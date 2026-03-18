@@ -1,0 +1,13 @@
+---
+title = "Results"
+---
+
+This chapter presents the results.
+
+## Main findings
+
+Describe the main findings here.
+
+## Discussion
+
+Discuss the implications of the results.

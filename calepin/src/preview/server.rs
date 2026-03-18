@@ -1,0 +1,236 @@
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, RwLock};
+use std::thread;
+
+use anyhow::Result;
+use tiny_http::{Header, Response, Server, StatusCode};
+
+pub struct ServerHandle {
+    server: Arc<Server>,
+}
+
+impl ServerHandle {
+    /// Unblock the server's request loop so its thread can exit and release the port.
+    pub fn shutdown(&self) {
+        self.server.unblock();
+    }
+}
+
+impl Drop for ServerHandle {
+    fn drop(&mut self) {
+        self.server.unblock();
+    }
+}
+
+pub fn start(
+    port: u16,
+    content: Arc<RwLock<String>>,
+    version: Arc<AtomicU64>,
+    serve_dir: PathBuf,
+) -> Result<(ServerHandle, u16)> {
+    serve(port, version, move |request, url| {
+        if url == "/" {
+            let html = content.read().unwrap().clone();
+            let header =
+                Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
+            let _ = request.respond(Response::from_string(html).with_header(header));
+        } else {
+            serve_static(request, &url, &serve_dir);
+        }
+    })
+}
+
+/// Start an HTTP server that serves files from a directory on disk, with
+/// live-reload support via `/__version` endpoint and reload script injection.
+pub fn start_collection(
+    port: u16,
+    version: Arc<AtomicU64>,
+    serve_dir: PathBuf,
+) -> Result<(ServerHandle, u16)> {
+    let version_for_handler = Arc::clone(&version);
+    serve(port, version, move |request, url| {
+        serve_collection_request(request, &url, &serve_dir, &version_for_handler);
+    })
+}
+
+/// Bind the server and spawn a request-handling thread. The `/__version`
+/// endpoint is handled automatically; all other requests are forwarded to
+/// `handler`.
+fn serve<F>(port: u16, version: Arc<AtomicU64>, handler: F) -> Result<(ServerHandle, u16)>
+where
+    F: Fn(tiny_http::Request, String) + Send + 'static,
+{
+    let (server, actual_port) = try_bind(port)?;
+    let server = Arc::new(server);
+
+    let server_clone = Arc::clone(&server);
+    thread::spawn(move || {
+        for request in server_clone.incoming_requests() {
+            let url = request.url().to_string();
+
+            if url == "/__version" {
+                let v = version.load(Ordering::Relaxed).to_string();
+                let _ = request.respond(Response::from_string(v));
+                continue;
+            }
+
+            handler(request, url);
+        }
+    });
+
+    Ok((ServerHandle { server }, actual_port))
+}
+
+fn serve_collection_request(
+    request: tiny_http::Request,
+    url: &str,
+    serve_dir: &PathBuf,
+    version: &AtomicU64,
+) {
+    let rel = url.split('?').next().unwrap_or(url).trim_start_matches('/');
+    let mut file_path = serve_dir.join(rel);
+    if file_path.is_dir() {
+        file_path = file_path.join("index.html");
+    }
+
+    // Prevent path traversal
+    if !file_path.starts_with(serve_dir) {
+        let _ = request.respond(Response::from_string("Forbidden").with_status_code(StatusCode(403)));
+        return;
+    }
+
+    let data = if file_path.is_file() {
+        std::fs::read(&file_path).ok()
+    } else {
+        None
+    };
+
+    if let Some(data) = data {
+        let mime = resolve_mime(&file_path);
+        if mime.starts_with("text/html") {
+            let html = String::from_utf8_lossy(&data);
+            let v = version.load(Ordering::Relaxed);
+            let html = super::reload::inject_reload_script(&html, v);
+            let header = Header::from_bytes("Content-Type", mime).unwrap();
+            let _ = request.respond(Response::from_string(html).with_header(header));
+        } else {
+            let header = Header::from_bytes("Content-Type", mime).unwrap();
+            let _ = request.respond(Response::from_data(data).with_header(header));
+        }
+    } else {
+        // Serve 404.html if it exists, otherwise plain text
+        let page_404 = serve_dir.join("404.html");
+        if let Ok(body) = std::fs::read_to_string(&page_404) {
+            let v = version.load(Ordering::Relaxed);
+            let html = super::reload::inject_reload_script(&body, v);
+            let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
+            let _ = request.respond(Response::from_string(html).with_header(header).with_status_code(StatusCode(404)));
+        } else {
+            let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+        }
+    }
+}
+
+/// Try the requested port, then fall back to nearby ports.
+/// If the port is held by a stale calepin preview (detected via `/__version`),
+/// warns and falls back rather than hanging.
+pub(crate) fn try_bind(port: u16) -> Result<(Server, u16)> {
+    // Try the requested port first
+    if let Ok(server) = Server::http(format!("127.0.0.1:{}", port)) {
+        return Ok((server, port));
+    }
+
+    // Check if a stale calepin preview holds the port
+    let stale = check_stale_preview(port);
+
+    // Try the next 10 ports
+    for p in (port + 1)..=(port + 10) {
+        if let Ok(server) = Server::http(format!("127.0.0.1:{}", p)) {
+            if stale {
+                eprintln!(
+                    "\x1b[33mWarning:\x1b[0m port {} held by a stale preview, using {} instead",
+                    port, p
+                );
+            } else {
+                eprintln!(
+                    "\x1b[33mWarning:\x1b[0m port {} in use, using {} instead",
+                    port, p
+                );
+            }
+            return Ok((server, p));
+        }
+    }
+
+    anyhow::bail!("Could not find an available port in range {}-{}", port, port + 10)
+}
+
+/// Check if a calepin preview server is running on the given port
+/// by probing the `/__version` endpoint.
+fn check_stale_preview(port: u16) -> bool {
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+
+    let Ok(mut stream) = TcpStream::connect_timeout(
+        &format!("127.0.0.1:{}", port).parse().unwrap(),
+        std::time::Duration::from_millis(200),
+    ) else {
+        return false;
+    };
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(200)));
+    let _ = stream.write_all(b"GET /__version HTTP/1.0\r\nHost: localhost\r\n\r\n");
+    let mut buf = [0u8; 256];
+    if let Ok(n) = stream.read(&mut buf) {
+        let response = String::from_utf8_lossy(&buf[..n]);
+        // A calepin preview responds with a version number
+        response.contains("200") && response.split("\r\n\r\n").nth(1).map_or(false, |body| body.trim().parse::<u64>().is_ok())
+    } else {
+        false
+    }
+}
+
+fn serve_static(request: tiny_http::Request, url: &str, serve_dir: &PathBuf) {
+    let rel_path = url.split('?').next().unwrap_or(url).trim_start_matches('/');
+    let file_path = serve_dir.join(rel_path);
+    // Prevent path traversal (e.g., /../../../etc/passwd)
+    if !file_path.starts_with(serve_dir) {
+        let _ = request.respond(Response::from_string("Forbidden").with_status_code(StatusCode(403)));
+        return;
+    }
+    if file_path.is_file() {
+        match std::fs::read(&file_path) {
+            Ok(data) => {
+                let mime = resolve_mime(&file_path);
+                let header = Header::from_bytes("Content-Type", mime).unwrap();
+                let response = Response::from_data(data).with_header(header);
+                let _ = request.respond(response);
+            }
+            Err(_) => {
+                let _ = request.respond(
+                    Response::from_string("Not found").with_status_code(StatusCode(404)),
+                );
+            }
+        }
+    } else {
+        let _ =
+            request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+    }
+}
+
+pub(crate) fn resolve_mime(path: &std::path::Path) -> &'static str {
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("html") => "text/html; charset=utf-8",
+        Some("css") => "text/css",
+        Some("js") => "application/javascript",
+        Some("json") => "application/json",
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("svg") => "image/svg+xml",
+        Some("pdf") => "application/pdf",
+        Some("woff2") => "font/woff2",
+        Some("woff") => "font/woff",
+        Some("qmd") => "text/plain; charset=utf-8",
+        _ => "application/octet-stream",
+    }
+}

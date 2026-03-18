@@ -1,0 +1,12 @@
+[package]
+name = "revealjs"
+version = "0.0.1"
+edition = "2021"
+description = "calepin plugin: postprocess HTML into reveal.js slides"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+extism-pdk = "1"
+serde = { version = "1", features = ["derive"] }

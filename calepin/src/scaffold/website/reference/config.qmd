@@ -1,0 +1,24 @@
+---
+title = "Configuration Reference"
+---
+
+*Calepin* is configured through `_calepin/config.toml` and TOML front matter.
+
+## Project config
+
+The `_calepin/config.toml` file controls site-wide settings like title, navbar,
+sidebar contents, and output targets.
+
+## Front matter
+
+Each `.qmd` file can set or override options in its TOML front matter:
+
+```toml
+---
+title = "My Page"
+date = "2025-01-15"
+
+[toc]
+enabled = true
+---
+```

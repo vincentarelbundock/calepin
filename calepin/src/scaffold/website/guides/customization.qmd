@@ -1,0 +1,19 @@
+---
+title = "Customization"
+---
+
+Customize your *Calepin* website with partials, modules, and themes.
+
+## Partials
+
+Override any built-in template by placing a file in
+`_calepin/partials/{engine}/{name}.{ext}`.
+
+## Modules
+
+Add custom modules in `_calepin/modules/{name}/module.toml` and enable them
+with the `plugins` field in your config or front matter.
+
+## Themes
+
+Apply a built-in theme or create your own with `calepin info themes`.

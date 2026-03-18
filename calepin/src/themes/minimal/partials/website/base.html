@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="{% if document.lang %}{{ document.lang }}{% elif collection.languages %}{{ collection.languages[0].abbreviation }}{% else %}en{% endif %}"{% if collection.dark_mode %} data-theme="light"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if document.title %}<title>{{ document.title }}{% if collection.title %} — {{ collection.title }}{% endif %}</title>
+  {% elif collection.title %}<title>{{ collection.title }}</title>{% endif %}
+  {% if document.abstract %}<meta name="description" content="{{ document.abstract }}">{% endif %}
+  {% if collection.favicon %}<link rel="icon" href="/{{ collection.favicon }}">{% endif %}
+  <link rel="stylesheet" href="/assets/page.css">
+  <link rel="stylesheet" href="/assets/calepin.css">
+  {{ collection.math }}
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
+  {% include "navbar.html" %}
+
+  <div class="site-container no-sidebar">
+
+    <main id="main-content" class="content-main">
+      <article>
+        {% block content %}{% endblock %}
+      </article>
+
+      {% block page_nav %}{% endblock %}
+    </main>
+
+  </div>
+
+  {% include "footer.html" %}
+</body>
+</html>

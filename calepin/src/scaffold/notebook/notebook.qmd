@@ -1,0 +1,24 @@
+---
+title = "My Calepin Notebook"
+subtitle = "A computational notebook"
+author = "Your Name"
+---
+
+This is a *Calepin* notebook. Write prose in Markdown and embed executable code chunks.
+
+## Getting started
+
+Here is an R code chunk. Set `eval: true` to run it:
+
+```{r}
+#| eval: false
+summary(mtcars[, 1:4])
+```
+
+And a Python chunk:
+
+```{python}
+#| eval: false
+import math
+[round(math.sin(x / 10), 3) for x in range(10)]
+```

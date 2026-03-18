@@ -1,0 +1,49 @@
+---
+title = "Configuration"
+---
+
+*Calepin* is configured through `_calepin/config.toml` and TOML front matter.
+
+## Project config
+
+The `_calepin/config.toml` file controls site-wide settings:
+
+```toml
+title = "My Website"
+target = "website"
+output = "output"
+```
+
+## Sidebar navigation
+
+Use `[[contents]]` sections with `include` to list pages in the sidebar:
+
+```toml
+[[contents]]
+text = "Guides"
+include = ["guides/*.qmd"]
+
+[[contents]]
+text = "Reference"
+include = ["reference/cli.qmd", "reference/config.qmd"]
+```
+
+## Navbar
+
+Navbar items support `include` for dropdown menus:
+
+```toml
+[[navbar.middle]]
+text = "Guides"
+include = ["guides/*.qmd"]
+```
+
+Or use explicit `children` for manual dropdowns:
+
+```toml
+[[navbar.middle]]
+text = "More"
+[[navbar.middle.children]]
+text = "About"
+href = "/pages/about.html"
+```

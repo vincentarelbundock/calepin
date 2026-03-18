@@ -1,0 +1,1 @@
+{% if align == "left" %}left{% elif align == "right" %}right{% else %}center{% endif %}

@@ -1,0 +1,82 @@
+[package]
+name = "calepin"
+version = "0.0.1-alpha.4"
+edition = "2021"
+description = "A Rust CLI for rendering .qmd files to HTML, LaTeX, Typst, or Markdown"
+license = "MIT"
+repository = "https://github.com/vincentarelbundock/calepin"
+homepage = "https://vincentarelbundock.github.io/calepin"
+exclude = []
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+
+
+# Markdown rendering
+comrak = "0.51"
+
+# Front matter (TOML)
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# Syntax highlighting
+syntect = "5"
+
+# Regex for chunk parsing
+regex = "1"
+
+# Python AST parsing (for man python)
+ruff_python_parser = { git = "https://github.com/astral-sh/ruff", tag = "0.11.6" }
+ruff_python_ast = { git = "https://github.com/astral-sh/ruff", tag = "0.11.6" }
+ruff_text_size = { git = "https://github.com/astral-sh/ruff", tag = "0.11.6" }
+
+# Temp files for R code/plots
+tempfile = "3"
+
+
+# Base64 encoding (for imgur image upload)
+base64 = "0.22"
+
+# JSON parsing (for imgur API response)
+serde_json = "1"
+
+# Bibliography (CSL citation processing, BibTeX parsing)
+hayagriva = { version = "0.9", features = ["biblatex", "archive"] }
+
+# Template engine
+minijinja = "2"
+include_dir = "0.7"
+glob = "0.3"
+walkdir = "2"
+
+# Parallelism
+rayon = "1"
+
+# Error handling
+anyhow = "1"
+bincode = { version = "2", features = ["serde"] }
+
+# Preview server
+chrono = "0.4"
+notify = "8"
+notify-debouncer-full = "0.7"
+tiny_http = "0.12"
+open = "5"
+ctrlc = "3"
+indicatif = "0.18"
+xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
+
+# SVG to PDF conversion (for LaTeX output with SVG figures)
+svg2pdf = "0.13"
+usvg = "0.45"
+
+# PDF to SVG conversion (for TikZ diagrams)
+hayro-svg = "0.3"
+
+indexmap = "2.13.0"
+
+[[bench]]
+name = "template_bench"
+harness = false

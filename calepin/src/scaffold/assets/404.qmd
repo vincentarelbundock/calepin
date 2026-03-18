@@ -1,0 +1,14 @@
+---
+title: Page Not Found
+---
+
+<div style="text-align: center; padding: 4rem 1rem;">
+<img src="/assets/Calepin.svg" alt="Calepin" style="width: 120px; margin-bottom: 2rem;" class="logo-light">
+<img src="/assets/Calepin_dark.svg" alt="Calepin" style="width: 120px; margin-bottom: 2rem;" class="logo-dark">
+
+<p style="font-size: 4rem; font-weight: 200; margin: 0; color: var(--c-text-muted);">404</p>
+
+<p style="font-size: 1.2rem; color: var(--c-text-muted); margin-bottom: 2rem;">This page does not exist.</p>
+
+<a href="/" style="color: var(--c-link);">Back to home</a>
+</div>

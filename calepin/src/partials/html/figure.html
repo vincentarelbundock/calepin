@@ -1,0 +1,8 @@
+{%- set loc = cap_location | default("bottom") %}
+<figure{% if label %} id="{{label}}"{% endif %}{% if align_style %} style="{{align_style}}"{% endif %}>
+{%- if loc == "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
+{%- if link %}<a href="{{link}}">{%- endif %}
+<img src="{{src}}" alt="{{alt}}"{% if width_attr %} style="width:{{width_attr}};max-width:{{width_attr}}"{% endif %}{% if height_attr %} style="height:{{height_attr}}"{% endif %}/>
+{%- if link %}</a>{%- endif %}
+{%- if loc != "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
+</figure>

@@ -1,0 +1,154 @@
+# Built-in module declarations.
+#
+# Each module declares its match rules and kind. The Rust implementation
+# is resolved by name via `resolve_builtin_kind()` in registry.rs.
+#
+# kind:
+#   "element"          -- TransformElement (pre-render element mutation)
+#   "element_children" -- TransformElementChildren (structural div rewriting)
+#   "document"         -- TransformDocument (post-assembly full document)
+#   "span"             -- TransformSpan (span-level rendering)
+#   "noop"             -- No transform logic (partial/template provider only)
+
+# -- Span transforms --
+
+[[modules]]
+name = "pagebreak"
+kind = "span"
+contexts = ["span"]
+
+[modules.match]
+classes = ["pagebreak"]
+
+[[modules]]
+name = "video"
+kind = "span"
+contexts = ["span"]
+
+[modules.match]
+classes = ["video"]
+
+[[modules]]
+name = "placeholder"
+kind = "span"
+contexts = ["span"]
+
+[modules.match]
+classes = ["placeholder"]
+
+[[modules]]
+name = "lorem"
+kind = "span"
+contexts = ["span"]
+
+[modules.match]
+classes = ["lorem"]
+
+# -- Element children transforms (per-div structural rewriting) --
+
+[[modules]]
+name = "document_listing"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+classes = ["listing"]
+formats = ["html"]
+
+[[modules]]
+name = "tabset"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+classes = ["panel-tabset"]
+formats = ["html"]
+
+[[modules]]
+name = "layout"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+attrs = ["layout_ncol", "layout_nrow", "layout"]
+
+[[modules]]
+name = "figure"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+id_prefix = "fig-"
+
+[[modules]]
+name = "table"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+id_prefix = "tbl-"
+
+[[modules]]
+name = "callout"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+classes = [
+    "callout-note", "callout-tip", "callout-warning",
+    "callout-caution", "callout-important",
+]
+
+[[modules]]
+name = "theorem"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+classes = [
+    "theorem", "lemma", "corollary", "proposition", "conjecture",
+    "definition", "example", "exercise", "solution", "remark",
+    "algorithm", "proof",
+]
+
+# -- Emitters (AST -> format output) --
+
+[[modules]]
+name = "html"
+kind = "emitter"
+
+[[modules]]
+name = "latex"
+kind = "emitter"
+
+[[modules]]
+name = "typst"
+kind = "emitter"
+
+[[modules]]
+name = "markdown"
+kind = "emitter"
+
+# -- Element transforms (pre-render mutations) --
+
+[[modules]]
+name = "convert_svg_pdf"
+kind = "element"
+
+# -- Document transforms (post-assembly) --
+
+[[modules]]
+name = "append_footnotes"
+kind = "document"
+
+[[modules]]
+name = "split_slides"
+kind = "document"
+
+[[modules]]
+name = "highlight"
+kind = "document"
+
+[[modules]]
+name = "embed_images"
+kind = "document"

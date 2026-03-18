@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="{{generator}}">
+<title>{{plain_title}}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/monokai.css">
+{% if syntax_css %}<style>
+{{syntax_css}}
+</style>{% endif %}
+<style>
+.reveal pre { font-size: 0.55em; }
+.reveal code { font-size: 0.9em; }
+.reveal img { max-height: 500px; }
+.reveal .slides section { text-align: left; }
+.reveal h1, .reveal h2, .reveal h3 { text-align: left; }
+.reveal blockquote { width: 90%; }
+.reveal table { font-size: 0.7em; }
+</style>
+{% include "math.html" %}
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section>
+{% if title %}<h1>{{title}}</h1>{% endif %}
+{% if subtitle %}<p>{{subtitle}}</p>{% endif %}
+{% if author %}<p>{{author}}</p>{% endif %}
+{% if date %}<p><small>{{date}}</small></p>{% endif %}
+</section>
+{{body}}
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/highlight.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: true,
+  transition: 'slide',
+  plugins: [RevealHighlight]
+});
+</script>
+</body>
+</html>

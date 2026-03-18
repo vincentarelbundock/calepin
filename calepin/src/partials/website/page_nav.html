@@ -1,0 +1,22 @@
+{% if document.prev or document.next %}
+<nav class="page-nav" aria-label="Page navigation">
+  {% if document.prev %}
+  <a href="{{ document.prev.href }}" class="prev">
+    {% include "icons/arrow-left.svg" %}
+    <span>
+      <span class="label">Previous</span><br>
+      {{ document.prev.text }}
+    </span>
+  </a>
+  {% endif %}
+  {% if document.next %}
+  <a href="{{ document.next.href }}" class="next">
+    <span>
+      <span class="label">Next</span><br>
+      {{ document.next.text }}
+    </span>
+    {% include "icons/arrow-right.svg" %}
+  </a>
+  {% endif %}
+</nav>
+{% endif %}

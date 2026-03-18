@@ -1,0 +1,13 @@
+---
+title = "Introduction"
+---
+
+This is the first chapter. Write your introduction here.
+
+## Background
+
+Provide background information and context for the book.
+
+## Motivation
+
+Explain why this book exists and what the reader will learn.

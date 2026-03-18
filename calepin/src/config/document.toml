@@ -1,0 +1,66 @@
+# Document-level defaults (single-file rendering).
+# Concatenated with shared.toml at load time.
+
+# -- Document targets --
+[targets.html]
+writer = "html"
+template = "page"
+extension = "html"
+fig_extension = "svg"
+fig_formats = ["svg", "png", "jpg", "webp", "gif"]
+preview = "serve"
+modules = ["highlight", "append_footnotes", "embed_images"]
+crossref = "html"
+
+[targets.latex]
+writer = "latex"
+template = "page"
+extension = "tex"
+fig_extension = "pdf"
+fig_formats = ["pdf", "eps", "svg", "png", "jpg"]
+preview = "serve"
+modules = ["highlight", "convert_svg_pdf"]
+crossref = "latex"
+toc_headings = false
+
+[targets.typst]
+writer = "typst"
+template = "page"
+extension = "typ"
+fig_extension = "svg"
+fig_formats = ["svg", "png", "jpg"]
+preview = "serve"
+modules = ["highlight"]
+crossref = "plain"
+
+[targets.pdf]
+writer = "typst"
+template = "page"
+extension = "pdf"
+fig_extension = "svg"
+fig_formats = ["svg", "png", "jpg"]
+compile = "typst compile {input}"
+modules = ["highlight"]
+crossref = "plain"
+
+[targets.revealjs]
+writer = "html"
+template = "page"
+extension = "html"
+fig_extension = "svg"
+embed_resources = false
+preview = "serve"
+modules = ["highlight", "append_footnotes", "split_slides"]
+crossref = "html"
+toc_headings = false
+
+[targets.revealjs.page_vars]
+base = "html"
+
+[targets.markdown]
+writer = "markdown"
+extension = "md"
+fig_extension = "png"
+preview = "none"
+modules = ["highlight"]
+crossref = "plain"

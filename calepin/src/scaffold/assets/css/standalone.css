@@ -1,0 +1,31 @@
+/* =================================================================
+   5. Standalone document layout
+   Only applies when the page uses the default page template
+   (no site chrome). The site overrides body > main below.
+   ================================================================= */
+
+/* --- Theme toggle --- */
+.theme-toggle { position: fixed; top: 0.75rem; right: 0.75rem; z-index: 200; margin: 0; padding: 0; }
+.theme-toggle button { all: unset; cursor: pointer; font-size: 1.2rem; opacity: 0.5; }
+.theme-toggle button:hover { opacity: 1; }
+
+/* --- Front matter --- */
+.frontmatter { text-align: center; margin-bottom: 2rem; }
+.frontmatter h1 { margin-bottom: 0.2rem; font-variant: normal; }
+.frontmatter h2 { font-size: 1.1rem; font-weight: normal; font-variant: normal; font-style: normal; margin: 0 0 0.8rem; }
+.frontmatter h3 { font-size: 0.9rem; font-weight: normal; margin: 0; }
+.frontmatter .authors { margin-top: 0.8rem; }
+
+/* --- Page layout with TOC sidebar --- */
+.page-layout { display: flex; justify-content: center; }
+.page-layout > .container { max-width: 48rem; min-width: 0; padding: 2rem 1.5rem; }
+.toc-sidebar {
+  position: sticky; top: 2rem; align-self: flex-start;
+  width: 13rem; flex-shrink: 0;
+  max-height: calc(100vh - 4rem); overflow-y: auto;
+  padding: 2rem 1rem 2rem 0;
+  border-left: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
+}
+@media (max-width: 72rem) {
+  .toc-sidebar { display: none; }
+}

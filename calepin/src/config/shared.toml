@@ -1,0 +1,79 @@
+# Shared defaults for both document and collection rendering.
+
+# -- Rendering --
+csl = "chicago-author-date"
+math = "katex"
+lang = "en"
+embed_resources = true
+dpi = 150.0
+
+[highlight]
+light = "github"
+dark = "nord"
+
+[figure]
+fig_width = 6.0
+fig_asp = 0.618
+out_width = 0.70
+device = "png"
+alignment = "center"
+
+[execute]
+cache = true
+eval = true
+echo = true
+include = true
+warning = true
+message = true
+error = true
+comment = "> "
+results = "markup"
+
+[toc]
+enabled = false
+depth = 3
+title = "Contents"
+
+[callout]
+appearance = "default"
+note = "Note"
+tip = "Tip"
+warning = "Warning"
+important = "Important"
+caution = "Caution"
+icon_note = "\u2139\uFE0F"
+icon_tip = "\U0001F4A1"
+icon_warning = "\u26A0\uFE0F"
+icon_important = "\u2757"
+icon_caution = "\U0001F525"
+
+[video]
+width = "100%"
+height = "400"
+title = "Video"
+
+[placeholder]
+width = "600"
+height = "400"
+color = "#cccccc"
+
+[lipsum]
+paragraphs = 1
+
+[layout]
+valign = "top"
+columns = 1
+rows = 1
+
+[labels]
+abstract_title = "Abstract"
+keywords = "Keywords"
+appendix = "Appendix"
+citation = "Citation"
+reuse = "Reuse"
+funding = "Funding"
+copyright = "Copyright"
+listing = "Listing"
+proof = "Proof"
+contents = "Contents"
+

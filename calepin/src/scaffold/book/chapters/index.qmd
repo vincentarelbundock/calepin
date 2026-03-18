@@ -1,0 +1,10 @@
+---
+title = "Preface"
+---
+
+This is the preface of your book. It appears before the numbered chapters.
+
+```{r}
+#| eval: false
+summary(mtcars[, 1:4])
+```

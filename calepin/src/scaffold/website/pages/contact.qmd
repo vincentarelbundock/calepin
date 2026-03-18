@@ -1,0 +1,13 @@
+---
+title = "Contact"
+---
+
+Get in touch or report issues.
+
+## Email
+
+you@example.com
+
+## Links
+
+- [GitHub](https://github.com)

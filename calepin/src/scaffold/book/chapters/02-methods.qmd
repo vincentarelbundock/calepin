@@ -1,0 +1,25 @@
+---
+title = "Methods"
+---
+
+This chapter covers the methods and tools used throughout the book.
+
+## Setup
+
+Describe the setup and prerequisites.
+
+```r
+# Example R code
+summary(mtcars)
+```
+
+## Analysis
+
+Describe the analysis approach.
+
+```python
+# Example Python code
+import numpy as np
+x = np.linspace(0, 10, 100)
+print(f"Generated {len(x)} points")
+```

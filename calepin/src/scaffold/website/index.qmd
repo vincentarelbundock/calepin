@@ -1,0 +1,12 @@
+---
+title = "Home"
+---
+
+Welcome to your new *Calepin* website. Edit this file to get started.
+
+## Example code chunk
+
+```{r}
+#| eval: false
+summary(mtcars[, 1:4])
+```

@@ -1,0 +1,21 @@
+---
+title = "Getting started"
+---
+
+This guide walks you through the basics.
+
+## Installation
+
+Install *Calepin* with:
+
+```sh
+cargo install calepin
+```
+
+## Your first document
+
+Create a `.qmd` file and render it:
+
+```sh
+calepin render hello.qmd
+```

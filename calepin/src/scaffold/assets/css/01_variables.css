@@ -1,0 +1,73 @@
+/* =================================================================
+   1. Variables — Light
+   Override these to re-theme calepin. All rules reference only --c-*
+   tokens, never raw color values.
+   Default palette: Nord  https://www.nordtheme.com
+   ================================================================= */
+
+:root {
+  /* Surface & text */
+  --c-bg:           #fafbfc;
+  --c-bg-secondary: #f3f5f7;
+  --c-bg-tertiary:  #ebeef1;
+  --c-text:         #2e3440;
+  --c-text-muted:   #616e7c;
+  --c-text-secondary: #525d6e;
+  --c-link:         #5e81ac;
+  --c-border:       #e0e4e8;
+  --c-code-bg:      #f3f5f7;
+  --c-accent:       #5e81ac;
+
+  /* Component accents — semantic meaning */
+  --c-note:         #5e81ac;
+  --c-tip:          #a3be8c;
+  --c-warning:      #ebcb8b;
+  --c-error:        #bf616a;
+  --c-important:    #b48ead;
+
+  /* Depth */
+  --c-shadow:       rgba(46, 52, 64, 0.08);
+  --c-overlay-bg:   rgba(46, 52, 64, 0.5);
+
+  /* Site layout dimensions (used only when site chrome is present) */
+  --c-sidebar-width: 280px;
+  --c-toc-width: 240px;
+  --c-navbar-height: 52px;
+  --c-content-max-width: 900px;
+}
+
+/* =================================================================
+   2. Variables — Dark
+   ================================================================= */
+
+[data-theme="dark"] {
+  --c-bg:           #2f3643;
+  --c-bg-secondary: #353d4c;
+  --c-bg-tertiary:  #3b4454;
+  --c-text:         #e5e9f0;
+  --c-text-muted:   #9aa3b0;
+  --c-text-secondary: #b8bfc9;
+  --c-link:         #88c0d0;
+  --c-border:       #4a5568;
+  --c-code-bg:      #343c4b;
+  --c-accent:       #88c0d0;
+  --c-shadow:       rgba(0, 0, 0, 0.3);
+  --c-overlay-bg:   rgba(0, 0, 0, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-bg:           #2f3643;
+    --c-bg-secondary: #353d4c;
+    --c-bg-tertiary:  #3b4454;
+    --c-text:         #e5e9f0;
+    --c-text-muted:   #9aa3b0;
+    --c-text-secondary: #b8bfc9;
+    --c-link:         #88c0d0;
+    --c-border:       #4a5568;
+    --c-code-bg:      #343c4b;
+    --c-accent:       #88c0d0;
+    --c-shadow:       rgba(0, 0, 0, 0.3);
+    --c-overlay-bg:   rgba(0, 0, 0, 0.7);
+  }
+}
