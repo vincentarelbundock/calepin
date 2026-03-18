@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="{{generator}}">
+
+<title>{{plain-title}}</title>
+
+{{preamble}}
+
+{{css}}
+
+{{header-includes}}
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+  options: { ignoreHtmlClass: 'nodollar' },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+
+<body>
+<main class="container">
+{{include-before}}
+
+<header class="frontmatter">
+{{title-block}}
+{{subtitle-block}}
+{{author-block}}
+{{date-block}}
+</header>
+
+{{abstract-block}}
+{{keywords-block}}
+
+{{toc}}
+
+<article>
+{{body}}
+</article>
+
+{{appendix-block}}
+
+{{include-after}}
+</main>
+
+{{js}}
+<script>
+// Tabset switching
+document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var tabset = btn.closest('.panel-tabset');
+    var tabId = btn.getAttribute('data-tab');
+    var group = tabset.getAttribute('data-group');
+    // Get all tabsets to update (same group, or just this one)
+    var targets = group
+      ? document.querySelectorAll('.panel-tabset[data-group="' + group + '"]')
+      : [tabset];
+    targets.forEach(function(ts) {
+      ts.querySelectorAll('.nav-link').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
+      });
+      ts.querySelectorAll('.tab-pane').forEach(function(p) {
+        p.classList.toggle('active', p.getAttribute('data-tab') === tabId);
+      });
+    });
+  });
+});
+
+// Footnote hover previews
+document.querySelectorAll('.footnote-ref a').forEach(function(a) {
+  var id = a.getAttribute('href');
+  if (!id) return;
+  var fn = document.querySelector(id);
+  if (!fn) return;
+  var text = fn.textContent.replace(/\s*↩\s*$/, '').trim();
+  if (!text) return;
+  var tip = document.createElement('span');
+  tip.className = 'fn-preview';
+  tip.textContent = text;
+  a.parentElement.appendChild(tip);
+});
+</script>
+</body>
+
+</html>

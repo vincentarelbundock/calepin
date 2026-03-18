@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0" demote-non-dropping-particle="sort-only" default-locale="en-US">
+  <info>
+    <title>calepin default (author-date)</title>
+    <id>http://www.zotero.org/styles/calepin-default</id>
+    <category citation-format="author-date"/>
+    <updated>2024-01-01T00:00:00+00:00</updated>
+  </info>
+  <macro name="author">
+    <names variable="author">
+      <name and="text" delimiter=", " delimiter-precedes-last="always"/>
+      <et-al/>
+    </names>
+  </macro>
+  <macro name="author-short">
+    <names variable="author">
+      <name form="short" and="text" delimiter=", "/>
+      <et-al/>
+    </names>
+  </macro>
+  <macro name="year">
+    <date variable="issued">
+      <date-part name="year"/>
+    </date>
+  </macro>
+  <citation et-al-min="4" et-al-use-first="1" disambiguate-add-year-suffix="true">
+    <sort>
+      <key macro="author-short"/>
+      <key macro="year"/>
+    </sort>
+    <layout delimiter="; ">
+      <group delimiter=" ">
+        <text macro="author-short"/>
+        <text macro="year"/>
+      </group>
+    </layout>
+  </citation>
+  <bibliography>
+    <sort>
+      <key macro="author"/>
+      <key macro="year"/>
+    </sort>
+    <layout>
+      <group delimiter=". ">
+        <text macro="author"/>
+        <text macro="year"/>
+        <text variable="title"/>
+        <text variable="container-title" font-style="italic"/>
+      </group>
+    </layout>
+  </bibliography>
+</style>

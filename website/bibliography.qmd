@@ -1,0 +1,57 @@
+---
+title: Bibliography
+---
+
+*Calepin* processes citations from BibTeX/BibLaTeX files using [hayagriva](https://github.com/typst/hayagriva). Specify one or more `.bib` files in the front matter, and citation keys in the document body are resolved automatically.
+
+
+# Front matter
+
+The `bibliography` field accepts a single path or a list. The optional `csl` field points to a [Citation Style Language](https://citationstyles.org/) file.
+
+```yaml
+---
+title: My Document
+bibliography: references.bib
+csl: apa.csl
+---
+```
+
+Multiple bibliography files are merged into a single library:
+
+```yaml
+---
+bibliography:
+  - refs_theory.bib
+  - refs_empirical.bib
+---
+```
+
+
+# Citation syntax
+
+Three citation forms are supported:
+
+| Syntax | Output | Description |
+|--------|--------|-------------|
+| `@key` | Author et al. (Year) | Narrative citation |
+| `[@key]` | (Author et al. Year) | Parenthetical citation |
+| `[-@key]` | Year | Suppress author, year only |
+
+These are compatible with Quarto and Pandoc syntax.
+
+
+# CSL styles
+
+By default, *Calepin* uses an author-year style. To customize citation formatting, provide a `.csl` file via one of three methods (checked in order):
+
+1. **Front matter** --- Set `csl: path/to/style.csl` explicitly.
+2. **Project or user directory** --- Place a `.csl` file in `_calepin/templates/` (project) or `~/.config/calepin/templates/` (user). *Calepin* picks the first `.csl` file alphabetically.
+3. **Built-in** --- If no CSL file is found, the built-in default style is used.
+
+CSL files for most major journals are available from the [CSL repository](https://github.com/citation-style-language/styles).
+
+
+# References section
+
+When a document contains at least one resolved citation, *Calepin* appends a **References** section at the end of the output automatically. Unresolved keys (those not found in any `.bib` file) are left as-is.

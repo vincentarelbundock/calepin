@@ -1,0 +1,155 @@
+---
+title: Filters
+---
+
+Filters handle fenced divs and bracketed spans that need logic beyond `{{variable}}` substitution: conditional rendering, computed values, content rewriting.
+
+
+# External filters
+
+An external filter is an executable at `_calepin/filters/{class}` (or `_calepin/filters/{class}.{ext}` for format-specific variants). It receives flat JSON on stdin and writes the rendered output to stdout.
+
+For a div:
+
+```json
+{
+  "context": "div",
+  "content": "<p>rendered children</p>",
+  "classes": ["myclass"],
+  "id": "my-id",
+  "format": "html",
+  "title": "user attribute"
+}
+```
+
+For a span:
+
+```json
+{
+  "context": "span",
+  "content": "span text",
+  "classes": ["myclass"],
+  "id": "",
+  "format": "html",
+  "tip": "user attribute"
+}
+```
+
+Exit 0: stdout is used as final output (template is skipped). Exit non-zero: falls through to next handler.
+
+## Example: a div filter
+
+`_calepin/filters/accordion` (Python):
+
+```python
+#!/usr/bin/env python3
+import json, sys
+
+data = json.load(sys.stdin)
+title = data.get("title", "Details")
+content = data["content"]
+fmt = data["format"]
+
+if fmt == "html":
+    print(f'<details><summary>{title}</summary>{content}</details>')
+elif fmt == "tex":
+    print(f'\\paragraph{{{title}}} {content}')
+else:
+    print(f'**{title}**\n\n{content}')
+```
+
+Usage:
+
+    ::: {.accordion title="Click to expand"}
+    Hidden content here.
+    :::
+
+::: {.accordion title="Click to expand"}
+Hidden content here.
+:::
+
+## Example: a span filter
+
+`_calepin/filters/tooltip` (Python):
+
+```python
+#!/usr/bin/env python3
+import json, sys
+
+data = json.load(sys.stdin)
+text = data["content"]
+tip = data.get("tip", "")
+fmt = data["format"]
+
+if fmt == "html":
+    print(f'<span class="tooltip" title="{tip}">{text}</span>')
+else:
+    print(text)
+```
+
+Usage: `This has [hover me]{.tooltip tip="Extra info"} inline.`
+
+## Example: wordcount filter
+
+`_calepin/filters/wordcount` (Python):
+
+```python
+#!/usr/bin/env python3
+import json, sys, re
+
+data = json.load(sys.stdin)
+content = data["content"]
+plain = re.sub(r"<[^>]+>", "", content)
+count = len(plain.split())
+
+badge = f'<p style="font-size: 0.85em; color: #666;">({count} words)</p>'
+print(f'<div class="wordcount">{badge}\n{content}</div>')
+```
+
+::: {.wordcount}
+This paragraph is processed by the wordcount filter. The filter strips HTML tags from the rendered children, counts the words, and prepends a small badge showing the total. Filters have full programmatic control over the output, unlike templates which only do variable substitution.
+:::
+
+
+# Built-in filters
+
+## TheoremFilter
+
+Handles theorem-type classes and maintains per-type counters. See [Math](math.qmd#theorem-environments) for the full list of supported types, cross-reference prefixes, and template customization.
+
+## CalloutFilter
+
+Enriches `callout-note`, `callout-tip`, `callout-warning`, `callout-important`, and `callout-caution` divs with `{{title}}`, `{{icon}}`, `{{collapse}}`, and `{{appearance}}` variables.
+
+
+# Processing order
+
+When *Calepin* encounters a fenced div or bracketed span:
+
+1. **WASM plugins** (in front matter order)
+2. **External filters** (`_calepin/filters/`)
+3. **Built-in filters** (TheoremFilter, CalloutFilter)
+4. **Template** (by class name, then `div.{ext}`)
+5. **Default fallback** (generic markup)
+
+A handler that produces output short-circuits the pipeline.
+
+
+# Built-in div classes
+
+## `.hidden`
+
+Processes content (R code executes, variables are set) but produces no output:
+
+::: {.hidden}
+```{r}
+hidden_value <- 99
+```
+:::
+
+The variable is available: `{r} hidden_value`.
+
+
+# Cross-references
+
+See [Math](math.qmd#cross-references) for theorem cross-reference prefixes and label resolution.

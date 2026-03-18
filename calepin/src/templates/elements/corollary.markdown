@@ -1,0 +1,1 @@
+**Corollary {{number}}.** *{{children}}*

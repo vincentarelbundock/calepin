@@ -1,0 +1,61 @@
+project:
+  type: website
+  resources:
+    - assets
+
+website:
+  title: "Calepin"
+  subtitle: "A fast rendering engine for Quarto, written in Rust"
+  site-url: https://calepin.io
+  favicon: assets/Calepin.svg
+
+  navbar:
+    background: "#fafafa"
+    search: true
+    logo: assets/Calepin.svg
+    logo-alt: "Calepin logo"
+    right:
+      - text: GitHub
+        href: https://github.com/vincentarelbundock/calepin
+
+  sidebar:
+    collapse-level: 1
+
+  pages:
+    - text: "Home"
+      href: index.qmd
+    - quick_start.qmd
+    - section: "Authoring"
+      pages:
+        - basics.qmd
+        - figures.qmd
+        - math.qmd
+        - bibliography.qmd
+        - cache.qmd
+        - text: "PDF Example"
+          href: assets/pdf.pdf
+    - section: "Code Execution"
+      pages:
+        - code/chunks_inline.qmd
+        - code/r.qmd
+        - code/python.qmd
+        - code/sh.qmd
+    - section: "Extending"
+      pages:
+        - templates.qmd
+        - filters.qmd
+        - shortcodes.qmd
+        - plugins.qmd
+    - quarto.qmd
+    - section: "Presentations"
+      pages:
+        - slides.qmd
+
+format:
+  html:
+    toc: true
+    highlight-style:
+      light: github
+      dark: nord
+    code-copy: true
+    code-overflow: scroll

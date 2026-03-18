@@ -1,0 +1,168 @@
+---
+title: Shortcodes
+calepin:
+  plugins:
+    - lorem
+---
+
+Shortcodes are inline directives written as `{{< name args >}}`. They are processed during rendering and replaced with format-aware output. Calepin provides several built-in shortcodes and supports user-defined shortcodes via executable scripts or WASM plugins.
+
+
+# Syntax
+
+Shortcodes use the following syntax: `{{< name arg1 arg2 key="value" >}}`
+
+- Positional arguments are space-separated tokens after the shortcode name.
+- Keyword arguments use `key=value` or `key="quoted value"` syntax.
+
+To show a shortcode literally without processing it, wrap it in triple braces. For example, `{{< meta title >}}` in your source renders as the literal text `{{< meta title >}}` without being evaluated.
+
+
+# Built-in shortcodes
+
+## pagebreak
+
+Insert a native page break. Produces format-appropriate output: `<div style="page-break-after: always;">` in HTML, `\newpage{}` in LaTeX, `#pagebreak()` in Typst.
+
+Page one content.
+
+`{{< pagebreak >}}`
+
+Page two content.
+
+## meta
+
+Print a value from the document's YAML front matter, such as: `{{< meta title >}}`.
+
+The title of this document is: {{< meta title >}}.
+
+This works with standard fields (`title`, `subtitle`, `author`, `date`, `abstract`) and custom metadata.
+
+## env
+
+Print a system environment variable, such as: `{{< env SHELL >}}`. If the variable is not set, the shortcode produces an empty string.
+
+The `SHELL` environment variable on the local machine is: {{< env SHELL >}}.
+
+
+## var
+
+Look up a variable from `_variables.yml` using dot-notation. For example, this project's `_variables.yml` contains:
+
+```yaml
+version: 0.0.1-alpha.2
+urls:
+  docs: https://github.com/vincentarelbundock/calepin
+```
+
+The syntax `{{< var version >}}` inserts the value. 
+
+* *Calepin* version: {{< var version >}}
+* Documentation URL: {{< var urls.docs >}}
+
+## include
+
+Include the content of another file. YAML front matter in the included file is stripped automatically:
+
+```
+{{{< include basics.qmd >}}}
+```
+
+The included content is expanded before block parsing, so code chunks, fenced divs, and other block structures in the included file are processed normally.
+
+
+# Script shortcodes
+
+Custom shortcodes are executable files placed in `_calepin/shortcodes/` (project-level) or `~/.config/calepin/shortcodes/` (user-level). The file name is the shortcode name.
+
+## Input protocol
+
+The executable receives JSON on stdin:
+
+```
+{
+  "name": "greeting",
+  "args": ["Alice"],
+  "kwargs": {},
+  "format": "html",
+  "meta": {
+    "title": "My Document",
+    "author": ["Author Name"],
+    "date": "2025-01-01"
+  }
+}
+```
+
+## Output protocol
+
+Print the replacement text to stdout. The output is inserted directly into the document at the shortcode location.
+
+- Exit 0: stdout replaces the shortcode.
+- Exit non-zero: a warning is printed, and the shortcode is left as-is.
+
+## Example: greeting shortcode
+
+This project includes a `_calepin/shortcodes/greeting` script:
+
+```python
+#!/usr/bin/env python3
+import json, sys
+
+data = json.load(sys.stdin)
+name = data["args"][0] if data["args"] else "World"
+fmt = data["format"]
+
+if fmt == "html":
+    print(f'<strong>Hello, {name}!</strong>')
+elif fmt == "tex":
+    print(f'\\textbf{{Hello, {name}!}}')
+elif fmt == "typ":
+    print(f'Hello, {name}!')
+else:
+    print(f'Hello, {name}!')
+```
+
+{{{< greeting Alice >}}} renders as: {{< greeting Alice >}}
+
+
+# Plugin shortcodes
+
+Shortcodes can also be implemented as WASM plugins by exporting a `shortcode` function. This is useful for shortcodes that need to be portable across platforms or that benefit from being compiled (e.g., for performance or bundling data).
+
+See the [Plugins](plugins.qmd) page for how to write plugin shortcodes.
+
+## Example: `lorem` plugin
+
+The `lorem` plugin generates placeholder text. Add it to your front matter:
+
+```yaml
+calepin:
+  plugins:
+    - lorem
+```
+
+Then use it in your document:
+
+- `{{< lorem >}}` --- 1 paragraph
+- `{{< lorem words=20 >}}` --- a specific number of words
+- `{{< lorem sentences=3 >}}` --- a specific number of sentences
+- `{{< lorem paragraphs=2 >}}` or `{{< lorem 2 >}}` --- multiple paragraphs
+
+Two words: {{< lorem words=2 >}}.
+
+Two sentences: {{< lorem sentences=2 >}}
+
+Two paragraphs: 
+
+{{< lorem paragraphs=2 >}}
+
+# Resolution order
+
+For each shortcode, Calepin checks:
+
+1. Built-in shortcodes (`pagebreak`, `meta`, `env`, `var`, `include`)
+2. WASM plugins (in front matter order)
+3. Project-level: `_calepin/shortcodes/{name}`
+4. User-level: `~/.config/calepin/shortcodes/{name}`
+
+Built-in shortcodes take precedence. You cannot override them with external scripts.

@@ -1,0 +1,38 @@
+---
+title: R
+---
+
+*Calepin* embeds R via [extendr](https://extendr.github.io/extendr/extendr_api/), running code directly in process. Variables, loaded packages, and state persist across chunks.
+
+# Basic usage
+
+```{r}
+fit <- lm(mpg ~ wt + hp, data = mtcars)
+summary(fit)$coefficients
+```
+
+# Inline expressions
+
+The median horsepower is `{r} median(mtcars$hp)` and the dataset has `{r} nrow(mtcars)` observations. Numeric results are automatically formatted with 3 significant digits and comma separators.
+
+# Plots
+
+R plots are captured automatically. Use chunk options to control dimensions and format.
+
+```{r}
+#| fig-width: 6
+#| fig-height: 4
+plot(mtcars$wt, mtcars$mpg,
+     xlab = "Weight", ylab = "MPG",
+     main = "Fuel efficiency by weight",
+     pch = 19, col = "steelblue")
+```
+
+# Warnings and messages
+
+By default, warnings and messages are displayed. Suppress them with chunk options:
+
+```{r}
+#| warning: false
+log(-1)
+```

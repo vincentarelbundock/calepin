@@ -1,0 +1,448 @@
+---
+title: Benchmark Document
+author: calepin
+date: "2025-06-01"
+abstract: A heavyweight document for profiling calepin rendering performance. No executed code — pure markup, cross-references, tabsets, footnotes, callouts, theorems, and lots of prose.
+bibliography: library.bib
+number-sections: true
+---
+
+# Introduction {#sec-intro}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum[^1].
+
+Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis et commodo pharetra, est eros bibendum elit, nec luctus magna felis sollicitudin mauris. Integer in mauris eu nibh euismod gravida. Duis ac tellus et risus vulputate vehicula. Donec lobortis risus a elit[^2]. Etiam tempor. Ut ullamcorper, ligula ut dictum pharetra, nisi nunc fringilla magna, in commodo elit erat nec turpis. Ut pharetra augue nec augue. Nam elit magna, hendrerit sit amet, tincidunt ac, viverra sed, nulla[^3].
+
+Sed adipiscing ornare risus. Morbi est est, blandit sit amet, sagittis vel, euismod vel, velit. Pellentesque egestas sem. Suspendisse commodo ullamcorper magna. Ut nulla. Vivamus bibendum, nulla ut congue fringilla, lorem ipsum ultricies risus, ut rutrum velit tortor vel purus. In hac habitasse platea dictumst. Duis fermentum elit in turpis.
+
+@sec-theory provides the theoretical framework for our analysis, while @sec-litreview surveys the existing literature. The methods are detailed in @sec-methods, with results presented in @sec-results. We discuss the implications in @sec-discussion and extend the analysis in @sec-extended. The mathematical supplement in @sec-math provides additional theoretical insights, and the code appendix in @sec-appendix-code ensures reproducibility.
+
+[^1]: First footnote — Ut enim ad minim veniam, quis nostrud exercitation.
+[^2]: Second footnote — Duis aute irure dolor in reprehenderit in voluptate.
+[^3]: Third footnote — Excepteur sint occaecat cupidatat non proident.
+
+
+# Theoretical Framework {#sec-theory}
+
+As noted in @sec-intro, the theoretical foundations rest on several key results. We begin with the Pythagorean theorem and build toward more advanced constructs.
+
+## Core Theorems
+
+::: {.theorem #thm-pythagoras}
+In a right triangle with legs $a$ and $b$ and hypotenuse $c$, we have $a^2 + b^2 = c^2$.
+:::
+
+::: {.proof}
+Construct squares on each side of the right triangle. The area of the square on the hypotenuse equals the sum of the areas of the squares on the other two sides. This can be shown by rearranging four copies of the original triangle within a square of side length $a + b$, yielding $c^2 = a^2 + b^2$.
+:::
+
+::: {.theorem #thm-cauchy-schwarz}
+For vectors $\mathbf{u}$ and $\mathbf{v}$ in an inner product space,
+$$
+|\langle \mathbf{u}, \mathbf{v} \rangle|^2 \leq \langle \mathbf{u}, \mathbf{u} \rangle \cdot \langle \mathbf{v}, \mathbf{v} \rangle.
+$$
+:::
+
+::: {.lemma #lem-triangle}
+For any real numbers $x$ and $y$, $|x + y| \leq |x| + |y|$.
+:::
+
+::: {.corollary #cor-norm}
+If $\|\cdot\|$ is a norm on $\mathbb{R}^n$, then for all $\mathbf{x}, \mathbf{y} \in \mathbb{R}^n$,
+$$
+\|\mathbf{x} + \mathbf{y}\| \leq \|\mathbf{x}\| + \|\mathbf{y}\|.
+$$
+:::
+
+::: {.definition #def-metric}
+A **metric space** $(X, d)$ is a set $X$ together with a function $d: X \times X \to [0, \infty)$ satisfying: (i) $d(x,y) = 0 \iff x = y$; (ii) $d(x,y) = d(y,x)$; (iii) $d(x,z) \leq d(x,y) + d(y,z)$.
+:::
+
+::: {.proposition #prp-complete}
+Every compact metric space is complete.
+:::
+
+::: {.remark}
+The converse of @prp-complete is false: $\mathbb{R}$ with the standard metric is complete but not compact.
+:::
+
+By @thm-pythagoras and @thm-cauchy-schwarz, we can derive several important inequalities. See also @lem-triangle and @cor-norm for the triangle inequality in different settings. The notion of a metric space (@def-metric) unifies these ideas.
+
+
+## Additional Results
+
+::: {.theorem #thm-bolzano}
+Every bounded sequence in $\mathbb{R}^n$ has a convergent subsequence.
+:::
+
+::: {.theorem #thm-ivt}
+If $f: [a,b] \to \mathbb{R}$ is continuous and $f(a) \cdot f(b) < 0$, then there exists $c \in (a,b)$ such that $f(c) = 0$.
+:::
+
+::: {.definition #def-continuity}
+A function $f: X \to Y$ between metric spaces is **continuous** at $x_0 \in X$ if for every $\varepsilon > 0$ there exists $\delta > 0$ such that $d_X(x, x_0) < \delta$ implies $d_Y(f(x), f(x_0)) < \varepsilon$.
+:::
+
+::: {.example #exm-sqrt}
+The function $f(x) = \sqrt{x}$ is continuous on $[0, \infty)$ but is not Lipschitz continuous at $x = 0$.
+:::
+
+
+# Literature Review {#sec-litreview}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit[^4]. Praesent vestibulum molestie lacus. Aenean nonummy hendrerit mauris. Phasellus porta. Fusce suscipit varius mi. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Nulla dui. Fusce feugiat malesuada odio. Morbi nunc odio, gravida at, cursus nec, luctus a, lorem[^5].
+
+Maecenas tristique orci ac sem. Duis ultricies pharetra magna. Donec accumsan malesuada orci. Donec sit amet eros. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris fermentum dictum magna. Sed laoreet aliquam leo. Ut tellus dolor, dapibus eget, elementum vel, cursus eleifend, elit. Aenean auctor wisi et urna. Aliquam erat volutpat. Duis ac turpis.
+
+As discussed in @sec-theory, the theoretical underpinnings are well established. The empirical evidence, however, remains mixed, as @arel2026quantitative have shown. We refer the reader to @thm-bolzano and @thm-ivt for the key convergence results.
+
+Integer rutrum ante eu lacus. Vestibulum libero nisl, porta vel, scelerisque eget, malesuada at, neque. Vivamus eget nibh. Etiam cursus leo vel metus. Nulla facilisi. Aenean nec eros. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Suspendisse sollicitudin velit sed leo. Ut pharetra augue nec augue. Nam elit magna, hendrerit sit amet, tincidunt ac, viverra sed, nulla. Donec pretium vulputate sapien.
+
+[^4]: Fourth footnote — Praesent vestibulum molestie lacus discussion.
+[^5]: Fifth footnote — Morbi nunc odio, gravida at, cursus nec elaboration.
+
+
+# Methods {#sec-methods}
+
+## Data Description
+
+Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec odio elit, dictum in, hendrerit sit amet, egestas sed, leo. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum.
+
+| Variable | Type | Description | N |
+|----------|------|-------------|---|
+| `outcome` | Binary | Primary endpoint | 10,000 |
+| `treatment` | Binary | Treatment assignment | 10,000 |
+| `age` | Continuous | Age in years | 9,842 |
+| `income` | Continuous | Annual income (USD) | 8,956 |
+| `education` | Ordinal | Education level (1--5) | 9,991 |
+| `region` | Categorical | Geographic region | 10,000 |
+| `duration` | Continuous | Enrollment duration (months) | 10,000 |
+| `baseline` | Continuous | Baseline score | 9,500 |
+
+: Summary of key variables in the analysis dataset. {#tbl-vars}
+
+Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus.
+
+## Statistical Models
+
+We consider three modeling approaches. The primary specification is a logistic regression:
+
+$$
+\log\left(\frac{p_i}{1-p_i}\right) = \beta_0 + \beta_1 \text{treatment}_i + \mathbf{X}_i'\boldsymbol{\gamma} + \varepsilon_i
+$$
+
+The secondary specification uses a probit link:
+
+$$
+\Phi^{-1}(p_i) = \alpha_0 + \alpha_1 \text{treatment}_i + \mathbf{X}_i'\boldsymbol{\delta}
+$$
+
+And the third approach is a linear probability model:
+
+$$
+Y_i = \mu_0 + \mu_1 \text{treatment}_i + \mathbf{X}_i'\boldsymbol{\lambda} + u_i
+$$
+
+where $Y_i \in \{0, 1\}$ is the binary outcome and $\mathbf{X}_i$ is a vector of covariates including age, income, and education.
+
+## Estimation Strategy
+
+::: {.callout-note}
+All models are estimated using maximum likelihood. Standard errors are clustered at the region level to account for within-region correlation.
+:::
+
+::: {.callout-warning}
+The linear probability model can produce fitted probabilities outside the $[0, 1]$ interval. We report it for comparison but prefer the logistic specification.
+:::
+
+::: {.callout-tip title="Reproducibility"}
+All code, data, and configuration files needed to reproduce these results are available in the project repository. See @sec-appendix-code for details.
+:::
+
+
+# Results {#sec-results}
+
+## Main Findings
+
+::: {.panel-tabset}
+
+### Logistic Regression
+
+The logistic regression yields an odds ratio of $\hat{\text{OR}} = 1.42$ (95% CI: 1.18--1.71, $p < 0.001$). This corresponds to a 42% increase in the odds of the outcome among treated individuals compared to controls.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce a quam. Etiam ut purus mattis mauris sodales aliquam. Curabitur nisi. Quisque malesuada placerat nisl. Nam ipsum risus, rutrum vitae, vestibulum eu, molestie vel, lacus. Sed augue ipsum, egestas nec, vestibulum et, malesuada adipiscing, dui.
+
+| Covariate | Estimate | SE | OR | 95% CI | p |
+|-----------|----------|------|------|----------|-------|
+| Treatment | 0.351 | 0.094 | 1.42 | 1.18--1.71 | <0.001 |
+| Age | 0.023 | 0.005 | 1.02 | 1.01--1.03 | <0.001 |
+| Income | 0.008 | 0.003 | 1.01 | 1.00--1.01 | 0.012 |
+| Education | 0.142 | 0.041 | 1.15 | 1.06--1.25 | 0.001 |
+
+### Probit Model
+
+The probit model produces consistent results. The marginal effect of treatment at the mean is $\Delta p = 0.083$ (SE = 0.022), closely matching the average marginal effect from the logistic specification.
+
+Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Morbi lacinia molestie dui. Praesent blandit dolor. Sed non quam. In vel mi sit amet augue congue elementum.
+
+| Covariate | Estimate | SE | ME at mean | 95% CI | p |
+|-----------|----------|------|------------|----------|-------|
+| Treatment | 0.214 | 0.057 | 0.083 | 0.041--0.125 | <0.001 |
+| Age | 0.014 | 0.003 | 0.005 | 0.002--0.009 | <0.001 |
+| Income | 0.005 | 0.002 | 0.002 | 0.000--0.004 | 0.015 |
+| Education | 0.087 | 0.025 | 0.034 | 0.015--0.052 | <0.001 |
+
+### Linear Probability
+
+The LPM estimates a treatment effect of $\hat{\beta}_1 = 0.079$ (SE = 0.021), which is comparable to the marginal effects from the nonlinear models. However, 3.2% of fitted values fall outside $[0, 1]$.
+
+Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.
+
+| Covariate | Estimate | SE | 95% CI | p |
+|-----------|----------|------|----------|-------|
+| Treatment | 0.079 | 0.021 | 0.038--0.120 | <0.001 |
+| Age | 0.005 | 0.001 | 0.003--0.008 | <0.001 |
+| Income | 0.002 | 0.001 | 0.000--0.004 | 0.018 |
+| Education | 0.032 | 0.009 | 0.014--0.050 | <0.001 |
+
+:::
+
+
+## Robustness Checks
+
+::: {.panel-tabset}
+
+### Subgroup Analysis
+
+We examine treatment effects across demographic subgroups. The effect is largest among younger participants (age < 35) and those with lower baseline scores[^6].
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus luctus urna sed urna ultricies ac tempor dui sagittis. In condimentum facilisis porta. Sed nec diam eu diam mattis viverra. Nulla fringilla, orci ac euismod semper, magna diam porttitor mauris, quis sollicitudin sapien justo in libero.
+
+Vestibulum facilisis, purus nec pulvinar iaculis, ligula mi congue nunc, vitae euismod ligula urna in dolor. Mauris sollicitudin fermentum libero. Praesent nonummy mi in odio. Nunc interdum lacus sit amet orci. Vestibulum rutrum, mi nec elementum vehicula, eros quam gravida nisl, id fringilla neque ante vel mi.
+
+### Sensitivity Analysis
+
+Results are robust to alternative specifications including: (i) excluding observations with missing covariates, (ii) using inverse probability weighting, and (iii) controlling for pre-treatment trends[^7].
+
+Aliquam posuere. Nulla facilisis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos hymenaeos. Cras accumsan lorem in dui. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem.
+
+Nulla consequat massa quis enim. Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt.
+
+### Placebo Tests
+
+We conduct placebo tests by randomly reassigning treatment status. Across 1,000 permutations, fewer than 5% produce treatment effects as large as our observed estimate, confirming that the result is unlikely due to chance[^8].
+
+Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet.
+
+:::
+
+[^6]: Sixth footnote — Subgroup differences are statistically significant at the 5% level.
+[^7]: Seventh footnote — See online appendix for full sensitivity tables.
+[^8]: Eighth footnote — Permutation p-value = 0.032.
+
+
+# Discussion {#sec-discussion}
+
+The results in @sec-results confirm the theoretical predictions from @sec-theory. In particular, the treatment effect is both statistically significant and economically meaningful, with an odds ratio of 1.42 as established in the logistic regression.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam pretium turpis et arcu. Duis arcu tortor, suscipit eget, imperdiet nec, imperdiet iaculis, ipsum. Sed aliquam ultrices mauris. Integer ante arcu, accumsan a, consectetuer eget, posuere ut, mauris. Praesent adipiscing.
+
+Phasellus ullamcorper ipsum rutrum nunc. Nunc nonummy metus. Vestibulum volutpat pretium libero. Cras id dui. Aenean ut eros et nisl sagittis vestibulum. Nullam nulla eros, ultricies sit amet, nonummy id, imperdiet feugiat, pede. Sed lectus. Donec mollis hendrerit risus. Phasellus nec sem in justo pellentesque facilisis[^9].
+
+Etiam imperdiet imperdiet orci. Nunc nec neque. Phasellus leo dolor, tempus non, auctor et, hendrerit quis, nisi. Curabitur ligula sapien, tincidunt non, euismod vitae, posuere imperdiet, leo. Maecenas malesuada. Praesent congue erat at massa. Sed cursus turpis vitae tortor.
+
+::: {.callout-important}
+The effect size reported here is an intent-to-treat estimate. The local average treatment effect (LATE) for compliers is expected to be larger. Researchers should exercise caution when generalizing beyond the study population.
+:::
+
+::: {.callout-caution title="Limitations"}
+Several limitations should be noted:
+
+1. The sample is drawn from a single region and may not generalize nationally
+2. Attrition was 12% over the study period, though attrition patterns are balanced across treatment and control
+3. Self-reported outcomes may be subject to social desirability bias
+4. The baseline period (2019--2021) overlaps with the COVID-19 pandemic, which may confound treatment effects
+:::
+
+The relationship between @thm-cauchy-schwarz and the empirical findings deserves further investigation. As @def-metric and @def-continuity formalize the relevant mathematical structures, future work should explore whether the continuity assumptions underlying our models are satisfied in practice. We note that @exm-sqrt provides a cautionary example.
+
+[^9]: Ninth footnote — The facilisis result follows from the general theory in @sec-theory.
+
+
+# Extended Analysis {#sec-extended}
+
+## Heterogeneous Effects
+
+Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Proin pharetra nonummy pede. Mauris et orci. Aenean nec lorem. In porttitor. Donec laoreet nonummy augue. Suspendisse dui purus, scelerisque at, vulputate vitae, pretium mattis, nunc.
+
+Mauris eget neque at sem venenatis eleifend. Ut nonummy. Fusce aliquet pede non pede. Suspendisse dapibus lorem pellentesque magna. Integer nulla. Donec blandit feugiat ligula. Donec hendrerit, felis et imperdiet euismod, purus ipsum pretium metus, in lacinia nulla nisl eget sapien[^10].
+
+Donec ut est in lectus consequat consequat. Etiam eget dui. Aliquam erat volutpat. Sed at lorem in nunc porta tristique. Proin nec augue. Quisque aliquam tempor magna. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
+
+## Temporal Dynamics
+
+Nunc feugiat mi a tellus consequat imperdiet. Vestibulum sapien. Proin quam. Etiam ultrices. Suspendisse in justo eu magna luctus suscipit. Sed lectus. Integer euismod lacus luctus magna[^11].
+
+Quisque cursus, metus vitae pharetra auctor, sem massa mattis sem, at interdum magna augue eget diam. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Morbi lacinia molestie dui. Praesent blandit dolor. Sed non quam. In vel mi sit amet augue congue elementum.
+
+Morbi in ipsum sit amet pede facilisis laoreet. Donec lacus nunc, viverra nec, blandit vel, egestas et, augue. Vestibulum tincidunt malesuada tellus. Ut ultrices ultrices enim. Curabitur sit amet mauris. Morbi in dui quis est pulvinar ullamcorper. Nulla facilisi.
+
+Integer lacinia sollicitudin massa. Cras metus. Sed aliquet risus a tortor. Integer id quam. Morbi mi. Quisque nisl felis, venenatis tristique, dignissim in, ultrices sit amet, augue. Proin sodales libero eget ante.
+
+[^10]: Tenth footnote — See supplementary materials for interaction plots.
+[^11]: Eleventh footnote — Temporal analysis uses quarterly aggregation.
+
+## Mechanism Exploration
+
+::: {.panel-tabset}
+
+### Direct Effects
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut purus elit, vestibulum ut, placerat ac, adipiscing vitae, felis. Curabitur dictum gravida mauris. Nam arcu libero, nonummy eget, consectetuer id, vulputate a, magna. Donec vehicula augue eu neque.
+
+Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Ut non enim eleifend felis pretium feugiat. Vivamus quis mi. Phasellus a est. Phasellus magna. In hac habitasse platea dictumst.
+
+### Indirect Effects
+
+Curabitur at lacus ac velit ornare lobortis. Curabitur a felis in nunc fringilla tristique. Morbi mattis ullamcorper velit. Phasellus gravida semper nisi. Nullam vel sem. Pellentesque libero tortor, tincidunt et, tincidunt eget, semper nec, quam.
+
+Sed hendrerit. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh.
+
+### Mediation
+
+Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci eget eros faucibus tincidunt.
+
+In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus.
+
+:::
+
+
+# Mathematical Supplement {#sec-math}
+
+## Key Inequalities
+
+Building on @thm-cauchy-schwarz, we present additional results. The AM-GM inequality states:
+
+$$
+\frac{a_1 + a_2 + \cdots + a_n}{n} \geq \sqrt[n]{a_1 \cdot a_2 \cdots a_n}
+$$
+
+for non-negative reals $a_1, \ldots, a_n$. Jensen's inequality extends this:
+
+$$
+f\left(\sum_{i=1}^n \lambda_i x_i\right) \leq \sum_{i=1}^n \lambda_i f(x_i)
+$$
+
+for convex $f$ and weights $\lambda_i \geq 0$ with $\sum \lambda_i = 1$.
+
+::: {.theorem #thm-holder}
+For $p, q > 1$ with $\frac{1}{p} + \frac{1}{q} = 1$ and sequences $(a_i), (b_i) \geq 0$,
+$$
+\sum_{i=1}^n a_i b_i \leq \left(\sum_{i=1}^n a_i^p\right)^{1/p} \left(\sum_{i=1}^n b_i^q\right)^{1/q}.
+$$
+:::
+
+::: {.corollary #cor-cs-special}
+Setting $p = q = 2$ in @thm-holder recovers @thm-cauchy-schwarz for finite-dimensional spaces.
+:::
+
+::: {.lemma #lem-young}
+For $a, b \geq 0$ and $p, q > 1$ with $\frac{1}{p} + \frac{1}{q} = 1$,
+$$
+ab \leq \frac{a^p}{p} + \frac{b^q}{q}.
+$$
+:::
+
+::: {.conjecture #cnj-goldbach}
+Every even integer greater than 2 can be expressed as the sum of two primes.
+:::
+
+## Convergence Theory
+
+::: {.definition #def-convergence}
+A sequence $(x_n)$ in a metric space $(X, d)$ **converges** to $x \in X$ if for every $\varepsilon > 0$ there exists $N \in \mathbb{N}$ such that $n \geq N$ implies $d(x_n, x) < \varepsilon$.
+:::
+
+::: {.theorem #thm-monotone}
+Every bounded, monotone sequence of real numbers converges.
+:::
+
+::: {.exercise #exr-bounded}
+Show that convergent sequences in a metric space are bounded.
+:::
+
+::: {.solution}
+Let $(x_n) \to x$. Choose $\varepsilon = 1$. Then there exists $N$ such that $d(x_n, x) < 1$ for all $n \geq N$. Set $M = \max\{d(x_1, x), \ldots, d(x_{N-1}, x), 1\}$. Then $d(x_n, x) \leq M$ for all $n$, so the sequence is bounded.
+:::
+
+The relationship between @thm-monotone and @thm-bolzano is fundamental: every bounded sequence has a monotone subsequence (by the "peak" argument), and every monotone bounded sequence converges. Together they yield Bolzano–Weierstrass.
+
+
+# Conclusion {#sec-conclusion}
+
+This document has demonstrated the interplay between @sec-theory and @sec-results. The treatment effect, estimated at OR = 1.42 via logistic regression, is robust across specifications (@sec-results). The mathematical foundations from @sec-math — particularly @thm-holder and @lem-young — provide the analytical scaffolding for asymptotic inference.
+
+As @arel2026quantitative emphasize, adequate statistical power remains a pressing concern. Our sample of $n = 10{,}000$ provides 92% power to detect effects of the magnitude observed, well above conventional thresholds[-@arel2026quantitative].
+
+Future research should address the limitations discussed in @sec-discussion and extend the temporal analysis from @sec-extended. In particular, the mechanisms identified in the mediation analysis warrant further investigation using experimental designs with stronger identification strategies[^12].
+
+[^12]: Twelfth footnote — Forthcoming experimental protocols are registered at osf.io/example.
+
+
+# Appendix: Code {#sec-appendix-code}
+
+## `R`
+
+```r
+# Logistic regression specification
+model_logit <- glm(
+  outcome ~ treatment + age + income + education,
+  data = df,
+  family = binomial(link = "logit")
+)
+
+# Probit specification
+model_probit <- glm(
+  outcome ~ treatment + age + income + education,
+  data = df,
+  family = binomial(link = "probit")
+)
+
+# Linear probability model
+model_lpm <- lm(
+  outcome ~ treatment + age + income + education,
+  data = df
+)
+
+# Clustered standard errors
+library(sandwich)
+library(lmtest)
+coeftest(model_logit, vcov = vcovCL(model_logit, cluster = df$region))
+```
+
+## `Python`
+
+```python
+import statsmodels.api as sm
+import numpy as np
+
+# Logistic regression
+X = df[["treatment", "age", "income", "education"]]
+X = sm.add_constant(X)
+y = df["outcome"]
+
+model = sm.Logit(y, X).fit(cov_type="cluster", cov_kwds={"groups": df["region"]})
+print(model.summary())
+
+# Marginal effects
+mfx = model.get_margeff()
+print(mfx.summary())
+```
+
+> All analyses were conducted in R 4.4.2 and Python 3.12. Results were rendered with calepin.
+
+::: {.callout-note title="Data Availability" collapse="true"}
+The dataset used in this analysis is available upon request from the corresponding author. A synthetic version of the data, suitable for replication of the statistical methods, is included in the repository under `data/synthetic.csv`.
+
+Fusce mauris. Vestibulum luctus nibh at lectus. Sed bibendum, nulla a faucibus semper, leo velit ultricies tellus, ac venenatis arcu wisi vel nisl. Vestibulum diam. Aliquam pellentesque, augue quis sagittis posuere, turpis lacus congue quam, in hendrerit risus eros eget felis.
+:::

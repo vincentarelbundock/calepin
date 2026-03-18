@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""A simple calepin filter that renders a collapsible accordion."""
+import json, sys
+
+data = json.load(sys.stdin)
+title = data.get("title", "Details")
+content = data["content"]
+fmt = data["format"]
+
+if fmt == "html":
+    print(f'<details><summary>{title}</summary>{content}</details>')
+elif fmt == "tex":
+    print(f'\\paragraph{{{title}}} {content}')
+else:
+    print(f'**{title}**\n\n{content}')

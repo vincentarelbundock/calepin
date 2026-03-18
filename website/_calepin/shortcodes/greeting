@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""A simple shortcode that generates a greeting."""
+import json, sys
+
+data = json.load(sys.stdin)
+name = data["args"][0] if data["args"] else "World"
+fmt = data["format"]
+
+if fmt == "html":
+    print(f'<strong>Hello, {name}!</strong>')
+elif fmt == "tex":
+    print(f'\\textbf{{Hello, {name}!}}')
+elif fmt == "typ":
+    print(f'*Hello, {name}!*')
+else:
+    print(f'**Hello, {name}!**')

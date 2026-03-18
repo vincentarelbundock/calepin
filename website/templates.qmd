@@ -1,0 +1,159 @@
+---
+title: Templates
+---
+
+Every rendered element---code blocks, figures, fenced divs, bracketed spans---passes through a **template** before becoming output. Templates are files with `{{variable}}` placeholders that control the markup for a single element.
+
+All customization files live under `_calepin/` (project) or `~/.config/calepin/` (user). *Calepin* checks project first, then user, then built-in:
+
+```
+_calepin/
+  elements/       # templates for divs, spans, code blocks, figures
+  templates/      # page templates (calepin.html, calepin.css, etc.)
+```
+
+
+# Element templates
+
+A template is a file with `{{variable}}` placeholders. For example, the built-in `div.html`:
+
+```html
+<div class="{{classes}}"{{id-attr}}>
+{{children}}
+</div>
+```
+
+Any `{{variable}}` not defined is replaced with an empty string. Templates have no conditionals---all logic is computed in Rust and injected as pre-formatted variables.
+
+## Naming and resolution
+
+Templates are named `{element}.{format}` where format is `html`, `tex`, `typ`, or `md`:
+
+- `callout-note.html` --- HTML template for `::: {.callout-note}`
+- `theorem.tex` --- LaTeX template for `::: {.theorem}`
+- `mystyle.html` --- HTML template for `[text]{.mystyle}`
+
+Resolution order:
+
+1. `_calepin/elements/{name}.{ext}` (project override)
+2. `~/.config/calepin/elements/{name}.{ext}` (user default)
+3. Built-in (compiled into the binary)
+
+## Div variables
+
+Fenced divs (`::: {.classname #my-id key="value"} ... :::`) receive:
+
+| Variable | Description |
+|----------|-------------|
+| `{{children}}` | Recursively rendered content |
+| `{{classes}}` | Space-separated class list |
+| `{{id}}` | Element id (empty if none) |
+| `{{id-attr}}` | ` id="..."` attribute string (empty if none) |
+| `{{label}}` | Format-specific label: `\label{id}` (LaTeX), `<id>` (Typst) |
+| `{{number}}` | Auto-incremented counter (theorem environments only) |
+| *user attrs* | Any `key="value"` pairs from the div header |
+
+Template lookup tries each class in order, then falls back to `div.{ext}`.
+
+## Span variables
+
+Bracketed spans (`[text]{.myclass key="val"}`) receive:
+
+| Variable | Description |
+|----------|-------------|
+| `{{content}}` | Text inside the brackets |
+| `{{class}}` | First class |
+| `{{classes}}` | Space-separated class list |
+| `{{id}}` / `{{id-attr}}` | Same as divs |
+| *user attrs* | Any key-value pairs |
+
+If no template matches, *Calepin* falls back to `<span>` (HTML), `\text{}` (LaTeX), or `[]` (Typst).
+
+## Code block variables
+
+| Variable | Description |
+|----------|-------------|
+| `{{code}}` | Raw source code |
+| `{{lang}}` | Language identifier |
+| `{{label}}` | Chunk label |
+| `{{highlighted}}` | Syntax-highlighted code |
+
+Templates: `code-source`, `code-output` (`{{output}}`), `code-warning`, `code-message`, `code-error`.
+
+## Figure variables
+
+See [Figures](figures.qmd#figure-templates) for figure template variables.
+
+## Custom template example
+
+The file `_calepin/elements/highlight-box.html`:
+
+```html
+<div class="highlight-box" style="background: {{color}};
+     border-left: 4px solid #333; padding: 0.8em 1em; margin: 1em 0;"{{id-attr}}>
+<strong>{{title}}</strong>
+{{children}}
+</div>
+```
+
+Used as:
+
+    ::: {.highlight-box title="Key takeaway" color="#e8f4f8"}
+    Templates are the simplest way to customize *Calepin*.
+    :::
+
+::: {.highlight-box title="Key takeaway" color="#e8f4f8"}
+Templates are the simplest way to customize *Calepin*. Drop a file in `_calepin/elements/` and any fenced div with that class will use it.
+:::
+
+::: {.highlight-box title="Different colors work too" color="#fef3c7"}
+Each instance can pass different key-value attributes. Here `color` is yellow instead of blue.
+:::
+
+
+# Page templates
+
+The page template wraps the entire rendered body in a document shell---the `<html>`, `<head>`, CSS, JavaScript, etc. To customize the page layout, drop a file in `_calepin/templates/`:
+
+- `_calepin/templates/calepin.html` --- HTML page wrapper
+- `_calepin/templates/calepin.css` --- default stylesheet
+- `_calepin/templates/calepin.latex` --- LaTeX document wrapper
+- `_calepin/templates/calepin.typ` --- Typst document wrapper
+
+Same resolution: project → user (`~/.config/calepin/templates/`) → built-in.
+
+## Page template variables
+
+| Variable | Description |
+|----------|-------------|
+| `{{body}}` | Rendered document content |
+| `{{plain-title}}` | Title as plain text |
+| `{{title}}` / `{{author}}` / `{{date}}` | Metadata fields |
+| `{{title-block}}` | Pre-rendered title markup |
+| `{{subtitle-block}}` / `{{author-block}}` / `{{date-block}}` | Pre-rendered metadata blocks |
+| `{{abstract-block}}` / `{{keywords-block}}` | Pre-rendered if present |
+| `{{appendix-block}}` | License, citation, copyright, funding |
+| `{{css}}` | Stylesheet tags (HTML) |
+| `{{header-includes}}` | Raw content for `<head>` |
+| `{{include-before}}` / `{{include-after}}` | Content before/after body |
+| `{{preamble}}` | Extra preamble content |
+| `{{js}}` | JavaScript block |
+
+For example, to create a minimal HTML page:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{plain-title}}</title>
+{{css}}
+</head>
+<body>
+<h1>{{title}}</h1>
+{{body}}
+</body>
+</html>
+```
+
+Save as `_calepin/templates/calepin.html` and all HTML output in your project will use it. This is how you create blog layouts, slide shells, dashboard wrappers, or any other HTML variation without writing Rust.

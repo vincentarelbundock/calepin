@@ -1,0 +1,140 @@
+---
+title: Quick Start
+---
+
+# Installation
+
+Install *Calepin* from source using Cargo:
+
+```bash
+git clone https://github.com/vincentarelbundock/calepin
+cd calepin
+make install
+```
+
+This builds the release binary, installs it to `~/.cargo/bin/`, and sets up shell completions.
+
+*Calepin* requires R to be installed on your system for `{r}` code chunks. Python support is optional — rebuild with `cargo build --features python` to enable `{python}` chunks.
+
+Check your installation:
+
+```bash
+calepin -v
+```
+
+
+# Basic usage
+
+Render a `.qmd` file to HTML (the default format):
+
+```bash
+calepin document.qmd
+```
+
+This produces `document.html` in the same directory.
+
+
+# Output formats
+
+*Calepin* supports four output formats: `html`, `latex`, `typst`, and `markdown`.
+
+```bash
+calepin document.qmd --format latex    # → document.tex
+calepin document.qmd --format typst    # → document.typ
+calepin document.qmd --format markdown # → document.md
+```
+
+You can also set the format in the YAML front matter:
+
+```yaml
+---
+format: latex
+---
+```
+
+Or let *Calepin* infer it from the output file extension with `-o`:
+
+```bash
+calepin document.qmd -o paper.tex
+```
+
+
+# PDF compilation
+
+The `--compile` flag renders the document and then compiles the output to PDF. It uses [tectonic](https://tectonic-typesetting.github.io/) for LaTeX and [typst](https://typst.app/) for Typst.
+
+```bash
+calepin document.qmd --format latex --compile  # → document.pdf (via tectonic)
+calepin document.qmd --format typst --compile  # → document.pdf (via typst)
+```
+
+
+# Live preview
+
+The `--preview` flag starts a local server, opens your browser, and live-reloads whenever you save the file:
+
+```bash
+calepin document.qmd --preview
+```
+
+This serves the rendered HTML at `http://localhost:3456` by default. Use `--port` to change the port:
+
+```bash
+calepin document.qmd --preview --port 8080
+```
+
+For LaTeX and Typst, preview compiles to PDF and reloads the PDF viewer on each save.
+
+Press `Ctrl+C` to stop the preview server.
+
+
+# Metadata overrides
+
+The `--set` flag overrides YAML front matter values from the command line. This is useful for toggling options without editing the file:
+
+```bash
+calepin document.qmd --set toc=true
+calepin document.qmd --set title="Draft" toc=false number-sections=true
+```
+
+Multiple key-value pairs can follow a single `--set`:
+
+```bash
+calepin document.qmd --set bibliography=refs.bib fig-width=6
+```
+
+
+# Quiet mode
+
+Suppress progress messages:
+
+```bash
+calepin document.qmd -q
+```
+
+
+# Shell completions
+
+*Calepin* can generate shell completions for tab-completion of commands and options:
+
+```bash
+calepin --completions bash > ~/.bash_completion.d/calepin
+calepin --completions zsh > ~/.zfunc/_calepin
+calepin --completions fish > ~/.config/fish/completions/calepin.fish
+```
+
+Restart your shell or source the file to activate completions.
+
+
+# Putting it all together
+
+```bash
+# Render to HTML with table of contents
+calepin paper.qmd --set toc=true
+
+# Render to PDF via Typst, overriding the title
+calepin paper.qmd --format typst --compile --set title="Final Version"
+
+# Live preview while writing
+calepin paper.qmd --preview
+```

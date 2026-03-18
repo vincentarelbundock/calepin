@@ -1,0 +1,6 @@
+\begin{{{fig-env}}}{{fig-pos}}
+{{align-style}}
+{{image}}
+\caption{{short-caption}}{{{caption}}}
+\label{fig-{{label}}}
+\end{{{fig-env}}}

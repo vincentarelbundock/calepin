@@ -1,0 +1,55 @@
+[package]
+name = "calepin"
+version = "0.0.1-alpha.2"
+edition = "2021"
+description = "A Rust CLI for rendering .qmd files to HTML, LaTeX, Typst, or Markdown"
+license = "MIT"
+repository = "https://github.com/vincentarelbundock/calepin"
+exclude = []
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+
+
+# Markdown rendering
+comrak = "0.51"
+
+# YAML front matter
+serde = { version = "1", features = ["derive"] }
+saphyr = "0.0"
+
+# Syntax highlighting
+syntect = "5"
+
+# Regex for chunk parsing
+regex = "1"
+
+# Temp files for R code/plots
+tempfile = "3"
+
+
+# Base64 encoding (for imgur image upload)
+base64 = "0.22"
+
+# JSON parsing (for imgur API response)
+serde_json = "1"
+
+# Bibliography (CSL citation processing, BibTeX parsing)
+hayagriva = { version = "0.9", features = ["biblatex"] }
+
+# Error handling
+anyhow = "1"
+bincode = { version = "2", features = ["serde"] }
+
+# WASM plugin system
+extism = "1"
+
+# Preview server
+notify = "8"
+tiny_http = "0.12"
+open = "5"
+ctrlc = "3"
+indicatif = "0.18"
+xxhash-rust = { version = "0.8.15", features = ["xxh3"] }

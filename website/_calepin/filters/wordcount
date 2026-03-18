@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""A simple calepin filter that prepends a word count to div content."""
+import json, sys, re
+
+data = json.load(sys.stdin)
+content = data["content"]
+fmt = data["format"]
+
+# Strip HTML tags for counting
+plain = re.sub(r"<[^>]+>", "", content)
+count = len(plain.split())
+
+if fmt == "html":
+    badge = f'<p style="font-size: 0.85em; color: #666; margin: 0 0 0.5em;">({count} words)</p>'
+    print(f'<div class="wordcount">{badge}\n{content}</div>')
+elif fmt == "tex":
+    print(f"\\par\\textit{{({count} words)}}\\par {content}")
+else:
+    print(f"*({count} words)*\n\n{content}")

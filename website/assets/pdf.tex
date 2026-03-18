@@ -1,0 +1,490 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,hyperref}
+\usepackage{titling}
+
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage[normalem]{ulem}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+
+%%%% inspired by classicthesis.sty
+\usepackage{newpxtext,newpxmath}
+\usepackage{microtype}
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\relax}{\large\scshape\MakeUppercase{\chaptertitlename}~\thechapter}{0pt}{\large\scshape}
+\titleformat{\section}{\large\scshape}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\itshape}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\small\normalfont}{\thesubsubsection}{1em}{}
+
+
+% Source code box (light gray background, left accent bar)
+\newtcolorbox{srccode}{
+  enhanced, breakable,
+  colback=gray!5, colframe=gray!40,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  boxrule=0pt, leftrule=3pt,
+  arc=0pt, outer arc=0pt
+}
+
+% Output box (white background, thin border)
+\newtcolorbox{outcode}{
+  enhanced, breakable,
+  colback=white, colframe=gray!50,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  boxrule=0.5pt,
+  arc=0pt, outer arc=0pt,
+  fontupper=\small
+}
+
+\title{\emph{Calepin} Tutorial (PDF)}
+
+\author{Vincent Arel-Bundock\textsuperscript{1}\textsuperscript{*} \and Norah Jones\textsuperscript{2,3}}
+\newcommand{\affiliationblock}{\begin{center}\small \textsuperscript{1} Department of Political Science, Université de Montréal, Montreal, Canada \\
+\textsuperscript{2} Machine Learning, Carnegie Mellon University, Pittsburgh, PA, USA \\
+\textsuperscript{3} University of Chicago, Chicago, IL, USA\end{center}}
+\date{2026-03-19}
+\begin{document}
+\maketitle
+\ifdefined\affiliationblock\affiliationblock\fi
+
+
+\begin{abstract}
+This document renders the \emph{Calepin} tutorial to PDF via LaTeX. It demonstrates
+scholarly front matter (authors, affiliations, ORCID), the appendix, and the
+\texttt{include} shortcode for pulling in content from another file.
+\end{abstract}
+
+
+
+\definecolor{hl1}{RGB}{50,50,50}
+\definecolor{hl2}{RGB}{167,29,93}
+\definecolor{hl3}{RGB}{0,134,179}
+\definecolor{hl4}{RGB}{98,163,92}
+\definecolor{hl5}{RGB}{24,54,145}
+This page reviews some of the basics of Quarto and Markdown syntax supported by \emph{Calepin}. It covers document structure, code chunks, figures, math, cross-references, citations, and other features that work out of the box.
+
+\section*{Getting started}
+\label{getting-started}
+
+\emph{Calepin} renders \texttt{.qmd} documents to HTML, LaTeX, Typst, and Markdown. It executes R code chunks, captures output and plots, resolves citations and cross-references, and wraps everything in a template.
+
+To render this tutorial:
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{calepin tutorial.qmd}
+\end{Verbatim}
+\end{srccode}
+
+\section*{Markdown basics}
+\label{markdown-basics}
+
+\emph{Calepin} supports standard CommonMark and GitHub Flavored Markdown.
+
+Lorem ipsum dolor sit amet, \emph{consectetur} adipiscing elit.
+Sed do \textbf{eiusmod tempor} incididunt ut labore.
+
+Ordered list:
+
+\begin{enumerate}
+\item First item
+
+
+\item Second item
+
+
+\item Third item
+
+
+\end{enumerate}
+
+Unordered list:
+
+\begin{itemize}
+\item Alpha
+
+
+\item Beta
+
+
+\item Gamma
+
+
+\end{itemize}
+
+A \href{https://example.com}{hyperlink} and some \texttt{inline code}.
+
+\begin{quote}
+A blockquote: Ut enim ad minim veniam, quis nostrud
+exercitation ullamco laboris.
+
+\end{quote}
+
+Text with a footnote\footnotemark[1] and another\footnotemark[2].
+
+Superscript: E = mc\textsuperscript{2}. Strikethrough: \sout{deleted}.
+
+En dash: -- and em dash: ---
+
+\section*{Code chunks}
+\label{code-chunks}
+
+Code chunks are fenced with triple backticks and a \texttt{\{r\}} header. Options go inside the chunk as \texttt{\#\textbar{}} pipe comments.
+
+\footnotetext[1]{This is the first footnote.
+
+}\footnotetext[2]{This is the second footnote.
+
+}
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{x }\textcolor{hl2}{<-}\textcolor{hl1}{ }\textcolor{hl3}{1}\textcolor{hl2}{:}\textcolor{hl3}{10}
+\textcolor{hl4}{mean}\textcolor{hl1}{(x)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+[1] 5.5
+\end{verbatim}
+\end{outcode}
+
+\section*{Inline code}
+\label{inline-code}
+
+R expressions can be evaluated inline. The mean of 1:10 is 5.5 and pi is approximately 3.14.
+
+\section*{Figures}
+\label{figures}
+
+Code chunks that produce plots automatically generate figures. Use \texttt{fig-cap} for a caption and a label for cross-referencing.
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl4}{plot}\textcolor{hl1}{(}
+\textcolor{hl1}{    }\textcolor{hl3}{1}\textcolor{hl2}{:}\textcolor{hl3}{10}\textcolor{hl1}{,}
+\textcolor{hl1}{    (}\textcolor{hl3}{1}\textcolor{hl2}{:}\textcolor{hl3}{10}\textcolor{hl1}{)}\textcolor{hl2}{^}\textcolor{hl3}{2}\textcolor{hl1}{,}
+\textcolor{hl1}{    main }\textcolor{hl2}{=}\textcolor{hl1}{ }\textcolor{hl5}{"Square Numbers"}\textcolor{hl1}{,}
+\textcolor{hl1}{    xlab }\textcolor{hl2}{=}\textcolor{hl1}{ }\textcolor{hl5}{"x"}\textcolor{hl1}{,}
+\textcolor{hl1}{    ylab }\textcolor{hl2}{=}\textcolor{hl1}{ }\textcolor{hl5}{"x^2"}
+\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.60\textwidth]{pdf_files/scatter-1.png}
+\caption{A simple scatter plot}
+\label{fig-scatter}
+\end{figure}
+
+\section*{Figure layouts}
+\label{figure-layouts}
+
+Figures can be arranged in grids using \texttt{layout-ncol}. The following example places three plots side by side with individual subcaptions and an overall caption.
+
+
+
+\begin{figure}
+\centering
+\begin{minipage}[t]{0.320\textwidth}
+\centering
+\includegraphics[width=\textwidth]{pdf_files/line-1.png}
+\caption{Linear}
+\label{fig-line}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.320\textwidth}
+\centering
+\includegraphics[width=\textwidth]{pdf_files/quad-1.png}
+\caption{Quadratic}
+\label{fig-quad}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.320\textwidth}
+\centering
+\includegraphics[width=\textwidth]{pdf_files/log-1.png}
+\caption{Logarithmic}
+\label{fig-log}
+\end{minipage}
+\caption{Three growth patterns compared.}
+\label{fig-panels}
+\end{figure}
+
+See \hyperref[fig-panels]{Figure 5} for the result. The \texttt{layout} attribute supports custom grids with relative widths (e.g., \texttt{layout=\textquotedbl{}{[}{[}1,1{]},{[}1{]}{]}\textquotedbl{}}) and negative values for spacing gaps.
+
+\section*{Cross-references}
+\label{cross-references}
+
+\emph{Calepin} resolves references to figures, sections, and theorem environments.
+
+\begin{itemize}
+\item \hyperref[fig-scatter]{Figure 1} renders as a linked reference
+
+
+\item Section \ref{sec-figures} links to the Figures section
+
+
+\item \hyperref[fig-scatter]{1} suppresses the type prefix
+
+
+\end{itemize}
+
+Sections get automatic ids from their heading text.
+
+\section*{Math}
+\label{math}
+
+We can represent dollar amounts using a single dollar sign like 24\$ or enclose math between two dollar signs: $a^2 + b^2 = c^2$.
+
+Display math uses double dollars:
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$
+
+\subsection*{Theorem environments}
+\label{theorem-environments}
+
+Fenced divs with theorem-type classes get automatic numbering and can be cross-referenced.
+
+
+
+\par\medskip\noindent\textbf{Theorem 1.} \label{thm-pythagoras} \itshape{} In a right triangle, the square of the hypotenuse equals the sum of the squares of the other two sides: $a^2 + b^2 = c^2$.
+
+\upshape\medskip
+
+\par\medskip\noindent\textit{Proof.} Let a right triangle have legs $a$, $b$ and hypotenuse $c$. By constructing squares on each side and comparing areas, we obtain $a^2 + b^2 = c^2$.
+
+ \hfill$\square$\medskip
+
+By \hyperref[thm-pythagoras]{Theorem 1}, the relationship is fundamental to Euclidean geometry.
+
+The supported theorem types are: \texttt{theorem}, \texttt{lemma}, \texttt{corollary}, \texttt{proposition}, \texttt{conjecture}, \texttt{definition}, \texttt{example}, \texttt{exercise}, \texttt{solution}, \texttt{remark}, and \texttt{algorithm}. Each type maintains its own counter.
+
+\section*{Callouts}
+\label{callouts}
+
+Callout divs highlight important information. Five types are available: \texttt{callout-note}, \texttt{callout-warning}, \texttt{callout-tip}, \texttt{callout-caution}, and \texttt{callout-important}. They can be nested.
+
+
+
+\begin{tcolorbox}[enhanced, breakable, colback=blue!5, colframe=blue!40,
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+  title=Note, fonttitle=\bfseries]
+This is a note callout. Use it for supplementary information.
+
+
+
+\begin{tcolorbox}[enhanced, breakable, colback=yellow!10, colframe=yellow!60!black,
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+  title=Warning, fonttitle=\bfseries]
+Callouts can be nested. This warning appears inside the note above.
+
+
+\end{tcolorbox}
+\end{tcolorbox}
+
+\section*{Conditional content}
+\label{conditional-content}
+
+Fenced divs with \texttt{.content-visible} or \texttt{.content-hidden} classes control which content appears in each output format.
+
+
+
+Format aliases are supported: \texttt{latex} and \texttt{pdf} both match LaTeX output, \texttt{markdown} and \texttt{md} both match Markdown.
+
+\section*{Raw blocks}
+\label{raw-blocks}
+
+Raw blocks inject format-specific markup that passes through verbatim when the output format matches and is dropped otherwise.
+
+
+
+\section*{Shortcodes}
+\label{shortcodes}
+
+Shortcodes are inline directives written as \texttt{\{\{\textless{} name args \textgreater{}\}\}}. They are processed during rendering and replaced with format-aware output.
+
+\subsection*{pagebreak}
+\label{pagebreak}
+
+Insert a native page break. Produces format-appropriate output: \texttt{\textless{}div style=\textquotedbl{}page-break-after: always;\textquotedbl{}\textgreater{}} in HTML, \texttt{\textbackslash{}newpage\{\}} in LaTeX, \texttt{\#pagebreak()} in Typst.
+
+Page one content.
+
+
+
+Page two content.
+
+\subsection*{meta}
+\label{meta}
+
+Print a value from the document's YAML front matter.
+
+The title of this document is ``\emph{Calepin} Tutorial (PDF)''.
+
+This works with standard fields (\texttt{title}, \texttt{subtitle}, \texttt{author}, \texttt{date}, \texttt{abstract}) and custom metadata.
+
+\subsection*{env}
+\label{env}
+
+Print a system environment variable.
+
+The \texttt{SHELL} environment variable on the local machine is: /bin/zsh.
+
+If the variable is not set, the shortcode produces an empty string.
+
+\section*{Citations}
+\label{citations}
+
+\emph{Calepin} processes citations from BibTeX files listed in the YAML front matter under \texttt{bibliography}. Use \texttt{@key} for author-year citations and \texttt{{[}-@key{]}} for year-only.
+
+As Arel-Bundock et al. (2026) show, political science research is underpowered. This finding has important implications 2026.
+
+\section*{Tabsets}
+\label{tabsets}
+
+Tabsets organize content into switchable tabs. In HTML, readers click to switch tabs. In LaTeX and Typst, tabs render as regular sections.
+
+
+
+\subsection*{R}
+\label{r}
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{x }\textcolor{hl2}{<-}\textcolor{hl1}{ }\textcolor{hl4}{c}\textcolor{hl1}{(}\textcolor{hl3}{1}\textcolor{hl1}{, }\textcolor{hl3}{2}\textcolor{hl1}{, }\textcolor{hl3}{3}\textcolor{hl1}{)}
+\textcolor{hl4}{mean}\textcolor{hl1}{(x)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+[1] 2
+\end{verbatim}
+\end{outcode}
+
+\subsection*{Python}
+\label{python}
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{x }\textcolor{hl2}{=}\textcolor{hl1}{ [}\textcolor{hl3}{1}\textcolor{hl1}{, }\textcolor{hl3}{2}\textcolor{hl1}{, }\textcolor{hl3}{3}\textcolor{hl1}{]}
+\textcolor{hl4}{sum}\textcolor{hl1}{(x) }\textcolor{hl2}{/}\textcolor{hl1}{ }\textcolor{hl4}{len}\textcolor{hl1}{(x)}
+\end{Verbatim}
+\end{srccode}
+
+\subsection*{Julia}
+\label{julia}
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{x = [1, 2, 3]
+}
+\textcolor{hl1}{sum(x) / length(x)}
+\end{Verbatim}
+\end{srccode}
+
+Tabsets with the same \texttt{group} attribute switch together:
+
+
+
+\subsection*{R}
+\label{r}
+
+R version of example 2.
+
+\subsection*{Python}
+\label{python}
+
+Python version of example 2.
+
+
+
+\subsection*{R}
+\label{r}
+
+R content stays synced with the tabset above.
+
+\subsection*{Python}
+\label{python}
+
+Python content stays synced too.
+
+
+
+\section*{Line blocks}
+\label{line-blocks}
+
+Line blocks preserve line breaks and leading spaces. Prefix each line with \texttt{\textbar{}}.
+
+The limerick packs laughs anatomical\\
+Into space that is quite economical.\\
+~~~But the good ones I've seen\\
+~~~So seldom are clean\\
+And the clean ones so seldom are comical.
+
+\section*{Footnotes}
+\label{footnotes}
+
+There are two ways to create footnotes. Named references use \texttt{{[}\^{}label{]}} at the point of reference and \texttt{{[}\^{}label{]}: text} for the definition elsewhere in the document. Inline footnotes use \texttt{\^{}{[}text{]}} directly without a separate definition.
+
+Named footnote\footnotemark[1] and inline footnote\footnotemark[2].
+
+\section*{Numbered sections}
+\label{numbered-sections}
+
+Add \texttt{number-sections: true} to the YAML front matter to automatically number all section headings.
+
+\section*{The \texttt{.hidden} div}
+\label{the-hidden-div}
+
+The \texttt{.hidden} div executes its content but produces no output.
+
+\footnotetext[1]{This is defined separately.
+
+}\footnotetext[2]{This is defined right here.
+
+}
+
+The value computed silently: \_\_CALEPIN\_186d\_189e69e21271a060\_\_\_ERROR:object `secret' not found.
+
+
+
+\section*{References}
+\label{references}
+
+Vincent Arel-Bundock, Ryan C Briggs, Hristos Doucouliagos, Marco M Aviña, Tom D Stanley. 2026. Quantitative political science research is greatly underpowered. The Journal of politics
+
+
+
+\appendix
+\section*{Appendix}
+\subsection*{Reuse}
+Creative Commons Attribution 4.0 (\url{https://creativecommons.org/licenses/by/4.0/})
+\subsection*{Citation}
+Vincent Arel-Bundock, Norah Jones. "*Calepin* Tutorial (PDF)". \emph{Journal of Reproducible Research}. 1(1). (2026-03). DOI: \url{https://doi.org/10.1234/calepin.2026}
+\subsection*{Copyright}
+Copyright 2026 Vincent Arel-Bundock
+\subsection*{Funding}
+\begin{itemize}
+\item Social Sciences and Humanities Research Council, Grant \#123456, Vincent Arel-Bundock
+\end{itemize}
+
+
+\end{document}

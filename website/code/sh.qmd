@@ -1,0 +1,36 @@
+---
+title: Shell
+---
+
+*Calepin* runs shell chunks in a persistent `/bin/sh` subprocess. Shell state --- variables, working directory, and environment --- persists across chunks.
+
+# Basic usage
+
+```{sh}
+echo "Hello from the shell"
+uname -s
+```
+
+# Persistent state
+
+Variables set in one chunk carry over to the next:
+
+```{sh}
+GREETING="Hello, world"
+```
+
+```{sh}
+echo "$GREETING"
+```
+
+# Inline expressions
+
+The current user is `{sh} whoami`.
+
+# Piping and commands
+
+Standard shell constructs work as expected:
+
+```{sh}
+seq 1 5 | paste -sd+ | bc
+```

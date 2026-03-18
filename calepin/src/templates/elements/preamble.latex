@@ -1,0 +1,35 @@
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage[normalem]{ulem}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+
+%%%% inspired by classicthesis.sty
+\usepackage{newpxtext,newpxmath}
+\usepackage{microtype}
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\relax}{\large\scshape\MakeUppercase{\chaptertitlename}~\thechapter}{0pt}{\large\scshape}
+\titleformat{\section}{\large\scshape}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\itshape}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\small\normalfont}{\thesubsubsection}{1em}{}
+
+
+% Source code box (light gray background, left accent bar)
+\newtcolorbox{srccode}{
+  enhanced, breakable,
+  colback=gray!5, colframe=gray!40,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  boxrule=0pt, leftrule=3pt,
+  arc=0pt, outer arc=0pt
+}
+
+% Output box (white background, thin border)
+\newtcolorbox{outcode}{
+  enhanced, breakable,
+  colback=white, colframe=gray!50,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  boxrule=0.5pt,
+  arc=0pt, outer arc=0pt,
+  fontupper=\small
+}

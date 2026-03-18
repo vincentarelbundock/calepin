@@ -1,0 +1,25 @@
+#set document(title: "{{plain-title}}", author: "{{author}}")
+#set page(margin: 2.5cm)
+#set text(size: 11pt)
+#set par(justify: true, leading: 0.65em)
+#set heading(numbering: "1.1")
+
+{{preamble}}
+
+#align(center)[
+  #text(size: 17pt, weight: "bold")[{{title}}]
+  #v(0.3em)
+  {{subtitle-block}}
+  #v(0.5em)
+  {{author-block}}
+  #v(0.3em)
+  #text(size: 10pt, style: "italic")[{{date}}]
+]
+
+{{abstract-block}}
+{{keywords-block}}
+{{toc}}
+
+{{body}}
+
+{{appendix-block}}

@@ -1,0 +1,84 @@
+---
+title: Differences with Quarto
+---
+
+*Calepin* aims for compatibility with Quarto's `.qmd` syntax, but there are deliberate differences and simplifications. This page documents them.
+
+
+# Chunk headers
+
+In Quarto, the chunk header can contain key-value options:
+
+````
+```{r, label, echo=FALSE, fig.width=5}
+````
+
+In *Calepin*, the header accepts **only** the language and an optional label:
+
+````
+```{r, label}
+````
+
+All options must go inside the chunk as `#|` pipe comments:
+
+````
+```{r, scatter}
+#| echo: false
+#| fig-width: 5
+````
+
+If you accidentally put key-value pairs in the header, *Calepin* prints an error with the corrected pipe syntax.
+
+
+# Heading levels
+
+Like Quarto, *Calepin* shifts heading levels down by one when a `title:` is present in the YAML front matter: `#` becomes `<h2>`, `##` becomes `<h3>`, and so on. This is standard practice because the document title occupies `<h1>`. *Calepin* warns if more than one top-level `#` heading is found.
+
+A document without `title:` in the YAML renders headings at their literal level (`#` = `<h1>`).
+
+
+# Option names
+
+*Calepin* uses dashes in option names (`fig-width`, `fig-cap`), matching Quarto's newer convention. Dots (`fig.width`) are not accepted and will produce a warning suggesting the dashed form.
+
+
+# Format names
+
+*Calepin* uses canonical format names: `html`, `latex`, `typst`, `markdown`. Aliases like `pdf`, `tex`, `typ`, and `md` are accepted for compatibility with Quarto raw blocks and conditional content (e.g., `::: {.content-visible when-format="pdf"}`).
+
+
+# Label syntax
+
+In Quarto, a label can be specified either in the header or as a pipe comment:
+
+````
+```{r, my-label}
+```
+
+```{r}
+#| label: my-label
+```
+````
+
+In *Calepin*, the label must be in the header. Using `#| label:` in a pipe comment produces an error directing you to move it to the header.
+
+
+# Extensions directory
+
+Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `_calepin/` with a different structure:
+
+```
+_calepin/
+  elements/       # element templates
+  filters/        # executable filters
+  templates/      # page templates
+  plugins/        # WASM plugins
+  shortcodes/     # executable shortcodes
+```
+
+
+# Missing features
+
+The following Quarto features are not yet implemented in *Calepin*:
+
+<!-- TODO: fill in as features are tracked -->

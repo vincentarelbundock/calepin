@@ -1,0 +1,179 @@
+# TODO
+
+## Engines
+
+- [ ] Diagrams: Mermaid
+- [ ] Diagrams: Graphviz
+- [ ] Diagrams: Tikz
+- [ ] Diagrams: Penrose (plugin, not built-in since Quarto doesn't support it)
+- [x] sh engine
+- [x] Create an engines module to split code execution by language
+- [x] Re-use key building blocks across languages languages
+- [x] Python support
+- [x] --preview
+
+## Misc
+
+- [x] $ handling. Quarto does not require escape, IIRC.
+- [ ] Table of contents
+- [ ] Image in tutorial.qmd title block should work in typst and latex and markdown.
+
+## Astro
+
+- [ ] Astro does not show inline math.
+
+## Figures
+
+- [x] Figure sizing via attributes (`{width=300}`, `{width=80%}`, `{width=4in}`)
+- [x] Figure alignment (`{fig-align="left"}`)
+- [x] Alt text via attribute (`{fig-alt="..."}`)
+- [x] Linked figures (`[![Caption](img.png)](url)`)
+- [x] Multiformat figures (auto-select `.png` vs `.pdf` based on output format)
+- [x] Lightbox figures (click to enlarge in HTML)
+- [x] Subfigures with subcaptions (`::: {#fig-id layout-ncol=2}`)
+- [x] Figure panels (`layout-ncol`, `layout-nrow`)
+- [x] Custom figure layouts (`layout="[[1,1], [1]]"`, negative spacing)
+- [x] Figure divs (arbitrary content as a figure with `#fig-` prefix)
+- [x] Caption location (`fig-cap-location: top/bottom/margin`)
+- [x] Short captions for List of Figures (`fig-scap`)
+- [x] LaTeX figure environment (`fig-env="figure*"`)
+- [x] LaTeX figure position (`fig-pos`)
+- [x] Vertical alignment in layouts (`layout-valign`)
+- [x] Block layout (non-figure content in `layout-ncol` divs)
+
+## Tables
+
+- [x] Cross-referenceable tables with `#tbl-` prefix
+- [x] Table captions (last non-table paragraph in `#tbl-` div)
+- [x] Table caption location (`tbl-cap-location: top/bottom`)
+- [x] LaTeX table positioning (`tbl-pos`)
+- [ ] knitr_print() support
+- [ ] Tables should be using a template and filter
+- [ ] Advanced table features (Bootstrap classes, embedded markdown in cells)
+- [ ] Subtables
+- [ ] Table caption location: margin
+
+## Markdown
+
+- [x] Shortcode system (`{{< ... >}}`) with `pagebreak`, `meta`, `env`, and user-extensible scripts
+- [x] Built-in shortcodes: `include`, `var`
+- [x] Built-in shortcodes: `video` (YouTube/Vimeo auto-embed)
+- [ ] Built-in shortcodes: `kbd`
+- [x] Line blocks (`| preserved lines`)
+- [x] Inline footnotes (`^[inline note]`)
+- [ ] Footnotes backlinks don't bring us back up in HTML
+- [ ] Footnotes backlinks check other formats
+- [x] Definition lists (`term\n: definition`)
+- [x] Tabsets / panel tabs (`::: {.panel-tabset}`)
+- [ ] Multi-column layout (`.columns` / `.column` divs with width percentages)
+
+## HTML
+
+- [ ] Embed resources
+
+## Code
+
+- [ ] Code filename attribute (`{.python filename="run.py"}`)
+- [ ] Code annotation (line markers `# <1>` with numbered explanations)
+- [ ] Multiple figures from a single code chunk with `fig-subcap`
+- [ ] Layout attributes on code chunks (`layout-ncol`, `layout`)
+- [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
+- [x] `output: asis` chunk option (raw markdown output, not code block)
+- [ ] `echo: fenced` to show chunk delimiters in output
+- [x] `error: true` to display errors without halting
+
+## Layout
+
+- [ ] Column classes for content width (`.column-body`, `.column-page`, `.column-screen`, `.column-margin`)
+- [ ] Outset variants (`.column-body-outset`, `.column-page-inset`)
+- [ ] Left/right overflow (`.column-screen-left`, `.column-page-right`, etc.)
+- [ ] Margin content (`.column-margin` for text, figures, tables)
+- [ ] Margin references (`reference-location: margin`)
+- [ ] Margin citations (`citation-location: margin`)
+- [ ] Margin captions (`cap-location: margin`, `fig-cap-location: margin`)
+- [ ] Asides (`[text]{.aside}`)
+- [ ] Landscape mode (`::: {.landscape}`)
+- [ ] PDF page geometry options (`geometry:` front matter)
+- [ ] Screen inset shaded (`column: screen-inset-shaded`)
+
+## Conditional Content
+
+- [x] `.content-visible` / `.content-hidden` with `when-format` / `unless-format`
+- [x] `when-meta` / `unless-meta` (match against boolean metadata values with dot notation)
+
+## Cross-References
+
+- [x] Basic cross-refs: `@fig:`, `@sec:`, `@thm:` etc.
+- [ ] Custom cross-reference types
+- [ ] Grouped references (e.g., `@fig-one; @fig-two`)
+- [ ] Code listing cross-references (`#lst-` prefix)
+- [x] Equation numbering and cross-references (`$$ ... $$ {#eq-label}`, `@eq-label`)
+- [ ] Callout cross-references
+- [ ] Custom numbered float types
+
+## Document
+
+- [x] Numbered sections (`number-sections: true`)
+- [x] Date handling (keywords `today`/`now`/`last-modified`)
+- [ ] Date format strings
+- [ ] Language / localization (`lang:` option, custom translation strings)
+- [x] File includes (`{{< include file.qmd >}}` shortcode)
+- [x] Variables file (`_variables.yml` with `{{< var name >}}` shortcode)
+- [x] Callout collapse/expand (`collapse=true`)
+- [x] Callout appearance styles (`appearance: simple/minimal`)
+- [x] Callout custom titles
+
+## Scholarly Front Matter
+
+- [x] Rich author metadata (affiliation, ORCID, email, roles, corresponding author)
+- [x] Affiliation details (department, city, country, ROR/ISNI/Ringgold IDs)
+- [x] Multiple authors with shared affiliations (`ref:` system)
+- [x] Keywords
+- [x] Copyright (holder, year, statement)
+- [x] License (Creative Commons abbreviations, custom text, URL)
+- [x] Citation metadata (`citation:` key for citeable articles)
+- [x] Funding (awards, sources, investigator references)
+- [x] Appendices
+
+## Misc
+
+- [ ] Performance profiling
+- [ ] Architecture refactor
+- [ ] DRY
+- [ ] Simplification
+- [ ] ANSI colors in txtfmt plugin
+- [x] lorem plugin
+- [ ] cache
+- [x] websites via plugin-based site builder
+- [ ] websites with navbar
+- [ ] better CSS
+- [ ] Calepin always in italics with capital letter.
+- [x] Calepin vs Quarto (docs/quarto.qmd)
+- [x] Warn on dot-style option names (use dashes instead)
+- [x] `-v` / `--version` flag
+- [ ] Allow users to supply a postprocess.latex or postprocess.html that accepts the raw code and returns the same thing but modified. That is done automatically if in the _calepin directory
+- [ ] Files paths are different in Typst, LaTeX, HTML, and Markdown
+- [ ] How do lettered addpendices work?
+
+## Plugins
+
+- [x] `lightbox` (postprocessor plugin)
+- [x] `txtfmt`
+- [x] `lorem` (shortcode plugin)
+- [x] `astro` (site builder plugin)
+
+## Docs
+
+- [ ] HTML
+    - [ ] Classless CSS
+    - [ ] Standalone files by default
+
+## Manual Code Review
+
+- [x] `src/engines/`
+- [x] `src/filters/`
+- [ ] `src/render/`
+- [ ] `src/formats/`
+- [ ] `src/structures/`
+- [ ] `src/parse/`
+- [ ] `src/` (root modules: main, types, plugins, cli, util, website, site_builder, preview, compile)

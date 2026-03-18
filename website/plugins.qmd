@@ -1,0 +1,189 @@
+---
+title: Plugins
+calepin:
+  plugins:
+    - txtfmt
+---
+
+Plugins are `.wasm` files that extend *Calepin* with custom span/div filters, shortcodes, and postprocessors. A single `.wasm` file works on macOS, Linux, and Windows---no recompilation needed.
+
+
+# Using a plugin
+
+1. Copy the `.wasm` file to `_calepin/plugins/` (or `~/.config/calepin/plugins/`).
+2. List it in front matter:
+
+```yaml
+calepin:
+  plugins:
+    - txtfmt
+    - lightbox
+    - lorem
+```
+
+Example plugins and source code: [github.com/vincentarelbundock/calepin](https://github.com/vincentarelbundock/calepin) in the `plugins/` directory.
+
+
+# Available plugins
+
+## `txtfmt` --- text formatting
+
+The `.txtfmt` span class provides inline styling. Attributes: `em` (size multiplier), `color` (name or `#hex`), `smallcaps`, `underline`, `mark`. Over 1000 color names (from R and LaTeX) are resolved to hex for consistent rendering across formats.
+
+[teal text]{.txtfmt color="teal"},
+[large hex color]{.txtfmt color="#E69F00" em=1.3},
+[highlighted]{.txtfmt mark=true},
+[Small Caps]{.txtfmt smallcaps=true underline=true},
+and [small orange]{.txtfmt em=0.8 color="#E69F00" underline=true}.
+
+## `lightbox` --- click-to-enlarge images
+
+See [Figures](figures.qmd#lightbox) for details on the lightbox plugin.
+
+## `lorem` --- placeholder text
+
+A shortcode plugin that generates lorem ipsum text. Useful for prototyping layouts.
+
+- {{{< lorem >}}} --- 1 paragraph (default)
+- {{{< lorem 3 >}}} --- 3 paragraphs
+- {{{< lorem words=20 >}}} --- 20 words
+- {{{< lorem sentences=4 >}}} --- 4 sentences
+- {{{< lorem paragraphs=2 >}}} --- 2 paragraphs
+
+## `imgur` --- image upload
+
+The `.imgur` span uploads local images to imgur and returns format-appropriate markup. Usage: `[path/to/image.png]{.imgur alt="description"}`.
+
+## `revealjs` --- reveal.js slides
+
+A postprocessor that converts rendered HTML into a [reveal.js](https://revealjs.com) slide deck. Each `<h2>` heading starts a new slide.
+
+```yaml
+calepin:
+  plugins:
+    - revealjs
+```
+
+## `slidev` --- Slidev slides
+
+A postprocessor that converts rendered HTML into [Slidev](https://sli.dev) markdown format.
+
+
+# Writing plugins
+
+A plugin is a Rust cdylib crate compiled to `wasm32-unknown-unknown`. It exports one or more functions that exchange JSON with *Calepin* via [extism](https://extism.org). Plugins can also be written in Go, JavaScript, Python, Zig, or any language with an extism PDK.
+
+## Plugin functions
+
+A plugin can export any combination of these functions:
+
+### `filter`
+
+Handles fenced divs and bracketed spans. Receives a JSON object:
+
+```json
+{
+  "context": "div",
+  "content": "<p>rendered children</p>",
+  "classes": ["myclass"],
+  "id": "my-id",
+  "format": "html",
+  "attrs": {"key": "value"}
+}
+```
+
+Returns `{"Rendered": "output html"}` to handle the element, or `"Pass"` to skip.
+
+### `shortcode`
+
+Handles `{{< name args >}}` shortcodes. Receives:
+
+```json
+{
+  "name": "lorem",
+  "args": ["3"],
+  "kwargs": {"words": "50"},
+  "format": "html"
+}
+```
+
+Returns the replacement string or `null` to skip.
+
+### `postprocess`
+
+Transforms the entire rendered body after all other processing. Receives:
+
+```json
+{
+  "body": "<h1>...</h1><p>...</p>",
+  "format": "html",
+  "title": "Document Title",
+  "css": "..."
+}
+```
+
+Returns the modified body string.
+
+## Minimal example
+
+`Cargo.toml`:
+
+```toml
+[package]
+name = "myplugin"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+extism-pdk = "1"
+serde = { version = "1", features = ["derive"] }
+```
+
+`src/lib.rs`:
+
+```rust
+use extism_pdk::*;
+use serde::Deserialize;
+use std::collections::HashMap;
+
+#[derive(Deserialize)]
+struct FilterContext {
+    context: String,
+    content: String,
+    classes: Vec<String>,
+    format: String,
+    attrs: HashMap<String, String>,
+}
+
+#[derive(serde::Serialize)]
+enum FilterResult {
+    Rendered(String),
+    Pass,
+}
+
+#[plugin_fn]
+pub fn filter(Json(ctx): Json<FilterContext>) -> FnResult<Json<FilterResult>> {
+    if ctx.context != "span" || !ctx.classes.contains(&"hello".to_string()) {
+        return Ok(Json(FilterResult::Pass));
+    }
+    let out = match ctx.format.as_str() {
+        "html" => format!("<b>{}</b>", ctx.content),
+        "latex" => format!("\\textbf{{{}}}", ctx.content),
+        _ => ctx.content,
+    };
+    Ok(Json(FilterResult::Rendered(out)))
+}
+```
+
+Build with:
+
+```bash
+cargo build --release --target wasm32-unknown-unknown
+```
+
+The `.wasm` file will be at `target/wasm32-unknown-unknown/release/myplugin.wasm`.
+
+See `plugins/txtfmt/src/lib.rs` and `plugins/lorem/src/lib.rs` in the repository for complete examples.

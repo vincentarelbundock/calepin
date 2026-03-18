@@ -1,0 +1,80 @@
+---
+title: Tables
+---
+
+*Calepin* supports GFM (GitHub Flavored Markdown) tables with captions and cross-references.
+
+
+# Basic tables
+
+Tables use the standard GFM pipe syntax:
+
+| Name  | Score | Grade |
+|-------|------:|:-----:|
+| Alice |    95 | A     |
+| Bob   |    87 | B     |
+| Carol |    92 | A     |
+
+Column alignment is controlled by colons in the separator row: left (default), right (`---:`), or center (`:---:`).
+
+
+# Captioned tables
+
+Wrap a table in a fenced div with a `#tbl-` id to add a caption and make it cross-referenceable. The last paragraph in the div becomes the caption:
+
+```
+::: {#tbl-grades}
+| Name  | Score | Grade |
+|-------|------:|:-----:|
+| Alice |    95 | A     |
+| Bob   |    87 | B     |
+| Carol |    92 | A     |
+
+Student grades for Fall 2026.
+:::
+```
+
+::: {#tbl-grades}
+| Name  | Score | Grade |
+|-------|------:|:-----:|
+| Alice |    95 | A     |
+| Bob   |    87 | B     |
+| Carol |    92 | A     |
+
+Student grades for Fall 2026.
+:::
+
+
+# Cross-references
+
+Reference tables with `@tbl-label`:
+
+- @tbl-grades shows the full class results.
+- Just the number: [-@tbl-grades].
+
+This works across all output formats: HTML produces linked references, LaTeX uses `\hyperref`, and Typst resolves natively.
+
+
+# Caption location
+
+By default, captions appear above the table. Use `tbl-cap-location` to place them below:
+
+::: {#tbl-bottom tbl-cap-location="bottom"}
+| x | y  |
+|---|---:|
+| 1 |  1 |
+| 2 |  4 |
+| 3 |  9 |
+
+This caption appears below the table.
+:::
+
+
+# Format-specific output
+
+*Calepin* produces appropriate table environments for each format:
+
+- **HTML**: `<div class="table-div">` with `<p class="table-caption">`
+- **LaTeX**: `\begin{table}...\caption{...}\label{...}\end{table}`
+- **Typst**: `#figure(kind: table, [...], caption: [...]) <label>`
+- **Markdown**: Standard GFM table with caption as text

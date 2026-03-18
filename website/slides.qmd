@@ -1,0 +1,50 @@
+---
+title: "*Calepin* Slides"
+date: 2026-03-19
+format: revealjs
+---
+
+## What is *Calepin*?
+
+A Rust CLI that renders `.qmd` documents to HTML, LaTeX, Typst, and Markdown.
+
+- Embeds R via extendr
+- Citations via hayagriva
+- WASM plugin system
+
+## Code Chunks
+
+```{r}
+x <- rnorm(100)
+summary(x)
+```
+
+## Math
+
+The Pythagorean theorem: $a^2 + b^2 = c^2$.
+
+Display math:
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$
+
+## Plugins
+
+Extend *Calepin* with `.wasm` files:
+
+- **txtfmt**: inline text styling
+- **imgur**: image upload
+- **revealjs**: these slides!
+
+Custom formats via `_calepin/formats/revealjs.yaml`:
+
+```yaml
+base: html
+extension: html
+plugin: revealjs
+```
+
+## Thank You
+
+Source: [github.com/vincentarelbundock/calepin](https://github.com/vincentarelbundock/calepin)

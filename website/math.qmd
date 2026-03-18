@@ -1,0 +1,73 @@
+---
+title: Math
+---
+
+*Calepin* renders LaTeX math notation using MathJax (HTML) or natively (LaTeX and Typst). Use `\$` for a literal dollar sign.
+
+# Inline and display math
+
+Inline math is enclosed in single dollar signs: $a^2 + b^2 = c^2$.
+
+Display math uses double dollars `$$`:
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$
+
+Multi-line equations use `\begin{aligned}` inside double dollars:
+
+$$
+\begin{aligned}
+\nabla \cdot \mathbf{E} &= \frac{\rho}{\varepsilon_0} \\
+\nabla \cdot \mathbf{B} &= 0 \\
+\nabla \times \mathbf{E} &= -\frac{\partial \mathbf{B}}{\partial t} \\
+\nabla \times \mathbf{B} &= \mu_0 \mathbf{J} + \mu_0 \varepsilon_0 \frac{\partial \mathbf{E}}{\partial t}
+\end{aligned}
+$$
+
+
+# Theorem environments
+
+Fenced divs with theorem-type classes get automatic numbering and can be cross-referenced.
+
+::: {.theorem #thm-pythagoras}
+In a right triangle, the square of the hypotenuse equals the sum of the squares of the other two sides: $a^2 + b^2 = c^2$.
+:::
+
+::: {.proof}
+Let a right triangle have legs $a$, $b$ and hypotenuse $c$. By constructing squares on each side and comparing areas, we obtain $a^2 + b^2 = c^2$.
+:::
+
+By @thm-pythagoras, the relationship is fundamental to Euclidean geometry.
+
+## Supported types
+
+The following theorem types are available, each with its own counter:
+
+`theorem`, `lemma`, `corollary`, `proposition`, `conjecture`, `definition`, `example`, `exercise`, `solution`, `remark`, and `algorithm`.
+
+## Cross-references
+
+Fenced divs with reserved id prefixes participate in the cross-reference system:
+
+| Class | Prefix | Example |
+|-------|--------|---------|
+| `theorem` | `thm` | `::: {.theorem #thm-pythagoras}` |
+| `lemma` | `lem` | `::: {.lemma #lem-helper}` |
+| `definition` | `def` | `::: {.definition #def-group}` |
+| `example` | `exm` | `::: {.example #exm-basic}` |
+
+References like `@thm-pythagoras` resolve to the theorem number. The `{{label}}` variable generates format-specific anchors: `\label{thm-pythagoras}` (LaTeX), `<thm-pythagoras>` (Typst).
+
+## Customizing appearance
+
+You can override the appearance by replacing the template while keeping automatic numbering. Create `_calepin/elements/theorem.html`:
+
+```html
+<div class="my-theorem"{{id-attr}}>
+  <h4>Theorem {{number}}</h4>
+  {{children}}
+</div>
+```
+
+See [Templates](templates.qmd) for more on element templates.
