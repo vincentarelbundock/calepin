@@ -65,7 +65,6 @@ pub struct PluginHandle {
     has_filter: bool,
     has_shortcode: bool,
     has_postprocess: bool,
-    has_build_site: bool,
 }
 
 impl PluginHandle {
@@ -99,20 +98,6 @@ impl PluginHandle {
         match plugin.call::<&str, String>("shortcode", &input) {
             Ok(output) => serde_json::from_str(&output).unwrap_or(None),
             Err(_) => None,
-        }
-    }
-
-    pub fn call_build_site(&self, ctx_json: &str) -> Option<String> {
-        if !self.has_build_site {
-            return None;
-        }
-        let mut plugin = self.plugin.borrow_mut();
-        match plugin.call::<&str, String>("build_site", ctx_json) {
-            Ok(output) => Some(output),
-            Err(e) => {
-                eprintln!("Warning: plugin '{}' build_site error: {}", self.name, e);
-                None
-            }
         }
     }
 
@@ -187,7 +172,6 @@ fn load_one(path: &Path, name: &str) -> anyhow::Result<PluginHandle> {
     let has_filter = plugin.function_exists("filter");
     let has_shortcode = plugin.function_exists("shortcode");
     let has_postprocess = plugin.function_exists("postprocess");
-    let has_build_site = plugin.function_exists("build_site");
 
     Ok(PluginHandle {
         name: name.to_string(),
@@ -195,6 +179,5 @@ fn load_one(path: &Path, name: &str) -> anyhow::Result<PluginHandle> {
         has_filter,
         has_shortcode,
         has_postprocess,
-        has_build_site,
     })
 }

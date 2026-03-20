@@ -10,7 +10,11 @@ pub mod latex;
 pub mod markdown;
 pub mod typst;
 
-use anyhow::Result;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::io::Write;
+
+use anyhow::{Context, Result};
 
 use crate::types::{Element, Metadata};
 use crate::render::elements::ElementRenderer;
@@ -55,6 +59,12 @@ pub trait OutputRenderer {
     /// Wrap the rendered body in a page template. Return None to skip.
     fn apply_template(&self, body: &str, meta: &Metadata, renderer: &ElementRenderer)
         -> Option<String>;
+
+    /// Optional preprocess script path. If set, the raw .qmd body is piped
+    /// through this script before block parsing.
+    fn preprocess(&self) -> Option<&Path> {
+        None
+    }
 }
 
 /// Create a renderer from a format name string.
@@ -91,6 +101,8 @@ struct CustomRenderer {
     ext: String,
     base: Box<dyn OutputRenderer>,
     postprocess_plugin: Option<PluginHandle>,
+    preprocess_script: Option<PathBuf>,
+    postprocess_script: Option<PathBuf>,
 }
 
 impl OutputRenderer for CustomRenderer {
@@ -120,30 +132,67 @@ impl OutputRenderer for CustomRenderer {
         meta: &Metadata,
         renderer: &ElementRenderer,
     ) -> Option<String> {
-        // If a postprocess plugin exists, pass it the body + metadata
+        // 1. WASM plugin postprocess (replaces template entirely)
         if let Some(ref plugin) = self.postprocess_plugin {
             let title = meta.title.as_deref().unwrap_or("");
             let syntax_css = renderer.syntax_css();
             return plugin.call_postprocess(body, &self.name, title, &syntax_css);
         }
 
-        // Try custom page template first: calepin.{name}
-        let custom_tpl = crate::render::template::load_page_template(
-            &format!("calepin.{}", self.name),
-        );
-        if !custom_tpl.is_empty() {
-            let vars = match self.base.format() {
-                "html" => crate::render::template::build_html_vars(meta, body),
-                "latex" => crate::render::template::build_latex_vars(meta, body),
-                "typst" => crate::render::template::build_typst_vars(meta, body),
-                _ => return None,
-            };
-            return Some(crate::render::template::apply_template(&custom_tpl, &vars));
+        // 2. Base format template (produces complete document)
+        let templated = {
+            // Try custom page template first: calepin.{name}
+            let custom_tpl = crate::render::template::load_page_template(
+                &format!("calepin.{}", self.name),
+            );
+            if !custom_tpl.is_empty() {
+                let vars = match self.base.format() {
+                    "html" => crate::render::template::build_html_vars(meta, body),
+                    "latex" => crate::render::template::build_latex_vars(meta, body),
+                    "typst" => crate::render::template::build_typst_vars(meta, body),
+                    _ => return None,
+                };
+                Some(crate::render::template::apply_template(&custom_tpl, &vars))
+            } else {
+                self.base.apply_template(body, meta, renderer)
+            }
+        };
+
+        // 3. Script postprocess (transforms the complete document)
+        if let Some(ref script) = self.postprocess_script {
+            let input = templated.as_deref().unwrap_or(body);
+            match run_script(script, input, &[&self.name]) {
+                Ok(output) => return Some(output),
+                Err(e) => {
+                    eprintln!("Warning: postprocess script failed: {}", e);
+                }
+            }
         }
 
-        // Fall back to base format's template
-        self.base.apply_template(body, meta, renderer)
+        templated
     }
+
+    fn preprocess(&self) -> Option<&Path> {
+        self.preprocess_script.as_deref()
+    }
+}
+
+/// Run a script, piping `stdin_data` to its stdin and returning stdout.
+pub fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<String> {
+    let mut child = Command::new(script)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| format!("Failed to run script: {}", script.display()))?;
+    child.stdin.take().unwrap().write_all(stdin_data.as_bytes())?;
+    let output = child.wait_with_output()?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Script {} failed: {}", script.display(), stderr);
+    }
+    Ok(String::from_utf8(output.stdout)?)
 }
 
 /// Load a custom format from `_calepin/formats/{name}.yaml`.
@@ -190,10 +239,20 @@ fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
             }
         });
 
+    let config_dir = path.parent().unwrap_or(Path::new("."));
+    let preprocess_script = config["preprocess"]
+        .as_str()
+        .map(|s| config_dir.join(s));
+    let postprocess_script = config["postprocess"]
+        .as_str()
+        .map(|s| config_dir.join(s));
+
     Ok(Box::new(CustomRenderer {
         name: name.to_string(),
         ext,
         base,
         postprocess_plugin,
+        preprocess_script,
+        postprocess_script,
     }))
 }

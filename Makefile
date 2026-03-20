@@ -1,4 +1,4 @@
-.PHONY: help docs plugins website
+.PHONY: help docs plugins
 
 help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m\n"
@@ -42,9 +42,6 @@ test:  ## Run unit tests
 
 check:  ## Run cargo check (fast compile check)
 	cargo check --manifest-path calepin/Cargo.toml
-
-website: ## Render and preview website
-	@cd website && calepin _calepin.yaml --preview
 
 # ==============================================================================
 # Render targets

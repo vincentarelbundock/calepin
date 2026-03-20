@@ -54,6 +54,15 @@ pub struct Cli {
     #[arg(short, long)]
     pub compile: bool,
 
+    /// Render multiple files in parallel from a JSON manifest.
+    /// Pass a file path or "-" to read from stdin.
+    #[arg(long, value_name = "MANIFEST")]
+    pub batch: Option<String>,
+
+    /// With --batch: emit rendered bodies in JSON stdout instead of writing files
+    #[arg(long)]
+    pub batch_stdout: bool,
+
     /// List available syntax highlighting themes and exit
     #[arg(long)]
     pub list_highlight_styles: bool,

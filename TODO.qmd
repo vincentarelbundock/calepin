@@ -1,5 +1,9 @@
 # TODO
 
+## Plugins
+
+I want each format to be a separate plugin. That will force me to design a good plugin infrastructure for users.
+
 ## Engines
 
 - [ ] Diagrams: Mermaid
@@ -154,6 +158,9 @@
 - [ ] ANSI colors in txtfmt plugin
 - [x] lorem plugin
 - [ ] cache
+- [ ] _calepin_cache/ directory for storing all the caches. Otherwise we get many folders. 
+- [ ] _calepin_files/ directory for storing files. [should be customizable]
+- [ ] _calepin_plugins/ directory for storing files
 - [x] websites via plugin-based site builder
 - [ ] websites with navbar
 - [ ] better CSS

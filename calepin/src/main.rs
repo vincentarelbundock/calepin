@@ -1,6 +1,6 @@
 #[macro_use]
 mod cli;
-mod site_builder;
+mod batch;
 mod compile;
 mod engines;
 mod filters;
@@ -12,8 +12,6 @@ mod render;
 mod structures;
 mod types;
 mod util;
-mod website;
-
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -81,24 +79,13 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Batch mode: render multiple files from a JSON manifest
+    if let Some(ref manifest) = cli.batch {
+        return batch::run_batch(manifest, !cli.batch_stdout, cli.quiet);
+    }
+
     let input = cli.input.as_ref()
         .context("No input file specified. Run with --help for usage.")?;
-
-    // Website/Astro mode: input is a .yaml config file
-    let ext = input.extension().and_then(|e| e.to_str());
-    if ext == Some("yaml") || ext == Some("yml") {
-        // Change to the config file's directory so relative paths resolve
-        if let Some(parent) = input.parent().filter(|p| !p.as_os_str().is_empty()) {
-            std::env::set_current_dir(parent)
-                .with_context(|| format!("Failed to cd to {}", parent.display()))?;
-        }
-        let config_name = input.file_name().unwrap();
-        let config_path = Path::new(config_name);
-        if cli.preview {
-            return preview::run_website(config_path, &cli);
-        }
-        return site_builder::build(config_path, cli.quiet).map(|_| ());
-    }
 
     if cli.preview {
         preview::run(input, &cli)
@@ -159,6 +146,17 @@ pub fn render_core(
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
     let body = filters::shortcodes::expand_includes(&body);
+
+    // 4a. Preprocess hook: pipe body through script if custom format defines one
+    let body = if let Some(script) = renderer.preprocess() {
+        let input = serde_json::json!({
+            "body": body,
+            "format": format_str,
+        });
+        formats::run_script(script, &input.to_string(), &[])?
+    } else {
+        body
+    };
 
     // 4b. Parse body into blocks
     let blocks = parse::blocks::parse_body(&body)?;

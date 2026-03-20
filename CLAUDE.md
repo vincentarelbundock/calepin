@@ -36,7 +36,9 @@ make bench          # Benchmark vs litedown and Quarto (uses website/basics.qmd)
 
 Run a single test: `cargo test test_name`
 
-CLI: `calepin <input.qmd> [-o PATH] [-f FORMAT] [-s KEY=VALUE ...] [-q] [--completions SHELL]`
+CLI: `calepin <input.qmd> [-o PATH] [-f FORMAT] [-s KEY=VALUE ...] [-q] [--compile] [--preview] [--completions SHELL]`
+
+Batch mode: `calepin --batch manifest.json` or `calepin --batch - < manifest.json`. Add `--batch-stdout` to get rendered bodies in JSON output instead of writing files. See `batch.rs` for manifest format.
 
 **Important**: website/ must be rendered with `cd website && ../calepin/target/debug/calepin file.qmd` so that `_calepin/` overrides are found relative to the working directory. `make docs` handles this.
 
@@ -81,6 +83,7 @@ The engines module owns all code evaluation — block-level, inline-level, the e
 ### Root (`calepin/src/`) — Orchestration and core types
 
 - `main.rs` — Entry point, pipeline stages
+- `batch.rs` — Batch rendering: `BatchJob`/`BatchResult` types, `run_batch()` parallel runner
 - `types.rs` — Input types: `Block`, `CodeChunk`, `ChunkOptions`, `Metadata`, `FigureAttrs`
 - `plugins.rs` — WASM plugin loading (extism): `PluginHandle`, `FilterContext`, `ShortcodeContext`
 - `cli.rs` — CLI argument parsing (clap) + `cwarn!` macro
@@ -111,6 +114,7 @@ Each filter enriches template variables or produces final output. Built-in div f
 ### `calepin/src/formats/` — Format-specific renderers
 
 - `html.rs`, `latex.rs`, `typst.rs`, `markdown.rs` — Implement `OutputRenderer`
+- `mod.rs` — `OutputRenderer` trait, `create_renderer()`, custom format loading, `run_script()` helper, preprocess/postprocess script support
 
 ### `calepin/src/structures/` — Structural div handlers
 
@@ -179,6 +183,7 @@ Three-level override for all customization: `_calepin/` (project) → `~/.config
 - Filters: `_calepin/filters/{class}` or `_calepin/filters/{class}.{format}`
 - Shortcodes: `_calepin/shortcodes/{name}`
 - Plugins: `_calepin/plugins/{name}.wasm`
+- Custom formats: `_calepin/formats/{name}.yaml` (with optional `preprocess` and `postprocess` script paths)
 
 ## Chunk Options
 
