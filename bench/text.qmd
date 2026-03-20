@@ -1,10 +1,15 @@
 ---
 title: Benchmark Document
+subtitle: A Comprehensive Stress Test
 author: calepin
 date: "2025-06-01"
-abstract: A heavyweight document for profiling calepin rendering performance. No executed code — pure markup, cross-references, tabsets, footnotes, callouts, theorems, and lots of prose.
+abstract: A heavyweight document for profiling calepin rendering performance. No executed code --- pure markup, cross-references, tabsets, footnotes, callouts, theorems, citations, raw blocks, shortcodes, content visibility, and lots of prose and mathematics.
 bibliography: library.bib
 number-sections: true
+keywords:
+  - benchmarking
+  - performance
+  - rendering
 ---
 
 # Introduction {#sec-intro}
@@ -15,16 +20,16 @@ Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, tur
 
 Sed adipiscing ornare risus. Morbi est est, blandit sit amet, sagittis vel, euismod vel, velit. Pellentesque egestas sem. Suspendisse commodo ullamcorper magna. Ut nulla. Vivamus bibendum, nulla ut congue fringilla, lorem ipsum ultricies risus, ut rutrum velit tortor vel purus. In hac habitasse platea dictumst. Duis fermentum elit in turpis.
 
-@sec-theory provides the theoretical framework for our analysis, while @sec-litreview surveys the existing literature. The methods are detailed in @sec-methods, with results presented in @sec-results. We discuss the implications in @sec-discussion and extend the analysis in @sec-extended. The mathematical supplement in @sec-math provides additional theoretical insights, and the code appendix in @sec-appendix-code ensures reproducibility.
+@sec-theory provides the theoretical framework for our analysis, while @sec-litreview surveys the existing literature. The methods are detailed in @sec-methods, with results presented in @sec-results. We discuss the implications in @sec-discussion and extend the analysis in @sec-extended. The mathematical supplement in @sec-math provides additional theoretical insights, and the code appendix in @sec-appendix-code ensures reproducibility. The document title is "{{< meta title >}}" and the author is {{< meta author >}}.
 
-[^1]: First footnote — Ut enim ad minim veniam, quis nostrud exercitation.
-[^2]: Second footnote — Duis aute irure dolor in reprehenderit in voluptate.
-[^3]: Third footnote — Excepteur sint occaecat cupidatat non proident.
+[^1]: First footnote --- Ut enim ad minim veniam, quis nostrud exercitation.
+[^2]: Second footnote --- Duis aute irure dolor in reprehenderit in voluptate.
+[^3]: Third footnote --- Excepteur sint occaecat cupidatat non proident.
 
 
 # Theoretical Framework {#sec-theory}
 
-As noted in @sec-intro, the theoretical foundations rest on several key results. We begin with the Pythagorean theorem and build toward more advanced constructs.
+As noted in @sec-intro, the theoretical foundations rest on several key results. We begin with the Pythagorean theorem and build toward more advanced constructs. The classical references include @knuth1997art, @euler1748introductio, and @gauss1801disquisitiones.
 
 ## Core Theorems
 
@@ -41,6 +46,10 @@ For vectors $\mathbf{u}$ and $\mathbf{v}$ in an inner product space,
 $$
 |\langle \mathbf{u}, \mathbf{v} \rangle|^2 \leq \langle \mathbf{u}, \mathbf{u} \rangle \cdot \langle \mathbf{v}, \mathbf{v} \rangle.
 $$
+:::
+
+::: {.proof}
+Consider $\mathbf{w} = \mathbf{u} - t\mathbf{v}$ for $t \in \mathbb{R}$. Then $\langle \mathbf{w}, \mathbf{w} \rangle \geq 0$ yields a quadratic in $t$ whose discriminant must be non-positive.
 :::
 
 ::: {.lemma #lem-triangle}
@@ -68,11 +77,14 @@ The converse of @prp-complete is false: $\mathbb{R}$ with the standard metric is
 
 By @thm-pythagoras and @thm-cauchy-schwarz, we can derive several important inequalities. See also @lem-triangle and @cor-norm for the triangle inequality in different settings. The notion of a metric space (@def-metric) unifies these ideas.
 
-
 ## Additional Results
 
 ::: {.theorem #thm-bolzano}
 Every bounded sequence in $\mathbb{R}^n$ has a convergent subsequence.
+:::
+
+::: {.proof}
+We prove the case $n = 1$; the general case follows by applying the one-dimensional result to each coordinate. Let $(x_k)$ be a bounded sequence in $\mathbb{R}$. By the "peak index" lemma, $(x_k)$ has a monotone subsequence. Since this subsequence is also bounded, it converges by the Monotone Convergence Theorem (see [-@thm-monotone]).
 :::
 
 ::: {.theorem #thm-ivt}
@@ -87,6 +99,42 @@ A function $f: X \to Y$ between metric spaces is **continuous** at $x_0 \in X$ i
 The function $f(x) = \sqrt{x}$ is continuous on $[0, \infty)$ but is not Lipschitz continuous at $x = 0$.
 :::
 
+## Topology Fundamentals
+
+::: {.definition #def-topology}
+A **topological space** is a pair $(X, \tau)$ where $X$ is a set and $\tau \subseteq \mathcal{P}(X)$ satisfying: (i) $\emptyset, X \in \tau$; (ii) $\tau$ is closed under arbitrary unions; (iii) $\tau$ is closed under finite intersections.
+:::
+
+::: {.definition #def-compact}
+A topological space $X$ is **compact** if every open cover of $X$ has a finite subcover. That is, if $X \subseteq \bigcup_{\alpha \in A} U_\alpha$ with each $U_\alpha$ open, then there exist $\alpha_1, \ldots, \alpha_n \in A$ such that $X \subseteq U_{\alpha_1} \cup \cdots \cup U_{\alpha_n}$.
+:::
+
+::: {.theorem #thm-heine-borel}
+A subset of $\mathbb{R}^n$ is compact if and only if it is closed and bounded.
+:::
+
+::: {.proof}
+**Closed and bounded $\Rightarrow$ compact.** A closed and bounded subset $K \subseteq \mathbb{R}^n$ is contained in some closed box $[-M, M]^n$. By Tychonoff's theorem, $[-M, M]^n$ is compact. Since $K$ is a closed subset of a compact set, $K$ is compact.
+
+**Compact $\Rightarrow$ closed and bounded.** Let $K$ be compact. Since $\mathbb{R}^n$ is Hausdorff, compact sets are closed. For boundedness, consider the open cover $\{B(0, k)\}_{k=1}^{\infty}$. By compactness, finitely many balls suffice, so $K \subseteq B(0, N)$ for some $N$.
+:::
+
+::: {.theorem #thm-tychonoff}
+The product of any collection of compact topological spaces is compact in the product topology.
+:::
+
+::: {.lemma #lem-tube}
+Let $X$ be a topological space, $Y$ a compact space, and $N$ an open set in $X \times Y$ containing $\{x_0\} \times Y$. Then there exists an open $W \subseteq X$ containing $x_0$ such that $W \times Y \subseteq N$.
+:::
+
+::: {.proposition #prp-hausdorff}
+Every compact subspace of a Hausdorff space is closed.
+:::
+
+::: {.corollary #cor-compact-closed}
+In a Hausdorff space, the intersection of a compact set and a closed set is compact.
+:::
+
 
 # Literature Review {#sec-litreview}
 
@@ -94,12 +142,16 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit[^4]. Praesent vestibulum
 
 Maecenas tristique orci ac sem. Duis ultricies pharetra magna. Donec accumsan malesuada orci. Donec sit amet eros. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris fermentum dictum magna. Sed laoreet aliquam leo. Ut tellus dolor, dapibus eget, elementum vel, cursus eleifend, elit. Aenean auctor wisi et urna. Aliquam erat volutpat. Duis ac turpis.
 
-As discussed in @sec-theory, the theoretical underpinnings are well established. The empirical evidence, however, remains mixed, as @arel2026quantitative have shown. We refer the reader to @thm-bolzano and @thm-ivt for the key convergence results.
+As discussed in @sec-theory, the theoretical underpinnings are well established. The empirical evidence, however, remains mixed, as @arel2026quantitative have shown. We refer the reader to @thm-bolzano and @thm-ivt for the key convergence results. The foundational work of @rudin1976principles provides a rigorous treatment of the underlying analysis, while @neyman1933testing established the hypothesis testing framework we employ.
 
 Integer rutrum ante eu lacus. Vestibulum libero nisl, porta vel, scelerisque eget, malesuada at, neque. Vivamus eget nibh. Etiam cursus leo vel metus. Nulla facilisi. Aenean nec eros. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Suspendisse sollicitudin velit sed leo. Ut pharetra augue nec augue. Nam elit magna, hendrerit sit amet, tincidunt ac, viverra sed, nulla. Donec pretium vulputate sapien.
 
-[^4]: Fourth footnote — Praesent vestibulum molestie lacus discussion.
-[^5]: Fifth footnote — Morbi nunc odio, gravida at, cursus nec elaboration.
+The causal inference literature [@imbens2015causal] has grown considerably. Earlier work by @fisher1936use on experimental design laid the groundwork. @lehmann2005testing provides a comprehensive reference for testing methodology, while @pearson1901lines introduced the principal component analysis framework that underpins much modern multivariate work.
+
+Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra.
+
+[^4]: Fourth footnote --- Praesent vestibulum molestie lacus discussion.
+[^5]: Fifth footnote --- Morbi nunc odio, gravida at, cursus nec elaboration.
 
 
 # Methods {#sec-methods}
@@ -108,6 +160,7 @@ Integer rutrum ante eu lacus. Vestibulum libero nisl, porta vel, scelerisque ege
 
 Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec odio elit, dictum in, hendrerit sit amet, egestas sed, leo. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum.
 
+::: {#tab-vars}
 | Variable | Type | Description | N |
 |----------|------|-------------|---|
 | `outcome` | Binary | Primary endpoint | 10,000 |
@@ -119,31 +172,73 @@ Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac tu
 | `duration` | Continuous | Enrollment duration (months) | 10,000 |
 | `baseline` | Continuous | Baseline score | 9,500 |
 
-: Summary of key variables in the analysis dataset. {#tbl-vars}
+Summary of key variables in the analysis dataset.
+:::
 
 Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus.
 
-## Statistical Models
+::: {#tab-balance}
+| Statistic | Outcome=0 | Outcome=1 | Difference | p-value |
+|-----------|-----------|-----------|------------|---------|
+| Mean age | 42.3 | 39.1 | -3.2 | <0.001 |
+| Mean income | \$52,400 | \$48,700 | -\$3,700 | 0.003 |
+| % Female | 51.2% | 49.8% | -1.4pp | 0.312 |
+| % Urban | 67.1% | 72.4% | +5.3pp | <0.001 |
+| Mean baseline | 5.21 | 4.87 | -0.34 | 0.007 |
+| Mean duration | 18.4 | 19.1 | +0.7 | 0.145 |
+
+Balance table comparing covariates across outcome groups.
+:::
+
+::: {#tab-regional}
+| Region | N | % Treated | Mean Outcome | SE |
+|--------|---|-----------|-------------|-----|
+| Northeast | 2,450 | 50.2% | 0.342 | 0.010 |
+| Southeast | 2,180 | 49.8% | 0.298 | 0.010 |
+| Midwest | 2,370 | 50.5% | 0.331 | 0.010 |
+| West | 1,890 | 49.3% | 0.356 | 0.011 |
+| Southwest | 1,110 | 50.9% | 0.312 | 0.014 |
+
+Regional distribution and summary statistics.
+:::
+
+## Statistical Models {#sec-models}
 
 We consider three modeling approaches. The primary specification is a logistic regression:
 
 $$
 \log\left(\frac{p_i}{1-p_i}\right) = \beta_0 + \beta_1 \text{treatment}_i + \mathbf{X}_i'\boldsymbol{\gamma} + \varepsilon_i
-$$
+$$ {#eq-logit}
 
 The secondary specification uses a probit link:
 
 $$
 \Phi^{-1}(p_i) = \alpha_0 + \alpha_1 \text{treatment}_i + \mathbf{X}_i'\boldsymbol{\delta}
-$$
+$$ {#eq-probit}
 
 And the third approach is a linear probability model:
 
 $$
 Y_i = \mu_0 + \mu_1 \text{treatment}_i + \mathbf{X}_i'\boldsymbol{\lambda} + u_i
+$$ {#eq-lpm}
+
+where $Y_i \in \{0, 1\}$ is the binary outcome and $\mathbf{X}_i$ is a vector of covariates including age, income, and education. The likelihood for the logistic model (@eq-logit) is
+
+$$
+\mathcal{L}(\boldsymbol{\theta}) = \prod_{i=1}^n p_i^{y_i} (1 - p_i)^{1 - y_i}
 $$
 
-where $Y_i \in \{0, 1\}$ is the binary outcome and $\mathbf{X}_i$ is a vector of covariates including age, income, and education.
+and the corresponding log-likelihood is
+
+$$
+\ell(\boldsymbol{\theta}) = \sum_{i=1}^n \left[ y_i \log p_i + (1 - y_i) \log(1 - p_i) \right].
+$$
+
+The score equations are obtained by differentiating:
+
+$$
+\frac{\partial \ell}{\partial \boldsymbol{\theta}} = \sum_{i=1}^n (y_i - p_i) \mathbf{x}_i = \mathbf{0}.
+$$
 
 ## Estimation Strategy
 
@@ -157,6 +252,16 @@ The linear probability model can produce fitted probabilities outside the $[0, 1
 
 ::: {.callout-tip title="Reproducibility"}
 All code, data, and configuration files needed to reproduce these results are available in the project repository. See @sec-appendix-code for details.
+:::
+
+::: {.callout-note title="Nested Callout Example"}
+This is the outer callout providing general context about our estimation approach.
+
+::: {.callout-tip}
+This nested callout contains a specific recommendation: always report both the logistic and LPM estimates as a robustness check.
+:::
+
+The outer context continues here with additional methodological notes.
 :::
 
 
@@ -218,11 +323,30 @@ We examine treatment effects across demographic subgroups. The effect is largest
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus luctus urna sed urna ultricies ac tempor dui sagittis. In condimentum facilisis porta. Sed nec diam eu diam mattis viverra. Nulla fringilla, orci ac euismod semper, magna diam porttitor mauris, quis sollicitudin sapien justo in libero.
 
+| Subgroup | N | OR | 95% CI | p-interaction |
+|----------|---|------|----------|---------------|
+| Age < 35 | 3,210 | 1.68 | 1.24--2.27 | 0.021 |
+| Age 35--50 | 3,890 | 1.39 | 1.08--1.79 | --- |
+| Age > 50 | 2,900 | 1.21 | 0.91--1.61 | --- |
+| Low baseline | 4,750 | 1.55 | 1.22--1.97 | 0.038 |
+| High baseline | 4,750 | 1.29 | 1.01--1.65 | --- |
+| Female | 5,050 | 1.44 | 1.13--1.84 | 0.872 |
+| Male | 4,950 | 1.40 | 1.09--1.80 | --- |
+
 Vestibulum facilisis, purus nec pulvinar iaculis, ligula mi congue nunc, vitae euismod ligula urna in dolor. Mauris sollicitudin fermentum libero. Praesent nonummy mi in odio. Nunc interdum lacus sit amet orci. Vestibulum rutrum, mi nec elementum vehicula, eros quam gravida nisl, id fringilla neque ante vel mi.
 
 ### Sensitivity Analysis
 
 Results are robust to alternative specifications including: (i) excluding observations with missing covariates, (ii) using inverse probability weighting, and (iii) controlling for pre-treatment trends[^7].
+
+| Specification | OR | 95% CI | p | N |
+|---------------|------|----------|-------|-------|
+| Baseline | 1.42 | 1.18--1.71 | <0.001 | 10,000 |
+| Complete cases | 1.45 | 1.19--1.77 | <0.001 | 8,214 |
+| IPW | 1.40 | 1.15--1.70 | <0.001 | 10,000 |
+| Pre-trends | 1.38 | 1.14--1.67 | 0.001 | 10,000 |
+| Region FE | 1.43 | 1.19--1.72 | <0.001 | 10,000 |
+| Propensity score | 1.41 | 1.16--1.71 | <0.001 | 9,800 |
 
 Aliquam posuere. Nulla facilisis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos hymenaeos. Cras accumsan lorem in dui. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem.
 
@@ -234,11 +358,24 @@ We conduct placebo tests by randomly reassigning treatment status. Across 1,000 
 
 Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet.
 
+### Dose--Response
+
+We examine whether treatment intensity modulates the effect by stratifying on exposure duration:
+
+| Duration | N | OR | 95% CI | p |
+|----------|---|------|----------|-------|
+| < 6 months | 2,100 | 1.15 | 0.87--1.52 | 0.321 |
+| 6--12 months | 3,400 | 1.38 | 1.08--1.76 | 0.009 |
+| 12--24 months | 2,800 | 1.52 | 1.17--1.97 | 0.002 |
+| > 24 months | 1,700 | 1.71 | 1.24--2.36 | 0.001 |
+
+The monotonic increase in odds ratios with exposure duration supports a causal interpretation of the treatment effect. A formal test for trend yields $p_{\text{trend}} = 0.003$.
+
 :::
 
-[^6]: Sixth footnote — Subgroup differences are statistically significant at the 5% level.
-[^7]: Seventh footnote — See online appendix for full sensitivity tables.
-[^8]: Eighth footnote — Permutation p-value = 0.032.
+[^6]: Sixth footnote --- Subgroup differences are statistically significant at the 5% level.
+[^7]: Seventh footnote --- See online appendix for full sensitivity tables.
+[^8]: Eighth footnote --- Permutation p-value = 0.032.
 
 
 # Discussion {#sec-discussion}
@@ -266,7 +403,7 @@ Several limitations should be noted:
 
 The relationship between @thm-cauchy-schwarz and the empirical findings deserves further investigation. As @def-metric and @def-continuity formalize the relevant mathematical structures, future work should explore whether the continuity assumptions underlying our models are satisfied in practice. We note that @exm-sqrt provides a cautionary example.
 
-[^9]: Ninth footnote — The facilisis result follows from the general theory in @sec-theory.
+[^9]: Ninth footnote --- The facilisis result follows from the general theory in @sec-theory.
 
 
 # Extended Analysis {#sec-extended}
@@ -289,8 +426,8 @@ Morbi in ipsum sit amet pede facilisis laoreet. Donec lacus nunc, viverra nec, b
 
 Integer lacinia sollicitudin massa. Cras metus. Sed aliquet risus a tortor. Integer id quam. Morbi mi. Quisque nisl felis, venenatis tristique, dignissim in, ultrices sit amet, augue. Proin sodales libero eget ante.
 
-[^10]: Tenth footnote — See supplementary materials for interaction plots.
-[^11]: Eleventh footnote — Temporal analysis uses quarterly aggregation.
+[^10]: Tenth footnote --- See supplementary materials for interaction plots.
+[^11]: Eleventh footnote --- Temporal analysis uses quarterly aggregation.
 
 ## Mechanism Exploration
 
@@ -313,6 +450,12 @@ Sed hendrerit. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut
 Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci eget eros faucibus tincidunt.
 
 In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus.
+
+### Spillover Effects
+
+Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet. Quisque rutrum. Aenean imperdiet.
+
+Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui. Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing sem neque sed ipsum.
 
 :::
 
@@ -342,6 +485,14 @@ $$
 $$
 :::
 
+::: {.proof}
+By Young's inequality (@lem-young), for each $i$,
+$$
+\frac{a_i}{\|a\|_p} \cdot \frac{b_i}{\|b\|_q} \leq \frac{1}{p} \frac{a_i^p}{\|a\|_p^p} + \frac{1}{q} \frac{b_i^q}{\|b\|_q^q}.
+$$
+Summing over $i$ and using $\frac{1}{p} + \frac{1}{q} = 1$ yields the result.
+:::
+
 ::: {.corollary #cor-cs-special}
 Setting $p = q = 2$ in @thm-holder recovers @thm-cauchy-schwarz for finite-dimensional spaces.
 :::
@@ -353,8 +504,20 @@ ab \leq \frac{a^p}{p} + \frac{b^q}{q}.
 $$
 :::
 
+::: {.proof}
+The function $f(t) = e^t$ is convex. By Jensen's inequality applied to the weights $\frac{1}{p}$ and $\frac{1}{q}$,
+$$
+e^{\frac{1}{p} \log a^p + \frac{1}{q} \log b^q} \leq \frac{1}{p} e^{\log a^p} + \frac{1}{q} e^{\log b^q} = \frac{a^p}{p} + \frac{b^q}{q}.
+$$
+The left-hand side simplifies to $e^{\log a + \log b} = ab$.
+:::
+
 ::: {.conjecture #cnj-goldbach}
 Every even integer greater than 2 can be expressed as the sum of two primes.
+:::
+
+::: {.conjecture #cnj-riemann}
+All non-trivial zeros of the Riemann zeta function $\zeta(s) = \sum_{n=1}^{\infty} n^{-s}$ have real part equal to $\frac{1}{2}$.
 :::
 
 ## Convergence Theory
@@ -367,6 +530,10 @@ A sequence $(x_n)$ in a metric space $(X, d)$ **converges** to $x \in X$ if for 
 Every bounded, monotone sequence of real numbers converges.
 :::
 
+::: {.proof}
+Suppose $(x_n)$ is increasing and bounded above. Let $L = \sup_n x_n$, which exists by the completeness of $\mathbb{R}$. For any $\varepsilon > 0$, there exists $N$ with $x_N > L - \varepsilon$ (otherwise $L - \varepsilon$ would be an upper bound smaller than $L$). For $n \geq N$, $L - \varepsilon < x_N \leq x_n \leq L$, so $|x_n - L| < \varepsilon$. The decreasing case is analogous (take $\inf$).
+:::
+
 ::: {.exercise #exr-bounded}
 Show that convergent sequences in a metric space are bounded.
 :::
@@ -375,18 +542,482 @@ Show that convergent sequences in a metric space are bounded.
 Let $(x_n) \to x$. Choose $\varepsilon = 1$. Then there exists $N$ such that $d(x_n, x) < 1$ for all $n \geq N$. Set $M = \max\{d(x_1, x), \ldots, d(x_{N-1}, x), 1\}$. Then $d(x_n, x) \leq M$ for all $n$, so the sequence is bounded.
 :::
 
-The relationship between @thm-monotone and @thm-bolzano is fundamental: every bounded sequence has a monotone subsequence (by the "peak" argument), and every monotone bounded sequence converges. Together they yield Bolzano–Weierstrass.
+::: {.exercise #exr-cauchy}
+Prove that every convergent sequence in a metric space is a Cauchy sequence.
+:::
+
+::: {.solution}
+Let $(x_n) \to x$ and let $\varepsilon > 0$. There exists $N$ such that $d(x_n, x) < \varepsilon/2$ for all $n \geq N$. For $m, n \geq N$,
+$$
+d(x_m, x_n) \leq d(x_m, x) + d(x, x_n) < \frac{\varepsilon}{2} + \frac{\varepsilon}{2} = \varepsilon.
+$$
+:::
+
+The relationship between @thm-monotone and @thm-bolzano is fundamental: every bounded sequence has a monotone subsequence (by the "peak" argument), and every monotone bounded sequence converges. Together they yield Bolzano--Weierstrass.
+
+## Measure Theory
+
+::: {.definition #def-sigma-algebra}
+A **$\sigma$-algebra** on a set $\Omega$ is a collection $\mathcal{F} \subseteq \mathcal{P}(\Omega)$ satisfying: (i) $\Omega \in \mathcal{F}$; (ii) if $A \in \mathcal{F}$ then $A^c \in \mathcal{F}$; (iii) if $A_1, A_2, \ldots \in \mathcal{F}$ then $\bigcup_{n=1}^{\infty} A_n \in \mathcal{F}$.
+:::
+
+::: {.definition #def-measure}
+A **measure** on a measurable space $(\Omega, \mathcal{F})$ is a function $\mu: \mathcal{F} \to [0, \infty]$ satisfying: (i) $\mu(\emptyset) = 0$; (ii) countable additivity: for disjoint sets $A_1, A_2, \ldots \in \mathcal{F}$,
+$$
+\mu\left(\bigcup_{n=1}^{\infty} A_n\right) = \sum_{n=1}^{\infty} \mu(A_n).
+$$
+:::
+
+::: {.theorem #thm-monotone-convergence}
+Let $(f_n)$ be a sequence of non-negative measurable functions with $f_n \uparrow f$ pointwise. Then
+$$
+\lim_{n \to \infty} \int f_n \, d\mu = \int f \, d\mu.
+$$
+:::
+
+::: {.theorem #thm-dominated-convergence}
+Let $(f_n)$ be a sequence of measurable functions converging pointwise to $f$. If there exists an integrable function $g$ such that $|f_n| \leq g$ for all $n$, then
+$$
+\lim_{n \to \infty} \int f_n \, d\mu = \int f \, d\mu.
+$$
+:::
+
+::: {.lemma #lem-fatou}
+For non-negative measurable functions $(f_n)$,
+$$
+\int \liminf_{n \to \infty} f_n \, d\mu \leq \liminf_{n \to \infty} \int f_n \, d\mu.
+$$
+:::
+
+::: {.proof}
+Define $g_k = \inf_{n \geq k} f_n$. Then $g_k \leq f_n$ for all $n \geq k$, so $\int g_k \leq \int f_n$ for $n \geq k$, hence $\int g_k \leq \inf_{n \geq k} \int f_n$. Since $g_k \uparrow \liminf f_n$, the Monotone Convergence Theorem (@thm-monotone-convergence) gives
+$$
+\int \liminf f_n = \lim_k \int g_k \leq \lim_k \inf_{n \geq k} \int f_n = \liminf \int f_n.
+$$
+:::
+
+## Linear Algebra
+
+::: {.definition #def-eigenvalue}
+Let $A$ be an $n \times n$ matrix. A scalar $\lambda$ is an **eigenvalue** of $A$ if there exists a nonzero vector $\mathbf{v}$ such that $A\mathbf{v} = \lambda \mathbf{v}$. The vector $\mathbf{v}$ is the corresponding **eigenvector**.
+:::
+
+::: {.theorem #thm-spectral}
+Every real symmetric matrix $A \in \mathbb{R}^{n \times n}$ has a decomposition $A = Q \Lambda Q^T$ where $Q$ is orthogonal and $\Lambda$ is diagonal with real eigenvalues.
+:::
+
+::: {.proof}
+We proceed by induction on $n$. The base case $n = 1$ is trivial. For the inductive step, let $\lambda_1$ be an eigenvalue of $A$ (which exists since $\det(A - \lambda I)$ has a real root for real symmetric $A$) with unit eigenvector $\mathbf{v}_1$. Extend $\mathbf{v}_1$ to an orthonormal basis $\{\mathbf{v}_1, \mathbf{v}_2, \ldots, \mathbf{v}_n\}$ and set $P = [\mathbf{v}_1 \mid \mathbf{v}_2 \mid \cdots \mid \mathbf{v}_n]$. Then
+
+$$
+P^T A P = \begin{pmatrix} \lambda_1 & \mathbf{0}^T \\ \mathbf{0} & B \end{pmatrix}
+$$
+
+where $B$ is a real symmetric $(n-1) \times (n-1)$ matrix. By the inductive hypothesis, $B = Q' \Lambda' Q'^T$. Assembling gives the result.
+:::
+
+::: {.corollary #cor-positive-definite}
+A real symmetric matrix $A$ is positive definite if and only if all its eigenvalues are strictly positive.
+:::
+
+::: {#tab-definiteness}
+| Property | Positive Definite | Positive Semidefinite | Indefinite |
+|----------|-------------------|----------------------|------------|
+| Eigenvalues | All $> 0$ | All $\geq 0$ | Mixed signs |
+| Determinant | $> 0$ | $\geq 0$ | Any |
+| Leading minors | All $> 0$ | --- | --- |
+| Quadratic form | $\mathbf{x}^T A \mathbf{x} > 0$ | $\mathbf{x}^T A \mathbf{x} \geq 0$ | Both signs |
+| Cholesky | Exists | Exists (with zeros) | Does not exist |
+
+Classification of symmetric matrices by definiteness.
+:::
+
+
+# Probability and Statistics {#sec-probability}
+
+## Foundational Results
+
+::: {.theorem #thm-lln}
+**(Strong Law of Large Numbers.)** Let $X_1, X_2, \ldots$ be i.i.d. random variables with $\mathbb{E}[|X_1|] < \infty$. Then
+$$
+\frac{1}{n} \sum_{i=1}^n X_i \xrightarrow{\text{a.s.}} \mathbb{E}[X_1].
+$$
+:::
+
+::: {.theorem #thm-clt}
+**(Central Limit Theorem.)** Let $X_1, X_2, \ldots$ be i.i.d. with $\mathbb{E}[X_1] = \mu$ and $\text{Var}(X_1) = \sigma^2 < \infty$. Then
+$$
+\sqrt{n}\left(\bar{X}_n - \mu\right) \xrightarrow{d} N(0, \sigma^2).
+$$
+:::
+
+::: {.theorem #thm-delta-method}
+**(Delta Method.)** If $\sqrt{n}(T_n - \theta) \xrightarrow{d} N(0, \sigma^2)$ and $g$ is differentiable at $\theta$ with $g'(\theta) \neq 0$, then
+$$
+\sqrt{n}\left(g(T_n) - g(\theta)\right) \xrightarrow{d} N\left(0, [g'(\theta)]^2 \sigma^2\right).
+$$
+:::
+
+::: {.example #exm-delta}
+To find the asymptotic distribution of $\log \bar{X}_n$ when $X_i \sim \text{Exponential}(\lambda)$: we have $\mu = 1/\lambda$, $\sigma^2 = 1/\lambda^2$, and $g(x) = \log x$. By @thm-delta-method,
+$$
+\sqrt{n}\left(\log \bar{X}_n - \log \frac{1}{\lambda}\right) \xrightarrow{d} N\left(0, \lambda^2 \cdot \frac{1}{\lambda^2}\right) = N(0, 1).
+$$
+:::
+
+## Bayesian Inference
+
+::: {.theorem #thm-bayes}
+**(Bayes' Theorem.)** For events $A$ and $B$ with $P(B) > 0$,
+$$
+P(A \mid B) = \frac{P(B \mid A) \, P(A)}{P(B)}.
+$$
+:::
+
+The posterior distribution for a parameter $\theta$ given data $\mathbf{y}$ is
+
+$$
+\pi(\theta \mid \mathbf{y}) = \frac{L(\mathbf{y} \mid \theta) \, \pi(\theta)}{\int L(\mathbf{y} \mid \theta') \, \pi(\theta') \, d\theta'}
+$$
+
+where $L(\mathbf{y} \mid \theta)$ is the likelihood and $\pi(\theta)$ is the prior. Conjugate priors yield closed-form posteriors:
+
+::: {#tab-conjugate}
+| Likelihood | Conjugate Prior | Posterior |
+|-----------|----------------|-----------|
+| Normal($\mu$, $\sigma^2$ known) | Normal($\mu_0$, $\tau^2$) | Normal($\tilde{\mu}$, $\tilde{\tau}^2$) |
+| Binomial($n$, $p$) | Beta($\alpha$, $\beta$) | Beta($\alpha + x$, $\beta + n - x$) |
+| Poisson($\lambda$) | Gamma($\alpha$, $\beta$) | Gamma($\alpha + \sum x_i$, $\beta + n$) |
+| Exponential($\lambda$) | Gamma($\alpha$, $\beta$) | Gamma($\alpha + n$, $\beta + \sum x_i$) |
+
+Common conjugate prior families.
+:::
+
+::: {.callout-tip title="Jeffreys' Prior"}
+When no prior information is available, Jeffreys' prior $\pi(\theta) \propto \sqrt{I(\theta)}$, where $I(\theta)$ is the Fisher information, provides a non-informative prior that is invariant under reparameterization.
+:::
+
+
+# Conditional Content {#sec-conditional}
+
+The following content demonstrates format-specific rendering. Different output formats will display different material.
+
+::: {.content-visible when-format="html"}
+This paragraph is **only visible in HTML output**. It contains an HTML-specific note about interactive features and JavaScript rendering.
+:::
+
+::: {.content-visible when-format="latex"}
+This paragraph is **only visible in LaTeX output**. It contains a note about PDF compilation and page layout.
+:::
+
+::: {.content-visible when-format="typst"}
+This paragraph is **only visible in Typst output**. Typst is a modern typesetting system.
+:::
+
+::: {.content-hidden when-format="html"}
+This paragraph is **hidden from HTML** but visible in all other formats.
+:::
+
+::: {.content-visible when-format="markdown"}
+This paragraph is **only visible in Markdown output**. It is stripped from HTML, LaTeX, and Typst.
+:::
+
+
+# Raw Format Blocks {#sec-raw-blocks}
+
+The following sections contain format-specific raw content:
+
+```{=html}
+<div style="border: 2px solid #3498db; padding: 1em; border-radius: 8px; margin: 1em 0;">
+  <strong>HTML-only box:</strong> This styled <code>&lt;div&gt;</code> only appears in HTML output.
+  It is passed through verbatim without markdown processing.
+</div>
+```
+
+```{=latex}
+\begin{center}
+\fbox{\parbox{0.8\textwidth}{%
+\textbf{LaTeX-only box:} This framed paragraph only appears in LaTeX/PDF output.
+It uses native LaTeX commands.}}
+\end{center}
+```
+
+```{=typst}
+#rect(
+  width: 100%,
+  fill: luma(240),
+  inset: 1em,
+  [*Typst-only box:* This rectangle only appears in Typst output.]
+)
+```
+
+
+# Shortcodes and Variables {#sec-shortcodes}
+
+This document's title is "{{< meta title >}}" by {{< meta author >}}, dated {{< meta date >}}.
+
+The abstract begins: "{{< meta abstract >}}"
+
+{{< pagebreak >}}
+
+
+# Advanced Mathematics {#sec-advanced-math}
+
+## Differential Equations
+
+The heat equation in one dimension is
+
+$$
+\frac{\partial u}{\partial t} = \kappa \frac{\partial^2 u}{\partial x^2}
+$$ {#eq-heat}
+
+with boundary conditions $u(0, t) = u(L, t) = 0$ and initial condition $u(x, 0) = f(x)$. The solution via separation of variables is
+
+$$
+u(x, t) = \sum_{n=1}^{\infty} B_n \sin\left(\frac{n\pi x}{L}\right) e^{-\kappa (n\pi/L)^2 t}
+$$
+
+where the Fourier coefficients are
+
+$$
+B_n = \frac{2}{L} \int_0^L f(x) \sin\left(\frac{n\pi x}{L}\right) dx.
+$$
+
+The wave equation,
+
+$$
+\frac{\partial^2 u}{\partial t^2} = c^2 \frac{\partial^2 u}{\partial x^2},
+$$ {#eq-wave}
+
+and the Laplace equation,
+
+$$
+\nabla^2 \phi = \frac{\partial^2 \phi}{\partial x^2} + \frac{\partial^2 \phi}{\partial y^2} = 0,
+$$ {#eq-laplace}
+
+are the other fundamental PDEs of mathematical physics. Together, @eq-heat, @eq-wave, and @eq-laplace form the classical trio.
+
+## Matrix Calculus
+
+For a matrix $A \in \mathbb{R}^{m \times n}$ and vectors $\mathbf{x} \in \mathbb{R}^n$, $\mathbf{b} \in \mathbb{R}^m$:
+
+$$
+\frac{\partial}{\partial \mathbf{x}} \| A\mathbf{x} - \mathbf{b} \|^2 = 2 A^T(A\mathbf{x} - \mathbf{b})
+$$
+
+Setting this to zero gives the normal equations:
+
+$$
+A^T A \hat{\mathbf{x}} = A^T \mathbf{b}
+$$
+
+The solution $\hat{\mathbf{x}} = (A^T A)^{-1} A^T \mathbf{b}$ is the ordinary least squares estimator. Its covariance matrix is
+
+$$
+\text{Cov}(\hat{\mathbf{x}}) = \sigma^2 (A^T A)^{-1}
+$$
+
+and the hat matrix $H = A(A^T A)^{-1} A^T$ projects onto the column space of $A$.
+
+## Functional Analysis
+
+::: {.definition #def-banach}
+A **Banach space** is a complete normed vector space --- that is, a normed space $(V, \|\cdot\|)$ in which every Cauchy sequence converges.
+:::
+
+::: {.definition #def-hilbert}
+A **Hilbert space** is a Banach space whose norm arises from an inner product: $\|x\| = \sqrt{\langle x, x \rangle}$.
+:::
+
+::: {.theorem #thm-riesz}
+**(Riesz Representation Theorem.)** Let $H$ be a Hilbert space and $\varphi: H \to \mathbb{R}$ a continuous linear functional. Then there exists a unique $y \in H$ such that $\varphi(x) = \langle x, y \rangle$ for all $x \in H$.
+:::
+
+::: {.theorem #thm-banach-fixed}
+**(Banach Fixed-Point Theorem.)** Let $(X, d)$ be a complete metric space and $T: X \to X$ a contraction mapping with constant $q < 1$. Then $T$ has a unique fixed point $x^* \in X$, and for any $x_0 \in X$, $T^n(x_0) \to x^*$.
+:::
+
+::: {.proof}
+**Existence.** Pick any $x_0$ and define $x_n = T(x_{n-1})$. For $m > n$,
+$$
+d(x_n, x_m) \leq \sum_{k=n}^{m-1} d(x_k, x_{k+1}) \leq \sum_{k=n}^{m-1} q^k d(x_0, x_1) \leq \frac{q^n}{1-q} d(x_0, x_1).
+$$
+Since $q < 1$, the right side $\to 0$ as $n \to \infty$, so $(x_n)$ is Cauchy. By completeness, $x_n \to x^*$ for some $x^*$. Since $T$ is continuous, $T(x^*) = \lim T(x_n) = \lim x_{n+1} = x^*$.
+
+**Uniqueness.** If $T(y^*) = y^*$ also, then $d(x^*, y^*) = d(T(x^*), T(y^*)) \leq q \cdot d(x^*, y^*)$. Since $q < 1$, this forces $d(x^*, y^*) = 0$.
+:::
+
+::: {.algorithm #alg-picard}
+**(Picard iteration for ODEs.)**
+Given an initial value problem $y' = f(t, y)$, $y(t_0) = y_0$:
+
+1. Set $\phi_0(t) = y_0$
+2. For $n = 0, 1, 2, \ldots$, compute $\phi_{n+1}(t) = y_0 + \int_{t_0}^t f(s, \phi_n(s)) \, ds$
+3. If $f$ is Lipschitz in $y$, the sequence $(\phi_n)$ converges uniformly to the unique solution
+:::
+
+
+# Bulk Content for Stress Testing {#sec-bulk}
+
+## Prose Section Alpha
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec vel sapien velit. Fusce id eros at diam maximus gravida sit amet in tellus. Suspendisse potenti. Praesent sodales ligula quis erat tempor, sit amet fermentum justo lobortis. Nulla id lacinia justo. Proin a felis vel ligula tristique porttitor. Aliquam suscipit semper tellus, ut dapibus mi efficitur nec^[Inline footnote demonstrating this syntax.]. Sed eu velit velit. Nullam scelerisque volutpat dui quis rhoncus. Integer vel elit vel lacus vehicula lobortis a ut mauris.
+
+Vivamus quis purus at augue ultricies accumsan eget sit amet velit. Quisque tincidunt, quam eget tempus aliquam, ligula velit dictum purus, et vehicula odio velit at arcu. Nullam ultrices mi at turpis fermentum, non vehicula mi eleifend. Proin et orci id nisl ultricies placerat. Cras nec turpis vel metus aliquam eleifend a in lectus. Donec sodales feugiat ipsum, at blandit diam ultrices sit amet. Pellentesque sed ex ut augue volutpat imperdiet.
+
+Etiam sit amet eros a metus varius euismod eget non eros. Sed consequat augue vel libero feugiat, in fringilla sapien aliquam. Sed auctor lacus in urna fermentum, a molestie arcu pellentesque. Ut posuere risus ut ex condimentum, nec cursus lorem vestibulum. Morbi vestibulum mauris ut lacus fermentum, quis feugiat nunc efficitur. Fusce nec est quis est feugiat tempor vel eu velit. Curabitur volutpat purus at libero tincidunt, non suscipit erat varius.
+
+## Prose Section Beta
+
+Phasellus imperdiet, nulla et dictum interdum, nisi lorem egestas odio, vitae scelerisque enim ligula venenatis dolor. Maecenas nisl est, ultrices nec congue eget, auctor vitae massa. Fusce luctus vestibulum augue ut facilisis. Cras imperdiet nunc nec purus euismod, id euismod elit maximus. Nunc lobortis dolor quis mi varius, in bibendum nibh facilisis. Sed convallis erat id turpis posuere lobortis. Sed eu ligula risus.
+
+Nullam mollis sem in urna tincidunt, sit amet venenatis augue tempor. Mauris pulvinar ex in turpis lacinia, a dignissim leo pellentesque. Nunc non tempor sapien. Donec vel elit pretium, placerat ante nec, blandit nulla. Integer ut turpis varius, commodo ex in, facilisis nunc. Aliquam erat volutpat. Fusce euismod lobortis lacus vel tempus. Quisque congue nunc eget erat tincidunt facilisis. Cras sit amet dolor sit amet turpis bibendum dignissim.
+
+Ut vehicula diam eget nunc blandit, in tempor orci luctus. Nulla facilisi. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Cras hendrerit nisl vel lacinia fermentum. Donec nec sapien vel ligula tincidunt eleifend a non arcu. Morbi et ex sed massa interdum convallis id ac lorem. Vestibulum vitae velit et purus vestibulum pharetra sit amet vel magna.
+
+## Prose Section Gamma
+
+Aliquam nec felis eu purus suscipit tincidunt sit amet a enim. Donec euismod dolor quis est tempus facilisis. Morbi non ante quam. Nullam lobortis erat id augue lacinia, id feugiat mi lobortis. Phasellus vel quam ac libero suscipit commodo. Aenean sagittis diam vel eros tincidunt, a pharetra ligula interdum. Praesent lacinia sapien sit amet consequat ultricies.
+
+Fusce fermentum est ut quam ultrices, id posuere risus accumsan. Proin hendrerit lorem sed orci vestibulum, vel iaculis purus posuere. Ut sit amet velit sed mauris malesuada auctor non a nibh. Nullam vel velit eget sapien aliquam maximus ut nec lorem. Curabitur lobortis erat vel enim accumsan, quis sagittis nulla sollicitudin. In lacinia turpis eu ante maximus, ac posuere ex lacinia.
+
+Vivamus sit amet dolor vitae mauris sagittis fringilla. Praesent eget lacus vel justo fermentum facilisis. Cras a velit vel dolor condimentum tempor. Morbi sodales ante a sem suscipit, id euismod sapien consequat. Sed aliquet lacus eu sapien posuere, vel accumsan dui blandit. Nulla in velit in risus finibus bibendum sed nec est.
+
+Integer nec turpis a dui cursus aliquam eget eget diam. Proin consectetur vestibulum sapien at convallis. Nullam tempus mauris non lectus efficitur hendrerit. Vivamus semper augue nec justo euismod, eu varius dolor sodales. Cras fringilla neque at felis pretium, et pretium est interdum. Mauris molestie sapien sit amet mi maximus, eu dapibus felis dictum.
+
+## Prose Section Delta
+
+### Subsection Delta-One
+
+Pellentesque dapibus suscipit ligula. Donec posuere augue in quam. Etiam vel tortor sodales tellus ultricies commodo. Suspendisse potenti. Aenean in sem ac leo mollis blandit. Donec neque quam, dignissim in, mollis nec, sagittis eu, wisi. Phasellus lacus. Etiam laoreet quam sed arcu.
+
+#### Sub-subsection Delta-One-Alpha
+
+Phasellus at dui in ligula mollis ultricies. Integer placerat tristique nisl. Praesent augue. Fusce commodo. Vestibulum convallis, lorem a tempus semper, dui dui euismod elit, vitae placerat urna tortor vitae lacus. Nullam libero mauris, consequat quis, varius et, dictum id, arcu.
+
+#### Sub-subsection Delta-One-Beta
+
+Donec vitae arcu. Nam pretium turpis et arcu. Duis arcu tortor, suscipit eget, imperdiet nec, imperdiet iaculis, ipsum. Sed aliquam ultrices mauris. Integer ante arcu, accumsan a, consectetuer eget, posuere ut, mauris.
+
+### Subsection Delta-Two
+
+Maecenas vestibulum mollis diam. Pellentesque ut neque. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. In dui magna, posuere eget, vestibulum et, tempor auctor, justo. In ac felis quis tortor malesuada pretium.
+
+#### Sub-subsection Delta-Two-Alpha
+
+Pellentesque auctor neque nec urna. Proin sapien ipsum, porta a, auctor quis, eu amet, nibh. Cras id dui. Aenean ut eros et nisl sagittis vestibulum. Nullam nulla eros, ultricies sit amet, nonummy id, imperdiet feugiat, pede. Vivamus vel sapien.
+
+Praesent ac massa at ligula laoreet iaculis. Nulla neque dolor, sagittis eget, iaculis quis, molestie non, velit. Mauris turpis nunc, blandit et, volutpat molestie, porta ut, ligula.
+
+#### Sub-subsection Delta-Two-Beta
+
+Fusce ac felis sit amet ligula pharetra condimentum. Maecenas egestas arcu quis ligula mattis placerat. Duis lobortis massa imperdiet quam. Suspendisse potenti. Pellentesque commodo eros a enim.
+
+### Subsection Delta-Three
+
+Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; In ac dui quis mi consectetuer lacinia. Nam pretium turpis et arcu. Duis arcu tortor, suscipit eget, imperdiet nec, imperdiet iaculis, ipsum.
+
+Sed aliquam ultrices mauris. Integer ante arcu, accumsan a, consectetuer eget, posuere ut, mauris. Praesent adipiscing. Phasellus ullamcorper ipsum rutrum nunc. Nunc nonummy metus. Vestibulum volutpat pretium libero.
+
+## Prose Section Epsilon
+
+### Subsection Epsilon-One
+
+Cras varius. Donec vitae orci sed dolor rutrum auctor. Fusce egestas elit eget lorem. Suspendisse nisl elit, rhoncus eget, elementum ac, condimentum eget, diam. Nam at tortor in tellus interdum sagittis. Aliquam lobortis.
+
+Donec orci lectus, aliquam vel, dapibus a, posuere nec, elit. Nullam ante orci, pellentesque eget, tempus quis, ultrices in, est. Curabitur sit amet nulla. Nam in massa.
+
+### Subsection Epsilon-Two
+
+Vivamus luctus egestas leo. Maecenas sollicitudin. Nullam rhoncus aliquam metus. Etiam egestas wisi a erat. Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Morbi vel erat non mauris convallis vehicula^[Another inline footnote for stress testing.]. Nulla et sapien.
+
+Integer tortor tellus, aliquam faucibus, convallis id, congue eu, quam. Mauris ullamcorper felis vitae erat. Proin feugiat, augue non elementum posuere, metus purus iaculis lectus, et tristique ligula justo vitae magna.
+
+Aliquam convallis sollicitudin purus. Praesent aliquam, enim at fermentum mollis, ligula massa adipiscing nisl, ac euismod nibh nisl eu lectus. Fusce vulputate sem at sapien. Vivamus leo. Aliquam euismod libero eu enim. Nulla nec felis sed leo placerat imperdiet. Aenean suscipit nulla in justo. Suspendisse cursus rutrum augue.
+
+### Subsection Epsilon-Three
+
+#### Deep Nesting Level Four
+
+Nulla quam. Aenean laoreet. Vestibulum nisi lectus, commodo ac, facilisis ac, ultricies eu, pede. Ut orci risus, accumsan porttitor, cursus quis, aliquet eget, justo.
+
+##### Even Deeper Level Five
+
+Sed pretium blandit orci. Ut eu diam at pede suscipit sodales. Aenean lectus elit, fermentum non, convallis id, sagittis at, neque. Nullam mauris orci, aliquet et, iaculis et, viverra vitae, ligula.
+
+Nunc nec lectus in pede hendrerit laoreet. Nulla quam. Aenean laoreet. Vestibulum nisi lectus, commodo ac, facilisis ac, ultricies eu, pede.
+
+## Dense Mathematics
+
+Consider the multivariate normal distribution $\mathbf{X} \sim N(\boldsymbol{\mu}, \boldsymbol{\Sigma})$. The density is
+
+$$
+f(\mathbf{x}) = \frac{1}{(2\pi)^{n/2} |\boldsymbol{\Sigma}|^{1/2}} \exp\left(-\frac{1}{2} (\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})\right).
+$$
+
+The moment generating function is $M(\mathbf{t}) = \exp\left(\boldsymbol{\mu}^T \mathbf{t} + \frac{1}{2} \mathbf{t}^T \boldsymbol{\Sigma} \mathbf{t}\right)$. The characteristic function is $\varphi(\mathbf{t}) = \exp\left(i \boldsymbol{\mu}^T \mathbf{t} - \frac{1}{2} \mathbf{t}^T \boldsymbol{\Sigma} \mathbf{t}\right)$.
+
+Key properties: if $\mathbf{X} \sim N(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ and $\mathbf{Y} = A\mathbf{X} + \mathbf{b}$, then $\mathbf{Y} \sim N(A\boldsymbol{\mu} + \mathbf{b}, A \boldsymbol{\Sigma} A^T)$. For a partition
+
+$$
+\mathbf{X} = \begin{pmatrix} \mathbf{X}_1 \\ \mathbf{X}_2 \end{pmatrix}, \quad
+\boldsymbol{\mu} = \begin{pmatrix} \boldsymbol{\mu}_1 \\ \boldsymbol{\mu}_2 \end{pmatrix}, \quad
+\boldsymbol{\Sigma} = \begin{pmatrix} \boldsymbol{\Sigma}_{11} & \boldsymbol{\Sigma}_{12} \\ \boldsymbol{\Sigma}_{21} & \boldsymbol{\Sigma}_{22} \end{pmatrix},
+$$
+
+the conditional distribution is $\mathbf{X}_1 \mid \mathbf{X}_2 = \mathbf{x}_2 \sim N(\bar{\boldsymbol{\mu}}, \bar{\boldsymbol{\Sigma}})$ where
+
+$$
+\bar{\boldsymbol{\mu}} = \boldsymbol{\mu}_1 + \boldsymbol{\Sigma}_{12} \boldsymbol{\Sigma}_{22}^{-1} (\mathbf{x}_2 - \boldsymbol{\mu}_2), \quad
+\bar{\boldsymbol{\Sigma}} = \boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12} \boldsymbol{\Sigma}_{22}^{-1} \boldsymbol{\Sigma}_{21}.
+$$
+
+The Mahalanobis distance is $D^2 = (\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})$, which follows a $\chi^2_n$ distribution when $\mathbf{X} \sim N(\boldsymbol{\mu}, \boldsymbol{\Sigma})$.
+
+## More Tables
+
+::: {#tab-distributions}
+| Distribution | PDF/PMF | Mean | Variance | MGF |
+|-------------|---------|------|----------|-----|
+| $\text{Bernoulli}(p)$ | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ | $(1-p) + pe^t$ |
+| $\text{Binomial}(n,p)$ | $\binom{n}{x}p^x(1-p)^{n-x}$ | $np$ | $np(1-p)$ | $((1-p)+pe^t)^n$ |
+| $\text{Poisson}(\lambda)$ | $e^{-\lambda}\lambda^x/x!$ | $\lambda$ | $\lambda$ | $e^{\lambda(e^t-1)}$ |
+| $\text{Geometric}(p)$ | $(1-p)^{x-1}p$ | $1/p$ | $(1-p)/p^2$ | $pe^t/(1-(1-p)e^t)$ |
+| $N(\mu, \sigma^2)$ | $(2\pi\sigma^2)^{-1/2}e^{-(x-\mu)^2/2\sigma^2}$ | $\mu$ | $\sigma^2$ | $e^{\mu t + \sigma^2 t^2/2}$ |
+| $\text{Exp}(\lambda)$ | $\lambda e^{-\lambda x}$ | $1/\lambda$ | $1/\lambda^2$ | $\lambda/(\lambda-t)$ |
+| $\text{Gamma}(\alpha,\beta)$ | $\frac{\beta^\alpha}{\Gamma(\alpha)}x^{\alpha-1}e^{-\beta x}$ | $\alpha/\beta$ | $\alpha/\beta^2$ | $(\beta/(\beta-t))^\alpha$ |
+| $\text{Beta}(\alpha,\beta)$ | $\frac{x^{\alpha-1}(1-x)^{\beta-1}}{B(\alpha,\beta)}$ | $\frac{\alpha}{\alpha+\beta}$ | $\frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$ | --- |
+
+Common probability distributions and their properties.
+:::
+
+::: {#tab-tests}
+| Test | Null Hypothesis | Test Statistic | Distribution under $H_0$ |
+|------|----------------|----------------|--------------------------|
+| $z$-test | $\mu = \mu_0$ | $Z = \frac{\bar{X} - \mu_0}{\sigma/\sqrt{n}}$ | $N(0,1)$ |
+| $t$-test | $\mu = \mu_0$ | $T = \frac{\bar{X} - \mu_0}{S/\sqrt{n}}$ | $t_{n-1}$ |
+| $\chi^2$ goodness-of-fit | $p_i = p_{i0}$ | $\chi^2 = \sum \frac{(O_i - E_i)^2}{E_i}$ | $\chi^2_{k-1}$ |
+| $F$-test | $\sigma_1^2 = \sigma_2^2$ | $F = S_1^2 / S_2^2$ | $F_{n_1-1, n_2-1}$ |
+| Wald test | $\theta = \theta_0$ | $W = (\hat\theta - \theta_0)^2 / \widehat{\text{Var}}(\hat\theta)$ | $\chi^2_1$ |
+| LR test | $\theta \in \Theta_0$ | $\Lambda = -2\log(L_0/L_1)$ | $\chi^2_r$ |
+
+Common hypothesis tests in statistics.
+:::
 
 
 # Conclusion {#sec-conclusion}
 
-This document has demonstrated the interplay between @sec-theory and @sec-results. The treatment effect, estimated at OR = 1.42 via logistic regression, is robust across specifications (@sec-results). The mathematical foundations from @sec-math — particularly @thm-holder and @lem-young — provide the analytical scaffolding for asymptotic inference.
+This document has demonstrated the interplay between @sec-theory and @sec-results. The treatment effect, estimated at OR = 1.42 via logistic regression, is robust across specifications (@sec-results). The mathematical foundations from @sec-math --- particularly @thm-holder and @lem-young --- provide the analytical scaffolding for asymptotic inference.
 
-As @arel2026quantitative emphasize, adequate statistical power remains a pressing concern. Our sample of $n = 10{,}000$ provides 92% power to detect effects of the magnitude observed, well above conventional thresholds[-@arel2026quantitative].
+As @arel2026quantitative emphasize, adequate statistical power remains a pressing concern. Our sample of $n = 10{,}000$ provides 92% power to detect effects of the magnitude observed, well above conventional thresholds [-@arel2026quantitative]. The classical results of @rudin1976principles and @lehmann2005testing provide the theoretical grounding, while @knuth1997art reminds us of the importance of algorithmic efficiency in computation.
 
-Future research should address the limitations discussed in @sec-discussion and extend the temporal analysis from @sec-extended. In particular, the mechanisms identified in the mediation analysis warrant further investigation using experimental designs with stronger identification strategies[^12].
+The topology results from @sec-theory --- @thm-heine-borel, @thm-tychonoff, and @prp-hausdorff --- are central to modern analysis. The measure-theoretic results in @sec-math --- @thm-monotone-convergence, @thm-dominated-convergence, and @lem-fatou --- underpin the probabilistic results of @sec-probability including @thm-lln and @thm-clt.
 
-[^12]: Twelfth footnote — Forthcoming experimental protocols are registered at osf.io/example.
+Future research should address the limitations discussed in @sec-discussion and extend the temporal analysis from @sec-extended. In particular, the mechanisms identified in the mediation analysis warrant further investigation using experimental designs with stronger identification strategies[^12]. The Banach fixed-point theorem (@thm-banach-fixed) and the Riesz representation theorem (@thm-riesz) suggest fruitful connections to functional-analytic methods in econometrics.
+
+The model specifications @eq-logit, @eq-probit, and @eq-lpm cover the standard binary-choice toolbox. The balance table (@tab-balance) confirms adequate randomization, while @tab-regional reveals geographic heterogeneity. The data summary in @tab-vars lists all covariates. Distributional properties are collected in @tab-distributions, hypothesis tests in @tab-tests, and matrix definiteness criteria in @tab-definiteness.
+
+[^12]: Twelfth footnote --- Forthcoming experimental protocols are registered at osf.io/example.
 
 
 # Appendix: Code {#sec-appendix-code}
@@ -439,7 +1070,35 @@ mfx = model.get_margeff()
 print(mfx.summary())
 ```
 
-> All analyses were conducted in R 4.4.2 and Python 3.12. Results were rendered with calepin.
+## `Rust`
+
+```rust
+use nalgebra::{DMatrix, DVector};
+
+fn ols(x: &DMatrix<f64>, y: &DVector<f64>) -> DVector<f64> {
+    let xt = x.transpose();
+    let xtx = &xt * x;
+    let xty = &xt * y;
+    xtx.lu().solve(&xty).expect("Singular matrix")
+}
+
+fn residuals(x: &DMatrix<f64>, y: &DVector<f64>, beta: &DVector<f64>) -> DVector<f64> {
+    y - x * beta
+}
+```
+
+## `Julia`
+
+```julia
+using GLM, DataFrames
+
+# Logistic regression
+model = glm(@formula(outcome ~ treatment + age + income + education),
+            df, Binomial(), LogitLink())
+coeftable(model)
+```
+
+> All analyses were conducted in R 4.4.2, Python 3.12, Rust 1.89, and Julia 1.11. Results were rendered with *Calepin*.
 
 ::: {.callout-note title="Data Availability" collapse="true"}
 The dataset used in this analysis is available upon request from the corresponding author. A synthetic version of the data, suitable for replication of the statistical methods, is included in the repository under `data/synthetic.csv`.

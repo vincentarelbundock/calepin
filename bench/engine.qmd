@@ -3,6 +3,7 @@ title: This is a test
 ---
 
 # Two R chunks with a persistent variable
+
 ```{r}
 a = 2
 ```
@@ -11,6 +12,7 @@ a + exp(10)
 ```
 
 # Two Python chunks with a persistent variable
+
 ```{python}
 import math
 a = 2

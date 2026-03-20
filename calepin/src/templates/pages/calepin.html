@@ -7,6 +7,12 @@
 
 <title>{{plain-title}}</title>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
+<script>
+// Apply saved theme immediately to prevent flash
+(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)})();
+</script>
+
 {{preamble}}
 
 {{css}}
@@ -24,6 +30,9 @@ MathJax = {
 </head>
 
 <body>
+<nav class="theme-toggle">
+  <button id="theme-btn" aria-label="Toggle dark mode"></button>
+</nav>
 <main class="container">
 {{include-before}}
 
@@ -70,6 +79,23 @@ document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
     });
   });
 });
+
+// Theme toggle
+(function() {
+  var btn = document.getElementById('theme-btn');
+  function current() {
+    return document.documentElement.getAttribute('data-theme') ||
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  }
+  function update(t) { btn.textContent = t === 'dark' ? '\u2600' : '\u263e'; }
+  update(current());
+  btn.addEventListener('click', function() {
+    var t = current() === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('theme', t);
+    update(t);
+  });
+})();
 
 // Footnote hover previews
 document.querySelectorAll('.footnote-ref a').forEach(function(a) {

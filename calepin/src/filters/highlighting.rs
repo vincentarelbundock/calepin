@@ -105,51 +105,58 @@ pub enum ColorScope {
     MediaQuery,
     /// Use `[data-theme='light']` / `[data-theme='dark']` — for Starlight/Astro.
     DataTheme,
+    /// Emit both `@media` and `[data-theme]` rules — for standalone HTML with a theme toggle.
+    Both,
 }
 
-impl ColorScope {
-    fn wrappers(&self) -> (&'static str, &'static str) {
-        match self {
-            ColorScope::MediaQuery => (
-                "@media (prefers-color-scheme: light)",
-                "@media (prefers-color-scheme: dark)",
-            ),
-            ColorScope::DataTheme => (
-                "[data-theme='light']",
-                "[data-theme='dark']",
-            ),
-        }
-    }
-}
 
 /// Syntax highlighting engine holding shared state.
+///
+/// Theme and syntax loading is lazy: when `HighlightConfig::None`, no syntect
+/// data structures are allocated. When highlighting is enabled, only the
+/// requested theme(s) are parsed — not all 26 bundled themes.
 pub struct Highlighter {
-    ss: SyntaxSet,
-    ts: ThemeSet,
+    ss: std::cell::OnceCell<SyntaxSet>,
+    ts: std::cell::OnceCell<ThemeSet>,
     config: HighlightConfig,
     latex_colors: std::cell::RefCell<LatexColorRegistry>,
 }
 
+/// Look up a bundled .tmTheme by internal key name.
+fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
+    use std::io::Cursor;
+    BUNDLED_THEMES.iter()
+        .find(|(n, _)| *n == name)
+        .and_then(|(_, bytes)| ThemeSet::load_from_reader(&mut Cursor::new(bytes)).ok())
+}
+
+/// Check whether a theme key refers to a syntect built-in (not a bundled .tmTheme).
+fn is_syntect_builtin(key: &str) -> bool {
+    matches!(key,
+        "base16-ocean.dark" | "base16-ocean.light" |
+        "base16-eighties.dark" | "base16-mocha.dark" |
+        "Solarized (dark)" | "Solarized (light)"
+    )
+}
+
 impl Highlighter {
     pub fn new(config: HighlightConfig) -> Self {
-        let mut ts = ThemeSet::load_defaults();
-
-        // Load bundled .tmTheme files
-        for (name, bytes) in BUNDLED_THEMES {
-            use std::io::Cursor;
-            match ThemeSet::load_from_reader(&mut Cursor::new(bytes)) {
-                Ok(t) => { ts.themes.insert(name.to_string(), t); }
-                Err(e) => { cwarn!("failed to load bundled theme '{}': {}", name, e); }
-            }
-        }
-
-        // Load custom .tmTheme file if referenced
+        // Handle custom .tmTheme file path in config — resolve it eagerly so we
+        // can report errors early and normalise the config to "_custom".
         let config = if let HighlightConfig::Single(ref key) = config {
             if key.ends_with(".tmTheme") || key.ends_with(".tmtheme") {
                 match ThemeSet::get_theme(std::path::Path::new(key)) {
                     Ok(t) => {
+                        let ts_cell = std::cell::OnceCell::new();
+                        let mut ts = ThemeSet { themes: std::collections::BTreeMap::new() };
                         ts.themes.insert("_custom".to_string(), t);
-                        HighlightConfig::Single("_custom".to_string())
+                        let _ = ts_cell.set(ts);
+                        return Self {
+                            ss: std::cell::OnceCell::new(),
+                            ts: ts_cell,
+                            config: HighlightConfig::Single("_custom".to_string()),
+                            latex_colors: std::cell::RefCell::new(LatexColorRegistry::new()),
+                        };
                     }
                     Err(e) => {
                         cwarn!("highlight-style '{}': failed to parse: {}", key, e);
@@ -164,11 +171,45 @@ impl Highlighter {
         };
 
         Self {
-            ss: SyntaxSet::load_defaults_newlines(),
-            ts,
+            ss: std::cell::OnceCell::new(),
+            ts: std::cell::OnceCell::new(),
             config,
             latex_colors: std::cell::RefCell::new(LatexColorRegistry::new()),
         }
+    }
+
+    /// Lazily load the SyntaxSet (only when first needed for highlighting).
+    fn syntax_set(&self) -> &SyntaxSet {
+        self.ss.get_or_init(SyntaxSet::load_defaults_newlines)
+    }
+
+    /// Lazily load the ThemeSet, containing only the theme(s) actually needed.
+    fn theme_set(&self) -> &ThemeSet {
+        self.ts.get_or_init(|| {
+            let mut ts = ThemeSet { themes: std::collections::BTreeMap::new() };
+            let keys: Vec<&str> = match &self.config {
+                HighlightConfig::None => vec![],
+                HighlightConfig::Single(k) => vec![k.as_str()],
+                HighlightConfig::LightDark { light, dark } => vec![light.as_str(), dark.as_str()],
+            };
+            for key in keys {
+                if ts.themes.contains_key(key) {
+                    continue;
+                }
+                if is_syntect_builtin(key) {
+                    // Load only the syntect defaults to get this theme
+                    let defaults = ThemeSet::load_defaults();
+                    if let Some(theme) = defaults.themes.into_iter().find(|(n, _)| n == key) {
+                        ts.themes.insert(theme.0, theme.1);
+                    }
+                } else if let Some(theme) = load_bundled_theme(key) {
+                    ts.themes.insert(key.to_string(), theme);
+                } else {
+                    cwarn!("theme '{}' not found", key);
+                }
+            }
+            ts
+        })
     }
 
     /// Syntax-highlight code for the given output format extension.
@@ -181,11 +222,11 @@ impl Highlighter {
             HighlightConfig::LightDark { light, .. } => light,
         };
 
-        let syntax = self
-            .ss
+        let ss = self.syntax_set();
+        let syntax = ss
             .find_syntax_by_token(lang)
-            .or_else(|| self.ss.find_syntax_by_name(lang))
-            .unwrap_or_else(|| self.ss.find_syntax_plain_text());
+            .or_else(|| ss.find_syntax_by_name(lang))
+            .unwrap_or_else(|| ss.find_syntax_plain_text());
 
         match ext {
             "html" => self.highlight_html(code, syntax),
@@ -195,12 +236,13 @@ impl Highlighter {
     }
 
     fn theme(&self, key: &str) -> &syntect::highlighting::Theme {
-        &self.ts.themes[key]
+        &self.theme_set().themes[key]
     }
 
     fn highlight_html(&self, code: &str, syntax: &syntect::parsing::SyntaxReference) -> String {
+        let ss = self.syntax_set();
         let mut generator =
-            ClassedHTMLGenerator::new_with_class_style(syntax, &self.ss, ClassStyle::Spaced);
+            ClassedHTMLGenerator::new_with_class_style(syntax, ss, ClassStyle::Spaced);
         for line in LinesWithEndings::from(code) {
             let _ = generator.parse_html_for_line_which_includes_newline(line);
         }
@@ -208,6 +250,7 @@ impl Highlighter {
     }
 
     fn highlight_latex(&self, code: &str, syntax: &syntect::parsing::SyntaxReference, theme_key: &str) -> String {
+        let ss = self.syntax_set();
         let mut h = HighlightLines::new(syntax, self.theme(theme_key));
         let mut output = String::new();
         let mut colors = self.latex_colors.borrow_mut();
@@ -216,7 +259,7 @@ impl Highlighter {
             if i > 0 {
                 output.push('\n');
             }
-            match h.highlight_line(line, &self.ss) {
+            match h.highlight_line(line, ss) {
                 Ok(ranges) => output.push_str(&escape_latex_line(&ranges, &mut colors)),
                 Err(_) => output.push_str(&escape_latex(line)),
             }
@@ -250,13 +293,29 @@ impl Highlighter {
                     .unwrap_or_default();
 
                 let mut css = String::new();
-                let (light_wrap, dark_wrap) = scope.wrappers();
-                write!(css, "{} {{\n{}", light_wrap, light_css).unwrap();
-                self.append_pre_overrides(&mut css, light);
-                css.push_str("\n}\n");
-                write!(css, "{} {{\n{}", dark_wrap, dark_css).unwrap();
-                self.append_pre_overrides(&mut css, dark);
-                css.push_str("\n}");
+
+                let scopes: Vec<(&str, &str)> = match scope {
+                    ColorScope::MediaQuery => vec![
+                        ("@media (prefers-color-scheme: light)", "@media (prefers-color-scheme: dark)"),
+                    ],
+                    ColorScope::DataTheme => vec![
+                        ("[data-theme='light']", "[data-theme='dark']"),
+                    ],
+                    ColorScope::Both => vec![
+                        ("@media (prefers-color-scheme: light)", "@media (prefers-color-scheme: dark)"),
+                        ("[data-theme='light']", "[data-theme='dark']"),
+                    ],
+                };
+
+                for (light_wrap, dark_wrap) in &scopes {
+                    write!(css, "{} {{\n{}", light_wrap, light_css).unwrap();
+                    self.append_pre_overrides(&mut css, light);
+                    css.push_str("\n}\n");
+                    write!(css, "{} {{\n{}", dark_wrap, dark_css).unwrap();
+                    self.append_pre_overrides(&mut css, dark);
+                    css.push_str("\n}\n");
+                }
+
                 css
             }
         }

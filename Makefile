@@ -14,7 +14,7 @@ build:  ## Build debug binary
 release:  ## Build optimized release binary
 	cargo build --manifest-path calepin/Cargo.toml --release
 
-install:  ## Build release binary, install to ~/.cargo/bin, and set up shell completions
+install: ## Build release binary, install to ~/.cargo/bin, and set up shell completions
 	cargo install --path calepin
 	@mkdir -p ~/.config/calepin
 	@if [ -n "$$ZSH_VERSION" ] || [ "$$SHELL" = "/bin/zsh" ]; then \

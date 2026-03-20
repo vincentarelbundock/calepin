@@ -126,7 +126,7 @@ impl ChunkOptions {
     pub fn message(&self) -> bool { self.get_bool("message", true) }
     #[allow(dead_code)]
     pub fn collapse(&self) -> bool { self.get_bool("collapse", false) }
-    pub fn comment(&self) -> String { self.get_string("comment", "") }
+    pub fn comment(&self) -> String { self.get_string("comment", "> ") }
     pub fn results(&self) -> ResultsMode {
         match self.get_string("results", "markup").as_str() {
             "asis" => ResultsMode::Asis,

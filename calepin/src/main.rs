@@ -194,7 +194,10 @@ pub fn render_core(
     // 7. Create element renderer
     let highlight_config = metadata.extra.get("highlight-style")
         .map(|v| filters::highlighting::parse_highlight_config(v))
-        .unwrap_or(filters::highlighting::HighlightConfig::None);
+        .unwrap_or(filters::highlighting::HighlightConfig::LightDark {
+            light: "github".to_string(),
+            dark: "nord".to_string(),
+        });
     let mut element_renderer = ElementRenderer::new(renderer.base_format(), highlight_config);
     element_renderer.number_sections = metadata.number_sections;
     element_renderer.shift_headings = metadata.title.is_some();

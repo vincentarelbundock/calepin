@@ -28,7 +28,9 @@ impl OutputRenderer for HtmlRenderer {
     ) -> Option<String> {
         let mut vars = build_html_vars(meta, body);
         vars.insert("preamble".to_string(), renderer.get_template("preamble"));
-        let syntax_css = renderer.syntax_css();
+        let syntax_css = renderer.syntax_css_with_scope(
+            crate::filters::highlighting::ColorScope::Both,
+        );
         let css = vars.entry("css".to_string()).or_default();
         css.push_str(&format!("\n<style>\n{}</style>", syntax_css));
         let tpl = template::html_template();
@@ -130,7 +132,17 @@ pub fn postprocess_html(html: &str) -> String {
 }
 
 /// Add hierarchical section numbers to HTML headings.
+///
+/// When headings have been shifted (e.g. `#` → `<h2>` because a title exists),
+/// the numbering uses the minimum heading level as the base so that top-level
+/// headings are numbered 1, 2, 3 rather than 0.1, 0.2, 0.3.
 pub fn number_sections_html(html: &str) -> String {
+    // Find the minimum heading level present in the document.
+    let min_level = HEADING_RE.captures_iter(html)
+        .filter_map(|caps| caps[2].parse::<usize>().ok())
+        .min()
+        .unwrap_or(1);
+
     let mut counters = [0usize; 6];
 
     HEADING_RE.replace_all(html, |caps: &regex::Captures| {
@@ -138,14 +150,15 @@ pub fn number_sections_html(html: &str) -> String {
         let level: usize = caps[2].parse().unwrap_or(1);
         let attrs = &caps[3];
         let content = &caps[4];
-        let idx = level - 1;
+        // Normalize so the shallowest heading maps to depth 0.
+        let depth = level - min_level;
 
-        counters[idx] += 1;
-        for c in counters.iter_mut().skip(level) {
+        counters[depth] += 1;
+        for c in counters.iter_mut().skip(depth + 1) {
             *c = 0;
         }
 
-        let number: String = counters[..level]
+        let number: String = counters[..=depth]
             .iter()
             .map(|c| c.to_string())
             .collect::<Vec<_>>()
@@ -355,6 +368,16 @@ mod tests {
         let html = "<h1>Hello</h1>";
         let result = number_sections_html(html);
         assert!(result.contains(r#"<span class="section-number">1</span> Hello"#), "{}", result);
+    }
+
+    #[test]
+    fn test_number_sections_shifted() {
+        // When headings are shifted (title present), h2 is the top level
+        let html = r#"<h2 id="a">Intro</h2><h3 id="b">Sub</h3><h2 id="c">Methods</h2>"#;
+        let result = number_sections_html(html);
+        assert!(result.contains(r#"<span class="section-number">1</span> Intro"#), "{}", result);
+        assert!(result.contains(r#"<span class="section-number">1.1</span> Sub"#), "{}", result);
+        assert!(result.contains(r#"<span class="section-number">2</span> Methods"#), "{}", result);
     }
 
     #[test]
