@@ -26,7 +26,8 @@ pub struct PluginManifest {
 /// All capabilities a plugin can provide (all optional).
 #[derive(Default)]
 pub struct PluginProvides {
-    pub filter: Option<FilterSpec>,
+    /// Multiple filters, each with its own match rules and executable.
+    pub filters: Vec<FilterSpec>,
     pub shortcode: Option<ShortcodeSpec>,
     pub postprocess: Option<PostprocessSpec>,
     pub elements: Option<ElementsSpec>,
@@ -179,7 +180,7 @@ fn parse_provides(root: &saphyr::YamlOwned, plugin_dir: &Path) -> Result<PluginP
     }
 
     Ok(PluginProvides {
-        filter: parse_filter_spec(provides_node, plugin_dir),
+        filters: parse_filter_specs(provides_node, plugin_dir),
         shortcode: parse_shortcode_spec(provides_node, plugin_dir),
         postprocess: parse_postprocess_spec(provides_node, plugin_dir),
         elements: parse_elements_spec(provides_node),
@@ -189,8 +190,35 @@ fn parse_provides(root: &saphyr::YamlOwned, plugin_dir: &Path) -> Result<PluginP
     })
 }
 
-fn parse_filter_spec(provides: &saphyr::YamlOwned, plugin_dir: &Path) -> Option<FilterSpec> {
-    let node = &provides["filter"];
+/// Parse filter specs. Supports both singular `filter:` (one object) and
+/// plural `filters:` (array of objects) in the manifest.
+fn parse_filter_specs(provides: &saphyr::YamlOwned, plugin_dir: &Path) -> Vec<FilterSpec> {
+    let mut specs = Vec::new();
+
+    // Try plural `filters:` (array)
+    let filters_node = &provides["filters"];
+    if !filters_node.is_badvalue() {
+        if let Some(items) = filters_node.as_vec() {
+            for item in items {
+                if let Some(spec) = parse_one_filter_spec(item, plugin_dir) {
+                    specs.push(spec);
+                }
+            }
+        }
+    }
+
+    // Try singular `filter:` (single object)
+    let filter_node = &provides["filter"];
+    if !filter_node.is_badvalue() {
+        if let Some(spec) = parse_one_filter_spec(filter_node, plugin_dir) {
+            specs.push(spec);
+        }
+    }
+
+    specs
+}
+
+fn parse_one_filter_spec(node: &saphyr::YamlOwned, plugin_dir: &Path) -> Option<FilterSpec> {
     if node.is_badvalue() {
         return None;
     }

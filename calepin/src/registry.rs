@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
 
 use crate::filters::Filter;
-use crate::plugin_manifest::{FilterMatch, FormatSpec, PluginManifest, PluginProvides};
+use crate::plugin_manifest::{FilterMatch, FilterSpec, FormatSpec, PluginManifest, PluginProvides};
 use crate::types::Element;
 
 // ---------------------------------------------------------------------------
@@ -132,19 +132,17 @@ impl PluginRegistry {
             match resolve_plugin_dir(name) {
                 Some(dir) => match PluginManifest::load(&dir) {
                     Ok(manifest) => {
-                        let kind = if manifest.provides.filter.as_ref()
-                            .map_or(false, |f| f.persistent)
-                        {
-                            let path = manifest.provides.filter.as_ref()
-                                .and_then(|f| f.run.clone())
+                        // Check if any filter is persistent
+                        let persistent_filter = manifest.provides.filters.iter()
+                            .find(|f| f.persistent);
+                        let kind = if let Some(pf) = persistent_filter {
+                            let path = pf.run.clone()
                                 .unwrap_or_else(|| dir.join("filter"));
                             PluginKind::PersistentSubprocess {
                                 path,
                                 process: RefCell::new(None),
                             }
                         } else {
-                            // Determine path from whichever provides.* has a `run` field.
-                            // For subprocess plugins, the path is resolved per-call from the manifest.
                             PluginKind::Subprocess { path: dir }
                         };
                         plugins.push(LoadedPlugin { manifest, kind });
@@ -173,7 +171,8 @@ impl PluginRegistry {
     // -----------------------------------------------------------------------
 
     /// Iterate over plugins whose filter matches the given element properties.
-    /// Returns matching plugins in registry order (user first, then built-in).
+    /// Returns matching (plugin, filter_spec) pairs in registry order.
+    /// A single plugin may appear multiple times if it has multiple matching filters.
     pub fn matching_filters<'a>(
         &'a self,
         classes: &[String],
@@ -181,15 +180,18 @@ impl PluginRegistry {
         id: Option<&str>,
         format: &str,
         context: &str,
-    ) -> Vec<&'a LoadedPlugin> {
-        self.plugins.iter().filter(|p| {
-            if let Some(ref spec) = p.manifest.provides.filter {
-                spec.contexts.iter().any(|c| c == context)
+    ) -> Vec<(&'a LoadedPlugin, &'a FilterSpec)> {
+        let mut result = Vec::new();
+        for plugin in &self.plugins {
+            for spec in &plugin.manifest.provides.filters {
+                if spec.contexts.iter().any(|c| c == context)
                     && spec.match_rule.matches(classes, attrs, id, format)
-            } else {
-                false
+                {
+                    result.push((plugin, spec));
+                }
             }
-        }).collect()
+        }
+        result
     }
 
     /// Call a subprocess filter (one-shot or persistent).
@@ -197,6 +199,7 @@ impl PluginRegistry {
     pub fn call_subprocess_filter(
         &self,
         plugin: &LoadedPlugin,
+        filter_spec: &FilterSpec,
         context: &str,
         content: &str,
         classes: &[String],
@@ -208,7 +211,7 @@ impl PluginRegistry {
 
         match &plugin.kind {
             PluginKind::Subprocess { path: _ } => {
-                let run_path = plugin.manifest.provides.filter.as_ref()?.run.as_ref()?;
+                let run_path = filter_spec.run.as_ref()?;
                 crate::util::run_json_process(run_path, &input)
             }
             PluginKind::PersistentSubprocess { path, process } => {
@@ -578,12 +581,12 @@ fn builtin_structural(
             version: None,
             description: Some(description.to_string()),
             provides: PluginProvides {
-                filter: Some(crate::plugin_manifest::FilterSpec {
+                filters: vec![crate::plugin_manifest::FilterSpec {
                     run: None,
                     match_rule,
                     contexts,
                     persistent: false,
-                }),
+                }],
                 ..Default::default()
             },
             plugin_dir: PathBuf::new(),
@@ -605,12 +608,12 @@ fn builtin_filter(
             version: None,
             description: Some(description.to_string()),
             provides: PluginProvides {
-                filter: Some(crate::plugin_manifest::FilterSpec {
+                filters: vec![crate::plugin_manifest::FilterSpec {
                     run: None,
                     match_rule,
                     contexts,
                     persistent: false,
-                }),
+                }],
                 ..Default::default()
             },
             plugin_dir: PathBuf::new(),

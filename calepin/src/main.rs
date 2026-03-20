@@ -368,7 +368,7 @@ fn plugin_list() -> Result<()> {
                     if let Ok(manifest) = plugin_manifest::PluginManifest::load(&path) {
                         let desc = manifest.description.as_deref().unwrap_or("");
                         let mut caps = Vec::new();
-                        if manifest.provides.filter.is_some() { caps.push("filter"); }
+                        if !manifest.provides.filters.is_empty() { caps.push("filter"); }
                         if manifest.provides.shortcode.is_some() { caps.push("shortcode"); }
                         if manifest.provides.postprocess.is_some() { caps.push("postprocess"); }
                         if manifest.provides.elements.is_some() { caps.push("elements"); }

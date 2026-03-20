@@ -76,7 +76,7 @@ pub fn render(
         *vars = Some(v);
     };
 
-    for plugin in &matching {
+    for (plugin, filter_spec) in &matching {
         match &plugin.kind {
             PluginKind::BuiltinStructural(handler) => {
                 if let Some(output) = handler.render_div(
@@ -104,6 +104,7 @@ pub fn render(
                 ensure_vars(&mut vars, children_rendered.as_ref().unwrap());
                 if let Some(output) = registry.call_subprocess_filter(
                     plugin,
+                    filter_spec,
                     "div",
                     children_rendered.as_ref().unwrap(),
                     classes,

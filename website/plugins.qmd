@@ -53,15 +53,24 @@ version: 0.1.0
 description: "Collapsible accordion sections"
 
 provides:
+  # A single filter
   filter:
-    run: filter.py                 # executable, relative to plugin dir
+    run: filter.py
     match:
-      classes: [accordion]         # CSS classes that trigger this filter
-      attrs: [layout-ncol]         # attribute names that trigger this filter
-      id_prefix: "fig-"            # ID prefix that triggers this filter
-      formats: [html]              # output formats (omit = all)
-    contexts: [div, span]          # default: both
-    persistent: false              # JSON-lines long-running subprocess
+      classes: [accordion]
+    contexts: [div]
+
+  # Or multiple filters with different match rules and scripts
+  filters:
+    - run: accordion.py
+      match:
+        classes: [accordion]
+      contexts: [div]
+    - run: tooltip.py
+      match:
+        classes: [tooltip]
+      contexts: [span]
+      formats: [html]
 
   shortcode:
     run: shortcode.py
@@ -87,7 +96,9 @@ provides:
     postprocess: scripts/post.sh
 ```
 
-All paths are relative to the plugin directory. Match fields under `filter.match` are OR'd: a filter triggers when *any* rule matches.
+All paths are relative to the plugin directory. Match fields under `match` are OR'd: a filter triggers when *any* rule matches.
+
+Filters can be declared as singular (`filter:` with one object) or plural (`filters:` with a list). A plugin can define multiple filters, each with its own executable, match rules, and contexts. Both forms can coexist in the same manifest.
 
 Example plugins are available in the [plugins/ directory on GitHub](https://github.com/vincentarelbundock/calepin/tree/main/plugins).
 
