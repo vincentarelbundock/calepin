@@ -12,6 +12,16 @@
 - [x] Python support
 - [x] --preview
 
+## Python 
+
+- [ ] Environments don't seem to work. Check with marginaleffectscom
+
+## Ignore
+
+- [ ] inline latex code when rendering to html
+- [ ] inline html coe when rendering to latex or typst
+- [ ] Or document that we don't ignore anything, which is stricter and simpler.
+
 ## Misc
 
 - [x] $ handling. Quarto does not require escape, IIRC.
@@ -171,7 +181,7 @@
 ## Manual Code Review
 
 - [x] `src/engines/`
-- [x] `src/filters/`
+- [ ] `src/filters/`
 - [ ] `src/render/`
 - [ ] `src/formats/`
 - [ ] `src/structures/`
