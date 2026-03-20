@@ -41,6 +41,7 @@ pub fn evaluate_block(
                         code: lines.join("\n"),
                         lang: lang.clone(),
                         label: chunk.label.clone(),
+                        filename: opts.get_string("filename", ""),
                     });
                 }
             }

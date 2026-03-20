@@ -29,7 +29,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 ## Misc
 
 - [x] $ handling. Quarto does not require escape, IIRC.
-- [ ] Table of contents
+- [x] Table of contents
 - [ ] Image in tutorial.qmd title block should work in typst and latex and markdown.
 
 ## Astro
@@ -72,11 +72,11 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [x] Shortcode system (`{{< ... >}}`) with `pagebreak`, `meta`, `env`, and user-extensible scripts
 - [x] Built-in shortcodes: `include`, `var`
 - [x] Built-in shortcodes: `video` (YouTube/Vimeo auto-embed)
-- [ ] Built-in shortcodes: `kbd`
+- [x] Built-in shortcodes: `kbd`
 - [x] Line blocks (`| preserved lines`)
 - [x] Inline footnotes (`^[inline note]`)
-- [ ] Footnotes backlinks don't bring us back up in HTML
-- [ ] Footnotes backlinks check other formats
+- [x] Footnotes backlinks don't bring us back up in HTML
+- [x] Footnotes backlinks check other formats (LaTeX/Typst use native footnotes)
 - [x] Definition lists (`term\n: definition`)
 - [x] Tabsets / panel tabs (`::: {.panel-tabset}`)
 - [ ] Multi-column layout (`.columns` / `.column` divs with width percentages)
@@ -87,7 +87,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 
 ## Code
 
-- [ ] Code filename attribute (`{.python filename="run.py"}`)
+- [x] Code filename attribute (`{.python filename="run.py"}` and `#| filename: run.py`)
 - [ ] Code annotation (line markers `# <1>` with numbered explanations)
 - [ ] Multiple figures from a single code chunk with `fig-subcap`
 - [ ] Layout attributes on code chunks (`layout-ncol`, `layout`)
@@ -171,6 +171,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] Allow users to supply a postprocess.latex or postprocess.html that accepts the raw code and returns the same thing but modified. That is done automatically if in the _calepin directory
 - [ ] Files paths are different in Typst, LaTeX, HTML, and Markdown
 - [ ] How do lettered addpendices work?
+- [ ] {.unnumbered} {.unlisted} sections.
 
 ## Plugins
 

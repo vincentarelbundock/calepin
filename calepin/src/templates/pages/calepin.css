@@ -113,7 +113,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; 
 .footnotes { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color); font-size: 0.9rem; }
 .footnotes ol { padding-left: 1.5rem; }
 .footnote-ref a { text-decoration: none; }
-.footnote-ref { position: relative; }
+.footnote-ref { position: relative; scroll-margin-top: 2rem; }
 .footnote-ref .fn-preview {
   display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
   background: var(--pico-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: 0.25rem;
@@ -121,6 +121,12 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; 
   max-width: 300px; width: max-content; box-shadow: 0 2px 8px rgba(0,0,0,0.12); z-index: 100;
 }
 .footnote-ref:hover .fn-preview { display: block; }
+.footnotes li { scroll-margin-top: 2rem; }
+
+/* Code with filename */
+.code-with-filename { margin: 1rem 0; border: 1px solid var(--pico-muted-border-color); border-radius: 0.25rem; overflow: hidden; }
+.code-with-filename .code-filename { background: color-mix(in srgb, var(--pico-muted-border-color) 30%, var(--pico-background-color)); padding: 0.25rem 0.75rem; font-size: 0.85rem; font-family: var(--pico-font-family); border-bottom: 1px solid var(--pico-muted-border-color); }
+.code-with-filename pre { margin: 0; border: none; border-radius: 0; border-left: 4px solid var(--pico-secondary); }
 
 /* Layout grid */
 .layout-grid { margin: 1rem 0; }

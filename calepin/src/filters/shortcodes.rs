@@ -268,6 +268,7 @@ fn builtin_shortcode(
             let arg3 = args.get(2).map(|s| s.as_str());
             Some(shortcode_brand(sub, arg2, arg3, format))
         }
+        "kbd" => Some(shortcode_kbd(args, format)),
         _ => None,
     }
 }
@@ -279,6 +280,33 @@ fn shortcode_pagebreak(format: &str) -> String {
         "typst" | "typ" => "#pagebreak()".to_string(),
         "markdown" | "md" => "\n---\n".to_string(),
         _ => "\u{0C}".to_string(), // form feed
+    }
+}
+
+fn shortcode_kbd(args: &[String], format: &str) -> String {
+    if args.is_empty() {
+        return String::new();
+    }
+    match format {
+        "html" => {
+            let parts: Vec<String> = args.iter()
+                .map(|k| format!("<kbd>{}</kbd>", k))
+                .collect();
+            parts.join("+")
+        }
+        "latex" | "tex" => {
+            let parts: Vec<String> = args.iter()
+                .map(|k| format!("\\texttt{{{}}}", k))
+                .collect();
+            parts.join("+")
+        }
+        "typst" | "typ" => {
+            let parts: Vec<String> = args.iter()
+                .map(|k| format!("#raw(\"{}\")", k))
+                .collect();
+            parts.join("+")
+        }
+        _ => args.join("+"),
     }
 }
 

@@ -23,6 +23,7 @@ pub enum Block {
 pub struct CodeBlock {
     pub code: String,
     pub lang: String,
+    pub filename: String,
     #[allow(dead_code)]
     pub lines: (usize, usize),
 }
@@ -490,7 +491,7 @@ pub struct InlineCode {
 #[derive(Debug, Clone)]
 pub enum Element {
     Text { content: String },
-    CodeSource { code: String, lang: String, label: String },
+    CodeSource { code: String, lang: String, label: String, filename: String },
     CodeOutput { text: String },
     CodeWarning { text: String },
     CodeMessage { text: String },

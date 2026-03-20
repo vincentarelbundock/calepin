@@ -81,6 +81,7 @@ pub fn evaluate(
                     code: cb.code.clone(),
                     lang: cb.lang.clone(),
                     label: String::new(),
+                    filename: cb.filename.clone(),
                 });
             }
             Block::Div(div) => {
@@ -103,6 +104,7 @@ pub fn evaluate(
                         code: raw,
                         lang: String::new(),
                         label: String::new(),
+                        filename: String::new(),
                     });
                     continue;
                 }

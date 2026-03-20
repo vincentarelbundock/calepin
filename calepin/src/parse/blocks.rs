@@ -205,20 +205,16 @@ fn parse_fence_marker(line: &str) -> Option<(usize, char)> {
 }
 
 /// Try to parse an unnamed fenced code block (``` or ~~~, no {language}).
+/// Also handles `{.lang attr="val"}` syntax for display-only blocks with attributes.
 /// Returns the block and the position after the closing fence.
 fn parse_unnamed_fence(lines: &[&str], i: usize) -> Option<(Block, usize)> {
     let (open_count, marker) = parse_fence_marker(lines[i])?;
     let trimmed = lines[i].trim_start();
     let after = trimmed[open_count..].trim();
 
-    // Unnamed if: empty, or has a bare language class like "python" (no braces, no =)
-    let is_unnamed = after.is_empty()
-        || (!after.starts_with('{') && !after.starts_with('='));
-    if !is_unnamed {
-        return None;
-    }
+    // Parse language and filename from the fence line
+    let (lang, filename) = parse_code_block_info(after)?;
 
-    let lang = after.to_string();
     let start_line = i;
     let mut j = i + 1;
     let mut content_lines: Vec<&str> = Vec::new();
@@ -242,11 +238,51 @@ fn parse_unnamed_fence(lines: &[&str], i: usize) -> Option<(Block, usize)> {
         Block::CodeBlock(crate::types::CodeBlock {
             code: content_lines.join("\n"),
             lang,
+            filename,
             lines: (start_line, j.saturating_sub(1)),
         }),
         j,
     ))
 }
+
+/// Parse the info string after a fence marker into (lang, filename).
+/// Accepts:
+///   - empty → ("", "")
+///   - `python` → ("python", "")
+///   - `{.python}` → ("python", "")
+///   - `{.python filename="run.py"}` → ("python", "run.py")
+/// Returns None for `{language}` (executable) or `{=format}` (raw) syntax.
+fn parse_code_block_info(info: &str) -> Option<(String, String)> {
+    if info.is_empty() {
+        return Some((String::new(), String::new()));
+    }
+
+    // Bare language: `python`, `js`, etc (no braces, no =)
+    if !info.starts_with('{') && !info.starts_with('=') {
+        return Some((info.to_string(), String::new()));
+    }
+
+    // Must be `{.class ...}` syntax (display-only with attributes)
+    if !info.starts_with("{.") {
+        return None; // `{language}` or `{=format}` — not our job
+    }
+
+    let inner = info.trim_start_matches('{').trim_end_matches('}').trim();
+    let mut lang = String::new();
+    let mut filename = String::new();
+
+    for token in tokenize_attrs(inner) {
+        if token.starts_with('.') {
+            lang = token[1..].to_string();
+        } else if let Some(val) = token.strip_prefix("filename=") {
+            filename = val.trim_matches('"').trim_matches('\'').to_string();
+        }
+    }
+
+    Some((lang, filename))
+}
+
+// Uses tokenize_attrs() defined below for attribute parsing.
 
 /// Try to parse a raw block (```{=format} or ~~~{=format}).
 /// Returns the block and position after the closing fence, or None.
@@ -418,14 +454,17 @@ fn tokenize_attrs(input: &str) -> Vec<String> {
     tokens
 }
 
-/// Check if a line starts an unnamed fenced code block (3+ backticks or tildes, no {language}).
+/// Check if a line starts an unnamed/display fenced code block.
+/// Matches: empty info, bare language (`python`), or class syntax (`{.python ...}`).
 fn is_unnamed_fence(line: &str) -> bool {
     match parse_fence_marker(line) {
         None => false,
         Some((count, _)) => {
             let trimmed = line.trim_start();
             let after = trimmed[count..].trim();
-            after.is_empty() || (!after.starts_with('{') && !after.starts_with('='))
+            after.is_empty()
+                || (!after.starts_with('{') && !after.starts_with('='))
+                || after.starts_with("{.")
         }
     }
 }
