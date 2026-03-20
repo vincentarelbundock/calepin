@@ -1,6 +1,7 @@
 #[macro_use]
 mod cli;
 mod batch;
+mod brand;
 mod compile;
 mod engines;
 mod filters;

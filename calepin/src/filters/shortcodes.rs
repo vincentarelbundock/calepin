@@ -93,7 +93,8 @@ pub fn process_shortcodes(text: &str, format: &str, metadata: &Metadata, plugins
         // Try built-in shortcodes first
         if let Some(output) = builtin_shortcode(&name, &args, &kwargs, format, metadata) {
             // `include` returns raw markdown that still needs parsing — don't wrap in markers
-            if name == "include" || name == "meta" || name == "env" || name == "var" {
+            if name == "include" || name == "meta" || name == "env" || name == "var"
+                || (name == "brand" && args.first().map(|s| s.as_str()) == Some("color")) {
                 return output;
             }
             return wrap_raw_output(&output, format, &mut sc_fragments);
@@ -265,6 +266,12 @@ fn builtin_shortcode(
             let url = args.first().map(|s| s.as_str()).unwrap_or("");
             Some(shortcode_video(url, kwargs, format))
         }
+        "brand" => {
+            let sub = args.first().map(|s| s.as_str()).unwrap_or("");
+            let arg2 = args.get(1).map(|s| s.as_str()).unwrap_or("");
+            let arg3 = args.get(2).map(|s| s.as_str());
+            Some(shortcode_brand(sub, arg2, arg3, format))
+        }
         _ => None,
     }
 }
@@ -422,6 +429,22 @@ fn shortcode_var(key: &str) -> String {
     if let Some(f) = current.as_floating_point() { return f.to_string(); }
     match current {
         _ => format!("{:?}", current),
+    }
+}
+
+fn shortcode_brand(subcommand: &str, name: &str, mode: Option<&str>, format: &str) -> String {
+    match subcommand {
+        "color" => {
+            crate::brand::brand_color(name, mode).unwrap_or_default()
+        }
+        "logo" => {
+            let mode = mode.unwrap_or("both");
+            crate::brand::brand_logo_tag(name, mode, format).unwrap_or_default()
+        }
+        _ => {
+            cwarn!("{{{{< brand >}}}}: unknown subcommand '{}'", subcommand);
+            String::new()
+        }
     }
 }
 

@@ -319,6 +319,9 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         vars.insert("toc".to_string(), String::new());
     }
 
+    // Brand variables (_brand.yml)
+    crate::brand::inject_brand_vars(&mut vars, ext);
+
     // Extra YAML fields override defaults (e.g., classoption, documentclass)
     for (key, value) in &meta.extra {
         let s = if let Some(s) = value.as_str() {

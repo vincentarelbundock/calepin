@@ -146,12 +146,27 @@ impl OutputRenderer for CustomRenderer {
                 &format!("calepin.{}", self.name),
             );
             if !custom_tpl.is_empty() {
-                let vars = match self.base.format() {
+                let mut vars = match self.base.format() {
                     "html" => crate::render::template::build_html_vars(meta, body),
                     "latex" => crate::render::template::build_latex_vars(meta, body),
                     "typst" => crate::render::template::build_typst_vars(meta, body),
                     _ => return None,
                 };
+                // Add syntax highlighting CSS (not included by build_*_vars)
+                if self.base.format() == "html" {
+                    let syntax_css = renderer.syntax_css();
+                    if !syntax_css.is_empty() {
+                        let css = vars.entry("css".to_string()).or_default();
+                        css.push_str(&format!("\n<style>\n{}</style>", &syntax_css));
+                        vars.insert("syntax-css".to_string(), syntax_css);
+                    }
+                    let datatheme_css = renderer.syntax_css_with_scope(
+                        crate::filters::highlighting::ColorScope::DataTheme,
+                    );
+                    if !datatheme_css.is_empty() {
+                        vars.insert("syntax-css-datatheme".to_string(), datatheme_css);
+                    }
+                }
                 Some(crate::render::template::apply_template(&custom_tpl, &vars))
             } else {
                 self.base.apply_template(body, meta, renderer)
@@ -222,13 +237,13 @@ fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
         other => anyhow::bail!("Custom format '{}': unknown base format '{}'", name, other),
     };
 
-    let ext = config["extension"]
-        .as_str()
+    let ext = config.as_mapping_get("extension")
+        .and_then(|v| v.as_str())
         .unwrap_or(base.extension())
         .to_string();
 
-    let postprocess_plugin = config["plugin"]
-        .as_str()
+    let postprocess_plugin = config.as_mapping_get("plugin")
+        .and_then(|v| v.as_str())
         .and_then(|plugin_name| {
             match crate::plugins::load_plugin(plugin_name) {
                 Some(p) => Some(p),
@@ -240,11 +255,11 @@ fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
         });
 
     let config_dir = path.parent().unwrap_or(Path::new("."));
-    let preprocess_script = config["preprocess"]
-        .as_str()
+    let preprocess_script = config.as_mapping_get("preprocess")
+        .and_then(|v| v.as_str())
         .map(|s| config_dir.join(s));
-    let postprocess_script = config["postprocess"]
-        .as_str()
+    let postprocess_script = config.as_mapping_get("postprocess")
+        .and_then(|v| v.as_str())
         .map(|s| config_dir.join(s));
 
     Ok(Box::new(CustomRenderer {
