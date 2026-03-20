@@ -1,189 +1,141 @@
 ---
 title: Plugins
-calepin:
-  plugins:
-    - txtfmt
 ---
 
-Plugins are `.wasm` files that extend *Calepin* with custom span/div filters, shortcodes, and postprocessors. A single `.wasm` file works on macOS, Linux, and Windows---no recompilation needed.
+*Calepin* produces clean HTML, LaTeX, Typst, and Markdown out of the box, but every project has unique needs: custom div styles, new shortcodes, branded page templates, or entirely new output formats. Plugins let you extend *Calepin* without modifying its source.
+
+A plugin can provide any combination of:
+
+- **Filters** --- transform fenced divs (`::: {.myclass} ... :::`) and bracketed spans (`[text]{.myclass}`) into custom output.
+- **Shortcodes** --- expand `{{< name args >}}` directives into format-aware markup.
+- **Postprocessors** --- rewrite the entire rendered document (e.g., split HTML into slides).
+- **Templates** --- override element or page templates to change how divs, figures, or the full page are rendered.
+- **Custom formats** --- define new output formats built on top of HTML, LaTeX, Typst, or Markdown.
+
+Plugins are written as executable scripts---Python, R, shell, Ruby, Node, or any language that reads JSON from stdin and writes to stdout. No compilation step, no special SDK.
 
 
-# Using a plugin
+# Plugin structure
 
-1. Copy the `.wasm` file to `_calepin/plugins/` (or `~/.config/calepin/plugins/`).
+A plugin is a directory with a `plugin.yml` manifest at its root. Here is a typical layout:
+
+```
+_calepin/plugins/accordion/
+  plugin.yml          # required: declares capabilities
+  filter.py           # executable for the filter hook
+```
+
+A more full-featured plugin might look like:
+
+```
+_calepin/plugins/mytheme/
+  plugin.yml
+  filter.py           # filter logic
+  shortcode.py        # shortcode logic
+  postprocess.py      # document postprocessor
+  elements/           # element template overrides
+    theorem.html
+    callout-note.html
+  templates/          # page template overrides
+    calepin.html
+    calepin.css
+  style.csl           # citation style
+```
+
+
+# The manifest: `plugin.yml`
+
+Every field under `provides` is optional. A plugin declares only what it needs.
+
+```yaml
+name: accordion
+version: 0.1.0
+description: "Collapsible accordion sections"
+
+provides:
+  filter:
+    run: filter.py                 # executable, relative to plugin dir
+    match:
+      classes: [accordion]         # CSS classes that trigger this filter
+      attrs: [layout-ncol]         # attribute names that trigger this filter
+      id_prefix: "fig-"            # ID prefix that triggers this filter
+      formats: [html]              # output formats (omit = all)
+    contexts: [div, span]          # default: both
+    persistent: false              # JSON-lines long-running subprocess
+
+  shortcode:
+    run: shortcode.py
+    names: [greeting, farewell]    # shortcode names handled
+
+  postprocess:
+    run: postprocess.py
+    formats: [html]                # output formats (omit = all)
+
+  elements:
+    dir: elements/                 # {name}.{format} template files
+
+  templates:
+    dir: templates/                # calepin.{format}, calepin.css
+
+  csl: style.csl                   # citation style file
+
+  format:
+    name: myformat                 # custom output format
+    base: html
+    extension: html
+    preprocess: scripts/pre.sh
+    postprocess: scripts/post.sh
+```
+
+All paths are relative to the plugin directory. Match fields under `filter.match` are OR'd: a filter triggers when *any* rule matches.
+
+Example plugins are available in the [plugins/ directory on GitHub](https://github.com/vincentarelbundock/calepin/tree/main/plugins).
+
+
+# Using plugins
+
+1. Place the plugin directory in `_calepin/plugins/` (project) or `~/.config/calepin/plugins/` (user).
 2. List it in front matter:
 
 ```yaml
 calepin:
   plugins:
-    - txtfmt
-    - lightbox
-    - lorem
+    - accordion
+    - mytheme
 ```
 
-Example plugins and source code: [github.com/vincentarelbundock/calepin](https://github.com/vincentarelbundock/calepin) in the `plugins/` directory.
+Plugins are dispatched in the order listed. Built-in plugins (tabset, layout, figure-div, theorem, callout) run after user plugins. The first plugin to handle an element wins.
 
-
-# Available plugins
-
-## `txtfmt` --- text formatting
-
-The `.txtfmt` span class provides inline styling. Attributes: `em` (size multiplier), `color` (name or `#hex`), `smallcaps`, `underline`, `mark`. Over 1000 color names (from R and LaTeX) are resolved to hex for consistent rendering across formats.
-
-[teal text]{.txtfmt color="teal"},
-[large hex color]{.txtfmt color="#E69F00" em=1.3},
-[highlighted]{.txtfmt mark=true},
-[Small Caps]{.txtfmt smallcaps=true underline=true},
-and [small orange]{.txtfmt em=0.8 color="#E69F00" underline=true}.
-
-## `lightbox` --- click-to-enlarge images
-
-See [Figures](figures.qmd#lightbox) for details on the lightbox plugin.
-
-## `lorem` --- placeholder text
-
-A shortcode plugin that generates lorem ipsum text. Useful for prototyping layouts.
-
-- {{{< lorem >}}} --- 1 paragraph (default)
-- {{{< lorem 3 >}}} --- 3 paragraphs
-- {{{< lorem words=20 >}}} --- 20 words
-- {{{< lorem sentences=4 >}}} --- 4 sentences
-- {{{< lorem paragraphs=2 >}}} --- 2 paragraphs
-
-## `imgur` --- image upload
-
-The `.imgur` span uploads local images to imgur and returns format-appropriate markup. Usage: `[path/to/image.png]{.imgur alt="description"}`.
-
-## `revealjs` --- reveal.js slides
-
-A postprocessor that converts rendered HTML into a [reveal.js](https://revealjs.com) slide deck. Each `<h2>` heading starts a new slide.
-
-```yaml
-calepin:
-  plugins:
-    - revealjs
-```
-
-## `slidev` --- Slidev slides
-
-A postprocessor that converts rendered HTML into [Slidev](https://sli.dev) markdown format.
-
-
-# Writing plugins
-
-A plugin is a Rust cdylib crate compiled to `wasm32-unknown-unknown`. It exports one or more functions that exchange JSON with *Calepin* via [extism](https://extism.org). Plugins can also be written in Go, JavaScript, Python, Zig, or any language with an extism PDK.
-
-## Plugin functions
-
-A plugin can export any combination of these functions:
-
-### `filter`
-
-Handles fenced divs and bracketed spans. Receives a JSON object:
-
-```json
-{
-  "context": "div",
-  "content": "<p>rendered children</p>",
-  "classes": ["myclass"],
-  "id": "my-id",
-  "format": "html",
-  "attrs": {"key": "value"}
-}
-```
-
-Returns `{"Rendered": "output html"}` to handle the element, or `"Pass"` to skip.
-
-### `shortcode`
-
-Handles `{{< name args >}}` shortcodes. Receives:
-
-```json
-{
-  "name": "lorem",
-  "args": ["3"],
-  "kwargs": {"words": "50"},
-  "format": "html"
-}
-```
-
-Returns the replacement string or `null` to skip.
-
-### `postprocess`
-
-Transforms the entire rendered body after all other processing. Receives:
-
-```json
-{
-  "body": "<h1>...</h1><p>...</p>",
-  "format": "html",
-  "title": "Document Title",
-  "css": "..."
-}
-```
-
-Returns the modified body string.
-
-## Minimal example
-
-`Cargo.toml`:
-
-```toml
-[package]
-name = "myplugin"
-version = "0.0.1"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-extism-pdk = "1"
-serde = { version = "1", features = ["derive"] }
-```
-
-`src/lib.rs`:
-
-```rust
-use extism_pdk::*;
-use serde::Deserialize;
-use std::collections::HashMap;
-
-#[derive(Deserialize)]
-struct FilterContext {
-    context: String,
-    content: String,
-    classes: Vec<String>,
-    format: String,
-    attrs: HashMap<String, String>,
-}
-
-#[derive(serde::Serialize)]
-enum FilterResult {
-    Rendered(String),
-    Pass,
-}
-
-#[plugin_fn]
-pub fn filter(Json(ctx): Json<FilterContext>) -> FnResult<Json<FilterResult>> {
-    if ctx.context != "span" || !ctx.classes.contains(&"hello".to_string()) {
-        return Ok(Json(FilterResult::Pass));
-    }
-    let out = match ctx.format.as_str() {
-        "html" => format!("<b>{}</b>", ctx.content),
-        "latex" => format!("\\textbf{{{}}}", ctx.content),
-        _ => ctx.content,
-    };
-    Ok(Json(FilterResult::Rendered(out)))
-}
-```
-
-Build with:
+To scaffold a new plugin quickly:
 
 ```bash
-cargo build --release --target wasm32-unknown-unknown
+calepin plugin init myplugin
 ```
 
-The `.wasm` file will be at `target/wasm32-unknown-unknown/release/myplugin.wasm`.
+To see all available plugins:
 
-See `plugins/txtfmt/src/lib.rs` and `plugins/lorem/src/lib.rs` in the repository for complete examples.
+```bash
+calepin plugin list
+```
+
+
+# Built-in plugins
+
+These are compiled into *Calepin* and always active. A user plugin can override any of them by declaring the same match rules.
+
+| Plugin | Matches | Description |
+|--------|---------|-------------|
+| `tabset` | `.panel-tabset` class | Tabbed panels |
+| `layout` | `layout-ncol`, `layout-nrow`, `layout` attrs | Grid layouts |
+| `figure-div` | `fig-` id prefix | Figure divs with captions |
+| `theorem` | `.theorem`, `.lemma`, `.corollary`, etc. | Auto-numbered theorem environments |
+| `callout` | `.callout-note`, `.callout-tip`, etc. | Callout boxes with icons |
+
+
+# What's next
+
+The following pages cover each plugin capability in detail:
+
+- [Shortcodes](shortcodes.qmd) --- built-in shortcodes and writing shortcode plugins.
+- [Filters](filters.qmd) --- writing filter plugins for divs and spans.
+- [Templates](templates.qmd) --- element and page templates, and template plugins.

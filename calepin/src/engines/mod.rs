@@ -48,7 +48,7 @@ pub fn evaluate(
     fig_ext: &str,
     output_ext: &str,
     metadata: &Metadata,
-    plugins: &[crate::plugins::PluginHandle],
+    registry: &crate::registry::PluginRegistry,
     ctx: &mut EngineContext,
     cache: &mut cache::CacheState,
 ) -> Result<EvalResult> {
@@ -60,7 +60,7 @@ pub fn evaluate(
         match block {
             Block::Text(text) => {
                 let sc_result = crate::filters::shortcodes::process_shortcodes(
-                    &text.content, output_ext, metadata, plugins,
+                    &text.content, output_ext, metadata, registry,
                 );
                 // Only hash inline code expressions into the upstream digest,
                 // not the full text. This way prose edits don't invalidate chunk caches.
@@ -88,7 +88,7 @@ pub fn evaluate(
                     continue;
                 }
                 if div.classes.iter().any(|c| c == "hidden") {
-                    let _children = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, plugins, ctx, cache)?;
+                    let _children = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
                     continue;
                 }
                 if div.classes.iter().any(|c| c == "verbatim") {
@@ -106,7 +106,7 @@ pub fn evaluate(
                     });
                     continue;
                 }
-                let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, plugins, ctx, cache)?;
+                let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
                 sc_fragments.extend(child_result.sc_fragments);
                 escaped_sc_fragments.extend(child_result.escaped_sc_fragments);
                 elements.push(Element::Div {

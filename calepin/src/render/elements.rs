@@ -1,10 +1,11 @@
 //! Element rendering engine: thin dispatcher that delegates to filters.
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::types::Element;
 use crate::filters::{Filter, FilterResult};
-use crate::plugins::PluginHandle;
+use crate::registry::PluginRegistry;
 use crate::filters::highlighting::{Highlighter, HighlightConfig, ColorScope};
 
 // ---------------------------------------------------------------------------
@@ -73,8 +74,7 @@ pub struct ElementRenderer {
     ext: String,
     templates: HashMap<String, String>,
     highlighter: Highlighter,
-    builtin_filters: Vec<Box<dyn Filter>>,
-    plugins: Vec<PluginHandle>,
+    registry: Rc<PluginRegistry>,
     raw_fragments: std::cell::RefCell<Vec<String>>,
     sc_fragments: Vec<String>,
     escaped_sc_fragments: Vec<String>,
@@ -104,17 +104,11 @@ impl ElementRenderer {
             }
         }
 
-        let builtin_filters: Vec<Box<dyn Filter>> = vec![
-            Box::new(crate::filters::TheoremFilter::new()),
-            Box::new(crate::filters::CalloutFilter::new()),
-        ];
-
         Self {
             ext: ext.to_string(),
             templates,
             highlighter: Highlighter::new(highlight_config),
-            builtin_filters,
-            plugins: Vec::new(),
+            registry: Rc::new(PluginRegistry::empty()),
             raw_fragments: std::cell::RefCell::new(Vec::new()),
             sc_fragments: Vec::new(),
             escaped_sc_fragments: Vec::new(),
@@ -125,8 +119,8 @@ impl ElementRenderer {
         }
     }
 
-    pub fn set_plugins(&mut self, plugins: Vec<PluginHandle>) {
-        self.plugins = plugins;
+    pub fn set_registry(&mut self, registry: Rc<PluginRegistry>) {
+        self.registry = registry;
     }
 
     pub fn set_sc_fragments(&mut self, sc: Vec<String>, escaped: Vec<String>) {
@@ -161,7 +155,7 @@ impl ElementRenderer {
             Element::Div { classes, id, attrs, children } => {
                 crate::render::div::render(
                     classes, id, attrs, children, &self.ext,
-                    &self.plugins, &self.builtin_filters,
+                    &self.registry,
                     &|e| self.render(e),
                     &|name| self.resolve_element_template(name),
                     &self.raw_fragments,
@@ -181,7 +175,7 @@ impl ElementRenderer {
 
     fn render_bracketed_spans(&self, text: &str) -> String {
         crate::render::span::render(
-            text, &self.ext, &self.plugins, &self.raw_fragments,
+            text, &self.ext, &self.registry, &self.raw_fragments,
             &|name| self.resolve_element_template(name),
         )
     }
@@ -206,6 +200,10 @@ impl ElementRenderer {
     }
 
     fn resolve_element_template(&self, name: &str) -> Option<String> {
+        // Check plugin-provided element templates first
+        if let Some(tpl) = self.registry.resolve_element_template(name, &self.ext) {
+            return Some(tpl);
+        }
         resolve_element_template(name, &self.ext)
     }
 

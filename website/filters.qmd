@@ -4,10 +4,25 @@ title: Filters
 
 Filters handle fenced divs and bracketed spans that need logic beyond `{{variable}}` substitution: conditional rendering, computed values, content rewriting.
 
+Filters are implemented as plugins. Each plugin declares which elements it handles via match rules in its `plugin.yml` manifest.
 
-# External filters
 
-An external filter is an executable at `_calepin/filters/{class}` (or `_calepin/filters/{class}.{ext}` for format-specific variants). It receives flat JSON on stdin and writes the rendered output to stdout.
+# Writing a filter plugin
+
+A filter plugin is a directory with a `plugin.yml` and an executable script. The `match` section declares exactly which elements trigger the filter.
+
+## Match rules
+
+Match fields are OR'd: any match triggers the filter.
+
+- `classes` --- CSS classes. The filter runs when any listed class is present.
+- `attrs` --- attribute names. The filter runs when any listed attribute is present.
+- `id_prefix` --- a string prefix. The filter runs when the element's id starts with this prefix.
+- `formats` --- restrict to specific output formats. Omit to handle all formats.
+
+## Input protocol
+
+The executable receives flat JSON on stdin.
 
 For a div:
 
@@ -35,11 +50,32 @@ For a span:
 }
 ```
 
-Exit 0: stdout is used as final output (template is skipped). Exit non-zero: falls through to next handler.
+User attributes from the element are flattened into the top-level JSON object.
 
-## Example: a div filter
+## Output protocol
 
-`_calepin/filters/accordion` (Python):
+- Exit 0 with output on stdout: the output replaces the element (template is skipped).
+- Exit non-zero or empty stdout: falls through to next handler.
+
+
+# Example: a div filter
+
+`_calepin/plugins/accordion/plugin.yml`:
+
+```yaml
+name: accordion
+version: 0.1.0
+description: "Collapsible accordion sections"
+
+provides:
+  filter:
+    run: filter.py
+    match:
+      classes: [accordion]
+    contexts: [div]
+```
+
+`_calepin/plugins/accordion/filter.py`:
 
 ```python
 #!/usr/bin/env python3
@@ -64,13 +100,25 @@ Usage:
     Hidden content here.
     :::
 
-::: {.accordion title="Click to expand"}
-Hidden content here.
-:::
 
-## Example: a span filter
+# Example: a span filter
 
-`_calepin/filters/tooltip` (Python):
+`_calepin/plugins/tooltip/plugin.yml`:
+
+```yaml
+name: tooltip
+version: 0.1.0
+description: "Tooltip on hover"
+
+provides:
+  filter:
+    run: filter.py
+    match:
+      classes: [tooltip]
+    contexts: [span]
+```
+
+`_calepin/plugins/tooltip/filter.py`:
 
 ```python
 #!/usr/bin/env python3
@@ -89,9 +137,25 @@ else:
 
 Usage: `This has [hover me]{.tooltip tip="Extra info"} inline.`
 
-## Example: wordcount filter
 
-`_calepin/filters/wordcount` (Python):
+# Example: wordcount filter
+
+`_calepin/plugins/wordcount/plugin.yml`:
+
+```yaml
+name: wordcount
+version: 0.1.0
+description: "Word count badge for div content"
+
+provides:
+  filter:
+    run: filter.py
+    match:
+      classes: [wordcount]
+    contexts: [div]
+```
+
+`_calepin/plugins/wordcount/filter.py`:
 
 ```python
 #!/usr/bin/env python3
@@ -106,16 +170,16 @@ badge = f'<p style="font-size: 0.85em; color: #666;">({count} words)</p>'
 print(f'<div class="wordcount">{badge}\n{content}</div>')
 ```
 
-::: {.wordcount}
-This paragraph is processed by the wordcount filter. The filter strips HTML tags from the rendered children, counts the words, and prepends a small badge showing the total. Filters have full programmatic control over the output, unlike templates which only do variable substitution.
-:::
-
 
 # Built-in filters
+
+These are compiled into *Calepin* and registered as built-in plugins. They run after user plugins, so you can override them by creating a plugin with the same match rules.
 
 ## TheoremFilter
 
 Handles theorem-type classes and maintains per-type counters. See [Math](math.qmd#theorem-environments) for the full list of supported types, cross-reference prefixes, and template customization.
+
+Matches: `.theorem`, `.lemma`, `.corollary`, `.proposition`, `.conjecture`, `.definition`, `.example`, `.exercise`, `.solution`, `.remark`, `.algorithm`, `.proof`.
 
 ## CalloutFilter
 
@@ -124,15 +188,16 @@ Enriches `callout-note`, `callout-tip`, `callout-warning`, `callout-important`, 
 
 # Processing order
 
-When *Calepin* encounters a fenced div or bracketed span:
+When *Calepin* encounters a fenced div or bracketed span, it iterates over all plugins in registry order (user plugins first, then built-in):
 
-1. **WASM plugins** (in front matter order)
-2. **External filters** (`_calepin/filters/`)
-3. **Built-in filters** (TheoremFilter, CalloutFilter)
-4. **Template** (by class name, then `div.{ext}`)
-5. **Default fallback** (generic markup)
+1. For each plugin whose `match` rules apply to the element:
+   - **Structural plugins** (tabset, layout, figure-div): receive raw children, return if handled.
+   - **Filter plugins**: receive rendered children, return if output produced.
+   - **Subprocess plugins**: receive JSON, return if stdout is non-empty.
+2. **Template** (by class name, then `div.{ext}`)
+3. **Default fallback** (generic markup)
 
-A handler that produces output short-circuits the pipeline.
+A handler that produces output short-circuits the pipeline. Filters returning `Continue` (like TheoremFilter and CalloutFilter) enrich template variables and continue to the next handler.
 
 
 # Built-in div classes

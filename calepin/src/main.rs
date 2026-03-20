@@ -7,8 +7,9 @@ mod engines;
 mod filters;
 mod formats;
 mod parse;
-mod plugins;
+mod plugin_manifest;
 mod preview;
+mod registry;
 mod render;
 mod structures;
 mod types;
@@ -34,6 +35,11 @@ fn main() -> Result<()> {
         let mut cmd = <Cli as clap::CommandFactory>::command();
         clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
         return Ok(());
+    }
+
+    // Subcommands
+    if let Some(ref cmd) = cli.command {
+        return handle_command(cmd);
     }
 
     // List highlight styles: print and exit
@@ -187,8 +193,8 @@ pub fn render_core(
     // 5b. Evaluate inline code in metadata fields (title, date, etc.)
     metadata.evaluate_inline(&mut ctx);
 
-    // 6. Load WASM plugins declared in front matter
-    let plugins = plugins::load_plugins(&metadata.plugins);
+    // 6. Load plugin registry
+    let registry = std::rc::Rc::new(registry::PluginRegistry::load(&metadata.plugins));
 
     // 7. Create element renderer
     let highlight_config = metadata.extra.get("highlight-style")
@@ -217,14 +223,14 @@ pub fn render_core(
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
     let mut cache = CacheState::new(input, cache_enabled);
-    let eval_result = engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &plugins, &mut ctx, &mut cache)?;
+    let eval_result = engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &registry, &mut ctx, &mut cache)?;
     let mut elements = eval_result.elements;
 
     // 9. Bibliography
     filters::bibliography::process_citations(&mut elements, &metadata)?;
 
-    // 10. Set plugins on element renderer
-    element_renderer.set_plugins(plugins);
+    // 10. Set registry on element renderer
+    element_renderer.set_registry(registry);
     element_renderer.set_sc_fragments(eval_result.sc_fragments, eval_result.escaped_sc_fragments);
 
     // 12. Render elements to final format
@@ -289,5 +295,120 @@ fn resolve_output_path(input: &Path, output: Option<&Path>, ext: &str) -> PathBu
     match output {
         Some(path) => path.to_path_buf(),
         None => input.with_extension(ext),
+    }
+}
+
+fn handle_command(cmd: &cli::CliCommand) -> Result<()> {
+    match cmd {
+        cli::CliCommand::Plugin { action } => match action {
+            cli::PluginAction::Init { name } => plugin_init(name),
+            cli::PluginAction::List => plugin_list(),
+        },
+    }
+}
+
+fn plugin_init(name: &str) -> Result<()> {
+    let dir = Path::new("_calepin").join("plugins").join(name);
+    if dir.exists() {
+        anyhow::bail!("Plugin directory already exists: {}", dir.display());
+    }
+    fs::create_dir_all(&dir)?;
+    let manifest = format!(
+        "name: {name}\nversion: 0.1.0\ndescription: \"\"\n\nprovides:\n  filter:\n    run: filter.py\n    match:\n      classes: [{name}]\n    contexts: [div, span]\n",
+        name = name,
+    );
+    fs::write(dir.join("plugin.yml"), manifest)?;
+
+    // Create a minimal filter script
+    let filter_script = r#"#!/usr/bin/env python3
+import json, sys
+
+data = json.load(sys.stdin)
+context = data["context"]
+content = data["content"]
+classes = data["classes"]
+fmt = data["format"]
+
+# Return rendered output on stdout, or exit non-zero to pass
+print(content)
+"#;
+    fs::write(dir.join("filter.py"), filter_script)?;
+
+    // Make it executable
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(dir.join("filter.py"))?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(dir.join("filter.py"), perms)?;
+    }
+
+    eprintln!("Created plugin scaffold at {}", dir.display());
+    eprintln!("  plugin.yml  — manifest");
+    eprintln!("  filter.py   — filter script (edit this)");
+    Ok(())
+}
+
+fn plugin_list() -> Result<()> {
+    // Scan project and user plugin directories
+    let dirs = [
+        PathBuf::from("_calepin/plugins"),
+        dirs::config_dir().map(|d| d.join("calepin/plugins")).unwrap_or_default(),
+    ];
+
+    let mut found = false;
+    for dir in &dirs {
+        if !dir.is_dir() {
+            continue;
+        }
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let path = entry.path();
+                if path.join("plugin.yml").exists() {
+                    if let Ok(manifest) = plugin_manifest::PluginManifest::load(&path) {
+                        let desc = manifest.description.as_deref().unwrap_or("");
+                        let mut caps = Vec::new();
+                        if manifest.provides.filter.is_some() { caps.push("filter"); }
+                        if manifest.provides.shortcode.is_some() { caps.push("shortcode"); }
+                        if manifest.provides.postprocess.is_some() { caps.push("postprocess"); }
+                        if manifest.provides.elements.is_some() { caps.push("elements"); }
+                        if manifest.provides.templates.is_some() { caps.push("templates"); }
+                        if manifest.provides.csl.is_some() { caps.push("csl"); }
+                        if manifest.provides.format.is_some() { caps.push("format"); }
+                        println!(
+                            "  {:<20} [{}] {}",
+                            manifest.name,
+                            caps.join(", "),
+                            desc,
+                        );
+                        found = true;
+                    }
+                }
+            }
+        }
+    }
+
+    if !found {
+        println!("No plugins found.");
+        println!("  Project: _calepin/plugins/");
+        println!("  User:    ~/.config/calepin/plugins/");
+    }
+
+    // Also list built-in plugins
+    println!("\nBuilt-in plugins:");
+    println!("  {:<20} [filter] Panel tabset rendering", "tabset");
+    println!("  {:<20} [filter] Layout grid rendering", "layout");
+    println!("  {:<20} [filter] Figure div rendering", "figure-div");
+    println!("  {:<20} [filter] Theorem auto-numbering", "theorem");
+    println!("  {:<20} [filter] Callout enrichment", "callout");
+
+    Ok(())
+}
+
+/// Get the user config directory (cross-platform).
+mod dirs {
+    use std::path::PathBuf;
+    pub fn config_dir() -> Option<PathBuf> {
+        std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".config"))
     }
 }

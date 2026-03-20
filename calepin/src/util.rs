@@ -10,15 +10,6 @@ pub fn escape_html(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-/// Check if a path is an executable file (Unix).
-pub fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    match std::fs::metadata(path) {
-        Ok(meta) => meta.is_file() && (meta.permissions().mode() & 0o111 != 0),
-        Err(_) => false,
-    }
-}
-
 /// Convert heading text to a URL-friendly slug.
 pub fn slugify(text: &str) -> String {
     let mut slug = String::new();
@@ -117,24 +108,6 @@ pub fn resolve_first_match(dir: &str, extension: &str) -> Option<PathBuf> {
             matches.sort();
             if let Some(first) = matches.into_iter().next() {
                 return Some(first);
-            }
-        }
-    }
-    None
-}
-
-/// Resolve an executable by name in a subdirectory of _calepin/ or ~/.config/calepin/.
-/// If `format` is Some, tries `{name}.{format}` first, then `{name}`.
-pub fn resolve_executable(subdir: &str, name: &str, format: Option<&str>) -> Option<PathBuf> {
-    let candidates: Vec<String> = if let Some(fmt) = format {
-        vec![format!("{}.{}", name, fmt), name.to_string()]
-    } else {
-        vec![name.to_string()]
-    };
-    for candidate in &candidates {
-        if let Some(path) = resolve_path(subdir, candidate) {
-            if is_executable(&path) {
-                return Some(path);
             }
         }
     }

@@ -6,14 +6,14 @@
 // - is_inside_code()       — Detect if position is in backtick/fenced code.
 //
 // Built-in: pagebreak, meta, env, include, var, video.
-// External shortcodes use util::run_json_process() and util::resolve_executable().
+// External shortcodes are handled via the plugin registry.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::plugins::PluginHandle;
+use crate::registry::PluginRegistry;
 use crate::render::markers;
 use crate::types::Metadata;
 
@@ -59,7 +59,7 @@ pub struct ShortcodeResult {
 /// Escaped shortcodes use triple braces: `{{{< name >}}}` renders as
 /// the literal text `{{< name >}}` without processing.
 /// Shortcodes inside backtick-delimited code spans are not processed.
-pub fn process_shortcodes(text: &str, format: &str, metadata: &Metadata, plugins: &[PluginHandle]) -> ShortcodeResult {
+pub fn process_shortcodes(text: &str, format: &str, metadata: &Metadata, registry: &PluginRegistry) -> ShortcodeResult {
     // First pass: replace escaped shortcodes {{{< ... >}}} with placeholders
     static ESCAPE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"\{\{\{<\s*(.+?)\s*>\}\}\}").unwrap()
@@ -100,22 +100,18 @@ pub fn process_shortcodes(text: &str, format: &str, metadata: &Metadata, plugins
             return wrap_raw_output(&output, format, &mut sc_fragments);
         }
 
-        // Try WASM plugins
-        for plugin in plugins {
-            let ctx = crate::plugins::ShortcodeContext {
-                name: name.clone(),
-                args: args.clone(),
-                kwargs: kwargs.clone(),
-                format: format.to_string(),
-            };
-            if let Some(output) = plugin.call_shortcode(&ctx) {
-                return wrap_raw_output(&output, format, &mut sc_fragments);
+        // Try plugin registry (user plugins + external)
+        if let Some(plugin) = registry.matching_shortcode(&name) {
+            let meta_json = serde_json::json!({
+                "title": metadata.title,
+                "author": metadata.author,
+                "date": metadata.date,
+            });
+            if let Some(output) = registry.call_subprocess_shortcode(
+                plugin, &name, &args, &kwargs, format, &meta_json,
+            ) {
+                return wrap_raw_output(&output.trim().to_string(), format, &mut sc_fragments);
             }
-        }
-
-        // Try external shortcode
-        if let Some(output) = external_shortcode(&name, &args, &kwargs, format, metadata) {
-            return wrap_raw_output(&output, format, &mut sc_fragments);
         }
 
         // Unknown shortcode: warn and keep as-is
@@ -448,35 +444,6 @@ fn shortcode_brand(subcommand: &str, name: &str, mode: Option<&str>, format: &st
     }
 }
 
-// ---------------------------------------------------------------------------
-// External shortcodes
-// ---------------------------------------------------------------------------
-
-fn external_shortcode(
-    name: &str,
-    args: &[String],
-    kwargs: &HashMap<String, String>,
-    format: &str,
-    metadata: &Metadata,
-) -> Option<String> {
-    let path = crate::util::resolve_executable("shortcodes", name, None)?;
-
-    let input = serde_json::json!({
-        "name": name,
-        "args": args,
-        "kwargs": kwargs,
-        "format": format,
-        "meta": {
-            "title": metadata.title,
-            "author": metadata.author,
-            "date": metadata.date,
-        },
-    });
-
-    crate::util::run_json_process(&path, &input)
-        .map(|s| s.trim().to_string())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -526,7 +493,8 @@ mod tests {
         let meta = Metadata::default();
         std::env::set_var("SNB_TEST_SC", "world");
         let text = "Hello {{< env SNB_TEST_SC >}}!";
-        let result = process_shortcodes(text, "html", &meta, &[]);
+        let registry = crate::registry::PluginRegistry::empty();
+        let result = process_shortcodes(text, "html", &meta, &registry);
         assert_eq!(result.text, "Hello world!");
         std::env::remove_var("SNB_TEST_SC");
     }
@@ -541,7 +509,8 @@ mod tests {
     fn test_escaped_shortcode() {
         let meta = Metadata::default();
         let text = "Literal: {{{< meta title >}}}";
-        let result = process_shortcodes(text, "html", &meta, &[]);
+        let registry = crate::registry::PluginRegistry::empty();
+        let result = process_shortcodes(text, "html", &meta, &registry);
         let resolved = resolve_escaped_shortcodes(&result.text, &result.escaped_fragments);
         assert_eq!(resolved, "Literal: {{< meta title >}}");
     }

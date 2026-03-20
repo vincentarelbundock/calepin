@@ -1,11 +1,8 @@
 ---
 title: Shortcodes
-calepin:
-  plugins:
-    - lorem
 ---
 
-Shortcodes are inline directives written as `{{< name args >}}`. They are processed during rendering and replaced with format-aware output. Calepin provides several built-in shortcodes and supports user-defined shortcodes via executable scripts or WASM plugins.
+Shortcodes are inline directives written as `{{< name args >}}`. They are processed during rendering and replaced with format-aware output. *Calepin* provides several built-in shortcodes and supports user-defined shortcodes via plugins.
 
 
 # Syntax
@@ -55,7 +52,7 @@ urls:
   docs: https://github.com/vincentarelbundock/calepin
 ```
 
-The syntax `{{< var version >}}` inserts the value. 
+The syntax `{{< var version >}}` inserts the value.
 
 * *Calepin* version: {{< var version >}}
 * Documentation URL: {{< var urls.docs >}}
@@ -70,16 +67,69 @@ Include the content of another file. YAML front matter in the included file is s
 
 The included content is expanded before block parsing, so code chunks, fenced divs, and other block structures in the included file are processed normally.
 
+## video
 
-# Script shortcodes
+Embed a video or streaming service. Supports YouTube, Vimeo, and direct video URLs:
 
-Custom shortcodes are executable files placed in `_calepin/shortcodes/` (project-level) or `~/.config/calepin/shortcodes/` (user-level). The file name is the shortcode name.
+```
+{{{< video https://www.youtube.com/watch?v=dQw4w9WgXcQ >}}}
+{{{< video https://vimeo.com/123456 width="640" height="480" title="My Video" >}}}
+```
+
+YouTube and Vimeo URLs are automatically converted to embed URLs.
+
+## brand
+
+Access branding information from `_brand.yml`:
+
+- `{{< brand color primary >}}` --- returns a color value
+- `{{< brand logo mark >}}` --- returns format-appropriate logo markup
+
+
+# Plugin shortcodes
+
+Custom shortcodes are implemented as plugins with a `shortcode` capability. Create a plugin directory with a `plugin.yml` manifest and an executable script.
+
+## Example: greeting plugin
+
+`_calepin/plugins/greeting/plugin.yml`:
+
+```yaml
+name: greeting
+version: 0.1.0
+description: "A friendly greeting shortcode"
+
+provides:
+  shortcode:
+    run: shortcode.py
+    names: [greeting]
+```
+
+`_calepin/plugins/greeting/shortcode.py`:
+
+```python
+#!/usr/bin/env python3
+import json, sys
+
+data = json.load(sys.stdin)
+name = data["args"][0] if data["args"] else "World"
+fmt = data["format"]
+
+if fmt == "html":
+    print(f'<strong>Hello, {name}!</strong>')
+elif fmt == "tex":
+    print(f'\\textbf{{Hello, {name}!}}')
+elif fmt == "typ":
+    print(f'Hello, {name}!')
+else:
+    print(f'Hello, {name}!')
+```
 
 ## Input protocol
 
 The executable receives JSON on stdin:
 
-```
+```json
 {
   "name": "greeting",
   "args": ["Alice"],
@@ -100,69 +150,14 @@ Print the replacement text to stdout. The output is inserted directly into the d
 - Exit 0: stdout replaces the shortcode.
 - Exit non-zero: a warning is printed, and the shortcode is left as-is.
 
-## Example: greeting shortcode
+See [Plugins](plugins.qmd) for the full plugin system documentation, including how to scaffold a plugin with `calepin plugin init`.
 
-This project includes a `_calepin/shortcodes/greeting` script:
-
-```python
-#!/usr/bin/env python3
-import json, sys
-
-data = json.load(sys.stdin)
-name = data["args"][0] if data["args"] else "World"
-fmt = data["format"]
-
-if fmt == "html":
-    print(f'<strong>Hello, {name}!</strong>')
-elif fmt == "tex":
-    print(f'\\textbf{{Hello, {name}!}}')
-elif fmt == "typ":
-    print(f'Hello, {name}!')
-else:
-    print(f'Hello, {name}!')
-```
-
-{{{< greeting Alice >}}} renders as: {{< greeting Alice >}}
-
-
-# Plugin shortcodes
-
-Shortcodes can also be implemented as WASM plugins by exporting a `shortcode` function. This is useful for shortcodes that need to be portable across platforms or that benefit from being compiled (e.g., for performance or bundling data).
-
-See the [Plugins](plugins.qmd) page for how to write plugin shortcodes.
-
-## Example: `lorem` plugin
-
-The `lorem` plugin generates placeholder text. Add it to your front matter:
-
-```yaml
-calepin:
-  plugins:
-    - lorem
-```
-
-Then use it in your document:
-
-- `{{< lorem >}}` --- 1 paragraph
-- `{{< lorem words=20 >}}` --- a specific number of words
-- `{{< lorem sentences=3 >}}` --- a specific number of sentences
-- `{{< lorem paragraphs=2 >}}` or `{{< lorem 2 >}}` --- multiple paragraphs
-
-Two words: {{< lorem words=2 >}}.
-
-Two sentences: {{< lorem sentences=2 >}}
-
-Two paragraphs: 
-
-{{< lorem paragraphs=2 >}}
 
 # Resolution order
 
-For each shortcode, Calepin checks:
+For each shortcode, *Calepin* checks:
 
-1. Built-in shortcodes (`pagebreak`, `meta`, `env`, `var`, `include`)
-2. WASM plugins (in front matter order)
-3. Project-level: `_calepin/shortcodes/{name}`
-4. User-level: `~/.config/calepin/shortcodes/{name}`
+1. Built-in shortcodes (`pagebreak`, `meta`, `env`, `var`, `include`, `video`, `brand`)
+2. Plugin registry (in front matter order)
 
-Built-in shortcodes take precedence. You cannot override them with external scripts.
+Built-in shortcodes take precedence. You cannot override them with plugins.

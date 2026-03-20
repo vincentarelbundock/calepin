@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::plugins::PluginHandle;
+use crate::registry::{PluginKind, PluginRegistry};
 
 static RE_BRACKETED_SPAN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\[([^\]]+)\]\{([^}]+)\}").unwrap()
@@ -16,7 +16,7 @@ static RE_BRACKETED_SPAN: LazyLock<Regex> = LazyLock::new(|| {
 pub fn render(
     text: &str,
     format: &str,
-    plugins: &[PluginHandle],
+    registry: &PluginRegistry,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
     resolve_template: &dyn Fn(&str) -> Option<String>,
 ) -> String {
@@ -51,27 +51,35 @@ pub fn render(
             vars.insert("id-attr".to_string(), String::new());
         }
 
-        // WASM plugin span filters
-        for plugin in plugins {
-            let ctx = crate::plugins::FilterContext {
-                context: "span".to_string(),
-                content: content.to_string(),
-                classes: classes.clone(),
-                id: id.as_deref().unwrap_or("").to_string(),
-                format: format.to_string(),
-                attrs: kv.clone(),
-            };
-            if let crate::plugins::FilterResult::Rendered(output) = plugin.call_filter(&ctx) {
-                return wrap_output(format, raw_fragments, output);
-            }
-        }
+        // Plugin dispatch via registry
+        let empty_attrs = HashMap::new();
+        let matching = registry.matching_filters(&classes, &empty_attrs, id.as_deref(), format, "span");
 
-        // External span filter
-        for cls in &classes {
-            if let Some(filter) = crate::filters::resolve_external_filter(cls, format) {
-                if let Some(output) = filter.run_span_filter(content, &classes, &id, format, &kv) {
-                    return wrap_output(format, raw_fragments, output);
+        for plugin in &matching {
+            match &plugin.kind {
+                PluginKind::BuiltinFilter(filter) => {
+                    let span_element = crate::types::Element::Text { content: content.to_string() };
+                    match filter.apply(&span_element, format, &mut vars) {
+                        crate::filters::FilterResult::Rendered(output) => {
+                            return wrap_output(format, raw_fragments, output);
+                        }
+                        _ => {}
+                    }
                 }
+                PluginKind::Subprocess { .. } | PluginKind::PersistentSubprocess { .. } => {
+                    if let Some(output) = registry.call_subprocess_filter(
+                        plugin,
+                        "span",
+                        content,
+                        &classes,
+                        id.as_deref().unwrap_or(""),
+                        format,
+                        &kv,
+                    ) {
+                        return wrap_output(format, raw_fragments, output);
+                    }
+                }
+                PluginKind::BuiltinStructural(_) => {}
             }
         }
 

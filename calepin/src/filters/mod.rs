@@ -4,8 +4,7 @@
 //
 // 1. Element filters (Filter trait) — run during element rendering in the
 //    div pipeline (render/div.rs). Enrich template vars or produce final
-//    output. Includes: TheoremFilter, CalloutFilter, CodeFilter,
-//    FigureFilter, ExternalFilter.
+//    output. Includes: TheoremFilter, CalloutFilter, CodeFilter, FigureFilter.
 //
 // 2. Pre-render passes — run on the element list before rendering.
 //    bibliography.rs processes citations and appends a References section.
@@ -19,7 +18,6 @@ pub mod bibliography;
 pub mod callout;
 pub mod code;
 pub mod crossref;
-pub mod external;
 pub mod figure;
 pub mod highlighting;
 pub mod theorem;
@@ -31,7 +29,6 @@ use std::collections::HashMap;
 use crate::types::Element;
 
 pub use callout::CalloutFilter;
-pub use external::resolve_external_filter;
 pub use theorem::TheoremFilter;
 
 /// Result of applying a filter.

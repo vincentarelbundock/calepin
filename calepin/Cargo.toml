@@ -43,9 +43,6 @@ hayagriva = { version = "0.9", features = ["biblatex"] }
 anyhow = "1"
 bincode = { version = "2", features = ["serde"] }
 
-# WASM plugin system
-extism = "1"
-
 # Preview server
 notify = "8"
 tiny_http = "0.12"

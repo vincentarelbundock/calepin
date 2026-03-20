@@ -4,13 +4,12 @@ title: Templates
 
 Every rendered element---code blocks, figures, fenced divs, bracketed spans---passes through a **template** before becoming output. Templates are files with `{{variable}}` placeholders that control the markup for a single element.
 
-All customization files live under `_calepin/` (project) or `~/.config/calepin/` (user). *Calepin* checks project first, then user, then built-in:
+Templates can be provided by plugins (in their `elements/` and `templates/` directories), placed in `_calepin/` (project), or `~/.config/calepin/` (user). *Calepin* checks in this order:
 
-```
-_calepin/
-  elements/       # templates for divs, spans, code blocks, figures
-  templates/      # page templates (calepin.html, calepin.css, etc.)
-```
+1. Plugin-provided directories (in plugin order)
+2. `_calepin/elements/` or `_calepin/templates/` (project)
+3. `~/.config/calepin/elements/` or `~/.config/calepin/templates/` (user)
+4. Built-in (compiled into the binary)
 
 
 # Element templates
@@ -35,9 +34,12 @@ Templates are named `{element}.{format}` where format is `html`, `tex`, `typ`, o
 
 Resolution order:
 
-1. `_calepin/elements/{name}.{ext}` (project override)
-2. `~/.config/calepin/elements/{name}.{ext}` (user default)
-3. Built-in (compiled into the binary)
+1. Plugin `elements/` directory (in plugin order)
+2. `_calepin/elements/{name}.{ext}` (project override)
+3. `~/.config/calepin/elements/{name}.{ext}` (user default)
+4. Built-in (compiled into the binary)
+
+A plugin can bundle template overrides by declaring `provides.elements.dir` in its `plugin.yml`. See [Plugins](plugins.qmd) for details.
 
 ## Div variables
 
@@ -120,7 +122,7 @@ The page template wraps the entire rendered body in a document shell---the `<htm
 - `_calepin/templates/calepin.latex` --- LaTeX document wrapper
 - `_calepin/templates/calepin.typ` --- Typst document wrapper
 
-Same resolution: project → user (`~/.config/calepin/templates/`) → built-in.
+Same resolution: plugin → project → user (`~/.config/calepin/templates/`) → built-in.
 
 ## Page template variables
 

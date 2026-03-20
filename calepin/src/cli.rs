@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use clap_complete::Shell;
 use std::path::PathBuf;
 
@@ -66,6 +66,29 @@ pub struct Cli {
     /// List available syntax highlighting themes and exit
     #[arg(long)]
     pub list_highlight_styles: bool,
+
+    #[command(subcommand)]
+    pub command: Option<CliCommand>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CliCommand {
+    /// Plugin management
+    Plugin {
+        #[command(subcommand)]
+        action: PluginAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum PluginAction {
+    /// Create a new plugin scaffold
+    Init {
+        /// Plugin name
+        name: String,
+    },
+    /// List all available plugins
+    List,
 }
 
 /// Print a yellow warning to stderr.

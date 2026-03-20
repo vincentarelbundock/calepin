@@ -30,7 +30,6 @@ make install        # Install to ~/.cargo/bin + shell completions
 make check          # Fast compile check (no linking)
 make test           # cargo test
 make docs           # Render all .qmd files in website/ to all formats
-make plugins        # Build WASM plugins → website/_calepin/plugins/ + plugins/*/
 make bench          # Benchmark vs litedown and Quarto (uses website/basics.qmd)
 ```
 
@@ -56,7 +55,7 @@ The pipeline transforms data through three representations:
 
 1. **Parse** — YAML front matter (`parse/yaml.rs`), then recursive block parsing into `Block` enum (`parse/blocks.rs`). Chunk options use pipe-only syntax (`#| key: value`). Dashes in option names are normalized to dots internally (`fig-width` → `fig.width`).
 2. **Evaluate** (`engines/mod.rs`) — Shortcodes processed first, then inline code, then blocks become `Element`s. `engines::evaluate()` orchestrates; `engines::block::evaluate_block()` handles code chunks; `engines::inline::evaluate_inline()` handles inline expressions. Conditional content (`.content-visible`/`.content-hidden` with `when-format`/`unless-format`/`when-meta`/`unless-meta`) filtered here. `.hidden` divs execute but emit nothing.
-3. **Load plugins** (`plugins.rs`) — WASM plugins from front matter `calepin: { plugins: [name] }`. Resolved from `_calepin/plugins/name.wasm` → `~/.config/calepin/plugins/`.
+3. **Load plugin registry** (`registry.rs`) — Plugins from front matter `calepin: { plugins: [name] }`. Each plugin is a directory with a `plugin.yml` manifest. Resolved from `_calepin/plugins/{name}/` → `~/.config/calepin/plugins/{name}/`. Built-in plugins (tabset, layout, figure-div, theorem, callout) are appended automatically.
 4. **Bibliography** (`filters/bibliography.rs`) — Citation keys resolved via hayagriva.
 5. **Cross-ref markers** (`filters/crossref.rs`) — Inject anchors into elements.
 6. **Render** — `ElementRenderer` dispatches each element to the appropriate filter, then applies a template. `OutputRenderer` wraps the result in a page template.
@@ -85,18 +84,18 @@ The engines module owns all code evaluation — block-level, inline-level, the e
 - `main.rs` — Entry point, pipeline stages
 - `batch.rs` — Batch rendering: `BatchJob`/`BatchResult` types, `run_batch()` parallel runner
 - `types.rs` — Input types: `Block`, `CodeChunk`, `ChunkOptions`, `Metadata`, `FigureAttrs`
-- `plugins.rs` — WASM plugin loading (extism): `PluginHandle`, `FilterContext`, `ShortcodeContext`
-- `cli.rs` — CLI argument parsing (clap) + `cwarn!` macro
-- `util.rs` — `slugify()`, `escape_html()`, `resolve_path()`
+- `plugin_manifest.rs` — Plugin manifest (`plugin.yml`) parsing: `PluginManifest`, `FilterMatch`, `FilterSpec`, etc.
+- `registry.rs` — Plugin registry: `PluginRegistry` loads user + built-in plugins, dispatches filters/shortcodes/postprocessors, resolves templates. `StructuralHandler` trait for built-in structural plugins.
+- `cli.rs` — CLI argument parsing (clap) + `cwarn!` macro + `plugin init`/`plugin list` subcommands
+- `util.rs` — `slugify()`, `escape_html()`, `resolve_path()`, `run_json_process()`
 
 ### `calepin/src/filters/` — Transforms
 
 Each filter enriches template variables or produces final output. Built-in div filters implement the `DivFilter` trait with a uniform `(classes, id, content, format, vars) → FilterAction` interface.
 
-- `callout.rs` — Callout enrichment: title, icon, collapse/appearance. Produces `<details>` for collapsible HTML callouts.
-- `theorem.rs` — Theorem auto-numbering: per-type counters, injects `{{number}}`
-- `external.rs` — Subprocess JSON filters (`_calepin/filters/`)
-- `shortcodes.rs` — `{{< name args >}}` expansion (built-in + external)
+- `callout.rs` — Callout enrichment: title, icon, collapse/appearance. Produces `<details>` for collapsible HTML callouts. Registered as built-in plugin.
+- `theorem.rs` — Theorem auto-numbering: per-type counters, injects `{{number}}`. Registered as built-in plugin.
+- `shortcodes.rs` — `{{< name args >}}` expansion (built-in shortcodes + plugin registry)
 - `code.rs` — Code block template variable filling (syntax highlighting)
 - `figure.rs` — Figure template vars, figure div rendering, image helpers, path resolution
 
@@ -104,8 +103,8 @@ Each filter enriches template variables or produces final output. Built-in div f
 
 - `mod.rs` — `OutputRenderer` trait with `format()` and `extension()`
 - `elements.rs` — `Element` enum + `ElementRenderer` dispatch
-- `div.rs` — Div rendering pipeline: structural dispatch + filter chain + template
-- `span.rs` — Span rendering pipeline: plugin → external → template → fallback
+- `div.rs` — Div rendering pipeline: unified plugin registry dispatch (structural → filter → subprocess → template)
+- `span.rs` — Span rendering pipeline: unified plugin registry dispatch → template → fallback
 - `template.rs` — `{{variable}}` substitution + page template loading
 - `markdown.rs` — comrak CommonMark+GFM with math/raw protection
 - `latex.rs` — Markdown-to-LaTeX conversion
@@ -128,25 +127,72 @@ Each filter enriches template variables or produces final output. Built-in div f
 - `pages/` — Page templates (`calepin.html`, `calepin.css`, `calepin.latex`, `calepin.typst`)
 - `misc/` — Other resources (`default.csl`)
 
-### `plugins/` — WASM plugin crates
+### `plugins/` — Plugin source (to be migrated to subprocess-based plugins)
 
-- `txtfmt/` — `.txtfmt` span filter (em, color, smallcaps, underline, mark) with 1000+ named colors
-- `imgur/` — `.imgur` span filter (upload images to imgur)
+Legacy WASM plugin sources. These need to be rewritten as executable scripts with `plugin.yml` manifests. See the plugin system documentation below.
 
-Built with `make plugins`. Each compiles to `wasm32-unknown-unknown`.
+## Plugin System
 
-## Div Rendering Pipeline
+All extensibility flows through the `PluginRegistry` (`registry.rs`). A plugin is a directory with a `plugin.yml` manifest declaring its capabilities.
 
-`render/div.rs` dispatches in this order:
+### Plugin types
 
-1. **Tabsets** — `.panel-tabset` class → `structures/tabset.rs`
-2. **Layouts** — `layout-ncol`/`layout-nrow`/`layout` attr → `structures/layout.rs`
-3. **Figure divs** — `#fig-` id prefix → `structures/figure.rs`
-4. **WASM plugins** — in front matter order
-5. **External filters** — subprocess (`_calepin/filters/`)
-6. **Built-in filters** — TheoremFilter, CalloutFilter
-7. **Template lookup** — First matching class template, falling back to `div` template
-8. **Callout collapse** — HTML post-processing wraps in `<details>/<summary>`
+- **Built-in structural** (`BuiltinStructural`) — Receive raw `&[Element]` children + render closure. Run before child rendering. Used by: tabset, layout, figure-div.
+- **Built-in filter** (`BuiltinFilter`) — Implement the `Filter` trait. Run after child rendering. Used by: theorem, callout.
+- **Subprocess** — External executables receiving JSON on stdin, returning output on stdout. One process per call.
+- **Persistent subprocess** — Long-running process communicating via JSON lines. Spawned once, reused across calls.
+
+### Dispatch order
+
+`render/div.rs` iterates matching plugins in registry order (user plugins first, then built-in):
+
+1. For each matching plugin (by classes/attrs/id_prefix/formats):
+   - **Structural** → call with raw children, return if handled
+   - **Filter/Subprocess** → lazy-render children, call, return if `Rendered`; accumulate vars if `Continue`
+2. **Template lookup** — explicit override → class-based → `div` fallback
+
+### plugin.yml manifest
+
+```yaml
+name: myplugin
+version: 0.1.0
+description: "What this plugin does"
+provides:
+  filter:
+    run: filter.py
+    match:
+      classes: [myclass]     # CSS classes (OR'd)
+      attrs: [my-attr]       # Attribute names (OR'd)
+      id_prefix: "fig-"      # ID prefix
+      formats: [html]        # Output formats (omit = all)
+    contexts: [div, span]    # Default: both
+    persistent: false         # JSON-lines protocol
+  shortcode:
+    run: shortcode.py
+    names: [mysc]
+  postprocess:
+    run: postprocess.py
+    formats: [html]
+  elements:
+    dir: elements/
+  templates:
+    dir: templates/
+  csl: style.csl
+  format:
+    name: myformat
+    base: html
+    extension: html
+```
+
+### Resolution
+
+1. `_calepin/plugins/{name}/plugin.yml` (project)
+2. `~/.config/calepin/plugins/{name}/plugin.yml` (user)
+
+### CLI
+
+- `calepin plugin init <name>` — scaffold a new plugin
+- `calepin plugin list` — list available plugins
 
 ## Raw Output Protection
 
@@ -175,15 +221,14 @@ Standard Quarto fields (`title`, `author`, `bibliography`, `format`, etc.) remai
 
 ## Template and Filter Resolution
 
-Three-level override for all customization: `_calepin/` (project) → `~/.config/calepin/` (user) → built-in.
+Resolution order: plugin-provided dirs (in plugin order) → `_calepin/{elements,templates}/` → `~/.config/calepin/` → built-in.
 
-- Element templates: `_calepin/elements/{name}.{format}` (e.g., `theorem.latex`)
-- Page templates: `_calepin/templates/calepin.{format}` (e.g., `calepin.html`)
-- CSL: `_calepin/templates/calepin.csl`
-- Filters: `_calepin/filters/{class}` or `_calepin/filters/{class}.{format}`
-- Shortcodes: `_calepin/shortcodes/{name}`
-- Plugins: `_calepin/plugins/{name}.wasm`
-- Custom formats: `_calepin/formats/{name}.yaml` (with optional `preprocess` and `postprocess` script paths)
+- Element templates: plugin `elements/` dir → `_calepin/elements/{name}.{format}` → built-in
+- Page templates: plugin `templates/` dir → `_calepin/templates/calepin.{format}` → built-in
+- CSL: plugin `csl` field → `_calepin/templates/calepin.csl` → built-in
+- Filters: provided via plugin `filter` capability (subprocess executables with `plugin.yml`)
+- Shortcodes: provided via plugin `shortcode` capability
+- Custom formats: provided via plugin `format` capability, or `_calepin/formats/{name}.yaml`
 
 ## Chunk Options
 
@@ -191,7 +236,7 @@ Only pipe syntax (`#| key: value`) is accepted. The header accepts only language
 
 ## Shortcodes
 
-Syntax: `{{< name arg1 key="value" >}}`. Escaped with triple braces: `{{{< name >}}}`. Processed during evaluate before inline code. Built-in: `pagebreak`, `meta`, `env`, `include` (file inclusion), `var` (reads `_variables.yml` with dot-notation). External shortcodes are executables in `_calepin/shortcodes/` receiving JSON on stdin.
+Syntax: `{{< name arg1 key="value" >}}`. Escaped with triple braces: `{{{< name >}}}`. Processed during evaluate before inline code. Built-in: `pagebreak`, `meta`, `env`, `include` (file inclusion), `var` (reads `_variables.yml` with dot-notation), `video`, `brand`. Plugin shortcodes are provided via the plugin registry.
 
 ## Dependencies
 
@@ -200,7 +245,6 @@ Syntax: `{{< name arg1 key="value" >}}`. Escaped with triple braces: `{{{< name 
 - `syntect` — Syntax highlighting
 - `clap` + `clap_complete` — CLI and shell completions
 - `saphyr` — YAML parsing (DOM-style `YamlOwned` enum, not serde-based)
-- `extism` — WASM plugin runtime (wasmtime-based)
 
 ## Function Naming Convention
 

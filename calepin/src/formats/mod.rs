@@ -18,7 +18,6 @@ use anyhow::{Context, Result};
 
 use crate::types::{Element, Metadata};
 use crate::render::elements::ElementRenderer;
-use crate::plugins::PluginHandle;
 
 /// Trait for pluggable output formats.
 pub trait OutputRenderer {
@@ -100,7 +99,6 @@ struct CustomRenderer {
     name: String,
     ext: String,
     base: Box<dyn OutputRenderer>,
-    postprocess_plugin: Option<PluginHandle>,
     preprocess_script: Option<PathBuf>,
     postprocess_script: Option<PathBuf>,
 }
@@ -132,14 +130,7 @@ impl OutputRenderer for CustomRenderer {
         meta: &Metadata,
         renderer: &ElementRenderer,
     ) -> Option<String> {
-        // 1. WASM plugin postprocess (replaces template entirely)
-        if let Some(ref plugin) = self.postprocess_plugin {
-            let title = meta.title.as_deref().unwrap_or("");
-            let syntax_css = renderer.syntax_css();
-            return plugin.call_postprocess(body, &self.name, title, &syntax_css);
-        }
-
-        // 2. Base format template (produces complete document)
+        // Base format template (produces complete document)
         let templated = {
             // Try custom page template first: calepin.{name}
             let custom_tpl = crate::render::template::load_page_template(
@@ -242,18 +233,6 @@ fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
         .unwrap_or(base.extension())
         .to_string();
 
-    let postprocess_plugin = config.as_mapping_get("plugin")
-        .and_then(|v| v.as_str())
-        .and_then(|plugin_name| {
-            match crate::plugins::load_plugin(plugin_name) {
-                Some(p) => Some(p),
-                None => {
-                    eprintln!("Warning: format plugin '{}' not found", plugin_name);
-                    None
-                }
-            }
-        });
-
     let config_dir = path.parent().unwrap_or(Path::new("."));
     let preprocess_script = config.as_mapping_get("preprocess")
         .and_then(|v| v.as_str())
@@ -266,7 +245,6 @@ fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
         name: name.to_string(),
         ext,
         base,
-        postprocess_plugin,
         preprocess_script,
         postprocess_script,
     }))

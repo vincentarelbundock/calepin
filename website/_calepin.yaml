@@ -42,10 +42,10 @@ website:
         - code/sh.qmd
     - section: "Extending"
       pages:
-        - templates.qmd
-        - filters.qmd
-        - shortcodes.qmd
         - plugins.qmd
+        - shortcodes.qmd
+        - filters.qmd
+        - templates.qmd
     - quarto.qmd
     - section: "Presentations"
       pages:
