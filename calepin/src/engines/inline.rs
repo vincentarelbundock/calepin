@@ -10,6 +10,7 @@ use crate::parse::blocks::collect_inline_code;
 
 /// Evaluate inline code expressions in text, replacing `{r}` and `{python}`
 /// expressions with their results.
+#[inline(never)]
 pub fn evaluate_inline(text: &str, ctx: &mut EngineContext) -> Result<String> {
     let inlines = collect_inline_code(text);
     if inlines.is_empty() {

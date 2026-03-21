@@ -135,6 +135,7 @@ static RE_TEMPLATE_VAR: LazyLock<Regex> = LazyLock::new(|| {
 /// Apply Tera template rendering to a template string with variable substitution.
 /// This is the single templating engine used by both page templates
 /// and element templates. Supports Tera conditionals, loops, and filters.
+#[inline(never)]
 pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String {
     let mut context = tera::Context::new();
     // Pre-fill any variables referenced in the template but missing from vars
@@ -148,6 +149,10 @@ pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String 
     for (key, value) in vars {
         context.insert(key.as_str(), value);
     }
+    // Literal brace helpers (inserted last so pre-fill can't override them):
+    // use {{_lb}} and {{_rb}} when LaTeX braces collide with Tera delimiters.
+    context.insert("_lb", "{");
+    context.insert("_rb", "}");
     match tera::Tera::one_off(template, &context, false) {
         Ok(rendered) => rendered,
         Err(e) => {
@@ -162,7 +167,9 @@ pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String 
 fn render_block(name: &str, ext: &str, vars: &HashMap<String, String>, fallback: &str) -> String {
     use crate::render::elements::resolve_element_template;
     if let Some(tpl) = resolve_element_template(name, ext) {
-        apply_template(&tpl, vars)
+        let mut vars = vars.clone();
+        vars.insert("format".to_string(), ext.to_string());
+        apply_template(&tpl, &vars)
     } else {
         fallback.to_string()
     }
@@ -301,6 +308,15 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         vars.insert("bib_end".to_string(), String::new());
     }
 
+    // Bibliography block (format-specific via element template)
+    if !meta.bibliography.is_empty() {
+        let bib_path = &meta.bibliography[0];
+        let mut bvars = HashMap::new();
+        bvars.insert("path".to_string(), bib_path.clone());
+        vars.insert("bibliography_block".to_string(),
+            render_block("bibliography_block", ext, &bvars, ""));
+    }
+
     // Common include variables
     vars.insert(
         "header_includes".to_string(),
@@ -334,8 +350,8 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         vars.insert("toc".to_string(), String::new());
     }
 
-    // Brand variables (_brand.yml)
-    crate::brand::inject_brand_vars(&mut vars, ext);
+    // Brand variables (from front matter `brand:` key)
+    crate::brand::inject_brand_vars(&mut vars, ext, meta.brand.as_ref());
 
     // Extra YAML fields override defaults (e.g., classoption, documentclass)
     for (key, value) in &meta.extra {
@@ -381,6 +397,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     }
 
     let mut sections: Vec<String> = Vec::new();
+    let fmt = ext.to_string();
 
     // License
     if let Some(ref lic) = meta.license {
@@ -388,6 +405,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
             let content = format_link(text, lic.url.as_deref(), ext);
             if let Some(tpl) = resolve_element_template("appendix_license", ext) {
                 let mut vars = HashMap::new();
+                vars.insert("format".to_string(), fmt.clone());
                 vars.insert("content".to_string(), content);
                 sections.push(apply_template(&tpl, &vars));
             }
@@ -399,6 +417,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
         let content = build_citation_text(meta, cite, ext);
         if let Some(tpl) = resolve_element_template("appendix_citation", ext) {
             let mut vars = HashMap::new();
+            vars.insert("format".to_string(), fmt.clone());
             vars.insert("content".to_string(), content);
             sections.push(apply_template(&tpl, &vars));
         }
@@ -410,6 +429,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
         if !text.is_empty() {
             if let Some(tpl) = resolve_element_template("appendix_copyright", ext) {
                 let mut vars = HashMap::new();
+                vars.insert("format".to_string(), fmt.clone());
                 vars.insert("content".to_string(), text);
                 sections.push(apply_template(&tpl, &vars));
             }
@@ -422,6 +442,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
         if !items.is_empty() {
             if let Some(tpl) = resolve_element_template("appendix_funding", ext) {
                 let mut vars = HashMap::new();
+                vars.insert("format".to_string(), fmt.clone());
                 vars.insert("items".to_string(), items);
                 sections.push(apply_template(&tpl, &vars));
             }
@@ -432,6 +453,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
         String::new()
     } else if let Some(tpl) = resolve_element_template("appendix", ext) {
         let mut vars = HashMap::new();
+        vars.insert("format".to_string(), fmt);
         vars.insert("sections".to_string(), sections.join("\n"));
         apply_template(&tpl, &vars)
     } else {
@@ -612,6 +634,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
 
             if let Some(ref tpl) = author_tpl {
                 let mut vars = HashMap::new();
+                vars.insert("format".to_string(), ext.to_string());
                 vars.insert("name".to_string(), author.name.literal.clone());
                 vars.insert("superscripts".to_string(), superscripts);
                 vars.insert("corresponding".to_string(), corresponding);
@@ -641,6 +664,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
             };
             if let Some(ref tpl) = aff_tpl {
                 let mut vars = HashMap::new();
+                vars.insert("format".to_string(), ext.to_string());
                 vars.insert("number".to_string(), number);
                 vars.insert("display".to_string(), display);
                 Some(apply_template(tpl, &vars))
@@ -710,6 +734,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
 
         if let Some(tpl) = resolve_element_template("author_block", ext) {
             let mut vars = HashMap::new();
+            vars.insert("format".to_string(), ext.to_string());
             vars.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
             vars.insert("authors".to_string(), authors_joined);
             vars.insert("affiliations".to_string(), affiliations_joined);

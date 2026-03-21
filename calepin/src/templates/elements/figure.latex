@@ -1,6 +1,0 @@
-{{fig_begin}}{{fig_pos}}
-{{align_style}}
-{{image}}
-{{caption_cmd}}
-\label{fig-{{label}}}
-{{fig_end}}

@@ -51,6 +51,7 @@ static RE_INLINE_CODE: LazyLock<Regex> = LazyLock::new(|| {
 
 /// Parse an .qmd document body (after YAML removal) into a list of blocks.
 /// Supports code chunks (```{r}), fenced divs (::: {.class}), and nesting.
+#[inline(never)]
 pub fn parse_body(body: &str) -> Result<Vec<Block>> {
     let lines: Vec<&str> = body.lines().collect();
     parse_blocks(&lines, 0, &mut 0, 0)

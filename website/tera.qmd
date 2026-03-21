@@ -1,0 +1,225 @@
+---
+title: Tera
+variables:
+  version: 0.0.1-alpha.2
+  urls:
+    docs: https://github.com/vincentarelbundock/calepin
+---
+
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
+*Calepin* processes the body of every `.qmd` document through the [Tera](https://keats.github.io/tera/) template engine. This lets you use expressions, functions, conditionals, and loops directly in your text. Code blocks and inline code are automatically protected from Tera evaluation.
+
+
+# Syntax
+
+Tera expressions use double braces: `{% raw %}{{ expression }}{% endraw %}`. Functions use parentheses with keyword arguments:
+
+```
+{% raw %}{{ function_name(arg="value") }}{% endraw %}
+```
+
+To include literal Tera syntax without evaluation, wrap it in raw blocks:
+
+````
+{% raw %}{% raw %}{{ this is not evaluated }}{% endraw %}{% endraw %}
+````
+
+
+# Context variables
+
+## meta
+
+Access YAML front matter fields:
+
+{% raw %}
+- `{{ meta.title }}` --- document title
+- `{{ meta.author }}` --- author (comma-joined if multiple)
+- `{{ meta.date }}` --- date
+- `{{ meta.subtitle }}` --- subtitle
+- `{{ meta.abstract }}` --- abstract text
+- `{{ meta.keywords }}` --- keywords (comma-joined)
+{% endraw %}
+
+Any custom field in the YAML front matter is also available.
+
+The title of this document is: {{ meta.title }}.
+
+## var
+
+Look up a variable from the `variables:` block in front matter (or in `_calepin.yaml` for site-wide variables). Uses dot-notation for nested values. For example, this document's front matter contains:
+
+```yaml
+variables:
+  version: 0.0.1-alpha.2
+  urls:
+    docs: https://github.com/vincentarelbundock/calepin
+```
+
+{% raw %}The syntax `{{ var.version }}` inserts the value.{% endraw %}
+
+* *Calepin* version: {{ var.version }}
+* Documentation URL: {{ var.urls.docs }}
+
+## format
+
+The current output format is available as `{% raw %}{{ format }}{% endraw %}` --- one of `html`, `latex`, `typst`, or `markdown`.
+
+
+# Conditionals and loops
+
+Because the document body is a Tera template, you can use control flow:
+
+````
+{% raw %}{% if format == "html" %}
+This paragraph only appears in HTML output.
+{% endif %}{% endraw %}
+````
+
+````
+{% raw %}{% for item in var.features %}
+- {{ item }}
+{% endfor %}{% endraw %}
+````
+
+See the [Tera documentation](https://keats.github.io/tera/docs/) for the full template syntax, including filters, macros, and inheritance.
+
+
+# Built-in functions
+
+## pagebreak
+
+Insert a native page break. Produces format-appropriate output: `<div style="page-break-after: always;">` in HTML, `\newpage{}` in LaTeX, `#pagebreak()` in Typst.
+
+Page one content.
+
+{% raw %}`{{ pagebreak() }}`{% endraw %}
+
+Page two content.
+
+## env
+
+Insert a system environment variable. Produces an empty string if the variable is not set.
+
+{% raw %}`{{ env(name="SHELL") }}`{% endraw %}
+
+The `SHELL` environment variable on the local machine is: {{ env(name="SHELL") }}.
+
+## video
+
+Embed a video or streaming service. Supports YouTube, Vimeo, and direct video URLs:
+
+```
+{% raw %}{{ video(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ") }}
+{{ video(url="https://vimeo.com/123456", width="640", height="480", title="My Video") }}{% endraw %}
+```
+
+YouTube and Vimeo URLs are automatically converted to embed URLs.
+
+## brand
+
+Access branding information from the `brand:` block in front matter (or in `_calepin.yaml` for site-wide branding):
+
+{% raw %}
+- `{{ brand(type="color", name="primary") }}` --- returns a color value
+- `{{ brand(type="color", name="primary", mode="dark") }}` --- dark mode variant
+- `{{ brand(type="logo", name="mark") }}` --- returns format-appropriate logo markup
+{% endraw %}
+
+See [brand.yml specification](https://posit-dev.github.io/brand-yml/) for the structure of the `brand:` block.
+
+## kbd
+
+Render keyboard shortcuts:
+
+{% raw %}`{{ kbd(keys=["Ctrl", "C"]) }}`{% endraw %}
+
+Produces `<kbd>Ctrl</kbd>+<kbd>C</kbd>` in HTML, `\texttt{Ctrl}+\texttt{C}` in LaTeX.
+
+## include
+
+Include the content of another file:
+
+{% raw %}`{% include "file.qmd" %}`{% endraw %}
+
+This is a pre-parse directive --- included content is parsed as blocks, so code chunks and fenced divs work normally. YAML front matter in the included file is stripped automatically.
+
+
+# Plugin functions
+
+Plugins can register custom Tera functions via the `shortcode` capability in their `plugin.yml`. They are called with the same `{% raw %}{{ name(args) }}{% endraw %}` syntax as built-in functions.
+
+## Example: greeting plugin
+
+`_calepin/plugins/greeting/plugin.yml`:
+
+```yaml
+name: greeting
+version: 0.1.0
+description: "A friendly greeting function"
+
+provides:
+  shortcode:
+    run: shortcode.py
+    names: [greeting]
+```
+
+`_calepin/plugins/greeting/shortcode.py`:
+
+```python
+#!/usr/bin/env python3
+import json, sys
+
+data = json.load(sys.stdin)
+name = data["kwargs"].get("name", "World")
+fmt = data["format"]
+
+if fmt == "html":
+    print(f'<strong>Hello, {name}!</strong>')
+elif fmt == "tex":
+    print(f'\\textbf{{Hello, {name}!}}')
+else:
+    print(f'Hello, {name}!')
+```
+
+{% raw %}Use it as `{{ greeting(name="Alice") }}`.{% endraw %}
+
+## Input protocol
+
+The executable receives JSON on stdin:
+
+```json
+{
+  "name": "greeting",
+  "args": [],
+  "kwargs": {"name": "Alice"},
+  "format": "html",
+  "meta": {
+    "title": "My Document",
+    "author": ["Author Name"],
+    "date": "2025-01-01"
+  }
+}
+```
+
+## Output protocol
+
+Print the replacement text to stdout. The output is inserted directly at the call site.
+
+- Exit 0: stdout replaces the function call.
+- Exit non-zero: a warning is printed, and the function call produces an empty string.
+
+See [Plugins](plugins.qmd) for the full plugin system documentation.
+
+
+# Resolution order
+
+For each function call, *Calepin* checks:
+
+1. Built-in functions (`pagebreak`, `env`, `video`, `brand`, `kbd`)
+2. Context variables (`meta`, `var`, `format`)
+3. Plugin registry (in front matter order)
+
+Built-in functions take precedence over plugin functions.

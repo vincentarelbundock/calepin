@@ -1,3 +1,0 @@
-#block(inset: 1em)[
-{{children}}
-]

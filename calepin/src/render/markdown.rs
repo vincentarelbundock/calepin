@@ -74,10 +74,12 @@ pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
     let preprocessed = preprocess(markdown);
     let (protected, math) = protect_math(&preprocessed);
     let typst = markdown_to_typst(&protected, &comrak_options());
+    let typst = fix_typst_heading_ids(&typst);
     let typst = apply_image_attrs_typst(&typst);
     let restored = restore_math(&typst, &math);
     let restored = markers::resolve_equation_labels(&restored, "typst");
     let restored = markers::resolve_escaped_dollars(&restored, "typst");
+    let restored = crate::filters::math::strip_math_for_typst(&restored);
     resolve_raw(&restored, raw_fragments)
 }
 
@@ -238,6 +240,20 @@ static TYPST_IMG_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"#box\(image\("([^"]+)"\)\)\{([^}]+)\}"#).unwrap()
 });
 
+/// Fix Typst heading IDs: extract explicit `{#id}` attributes from heading text
+/// and use them as the Typst label, replacing comrak's auto-generated slug.
+///
+/// Transforms: `== Title \{#sec-intro\} <slugified-title-sec-intro>`
+/// Into:       `== Title <sec-intro>`
+fn fix_typst_heading_ids(typst: &str) -> String {
+    static RE: LazyLock<Regex> = LazyLock::new(|| {
+        // Match: (=+ heading text) \{#explicit-id\} <auto-slug>
+        // Also handles escaped braces: {\#id} or \{\#id\}
+        Regex::new(r"(?m)^(=+\s+.*?)\s*\\?\{\\?#([a-zA-Z0-9_-]+)\\?\}\s*<[^>]+>$").unwrap()
+    });
+    RE.replace_all(typst, "$1 <$2>").to_string()
+}
+
 /// Post-process Typst to absorb `{key=value}` attribute blocks into preceding `#box(image(...))`.
 pub fn apply_image_attrs_typst(typst: &str) -> String {
     TYPST_IMG_ATTR_RE.replace_all(typst, |caps: &regex::Captures| {
@@ -365,5 +381,36 @@ mod tests {
         let input = "###### Deep";
         let result = shift_headings(input);
         assert_eq!(result, "###### Deep", "h6 should stay at h6");
+    }
+
+    #[test]
+    fn test_fix_typst_heading_ids_explicit() {
+        let input = "== Introduction \\{\\#sec-intro\\} <introduction-sec-intro>";
+        let result = fix_typst_heading_ids(input);
+        assert_eq!(result, "== Introduction <sec-intro>");
+    }
+
+    #[test]
+    fn test_fix_typst_heading_ids_escaped_braces() {
+        let input = "=== Methods {\\#sec-methods} <methods-sec-methods>";
+        let result = fix_typst_heading_ids(input);
+        assert_eq!(result, "=== Methods <sec-methods>");
+    }
+
+    #[test]
+    fn test_fix_typst_heading_ids_no_explicit() {
+        let input = "== Plain Heading <plain-heading>";
+        let result = fix_typst_heading_ids(input);
+        assert_eq!(result, "== Plain Heading <plain-heading>", "should be unchanged");
+    }
+
+    #[test]
+    fn test_typst_heading_ids_roundtrip() {
+        // End-to-end: markdown with explicit id → Typst with correct label
+        let md = "# Introduction {#sec-intro}\n\nSome text.\n";
+        let result = render_typst(md, &[]);
+        assert!(result.contains("<sec-intro>"), "should have explicit label: {}", result);
+        assert!(!result.contains("\\{#sec-intro\\}"), "should strip attr syntax: {}", result);
+        assert!(!result.contains("{#sec-intro}"), "should strip attr syntax: {}", result);
     }
 }

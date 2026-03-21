@@ -1,0 +1,7 @@
+{% if format == "html" %}<pre><code class="language-{{lang}} code">{{highlighted}}</code></pre>{% elif format == "latex" %}\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+{{highlighted}}
+\end{Verbatim}
+\end{srccode}{% elif format == "typst" %}#srcbox[#raw("{{code}}", block: true, lang: "{{lang}}")]{% else %}``` {{lang}}
+{{code}}
+```{% endif %}

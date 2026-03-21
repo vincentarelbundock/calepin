@@ -1,0 +1,6 @@
+{% if format == "html" %}<div class="abstract">
+{{abstract}}
+</div>{% elif format == "latex" %}\begin{abstract}
+{{abstract}}
+\end{abstract}{% elif format == "typst" %}#block(fill: luma(240), inset: 1em, width: 100%)[#text(weight: "bold")[Abstract] \
+{{abstract}}]{% endif %}

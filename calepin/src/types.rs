@@ -10,7 +10,7 @@ pub enum Block {
     /// Executable code chunk: `{r}`, `{r, label}` with pipe options.
     Code(CodeChunk),
     /// Opaque fenced code block: ` ```python `, ` ``` ` — displayed but not executed.
-    /// Bypasses shortcode, citation, and cross-reference processing.
+    /// Bypasses Tera, citation, and cross-reference processing.
     CodeBlock(CodeBlock),
     Div(DivBlock),
     /// A raw block: `` ```{=format} `` content `` ``` ``.
@@ -343,6 +343,8 @@ pub struct Metadata {
     pub bibliography: Vec<String>,
     pub csl: Option<String>,
     pub plugins: Vec<String>,
+    pub brand: Option<crate::brand::Brand>,
+    pub variables: Option<saphyr::YamlOwned>,
     pub extra: HashMap<String, saphyr::YamlOwned>,
 }
 

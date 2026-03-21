@@ -4,6 +4,16 @@
 + [ ] Blog post site template
 + [ ] Accessibility
 
+## Templates
+
++ [ ] Documentation should note that code blocks and raw code blocks are protected from templates, so we cannot insert a template *inside* a code block. That is a design choice to avoid complexity and edge cases.
+
+## Math
+
++ [ ] Typst math is currently suppressed
++ [ ] LaTeX -> Typst math plugin
++ [ ] Warning when the plugin is not active
+
 ## Plugins
 
 I want each format to be a separate plugin. That will force me to design a good plugin infrastructure for users.
@@ -31,8 +41,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 
 ## Misc
 
-- [ ] shortcodes explore options with Tera
-- [ ] What is the point of _brand.yml if we already have YAML.
+- [ ] What is the point of _brand.yml if we already have YAML? Still support it, though.
 - [ ] Image in tutorial.qmd title block should work in typst and latex and markdown.
 - [x] $ handling. Quarto does not require escape, IIRC.
 - [x] Table of contents
@@ -174,10 +183,19 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [x] Warn on dot-style option names (use dashes instead)
 - [x] `-v` / `--version` flag
 - [ ] Allow users to supply a postprocess.latex or postprocess.html that accepts the raw code and returns the same thing but modified. That is done automatically if in the _calepin directory
-- [ ] Files paths are different in Typst, LaTeX, HTML, and Markdown
 - [ ] How do lettered addpendices work?
 - [x] `{.unnumbered}` / `{.unlisted}` sections
 - [ ] Accessibility
+
+
+## File paths
+
+- [ ] Be super strict
+- [ ] Be super consistent
+- [ ] Be super simple
+- [ ] Be cross platform
+- [ ] Be clear about location of output and location of intputs
+- [ ] Files paths are different in Typst, LaTeX, HTML, and Markdown
 
 ## Plugins
 

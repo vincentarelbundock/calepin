@@ -1,0 +1,1 @@
+{% if format == "html" %}<div class="keywords"><strong>Keywords:</strong> {{keywords}}</div>{% elif format == "latex" %}\paragraph{Keywords} {{keywords}}{% elif format == "typst" %}#text(weight: "bold")[Keywords:] {{keywords}}{% endif %}

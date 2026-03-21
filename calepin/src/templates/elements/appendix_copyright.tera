@@ -1,0 +1,6 @@
+{% if format == "html" %}<section class="appendix-section">
+<h2>Copyright</h2>
+<p>{{content}}</p>
+</section>{% elif format == "latex" %}\subsection*{Copyright}
+{{content}}{% elif format == "typst" %}== Copyright
+{{content}}{% endif %}

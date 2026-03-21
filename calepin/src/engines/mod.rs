@@ -1,6 +1,6 @@
 // Evaluate orchestrator and engine dispatch.
 //
-// - evaluate()          — Walk parsed Blocks, execute code chunks, process shortcodes and
+// - evaluate()          — Walk parsed Blocks, execute code chunks, process Tera functions and
 //                         inline expressions, filter conditional content, and produce Elements.
 // - execute_chunk()     — Dispatch a code chunk to the R or Python engine and capture output.
 // - evaluate_inline()   — Dispatch an inline expression (`{r}`/`{python}`) to its engine.
@@ -40,7 +40,8 @@ pub struct EvalResult {
 }
 
 /// Evaluate all blocks and produce a flat list of Elements.
-/// Executes code chunks, processes shortcodes, filters conditional content.
+/// Executes code chunks, processes Tera functions, filters conditional content.
+#[inline(never)]
 pub fn evaluate(
     blocks: &[Block],
     fig_dir: &Path,

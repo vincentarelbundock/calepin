@@ -1,0 +1,65 @@
+{% if format == "html" %}<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Inconsolata:wght@400;700&family=Inter:wght@300..700&display=swap" rel="stylesheet">{% elif format == "latex" %}\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage[normalem]{ulem}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+
+%%%% inspired by classicthesis.sty
+\usepackage{newpxtext,newpxmath}
+\usepackage{microtype}
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\relax}{\large\scshape\MakeUppercase{\chaptertitlename}~\thechapter}{0pt}{\large\scshape}
+\titleformat{\section}{\large\scshape}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\itshape}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\small\normalfont}{\thesubsubsection}{1em}{}
+
+
+% Source code box (light gray background, left accent bar)
+\newtcolorbox{srccode}{
+  enhanced, breakable,
+  colback=gray!5, colframe=gray!40,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  boxrule=0pt, leftrule=3pt,
+  arc=0pt, outer arc=0pt
+}
+
+% Output box (white background, thin border)
+\newtcolorbox{outcode}{
+  enhanced, breakable,
+  colback=white, colframe=gray!50,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  boxrule=0.5pt,
+  arc=0pt, outer arc=0pt,
+  fontupper=\small
+}{% elif format == "typst" %}// Heading styles: h1 large smallcaps, h2 italic, h3 small normal
+#show heading.where(level: 1): set text(size: 12pt, weight: "regular")
+#show heading.where(level: 1): it => {
+  v(1.2em)
+  block(smallcaps(it.body))
+  v(0.4em)
+}
+#show heading.where(level: 2): set text(size: 10pt, style: "italic", weight: "regular")
+#show heading.where(level: 3): set text(size: 9pt, weight: "regular")
+
+// Source code box (light gray, left accent bar)
+#let srcbox(body) = block(
+  fill: luma(245),
+  stroke: (left: 3pt + luma(180)),
+  inset: (x: 8pt, y: 6pt),
+  radius: 0pt,
+  width: 100%,
+  body
+)
+
+// Output box (white, thin border)
+#let outbox(body) = block(
+  fill: white,
+  stroke: 0.5pt + luma(180),
+  inset: (x: 8pt, y: 6pt),
+  radius: 0pt,
+  width: 100%,
+  body
+){% endif %}

@@ -15,6 +15,9 @@ pub struct SiteConfig {
     pub format: FormatConfig,
     #[serde(default)]
     pub execute: ExecuteConfig,
+    /// Brand configuration, parsed separately from raw YAML.
+    #[serde(skip)]
+    pub brand: Option<crate::brand::Brand>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -140,8 +143,9 @@ impl SiteConfig {
         if let Some(path) = config_path {
             let text = fs::read_to_string(path)
                 .with_context(|| format!("Failed to read config: {}", path.display()))?;
-            let config: SiteConfig = serde_saphyr::from_str(&text)
+            let mut config: SiteConfig = serde_saphyr::from_str(&text)
                 .with_context(|| format!("Failed to parse config: {}", path.display()))?;
+            config.brand = parse_brand_from_text(&text);
             return Ok((config, path.to_path_buf()));
         }
 
@@ -151,8 +155,9 @@ impl SiteConfig {
             if path.exists() {
                 let text = fs::read_to_string(&path)
                     .with_context(|| format!("Failed to read config: {}", path.display()))?;
-                let config: SiteConfig = serde_saphyr::from_str(&text)
+                let mut config: SiteConfig = serde_saphyr::from_str(&text)
                     .with_context(|| format!("Failed to parse config: {}", path.display()))?;
+                config.brand = parse_brand_from_text(&text);
                 return Ok((config, path));
             }
         }
@@ -189,4 +194,15 @@ fn collect_paths_recursive(entries: &[PageEntry], out: &mut Vec<String>) {
             }
         }
     }
+}
+
+/// Extract `brand:` from raw YAML text and parse into a Brand.
+fn parse_brand_from_text(text: &str) -> Option<crate::brand::Brand> {
+    use saphyr::LoadableYamlNode;
+    let docs = saphyr::YamlOwned::load_from_str(text).ok()?;
+    let root = docs.into_iter().next()?;
+    let map = root.as_mapping()?;
+    let brand_key = saphyr::YamlOwned::Value(saphyr::ScalarOwned::String("brand".to_string()));
+    let brand_val = map.get(&brand_key)?;
+    crate::brand::parse_brand_from_yaml(brand_val)
 }

@@ -1,0 +1,1 @@
+{% if format == "html" %}    <p class="affiliation">{{number}}{{display}}</p>{% elif format == "markdown" %}{{display}}{% else %}{{number}}{{display}}{% endif %}

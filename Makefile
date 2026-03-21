@@ -91,13 +91,21 @@ plugins:  ## Build WASM plugins and install to plugins/ and website/_calepin/plu
 # ==============================================================================
 
 PROF_FILE ?= bench/text.qmd
+PROF_N ?= 100
 
-prof: release  ## Profile calepin with samply in browser (set PROF_FILE=path/to/file.qmd)
-	cd $$(dirname $(PROF_FILE)) && samply record -- ../calepin/target/release/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
+prof-build:  ## Build with profiling profile (release + debug symbols)
+	cargo build --manifest-path calepin/Cargo.toml --profile profiling
 
-prof-save: release  ## Profile calepin and save to profile.json (for inspection)
-	cd $$(dirname $(PROF_FILE)) && samply record --save-only -o profile.json -- ../calepin/target/release/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
+prof: prof-build  ## Profile calepin with samply in browser (set PROF_FILE=path/to/file.qmd)
+	cd $$(dirname $(PROF_FILE)) && samply record -- ../calepin/target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
+
+prof-save: prof-build  ## Profile calepin and save to profile.json (for inspection)
+	cd $$(dirname $(PROF_FILE)) && samply record --save-only -o profile.json -- ../calepin/target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
 	@echo "Profile saved to $$(dirname $(PROF_FILE))/profile.json"
+
+prof-batch: prof-build  ## Profile N iterations via batch mode (set PROF_N=100, PROF_FILE=bench/text.qmd)
+	cd $$(dirname $(PROF_FILE)) && python3 prof-manifest.py $(PROF_N) $$(basename $(PROF_FILE)) html | \
+		samply record -- ../calepin/target/profiling/calepin --batch - --batch-stdout -q
 
 # ==============================================================================
 # Benchmarks

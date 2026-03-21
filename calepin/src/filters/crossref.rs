@@ -164,6 +164,7 @@ fn resolve_grouped_plain(ids: &[String], db: &HashMap<String, String>) -> String
 /// Post-process rendered HTML: resolve all cross-references.
 /// `theorem_nums` provides theorem numbers from the rendering phase,
 /// avoiding the need to scrape them from rendered HTML.
+#[inline(never)]
 pub fn resolve_html(html: &str, theorem_nums: &HashMap<String, String>) -> String {
     let mut db: HashMap<String, String> = HashMap::new();
 
@@ -290,6 +291,7 @@ pub fn resolve_html(html: &str, theorem_nums: &HashMap<String, String>) -> Strin
 /// Post-process rendered LaTeX: resolve cross-references.
 /// LaTeX has its own \label/\ref system, so unresolved refs emit \ref{} instead
 /// of warnings — LaTeX will resolve them during compilation.
+#[inline(never)]
 pub fn resolve_latex(latex: &str, theorem_nums: &HashMap<String, String>) -> String {
     let mut db: HashMap<String, String> = HashMap::new();
 

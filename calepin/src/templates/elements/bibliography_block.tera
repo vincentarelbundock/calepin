@@ -1,0 +1,1 @@
+{% if format == "typst" %}#bibliography("{{path}}"){% elif format == "latex" %}\bibliography{{_lb}}{{path}}{{_rb}}{% endif %}

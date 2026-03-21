@@ -1,5 +1,6 @@
-// Tera-based body processing: replaces the `{{< shortcode >}}` system.
+// Tera-based body processing.
 //
+// - expand_includes()      — Pre-parse `{% include "file" %}` expansion.
 // - process_body()         — Main entry: Tera-render a text block (code-block-safe).
 // - protect_code_blocks()  — Extract fenced/inline code before Tera evaluation.
 // - restore_code_blocks()  — Re-insert protected code after Tera evaluation.
@@ -9,7 +10,7 @@
 //
 // Context variables:
 //   meta.title, meta.author, meta.date, ...  — from Metadata
-//   var.key.subkey                            — from _variables.yml
+//   var.key.subkey                            — from front matter `variables:` block
 //   format                                   — current output format
 
 use std::collections::HashMap;
@@ -23,13 +24,82 @@ use crate::registry::PluginRegistry;
 use crate::render::markers;
 use crate::types::Metadata;
 
+// ---------------------------------------------------------------------------
+// Pre-parse include expansion
+// ---------------------------------------------------------------------------
+
+/// Expand `{% include "file" %}` directives before block parsing.
+/// This must run on the raw body text so that included content gets
+/// parsed as blocks (code chunks, divs, etc.) rather than inline text.
+#[inline(never)]
+pub fn expand_includes(text: &str) -> String {
+    // {% include "file" %} or {% include 'file' %}
+    static INCLUDE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"\{%[-\s]\s*include\s+["'](.+?)["']\s*[-\s]?%\}"#).unwrap()
+    });
+    // {% raw %} ... {% endraw %} blocks (protect from include expansion)
+    static RAW_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\{%-?\s*raw\s*-?%\}[\s\S]*?\{%-?\s*endraw\s*-?%\}").unwrap()
+    });
+
+    // Protect {% raw %} blocks from include expansion
+    let mut raw_blocks = Vec::new();
+    let text = RAW_RE.replace_all(text, |caps: &regex::Captures| {
+        let idx = raw_blocks.len();
+        raw_blocks.push(caps[0].to_string());
+        format!("\u{FDD2}RAW{}\u{FDD3}", idx)
+    }).to_string();
+
+    // Expand includes
+    let text = INCLUDE_RE.replace_all(&text, |caps: &regex::Captures| {
+        let path = caps[1].trim();
+        include_file(path)
+    }).to_string();
+
+    // Restore {% raw %} blocks
+    let mut result = text;
+    for (idx, block) in raw_blocks.iter().enumerate() {
+        result = result.replace(&format!("\u{FDD2}RAW{}\u{FDD3}", idx), block);
+    }
+    result
+}
+
+/// Read and include a file, stripping YAML front matter if present.
+fn include_file(path: &str) -> String {
+    if path.is_empty() {
+        cwarn!("{{% include %}} requires a file path");
+        return String::new();
+    }
+    match std::fs::read_to_string(path) {
+        Ok(content) => {
+            // Strip YAML front matter if present
+            if content.starts_with("---") {
+                if let Some(end) = content[3..].find("\n---") {
+                    let after = end + 3 + 4; // skip past closing ---
+                    return content[after..].to_string();
+                }
+            }
+            content
+        }
+        Err(e) => {
+            cwarn!("{{% include \"{}\" %}}: {}", path, e);
+            String::new()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tera body processing
+// ---------------------------------------------------------------------------
+
 /// Result of Tera body processing.
 pub struct BodyTeraResult {
     pub text: String,
     pub sc_fragments: Vec<String>,
 }
 
-/// Process a text block through Tera, replacing shortcode-style function calls.
+/// Process a text block through Tera, evaluating functions and variable references.
+#[inline(never)]
 pub fn process_body(
     text: &str,
     format: &str,
@@ -40,6 +110,13 @@ pub fn process_body(
 
     // 1. Protect code blocks and inline code from Tera
     let (protected, code_blocks) = protect_code_blocks(text);
+
+    // 1b. Escape heading attribute syntax {#id .class} which Tera
+    //     interprets as comment openers ({# ... #}).
+    static RE_HEADING_ATTR: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\{(#[a-zA-Z][a-zA-Z0-9_-]*(?:\s+\.[a-zA-Z][a-zA-Z0-9_-]*)*)\}").unwrap()
+    });
+    let protected = RE_HEADING_ATTR.replace_all(&protected, "\u{FDD2}$1\u{FDD3}").to_string();
 
     // Quick exit: if no Tera syntax found, skip processing
     if !protected.contains("{{") && !protected.contains("{%") {
@@ -54,7 +131,7 @@ pub fn process_body(
     tera.register_function("pagebreak", PagebreakFn::new(format, &fragments));
     tera.register_function("env", EnvFn);
     tera.register_function("video", VideoFn::new(format, &fragments));
-    tera.register_function("brand", BrandFn::new(format, &fragments));
+    tera.register_function("brand", BrandFn::new(format, &fragments, metadata.brand.as_ref()));
     tera.register_function("kbd", KbdFn::new(format, &fragments));
 
     // Register plugin shortcodes as Tera functions
@@ -81,9 +158,10 @@ pub fn process_body(
     let mut context = Context::new();
     context.insert("format", format);
     context.insert("meta", &build_meta_map(metadata));
-    context.insert("var", &load_variables_map());
+    context.insert("var", &build_variables_map(metadata));
 
-    // 4. Render through Tera
+    // 4. Render through Tera (on error, fall back to protected text so that
+    //    restore_code_blocks can still recover code block placeholders)
     let rendered = match tera.add_raw_template("__body__", &protected) {
         Ok(()) => match tera.render("__body__", &context) {
             Ok(r) => r,
@@ -98,7 +176,8 @@ pub fn process_body(
         }
     };
 
-    // 5. Restore protected code blocks
+    // 5. Restore protected content
+    let rendered = rendered.replace('\u{FDD2}', "{").replace('\u{FDD3}', "}");
     let text = restore_code_blocks(&rendered, &code_blocks);
 
     let sc_fragments = match Arc::try_unwrap(fragments) {
@@ -322,10 +401,9 @@ fn build_meta_map(meta: &Metadata) -> serde_json::Value {
     serde_json::Value::Object(map)
 }
 
-/// Load _variables.yml into a serde_json::Value for the `var` context variable.
-fn load_variables_map() -> serde_json::Value {
-    use crate::filters::shortcodes::VARIABLES;
-    match VARIABLES.as_ref() {
+/// Build the `var` context from front matter `variables:` block.
+fn build_variables_map(metadata: &Metadata) -> serde_json::Value {
+    match &metadata.variables {
         Some(yaml) => yaml_to_json(yaml),
         None => serde_json::Value::Object(serde_json::Map::new()),
     }
@@ -361,7 +439,7 @@ fn yaml_to_json(yaml: &saphyr::YamlOwned) -> serde_json::Value {
 }
 
 // ---------------------------------------------------------------------------
-// Built-in Tera functions (replace shortcodes)
+// Built-in Tera functions
 // ---------------------------------------------------------------------------
 
 /// `{{ pagebreak() }}` — format-specific page break.
@@ -471,22 +549,36 @@ impl tera::Function for VideoFn {
 }
 
 /// `{{ brand(type="color", name="primary", mode="light") }}` — brand assets.
+///
+/// Safety: `brand_ptr` is valid for the duration of `process_body()` where the
+/// metadata reference is valid. Tera doesn't use threads.
 struct BrandFn {
     format: String,
     fragments: Arc<Mutex<Vec<String>>>,
+    brand_ptr: *const crate::brand::Brand,
 }
 
 impl BrandFn {
-    fn new(format: &str, fragments: &Arc<Mutex<Vec<String>>>) -> Self {
+    fn new(format: &str, fragments: &Arc<Mutex<Vec<String>>>, brand: Option<&crate::brand::Brand>) -> Self {
         Self {
             format: format.to_string(),
             fragments: Arc::clone(fragments),
+            brand_ptr: brand.map_or(std::ptr::null(), |b| b as *const _),
         }
     }
 }
 
+unsafe impl Send for BrandFn {}
+unsafe impl Sync for BrandFn {}
+
 impl tera::Function for BrandFn {
     fn call(&self, args: &HashMap<String, Value>) -> tera::Result<Value> {
+        if self.brand_ptr.is_null() {
+            return Ok(Value::String(String::new()));
+        }
+        // Safety: brand_ptr is valid for the duration of process_body()
+        let brand = unsafe { &*self.brand_ptr };
+
         let typ = args.get("type")
             .and_then(|v| v.as_str())
             .ok_or_else(|| tera::Error::msg("brand() requires a `type` argument (\"color\" or \"logo\")"))?;
@@ -496,10 +588,10 @@ impl tera::Function for BrandFn {
         let mode = args.get("mode").and_then(|v| v.as_str());
 
         let output = match typ {
-            "color" => crate::brand::brand_color(name, mode).unwrap_or_default(),
+            "color" => crate::brand::brand_color(brand, name, mode).unwrap_or_default(),
             "logo" => {
                 let m = mode.unwrap_or("both");
-                crate::brand::brand_logo_tag(name, m, &self.format).unwrap_or_default()
+                crate::brand::brand_logo_tag(brand, name, m, &self.format).unwrap_or_default()
             }
             _ => {
                 cwarn!("brand(): unknown type '{}'", typ);

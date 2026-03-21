@@ -1,0 +1,1 @@
+{% if format == "html" %}  <p class="author"><span class="author-name">{{name}}</span>{{superscripts}}{{corresponding}}{{orcid_link}}</p>{% elif format == "markdown" %}{{name}}{% else %}{{name}}{{superscripts}}{{corresponding}}{% endif %}

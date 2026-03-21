@@ -1,0 +1,7 @@
+{% if format == "html" %}<pre><code class="output">{{output}}</code></pre>{% elif format == "latex" %}\begin{outcode}
+\begin{verbatim}
+{{output}}
+\end{verbatim}
+\end{outcode}{% elif format == "typst" %}#outbox[#raw("{{output}}", block: true)]{% else %}```
+{{output}}
+```{% endif %}

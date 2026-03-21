@@ -18,6 +18,8 @@ mod types;
 mod util;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -194,15 +196,51 @@ pub fn render_core(
     format: Option<&str>,
     overrides: &[String],
 ) -> Result<RenderResult> {
+    render_core_with_brand(input, output_path, format, overrides, None)
+}
+
+/// Whether `CALEPIN_TIMING=1` is set (checked once at startup).
+static TIMING: LazyLock<bool> = LazyLock::new(|| std::env::var("CALEPIN_TIMING").is_ok());
+
+/// Print a timing line to stderr if `CALEPIN_TIMING` is set.
+macro_rules! timed {
+    ($label:expr, $block:expr) => {{
+        if *TIMING {
+            let _t = Instant::now();
+            let _r = $block;
+            eprintln!("[timing] {:.<30} {:>8.3}ms", $label, _t.elapsed().as_secs_f64() * 1000.0);
+            _r
+        } else {
+            $block
+        }
+    }};
+}
+
+/// Core render pipeline with optional site-level brand fallback.
+pub fn render_core_with_brand(
+    input: &Path,
+    output_path: &Path,
+    format: Option<&str>,
+    overrides: &[String],
+    site_brand: Option<&brand::Brand>,
+) -> Result<RenderResult> {
+    let t_total = if *TIMING { Some(Instant::now()) } else { None };
+
     // 1. Read input file
     let input_text = fs::read_to_string(input)
         .with_context(|| format!("Failed to read input file: {}", input.display()))?;
 
     // 2. Parse YAML front matter, then apply CLI overrides
-    let (mut metadata, body) = parse::yaml::split_yaml(&input_text)?;
+    let (mut metadata, body) = timed!("parse_yaml", parse::yaml::split_yaml(&input_text)?);
     let body = render::markers::sanitize(&body);
     metadata.apply_overrides(overrides);
     metadata.resolve_date(Some(input));
+    // Fall back to site-level brand if page doesn't define its own
+    if metadata.brand.is_none() {
+        if let Some(sb) = site_brand {
+            metadata.brand = Some(sb.clone());
+        }
+    }
 
     // 3. Create renderer for this format
     let format_str = format
@@ -212,7 +250,7 @@ pub fn render_core(
     let renderer = formats::create_renderer(&format_str)?;
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
-    let body = filters::shortcodes::expand_includes(&body);
+    let body = timed!("expand_includes", tera_engine::expand_includes(&body));
 
     // 4a. Preprocess hook: pipe body through script if custom format defines one
     let body = if let Some(script) = renderer.preprocess() {
@@ -226,16 +264,16 @@ pub fn render_core(
     };
 
     // 4b. Parse body into blocks
-    let blocks = parse::blocks::parse_body(&body)?;
+    let blocks = timed!("parse_blocks", parse::blocks::parse_body(&body)?);
 
     // 5. Initialize engine subprocesses only if needed
     let mut r_session = if engines::util::needs_engine(&blocks, &body, &metadata, "r") {
-        Some(RSession::init(renderer.base_format())?)
+        Some(timed!("init_r", RSession::init(renderer.base_format())?))
     } else {
         None
     };
     let mut py_session = if engines::util::needs_engine(&blocks, &body, &metadata, "python") {
-        Some(PythonSession::init()?)
+        Some(timed!("init_python", PythonSession::init()?))
     } else {
         None
     };
@@ -254,7 +292,7 @@ pub fn render_core(
     metadata.evaluate_inline(&mut ctx);
 
     // 6. Load plugin registry
-    let registry = std::rc::Rc::new(registry::PluginRegistry::load(&metadata.plugins));
+    let registry = timed!("load_plugins", std::rc::Rc::new(registry::PluginRegistry::load(&metadata.plugins)));
 
     // 7. Create element renderer
     let highlight_config = metadata.extra.get("highlight-style")
@@ -283,30 +321,30 @@ pub fn render_core(
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
     let mut cache = CacheState::new(input, cache_enabled);
-    let eval_result = engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &registry, &mut ctx, &mut cache)?;
+    let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &registry, &mut ctx, &mut cache)?);
     let mut elements = eval_result.elements;
 
     // 9. Bibliography
-    filters::bibliography::process_citations(&mut elements, &metadata)?;
+    timed!("bibliography", filters::bibliography::process_citations(&mut elements, &metadata)?);
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);
     element_renderer.set_sc_fragments(eval_result.sc_fragments);
 
     // 12. Render elements to final format
-    let rendered = renderer.render(&elements, &element_renderer)?;
+    let rendered = timed!("render", renderer.render(&elements, &element_renderer)?);
 
     // 13. Cross-ref resolution
     let thm_nums = element_renderer.theorem_numbers();
-    let rendered = match renderer.base_format() {
+    let rendered = timed!("crossref", match renderer.base_format() {
         "html" => filters::crossref::resolve_html(&rendered, &thm_nums),
         "latex" => filters::crossref::resolve_latex(&rendered, &thm_nums),
         _ => filters::crossref::resolve_plain(&rendered, &thm_nums),
-    };
+    });
 
     // 14. Number sections (HTML only)
     let rendered = if metadata.number_sections && renderer.base_format() == "html" {
-        formats::html::number_sections_html(&rendered)
+        timed!("number_sections", formats::html::number_sections_html(&rendered))
     } else {
         rendered
     };
@@ -314,6 +352,10 @@ pub fn render_core(
     // Clean up empty fig_dir
     if fig_dir.is_dir() && std::fs::read_dir(&fig_dir).map_or(false, |mut d| d.next().is_none()) {
         std::fs::remove_dir(&fig_dir).ok();
+    }
+
+    if let Some(t) = t_total {
+        eprintln!("[timing] {:=<30} {:>8.3}ms", "TOTAL ", t.elapsed().as_secs_f64() * 1000.0);
     }
 
     Ok(RenderResult { rendered, metadata, element_renderer })

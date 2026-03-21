@@ -1,0 +1,7 @@
+{% if format == "html" %}<div class="authors">
+{{authors}}
+{{affiliations}}
+{{corresponding_note}}
+</div>{% elif format == "latex" %}{{authors_cmd}}
+{{affiliations}}{% elif format == "typst" %}#text(size: 12pt)[{{authors}}]
+{{affiliations}}{% else %}{{authors}}{% endif %}

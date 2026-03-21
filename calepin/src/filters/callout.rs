@@ -15,7 +15,7 @@ impl CalloutFilter {
 }
 
 impl Filter for CalloutFilter {
-    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>) -> FilterResult {
+    fn apply(&self, element: &Element, _format: &str, vars: &mut HashMap<String, String>) -> FilterResult {
         let classes = match element {
             Element::Div { classes, .. } => classes,
             _ => return FilterResult::Pass,
@@ -50,10 +50,6 @@ impl Filter for CalloutFilter {
 
         let appearance = vars.get("appearance").cloned().unwrap_or_else(|| "default".to_string());
         vars.insert("appearance".to_string(), appearance.clone());
-
-        if collapse && format == "html" {
-            vars.insert("template".to_string(), "callout_collapse".to_string());
-        }
 
         FilterResult::Continue
     }

@@ -26,7 +26,7 @@ A template is a file with `{{variable}}` placeholders. For example, the built-in
 </div>
 ```
 
-Any `{{variable}}` not defined is replaced with an empty string. Templates have no conditionals---all logic is computed in Rust and injected as pre-formatted variables.
+Any `{{variable}}` not defined is replaced with an empty string. Templates support the full [Tera](https://keats.github.io/tera/) syntax, including conditionals (`{% raw %}{% if %}{% endraw %}`), loops, and filters.
 
 ## Naming and resolution
 

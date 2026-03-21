@@ -24,7 +24,7 @@ Please report bugs and feature requests to Vincent Arel-Bundock at:
 
 - **Fast.** Render notebooks in milliseconds (sometimes 100x faster than Quarto).
 - **Parallel processing.** Render many documents at once with the built-in batch mode.
-- **Plugins in any language.** Write filters, shortcodes, and postprocessors in Python, R, shell, or anything that reads JSON.
+- **Plugins in any language.** Write filters, custom functions, and postprocessors in Python, R, shell, or anything that reads JSON.
 - **Plugins even without code.** Override templates with plain HTML, LaTeX, or Typst files---no programming required.
 
 ## But my code chunks take the most time! {.unnumbered}

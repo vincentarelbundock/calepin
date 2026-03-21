@@ -6,12 +6,12 @@ title: Plugins
 Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
 :::
 
-*Calepin* produces clean HTML, LaTeX, Typst, and Markdown out of the box, but every project has unique needs: custom div styles, new shortcodes, branded page templates, or entirely new output formats. Plugins let you extend *Calepin* without modifying its source.
+*Calepin* produces clean HTML, LaTeX, Typst, and Markdown out of the box, but every project has unique needs: custom div styles, new Tera functions, branded page templates, or entirely new output formats. Plugins let you extend *Calepin* without modifying its source.
 
 A plugin can provide any combination of:
 
 - **Filters** --- transform fenced divs (`::: {.myclass} ... :::`) and bracketed spans (`[text]{.myclass}`) into custom output.
-- **Shortcodes** --- expand `{{< name args >}}` directives into format-aware markup.
+- **Custom functions** --- register Tera functions callable as `{% raw %}{{ name(args) }}{% endraw %}` in document bodies.
 - **Postprocessors** --- rewrite the entire rendered document (e.g., split HTML into slides).
 - **Templates** --- override element or page templates to change how divs, figures, or the full page are rendered.
 - **Custom formats** --- define new output formats built on top of HTML, LaTeX, Typst, or Markdown.
@@ -35,7 +35,7 @@ A more full-featured plugin might look like:
 _calepin/plugins/mytheme/
   plugin.yml
   filter.py           # filter logic
-  shortcode.py        # shortcode logic
+  shortcode.py        # custom function logic
   postprocess.py      # document postprocessor
   elements/           # element template overrides
     theorem.html
@@ -78,7 +78,7 @@ provides:
 
   shortcode:
     run: shortcode.py
-    names: [greeting, farewell]    # shortcode names handled
+    names: [greeting, farewell]    # function names to register
 
   postprocess:
     run: postprocess.py
@@ -151,6 +151,6 @@ These are compiled into *Calepin* and always active. A user plugin can override 
 
 The following pages cover each plugin capability in detail:
 
-- [Shortcodes](shortcodes.qmd) --- built-in shortcodes and writing shortcode plugins.
+- [Tera](tera.qmd) --- built-in functions, context variables, and plugin functions.
 - [Filters](filters.qmd) --- writing filter plugins for divs and spans.
 - [Templates](templates.qmd) --- element and page templates, and template plugins.

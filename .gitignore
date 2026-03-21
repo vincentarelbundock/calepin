@@ -25,6 +25,7 @@ bench/*.typ
 bench/*.md
 bench/*.pdf
 bench/*_files/
+bench/profile.json
 
 # LaTeX build files
 *.aux

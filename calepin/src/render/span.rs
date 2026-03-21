@@ -40,6 +40,7 @@ pub fn render(
         for (k, v) in &kv {
             vars.insert(k.clone(), v.clone());
         }
+        vars.insert("format".to_string(), format.to_string());
         vars.insert("content".to_string(), rendered_content.clone());
         vars.insert("class".to_string(), first_class.to_string());
         vars.insert("classes".to_string(), classes.join(" "));

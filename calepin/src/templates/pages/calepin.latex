@@ -20,6 +20,7 @@
 {{body}}
 
 {{appendix_block}}
+{{bibliography_block}}
 {{bib_end}}
 {{include_after}}
 \end{document}

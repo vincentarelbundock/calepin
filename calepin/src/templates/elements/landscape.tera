@@ -1,0 +1,7 @@
+{% if format == "html" %}<div class="landscape"{{id_attr}}>
+{{children}}
+</div>{% elif format == "latex" %}\begin{landscape}
+{{children}}
+\end{landscape}{% elif format == "typst" %}#page(flipped: true)[
+{{children}}
+]{% else %}{{children}}{% endif %}

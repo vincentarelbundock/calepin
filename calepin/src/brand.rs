@@ -1,20 +1,19 @@
-//! `_brand.yml` support: colors, logos, typography, and CSS generation.
+//! Brand support: colors, logos, typography, and CSS generation.
 //!
 //! Implements a subset of the brand.yml specification
 //! (<https://posit-dev.github.io/brand-yml/>).
 //!
-//! Brand data is loaded lazily on first access from `_brand.yml` in the
-//! current directory.
+//! Brand data is parsed from the front matter `brand:` key.
 
 use std::collections::HashMap;
-use std::sync::LazyLock;
 
-use saphyr::{LoadableYamlNode, YamlOwned, ScalarOwned};
+use saphyr::{YamlOwned, ScalarOwned};
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+#[derive(Debug, Clone)]
 pub struct Brand {
     pub color: BrandColor,
     pub logo: BrandLogo,
@@ -22,34 +21,37 @@ pub struct Brand {
     pub meta: HashMap<String, String>,
 }
 
+#[derive(Debug, Clone)]
 pub struct BrandColor {
     pub semantic: HashMap<String, ColorValue>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum ColorValue {
     Flat(String),
     Themed { light: Option<String>, dark: Option<String> },
 }
 
+#[derive(Debug, Clone)]
 pub struct BrandLogo {
     pub small: Option<LogoSlot>,
     pub medium: Option<LogoSlot>,
     pub large: Option<LogoSlot>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct LogoImage {
     pub path: String,
     pub alt: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum LogoSlot {
     Single(LogoImage),
     Themed { light: Option<LogoImage>, dark: Option<LogoImage> },
 }
 
+#[derive(Debug, Clone)]
 pub struct BrandTypography {
     pub fonts: Vec<FontDef>,
     pub base: Option<String>,
@@ -57,34 +59,20 @@ pub struct BrandTypography {
     pub monospace: Option<String>,
 }
 
+#[derive(Debug, Clone)]
 pub struct FontDef {
     pub source: String,
     pub family: String,
 }
 
-// ---------------------------------------------------------------------------
-// Lazy loading
-// ---------------------------------------------------------------------------
-
-static BRAND: LazyLock<Option<Brand>> = LazyLock::new(|| {
-    let content = std::fs::read_to_string("_brand.yml")
-        .or_else(|_| std::fs::read_to_string("_brand.yaml"))
-        .ok()?;
-    if content.is_empty() {
-        return None;
-    }
-    match parse_brand_yaml(&content) {
-        Ok(b) => Some(b),
-        Err(e) => {
-            cwarn!("Failed to parse _brand.yml: {}", e);
-            None
-        }
-    }
-});
-
-/// Access the lazily loaded brand data.
-pub fn brand() -> Option<&'static Brand> {
-    BRAND.as_ref()
+/// Parse a `Brand` from a YAML mapping node (front matter `brand:` key).
+pub fn parse_brand_from_yaml(val: &YamlOwned) -> Option<Brand> {
+    let map = val.as_mapping()?;
+    let color = parse_color(map);
+    let logo = parse_logo(map);
+    let typography = parse_typography(map);
+    let meta = parse_meta(map);
+    Some(Brand { color, logo, typography, meta })
 }
 
 // ---------------------------------------------------------------------------
@@ -106,20 +94,6 @@ fn yaml_str<'a>(map: &'a saphyr::MappingOwned, key: &str) -> Option<&'a str> {
 // ---------------------------------------------------------------------------
 // Parsing
 // ---------------------------------------------------------------------------
-
-fn parse_brand_yaml(content: &str) -> anyhow::Result<Brand> {
-    let docs = YamlOwned::load_from_str(content)?;
-    let root = docs.into_iter().next().unwrap_or(YamlOwned::BadValue);
-    let empty = saphyr::MappingOwned::new();
-    let root_map = root.as_mapping().unwrap_or(&empty);
-
-    let color = parse_color(root_map);
-    let logo = parse_logo(root_map);
-    let typography = parse_typography(root_map);
-    let meta = parse_meta(root_map);
-
-    Ok(Brand { color, logo, typography, meta })
-}
 
 fn parse_color(root: &saphyr::MappingOwned) -> BrandColor {
     let empty_map = saphyr::MappingOwned::new();
@@ -300,12 +274,11 @@ fn parse_meta(root: &saphyr::MappingOwned) -> HashMap<String, String> {
 }
 
 // ---------------------------------------------------------------------------
-// Public accessors (for shortcodes)
+// Public accessors (for Tera functions)
 // ---------------------------------------------------------------------------
 
 /// Get a brand color by semantic name, optionally for a specific mode.
-pub fn brand_color(name: &str, mode: Option<&str>) -> Option<String> {
-    let brand = brand()?;
+pub fn brand_color(brand: &Brand, name: &str, mode: Option<&str>) -> Option<String> {
     let cv = brand.color.semantic.get(name)?;
     match cv {
         ColorValue::Flat(hex) => Some(hex.clone()),
@@ -320,8 +293,7 @@ pub fn brand_color(name: &str, mode: Option<&str>) -> Option<String> {
 
 /// Get the preferred logo for a given size and mode.
 /// Size preference: medium > small > large.
-pub fn resolve_preferred_logo(mode: &str) -> Option<LogoImage> {
-    let brand = brand()?;
+pub fn resolve_preferred_logo(brand: &Brand, mode: &str) -> Option<LogoImage> {
     let logo = &brand.logo;
     for slot in [&logo.medium, &logo.small, &logo.large].into_iter().flatten() {
         match slot {
@@ -338,8 +310,7 @@ pub fn resolve_preferred_logo(mode: &str) -> Option<LogoImage> {
 }
 
 /// Generate an `<img>` tag (or pair for light/dark) for a brand logo.
-pub fn brand_logo_tag(size: &str, mode: &str, format: &str) -> Option<String> {
-    let brand = brand()?;
+pub fn brand_logo_tag(brand: &Brand, size: &str, mode: &str, format: &str) -> Option<String> {
     let logo = &brand.logo;
 
     let slot = match size {
@@ -530,8 +501,8 @@ fn build_brand_css_inner(brand: &Brand, scope: CssScope) -> String {
 // ---------------------------------------------------------------------------
 
 /// Inject brand-related template variables into a vars map.
-pub fn inject_brand_vars(vars: &mut HashMap<String, String>, ext: &str) {
-    let brand = match brand() {
+pub fn inject_brand_vars(vars: &mut HashMap<String, String>, ext: &str, brand: Option<&Brand>) {
+    let brand = match brand {
         Some(b) => b,
         None => return,
     };
@@ -559,13 +530,13 @@ pub fn inject_brand_vars(vars: &mut HashMap<String, String>, ext: &str) {
     }
 
     // Logo paths (preferred size: medium > small > large)
-    if let Some(img) = resolve_preferred_logo("light") {
+    if let Some(img) = resolve_preferred_logo(brand, "light") {
         vars.insert("brand_logo_light".to_string(), img.path);
         if let Some(alt) = img.alt {
             vars.insert("brand_logo_alt".to_string(), alt);
         }
     }
-    if let Some(img) = resolve_preferred_logo("dark") {
+    if let Some(img) = resolve_preferred_logo(brand, "dark") {
         vars.insert("brand_logo_dark".to_string(), img.path);
     }
 

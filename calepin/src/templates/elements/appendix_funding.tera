@@ -1,0 +1,12 @@
+{% if format == "html" %}<section class="appendix-section">
+<h2>Funding</h2>
+<ul>
+{{items}}
+</ul>
+</section>{% elif format == "latex" %}\subsection*{Funding}
+\begin{itemize}
+{{items}}
+\end{itemize}{% elif format == "typst" %}== Funding
+{{items}}{% else %}## Funding
+
+{{items}}{% endif %}

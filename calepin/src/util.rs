@@ -51,7 +51,7 @@ pub fn resolve_path(dir: &str, filename: &str) -> Option<PathBuf> {
 }
 
 /// Run a subprocess with JSON on stdin, return stdout on success.
-/// Used by external filters and shortcodes.
+/// Used by external filters and plugin functions.
 pub fn run_json_process(path: &Path, input: &serde_json::Value) -> Option<String> {
     use std::process::{Command, Stdio};
     match Command::new(path)

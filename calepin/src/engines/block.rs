@@ -14,6 +14,7 @@ use crate::types::{ChunkResult, CodeChunk, Element, ResultsMode};
 
 /// Evaluate a code chunk and return Elements (interleaved source + output).
 /// This is the block-level counterpart to `inline::evaluate_inline()`.
+#[inline(never)]
 pub fn evaluate_block(
     chunk: &CodeChunk,
     fig_dir: &Path,

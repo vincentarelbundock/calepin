@@ -36,6 +36,7 @@ pub fn render_pages(
     }
 
     // Render all pages in parallel using thread::scope
+    let site_brand = config.brand.as_ref();
     let results: Vec<(String, Result<SiteRenderResult>)> = std::thread::scope(|s| {
         let handles: Vec<_> = pages
             .iter()
@@ -44,7 +45,7 @@ pub fn render_pages(
                 let base_dir = base_dir;
                 s.spawn(move || {
                     let key = page.source.display().to_string();
-                    let result = render_one_page(page, overrides, base_dir);
+                    let result = render_one_page(page, overrides, base_dir, site_brand);
                     (key, result)
                 })
             })
@@ -71,13 +72,14 @@ fn render_one_page(
     page: &PageInfo,
     overrides: &[String],
     base_dir: &Path,
+    site_brand: Option<&crate::brand::Brand>,
 ) -> Result<SiteRenderResult> {
     let input = base_dir.join(&page.source);
     let output_path = base_dir.join(&page.output);
 
     // Call calepin's render_core() directly — no subprocess, no JSON round-trip.
     // render_core stops before page template application, giving us the body.
-    let result = crate::render_core(&input, &output_path, Some("html"), overrides)?;
+    let result = crate::render_core_with_brand(&input, &output_path, Some("html"), overrides, site_brand)?;
 
     // Prepend syntax highlighting CSS — normally injected by apply_template(),
     // which site mode skips since it has its own page shell.

@@ -1,0 +1,8 @@
+{% if format == "html" %}<section class="appendix-section">
+<h2>Citation</h2>
+<p>{{content}}</p>
+</section>{% elif format == "latex" %}\subsection*{Citation}
+{{content}}{% elif format == "typst" %}== Citation
+{{content}}{% else %}## Citation
+
+{{content}}{% endif %}

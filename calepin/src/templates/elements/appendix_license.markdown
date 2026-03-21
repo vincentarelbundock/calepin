@@ -1,3 +1,0 @@
-## Reuse
-
-{{content}}

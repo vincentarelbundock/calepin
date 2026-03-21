@@ -60,3 +60,7 @@ xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 # SVG to PDF conversion (for LaTeX output with SVG figures)
 svg2pdf = "0.13"
 usvg = "0.45"
+
+[profile.profiling]
+inherits = "release"
+debug = true

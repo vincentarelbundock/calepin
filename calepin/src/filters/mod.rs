@@ -11,9 +11,7 @@
 //
 // 3. Post-render passes — run on the final rendered string.
 //    crossref.rs resolves @ref-id patterns to links/numbers.
-//    shortcodes.rs resolves protected marker content.
-//
-// Shortcodes transform text by expanding `{{< >}}` directives.
+//    markers.rs resolves protected marker content.
 pub mod bibliography;
 pub mod callout;
 pub mod code;
@@ -22,7 +20,7 @@ pub mod figure;
 pub mod highlighting;
 pub mod theorem;
 
-pub mod shortcodes;
+pub mod math;
 pub mod svg;
 
 use std::collections::HashMap;

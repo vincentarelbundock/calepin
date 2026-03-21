@@ -1,0 +1,1 @@
+{% if format == "html" %}<h2>{{subtitle}}</h2>{% elif format == "latex" %}\posttitle{\par\large {{subtitle}}\end{center}}{% elif format == "typst" %}#text(size: 13pt)[{{subtitle}}]{% endif %}

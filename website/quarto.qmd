@@ -74,10 +74,8 @@ Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `_cale
 ```
 _calepin/
   elements/       # element templates
-  filters/        # executable filters
   templates/      # page templates
-  plugins/        # WASM plugins
-  shortcodes/     # executable shortcodes
+  plugins/        # plugin directories (filters, custom functions, etc.)
 ```
 
 

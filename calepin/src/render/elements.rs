@@ -11,91 +11,49 @@ use crate::filters::highlighting::{Highlighter, HighlightConfig, ColorScope};
 // ---------------------------------------------------------------------------
 // Built-in templates (embedded at compile time)
 // ---------------------------------------------------------------------------
+//
+// Each template is a single .tera file with format conditionals
+// ({% if format == "html" %} ... {% elif format == "latex" %} ... {% endif %}).
 
-macro_rules! element_templates {
-    ( $name:expr, $ext:expr; $( $tpl:literal => [ $( $fmt:literal ),+ ] ),+ $(,)? ) => {
-        match ($name, $ext) {
-            $($(
-                ($tpl, $fmt) => Some(include_str!(concat!("../templates/elements/", $tpl, ".", $fmt))),
-            )+)+
-            _ => None,
-        }
-    };
-}
+const THEOREM_ITALIC: &str = include_str!("../templates/elements/theorem_italic.tera");
+const THEOREM_NORMAL: &str = include_str!("../templates/elements/theorem_normal.tera");
+const CALLOUT: &str = include_str!("../templates/elements/callout.tera");
+const CODE_DIAGNOSTIC: &str = include_str!("../templates/elements/code_diagnostic.tera");
 
-// Consolidated templates shared by multiple element types
-const THEOREM_ITALIC_HTML: &str = include_str!("../templates/elements/theorem_italic.html");
-const THEOREM_ITALIC_LATEX: &str = include_str!("../templates/elements/theorem_italic.latex");
-const THEOREM_ITALIC_TYPST: &str = include_str!("../templates/elements/theorem_italic.typst");
-const THEOREM_ITALIC_MARKDOWN: &str = include_str!("../templates/elements/theorem_italic.markdown");
-
-const THEOREM_NORMAL_HTML: &str = include_str!("../templates/elements/theorem_normal.html");
-const THEOREM_NORMAL_LATEX: &str = include_str!("../templates/elements/theorem_normal.latex");
-const THEOREM_NORMAL_TYPST: &str = include_str!("../templates/elements/theorem_normal.typst");
-const THEOREM_NORMAL_MARKDOWN: &str = include_str!("../templates/elements/theorem_normal.markdown");
-
-const CALLOUT_HTML: &str = include_str!("../templates/elements/callout.html");
-const CALLOUT_LATEX: &str = include_str!("../templates/elements/callout.latex");
-const CALLOUT_TYPST: &str = include_str!("../templates/elements/callout.typst");
-const CALLOUT_MARKDOWN: &str = include_str!("../templates/elements/callout.markdown");
-const CALLOUT_COLLAPSE_HTML: &str = include_str!("../templates/elements/callout_collapse.html");
-
-const CODE_DIAGNOSTIC_HTML: &str = include_str!("../templates/elements/code_diagnostic.html");
-const CODE_DIAGNOSTIC_LATEX: &str = include_str!("../templates/elements/code_diagnostic.latex");
-const CODE_DIAGNOSTIC_TYPST: &str = include_str!("../templates/elements/code_diagnostic.typst");
-const CODE_DIAGNOSTIC_MARKDOWN: &str = include_str!("../templates/elements/code_diagnostic.markdown");
-
-fn builtin_template(name: &str, ext: &str) -> Option<&'static str> {
-    // Consolidated templates: multiple element names share the same template
-    match (name, ext) {
+fn builtin_template(name: &str) -> Option<&'static str> {
+    match name {
         // Italic-body theorem environments
-        ("theorem" | "lemma" | "corollary" | "conjecture" | "proposition", "html") => Some(THEOREM_ITALIC_HTML),
-        ("theorem" | "lemma" | "corollary" | "conjecture" | "proposition", "latex") => Some(THEOREM_ITALIC_LATEX),
-        ("theorem" | "lemma" | "corollary" | "conjecture" | "proposition", "typst") => Some(THEOREM_ITALIC_TYPST),
-        ("theorem" | "lemma" | "corollary" | "conjecture" | "proposition", "markdown") => Some(THEOREM_ITALIC_MARKDOWN),
+        "theorem" | "lemma" | "corollary" | "conjecture" | "proposition" => Some(THEOREM_ITALIC),
         // Normal-body theorem environments
-        ("definition" | "example" | "exercise" | "solution" | "remark" | "algorithm", "html") => Some(THEOREM_NORMAL_HTML),
-        ("definition" | "example" | "exercise" | "solution" | "remark" | "algorithm", "latex") => Some(THEOREM_NORMAL_LATEX),
-        ("definition" | "example" | "exercise" | "solution" | "remark" | "algorithm", "typst") => Some(THEOREM_NORMAL_TYPST),
-        ("definition" | "example" | "exercise" | "solution" | "remark" | "algorithm", "markdown") => Some(THEOREM_NORMAL_MARKDOWN),
-        // Callout environments (all types share one template per format)
-        ("callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important", "html") => Some(CALLOUT_HTML),
-        ("callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important", "latex") => Some(CALLOUT_LATEX),
-        ("callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important", "typst") => Some(CALLOUT_TYPST),
-        ("callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important", "markdown") => Some(CALLOUT_MARKDOWN),
-        ("callout_collapse", "html") => Some(CALLOUT_COLLAPSE_HTML),
-        // Code diagnostics (error, warning, message share one template per format)
-        ("code_error" | "code_warning" | "code_message", "html") => Some(CODE_DIAGNOSTIC_HTML),
-        ("code_error" | "code_warning" | "code_message", "latex") => Some(CODE_DIAGNOSTIC_LATEX),
-        ("code_error" | "code_warning" | "code_message", "typst") => Some(CODE_DIAGNOSTIC_TYPST),
-        ("code_error" | "code_warning" | "code_message", "markdown") => Some(CODE_DIAGNOSTIC_MARKDOWN),
+        "definition" | "example" | "exercise" | "solution" | "remark" | "algorithm" => Some(THEOREM_NORMAL),
+        // Callout environments (all types share one template)
+        "callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important" => Some(CALLOUT),
+        // Code diagnostics
+        "code_error" | "code_warning" | "code_message" => Some(CODE_DIAGNOSTIC),
+        // Single-file templates
+        "code_source" => Some(include_str!("../templates/elements/code_source.tera")),
+        "code_output" => Some(include_str!("../templates/elements/code_output.tera")),
+        "figure" => Some(include_str!("../templates/elements/figure.tera")),
+        "div" => Some(include_str!("../templates/elements/div.tera")),
+        "proof" => Some(include_str!("../templates/elements/proof.tera")),
+        "landscape" => Some(include_str!("../templates/elements/landscape.tera")),
+        "preamble" => Some(include_str!("../templates/elements/preamble.tera")),
+        "appendix" => Some(include_str!("../templates/elements/appendix.tera")),
+        "appendix_license" => Some(include_str!("../templates/elements/appendix_license.tera")),
+        "appendix_copyright" => Some(include_str!("../templates/elements/appendix_copyright.tera")),
+        "appendix_funding" => Some(include_str!("../templates/elements/appendix_funding.tera")),
+        "appendix_citation" => Some(include_str!("../templates/elements/appendix_citation.tera")),
+        "author_block" => Some(include_str!("../templates/elements/author_block.tera")),
+        "author_item" => Some(include_str!("../templates/elements/author_item.tera")),
+        "affiliation_item" => Some(include_str!("../templates/elements/affiliation_item.tera")),
+        "title_block" => Some(include_str!("../templates/elements/title_block.tera")),
+        "subtitle_block" => Some(include_str!("../templates/elements/subtitle_block.tera")),
+        "date_block" => Some(include_str!("../templates/elements/date_block.tera")),
+        "abstract_block" => Some(include_str!("../templates/elements/abstract_block.tera")),
+        "keywords_block" => Some(include_str!("../templates/elements/keywords_block.tera")),
+        "bibliography_block" => Some(include_str!("../templates/elements/bibliography_block.tera")),
         _ => None,
     }
-    .or_else(|| {
-        // Remaining templates: one file per (name, format)
-        element_templates!(name, ext;
-            "code_source"  => ["html", "latex", "typst", "markdown"],
-            "code_output"  => ["html", "latex", "typst", "markdown"],
-            "figure" => ["html", "latex", "typst", "markdown"],
-            "div"    => ["html", "latex", "typst", "markdown"],
-            "proof"       => ["html", "latex", "typst", "markdown"],
-            "landscape"   => ["html", "latex", "typst", "markdown"],
-            "preamble" => ["html", "latex", "typst"],
-            "appendix"           => ["html", "latex", "typst", "markdown"],
-            "appendix_license"   => ["html", "latex", "typst", "markdown"],
-            "appendix_copyright" => ["html", "latex", "typst", "markdown"],
-            "appendix_funding"   => ["html", "latex", "typst", "markdown"],
-            "appendix_citation"  => ["html", "latex", "typst", "markdown"],
-            "author_block"     => ["html", "latex", "typst", "markdown"],
-            "author_item"      => ["html", "latex", "typst", "markdown"],
-            "affiliation_item" => ["html", "latex", "typst", "markdown"],
-            "title_block"    => ["html", "latex"],
-            "subtitle_block" => ["html", "latex", "typst"],
-            "date_block"     => ["html", "latex"],
-            "abstract_block" => ["html", "latex", "typst"],
-            "keywords_block" => ["html", "latex", "typst"]
-        )
-    })
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +82,6 @@ impl ElementRenderer {
             "code_source", "code_output", "code_warning", "code_message", "code_error",
             "figure", "div",
             "callout_note", "callout_warning", "callout_tip", "callout_caution", "callout_important",
-            "callout_collapse",
             "theorem", "lemma", "corollary", "proposition", "conjecture",
             "definition", "example", "exercise", "solution", "remark", "algorithm", "proof",
             "preamble",
@@ -159,14 +116,25 @@ impl ElementRenderer {
     }
 
     pub fn get_template(&self, name: &str) -> String {
-        self.templates.get(name).cloned().unwrap_or_default()
+        match self.templates.get(name) {
+            Some(tpl) => {
+                let mut vars = HashMap::new();
+                vars.insert("format".to_string(), self.ext.clone());
+                crate::render::template::apply_template(tpl, &vars)
+            }
+            None => String::new(),
+        }
     }
 
+    #[inline(never)]
     pub fn render(&self, element: &Element) -> String {
         match element {
             Element::Text { content } => {
                 let processed = self.render_bracketed_spans(content);
-                let processed = if self.shift_headings {
+                // Shift headings down one level (# → ##) only for HTML, where
+                // <h1> is reserved for the document title. LaTeX and Typst have
+                // no such constraint: \section and = are valid top-level headings.
+                let processed = if self.shift_headings && self.ext == "html" {
                     crate::render::markdown::shift_headings(&processed)
                 } else {
                     processed
@@ -178,7 +146,7 @@ impl ElementRenderer {
                     "latex" => crate::render::latex::markdown_to_latex(&processed, &fragments, self.number_sections),
                     _ => crate::render::markdown::resolve_raw(&processed, &fragments),
                 };
-                crate::filters::shortcodes::resolve_shortcode_raw(&rendered, &self.sc_fragments)
+                crate::render::markers::resolve_shortcode_raw(&rendered, &self.sc_fragments)
             }
             Element::CodeAsis { text } => text.clone(),
             Element::Div { classes, id, attrs, children } => {
@@ -211,6 +179,7 @@ impl ElementRenderer {
 
     fn build_template_output(&self, template: &str, element: &Element) -> String {
         let mut vars = HashMap::new();
+        vars.insert("format".to_string(), self.ext.clone());
 
         // Run element through pipeline filters
         let code_filter = crate::filters::code::CodeFilter::new(&self.highlighter);
@@ -257,13 +226,17 @@ impl ElementRenderer {
 
 /// Resolve an element template: project → user → built-in.
 /// Template names use underscores internally; hyphens are normalized.
+/// User overrides are per-format ({name}.{ext}); built-in templates are
+/// format-conditional single files.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
+    // User override: per-format file
     let filename = format!("{}.{}", canonical, ext);
     if let Some(path) = crate::util::resolve_path("elements", &filename) {
         if let Ok(content) = std::fs::read_to_string(&path) {
             return Some(content);
         }
     }
-    builtin_template(&canonical, ext).map(|s| s.to_string())
+    // Built-in: format-conditional single template
+    builtin_template(&canonical).map(|s| s.to_string())
 }

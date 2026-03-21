@@ -24,6 +24,7 @@ fn format_plain(elem: &impl std::fmt::Display) -> String {
     format!("{:#}", elem)
 }
 
+#[inline(never)]
 pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata) -> Result<()> {
     if metadata.bibliography.is_empty() {
         return Ok(());
@@ -132,7 +133,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata) -> Re
         Regex::new(r"\[@([a-zA-Z0-9_][-a-zA-Z0-9_:.]*)\]").unwrap()
     });
     static RE_BARE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"@([a-zA-Z0-9_][-a-zA-Z0-9_:.]*)").unwrap()
+        Regex::new(r"@([a-zA-Z0-9_][-a-zA-Z0-9_:]*)").unwrap()
     });
     let re_suppress = &*RE_SUPPRESS;
     let re_bracket = &*RE_BRACKET;
