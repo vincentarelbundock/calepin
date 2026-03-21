@@ -61,6 +61,10 @@ xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 svg2pdf = "0.13"
 usvg = "0.45"
 
+[[bench]]
+name = "template_bench"
+harness = false
+
 [profile.profiling]
 inherits = "release"
 debug = true

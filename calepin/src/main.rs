@@ -342,12 +342,8 @@ pub fn render_core_with_brand(
         _ => filters::crossref::resolve_plain(&rendered, &thm_nums),
     });
 
-    // 14. Number sections (HTML only)
-    let rendered = if metadata.number_sections && renderer.base_format() == "html" {
-        timed!("number_sections", formats::html::number_sections_html(&rendered))
-    } else {
-        rendered
-    };
+    // 14. Number sections (HTML only) — now handled in the AST walker
+    //     (render/html_ast.rs) via ElementRenderer.number_sections
 
     // Clean up empty fig_dir
     if fig_dir.is_dir() && std::fs::read_dir(&fig_dir).map_or(false, |mut d| d.next().is_none()) {

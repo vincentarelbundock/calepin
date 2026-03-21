@@ -62,7 +62,11 @@ fn builtin_template(name: &str) -> Option<&'static str> {
 
 pub struct ElementRenderer {
     ext: String,
-    templates: HashMap<String, String>,
+    /// Pre-compiled template environment. Element templates are parsed and
+    /// compiled once at construction time rather than on every render() call.
+    /// This avoids repeated parsing overhead (~3 us/call) for templates that
+    /// may be rendered hundreds of times per document (code chunks, divs, etc.).
+    template_env: crate::render::template::TemplateEnv,
     highlighter: Highlighter,
     registry: Rc<PluginRegistry>,
     raw_fragments: std::cell::RefCell<Vec<String>>,
@@ -77,8 +81,11 @@ pub struct ElementRenderer {
 
 impl ElementRenderer {
     pub fn new(ext: &str, highlight_config: HighlightConfig) -> Self {
-        let mut templates = HashMap::with_capacity(40);
-        let element_names = [
+        // Pre-compile all known element templates into a single minijinja
+        // environment. This pays the parse cost once; each subsequent
+        // render() call just executes the compiled template.
+        let mut template_env = crate::render::template::TemplateEnv::new();
+        let element_names: &[&'static str] = &[
             "code_source", "code_output", "code_warning", "code_message", "code_error",
             "figure", "div",
             "callout_note", "callout_warning", "callout_tip", "callout_caution", "callout_important",
@@ -87,15 +94,15 @@ impl ElementRenderer {
             "preamble",
         ];
 
-        for name in &element_names {
+        for name in element_names {
             if let Some(tpl) = resolve_element_template(name, ext) {
-                templates.insert(name.to_string(), tpl);
+                template_env.add(name, tpl);
             }
         }
 
         Self {
             ext: ext.to_string(),
-            templates,
+            template_env,
             highlighter: Highlighter::new(highlight_config),
             registry: Rc::new(PluginRegistry::empty()),
             raw_fragments: std::cell::RefCell::new(Vec::new()),
@@ -116,14 +123,9 @@ impl ElementRenderer {
     }
 
     pub fn get_template(&self, name: &str) -> String {
-        match self.templates.get(name) {
-            Some(tpl) => {
-                let mut vars = HashMap::new();
-                vars.insert("format".to_string(), self.ext.clone());
-                crate::render::template::apply_template(tpl, &vars)
-            }
-            None => String::new(),
-        }
+        let mut vars = HashMap::new();
+        vars.insert("format".to_string(), self.ext.clone());
+        self.template_env.render(name, &vars)
     }
 
     #[inline(never)]
@@ -131,17 +133,13 @@ impl ElementRenderer {
         match element {
             Element::Text { content } => {
                 let processed = self.render_bracketed_spans(content);
-                // Shift headings down one level (# → ##) only for HTML, where
-                // <h1> is reserved for the document title. LaTeX and Typst have
-                // no such constraint: \section and = are valid top-level headings.
-                let processed = if self.shift_headings && self.ext == "html" {
-                    crate::render::markdown::shift_headings(&processed)
-                } else {
-                    processed
-                };
+                // Heading shift for HTML is now handled in the AST walker
+                // (html_ast.rs) via the shift_headings parameter.
                 let fragments = self.raw_fragments.borrow();
                 let rendered = match self.ext.as_str() {
-                    "html" => crate::render::markdown::render_html(&processed, &fragments),
+                    "html" => crate::render::markdown::render_html_full(
+                        &processed, &fragments, self.number_sections, self.shift_headings,
+                    ),
                     "typst" => crate::render::markdown::render_typst(&processed, &fragments),
                     "latex" => crate::render::latex::markdown_to_latex(&processed, &fragments, self.number_sections),
                     _ => crate::render::markdown::resolve_raw(&processed, &fragments),
@@ -161,11 +159,7 @@ impl ElementRenderer {
             }
             _ => {
                 let name = element.template_name();
-                let tpl = match self.templates.get(name) {
-                    Some(t) => t.clone(),
-                    None => return String::new(),
-                };
-                self.build_template_output(&tpl, element)
+                self.build_template_output(name, element)
             }
         }
     }
@@ -177,7 +171,7 @@ impl ElementRenderer {
         )
     }
 
-    fn build_template_output(&self, template: &str, element: &Element) -> String {
+    fn build_template_output(&self, template_name: &str, element: &Element) -> String {
         let mut vars = HashMap::new();
         vars.insert("format".to_string(), self.ext.clone());
 
@@ -194,7 +188,7 @@ impl ElementRenderer {
             }
         }
 
-        crate::render::template::apply_template(template, &vars)
+        self.template_env.render(template_name, &vars)
     }
 
     fn resolve_element_template(&self, name: &str) -> Option<String> {

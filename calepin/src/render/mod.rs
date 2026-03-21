@@ -13,9 +13,11 @@
 
 pub mod div;
 pub mod elements;
+pub mod html_ast;
 pub mod latex;
 pub mod markdown;
 pub mod markers;
+pub mod typst_ast;
 
 pub mod span;
 pub mod template;

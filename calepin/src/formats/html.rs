@@ -17,7 +17,9 @@ impl OutputRenderer for HtmlRenderer {
     fn extension(&self) -> &str { "html" }
 
     fn postprocess(&self, body: &str, _renderer: &ElementRenderer) -> String {
-        postprocess_html(body)
+        // Heading IDs, section numbering, and footnote consolidation are now
+        // handled structurally in the AST walker (render/html_ast.rs).
+        body.to_string()
     }
 
     fn apply_template(
@@ -79,9 +81,11 @@ fn embed_images_base64(html: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// Precompiled regexes
+// Legacy HTML post-processing (now handled by AST walker in render/html_ast.rs)
+// Kept for test coverage; will be removed once AST walker is fully validated.
 // ---------------------------------------------------------------------------
 
+#[allow(dead_code)]
 /// Matches headings with or without attributes: <h1>, <h2 id="foo">, etc.
 static HEADING_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?s)<(h([1-6]))([^>]*)>(.*?)</h[1-6]>"#).unwrap());

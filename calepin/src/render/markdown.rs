@@ -1,11 +1,13 @@
-use comrak::{markdown_to_html, markdown_to_typst, Options};
+use comrak::Options;
 use regex::Regex;
 use std::sync::LazyLock;
 
 use crate::render::markers;
 
 /// Shift all markdown heading levels down by one (`#` → `##`, `##` → `###`, etc.).
+/// NOTE: For HTML, this is now handled in the AST walker. Kept for tests and non-HTML use.
 /// Only modifies ATX headings at the start of a line. Headings at level 6 stay at level 6.
+#[allow(dead_code)]
 pub fn shift_headings(markdown: &str) -> String {
     let mut out = String::with_capacity(markdown.len() + 64);
     for line in markdown.lines() {
@@ -55,49 +57,35 @@ pub fn comrak_options() -> Options<'static> {
 }
 
 // Re-export marker functions used by element_renderer and other modules
-pub use markers::{protect_math, restore_math, wrap_raw, resolve_raw, preprocess};
+pub use markers::{wrap_raw, resolve_raw};
 
-/// Render markdown to HTML using comrak (CommonMark + GFM extensions).
+/// Render markdown to HTML via AST walk (structured heading/image/table access).
 pub fn render_html(markdown: &str, raw_fragments: &[String]) -> String {
-    let preprocessed = preprocess(markdown);
-    let (protected, math) = protect_math(&preprocessed);
-    let html = markdown_to_html(&protected, &comrak_options());
-    let restored = restore_math(&html, &math);
-    let restored = markers::resolve_equation_labels(&restored, "html");
-    let restored = markers::resolve_escaped_dollars(&restored, "html");
-    let restored = apply_image_attrs_html(&restored);
-    resolve_raw(&restored, raw_fragments)
+    crate::render::html_ast::markdown_to_html_ast(markdown, raw_fragments, false, false)
 }
 
-/// Render markdown to Typst using comrak.
+/// Render markdown to HTML with section numbering and heading shift control.
+pub fn render_html_full(
+    markdown: &str,
+    raw_fragments: &[String],
+    number_sections: bool,
+    shift_headings: bool,
+) -> String {
+    crate::render::html_ast::markdown_to_html_ast(markdown, raw_fragments, number_sections, shift_headings)
+}
+
+/// Render markdown to Typst via AST walk (structured heading/image/table access).
 pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
-    let preprocessed = preprocess(markdown);
-    let (protected, math) = protect_math(&preprocessed);
-    let typst = markdown_to_typst(&protected, &comrak_options());
-    let typst = fix_typst_heading_ids(&typst);
-    let typst = apply_image_attrs_typst(&typst);
-    let restored = restore_math(&typst, &math);
-    let restored = markers::resolve_equation_labels(&restored, "typst");
-    let restored = markers::resolve_escaped_dollars(&restored, "typst");
-    let restored = crate::filters::math::strip_math_for_typst(&restored);
-    resolve_raw(&restored, raw_fragments)
+    crate::render::typst_ast::markdown_to_typst_ast(markdown, raw_fragments)
 }
 
 /// Render a short inline markdown string (e.g., title) to the target format.
 /// Strips the wrapping <p> tags that comrak adds.
 pub fn render_inline(text: &str, format: &str) -> String {
     let rendered = match format {
-        "html" => {
-            let html = markdown_to_html(text, &comrak_options());
-            apply_image_attrs_html(&html)
-        }
-        "latex" => {
-            crate::render::latex::markdown_to_latex(text, &[], false)
-        }
-        "typst" => {
-            let typst = markdown_to_typst(text, &comrak_options());
-            apply_image_attrs_typst(&typst)
-        }
+        "html" => render_html(text, &[]),
+        "latex" => crate::render::latex::markdown_to_latex(text, &[], false),
+        "typst" => render_typst(text, &[]),
         _ => text.to_string(),
     };
     // Strip wrapping paragraph tags
@@ -147,6 +135,7 @@ impl ImageAttrs {
     }
 
     /// Emit HTML style and extra attributes for an `<img>` tag.
+    #[allow(dead_code)]
     pub fn to_html(&self) -> (String, Vec<String>) {
         let mut style_parts: Vec<String> = Vec::new();
         let mut html_attrs: Vec<String> = Vec::new();
@@ -193,6 +182,7 @@ impl ImageAttrs {
     }
 
     /// Emit Typst named parameters for `image()`.
+    #[allow(dead_code)]
     pub fn to_typst_params(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
         if let Some(ref w) = self.width {
@@ -210,15 +200,17 @@ impl ImageAttrs {
 }
 
 // ---------------------------------------------------------------------------
-// Format-specific post-processing
+// Legacy format-specific post-processing
+// Now handled by AST walkers in render/html_ast.rs and render/typst_ast.rs.
+// Kept for test coverage.
 // ---------------------------------------------------------------------------
 
-/// Matches `<img .../>` or `<img ...>` followed by `{key=value ...}`.
+#[allow(dead_code)]
 static HTML_IMG_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(<img\s[^>]*?)/?\s*>\s*\{([^}]+)\}"#).unwrap()
 });
 
-/// Post-process HTML to absorb `{key=value}` attribute blocks into preceding `<img>` tags.
+#[allow(dead_code)]
 pub fn apply_image_attrs_html(html: &str) -> String {
     HTML_IMG_ATTR_RE.replace_all(html, |caps: &regex::Captures| {
         let img_open = &caps[1];
@@ -235,7 +227,7 @@ pub fn apply_image_attrs_html(html: &str) -> String {
     }).to_string()
 }
 
-/// Matches Typst `#box(image("url")){key=value ...}`.
+#[allow(dead_code)]
 static TYPST_IMG_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"#box\(image\("([^"]+)"\)\)\{([^}]+)\}"#).unwrap()
 });
@@ -245,6 +237,7 @@ static TYPST_IMG_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| {
 ///
 /// Transforms: `== Title \{#sec-intro\} <slugified-title-sec-intro>`
 /// Into:       `== Title <sec-intro>`
+#[allow(dead_code)]
 fn fix_typst_heading_ids(typst: &str) -> String {
     static RE: LazyLock<Regex> = LazyLock::new(|| {
         // Match: (=+ heading text) \{#explicit-id\} <auto-slug>
@@ -255,6 +248,7 @@ fn fix_typst_heading_ids(typst: &str) -> String {
 }
 
 /// Post-process Typst to absorb `{key=value}` attribute blocks into preceding `#box(image(...))`.
+#[allow(dead_code)]
 pub fn apply_image_attrs_typst(typst: &str) -> String {
     TYPST_IMG_ATTR_RE.replace_all(typst, |caps: &regex::Captures| {
         let url = &caps[1];
