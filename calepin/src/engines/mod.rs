@@ -23,7 +23,7 @@ use std::path::Path;
 
 use std::collections::HashMap;
 
-use crate::types::{Block, ChunkOptions, ChunkResult, Element, Metadata};
+use crate::types::{Block, ChunkOptions, ChunkResult, CodeChunk, Element, Metadata};
 
 /// Holds mutable references to the active engine sessions.
 /// Threaded through the evaluate pipeline so block/inline code can dispatch.
@@ -71,7 +71,23 @@ pub fn evaluate(
                 elements.push(Element::Text { content: processed });
             }
             Block::Code(chunk) => {
-                let mut chunk_elements = block::evaluate_block(chunk, fig_dir, fig_ext, ctx, cache)?;
+                // If #| tera: true, process chunk source through Tera before execution
+                let tera_chunk;
+                let chunk_ref = if chunk.options.get_bool("tera", false) {
+                    let joined = chunk.source.join("\n");
+                    let tera_result = crate::tera_engine::process_body(
+                        &joined, output_ext, metadata, registry,
+                    );
+                    sc_fragments.extend(tera_result.sc_fragments);
+                    tera_chunk = CodeChunk {
+                        source: tera_result.text.lines().map(|l| l.to_string()).collect(),
+                        ..chunk.clone()
+                    };
+                    &tera_chunk
+                } else {
+                    chunk
+                };
+                let mut chunk_elements = block::evaluate_block(chunk_ref, fig_dir, fig_ext, ctx, cache)?;
                 elements.append(&mut chunk_elements);
             }
             Block::CodeBlock(cb) => {

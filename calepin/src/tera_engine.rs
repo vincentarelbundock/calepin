@@ -2,17 +2,19 @@
 //
 // - expand_includes()      — Pre-parse `{% include "file" %}` expansion.
 // - process_body()         — Main entry: Tera-render a text block (code-block-safe).
-// - protect_code_blocks()  — Extract fenced/inline code before Tera evaluation.
+// - protect_code_blocks()  — Extract fenced code blocks before Tera evaluation.
 // - restore_code_blocks()  — Re-insert protected code after Tera evaluation.
 //
 // Built-in Tera functions:
-//   pagebreak(), env(name), video(url, ...), brand(type, name, mode?), kbd(keys)
+//   pagebreak(), video(url, ...), brand(type, name, mode?), kbd(keys),
+//   lipsum(paragraphs|sentences|words), placeholder(width, height, text, color)
 //
 // Context variables:
 //   meta.title, meta.author, meta.date, ...  — from Metadata
 //   var.key.subkey                            — from front matter `variables:` block
+//   env.HOME, env.USER, ...                   — system environment variables
 //   format                                   — current output format
-
+//
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
@@ -108,8 +110,9 @@ pub fn process_body(
 ) -> BodyTeraResult {
     let fragments = Arc::new(Mutex::new(Vec::new()));
 
-    // 1. Protect code blocks and inline code from Tera
-    let (protected, code_blocks) = protect_code_blocks(text);
+    // 1. Protect fenced code blocks and inline code from Tera
+    let (protected, mut code_blocks) = protect_code_blocks(text);
+    let protected = protect_inline_code(&protected, &mut code_blocks);
 
     // 1b. Escape heading attribute syntax {#id .class} which Tera
     //     interprets as comment openers ({# ... #}).
@@ -129,10 +132,11 @@ pub fn process_body(
     // 2. Build Tera instance with custom functions
     let mut tera = Tera::default();
     tera.register_function("pagebreak", PagebreakFn::new(format, &fragments));
-    tera.register_function("env", EnvFn);
     tera.register_function("video", VideoFn::new(format, &fragments));
     tera.register_function("brand", BrandFn::new(format, &fragments, metadata.brand.as_ref()));
     tera.register_function("kbd", KbdFn::new(format, &fragments));
+    tera.register_function("lipsum", LipsumFn);
+    tera.register_function("placeholder", PlaceholderFn::new(format, &fragments));
 
     // Register plugin shortcodes as Tera functions
     for (name, plugin_idx) in registry.shortcode_names() {
@@ -154,11 +158,12 @@ pub fn process_body(
         );
     }
 
-    // 3. Build context with metadata and variables
+    // 3. Build context with metadata, variables, and environment
     let mut context = Context::new();
     context.insert("format", format);
     context.insert("meta", &build_meta_map(metadata));
     context.insert("var", &build_variables_map(metadata));
+    context.insert("env", &std::env::vars().collect::<HashMap<String, String>>());
 
     // 4. Render through Tera (on error, fall back to protected text so that
     //    restore_code_blocks can still recover code block placeholders)
@@ -249,10 +254,59 @@ fn protect_code_blocks(text: &str) -> (String, Vec<String>) {
         result.pop();
     }
 
-    // Second pass: protect inline code spans
-    let result = protect_inline_code(&result, &mut blocks);
-
     (result, blocks)
+}
+
+/// Replace inline code spans (`` `...` ``) with placeholders.
+/// Only protects spans that contain Tera-like syntax.
+fn protect_inline_code(text: &str, blocks: &mut Vec<String>) -> String {
+    let mut result = String::new();
+    let chars: Vec<char> = text.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
+
+    while i < len {
+        if chars[i] == '`' {
+            let start = i;
+            let mut tick_count = 0;
+            while i < len && chars[i] == '`' {
+                tick_count += 1;
+                i += 1;
+            }
+            let mut found_end = false;
+            while i <= len - tick_count {
+                if chars[i] == '`' {
+                    let mut closing = 0;
+                    while i < len && chars[i] == '`' {
+                        closing += 1;
+                        i += 1;
+                    }
+                    if closing == tick_count {
+                        let full: String = chars[start..i].iter().collect();
+                        if full.contains("{{") || full.contains("{%") || full.contains("{#") {
+                            let idx = blocks.len();
+                            blocks.push(full);
+                            result.push_str(&format!("{}{}{}", CODE_PLACEHOLDER_PREFIX, idx, CODE_PLACEHOLDER_SUFFIX));
+                        } else {
+                            result.push_str(&full);
+                        }
+                        found_end = true;
+                        break;
+                    }
+                } else {
+                    i += 1;
+                }
+            }
+            if !found_end {
+                let unmatched: String = chars[start..i].iter().collect();
+                result.push_str(&unmatched);
+            }
+        } else {
+            result.push(chars[i]);
+            i += 1;
+        }
+    }
+    result
 }
 
 /// Detect a fenced code block opening (3+ backticks or tildes).
@@ -267,65 +321,6 @@ fn detect_fence_open(trimmed: &str) -> Option<String> {
     } else {
         None
     }
-}
-
-/// Replace inline code spans (`` `...` ``) with placeholders.
-/// Only protects spans that contain Tera-like syntax.
-fn protect_inline_code(text: &str, blocks: &mut Vec<String>) -> String {
-    let mut result = String::new();
-    let chars: Vec<char> = text.chars().collect();
-    let len = chars.len();
-    let mut i = 0;
-
-    while i < len {
-        if chars[i] == '`' {
-            // Count opening backticks
-            let start = i;
-            let mut tick_count = 0;
-            while i < len && chars[i] == '`' {
-                tick_count += 1;
-                i += 1;
-            }
-            // Find matching closing backticks
-            let mut found_end = false;
-            let _content_start = i;
-            while i <= len - tick_count {
-                if chars[i] == '`' {
-                    let mut closing = 0;
-                    let _close_start = i;
-                    while i < len && chars[i] == '`' {
-                        closing += 1;
-                        i += 1;
-                    }
-                    if closing == tick_count {
-                        // Found matching close
-                        let full: String = chars[start..i].iter().collect();
-                        if full.contains("{{") || full.contains("{%") || full.contains("{#") {
-                            let idx = blocks.len();
-                            blocks.push(full);
-                            result.push_str(&format!("{}{}{}", CODE_PLACEHOLDER_PREFIX, idx, CODE_PLACEHOLDER_SUFFIX));
-                        } else {
-                            result.push_str(&full);
-                        }
-                        found_end = true;
-                        break;
-                    }
-                    // Not matching — continue searching
-                } else {
-                    i += 1;
-                }
-            }
-            if !found_end {
-                // No matching close — emit as-is
-                let unmatched: String = chars[start..i].iter().collect();
-                result.push_str(&unmatched);
-            }
-        } else {
-            result.push(chars[i]);
-            i += 1;
-        }
-    }
-    result
 }
 
 /// Restore protected code blocks from placeholders.
@@ -467,20 +462,6 @@ impl tera::Function for PagebreakFn {
             _ => "\u{0C}",
         };
         Ok(Value::String(wrap_if_needed(output, &self.format, &self.fragments)))
-    }
-
-    fn is_safe(&self) -> bool { true }
-}
-
-/// `{{ env(name="VAR") }}` — environment variable.
-struct EnvFn;
-
-impl tera::Function for EnvFn {
-    fn call(&self, args: &HashMap<String, Value>) -> tera::Result<Value> {
-        let name = args.get("name")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| tera::Error::msg("env() requires a `name` argument"))?;
-        Ok(Value::String(std::env::var(name).unwrap_or_default()))
     }
 
     fn is_safe(&self) -> bool { true }
@@ -664,6 +645,162 @@ impl tera::Function for KbdFn {
 }
 
 // ---------------------------------------------------------------------------
+// Lorem ipsum
+// ---------------------------------------------------------------------------
+
+const LIPSUM_WORDS: &[&str] = &[
+    "lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing",
+    "elit", "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore",
+    "et", "dolore", "magna", "aliqua", "enim", "ad", "minim", "veniam",
+    "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
+    "aliquip", "ex", "ea", "commodo", "consequat", "duis", "aute", "irure",
+    "in", "reprehenderit", "voluptate", "velit", "esse", "cillum",
+    "fugiat", "nulla", "pariatur", "excepteur", "sint", "occaecat",
+    "cupidatat", "non", "proident", "sunt", "culpa", "qui", "officia",
+    "deserunt", "mollit", "anim", "id", "est", "laborum", "at", "vero",
+    "eos", "accusamus", "iusto", "odio", "dignissimos", "ducimus",
+    "blanditiis", "praesentium", "voluptatum", "deleniti", "atque",
+    "corrupti", "quos", "dolores", "quas", "molestias", "excepturi",
+    "obcaecati", "cupiditate", "provident", "similique", "optio",
+    "cumque", "nihil", "impedit", "quo", "minus", "quod", "maxime",
+    "placeat", "facere", "possimus", "omnis", "voluptas", "assumenda",
+    "repellendus", "temporibus", "autem", "quibusdam", "officiis",
+    "debitis", "aut", "rerum", "necessitatibus", "saepe", "eveniet",
+    "voluptates", "repudiandae", "recusandae", "itaque", "earum",
+    "hic", "tenetur", "sapiente", "delectus", "reiciendis", "voluptatibus",
+    "maiores", "alias", "perferendis", "doloribus", "asperiores",
+    "repellat",
+];
+
+fn lipsum_words(n: usize) -> String {
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        out.push(LIPSUM_WORDS[i % LIPSUM_WORDS.len()]);
+    }
+    let mut s = out.join(" ");
+    if let Some(first) = s.get_mut(..1) {
+        first.make_ascii_uppercase();
+    }
+    s
+}
+
+fn lipsum_sentence(word_count: usize, offset: usize) -> String {
+    let mut out = Vec::with_capacity(word_count);
+    for i in 0..word_count {
+        out.push(LIPSUM_WORDS[(i + offset) % LIPSUM_WORDS.len()]);
+    }
+    let mut s = out.join(" ");
+    if let Some(first) = s.get_mut(..1) {
+        first.make_ascii_uppercase();
+    }
+    s.push('.');
+    s
+}
+
+fn lipsum_sentences(n: usize) -> String {
+    let mut sentences = Vec::with_capacity(n);
+    for i in 0..n {
+        let len = 8 + (i * 3) % 8;
+        sentences.push(lipsum_sentence(len, i * 7));
+    }
+    sentences.join(" ")
+}
+
+fn lipsum_paragraphs(n: usize) -> String {
+    let mut paragraphs = Vec::with_capacity(n);
+    for i in 0..n {
+        let count = 3 + (i * 2) % 3;
+        let mut sentences = Vec::with_capacity(count);
+        for j in 0..count {
+            let len = 8 + ((i * 5 + j * 3) % 8);
+            sentences.push(lipsum_sentence(len, i * 17 + j * 11));
+        }
+        paragraphs.push(sentences.join(" "));
+    }
+    paragraphs.join("\n\n")
+}
+
+/// `{{ lipsum(paragraphs=2) }}`, `{{ lipsum(sentences=3) }}`,
+/// `{{ lipsum(words=50) }}` — placeholder text. Default: 1 paragraph.
+struct LipsumFn;
+
+impl tera::Function for LipsumFn {
+    fn call(&self, args: &HashMap<String, Value>) -> tera::Result<Value> {
+        if let Some(n) = args.get("words").and_then(|v| v.as_u64()) {
+            return Ok(Value::String(lipsum_words(n as usize)));
+        }
+        if let Some(n) = args.get("sentences").and_then(|v| v.as_u64()) {
+            return Ok(Value::String(lipsum_sentences(n as usize)));
+        }
+        let n = args.get("paragraphs").and_then(|v| v.as_u64()).unwrap_or(1);
+        Ok(Value::String(lipsum_paragraphs(n as usize)))
+    }
+
+    fn is_safe(&self) -> bool { true }
+}
+
+// ---------------------------------------------------------------------------
+// Placeholder image
+// ---------------------------------------------------------------------------
+
+/// `{{ placeholder(width=600, height=400) }}` — placeholder image.
+/// Optional: `text` (label), `color` (background hex, default "#cccccc").
+struct PlaceholderFn {
+    format: String,
+    fragments: Arc<Mutex<Vec<String>>>,
+}
+
+impl PlaceholderFn {
+    fn new(format: &str, fragments: &Arc<Mutex<Vec<String>>>) -> Self {
+        Self {
+            format: format.to_string(),
+            fragments: Arc::clone(fragments),
+        }
+    }
+}
+
+impl tera::Function for PlaceholderFn {
+    fn call(&self, args: &HashMap<String, Value>) -> tera::Result<Value> {
+        let width = args.get("width").and_then(|v| v.as_u64()).unwrap_or(600) as u32;
+        let height = args.get("height").and_then(|v| v.as_u64()).unwrap_or(400) as u32;
+        let color = args.get("color").and_then(|v| v.as_str()).unwrap_or("#cccccc");
+        let text = args.get("text").and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("{}×{}", width, height));
+
+        let output = match self.format.as_str() {
+            "html" => {
+                format!(
+                    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\">\
+                     <rect width=\"100%\" height=\"100%\" fill=\"{}\"/>\
+                     <text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" \
+                     font-family=\"sans-serif\" font-size=\"20\" fill=\"#666\">{}</text>\
+                     </svg>",
+                    width, height, crate::util::escape_html(color),
+                    crate::util::escape_html(&text)
+                )
+            }
+            "latex" | "tex" => {
+                format!(
+                    "\\fbox{{\\parbox[c][{}pt]{{{}pt}}{{\\centering {}}}}}",
+                    height, width, text
+                )
+            }
+            "typst" | "typ" => {
+                format!(
+                    "#rect(width: {}pt, height: {}pt, fill: luma(200))[#align(center + horizon)[{}]]",
+                    width, height, text
+                )
+            }
+            _ => format!("[{} ({}×{})]", text, width, height),
+        };
+        Ok(Value::String(wrap_if_needed(&output, &self.format, &self.fragments)))
+    }
+
+    fn is_safe(&self) -> bool { true }
+}
+
+// ---------------------------------------------------------------------------
 // Plugin shortcode bridge
 // ---------------------------------------------------------------------------
 
@@ -757,13 +894,12 @@ mod tests {
     }
 
     #[test]
-    fn test_protect_restore_inline_code() {
-        let text = "use `{{ var }}` in code";
-        let (protected, blocks) = protect_code_blocks(text);
-        assert!(!protected.contains("{{ var }}"));
-        assert_eq!(blocks.len(), 1);
-        let restored = restore_code_blocks(&protected, &blocks);
-        assert_eq!(restored, text);
+    fn test_inline_code_protected() {
+        let mut meta = Metadata::default();
+        meta.title = Some("T".to_string());
+        let registry = PluginRegistry::empty();
+        let result = process_body("version: `{{ meta.title }}`", "html", &meta, &registry);
+        assert!(result.text.contains("`{{ meta.title }}`"));
     }
 
     #[test]
@@ -786,13 +922,59 @@ mod tests {
     }
 
     #[test]
-    fn test_env_function() {
+    fn test_env_context_variable() {
         std::env::set_var("CALEPIN_TEST_VAR", "hello_tera");
         let meta = Metadata::default();
         let registry = PluginRegistry::empty();
-        let result = process_body("{{ env(name=\"CALEPIN_TEST_VAR\") }}", "html", &meta, &registry);
+        let result = process_body("{{ env.CALEPIN_TEST_VAR }}", "html", &meta, &registry);
         assert_eq!(result.text, "hello_tera");
         std::env::remove_var("CALEPIN_TEST_VAR");
+    }
+
+    #[test]
+    fn test_lipsum_default() {
+        let meta = Metadata::default();
+        let registry = PluginRegistry::empty();
+        let result = process_body("{{ lipsum() }}", "html", &meta, &registry);
+        assert!(result.text.contains("Lorem"));
+        assert!(result.text.contains('.'));
+    }
+
+    #[test]
+    fn test_lipsum_words() {
+        let meta = Metadata::default();
+        let registry = PluginRegistry::empty();
+        let result = process_body("{{ lipsum(words=5) }}", "html", &meta, &registry);
+        assert_eq!(result.text.split_whitespace().count(), 5);
+    }
+
+    #[test]
+    fn test_lipsum_paragraphs() {
+        let meta = Metadata::default();
+        let registry = PluginRegistry::empty();
+        let result = process_body("{{ lipsum(paragraphs=3) }}", "html", &meta, &registry);
+        // 3 paragraphs separated by double newlines
+        let paras: Vec<&str> = result.text.split("\n\n").collect();
+        assert_eq!(paras.len(), 3);
+    }
+
+    #[test]
+    fn test_placeholder_html() {
+        let meta = Metadata::default();
+        let registry = PluginRegistry::empty();
+        let result = process_body("{{ placeholder(width=200, height=100) }}", "html", &meta, &registry);
+        assert!(result.text.contains("<svg"));
+        assert!(result.text.contains("200"));
+        assert!(result.text.contains("100"));
+    }
+
+    #[test]
+    fn test_placeholder_latex() {
+        let meta = Metadata::default();
+        let registry = PluginRegistry::empty();
+        let result = process_body("{{ placeholder(width=200, height=100) }}", "latex", &meta, &registry);
+        assert!(!result.sc_fragments.is_empty());
+        assert!(result.sc_fragments[0].contains("fbox"));
     }
 
     #[test]

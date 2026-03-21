@@ -10,7 +10,20 @@ variables:
 Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
 :::
 
-*Calepin* processes the body of every `.qmd` document through the [Tera](https://keats.github.io/tera/) template engine. This lets you use expressions, functions, conditionals, and loops directly in your text. Code blocks and inline code are automatically protected from Tera evaluation.
+*Calepin* processes the body of every `.qmd` document through the [Tera](https://keats.github.io/tera/) template engine. This lets you use expressions, functions, conditionals, and loops directly in your text. Fenced code blocks and inline code spans are automatically protected from Tera evaluation.
+
+::: {.callout-note}
+Tera expressions inside fenced code blocks and inline code spans are not evaluated by default. To opt-in to Tera processing inside a code chunk, use the `#| tera: true` chunk option:
+:::
+
+````
+```{r}
+#| tera: true
+n <- {{var.sample_size}}
+x <- rnorm(n)
+summary(x)
+```
+````
 
 
 # Syntax
@@ -63,6 +76,14 @@ variables:
 * *Calepin* version: {{ var.version }}
 * Documentation URL: {{ var.urls.docs }}
 
+## env
+
+System environment variables are available under `env`:
+
+{% raw %}`{{ env.SHELL }}`{% endraw %}
+
+The `SHELL` environment variable on the local machine is: {{ env.SHELL }}.
+
 ## format
 
 The current output format is available as `{% raw %}{{ format }}{% endraw %}` --- one of `html`, `latex`, `typst`, or `markdown`.
@@ -99,14 +120,6 @@ Page one content.
 
 Page two content.
 
-## env
-
-Insert a system environment variable. Produces an empty string if the variable is not set.
-
-{% raw %}`{{ env(name="SHELL") }}`{% endraw %}
-
-The `SHELL` environment variable on the local machine is: {{ env(name="SHELL") }}.
-
 ## video
 
 Embed a video or streaming service. Supports YouTube, Vimeo, and direct video URLs:
@@ -137,6 +150,33 @@ Render keyboard shortcuts:
 {% raw %}`{{ kbd(keys=["Ctrl", "C"]) }}`{% endraw %}
 
 Produces `<kbd>Ctrl</kbd>+<kbd>C</kbd>` in HTML, `\texttt{Ctrl}+\texttt{C}` in LaTeX.
+
+## lipsum
+
+Insert placeholder lorem ipsum text. Default: 1 paragraph.
+
+```
+{% raw %}{{ lipsum() }}
+{{ lipsum(paragraphs=3) }}
+{{ lipsum(sentences=5) }}
+{{ lipsum(words=20) }}{% endraw %}
+```
+
+Example with 2 sentences: {{ lipsum(sentences=2) }}
+
+## placeholder
+
+Insert a placeholder image for layout prototyping. Produces an inline SVG in HTML, `\fbox` in LaTeX, `#rect` in Typst.
+
+```
+{% raw %}{{ placeholder() }}
+{{ placeholder(width=300, height=200) }}
+{{ placeholder(width=400, height=100, text="Banner", color="#e0e0ff") }}{% endraw %}
+```
+
+Default dimensions are 600×400.
+
+{{ placeholder(width=300, height=150) }}
 
 ## include
 
@@ -218,8 +258,8 @@ See [Plugins](plugins.qmd) for the full plugin system documentation.
 
 For each function call, *Calepin* checks:
 
-1. Built-in functions (`pagebreak`, `env`, `video`, `brand`, `kbd`)
-2. Context variables (`meta`, `var`, `format`)
+1. Built-in functions (`pagebreak`, `video`, `brand`, `kbd`, `lipsum`, `placeholder`)
+2. Context variables (`meta`, `var`, `env`, `format`)
 3. Plugin registry (in front matter order)
 
 Built-in functions take precedence over plugin functions.

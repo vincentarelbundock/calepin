@@ -239,19 +239,21 @@ Only pipe syntax (`#| key: value`) is accepted. The header accepts only language
 
 ## Tera Body Processing
 
-The `.qmd` body text is processed as a Tera template during the evaluate stage (`tera_engine.rs`). Code blocks and inline code are protected from Tera evaluation.
+The `.qmd` body text is processed as a Tera template during the evaluate stage (`tera_engine.rs`). Code blocks and inline code are protected from Tera evaluation. Use `#| tera: true` chunk option to opt-in to Tera processing inside a code chunk.
 
 Built-in Tera functions (replace old `{{< shortcode >}}` syntax):
 
 - `{{ pagebreak() }}` — format-specific page break
-- `{{ env(name="VAR") }}` — environment variable
 - `{{ video(url="...", width="...", height="...", title="...") }}` — video embed
 - `{{ brand(type="color", name="primary") }}` — brand assets
 - `{{ kbd(keys=["Ctrl", "C"]) }}` — keyboard shortcuts
+- `{{ lipsum(paragraphs=2) }}` — placeholder lorem ipsum text (also `sentences`, `words`)
+- `{{ placeholder(width=600, height=400) }}` — placeholder image (also `text`, `color`)
 
 Context variables:
 - `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. — document metadata
 - `{{ var.key.subkey }}` — values from front matter `variables:` block
+- `{{ env.HOME }}`, `{{ env.USER }}`, etc. — system environment variables
 - `{{ format }}` — current output format
 
 File inclusion uses Tera's include tag: `{% include "file.qmd" %}` (pre-parse directive, runs before block parsing via `filters/shortcodes.rs::expand_includes()`). Escaping uses `{% raw %}...{% endraw %}`.
