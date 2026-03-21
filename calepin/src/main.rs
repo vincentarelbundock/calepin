@@ -113,9 +113,10 @@ fn handle_site(action: SiteAction) -> Result<()> {
             eprintln!("Site init (template: {}) is not yet implemented.", template);
             Ok(())
         }
-        SiteAction::Preview { config: _, port: _ } => {
-            eprintln!("Site preview is not yet implemented.");
-            Ok(())
+        SiteAction::Preview { config, port } => {
+            let output = std::path::PathBuf::from("_site");
+            site::build_site(config.as_deref(), &output, true, false)?;
+            site::serve(&output, port)
         }
     }
 }

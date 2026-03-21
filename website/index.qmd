@@ -8,7 +8,7 @@ toc: true
 <div style="text-align: center; margin-bottom: 1.5rem;">
   <img class="logo-light" src="/assets/Calepin.svg" alt="Calepin logo" style="max-width: 280px;">
   <img class="logo-dark" src="/assets/Calepin_dark.svg" alt="Calepin logo" style="max-width: 280px;">
-  <p style="font-size: 1.1rem; color: var(--c-text-muted); margin-top: 0.5rem;">A fast rendering engine for Quarto, written in Rust.</p>
+  <p style="font-size: 1.1rem; color: var(--c-text-muted); margin-top: 0.5rem;">A fast notebook and website generator, written in Rust.</p>
 </div>
 ```
 

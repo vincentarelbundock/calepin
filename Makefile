@@ -43,8 +43,8 @@ test:  ## Run unit tests
 check:  ## Run cargo check (fast compile check)
 	cargo check --manifest-path calepin/Cargo.toml
 
-site: build ## Build static site from website/
-	@cd website && ../calepin/target/debug/calepin site build --clean
+site: build ## Build and serve static site from website/
+	@cd website && ../calepin/target/debug/calepin site preview
 
 # ==============================================================================
 # Render targets

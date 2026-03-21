@@ -177,3 +177,71 @@ pub fn build_site(
 
     Ok(())
 }
+
+/// Serve a built site directory using the built-in HTTP server.
+pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
+    use tiny_http::{Header, Response, Server, StatusCode};
+
+    let output = output.canonicalize()
+        .with_context(|| format!("Site directory not found: {}", output.display()))?;
+
+    // Try requested port, then fall back to nearby ports
+    let (server, actual_port) = {
+        let mut result = None;
+        for p in port..=port + 10 {
+            if let Ok(s) = Server::http(format!("0.0.0.0:{}", p)) {
+                if p != port {
+                    eprintln!("\x1b[33mWarning:\x1b[0m port {} in use, using {} instead", port, p);
+                }
+                result = Some((s, p));
+                break;
+            }
+        }
+        result.ok_or_else(|| anyhow::anyhow!("Could not find an available port in range {}–{}", port, port + 10))?
+    };
+
+    eprintln!("Serving at http://localhost:{}", actual_port);
+    let _ = open::that(format!("http://localhost:{}", actual_port));
+
+    for request in server.incoming_requests() {
+        let url = request.url().to_string();
+        let rel = url.split('?').next().unwrap_or(&url).trim_start_matches('/');
+
+        // Try the path directly, then as index.html
+        let mut file_path = output.join(rel);
+        if file_path.is_dir() {
+            file_path = file_path.join("index.html");
+        }
+
+        if file_path.is_file() {
+            match fs::read(&file_path) {
+                Ok(data) => {
+                    let mime = match file_path.extension().and_then(|e| e.to_str()) {
+                        Some("html") => "text/html; charset=utf-8",
+                        Some("css") => "text/css",
+                        Some("js") => "application/javascript",
+                        Some("json") => "application/json",
+                        Some("svg") => "image/svg+xml",
+                        Some("png") => "image/png",
+                        Some("jpg" | "jpeg") => "image/jpeg",
+                        Some("gif") => "image/gif",
+                        Some("pdf") => "application/pdf",
+                        Some("woff2") => "font/woff2",
+                        Some("woff") => "font/woff",
+                        Some("qmd") => "text/plain; charset=utf-8",
+                        _ => "application/octet-stream",
+                    };
+                    let header = Header::from_bytes("Content-Type", mime).unwrap();
+                    let _ = request.respond(Response::from_data(data).with_header(header));
+                }
+                Err(_) => {
+                    let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+                }
+            }
+        } else {
+            let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+        }
+    }
+
+    Ok(())
+}
