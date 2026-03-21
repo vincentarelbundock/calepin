@@ -1,0 +1,214 @@
+---
+title: "Tera Templating: What It Would Unlock"
+---
+
+## Current System: Pure `{{variable}}` Substitution
+
+The engine in `apply_template()` is a regex replacing `{{name}}` with values from a `HashMap<String, String>`. No conditionals, no loops, no filters, no inheritance. All logic lives in Rust --- ~700 lines in `template.rs` alone, plus format-specific branching scattered across `filters/`, `render/`, and `engines/`.
+
+## What Tera Would Unlock
+
+### 1. Collapse the format-specific template explosion
+
+We currently have **195+ template files** because every element needs 4 copies (html/latex/typst/markdown). With Tera conditionals, many could merge:
+
+```jinja2
+{# figure.tera — one file instead of four #}
+{% if format == "html" %}
+<figure id="fig-{{ label }}"{{ ' style="' ~ align_style ~ '"' if align_style }}>
+  <img src="{{ path }}" alt="{{ alt }}"{{ width_attr }}{{ height_attr }}>
+  {% if caption %}<figcaption>Figure {{ number }}: {{ caption }}</figcaption>{% endif %}
+</figure>
+{% elif format == "latex" %}
+\begin{ {{- fig_env -}} }{{ fig_pos }}
+{{ align_style }}
+\includegraphics[{{ width_attr }}]{ {{- path -}} }
+{% if caption %}\caption{ {{- caption -}} }{% endif %}
+{{ label }}
+\end{ {{- fig_env -}} }
+{% elif format == "typst" %}
+#figure(
+  image("{{ path }}"{{ ", width: " ~ width if width }}),
+  caption: [{{ caption }}],
+){{ label }}
+{% endif %}
+```
+
+We could still keep separate per-format files for overrides --- Tera's `{% include %}` makes that composable.
+
+### 2. Move format branching out of Rust into templates
+
+Right now `build_author_block()` is **175 lines of Rust** with nested `match ext {}` for superscripts, ORCID links, affiliation formatting, corresponding author notes, and joining logic. With Tera:
+
+```jinja2
+{# author-block.tera #}
+{% for author in authors %}
+  {% if format == "html" %}
+    <span class="author">{{ author.name }}
+      {% if author.superscripts %}<sup>{{ author.superscripts }}</sup>{% endif %}
+      {% if author.corresponding %}<sup>*</sup>{% endif %}
+      {{ author.orcid_link | safe }}
+    </span>
+  {% elif format == "latex" %}
+    {{ author.name }}
+    {%- if author.superscripts %}\textsuperscript{ {{- author.superscripts -}} }{% endif %}
+  {% endif %}
+{% endfor %}
+```
+
+The Rust side drops to: build a `Vec<AuthorContext>` struct, serialize it, done.
+
+### 3. Template inheritance for page templates
+
+Instead of 3 separate page templates with duplicated structure:
+
+```jinja2
+{# base.tera #}
+{% block preamble %}{% endblock %}
+{% block header %}
+  {{ title_block }}
+  {{ author_block }}
+  {{ date_block }}
+{% endblock %}
+{{ abstract_block }}
+{{ toc }}
+{% block body %}{{ body }}{% endblock %}
+{{ appendix_block }}
+
+{# html.tera #}
+{% extends "base.tera" %}
+{% block preamble %}
+<!doctype html>
+<html><head><title>{{ plain_title }}</title>
+{{ css | safe }}
+</head><body>
+{% endblock %}
+```
+
+Users overriding page templates could extend the built-in and change just one block, rather than copy-pasting the entire file.
+
+### 4. Loops eliminate pre-rendering in Rust
+
+Currently, funding items, affiliations, and authors are pre-rendered into HTML strings in Rust then injected as a single `{{items}}` variable. With Tera loops:
+
+```jinja2
+{# appendix-funding.html.tera #}
+<section class="appendix-funding">
+  <h3>Funding</h3>
+  <ul>
+  {% for item in funding %}
+    <li>{{ item.source }}{% if item.award %}, {{ item.award }}{% endif %}</li>
+  {% endfor %}
+  </ul>
+</section>
+```
+
+This means plugins could override the funding template and restructure it --- currently impossible because the HTML list is baked in Rust.
+
+### 5. Tera filters replace utility functions
+
+```jinja2
+{{ title | markdown }}           {# custom filter: render inline markdown #}
+{{ code | escape_latex }}        {# custom filter: LaTeX escaping #}
+{{ path | resolve_image }}       {# custom filter: format-aware path resolution #}
+{{ authors | join(sep=", ") }}   {# built-in #}
+{{ caption | default(value="Untitled") }}  {# built-in #}
+{{ content | slugify }}          {# built-in #}
+```
+
+Custom Tera filters registered once in Rust, reusable everywhere. Plugin authors get the same filters.
+
+### 6. Macros for reusable patterns
+
+```jinja2
+{% macro superscript(text) %}
+  {% if format == "html" %}<sup>{{ text }}</sup>
+  {% elif format == "latex" %}\textsuperscript{ {{- text -}} }
+  {% elif format == "typst" %}#super[{{ text }}]
+  {% endif %}
+{% endmacro %}
+
+{% macro link(text, url) %}
+  {% if format == "html" %}<a href="{{ url }}">{{ text }}</a>
+  {% elif format == "latex" %}{{ text }} (\url{ {{- url -}} })
+  {% elif format == "typst" %}#link("{{ url }}")[{{ text }}]
+  {% endif %}
+{% endmacro %}
+```
+
+These macros could be shared across all templates. The `format_link()` Rust function and every `match ext {}` for superscripts become template-side concerns.
+
+### 7. Plugin templates become dramatically more powerful
+
+Currently, a plugin's element template can only do `{{variable}}` substitution. With Tera, a plugin could provide a template like:
+
+```jinja2
+{# A plugin for academic margin notes #}
+{% if format == "html" %}
+<aside class="margin-note" id="{{ id }}">
+  {% if number %}<sup>{{ number }}</sup>{% endif %}
+  {{ children | safe }}
+</aside>
+{% elif format == "latex" %}
+\marginpar{\footnotesize {{ children }}}
+{% endif %}
+```
+
+No subprocess needed for simple formatting logic --- the template alone handles it.
+
+### 8. TOC generation in templates
+
+The 76-line `build_html_toc()` Rust function could become a recursive Tera macro if we pass headings as structured data:
+
+```jinja2
+{% macro toc_list(items, depth) %}
+<ul>
+{% for item in items %}
+  <li><a href="#{{ item.id }}">{{ item.text }}</a>
+    {% if item.children and depth > 1 %}
+      {{ self::toc_list(items=item.children, depth=depth-1) }}
+    {% endif %}
+  </li>
+{% endfor %}
+</ul>
+{% endmacro %}
+```
+
+Users could override just the TOC template without touching Rust.
+
+### 9. Conditional CSS/JS inclusion
+
+```jinja2
+{% if has_code_blocks %}
+  <link rel="stylesheet" href="highlight.css">
+{% endif %}
+{% if has_math %}
+  <script src="mathjax.js"></script>
+{% endif %}
+{% if toc %}
+  <style>.toc { ... }</style>
+{% endif %}
+```
+
+Currently `{{js}}` is always empty --- this kind of conditional inclusion would need Rust changes today.
+
+### 10. Debug/development mode in templates
+
+```jinja2
+{% if debug %}
+  <div class="debug-info">
+    <pre>Format: {{ format }}, Chunks: {{ chunk_count }}, Vars: {{ vars | json_encode }}</pre>
+  </div>
+{% endif %}
+```
+
+## Trade-offs
+
+- **Compile-time guarantees**: Current system can't produce malformed output from template logic --- it's just substitution. Tera templates can have syntax errors discovered only at runtime.
+- **Performance**: Tera parses templates and builds an AST. For 195+ templates loaded per render, there's overhead vs. a single regex pass. Mitigated by caching the `Tera` instance.
+- **Dependency weight**: Tera pulls in serde, a parser, etc. --- though we already have serde via pyo3/extendr.
+- **Migration effort**: Every existing `.html`/`.latex`/`.typst`/`.markdown` template needs updating (though they'd still work as-is since `{{var}}` is valid Tera syntax).
+
+## Bottom Line
+
+The biggest win is **shifting format-specific branching from Rust to templates**. Right now ~500 lines of `template.rs` are format dispatching (`match ext { "html" => ..., "latex" => ... }`). That logic belongs in templates, not in compiled code. It would make the plugin system far more capable (plugins could provide smart templates without writing executables), make page templates inheritable rather than copy-paste, and let users customize output structure without forking the binary.
