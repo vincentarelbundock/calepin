@@ -1,9 +1,17 @@
-{% if format == "html" %}<aside class="appendix">
+{%- if format == "html" %}
+<aside class="appendix">
 {{sections}}
-</aside>{% elif format == "latex" %}\appendix
+</aside>
+{%- elif format == "latex" %}
+\appendix
 \section*{Appendix}
-{{sections}}{% elif format == "typst" %}#pagebreak()
+{{sections}}
+{%- elif format == "typst" %}
+#pagebreak()
 = Appendix
-{{sections}}{% else %}# Appendix
+{{sections}}
+{%- else %}
+# Appendix
 
-{{sections}}{% endif %}
+{{sections}}
+{%- endif %}

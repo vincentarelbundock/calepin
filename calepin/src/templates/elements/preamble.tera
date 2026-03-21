@@ -1,6 +1,9 @@
-{% if format == "html" %}<link rel="preconnect" href="https://fonts.googleapis.com">
+{%- if format == "html" %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Inconsolata:wght@400;700&family=Inter:wght@300..700&display=swap" rel="stylesheet">{% elif format == "latex" %}\usepackage{xcolor}
+<link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Inconsolata:wght@400;700&family=Inter:wght@300..700&display=swap" rel="stylesheet">
+{%- elif format == "latex" %}
+\usepackage{xcolor}
 \usepackage{amsmath,amssymb}
 \usepackage[normalem]{ulem}
 \usepackage{fancyvrb}
@@ -34,7 +37,15 @@
   boxrule=0.5pt,
   arc=0pt, outer arc=0pt,
   fontupper=\small
-}{% elif format == "typst" %}// Heading styles — match LaTeX titlesec at 11pt:
+}
+{%- elif format == "typst" %}
+#set document(title: "{{plain_title}}", author: "{{author}}")
+#set page(margin: (x: 4.5cm, y: 3.5cm))
+#set text(size: 11pt)
+#set par(justify: true, leading: 0.65em)
+#set heading(numbering: "1.1")
+
+// Heading styles — match LaTeX titlesec at 11pt:
 // \section:       \large\scshape   → 12pt smallcaps
 // \subsection:    \normalsize\itshape → 11pt italic
 // \subsubsection: \normalsize      → 11pt normal
@@ -69,4 +80,5 @@
   radius: 0pt,
   width: 100%,
   body
-){% endif %}
+)
+{%- endif %}

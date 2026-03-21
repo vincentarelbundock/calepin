@@ -1,9 +1,3 @@
-#set document(title: "{{plain_title}}", author: "{{author}}")
-#set page(margin: (x: 4.5cm, y: 3.5cm))
-#set text(size: 11pt)
-#set par(justify: true, leading: 0.65em)
-#set heading(numbering: "1.1")
-
 {{preamble}}
 
 #align(center)[

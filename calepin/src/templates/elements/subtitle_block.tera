@@ -1,1 +1,7 @@
-{% if format == "html" %}<h2>{{subtitle}}</h2>{% elif format == "latex" %}\posttitle{\par\vskip 0.5em\large {{subtitle}}\end{center}}{% elif format == "typst" %}#text(size: 13pt)[{{subtitle}}]{% endif %}
+{%- if format == "html" %}
+<h2>{{subtitle}}</h2>
+{%- elif format == "latex" %}
+\posttitle{\par\vskip 0.5em\large {{subtitle}}\end{center}}
+{%- elif format == "typst" %}
+#text(size: 13pt)[{{subtitle}}]
+{%- endif %}

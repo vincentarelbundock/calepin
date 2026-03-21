@@ -1,1 +1,5 @@
-{% if format == "html" %}<h3>{{date}}</h3>{% elif format == "latex" %}{{date_cmd}}{% endif %}
+{%- if format == "html" %}
+<h3>{{date}}</h3>
+{%- elif format == "latex" %}
+{{date_cmd}}
+{%- endif %}

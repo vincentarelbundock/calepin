@@ -1,7 +1,15 @@
-{% if format == "html" %}<div class="{{classes}}"{{id_attr}}>
+{%- if format == "html" %}
+<div class="{{classes}}"{{id_attr}}>
 {{children}}
-</div>{% elif format == "latex" %}\begin{quote}
+</div>
+{%- elif format == "latex" %}
+\begin{quote}
 {{children}}
-\end{quote}{% elif format == "typst" %}#block(inset: 1em)[
+\end{quote}
+{%- elif format == "typst" %}
+#block(inset: 1em)[
 {{children}}
-]{{label}}{% else %}> {{children}}{% endif %}
+]{{label}}
+{%- else %}
+> {{children}}
+{%- endif %}

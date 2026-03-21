@@ -1,9 +1,17 @@
-{% if format == "html" %}<div class="figure" id="fig-{{label}}" style="{{align_style}}">
+{%- if format == "html" %}
+<div class="figure" id="fig-{{label}}" style="{{align_style}}">
 {{image}}
 <p class="caption">{{caption}}</p>
-</div>{% elif format == "latex" %}{{fig_begin}}{{fig_pos}}
+</div>
+{%- elif format == "latex" %}
+{{fig_begin}}{{fig_pos}}
 {{align_style}}
 {{image}}
 {{caption_cmd}}
 \label{{_lb}}fig-{{label}}{{_rb}}
-{{fig_end}}{% elif format == "typst" %}#figure({{image}}, caption: [{{caption}}]) <fig-{{label}}>{% else %}![{{alt}}]({{path}}){% endif %}
+{{fig_end}}
+{%- elif format == "typst" %}
+#figure({{image}}, caption: [{{caption}}]) <fig-{{label}}>
+{%- else %}
+![{{alt}}]({{path}})
+{%- endif %}

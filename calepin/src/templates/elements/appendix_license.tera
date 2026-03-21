@@ -1,8 +1,16 @@
-{% if format == "html" %}<section class="appendix-section">
+{%- if format == "html" %}
+<section class="appendix-section">
 <h2>Reuse</h2>
 <p>{{content}}</p>
-</section>{% elif format == "latex" %}\subsection*{Reuse}
-{{content}}{% elif format == "typst" %}== Reuse
-{{content}}{% else %}## Reuse
+</section>
+{%- elif format == "latex" %}
+\subsection*{Reuse}
+{{content}}
+{%- elif format == "typst" %}
+== Reuse
+{{content}}
+{%- else %}
+## Reuse
 
-{{content}}{% endif %}
+{{content}}
+{%- endif %}

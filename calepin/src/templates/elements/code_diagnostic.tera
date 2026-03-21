@@ -1,7 +1,15 @@
-{% if format == "html" %}<pre><code class="{{diagnostic_class}}">{{text}}</code></pre>{% elif format == "latex" %}\begin{outcode}
+{%- if format == "html" %}
+<pre><code class="{{diagnostic_class}}">{{text}}</code></pre>
+{%- elif format == "latex" %}
+\begin{outcode}
 \begin{verbatim}
 {{text}}
 \end{verbatim}
-\end{outcode}{% elif format == "typst" %}#outbox[#raw("{{text}}", block: true)]{% else %}```
+\end{outcode}
+{%- elif format == "typst" %}
+#outbox[#raw("{{text}}", block: true)]
+{%- else %}
+```
 {{text}}
-```{% endif %}
+```
+{%- endif %}
