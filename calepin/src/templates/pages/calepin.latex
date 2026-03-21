@@ -1,25 +1,25 @@
-\documentclass[{{classoption}}]{{{documentclass}}}
+{{documentclass_line}}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx,hyperref}
 \usepackage{titling}
-{{bib-preamble}}
-{{header-includes}}
-{{title-block}}
-{{subtitle-block}}
-{{author-block}}
-{{date-block}}
+{{bib_preamble}}
+{{header_includes}}
+{{title_block}}
+{{subtitle_block}}
+{{author_block}}
+{{date_block}}
 \begin{document}
 \maketitle
 \ifdefined\affiliationblock\affiliationblock\fi
-{{include-before}}
+{{include_before}}
 
-{{abstract-block}}
-{{keywords-block}}
+{{abstract_block}}
+{{keywords_block}}
 {{toc}}
 
 {{body}}
 
-{{appendix-block}}
-{{bib-end}}
-{{include-after}}
+{{appendix_block}}
+{{bib_end}}
+{{include_after}}
 \end{document}

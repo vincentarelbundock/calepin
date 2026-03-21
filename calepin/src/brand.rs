@@ -560,13 +560,13 @@ pub fn inject_brand_vars(vars: &mut HashMap<String, String>, ext: &str) {
 
     // Logo paths (preferred size: medium > small > large)
     if let Some(img) = resolve_preferred_logo("light") {
-        vars.insert("brand-logo-light".to_string(), img.path);
+        vars.insert("brand_logo_light".to_string(), img.path);
         if let Some(alt) = img.alt {
-            vars.insert("brand-logo-alt".to_string(), alt);
+            vars.insert("brand_logo_alt".to_string(), alt);
         }
     }
     if let Some(img) = resolve_preferred_logo("dark") {
-        vars.insert("brand-logo-dark".to_string(), img.path);
+        vars.insert("brand_logo_dark".to_string(), img.path);
     }
 
     // Meta
@@ -578,13 +578,13 @@ pub fn inject_brand_vars(vars: &mut HashMap<String, String>, ext: &str) {
     if ext == "html" {
         let brand_css = build_brand_css(brand);
         if !brand_css.is_empty() {
-            vars.insert("brand-css".to_string(), brand_css.clone());
+            vars.insert("brand_css".to_string(), brand_css.clone());
             let css = vars.entry("css".to_string()).or_default();
             css.push_str(&format!("\n<style>\n{}\n</style>", brand_css));
         }
         let brand_css_dt = build_brand_css_datatheme(brand);
         if !brand_css_dt.is_empty() {
-            vars.insert("brand-css-datatheme".to_string(), brand_css_dt);
+            vars.insert("brand_css_datatheme".to_string(), brand_css_dt);
         }
     }
 }

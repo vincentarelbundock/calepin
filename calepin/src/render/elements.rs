@@ -25,18 +25,18 @@ macro_rules! element_templates {
 
 fn builtin_template(name: &str, ext: &str) -> Option<&'static str> {
     element_templates!(name, ext;
-        "code-source"  => ["html", "latex", "typst", "markdown"],
-        "code-output"  => ["html", "latex", "typst", "markdown"],
-        "code-warning" => ["html", "latex", "typst", "markdown"],
-        "code-message" => ["html", "latex", "typst", "markdown"],
-        "code-error"   => ["html", "latex", "typst", "markdown"],
+        "code_source"  => ["html", "latex", "typst", "markdown"],
+        "code_output"  => ["html", "latex", "typst", "markdown"],
+        "code_warning" => ["html", "latex", "typst", "markdown"],
+        "code_message" => ["html", "latex", "typst", "markdown"],
+        "code_error"   => ["html", "latex", "typst", "markdown"],
         "figure" => ["html", "latex", "typst", "markdown"],
         "div"    => ["html", "latex", "typst", "markdown"],
-        "callout-note"      => ["html", "latex", "typst", "markdown"],
-        "callout-warning"   => ["html", "latex", "typst", "markdown"],
-        "callout-tip"       => ["html", "latex", "typst", "markdown"],
-        "callout-caution"   => ["html", "latex", "typst", "markdown"],
-        "callout-important" => ["html", "latex", "typst", "markdown"],
+        "callout_note"      => ["html", "latex", "typst", "markdown"],
+        "callout_warning"   => ["html", "latex", "typst", "markdown"],
+        "callout_tip"       => ["html", "latex", "typst", "markdown"],
+        "callout_caution"   => ["html", "latex", "typst", "markdown"],
+        "callout_important" => ["html", "latex", "typst", "markdown"],
         "theorem"     => ["html", "latex", "typst", "markdown"],
         "lemma"       => ["html", "latex", "typst", "markdown"],
         "corollary"   => ["html", "latex", "typst", "markdown"],
@@ -52,18 +52,18 @@ fn builtin_template(name: &str, ext: &str) -> Option<&'static str> {
         "landscape"   => ["html", "latex", "typst", "markdown"],
         "preamble" => ["html", "latex", "typst"],
         "appendix"           => ["html", "latex", "typst", "markdown"],
-        "appendix-license"   => ["html", "latex", "typst", "markdown"],
-        "appendix-copyright" => ["html", "latex", "typst", "markdown"],
-        "appendix-funding"   => ["html", "latex", "typst", "markdown"],
-        "appendix-citation"  => ["html", "latex", "typst", "markdown"],
-        "author-block"     => ["html", "latex", "typst", "markdown"],
-        "author-item"      => ["html", "latex", "typst", "markdown"],
-        "affiliation-item" => ["html", "latex", "typst", "markdown"],
-        "title-block"    => ["html", "latex"],
-        "subtitle-block" => ["html", "latex", "typst"],
-        "date-block"     => ["html", "latex"],
-        "abstract-block" => ["html", "latex", "typst"],
-        "keywords-block" => ["html", "latex", "typst"]
+        "appendix_license"   => ["html", "latex", "typst", "markdown"],
+        "appendix_copyright" => ["html", "latex", "typst", "markdown"],
+        "appendix_funding"   => ["html", "latex", "typst", "markdown"],
+        "appendix_citation"  => ["html", "latex", "typst", "markdown"],
+        "author_block"     => ["html", "latex", "typst", "markdown"],
+        "author_item"      => ["html", "latex", "typst", "markdown"],
+        "affiliation_item" => ["html", "latex", "typst", "markdown"],
+        "title_block"    => ["html", "latex"],
+        "subtitle_block" => ["html", "latex", "typst"],
+        "date_block"     => ["html", "latex"],
+        "abstract_block" => ["html", "latex", "typst"],
+        "keywords_block" => ["html", "latex", "typst"]
     )
 }
 
@@ -78,7 +78,6 @@ pub struct ElementRenderer {
     registry: Rc<PluginRegistry>,
     raw_fragments: std::cell::RefCell<Vec<String>>,
     sc_fragments: Vec<String>,
-    escaped_sc_fragments: Vec<String>,
     pub number_sections: bool,
     pub shift_headings: bool,
     pub default_fig_cap_location: Option<String>,
@@ -91,9 +90,9 @@ impl ElementRenderer {
     pub fn new(ext: &str, highlight_config: HighlightConfig) -> Self {
         let mut templates = HashMap::with_capacity(40);
         let element_names = [
-            "code-source", "code-output", "code-warning", "code-message", "code-error",
+            "code_source", "code_output", "code_warning", "code_message", "code_error",
             "figure", "div",
-            "callout-note", "callout-warning", "callout-tip", "callout-caution", "callout-important",
+            "callout_note", "callout_warning", "callout_tip", "callout_caution", "callout_important",
             "theorem", "lemma", "corollary", "proposition", "conjecture",
             "definition", "example", "exercise", "solution", "remark", "algorithm", "proof",
             "preamble",
@@ -112,7 +111,6 @@ impl ElementRenderer {
             registry: Rc::new(PluginRegistry::empty()),
             raw_fragments: std::cell::RefCell::new(Vec::new()),
             sc_fragments: Vec::new(),
-            escaped_sc_fragments: Vec::new(),
             number_sections: false,
             shift_headings: false,
             default_fig_cap_location: None,
@@ -124,9 +122,8 @@ impl ElementRenderer {
         self.registry = registry;
     }
 
-    pub fn set_sc_fragments(&mut self, sc: Vec<String>, escaped: Vec<String>) {
+    pub fn set_sc_fragments(&mut self, sc: Vec<String>) {
         self.sc_fragments = sc;
-        self.escaped_sc_fragments = escaped;
     }
 
     pub fn get_template(&self, name: &str) -> String {
@@ -149,8 +146,7 @@ impl ElementRenderer {
                     "latex" => crate::render::latex::markdown_to_latex(&processed, &fragments, self.number_sections),
                     _ => crate::render::markdown::resolve_raw(&processed, &fragments),
                 };
-                let rendered = crate::filters::shortcodes::resolve_shortcode_raw(&rendered, &self.sc_fragments);
-                crate::filters::shortcodes::resolve_escaped_shortcodes(&rendered, &self.escaped_sc_fragments)
+                crate::filters::shortcodes::resolve_shortcode_raw(&rendered, &self.sc_fragments)
             }
             Element::CodeAsis { text } => text.clone(),
             Element::Div { classes, id, attrs, children } => {
@@ -228,12 +224,14 @@ impl ElementRenderer {
 }
 
 /// Resolve an element template: project → user → built-in.
+/// Template names use underscores internally; hyphens are normalized.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
-    let filename = format!("{}.{}", name, ext);
+    let canonical = name.replace('-', "_");
+    let filename = format!("{}.{}", canonical, ext);
     if let Some(path) = crate::util::resolve_path("elements", &filename) {
         if let Ok(content) = std::fs::read_to_string(&path) {
             return Some(content);
         }
     }
-    builtin_template(name, ext).map(|s| s.to_string())
+    builtin_template(&canonical, ext).map(|s| s.to_string())
 }

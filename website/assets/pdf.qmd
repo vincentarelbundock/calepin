@@ -45,4 +45,4 @@ format: latex
 bibliography: ../library.bib
 ---
 
-{{< include ../basics.qmd >}}
+{% include "../basics.qmd" %}

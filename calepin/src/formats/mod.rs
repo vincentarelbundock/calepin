@@ -149,13 +149,13 @@ impl OutputRenderer for CustomRenderer {
                     if !syntax_css.is_empty() {
                         let css = vars.entry("css".to_string()).or_default();
                         css.push_str(&format!("\n<style>\n{}</style>", &syntax_css));
-                        vars.insert("syntax-css".to_string(), syntax_css);
+                        vars.insert("syntax_css".to_string(), syntax_css);
                     }
                     let datatheme_css = renderer.syntax_css_with_scope(
                         crate::filters::highlighting::ColorScope::DataTheme,
                     );
                     if !datatheme_css.is_empty() {
-                        vars.insert("syntax-css-datatheme".to_string(), datatheme_css);
+                        vars.insert("syntax_css_datatheme".to_string(), datatheme_css);
                     }
                 }
                 Some(crate::render::template::apply_template(&custom_tpl, &vars))

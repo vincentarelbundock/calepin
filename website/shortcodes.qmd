@@ -1,50 +1,47 @@
 ---
-title: Shortcodes
+title: Tera Functions
 ---
 
 ::: {.callout-tip}
 Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
 :::
 
-Shortcodes are inline directives written as `{{< name args >}}`. They are processed during rendering and replaced with format-aware output. *Calepin* provides several built-in shortcodes and supports user-defined shortcodes via plugins.
+*Calepin* processes the body of `.qmd` documents as [Tera](https://keats.github.io/tera/) templates. This means you can use Tera expressions, functions, conditionals, and loops directly in your text. Code blocks and inline code are automatically protected from Tera evaluation.
 
 
 # Syntax
 
-Shortcodes use the following syntax: `{{< name arg1 arg2 key="value" >}}`
+Tera expressions use double braces: `{% raw %}{{ expression }}{% endraw %}`. Functions use parentheses with keyword arguments:
 
-- Positional arguments are space-separated tokens after the shortcode name.
-- Keyword arguments use `key=value` or `key="quoted value"` syntax.
+```
+{% raw %}{{ function_name(arg="value") }}{% endraw %}
+```
 
-To show a shortcode literally without processing it, wrap it in triple braces. For example, `{{< meta title >}}` in your source renders as the literal text `{{< meta title >}}` without being evaluated.
+To show Tera syntax literally without processing it, wrap it in raw blocks:
+
+````
+{% raw %}{% raw %}{{ this is not evaluated }}{% endraw %}{% endraw %}
+````
 
 
-# Built-in shortcodes
-
-## pagebreak
-
-Insert a native page break. Produces format-appropriate output: `<div style="page-break-after: always;">` in HTML, `\newpage{}` in LaTeX, `#pagebreak()` in Typst.
-
-Page one content.
-
-`{{< pagebreak >}}`
-
-Page two content.
+# Context variables
 
 ## meta
 
-Print a value from the document's YAML front matter, such as: `{{< meta title >}}`.
+Access YAML front matter fields directly:
 
-The title of this document is: {{< meta title >}}.
+{% raw %}
+- `{{ meta.title }}` --- document title
+- `{{ meta.author }}` --- author (comma-joined if multiple)
+- `{{ meta.date }}` --- date
+- `{{ meta.subtitle }}` --- subtitle
+- `{{ meta.abstract }}` --- abstract text
+- `{{ meta.keywords }}` --- keywords (comma-joined)
+{% endraw %}
 
-This works with standard fields (`title`, `subtitle`, `author`, `date`, `abstract`) and custom metadata.
+Any custom field in the YAML front matter is also available.
 
-## env
-
-Print a system environment variable, such as: `{{< env SHELL >}}`. If the variable is not set, the shortcode produces an empty string.
-
-The `SHELL` environment variable on the local machine is: {{< env SHELL >}}.
-
+The title of this document is: {{ meta.title }}.
 
 ## var
 
@@ -56,28 +53,43 @@ urls:
   docs: https://github.com/vincentarelbundock/calepin
 ```
 
-The syntax `{{< var version >}}` inserts the value.
+{% raw %}The syntax `{{ var.version }}` inserts the value.{% endraw %}
 
-* *Calepin* version: {{< var version >}}
-* Documentation URL: {{< var urls.docs >}}
+* *Calepin* version: {{ var.version }}
+* Documentation URL: {{ var.urls.docs }}
 
-## include
+## format
 
-Include the content of another file. YAML front matter in the included file is stripped automatically:
+The current output format is available as `{% raw %}{{ format }}{% endraw %}` --- one of `html`, `latex`, `typst`, or `markdown`.
 
-```
-{{{< include basics.qmd >}}}
-```
 
-The included content is expanded before block parsing, so code chunks, fenced divs, and other block structures in the included file are processed normally.
+# Built-in functions
+
+## pagebreak
+
+Insert a native page break. Produces format-appropriate output: `<div style="page-break-after: always;">` in HTML, `\newpage{}` in LaTeX, `#pagebreak()` in Typst.
+
+Page one content.
+
+{% raw %}`{{ pagebreak() }}`{% endraw %}
+
+Page two content.
+
+## env
+
+Print a system environment variable. If the variable is not set, produces an empty string.
+
+{% raw %}`{{ env(name="SHELL") }}`{% endraw %}
+
+The `SHELL` environment variable on the local machine is: {{ env(name="SHELL") }}.
 
 ## video
 
 Embed a video or streaming service. Supports YouTube, Vimeo, and direct video URLs:
 
 ```
-{{{< video https://www.youtube.com/watch?v=dQw4w9WgXcQ >}}}
-{{{< video https://vimeo.com/123456 width="640" height="480" title="My Video" >}}}
+{% raw %}{{ video(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ") }}
+{{ video(url="https://vimeo.com/123456", width="640", height="480", title="My Video") }}{% endraw %}
 ```
 
 YouTube and Vimeo URLs are automatically converted to embed URLs.
@@ -86,13 +98,48 @@ YouTube and Vimeo URLs are automatically converted to embed URLs.
 
 Access branding information from `_brand.yml`:
 
-- `{{< brand color primary >}}` --- returns a color value
-- `{{< brand logo mark >}}` --- returns format-appropriate logo markup
+{% raw %}
+- `{{ brand(type="color", name="primary") }}` --- returns a color value
+- `{{ brand(type="logo", name="mark") }}` --- returns format-appropriate logo markup
+{% endraw %}
+
+## kbd
+
+Render keyboard shortcuts:
+
+{% raw %}`{{ kbd(keys=["Ctrl", "C"]) }}`{% endraw %}
+
+Produces `<kbd>Ctrl</kbd>+<kbd>C</kbd>` in HTML, `\texttt{Ctrl}+\texttt{C}` in LaTeX.
+
+## include
+
+Include the content of another file. Uses Tera's include tag syntax: `{%` `include "file.qmd"` `%}`.
+
+This is a pre-parse directive (not a Tera function) because included content must be parsed as blocks. YAML front matter in the included file is stripped automatically. Code chunks, fenced divs, and other block structures in the included file are processed normally.
+
+
+# Tera features in documents
+
+Because the body is a Tera template, you can use conditionals and loops:
+
+````
+{% raw %}{% if format == "html" %}
+This paragraph only appears in HTML output.
+{% endif %}{% endraw %}
+````
+
+````
+{% raw %}{% for item in var.features %}
+- {{ item }}
+{% endfor %}{% endraw %}
+````
+
+See the [Tera documentation](https://keats.github.io/tera/docs/) for the full template syntax.
 
 
 # Plugin shortcodes
 
-Custom shortcodes are implemented as plugins with a `shortcode` capability. Create a plugin directory with a `plugin.yml` manifest and an executable script.
+Custom functions are implemented as plugins with a `shortcode` capability. They are registered as Tera functions automatically.
 
 ## Example: greeting plugin
 
@@ -129,6 +176,8 @@ else:
     print(f'Hello, {name}!')
 ```
 
+{% raw %}Use it as `{{ greeting(name="Alice") }}`.{% endraw %}
+
 ## Input protocol
 
 The executable receives JSON on stdin:
@@ -136,8 +185,8 @@ The executable receives JSON on stdin:
 ```json
 {
   "name": "greeting",
-  "args": ["Alice"],
-  "kwargs": {},
+  "args": [],
+  "kwargs": {"name": "Alice"},
   "format": "html",
   "meta": {
     "title": "My Document",
@@ -149,19 +198,20 @@ The executable receives JSON on stdin:
 
 ## Output protocol
 
-Print the replacement text to stdout. The output is inserted directly into the document at the shortcode location.
+Print the replacement text to stdout. The output is inserted directly into the document at the function call location.
 
-- Exit 0: stdout replaces the shortcode.
-- Exit non-zero: a warning is printed, and the shortcode is left as-is.
+- Exit 0: stdout replaces the function call.
+- Exit non-zero: a warning is printed, and the function call produces an empty string.
 
 See [Plugins](plugins.qmd) for the full plugin system documentation, including how to scaffold a plugin with `calepin plugin init`.
 
 
 # Resolution order
 
-For each shortcode, *Calepin* checks:
+For each function call, *Calepin* checks:
 
-1. Built-in shortcodes (`pagebreak`, `meta`, `env`, `var`, `include`, `video`, `brand`)
-2. Plugin registry (in front matter order)
+1. Built-in functions (`pagebreak`, `env`, `video`, `brand`, `kbd`)
+2. Context variables (`meta`, `var`, `format`)
+3. Plugin registry (in front matter order)
 
-Built-in shortcodes take precedence. You cannot override them with plugins.
+Built-in functions take precedence. You cannot override them with plugins.

@@ -11,10 +11,6 @@ static RE_TOC_HEADING: LazyLock<Regex> = LazyLock::new(|| {
 static RE_TOC_TAG: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"<[^>]+>").unwrap()
 });
-static RE_TEMPLATE_VAR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\{\{([a-zA-Z_][-_a-zA-Z0-9]*)\}\}").unwrap()
-});
-
 /// Build an HTML table of contents from rendered headings in the body.
 pub fn build_html_toc(body: &str, depth: u8, title: &str) -> String {
     let re = &RE_TOC_HEADING;
@@ -130,24 +126,34 @@ pub fn latex_template() -> String { load_page_template("calepin.latex") }
 pub fn typst_template() -> String { load_page_template("calepin.typst") }
 pub fn default_css() -> String { load_page_template("calepin.css") }
 
-/// Apply {{variable}} substitution to a template string.
+/// Regex for finding variable references in templates, used to pre-fill
+/// undefined variables with empty strings (Tera errors on undefined vars).
+static RE_TEMPLATE_VAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\{\{-?\s*([a-zA-Z_][_a-zA-Z0-9]*)\s*-?\}\}").unwrap()
+});
+
+/// Apply Tera template rendering to a template string with variable substitution.
 /// This is the single templating engine used by both page templates
-/// and element templates.
-///
-/// Two-pass: first replace all non-body vars (body may contain {{var}} patterns),
-/// then replace {{body}}.
+/// and element templates. Supports Tera conditionals, loops, and filters.
 pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String {
-    let result = RE_TEMPLATE_VAR.replace_all(template, |caps: &regex::Captures| {
-        let name = &caps[1];
-        if name == "body" {
-            return caps[0].to_string(); // defer body to second pass
+    let mut context = tera::Context::new();
+    // Pre-fill any variables referenced in the template but missing from vars
+    // with empty strings, since Tera errors on undefined variables.
+    for cap in RE_TEMPLATE_VAR.captures_iter(template) {
+        let name = &cap[1];
+        if !vars.contains_key(name) {
+            context.insert(name, "");
         }
-        vars.get(name).cloned().unwrap_or_default()
-    });
-    // Second pass: replace {{body}}
-    match vars.get("body") {
-        Some(body) => result.replace("{{body}}", body),
-        None => result.replace("{{body}}", ""),
+    }
+    for (key, value) in vars {
+        context.insert(key.as_str(), value);
+    }
+    match tera::Tera::one_off(template, &context, false) {
+        Ok(rendered) => rendered,
+        Err(e) => {
+            cwarn!("template error: {}", e);
+            template.to_string()
+        }
     }
 }
 
@@ -178,7 +184,7 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
     // Plain title (used in <title> etc.) — strip markdown image/link syntax
     let plain_title = meta.title.as_deref().unwrap_or("Untitled");
     let plain_title = strip_markdown_formatting(plain_title);
-    vars.insert("plain-title".to_string(), plain_title);
+    vars.insert("plain_title".to_string(), plain_title);
     vars.insert("title".to_string(),
         meta.title.as_deref()
             .map(|t| crate::render::markdown::render_inline(t, ext))
@@ -200,10 +206,11 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         let rendered_title = crate::render::markdown::render_inline(title, ext);
         let mut bvars = HashMap::new();
         bvars.insert("title".to_string(), rendered_title.clone());
-        vars.insert("title-block".to_string(), render_block("title-block", ext, &bvars, &rendered_title));
+        bvars.insert("title_cmd".to_string(), format!("\\title{{{}}}", rendered_title));
+        vars.insert("title_block".to_string(), render_block("title_block", ext, &bvars, &rendered_title));
     } else {
         // LaTeX requires \title{} even if empty (for \maketitle)
-        vars.insert("title-block".to_string(), match ext {
+        vars.insert("title_block".to_string(), match ext {
             "latex" => "\\title{}".to_string(),
             _ => String::new(),
         });
@@ -214,26 +221,27 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         let rendered_subtitle = crate::render::markdown::render_inline(subtitle, ext);
         let mut bvars = HashMap::new();
         bvars.insert("subtitle".to_string(), rendered_subtitle.clone());
-        vars.insert("subtitle-block".to_string(), render_block("subtitle-block", ext, &bvars, &rendered_subtitle));
+        vars.insert("subtitle_block".to_string(), render_block("subtitle_block", ext, &bvars, &rendered_subtitle));
     } else {
-        vars.insert("subtitle-block".to_string(), String::new());
+        vars.insert("subtitle_block".to_string(), String::new());
     }
 
     // Author block
-    vars.insert("author-block".to_string(), build_author_block(meta, ext));
+    vars.insert("author_block".to_string(), build_author_block(meta, ext));
 
     // Date block
     if let Some(ref date) = meta.date {
         let mut bvars = HashMap::new();
         bvars.insert("date".to_string(), date.clone());
+        bvars.insert("date_cmd".to_string(), format!("\\date{{{}}}", date));
         let fallback = match ext {
             "latex" => format!("\\date{{{}}}", date),
             _ => date.clone(),
         };
-        vars.insert("date-block".to_string(), render_block("date-block", ext, &bvars, &fallback));
+        vars.insert("date_block".to_string(), render_block("date_block", ext, &bvars, &fallback));
     } else {
         // LaTeX needs an empty \date{} to suppress "today"
-        vars.insert("date-block".to_string(), match ext {
+        vars.insert("date_block".to_string(), match ext {
             "latex" => "\\date{}".to_string(),
             _ => String::new(),
         });
@@ -244,9 +252,9 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         let rendered_abs = crate::render::markdown::render_inline(abs, ext);
         let mut bvars = HashMap::new();
         bvars.insert("abstract".to_string(), rendered_abs.clone());
-        vars.insert("abstract-block".to_string(), render_block("abstract-block", ext, &bvars, &rendered_abs));
+        vars.insert("abstract_block".to_string(), render_block("abstract_block", ext, &bvars, &rendered_abs));
     } else {
-        vars.insert("abstract-block".to_string(), String::new());
+        vars.insert("abstract_block".to_string(), String::new());
     }
 
     // Keywords block
@@ -254,7 +262,7 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         let joined = meta.keywords.join(", ");
         let mut bvars = HashMap::new();
         bvars.insert("keywords".to_string(), joined.clone());
-        vars.insert("keywords-block".to_string(), render_block("keywords-block", ext, &bvars, &joined));
+        vars.insert("keywords_block".to_string(), render_block("keywords_block", ext, &bvars, &joined));
 
         // HTML meta tag for keywords
         if ext == "html" {
@@ -268,11 +276,11 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
             );
         }
     } else {
-        vars.insert("keywords-block".to_string(), String::new());
+        vars.insert("keywords_block".to_string(), String::new());
     }
 
     // Appendix
-    vars.insert("appendix-block".to_string(), build_appendix(meta, ext));
+    vars.insert("appendix_block".to_string(), build_appendix(meta, ext));
 
     // CSS (HTML only)
     if ext == "html" {
@@ -282,28 +290,28 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         }
         vars.insert("css".to_string(), css_parts.join("\n"));
         vars.insert("js".to_string(), String::new());
-        vars.insert("body-class".to_string(), "body".to_string());
+        vars.insert("body_class".to_string(), "body".to_string());
     }
 
     // LaTeX-specific defaults
     if ext == "latex" {
         vars.insert("documentclass".to_string(), "article".to_string());
         vars.insert("classoption".to_string(), "11pt".to_string());
-        vars.insert("bib-preamble".to_string(), String::new());
-        vars.insert("bib-end".to_string(), String::new());
+        vars.insert("bib_preamble".to_string(), String::new());
+        vars.insert("bib_end".to_string(), String::new());
     }
 
     // Common include variables
     vars.insert(
-        "header-includes".to_string(),
+        "header_includes".to_string(),
         meta.header_includes.clone().unwrap_or_default(),
     );
     vars.insert(
-        "include-before".to_string(),
+        "include_before".to_string(),
         meta.include_before.clone().unwrap_or_default(),
     );
     vars.insert(
-        "include-after".to_string(),
+        "include_after".to_string(),
         meta.include_after.clone().unwrap_or_default(),
     );
 
@@ -341,6 +349,14 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         vars.insert(key.clone(), s);
     }
 
+    // Precompute LaTeX command line (after YAML overrides may have changed classoption/documentclass)
+    if ext == "latex" {
+        let classoption = vars.get("classoption").cloned().unwrap_or_default();
+        let documentclass = vars.get("documentclass").cloned().unwrap_or_default();
+        vars.insert("documentclass_line".to_string(),
+            format!("\\documentclass[{}]{{{}}}", classoption, documentclass));
+    }
+
     vars
 }
 
@@ -366,7 +382,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
             let content = format_link(text, lic.url.as_deref(), ext);
-            if let Some(tpl) = resolve_element_template("appendix-license", ext) {
+            if let Some(tpl) = resolve_element_template("appendix_license", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("content".to_string(), content);
                 sections.push(apply_template(&tpl, &vars));
@@ -377,7 +393,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     // Citation
     if let Some(ref cite) = meta.citation {
         let content = build_citation_text(meta, cite, ext);
-        if let Some(tpl) = resolve_element_template("appendix-citation", ext) {
+        if let Some(tpl) = resolve_element_template("appendix_citation", ext) {
             let mut vars = HashMap::new();
             vars.insert("content".to_string(), content);
             sections.push(apply_template(&tpl, &vars));
@@ -388,7 +404,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref cr) = meta.copyright {
         let text = build_copyright_text(cr);
         if !text.is_empty() {
-            if let Some(tpl) = resolve_element_template("appendix-copyright", ext) {
+            if let Some(tpl) = resolve_element_template("appendix_copyright", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("content".to_string(), text);
                 sections.push(apply_template(&tpl, &vars));
@@ -400,7 +416,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if !meta.funding.is_empty() {
         let items = build_funding_items(&meta.funding, ext);
         if !items.is_empty() {
-            if let Some(tpl) = resolve_element_template("appendix-funding", ext) {
+            if let Some(tpl) = resolve_element_template("appendix_funding", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("items".to_string(), items);
                 sections.push(apply_template(&tpl, &vars));
@@ -545,7 +561,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
 
     if has_rich {
         // Render each author through the author-item template
-        let author_tpl = resolve_element_template("author-item", ext);
+        let author_tpl = resolve_element_template("author_item", ext);
         let authors_rendered: Vec<String> = meta.authors.iter().map(|author| {
             let superscripts = if !author.affiliation_ids.is_empty() && meta.affiliations.len() > 1 {
                 let sups: Vec<String> = author.affiliation_ids.iter()
@@ -595,7 +611,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
                 vars.insert("name".to_string(), author.name.literal.clone());
                 vars.insert("superscripts".to_string(), superscripts);
                 vars.insert("corresponding".to_string(), corresponding);
-                vars.insert("orcid-link".to_string(), orcid_link);
+                vars.insert("orcid_link".to_string(), orcid_link);
                 apply_template(tpl, &vars)
             } else {
                 format!("{}{}{}{}", author.name.literal, superscripts, corresponding, orcid_link)
@@ -603,7 +619,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
         }).collect();
 
         // Render each affiliation through the affiliation-item template
-        let aff_tpl = resolve_element_template("affiliation-item", ext);
+        let aff_tpl = resolve_element_template("affiliation_item", ext);
         let affs_rendered: Vec<String> = meta.affiliations.iter().filter_map(|aff| {
             let display = aff.display();
             if display.is_empty() {
@@ -688,11 +704,12 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
             _ => affs_rendered.join(", "),
         };
 
-        if let Some(tpl) = resolve_element_template("author-block", ext) {
+        if let Some(tpl) = resolve_element_template("author_block", ext) {
             let mut vars = HashMap::new();
+            vars.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
             vars.insert("authors".to_string(), authors_joined);
             vars.insert("affiliations".to_string(), affiliations_joined);
-            vars.insert("corresponding-note".to_string(), corresponding_note);
+            vars.insert("corresponding_note".to_string(), corresponding_note);
             apply_template(&tpl, &vars)
         } else {
             format!("{}\n{}\n{}", authors_joined, affiliations_joined, corresponding_note)

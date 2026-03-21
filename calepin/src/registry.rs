@@ -250,6 +250,24 @@ impl PluginRegistry {
         })
     }
 
+    /// Return all shortcode names and their plugin index, for Tera function registration.
+    pub fn shortcode_names(&self) -> Vec<(String, usize)> {
+        let mut result = Vec::new();
+        for (idx, plugin) in self.plugins.iter().enumerate() {
+            if let Some(ref sc) = plugin.manifest.provides.shortcode {
+                for name in &sc.names {
+                    result.push((name.clone(), idx));
+                }
+            }
+        }
+        result
+    }
+
+    /// Get a plugin by its index in the plugins vector.
+    pub fn plugin_by_index(&self, idx: usize) -> Option<&LoadedPlugin> {
+        self.plugins.get(idx)
+    }
+
     /// Call a subprocess shortcode.
     pub fn call_subprocess_shortcode(
         &self,
@@ -356,7 +374,8 @@ impl PluginRegistry {
     /// Resolve an element template by checking plugin element dirs (in order),
     /// then falling back to `_calepin/elements/` and `~/.config/calepin/elements/`.
     pub fn resolve_element_template(&self, name: &str, format: &str) -> Option<String> {
-        let filename = format!("{}.{}", name, format);
+        let canonical = name.replace('-', "_");
+        let filename = format!("{}.{}", canonical, format);
 
         // Check plugin-provided element dirs
         for plugin in &self.plugins {

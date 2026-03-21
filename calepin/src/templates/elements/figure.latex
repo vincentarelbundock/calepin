@@ -1,6 +1,6 @@
-\begin{{{fig-env}}}{{fig-pos}}
-{{align-style}}
+{{fig_begin}}{{fig_pos}}
+{{align_style}}
 {{image}}
-\caption{{short-caption}}{{{caption}}}
+{{caption_cmd}}
 \label{fig-{{label}}}
-\end{{{fig-env}}}
+{{fig_end}}

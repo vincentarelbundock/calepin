@@ -37,7 +37,6 @@ pub struct EngineContext<'a> {
 pub struct EvalResult {
     pub elements: Vec<Element>,
     pub sc_fragments: Vec<String>,
-    pub escaped_sc_fragments: Vec<String>,
 }
 
 /// Evaluate all blocks and produce a flat list of Elements.
@@ -54,22 +53,20 @@ pub fn evaluate(
 ) -> Result<EvalResult> {
     let mut elements: Vec<Element> = Vec::new();
     let mut sc_fragments: Vec<String> = Vec::new();
-    let mut escaped_sc_fragments: Vec<String> = Vec::new();
 
     for block in blocks {
         match block {
             Block::Text(text) => {
-                let sc_result = crate::filters::shortcodes::process_shortcodes(
+                let tera_result = crate::tera_engine::process_body(
                     &text.content, output_ext, metadata, registry,
                 );
                 // Only hash inline code expressions into the upstream digest,
                 // not the full text. This way prose edits don't invalidate chunk caches.
-                for (_start, _end, ic) in crate::parse::blocks::collect_inline_code(&sc_result.text) {
+                for (_start, _end, ic) in crate::parse::blocks::collect_inline_code(&tera_result.text) {
                     cache.advance_digest_inline(&format!("{}:{}", ic.engine, ic.expr));
                 }
-                let processed = inline::evaluate_inline(&sc_result.text, ctx)?;
-                sc_fragments.extend(sc_result.sc_fragments);
-                escaped_sc_fragments.extend(sc_result.escaped_fragments);
+                let processed = inline::evaluate_inline(&tera_result.text, ctx)?;
+                sc_fragments.extend(tera_result.sc_fragments);
                 elements.push(Element::Text { content: processed });
             }
             Block::Code(chunk) => {
@@ -110,7 +107,6 @@ pub fn evaluate(
                 }
                 let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
                 sc_fragments.extend(child_result.sc_fragments);
-                escaped_sc_fragments.extend(child_result.escaped_sc_fragments);
                 elements.push(Element::Div {
                     classes: div.classes.clone(),
                     id: div.id.clone(),
@@ -128,7 +124,7 @@ pub fn evaluate(
         }
     }
 
-    Ok(EvalResult { elements, sc_fragments, escaped_sc_fragments })
+    Ok(EvalResult { elements, sc_fragments })
 }
 
 // ---------------------------------------------------------------------------

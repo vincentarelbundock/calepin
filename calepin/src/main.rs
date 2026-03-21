@@ -13,6 +13,7 @@ mod registry;
 mod render;
 mod site;
 mod structures;
+mod tera_engine;
 mod types;
 mod util;
 use std::fs;
@@ -291,7 +292,7 @@ pub fn render_core(
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);
-    element_renderer.set_sc_fragments(eval_result.sc_fragments, eval_result.escaped_sc_fragments);
+    element_renderer.set_sc_fragments(eval_result.sc_fragments);
 
     // 12. Render elements to final format
     let rendered = renderer.render(&elements, &element_renderer)?;

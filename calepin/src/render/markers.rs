@@ -42,7 +42,6 @@ const TY_ESC_DOLLAR: char = 'D';
 const TY_EQ_LABEL: char = 'L';
 const TY_RAW: char = 'R';
 const TY_SC_RAW: char = 'S';
-const TY_ESC_SC: char = 'X';
 
 // ---------------------------------------------------------------------------
 // Compiled regex patterns (one per marker type that needs resolution)
@@ -110,13 +109,6 @@ pub fn wrap_shortcode_raw(fragments: &mut Vec<String>, content: String) -> Strin
     let idx = fragments.len();
     fragments.push(content);
     format!("{}{}{}{}", MS, TY_SC_RAW, idx, ME)
-}
-
-/// Create an escaped-shortcode marker: `\u{FFFF}X<idx>\u{FFFE}`
-pub fn wrap_escaped_shortcode(escaped: &mut Vec<String>, literal: String) -> String {
-    let idx = escaped.len();
-    escaped.push(literal);
-    format!("{}{}{}{}", MS, TY_ESC_SC, idx, ME)
 }
 
 // ---------------------------------------------------------------------------
@@ -325,18 +317,6 @@ pub fn resolve_shortcode_raw(text: &str, fragments: &[String]) -> String {
     re.replace_all(text, |caps: &regex::Captures| {
         let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
         fragments.get(idx).cloned().unwrap_or_default()
-    }).to_string()
-}
-
-/// Resolve escaped shortcode markers (`X` type) to their literal text.
-pub fn resolve_escaped_shortcodes(text: &str, escaped: &[String]) -> String {
-    if !text.contains(MS) {
-        return text.to_string();
-    }
-    let re = Regex::new(&format!("{}{}(\\d+){}", MS, TY_ESC_SC, ME)).unwrap();
-    re.replace_all(text, |caps: &regex::Captures| {
-        let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
-        escaped.get(idx).cloned().unwrap_or_default()
     }).to_string()
 }
 

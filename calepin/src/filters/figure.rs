@@ -66,28 +66,39 @@ fn build_figure_vars(
     let image_tag = render_image(&resolved_path, alt, attrs, format);
     vars.insert("image".to_string(), image_tag);
 
-    vars.insert("width-attr".to_string(), format_width(attrs, format));
-    vars.insert("height-attr".to_string(), format_height(attrs));
+    vars.insert("width_attr".to_string(), format_width(attrs, format));
+    vars.insert("height_attr".to_string(), format_height(attrs));
 
     let align = attrs.fig_align.as_deref().unwrap_or("center");
-    vars.insert("align-style".to_string(), format_align(align, format));
+    vars.insert("align_style".to_string(), format_align(align, format));
     vars.insert("align".to_string(), align.to_string());
 
     let fig_env = attrs.fig_env.as_deref().unwrap_or("figure");
-    vars.insert("fig-env".to_string(), fig_env.to_string());
-    vars.insert("fig-pos".to_string(), match attrs.fig_pos.as_deref() {
+    vars.insert("fig_env".to_string(), fig_env.to_string());
+    vars.insert("fig_begin".to_string(), format!("\\begin{{{}}}", fig_env));
+    vars.insert("fig_end".to_string(), format!("\\end{{{}}}", fig_env));
+    vars.insert("fig_pos".to_string(), match attrs.fig_pos.as_deref() {
         Some(pos) => format!("[{}]", pos),
         None => String::new(),
     });
-    vars.insert("short-caption".to_string(), match attrs.fig_scap.as_deref() {
+    let short_caption = match attrs.fig_scap.as_deref() {
         Some(sc) => format!("[{}]", sc),
         None => String::new(),
-    });
+    };
+    vars.insert("short_caption".to_string(), short_caption.clone());
+    let caption_text = caption.unwrap_or("");
+    vars.insert("caption_cmd".to_string(),
+        if caption_text.is_empty() {
+            String::new()
+        } else {
+            format!("\\caption{}{{{}}}", short_caption, caption_text)
+        }
+    );
 
     let cap_loc = attrs.cap_location.as_deref()
         .or(default_cap_location)
         .unwrap_or("bottom");
-    vars.insert("cap-location".to_string(), cap_loc.to_string());
+    vars.insert("cap_location".to_string(), cap_loc.to_string());
 
     if let Some(ref link) = attrs.link {
         let img = vars.get("image").cloned().unwrap_or_default();

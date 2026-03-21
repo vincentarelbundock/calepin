@@ -54,13 +54,13 @@ The pipeline transforms data through three representations:
 ### Pipeline stages
 
 1. **Parse** — YAML front matter (`parse/yaml.rs`), then recursive block parsing into `Block` enum (`parse/blocks.rs`). Chunk options use pipe-only syntax (`#| key: value`). Dashes in option names are normalized to dots internally (`fig-width` → `fig.width`).
-2. **Evaluate** (`engines/mod.rs`) — Shortcodes processed first, then inline code, then blocks become `Element`s. `engines::evaluate()` orchestrates; `engines::block::evaluate_block()` handles code chunks; `engines::inline::evaluate_inline()` handles inline expressions. Conditional content (`.content-visible`/`.content-hidden` with `when-format`/`unless-format`/`when-meta`/`unless-meta`) filtered here. `.hidden` divs execute but emit nothing.
+2. **Evaluate** (`engines/mod.rs`) — Tera body processing replaces shortcodes (via `tera_engine::process_body()`), then inline code, then blocks become `Element`s. `engines::evaluate()` orchestrates; `engines::block::evaluate_block()` handles code chunks; `engines::inline::evaluate_inline()` handles inline expressions. Conditional content (`.content-visible`/`.content-hidden` with `when-format`/`unless-format`/`when-meta`/`unless-meta`) filtered here. `.hidden` divs execute but emit nothing.
 3. **Load plugin registry** (`registry.rs`) — Plugins from front matter `calepin: { plugins: [name] }`. Each plugin is a directory with a `plugin.yml` manifest. Resolved from `_calepin/plugins/{name}/` → `~/.config/calepin/plugins/{name}/`. Built-in plugins (tabset, layout, figure-div, theorem, callout) are appended automatically.
 4. **Bibliography** (`filters/bibliography.rs`) — Citation keys resolved via hayagriva.
 5. **Cross-ref markers** (`filters/crossref.rs`) — Inject anchors into elements.
 6. **Render** — `ElementRenderer` dispatches each element to the appropriate filter, then applies a template. `OutputRenderer` wraps the result in a page template.
 7. **Cross-ref resolution** — Post-processing pass resolves `@fig-x` references to links/numbers.
-8. **Page template** (`render/template.rs`) — `{{variable}}` substitution. **No conditionals** — all logic computed in Rust.
+8. **Page template** (`render/template.rs`) — Tera-based rendering with `{{variable}}` substitution, conditionals, loops, and filters.
 
 ## Format Names
 
@@ -87,6 +87,7 @@ The engines module owns all code evaluation — block-level, inline-level, the e
 - `plugin_manifest.rs` — Plugin manifest (`plugin.yml`) parsing: `PluginManifest`, `FilterMatch`, `FilterSpec`, etc.
 - `registry.rs` — Plugin registry: `PluginRegistry` loads user + built-in plugins, dispatches filters/shortcodes/postprocessors, resolves templates. `StructuralHandler` trait for built-in structural plugins.
 - `cli.rs` — CLI argument parsing (clap) + `cwarn!` macro + `plugin init`/`plugin list` subcommands
+- `tera_engine.rs` — Tera body processing: `process_body()` replaces shortcodes with Tera functions, code block protection, custom Tera function implementations (`PagebreakFn`, `EnvFn`, `VideoFn`, `BrandFn`, `KbdFn`), plugin shortcode bridge
 - `util.rs` — `slugify()`, `escape_html()`, `resolve_path()`, `run_json_process()`
 
 ### `calepin/src/filters/` — Transforms
@@ -95,7 +96,7 @@ Each filter enriches template variables or produces final output. Built-in div f
 
 - `callout.rs` — Callout enrichment: title, icon, collapse/appearance. Produces `<details>` for collapsible HTML callouts. Registered as built-in plugin.
 - `theorem.rs` — Theorem auto-numbering: per-type counters, injects `{{number}}`. Registered as built-in plugin.
-- `shortcodes.rs` — `{{< name args >}}` expansion (built-in shortcodes + plugin registry)
+- `shortcodes.rs` — Pre-parse `{% include %}` expansion, shortcode marker resolution, `VARIABLES` cache
 - `code.rs` — Code block template variable filling (syntax highlighting)
 - `figure.rs` — Figure template vars, figure div rendering, image helpers, path resolution
 
@@ -105,7 +106,7 @@ Each filter enriches template variables or produces final output. Built-in div f
 - `elements.rs` — `Element` enum + `ElementRenderer` dispatch
 - `div.rs` — Div rendering pipeline: unified plugin registry dispatch (structural → filter → subprocess → template)
 - `span.rs` — Span rendering pipeline: unified plugin registry dispatch → template → fallback
-- `template.rs` — `{{variable}}` substitution + page template loading
+- `template.rs` — Tera-based template rendering (`apply_template()` using `Tera::one_off()`) + page template loading + `build_template_vars()`
 - `markdown.rs` — comrak CommonMark+GFM with math/raw protection
 - `latex.rs` — Markdown-to-LaTeX conversion
 - `markers.rs` — Marker systems for protecting content through conversion
@@ -221,28 +222,48 @@ Standard Quarto fields (`title`, `author`, `bibliography`, `format`, etc.) remai
 
 ## Template and Filter Resolution
 
+Templates use Tera syntax (`{{variable}}`, `{% if %}`, `{% for %}`, filters, macros). Template variable names use underscores (e.g., `id_attr`, `plain_title`). CSS class names in source documents keep dashes; the template resolver normalizes dashes to underscores when looking up templates by class name.
+
 Resolution order: plugin-provided dirs (in plugin order) → `_calepin/{elements,templates}/` → `~/.config/calepin/` → built-in.
 
 - Element templates: plugin `elements/` dir → `_calepin/elements/{name}.{format}` → built-in
 - Page templates: plugin `templates/` dir → `_calepin/templates/calepin.{format}` → built-in
 - CSL: plugin `csl` field → `_calepin/templates/calepin.csl` → built-in
 - Filters: provided via plugin `filter` capability (subprocess executables with `plugin.yml`)
-- Shortcodes: provided via plugin `shortcode` capability
+- Shortcodes: provided via plugin `shortcode` capability (registered as Tera functions)
 - Custom formats: provided via plugin `format` capability, or `_calepin/formats/{name}.yaml`
 
 ## Chunk Options
 
 Only pipe syntax (`#| key: value`) is accepted. The header accepts only language and optional label: `{r}` or `{r, label}` (also `{python}` or `{python, label}`). Key=value in headers produces an informative error with the corrected pipe syntax. Option names use dashes (`fig-width`), normalized to dots internally. `label` is rejected in pipe comments — it must be in the header.
 
-## Shortcodes
+## Tera Body Processing
 
-Syntax: `{{< name arg1 key="value" >}}`. Escaped with triple braces: `{{{< name >}}}`. Processed during evaluate before inline code. Built-in: `pagebreak`, `meta`, `env`, `include` (file inclusion), `var` (reads `_variables.yml` with dot-notation), `video`, `brand`. Plugin shortcodes are provided via the plugin registry.
+The `.qmd` body text is processed as a Tera template during the evaluate stage (`tera_engine.rs`). Code blocks and inline code are protected from Tera evaluation.
+
+Built-in Tera functions (replace old `{{< shortcode >}}` syntax):
+
+- `{{ pagebreak() }}` — format-specific page break
+- `{{ env(name="VAR") }}` — environment variable
+- `{{ video(url="...", width="...", height="...", title="...") }}` — video embed
+- `{{ brand(type="color", name="primary") }}` — brand assets
+- `{{ kbd(keys=["Ctrl", "C"]) }}` — keyboard shortcuts
+
+Context variables:
+- `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. — document metadata
+- `{{ var.key.subkey }}` — values from `_variables.yml`
+- `{{ format }}` — current output format
+
+File inclusion uses Tera's include tag: `{% include "file.qmd" %}` (pre-parse directive, runs before block parsing via `filters/shortcodes.rs::expand_includes()`). Escaping uses `{% raw %}...{% endraw %}`.
+
+Plugin shortcodes are registered as Tera functions via the plugin registry.
 
 ## Dependencies
 
 - `comrak` — CommonMark + GFM markdown parsing/rendering
 - `hayagriva` — Citation/bibliography processing
 - `syntect` — Syntax highlighting
+- `tera` — Template engine for element/page templates and body processing (replaces custom regex substitution)
 - `clap` + `clap_complete` — CLI and shell completions
 - `saphyr` — YAML parsing (DOM-style `YamlOwned` enum, not serde-based)
 

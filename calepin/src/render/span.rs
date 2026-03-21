@@ -45,10 +45,10 @@ pub fn render(
         vars.insert("classes".to_string(), classes.join(" "));
         if let Some(ref id_val) = id {
             vars.insert("id".to_string(), id_val.clone());
-            vars.insert("id-attr".to_string(), format!(" id=\"{}\"", id_val));
+            vars.insert("id_attr".to_string(), format!(" id=\"{}\"", id_val));
         } else {
             vars.insert("id".to_string(), String::new());
-            vars.insert("id-attr".to_string(), String::new());
+            vars.insert("id_attr".to_string(), String::new());
         }
 
         // Plugin dispatch via registry

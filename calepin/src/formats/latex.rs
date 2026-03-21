@@ -31,7 +31,7 @@ impl OutputRenderer for LatexRenderer {
         let mut vars = build_latex_vars(meta, body);
         let preamble = renderer.get_template("preamble");
         if !preamble.is_empty() {
-            let header = vars.entry("header-includes".to_string()).or_default();
+            let header = vars.entry("header_includes".to_string()).or_default();
             if !header.is_empty() {
                 header.push('\n');
             }

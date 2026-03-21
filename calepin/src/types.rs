@@ -519,11 +519,11 @@ pub enum Element {
 impl Element {
     pub fn template_name(&self) -> &str {
         match self {
-            Element::CodeSource { .. } => "code-source",
-            Element::CodeOutput { .. } => "code-output",
-            Element::CodeWarning { .. } => "code-warning",
-            Element::CodeMessage { .. } => "code-message",
-            Element::CodeError { .. } => "code-error",
+            Element::CodeSource { .. } => "code_source",
+            Element::CodeOutput { .. } => "code_output",
+            Element::CodeWarning { .. } => "code_warning",
+            Element::CodeMessage { .. } => "code_message",
+            Element::CodeError { .. } => "code_error",
             Element::Figure { .. } => "figure",
             Element::Div { .. } => "div",
             Element::Text { .. } | Element::CodeAsis { .. } => "",

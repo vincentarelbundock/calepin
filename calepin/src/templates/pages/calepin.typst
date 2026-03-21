@@ -1,4 +1,4 @@
-#set document(title: "{{plain-title}}", author: "{{author}}")
+#set document(title: "{{plain_title}}", author: "{{author}}")
 #set page(margin: 2.5cm)
 #set text(size: 11pt)
 #set par(justify: true, leading: 0.65em)
@@ -9,17 +9,17 @@
 #align(center)[
   #text(size: 17pt, weight: "bold")[{{title}}]
   #v(0.3em)
-  {{subtitle-block}}
+  {{subtitle_block}}
   #v(0.5em)
-  {{author-block}}
+  {{author_block}}
   #v(0.3em)
   #text(size: 10pt, style: "italic")[{{date}}]
 ]
 
-{{abstract-block}}
-{{keywords-block}}
+{{abstract_block}}
+{{keywords_block}}
 {{toc}}
 
 {{body}}
 
-{{appendix-block}}
+{{appendix_block}}
