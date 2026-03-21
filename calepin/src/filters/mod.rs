@@ -23,6 +23,7 @@ pub mod highlighting;
 pub mod theorem;
 
 pub mod shortcodes;
+pub mod svg;
 
 use std::collections::HashMap;
 

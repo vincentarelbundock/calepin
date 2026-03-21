@@ -9,10 +9,6 @@ impl OutputRenderer for LatexRenderer {
     fn format(&self) -> &str { "latex" }
     fn extension(&self) -> &str { "tex" }
 
-    fn default_fig_ext(&self) -> &str {
-        "pdf"
-    }
-
     fn postprocess(&self, body: &str, renderer: &ElementRenderer) -> String {
         let color_defs = renderer.latex_color_definitions();
         if color_defs.is_empty() {

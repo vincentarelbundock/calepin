@@ -80,15 +80,14 @@ fn handle_render(args: RenderArgs) -> Result<()> {
     let input = args.input.as_ref()
         .context("No input file specified. Run with --help for usage.")?;
 
-    let (output_path, final_output) = render_file(
+    let (output_path, final_output, renderer) = render_file(
         input,
         args.output.as_deref(),
         args.format.as_deref(),
         &args.overrides,
     )?;
 
-    fs::write(&output_path, &final_output)
-        .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
+    renderer.write_output(&final_output, &output_path)?;
 
     if !args.quiet {
         eprintln!("→ {}", output_path.display());
@@ -320,13 +319,13 @@ pub fn render_core(
     Ok(RenderResult { rendered, metadata, element_renderer })
 }
 
-/// Full render pipeline. Returns (output_path, rendered_content).
+/// Full render pipeline. Returns (output_path, rendered_content, renderer).
 pub fn render_file(
     input: &Path,
     output: Option<&Path>,
     format: Option<&str>,
     overrides: &[String],
-) -> Result<(PathBuf, String)> {
+) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
     // Resolve format from CLI flag or output extension; None falls back to metadata in render_core
     let resolved_format = format
         .map(|s| s.to_string())
@@ -349,7 +348,7 @@ pub fn render_file(
         .apply_template(&result.rendered, &result.metadata, &result.element_renderer)
         .unwrap_or(result.rendered);
 
-    Ok((output_path, final_output))
+    Ok((output_path, final_output, renderer))
 }
 
 fn resolve_output_path(input: &Path, output: Option<&Path>, ext: &str) -> PathBuf {

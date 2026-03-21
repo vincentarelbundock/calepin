@@ -92,7 +92,7 @@ fn render_one_page(
     };
 
     // Build TOC from rendered headings if toc is enabled
-    let toc = if result.metadata.toc {
+    let toc = if result.metadata.toc.unwrap_or(true) {
         let depth = if result.metadata.toc_depth == 0 { 3 } else { result.metadata.toc_depth };
         let title = result.metadata.toc_title.as_deref().unwrap_or("Contents");
         let toc_html = crate::render::template::build_html_toc(&body, depth, title);

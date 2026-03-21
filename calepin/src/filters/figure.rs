@@ -235,10 +235,10 @@ pub fn typst_length(s: &str) -> String {
 
 pub fn resolve_path(path: &Path, format: &str) -> PathBuf {
     let preferred: &[&str] = match format {
-        "latex" => &["pdf", "eps", "png", "jpg"],
+        "latex" => &["pdf", "eps", "svg", "png", "jpg"],
         "typst" => &["svg", "png", "jpg"],
         "html" => &["svg", "png", "jpg", "webp", "gif"],
-        _ => &["png", "jpg"],
+        _ => &["svg", "png", "jpg"],
     };
 
     if let Some(stem) = path.file_stem() {
@@ -246,11 +246,31 @@ pub fn resolve_path(path: &Path, format: &str) -> PathBuf {
             for ext in preferred {
                 let candidate = parent.join(format!("{}.{}", stem.to_string_lossy(), ext));
                 if candidate.exists() {
+                    // For LaTeX, convert SVG to PDF on the fly
+                    if format == "latex" && *ext == "svg" {
+                        match super::svg::convert_svg_to_pdf(&candidate) {
+                            Ok(pdf_path) => return pdf_path,
+                            Err(e) => {
+                                cwarn!("SVG→PDF conversion failed for {}: {}", candidate.display(), e);
+                                return candidate;
+                            }
+                        }
+                    }
                     if candidate != path {
                         cwarn!("image: {} → {}", path.display(), candidate.display());
                     }
                     return candidate;
                 }
+            }
+        }
+    }
+
+    // If the path itself is an SVG and we're targeting LaTeX, convert it
+    if format == "latex" && path.extension().is_some_and(|e| e == "svg") && path.exists() {
+        match super::svg::convert_svg_to_pdf(path) {
+            Ok(pdf_path) => return pdf_path,
+            Err(e) => {
+                cwarn!("SVG→PDF conversion failed for {}: {}", path.display(), e);
             }
         }
     }

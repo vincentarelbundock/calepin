@@ -32,6 +32,7 @@ MathJax = {
 <nav class="theme-toggle">
   <button id="theme-btn" aria-label="Toggle dark mode"></button>
 </nav>
+<div class="page-layout">
 <main class="container">
 {{include_before}}
 
@@ -45,8 +46,6 @@ MathJax = {
 {{abstract_block}}
 {{keywords_block}}
 
-{{toc}}
-
 <article>
 {{body}}
 </article>
@@ -55,6 +54,8 @@ MathJax = {
 
 {{include_after}}
 </main>
+{% if toc %}<aside class="toc-sidebar">{{toc}}</aside>{% endif %}
+</div>
 
 {{js}}
 <script>
@@ -94,6 +95,31 @@ document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
     localStorage.setItem('theme', t);
     update(t);
   });
+})();
+
+// TOC active section tracking
+(function() {
+  var links = document.querySelectorAll('.toc a');
+  if (!links.length) return;
+  var headings = [];
+  links.forEach(function(a) {
+    var id = a.getAttribute('href');
+    if (id) { var el = document.querySelector(id); if (el) headings.push({ el: el, link: a }); }
+  });
+  if (!headings.length) return;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(a) { a.classList.remove('active'); });
+        var match = headings.find(function(h) { return h.el === entry.target; });
+        if (match) {
+          match.link.classList.add('active');
+          match.link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    });
+  }, { rootMargin: '0px 0px -80% 0px' });
+  headings.forEach(function(h) { observer.observe(h.el); });
 })();
 
 // Footnote hover previews

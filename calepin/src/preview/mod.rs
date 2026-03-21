@@ -237,9 +237,8 @@ fn pdf_viewer_html(pdf_filename: &str, version: u64) -> String {
 /// Render to LaTeX/Typst, write the file, compile to PDF. Returns the PDF path.
 /// Always compiles quietly — the spinner shows status instead.
 fn render_and_compile(input: &Path, format: &str, overrides: &[String], _quiet: bool) -> Result<std::path::PathBuf> {
-    let (output_path, content) = crate::render_file(input, None, Some(format), overrides)?;
-    fs::write(&output_path, &content)
-        .with_context(|| format!("Failed to write {}", output_path.display()))?;
+    let (output_path, content, renderer) = crate::render_file(input, None, Some(format), overrides)?;
+    renderer.write_output(&content, &output_path)?;
     crate::compile::compile_to_pdf(&output_path, true)?;
     Ok(output_path.with_extension("pdf"))
 }
@@ -267,7 +266,7 @@ fn local_time_str() -> String {
 }
 
 fn render_html(input: &Path, overrides: &[String]) -> Result<String> {
-    let (_path, html) = crate::render_file(input, None, Some("html"), overrides)?;
+    let (_path, html, _renderer) = crate::render_file(input, None, Some("html"), overrides)?;
     Ok(html)
 }
 

@@ -55,7 +55,13 @@
    ================================================================= */
 
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; scrollbar-color: color-mix(in srgb, var(--c-text-muted) 30%, transparent) transparent; }
+
+/* Thin, subtle scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--c-text-muted) 25%, transparent); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--c-text-muted) 45%, transparent); }
 
 body {
   margin: 0; padding: 0;
@@ -65,7 +71,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-body > main { max-width: 52rem; margin: 0 auto; padding: 2rem 1.5rem; }
+body > main { max-width: 48rem; margin: 0 auto; padding: 2rem 1.5rem; }
 
 a { color: var(--c-link); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -233,22 +239,29 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; 
 .equation { position: relative; text-align: center; margin: 1em 0; }
 .eq-number { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 
-/* --- Table of contents --- */
-.toc {
-  position: fixed; top: 2rem;
-  right: max(1rem, calc((100vw - 52rem) / 2 - 14rem));
-  width: 13rem; max-height: calc(100vh - 4rem);
-  overflow-y: auto; font-size: 0.8rem; line-height: 1.4;
+/* --- Page layout with TOC sidebar --- */
+.page-layout { display: flex; justify-content: center; }
+.page-layout > .container { max-width: 48rem; min-width: 0; padding: 2rem 1.5rem; }
+.toc-sidebar {
+  position: sticky; top: 2rem; align-self: flex-start;
+  width: 13rem; flex-shrink: 0;
+  max-height: calc(100vh - 4rem); overflow-y: auto;
+  padding: 2rem 1rem 2rem 0;
+  border-left: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
 }
-.toc-title { font-size: 0.9rem; margin-bottom: 0.5rem; }
+@media (max-width: 72rem) {
+  .toc-sidebar { display: none; }
+}
+
+/* --- Table of contents --- */
+.toc { font-size: 0.8rem; line-height: 1.4; }
+.toc-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--c-text-muted); margin-bottom: 0.75rem; }
 .toc ul { list-style: none; padding-left: 0; margin: 0; }
 .toc ul ul { padding-left: 0.8rem; }
 .toc li { margin: 0.15rem 0; }
-.toc a { color: var(--c-text-muted); text-decoration: none; }
+.toc a { display: block; padding: 0.2rem 0.5rem; color: var(--c-text-muted); text-decoration: none; border-left: 2px solid transparent; }
 .toc a:hover { color: var(--c-text); }
-@media (max-width: 90rem) {
-  .toc { position: static; width: auto; max-height: none; margin-bottom: 1.5rem; border-left: 3px solid var(--c-border); padding-left: 1rem; }
-}
+.toc a.active { color: var(--c-accent); border-left-color: var(--c-accent); }
 
 /* --- Asides (margin notes) --- */
 .aside {

@@ -87,7 +87,7 @@ fn render_job_inner(
     write_files: bool,
     quiet: bool,
 ) -> Result<BatchResult> {
-    let (output_path, final_output) = crate::render_file(
+    let (output_path, final_output, renderer) = crate::render_file(
         input,
         job.output.as_ref().map(Path::new),
         job.format.as_deref(),
@@ -103,8 +103,7 @@ fn render_job_inner(
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent).ok();
         }
-        fs::write(&output_path, &final_output)
-            .with_context(|| format!("Failed to write: {}", output_path.display()))?;
+        renderer.write_output(&final_output, &output_path)?;
         if !quiet {
             eprintln!("→ {}", output_path.display());
         }

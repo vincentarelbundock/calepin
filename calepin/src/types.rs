@@ -333,7 +333,7 @@ pub struct Metadata {
     pub include_after: Option<String>,
     pub format: Option<String>,
     pub number_sections: bool,
-    pub toc: bool,
+    pub toc: Option<bool>,
     pub toc_depth: u8,
     pub toc_title: Option<String>,
     pub date_format: Option<String>,
@@ -363,7 +363,7 @@ impl Metadata {
                 "include-after" => self.include_after = Some(value.to_string()),
                 "format" => self.format = Some(value.to_string()),
                 "number-sections" => self.number_sections = coerce_yaml_value(value).as_bool() == Some(true),
-                "toc" => self.toc = coerce_yaml_value(value).as_bool() == Some(true),
+                "toc" => self.toc = Some(coerce_yaml_value(value).as_bool() == Some(true)),
                 "bibliography" => self.bibliography = vec![value.to_string()],
                 "csl" => self.csl = Some(value.to_string()),
                 _ => {

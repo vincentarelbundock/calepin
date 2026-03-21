@@ -6,7 +6,7 @@ title: Differences with Quarto
 Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
 :::
 
-*Calepin* aims for compatibility with Quarto's `.qmd` syntax, but there are deliberate differences and simplifications. This page documents them.
+*Calepin* aims for compatibility with Quarto's `.qmd` syntax, but there are deliberate differences and simplifications. Most notably, *Calepin* does not use Pandoc. Quarto delegates most of its parsing and format conversion to Pandoc, whereas *Calepin* handles everything internally — markdown parsing (via comrak), code execution, citation processing, cross-references, and template rendering are all built into a single Rust binary. The only exception is `.docx` output, which relies on Pandoc for the final conversion. This page documents the differences.
 
 
 # Chunk headers
@@ -79,6 +79,37 @@ _calepin/
   plugins/        # WASM plugins
   shortcodes/     # executable shortcodes
 ```
+
+
+# Raw inline content
+
+Inline LaTeX or HTML must be declared as raw content using Quarto's raw attribute syntax, otherwise it will render incorrectly in other output formats. For example, raw LaTeX passed through an HTML render will appear as literal text, and raw HTML in a LaTeX render will break compilation.
+
+Use backtick spans with an explicit format attribute:
+
+```
+This has `\textbf{bold}` text.        <!-- BAD: appears literally in HTML -->
+This has `\textbf{bold}`{=latex} text. <!-- GOOD: only emitted for LaTeX -->
+
+This has `<mark>highlighted</mark>` text.        <!-- BAD: breaks LaTeX -->
+This has `<mark>highlighted</mark>`{=html} text.  <!-- GOOD: only emitted for HTML -->
+```
+
+For larger blocks of format-specific content, use a raw fenced div:
+
+````
+```{=latex}
+\begin{center}
+Custom LaTeX here
+\end{center}
+```
+
+```{=html}
+<div class="special">Custom HTML here</div>
+```
+````
+
+This syntax is identical to Quarto and ensures that format-specific markup is only included in the matching output format.
 
 
 # Missing features

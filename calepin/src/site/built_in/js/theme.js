@@ -47,5 +47,36 @@
         sidebar.classList.toggle('open');
       });
     }
+
+    // Navbar auto-hide: disappears on scroll down, reappears on mouse move
+    var navbar = document.querySelector('.navbar');
+    if (navbar) {
+      var lastScroll = 0;
+      var hideTimer = null;
+      var navbarHeight = navbar.offsetHeight;
+
+      window.addEventListener('scroll', function() {
+        var current = window.scrollY;
+        if (current > navbarHeight && current > lastScroll) {
+          navbar.classList.add('hidden');
+        }
+        lastScroll = current;
+        if (current <= navbarHeight) {
+          navbar.classList.remove('hidden');
+        }
+      }, { passive: true });
+
+      document.addEventListener('mousemove', function(e) {
+        if (e.clientY < navbarHeight * 2) {
+          navbar.classList.remove('hidden');
+          clearTimeout(hideTimer);
+          hideTimer = setTimeout(function() {
+            if (window.scrollY > navbarHeight) {
+              navbar.classList.add('hidden');
+            }
+          }, 1500);
+        }
+      });
+    }
   });
 })();

@@ -56,3 +56,7 @@ open = "5"
 ctrlc = "3"
 indicatif = "0.18"
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
+
+# SVG to PDF conversion (for LaTeX output with SVG figures)
+svg2pdf = "0.13"
+usvg = "0.45"

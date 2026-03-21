@@ -315,8 +315,12 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         meta.include_after.clone().unwrap_or_default(),
     );
 
-    // Table of contents
-    if meta.toc {
+    // Table of contents (defaults to true for HTML)
+    let toc_enabled = match meta.toc {
+        Some(v) => v,
+        None => ext == "html",
+    };
+    if toc_enabled {
         let toc_depth = if meta.toc_depth == 0 { 3 } else { meta.toc_depth };
         let toc_title = meta.toc_title.as_deref().unwrap_or("Contents");
         let toc = match ext {

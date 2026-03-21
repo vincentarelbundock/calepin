@@ -9,6 +9,7 @@ pub mod html;
 pub mod latex;
 pub mod markdown;
 pub mod typst;
+pub mod word;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -36,7 +37,7 @@ pub trait OutputRenderer {
 
     /// Default figure file extension.
     fn default_fig_ext(&self) -> &str {
-        "png"
+        "svg"
     }
 
     /// Render a list of elements into the final document body.
@@ -64,6 +65,15 @@ pub trait OutputRenderer {
     fn preprocess(&self) -> Option<&Path> {
         None
     }
+
+    /// Write the final rendered content to the output file.
+    /// The default implementation writes the string directly. Formats that
+    /// need external conversion (e.g., Word via pandoc) override this.
+    fn write_output(&self, content: &str, output_path: &Path) -> Result<()> {
+        std::fs::write(output_path, content)
+            .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
+        Ok(())
+    }
 }
 
 /// Create a renderer from a format name string.
@@ -74,6 +84,7 @@ pub fn create_renderer(format: &str) -> Result<Box<dyn OutputRenderer>> {
         "latex" | "tex" => Ok(Box::new(latex::LatexRenderer)),
         "markdown" | "md" | "reprex" => Ok(Box::new(markdown::MarkdownRenderer)),
         "typst" | "typ" => Ok(Box::new(typst::TypstRenderer)),
+        "word" | "docx" => Ok(Box::new(word::WordRenderer)),
         other => load_custom_format(other),
     }
 }
@@ -85,6 +96,7 @@ pub fn format_from_extension(ext: &str) -> &str {
         "pdf" => "latex",
         "typ" => "typst",
         "md" => "markdown",
+        "docx" => "word",
         "html" => "html",
         other => other,
     }
