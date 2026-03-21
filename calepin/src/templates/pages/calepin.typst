@@ -1,5 +1,5 @@
 #set document(title: "{{plain_title}}", author: "{{author}}")
-#set page(margin: 2.5cm)
+#set page(margin: (x: 4.5cm, y: 3.5cm))
 #set text(size: 11pt)
 #set par(justify: true, leading: 0.65em)
 #set heading(numbering: "1.1")
@@ -7,13 +7,13 @@
 {{preamble}}
 
 #align(center)[
-  #text(size: 17pt, weight: "bold")[{{title}}]
-  #v(0.3em)
+  #text(size: 17pt)[{{title}}]
+  #v(0.5em)
   {{subtitle_block}}
   #v(0.5em)
   {{author_block}}
   #v(0.3em)
-  #text(size: 10pt, style: "italic")[{{date}}]
+  #text(size: 10pt)[{{date}}]
 ]
 
 {{abstract_block}}

@@ -14,7 +14,7 @@
   {\relax}{\large\scshape\MakeUppercase{\chaptertitlename}~\thechapter}{0pt}{\large\scshape}
 \titleformat{\section}{\large\scshape}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalsize\itshape}{\thesubsection}{1em}{}
-\titleformat{\subsubsection}{\small\normalfont}{\thesubsubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\normalfont}{\thesubsubsection}{1em}{}
 
 
 % Source code box (light gray background, left accent bar)
@@ -34,15 +34,22 @@
   boxrule=0.5pt,
   arc=0pt, outer arc=0pt,
   fontupper=\small
-}{% elif format == "typst" %}// Heading styles: h1 large smallcaps, h2 italic, h3 small normal
+}{% elif format == "typst" %}// Heading styles — match LaTeX titlesec at 11pt:
+// \section:       \large\scshape   → 12pt smallcaps
+// \subsection:    \normalsize\itshape → 11pt italic
+// \subsubsection: \normalsize      → 11pt normal
 #show heading.where(level: 1): set text(size: 12pt, weight: "regular")
 #show heading.where(level: 1): it => {
   v(1.2em)
-  block(smallcaps(it.body))
+  if it.numbering != none {
+    block(smallcaps[#counter(heading).display(it.numbering) #it.body])
+  } else {
+    block(smallcaps(it.body))
+  }
   v(0.4em)
 }
-#show heading.where(level: 2): set text(size: 10pt, style: "italic", weight: "regular")
-#show heading.where(level: 3): set text(size: 9pt, weight: "regular")
+#show heading.where(level: 2): set text(size: 11pt, style: "italic", weight: "regular")
+#show heading.where(level: 3): set text(size: 11pt, weight: "regular")
 
 // Source code box (light gray, left accent bar)
 #let srcbox(body) = block(

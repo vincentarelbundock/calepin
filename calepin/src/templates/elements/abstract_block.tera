@@ -2,5 +2,8 @@
 {{abstract}}
 </div>{% elif format == "latex" %}\begin{abstract}
 {{abstract}}
-\end{abstract}{% elif format == "typst" %}#block(fill: luma(240), inset: 1em, width: 100%)[#text(weight: "bold")[Abstract] \
-{{abstract}}]{% endif %}
+\end{abstract}{% elif format == "typst" %}#pad(x: 1cm)[
+  #align(center)[#smallcaps[Abstract]]
+  #v(0.5em)
+  #text(size: 9.5pt)[{{abstract}}]
+]{% endif %}

@@ -49,7 +49,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata) -> Re
 
     // Collect cited keys
     static RE_ANY: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?:\[-)?@([a-zA-Z0-9_][-a-zA-Z0-9_:.]*)\]?").unwrap()
+        Regex::new(r"(?:\[-)?@([a-zA-Z0-9_][-a-zA-Z0-9_:]*)\]?").unwrap()
     });
     // Cross-reference prefixes that should not be looked up as citation keys
     static CROSSREF_PREFIXES: &[&str] = &[
@@ -184,9 +184,9 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata) -> Re
     Ok(())
 }
 
-/// Regex matching a 4-digit year (1900–2099) with optional letter suffix.
+/// Regex matching a 4-digit year with optional letter suffix.
 static RE_YEAR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\b((?:19|20)\d{2}[a-z]?)\b").unwrap()
+    Regex::new(r"\b(\d{4}[a-z]?)\b").unwrap()
 });
 
 /// Convert parenthetical "Author et al. 2026" to narrative "Author et al. (2026)".
@@ -238,4 +238,73 @@ fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
     let default_csl = include_str!("../templates/misc/default.csl");
     IndependentStyle::from_xml(default_csl)
         .map_err(|e| anyhow::anyhow!("Failed to parse default CSL: {:?}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_narrative_modern_year() {
+        assert_eq!(format_narrative("Knuth 1997"), "Knuth (1997)");
+    }
+
+    #[test]
+    fn test_format_narrative_old_year() {
+        assert_eq!(format_narrative("Euler 1748"), "Euler (1748)");
+        assert_eq!(format_narrative("Gauss 1801"), "Gauss (1801)");
+    }
+
+    #[test]
+    fn test_format_narrative_year_suffix() {
+        assert_eq!(format_narrative("Smith 2024a"), "Smith (2024a)");
+    }
+
+    #[test]
+    fn test_format_narrative_no_year() {
+        assert_eq!(format_narrative("No year here"), "No year here");
+    }
+
+    #[test]
+    fn test_extract_year_modern() {
+        assert_eq!(extract_year("Knuth 1997"), "1997");
+    }
+
+    #[test]
+    fn test_extract_year_old() {
+        assert_eq!(extract_year("Euler 1748"), "1748");
+    }
+
+    #[test]
+    fn test_extract_year_suffix() {
+        assert_eq!(extract_year("Smith 2024a"), "2024a");
+    }
+
+    #[test]
+    fn test_extract_year_missing() {
+        assert_eq!(extract_year("no year"), "no year");
+    }
+
+    #[test]
+    fn test_bare_citation_regex_no_trailing_period() {
+        // @key at end of sentence: period must NOT be part of the key
+        static RE_BARE: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"@([a-zA-Z0-9_][-a-zA-Z0-9_:]*)").unwrap()
+        });
+        let text = "see @gauss1801disquisitiones.";
+        let caps = RE_BARE.captures(text).unwrap();
+        assert_eq!(&caps[1], "gauss1801disquisitiones");
+    }
+
+    #[test]
+    fn test_bare_citation_regex_comma() {
+        static RE_BARE: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"@([a-zA-Z0-9_][-a-zA-Z0-9_:]*)").unwrap()
+        });
+        let text = "@knuth1997art, @euler1748introductio";
+        let keys: Vec<&str> = RE_BARE.captures_iter(text)
+            .map(|c| c.get(1).unwrap().as_str())
+            .collect();
+        assert_eq!(keys, vec!["knuth1997art", "euler1748introductio"]);
+    }
 }
