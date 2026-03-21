@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if page.title %}
+<header class="page-header">
+  <h1>{{ page.title }}</h1>
+  {% if page.subtitle %}<p class="subtitle">{{ page.subtitle }}</p>{% endif %}
+  {% if page.abstract %}<div class="abstract">{{ page.abstract }}</div>{% endif %}
+</header>
+{% endif %}
+
+{{ page.body | safe }}
+
+{% if page.listing %}
+{% set listing_type = page.listing_type | default(value="default") %}
+
+{% if listing_type == "table" %}
+<table class="listing-table">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Date</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in page.listing %}
+    <tr>
+      <td><a href="{{ item.url }}">{{ item.title | default(value="Untitled") }}</a></td>
+      <td>{{ item.date | default(value="") }}</td>
+      <td>{{ item.description | default(value="") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% elif listing_type == "grid" %}
+<div class="listing-grid">
+  {% for item in page.listing %}
+  <a href="{{ item.url }}" class="listing-item">
+    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="">{% endif %}
+    <div class="listing-item-content">
+      <h3>{{ item.title | default(value="Untitled") }}</h3>
+      {% if item.date %}<div class="date">{{ item.date }}</div>{% endif %}
+      {% if item.description %}<div class="description">{{ item.description }}</div>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="listing-default">
+  {% for item in page.listing %}
+  <a href="{{ item.url }}" class="listing-item">
+    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="">{% endif %}
+    <div class="listing-item-content">
+      <h3>{{ item.title | default(value="Untitled") }}</h3>
+      {% if item.date %}<div class="date">{{ item.date }}</div>{% endif %}
+      {% if item.description %}<div class="description">{{ item.description }}</div>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

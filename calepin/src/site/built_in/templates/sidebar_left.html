@@ -1,0 +1,29 @@
+<aside class="sidebar-left" role="navigation" aria-label="Section navigation">
+  <nav>
+    {% for node in site.pages %}
+      {% if node.children | length > 0 %}
+        <div class="sidebar-section-title">{{ node.text }}</div>
+        <ul class="sidebar-children">
+          {% for child in node.children %}
+            {% if child.children | length > 0 %}
+              <li>
+                <div class="sidebar-section-title" style="font-size: 0.78rem; margin-top: 0.25rem;">{{ child.text }}</div>
+                <ul class="sidebar-children">
+                  {% for grandchild in child.children %}
+                  <li><a href="{{ grandchild.href | default(value='#') }}"{% if grandchild.active and grandchild.href %} class="active"{% endif %}>{{ grandchild.text }}</a></li>
+                  {% endfor %}
+                </ul>
+              </li>
+            {% else %}
+              <li><a href="{{ child.href | default(value='#') }}"{% if child.active and child.href %} class="active"{% endif %}>{{ child.text }}</a></li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      {% else %}
+        <ul>
+          <li><a href="{{ node.href | default(value='#') }}"{% if node.active and node.href %} class="active"{% endif %}>{{ node.text }}</a></li>
+        </ul>
+      {% endif %}
+    {% endfor %}
+  </nav>
+</aside>

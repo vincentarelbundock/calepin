@@ -39,6 +39,12 @@ serde_json = "1"
 # Bibliography (CSL citation processing, BibTeX parsing)
 hayagriva = { version = "0.9", features = ["biblatex"] }
 
+# Site generator
+tera = "1"
+serde-saphyr = "0.0"
+glob = "0.3"
+walkdir = "2"
+
 # Error handling
 anyhow = "1"
 bincode = { version = "2", features = ["serde"] }

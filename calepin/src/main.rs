@@ -11,6 +11,7 @@ mod plugin_manifest;
 mod preview;
 mod registry;
 mod render;
+mod site;
 mod structures;
 mod types;
 mod util;
@@ -20,102 +21,160 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use cli::Cli;
+use cli::{Cli, Command, RenderArgs, PreviewArgs, SiteAction, PluginAction, HighlightAction};
 use render::elements::ElementRenderer;
 use engines::r::RSession;
 use engines::python::PythonSession;
 use engines::EngineContext;
 use engines::cache::CacheState;
 
-fn main() -> Result<()> {
-    let cli = Cli::parse();
+/// Parse CLI args, injecting "render" as default subcommand when the first
+/// positional argument looks like a file path rather than a known subcommand.
+fn parse_cli() -> Cli {
+    let args: Vec<String> = std::env::args().collect();
 
-    // Shell completions: print and exit
-    if let Some(shell) = cli.completions {
-        let mut cmd = <Cli as clap::CommandFactory>::command();
-        clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
-        return Ok(());
-    }
+    let known = ["render", "preview", "site", "plugin", "highlight", "completions"];
 
-    // Subcommands
-    if let Some(ref cmd) = cli.command {
-        return handle_command(cmd);
-    }
-
-    // List highlight styles: print and exit
-    if cli.list_highlight_styles {
-        println!("Built-in syntax highlighting themes:\n");
-        let themes = [
-            ("github", "Light"),
-            ("catppuccin-latte", "Light"),
-            ("coldark-cold", "Light"),
-            ("gruvbox-light", "Light"),
-            ("monokai-extended-light", "Light"),
-            ("base16-ocean-light", "Light"),
-            ("onehalf-light", "Light"),
-            ("solarized-light", "Light"),
-            ("solarized-light-alt", "Light"),
-            ("1337", "Dark"),
-            ("ansi", "Dark"),
-            ("base16", "Dark"),
-            ("base16-256", "Dark"),
-            ("base16-eighties-dark", "Dark"),
-            ("base16-mocha-dark", "Dark"),
-            ("base16-ocean-dark", "Dark"),
-            ("catppuccin-frappe", "Dark"),
-            ("catppuccin-macchiato", "Dark"),
-            ("catppuccin-mocha", "Dark"),
-            ("coldark-dark", "Dark"),
-            ("darkneon", "Dark"),
-            ("dracula", "Dark"),
-            ("gruvbox-dark", "Dark"),
-            ("monokai-extended", "Dark"),
-            ("monokai-extended-bright", "Dark"),
-            ("monokai-extended-origin", "Dark"),
-            ("nord", "Dark"),
-            ("onehalf-dark", "Dark"),
-            ("snazzy", "Dark"),
-            ("solarized-dark", "Dark"),
-            ("solarized-dark-alt", "Dark"),
-            ("twodark", "Dark"),
-        ];
-        for (name, style) in themes {
-            println!("  {:<28} {}", name, style);
+    let needs_inject = args.get(1).map_or(false, |arg| {
+        // Don't inject for flags (--help, -v, etc.)
+        if arg.starts_with('-') {
+            return false;
         }
-        println!("\nCustom themes: set highlight-style to a .tmTheme file path.");
-        return Ok(());
+        // If it's not a known subcommand, assume it's a file path → inject "render"
+        !known.contains(&arg.as_str())
+    });
+
+    if needs_inject {
+        let mut patched = vec![args[0].clone(), "render".to_string()];
+        patched.extend_from_slice(&args[1..]);
+        Cli::parse_from(patched)
+    } else {
+        Cli::parse()
+    }
+}
+
+fn main() -> Result<()> {
+    let cli = parse_cli();
+
+    match cli.command {
+        Command::Render(args) => handle_render(args),
+        Command::Preview(args) => handle_preview(args),
+        Command::Site { action } => handle_site(action),
+        Command::Plugin { action } => handle_plugin(action),
+        Command::Highlight { action } => handle_highlight(action),
+        Command::Completions { shell } => {
+            let mut cmd = <Cli as clap::CommandFactory>::command();
+            clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
+            Ok(())
+        }
+    }
+}
+
+fn handle_render(args: RenderArgs) -> Result<()> {
+    // Batch mode
+    if let Some(ref manifest) = args.batch {
+        return batch::run_batch(manifest, !args.stdout, args.quiet);
     }
 
-    // Batch mode: render multiple files from a JSON manifest
-    if let Some(ref manifest) = cli.batch {
-        return batch::run_batch(manifest, !cli.batch_stdout, cli.quiet);
-    }
-
-    let input = cli.input.as_ref()
+    let input = args.input.as_ref()
         .context("No input file specified. Run with --help for usage.")?;
 
-    if cli.preview {
-        preview::run(input, &cli)
-    } else {
-        let (output_path, final_output) = render_file(
-            input,
-            cli.output.as_deref(),
-            cli.format.as_deref(),
-            &cli.overrides,
-        )?;
+    let (output_path, final_output) = render_file(
+        input,
+        args.output.as_deref(),
+        args.format.as_deref(),
+        &args.overrides,
+    )?;
 
-        fs::write(&output_path, &final_output)
-            .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
+    fs::write(&output_path, &final_output)
+        .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
 
-        if !cli.quiet {
-            eprintln!("→ {}", output_path.display());
+    if !args.quiet {
+        eprintln!("→ {}", output_path.display());
+    }
+
+    if args.pdf {
+        compile::compile_to_pdf(&output_path, args.quiet)?;
+    }
+
+    Ok(())
+}
+
+fn handle_preview(args: PreviewArgs) -> Result<()> {
+    preview::run(&args.input, &args)
+}
+
+fn handle_site(action: SiteAction) -> Result<()> {
+    match action {
+        SiteAction::Build { config, output, clean, quiet } => {
+            site::build_site(config.as_deref(), &output, clean, quiet)
         }
-
-        if cli.compile {
-            compile::compile_to_pdf(&output_path, cli.quiet)?;
+        SiteAction::Init { template } => {
+            eprintln!("Site init (template: {}) is not yet implemented.", template);
+            Ok(())
         }
+        SiteAction::Preview { config: _, port: _ } => {
+            eprintln!("Site preview is not yet implemented.");
+            Ok(())
+        }
+    }
+}
 
-        Ok(())
+fn handle_plugin(action: PluginAction) -> Result<()> {
+    match action {
+        PluginAction::Init { ref name } => plugin_init(name),
+        PluginAction::List => plugin_list(),
+    }
+}
+
+fn handle_highlight(action: HighlightAction) -> Result<()> {
+    match action {
+        HighlightAction::List => {
+            println!("Built-in syntax highlighting themes:\n");
+            let themes = [
+                ("github", "Light"),
+                ("catppuccin-latte", "Light"),
+                ("coldark-cold", "Light"),
+                ("gruvbox-light", "Light"),
+                ("monokai-extended-light", "Light"),
+                ("base16-ocean-light", "Light"),
+                ("onehalf-light", "Light"),
+                ("solarized-light", "Light"),
+                ("solarized-light-alt", "Light"),
+                ("1337", "Dark"),
+                ("ansi", "Dark"),
+                ("base16", "Dark"),
+                ("base16-256", "Dark"),
+                ("base16-eighties-dark", "Dark"),
+                ("base16-mocha-dark", "Dark"),
+                ("base16-ocean-dark", "Dark"),
+                ("catppuccin-frappe", "Dark"),
+                ("catppuccin-macchiato", "Dark"),
+                ("catppuccin-mocha", "Dark"),
+                ("coldark-dark", "Dark"),
+                ("darkneon", "Dark"),
+                ("dracula", "Dark"),
+                ("gruvbox-dark", "Dark"),
+                ("monokai-extended", "Dark"),
+                ("monokai-extended-bright", "Dark"),
+                ("monokai-extended-origin", "Dark"),
+                ("nord", "Dark"),
+                ("onehalf-dark", "Dark"),
+                ("snazzy", "Dark"),
+                ("solarized-dark", "Dark"),
+                ("solarized-dark-alt", "Dark"),
+                ("twodark", "Dark"),
+            ];
+            for (name, style) in themes {
+                println!("  {:<28} {}", name, style);
+            }
+            println!("\nCustom themes: set highlight-style to a .tmTheme file path.");
+            Ok(())
+        }
+        HighlightAction::Preview { theme } => {
+            eprintln!("Highlight preview ({}) is not yet implemented.", theme);
+            Ok(())
+        }
     }
 }
 
@@ -295,15 +354,6 @@ fn resolve_output_path(input: &Path, output: Option<&Path>, ext: &str) -> PathBu
     match output {
         Some(path) => path.to_path_buf(),
         None => input.with_extension(ext),
-    }
-}
-
-fn handle_command(cmd: &cli::CliCommand) -> Result<()> {
-    match cmd {
-        cli::CliCommand::Plugin { action } => match action {
-            cli::PluginAction::Init { name } => plugin_init(name),
-            cli::PluginAction::List => plugin_list(),
-        },
     }
 }
 

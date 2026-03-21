@@ -11,9 +11,9 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
-use crate::cli::Cli;
+use crate::cli::PreviewArgs;
 
-pub fn run(input: &Path, cli: &Cli) -> Result<()> {
+pub fn run(input: &Path, args: &PreviewArgs) -> Result<()> {
     // Canonicalize for the file watcher (needs absolute paths for event matching),
     // but keep the original relative path for rendering (so figure paths stay relative).
     let input_abs = input.canonicalize()
@@ -21,16 +21,16 @@ pub fn run(input: &Path, cli: &Cli) -> Result<()> {
     let input = input;
 
     // Determine the effective format
-    let format = resolve_preview_format(cli, input)?;
+    let format = resolve_preview_format(args, input)?;
 
     match format.as_str() {
-        "latex" | "typst" => run_pdf_preview(input, &input_abs, cli, &format),
-        _ => run_html_preview(input, &input_abs, cli),
+        "latex" | "typst" => run_pdf_preview(input, &input_abs, args, &format),
+        _ => run_html_preview(input, &input_abs, args),
     }
 }
 
 /// Preview for HTML: serve with live-reload.
-fn run_html_preview(input: &Path, input_abs: &Path, cli: &Cli) -> Result<()> {
+fn run_html_preview(input: &Path, input_abs: &Path, args: &PreviewArgs) -> Result<()> {
     let serve_dir = input_abs.parent().unwrap().to_path_buf();
 
     let version = Arc::new(AtomicU64::new(1));
@@ -50,14 +50,14 @@ fn run_html_preview(input: &Path, input_abs: &Path, cli: &Cli) -> Result<()> {
 
     // Initial render
     spinner.set_message("rendering...");
-    let html = render_html(input, &cli.overrides)?;
+    let html = render_html(input, &args.overrides)?;
     let html = reload::inject_reload_script(&html, version.load(Ordering::Relaxed));
 
     let content = Arc::new(RwLock::new(html));
 
     // Start HTTP server in background
     let (_server, actual_port) = server::start(
-        cli.port,
+        args.port,
         Arc::clone(&content),
         Arc::clone(&version),
         serve_dir,
@@ -65,7 +65,7 @@ fn run_html_preview(input: &Path, input_abs: &Path, cli: &Cli) -> Result<()> {
 
     let url = format!("http://localhost:{}", actual_port);
 
-    if !cli.quiet {
+    if !args.quiet {
         mp.println(format!("→ preview at {}", url)).ok();
     }
 
@@ -84,9 +84,9 @@ fn run_html_preview(input: &Path, input_abs: &Path, cli: &Cli) -> Result<()> {
     spinner.set_message("watching for changes... (Ctrl+C to stop)");
 
     // Watch for changes and re-render
-    let overrides = cli.overrides.clone();
+    let overrides = args.overrides.clone();
     let stop_clone = Arc::clone(&stop);
-    let quiet = cli.quiet;
+    let quiet = args.quiet;
     watcher::watch(input_abs, stop_clone, || {
         spinner.set_message("rebuilding...");
         let start = std::time::Instant::now();
@@ -116,7 +116,7 @@ fn run_html_preview(input: &Path, input_abs: &Path, cli: &Cli) -> Result<()> {
 }
 
 /// Preview for LaTeX/Typst: render, compile to PDF, serve in browser with reload.
-fn run_pdf_preview(input: &Path, input_abs: &Path, cli: &Cli, format: &str) -> Result<()> {
+fn run_pdf_preview(input: &Path, input_abs: &Path, args: &PreviewArgs, format: &str) -> Result<()> {
     let serve_dir = input_abs.parent().unwrap().to_path_buf();
 
     let version = Arc::new(AtomicU64::new(1));
@@ -136,7 +136,7 @@ fn run_pdf_preview(input: &Path, input_abs: &Path, cli: &Cli, format: &str) -> R
 
     // Initial render + compile
     spinner.set_message("rendering...");
-    let pdf_path = render_and_compile(input, format, &cli.overrides, cli.quiet)?;
+    let pdf_path = render_and_compile(input, format, &args.overrides, args.quiet)?;
 
     // Build the PDF viewer HTML wrapper
     let pdf_filename = pdf_path.file_name().unwrap().to_string_lossy().to_string();
@@ -145,7 +145,7 @@ fn run_pdf_preview(input: &Path, input_abs: &Path, cli: &Cli, format: &str) -> R
 
     // Start HTTP server in background
     let (_server, actual_port) = server::start(
-        cli.port,
+        args.port,
         Arc::clone(&content),
         Arc::clone(&version),
         serve_dir,
@@ -153,7 +153,7 @@ fn run_pdf_preview(input: &Path, input_abs: &Path, cli: &Cli, format: &str) -> R
 
     let url = format!("http://localhost:{}", actual_port);
 
-    if !cli.quiet {
+    if !args.quiet {
         mp.println(format!("→ preview at {}", url)).ok();
     }
 
@@ -172,9 +172,9 @@ fn run_pdf_preview(input: &Path, input_abs: &Path, cli: &Cli, format: &str) -> R
     spinner.set_message("watching for changes... (Ctrl+C to stop)");
 
     // Watch for changes and re-render + recompile
-    let overrides = cli.overrides.clone();
+    let overrides = args.overrides.clone();
     let format = format.to_string();
-    let quiet = cli.quiet;
+    let quiet = args.quiet;
     watcher::watch(input_abs, Arc::clone(&stop), || {
         spinner.set_message("rebuilding...");
         let start = std::time::Instant::now();
@@ -245,8 +245,8 @@ fn render_and_compile(input: &Path, format: &str, overrides: &[String], _quiet: 
 }
 
 /// Detect the format for preview from CLI flags or YAML front matter.
-fn resolve_preview_format(cli: &Cli, input: &Path) -> Result<String> {
-    if let Some(ref fmt) = cli.format {
+fn resolve_preview_format(args: &PreviewArgs, input: &Path) -> Result<String> {
+    if let Some(ref fmt) = args.format {
         return Ok(fmt.clone());
     }
     // Check YAML front matter

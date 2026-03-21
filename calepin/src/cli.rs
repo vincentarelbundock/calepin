@@ -16,6 +16,45 @@ use std::path::PathBuf;
     .help("Print version")
 ))]
 pub struct Cli {
+    #[command(subcommand)]
+    pub command: Command,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    /// Render a .qmd file to HTML, LaTeX, Typst, or Markdown
+    Render(RenderArgs),
+
+    /// Watch file and live-reload on changes
+    Preview(PreviewArgs),
+
+    /// Static site operations
+    Site {
+        #[command(subcommand)]
+        action: SiteAction,
+    },
+
+    /// Plugin management
+    Plugin {
+        #[command(subcommand)]
+        action: PluginAction,
+    },
+
+    /// Syntax highlighting utilities
+    Highlight {
+        #[command(subcommand)]
+        action: HighlightAction,
+    },
+
+    /// Print shell completions
+    Completions {
+        /// Shell to generate completions for
+        shell: Shell,
+    },
+}
+
+#[derive(clap::Args, Debug)]
+pub struct RenderArgs {
     /// Input .qmd file path
     pub input: Option<PathBuf>,
 
@@ -38,21 +77,9 @@ pub struct Cli {
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
 
-    /// Print shell completions and exit
-    #[arg(long, value_name = "SHELL")]
-    pub completions: Option<Shell>,
-
-    /// Watch file, serve HTML, and live-reload on changes
-    #[arg(long)]
-    pub preview: bool,
-
-    /// Port for the preview server
-    #[arg(long, default_value = "3456")]
-    pub port: u16,
-
     /// Compile output to PDF (LaTeX via tectonic, Typst via typst)
-    #[arg(short, long)]
-    pub compile: bool,
+    #[arg(long)]
+    pub pdf: bool,
 
     /// Render multiple files in parallel from a JSON manifest.
     /// Pass a file path or "-" to read from stdin.
@@ -61,22 +88,68 @@ pub struct Cli {
 
     /// With --batch: emit rendered bodies in JSON stdout instead of writing files
     #[arg(long)]
-    pub batch_stdout: bool,
+    pub stdout: bool,
+}
 
-    /// List available syntax highlighting themes and exit
-    #[arg(long)]
-    pub list_highlight_styles: bool,
+#[derive(clap::Args, Debug)]
+pub struct PreviewArgs {
+    /// Input .qmd file path
+    pub input: PathBuf,
 
-    #[command(subcommand)]
-    pub command: Option<CliCommand>,
+    /// Port for the preview server
+    #[arg(short, long, default_value = "3456")]
+    pub port: u16,
+
+    /// Output format: html, latex, typst, markdown
+    #[arg(short, long)]
+    pub format: Option<String>,
+
+    /// Override YAML metadata fields
+    #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
+    pub overrides: Vec<String>,
+
+    /// Quiet mode (suppress progress messages)
+    #[arg(short, long)]
+    pub quiet: bool,
 }
 
 #[derive(Subcommand, Debug)]
-pub enum CliCommand {
-    /// Plugin management
-    Plugin {
-        #[command(subcommand)]
-        action: PluginAction,
+pub enum SiteAction {
+    /// Build a static site from .qmd files
+    Build {
+        /// Path to site config file (_calepin.yaml)
+        #[arg(short, long, value_name = "PATH")]
+        config: Option<PathBuf>,
+
+        /// Output directory
+        #[arg(short, long, default_value = "_site")]
+        output: PathBuf,
+
+        /// Remove output directory before building
+        #[arg(long)]
+        clean: bool,
+
+        /// Quiet mode
+        #[arg(short, long)]
+        quiet: bool,
+    },
+
+    /// Initialize a new site project
+    Init {
+        /// Site template: blank, docs, blog
+        #[arg(long, default_value = "blank")]
+        template: String,
+    },
+
+    /// Preview the site with live-reload
+    Preview {
+        /// Path to site config file
+        #[arg(short, long, value_name = "PATH")]
+        config: Option<PathBuf>,
+
+        /// Port for the preview server
+        #[arg(short, long, default_value = "3456")]
+        port: u16,
     },
 }
 
@@ -89,6 +162,17 @@ pub enum PluginAction {
     },
     /// List all available plugins
     List,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum HighlightAction {
+    /// List available syntax highlighting themes
+    List,
+    /// Preview a highlighting theme on a sample
+    Preview {
+        /// Theme name
+        theme: String,
+    },
 }
 
 /// Print a yellow warning to stderr.

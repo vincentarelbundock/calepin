@@ -8,6 +8,7 @@ quarto_website/
 _calepin/
 _astro/
 node_modules/
+_site/
 
 # Rendered output
 TODO.html

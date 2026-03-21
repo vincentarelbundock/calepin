@@ -1,4 +1,4 @@
-.PHONY: help docs plugins website
+.PHONY: help docs plugins website site
 
 help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m\n"
@@ -18,15 +18,15 @@ install: ## Build release binary, install to ~/.cargo/bin, and set up shell comp
 	cargo install --path calepin
 	@mkdir -p ~/.config/calepin
 	@if [ -n "$$ZSH_VERSION" ] || [ "$$SHELL" = "/bin/zsh" ]; then \
-		calepin --completions zsh > ~/.config/calepin/_calepin 2>/dev/null && \
+		calepin completions zsh > ~/.config/calepin/_calepin 2>/dev/null && \
 		echo "Zsh completions written to ~/.config/calepin/_calepin"; \
 		echo "Add to .zshrc: fpath=(~/.config/calepin \$$fpath); compinit"; \
 	elif [ -n "$$BASH_VERSION" ] || [ "$$SHELL" = "/bin/bash" ]; then \
-		calepin --completions bash > ~/.config/calepin/calepin.bash 2>/dev/null && \
+		calepin completions bash > ~/.config/calepin/calepin.bash 2>/dev/null && \
 		echo "Bash completions written to ~/.config/calepin/calepin.bash"; \
 		echo "Add to .bashrc: source ~/.config/calepin/calepin.bash"; \
 	elif [ -n "$$FISH_VERSION" ] || [ "$$SHELL" = "/usr/bin/fish" ]; then \
-		calepin --completions fish > ~/.config/fish/completions/calepin.fish 2>/dev/null && \
+		calepin completions fish > ~/.config/fish/completions/calepin.fish 2>/dev/null && \
 		echo "Fish completions installed."; \
 	fi
 
@@ -46,6 +46,9 @@ check:  ## Run cargo check (fast compile check)
 website: ## Build Astro/Starlight website and serve it
 	@cd website && uv run ../plugins/website_astro_starlight/build.py && \
 		cd _astro && npx astro preview --open
+
+site: build ## Build static site from website/ using calepin-site
+	@cd website && ../calepin-site/target/debug/calepin-site --calepin ../calepin/target/debug/calepin
 
 # ==============================================================================
 # Render targets
