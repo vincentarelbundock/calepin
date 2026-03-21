@@ -3,7 +3,7 @@
 // ## Design
 //
 // A single python3 process runs for the lifetime of the document render. On init,
-// a bootstrap script is written to a temp file and executed. The bootstrap sets up
+// the bootstrap script is piped directly to stdin (`python3 -S -s -u -`). It sets up
 // a read-eval loop over stdin/stdout using a sentinel-delimited protocol (see
 // subprocess.rs). All chunks execute in a shared `_globals` dict, so variables
 // persist across chunks — notebook semantics by design.
@@ -38,7 +38,7 @@ use super::subprocess::SubprocessSession;
 /// executes them with output/warning/error/plot capture, and writes
 /// sentinel-delimited results to stdout.
 const PYTHON_BOOTSTRAP: &str = r#"
-import sys, io, os, warnings, contextlib, traceback
+import sys, io, os
 
 # Force non-interactive matplotlib backend before any user code can import it.
 # The env var is checked by matplotlib on first import -- no import needed here,
@@ -93,15 +93,21 @@ while True:
     err = None
     warns_list = []
 
-    # warnings.catch_warnings is not thread-safe, but chunks execute sequentially.
+    # Capture stdout via temporary swap (avoids importing contextlib at startup).
+    # warnings/traceback imported lazily on first use.
+    old_stdout = sys.stdout
+    sys.stdout = buf
     try:
+        import warnings
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            with contextlib.redirect_stdout(buf):
-                exec(compile(code, "<chunk>", "exec"), _globals)
+            exec(compile(code, "<chunk>", "exec"), _globals)
             warns_list = [str(x.message) for x in w]
     except Exception:
+        import traceback
         err = traceback.format_exc()
+    finally:
+        sys.stdout = old_stdout
 
     # Check for matplotlib figures. The import is a no-op if matplotlib is
     # already loaded (cached in sys.modules), and a cheap ImportError if not
@@ -150,20 +156,20 @@ while True:
 /// RAII guard for the Python subprocess.
 pub struct PythonSession {
     proc: SubprocessSession,
-    _bootstrap_file: tempfile::NamedTempFile,
 }
 
 impl PythonSession {
     /// Spawn a python3 subprocess running the bootstrap script.
+    /// Uses -S (skip site-import), -s (no user site), -u (unbuffered stdio),
+    /// and passes the bootstrap as a -c argument (no temp file needed).
     pub fn init() -> Result<Self> {
-        let bootstrap_file = tempfile::NamedTempFile::new()
-            .context("Failed to create temp file for Python bootstrap")?;
-        std::fs::write(bootstrap_file.path(), PYTHON_BOOTSTRAP)
-            .context("Failed to write Python bootstrap")?;
-        let path_str = bootstrap_file.path().to_string_lossy().to_string();
-        let proc = SubprocessSession::spawn("python3", &["-u", &path_str])
-            .context("Failed to start Python")?;
-        Ok(PythonSession { proc, _bootstrap_file: bootstrap_file })
+        let proc = SubprocessSession::spawn_with_env(
+            "python3",
+            &["-S", "-s", "-u", "-c", PYTHON_BOOTSTRAP],
+            &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
+        )
+        .context("Failed to start Python")?;
+        Ok(PythonSession { proc })
     }
 
     /// Evaluate an inline Python expression and return the result as a string.
