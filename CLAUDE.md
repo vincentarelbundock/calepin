@@ -251,7 +251,7 @@ Built-in Tera functions (replace old `{{< shortcode >}}` syntax):
 
 Context variables:
 - `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. — document metadata
-- `{{ var.key.subkey }}` — values from `_variables.yml`
+- `{{ var.key.subkey }}` — values from front matter `variables:` block
 - `{{ format }}` — current output format
 
 File inclusion uses Tera's include tag: `{% include "file.qmd" %}` (pre-parse directive, runs before block parsing via `filters/shortcodes.rs::expand_includes()`). Escaping uses `{% raw %}...{% endraw %}`.
