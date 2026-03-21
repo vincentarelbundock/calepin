@@ -33,6 +33,9 @@ install: ## Build release binary, install to ~/.cargo/bin, and set up shell comp
 clean:  ## Remove build artifacts
 	cargo clean --manifest-path calepin/Cargo.toml
 
+flush:  ## Delete all _cache directories recursively
+	find . -type d -name '_cache' -exec rm -rf {} +
+
 # ==============================================================================
 # Test targets
 # ==============================================================================

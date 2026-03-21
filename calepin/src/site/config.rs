@@ -13,6 +13,14 @@ pub struct SiteConfig {
     pub website: WebsiteConfig,
     #[serde(default)]
     pub format: FormatConfig,
+    #[serde(default)]
+    pub execute: ExecuteConfig,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ExecuteConfig {
+    #[serde(default)]
+    pub cache: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize)]

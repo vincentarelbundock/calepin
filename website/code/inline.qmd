@@ -1,5 +1,5 @@
 ---
-title: Inline Code
+title: Inline
 ---
 
 ::: {.callout-tip}

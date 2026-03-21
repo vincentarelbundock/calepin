@@ -24,6 +24,19 @@ plot(
 
 Figures with labels can be cross-referenced with `@fig-label`. See @fig-scatter above.
 
+Any plotting library works — here is a ggplot2 example:
+
+```{r, fig-ggplot}
+#| fig-width: 6
+#| fig-height: 4
+#| fig-cap: "Fuel efficiency by weight (ggplot2)"
+library(ggplot2)
+ggplot(mtcars, aes(wt, mpg, color = factor(cyl))) +
+  geom_point(size = 3) +
+  labs(x = "Weight (1000 lbs)", y = "MPG", color = "Cylinders") +
+  theme_minimal()
+```
+
 
 # Figure options
 

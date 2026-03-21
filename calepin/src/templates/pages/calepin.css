@@ -84,9 +84,12 @@ blockquote {
   border-left: 4px solid var(--c-border); color: var(--c-text-muted);
 }
 
-table { width: 100%; border-collapse: collapse; margin: 1em 0; }
-th, td { padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--c-border); text-align: left; }
-th { font-weight: 600; }
+table:not(.tinytable) { width: 100%; border-collapse: collapse; margin: 1em 0; }
+table:not(.tinytable) th, table:not(.tinytable) td { padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--c-border); text-align: left; }
+table:not(.tinytable) th { font-weight: 600; }
+
+.table-div { margin: 1.5rem 0; }
+.table-caption, .figure .caption { text-align: center; font-size: 0.9rem; color: color-mix(in srgb, var(--c-text) 70%, var(--c-text-muted)); }
 
 h1, h2, h3, h4, h5, h6 { font-weight: normal; line-height: 1.25; margin: 1.5em 0 0.5em; color: var(--c-text); }
 h1 { font-size: 1.8rem; }

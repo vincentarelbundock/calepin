@@ -1,5 +1,5 @@
 ---
-title: Code Chunks
+title: Chunks
 ---
 
 ::: {.callout-tip}

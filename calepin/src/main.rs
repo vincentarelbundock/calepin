@@ -230,7 +230,7 @@ pub fn render_core(
 
     // 5. Initialize engine subprocesses only if needed
     let mut r_session = if engines::util::needs_engine(&blocks, &body, &metadata, "r") {
-        Some(RSession::init()?)
+        Some(RSession::init(renderer.base_format())?)
     } else {
         None
     };

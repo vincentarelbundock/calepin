@@ -2,12 +2,13 @@
 title: Tables
 ---
 
-*Calepin* supports GFM (GitHub Flavored Markdown) tables with captions and cross-references.
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
 
+# Markdown
 
-# Basic tables
-
-Tables use the standard GFM pipe syntax:
+Tables use the standard GFM pipe syntax. Column alignment is controlled by colons in the separator row: left (default), right (`---:`), or center (`:---:`).
 
 | Name  | Score | Grade |
 |-------|------:|:-----:|
@@ -15,10 +16,8 @@ Tables use the standard GFM pipe syntax:
 | Bob   |    87 | B     |
 | Carol |    92 | A     |
 
-Column alignment is controlled by colons in the separator row: left (default), right (`---:`), or center (`:---:`).
 
-
-# Captioned tables
+## Captions and cross-references
 
 Wrap a table in a fenced div with a `#tbl-` id to add a caption and make it cross-referenceable. The last paragraph in the div becomes the caption:
 
@@ -44,18 +43,10 @@ Student grades for Fall 2026.
 Student grades for Fall 2026.
 :::
 
-
-# Cross-references
-
-Reference tables with `@tbl-label`:
-
-- @tbl-grades shows the full class results.
-- Just the number: [-@tbl-grades].
-
-This works across all output formats: HTML produces linked references, LaTeX uses `\hyperref`, and Typst resolves natively.
+Reference tables with `@tbl-label`: @tbl-grades shows the full class results. Suppress the type prefix with `[-@tbl-label]`: [-@tbl-grades].
 
 
-# Caption location
+## Caption location
 
 By default, captions appear above the table. Use `tbl-cap-location` to place them below:
 
@@ -70,11 +61,23 @@ This caption appears below the table.
 :::
 
 
-# Format-specific output
+# Code generation
 
-*Calepin* produces appropriate table environments for each format:
+The [tinytable](https://vincentarelbundock.github.io/tinytable/) R package generates format-aware tables that work automatically in *Calepin*. Use a `tbl-` label on the chunk and `tbl-cap` for the caption. The `style_tt()` function applies cell-level formatting, and `group_tt()` adds spanning headers.
 
-- **HTML**: `<div class="table-div">` with `<p class="table-caption">`
-- **LaTeX**: `\begin{table}...\caption{...}\label{...}\end{table}`
-- **Typst**: `#figure(kind: table, [...], caption: [...]) <label>`
-- **Markdown**: Standard GFM table with caption as text
+```{r, tbl-cars}
+#| tbl-cap: Motor Trend car data
+library(tinytable)
+tt(mtcars[1:5, 1:4]) |>
+  style_tt(2:3, background = "#5E81AC", color = "white") |>
+  group_tt(j = list("Group" = 3:4))
+```
+
+Cross-reference: see @tbl-cars.
+
+
+```{r, tbl-cars}
+#| tbl-cap: Motor Trend car data
+library(gt)
+gt(mtcars[1:5, 1:4])
+```

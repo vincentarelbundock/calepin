@@ -21,7 +21,7 @@
 //
 // ## Functions
 //
-// - RSession::init()            — Spawn Rscript with the bootstrap read-eval loop.
+// - RSession::init(format)      — Spawn Rscript with the bootstrap read-eval loop.
 // - RSession::evaluate_inline() — Evaluate a single R expression and return the formatted result.
 // - RSession::capture()         — Execute an R code chunk with output/warning/message/plot capture
 //                                 using the sentinel protocol.
@@ -31,11 +31,25 @@ use anyhow::{Context, Result};
 use super::make_sentinel;
 use super::subprocess::SubprocessSession;
 
+/// Format placeholder replaced at init time with the actual output format.
+const FORMAT_PLACEHOLDER: &str = "__CALEPIN_FORMAT__";
+
 /// Bootstrap R script sent once at startup.
 /// Sets up a read-eval loop that reads sentinel-delimited code blocks from stdin,
 /// executes them with output/warning/message/error/plot capture, and writes
 /// sentinel-delimited results to stdout.
 const R_BOOTSTRAP: &str = r#"
+# Tell knitr-aware packages (tinytable, gt, etc.) what format we are rendering to.
+local({
+  fmt <- "__CALEPIN_FORMAT__"
+  options(knitr.in.progress = TRUE)
+  if (requireNamespace("knitr", quietly = TRUE)) {
+    knitr::opts_knit$set(rmarkdown.pandoc.to = fmt)
+  }
+})
+
+.calepin_has_knitr <- requireNamespace("knitr", quietly = TRUE)
+
 .calepin_loop <- function() {
   con <- file("stdin", "r")
   while (TRUE) {
@@ -89,7 +103,7 @@ const R_BOOTSTRAP: &str = r#"
 
     # Open graphics device
     has_plot <- FALSE
-    if (nzchar(fig_path) && nzchar(dev_name)) {
+    if (isTRUE(nzchar(fig_path)) && isTRUE(nzchar(dev_name))) {
       dev_fun <- match.fun(dev_name)
       # Raster devices (png, jpeg, etc.) need units and resolution
       if (dev_name %in% c("png", "jpeg", "bmp", "tiff")) {
@@ -102,14 +116,31 @@ const R_BOOTSTRAP: &str = r#"
 
     warns <- character(0)
     msgs <- character(0)
+    is_asis <- FALSE
     out <- tryCatch(
       withCallingHandlers(
         {
           exprs <- parse(text = code)
           res <- character(0)
           for (expr in exprs) {
-            r <- capture.output(eval(expr, envir = globalenv()))
-            if (length(r) > 0) res <- c(res, r)
+            .val <- withVisible(eval(expr, envir = globalenv()))
+            if (.val$visible) {
+              if (.calepin_has_knitr) {
+                # Capture both the return value and any printed output
+                kp_val <- NULL
+                r <- capture.output(kp_val <<- knitr::knit_print(.val$value))
+                if (inherits(kp_val, "knit_asis")) {
+                  is_asis <- TRUE
+                  r <- as.character(kp_val)
+                } else if (length(r) == 0) {
+                  # knit_print returned silently; fall back to print()
+                  r <- capture.output(print(.val$value))
+                }
+              } else {
+                r <- capture.output(print(.val$value))
+              }
+              if (length(r) > 0) res <- c(res, r)
+            }
           }
           paste(res, collapse = "\n")
         },
@@ -130,12 +161,20 @@ const R_BOOTSTRAP: &str = r#"
     if (dev.cur() > 1) dev.off()
     on.exit(NULL)
 
-    if (nzchar(fig_path)) {
-      has_plot <- file.exists(fig_path) && file.info(fig_path)$size > 0
+    if (isTRUE(nzchar(fig_path)) && file.exists(fig_path)) {
+      # An empty SVG device writes only the XML/SVG skeleton with no drawing
+      # elements (no <defs>, <path>, <line>, <rect>, <circle>, <text>, etc.).
+      # Check file size: empty SVGs are tiny (~200 bytes), real plots are larger.
+      sz <- file.info(fig_path)$size
+      has_plot <- sz > 300
+      if (!has_plot) file.remove(fig_path)
     }
 
     parts <- character(0)
-    if (nzchar(out)) parts <- c(parts, paste0(sentinel, "_OUTPUT:", out))
+    if (nzchar(out)) {
+      tag <- if (is_asis) "_ASIS:" else "_OUTPUT:"
+      parts <- c(parts, paste0(sentinel, tag, out))
+    }
     if (length(warns) > 0) parts <- c(parts, paste0(sentinel, "_WARNING:", paste(warns, collapse = "\n")))
     if (length(msgs) > 0) parts <- c(parts, paste0(sentinel, "_MESSAGE:", paste(msgs, collapse = "\n")))
     if (has_plot) parts <- c(parts, paste0(sentinel, "_PLOT:", fig_path))
@@ -157,10 +196,13 @@ pub struct RSession {
 
 impl RSession {
     /// Spawn an Rscript subprocess running the bootstrap script.
-    pub fn init() -> Result<Self> {
+    /// `format` is the output format name (html, latex, typst, markdown) so that
+    /// knitr-aware packages (tinytable, gt, …) can auto-detect it.
+    pub fn init(format: &str) -> Result<Self> {
+        let bootstrap = R_BOOTSTRAP.replace(FORMAT_PLACEHOLDER, format);
         let bootstrap_file = tempfile::NamedTempFile::new()
             .context("Failed to create temp file for R bootstrap")?;
-        std::fs::write(bootstrap_file.path(), R_BOOTSTRAP)
+        std::fs::write(bootstrap_file.path(), &bootstrap)
             .context("Failed to write R bootstrap")?;
         let path_str = bootstrap_file.path().to_string_lossy().to_string();
         let proc = SubprocessSession::spawn("Rscript", &["--no-save", "--no-restore", &path_str])

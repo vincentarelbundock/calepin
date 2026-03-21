@@ -5,6 +5,7 @@
 // - apply_comment()  — Prepend a comment prefix to each line of output text.
 
 use anyhow::Result;
+use std::collections::HashMap;
 use std::path::Path;
 
 use crate::engines::{self, EngineContext};
@@ -66,6 +67,14 @@ pub fn evaluate_block(
                     elements.push(Element::CodeOutput { text: commented });
                 }
             },
+            ChunkResult::Asis(text) => {
+                // knit_asis output is always verbatim, regardless of results option.
+                // knit_print methods often wrap output in Pandoc raw blocks:
+                //   ```{=html}\n...\n```
+                // Strip the wrapper and emit the inner content directly.
+                let text = strip_raw_block_wrapper(&text);
+                elements.push(Element::CodeAsis { text });
+            }
             ChunkResult::Warning(text) => {
                 if opts.warning() {
                     elements.push(Element::CodeWarning { text });
@@ -92,7 +101,52 @@ pub fn evaluate_block(
         }
     }
 
+    // If the chunk has a tbl- label, wrap asis output in a Div so the
+    // table structural handler and cross-ref system can process it.
+    if chunk.label.starts_with("tbl-") {
+        let caption = opts.tbl_cap().unwrap_or_default();
+        let mut div_children = Vec::new();
+        let mut other = Vec::new();
+        for el in elements {
+            match &el {
+                Element::CodeAsis { .. } => div_children.push(el),
+                _ => other.push(el),
+            }
+        }
+        if !caption.is_empty() {
+            div_children.push(Element::Text { content: format!("\n\n{}", caption) });
+        }
+        if !div_children.is_empty() {
+            other.push(Element::Div {
+                classes: vec![],
+                id: Some(chunk.label.clone()),
+                attrs: HashMap::new(),
+                children: div_children,
+            });
+        }
+        return Ok(other);
+    }
+
     Ok(elements)
+}
+
+/// Strip Pandoc raw block wrappers (` ```{=html}\n...\n``` `) from knit_asis output.
+/// If the text is wrapped in a raw block fence, returns the inner content.
+/// Otherwise returns the text unchanged.
+fn strip_raw_block_wrapper(text: &str) -> String {
+    let trimmed = text.trim();
+    if let Some(rest) = trimmed.strip_prefix("```{=") {
+        if let Some(after_lang) = rest.strip_suffix("```") {
+            // Find the end of the opening fence line (e.g., "html}\n")
+            if let Some(newline_pos) = after_lang.find('\n') {
+                let lang_close = &after_lang[..newline_pos];
+                if lang_close.ends_with('}') {
+                    return after_lang[newline_pos + 1..].trim().to_string();
+                }
+            }
+        }
+    }
+    text.to_string()
 }
 
 /// Apply comment prefix to output lines.

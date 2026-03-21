@@ -6,4 +6,5 @@
 
 pub mod figure;
 pub mod layout;
+pub mod table;
 pub mod tabset;

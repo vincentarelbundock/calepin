@@ -148,6 +148,7 @@ impl ChunkOptions {
     pub fn fig_width(&self) -> f64 { self.get_number("fig.width", 7.0) }
     pub fn fig_height(&self) -> f64 { self.get_number("fig.height", 5.0) }
     pub fn fig_cap(&self) -> Option<String> { self.get_opt_string("fig.cap") }
+    pub fn tbl_cap(&self) -> Option<String> { self.get_opt_string("tbl.cap") }
     pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig.alt") }
     #[allow(dead_code)]
     pub fn fig_ext(&self) -> Option<String> { self.get_opt_string("fig.ext") }
@@ -200,6 +201,8 @@ pub enum ChunkResult {
     Message(String),
     Error(String),
     Plot(PathBuf),
+    /// Raw output from knit_print (knit_asis class) — included verbatim, bypassing comment wrapping.
+    Asis(String),
 }
 
 // ---------------------------------------------------------------------------

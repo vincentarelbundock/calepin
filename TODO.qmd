@@ -2,6 +2,7 @@
 
 + [ ] Convert elements templates to Tera and simplify the dispatch
 + [ ] Blog post site template
++ [ ] Accessibility
 
 ## Plugins
 
@@ -176,6 +177,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] Files paths are different in Typst, LaTeX, HTML, and Markdown
 - [ ] How do lettered addpendices work?
 - [x] `{.unnumbered}` / `{.unlisted}` sections
+- [ ] Accessibility
 
 ## Plugins
 

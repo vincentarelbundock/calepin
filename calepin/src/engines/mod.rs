@@ -149,12 +149,17 @@ pub fn execute_chunk(
         return Ok(results);
     }
 
-    // Set up figure paths
+    // Set up figure paths (skip for tbl- chunks which don't produce plots)
+    let is_table_chunk = label.starts_with("tbl-");
     std::fs::create_dir_all(fig_dir).ok();
     let fig_width = options.fig_width();
     let fig_height = options.fig_height();
     let fig_full_path = fig_dir.join(format!("{}-1.{}", label, fig_ext));
-    let fig_full_str = fig_full_path.to_string_lossy().replace('\\', "/");
+    let fig_full_str = if is_table_chunk {
+        String::new()
+    } else {
+        fig_full_path.to_string_lossy().replace('\\', "/")
+    };
 
     results.push(ChunkResult::Source(source.to_vec()));
 
@@ -238,6 +243,7 @@ fn process_results(
     let sep = format!("\n{}_SEP\n", sentinel);
 
     let output_prefix = format!("{}_OUTPUT:", sentinel);
+    let asis_prefix = format!("{}_ASIS:", sentinel);
     let error_prefix = format!("{}_ERROR:", sentinel);
     let warning_prefix = format!("{}_WARNING:", sentinel);
     let message_prefix = format!("{}_MESSAGE:", sentinel);
@@ -251,6 +257,10 @@ fn process_results(
         if let Some(text) = part.strip_prefix(&error_prefix) {
             if !text.is_empty() {
                 results.push(ChunkResult::Error(text.to_string()));
+            }
+        } else if let Some(text) = part.strip_prefix(&asis_prefix) {
+            if !text.is_empty() {
+                results.push(ChunkResult::Asis(text.to_string()));
             }
         } else if let Some(text) = part.strip_prefix(&output_prefix) {
             if let Some(err_msg) = text.strip_prefix(&error_prefix) {

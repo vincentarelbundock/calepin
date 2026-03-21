@@ -47,6 +47,9 @@ static RE_HTML_ID: LazyLock<Regex> = LazyLock::new(|| {
 static RE_HTML_FIG: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r##"id="fig-([^"]+)""##).unwrap()
 });
+static RE_HTML_TBL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r##"id="tbl-([^"]+)""##).unwrap()
+});
 static RE_HTML_EQ: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r##"id="eq-([^"]+)""##).unwrap()
 });
@@ -69,6 +72,12 @@ static RE_PLAIN_FIG_TYPST: LazyLock<Regex> = LazyLock::new(|| {
 });
 static RE_PLAIN_FIG_MD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r##"id="fig-([^"]+)""##).unwrap()
+});
+static RE_PLAIN_TBL_TYPST: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"<tbl-([^>]+)>").unwrap()
+});
+static RE_PLAIN_TBL_MD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r##"id="tbl-([^"]+)""##).unwrap()
 });
 static RE_PLAIN_HEADING: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?m)^(=+|#+)\s+(.+?)(?:\s+<([^>]+)>)?$").unwrap()
@@ -182,6 +191,13 @@ pub fn resolve_html(html: &str, theorem_nums: &HashMap<String, String>) -> Strin
     for caps in RE_HTML_FIG.captures_iter(html) {
         fig_counter += 1;
         db.insert(format!("fig-{}", &caps[1]), fig_counter.to_string());
+    }
+
+    // Pass 2b: Count tables from id="tbl-*"
+    let mut tbl_counter = 0usize;
+    for caps in RE_HTML_TBL.captures_iter(html) {
+        tbl_counter += 1;
+        db.insert(format!("tbl-{}", &caps[1]), tbl_counter.to_string());
     }
 
     // Pass 3: Theorem numbers from rendering phase
@@ -302,6 +318,16 @@ pub fn resolve_latex(latex: &str, theorem_nums: &HashMap<String, String>) -> Str
         db.insert(format!("fig-{}", &caps[1]), fig_counter.to_string());
     }
 
+    // Count tables
+    static RE_LATEX_TBL: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\\label\{tbl-([^}]+)\}").unwrap()
+    });
+    let mut tbl_counter = 0usize;
+    for caps in RE_LATEX_TBL.captures_iter(latex) {
+        tbl_counter += 1;
+        db.insert(format!("tbl-{}", &caps[1]), tbl_counter.to_string());
+    }
+
     // Theorem numbers from rendering phase
     db.extend(theorem_nums.iter().map(|(k, v)| (k.clone(), v.clone())));
 
@@ -387,6 +413,17 @@ pub fn resolve_plain(text: &str, theorem_nums: &HashMap<String, String>) -> Stri
         if seen_figs.insert(label.clone()) {
             fig_counter += 1;
             db.insert(format!("fig-{}", label), fig_counter.to_string());
+        }
+    }
+
+    // Count tables — collect from both syntaxes but deduplicate by label
+    let mut tbl_counter = 0usize;
+    let mut seen_tbls: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for caps in RE_PLAIN_TBL_TYPST.captures_iter(text).chain(RE_PLAIN_TBL_MD.captures_iter(text)) {
+        let label = caps[1].to_string();
+        if seen_tbls.insert(label.clone()) {
+            tbl_counter += 1;
+            db.insert(format!("tbl-{}", label), tbl_counter.to_string());
         }
     }
 

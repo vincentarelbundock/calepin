@@ -20,21 +20,20 @@ website:
         href: https://github.com/vincentarelbundock/calepin
 
   sidebar:
-    collapse-level: 1
+    collapse-level: 0
 
   pages:
     - text: "Home"
       href: index.qmd
-    - quick_start.qmd
+    - installation.qmd
+    - cli.qmd
     - section: "Authoring"
       pages:
         - basics.qmd
         - figures.qmd
+        - tables.qmd
         - math.qmd
         - bibliography.qmd
-        - cache.qmd
-        - text: "PDF Example"
-          href: assets/pdf.pdf
     - section: "Code Execution"
       pages:
         - code/chunks.qmd
@@ -42,16 +41,22 @@ website:
         - code/r.qmd
         - code/python.qmd
         - code/sh.qmd
+        - cache.qmd
     - section: "Extending"
       pages:
         - plugins.qmd
         - shortcodes.qmd
         - filters.qmd
         - templates.qmd
-    - quarto.qmd
-    - section: "Presentations"
+    - section: "Misc"
       pages:
+        - text: "PDF Example"
+          href: assets/pdf.pdf
         - slides.qmd
+        - quarto.qmd
+
+execute:
+  cache: false
 
 format:
   html:

@@ -1,0 +1,34 @@
+---
+title: Installation
+---
+
+Install *Calepin* from source using Cargo:
+
+```bash
+git clone https://github.com/vincentarelbundock/calepin
+cd calepin
+make install
+```
+
+This builds the release binary, installs it to `~/.cargo/bin/`, and sets up shell completions.
+
+*Calepin* requires R to be installed on your system for `{r}` code chunks. Python support is optional — rebuild with `cargo build --features python` to enable `{python}` chunks.
+
+Check your installation:
+
+```bash
+calepin -v
+```
+
+
+# Shell completions
+
+*Calepin* can generate shell completions for tab-completion of commands and options:
+
+```bash
+calepin --completions bash > ~/.bash_completion.d/calepin
+calepin --completions zsh > ~/.zfunc/_calepin
+calepin --completions fish > ~/.config/fish/completions/calepin.fish
+```
+
+Restart your shell or source the file to activate completions.

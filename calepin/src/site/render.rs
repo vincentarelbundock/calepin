@@ -125,6 +125,9 @@ fn render_inline_markdown(text: &str) -> String {
 
 fn build_overrides(config: &SiteConfig) -> Vec<String> {
     let mut overrides = Vec::new();
+    if let Some(cache) = config.execute.cache {
+        overrides.push(format!("execute.cache={}", cache));
+    }
     if let Some(html) = &config.format.html {
         if let Some(toc) = html.toc {
             overrides.push(format!("toc={}", toc));
