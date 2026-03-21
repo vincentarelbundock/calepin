@@ -1,1 +1,0 @@
-**Conjecture {{number}}.** *{{children}}*

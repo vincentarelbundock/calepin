@@ -1,4 +1,0 @@
-#block(fill: rgb("#ede9fe"), stroke: (left: 3pt + rgb("#8b5cf6")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
-  #text(weight: "bold")[{{header}}] \
-  {{children}}
-]

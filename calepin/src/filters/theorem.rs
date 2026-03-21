@@ -44,6 +44,14 @@ impl Filter for TheoremFilter {
                 let count = counters.entry(cls.clone()).or_insert(0);
                 *count += 1;
                 vars.insert("number".to_string(), count.to_string());
+                // Capitalize class name for display (e.g., "theorem" → "Theorem")
+                let mut chars = cls.chars();
+                let type_name = match chars.next() {
+                    Some(c) => c.to_uppercase().to_string() + chars.as_str(),
+                    None => cls.clone(),
+                };
+                vars.insert("type_name".to_string(), type_name);
+                vars.insert("type_class".to_string(), cls.clone());
                 return FilterResult::Continue;
             }
         }

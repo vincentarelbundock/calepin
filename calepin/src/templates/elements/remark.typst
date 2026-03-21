@@ -1,1 +1,0 @@
-#block(width: 100%, above: 1em, below: 1em)[*Remark {{number}}.* {{children}}]{{label}}

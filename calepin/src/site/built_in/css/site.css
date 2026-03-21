@@ -340,13 +340,20 @@ body.split-active .content-main {
 body.split-active .content-main > article { max-width: none; }
 body.split-active .site-footer { margin-left: 0; margin-right: 0; }
 
+body.split-active .content-main { padding-bottom: 0; overflow: hidden; }
+
 body.split-active .split-wrapper {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  height: calc(100vh - var(--c-navbar-height));
+}
+body.split-active .split-rendered {
+  overflow-y: auto; padding-right: 2rem;
 }
 body.split-active .split-source {
-  display: block; position: sticky; top: calc(var(--c-navbar-height) + 1rem);
-  max-height: calc(100vh - var(--c-navbar-height) - 2rem);
-  overflow-y: auto; font-size: 0.8rem; line-height: 1.5;
+  display: block; overflow-y: auto;
+  border-left: 1px solid var(--c-border);
+  padding-left: 2rem;
+  font-size: 0.8rem; line-height: 1.5;
 }
 body.split-active .split-source pre {
   margin: 0; border: none; background: var(--c-bg-secondary);

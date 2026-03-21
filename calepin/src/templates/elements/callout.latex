@@ -1,0 +1,6 @@
+{% if callout_type == "note" %}\begin{tcolorbox}[enhanced, breakable, colback=blue!5, colframe=blue!40,{% elif callout_type == "tip" %}\begin{tcolorbox}[enhanced, breakable, colback=green!5, colframe=green!40,{% elif callout_type == "warning" %}\begin{tcolorbox}[enhanced, breakable, colback=yellow!10, colframe=yellow!60!black,{% elif callout_type == "caution" %}\begin{tcolorbox}[enhanced, breakable, colback=red!5, colframe=red!40,{% elif callout_type == "important" %}\begin{tcolorbox}[enhanced, breakable, colback=violet!5, colframe=violet!40,{% else %}\begin{tcolorbox}[enhanced, breakable, colback=blue!5, colframe=blue!40,{% endif %}
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+  title={{title}}, fonttitle=\bfseries]
+{{children}}
+\end{tcolorbox}

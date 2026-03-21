@@ -58,6 +58,13 @@ impl<'a> Filter for CodeFilter<'a> {
             | Element::CodeMessage { text }
             | Element::CodeError { text } => {
                 vars.insert("text".to_string(), escape_code_for_format(text, format));
+                let cls = match element {
+                    Element::CodeWarning { .. } => "warning",
+                    Element::CodeMessage { .. } => "message",
+                    Element::CodeError { .. } => "error",
+                    _ => unreachable!(),
+                };
+                vars.insert("diagnostic_class".to_string(), cls.to_string());
                 FilterResult::Continue
             }
             _ => FilterResult::Pass,

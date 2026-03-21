@@ -35,6 +35,9 @@ impl Filter for CalloutFilter {
             _ => ("Note", "\u{2139}\u{fe0f}"),
         };
 
+        let callout_type = callout_class.strip_prefix("callout-").unwrap_or("note");
+        vars.insert("callout_type".to_string(), callout_type.to_string());
+
         let title = vars.get("title").filter(|t| !t.is_empty())
             .cloned()
             .unwrap_or_else(|| default_title.to_string());
@@ -49,8 +52,7 @@ impl Filter for CalloutFilter {
         vars.insert("appearance".to_string(), appearance.clone());
 
         if collapse && format == "html" {
-            let collapse_template = format!("{}-collapse", callout_class);
-            vars.insert("template".to_string(), collapse_template);
+            vars.insert("template".to_string(), "callout_collapse".to_string());
         }
 
         FilterResult::Continue

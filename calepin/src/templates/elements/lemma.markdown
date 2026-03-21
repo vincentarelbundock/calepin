@@ -1,1 +1,0 @@
-**Lemma {{number}}.** *{{children}}*

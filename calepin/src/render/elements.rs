@@ -23,48 +23,79 @@ macro_rules! element_templates {
     };
 }
 
+// Consolidated templates shared by multiple element types
+const THEOREM_ITALIC_HTML: &str = include_str!("../templates/elements/theorem_italic.html");
+const THEOREM_ITALIC_LATEX: &str = include_str!("../templates/elements/theorem_italic.latex");
+const THEOREM_ITALIC_TYPST: &str = include_str!("../templates/elements/theorem_italic.typst");
+const THEOREM_ITALIC_MARKDOWN: &str = include_str!("../templates/elements/theorem_italic.markdown");
+
+const THEOREM_NORMAL_HTML: &str = include_str!("../templates/elements/theorem_normal.html");
+const THEOREM_NORMAL_LATEX: &str = include_str!("../templates/elements/theorem_normal.latex");
+const THEOREM_NORMAL_TYPST: &str = include_str!("../templates/elements/theorem_normal.typst");
+const THEOREM_NORMAL_MARKDOWN: &str = include_str!("../templates/elements/theorem_normal.markdown");
+
+const CALLOUT_HTML: &str = include_str!("../templates/elements/callout.html");
+const CALLOUT_LATEX: &str = include_str!("../templates/elements/callout.latex");
+const CALLOUT_TYPST: &str = include_str!("../templates/elements/callout.typst");
+const CALLOUT_MARKDOWN: &str = include_str!("../templates/elements/callout.markdown");
+const CALLOUT_COLLAPSE_HTML: &str = include_str!("../templates/elements/callout_collapse.html");
+
+const CODE_DIAGNOSTIC_HTML: &str = include_str!("../templates/elements/code_diagnostic.html");
+const CODE_DIAGNOSTIC_LATEX: &str = include_str!("../templates/elements/code_diagnostic.latex");
+const CODE_DIAGNOSTIC_TYPST: &str = include_str!("../templates/elements/code_diagnostic.typst");
+const CODE_DIAGNOSTIC_MARKDOWN: &str = include_str!("../templates/elements/code_diagnostic.markdown");
+
 fn builtin_template(name: &str, ext: &str) -> Option<&'static str> {
-    element_templates!(name, ext;
-        "code_source"  => ["html", "latex", "typst", "markdown"],
-        "code_output"  => ["html", "latex", "typst", "markdown"],
-        "code_warning" => ["html", "latex", "typst", "markdown"],
-        "code_message" => ["html", "latex", "typst", "markdown"],
-        "code_error"   => ["html", "latex", "typst", "markdown"],
-        "figure" => ["html", "latex", "typst", "markdown"],
-        "div"    => ["html", "latex", "typst", "markdown"],
-        "callout_note"      => ["html", "latex", "typst", "markdown"],
-        "callout_warning"   => ["html", "latex", "typst", "markdown"],
-        "callout_tip"       => ["html", "latex", "typst", "markdown"],
-        "callout_caution"   => ["html", "latex", "typst", "markdown"],
-        "callout_important" => ["html", "latex", "typst", "markdown"],
-        "theorem"     => ["html", "latex", "typst", "markdown"],
-        "lemma"       => ["html", "latex", "typst", "markdown"],
-        "corollary"   => ["html", "latex", "typst", "markdown"],
-        "proposition" => ["html", "latex", "typst", "markdown"],
-        "conjecture"  => ["html", "latex", "typst", "markdown"],
-        "definition"  => ["html", "latex", "typst", "markdown"],
-        "example"     => ["html", "latex", "typst", "markdown"],
-        "exercise"    => ["html", "latex", "typst", "markdown"],
-        "solution"    => ["html", "latex", "typst", "markdown"],
-        "remark"      => ["html", "latex", "typst", "markdown"],
-        "algorithm"   => ["html", "latex", "typst", "markdown"],
-        "proof"       => ["html", "latex", "typst", "markdown"],
-        "landscape"   => ["html", "latex", "typst", "markdown"],
-        "preamble" => ["html", "latex", "typst"],
-        "appendix"           => ["html", "latex", "typst", "markdown"],
-        "appendix_license"   => ["html", "latex", "typst", "markdown"],
-        "appendix_copyright" => ["html", "latex", "typst", "markdown"],
-        "appendix_funding"   => ["html", "latex", "typst", "markdown"],
-        "appendix_citation"  => ["html", "latex", "typst", "markdown"],
-        "author_block"     => ["html", "latex", "typst", "markdown"],
-        "author_item"      => ["html", "latex", "typst", "markdown"],
-        "affiliation_item" => ["html", "latex", "typst", "markdown"],
-        "title_block"    => ["html", "latex"],
-        "subtitle_block" => ["html", "latex", "typst"],
-        "date_block"     => ["html", "latex"],
-        "abstract_block" => ["html", "latex", "typst"],
-        "keywords_block" => ["html", "latex", "typst"]
-    )
+    // Consolidated templates: multiple element names share the same template
+    match (name, ext) {
+        // Italic-body theorem environments
+        ("theorem" | "lemma" | "corollary" | "conjecture" | "proposition", "html") => Some(THEOREM_ITALIC_HTML),
+        ("theorem" | "lemma" | "corollary" | "conjecture" | "proposition", "latex") => Some(THEOREM_ITALIC_LATEX),
+        ("theorem" | "lemma" | "corollary" | "conjecture" | "proposition", "typst") => Some(THEOREM_ITALIC_TYPST),
+        ("theorem" | "lemma" | "corollary" | "conjecture" | "proposition", "markdown") => Some(THEOREM_ITALIC_MARKDOWN),
+        // Normal-body theorem environments
+        ("definition" | "example" | "exercise" | "solution" | "remark" | "algorithm", "html") => Some(THEOREM_NORMAL_HTML),
+        ("definition" | "example" | "exercise" | "solution" | "remark" | "algorithm", "latex") => Some(THEOREM_NORMAL_LATEX),
+        ("definition" | "example" | "exercise" | "solution" | "remark" | "algorithm", "typst") => Some(THEOREM_NORMAL_TYPST),
+        ("definition" | "example" | "exercise" | "solution" | "remark" | "algorithm", "markdown") => Some(THEOREM_NORMAL_MARKDOWN),
+        // Callout environments (all types share one template per format)
+        ("callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important", "html") => Some(CALLOUT_HTML),
+        ("callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important", "latex") => Some(CALLOUT_LATEX),
+        ("callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important", "typst") => Some(CALLOUT_TYPST),
+        ("callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important", "markdown") => Some(CALLOUT_MARKDOWN),
+        ("callout_collapse", "html") => Some(CALLOUT_COLLAPSE_HTML),
+        // Code diagnostics (error, warning, message share one template per format)
+        ("code_error" | "code_warning" | "code_message", "html") => Some(CODE_DIAGNOSTIC_HTML),
+        ("code_error" | "code_warning" | "code_message", "latex") => Some(CODE_DIAGNOSTIC_LATEX),
+        ("code_error" | "code_warning" | "code_message", "typst") => Some(CODE_DIAGNOSTIC_TYPST),
+        ("code_error" | "code_warning" | "code_message", "markdown") => Some(CODE_DIAGNOSTIC_MARKDOWN),
+        _ => None,
+    }
+    .or_else(|| {
+        // Remaining templates: one file per (name, format)
+        element_templates!(name, ext;
+            "code_source"  => ["html", "latex", "typst", "markdown"],
+            "code_output"  => ["html", "latex", "typst", "markdown"],
+            "figure" => ["html", "latex", "typst", "markdown"],
+            "div"    => ["html", "latex", "typst", "markdown"],
+            "proof"       => ["html", "latex", "typst", "markdown"],
+            "landscape"   => ["html", "latex", "typst", "markdown"],
+            "preamble" => ["html", "latex", "typst"],
+            "appendix"           => ["html", "latex", "typst", "markdown"],
+            "appendix_license"   => ["html", "latex", "typst", "markdown"],
+            "appendix_copyright" => ["html", "latex", "typst", "markdown"],
+            "appendix_funding"   => ["html", "latex", "typst", "markdown"],
+            "appendix_citation"  => ["html", "latex", "typst", "markdown"],
+            "author_block"     => ["html", "latex", "typst", "markdown"],
+            "author_item"      => ["html", "latex", "typst", "markdown"],
+            "affiliation_item" => ["html", "latex", "typst", "markdown"],
+            "title_block"    => ["html", "latex"],
+            "subtitle_block" => ["html", "latex", "typst"],
+            "date_block"     => ["html", "latex"],
+            "abstract_block" => ["html", "latex", "typst"],
+            "keywords_block" => ["html", "latex", "typst"]
+        )
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +124,7 @@ impl ElementRenderer {
             "code_source", "code_output", "code_warning", "code_message", "code_error",
             "figure", "div",
             "callout_note", "callout_warning", "callout_tip", "callout_caution", "callout_important",
+            "callout_collapse",
             "theorem", "lemma", "corollary", "proposition", "conjecture",
             "definition", "example", "exercise", "solution", "remark", "algorithm", "proof",
             "preamble",

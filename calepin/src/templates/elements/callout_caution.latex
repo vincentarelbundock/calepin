@@ -1,6 +1,0 @@
-\begin{tcolorbox}[enhanced, breakable, colback=red!5, colframe=red!40,
-  left=4pt, right=4pt, top=4pt, bottom=4pt,
-  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
-  title={{title}}, fonttitle=\bfseries]
-{{children}}
-\end{tcolorbox}
