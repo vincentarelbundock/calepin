@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**calepin** is a Rust CLI that renders `.qmd` (Quarto-compatible) documents to HTML, LaTeX, Typst, and Markdown. It embeds R (via extendr) and Python (via pyo3) runtimes to execute code chunks, processes citations with hayagriva, and resolves cross-references.
+**calepin** is a Rust CLI that renders `.qmd` (Quarto-compatible) documents to HTML, LaTeX, Typst, and Markdown. It runs R (via a persistent `Rscript` subprocess) and Python (via a persistent `python3` subprocess) to execute code chunks, processes citations with hayagriva, and resolves cross-references.
 
 The tutorial (`website/basics.qmd`) must be valid Quarto syntax so it can be benchmarked against Quarto and litedown. calepin-specific extensions (plugins, `.hidden` divs, custom shortcodes) are documented in `website/templates.qmd`, `website/filters.qmd`, `website/shortcodes.qmd`, and `website/plugins.qmd`.
 
@@ -75,8 +75,8 @@ The engines module owns all code evaluation — block-level, inline-level, the e
 - `mod.rs` — `evaluate()` orchestrator (walks `Block`s → `Element`s), `execute_chunk()` dispatch, `process_results()` (shared sentinel protocol parser), `make_sentinel()`, `eval_inline()` dispatch, visibility logic (`content_is_visible`, `format_matches`)
 - `block.rs` — `evaluate_block()`: chunk → `Element`s (handles `echo`, `eval`, `include`, `results`, `warning`, `message`, figures)
 - `inline.rs` — `evaluate_inline()`: `` `{r}` ``/`` `{python}` `` in text → evaluated strings
-- `r.rs` — `RSession` (extendr), R-specific `capture()` (wraps code in R script with graphics device + sentinel protocol), `eval_inline()` (R formatting with digit/comma support)
-- `python.rs` — `PythonSession` (pyo3), Python-specific `capture()` (wraps code in Python script with stdout/matplotlib/warning capture), `eval_inline()`. Shared globals dict persists variables across chunks.
+- `r.rs` — `RSession` (persistent `Rscript` subprocess), R-specific `capture()` (wraps code in R script with graphics device + sentinel protocol), `eval_inline()` (R formatting with digit/comma support)
+- `python.rs` — `PythonSession` (persistent `python3` subprocess), Python-specific `capture()` (wraps code in Python script with stdout/matplotlib/warning capture), `eval_inline()`. Shared globals dict persists variables across chunks.
 - `util.rs` — `needs_engine()`: scans blocks and body to determine if R/Python runtime should be initialized
 
 ### Root (`calepin/src/`) — Orchestration and core types

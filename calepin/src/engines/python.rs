@@ -40,13 +40,15 @@ use super::subprocess::SubprocessSession;
 const PYTHON_BOOTSTRAP: &str = r#"
 import sys, io, os, warnings, contextlib, traceback
 
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-except ImportError:
-    pass
+# Force non-interactive matplotlib backend before any user code can import it.
+# The env var is checked by matplotlib on first import -- no import needed here,
+# so there's zero startup cost when no chunks use matplotlib.
+os.environ["MPLBACKEND"] = "Agg"
 
-_globals = {"__builtins__": __builtins__}
+# Shared globals dict gives notebook-style variable persistence across chunks.
+# Note: objects accumulate here for the lifetime of the subprocess (by design).
+# Requires Python 3.9+ for str.removesuffix().
+_globals = {"__builtins__": __import__("builtins")}
 
 while True:
     header = sys.stdin.readline()
@@ -67,7 +69,6 @@ while True:
     code = "".join(lines[1:])
 
     if meta_line.startswith("INLINE:"):
-        # Inline eval mode
         expr = meta_line[len("INLINE:"):]
         try:
             result = eval(compile(expr, "<inline>", "eval"), _globals)
@@ -77,13 +78,8 @@ while True:
         print(f"{sentinel}_DONE", flush=True)
         continue
 
-    # Parse metadata
-    meta = {}
-    if meta_line.startswith("META:"):
-        for item in meta_line[len("META:"):].split(";"):
-            if "=" in item:
-                k, v = item.split("=", 1)
-                meta[k] = v
+    # Parse metadata: "META:fig_path=/tmp/fig.png;width=7;height=5;dpi=150"
+    meta = dict(item.split("=", 1) for item in meta_line[5:].split(";") if "=" in item) if meta_line.startswith("META:") else {}
 
     fig_path = meta.get("fig_path", "")
     width = float(meta.get("width", "7"))
@@ -97,33 +93,43 @@ while True:
     err = None
     warns_list = []
 
+    # warnings.catch_warnings is not thread-safe, but chunks execute sequentially.
     try:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             with contextlib.redirect_stdout(buf):
-                compiled = compile(code, "<chunk>", "exec")
-                exec(compiled, _globals)
+                exec(compile(code, "<chunk>", "exec"), _globals)
             warns_list = [str(x.message) for x in w]
     except Exception:
         err = traceback.format_exc()
 
-    # Check for matplotlib figures
+    # Check for matplotlib figures. The import is a no-op if matplotlib is
+    # already loaded (cached in sys.modules), and a cheap ImportError if not
+    # installed. Only runs when fig_path is set (i.e., not a table chunk).
+    # bbox_inches="tight" recomputes layout, so set_size_inches after user
+    # code is fine even if user called tight_layout().
+    #
+    # Only the current figure (gcf) is saved. If a chunk creates multiple
+    # figures, earlier ones are discarded. This matches R's behavior where
+    # only the last plot device output is captured per chunk.
     has_plot = False
-    try:
-        import matplotlib.pyplot as plt
-        if plt.get_fignums():
-            fig = plt.gcf()
-            fig.set_size_inches(width, height)
-            fig.savefig(fig_path, dpi=dpi, bbox_inches="tight")
-            plt.close("all")
-            if os.path.exists(fig_path) and os.path.getsize(fig_path) > 0:
-                has_plot = True
-    except ImportError:
-        pass
+    if fig_path:
+        try:
+            import matplotlib.pyplot as plt
+            if plt.get_fignums():
+                fig = plt.gcf()
+                fig.set_size_inches(width, height)
+                try:
+                    fig.savefig(fig_path, dpi=dpi, bbox_inches="tight")
+                except Exception as save_err:
+                    parts.append(f"{sentinel}_WARNING:Failed to save figure: {save_err}")
+                plt.close("all")
+                if os.path.exists(fig_path) and os.path.getsize(fig_path) > 0:
+                    has_plot = True
+        except ImportError:
+            pass
 
-    output = buf.getvalue()
-    if output and output.endswith("\n"):
-        output = output[:-1]
+    output = buf.getvalue().rstrip("\n")
 
     if err:
         parts.append(f"{sentinel}_ERROR:{err}")

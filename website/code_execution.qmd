@@ -2,7 +2,7 @@
 title: Code Execution
 ---
 
-*Calepin* embeds R and Python runtimes directly in the binary, so code chunks are executed during rendering without spawning external processes. Variables persist across chunks within the same language, plots are captured automatically, and results are woven into the final document.
+*Calepin* runs R and Python code chunks via persistent subprocesses (`Rscript` and `python3`). Variables persist across chunks within the same language, plots are captured automatically, and results are woven into the final document.
 
 # Code chunks
 
@@ -35,6 +35,18 @@ The same computation in Python:
 import math
 x = list(range(1, 11))
 print(math.exp(sum(x) / len(x)))
+```
+
+A Python plot with matplotlib:
+
+```{python}
+#| fig-cap: A sine wave
+import numpy as np
+import matplotlib.pyplot as plt
+x = np.linspace(0, 2 * np.pi, 100)
+plt.plot(x, np.sin(x))
+plt.xlabel("x")
+plt.ylabel("sin(x)")
 ```
 
 Each language has its own session --- variables persist across chunks of the same language but are not shared between R and Python.
