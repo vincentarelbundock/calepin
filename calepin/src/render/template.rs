@@ -260,6 +260,11 @@ fn render_block(name: &str, ext: &str, vars: &HashMap<String, String>, fallback:
     }
 }
 
+/// Public wrapper for rendering an element block template with variables.
+pub fn render_element_block(name: &str, ext: &str, vars: &HashMap<String, String>) -> String {
+    render_block(name, ext, vars, "")
+}
+
 /// Build page template variables from metadata and rendered body.
 /// Shared across all output formats; format-specific blocks are rendered
 /// through overridable element templates.
@@ -393,6 +398,11 @@ pub fn build_template_vars_with_headings(
         vars.insert("css".to_string(), css_parts.join("\n"));
         vars.insert("js".to_string(), String::new());
         vars.insert("body_class".to_string(), "body".to_string());
+        let mut math_vars = HashMap::new();
+        math_vars.insert("html_math_method".to_string(),
+            meta.html_math_method.as_deref().unwrap_or("katex").to_string());
+        vars.insert("math_block".to_string(),
+            render_block("math_block", ext, &math_vars, ""));
     }
 
     // LaTeX-specific defaults

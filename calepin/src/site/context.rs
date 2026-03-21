@@ -17,6 +17,7 @@ pub struct SiteContext {
     pub sidebar: SidebarContext,
     pub pages: Vec<NavNode>,
     pub dark_mode: bool,
+    pub math_block: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -109,6 +110,16 @@ pub fn build_site_context(config: &SiteConfig, pages: &[PageInfo]) -> SiteContex
 
     let nav_tree = build_nav_tree(&config.website.pages, pages, "");
 
+    let html_math_method = config.format.html.as_ref()
+        .and_then(|h| h.html_math_method.clone())
+        .unwrap_or_else(|| "katex".to_string());
+    let math_block = {
+        let mut vars = HashMap::new();
+        vars.insert("html_math_method".to_string(), html_math_method);
+        vars.insert("format".to_string(), "html".to_string());
+        crate::render::template::render_element_block("math_block", "html", &vars)
+    };
+
     SiteContext {
         title: config.website.title.clone(),
         subtitle: config.website.subtitle.clone(),
@@ -128,6 +139,7 @@ pub fn build_site_context(config: &SiteConfig, pages: &[PageInfo]) -> SiteContex
         },
         pages: nav_tree,
         dark_mode: true,
+        math_block,
     }
 }
 

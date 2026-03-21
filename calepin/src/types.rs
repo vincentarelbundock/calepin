@@ -290,6 +290,7 @@ pub struct Metadata {
     pub bibliography: Vec<String>,
     pub csl: Option<String>,
     pub plugins: Vec<String>,
+    pub html_math_method: Option<String>,
     pub brand: Option<crate::brand::Brand>,
     pub var: HashMap<String, saphyr::YamlOwned>,
 }

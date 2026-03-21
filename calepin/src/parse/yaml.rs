@@ -108,6 +108,7 @@ fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
                 meta.bibliography = yaml_string_list(v);
             }
             "csl" => meta.csl = v.as_str().map(String::from),
+            "html-math-method" => meta.html_math_method = v.as_str().map(String::from),
             "brand" => {
                 meta.brand = crate::brand::parse_brand_from_yaml(v);
             }

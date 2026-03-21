@@ -125,6 +125,8 @@ pub struct HtmlFormatConfig {
     pub code_copy: Option<bool>,
     #[serde(rename = "code-overflow", default)]
     pub code_overflow: Option<String>,
+    #[serde(rename = "html-math-method", default)]
+    pub html_math_method: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

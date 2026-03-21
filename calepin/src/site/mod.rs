@@ -119,6 +119,7 @@ pub fn build_site(
                 },
                 pages: nav_tree,
                 dark_mode: site_ctx.dark_mode,
+                math_block: site_ctx.math_block.clone(),
             },
             page => page_ctx,
         };

@@ -10,14 +10,7 @@
   <link rel="stylesheet" href="/_assets/calepin.css">
   <link rel="stylesheet" href="/_assets/site.css">
   {% if site.dark_mode %}<script src="/_assets/theme.js"></script>{% endif %}
-  <script>
-  MathJax = {
-    tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
-    options: { ignoreHtmlClass: 'nodollar' },
-    svg: { fontCache: 'global' }
-  };
-  </script>
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  {{ site.math_block }}
   {% block head_extra %}{% endblock %}
 </head>
 <body>

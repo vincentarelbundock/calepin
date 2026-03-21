@@ -52,6 +52,7 @@ fn builtin_template(name: &str) -> Option<&'static str> {
         "abstract_block" => Some(include_str!("../templates/elements/abstract_block.jinja")),
         "keywords_block" => Some(include_str!("../templates/elements/keywords_block.jinja")),
         "bibliography_block" => Some(include_str!("../templates/elements/bibliography_block.jinja")),
+        "math_block" => Some(include_str!("../templates/elements/math_block.jinja")),
         _ => None,
     }
 }
