@@ -79,7 +79,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [x] Footnotes backlinks check other formats (LaTeX/Typst use native footnotes)
 - [x] Definition lists (`term\n: definition`)
 - [x] Tabsets / panel tabs (`::: {.panel-tabset}`)
-- [ ] Multi-column layout (`.columns` / `.column` divs with width percentages)
+- [x] Multi-column layout (`.columns` / `.column` divs with CSS flexbox)
 
 ## HTML
 
@@ -93,7 +93,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] Layout attributes on code chunks (`layout-ncol`, `layout`)
 - [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
 - [x] `output: asis` chunk option (raw markdown output, not code block)
-- [ ] `echo: fenced` to show chunk delimiters in output
+- [x] `echo: fenced` to show chunk delimiters in output
 - [x] `error: true` to display errors without halting
 
 ## Layout
@@ -105,8 +105,8 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] Margin references (`reference-location: margin`)
 - [ ] Margin citations (`citation-location: margin`)
 - [ ] Margin captions (`cap-location: margin`, `fig-cap-location: margin`)
-- [ ] Asides (`[text]{.aside}`)
-- [ ] Landscape mode (`::: {.landscape}`)
+- [x] Asides (`[text]{.aside}` → margin notes)
+- [x] Landscape mode (`::: {.landscape}`)
 - [ ] PDF page geometry options (`geometry:` front matter)
 - [ ] Screen inset shaded (`column: screen-inset-shaded`)
 
@@ -119,7 +119,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 
 - [x] Basic cross-refs: `@fig:`, `@sec:`, `@thm:` etc.
 - [ ] Custom cross-reference types
-- [ ] Grouped references (e.g., `@fig-one; @fig-two`)
+- [x] Grouped references (`[@fig-one; @fig-two]` → "Figure 1; Figure 2")
 - [ ] Code listing cross-references (`#lst-` prefix)
 - [x] Equation numbering and cross-references (`$$ ... $$ {#eq-label}`, `@eq-label`)
 - [ ] Callout cross-references
@@ -129,7 +129,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 
 - [x] Numbered sections (`number-sections: true`)
 - [x] Date handling (keywords `today`/`now`/`last-modified`)
-- [ ] Date format strings
+- [x] Date format strings (`date-format: "%B %e, %Y"`)
 - [ ] Language / localization (`lang:` option, custom translation strings)
 - [x] File includes (`{{< include file.qmd >}}` shortcode)
 - [x] Variables file (`_variables.yml` with `{{< var name >}}` shortcode)
@@ -171,7 +171,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] Allow users to supply a postprocess.latex or postprocess.html that accepts the raw code and returns the same thing but modified. That is done automatically if in the _calepin directory
 - [ ] Files paths are different in Typst, LaTeX, HTML, and Markdown
 - [ ] How do lettered addpendices work?
-- [ ] {.unnumbered} {.unlisted} sections.
+- [x] `{.unnumbered}` / `{.unlisted}` sections
 
 ## Plugins
 

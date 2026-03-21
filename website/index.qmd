@@ -22,3 +22,9 @@ Please report bugs and feature requests to Vincent Arel-Bundock at:
 - **Plugins in any language.** Write filters, shortcodes, and postprocessors in Python, R, shell, or anything that reads JSON.
 - **Plugins even without code.** Override templates with plain HTML, LaTeX, or Typst files---no programming required.
 
+## But my code chunks take the most time! {.unnumbered}
+
+A common reaction is: *"Why do I need fast rendering? My code chunks are the bottleneck!"* The answer is **chunk caching.** *Calepin* caches code chunk outputs, so the code only runs the first time (or when it changes). On subsequent renders, cached results are reused and rendering completes in milliseconds.
+
+With `--preview`, you get *instantaneous* updates: work side by side with the rendered version of your document and see your changes appear immediately as you edit.
+

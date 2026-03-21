@@ -102,6 +102,7 @@ fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
             "toc" => meta.toc = v.as_bool().unwrap_or(false),
             "toc-depth" => meta.toc_depth = v.as_integer().unwrap_or(3) as u8,
             "toc-title" => meta.toc_title = v.as_str().map(String::from),
+            "date-format" => meta.date_format = v.as_str().map(String::from),
             "bibliography" => {
                 meta.bibliography = yaml_string_list(v);
             }

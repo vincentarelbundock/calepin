@@ -24,6 +24,9 @@ fn build_html_toc(body: &str, depth: u8, title: &str) -> String {
     for cap in re.captures_iter(body) {
         let level: u8 = cap[1].parse().unwrap_or(1);
         if level > depth { continue; }
+        // Skip headings with the "unlisted" class
+        let full_tag = cap.get(0).map_or("", |m| m.as_str());
+        if full_tag.contains("unlisted") { continue; }
         let id = cap[2].to_string();
         let text = tag_re.replace_all(&cap[3], "").trim().to_string();
         if text.is_empty() { continue; }

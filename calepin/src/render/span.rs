@@ -101,11 +101,20 @@ pub fn render(
         let id_attr = id
             .as_ref()
             .map_or(String::new(), |v| format!(" id=\"{}\"", v));
-        let output = match format {
-            "html" => format!("<span{}{}>{}</span>", id_attr, class_attr, rendered_content),
-            "latex" => format!("\\text{{{}}}", rendered_content),
-            "typst" => format!("[{}]", rendered_content),
-            _ => rendered_content.to_string(),
+        let output = if first_class == "aside" {
+            match format {
+                "html" => format!("<span{}{}>{}</span>", id_attr, class_attr, rendered_content),
+                "latex" => format!("\\marginpar{{\\footnotesize {}}}", rendered_content),
+                "typst" => format!("#place(right, dx: 1em)[#text(size: 0.8em)[{}]]", rendered_content),
+                _ => rendered_content.to_string(),
+            }
+        } else {
+            match format {
+                "html" => format!("<span{}{}>{}</span>", id_attr, class_attr, rendered_content),
+                "latex" => format!("\\text{{{}}}", rendered_content),
+                "typst" => format!("[{}]", rendered_content),
+                _ => rendered_content.to_string(),
+            }
         };
         wrap_output(format, raw_fragments, output)
     })

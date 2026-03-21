@@ -121,6 +121,7 @@ impl ChunkOptions {
     // Convenience accessors mirroring calepin's reactor defaults
     pub fn cache(&self) -> bool { self.get_bool("cache", true) }
     pub fn eval(&self) -> bool { self.get_bool("eval", true) }
+    #[allow(dead_code)]
     pub fn echo(&self) -> bool { self.get_bool("echo", true) }
     pub fn include(&self) -> bool { self.get_bool("include", true) }
     pub fn warning(&self) -> bool { self.get_bool("warning", true) }
@@ -335,6 +336,7 @@ pub struct Metadata {
     pub toc: bool,
     pub toc_depth: u8,
     pub toc_title: Option<String>,
+    pub date_format: Option<String>,
     pub bibliography: Vec<String>,
     pub csl: Option<String>,
     pub plugins: Vec<String>,
@@ -381,30 +383,27 @@ impl Metadata {
     }
 
     /// Resolve date keywords: `today`/`now` → current date, `last-modified` → file mtime.
+    /// Applies `date-format` if set (supports `%Y`, `%m`, `%d`, `%B`, `%b`, `%A`, `%a`, `%e`).
     pub fn resolve_date(&mut self, input_path: Option<&std::path::Path>) {
         let date = match self.date.as_deref() {
             Some(d) => d.trim(),
             None => return,
         };
-        let resolved = match date {
+        let secs = match date {
             "today" | "now" => {
-                let now = std::time::SystemTime::now()
+                std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
-                    .as_secs();
-                // Convert to YYYY-MM-DD without chrono
-                let days = now / 86400;
-                epoch_days_to_date(days)
+                    .as_secs()
             }
             "last-modified" | "last_modified" | "lastmodified" => {
                 if let Some(path) = input_path {
                     if let Ok(meta) = std::fs::metadata(path) {
                         if let Ok(modified) = meta.modified() {
-                            let secs = modified
+                            modified
                                 .duration_since(std::time::UNIX_EPOCH)
                                 .unwrap_or_default()
-                                .as_secs();
-                            epoch_days_to_date(secs / 86400)
+                                .as_secs()
                         } else {
                             return;
                         }
@@ -416,6 +415,10 @@ impl Metadata {
                 }
             }
             _ => return,
+        };
+        let resolved = match &self.date_format {
+            Some(fmt) => format_date(secs, fmt),
+            None => epoch_days_to_date(secs / 86400),
         };
         self.date = Some(resolved);
     }
@@ -564,4 +567,43 @@ fn epoch_days_to_date(total_days: u64) -> String {
 
 fn is_leap(y: i64) -> bool {
     (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+}
+
+/// Format a Unix timestamp according to a format string.
+/// Supports: `%Y` (year), `%m` (month 01-12), `%d` (day 01-31), `%e` (day 1-31),
+/// `%B` (month name), `%b` (month abbrev), `%A` (weekday name), `%a` (weekday abbrev).
+fn format_date(secs: u64, fmt: &str) -> String {
+    let days = secs / 86400;
+    let ymd = epoch_days_to_date(days);
+    let parts: Vec<&str> = ymd.split('-').collect();
+    let (y, m, d) = (
+        parts[0].parse::<i64>().unwrap_or(1970),
+        parts[1].parse::<usize>().unwrap_or(1),
+        parts[2].parse::<usize>().unwrap_or(1),
+    );
+
+    static MONTHS: [&str; 12] = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ];
+    static MONTHS_SHORT: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    static DAYS: [&str; 7] = [
+        "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+    ];
+    static DAYS_SHORT: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    // Zeller-like day of week from days since epoch (1970-01-01 was Thursday = 4)
+    let dow = ((days + 4) % 7) as usize;
+
+    fmt.replace("%Y", &format!("{:04}", y))
+        .replace("%m", &format!("{:02}", m))
+        .replace("%d", &format!("{:02}", d))
+        .replace("%e", &d.to_string())
+        .replace("%B", MONTHS[m - 1])
+        .replace("%b", MONTHS_SHORT[m - 1])
+        .replace("%A", DAYS[dow])
+        .replace("%a", DAYS_SHORT[dow])
 }

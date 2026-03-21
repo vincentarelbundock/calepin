@@ -27,6 +27,13 @@ static RE_REF_SUPPRESS: LazyLock<Regex> = LazyLock::new(|| {
 static RE_REF_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(r"\[@((?:{})-[-a-zA-Z0-9_]+)\]", REF_PREFIXES)).unwrap()
 });
+/// Grouped bracketed references: [@fig-one; @fig-two; @fig-three]
+static RE_REF_GROUPED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"\[(@(?:{})-[-a-zA-Z0-9_]+(?:\s*;\s*@(?:{})-[-a-zA-Z0-9_]+)+)\]",
+        REF_PREFIXES, REF_PREFIXES
+    )).unwrap()
+});
 static RE_REF_BARE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(r"@((?:{})-[-a-zA-Z0-9_]+)", REF_PREFIXES)).unwrap()
 });
@@ -98,6 +105,53 @@ fn split_ref_id(id: &str) -> (&str, &str) {
     }
 }
 
+/// Parse grouped ref IDs from a string like "@fig-a; @fig-b; @tbl-c".
+fn parse_grouped_refs(s: &str) -> Vec<String> {
+    s.split(';')
+        .map(|part| part.trim().trim_start_matches('@').to_string())
+        .filter(|id| !id.is_empty())
+        .collect()
+}
+
+/// Resolve grouped refs for HTML: produces comma-separated linked refs.
+fn resolve_grouped_html(ids: &[String], db: &HashMap<String, String>) -> String {
+    let parts: Vec<String> = ids.iter().map(|id| {
+        let (typ, _) = split_ref_id(id);
+        let label = type_label(typ);
+        match db.get(id) {
+            Some(num) => format!("<a class=\"cross-ref-{}\" href=\"#{}\">{} {}</a>", typ, id, label, num),
+            None => { warn_unresolved(id); format!("@{}", id) }
+        }
+    }).collect();
+    format!("[{}]", parts.join("; "))
+}
+
+/// Resolve grouped refs for LaTeX: produces comma-separated hyperrefs.
+fn resolve_grouped_latex(ids: &[String], db: &HashMap<String, String>) -> String {
+    let parts: Vec<String> = ids.iter().map(|id| {
+        let (typ, _) = split_ref_id(id);
+        let label = type_label(typ);
+        match db.get(id) {
+            Some(num) => format!("\\hyperref[{}]{{{} {}}}", id, label, num),
+            None => format!("{} \\ref{{{}}}", label, id),
+        }
+    }).collect();
+    format!("[{}]", parts.join("; "))
+}
+
+/// Resolve grouped refs for plain text (Typst/Markdown).
+fn resolve_grouped_plain(ids: &[String], db: &HashMap<String, String>) -> String {
+    let parts: Vec<String> = ids.iter().map(|id| {
+        let (typ, _) = split_ref_id(id);
+        let label = type_label(typ);
+        match db.get(id) {
+            Some(num) => format!("{} {}", label, num),
+            None => format!("@{}", id),
+        }
+    }).collect();
+    format!("[{}]", parts.join("; "))
+}
+
 /// Post-process rendered HTML: resolve all cross-references.
 /// `theorem_nums` provides theorem numbers from the rendering phase,
 /// avoiding the need to scrape them from rendered HTML.
@@ -165,6 +219,13 @@ pub fn resolve_html(html: &str, theorem_nums: &HashMap<String, String>) -> Strin
     }).to_string();
 
     // Pass 7: Resolve cross-references
+
+    // Grouped refs first (before single refs consume the @ids)
+    result = RE_REF_GROUPED
+        .replace_all(&result, |caps: &regex::Captures| {
+            let ids = parse_grouped_refs(&caps[1]);
+            resolve_grouped_html(&ids, &db)
+        }).to_string();
 
     result = RE_REF_SUPPRESS
         .replace_all(&result, |caps: &regex::Captures| {
@@ -269,6 +330,13 @@ pub fn resolve_latex(latex: &str, theorem_nums: &HashMap<String, String>) -> Str
         .replace_all(&result, "$1$2$3")
         .to_string();
 
+    // Grouped refs
+    result = RE_REF_GROUPED
+        .replace_all(&result, |caps: &regex::Captures| {
+            let ids = parse_grouped_refs(&caps[1]);
+            resolve_grouped_latex(&ids, &db)
+        }).to_string();
+
     result = RE_LATEX_SUPPRESS
         .replace_all(&result, |caps: &regex::Captures| {
             let id = &caps[1];
@@ -368,6 +436,13 @@ pub fn resolve_plain(text: &str, theorem_nums: &HashMap<String, String>) -> Stri
     }).to_string();
 
     // Resolve refs
+
+    // Grouped refs
+    result = RE_REF_GROUPED
+        .replace_all(&result, |caps: &regex::Captures| {
+            let ids = parse_grouped_refs(&caps[1]);
+            resolve_grouped_plain(&ids, &db)
+        }).to_string();
 
     result = RE_PLAIN_SUPPRESS
         .replace_all(&result, |caps: &regex::Captures| {

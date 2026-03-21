@@ -67,9 +67,10 @@ pub fn resolve_image_paths_latex(latex: &str) -> String {
     }).to_string()
 }
 
-/// Match explicit ID attribute in heading: `\{\#some-id\}` (LaTeX-escaped braces)
+/// Match explicit ID/class attribute in heading: `\{\#some-id\}` or `\{\.unnumbered\}`
+/// (LaTeX-escaped braces)
 static RE_EXPLICIT_ID: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\s*\\\{\\\#([\w-]+)\\\}").unwrap()
+    Regex::new(r"\s*\\\{([^\\]*(?:\\.[^\\]*)*)\\\}").unwrap()
 });
 
 /// Convert markdown text to LaTeX by walking comrak's AST.
@@ -160,23 +161,41 @@ fn markdown_to_latex_raw(markdown: &str, number_sections: bool) -> String {
                 let val = &node.data.borrow().value;
                 match val {
                     NodeValue::Heading(_) => {
-                        let (label, clean_end) = if let Some(start) = heading_content_start.take() {
+                        let (label, clean_end, is_unnumbered) = if let Some(start) = heading_content_start.take() {
                             let heading_text = &out[start..];
-                            // Check for explicit {#id} attribute
+                            // Check for explicit {#id .class} attribute
                             if let Some(m) = RE_EXPLICIT_ID.captures(heading_text) {
-                                let id = m.get(1).unwrap().as_str().to_string();
-                                // Find where the {#id} pattern starts in the heading
+                                let attr_str = m.get(1).unwrap().as_str();
                                 let attr_start = m.get(0).unwrap().start();
-                                (id, Some(start + attr_start))
+                                // Parse id and classes from attr_str
+                                let mut id = String::new();
+                                let mut unnumbered = false;
+                                for token in attr_str.split_whitespace() {
+                                    let token = token.replace('\\', "");
+                                    if let Some(stripped) = token.strip_prefix('#') {
+                                        id = stripped.to_string();
+                                    } else if token == ".unnumbered" || token == ".unlisted" {
+                                        unnumbered = true;
+                                    }
+                                }
+                                if id.is_empty() {
+                                    let before = &out[start..start + attr_start];
+                                    let plain = before
+                                        .replace("\\emph{", "").replace("\\textbf{", "")
+                                        .replace("\\texttt{", "").replace('}', "")
+                                        .replace('\\', "");
+                                    id = slugify(&plain);
+                                }
+                                (id, Some(start + attr_start), unnumbered)
                             } else {
                                 let plain = heading_text
                                     .replace("\\emph{", "").replace("\\textbf{", "")
                                     .replace("\\texttt{", "").replace('}', "")
                                     .replace('\\', "");
-                                (slugify(&plain), None)
+                                (slugify(&plain), None, false)
                             }
                         } else {
-                            (String::new(), None)
+                            (String::new(), None, false)
                         };
                         // Strip the {#id} from heading text if present
                         if let Some(end) = clean_end {
@@ -184,6 +203,15 @@ fn markdown_to_latex_raw(markdown: &str, number_sections: bool) -> String {
                             // Trim trailing whitespace inside heading
                             let trimmed = out.trim_end().len();
                             out.truncate(trimmed);
+                        }
+                        // If unnumbered and number_sections is on, retroactively add star
+                        if is_unnumbered && number_sections {
+                            // Find the last \section{ or \subsection{ etc and add * before {
+                            if let Some(cmd_pos) = out.rfind('{') {
+                                if cmd_pos > 0 && !out[..cmd_pos].ends_with('*') {
+                                    out.insert(cmd_pos, '*');
+                                }
+                            }
                         }
                         out.push_str("}\n");
                         if !label.is_empty() {

@@ -49,6 +49,7 @@ fn builtin_template(name: &str, ext: &str) -> Option<&'static str> {
         "remark"      => ["html", "latex", "typst", "markdown"],
         "algorithm"   => ["html", "latex", "typst", "markdown"],
         "proof"       => ["html", "latex", "typst", "markdown"],
+        "landscape"   => ["html", "latex", "typst", "markdown"],
         "preamble" => ["html", "latex", "typst"],
         "appendix"           => ["html", "latex", "typst", "markdown"],
         "appendix-license"   => ["html", "latex", "typst", "markdown"],

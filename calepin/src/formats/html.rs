@@ -89,9 +89,9 @@ static HEADING_RE: LazyLock<Regex> =
 static STRIP_TAGS_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"<[^>]+>").unwrap());
 
-/// Matches `{#id}` or `{#id .class}` attribute syntax at end of heading content.
+/// Matches `{#id}`, `{#id .class}`, or `{.class}` attribute syntax at end of heading content.
 static HEADING_ATTR_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\s*\{#([-a-zA-Z0-9_]+)[^}]*\}\s*$").unwrap());
+    LazyLock::new(|| Regex::new(r"\s*\{([^}]+)\}\s*$").unwrap());
 
 static FOOTNOTE_REF_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
@@ -150,6 +150,12 @@ pub fn number_sections_html(html: &str) -> String {
         let level: usize = caps[2].parse().unwrap_or(1);
         let attrs = &caps[3];
         let content = &caps[4];
+
+        // Skip unnumbered headings
+        if attrs.contains("unnumbered") {
+            return caps[0].to_string();
+        }
+
         // Normalize so the shallowest heading maps to depth 0.
         let depth = level - min_level;
 
@@ -176,7 +182,8 @@ pub fn number_sections_html(html: &str) -> String {
 // ---------------------------------------------------------------------------
 
 /// Add id to headings from their text content. Preserves existing attributes.
-/// Parses `{#id}` attribute syntax from heading content (Quarto-compatible).
+/// Parses `{#id .class}` attribute syntax from heading content (Quarto-compatible).
+/// Supports `.unnumbered` and `.unlisted` classes.
 /// Skips headings that already have an id.
 fn add_heading_ids(html: &str) -> String {
     HEADING_RE.replace_all(html, |caps: &regex::Captures| {
@@ -189,12 +196,31 @@ fn add_heading_ids(html: &str) -> String {
             return caps[0].to_string();
         }
 
-        // Check for {#id} attribute syntax in content
+        // Check for {#id .class} or {.class} attribute syntax in content
         let plain = STRIP_TAGS_RE.replace_all(content, "");
         if let Some(attr_caps) = HEADING_ATTR_RE.captures(&plain) {
-            let id = &attr_caps[1];
+            let attr_str = &attr_caps[1];
             let clean_content = HEADING_ATTR_RE.replace(content, "");
-            format!(r#"<{}{} id="{}">{}</{}>"#, tag, attrs, id, clean_content, tag)
+
+            // Parse id and classes from the attribute string
+            let mut id = String::new();
+            let mut classes = Vec::new();
+            for token in attr_str.split_whitespace() {
+                if let Some(stripped) = token.strip_prefix('#') {
+                    id = stripped.to_string();
+                } else if let Some(stripped) = token.strip_prefix('.') {
+                    classes.push(stripped.to_string());
+                }
+            }
+            if id.is_empty() {
+                id = slugify(&STRIP_TAGS_RE.replace_all(&clean_content, ""));
+            }
+            let class_attr = if classes.is_empty() {
+                String::new()
+            } else {
+                format!(" class=\"{}\"", classes.join(" "))
+            };
+            format!(r#"<{}{}{} id="{}">{}</{}>"#, tag, attrs, class_attr, id, clean_content, tag)
         } else {
             let id = slugify(&plain);
             format!(r#"<{}{} id="{}">{}</{}>"#, tag, attrs, id, content, tag)

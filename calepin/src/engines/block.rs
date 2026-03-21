@@ -36,9 +36,20 @@ pub fn evaluate_block(
     for result in results {
         match result {
             ChunkResult::Source(lines) => {
-                if opts.echo() {
+                let echo_val = opts.get_string("echo", "true");
+                if echo_val == "true" || echo_val == "fenced" {
+                    let code = if echo_val == "fenced" {
+                        let header = if chunk.label.is_empty() {
+                            format!("```{{{}}}", lang)
+                        } else {
+                            format!("```{{{}, {}}}", lang, chunk.label)
+                        };
+                        format!("{}\n{}\n```", header, lines.join("\n"))
+                    } else {
+                        lines.join("\n")
+                    };
                     elements.push(Element::CodeSource {
-                        code: lines.join("\n"),
+                        code,
                         lang: lang.clone(),
                         label: chunk.label.clone(),
                         filename: opts.get_string("filename", ""),

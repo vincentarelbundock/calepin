@@ -158,6 +158,24 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; 
   .toc { position: static; width: auto; max-height: none; margin-bottom: 1.5rem; border-left: 3px solid var(--pico-muted-border-color); padding-left: 1rem; }
 }
 
+/* Asides (margin notes) */
+.aside {
+  float: right; clear: right; width: 13rem;
+  margin: 0 -15rem 0.5rem 1rem;
+  font-size: 0.8rem; color: var(--pico-muted-color); line-height: 1.4;
+}
+@media (max-width: 90rem) {
+  .aside { float: none; width: auto; margin: 0.5rem 0; padding: 0.5rem 0.75rem; border-left: 3px solid var(--pico-muted-border-color); }
+}
+
+/* Landscape */
+.landscape { page-break-before: always; page-break-after: always; }
+@media print { .landscape { size: landscape; } }
+
+/* Multi-column */
+.columns { display: flex; gap: 1rem; flex-wrap: wrap; }
+.columns > .column { flex: 1; min-width: 0; }
+
 @media print {
   body { max-width: 100%; }
   .toc { display: none; }
