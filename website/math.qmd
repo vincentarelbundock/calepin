@@ -74,4 +74,4 @@ You can override the appearance by replacing the template while keeping automati
 </div>
 ```
 
-See [Templates](templates.qmd) for more on element templates.
+See [Element Templates](templates/elements.qmd) for more on element templates.

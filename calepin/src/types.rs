@@ -10,7 +10,7 @@ pub enum Block {
     /// Executable code chunk: `{r}`, `{r, label}` with pipe options.
     Code(CodeChunk),
     /// Opaque fenced code block: ` ```python `, ` ``` ` — displayed but not executed.
-    /// Bypasses Tera, citation, and cross-reference processing.
+    /// Bypasses Jinja, citation, and cross-reference processing.
     CodeBlock(CodeBlock),
     Div(DivBlock),
     /// A raw block: `` ```{=format} `` content `` ``` ``.

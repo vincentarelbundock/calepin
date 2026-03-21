@@ -126,34 +126,27 @@ pub fn latex_template() -> String { load_page_template("calepin.latex") }
 pub fn typst_template() -> String { load_page_template("calepin.typst") }
 pub fn default_css() -> String { load_page_template("calepin.css") }
 
-/// Regex for finding variable references in templates, used to pre-fill
-/// undefined variables with empty strings (Tera errors on undefined vars).
-static RE_TEMPLATE_VAR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\{\{-?\s*([a-zA-Z_][_a-zA-Z0-9]*)\s*-?\}\}").unwrap()
-});
-
-/// Apply Tera template rendering to a template string with variable substitution.
+/// Apply MiniJinja template rendering to a template string with variable substitution.
 /// This is the single templating engine used by both page templates
-/// and element templates. Supports Tera conditionals, loops, and filters.
+/// and element templates. Supports Jinja conditionals, loops, and filters.
 #[inline(never)]
 pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String {
-    let mut context = tera::Context::new();
-    // Pre-fill any variables referenced in the template but missing from vars
-    // with empty strings, since Tera errors on undefined variables.
-    for cap in RE_TEMPLATE_VAR.captures_iter(template) {
-        let name = &cap[1];
-        if !vars.contains_key(name) {
-            context.insert(name, "");
-        }
+    let mut env = minijinja::Environment::new();
+    env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
+    if let Err(e) = env.add_template("__tpl__", template) {
+        cwarn!("template parse error: {}", e);
+        return template.to_string();
     }
+    let mut ctx = std::collections::BTreeMap::new();
     for (key, value) in vars {
-        context.insert(key.as_str(), value);
+        ctx.insert(key.as_str(), minijinja::Value::from(value.as_str()));
     }
-    // Literal brace helpers (inserted last so pre-fill can't override them):
-    // use {{_lb}} and {{_rb}} when LaTeX braces collide with Tera delimiters.
-    context.insert("_lb", "{");
-    context.insert("_rb", "}");
-    match tera::Tera::one_off(template, &context, false) {
+    // Literal brace helpers:
+    // use {{_lb}} and {{_rb}} when LaTeX braces collide with Jinja delimiters.
+    ctx.insert("_lb", minijinja::Value::from("{"));
+    ctx.insert("_rb", minijinja::Value::from("}"));
+    let tpl = env.get_template("__tpl__").unwrap();
+    match tpl.render(minijinja::Value::from_serialize(&ctx)) {
         Ok(rendered) => rendered,
         Err(e) => {
             cwarn!("template error: {}", e);

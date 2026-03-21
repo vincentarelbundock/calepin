@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use tera::Tera;
+use minijinja::Environment;
 
 use super::icons;
 
@@ -14,27 +14,36 @@ const SIDEBAR_LEFT_HTML: &str = include_str!("built_in/templates/sidebar_left.ht
 const SIDEBAR_RIGHT_HTML: &str = include_str!("built_in/templates/sidebar_right.html");
 const SEARCH_HTML: &str = include_str!("built_in/templates/search.html");
 
-/// Initialize Tera with built-in templates, then overlay user templates from `_templates/`.
-pub fn init_tera(base_dir: &Path) -> Result<Tera> {
-    let mut tera = Tera::default();
-
-    // Register built-in templates
-    tera.add_raw_templates(vec![
-        ("base.html", BASE_HTML),
-        ("page.html", PAGE_HTML),
-        ("listing.html", LISTING_HTML),
-        ("navbar.html", NAVBAR_HTML),
-        ("sidebar_left.html", SIDEBAR_LEFT_HTML),
-        ("sidebar_right.html", SIDEBAR_RIGHT_HTML),
-        ("search.html", SEARCH_HTML),
-    ])
-    .context("Failed to register built-in templates")?;
+/// Initialize MiniJinja with built-in templates, then overlay user templates from `_templates/`.
+pub fn init_jinja(base_dir: &Path) -> Result<Environment<'static>> {
+    let mut env = Environment::new();
 
     // Disable auto-escaping — calepin output is trusted HTML
-    tera.autoescape_on(vec![]);
+    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
 
-    // Register custom Tera function for icons
-    tera.register_function("icon", IconFunction);
+    // Register built-in templates
+    env.add_template("base.html", BASE_HTML)
+        .context("Failed to register base.html")?;
+    env.add_template("page.html", PAGE_HTML)
+        .context("Failed to register page.html")?;
+    env.add_template("listing.html", LISTING_HTML)
+        .context("Failed to register listing.html")?;
+    env.add_template("navbar.html", NAVBAR_HTML)
+        .context("Failed to register navbar.html")?;
+    env.add_template("sidebar_left.html", SIDEBAR_LEFT_HTML)
+        .context("Failed to register sidebar_left.html")?;
+    env.add_template("sidebar_right.html", SIDEBAR_RIGHT_HTML)
+        .context("Failed to register sidebar_right.html")?;
+    env.add_template("search.html", SEARCH_HTML)
+        .context("Failed to register search.html")?;
+
+    // Register custom Jinja function for icons
+    env.add_function("icon", |kwargs: minijinja::value::Kwargs| -> Result<minijinja::Value, minijinja::Error> {
+        let name: &str = kwargs.get("name")
+            .map_err(|_| minijinja::Error::new(minijinja::ErrorKind::MissingArgument, "icon() requires a 'name' argument"))?;
+        kwargs.assert_all_used()?;
+        Ok(minijinja::Value::from_safe_string(icons::get_icon_svg(name)))
+    });
 
     // Overlay user templates from _templates/
     let user_templates = base_dir.join("_templates");
@@ -42,33 +51,22 @@ pub fn init_tera(base_dir: &Path) -> Result<Tera> {
         let pattern = user_templates.join("**").join("*.html");
         let pattern_str = pattern.display().to_string();
 
-        match Tera::parse(&pattern_str) {
-            Ok(user_tera) => {
-                tera.extend(&user_tera)
-                    .context("Failed to extend Tera with user templates")?;
-            }
-            Err(e) => {
-                eprintln!("Warning: failed to parse user templates: {}", e);
+        for entry in glob::glob(&pattern_str).unwrap_or_else(|_| glob::glob("").unwrap()) {
+            if let Ok(path) = entry {
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    // Compute template name relative to _templates/
+                    let rel = path.strip_prefix(&user_templates)
+                        .unwrap_or(&path);
+                    let name = rel.display().to_string();
+                    // Leak the content string so it lives for 'static
+                    let content: &'static str = Box::leak(content.into_boxed_str());
+                    if let Err(e) = env.add_template(Box::leak(name.into_boxed_str()), content) {
+                        eprintln!("Warning: failed to parse user template {}: {}", rel.display(), e);
+                    }
+                }
             }
         }
     }
 
-    Ok(tera)
-}
-
-/// Tera function: {{ icon(name="github") }}
-struct IconFunction;
-
-impl tera::Function for IconFunction {
-    fn call(&self, args: &std::collections::HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
-        let name = args
-            .get("name")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| tera::Error::msg("icon() requires a 'name' argument"))?;
-        Ok(tera::Value::String(icons::get_icon_svg(name)))
-    }
-
-    fn is_safe(&self) -> bool {
-        true
-    }
+    Ok(env)
 }

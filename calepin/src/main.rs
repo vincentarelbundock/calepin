@@ -13,7 +13,7 @@ mod registry;
 mod render;
 mod site;
 mod structures;
-mod tera_engine;
+mod jinja_engine;
 mod types;
 mod util;
 use std::fs;
@@ -250,7 +250,7 @@ pub fn render_core_with_brand(
     let renderer = formats::create_renderer(&format_str)?;
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
-    let body = timed!("expand_includes", tera_engine::expand_includes(&body));
+    let body = timed!("expand_includes", jinja_engine::expand_includes(&body));
 
     // 4a. Preprocess hook: pipe body through script if custom format defines one
     let body = if let Some(script) = renderer.preprocess() {

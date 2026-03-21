@@ -1,0 +1,275 @@
+---
+title: Site Templates
+---
+
+When you run `calepin site`, *Calepin* renders a collection of `.qmd` files into a structured website with navigation, sidebar, search, dark mode, and a consistent layout.
+
+
+# Quick start
+
+1. Create a `_calepin.yaml` in your project root:
+
+```yaml
+project:
+  type: website
+
+website:
+  title: "My Site"
+  pages:
+    - index.qmd
+    - about.qmd
+    - section: "Guide"
+      pages:
+        - guide/intro.qmd
+        - guide/advanced.qmd
+```
+
+2. Build the site:
+
+```
+calepin site
+```
+
+3. Preview locally:
+
+```
+calepin site --serve
+```
+
+The site is written to `_site/` by default.
+
+
+# Configuration
+
+The `_calepin.yaml` file (or `_site.yml`) configures your site. Here are the main sections:
+
+## Project
+
+```yaml
+project:
+  type: website
+  resources:
+    - images    # Directories copied to output
+    - data
+```
+
+## Website metadata
+
+```yaml
+website:
+  title: "My Site"
+  subtitle: "A description"
+  site-url: https://example.com
+  favicon: assets/favicon.svg
+```
+
+## Navbar
+
+```yaml
+website:
+  navbar:
+    logo: assets/logo.svg
+    logo-dark: assets/logo-dark.svg   # Dark mode variant
+    logo-alt: "Site logo"
+    background: "#fafafa"
+    search: true                       # Enable search
+    left:
+      - text: "Home"
+        href: index.qmd
+    right:
+      - icon: github
+        href: https://github.com/user/repo
+```
+
+Available icons: `github`, `twitter`, `x`, `bluesky`, `mastodon`, `linkedin`, `orcid`, `rss`, `email`, `globe`, `youtube`.
+
+## Sidebar
+
+```yaml
+website:
+  sidebar:
+    collapse-level: 1    # 0 = all collapsed, higher = more open
+```
+
+## Pages
+
+The `pages:` list defines the sidebar navigation tree:
+
+```yaml
+website:
+  pages:
+    - index.qmd                     # Simple page
+    - text: "Custom Label"          # Page with custom nav label
+      href: about.qmd
+    - section: "Guide"              # Section with nested pages
+      pages:
+        - guide/intro.qmd
+        - guide/advanced.qmd
+        - section: "Subsection"     # Nested sections
+          pages:
+            - guide/sub/a.qmd
+    - text: "External Link"
+      href: https://example.com
+```
+
+Page titles are extracted from YAML front matter. The `text:` field overrides the title shown in navigation.
+
+
+# Listings
+
+A page can display a listing of other pages (for blogs, news, etc.):
+
+```yaml
+---
+title: Blog
+listing:
+  contents: "posts/*.qmd"
+  type: default           # default, table, or grid
+  sort: "date desc"
+---
+```
+
+| Option | Description |
+|--------|-------------|
+| `contents` | Glob pattern for pages to list |
+| `type` | Layout: `default` (cards), `table`, or `grid` |
+| `sort` | Sort order: `"date desc"`, `"title asc"`, etc. |
+
+
+# Output options
+
+```yaml
+format:
+  html:
+    toc: true
+    highlight-style:
+      light: github      # Light mode syntax theme
+      dark: nord          # Dark mode syntax theme
+    code-copy: true       # Show copy button on code blocks
+    code-overflow: scroll
+```
+
+
+# Brand
+
+Site-wide branding (colors, logos, typography) is configured under the `brand:` key:
+
+```yaml
+brand:
+  color:
+    primary: "#0066cc"
+    background:
+      light: "#ffffff"
+      dark: "#1a1a2e"
+    foreground:
+      light: "#222222"
+      dark: "#e0e0e0"
+  logo:
+    images:
+      main:
+        path: assets/logo.svg
+        alt: "Logo"
+    medium:
+      light: main
+      dark: main-dark
+  typography:
+    fonts:
+      - family: Inter
+        source: google
+    base: Inter
+    headings: Inter
+```
+
+Brand values are available in document bodies via the `{% raw %}{{ brand() }}{% endraw %}` function. See [Shortcuts](shortcuts.qmd#brand).
+
+
+# Customizing site templates
+
+Site templates control the HTML structure of every page. To override any template, create files in `_templates/` at your project root.
+
+## Built-in templates
+
+| Template | Purpose |
+|----------|---------|
+| `base.html` | Root layout: head, scripts, overall structure |
+| `page.html` | Standard page (extends `base.html`) |
+| `listing.html` | Listing page with card/table/grid (extends `base.html`) |
+| `navbar.html` | Top navigation bar |
+| `sidebar_left.html` | Left sidebar with page tree |
+| `sidebar_right.html` | Right sidebar with table of contents |
+| `search.html` | Search overlay modal |
+
+## Template variables
+
+Site templates receive two main context objects:
+
+### site
+
+| Variable | Description |
+|----------|-------------|
+| `{% raw %}{{ site.title }}{% endraw %}` | Site title |
+| `{% raw %}{{ site.subtitle }}{% endraw %}` | Site subtitle |
+| `{% raw %}{{ site.url }}{% endraw %}` | Site URL |
+| `{% raw %}{{ site.favicon }}{% endraw %}` | Favicon path |
+| `{% raw %}{{ site.navbar }}{% endraw %}` | Navbar config (logo, left/right items, search) |
+| `{% raw %}{{ site.sidebar }}{% endraw %}` | Sidebar config (collapse level) |
+| `{% raw %}{{ site.pages }}{% endraw %}` | Navigation tree (with active page marked) |
+| `{% raw %}{{ site.dark_mode }}{% endraw %}` | Whether dark mode is enabled |
+
+### page
+
+| Variable | Description |
+|----------|-------------|
+| `{% raw %}{{ page.title }}{% endraw %}` | Page title |
+| `{% raw %}{{ page.subtitle }}{% endraw %}` | Page subtitle |
+| `{% raw %}{{ page.date }}{% endraw %}` | Page date |
+| `{% raw %}{{ page.body }}{% endraw %}` | Rendered HTML content |
+| `{% raw %}{{ page.toc }}{% endraw %}` | Table of contents HTML |
+| `{% raw %}{{ page.url }}{% endraw %}` | Page URL path |
+| `{% raw %}{{ page.source_url }}{% endraw %}` | Path to `.qmd` source file |
+| `{% raw %}{{ page.listing }}{% endraw %}` | List of listing items (for listing pages) |
+| `{% raw %}{{ page.breadcrumbs }}{% endraw %}` | Breadcrumb trail |
+| `{% raw %}{{ page.prev }}{% endraw %}` | Previous page link (`text`, `href`) |
+| `{% raw %}{{ page.next }}{% endraw %}` | Next page link (`text`, `href`) |
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `{% raw %}{{ icon(name="github") }}{% endraw %}` | Insert an SVG icon by name |
+
+## Example: custom page template
+
+Create `_templates/page.html` to override the default page layout:
+
+```html
+{% raw %}{% extends "base.html" %}
+{% block content %}
+<article>
+  <h1>{{ page.title }}</h1>
+  {% if page.date %}<time>{{ page.date }}</time>{% endif %}
+  {{ page.body }}
+</article>
+{% endblock %}
+
+{% block page_nav %}
+<nav class="page-nav">
+  {% if page.prev %}<a href="{{ page.prev.href }}">Previous</a>{% endif %}
+  {% if page.next %}<a href="{{ page.next.href }}">Next</a>{% endif %}
+</nav>
+{% endblock %}{% endraw %}
+```
+
+The base template provides blocks you can override: `head_extra`, `content`, `page_nav`, `footer`.
+
+
+# CLI
+
+```
+calepin site                    # Build to _site/
+calepin site -o docs            # Build to docs/
+calepin site --clean            # Clean output before building
+calepin site --serve            # Build and serve locally
+calepin site --serve --port 4000
+calepin site -c my-config.yaml  # Use custom config file
+```

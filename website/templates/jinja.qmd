@@ -1,0 +1,130 @@
+---
+title: Jinja Syntax
+---
+
+*Calepin* uses [MiniJinja](https://github.com/mitsuhiko/minijinja), a Jinja2 template engine for Rust. The same syntax is used everywhere: in document bodies ([shortcuts](shortcuts.qmd)), in element templates ([elements](elements.qmd)), in page templates ([pages](pages.qmd)), and in site templates ([sites](sites.qmd)).
+
+This page covers the syntax basics. If you know Jinja2 or Python's Django templates, you already know this.
+
+
+# Expressions
+
+Insert a value with double braces:
+
+```
+{% raw %}{{ variable }}{% endraw %}
+```
+
+Dot notation accesses nested values:
+
+```
+{% raw %}{{ meta.title }}
+{{ var.urls.docs }}{% endraw %}
+```
+
+
+# Functions
+
+Call functions with parentheses and keyword arguments:
+
+```
+{% raw %}{{ pagebreak() }}
+{{ video(url="https://youtube.com/watch?v=abc") }}
+{{ lipsum(paragraphs=3) }}{% endraw %}
+```
+
+
+# Conditionals
+
+```
+{% raw %}{% if format == "html" %}
+This appears only in HTML output.
+{% elif format == "latex" %}
+This appears only in LaTeX output.
+{% else %}
+This appears in all other formats.
+{% endif %}{% endraw %}
+```
+
+
+# Loops
+
+```
+{% raw %}{% for item in var.features %}
+- {{ item }}
+{% endfor %}{% endraw %}
+```
+
+
+# Filters
+
+Filters transform values with the pipe operator:
+
+```
+{% raw %}{{ meta.title | upper }}
+{{ meta.title | length }}{% endraw %}
+```
+
+MiniJinja provides built-in filters like `upper`, `lower`, `length`, `trim`, `replace`, `default`, and others. See the [MiniJinja documentation](https://docs.rs/minijinja/latest/minijinja/) for the full list.
+
+
+# Comments
+
+```
+{% raw %}{# This is a comment and won't appear in the output. #}{% endraw %}
+```
+
+
+# Raw blocks
+
+To include literal Jinja syntax without evaluation, wrap it in `{% raw %}{% raw %}...{% endraw %}{% endraw %}`:
+
+````
+{% raw %}{% raw %}
+{{ this is not evaluated }}
+{% endraw %}{% endraw %}
+````
+
+
+# Whitespace control
+
+Add a dash to trim whitespace before or after a tag:
+
+```
+{% raw %}{%- if condition -%}
+  compact output
+{%- endif -%}{% endraw %}
+```
+
+
+# Set variables
+
+Define local variables:
+
+```
+{% raw %}{% set name = "World" %}
+Hello, {{ name }}!{% endraw %}
+```
+
+
+# Include files
+
+Include external files:
+
+```
+{% raw %}{% include "header.qmd" %}{% endraw %}
+```
+
+In document bodies, `{% raw %}{% include %}{% endraw %}` is a pre-parse directive --- included content is parsed as blocks, so code chunks and fenced divs work normally. YAML front matter in included files is stripped automatically.
+
+
+# Where this syntax is used
+
+| Context | Example | Details |
+|---------|---------|---------|
+| Document body | `{% raw %}{{ meta.title }}{% endraw %}` in your `.qmd` | [Shortcuts](shortcuts.qmd) |
+| Element templates | `{% raw %}{{children}}{% endraw %}` in `_calepin/elements/div.html` | [Elements](elements.qmd) |
+| Page templates | `{% raw %}{{body}}{% endraw %}` in `_calepin/templates/calepin.html` | [Pages](pages.qmd) |
+| Site templates | `{% raw %}{{ page.title }}{% endraw %}` in `_templates/page.html` | [Sites](sites.qmd) |
+
+The syntax is identical everywhere. The only difference is which variables and functions are available in each context.

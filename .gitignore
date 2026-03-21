@@ -13,7 +13,7 @@ _site/
 # Rendered output
 TODO.html
 README.html
-website/*.html
+website/**/*.html
 website/*.tex
 website/*.typ
 website/*.md

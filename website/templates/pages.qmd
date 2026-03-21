@@ -1,0 +1,176 @@
+---
+title: Page Templates
+---
+
+The page template wraps the entire rendered body in a document shell --- the `<html>` and `<head>` for HTML, the `\documentclass` and preamble for LaTeX, the equivalent for Typst.
+
+
+# Customizing page templates
+
+To customize the page layout for a format, create a file in `_calepin/templates/`:
+
+- `_calepin/templates/calepin.html` --- HTML page wrapper
+- `_calepin/templates/calepin.css` --- default stylesheet (HTML only)
+- `_calepin/templates/calepin.latex` --- LaTeX document wrapper
+- `_calepin/templates/calepin.typst` --- Typst document wrapper
+
+Resolution order:
+
+1. Plugin `templates/` directory (in plugin order)
+2. `_calepin/templates/calepin.{format}` (project)
+3. `~/.config/calepin/templates/calepin.{format}` (user default)
+4. Built-in (compiled into the binary)
+
+
+# Page template variables
+
+All page templates receive these variables:
+
+## Content
+
+| Variable | Description |
+|----------|-------------|
+| `{% raw %}{{body}}{% endraw %}` | Rendered document content |
+| `{% raw %}{{toc}}{% endraw %}` | Table of contents (format-specific) |
+| `{% raw %}{{preamble}}{% endraw %}` | Extra preamble content (meta tags, etc.) |
+
+## Metadata
+
+| Variable | Description |
+|----------|-------------|
+| `{% raw %}{{plain_title}}{% endraw %}` | Title as plain text (markdown stripped) |
+| `{% raw %}{{title}}{% endraw %}` | Title with inline markdown rendered |
+| `{% raw %}{{author}}{% endraw %}` | Author(s), comma-joined |
+| `{% raw %}{{date}}{% endraw %}` | Date string |
+| `{% raw %}{{generator}}{% endraw %}` | `"calepin X.Y.Z"` |
+
+## Pre-rendered blocks
+
+These variables contain already-rendered markup, produced through overridable element templates (see [Elements](elements.qmd)):
+
+| Variable | Description |
+|----------|-------------|
+| `{% raw %}{{title_block}}{% endraw %}` | Title markup |
+| `{% raw %}{{subtitle_block}}{% endraw %}` | Subtitle markup |
+| `{% raw %}{{author_block}}{% endraw %}` | Author metadata (names, affiliations, ORCID) |
+| `{% raw %}{{date_block}}{% endraw %}` | Date markup |
+| `{% raw %}{{abstract_block}}{% endraw %}` | Abstract text |
+| `{% raw %}{{keywords_block}}{% endraw %}` | Keywords list |
+| `{% raw %}{{appendix_block}}{% endraw %}` | License, citation, copyright, funding |
+| `{% raw %}{{bibliography_block}}{% endraw %}` | Bibliography section |
+
+## Includes
+
+| Variable | Description |
+|----------|-------------|
+| `{% raw %}{{header_includes}}{% endraw %}` | Raw content for `<head>` (from `header-includes:` in YAML) |
+| `{% raw %}{{include_before}}{% endraw %}` | Content before body |
+| `{% raw %}{{include_after}}{% endraw %}` | Content after body |
+
+## HTML-specific
+
+| Variable | Description |
+|----------|-------------|
+| `{% raw %}{{css}}{% endraw %}` | `<style>` tag + external stylesheet links |
+| `{% raw %}{{js}}{% endraw %}` | JavaScript block |
+| `{% raw %}{{body_class}}{% endraw %}` | CSS class for the body element |
+
+## LaTeX-specific
+
+| Variable | Description |
+|----------|-------------|
+| `{% raw %}{{documentclass_line}}{% endraw %}` | `\documentclass[classoption]{documentclass}` |
+| `{% raw %}{{documentclass}}{% endraw %}` | Document class name (default: `article`) |
+| `{% raw %}{{classoption}}{% endraw %}` | Class options (default: `11pt`) |
+| `{% raw %}{{bib_preamble}}{% endraw %}` | Bibliography preamble commands |
+| `{% raw %}{{bib_end}}{% endraw %}` | Bibliography end commands |
+
+## Extra YAML fields
+
+Any top-level YAML front matter field beyond the standard metadata is automatically available as a page template variable. For example:
+
+```yaml
+---
+title: My Report
+custom_footer: "Confidential"
+---
+```
+
+Then in `_calepin/templates/calepin.html`:
+
+```html
+{% raw %}<footer>{{custom_footer}}</footer>{% endraw %}
+```
+
+## Literal braces
+
+Use `{% raw %}{{_lb}}{% endraw %}` and `{% raw %}{{_rb}}{% endraw %}` to insert literal `{` and `}` characters in templates where they would otherwise conflict with Jinja syntax. This is especially useful in LaTeX templates:
+
+```latex
+{% raw %}\label{{_lb}}{{id}}{{_rb}}{% endraw %}
+```
+
+renders as `\label{my-id}`.
+
+
+# Examples
+
+## Minimal HTML page
+
+```html
+{% raw %}<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{plain_title}}</title>
+{{css}}
+{{header_includes}}
+</head>
+<body>
+{{title_block}}
+{{author_block}}
+{{toc}}
+{{body}}
+{{appendix_block}}
+</body>
+</html>{% endraw %}
+```
+
+Save as `_calepin/templates/calepin.html` and all HTML output in your project will use it.
+
+## Blog post layout
+
+```html
+{% raw %}<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{plain_title}}</title>
+{{css}}
+</head>
+<body>
+<article>
+  <header>
+    <h1>{{title}}</h1>
+    <time>{{date}}</time>
+    <p class="author">{{author}}</p>
+  </header>
+  {{body}}
+  {{appendix_block}}
+</article>
+</body>
+</html>{% endraw %}
+```
+
+## Custom CSS
+
+To change the stylesheet without replacing the entire HTML template, create `_calepin/templates/calepin.css`. This replaces the default styles but keeps the HTML structure unchanged.
+
+```css
+body {
+  max-width: 40em;
+  margin: 2em auto;
+  font-family: Georgia, serif;
+  line-height: 1.6;
+}
+```

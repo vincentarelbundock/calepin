@@ -6,12 +6,12 @@ title: Plugins
 Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
 :::
 
-*Calepin* produces clean HTML, LaTeX, Typst, and Markdown out of the box, but every project has unique needs: custom div styles, new Tera functions, branded page templates, or entirely new output formats. Plugins let you extend *Calepin* without modifying its source.
+*Calepin* produces clean HTML, LaTeX, Typst, and Markdown out of the box, but every project has unique needs: custom div styles, new Jinja functions, branded page templates, or entirely new output formats. Plugins let you extend *Calepin* without modifying its source.
 
 A plugin can provide any combination of:
 
 - **Filters** --- transform fenced divs (`::: {.myclass} ... :::`) and bracketed spans (`[text]{.myclass}`) into custom output.
-- **Custom functions** --- register Tera functions callable as `{% raw %}{{ name(args) }}{% endraw %}` in document bodies.
+- **Custom functions** --- register Jinja functions callable as `{% raw %}{{ name(args) }}{% endraw %}` in document bodies.
 - **Postprocessors** --- rewrite the entire rendered document (e.g., split HTML into slides).
 - **Templates** --- override element or page templates to change how divs, figures, or the full page are rendered.
 - **Custom formats** --- define new output formats built on top of HTML, LaTeX, Typst, or Markdown.
@@ -151,6 +151,6 @@ These are compiled into *Calepin* and always active. A user plugin can override 
 
 The following pages cover each plugin capability in detail:
 
-- [Tera](tera.qmd) --- built-in functions, context variables, and plugin functions.
+- [Shortcuts](templates/shortcuts.qmd) --- built-in functions, context variables, and plugin functions.
 - [Filters](filters.qmd) --- writing filter plugins for divs and spans.
-- [Templates](templates.qmd) --- element and page templates, and template plugins.
+- [Templates](templates/elements.qmd) --- element and page templates, and template plugins.

@@ -67,13 +67,13 @@ pub fn build_site(
     // 5. Render all pages with calepin (in parallel)
     let results = render::render_pages(&pages, &config, &base_dir, quiet)?;
 
-    // 6. Initialize Tera
-    let tera = templates::init_tera(&base_dir)?;
+    // 6. Initialize MiniJinja
+    let env = templates::init_jinja(&base_dir)?;
 
     // 7. Build site context
     let site_ctx = build_site_context(&config, &pages);
 
-    // 8. Render each page through Tera
+    // 8. Render each page through MiniJinja
     for page in &pages {
         let source_key = page.source.display().to_string();
         let result = results.get(&source_key);
@@ -98,29 +98,30 @@ pub fn build_site(
         let mut nav_tree = site_ctx.pages.clone();
         mark_active(&mut nav_tree, &page.url);
 
-        // Build Tera context with active-marked nav tree
-        let mut site_with_active = tera::Context::new();
-        site_with_active.insert("site", &context::SiteContext {
-            title: site_ctx.title.clone(),
-            subtitle: site_ctx.subtitle.clone(),
-            url: site_ctx.url.clone(),
-            favicon: site_ctx.favicon.clone(),
-            navbar: context::NavbarContext {
-                logo: site_ctx.navbar.logo.clone(),
-                logo_dark: site_ctx.navbar.logo_dark.clone(),
-                logo_alt: site_ctx.navbar.logo_alt.clone(),
-                background: site_ctx.navbar.background.clone(),
-                left: site_ctx.navbar.left.clone(),
-                right: site_ctx.navbar.right.clone(),
-                search: site_ctx.navbar.search,
+        // Build MiniJinja context with active-marked nav tree
+        let site_with_active = minijinja::context! {
+            site => context::SiteContext {
+                title: site_ctx.title.clone(),
+                subtitle: site_ctx.subtitle.clone(),
+                url: site_ctx.url.clone(),
+                favicon: site_ctx.favicon.clone(),
+                navbar: context::NavbarContext {
+                    logo: site_ctx.navbar.logo.clone(),
+                    logo_dark: site_ctx.navbar.logo_dark.clone(),
+                    logo_alt: site_ctx.navbar.logo_alt.clone(),
+                    background: site_ctx.navbar.background.clone(),
+                    left: site_ctx.navbar.left.clone(),
+                    right: site_ctx.navbar.right.clone(),
+                    search: site_ctx.navbar.search,
+                },
+                sidebar: context::SidebarContext {
+                    collapse_level: site_ctx.sidebar.collapse_level,
+                },
+                pages: nav_tree,
+                dark_mode: site_ctx.dark_mode,
             },
-            sidebar: context::SidebarContext {
-                collapse_level: site_ctx.sidebar.collapse_level,
-            },
-            pages: nav_tree,
-            dark_mode: site_ctx.dark_mode,
-        });
-        site_with_active.insert("page", &page_ctx);
+            page => page_ctx,
+        };
 
         // Choose template
         let template_name = if page.meta.listing.is_some() {
@@ -129,8 +130,9 @@ pub fn build_site(
             "page.html"
         };
 
-        let rendered = tera
-            .render(template_name, &site_with_active)
+        let tpl = env.get_template(template_name)
+            .with_context(|| format!("Failed to get template {} for {}", template_name, source_key))?;
+        let rendered = tpl.render(&site_with_active)
             .with_context(|| format!("Failed to render template for {}", source_key))?;
 
         // Write output

@@ -274,7 +274,7 @@ fn parse_meta(root: &saphyr::MappingOwned) -> HashMap<String, String> {
 }
 
 // ---------------------------------------------------------------------------
-// Public accessors (for Tera functions)
+// Public accessors (for Jinja functions)
 // ---------------------------------------------------------------------------
 
 /// Get a brand color by semantic name, optionally for a specific mode.

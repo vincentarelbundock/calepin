@@ -1,6 +1,6 @@
 // Evaluate orchestrator and engine dispatch.
 //
-// - evaluate()          — Walk parsed Blocks, execute code chunks, process Tera functions and
+// - evaluate()          — Walk parsed Blocks, execute code chunks, process Jinja functions and
 //                         inline expressions, filter conditional content, and produce Elements.
 // - execute_chunk()     — Dispatch a code chunk to the R or Python engine and capture output.
 // - evaluate_inline()   — Dispatch an inline expression (`{r}`/`{python}`) to its engine.
@@ -40,7 +40,7 @@ pub struct EvalResult {
 }
 
 /// Evaluate all blocks and produce a flat list of Elements.
-/// Executes code chunks, processes Tera functions, filters conditional content.
+/// Executes code chunks, processes Jinja functions, filters conditional content.
 #[inline(never)]
 pub fn evaluate(
     blocks: &[Block],
@@ -58,7 +58,7 @@ pub fn evaluate(
     for block in blocks {
         match block {
             Block::Text(text) => {
-                let tera_result = crate::tera_engine::process_body(
+                let tera_result = crate::jinja_engine::process_body(
                     &text.content, output_ext, metadata, registry,
                 );
                 // Only hash inline code expressions into the upstream digest,
@@ -71,11 +71,11 @@ pub fn evaluate(
                 elements.push(Element::Text { content: processed });
             }
             Block::Code(chunk) => {
-                // If #| tera: true, process chunk source through Tera before execution
+                // If #| tera: true, process chunk source through Jinja before execution
                 let tera_chunk;
                 let chunk_ref = if chunk.options.get_bool("tera", false) {
                     let joined = chunk.source.join("\n");
-                    let tera_result = crate::tera_engine::process_body(
+                    let tera_result = crate::jinja_engine::process_body(
                         &joined, output_ext, metadata, registry,
                     );
                     sc_fragments.extend(tera_result.sc_fragments);

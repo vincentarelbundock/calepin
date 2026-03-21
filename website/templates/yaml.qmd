@@ -1,0 +1,225 @@
+---
+title: YAML Preamble
+---
+
+The YAML front matter at the top of every `.qmd` file configures metadata, output options, and custom variables. *Calepin* parses the block between `---` delimiters before processing the document body.
+
+```yaml
+---
+title: My Document
+author: Jane Doe
+date: 2025-01-15
+format: html
+---
+```
+
+
+# Standard fields
+
+## Document metadata
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Document title |
+| `subtitle` | string | Document subtitle |
+| `author` | string or list | Author name(s) |
+| `date` | string | Publication date |
+| `abstract` | string | Abstract text |
+| `keywords` | list | Keywords |
+
+## Output
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `format` | string | Output format: `html`, `latex`, `typst`, `markdown` |
+| `toc` | boolean | Enable table of contents (default: true for HTML) |
+| `toc-depth` | number | Heading depth for TOC (default: 3) |
+| `toc-title` | string | TOC title (default: "Contents") |
+| `number-sections` | boolean | Number section headings |
+
+## Bibliography
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `bibliography` | string or list | Path(s) to `.bib` file(s) |
+| `csl` | string | Path to CSL style file |
+
+## Includes
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `header-includes` | string | Raw content inserted in `<head>` (HTML) or preamble (LaTeX) |
+| `include-before` | string | Content inserted before the body |
+| `include-after` | string | Content inserted after the body |
+| `css` | string or list | Additional CSS files (HTML only) |
+
+## LaTeX options
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `documentclass` | string | LaTeX document class (default: `article`) |
+| `classoption` | string | Class options (default: `11pt`) |
+
+
+# Rich author metadata
+
+Authors can be simple strings or detailed objects:
+
+```yaml
+# Simple
+author: Jane Doe
+
+# Multiple authors
+author:
+  - Jane Doe
+  - John Smith
+
+# Rich metadata
+author:
+  - name:
+      given: Jane
+      family: Doe
+    email: jane@example.com
+    orcid: 0000-0001-2345-6789
+    corresponding: true
+    affiliations:
+      - ref: uni
+
+affiliations:
+  - id: uni
+    name: University of Example
+    department: Department of Statistics
+    city: Exampleville
+    country: Examplia
+```
+
+Rich author data is rendered through the `author_block`, `author_item`, and `affiliation_item` element templates, which you can override. See [Elements](elements.qmd).
+
+
+# Variables
+
+The `variables:` block defines custom values accessible in document bodies via `{% raw %}{{ var.key }}{% endraw %}`:
+
+```yaml
+variables:
+  version: 2.0
+  urls:
+    docs: https://docs.example.com
+    api: https://api.example.com
+```
+
+Access in the document body:
+
+```
+{% raw %}Version: {{ var.version }}
+API docs: {{ var.urls.api }}{% endraw %}
+```
+
+Variables support arbitrary nesting. See [Shortcuts](shortcuts.qmd#var) for details.
+
+
+# Brand
+
+The `brand:` block configures colors, logos, and typography. It follows the [brand.yml specification](https://posit-dev.github.io/brand-yml/):
+
+```yaml
+brand:
+  color:
+    primary: "#0066cc"
+    background: "#ffffff"
+    foreground: "#222222"
+  logo:
+    images:
+      main:
+        path: logo.svg
+        alt: "Company logo"
+  typography:
+    fonts:
+      - family: Inter
+        source: google
+    base: Inter
+```
+
+Brand values are available in templates and document bodies via `{% raw %}{{ brand(type="color", name="primary") }}{% endraw %}`. See [Shortcuts](shortcuts.qmd#brand).
+
+
+# Appendix metadata
+
+These fields generate appendix sections at the end of the document:
+
+```yaml
+license:
+  text: "Creative Commons Attribution 4.0"
+  url: https://creativecommons.org/licenses/by/4.0/
+  type: CC BY 4.0     # Shorthand: expanded automatically
+
+citation:
+  container-title: "Journal of Examples"
+  volume: "42"
+  issue: "3"
+  page: "100-115"
+  doi: "10.1234/example"
+  issued: "2025"
+
+copyright:
+  holder: "Jane Doe"
+  year: "2025"
+
+funding:
+  - source: "National Science Foundation"
+    award: "Grant #12345"
+    recipient: "Jane Doe"
+```
+
+
+# Calepin-specific settings
+
+Settings specific to *Calepin* are nested under the `calepin:` key:
+
+```yaml
+calepin:
+  plugins:
+    - myplugin
+    - another-plugin
+```
+
+
+# CLI overrides
+
+Use the `-s` flag to override front matter values from the command line:
+
+```
+calepin doc.qmd -s title="New Title" -s toc=false
+calepin doc.qmd -s documentclass=report -s classoption=12pt
+```
+
+This is useful for batch rendering with different configurations.
+
+
+# Extra fields
+
+Any top-level YAML field not recognized by *Calepin* is stored as an extra field and becomes available as a page template variable:
+
+```yaml
+---
+title: Report
+confidential: true
+department: Research
+---
+```
+
+In a custom page template (`_calepin/templates/calepin.html`):
+
+```html
+{% raw %}{% if confidential %}
+<div class="watermark">CONFIDENTIAL</div>
+{% endif %}
+<footer>Department: {{department}}</footer>{% endraw %}
+```
+
+
+# Site configuration
+
+For sites, `_calepin.yaml` (or `_site.yml`) provides project-wide settings. The `website:` block configures navigation, sidebar, and other site-wide options. See [Sites](sites.qmd) for the full reference.
+
+Document-level front matter takes precedence over site configuration for metadata fields like `title`, `author`, and `date`.

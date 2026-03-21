@@ -1,19 +1,15 @@
 ---
-title: Tera
+title: Shortcuts
 variables:
   version: 0.0.1-alpha.2
   urls:
     docs: https://github.com/vincentarelbundock/calepin
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
-*Calepin* processes the body of every `.qmd` document through the [Tera](https://keats.github.io/tera/) template engine. This lets you use expressions, functions, conditionals, and loops directly in your text. Fenced code blocks and inline code spans are automatically protected from Tera evaluation.
+*Calepin* processes the body of every `.qmd` document through the [MiniJinja](https://github.com/mitsuhiko/minijinja) template engine. This means you can use expressions, functions, conditionals, and loops directly in your prose. Fenced code blocks and inline code spans are automatically protected from evaluation.
 
 ::: {.callout-note}
-Tera expressions inside fenced code blocks and inline code spans are not evaluated by default. To opt-in to Tera processing inside a code chunk, use the `#| tera: true` chunk option:
+Jinja expressions inside fenced code blocks and inline code spans are not evaluated by default. To opt-in to Jinja processing inside a code chunk, use the `#| tera: true` chunk option:
 :::
 
 ````
@@ -23,21 +19,6 @@ n <- {{var.sample_size}}
 x <- rnorm(n)
 summary(x)
 ```
-````
-
-
-# Syntax
-
-Tera expressions use double braces: `{% raw %}{{ expression }}{% endraw %}`. Functions use parentheses with keyword arguments:
-
-```
-{% raw %}{{ function_name(arg="value") }}{% endraw %}
-```
-
-To include literal Tera syntax without evaluation, wrap it in raw blocks:
-
-````
-{% raw %}{% raw %}{{ this is not evaluated }}{% endraw %}{% endraw %}
 ````
 
 
@@ -62,7 +43,7 @@ The title of this document is: {{ meta.title }}.
 
 ## var
 
-Look up a variable from the `variables:` block in front matter (or in `_calepin.yaml` for site-wide variables). Uses dot-notation for nested values. For example, this document's front matter contains:
+Look up a variable from the `variables:` block in front matter. Uses dot-notation for nested values. For example, this document's front matter contains:
 
 ```yaml
 variables:
@@ -91,7 +72,7 @@ The current output format is available as `{% raw %}{{ format }}{% endraw %}` --
 
 # Conditionals and loops
 
-Because the document body is a Tera template, you can use control flow:
+Because the document body is a Jinja template, you can use control flow:
 
 ````
 {% raw %}{% if format == "html" %}
@@ -105,7 +86,7 @@ This paragraph only appears in HTML output.
 {% endfor %}{% endraw %}
 ````
 
-See the [Tera documentation](https://keats.github.io/tera/docs/) for the full template syntax, including filters, macros, and inheritance.
+See [Jinja Syntax](jinja.qmd) for the full template syntax reference.
 
 
 # Built-in functions
@@ -131,6 +112,13 @@ Embed a video or streaming service. Supports YouTube, Vimeo, and direct video UR
 
 YouTube and Vimeo URLs are automatically converted to embed URLs.
 
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `url` | *required* | Video URL (YouTube, Vimeo, or direct) |
+| `width` | `"100%"` | Player width |
+| `height` | `"400"` | Player height |
+| `title` | `"Video"` | Accessible title |
+
 ## brand
 
 Access branding information from the `brand:` block in front matter (or in `_calepin.yaml` for site-wide branding):
@@ -149,7 +137,7 @@ Render keyboard shortcuts:
 
 {% raw %}`{{ kbd(keys=["Ctrl", "C"]) }}`{% endraw %}
 
-Produces `<kbd>Ctrl</kbd>+<kbd>C</kbd>` in HTML, `\texttt{Ctrl}+\texttt{C}` in LaTeX.
+Produces `<kbd>Ctrl</kbd>+<kbd>C</kbd>` in HTML, `\texttt{Ctrl}+\texttt{C}` in LaTeX, `#raw("Ctrl")+#raw("C")` in Typst.
 
 ## lipsum
 
@@ -174,9 +162,16 @@ Insert a placeholder image for layout prototyping. Produces an inline SVG in HTM
 {{ placeholder(width=400, height=100, text="Banner", color="#e0e0ff") }}{% endraw %}
 ```
 
-Default dimensions are 600×400.
+Default dimensions are 600x400.
 
 {{ placeholder(width=300, height=150) }}
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `width` | `600` | Width in pixels |
+| `height` | `400` | Height in pixels |
+| `text` | `"WxH"` | Display text |
+| `color` | `"#cccccc"` | Background color |
 
 ## include
 
@@ -189,17 +184,15 @@ This is a pre-parse directive --- included content is parsed as blocks, so code 
 
 # Plugin functions
 
-Plugins can register custom Tera functions via the `shortcode` capability in their `plugin.yml`. They are called with the same `{% raw %}{{ name(args) }}{% endraw %}` syntax as built-in functions.
+Plugins can register custom Jinja functions via the `shortcode` capability in their `plugin.yml`. They are called with the same `{% raw %}{{ name(args) }}{% endraw %}` syntax as built-in functions.
 
-## Example: greeting plugin
+For example, a greeting plugin:
 
 `_calepin/plugins/greeting/plugin.yml`:
 
 ```yaml
 name: greeting
 version: 0.1.0
-description: "A friendly greeting function"
-
 provides:
   shortcode:
     run: shortcode.py
@@ -218,40 +211,13 @@ fmt = data["format"]
 
 if fmt == "html":
     print(f'<strong>Hello, {name}!</strong>')
-elif fmt == "tex":
-    print(f'\\textbf{{Hello, {name}!}}')
 else:
     print(f'Hello, {name}!')
 ```
 
 {% raw %}Use it as `{{ greeting(name="Alice") }}`.{% endraw %}
 
-## Input protocol
-
-The executable receives JSON on stdin:
-
-```json
-{
-  "name": "greeting",
-  "args": [],
-  "kwargs": {"name": "Alice"},
-  "format": "html",
-  "meta": {
-    "title": "My Document",
-    "author": ["Author Name"],
-    "date": "2025-01-01"
-  }
-}
-```
-
-## Output protocol
-
-Print the replacement text to stdout. The output is inserted directly at the call site.
-
-- Exit 0: stdout replaces the function call.
-- Exit non-zero: a warning is printed, and the function call produces an empty string.
-
-See [Plugins](plugins.qmd) for the full plugin system documentation.
+The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, and `meta` fields, and prints replacement text to stdout. See [Plugins](../plugins.qmd) for the full protocol.
 
 
 # Resolution order

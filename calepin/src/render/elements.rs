@@ -12,13 +12,13 @@ use crate::filters::highlighting::{Highlighter, HighlightConfig, ColorScope};
 // Built-in templates (embedded at compile time)
 // ---------------------------------------------------------------------------
 //
-// Each template is a single .tera file with format conditionals
+// Each template is a single .jinja file with format conditionals
 // ({% if format == "html" %} ... {% elif format == "latex" %} ... {% endif %}).
 
-const THEOREM_ITALIC: &str = include_str!("../templates/elements/theorem_italic.tera");
-const THEOREM_NORMAL: &str = include_str!("../templates/elements/theorem_normal.tera");
-const CALLOUT: &str = include_str!("../templates/elements/callout.tera");
-const CODE_DIAGNOSTIC: &str = include_str!("../templates/elements/code_diagnostic.tera");
+const THEOREM_ITALIC: &str = include_str!("../templates/elements/theorem_italic.jinja");
+const THEOREM_NORMAL: &str = include_str!("../templates/elements/theorem_normal.jinja");
+const CALLOUT: &str = include_str!("../templates/elements/callout.jinja");
+const CODE_DIAGNOSTIC: &str = include_str!("../templates/elements/code_diagnostic.jinja");
 
 fn builtin_template(name: &str) -> Option<&'static str> {
     match name {
@@ -31,27 +31,27 @@ fn builtin_template(name: &str) -> Option<&'static str> {
         // Code diagnostics
         "code_error" | "code_warning" | "code_message" => Some(CODE_DIAGNOSTIC),
         // Single-file templates
-        "code_source" => Some(include_str!("../templates/elements/code_source.tera")),
-        "code_output" => Some(include_str!("../templates/elements/code_output.tera")),
-        "figure" => Some(include_str!("../templates/elements/figure.tera")),
-        "div" => Some(include_str!("../templates/elements/div.tera")),
-        "proof" => Some(include_str!("../templates/elements/proof.tera")),
-        "landscape" => Some(include_str!("../templates/elements/landscape.tera")),
-        "preamble" => Some(include_str!("../templates/elements/preamble.tera")),
-        "appendix" => Some(include_str!("../templates/elements/appendix.tera")),
-        "appendix_license" => Some(include_str!("../templates/elements/appendix_license.tera")),
-        "appendix_copyright" => Some(include_str!("../templates/elements/appendix_copyright.tera")),
-        "appendix_funding" => Some(include_str!("../templates/elements/appendix_funding.tera")),
-        "appendix_citation" => Some(include_str!("../templates/elements/appendix_citation.tera")),
-        "author_block" => Some(include_str!("../templates/elements/author_block.tera")),
-        "author_item" => Some(include_str!("../templates/elements/author_item.tera")),
-        "affiliation_item" => Some(include_str!("../templates/elements/affiliation_item.tera")),
-        "title_block" => Some(include_str!("../templates/elements/title_block.tera")),
-        "subtitle_block" => Some(include_str!("../templates/elements/subtitle_block.tera")),
-        "date_block" => Some(include_str!("../templates/elements/date_block.tera")),
-        "abstract_block" => Some(include_str!("../templates/elements/abstract_block.tera")),
-        "keywords_block" => Some(include_str!("../templates/elements/keywords_block.tera")),
-        "bibliography_block" => Some(include_str!("../templates/elements/bibliography_block.tera")),
+        "code_source" => Some(include_str!("../templates/elements/code_source.jinja")),
+        "code_output" => Some(include_str!("../templates/elements/code_output.jinja")),
+        "figure" => Some(include_str!("../templates/elements/figure.jinja")),
+        "div" => Some(include_str!("../templates/elements/div.jinja")),
+        "proof" => Some(include_str!("../templates/elements/proof.jinja")),
+        "landscape" => Some(include_str!("../templates/elements/landscape.jinja")),
+        "preamble" => Some(include_str!("../templates/elements/preamble.jinja")),
+        "appendix" => Some(include_str!("../templates/elements/appendix.jinja")),
+        "appendix_license" => Some(include_str!("../templates/elements/appendix_license.jinja")),
+        "appendix_copyright" => Some(include_str!("../templates/elements/appendix_copyright.jinja")),
+        "appendix_funding" => Some(include_str!("../templates/elements/appendix_funding.jinja")),
+        "appendix_citation" => Some(include_str!("../templates/elements/appendix_citation.jinja")),
+        "author_block" => Some(include_str!("../templates/elements/author_block.jinja")),
+        "author_item" => Some(include_str!("../templates/elements/author_item.jinja")),
+        "affiliation_item" => Some(include_str!("../templates/elements/affiliation_item.jinja")),
+        "title_block" => Some(include_str!("../templates/elements/title_block.jinja")),
+        "subtitle_block" => Some(include_str!("../templates/elements/subtitle_block.jinja")),
+        "date_block" => Some(include_str!("../templates/elements/date_block.jinja")),
+        "abstract_block" => Some(include_str!("../templates/elements/abstract_block.jinja")),
+        "keywords_block" => Some(include_str!("../templates/elements/keywords_block.jinja")),
+        "bibliography_block" => Some(include_str!("../templates/elements/bibliography_block.jinja")),
         _ => None,
     }
 }

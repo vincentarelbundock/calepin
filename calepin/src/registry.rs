@@ -250,7 +250,7 @@ impl PluginRegistry {
         })
     }
 
-    /// Return all shortcode names and their plugin index, for Tera function registration.
+    /// Return all shortcode names and their plugin index, for Jinja function registration.
     pub fn shortcode_names(&self) -> Vec<(String, usize)> {
         let mut result = Vec::new();
         for (idx, plugin) in self.plugins.iter().enumerate() {

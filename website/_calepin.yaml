@@ -42,17 +42,19 @@ website:
         - code/python.qmd
         - code/sh.qmd
         - cache.qmd
-    - section: "Extending"
+    - section: "Templates"
       pages:
-        - plugins.qmd
-        - tera.qmd
-        - filters.qmd
-        - templates.qmd
+        - templates/templates.qmd
+        - templates/jinja.qmd
+        - templates/shortcuts.qmd
+        - templates/elements.qmd
+        - templates/pages.qmd
+        - templates/sites.qmd
+        - templates/yaml.qmd
     - section: "Misc"
       pages:
         - text: "PDF Example"
           href: assets/pdf.pdf
-        - slides.qmd
         - quarto.qmd
 
 brand:
