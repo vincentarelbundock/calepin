@@ -334,10 +334,11 @@ pub fn render_core_with_brand(
     // 12. Render elements to final format
     let rendered = timed!("render", renderer.render(&elements, &element_renderer)?);
 
-    // 13. Cross-ref resolution
+    // 13. Cross-ref resolution (section IDs pre-collected from AST walk)
     let thm_nums = element_renderer.theorem_numbers();
+    let walk_meta = element_renderer.walk_metadata();
     let rendered = timed!("crossref", match renderer.base_format() {
-        "html" => filters::crossref::resolve_html(&rendered, &thm_nums),
+        "html" => filters::crossref::resolve_html_with_ids(&rendered, &thm_nums, &walk_meta.ids),
         "latex" => filters::crossref::resolve_latex(&rendered, &thm_nums),
         _ => filters::crossref::resolve_plain(&rendered, &thm_nums),
     });

@@ -2,7 +2,7 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render};
+use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
 use crate::render::markdown::ImageAttrs;
 
 pub struct LatexEmitter {
@@ -10,11 +10,21 @@ pub struct LatexEmitter {
 }
 
 /// Convert markdown to LaTeX via the shared AST walker.
-/// Image attributes and path resolution are handled structurally in the emitter.
 pub fn markdown_to_latex(markdown: &str, raw_fragments: &[String], number_sections: bool) -> String {
+    markdown_to_latex_with_counter(markdown, raw_fragments, number_sections, 0).0
+}
+
+/// Convert markdown to LaTeX, returning (output, final_footnote_counter).
+pub fn markdown_to_latex_with_counter(
+    markdown: &str,
+    raw_fragments: &[String],
+    number_sections: bool,
+    footnote_counter_start: usize,
+) -> (String, usize) {
     let emitter = LatexEmitter { number_sections };
-    let options = WalkOptions { number_sections, shift_headings: false };
-    walk_and_render(&emitter, markdown, raw_fragments, &options)
+    let options = WalkOptions { number_sections, shift_headings: false, footnote_counter_start };
+    let result = walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options);
+    (result.output, result.metadata.footnote_counter_end)
 }
 
 impl FormatEmitter for LatexEmitter {
@@ -137,6 +147,12 @@ impl FormatEmitter for LatexEmitter {
     fn strikethrough_close(&self) -> &str { "}" }
     fn superscript_open(&self) -> &str { "\\textsuperscript{" }
     fn superscript_close(&self) -> &str { "}" }
+    fn subscript_open(&self) -> &str { "\\textsubscript{" }
+    fn subscript_close(&self) -> &str { "}" }
+    fn underline_open(&self) -> &str { "\\underline{" }
+    fn underline_close(&self) -> &str { "}" }
+    fn highlight_open(&self) -> &str { "\\hl{" }
+    fn highlight_close(&self) -> &str { "}" }
 
     fn link_open(&self, url: &str) -> String {
         if url.starts_with('#') {

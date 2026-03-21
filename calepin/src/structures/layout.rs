@@ -60,7 +60,7 @@ fn render_html(
     caption: &str,
     valign: &str,
     is_figure: bool,
-    raw_fragments: &std::cell::RefCell<Vec<String>>,
+    _raw_fragments: &std::cell::RefCell<Vec<String>>,
 ) -> String {
     let align_items = match valign {
         "center" => "center",
@@ -92,10 +92,7 @@ fn render_html(
     }
 
     if is_figure && !caption.is_empty() {
-        let fragments = raw_fragments.borrow();
-        let cap_html = crate::render::markdown::render_html(caption, &fragments);
-        let cap_clean = cap_html.trim().strip_prefix("<p>").unwrap_or(cap_html.trim())
-            .strip_suffix("</p>").unwrap_or(cap_html.trim()).trim();
+        let cap_clean = crate::render::markdown::render_inline(caption, "html");
         html.push_str(&format!("<p class=\"caption\">{}</p>\n", cap_clean));
     }
 

@@ -118,9 +118,9 @@ bench:  release ## Benchmark calepin vs Quarto on bench/*.qmd (requires hyperfin
 		hyperfine --warmup 1 \
 			-n "calepin $$base → HTML"  '../calepin/target/release/calepin '"$$f"' -o '"$$base"'.html -q' \
 			-n "calepin $$base → LaTeX" '../calepin/target/release/calepin '"$$f"' -o '"$$base"'.tex -q' \
-			-n "Quarto $$base → HTML"   'quarto render '"$$f"' --to html --quiet' \
-			-n "Quarto $$base → LaTeX"  'quarto render '"$$f"' --to latex --quiet' \
 			--ignore-failure; \
 		rm -f "$$base".html "$$base".tex "$$base".pdf; \
 		rm -rf "$${base}_files"; \
 	done
+# -n "Quarto $$base → HTML"   'quarto render '"$$f"' --to html --quiet' \
+# -n "Quarto $$base → LaTeX"  'quarto render '"$$f"' --to latex --quiet' \

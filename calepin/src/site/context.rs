@@ -314,13 +314,7 @@ fn build_breadcrumbs(page: &PageInfo) -> Vec<Breadcrumb> {
     crumbs
 }
 
-/// Render inline markdown to HTML, stripping the <p> wrapper comrak adds.
+/// Render inline markdown to HTML, stripping the <p> wrapper.
 fn render_inline_markdown(text: &str) -> String {
-    let html = comrak::markdown_to_html(text, &comrak::Options::default());
-    let trimmed = html.trim();
-    if trimmed.starts_with("<p>") && trimmed.ends_with("</p>") {
-        trimmed[3..trimmed.len() - 4].to_string()
-    } else {
-        trimmed.to_string()
-    }
+    crate::render::markdown::render_inline(text, "html")
 }

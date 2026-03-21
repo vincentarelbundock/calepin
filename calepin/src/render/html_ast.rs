@@ -2,7 +2,7 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render};
+use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, WalkResult, walk_and_render_with_metadata};
 use crate::render::markdown::ImageAttrs;
 
 pub struct HtmlEmitter;
@@ -14,9 +14,20 @@ pub fn markdown_to_html_ast(
     number_sections: bool,
     shift_headings: bool,
 ) -> String {
+    markdown_to_html_ast_with_metadata(markdown, raw_fragments, number_sections, shift_headings, 0).output
+}
+
+/// Convert markdown to HTML and return collected metadata (headings, IDs).
+pub fn markdown_to_html_ast_with_metadata(
+    markdown: &str,
+    raw_fragments: &[String],
+    number_sections: bool,
+    shift_headings: bool,
+    footnote_counter_start: usize,
+) -> WalkResult {
     let emitter = HtmlEmitter;
-    let options = WalkOptions { number_sections, shift_headings };
-    walk_and_render(&emitter, markdown, raw_fragments, &options)
+    let options = WalkOptions { number_sections, shift_headings, footnote_counter_start };
+    walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options)
 }
 
 impl FormatEmitter for HtmlEmitter {
@@ -112,6 +123,12 @@ impl FormatEmitter for HtmlEmitter {
     fn strikethrough_close(&self) -> &str { "</del>" }
     fn superscript_open(&self) -> &str { "<sup>" }
     fn superscript_close(&self) -> &str { "</sup>" }
+    fn subscript_open(&self) -> &str { "<sub>" }
+    fn subscript_close(&self) -> &str { "</sub>" }
+    fn underline_open(&self) -> &str { "<u>" }
+    fn underline_close(&self) -> &str { "</u>" }
+    fn highlight_open(&self) -> &str { "<mark>" }
+    fn highlight_close(&self) -> &str { "</mark>" }
 
     fn link_open(&self, url: &str) -> String {
         format!("<a href=\"{}\">", self.escape_text(url))

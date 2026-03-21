@@ -97,7 +97,7 @@ fn render_one_page(
     let toc = if result.metadata.toc.unwrap_or(true) {
         let depth = if result.metadata.toc_depth == 0 { 3 } else { result.metadata.toc_depth };
         let title = result.metadata.toc_title.as_deref().unwrap_or("Contents");
-        let toc_html = crate::render::template::build_html_toc(&body, depth, title);
+        let toc_html = crate::render::template::build_html_toc_from_body(&body, depth, title);
         if toc_html.is_empty() { None } else { Some(toc_html) }
     } else {
         None
@@ -113,16 +113,9 @@ fn render_one_page(
     })
 }
 
-/// Render inline markdown to HTML, stripping the <p> wrapper comrak adds.
+/// Render inline markdown to HTML, stripping the <p> wrapper.
 fn render_inline_markdown(text: &str) -> String {
-    let html = comrak::markdown_to_html(text, &comrak::Options::default());
-    // comrak wraps in <p>...</p>\n — strip it for inline use
-    let trimmed = html.trim();
-    if trimmed.starts_with("<p>") && trimmed.ends_with("</p>") {
-        trimmed[3..trimmed.len() - 4].to_string()
-    } else {
-        trimmed.to_string()
-    }
+    crate::render::markdown::render_inline(text, "html")
 }
 
 fn build_overrides(config: &SiteConfig) -> Vec<String> {

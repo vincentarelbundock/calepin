@@ -44,6 +44,41 @@ pub struct HeadingAttrs {
     pub classes: Vec<String>,
 }
 
+// ---------------------------------------------------------------------------
+// Structured metadata collected during the AST walk
+// ---------------------------------------------------------------------------
+
+/// A heading entry collected during the AST walk.
+#[derive(Debug, Clone)]
+pub struct TocEntry {
+    pub level: u8,
+    pub id: String,
+    /// Plain text content (no formatting markup).
+    pub text: String,
+    /// Section number string (e.g. "1.2.3"), if numbering is enabled.
+    pub number: Option<String>,
+    pub classes: Vec<String>,
+}
+
+/// Metadata collected as a side-product of the AST walk.
+/// Avoids the need to regex-scan rendered output for IDs.
+#[derive(Debug, Clone, Default)]
+pub struct WalkMetadata {
+    /// All headings encountered during the walk.
+    pub headings: Vec<TocEntry>,
+    /// All IDs encountered (headings as sec-*, figures as fig-*, tables as tbl-*, etc.).
+    /// Values are sequential numbers assigned during the walk.
+    pub ids: HashMap<String, String>,
+    /// Final footnote counter value (for chaining across multiple Text elements).
+    pub footnote_counter_end: usize,
+}
+
+/// Result of `walk_and_render`: the rendered string plus collected metadata.
+pub struct WalkResult {
+    pub output: String,
+    pub metadata: WalkMetadata,
+}
+
 /// Format-specific string emission. Each method returns the string(s) to
 /// write for a given AST node. The walker handles all shared state.
 pub trait FormatEmitter {
@@ -88,6 +123,12 @@ pub trait FormatEmitter {
     fn strikethrough_close(&self) -> &str;
     fn superscript_open(&self) -> &str;
     fn superscript_close(&self) -> &str;
+    fn subscript_open(&self) -> &str;
+    fn subscript_close(&self) -> &str;
+    fn underline_open(&self) -> &str;
+    fn underline_close(&self) -> &str;
+    fn highlight_open(&self) -> &str;
+    fn highlight_close(&self) -> &str;
 
     // -- Links & images --
     fn link_open(&self, url: &str) -> String;
@@ -145,11 +186,13 @@ pub trait FormatEmitter {
 pub struct WalkOptions {
     pub number_sections: bool,
     pub shift_headings: bool,
+    /// Starting footnote counter (for documents with multiple Text elements).
+    pub footnote_counter_start: usize,
 }
 
 impl Default for WalkOptions {
     fn default() -> Self {
-        Self { number_sections: false, shift_headings: false }
+        Self { number_sections: false, shift_headings: false, footnote_counter_start: 0 }
     }
 }
 
@@ -157,32 +200,23 @@ impl Default for WalkOptions {
 // Public entry point
 // ---------------------------------------------------------------------------
 
-/// Walk the AST without math protection (for formats that need custom
-/// post-processing between the walk and marker resolution, like LaTeX).
-pub fn walk_ast_raw(
-    emitter: &dyn FormatEmitter,
-    markdown: &str,
-    options: &WalkOptions,
-) -> String {
-    walk_ast(emitter, markdown, options)
-}
-
-/// Convert markdown to the target format using a shared AST walk.
-/// Handles math protection, footnote pre-pass, heading IDs, and section numbering.
-pub fn walk_and_render(
+/// Convert markdown and return both rendered output and collected metadata
+/// (headings for TOC, IDs for cross-references).
+pub fn walk_and_render_with_metadata(
     emitter: &dyn FormatEmitter,
     markdown: &str,
     raw_fragments: &[String],
     options: &WalkOptions,
-) -> String {
+) -> WalkResult {
     let preprocessed = markers::preprocess(markdown);
     let (protected, math) = markers::protect_math(&preprocessed);
-    let raw = walk_ast(emitter, &protected, options);
+    let (raw, metadata) = walk_ast(emitter, &protected, options);
     let restored = markers::restore_math(&raw, &math);
     let fmt = emitter.format_name();
     let restored = markers::resolve_equation_labels(&restored, fmt);
     let restored = markers::resolve_escaped_dollars(&restored, fmt);
-    markers::resolve_raw(&restored, raw_fragments)
+    let output = markers::resolve_raw(&restored, raw_fragments);
+    WalkResult { output, metadata }
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +253,9 @@ struct WalkState {
     pending_image: Option<PendingImage>,
     list_tight: bool,
     in_tight_list_item: bool,
+
+    /// Collected metadata (headings, IDs).
+    meta: WalkMetadata,
 }
 
 struct PendingImage {
@@ -230,14 +267,14 @@ struct PendingImage {
 // Core AST walk
 // ---------------------------------------------------------------------------
 
-fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) -> String {
+fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) -> (String, WalkMetadata) {
     let arena = Arena::new();
     let comrak_opts = comrak_options();
     let root = parse_document(&arena, markdown, &comrak_opts);
 
-    // Pre-pass 1: assign sequential footnote IDs
+    // Pre-pass 1: assign sequential footnote IDs (continuing from previous Text elements)
     let mut footnote_ids: HashMap<String, usize> = HashMap::new();
-    let mut fn_counter = 0usize;
+    let mut fn_counter = options.footnote_counter_start;
     for edge in root.traverse() {
         if let comrak::arena_tree::NodeEdge::Start(node) = edge {
             match &node.data.borrow().value {
@@ -316,6 +353,7 @@ fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) 
         pending_image: None,
         list_tight: false,
         in_tight_list_item: false,
+        meta: WalkMetadata::default(),
     };
 
     // Main traversal
@@ -345,7 +383,8 @@ fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) 
         }
     }
 
-    out
+    state.meta.footnote_counter_end = fn_counter;
+    (out, state.meta)
 }
 
 // ---------------------------------------------------------------------------
@@ -452,8 +491,11 @@ fn emit_entering(
         NodeValue::Emph => buf.push_str(e.emph_open()),
         NodeValue::Strikethrough => buf.push_str(e.strikethrough_open()),
         NodeValue::Superscript => buf.push_str(e.superscript_open()),
+        NodeValue::Subscript => buf.push_str(e.subscript_open()),
+        NodeValue::Underline => buf.push_str(e.underline_open()),
+        NodeValue::Highlight => buf.push_str(e.highlight_open()),
         NodeValue::Link(link) => buf.push_str(&e.link_open(&link.url)),
-        NodeValue::Image(link) => {
+        NodeValue::Image(_) => {
             s.skip_image_text = true;
             s.image_alt.clear();
             // Image tag is emitted in leave (after collecting alt text)
@@ -572,6 +614,30 @@ fn emit_leaving(
                     None
                 };
 
+                // Collect metadata: TOC entry
+                let is_unlisted = attrs.classes.iter().any(|c| c == "unlisted");
+                if !is_unlisted {
+                    s.meta.headings.push(TocEntry {
+                        level,
+                        id: attrs.id.clone(),
+                        text: s.heading_raw_text.clone(),
+                        number: section_number.clone(),
+                        classes: attrs.classes.clone(),
+                    });
+                }
+
+                // Collect metadata: section ID
+                if !attrs.id.is_empty() {
+                    let sec_key = if attrs.id.starts_with("sec-") {
+                        attrs.id.clone()
+                    } else {
+                        format!("sec-{}", &attrs.id)
+                    };
+                    if let Some(ref num) = section_number {
+                        s.meta.ids.insert(sec_key, num.clone());
+                    }
+                }
+
                 buf.push_str(&e.heading(
                     level,
                     &attrs,
@@ -588,6 +654,9 @@ fn emit_leaving(
         NodeValue::Emph => buf.push_str(e.emph_close()),
         NodeValue::Strikethrough => buf.push_str(e.strikethrough_close()),
         NodeValue::Superscript => buf.push_str(e.superscript_close()),
+        NodeValue::Subscript => buf.push_str(e.subscript_close()),
+        NodeValue::Underline => buf.push_str(e.underline_close()),
+        NodeValue::Highlight => buf.push_str(e.highlight_close()),
         NodeValue::Link(_) => buf.push_str(e.link_close()),
         NodeValue::Image(link) => {
             s.skip_image_text = false;

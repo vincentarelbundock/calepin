@@ -42,6 +42,10 @@ pub trait OutputRenderer {
 
     /// Render a list of elements into the final document body.
     fn render(&self, elements: &[Element], renderer: &ElementRenderer) -> Result<String> {
+        // Pre-collect footnote definitions across all Text elements so that
+        // references in one block can resolve against definitions in another.
+        renderer.collect_footnote_defs(elements);
+
         let parts: Vec<String> = elements
             .iter()
             .map(|el| renderer.render(el))

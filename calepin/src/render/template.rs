@@ -5,30 +5,45 @@ use regex::Regex;
 
 use crate::types::Metadata;
 
-static RE_TOC_HEADING: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"<h([1-6])\s[^>]*id="([^"]+)"[^>]*>(.*?)</h[1-6]>"#).unwrap()
-});
-static RE_TOC_TAG: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"<[^>]+>").unwrap()
-});
-/// Build an HTML table of contents from rendered headings in the body.
-pub fn build_html_toc(body: &str, depth: u8, title: &str) -> String {
-    let re = &RE_TOC_HEADING;
-    let tag_re = &RE_TOC_TAG;
+/// Build an HTML table of contents from heading metadata collected during the AST walk.
+pub fn build_html_toc(headings: &[crate::render::ast::TocEntry], depth: u8, title: &str) -> String {
+    let items: Vec<(u8, &str, &str)> = headings.iter()
+        .filter(|h| h.level <= depth)
+        .filter(|h| !h.classes.iter().any(|c| c == "unlisted"))
+        .filter(|h| !h.text.is_empty())
+        .map(|h| (h.level, h.id.as_str(), h.text.as_str()))
+        .collect();
+    build_html_toc_from_items(&items, title)
+}
 
-    let mut items: Vec<(u8, String, String)> = Vec::new();
-    for cap in re.captures_iter(body) {
-        let level: u8 = cap[1].parse().unwrap_or(1);
-        if level > depth { continue; }
-        // Skip headings with the "unlisted" class
-        let full_tag = cap.get(0).map_or("", |m| m.as_str());
-        if full_tag.contains("unlisted") { continue; }
-        let id = cap[2].to_string();
-        let text = tag_re.replace_all(&cap[3], "").trim().to_string();
-        if text.is_empty() { continue; }
-        items.push((level, id, text));
-    }
+/// Build an HTML table of contents by extracting headings from rendered HTML (fallback).
+pub fn build_html_toc_from_body(body: &str, depth: u8, title: &str) -> String {
+    static RE_TOC_HEADING: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"<h([1-6])\s[^>]*id="([^"]+)"[^>]*>(.*?)</h[1-6]>"#).unwrap()
+    });
+    static RE_TOC_TAG: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"<[^>]+>").unwrap()
+    });
+    // Can't return refs to captures, so use owned version
+    let owned_items: Vec<(u8, String, String)> = RE_TOC_HEADING.captures_iter(body)
+        .filter_map(|cap| {
+            let level: u8 = cap[1].parse().ok()?;
+            if level > depth { return None; }
+            let full_tag = cap.get(0)?.as_str();
+            if full_tag.contains("unlisted") { return None; }
+            let id = cap[2].to_string();
+            let text = RE_TOC_TAG.replace_all(&cap[3], "").trim().to_string();
+            if text.is_empty() { return None; }
+            Some((level, id, text))
+        })
+        .collect();
+    let items: Vec<(u8, &str, &str)> = owned_items.iter()
+        .map(|(l, id, text)| (*l, id.as_str(), text.as_str()))
+        .collect();
+    build_html_toc_from_items(&items, title)
+}
 
+fn build_html_toc_from_items(items: &[(u8, &str, &str)], title: &str) -> String {
     if items.is_empty() { return String::new(); }
 
     let min_level = items.iter().map(|(l, _, _)| *l).min().unwrap_or(1);
@@ -36,7 +51,7 @@ pub fn build_html_toc(body: &str, depth: u8, title: &str) -> String {
     let mut current_level = min_level;
     let mut first = true;
 
-    for (level, id, text) in &items {
+    for (level, id, text) in items {
         if *level > current_level {
             // Going deeper: nest inside the current <li> (which was left open)
             while current_level < *level {
@@ -249,6 +264,16 @@ fn render_block(name: &str, ext: &str, vars: &HashMap<String, String>, fallback:
 /// Shared across all output formats; format-specific blocks are rendered
 /// through overridable element templates.
 pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<String, String> {
+    build_template_vars_with_headings(meta, body, ext, &[])
+}
+
+/// Build page template variables with pre-collected heading metadata for TOC.
+pub fn build_template_vars_with_headings(
+    meta: &Metadata,
+    body: &str,
+    ext: &str,
+    headings: &[crate::render::ast::TocEntry],
+) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
     vars.insert("body".to_string(), body.to_string());
@@ -410,7 +435,7 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
         let toc_depth = if meta.toc_depth == 0 { 3 } else { meta.toc_depth };
         let toc_title = meta.toc_title.as_deref().unwrap_or("Contents");
         let toc = match ext {
-            "html" => build_html_toc(body, toc_depth, toc_title),
+            "html" => build_html_toc(headings, toc_depth, toc_title),
             "latex" => format!("\\setcounter{{tocdepth}}{{{}}}\n\\tableofcontents", toc_depth),
             "typst" => format!("#outline(depth: {})", toc_depth),
             _ => String::new(),
@@ -453,6 +478,15 @@ pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<St
 /// Convenience: build HTML template variables.
 pub fn build_html_vars(meta: &Metadata, body: &str) -> HashMap<String, String> {
     build_template_vars(meta, body, "html")
+}
+
+/// Build HTML template variables with pre-collected heading metadata.
+pub fn build_html_vars_with_headings(
+    meta: &Metadata,
+    body: &str,
+    headings: &[crate::render::ast::TocEntry],
+) -> HashMap<String, String> {
+    build_template_vars_with_headings(meta, body, "html", headings)
 }
 
 /// Build the appendix block for any format using element templates.

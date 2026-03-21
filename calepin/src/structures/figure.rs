@@ -12,7 +12,7 @@ pub fn render_div(
     children: &[Element],
     format: &str,
     render_element: &dyn Fn(&Element) -> String,
-    raw_fragments: &std::cell::RefCell<Vec<String>>,
+    _raw_fragments: &std::cell::RefCell<Vec<String>>,
 ) -> String {
     let (content_children, caption) = separate_figure_caption(children);
 
@@ -22,15 +22,7 @@ pub fn render_div(
         .join("\n\n");
 
     let cap_rendered = if !caption.is_empty() {
-        let fragments = raw_fragments.borrow();
-        match format {
-            "html" => {
-                let html = crate::render::markdown::render_html(&caption, &fragments);
-                html.trim().strip_prefix("<p>").unwrap_or(html.trim())
-                    .strip_suffix("</p>").unwrap_or(html.trim()).trim().to_string()
-            }
-            _ => caption.clone(),
-        }
+        crate::render::markdown::render_inline(&caption, format)
     } else {
         String::new()
     };

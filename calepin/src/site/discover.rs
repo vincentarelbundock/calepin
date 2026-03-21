@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use super::config::{PageEntry, SiteConfig};
+use super::config::SiteConfig;
 
 /// Metadata extracted from a page's YAML frontmatter.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

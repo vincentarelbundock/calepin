@@ -2,17 +2,27 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render};
+use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
 use crate::render::markdown::ImageAttrs;
 
 pub struct TypstEmitter;
 
 /// Convert markdown to Typst via the shared AST walker.
 pub fn markdown_to_typst_ast(markdown: &str, raw_fragments: &[String]) -> String {
+    markdown_to_typst_with_counter(markdown, raw_fragments, 0).0
+}
+
+/// Convert markdown to Typst, returning (output, final_footnote_counter).
+pub fn markdown_to_typst_with_counter(
+    markdown: &str,
+    raw_fragments: &[String],
+    footnote_counter_start: usize,
+) -> (String, usize) {
     let emitter = TypstEmitter;
-    let options = WalkOptions::default();
-    let result = walk_and_render(&emitter, markdown, raw_fragments, &options);
-    crate::filters::math::strip_math_for_typst(&result)
+    let options = WalkOptions { footnote_counter_start, ..WalkOptions::default() };
+    let result = walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options);
+    let output = crate::filters::math::strip_math_for_typst(&result.output);
+    (output, result.metadata.footnote_counter_end)
 }
 
 impl FormatEmitter for TypstEmitter {
@@ -87,6 +97,12 @@ impl FormatEmitter for TypstEmitter {
     fn strikethrough_close(&self) -> &str { "]" }
     fn superscript_open(&self) -> &str { "#super[" }
     fn superscript_close(&self) -> &str { "]" }
+    fn subscript_open(&self) -> &str { "#sub[" }
+    fn subscript_close(&self) -> &str { "]" }
+    fn underline_open(&self) -> &str { "#underline[" }
+    fn underline_close(&self) -> &str { "]" }
+    fn highlight_open(&self) -> &str { "#highlight[" }
+    fn highlight_close(&self) -> &str { "]" }
 
     fn link_open(&self, url: &str) -> String {
         format!("#link(\"{}\")[", url)

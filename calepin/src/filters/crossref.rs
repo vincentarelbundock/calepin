@@ -161,50 +161,67 @@ fn resolve_grouped_plain(ids: &[String], db: &HashMap<String, String>) -> String
     format!("[{}]", parts.join("; "))
 }
 
-/// Post-process rendered HTML: resolve all cross-references.
-/// `theorem_nums` provides theorem numbers from the rendering phase,
-/// avoiding the need to scrape them from rendered HTML.
+/// Post-process rendered HTML: resolve all cross-references (no pre-collected IDs).
 #[inline(never)]
-pub fn resolve_html(html: &str, theorem_nums: &HashMap<String, String>) -> String {
+#[allow(dead_code)]
+pub fn resolve_html(
+    html: &str,
+    theorem_nums: &HashMap<String, String>,
+) -> String {
+    resolve_html_with_ids(html, theorem_nums, &HashMap::new())
+}
+
+/// Post-process rendered HTML with pre-collected IDs from the AST walk.
+#[inline(never)]
+pub fn resolve_html_with_ids(
+    html: &str,
+    theorem_nums: &HashMap<String, String>,
+    walk_ids: &HashMap<String, String>,
+) -> String {
     let mut db: HashMap<String, String> = HashMap::new();
 
-    // Pass 1: Collect section IDs + numbers from headings
-    let mut counters = [0usize; 6];
-    for caps in RE_HTML_HEADING.captures_iter(html) {
-        let level: usize = caps[1].parse().unwrap_or(1);
-        let tag = caps.get(0).map_or("", |m| m.as_str());
-        let id = RE_HTML_ID.captures(tag)
-            .and_then(|c| c.get(1))
-            .map_or("", |m| m.as_str());
-        advance_section_counter(&mut counters, level);
-        if !id.is_empty() {
-            let key = if id.starts_with("sec-") {
-                id.to_string()
-            } else {
-                format!("sec-{}", id)
-            };
-            db.insert(key, format_section_number(&counters, level));
+    // Use pre-collected section IDs from the AST walk
+    db.extend(walk_ids.iter().map(|(k, v)| (k.clone(), v.clone())));
+
+    // Fallback: if no walk IDs, collect from rendered HTML (backward compat)
+    if walk_ids.is_empty() {
+        let mut counters = [0usize; 6];
+        for caps in RE_HTML_HEADING.captures_iter(html) {
+            let level: usize = caps[1].parse().unwrap_or(1);
+            let tag = caps.get(0).map_or("", |m| m.as_str());
+            let id = RE_HTML_ID.captures(tag)
+                .and_then(|c| c.get(1))
+                .map_or("", |m| m.as_str());
+            advance_section_counter(&mut counters, level);
+            if !id.is_empty() {
+                let key = if id.starts_with("sec-") {
+                    id.to_string()
+                } else {
+                    format!("sec-{}", id)
+                };
+                db.insert(key, format_section_number(&counters, level));
+            }
         }
     }
 
-    // Pass 2: Count figures from id="fig-*"
+    // Count figures from id="fig-*" (still regex -- these come from div rendering, not AST)
     let mut fig_counter = 0usize;
     for caps in RE_HTML_FIG.captures_iter(html) {
         fig_counter += 1;
         db.insert(format!("fig-{}", &caps[1]), fig_counter.to_string());
     }
 
-    // Pass 2b: Count tables from id="tbl-*"
+    // Count tables from id="tbl-*"
     let mut tbl_counter = 0usize;
     for caps in RE_HTML_TBL.captures_iter(html) {
         tbl_counter += 1;
         db.insert(format!("tbl-{}", &caps[1]), tbl_counter.to_string());
     }
 
-    // Pass 3: Theorem numbers from rendering phase
+    // Theorem numbers from rendering phase
     db.extend(theorem_nums.iter().map(|(k, v)| (k.clone(), v.clone())));
 
-    // Pass 4: Count equations from id="eq-*"
+    // Count equations from id="eq-*"
     let mut eq_counter = 0usize;
     for caps in RE_HTML_EQ.captures_iter(html) {
         eq_counter += 1;

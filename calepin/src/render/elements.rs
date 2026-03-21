@@ -77,6 +77,13 @@ pub struct ElementRenderer {
     /// Theorem numbers populated during rendering by TheoremFilter.
     /// Keyed by full id (e.g. "thm-cauchy"), value is the number string.
     pub theorem_numbers: std::cell::RefCell<HashMap<String, String>>,
+    /// Accumulated walk metadata (headings, IDs) from all Text element renders.
+    pub walk_metadata: std::cell::RefCell<crate::render::ast::WalkMetadata>,
+    /// Running footnote counter across Text elements.
+    footnote_counter: std::cell::Cell<usize>,
+    /// Footnote definitions collected from all Text elements (for cross-block resolution).
+    /// Each entry is the full `[^name]: content` line(s).
+    global_footnote_defs: std::cell::RefCell<String>,
 }
 
 impl ElementRenderer {
@@ -111,6 +118,9 @@ impl ElementRenderer {
             shift_headings: false,
             default_fig_cap_location: None,
             theorem_numbers: std::cell::RefCell::new(HashMap::new()),
+            walk_metadata: std::cell::RefCell::new(crate::render::ast::WalkMetadata::default()),
+            footnote_counter: std::cell::Cell::new(0),
+            global_footnote_defs: std::cell::RefCell::new(String::new()),
         }
     }
 
@@ -133,15 +143,45 @@ impl ElementRenderer {
         match element {
             Element::Text { content } => {
                 let processed = self.render_bracketed_spans(content);
-                // Heading shift for HTML is now handled in the AST walker
-                // (html_ast.rs) via the shift_headings parameter.
+                // Append global footnote definitions if this text has footnote refs
+                // so comrak can resolve them within a single parse.
+                let processed = {
+                    let defs = self.global_footnote_defs.borrow();
+                    if !defs.is_empty() && processed.contains("[^") {
+                        format!("{}{}", processed, defs)
+                    } else {
+                        processed
+                    }
+                };
                 let fragments = self.raw_fragments.borrow();
                 let rendered = match self.ext.as_str() {
-                    "html" => crate::render::markdown::render_html_full(
-                        &processed, &fragments, self.number_sections, self.shift_headings,
-                    ),
-                    "typst" => crate::render::markdown::render_typst(&processed, &fragments),
-                    "latex" => crate::render::latex::markdown_to_latex(&processed, &fragments, self.number_sections),
+                    "html" => {
+                        let fn_start = self.footnote_counter.get();
+                        let result = crate::render::markdown::render_html_full_with_metadata(
+                            &processed, &fragments, self.number_sections, self.shift_headings, fn_start,
+                        );
+                        self.footnote_counter.set(result.metadata.footnote_counter_end);
+                        let mut meta = self.walk_metadata.borrow_mut();
+                        meta.headings.extend(result.metadata.headings);
+                        meta.ids.extend(result.metadata.ids);
+                        result.output
+                    }
+                    "typst" => {
+                        let fn_start = self.footnote_counter.get();
+                        let (output, fn_end) = crate::render::typst_ast::markdown_to_typst_with_counter(
+                            &processed, &fragments, fn_start,
+                        );
+                        self.footnote_counter.set(fn_end);
+                        output
+                    }
+                    "latex" => {
+                        let fn_start = self.footnote_counter.get();
+                        let (output, fn_end) = crate::render::latex_emit::markdown_to_latex_with_counter(
+                            &processed, &fragments, self.number_sections, fn_start,
+                        );
+                        self.footnote_counter.set(fn_end);
+                        output
+                    }
                     _ => crate::render::markdown::resolve_raw(&processed, &fragments),
                 };
                 crate::render::markers::resolve_shortcode_raw(&rendered, &self.sc_fragments)
@@ -215,6 +255,57 @@ impl ElementRenderer {
 
     pub fn latex_color_definitions(&self) -> String {
         self.highlighter.latex_color_definitions()
+    }
+
+    /// Return the accumulated walk metadata (headings for TOC, IDs for cross-refs).
+    pub fn walk_metadata(&self) -> crate::render::ast::WalkMetadata {
+        self.walk_metadata.borrow().clone()
+    }
+
+    /// Pre-scan all Text elements for footnote definitions (`[^name]: ...`).
+    /// These are collected so they can be appended to Text elements that contain
+    /// footnote references (`[^name]`), enabling cross-block footnote resolution.
+    pub fn collect_footnote_defs(&self, elements: &[Element]) {
+        use regex::Regex;
+        use std::sync::LazyLock;
+        static RE_FN_DEF: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"(?m)^\[\^[^\]]+\]:.*(?:\n(?:    |\t).*)*").unwrap()
+        });
+
+        let mut defs = String::new();
+        for el in elements {
+            if let Element::Text { content } = el {
+                for m in RE_FN_DEF.find_iter(content) {
+                    defs.push_str("\n\n");
+                    defs.push_str(m.as_str());
+                }
+            }
+            // Also recurse into divs
+            if let Element::Div { children, .. } = el {
+                self.collect_footnote_defs_recursive(children, &mut defs);
+            }
+        }
+        *self.global_footnote_defs.borrow_mut() = defs;
+    }
+
+    fn collect_footnote_defs_recursive(&self, elements: &[Element], defs: &mut String) {
+        use regex::Regex;
+        use std::sync::LazyLock;
+        static RE_FN_DEF: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"(?m)^\[\^[^\]]+\]:.*(?:\n(?:    |\t).*)*").unwrap()
+        });
+
+        for el in elements {
+            if let Element::Text { content } = el {
+                for m in RE_FN_DEF.find_iter(content) {
+                    defs.push_str("\n\n");
+                    defs.push_str(m.as_str());
+                }
+            }
+            if let Element::Div { children, .. } = el {
+                self.collect_footnote_defs_recursive(children, defs);
+            }
+        }
     }
 }
 
