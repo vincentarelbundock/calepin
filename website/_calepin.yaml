@@ -16,7 +16,7 @@ website:
     logo-dark: assets/Calepin_dark.svg
     logo-alt: "Calepin logo"
     right:
-      - text: GitHub
+      - icon: github
         href: https://github.com/vincentarelbundock/calepin
 
   sidebar:
@@ -37,7 +37,8 @@ website:
           href: assets/pdf.pdf
     - section: "Code Execution"
       pages:
-        - code/chunks_inline.qmd
+        - code/chunks.qmd
+        - code/inline.qmd
         - code/r.qmd
         - code/python.qmd
         - code/sh.qmd

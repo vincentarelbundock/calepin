@@ -16,7 +16,7 @@ static RE_TEMPLATE_VAR: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Build an HTML table of contents from rendered headings in the body.
-fn build_html_toc(body: &str, depth: u8, title: &str) -> String {
+pub fn build_html_toc(body: &str, depth: u8, title: &str) -> String {
     let re = &RE_TOC_HEADING;
     let tag_re = &RE_TOC_TAG;
 

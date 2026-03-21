@@ -162,7 +162,7 @@ fn build_nav_tree(
                     .unwrap_or_else(|| path.clone());
                 let href = info.map(|p| p.url.clone());
                 NavNode {
-                    text,
+                    text: render_inline_markdown(&text),
                     href,
                     active: false,
                     children: vec![],
@@ -180,7 +180,7 @@ fn build_nav_tree(
                     Some(href.clone())
                 };
                 NavNode {
-                    text: display_text,
+                    text: render_inline_markdown(&display_text),
                     href: resolved_href,
                     active: false,
                     children: vec![],
@@ -278,7 +278,7 @@ pub fn build_page_context(
         body,
         url: page.url.clone(),
         source_url: format!("/_source/{}", page.source.display()),
-        toc: None, // TODO: extract from calepin output
+        toc: result.and_then(|r| r.toc.clone()),
         listing: listing_items,
         breadcrumbs,
         prev,
@@ -312,4 +312,15 @@ fn build_breadcrumbs(page: &PageInfo) -> Vec<Breadcrumb> {
     }
 
     crumbs
+}
+
+/// Render inline markdown to HTML, stripping the <p> wrapper comrak adds.
+fn render_inline_markdown(text: &str) -> String {
+    let html = comrak::markdown_to_html(text, &comrak::Options::default());
+    let trimmed = html.trim();
+    if trimmed.starts_with("<p>") && trimmed.ends_with("</p>") {
+        trimmed[3..trimmed.len() - 4].to_string()
+    } else {
+        trimmed.to_string()
+    }
 }

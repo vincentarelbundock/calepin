@@ -9,6 +9,7 @@ use super::discover::PageInfo;
 /// Result of rendering a single page for the site.
 pub struct SiteRenderResult {
     pub body: String,
+    pub toc: Option<String>,
     pub title: Option<String>,
     pub date: Option<String>,
     pub subtitle: Option<String>,
@@ -90,13 +91,36 @@ fn render_one_page(
         format!("<style>\n{}</style>\n{}", syntax_css, result.rendered)
     };
 
+    // Build TOC from rendered headings if toc is enabled
+    let toc = if result.metadata.toc {
+        let depth = if result.metadata.toc_depth == 0 { 3 } else { result.metadata.toc_depth };
+        let title = result.metadata.toc_title.as_deref().unwrap_or("Contents");
+        let toc_html = crate::render::template::build_html_toc(&body, depth, title);
+        if toc_html.is_empty() { None } else { Some(toc_html) }
+    } else {
+        None
+    };
+
     Ok(SiteRenderResult {
         body,
-        title: result.metadata.title,
+        toc,
+        title: result.metadata.title.map(|t| render_inline_markdown(&t)),
         date: result.metadata.date,
-        subtitle: result.metadata.subtitle,
+        subtitle: result.metadata.subtitle.map(|t| render_inline_markdown(&t)),
         abstract_text: result.metadata.abstract_text,
     })
+}
+
+/// Render inline markdown to HTML, stripping the <p> wrapper comrak adds.
+fn render_inline_markdown(text: &str) -> String {
+    let html = comrak::markdown_to_html(text, &comrak::Options::default());
+    // comrak wraps in <p>...</p>\n — strip it for inline use
+    let trimmed = html.trim();
+    if trimmed.starts_with("<p>") && trimmed.ends_with("</p>") {
+        trimmed[3..trimmed.len() - 4].to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 fn build_overrides(config: &SiteConfig) -> Vec<String> {

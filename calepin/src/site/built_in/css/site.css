@@ -8,7 +8,7 @@
   /* Layout dimensions — site-specific */
   --c-sidebar-width: 280px;
   --c-toc-width: 240px;
-  --c-navbar-height: 56px;
+  --c-navbar-height: 52px;
   --c-content-max-width: 900px;
 
   /* Site chrome additions — extend --c-* with a few extras */
@@ -46,22 +46,22 @@ body > main { max-width: none; margin: 0; padding: 0; }
   position: fixed; top: 0; left: 0; right: 0;
   height: var(--c-navbar-height); background: var(--c-bg-secondary);
   border-bottom: 1px solid var(--c-border);
-  display: flex; align-items: center; padding: 0 1rem; z-index: 1000; gap: 1rem;
+  display: flex; align-items: center; padding: 0 0.5rem; z-index: 1000; gap: 0.5rem;
 }
 
 .navbar-brand {
-  display: flex; align-items: center; gap: 0.5rem;
+  display: flex; align-items: center; gap: 0.25rem;
   font-weight: 600; font-size: 1.1rem; color: var(--c-text);
-  text-decoration: none; flex-shrink: 0;
+  text-decoration: none; flex-shrink: 0; padding: 0 0.25rem;
 }
 .navbar-brand:hover { text-decoration: none; color: var(--c-text); }
-.navbar-brand img { height: 28px; width: auto; }
-.navbar-brand .logo-dark { display: none; }
-[data-theme="dark"] .navbar-brand .logo-light { display: none; }
-[data-theme="dark"] .navbar-brand .logo-dark { display: inline; }
+.navbar-brand img { height: calc(var(--c-navbar-height) - 12px); width: auto; }
+.logo-dark { display: none; }
+[data-theme="dark"] .logo-light { display: none; }
+[data-theme="dark"] .logo-dark { display: inline; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .navbar-brand .logo-light { display: none; }
-  :root:not([data-theme="light"]) .navbar-brand .logo-dark { display: inline; }
+  :root:not([data-theme="light"]) .logo-light { display: none; }
+  :root:not([data-theme="light"]) .logo-dark { display: inline; }
 }
 
 .navbar-nav { display: flex; align-items: center; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
@@ -112,12 +112,26 @@ body > main { max-width: none; margin: 0; padding: 0; }
 .sidebar-left a:hover { color: var(--c-text); background: color-mix(in srgb, var(--c-bg-secondary) 85%, white 15%); text-decoration: none; }
 .sidebar-left a.active { color: var(--c-accent); font-weight: 600; background: transparent; }
 
+.sidebar-section { border: none; margin: 0; padding: 0; }
+.sidebar-section > .sidebar-children { padding-left: 0.5rem; }
+
 .sidebar-section-title {
   font-weight: 700; font-size: 0.8rem; text-transform: uppercase;
   letter-spacing: 0.05em; color: var(--c-text-muted);
   padding: 0.75rem 0.75rem 0.35rem; margin-top: 0.5rem;
+  cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.3rem;
 }
+.sidebar-section-title::-webkit-details-marker { display: none; }
+.sidebar-section-title::before {
+  content: ""; display: inline-block; width: 0.4em; height: 0.4em;
+  border-right: 2px solid var(--c-text-muted); border-bottom: 2px solid var(--c-text-muted);
+  transform: rotate(-45deg); transition: transform 0.15s;
+  flex-shrink: 0;
+}
+details.sidebar-section[open] > .sidebar-section-title::before { transform: rotate(45deg); }
+
 .sidebar-section-title:first-child { margin-top: 0; }
+.sidebar-section-nested { font-size: 0.78rem; margin-top: 0.25rem; text-transform: none; font-weight: 600; }
 .sidebar-children { padding-left: 0.5rem; }
 
 .sidebar-toggle-btn {
@@ -153,6 +167,17 @@ body > main { max-width: none; margin: 0; padding: 0; }
 .sidebar-right a:hover { color: var(--c-text); text-decoration: none; }
 .sidebar-right a.active { color: var(--c-accent); border-left-color: var(--c-accent); }
 .sidebar-right ul ul { padding-left: 0.75rem; }
+
+/* Override standalone TOC positioning when inside sidebar */
+.sidebar-right .toc {
+  position: static; width: auto; max-height: none;
+  font-size: inherit; line-height: inherit;
+  margin: 0; padding: 0; border: none;
+}
+.sidebar-right .toc .toc-title {
+  font-weight: 700; font-size: 0.75rem; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--c-text-muted); margin-bottom: 0.75rem;
+}
 
 /* ============================================================
    Page Header (site wraps title/date/abstract outside the body)

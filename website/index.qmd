@@ -1,11 +1,16 @@
 ---
-title: Calepin
-subtitle: "A fast rendering engine for Quarto,<br>written in Rust."
-date: "`{r} Sys.Date()`"
 bibliography: library.bib
 number-sections: true
 toc: true
 ---
+
+```{=html}
+<div style="text-align: center; margin-bottom: 1.5rem;">
+  <img class="logo-light" src="/assets/Calepin.svg" alt="Calepin logo" style="max-width: 280px;">
+  <img class="logo-dark" src="/assets/Calepin_dark.svg" alt="Calepin logo" style="max-width: 280px;">
+  <p style="font-size: 1.1rem; color: var(--c-text-muted); margin-top: 0.5rem;">A fast rendering engine for Quarto, written in Rust.</p>
+</div>
+```
 
 What is a *calepin*? In French, it's a small pocket notebook---the kind you carry around to jot down ideas. *Calepin* is a fast rendering engine for Quarto-compatible notebooks, written in Rust.
 

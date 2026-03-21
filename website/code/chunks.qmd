@@ -1,0 +1,148 @@
+---
+title: Code Chunks
+---
+
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
+*Calepin* embeds R, Python, and shell runtimes directly in the binary, so code chunks are executed during rendering without spawning external processes. Variables persist across chunks within the same language, plots are captured automatically, and results are woven into the final document.
+
+# Code chunks
+
+A code chunk has four parts:
+
+1. **Language** --- The header starts with the language engine: `{r}`, `{python}`, or `{sh}`.
+2. **Label** (optional) --- After the language, separated by a comma: `my-chunk`. Labels identify chunks in error messages and are used for cross-referencing figures (see [Figures](../figures.qmd)).
+3. **Chunk options** --- Lines starting with `#|` inside the chunk set options in `key: value` format. Option names use dashes, not dots (e.g., `fig-width` not `fig.width`). See [Chunk options] below for the full list.
+4. **Code** --- The body of the chunk is executed by the language engine. Output is captured and inserted into the document.
+
+Here is a simple example. The `echo: fenced` option shows the chunk exactly as written in the source, including the fence markers and options:
+
+```{r, my-chunk}
+#| echo: fenced
+x <- 1:10
+mean(x)
+```
+
+
+# Multiple expressions
+
+When a chunk contains several expressions, each produces its own output block, interleaved with the source:
+
+```{r}
+#| echo: fenced
+cat("Line 1\n")
+cat("Line 2\n")
+1 + 1
+```
+
+
+# Chunk options
+
+Options are set with `#|` pipe comments inside the chunk. Each option goes on its own line in `key: value` format. Option names use dashes, not dots (e.g., `fig-width` not `fig.width`).
+
+## echo
+
+Controls whether the source code is displayed. Default: `true`. When set to `fenced`, the chunk is shown with its fence markers and options --- useful for tutorials.
+
+```{r}
+#| echo: fenced
+#| eval: false
+#| echo: false
+summary(mtcars$mpg)
+```
+
+Setting `echo: false` hides the chunk entirely. Only the output is shown:
+
+```{r}
+#| echo: false
+summary(mtcars$mpg)
+```
+
+## eval
+
+Controls whether the code is executed. Default: `true`. Set to `false` to display code without running it:
+
+```{r}
+#| echo: fenced
+#| eval: false
+stop("This error is never reached")
+```
+
+## include
+
+Controls whether the chunk produces any output at all. When `false`, the code runs silently (useful for setup chunks). Default: `true`.
+
+```{r, setup}
+#| echo: fenced
+#| include: false
+library(stats)
+```
+
+## results
+
+Controls how text output is handled. Options: `markup` (default), `asis` (inject raw output into the document), `hide` (suppress output).
+
+```{r}
+#| echo: fenced
+#| results: hide
+invisible_result <- 42
+```
+
+The value was computed silently: `{r} invisible_result`.
+
+## warning and message
+
+Control whether warnings and messages from R are displayed. Default: `true` for both.
+
+```{r}
+#| echo: fenced
+#| warning: false
+#| message: false
+log(-1)
+```
+
+
+# Option reference
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `eval` | `true` | Execute the code |
+| `echo` | `true` | Display the source code (`true`, `false`, or `fenced`) |
+| `include` | `true` | Include any output (if `false`, runs silently) |
+| `results` | `markup` | Output handling: `markup`, `asis`, or `hide` |
+| `warning` | `true` | Display warnings |
+| `message` | `true` | Display messages |
+| `fig-width` | 7 | Figure width in inches (see [Figures](../figures.qmd)) |
+| `fig-height` | 5 | Figure height in inches (see [Figures](../figures.qmd)) |
+| `fig-cap` | | Figure caption (see [Figures](../figures.qmd)) |
+| `fig-alt` | | Figure alt text (see [Figures](../figures.qmd)) |
+| `dev` | `png` | Graphics device (see [Figures](../figures.qmd)) |
+
+
+# Syntax highlighting
+
+*Calepin* uses [syntect](https://github.com/trishume/syntect) for syntax highlighting. Set the theme with `highlight-style` in the front matter (Quarto-compatible key name):
+
+```yaml
+---
+highlight-style: solarized-dark
+---
+```
+
+The default is `inspired-github`. To list all built-in themes:
+
+```
+calepin highlight list
+```
+
+You can also point to a custom `.tmTheme` file:
+
+```yaml
+---
+highlight-style: mytheme.tmTheme
+---
+```
+
+For HTML output, highlighting produces CSS classes, so the theme controls only the generated stylesheet. For LaTeX, colors are inlined via `\textcolor`. Typst and Markdown output receive no highlighting.
