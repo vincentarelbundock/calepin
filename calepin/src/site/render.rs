@@ -78,8 +78,20 @@ fn render_one_page(
     // render_core stops before page template application, giving us the body.
     let result = crate::render_core(&input, &output_path, Some("html"), overrides)?;
 
+    // Prepend syntax highlighting CSS — normally injected by apply_template(),
+    // which site mode skips since it has its own page shell.
+    // Site uses data-theme attribute for theme switching (not media queries)
+    let syntax_css = result.element_renderer.syntax_css_with_scope(
+        crate::filters::highlighting::ColorScope::DataTheme,
+    );
+    let body = if syntax_css.is_empty() {
+        result.rendered
+    } else {
+        format!("<style>\n{}</style>\n{}", syntax_css, result.rendered)
+    };
+
     Ok(SiteRenderResult {
-        body: result.rendered,
+        body,
         title: result.metadata.title,
         date: result.metadata.date,
         subtitle: result.metadata.subtitle,

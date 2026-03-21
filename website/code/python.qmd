@@ -2,6 +2,10 @@
 title: Python
 ---
 
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
 *Calepin* embeds Python via [PyO3](https://pyo3.rs/), running code directly in process. A shared globals dictionary persists variables across chunks.
 
 # Basic usage

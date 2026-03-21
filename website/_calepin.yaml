@@ -13,6 +13,7 @@ website:
     background: "#fafafa"
     search: true
     logo: assets/Calepin.svg
+    logo-dark: assets/Calepin_dark.svg
     logo-alt: "Calepin logo"
     right:
       - text: GitHub

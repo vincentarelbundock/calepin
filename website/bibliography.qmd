@@ -2,6 +2,10 @@
 title: Bibliography
 ---
 
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
 *Calepin* processes citations from BibTeX/BibLaTeX files using [hayagriva](https://github.com/typst/hayagriva). Specify one or more `.bib` files in the front matter, and citation keys in the document body are resolved automatically.
 
 

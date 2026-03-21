@@ -2,6 +2,10 @@
 title: Plugins
 ---
 
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
 *Calepin* produces clean HTML, LaTeX, Typst, and Markdown out of the box, but every project has unique needs: custom div styles, new shortcodes, branded page templates, or entirely new output formats. Plugins let you extend *Calepin* without modifying its source.
 
 A plugin can provide any combination of:

@@ -107,6 +107,7 @@ pub fn build_site(
             favicon: site_ctx.favicon.clone(),
             navbar: context::NavbarContext {
                 logo: site_ctx.navbar.logo.clone(),
+                logo_dark: site_ctx.navbar.logo_dark.clone(),
                 logo_alt: site_ctx.navbar.logo_alt.clone(),
                 background: site_ctx.navbar.background.clone(),
                 left: site_ctx.navbar.left.clone(),
@@ -152,7 +153,19 @@ pub fn build_site(
         }
     }
 
-    // 10. Write built-in assets
+    // 10. Copy .qmd source files to _source/ for the source viewer
+    for page in &pages {
+        let source_dest = output.join("_source").join(&page.source);
+        if let Some(parent) = source_dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let source_src = base_dir.join(&page.source);
+        if source_src.exists() {
+            fs::copy(&source_src, &source_dest)?;
+        }
+    }
+
+    // 11. Write built-in assets
     assets::write_builtin_assets(output)?;
 
     // 11. Copy resource directories

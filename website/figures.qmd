@@ -3,6 +3,10 @@ title: Figures
 bibliography: library.bib
 ---
 
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
 Code chunks that produce plots automatically generate figures. Use `fig-cap` for a caption and a label in the chunk header for cross-referencing.
 
 ```{r, scatter}

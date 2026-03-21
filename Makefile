@@ -1,4 +1,4 @@
-.PHONY: help docs plugins website site
+.PHONY: help docs plugins site
 
 help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m\n"
@@ -43,12 +43,8 @@ test:  ## Run unit tests
 check:  ## Run cargo check (fast compile check)
 	cargo check --manifest-path calepin/Cargo.toml
 
-website: ## Build Astro/Starlight website and serve it
-	@cd website && uv run ../plugins/website_astro_starlight/build.py && \
-		cd _astro && npx astro preview --open
-
-site: build ## Build static site from website/ using calepin-site
-	@cd website && ../calepin-site/target/debug/calepin-site --calepin ../calepin/target/debug/calepin
+site: build ## Build static site from website/
+	@cd website && ../calepin/target/debug/calepin site build --clean
 
 # ==============================================================================
 # Render targets

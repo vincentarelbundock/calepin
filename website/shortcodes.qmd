@@ -2,6 +2,10 @@
 title: Shortcodes
 ---
 
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
 Shortcodes are inline directives written as `{{< name args >}}`. They are processed during rendering and replaced with format-aware output. *Calepin* provides several built-in shortcodes and supports user-defined shortcodes via plugins.
 
 

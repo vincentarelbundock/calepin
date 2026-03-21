@@ -47,6 +47,7 @@ pub struct PageInfo {
     /// Metadata from frontmatter
     pub meta: PageMeta,
     /// Display text (from config or title)
+    #[allow(dead_code)]
     pub nav_text: Option<String>,
 }
 

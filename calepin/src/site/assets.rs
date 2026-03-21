@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use walkdir::WalkDir;
 
 // Built-in CSS and JS embedded at compile time
+const BASE_CSS: &str = include_str!("../templates/pages/calepin.css");
 const SITE_CSS: &str = include_str!("built_in/css/site.css");
 const SEARCH_JS: &str = include_str!("built_in/js/search.js");
 const THEME_JS: &str = include_str!("built_in/js/theme.js");
@@ -56,6 +57,7 @@ pub fn write_builtin_assets(output_dir: &Path) -> Result<()> {
     let assets_dir = output_dir.join("_assets");
     fs::create_dir_all(&assets_dir)?;
 
+    fs::write(assets_dir.join("calepin.css"), BASE_CSS)?;
     fs::write(assets_dir.join("site.css"), SITE_CSS)?;
     fs::write(assets_dir.join("search.js"), SEARCH_JS)?;
     fs::write(assets_dir.join("theme.js"), THEME_JS)?;

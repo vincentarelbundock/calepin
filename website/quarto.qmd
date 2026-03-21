@@ -2,6 +2,10 @@
 title: Differences with Quarto
 ---
 
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
 *Calepin* aims for compatibility with Quarto's `.qmd` syntax, but there are deliberate differences and simplifications. This page documents them.
 
 

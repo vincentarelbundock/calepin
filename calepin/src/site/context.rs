@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
 use serde::Serialize;
-use tera;
-
 use super::config::{NavItem, PageEntry, SiteConfig};
 use super::discover::PageInfo;
 use super::icons;
@@ -24,6 +22,7 @@ pub struct SiteContext {
 #[derive(Debug, Serialize)]
 pub struct NavbarContext {
     pub logo: Option<String>,
+    pub logo_dark: Option<String>,
     pub logo_alt: Option<String>,
     pub background: Option<String>,
     pub left: Vec<NavItemContext>,
@@ -62,6 +61,7 @@ pub struct PageContext {
     pub r#abstract: Option<String>,
     pub body: String,
     pub url: String,
+    pub source_url: String,
     pub toc: Option<String>,
     pub listing: Option<Vec<ListingItem>>,
     pub breadcrumbs: Vec<Breadcrumb>,
@@ -116,6 +116,7 @@ pub fn build_site_context(config: &SiteConfig, pages: &[PageInfo]) -> SiteContex
         favicon: config.website.favicon.clone(),
         navbar: NavbarContext {
             logo: config.website.navbar.logo.clone(),
+            logo_dark: config.website.navbar.logo_dark.clone(),
             logo_alt: config.website.navbar.logo_alt.clone(),
             background: config.website.navbar.background.clone(),
             left: nav_items_left,
@@ -276,6 +277,7 @@ pub fn build_page_context(
         r#abstract: abstract_text,
         body,
         url: page.url.clone(),
+        source_url: format!("/_source/{}", page.source.display()),
         toc: None, // TODO: extract from calepin output
         listing: listing_items,
         breadcrumbs,
@@ -310,15 +312,4 @@ fn build_breadcrumbs(page: &PageInfo) -> Vec<Breadcrumb> {
     }
 
     crumbs
-}
-
-/// Build the full Tera context for a page.
-pub fn build_tera_context(
-    site: &SiteContext,
-    page: &PageContext,
-) -> tera::Context {
-    let mut ctx = tera::Context::new();
-    ctx.insert("site", site);
-    ctx.insert("page", page);
-    ctx
 }

@@ -2,6 +2,10 @@
 title: Quick Start
 ---
 
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
 # Installation
 
 Install *Calepin* from source using Cargo:

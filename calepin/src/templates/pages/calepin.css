@@ -7,17 +7,17 @@
 
 :root {
   /* Surface & text */
-  --c-bg:           #eceff4;
-  --c-bg-secondary: #e5e9f0;
+  --c-bg:           #fafbfc;
+  --c-bg-secondary: #f3f5f7;
   --c-text:         #2e3440;
-  --c-text-muted:   #4c566a;
+  --c-text-muted:   #616e7c;
   --c-link:         #5e81ac;
-  --c-border:       #d8dee9;
-  --c-code-bg:      #e5e9f0;
+  --c-border:       #e0e4e8;
+  --c-code-bg:      #f3f5f7;
   --c-accent:       #5e81ac;
 
   /* Component accents — semantic meaning */
-  --c-note:         #81a1c1;
+  --c-note:         #5e81ac;
   --c-tip:          #a3be8c;
   --c-warning:      #ebcb8b;
   --c-error:        #bf616a;
@@ -25,25 +25,25 @@
 }
 
 [data-theme="dark"] {
-  --c-bg:           #2e3440;
-  --c-bg-secondary: #3b4252;
-  --c-text:         #d8dee9;
-  --c-text-muted:   #4c566a;
+  --c-bg:           #2f3643;
+  --c-bg-secondary: #353d4c;
+  --c-text:         #e5e9f0;
+  --c-text-muted:   #9aa3b0;
   --c-link:         #88c0d0;
-  --c-border:       #434c5e;
-  --c-code-bg:      #3b4252;
+  --c-border:       #4a5568;
+  --c-code-bg:      #343c4b;
   --c-accent:       #88c0d0;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --c-bg:           #2e3440;
-    --c-bg-secondary: #3b4252;
-    --c-text:         #d8dee9;
-    --c-text-muted:   #4c566a;
+    --c-bg:           #2f3643;
+    --c-bg-secondary: #353d4c;
+    --c-text:         #e5e9f0;
+    --c-text-muted:   #9aa3b0;
     --c-link:         #88c0d0;
-    --c-border:       #434c5e;
-    --c-code-bg:      #3b4252;
+    --c-border:       #4a5568;
+    --c-code-bg:      #343c4b;
     --c-accent:       #88c0d0;
   }
 }

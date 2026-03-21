@@ -2,6 +2,10 @@
 title: Templates
 ---
 
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
+:::
+
 Every rendered element---code blocks, figures, fenced divs, bracketed spans---passes through a **template** before becoming output. Templates are files with `{{variable}}` placeholders that control the markup for a single element.
 
 Templates can be provided by plugins (in their `elements/` and `templates/` directories), placed in `_calepin/` (project), or `~/.config/calepin/` (user). *Calepin* checks in this order:

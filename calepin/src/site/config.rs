@@ -43,6 +43,8 @@ pub struct WebsiteConfig {
 pub struct NavbarConfig {
     #[serde(default)]
     pub logo: Option<String>,
+    #[serde(rename = "logo-dark", default)]
+    pub logo_dark: Option<String>,
     #[serde(rename = "logo-alt", default)]
     pub logo_alt: Option<String>,
     #[serde(default)]
