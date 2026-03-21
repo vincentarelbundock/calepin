@@ -76,20 +76,12 @@ static RE_EXPLICIT_ID: LazyLock<Regex> = LazyLock::new(|| {
 /// Convert markdown text to LaTeX by walking comrak's AST.
 /// Math expressions and raw span output are protected from LaTeX escaping.
 pub fn markdown_to_latex(markdown: &str, raw_fragments: &[String], number_sections: bool) -> String {
-    use crate::render::markers;
-
-    let preprocessed = markers::preprocess(markdown);
-    let (protected, math) = markers::protect_math(&preprocessed);
-    let raw = markdown_to_latex_raw(&protected, number_sections);
-    let raw = apply_image_attrs_latex(&raw);
-    let raw = resolve_image_paths_latex(&raw);
-    let restored = markers::restore_math(&raw, &math);
-    let restored = markers::resolve_equation_labels(&restored, "latex");
-    let restored = markers::resolve_escaped_dollars(&restored, "latex");
-    markers::resolve_raw(&restored, raw_fragments)
+    crate::render::latex_emit::markdown_to_latex(markdown, raw_fragments, number_sections)
 }
 
-/// Inner LaTeX conversion (no math protection).
+/// Legacy inner LaTeX conversion -- now handled by latex_emit.rs via the shared AST walker.
+/// Kept for reference; will be removed once the emitter-based path is fully validated.
+#[allow(dead_code)]
 fn markdown_to_latex_raw(markdown: &str, number_sections: bool) -> String {
     let arena = Arena::new();
     let options = comrak_options();
@@ -239,6 +231,7 @@ fn markdown_to_latex_raw(markdown: &str, number_sections: bool) -> String {
 
 use crate::render::markdown::comrak_options;
 
+#[allow(dead_code)]
 fn render_entering(val: &NodeValue, out: &mut String, number_sections: bool) {
     match val {
         NodeValue::Document => {}
@@ -359,6 +352,7 @@ fn render_entering(val: &NodeValue, out: &mut String, number_sections: bool) {
     }
 }
 
+#[allow(dead_code)]
 fn render_leaving(val: &NodeValue, out: &mut String) {
     match val {
         NodeValue::BlockQuote => {
@@ -413,6 +407,7 @@ fn render_leaving(val: &NodeValue, out: &mut String) {
 
 /// Escape special LaTeX characters in text.
 /// Ported from commonmark-gfm latex.c `outc()`.
+#[allow(dead_code)]
 fn escape_latex(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut iter = s.chars().peekable();
@@ -466,6 +461,7 @@ fn escape_latex(s: &str) -> String {
 use crate::util::slugify;
 
 /// Escape a URL for LaTeX \href{}.
+#[allow(dead_code)]
 fn escape_url(url: &str) -> String {
     url.replace('\\', "/")
         .replace('#', "\\#")

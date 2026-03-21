@@ -11,10 +11,12 @@
 //!   - `latex` — markdown-to-LaTeX AST conversion
 //!   - `markers` — math/raw output protection
 
+pub mod ast;
 pub mod div;
 pub mod elements;
 pub mod html_ast;
 pub mod latex;
+pub mod latex_emit;
 pub mod markdown;
 pub mod markers;
 pub mod typst_ast;

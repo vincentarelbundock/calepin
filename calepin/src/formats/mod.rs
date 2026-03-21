@@ -5,7 +5,6 @@
 //! format, optional file extension override, and optional WASM plugin
 //! for post-processing.
 
-#[allow(dead_code)]
 pub mod html;
 pub mod latex;
 pub mod markdown;

@@ -3,6 +3,7 @@
 + [ ] Convert elements templates to Tera and simplify the dispatch
 + [ ] Blog post site template
 + [ ] Accessibility
++ [ ] katex by default -- switchable to mathjax via YAML
 
 ## Templates
 

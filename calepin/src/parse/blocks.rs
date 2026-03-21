@@ -80,7 +80,6 @@ fn parse_blocks(
             let opener_colons = caps.get(1).unwrap().as_str().len();
             let attrs_str = caps.get(2).unwrap().as_str();
             let (classes, id, attrs) = parse_attributes(attrs_str);
-            let div_start = i;
             let is_verbatim = classes.iter().any(|c| c == "verbatim");
             i += 1;
 
@@ -89,7 +88,6 @@ fn parse_blocks(
                 i = end;
                 vec![Block::Text(TextBlock {
                     content: raw,
-                    lines: (div_start + 1, i.saturating_sub(2)),
                 })]
             } else {
                 let children = parse_blocks(lines, i, chunk_counter, opener_colons)?;
@@ -103,7 +101,6 @@ fn parse_blocks(
                 id,
                 attrs,
                 children,
-                lines: (div_start, i),
             }));
             continue;
         }
@@ -149,7 +146,6 @@ fn parse_blocks(
         if !text.is_empty() || start_line == 0 {
             blocks.push(Block::Text(TextBlock {
                 content: text,
-                lines: (start_line, i.saturating_sub(1)),
             }));
         }
     }
@@ -216,7 +212,6 @@ fn parse_unnamed_fence(lines: &[&str], i: usize) -> Option<(Block, usize)> {
     // Parse language and filename from the fence line
     let (lang, filename) = parse_code_block_info(after)?;
 
-    let start_line = i;
     let mut j = i + 1;
     let mut content_lines: Vec<&str> = Vec::new();
 
@@ -240,7 +235,6 @@ fn parse_unnamed_fence(lines: &[&str], i: usize) -> Option<(Block, usize)> {
             code: content_lines.join("\n"),
             lang,
             filename,
-            lines: (start_line, j.saturating_sub(1)),
         }),
         j,
     ))
@@ -297,13 +291,12 @@ fn parse_raw_block(lines: &[&str], i: usize) -> Result<Option<(Block, usize)>> {
     let fence_marker = caps.get(2).map_or("```", |m| m.as_str());
     let format = caps.get(3).map_or("", |m| m.as_str()).to_string();
 
-    let (content_lines, end_line, j) = collect_fenced_body(lines, i + 1, &prefix, fence_marker);
+    let (content_lines, _, j) = collect_fenced_body(lines, i + 1, &prefix, fence_marker);
 
     Ok(Some((
         Block::Raw(RawBlock {
             format,
             content: content_lines.join("\n"),
-            lines: (i, end_line),
         }),
         j,
     )))
@@ -333,7 +326,7 @@ fn parse_code_chunk(
         return Err(anyhow::anyhow!("Invalid chunk header at line {}", i + 1));
     }
 
-    let (body_lines, end_line, j) = collect_fenced_body(lines, i + 1, &prefix, fence_marker);
+    let (body_lines, _, j) = collect_fenced_body(lines, i + 1, &prefix, fence_marker);
     let code_lines: Vec<String> = body_lines.iter().map(|l| l.to_string()).collect();
 
     let (pipe_lines, actual_code) = collect_pipe_comments(&code_lines);
@@ -350,8 +343,6 @@ fn parse_code_chunk(
         Block::Code(CodeChunk {
             source: actual_code,
             options,
-            lines: (i, end_line),
-            prefix,
             label,
         }),
         j,

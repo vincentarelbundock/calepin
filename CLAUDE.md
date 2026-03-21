@@ -58,7 +58,7 @@ The pipeline transforms data through three representations:
 3. **Load plugin registry** (`registry.rs`) — Plugins from front matter `calepin: { plugins: [name] }`. Each plugin is a directory with a `plugin.yml` manifest. Resolved from `_calepin/plugins/{name}/` → `~/.config/calepin/plugins/{name}/`. Built-in plugins (tabset, layout, figure-div, theorem, callout) are appended automatically.
 4. **Bibliography** (`filters/bibliography.rs`) — Citation keys resolved via hayagriva.
 5. **Cross-ref markers** (`filters/crossref.rs`) — Inject anchors into elements.
-6. **Render** — `ElementRenderer` dispatches each element to the appropriate filter, then applies a template. `OutputRenderer` wraps the result in a page template.
+6. **Render** — `ElementRenderer` dispatches each element to the appropriate filter, then applies a template. `Element::Text` blocks are converted from markdown to the output format by a shared AST walker (`render/ast.rs`) that traverses comrak's parsed node tree via a `FormatEmitter` trait (one implementation per format: HTML, LaTeX, Typst). Heading IDs, section numbering, footnotes, table structure, and image attributes are resolved structurally during this walk. `OutputRenderer` wraps the result in a page template.
 7. **Cross-ref resolution** — Post-processing pass resolves `@fig-x` references to links/numbers.
 8. **Page template** (`render/template.rs`) — MiniJinja-based rendering with `{{variable}}` substitution, conditionals, loops, and filters.
 
@@ -103,12 +103,16 @@ Each filter enriches template variables or produces final output. Built-in div f
 ### `calepin/src/render/` — Format conversion machinery
 
 - `mod.rs` — `OutputRenderer` trait with `format()` and `extension()`
+- `ast.rs` — **Unified AST walker**: `FormatEmitter` trait + `walk_ast()`. All three output formats (HTML, LaTeX, Typst) share a single comrak AST traversal. The walker handles heading `{#id .class}` extraction, section numbering, footnote pre-pass, table state, image `{width= height=}` attribute parsing, and math/marker protection. Format-specific rendering is delegated to `FormatEmitter` methods (one per node type).
+- `html_ast.rs` — `HtmlEmitter`: implements `FormatEmitter` for HTML output
+- `latex_emit.rs` — `LatexEmitter`: implements `FormatEmitter` for LaTeX output
+- `typst_ast.rs` — `TypstEmitter`: implements `FormatEmitter` for Typst output
 - `elements.rs` — `Element` enum + `ElementRenderer` dispatch
 - `div.rs` — Div rendering pipeline: unified plugin registry dispatch (structural → filter → subprocess → template)
 - `span.rs` — Span rendering pipeline: unified plugin registry dispatch → template → fallback
 - `template.rs` — MiniJinja-based template rendering (`apply_template()`) + page template loading + `build_template_vars()`
-- `markdown.rs` — comrak CommonMark+GFM with math/raw protection
-- `latex.rs` — Markdown-to-LaTeX conversion
+- `markdown.rs` — Shared comrak options, `ImageAttrs` parsing, `render_html()`/`render_typst()`/`render_inline()` entry points (delegate to AST walker), math/raw marker re-exports
+- `latex.rs` — LaTeX image post-processing (`apply_image_attrs_latex`, `resolve_image_paths_latex`), delegates main conversion to `latex_emit.rs`
 - `markers.rs` — Marker systems for protecting content through conversion
 
 ### `calepin/src/formats/` — Format-specific renderers

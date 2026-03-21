@@ -24,16 +24,12 @@ pub struct CodeBlock {
     pub code: String,
     pub lang: String,
     pub filename: String,
-    #[allow(dead_code)]
-    pub lines: (usize, usize),
 }
 
 #[derive(Debug, Clone)]
 pub struct RawBlock {
     pub format: String,
     pub content: String,
-    #[allow(dead_code)]
-    pub lines: (usize, usize),
 }
 
 #[derive(Debug, Clone)]
@@ -42,15 +38,11 @@ pub struct DivBlock {
     pub id: Option<String>,
     pub attrs: HashMap<String, String>,
     pub children: Vec<Block>,
-    #[allow(dead_code)]
-    pub lines: (usize, usize),
 }
 
 #[derive(Debug, Clone)]
 pub struct TextBlock {
     pub content: String,
-    #[allow(dead_code)]
-    pub lines: (usize, usize),
 }
 
 #[derive(Debug, Clone)]
@@ -59,12 +51,6 @@ pub struct CodeChunk {
     pub source: Vec<String>,
     /// Chunk options (from header + pipe comments)
     pub options: ChunkOptions,
-    /// Line range in input file
-    #[allow(dead_code)]
-    pub lines: (usize, usize),
-    /// Indentation / blockquote prefix
-    #[allow(dead_code)]
-    pub prefix: String,
     /// Auto-generated or user-specified label
     pub label: String,
 }
@@ -126,8 +112,6 @@ impl ChunkOptions {
     pub fn include(&self) -> bool { self.get_bool("include", true) }
     pub fn warning(&self) -> bool { self.get_bool("warning", true) }
     pub fn message(&self) -> bool { self.get_bool("message", true) }
-    #[allow(dead_code)]
-    pub fn collapse(&self) -> bool { self.get_bool("collapse", false) }
     pub fn comment(&self) -> String { self.get_string("comment", "> ") }
     pub fn results(&self) -> ResultsMode {
         match self.get_string("results", "markup").as_str() {
@@ -136,22 +120,12 @@ impl ChunkOptions {
             _ => ResultsMode::Markup,
         }
     }
-    #[allow(dead_code)]
-    pub fn error_mode(&self) -> ErrorMode {
-        match self.inner.get("error") {
-            Some(OptionValue::Bool(true)) => ErrorMode::Show,
-            Some(OptionValue::Bool(false)) => ErrorMode::Hide,
-            _ => ErrorMode::Propagate,
-        }
-    }
     pub fn engine(&self) -> String { self.get_string("engine", "r") }
     pub fn fig_width(&self) -> f64 { self.get_number("fig.width", 7.0) }
     pub fn fig_height(&self) -> f64 { self.get_number("fig.height", 5.0) }
     pub fn fig_cap(&self) -> Option<String> { self.get_opt_string("fig.cap") }
     pub fn tbl_cap(&self) -> Option<String> { self.get_opt_string("tbl.cap") }
     pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig.alt") }
-    #[allow(dead_code)]
-    pub fn fig_ext(&self) -> Option<String> { self.get_opt_string("fig.ext") }
     pub fn dev(&self) -> String { self.get_string("dev", "png") }
     pub fn fig_align(&self) -> Option<String> { self.get_opt_string("fig.align") }
     pub fn fig_scap(&self) -> Option<String> { self.get_opt_string("fig.scap") }
@@ -184,14 +158,6 @@ pub enum ResultsMode {
     Hide,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-#[allow(dead_code)]
-pub enum ErrorMode {
-    Propagate,
-    Show,
-    Hide,
-}
-
 /// The result of executing a code chunk
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ChunkResult {
@@ -212,10 +178,6 @@ pub enum ChunkResult {
 /// A parsed author name, split into components.
 #[derive(Debug, Clone, Default)]
 pub struct AuthorName {
-    #[allow(dead_code)]
-    pub given: Option<String>,
-    #[allow(dead_code)]
-    pub family: Option<String>,
     pub literal: String,
 }
 
@@ -245,10 +207,6 @@ pub struct Affiliation {
     pub city: Option<String>,
     pub region: Option<String>,
     pub country: Option<String>,
-    #[allow(dead_code)]
-    pub postal_code: Option<String>,
-    #[allow(dead_code)]
-    pub url: Option<String>,
 }
 
 impl Affiliation {
@@ -277,9 +235,6 @@ pub struct Copyright {
 pub struct License {
     pub text: Option<String>,
     pub url: Option<String>,
-    /// Original short form (e.g. "CC BY") before expansion.
-    #[allow(dead_code)]
-    pub cc_type: Option<String>,
 }
 
 /// Funding source metadata.
@@ -294,20 +249,12 @@ pub struct Funding {
 /// Citation metadata for making a document citeable.
 #[derive(Debug, Clone, Default)]
 pub struct CitationMeta {
-    #[allow(dead_code)]
-    pub type_: Option<String>,
     pub container_title: Option<String>,
     pub volume: Option<String>,
     pub issue: Option<String>,
     pub issued: Option<String>,
     pub doi: Option<String>,
     pub url: Option<String>,
-    #[allow(dead_code)]
-    pub issn: Option<String>,
-    #[allow(dead_code)]
-    pub isbn: Option<String>,
-    #[allow(dead_code)]
-    pub publisher: Option<String>,
     pub page: Option<String>,
 }
 

@@ -113,6 +113,11 @@ static ATTR_PAIR_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 impl ImageAttrs {
+    /// Empty attributes (no width, height, etc.).
+    pub fn empty() -> Self {
+        Self { width: None, height: None, fig_align: None, extra: Vec::new() }
+    }
+
     /// Parse a `key=value ...` attribute string (the content inside `{...}`).
     pub fn parse(attrs_str: &str) -> Self {
         let mut attrs = ImageAttrs {
@@ -135,7 +140,6 @@ impl ImageAttrs {
     }
 
     /// Emit HTML style and extra attributes for an `<img>` tag.
-    #[allow(dead_code)]
     pub fn to_html(&self) -> (String, Vec<String>) {
         let mut style_parts: Vec<String> = Vec::new();
         let mut html_attrs: Vec<String> = Vec::new();
@@ -182,7 +186,6 @@ impl ImageAttrs {
     }
 
     /// Emit Typst named parameters for `image()`.
-    #[allow(dead_code)]
     pub fn to_typst_params(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
         if let Some(ref w) = self.width {
@@ -197,65 +200,6 @@ impl ImageAttrs {
             format!(", {}", parts.join(", "))
         }
     }
-}
-
-// ---------------------------------------------------------------------------
-// Legacy format-specific post-processing
-// Now handled by AST walkers in render/html_ast.rs and render/typst_ast.rs.
-// Kept for test coverage.
-// ---------------------------------------------------------------------------
-
-#[allow(dead_code)]
-static HTML_IMG_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(<img\s[^>]*?)/?\s*>\s*\{([^}]+)\}"#).unwrap()
-});
-
-#[allow(dead_code)]
-pub fn apply_image_attrs_html(html: &str) -> String {
-    HTML_IMG_ATTR_RE.replace_all(html, |caps: &regex::Captures| {
-        let img_open = &caps[1];
-        let attrs = ImageAttrs::parse(&caps[2]);
-        let (style, extra) = attrs.to_html();
-
-        let mut result = img_open.to_string();
-        result.push_str(&style);
-        for a in &extra {
-            result.push_str(&format!(" {}", a));
-        }
-        result.push_str(" />");
-        result
-    }).to_string()
-}
-
-#[allow(dead_code)]
-static TYPST_IMG_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"#box\(image\("([^"]+)"\)\)\{([^}]+)\}"#).unwrap()
-});
-
-/// Fix Typst heading IDs: extract explicit `{#id}` attributes from heading text
-/// and use them as the Typst label, replacing comrak's auto-generated slug.
-///
-/// Transforms: `== Title \{#sec-intro\} <slugified-title-sec-intro>`
-/// Into:       `== Title <sec-intro>`
-#[allow(dead_code)]
-fn fix_typst_heading_ids(typst: &str) -> String {
-    static RE: LazyLock<Regex> = LazyLock::new(|| {
-        // Match: (=+ heading text) \{#explicit-id\} <auto-slug>
-        // Also handles escaped braces: {\#id} or \{\#id\}
-        Regex::new(r"(?m)^(=+\s+.*?)\s*\\?\{\\?#([a-zA-Z0-9_-]+)\\?\}\s*<[^>]+>$").unwrap()
-    });
-    RE.replace_all(typst, "$1 <$2>").to_string()
-}
-
-/// Post-process Typst to absorb `{key=value}` attribute blocks into preceding `#box(image(...))`.
-#[allow(dead_code)]
-pub fn apply_image_attrs_typst(typst: &str) -> String {
-    TYPST_IMG_ATTR_RE.replace_all(typst, |caps: &regex::Captures| {
-        let url = &caps[1];
-        let attrs = ImageAttrs::parse(&caps[2]);
-        let params = attrs.to_typst_params();
-        format!("#box(image(\"{}\"{}))", url, params)
-    }).to_string()
 }
 
 #[cfg(test)]
@@ -325,31 +269,15 @@ mod tests {
     }
 
     #[test]
-    fn test_img_attrs_html() {
-        let attrs = ImageAttrs::parse("width=7em height=3em");
-        let (style, extra) = attrs.to_html();
-        assert!(style.contains("width:7em"), "style: {}", style);
-        assert!(style.contains("height:3em"), "style: {}", style);
-        assert!(extra.is_empty());
-    }
-
-    #[test]
     fn test_img_attrs_latex() {
         let attrs = ImageAttrs::parse("width=7em");
         assert_eq!(attrs.to_latex_options(), "[width=7em]");
     }
 
     #[test]
-    fn test_img_attrs_typst() {
-        let attrs = ImageAttrs::parse("width=7em height=3em");
-        assert_eq!(attrs.to_typst_params(), ", width: 7em, height: 3em");
-    }
-
-    #[test]
     fn test_img_attrs_empty() {
         let attrs = ImageAttrs::parse("");
         assert_eq!(attrs.to_latex_options(), "");
-        assert_eq!(attrs.to_typst_params(), "");
     }
 
     #[test]
@@ -375,27 +303,6 @@ mod tests {
         let input = "###### Deep";
         let result = shift_headings(input);
         assert_eq!(result, "###### Deep", "h6 should stay at h6");
-    }
-
-    #[test]
-    fn test_fix_typst_heading_ids_explicit() {
-        let input = "== Introduction \\{\\#sec-intro\\} <introduction-sec-intro>";
-        let result = fix_typst_heading_ids(input);
-        assert_eq!(result, "== Introduction <sec-intro>");
-    }
-
-    #[test]
-    fn test_fix_typst_heading_ids_escaped_braces() {
-        let input = "=== Methods {\\#sec-methods} <methods-sec-methods>";
-        let result = fix_typst_heading_ids(input);
-        assert_eq!(result, "=== Methods <sec-methods>");
-    }
-
-    #[test]
-    fn test_fix_typst_heading_ids_no_explicit() {
-        let input = "== Plain Heading <plain-heading>";
-        let result = fix_typst_heading_ids(input);
-        assert_eq!(result, "== Plain Heading <plain-heading>", "should be unchanged");
     }
 
     #[test]

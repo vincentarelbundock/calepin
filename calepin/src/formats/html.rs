@@ -85,7 +85,6 @@ fn embed_images_base64(html: &str) -> String {
 // Kept for test coverage; will be removed once AST walker is fully validated.
 // ---------------------------------------------------------------------------
 
-#[allow(dead_code)]
 /// Matches headings with or without attributes: <h1>, <h2 id="foo">, etc.
 static HEADING_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?s)<(h([1-6]))([^>]*)>(.*?)</h[1-6]>"#).unwrap());

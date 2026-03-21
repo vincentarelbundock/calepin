@@ -46,9 +46,6 @@ pub struct PageInfo {
     pub url: String,
     /// Metadata from frontmatter
     pub meta: PageMeta,
-    /// Display text (from config or title)
-    #[allow(dead_code)]
-    pub nav_text: Option<String>,
 }
 
 /// Discover all pages referenced in the site config.
@@ -71,15 +68,11 @@ pub fn discover_pages(config: &SiteConfig, base_dir: &Path) -> Result<Vec<PageIn
         let output = source.with_extension("html");
         let url = format!("/{}", output.display());
 
-        // Find nav text from config
-        let nav_text = find_nav_text(&config.website.pages, rel_path);
-
         pages.push(PageInfo {
             source,
             output,
             url,
             meta,
-            nav_text,
         });
     }
 
@@ -116,7 +109,6 @@ pub fn discover_listing_pages(
             output,
             url,
             meta,
-            nav_text: None,
         });
     }
 
@@ -177,19 +169,3 @@ fn extract_frontmatter(path: &Path) -> Result<PageMeta> {
     }
 }
 
-/// Find the display text for a page path in the config tree.
-fn find_nav_text(entries: &[PageEntry], path: &str) -> Option<String> {
-    for entry in entries {
-        match entry {
-            PageEntry::Simple(s) if s == path => return None,
-            PageEntry::Page { href, text, .. } if href == path => return text.clone(),
-            PageEntry::Section { pages, .. } => {
-                if let Some(text) = find_nav_text(pages, path) {
-                    return Some(text);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}

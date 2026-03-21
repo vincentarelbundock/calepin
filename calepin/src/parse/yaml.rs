@@ -187,24 +187,10 @@ fn parse_author_name_str(s: &str) -> AuthorName {
             format!("{} {}", given, family)
         };
         AuthorName {
-            given: if given.is_empty() { None } else { Some(given) },
-            family: Some(family),
             literal,
         }
     } else {
-        // "Given Family" — last word is family
-        let words: Vec<&str> = s.split_whitespace().collect();
-        if words.len() <= 1 {
-            AuthorName { literal: s.to_string(), ..Default::default() }
-        } else {
-            let family = words.last().unwrap().to_string();
-            let given = words[..words.len() - 1].join(" ");
-            AuthorName {
-                given: Some(given),
-                family: Some(family),
-                literal: s.to_string(),
-            }
-        }
+        AuthorName { literal: s.to_string() }
     }
 }
 
@@ -231,7 +217,7 @@ fn parse_author_mapping(
                     (None, None) => String::new(),
                 }
             });
-            author.name = AuthorName { given, family, literal };
+            author.name = AuthorName { literal };
         }
     }
 
@@ -345,8 +331,6 @@ fn resolve_affiliation(
             city: yaml_str(m, "city"),
             region: yaml_str(m, "region").or_else(|| yaml_str(m, "state")),
             country: yaml_str(m, "country"),
-            postal_code: yaml_str(m, "postal-code"),
-            url: yaml_str(m, "url").or_else(|| yaml_str(m, "affiliation-url")),
             ..Default::default()
         };
         affiliations.push(aff);
@@ -417,7 +401,7 @@ fn parse_copyright(v: &YamlOwned) -> Copyright {
 fn parse_license(v: &YamlOwned) -> License {
     if let Some(s) = v.as_str() {
         return if let Some((text, url)) = expand_cc_license(s) {
-            License { text: Some(text.to_string()), url: Some(url.to_string()), cc_type: Some(s.to_string()) }
+            License { text: Some(text.to_string()), url: Some(url.to_string()) }
         } else {
             License { text: Some(s.to_string()), ..Default::default() }
         };
@@ -431,7 +415,6 @@ fn parse_license(v: &YamlOwned) -> License {
         // If type: is a CC abbreviation, expand it
         if let Some(t) = yaml_str(m, "type") {
             if let Some((text, url)) = expand_cc_license(&t) {
-                lic.cc_type = Some(t);
                 if lic.text.is_none() { lic.text = Some(text.to_string()); }
                 if lic.url.is_none() { lic.url = Some(url.to_string()); }
             } else if lic.text.is_none() {
@@ -446,7 +429,6 @@ fn parse_license(v: &YamlOwned) -> License {
 fn parse_citation(v: &YamlOwned) -> Option<CitationMeta> {
     let m = v.as_mapping()?;
     Some(CitationMeta {
-        type_: yaml_str(m, "type"),
         container_title: yaml_str(m, "container-title"),
         volume: yaml_str(m, "volume")
             .or_else(|| m.get(&yaml_key("volume"))
@@ -457,9 +439,6 @@ fn parse_citation(v: &YamlOwned) -> Option<CitationMeta> {
         issued: yaml_str(m, "issued"),
         doi: yaml_str(m, "doi"),
         url: yaml_str(m, "url"),
-        issn: yaml_str(m, "issn"),
-        isbn: yaml_str(m, "isbn"),
-        publisher: yaml_str(m, "publisher"),
         page: yaml_str(m, "page"),
     })
 }
@@ -587,8 +566,6 @@ mod tests {
         assert_eq!(meta.author, Some(vec!["Norah Jones".to_string()]));
         assert_eq!(meta.authors.len(), 1);
         assert_eq!(meta.authors[0].name.literal, "Norah Jones");
-        assert_eq!(meta.authors[0].name.given.as_deref(), Some("Norah"));
-        assert_eq!(meta.authors[0].name.family.as_deref(), Some("Jones"));
     }
 
     #[test]

@@ -47,12 +47,6 @@ const TY_SC_RAW: char = 'S';
 // Compiled regex patterns (one per marker type that needs resolution)
 // ---------------------------------------------------------------------------
 
-/// Matches any marker: \u{FFFF}<type><payload>\u{FFFE}
-#[allow(dead_code)]
-static RE_MARKER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new("\u{FFFF}([MDLRSX])([^\u{FFFE}]*)\u{FFFE}").unwrap()
-});
-
 /// Matches equation label markers adjacent to restored display math.
 static RE_EQ_LABEL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
@@ -320,47 +314,6 @@ pub fn resolve_shortcode_raw(text: &str, fragments: &[String]) -> String {
     }).to_string()
 }
 
-/// Resolve all marker types in a single pass. This is the preferred entry
-/// point when all fragment vecs are available.
-#[allow(dead_code)]
-pub fn resolve_all(
-    text: &str,
-    format: &str,
-    math: &[String],
-    raw_fragments: &[String],
-    sc_fragments: &[String],
-) -> String {
-    if !text.contains(MS) {
-        return text.to_string();
-    }
-
-    let esc_dollar_replacement = match format {
-        "html" => "<span class=\"nodollar\">$</span>",
-        _ => "\\$",
-    };
-
-    RE_MARKER.replace_all(text, |caps: &regex::Captures| {
-        let ty = caps[1].chars().next().unwrap_or('?');
-        let payload = &caps[2];
-        match ty {
-            'M' => {
-                let idx: usize = payload.parse().unwrap_or(usize::MAX);
-                math.get(idx).cloned().unwrap_or_default()
-            }
-            'D' => esc_dollar_replacement.to_string(),
-            'R' => {
-                let idx: usize = payload.parse().unwrap_or(usize::MAX);
-                raw_fragments.get(idx).cloned().unwrap_or_default()
-            }
-            'S' => {
-                let idx: usize = payload.parse().unwrap_or(usize::MAX);
-                sc_fragments.get(idx).cloned().unwrap_or_default()
-            }
-            _ => String::new(),
-        }
-    }).to_string()
-}
-
 // ---------------------------------------------------------------------------
 // Preprocessing (shared by markdown.rs and latex.rs)
 // ---------------------------------------------------------------------------
@@ -525,20 +478,6 @@ mod tests {
         assert_eq!(fragments.len(), 1);
         let resolved = resolve_shortcode_raw(&marker, &fragments);
         assert_eq!(resolved, "\\newpage{}");
-    }
-
-    #[test]
-    fn test_resolve_all_mixed() {
-        let mut raw = Vec::new();
-        let mut sc = Vec::new();
-        let (math_text, math_exprs) = protect_math("$x$ hello");
-        let raw_marker = wrap_raw(&mut raw, "<b>bold</b>".to_string());
-        let sc_marker = wrap_shortcode_raw(&mut sc, "\\newpage".to_string());
-        let text = format!("{} {} {}", math_text, raw_marker, sc_marker);
-        let result = resolve_all(&text, "html", &math_exprs, &raw, &sc);
-        assert!(result.contains("$x$"));
-        assert!(result.contains("<b>bold</b>"));
-        assert!(result.contains("\\newpage"));
     }
 
     #[test]
