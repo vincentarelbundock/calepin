@@ -42,15 +42,56 @@ pub trait OutputRenderer {
 
     /// Render a list of elements into the final document body.
     fn render(&self, elements: &[Element], renderer: &ElementRenderer) -> Result<String> {
+        use std::time::Instant;
+
         // Pre-collect footnote definitions across all Text elements so that
         // references in one block can resolve against definitions in another.
         renderer.collect_footnote_defs(elements);
 
+        let timing = std::env::var("CALEPIN_TIMING").is_ok();
+        let mut t_text = 0f64;
+        let mut t_div = 0f64;
+        let mut n_text = 0usize;
+        let mut n_div = 0usize;
+        let mut by_kind: std::collections::HashMap<&str, (f64, usize)> =
+            std::collections::HashMap::new();
+
         let parts: Vec<String> = elements
             .iter()
-            .map(|el| renderer.render(el))
+            .map(|el| {
+                if timing {
+                    let t = Instant::now();
+                    let r = renderer.render(el);
+                    let elapsed = t.elapsed().as_secs_f64() * 1000.0;
+                    match el {
+                        Element::Text { .. } => { t_text += elapsed; n_text += 1; }
+                        Element::Div { .. } => { t_div += elapsed; n_div += 1; }
+                        _ => {
+                            let kind = el.template_name();
+                            let kind = if kind.is_empty() { "other" } else { kind };
+                            let entry = by_kind.entry(kind).or_insert((0.0, 0));
+                            entry.0 += elapsed;
+                            entry.1 += 1;
+                        }
+                    }
+                    r
+                } else {
+                    renderer.render(el)
+                }
+            })
             .filter(|s| !s.is_empty())
             .collect();
+
+        if timing {
+            eprintln!("[timing]   text  ({:>3} blocks) {:>8.3}ms", n_text, t_text);
+            eprintln!("[timing]   div   ({:>3} blocks) {:>8.3}ms", n_div, t_div);
+            let mut kinds: Vec<_> = by_kind.iter().collect();
+            kinds.sort_by(|a, b| b.1.0.partial_cmp(&a.1.0).unwrap());
+            for (kind, (ms, count)) in kinds {
+                eprintln!("[timing]   {:5} ({:>3} blocks) {:>8.3}ms", kind, count, ms);
+            }
+        }
+
         let body = parts.join("\n\n");
         Ok(self.postprocess(&body, renderer))
     }

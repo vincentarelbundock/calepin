@@ -7,12 +7,25 @@
 
 use std::collections::HashMap;
 use std::fmt::Write;
+use std::sync::LazyLock;
 
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, ThemeSet};
 use syntect::html::{ClassStyle, ClassedHTMLGenerator, css_for_theme_with_class_style};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
+
+// ---------------------------------------------------------------------------
+// Process-global SyntaxSet singleton
+// ---------------------------------------------------------------------------
+//
+// SyntaxSet::load_defaults_newlines() deserializes ~100 language grammars
+// from syntect's compiled binary blob. This takes 3-5ms and allocates ~2MB.
+// By making it a process-global singleton, we pay this cost once across all
+// documents (important in preview mode where the same process renders many
+// files). The SyntaxSet is immutable after construction, so sharing is safe.
+
+static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_newlines);
 
 /// Bundled .tmTheme files (embedded at compile time).
 const BUNDLED_THEMES: &[(&str, &[u8])] = &[
@@ -110,13 +123,12 @@ pub enum ColorScope {
 }
 
 
-/// Syntax highlighting engine holding shared state.
+/// Syntax highlighting engine.
 ///
-/// Theme and syntax loading is lazy: when `HighlightConfig::None`, no syntect
-/// data structures are allocated. When highlighting is enabled, only the
-/// requested theme(s) are parsed — not all 26 bundled themes.
+/// The SyntaxSet is a process-global singleton (loaded once, shared across
+/// documents). The ThemeSet is per-Highlighter and loaded lazily, containing
+/// only the theme(s) the document actually uses -- not all 26 bundled themes.
 pub struct Highlighter {
-    ss: std::cell::OnceCell<SyntaxSet>,
     ts: std::cell::OnceCell<ThemeSet>,
     config: HighlightConfig,
     latex_colors: std::cell::RefCell<LatexColorRegistry>,
@@ -152,7 +164,6 @@ impl Highlighter {
                         ts.themes.insert("_custom".to_string(), t);
                         let _ = ts_cell.set(ts);
                         return Self {
-                            ss: std::cell::OnceCell::new(),
                             ts: ts_cell,
                             config: HighlightConfig::Single("_custom".to_string()),
                             latex_colors: std::cell::RefCell::new(LatexColorRegistry::new()),
@@ -171,16 +182,15 @@ impl Highlighter {
         };
 
         Self {
-            ss: std::cell::OnceCell::new(),
             ts: std::cell::OnceCell::new(),
             config,
             latex_colors: std::cell::RefCell::new(LatexColorRegistry::new()),
         }
     }
 
-    /// Lazily load the SyntaxSet (only when first needed for highlighting).
+    /// Return the process-global SyntaxSet (loaded once, reused across documents).
     fn syntax_set(&self) -> &SyntaxSet {
-        self.ss.get_or_init(SyntaxSet::load_defaults_newlines)
+        &SYNTAX_SET
     }
 
     /// Lazily load the ThemeSet, containing only the theme(s) actually needed.

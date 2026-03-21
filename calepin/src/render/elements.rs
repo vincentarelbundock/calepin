@@ -84,6 +84,8 @@ pub struct ElementRenderer {
     /// Footnote definitions collected from all Text elements (for cross-block resolution).
     /// Each entry is the full `[^name]: content` line(s).
     global_footnote_defs: std::cell::RefCell<String>,
+    /// Cache for resolved element templates (avoids repeated filesystem lookups).
+    template_cache: std::cell::RefCell<HashMap<String, Option<String>>>,
 }
 
 impl ElementRenderer {
@@ -121,6 +123,7 @@ impl ElementRenderer {
             walk_metadata: std::cell::RefCell::new(crate::render::ast::WalkMetadata::default()),
             footnote_counter: std::cell::Cell::new(0),
             global_footnote_defs: std::cell::RefCell::new(String::new()),
+            template_cache: std::cell::RefCell::new(HashMap::new()),
         }
     }
 
@@ -188,6 +191,15 @@ impl ElementRenderer {
             }
             Element::CodeAsis { text } => text.clone(),
             Element::Div { classes, id, attrs, children } => {
+                // Track fig-/tbl- IDs for cross-reference resolution
+                if let Some(ref div_id) = id {
+                    if div_id.starts_with("fig-") || div_id.starts_with("tbl-") {
+                        let prefix = &div_id[..4]; // "fig-" or "tbl-"
+                        let mut meta = self.walk_metadata.borrow_mut();
+                        let count = meta.ids.keys().filter(|k| k.starts_with(prefix)).count();
+                        meta.ids.insert(div_id.clone(), (count + 1).to_string());
+                    }
+                }
                 crate::render::div::render(
                     classes, id, attrs, children, &self.ext,
                     &self.registry,
@@ -232,11 +244,14 @@ impl ElementRenderer {
     }
 
     fn resolve_element_template(&self, name: &str) -> Option<String> {
-        // Check plugin-provided element templates first
-        if let Some(tpl) = self.registry.resolve_element_template(name, &self.ext) {
-            return Some(tpl);
+        // Check cache first to avoid repeated filesystem lookups
+        if let Some(cached) = self.template_cache.borrow().get(name) {
+            return cached.clone();
         }
-        resolve_element_template(name, &self.ext)
+        let result = self.registry.resolve_element_template(name, &self.ext)
+            .or_else(|| resolve_element_template(name, &self.ext));
+        self.template_cache.borrow_mut().insert(name.to_string(), result.clone());
+        result
     }
 
     pub fn theorem_numbers(&self) -> HashMap<String, String> {

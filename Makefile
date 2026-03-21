@@ -96,7 +96,10 @@ PROF_N ?= 100
 prof-build:  ## Build with profiling profile (release + debug symbols)
 	cargo build --manifest-path calepin/Cargo.toml --profile profiling
 
-prof: prof-build  ## Profile calepin with samply in browser (set PROF_FILE=path/to/file.qmd)
+prof: prof-build  ## Profile calepin with per-stage timing (set PROF_FILE=path/to/file.qmd)
+	@cd $$(dirname $(PROF_FILE)) && CALEPIN_TIMING=1 ../calepin/target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
+
+prof-samply: prof-build  ## Profile calepin with samply in browser (set PROF_FILE=path/to/file.qmd)
 	cd $$(dirname $(PROF_FILE)) && samply record -- ../calepin/target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
 
 prof-save: prof-build  ## Profile calepin and save to profile.json (for inspection)
