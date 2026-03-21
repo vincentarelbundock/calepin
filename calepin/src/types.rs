@@ -344,8 +344,7 @@ pub struct Metadata {
     pub csl: Option<String>,
     pub plugins: Vec<String>,
     pub brand: Option<crate::brand::Brand>,
-    pub variables: Option<saphyr::YamlOwned>,
-    pub extra: HashMap<String, saphyr::YamlOwned>,
+    pub var: HashMap<String, saphyr::YamlOwned>,
 }
 
 impl Metadata {
@@ -376,11 +375,11 @@ impl Metadata {
                     let parts: Vec<&str> = key.split('.').collect();
                     let coerced = coerce_yaml_value(value);
                     if parts.len() == 1 {
-                        self.extra.insert(key.to_string(), coerced);
+                        self.var.insert(key.to_string(), coerced);
                     } else {
                         let leaf = coerced;
                         let nested = build_nested_yaml(&parts, leaf);
-                        merge_yaml_value(&mut self.extra, &parts[0].to_string(), nested);
+                        merge_yaml_value(&mut self.var, &parts[0].to_string(), nested);
                     }
                 }
             }

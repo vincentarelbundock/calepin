@@ -1,30 +1,30 @@
 ---
-title: Element Templates
+title: Elements
 ---
 
-Every rendered element --- code blocks, figures, fenced divs, bracketed spans, theorems, callouts --- passes through a template before becoming output. Element templates are small files that control the markup for a single component.
+Every rendered element (code blocks, figures, fenced divs, bracketed spans, theorems, callouts) passes through a template before becoming output. Element templates are small files that control the markup for a single component.
 
 
 # How it works
 
-A template is a file with `{% raw %}{{variable}}{% endraw %}` placeholders. For example, the built-in `div.html`:
+A template is a file with {% raw %}`{{variable}}`{% endraw %} placeholders. For example, the built-in `div.html`:
 
 ```html
-{% raw %}<div class="{{classes}}"{{id_attr}}>
+<div class="{{classes}}"{{id_attr}}>
 {{children}}
-</div>{% endraw %}
+</div>
 ```
 
-Any `{% raw %}{{variable}}{% endraw %}` not defined is replaced with an empty string. Templates support the full [Jinja](jinja.qmd) syntax, including conditionals, loops, and filters.
+Any {% raw %}`{{variable}}`{% endraw %} not defined is replaced with an empty string. Templates support the full [Jinja](jinja.html) syntax, including conditionals, loops, and filters.
 
 
 # Naming and resolution
 
 Templates are named `{element}.{format}` where format is `html`, `latex`, `typst`, or `markdown`:
 
-- `callout-note.html` --- HTML template for `::: {.callout-note}`
-- `theorem.latex` --- LaTeX template for `::: {.theorem}`
-- `mystyle.html` --- HTML template for `[text]{.mystyle}`
+- `callout-note.html`: HTML template for `::: {.callout-note}`
+- `theorem.latex`: LaTeX template for `::: {.theorem}`
+- `mystyle.html`: HTML template for `[text]{.mystyle}`
 
 Resolution order:
 
@@ -44,12 +44,12 @@ Fenced divs (`::: {.classname #my-id key="value"} ... :::`) receive:
 
 | Variable | Description |
 |----------|-------------|
-| `{% raw %}{{children}}{% endraw %}` | Recursively rendered content |
-| `{% raw %}{{classes}}{% endraw %}` | Space-separated class list |
-| `{% raw %}{{id}}{% endraw %}` | Element id (empty if none) |
-| `{% raw %}{{id_attr}}{% endraw %}` | ` id="..."` attribute string (empty if none) |
-| `{% raw %}{{label}}{% endraw %}` | Format-specific label: `\label{id}` (LaTeX), `<id>` (Typst), empty (HTML) |
-| `{% raw %}{{format}}{% endraw %}` | Current output format |
+| {% raw %}`{{children}}`{% endraw %} | Recursively rendered content |
+| {% raw %}`{{classes}}`{% endraw %} | Space-separated class list |
+| {% raw %}`{{id}}`{% endraw %} | Element id (empty if none) |
+| {% raw %}`{{id_attr}}`{% endraw %} | ` id="..."` attribute string (empty if none) |
+| {% raw %}`{{label}}`{% endraw %} | Format-specific label: `\label{id}` (LaTeX), `<id>` (Typst), empty (HTML) |
+| {% raw %}`{{format}}`{% endraw %} | Current output format |
 | *user attrs* | Any `key="value"` pairs from the div header |
 
 Template lookup tries each class in order, then falls back to `div.{format}`.
@@ -61,11 +61,11 @@ Bracketed spans (`[text]{.myclass key="val"}`) receive:
 
 | Variable | Description |
 |----------|-------------|
-| `{% raw %}{{content}}{% endraw %}` | Text inside the brackets (rendered as inline markdown) |
-| `{% raw %}{{class}}{% endraw %}` | First class |
-| `{% raw %}{{classes}}{% endraw %}` | Space-separated class list |
-| `{% raw %}{{id}}{% endraw %}` / `{% raw %}{{id_attr}}{% endraw %}` | Same as divs |
-| `{% raw %}{{format}}{% endraw %}` | Current output format |
+| {% raw %}`{{content}}`{% endraw %} | Text inside the brackets (rendered as inline markdown) |
+| {% raw %}`{{class}}`{% endraw %} | First class |
+| {% raw %}`{{classes}}`{% endraw %} | Space-separated class list |
+| {% raw %}`{{id}}`{% endraw %} / {% raw %}`{{id_attr}}`{% endraw %} | Same as divs |
+| {% raw %}`{{format}}`{% endraw %} | Current output format |
 | *user attrs* | Any key-value pairs |
 
 If no template matches, *Calepin* falls back to `<span>` (HTML), `\text{}` (LaTeX), or `[]` (Typst).
@@ -75,29 +75,29 @@ If no template matches, *Calepin* falls back to `<span>` (HTML), `\text{}` (LaTe
 
 | Variable | Description |
 |----------|-------------|
-| `{% raw %}{{code}}{% endraw %}` | Raw source code |
-| `{% raw %}{{lang}}{% endraw %}` | Language identifier |
-| `{% raw %}{{label}}{% endraw %}` | Chunk label |
-| `{% raw %}{{highlighted}}{% endraw %}` | Syntax-highlighted code (HTML/LaTeX/Typst) |
+| {% raw %}`{{code}}`{% endraw %} | Raw source code |
+| {% raw %}`{{lang}}`{% endraw %} | Language identifier |
+| {% raw %}`{{label}}`{% endraw %} | Chunk label |
+| {% raw %}`{{highlighted}}`{% endraw %} | Syntax-highlighted code (HTML/LaTeX/Typst) |
 
-Related templates: `code_source`, `code_output` (`{% raw %}{{output}}{% endraw %}`), `code_warning`, `code_message`, `code_error`.
+Related templates: `code_source`, `code_output` ({% raw %}`{{output}}`{% endraw %}), `code_warning`, `code_message`, `code_error`.
 
 
 # Figure variables
 
 | Variable | Description |
 |----------|-------------|
-| `{% raw %}{{image}}{% endraw %}` | Format-specific image tag |
-| `{% raw %}{{path}}{% endraw %}` | Resolved image file path |
-| `{% raw %}{{alt}}{% endraw %}` | Alt text |
-| `{% raw %}{{caption}}{% endraw %}` | Figure caption |
-| `{% raw %}{{label}}{% endraw %}` | Figure label |
-| `{% raw %}{{number}}{% endraw %}` | Auto-incremented figure number |
-| `{% raw %}{{width_attr}}{% endraw %}` / `{% raw %}{{height_attr}}{% endraw %}` | Format-specific dimension attributes |
-| `{% raw %}{{align}}{% endraw %}` | Alignment: `left`, `center`, `right` |
-| `{% raw %}{{cap_location}}{% endraw %}` | Caption position: `top`, `bottom`, `margin` |
+| {% raw %}`{{image}}`{% endraw %} | Format-specific image tag |
+| {% raw %}`{{path}}`{% endraw %} | Resolved image file path |
+| {% raw %}`{{alt}}`{% endraw %} | Alt text |
+| {% raw %}`{{caption}}`{% endraw %} | Figure caption |
+| {% raw %}`{{label}}`{% endraw %} | Figure label |
+| {% raw %}`{{number}}`{% endraw %} | Auto-incremented figure number |
+| {% raw %}`{{width_attr}}`{% endraw %} / {% raw %}`{{height_attr}}`{% endraw %} | Format-specific dimension attributes |
+| {% raw %}`{{align}}`{% endraw %} | Alignment: `left`, `center`, `right` |
+| {% raw %}`{{cap_location}}`{% endraw %} | Caption position: `top`, `bottom`, `margin` |
 
-See [Figures](../figures.qmd) for more details on figure rendering.
+See [Figures](../figures.html) for more details on figure rendering.
 
 
 # Theorem variables
@@ -106,9 +106,9 @@ Theorem environments (`::: {.theorem}`, `::: {.lemma}`, `::: {.definition}`, etc
 
 | Variable | Description |
 |----------|-------------|
-| `{% raw %}{{type_name}}{% endraw %}` | Capitalized type ("Theorem", "Lemma", "Definition", ...) |
-| `{% raw %}{{number}}{% endraw %}` | Auto-incremented counter per type |
-| `{% raw %}{{type_class}}{% endraw %}` | Original class name |
+| {% raw %}`{{type_name}}`{% endraw %} | Capitalized type ("Theorem", "Lemma", "Definition", ...) |
+| {% raw %}`{{number}}`{% endraw %} | Auto-incremented counter per type |
+| {% raw %}`{{type_class}}`{% endraw %} | Original class name |
 
 Two built-in templates handle these:
 
@@ -122,11 +122,11 @@ Callout divs (`::: {.callout-note}`, `::: {.callout-warning}`, etc.) receive:
 
 | Variable | Description |
 |----------|-------------|
-| `{% raw %}{{callout_type}}{% endraw %}` | Type without prefix: `note`, `tip`, `warning`, `caution`, `important` |
-| `{% raw %}{{title}}{% endraw %}` | Title text (default: capitalized type name) |
-| `{% raw %}{{header}}{% endraw %}` | Icon + title combined |
-| `{% raw %}{{collapse}}{% endraw %}` | `"true"` or `"false"` |
-| `{% raw %}{{appearance}}{% endraw %}` | `"default"` or user-provided |
+| {% raw %}`{{callout_type}}`{% endraw %} | Type without prefix: `note`, `tip`, `warning`, `caution`, `important` |
+| {% raw %}`{{title}}`{% endraw %} | Title text (default: capitalized type name) |
+| {% raw %}`{{header}}`{% endraw %} | Icon + title combined |
+| {% raw %}`{{collapse}}`{% endraw %} | `"true"` or `"false"` |
+| {% raw %}`{{appearance}}`{% endraw %} | `"default"` or user-provided |
 
 
 # Multi-format templates
@@ -134,7 +134,7 @@ Callout divs (`::: {.callout-note}`, `::: {.callout-warning}`, etc.) receive:
 Built-in templates handle all formats in a single file using conditionals:
 
 ```
-{% raw %}{%- if format == "html" -%}
+{%- if format == "html" -%}
 <div class="{{classes}}"{{id_attr}}>
 {{children}}
 </div>
@@ -146,7 +146,7 @@ Built-in templates handle all formats in a single file using conditionals:
 #block[
 {{children}}
 ]
-{%- endif -%}{% endraw %}
+{%- endif -%}
 ```
 
 User overrides are per-format (one file per format), so you only need to create the formats you want to customize.
@@ -157,11 +157,11 @@ User overrides are per-format (one file per format), so you only need to create 
 Create `_calepin/elements/highlight-box.html`:
 
 ```html
-{% raw %}<div class="highlight-box" style="background: {{color}};
+<div class="highlight-box" style="background: {{color}};
      border-left: 4px solid #333; padding: 0.8em 1em; margin: 1em 0;"{{id_attr}}>
 <strong>{{title}}</strong>
 {{children}}
-</div>{% endraw %}
+</div>
 ```
 
 Used as:

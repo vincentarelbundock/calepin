@@ -239,7 +239,7 @@ Only pipe syntax (`#| key: value`) is accepted. The header accepts only language
 
 ## Jinja Body Processing
 
-The `.qmd` body text is processed as a Jinja template during the evaluate stage (`jinja_engine.rs`). Code blocks and inline code are protected from Jinja evaluation. Use `#| tera: true` chunk option to opt-in to Jinja processing inside a code chunk.
+The `.qmd` body text is processed as a Jinja template during the evaluate stage (`jinja_engine.rs`). Code blocks and inline code are protected from Jinja evaluation. Use `#| jinja: true` chunk option to opt-in to Jinja processing inside a code chunk.
 
 Built-in Jinja functions (replace old `{{< shortcode >}}` syntax):
 
@@ -252,7 +252,7 @@ Built-in Jinja functions (replace old `{{< shortcode >}}` syntax):
 
 Context variables:
 - `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. — document metadata
-- `{{ var.key.subkey }}` — values from front matter `variables:` block
+- `{{ var.key.subkey }}` — non-standard front matter fields (with nesting)
 - `{{ env.HOME }}`, `{{ env.USER }}`, etc. — system environment variables
 - `{{ format }}` — current output format
 

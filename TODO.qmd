@@ -41,6 +41,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 
 ## Misc
 
+- [ ] Syntax highlight unexecuted code blocks in any language, ex: ```yaml
 - [ ] What is the point of _brand.yml if we already have YAML? Still support it, though.
 - [ ] Image in tutorial.qmd title block should work in typst and latex and markdown.
 - [x] $ handling. Quarto does not require escape, IIRC.

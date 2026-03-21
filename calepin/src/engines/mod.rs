@@ -71,9 +71,11 @@ pub fn evaluate(
                 elements.push(Element::Text { content: processed });
             }
             Block::Code(chunk) => {
-                // If #| tera: true, process chunk source through Jinja before execution
+                // If #| jinja: true, process chunk source through Jinja before execution
                 let tera_chunk;
-                let chunk_ref = if chunk.options.get_bool("tera", false) {
+                let chunk_ref = if chunk.options.get_bool("jinja", false)
+                    || chunk.options.get_bool("tera", false)
+                {
                     let joined = chunk.source.join("\n");
                     let tera_result = crate::jinja_engine::process_body(
                         &joined, output_ext, metadata, registry,
@@ -99,7 +101,7 @@ pub fn evaluate(
                 });
             }
             Block::Div(div) => {
-                if !div_is_visible(&div.classes, &div.attrs, output_ext, &metadata.extra) {
+                if !div_is_visible(&div.classes, &div.attrs, output_ext, &metadata.var) {
                     continue;
                 }
                 if div.classes.iter().any(|c| c == "hidden") {

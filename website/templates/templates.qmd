@@ -2,131 +2,55 @@
 title: Template Everything
 ---
 
-*Calepin* is built on one idea: **templates everywhere**. Every piece of output --- from a single callout box to a full website --- is controlled by a template you can read, copy, and customize. No Rust, no Lua, no Python, no shell scripts. Just text files with `{% raw %}{{variable}}{% endraw %}` placeholders.
+*Calepin* is built on one idea: **templates everywhere**. Every piece of output, from a single callout box to a full website, is controlled by a template you can read, copy, and customize. No Rust, no Lua, no Python, no shell scripts. Just text files with variable placeholders.
 
 Learn one syntax and you can change how *Calepin* renders anything.
 
 
-# Why templates?
+# Five layers of templates
 
-Most document systems require you to write code in a specific language when you want to customize output. Quarto uses Lua filters. R Markdown uses Pandoc templates and custom output formats written in R. LaTeX requires learning a macro language. Each customization point has its own API, its own learning curve, and its own failure modes.
-
-*Calepin* takes a different approach. Templates are plain text files with a simple substitution syntax ([Jinja](jinja.qmd)). You write the exact output you want --- HTML, LaTeX, Typst, Markdown --- and mark where dynamic content should go with `{% raw %}{{variable}}{% endraw %}`. That's it.
-
-Want to change how callout boxes look? Drop a file in `_calepin/elements/`. Want to wrap your document in a different HTML layout? Drop a file in `_calepin/templates/`. Want to insert a page break or a video? Call a built-in function. The syntax is the same everywhere.
-
-
-# Four layers of templates
-
-*Calepin* uses templates at four levels, from smallest to largest scope. Each level uses the same Jinja syntax, so what you learn for one applies to all.
+*Calepin* uses templates at five levels, from smallest to largest scope. Each level uses the same Jinja syntax, so what you learn for one applies to all.
 
 ## 1. Shortcuts
 
-Shortcuts are Jinja expressions you write directly in your `.qmd` body. They insert content, call functions, or use control flow --- without touching any external files.
+Shortcuts are Jinja expressions you write directly in your document body. They insert content, call functions, or use control flow, without touching any external files. With shortcuts, you can:
 
-For example, to insert a page break that works in every output format:
+- Insert the document title, author, date, or any front matter field into your prose.
+- Access custom variables defined in the YAML preamble.
+- Read system environment variables.
+- Insert a page break that produces the right output for every format.
+- Embed a YouTube or Vimeo video.
+- Render keyboard shortcuts with proper markup.
+- Generate placeholder text or images for layout prototyping.
+- Show or hide paragraphs based on the output format.
+- Loop over lists of items from your variables.
+- Include the contents of another file.
+- Call custom functions provided by plugins.
 
-```
-{% raw %}{{ pagebreak() }}{% endraw %}
-```
-
-Or to show a paragraph only in HTML:
-
-````
-{% raw %}{% if format == "html" %}
-This paragraph only appears in HTML output.
-{% endif %}{% endraw %}
-````
-
-Or to insert the document title:
-
-```
-{% raw %}The title is: {{ meta.title }}{% endraw %}
-```
-
-Shortcuts give you variables, functions, conditionals, and loops right in your prose. See [Shortcuts](shortcuts.qmd) for the full reference.
+See [Shortcuts](shortcuts.html) for the full reference.
 
 
-## 2. Element templates
+## 2. Elements
 
-Every rendered element --- code blocks, figures, fenced divs, bracketed spans, theorems, callouts --- passes through an element template. These are small files that control the markup for a single component.
+Every rendered element (code blocks, figures, fenced divs, bracketed spans, theorems, callouts) passes through an element template. These are small files that control the markup for a single component.
 
-For example, the built-in template for `div.html`:
-
-```html
-{% raw %}<div class="{{classes}}"{{id_attr}}>
-{{children}}
-</div>{% endraw %}
-```
-
-To customize how a fenced div with class `.highlight-box` renders, create `_calepin/elements/highlight-box.html`:
-
-```html
-{% raw %}<div class="highlight-box" style="background: {{color}}; padding: 1em;"{{id_attr}}>
-<strong>{{title}}</strong>
-{{children}}
-</div>{% endraw %}
-```
-
-Now any `::: {.highlight-box title="Note" color="#e8f4f8"} ... :::` uses your template. See [Elements](elements.qmd) for all available variables and naming conventions.
+To customize how any element renders, drop a template file in your project directory. For instance, you can restyle callout boxes, change how theorems are numbered, or create entirely new div types with custom attributes. See [Elements](elements.html) for all available variables and naming conventions.
 
 
-## 3. Page templates
+## 3. Pages
 
-The page template wraps the entire rendered body in a document shell --- the `<html>`, `<head>`, CSS, and metadata blocks for HTML; the `\documentclass`, preamble, and `\begin{document}` for LaTeX; the equivalent for Typst.
+The page template wraps the entire rendered body in a document shell: the HTML skeleton, the LaTeX preamble, or the Typst equivalent.
 
-To use a custom HTML layout, create `_calepin/templates/calepin.html`:
-
-```html
-{% raw %}<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>{{plain_title}}</title>
-{{css}}
-</head>
-<body>
-<h1>{{title}}</h1>
-{{body}}
-</body>
-</html>{% endraw %}
-```
-
-This is how you create blog layouts, slide shells, dashboard wrappers, or branded reports without writing code. See [Pages](pages.qmd) for all page template variables.
+To use a custom layout, drop a template file in your project directory with placeholders for the title, stylesheet, and body. This is how you create blog layouts, slide shells, dashboard wrappers, or branded reports without writing code. See [Pages](pages.html) for all page template variables.
 
 
-## 4. Site templates
+## 4. Sites
 
-When you use `calepin site`, *Calepin* renders a collection of `.qmd` files into a structured website with navigation, search, and a consistent layout. The site system has its own set of templates: `base.html`, `page.html`, `listing.html`, `navbar.html`, and more.
+*Calepin* can render a collection of documents into a structured website with navigation, search, and a consistent layout. The site system has its own set of templates for the navbar, sidebar, page shell, and more.
 
-To override any site template, create files in `_templates/` at your project root. See [Sites](sites.qmd) for configuration and customization.
-
-
-## 5. YAML preamble
-
-The YAML front matter at the top of every `.qmd` file controls metadata (title, author, date), output options (format, table of contents, bibliography), and custom variables. For sites, the `_calepin.yaml` file provides project-wide defaults.
-
-```yaml
----
-title: My Document
-author: Jane Doe
-format: html
-toc: true
-variables:
-  version: 2.0
----
-```
-
-See [YAML](yaml.qmd) for all supported fields and composition patterns.
+To override any site template, create files in your project root. See [Sites](sites.html) for configuration and customization.
 
 
-# Resolution order
+## 5. Preamble
 
-All templates follow a consistent lookup order:
-
-1. **Plugin-provided** (in plugin order)
-2. **Project** (`_calepin/elements/` or `_calepin/templates/`)
-3. **User** (`~/.config/calepin/elements/` or `~/.config/calepin/templates/`)
-4. **Built-in** (compiled into the binary)
-
-The first match wins. This means you can override any built-in template by placing a file with the right name in your project's `_calepin/` directory --- no need to fork or rebuild anything.
+The YAML front matter at the top of every document controls metadata, output options, and custom variables. For sites, a project-level configuration file provides defaults shared across all pages. See [YAML](yaml.html) for all supported fields.

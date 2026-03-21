@@ -11,7 +11,7 @@ Click the `</>` button in the top navigation bar to view the original `.qmd` sou
 A plugin can provide any combination of:
 
 - **Filters** --- transform fenced divs (`::: {.myclass} ... :::`) and bracketed spans (`[text]{.myclass}`) into custom output.
-- **Custom functions** --- register Jinja functions callable as `{% raw %}{{ name(args) }}{% endraw %}` in document bodies.
+- **Custom functions** --- register Jinja functions callable as {% raw %}`{{ name(args) }}`{% endraw %} in document bodies.
 - **Postprocessors** --- rewrite the entire rendered document (e.g., split HTML into slides).
 - **Templates** --- override element or page templates to change how divs, figures, or the full page are rendered.
 - **Custom formats** --- define new output formats built on top of HTML, LaTeX, Typst, or Markdown.

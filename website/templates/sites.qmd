@@ -1,5 +1,5 @@
 ---
-title: Site Templates
+title: Sites
 ---
 
 When you run `calepin site`, *Calepin* renders a collection of `.qmd` files into a structured website with navigation, sidebar, search, dark mode, and a consistent layout.
@@ -180,7 +180,7 @@ brand:
     headings: Inter
 ```
 
-Brand values are available in document bodies via the `{% raw %}{{ brand() }}{% endraw %}` function. See [Shortcuts](shortcuts.qmd#brand).
+Brand values are available in document bodies via the {% raw %}`{{ brand() }}`{% endraw %} function. See [Shortcuts](shortcuts.qmd#brand).
 
 
 # Customizing site templates
@@ -207,43 +207,43 @@ Site templates receive two main context objects:
 
 | Variable | Description |
 |----------|-------------|
-| `{% raw %}{{ site.title }}{% endraw %}` | Site title |
-| `{% raw %}{{ site.subtitle }}{% endraw %}` | Site subtitle |
-| `{% raw %}{{ site.url }}{% endraw %}` | Site URL |
-| `{% raw %}{{ site.favicon }}{% endraw %}` | Favicon path |
-| `{% raw %}{{ site.navbar }}{% endraw %}` | Navbar config (logo, left/right items, search) |
-| `{% raw %}{{ site.sidebar }}{% endraw %}` | Sidebar config (collapse level) |
-| `{% raw %}{{ site.pages }}{% endraw %}` | Navigation tree (with active page marked) |
-| `{% raw %}{{ site.dark_mode }}{% endraw %}` | Whether dark mode is enabled |
+| {% raw %}`{{ site.title }}`{% endraw %} | Site title |
+| {% raw %}`{{ site.subtitle }}`{% endraw %} | Site subtitle |
+| {% raw %}`{{ site.url }}`{% endraw %} | Site URL |
+| {% raw %}`{{ site.favicon }}`{% endraw %} | Favicon path |
+| {% raw %}`{{ site.navbar }}`{% endraw %} | Navbar config (logo, left/right items, search) |
+| {% raw %}`{{ site.sidebar }}`{% endraw %} | Sidebar config (collapse level) |
+| {% raw %}`{{ site.pages }}`{% endraw %} | Navigation tree (with active page marked) |
+| {% raw %}`{{ site.dark_mode }}`{% endraw %} | Whether dark mode is enabled |
 
 ### page
 
 | Variable | Description |
 |----------|-------------|
-| `{% raw %}{{ page.title }}{% endraw %}` | Page title |
-| `{% raw %}{{ page.subtitle }}{% endraw %}` | Page subtitle |
-| `{% raw %}{{ page.date }}{% endraw %}` | Page date |
-| `{% raw %}{{ page.body }}{% endraw %}` | Rendered HTML content |
-| `{% raw %}{{ page.toc }}{% endraw %}` | Table of contents HTML |
-| `{% raw %}{{ page.url }}{% endraw %}` | Page URL path |
-| `{% raw %}{{ page.source_url }}{% endraw %}` | Path to `.qmd` source file |
-| `{% raw %}{{ page.listing }}{% endraw %}` | List of listing items (for listing pages) |
-| `{% raw %}{{ page.breadcrumbs }}{% endraw %}` | Breadcrumb trail |
-| `{% raw %}{{ page.prev }}{% endraw %}` | Previous page link (`text`, `href`) |
-| `{% raw %}{{ page.next }}{% endraw %}` | Next page link (`text`, `href`) |
+| {% raw %}`{{ page.title }}`{% endraw %} | Page title |
+| {% raw %}`{{ page.subtitle }}`{% endraw %} | Page subtitle |
+| {% raw %}`{{ page.date }}`{% endraw %} | Page date |
+| {% raw %}`{{ page.body }}`{% endraw %} | Rendered HTML content |
+| {% raw %}`{{ page.toc }}`{% endraw %} | Table of contents HTML |
+| {% raw %}`{{ page.url }}`{% endraw %} | Page URL path |
+| {% raw %}`{{ page.source_url }}`{% endraw %} | Path to `.qmd` source file |
+| {% raw %}`{{ page.listing }}`{% endraw %} | List of listing items (for listing pages) |
+| {% raw %}`{{ page.breadcrumbs }}`{% endraw %} | Breadcrumb trail |
+| {% raw %}`{{ page.prev }}`{% endraw %} | Previous page link (`text`, `href`) |
+| {% raw %}`{{ page.next }}`{% endraw %} | Next page link (`text`, `href`) |
 
 ### Functions
 
 | Function | Description |
 |----------|-------------|
-| `{% raw %}{{ icon(name="github") }}{% endraw %}` | Insert an SVG icon by name |
+| {% raw %}`{{ icon(name="github") }}`{% endraw %} | Insert an SVG icon by name |
 
 ## Example: custom page template
 
 Create `_templates/page.html` to override the default page layout:
 
 ```html
-{% raw %}{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
 <article>
   <h1>{{ page.title }}</h1>
@@ -257,7 +257,7 @@ Create `_templates/page.html` to override the default page layout:
   {% if page.prev %}<a href="{{ page.prev.href }}">Previous</a>{% endif %}
   {% if page.next %}<a href="{{ page.next.href }}">Next</a>{% endif %}
 </nav>
-{% endblock %}{% endraw %}
+{% endblock %}
 ```
 
 The base template provides blocks you can override: `head_extra`, `content`, `page_nav`, `footer`.

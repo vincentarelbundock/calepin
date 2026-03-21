@@ -295,7 +295,7 @@ pub fn render_core_with_brand(
     let registry = timed!("load_plugins", std::rc::Rc::new(registry::PluginRegistry::load(&metadata.plugins)));
 
     // 7. Create element renderer
-    let highlight_config = metadata.extra.get("highlight-style")
+    let highlight_config = metadata.var.get("highlight-style")
         .map(|v| filters::highlighting::parse_highlight_config(v))
         .unwrap_or(filters::highlighting::HighlightConfig::LightDark {
             light: "github".to_string(),
@@ -304,7 +304,7 @@ pub fn render_core_with_brand(
     let mut element_renderer = ElementRenderer::new(renderer.base_format(), highlight_config);
     element_renderer.number_sections = metadata.number_sections;
     element_renderer.shift_headings = metadata.title.is_some();
-    element_renderer.default_fig_cap_location = metadata.extra.get("fig-cap-location")
+    element_renderer.default_fig_cap_location = metadata.var.get("fig-cap-location")
         .and_then(|v| v.as_str()).map(|s| s.to_string());
 
     // 8. Evaluate: execute code chunks and produce elements
@@ -316,7 +316,7 @@ pub fn render_core_with_brand(
             .to_string_lossy()
     ));
     let fig_ext = renderer.default_fig_ext();
-    let cache_enabled = metadata.extra.get("execute")
+    let cache_enabled = metadata.var.get("execute")
         .and_then(|v| v.as_mapping_get("cache"))
         .and_then(|v| v.as_bool())
         .unwrap_or(true);

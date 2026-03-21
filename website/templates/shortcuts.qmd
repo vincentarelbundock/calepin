@@ -1,20 +1,19 @@
 ---
 title: Shortcuts
-variables:
-  version: 0.0.1-alpha.2
-  urls:
-    docs: https://github.com/vincentarelbundock/calepin
+version: 0.0.1-alpha.2
+urls:
+  docs: https://github.com/vincentarelbundock/calepin
 ---
 
 *Calepin* processes the body of every `.qmd` document through the [MiniJinja](https://github.com/mitsuhiko/minijinja) template engine. This means you can use expressions, functions, conditionals, and loops directly in your prose. Fenced code blocks and inline code spans are automatically protected from evaluation.
 
 ::: {.callout-note}
-Jinja expressions inside fenced code blocks and inline code spans are not evaluated by default. To opt-in to Jinja processing inside a code chunk, use the `#| tera: true` chunk option:
+Jinja expressions inside fenced code blocks and inline code spans are not evaluated by default. To opt-in to Jinja processing inside a code chunk, use the `#| jinja: true` chunk option:
 :::
 
 ````
 ```{r}
-#| tera: true
+#| jinja: true
 n <- {{var.sample_size}}
 x <- rnorm(n)
 summary(x)
@@ -28,14 +27,14 @@ summary(x)
 
 Access YAML front matter fields:
 
-{% raw %}
-- `{{ meta.title }}` --- document title
-- `{{ meta.author }}` --- author (comma-joined if multiple)
-- `{{ meta.date }}` --- date
-- `{{ meta.subtitle }}` --- subtitle
-- `{{ meta.abstract }}` --- abstract text
-- `{{ meta.keywords }}` --- keywords (comma-joined)
-{% endraw %}
+```
+{{ meta.title }}
+{{ meta.author }}
+{{ meta.date }}
+{{ meta.subtitle }}
+{{ meta.abstract }}
+{{ meta.keywords }}
+```
 
 Any custom field in the YAML front matter is also available.
 
@@ -43,13 +42,12 @@ The title of this document is: {{ meta.title }}.
 
 ## var
 
-Look up a variable from the `variables:` block in front matter. Uses dot-notation for nested values. For example, this document's front matter contains:
+Any non-standard YAML front matter field is available under `var` with dot-notation for nested values. For example, this document's front matter contains:
 
 ```yaml
-variables:
-  version: 0.0.1-alpha.2
-  urls:
-    docs: https://github.com/vincentarelbundock/calepin
+version: 0.0.1-alpha.2
+urls:
+  docs: https://github.com/vincentarelbundock/calepin
 ```
 
 {% raw %}The syntax `{{ var.version }}` inserts the value.{% endraw %}
@@ -67,7 +65,7 @@ The `SHELL` environment variable on the local machine is: {{ env.SHELL }}.
 
 ## format
 
-The current output format is available as `{% raw %}{{ format }}{% endraw %}` --- one of `html`, `latex`, `typst`, or `markdown`.
+The current output format is available as {% raw %}`{{ format }}`{% endraw %}, one of `html`, `latex`, `typst`, or `markdown`.
 
 
 # Conditionals and loops
@@ -75,18 +73,18 @@ The current output format is available as `{% raw %}{{ format }}{% endraw %}` --
 Because the document body is a Jinja template, you can use control flow:
 
 ````
-{% raw %}{% if format == "html" %}
+{% if format == "html" %}
 This paragraph only appears in HTML output.
-{% endif %}{% endraw %}
+{% endif %}
 ````
 
 ````
-{% raw %}{% for item in var.features %}
+{% for item in var.features %}
 - {{ item }}
-{% endfor %}{% endraw %}
+{% endfor %}
 ````
 
-See [Jinja Syntax](jinja.qmd) for the full template syntax reference.
+See [Jinja Syntax](jinja.html) for the full template syntax reference.
 
 
 # Built-in functions
@@ -106,11 +104,13 @@ Page two content.
 Embed a video or streaming service. Supports YouTube, Vimeo, and direct video URLs:
 
 ```
-{% raw %}{{ video(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ") }}
-{{ video(url="https://vimeo.com/123456", width="640", height="480", title="My Video") }}{% endraw %}
+{{ video(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ") }}
+{{ video(url="https://vimeo.com/123456", width="640", height="480", title="My Video") }}
 ```
 
 YouTube and Vimeo URLs are automatically converted to embed URLs.
+
+{{ video(url="https://www.youtube.com/watch?v=XfELJU1mRMg", width="320", height="180") }}
 
 | Argument | Default | Description |
 |----------|---------|-------------|
@@ -123,11 +123,11 @@ YouTube and Vimeo URLs are automatically converted to embed URLs.
 
 Access branding information from the `brand:` block in front matter (or in `_calepin.yaml` for site-wide branding):
 
-{% raw %}
-- `{{ brand(type="color", name="primary") }}` --- returns a color value
-- `{{ brand(type="color", name="primary", mode="dark") }}` --- dark mode variant
-- `{{ brand(type="logo", name="mark") }}` --- returns format-appropriate logo markup
-{% endraw %}
+```
+{{ brand(type="color", name="primary") }}
+{{ brand(type="color", name="primary", mode="dark") }}
+{{ brand(type="logo", name="mark") }}
+```
 
 See [brand.yml specification](https://posit-dev.github.io/brand-yml/) for the structure of the `brand:` block.
 
@@ -144,10 +144,10 @@ Produces `<kbd>Ctrl</kbd>+<kbd>C</kbd>` in HTML, `\texttt{Ctrl}+\texttt{C}` in L
 Insert placeholder lorem ipsum text. Default: 1 paragraph.
 
 ```
-{% raw %}{{ lipsum() }}
+{{ lipsum() }}
 {{ lipsum(paragraphs=3) }}
 {{ lipsum(sentences=5) }}
-{{ lipsum(words=20) }}{% endraw %}
+{{ lipsum(words=20) }}
 ```
 
 Example with 2 sentences: {{ lipsum(sentences=2) }}
@@ -157,9 +157,9 @@ Example with 2 sentences: {{ lipsum(sentences=2) }}
 Insert a placeholder image for layout prototyping. Produces an inline SVG in HTML, `\fbox` in LaTeX, `#rect` in Typst.
 
 ```
-{% raw %}{{ placeholder() }}
+{{ placeholder() }}
 {{ placeholder(width=300, height=200) }}
-{{ placeholder(width=400, height=100, text="Banner", color="#e0e0ff") }}{% endraw %}
+{{ placeholder(width=400, height=100, text="Banner", color="#e0e0ff") }}
 ```
 
 Default dimensions are 600x400.
@@ -179,12 +179,12 @@ Include the content of another file:
 
 {% raw %}`{% include "file.qmd" %}`{% endraw %}
 
-This is a pre-parse directive --- included content is parsed as blocks, so code chunks and fenced divs work normally. YAML front matter in the included file is stripped automatically.
+This is a pre-parse directive. Included content is parsed as blocks, so code chunks and fenced divs work normally. YAML front matter in the included file is stripped automatically.
 
 
 # Plugin functions
 
-Plugins can register custom Jinja functions via the `shortcode` capability in their `plugin.yml`. They are called with the same `{% raw %}{{ name(args) }}{% endraw %}` syntax as built-in functions.
+Plugins can register custom Jinja functions via the `shortcode` capability in their `plugin.yml`. They are called with the same {% raw %}`{{ name(args) }}`{% endraw %} syntax as built-in functions.
 
 For example, a greeting plugin:
 
@@ -217,7 +217,7 @@ else:
 
 {% raw %}Use it as `{{ greeting(name="Alice") }}`.{% endraw %}
 
-The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, and `meta` fields, and prints replacement text to stdout. See [Plugins](../plugins.qmd) for the full protocol.
+The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, and `meta` fields, and prints replacement text to stdout. See [Plugins](../plugins.html) for the full protocol.
 
 
 # Resolution order

@@ -1,5 +1,5 @@
 ---
-title: YAML Preamble
+title: YAML Settings
 ---
 
 The YAML front matter at the top of every `.qmd` file configures metadata, output options, and custom variables. *Calepin* parses the block between `---` delimiters before processing the document body.
@@ -93,29 +93,41 @@ affiliations:
     country: Examplia
 ```
 
-Rich author data is rendered through the `author_block`, `author_item`, and `affiliation_item` element templates, which you can override. See [Elements](elements.qmd).
+Rich author data is rendered through the `author_block`, `author_item`, and `affiliation_item` element templates, which you can override. See [Elements](elements.html).
 
 
-# Variables
+# Custom fields
 
-The `variables:` block defines custom values accessible in document bodies via `{% raw %}{{ var.key }}{% endraw %}`:
+Any non-standard YAML field is accessible in document bodies via {% raw %}`{{ var.key }}`{% endraw %}, with dot-notation for nested values. The same fields are also available as page template variables (see [Pages](pages.html)).
 
 ```yaml
-variables:
-  version: 2.0
-  urls:
-    docs: https://docs.example.com
-    api: https://api.example.com
+---
+title: Report
+version: 2.0
+confidential: true
+urls:
+  docs: https://docs.example.com
+  api: https://api.example.com
+---
 ```
 
-Access in the document body:
+In the document body:
 
 ```
-{% raw %}Version: {{ var.version }}
-API docs: {{ var.urls.api }}{% endraw %}
+Version: {{ var.version }}
+API docs: {{ var.urls.api }}
 ```
 
-Variables support arbitrary nesting. See [Shortcuts](shortcuts.qmd#var) for details.
+In a page template (`_calepin/templates/calepin.html`):
+
+```html
+{% if confidential %}
+<div class="watermark">CONFIDENTIAL</div>
+{% endif %}
+<footer>Version {{version}}</footer>
+```
+
+See [Shortcuts](shortcuts.qmd#var) for details.
 
 
 # Brand
@@ -140,7 +152,7 @@ brand:
     base: Inter
 ```
 
-Brand values are available in templates and document bodies via `{% raw %}{{ brand(type="color", name="primary") }}{% endraw %}`. See [Shortcuts](shortcuts.qmd#brand).
+Brand values are available in templates and document bodies via {% raw %}`{{ brand(type="color", name="primary") }}`{% endraw %}. See [Shortcuts](shortcuts.qmd#brand).
 
 
 # Appendix metadata
@@ -196,30 +208,8 @@ calepin doc.qmd -s documentclass=report -s classoption=12pt
 This is useful for batch rendering with different configurations.
 
 
-# Extra fields
-
-Any top-level YAML field not recognized by *Calepin* is stored as an extra field and becomes available as a page template variable:
-
-```yaml
----
-title: Report
-confidential: true
-department: Research
----
-```
-
-In a custom page template (`_calepin/templates/calepin.html`):
-
-```html
-{% raw %}{% if confidential %}
-<div class="watermark">CONFIDENTIAL</div>
-{% endif %}
-<footer>Department: {{department}}</footer>{% endraw %}
-```
-
-
 # Site configuration
 
-For sites, `_calepin.yaml` (or `_site.yml`) provides project-wide settings. The `website:` block configures navigation, sidebar, and other site-wide options. See [Sites](sites.qmd) for the full reference.
+For sites, `_calepin.yaml` (or `_site.yml`) provides project-wide settings. The `website:` block configures navigation, sidebar, and other site-wide options. See [Sites](sites.html) for the full reference.
 
 Document-level front matter takes precedence over site configuration for metadata fields like `title`, `author`, and `date`.

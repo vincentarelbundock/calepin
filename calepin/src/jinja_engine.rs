@@ -47,9 +47,12 @@ pub fn expand_includes(text: &str) -> String {
         Regex::new(r"\{%-?\s*raw\s*-?%\}[\s\S]*?\{%-?\s*endraw\s*-?%\}").unwrap()
     });
 
+    // Protect fenced code blocks from include expansion
+    let (text, code_blocks) = protect_code_blocks(text);
+
     // Protect {% raw %} blocks from include expansion
     let mut raw_blocks = Vec::new();
-    let text = RAW_RE.replace_all(text, |caps: &regex::Captures| {
+    let text = RAW_RE.replace_all(&text, |caps: &regex::Captures| {
         let idx = raw_blocks.len();
         raw_blocks.push(caps[0].to_string());
         format!("\u{FDD2}RAW{}\u{FDD3}", idx)
@@ -66,7 +69,9 @@ pub fn expand_includes(text: &str) -> String {
     for (idx, block) in raw_blocks.iter().enumerate() {
         result = result.replace(&format!("\u{FDD2}RAW{}\u{FDD3}", idx), block);
     }
-    result
+
+    // Restore fenced code blocks
+    restore_code_blocks(&result, &code_blocks)
 }
 
 /// Read and include a file, stripping YAML front matter if present.
@@ -599,27 +604,16 @@ fn build_meta_map(meta: &Metadata) -> serde_json::Value {
     if !meta.keywords.is_empty() {
         map.insert("keywords".into(), serde_json::Value::String(meta.keywords.join(", ")));
     }
-    // Extra metadata fields
-    for (key, value) in &meta.extra {
-        if let Some(s) = value.as_str() {
-            map.insert(key.clone(), serde_json::Value::String(s.to_string()));
-        } else if let Some(b) = value.as_bool() {
-            map.insert(key.clone(), serde_json::Value::Bool(b));
-        } else if let Some(n) = value.as_integer() {
-            map.insert(key.clone(), serde_json::json!(n));
-        } else if let Some(f) = value.as_floating_point() {
-            map.insert(key.clone(), serde_json::json!(f));
-        }
-    }
     serde_json::Value::Object(map)
 }
 
-/// Build the `var` context from front matter `variables:` block.
+/// Build the `var` context from extra front matter fields.
 fn build_variables_map(metadata: &Metadata) -> serde_json::Value {
-    match &metadata.variables {
-        Some(yaml) => yaml_to_json(yaml),
-        None => serde_json::Value::Object(serde_json::Map::new()),
+    let mut map = serde_json::Map::new();
+    for (key, value) in &metadata.var {
+        map.insert(key.clone(), yaml_to_json(value));
     }
+    serde_json::Value::Object(map)
 }
 
 /// Convert a saphyr YAML value to serde_json::Value.

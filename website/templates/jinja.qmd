@@ -1,8 +1,8 @@
 ---
-title: Jinja Syntax
+title: Jinja2
 ---
 
-*Calepin* uses [MiniJinja](https://github.com/mitsuhiko/minijinja), a Jinja2 template engine for Rust. The same syntax is used everywhere: in document bodies ([shortcuts](shortcuts.qmd)), in element templates ([elements](elements.qmd)), in page templates ([pages](pages.qmd)), and in site templates ([sites](sites.qmd)).
+*Calepin* uses [MiniJinja](https://github.com/mitsuhiko/minijinja), a Jinja2 template engine for Rust. The same syntax is used everywhere: in document bodies ([shortcuts](shortcuts.html)), in element templates ([elements](elements.html)), in page templates ([pages](pages.html)), and in site templates ([sites](sites.html)).
 
 This page covers the syntax basics. If you know Jinja2 or Python's Django templates, you already know this.
 
@@ -12,14 +12,14 @@ This page covers the syntax basics. If you know Jinja2 or Python's Django templa
 Insert a value with double braces:
 
 ```
-{% raw %}{{ variable }}{% endraw %}
+{{ variable }}
 ```
 
 Dot notation accesses nested values:
 
 ```
-{% raw %}{{ meta.title }}
-{{ var.urls.docs }}{% endraw %}
+{{ meta.title }}
+{{ var.urls.docs }}
 ```
 
 
@@ -28,31 +28,31 @@ Dot notation accesses nested values:
 Call functions with parentheses and keyword arguments:
 
 ```
-{% raw %}{{ pagebreak() }}
+{{ pagebreak() }}
 {{ video(url="https://youtube.com/watch?v=abc") }}
-{{ lipsum(paragraphs=3) }}{% endraw %}
+{{ lipsum(paragraphs=3) }}
 ```
 
 
 # Conditionals
 
 ```
-{% raw %}{% if format == "html" %}
+{% if format == "html" %}
 This appears only in HTML output.
 {% elif format == "latex" %}
 This appears only in LaTeX output.
 {% else %}
 This appears in all other formats.
-{% endif %}{% endraw %}
+{% endif %}
 ```
 
 
 # Loops
 
 ```
-{% raw %}{% for item in var.features %}
+{% for item in var.features %}
 - {{ item }}
-{% endfor %}{% endraw %}
+{% endfor %}
 ```
 
 
@@ -61,8 +61,8 @@ This appears in all other formats.
 Filters transform values with the pipe operator:
 
 ```
-{% raw %}{{ meta.title | upper }}
-{{ meta.title | length }}{% endraw %}
+{{ meta.title | upper }}
+{{ meta.title | length }}
 ```
 
 MiniJinja provides built-in filters like `upper`, `lower`, `length`, `trim`, `replace`, `default`, and others. See the [MiniJinja documentation](https://docs.rs/minijinja/latest/minijinja/) for the full list.
@@ -71,18 +71,18 @@ MiniJinja provides built-in filters like `upper`, `lower`, `length`, `trim`, `re
 # Comments
 
 ```
-{% raw %}{# This is a comment and won't appear in the output. #}{% endraw %}
+{# This is a comment and won't appear in the output. #}
 ```
 
 
 # Raw blocks
 
-To include literal Jinja syntax without evaluation, wrap it in `{% raw %}{% raw %}...{% endraw %}{% endraw %}`:
+To include literal Jinja syntax without evaluation, wrap it in {% raw %}`{% raw %}...{% endraw %}`{% endraw %}:
 
 ````
-{% raw %}{% raw %}
+{% raw %}
 {{ this is not evaluated }}
-{% endraw %}{% endraw %}
+{% endraw %}
 ````
 
 
@@ -91,9 +91,9 @@ To include literal Jinja syntax without evaluation, wrap it in `{% raw %}{% raw 
 Add a dash to trim whitespace before or after a tag:
 
 ```
-{% raw %}{%- if condition -%}
+{%- if condition -%}
   compact output
-{%- endif -%}{% endraw %}
+{%- endif -%}
 ```
 
 
@@ -102,8 +102,8 @@ Add a dash to trim whitespace before or after a tag:
 Define local variables:
 
 ```
-{% raw %}{% set name = "World" %}
-Hello, {{ name }}!{% endraw %}
+{% set name = "World" %}
+Hello, {{ name }}!
 ```
 
 
@@ -112,19 +112,19 @@ Hello, {{ name }}!{% endraw %}
 Include external files:
 
 ```
-{% raw %}{% include "header.qmd" %}{% endraw %}
+{% include "header.qmd" %}
 ```
 
-In document bodies, `{% raw %}{% include %}{% endraw %}` is a pre-parse directive --- included content is parsed as blocks, so code chunks and fenced divs work normally. YAML front matter in included files is stripped automatically.
+In document bodies, {% raw %}`{% include %}`{% endraw %} is a pre-parse directive. Included content is parsed as blocks, so code chunks and fenced divs work normally. YAML front matter in included files is stripped automatically.
 
 
 # Where this syntax is used
 
 | Context | Example | Details |
 |---------|---------|---------|
-| Document body | `{% raw %}{{ meta.title }}{% endraw %}` in your `.qmd` | [Shortcuts](shortcuts.qmd) |
-| Element templates | `{% raw %}{{children}}{% endraw %}` in `_calepin/elements/div.html` | [Elements](elements.qmd) |
-| Page templates | `{% raw %}{{body}}{% endraw %}` in `_calepin/templates/calepin.html` | [Pages](pages.qmd) |
-| Site templates | `{% raw %}{{ page.title }}{% endraw %}` in `_templates/page.html` | [Sites](sites.qmd) |
+| Document body | {% raw %}`{{ meta.title }}`{% endraw %} in your `.qmd` | [Shortcuts](shortcuts.html) |
+| Element templates | {% raw %}`{{children}}`{% endraw %} in `_calepin/elements/div.html` | [Elements](elements.html) |
+| Page templates | {% raw %}`{{body}}`{% endraw %} in `_calepin/templates/calepin.html` | [Pages](pages.html) |
+| Site templates | {% raw %}`{{ page.title }}`{% endraw %} in `_templates/page.html` | [Sites](sites.html) |
 
 The syntax is identical everywhere. The only difference is which variables and functions are available in each context.
