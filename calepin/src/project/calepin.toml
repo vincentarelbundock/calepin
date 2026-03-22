@@ -1,0 +1,47 @@
+# Default citation style (from hayagriva's bundled archive).
+# Override per-project with csl: in front matter or a .csl file in assets/csl/.
+csl = "chicago-author-date"
+
+[highlight]
+light = "github"
+dark = "nord"
+
+[targets.html]
+base = "html"
+template = "calepin"
+extension = "html"
+fig-extension = "svg"
+preview = "serve"
+
+[targets.latex]
+base = "latex"
+template = "calepin"
+extension = "tex"
+fig-extension = "pdf"
+preview = "serve"
+
+[targets.typst]
+base = "typst"
+template = "calepin"
+extension = "typ"
+fig-extension = "svg"
+preview = "serve"
+
+[targets.pdf-latex]
+inherits = "latex"
+[targets.pdf-latex.compile]
+command = "tectonic {input}"
+extension = "pdf"
+
+[targets.pdf-typst]
+inherits = "typst"
+[targets.pdf-typst.compile]
+command = "typst compile {input} {output}"
+extension = "pdf"
+
+[targets.markdown]
+base = "markdown"
+template = "calepin"
+extension = "md"
+fig-extension = "png"
+preview = "none"

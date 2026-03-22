@@ -35,9 +35,12 @@ pub trait OutputRenderer {
         self.format()
     }
 
-    /// Default figure file extension.
+    /// Default figure file extension, derived from the built-in config.
     fn default_fig_ext(&self) -> &str {
-        "svg"
+        crate::project::builtin_config()
+            .targets.get(self.base_format())
+            .and_then(|t| t.fig_extension.as_deref())
+            .unwrap_or("png")
     }
 
     /// Render a list of elements into the final document body.

@@ -3,58 +3,66 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use include_dir::{include_dir, Dir};
+
 use crate::types::Element;
 use crate::filters::{Filter, FilterResult};
 use crate::registry::PluginRegistry;
 use crate::filters::highlighting::{Highlighter, HighlightConfig, ColorScope};
 
 // ---------------------------------------------------------------------------
-// Built-in templates (embedded at compile time)
+// Built-in project tree (embedded at compile time)
 // ---------------------------------------------------------------------------
-//
-// Each template is a single .jinja file with format conditionals
-// ({% if format == "html" %} ... {% elif format == "latex" %} ... {% endif %}).
 
-const THEOREM_ITALIC: &str = include_str!("../templates/components/common/theorem_italic.jinja");
-const THEOREM_NORMAL: &str = include_str!("../templates/components/common/theorem_normal.jinja");
-const CALLOUT: &str = include_str!("../templates/components/common/callout.jinja");
-const CODE_DIAGNOSTIC: &str = include_str!("../templates/components/common/code_diagnostic.jinja");
+/// The entire built-in project directory, embedded in the binary.
+/// Files are discovered by path at runtime -- no hardcoded file list.
+pub static BUILTIN_PROJECT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/project");
 
-fn builtin_template(name: &str) -> Option<&'static str> {
+/// Component name aliases: multiple names can map to the same template file.
+fn resolve_component_alias(name: &str) -> &str {
     match name {
-        // Italic-body theorem environments
-        "theorem" | "lemma" | "corollary" | "conjecture" | "proposition" => Some(THEOREM_ITALIC),
-        // Normal-body theorem environments
-        "definition" | "example" | "exercise" | "solution" | "remark" | "algorithm" => Some(THEOREM_NORMAL),
-        // Callout environments (all types share one template)
-        "callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important" => Some(CALLOUT),
-        // Code diagnostics
-        "code_error" | "code_warning" | "code_message" => Some(CODE_DIAGNOSTIC),
-        // Single-file templates
-        "code_source" => Some(include_str!("../templates/components/common/code_source.jinja")),
-        "code_output" => Some(include_str!("../templates/components/common/code_output.jinja")),
-        "figure" => Some(include_str!("../templates/components/common/figure.jinja")),
-        "div" => Some(include_str!("../templates/components/common/div.jinja")),
-        "proof" => Some(include_str!("../templates/components/common/proof.jinja")),
-        "landscape" => Some(include_str!("../templates/components/common/landscape.jinja")),
-        "preamble" => Some(include_str!("../templates/components/common/preamble.jinja")),
-        "appendix" => Some(include_str!("../templates/components/common/appendix.jinja")),
-        "appendix_license" => Some(include_str!("../templates/components/common/appendix_license.jinja")),
-        "appendix_copyright" => Some(include_str!("../templates/components/common/appendix_copyright.jinja")),
-        "appendix_funding" => Some(include_str!("../templates/components/common/appendix_funding.jinja")),
-        "appendix_citation" => Some(include_str!("../templates/components/common/appendix_citation.jinja")),
-        "author_block" => Some(include_str!("../templates/components/common/author_block.jinja")),
-        "author_item" => Some(include_str!("../templates/components/common/author_item.jinja")),
-        "affiliation_item" => Some(include_str!("../templates/components/common/affiliation_item.jinja")),
-        "title_block" => Some(include_str!("../templates/components/common/title_block.jinja")),
-        "subtitle_block" => Some(include_str!("../templates/components/common/subtitle_block.jinja")),
-        "date_block" => Some(include_str!("../templates/components/common/date_block.jinja")),
-        "abstract_block" => Some(include_str!("../templates/components/common/abstract_block.jinja")),
-        "keywords_block" => Some(include_str!("../templates/components/common/keywords_block.jinja")),
-        "bibliography_block" => Some(include_str!("../templates/components/common/bibliography_block.jinja")),
-        "math_block" => Some(include_str!("../templates/components/common/math_block.jinja")),
-        _ => None,
+        // Italic-body theorem environments share one template
+        "theorem" | "lemma" | "corollary" | "conjecture" | "proposition" => "theorem_italic",
+        // Normal-body theorem environments share one template
+        "definition" | "example" | "exercise" | "solution" | "remark" | "algorithm" => "theorem_normal",
+        // Callout types share one template
+        "callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important" => "callout",
+        // Code diagnostics share one template
+        "code_error" | "code_warning" | "code_message" => "code_diagnostic",
+        // Everything else: name matches file directly
+        other => other,
     }
+}
+
+/// Look up a built-in component template by name.
+/// Checks `components/{base}/{name}.{ext}` then `components/common/{name}.jinja`.
+fn builtin_component(name: &str, base: &str) -> Option<&'static str> {
+    let resolved = resolve_component_alias(name);
+    let ext = crate::paths::base_to_ext(base);
+
+    // Base-specific override
+    let base_path = format!("components/{}/{}.{}", base, resolved, ext);
+    if let Some(file) = BUILTIN_PROJECT.get_file(&base_path) {
+        return file.contents_utf8();
+    }
+
+    // Generic .jinja
+    let common_path = format!("components/common/{}.jinja", resolved);
+    BUILTIN_PROJECT.get_file(&common_path).and_then(|f| f.contents_utf8())
+}
+
+/// Look up a built-in page template by name and base.
+/// Checks `templates/{base}/{name}.{ext}` then `templates/common/{name}.jinja`.
+pub fn builtin_template(name: &str, base: &str) -> Option<&'static str> {
+    let ext = crate::paths::base_to_ext(base);
+
+    let base_path = format!("templates/{}/{}.{}", base, name, ext);
+    if let Some(file) = BUILTIN_PROJECT.get_file(&base_path) {
+        return file.contents_utf8();
+    }
+
+    let common_path = format!("templates/common/{}.jinja", name);
+    BUILTIN_PROJECT.get_file(&common_path).and_then(|f| f.contents_utf8())
 }
 
 // ---------------------------------------------------------------------------
@@ -329,16 +337,14 @@ impl ElementRenderer {
 
 /// Resolve an element template (component): project → user → built-in.
 /// Template names use underscores internally; hyphens are normalized.
-/// Uses the new three-layer resolution model (components/ directories),
-/// with legacy _calepin/elements/ fallback.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
-    // Three-layer resolution: project components/ → user components/ → legacy _calepin/elements/
+    // Project/user filesystem resolution
     if let Some(path) = crate::paths::resolve_component(&canonical, ext) {
         if let Ok(content) = std::fs::read_to_string(&path) {
             return Some(content);
         }
     }
-    // Built-in: format-conditional single template
-    builtin_template(&canonical).map(|s| s.to_string())
+    // Built-in: discovered from embedded project tree
+    builtin_component(&canonical, ext).map(|s| s.to_string())
 }

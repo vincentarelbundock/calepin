@@ -18,15 +18,15 @@ install: ## Build release binary, install to ~/.cargo/bin, and set up shell comp
 	cargo install --path calepin
 	@mkdir -p ~/.config/calepin
 	@if [ -n "$$ZSH_VERSION" ] || [ "$$SHELL" = "/bin/zsh" ]; then \
-		calepin completions zsh > ~/.config/calepin/_calepin 2>/dev/null && \
+		calepin info completions zsh > ~/.config/calepin/_calepin 2>/dev/null && \
 		echo "Zsh completions written to ~/.config/calepin/_calepin"; \
 		echo "Add to .zshrc: fpath=(~/.config/calepin \$$fpath); compinit"; \
 	elif [ -n "$$BASH_VERSION" ] || [ "$$SHELL" = "/bin/bash" ]; then \
-		calepin completions bash > ~/.config/calepin/calepin.bash 2>/dev/null && \
+		calepin info completions bash > ~/.config/calepin/calepin.bash 2>/dev/null && \
 		echo "Bash completions written to ~/.config/calepin/calepin.bash"; \
 		echo "Add to .bashrc: source ~/.config/calepin/calepin.bash"; \
 	elif [ -n "$$FISH_VERSION" ] || [ "$$SHELL" = "/usr/bin/fish" ]; then \
-		calepin completions fish > ~/.config/fish/completions/calepin.fish 2>/dev/null && \
+		calepin info completions fish > ~/.config/fish/completions/calepin.fish 2>/dev/null && \
 		echo "Fish completions installed."; \
 	fi
 

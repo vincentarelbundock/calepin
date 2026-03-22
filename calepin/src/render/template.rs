@@ -112,68 +112,37 @@ fn strip_markdown_formatting(text: &str) -> String {
     result.trim().to_string()
 }
 
-const BUILTIN_HTML_TEMPLATE: &str = include_str!("../templates/templates/html/calepin.html");
-const BUILTIN_LATEX_TEMPLATE: &str = include_str!("../templates/templates/latex/calepin.latex");
-const BUILTIN_TYPST_TEMPLATE: &str = include_str!("../templates/templates/typst/calepin.typst");
-const BUILTIN_CSS: &str = include_str!("../templates/templates/html/calepin.css");
-
-/// Load a page template with override lookup:
-///   1. Project templates/{base}/ or templates/common/
-///   2. Legacy _calepin/templates/
-///   3. User ~/.config/calepin/templates/
-///   4. Built-in (compiled into binary)
+/// Load a page template by name and base.
 ///
-/// Accepts either a legacy filename like "calepin.html" or a (template_name, base)
-/// pair via load_page_template_for_base().
-pub fn load_page_template(filename: &str) -> String {
-    // Extract template name and base from filename (e.g., "calepin.html" -> ("calepin", "html"))
-    if let Some(dot) = filename.rfind('.') {
-        let name = &filename[..dot];
-        let ext = &filename[dot + 1..];
-        // Map extension back to base name for the new resolver
-        let base = match ext {
-            "tex" => "latex",
-            "typ" => "typst",
-            "md" => "markdown",
-            other => other,
-        };
-        let result = load_page_template_for_base(name, base);
-        if !result.is_empty() {
-            return result;
-        }
-    }
-    // Legacy fallback: direct path lookup
-    if let Some(path) = crate::paths::resolve_path_cwd("templates", filename) {
-        if let Ok(s) = std::fs::read_to_string(&path) {
-            return s;
-        }
-    }
-    builtin_page_template(filename)
-}
-
-/// Load a page template by name and base using the three-layer model.
+/// Resolution order:
+///   1. Project filesystem (templates/{base}/ or templates/common/)
+///   2. User ~/.config/calepin/templates/
+///   3. Built-in (discovered from embedded project tree)
 pub fn load_page_template_for_base(template_name: &str, base: &str) -> String {
-    // Three-layer resolution
+    // Filesystem resolution
     if let Some(path) = crate::paths::resolve_template(template_name, base) {
         if let Ok(s) = std::fs::read_to_string(&path) {
             return s;
         }
     }
-    // Built-in fallback
-    let ext = crate::paths::base_to_ext(base);
-    let filename = format!("{}.{}", template_name, ext);
-    builtin_page_template(&filename)
+    // Built-in: discovered from embedded project tree
+    crate::render::elements::builtin_template(template_name, base)
+        .unwrap_or("")
+        .to_string()
 }
 
-/// Return built-in page template content by filename.
-fn builtin_page_template(filename: &str) -> String {
-    match filename {
-        "calepin.html" => BUILTIN_HTML_TEMPLATE.to_string(),
-        "calepin.latex" | "calepin.tex" => BUILTIN_LATEX_TEMPLATE.to_string(),
-        "calepin.typst" | "calepin.typ" => BUILTIN_TYPST_TEMPLATE.to_string(),
-        "calepin.css" => BUILTIN_CSS.to_string(),
-        _ => String::new(),
+/// Legacy entry point: accepts a filename like "calepin.html".
+pub fn load_page_template(filename: &str) -> String {
+    if let Some(dot) = filename.rfind('.') {
+        let name = &filename[..dot];
+        let ext = &filename[dot + 1..];
+        let base = crate::formats::format_from_extension(ext);
+        let result = load_page_template_for_base(name, base);
+        if !result.is_empty() {
+            return result;
+        }
     }
+    String::new()
 }
 
 pub fn html_template() -> String { load_page_template_for_base("calepin", "html") }
@@ -188,13 +157,12 @@ pub fn default_css() -> String {
             return s;
         }
     }
-    // Legacy path
-    if let Some(path) = crate::paths::resolve_path_cwd("templates", "calepin.css") {
-        if let Ok(s) = std::fs::read_to_string(&path) {
-            return s;
-        }
-    }
-    BUILTIN_CSS.to_string()
+    // Built-in: discovered from embedded project tree
+    crate::render::elements::BUILTIN_PROJECT
+        .get_file("templates/html/calepin.css")
+        .and_then(|f| f.contents_utf8())
+        .unwrap_or("")
+        .to_string()
 }
 
 /// Apply MiniJinja template rendering to a template string with variable substitution.
@@ -375,7 +343,7 @@ pub fn build_template_vars_with_headings(
         let mut bvars = HashMap::new();
         bvars.insert("title".to_string(), rendered_title.clone());
         bvars.insert("title_cmd".to_string(), format!("\\title{{{}}}", rendered_title));
-        vars.insert("title_block".to_string(), render_block("title_block", ext, &bvars, &rendered_title));
+        vars.insert("title_block".to_string(), render_block("title", ext, &bvars, &rendered_title));
     } else {
         // LaTeX requires \title{} even if empty (for \maketitle)
         vars.insert("title_block".to_string(), match ext {
@@ -389,7 +357,7 @@ pub fn build_template_vars_with_headings(
         let rendered_subtitle = crate::render::markdown::render_inline(subtitle, ext);
         let mut bvars = HashMap::new();
         bvars.insert("subtitle".to_string(), rendered_subtitle.clone());
-        vars.insert("subtitle_block".to_string(), render_block("subtitle_block", ext, &bvars, &rendered_subtitle));
+        vars.insert("subtitle_block".to_string(), render_block("subtitle", ext, &bvars, &rendered_subtitle));
     } else {
         vars.insert("subtitle_block".to_string(), String::new());
     }
@@ -406,7 +374,7 @@ pub fn build_template_vars_with_headings(
             "latex" => format!("\\date{{{}}}", date),
             _ => date.clone(),
         };
-        vars.insert("date_block".to_string(), render_block("date_block", ext, &bvars, &fallback));
+        vars.insert("date_block".to_string(), render_block("date", ext, &bvars, &fallback));
     } else {
         // LaTeX needs an empty \date{} to suppress "today"
         vars.insert("date_block".to_string(), match ext {
@@ -420,9 +388,9 @@ pub fn build_template_vars_with_headings(
         let rendered_abs = crate::render::markdown::render_inline(abs, ext);
         let mut bvars = HashMap::new();
         bvars.insert("abstract".to_string(), rendered_abs.clone());
-        vars.insert("abstract_block".to_string(), render_block("abstract_block", ext, &bvars, &rendered_abs));
+        vars.insert("abstract".to_string(), render_block("abstract", ext, &bvars, &rendered_abs));
     } else {
-        vars.insert("abstract_block".to_string(), String::new());
+        vars.insert("abstract".to_string(), String::new());
     }
 
     // Keywords block
@@ -430,7 +398,7 @@ pub fn build_template_vars_with_headings(
         let joined = meta.keywords.join(", ");
         let mut bvars = HashMap::new();
         bvars.insert("keywords".to_string(), joined.clone());
-        vars.insert("keywords_block".to_string(), render_block("keywords_block", ext, &bvars, &joined));
+        vars.insert("keywords_block".to_string(), render_block("keywords", ext, &bvars, &joined));
 
         // HTML meta tag for keywords
         if ext == "html" {
@@ -458,7 +426,7 @@ pub fn build_template_vars_with_headings(
         math_vars.insert("html_math_method".to_string(),
             meta.html_math_method.as_deref().unwrap_or("katex").to_string());
         vars.insert("math_block".to_string(),
-            render_block("math_block", ext, &math_vars, ""));
+            render_block("math", ext, &math_vars, ""));
     }
 
     // LaTeX-specific defaults
@@ -472,8 +440,8 @@ pub fn build_template_vars_with_headings(
         let bib_path = &meta.bibliography[0];
         let mut bvars = HashMap::new();
         bvars.insert("path".to_string(), bib_path.clone());
-        vars.insert("bibliography_block".to_string(),
-            render_block("bibliography_block", ext, &bvars, ""));
+        vars.insert("bibliography".to_string(),
+            render_block("bibliography", ext, &bvars, ""));
     }
 
     // Table of contents (defaults to true for HTML)
@@ -549,7 +517,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
             let content = format_link(text, lic.url.as_deref(), ext);
-            if let Some(tpl) = resolve_element_template("appendix_license", ext) {
+            if let Some(tpl) = resolve_element_template("license", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
                 vars.insert("content".to_string(), content);
@@ -561,7 +529,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     // Citation
     if let Some(ref cite) = meta.citation {
         let content = build_citation_text(meta, cite, ext);
-        if let Some(tpl) = resolve_element_template("appendix_citation", ext) {
+        if let Some(tpl) = resolve_element_template("citation", ext) {
             let mut vars = HashMap::new();
             vars.insert("base".to_string(), fmt.clone());
             vars.insert("content".to_string(), content);
@@ -573,7 +541,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref cr) = meta.copyright {
         let text = build_copyright_text(cr);
         if !text.is_empty() {
-            if let Some(tpl) = resolve_element_template("appendix_copyright", ext) {
+            if let Some(tpl) = resolve_element_template("copyright", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
                 vars.insert("content".to_string(), text);
@@ -586,7 +554,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if !meta.funding.is_empty() {
         let items = build_funding_items(&meta.funding, ext);
         if !items.is_empty() {
-            if let Some(tpl) = resolve_element_template("appendix_funding", ext) {
+            if let Some(tpl) = resolve_element_template("funding", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
                 vars.insert("items".to_string(), items);

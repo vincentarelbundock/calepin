@@ -29,7 +29,7 @@ See @sec-methods for details.
 
     // Render to .typ
     let output = Command::new(bin)
-        .args(["render", qmd.to_str().unwrap(), "-f", "typst"])
+        .args(["render", qmd.to_str().unwrap(), "-t", "typst"])
         .output()
         .expect("failed to run calepin");
     assert!(output.status.success(), "calepin render failed: {}", String::from_utf8_lossy(&output.stderr));

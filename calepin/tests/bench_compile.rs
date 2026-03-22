@@ -23,7 +23,7 @@ fn bench_text_latex_pdf() {
 
     // Render to .tex
     let output = Command::new(bin)
-        .args(["text.qmd", "-f", "latex", "-q"])
+        .args(["text.qmd", "-t", "latex", "-q"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin");
@@ -74,7 +74,7 @@ fn bench_text_typst_pdf() {
 
     // Render to .typ
     let output = Command::new(bin)
-        .args(["text.qmd", "-f", "typst", "-q"])
+        .args(["text.qmd", "-t", "typst", "-q"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin");

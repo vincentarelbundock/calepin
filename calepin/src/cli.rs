@@ -25,11 +25,8 @@ pub enum Command {
     /// Render a .qmd file or a project .yaml manifest
     Render(RenderArgs),
 
-    /// Watch file or project and live-reload on changes
+    /// Preview a file, project, or directory with live-reload
     Preview(PreviewArgs),
-
-    /// Serve a directory over HTTP
-    Serve(ServeArgs),
 
     /// Initialize a new project
     Init {
@@ -38,22 +35,10 @@ pub enum Command {
         template: String,
     },
 
-    /// Plugin management
-    Plugin {
+    /// Show information and utilities
+    Info {
         #[command(subcommand)]
-        action: PluginAction,
-    },
-
-    /// Syntax highlighting utilities
-    Highlight {
-        #[command(subcommand)]
-        action: HighlightAction,
-    },
-
-    /// Print shell completions
-    Completions {
-        /// Shell to generate completions for
-        shell: Shell,
+        action: InfoAction,
     },
 }
 
@@ -82,14 +67,6 @@ pub struct RenderArgs {
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
 
-    /// Compile output to PDF (LaTeX via tectonic, Typst via typst)
-    #[arg(long)]
-    pub pdf: bool,
-
-    /// Run the target's compile step (e.g., .tex to .pdf)
-    #[arg(long)]
-    pub compile: bool,
-
     /// Remove output directory before building (project manifests only)
     #[arg(long)]
     pub clean: bool,
@@ -97,7 +74,7 @@ pub struct RenderArgs {
 
 #[derive(clap::Args, Debug)]
 pub struct PreviewArgs {
-    /// Input .qmd file or .yaml/.yml project manifest
+    /// Input .qmd file, .yaml/.yml project manifest, or directory to serve
     pub input: PathBuf,
 
     /// Port for the preview server
@@ -117,40 +94,16 @@ pub struct PreviewArgs {
     pub quiet: bool,
 }
 
-#[derive(clap::Args, Debug)]
-pub struct ServeArgs {
-    /// Directory to serve (default: current directory)
-    #[arg(default_value = ".")]
-    pub dir: PathBuf,
-
-    /// Port for the server
-    #[arg(short, long, default_value = "3456")]
-    pub port: u16,
-
-    /// Quiet mode (suppress progress messages)
-    #[arg(short, long)]
-    pub quiet: bool,
-}
-
 #[derive(Subcommand, Debug)]
-pub enum PluginAction {
-    /// Create a new plugin scaffold
-    Init {
-        /// Plugin name
-        name: String,
-    },
-    /// List all available plugins
-    List,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum HighlightAction {
+pub enum InfoAction {
+    /// List available citation styles
+    Csl,
     /// List available syntax highlighting themes
-    List,
-    /// Preview a highlighting theme on a sample
-    Preview {
-        /// Theme name
-        theme: String,
+    Themes,
+    /// Print shell completions (bash, zsh, fish, elvish, powershell)
+    Completions {
+        /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)
+        shell: Shell,
     },
 }
 

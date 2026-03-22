@@ -210,24 +210,50 @@ fn extract_year(cite: &str) -> String {
 }
 
 fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
-    // 1. Explicit CSL path from front matter
-    if let Some(path) = csl_path {
-        if Path::new(path).exists() {
+    use hayagriva::archive::ArchivedStyle;
+
+    // 1. Explicit CSL from front matter: file path or archive name
+    if let Some(name) = csl_path {
+        // Try as file path first
+        let path = Path::new(name);
+        if path.exists() {
             let xml = fs::read_to_string(path)
-                .with_context(|| format!("Failed to read CSL file: {}", path))?;
+                .with_context(|| format!("Failed to read CSL file: {}", name))?;
             match IndependentStyle::from_xml(&xml) {
                 Ok(style) => return Ok(style),
                 Err(e) => {
-                    cwarn!("CSL '{}' not usable ({:?}), using default", path, e);
+                    cwarn!("CSL '{}' not usable ({:?}), falling back", name, e);
                 }
             }
+        }
+        // Try as archive name
+        if let Some(archived) = ArchivedStyle::by_name(name) {
+            match archived.get() {
+                citationberg::Style::Independent(style) => return Ok(style),
+                citationberg::Style::Dependent(_) => {
+                    cwarn!("CSL '{}' is a dependent style, falling back", name);
+                }
+            }
+        }
+        // Try in project assets/csl/
+        let project_csl = std::path::Path::new("assets/csl").join(format!("{}.csl", name));
+        if project_csl.exists() {
+            if let Ok(xml) = fs::read_to_string(&project_csl) {
+                if let Ok(style) = IndependentStyle::from_xml(&xml) {
+                    return Ok(style);
+                }
+            }
+        }
+        if path.extension().is_some() {
+            // Had an extension but file not found
+            cwarn!("CSL file '{}' not found, falling back to default", name);
         } else {
-            cwarn!("CSL file '{}' not found, using default", path);
+            cwarn!("unknown CSL style '{}', falling back to default", name);
         }
     }
 
-    // 2. Project/user: first .csl file (alphabetically) in _calepin/templates/
-    if let Some(path) = crate::paths::resolve_first_match(std::path::Path::new("."), "templates", "csl") {
+    // 2. Project: first .csl file in assets/csl/
+    if let Some(path) = crate::paths::resolve_first_match(std::path::Path::new("."), "assets/csl", "csl") {
         if let Ok(xml) = fs::read_to_string(&path) {
             if let Ok(style) = IndependentStyle::from_xml(&xml) {
                 return Ok(style);
@@ -235,10 +261,18 @@ fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
         }
     }
 
-    // 3. Built-in
-    let default_csl = include_str!("../templates/assets/csl/default.csl");
-    IndependentStyle::from_xml(default_csl)
-        .map_err(|e| anyhow::anyhow!("Failed to parse default CSL: {:?}", e))
+    // 3. Default from calepin.toml
+    let default_name = crate::project::builtin_config()
+        .csl.as_deref()
+        .unwrap_or("apa");
+    if let Some(archived) = ArchivedStyle::by_name(default_name) {
+        match archived.get() {
+            citationberg::Style::Independent(style) => return Ok(style),
+            citationberg::Style::Dependent(_) => {}
+        }
+    }
+
+    anyhow::bail!("No usable CSL style found")
 }
 
 #[cfg(test)]

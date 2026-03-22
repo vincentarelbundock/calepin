@@ -2,7 +2,6 @@ mod reload;
 mod server;
 mod watcher;
 
-use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
@@ -13,18 +12,17 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use crate::cli::PreviewArgs;
 
-pub fn run(input: &Path, args: &PreviewArgs) -> Result<()> {
-    // Canonicalize for the file watcher (needs absolute paths for event matching),
-    // but keep the original relative path for rendering (so figure paths stay relative).
+pub fn run(
+    input: &Path,
+    args: &PreviewArgs,
+    target_name: &str,
+    target: &crate::project::Target,
+) -> Result<()> {
     let input_abs = input.canonicalize()
         .with_context(|| format!("Input file not found: {}", input.display()))?;
-    let input = input;
 
-    // Determine the effective format
-    let format = resolve_preview_format(args, input)?;
-
-    match format.as_str() {
-        "latex" | "typst" => run_pdf_preview(input, &input_abs, args, &format),
+    match target.base.as_str() {
+        "latex" | "typst" => run_pdf_preview(input, &input_abs, args, target_name),
         _ => run_html_preview(input, &input_abs, args),
     }
 }
@@ -234,25 +232,22 @@ fn pdf_viewer_html(pdf_filename: &str, version: u64) -> String {
     )
 }
 
-/// Render to LaTeX/Typst, write the file, compile to PDF. Returns the PDF path.
-/// Always compiles quietly — the spinner shows status instead.
-fn render_and_compile(input: &Path, format: &str, overrides: &[String], _quiet: bool) -> Result<std::path::PathBuf> {
-    let (output_path, content, renderer) = crate::render_file(input, None, Some(format), overrides, None, None)?;
+/// Render to LaTeX/Typst, write the file, compile if the target defines it.
+/// Returns the final output path (PDF if compiled, rendered file otherwise).
+fn render_and_compile(input: &Path, target_name: &str, overrides: &[String], _quiet: bool) -> Result<std::path::PathBuf> {
+    let target = crate::project::resolve_target(target_name, None)?;
+    let (output_path, content, renderer) = crate::render_file(
+        input, None, Some(target_name), overrides, Some(&target), None,
+    )?;
     renderer.write_output(&content, &output_path)?;
-    crate::compile::compile_to_pdf(&output_path, true)?;
-    Ok(output_path.with_extension("pdf"))
-}
 
-/// Detect the format for preview from CLI flags or YAML front matter.
-fn resolve_preview_format(args: &PreviewArgs, input: &Path) -> Result<String> {
-    if let Some(ref fmt) = args.target {
-        return Ok(fmt.clone());
+    if let Some(ref compile_cfg) = target.compile {
+        crate::run_compile_step(&output_path, compile_cfg, true)?;
+        let ext = compile_cfg.extension.as_deref().unwrap_or("pdf");
+        Ok(output_path.with_extension(ext))
+    } else {
+        Ok(output_path)
     }
-    // Check YAML front matter
-    let text = fs::read_to_string(input)
-        .with_context(|| format!("Failed to read {}", input.display()))?;
-    let (metadata, _) = crate::parse::yaml::split_yaml(&text)?;
-    Ok(metadata.target.unwrap_or_else(|| "html".to_string()))
 }
 
 fn local_time_str() -> String {

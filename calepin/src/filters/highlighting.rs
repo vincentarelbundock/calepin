@@ -53,79 +53,30 @@ fn highlight_cache_key(code: &str, lang: &str, ext: &str) -> u64 {
     hasher.finish()
 }
 
-/// Bundled .tmTheme files (embedded at compile time).
-const BUNDLED_THEMES: &[(&str, &[u8])] = &[
-    ("1337", include_bytes!("../resources/tmtheme/1337-scheme/1337.tmtheme")),
-    ("ansi", include_bytes!("../resources/tmtheme/ansi/ansi.tmTheme")),
-    ("base16", include_bytes!("../resources/tmtheme/base16/base16.tmTheme")),
-    ("base16-256", include_bytes!("../resources/tmtheme/base16-256/base16-256.tmTheme")),
-    ("catppuccin-frappe", include_bytes!("../resources/tmtheme/catppuccin/catppuccin-frappe.tmtheme")),
-    ("catppuccin-latte", include_bytes!("../resources/tmtheme/catppuccin/catppuccin-latte.tmtheme")),
-    ("catppuccin-macchiato", include_bytes!("../resources/tmtheme/catppuccin/catppuccin-macchiato.tmtheme")),
-    ("catppuccin-mocha", include_bytes!("../resources/tmtheme/catppuccin/catppuccin-mocha.tmtheme")),
-    ("coldark-cold", include_bytes!("../resources/tmtheme/coldark/coldark-cold.tmtheme")),
-    ("coldark-dark", include_bytes!("../resources/tmtheme/coldark/coldark-dark.tmtheme")),
-    ("darkneon", include_bytes!("../resources/tmtheme/darkneon/DarkNeon.tmTheme")),
-    ("dracula", include_bytes!("../resources/tmtheme/dracula/dracula.tmtheme")),
-    ("github", include_bytes!("../resources/tmtheme/github/GitHub.tmTheme")),
-    ("gruvbox-dark", include_bytes!("../resources/tmtheme/gruvbox/gruvbox-dark.tmtheme")),
-    ("gruvbox-light", include_bytes!("../resources/tmtheme/gruvbox/gruvbox-light.tmtheme")),
-    ("monokai-extended", include_bytes!("../resources/tmtheme/monokai-extended/monokai-extended.tmtheme")),
-    ("monokai-extended-bright", include_bytes!("../resources/tmtheme/monokai-extended/monokai-extended-bright.tmtheme")),
-    ("monokai-extended-light", include_bytes!("../resources/tmtheme/monokai-extended/monokai-extended-light.tmtheme")),
-    ("monokai-extended-origin", include_bytes!("../resources/tmtheme/monokai-extended/monokai-extended-origin.tmtheme")),
-    ("nord", include_bytes!("../resources/tmtheme/nord/nord.tmtheme")),
-    ("onehalf-dark", include_bytes!("../resources/tmtheme/onehalf/onehalfdark.tmtheme")),
-    ("onehalf-light", include_bytes!("../resources/tmtheme/onehalf/onehalflight.tmtheme")),
-    ("snazzy", include_bytes!("../resources/tmtheme/snazzy/sublime-snazzy.tmtheme")),
-    ("solarized-dark-alt", include_bytes!("../resources/tmtheme/solarized/solarized-dark.tmtheme")),
-    ("solarized-light-alt", include_bytes!("../resources/tmtheme/solarized/solarized-light.tmtheme")),
-    ("twodark", include_bytes!("../resources/tmtheme/twodark/twodark.tmtheme")),
-];
-
-/// Resolve a user-facing theme name to an internal key. Returns None for unknown names.
+/// Resolve a user-facing theme name to an internal key.
+/// Handles a few legacy aliases, otherwise passes through as-is.
 fn resolve_theme_name(name: &str) -> Option<&'static str> {
+    // Legacy syntect built-in aliases
     match name.to_lowercase().as_str() {
-        // syntect built-ins (keep as aliases)
-        "inspiredgithub" | "inspired-github" => Some("github"),
-        "base16-ocean-dark" | "base16-ocean.dark" => Some("base16-ocean.dark"),
-        "base16-ocean-light" | "base16-ocean.light" => Some("base16-ocean.light"),
-        "base16-eighties-dark" | "base16-eighties.dark" => Some("base16-eighties.dark"),
-        "base16-mocha-dark" | "base16-mocha.dark" => Some("base16-mocha.dark"),
-        "solarized-dark" => Some("Solarized (dark)"),
-        "solarized-light" => Some("Solarized (light)"),
-        // bundled .tmTheme files
-        "1337" => Some("1337"),
-        "ansi" => Some("ansi"),
-        "base16" => Some("base16"),
-        "base16-256" => Some("base16-256"),
-        "catppuccin-frappe" => Some("catppuccin-frappe"),
-        "catppuccin-latte" => Some("catppuccin-latte"),
-        "catppuccin-macchiato" => Some("catppuccin-macchiato"),
-        "catppuccin-mocha" => Some("catppuccin-mocha"),
-        "coldark-cold" => Some("coldark-cold"),
-        "coldark-dark" => Some("coldark-dark"),
-        "darkneon" | "dark-neon" => Some("darkneon"),
-        "dracula" => Some("dracula"),
-        "github" => Some("github"),
-        "gruvbox-dark" => Some("gruvbox-dark"),
-        "gruvbox-light" => Some("gruvbox-light"),
-        "monokai-extended" => Some("monokai-extended"),
-        "monokai-extended-bright" => Some("monokai-extended-bright"),
-        "monokai-extended-light" => Some("monokai-extended-light"),
-        "monokai-extended-origin" => Some("monokai-extended-origin"),
-        "nord" => Some("nord"),
-        "onehalf-dark" | "onehalfdark" => Some("onehalf-dark"),
-        "onehalf-light" | "onehalflight" => Some("onehalf-light"),
-        "snazzy" => Some("snazzy"),
-        "solarized-dark-alt" => Some("solarized-dark-alt"),
-        "solarized-light-alt" => Some("solarized-light-alt"),
-        "twodark" | "two-dark" => Some("twodark"),
-        _ => {
-            cwarn!("unknown highlight-style '{}'", name);
-            None
-        }
+        "inspiredgithub" | "inspired-github" => return Some("github"),
+        "base16-ocean-dark" | "base16-ocean.dark" => return Some("base16-ocean.dark"),
+        "base16-ocean-light" | "base16-ocean.light" => return Some("base16-ocean.light"),
+        "base16-eighties-dark" | "base16-eighties.dark" => return Some("base16-eighties.dark"),
+        "base16-mocha-dark" | "base16-mocha.dark" => return Some("base16-mocha.dark"),
+        "solarized-dark" => return Some("Solarized (dark)"),
+        "solarized-light" => return Some("Solarized (light)"),
+        _ => {}
     }
+
+    // Check if a .tmTheme file exists in the built-in project tree
+    let path = format!("assets/highlighting/{}.tmTheme", name);
+    if crate::render::elements::BUILTIN_PROJECT.get_file(&path).is_some() {
+        // Leak a &'static str for the name (small, bounded set)
+        return Some(Box::leak(name.to_string().into_boxed_str()));
+    }
+
+    cwarn!("unknown highlight-style '{}'", name);
+    None
 }
 
 /// User-facing highlight configuration parsed from YAML front matter.
@@ -160,12 +111,51 @@ pub struct Highlighter {
     latex_colors: std::cell::RefCell<LatexColorRegistry>,
 }
 
-/// Look up a bundled .tmTheme by internal key name.
+/// Load a .tmTheme by name.
+///
+/// Resolution order:
+///   1. Project filesystem: `assets/highlighting/{name}.tmTheme`
+///   2. User config: `~/.config/calepin/assets/highlighting/{name}.tmTheme`
+///   3. Built-in: discovered from embedded project tree
+///   4. Filesystem path (for absolute/relative .tmTheme file paths)
 fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
     use std::io::Cursor;
-    BUNDLED_THEMES.iter()
-        .find(|(n, _)| *n == name)
-        .and_then(|(_, bytes)| ThemeSet::load_from_reader(&mut Cursor::new(bytes)).ok())
+
+    let filename = format!("{}.tmTheme", name);
+
+    // 1. Project filesystem
+    let project_path = std::path::Path::new("assets/highlighting").join(&filename);
+    if project_path.exists() {
+        if let Ok(theme) = ThemeSet::get_theme(&project_path) {
+            return Some(theme);
+        }
+    }
+
+    // 2. User config
+    if let Ok(home) = std::env::var("HOME") {
+        let user_path = std::path::Path::new(&home)
+            .join(".config/calepin/assets/highlighting")
+            .join(&filename);
+        if user_path.exists() {
+            if let Ok(theme) = ThemeSet::get_theme(&user_path) {
+                return Some(theme);
+            }
+        }
+    }
+
+    // 3. Built-in: embedded project tree
+    let builtin_path = format!("assets/highlighting/{}", filename);
+    if let Some(file) = crate::render::elements::BUILTIN_PROJECT.get_file(&builtin_path) {
+        return ThemeSet::load_from_reader(&mut Cursor::new(file.contents())).ok();
+    }
+
+    // 4. Direct filesystem path (user-provided .tmTheme path)
+    let path = std::path::Path::new(name);
+    if path.exists() {
+        return ThemeSet::get_theme(path).ok();
+    }
+
+    None
 }
 
 /// Check whether a theme key refers to a syntect built-in (not a bundled .tmTheme).

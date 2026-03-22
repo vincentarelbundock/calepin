@@ -12,6 +12,21 @@ split css into core and style
     - [ ] Validate that format names do not include commas
 + [ ] CSL helpers: https://github.com/citation-style-language/styles/
 
+## CSL
+
+Searched the webSearched the webYes, hayagriva fully supports CSL. Here's a summary:
+CSL support:
+
+Hayagriva supports all styles provided in the official Citation Style Language repository — currently over 2,600. Rust
+You can either supply your own CSL files or choose from about 100 bundled citation styles using the archive feature. GitHub
+
+Architecture:
+
+The Typst team built two Rust libraries for this: citationberg (a CSL 1.0 parser using serde) and hayagriva itself, which uses citationberg to implement CSL processing. Citationstyles
+
+Usage in code involves loading a .csl file, parsing it with IndependentStyle::from_xml, and passing it to a BibliographyDriver. The docs have a full worked example for this.
+Caveats: CSL compliance isn't 100% complete — there are some open issues around edge cases like ibid handling and certain position attributes not yet being fully spec-compliant, but for standard use it works well.
+
 ## YAML to TOML
 
 - [ ] Work only in TOML internally but write a translation layer from Quarto to Calepin when YAML is detected.

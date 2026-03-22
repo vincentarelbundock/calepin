@@ -116,8 +116,8 @@ pub fn build_site_context(config: &SiteConfig, pages: &[PageInfo]) -> SiteContex
     let math_block = {
         let mut vars = HashMap::new();
         vars.insert("html_math_method".to_string(), html_math_method);
-        vars.insert("format".to_string(), "html".to_string());
-        crate::render::template::render_element_block("math_block", "html", &vars)
+        vars.insert("base".to_string(), "html".to_string());
+        crate::render::template::render_element_block("math", "html", &vars)
     };
 
     SiteContext {

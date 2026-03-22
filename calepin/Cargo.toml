@@ -37,10 +37,11 @@ base64 = "0.22"
 serde_json = "1"
 
 # Bibliography (CSL citation processing, BibTeX parsing)
-hayagriva = { version = "0.9", features = ["biblatex"] }
+hayagriva = { version = "0.9", features = ["biblatex", "archive"] }
 
 # Template engine
 minijinja = "2"
+include_dir = "0.7"
 glob = "0.3"
 walkdir = "2"
 

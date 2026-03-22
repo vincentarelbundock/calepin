@@ -1,7 +1,6 @@
 #[macro_use]
 mod cli;
 mod brand;
-mod compile;
 mod engines;
 mod filters;
 mod formats;
@@ -26,19 +25,76 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use cli::{Cli, Command, RenderArgs, PreviewArgs, PluginAction, HighlightAction};
+use cli::{Cli, Command, RenderArgs, PreviewArgs, InfoAction};
 use render::elements::ElementRenderer;
 use engines::r::RSession;
 use engines::python::PythonSession;
 use engines::EngineContext;
 use engines::cache::CacheState;
 
+/// Resolved project context: project config + target, shared by render and preview.
+struct ProjectContext {
+    project_root: Option<PathBuf>,
+    #[allow(dead_code)]
+    project_config: Option<project::ProjectConfig>,
+    target_name: String,
+    target: project::Target,
+}
+
+/// Resolve project config and target from an input file and optional CLI target flag.
+/// Falls back to front matter `target:`, then "html".
+fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectContext> {
+    let input_dir = input.parent().unwrap_or(Path::new("."));
+    let abs_input_dir = if input_dir.is_relative() {
+        std::env::current_dir().unwrap_or_default().join(input_dir)
+    } else {
+        input_dir.to_path_buf()
+    };
+
+    let project_root = project::find_project_root(&abs_input_dir);
+    let project_config = project_root.as_ref().and_then(|root| {
+        let cfg_path = project::config_path(root)?;
+        match project::load_project_config(&cfg_path) {
+            Ok(config) => Some(config),
+            Err(e) => {
+                eprintln!("Warning: failed to load {}: {}", cfg_path.display(), e);
+                None
+            }
+        }
+    });
+
+    // Target name: CLI flag -> front matter -> "html"
+    let target_name = if let Some(name) = cli_target {
+        name.to_string()
+    } else {
+        // Read front matter to check for target:
+        if let Ok(text) = fs::read_to_string(input) {
+            if let Ok((meta, _)) = parse::yaml::split_yaml(&text) {
+                meta.target.unwrap_or_else(|| "html".to_string())
+            } else {
+                "html".to_string()
+            }
+        } else {
+            "html".to_string()
+        }
+    };
+
+    let target = project::resolve_target(&target_name, project_config.as_ref())?;
+
+    Ok(ProjectContext {
+        project_root,
+        project_config,
+        target_name,
+        target,
+    })
+}
+
 /// Parse CLI args, injecting "render" as default subcommand when the first
 /// positional argument looks like a file path rather than a known subcommand.
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "serve", "init", "plugin", "highlight", "completions"];
+    let known = ["render", "preview", "init", "info"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -64,18 +120,11 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Render(args) => handle_render(args),
         Command::Preview(args) => handle_preview(args),
-        Command::Serve(args) => site::serve(&args.dir, args.port),
         Command::Init { template } => {
             eprintln!("Project init (template: {}) is not yet implemented.", template);
             Ok(())
         }
-        Command::Plugin { action } => handle_plugin(action),
-        Command::Highlight { action } => handle_highlight(action),
-        Command::Completions { shell } => {
-            let mut cmd = <Cli as clap::CommandFactory>::command();
-            clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
-            Ok(())
-        }
+        Command::Info { action } => handle_info(action),
     }
 }
 
@@ -84,45 +133,19 @@ fn handle_render(args: RenderArgs) -> Result<()> {
 
     // Project manifest mode (.yaml / .yml)
     if cli::is_project_manifest(input) {
-        // -o overrides the output directory for project manifests
         let output = args.output.unwrap_or_else(|| PathBuf::from("_site"));
         return site::build_site(Some(input.as_path()), &output, args.clean, args.quiet);
     }
 
-    // Detect project root and load calepin.toml
-    let input_dir = input.parent().unwrap_or(Path::new("."));
-    let abs_input_dir = if input_dir.is_relative() {
-        std::env::current_dir().unwrap_or_default().join(input_dir)
-    } else {
-        input_dir.to_path_buf()
-    };
-    let project_root = project::find_project_root(&abs_input_dir);
-    let project_config = project_root.as_ref().and_then(|root| {
-        let config_path = root.join("calepin.toml");
-        match project::load_project_config(&config_path) {
-            Ok(config) => Some(config),
-            Err(e) => {
-                eprintln!("Warning: failed to load {}: {}", config_path.display(), e);
-                None
-            }
-        }
-    });
+    let ctx = resolve_context(input, args.target.as_deref())?;
 
-    // Resolve target from -f flag
-    let target = if let Some(ref format_str) = args.target {
-        Some(project::resolve_target(format_str, project_config.as_ref())?)
-    } else {
-        None
-    };
-
-    // Single-file mode (.qmd)
     let (output_path, final_output, renderer) = render_file(
         input,
         args.output.as_deref(),
-        args.target.as_deref(),
+        Some(&ctx.target_name),
         &args.overrides,
-        target.as_ref(),
-        project_root.as_deref(),
+        Some(&ctx.target),
+        ctx.project_root.as_deref(),
     )?;
 
     renderer.write_output(&final_output, &output_path)?;
@@ -131,24 +154,16 @@ fn handle_render(args: RenderArgs) -> Result<()> {
         eprintln!("→ {}", output_path.display());
     }
 
-    // Compile step: --pdf (legacy) or --compile (target-based)
-    if args.pdf {
-        compile::compile_to_pdf(&output_path, args.quiet)?;
-    } else if args.compile || target.as_ref().map_or(false, |t| {
-        t.compile.as_ref().map_or(false, |c| c.auto)
-    }) {
-        if let Some(ref t) = target {
-            if let Some(ref compile_cfg) = t.compile {
-                run_compile_step(&output_path, compile_cfg, args.quiet)?;
-            }
-        }
+    // Compile step: runs automatically when the target defines [compile]
+    if let Some(ref compile_cfg) = ctx.target.compile {
+        run_compile_step(&output_path, compile_cfg, args.quiet)?;
     }
 
     Ok(())
 }
 
 /// Run a target's compile step.
-fn run_compile_step(
+pub fn run_compile_step(
     rendered_path: &Path,
     compile_cfg: &project::CompileConfig,
     quiet: bool,
@@ -185,68 +200,87 @@ fn run_compile_step(
 }
 
 fn handle_preview(args: PreviewArgs) -> Result<()> {
+    // Directory: serve it over HTTP
+    if args.input.is_dir() {
+        return site::serve(&args.input, args.port);
+    }
+    // Project manifest: build then serve
     if cli::is_project_manifest(&args.input) {
         let config_dir = args.input.parent().unwrap_or(Path::new("."));
         let output = config_dir.join("_site");
         site::build_site(Some(args.input.as_path()), &PathBuf::from("_site"), true, false)?;
         return site::serve(&output, args.port);
     }
-    preview::run(&args.input, &args)
+    // Resolve target using the same path as render
+    let ctx = resolve_context(&args.input, args.target.as_deref())?;
+    preview::run(&args.input, &args, &ctx.target_name, &ctx.target)
 }
 
-fn handle_plugin(action: PluginAction) -> Result<()> {
-    match action {
-        PluginAction::Init { ref name } => plugin_init(name),
-        PluginAction::List => plugin_list(),
-    }
-}
 
-fn handle_highlight(action: HighlightAction) -> Result<()> {
+fn handle_info(action: InfoAction) -> Result<()> {
     match action {
-        HighlightAction::List => {
-            println!("Built-in syntax highlighting themes:\n");
-            let themes = [
-                ("github", "Light"),
-                ("catppuccin-latte", "Light"),
-                ("coldark-cold", "Light"),
-                ("gruvbox-light", "Light"),
-                ("monokai-extended-light", "Light"),
-                ("base16-ocean-light", "Light"),
-                ("onehalf-light", "Light"),
-                ("solarized-light", "Light"),
-                ("solarized-light-alt", "Light"),
-                ("1337", "Dark"),
-                ("ansi", "Dark"),
-                ("base16", "Dark"),
-                ("base16-256", "Dark"),
-                ("base16-eighties-dark", "Dark"),
-                ("base16-mocha-dark", "Dark"),
-                ("base16-ocean-dark", "Dark"),
-                ("catppuccin-frappe", "Dark"),
-                ("catppuccin-macchiato", "Dark"),
-                ("catppuccin-mocha", "Dark"),
-                ("coldark-dark", "Dark"),
-                ("darkneon", "Dark"),
-                ("dracula", "Dark"),
-                ("gruvbox-dark", "Dark"),
-                ("monokai-extended", "Dark"),
-                ("monokai-extended-bright", "Dark"),
-                ("monokai-extended-origin", "Dark"),
-                ("nord", "Dark"),
-                ("onehalf-dark", "Dark"),
-                ("snazzy", "Dark"),
-                ("solarized-dark", "Dark"),
-                ("solarized-dark-alt", "Dark"),
-                ("twodark", "Dark"),
-            ];
-            for (name, style) in themes {
-                println!("  {:<28} {}", name, style);
+        InfoAction::Csl => {
+            use hayagriva::archive::ArchivedStyle;
+
+            println!("Calepin uses CSL (Citation Style Language) for bibliography");
+            println!("formatting. Over 2,600 styles are available from the Zotero");
+            println!("style repository:");
+            println!();
+            println!("  https://www.zotero.org/styles");
+            println!();
+            println!("Download a .csl file and place it in assets/csl/, then set");
+            println!("csl: in calepin.toml or in document front matter.");
+            println!();
+            println!("The following shortcuts are also available as built-in names");
+            println!("(no download required):");
+            println!();
+
+            let mut names: Vec<&str> = ArchivedStyle::all().iter()
+                .map(|s| s.names()[0])
+                .collect();
+            names.sort();
+
+            // Print comma-separated, wrapped at 79 characters
+            let joined = names.join(", ");
+            let mut line = String::from("  ");
+            for word in joined.split(' ') {
+                if line.len() + 1 + word.len() > 79 && line.len() > 2 {
+                    println!("{}", line);
+                    line = format!("  {}", word);
+                } else {
+                    if line.len() > 2 { line.push(' '); }
+                    line.push_str(word);
+                }
             }
-            println!("\nCustom themes: set highlight-style to a .tmTheme file path.");
+            if !line.trim().is_empty() {
+                println!("{}", line);
+            }
             Ok(())
         }
-        HighlightAction::Preview { theme } => {
-            eprintln!("Highlight preview ({}) is not yet implemented.", theme);
+        InfoAction::Themes => {
+            println!("Built-in syntax highlighting themes:\n");
+            if let Some(dir) = render::elements::BUILTIN_PROJECT.get_dir("assets/highlighting") {
+                let mut names: Vec<&str> = dir.files()
+                    .filter_map(|f| {
+                        if f.path().extension()?.to_str()? == "tmTheme" {
+                            f.path().file_stem()?.to_str()
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                names.sort();
+                for name in &names {
+                    println!("  {}", name);
+                }
+                println!("\n{} themes available.", names.len());
+            }
+            println!("Custom themes: place a .tmTheme file in assets/highlighting/");
+            Ok(())
+        }
+        InfoAction::Completions { shell } => {
+            let mut cmd = <Cli as clap::CommandFactory>::command();
+            clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
             Ok(())
         }
     }
@@ -378,9 +412,14 @@ pub fn render_core_with_brand(
     // 7. Create element renderer
     let highlight_config = metadata.var.get("highlight-style")
         .map(|v| filters::highlighting::parse_highlight_config(v))
-        .unwrap_or(filters::highlighting::HighlightConfig::LightDark {
-            light: "github".to_string(),
-            dark: "nord".to_string(),
+        .unwrap_or_else(|| {
+            // Defaults from built-in calepin.toml [highlight] section
+            let cfg = project::builtin_config();
+            let defaults = cfg.highlight.as_ref();
+            filters::highlighting::HighlightConfig::LightDark {
+                light: defaults.and_then(|h| h.light.clone()).unwrap_or_else(|| "github".to_string()),
+                dark: defaults.and_then(|h| h.dark.clone()).unwrap_or_else(|| "nord".to_string()),
+            }
         });
     let mut element_renderer = ElementRenderer::new(renderer.base_format(), highlight_config);
     element_renderer.number_sections = metadata.number_sections;
@@ -470,7 +509,7 @@ pub fn render_file(
     // Resolve output path
     let output_path = if let Some(o) = output {
         o.to_path_buf()
-    } else if let (Some(t), Some(fmt)) = (target, format) {
+    } else if let (Some(_), Some(fmt)) = (target, format) {
         // Use target-aware output path when a target is specified
         project::resolve_target_output_path(input, fmt, ext, project_root)
     } else {
@@ -484,127 +523,4 @@ pub fn render_file(
         .unwrap_or(result.rendered);
 
     Ok((output_path, final_output, renderer))
-}
-
-fn resolve_output_path(input: &Path, output: Option<&Path>, ext: &str) -> PathBuf {
-    match output {
-        Some(path) => path.to_path_buf(),
-        None => input.with_extension(ext),
-    }
-}
-
-fn plugin_init(name: &str) -> Result<()> {
-    let dir = Path::new("_calepin").join("plugins").join(name);
-    if dir.exists() {
-        anyhow::bail!("Plugin directory already exists: {}", dir.display());
-    }
-    fs::create_dir_all(&dir)?;
-    let manifest = format!(
-        r#"name = "{name}"
-version = "0.1.0"
-description = ""
-
-[provides.filter]
-run = "filter.py"
-contexts = ["div", "span"]
-
-[provides.filter.match]
-classes = ["{name}"]
-"#,
-        name = name,
-    );
-    fs::write(dir.join("plugin.toml"), manifest)?;
-
-    // Create a minimal filter script
-    let filter_script = r#"#!/usr/bin/env python3
-import json, sys
-
-data = json.load(sys.stdin)
-context = data["context"]
-content = data["content"]
-classes = data["classes"]
-fmt = data["format"]
-
-# Return rendered output on stdout, or exit non-zero to pass
-print(content)
-"#;
-    fs::write(dir.join("filter.py"), filter_script)?;
-
-    // Make it executable
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(dir.join("filter.py"))?.permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(dir.join("filter.py"), perms)?;
-    }
-
-    eprintln!("Created plugin scaffold at {}", dir.display());
-    eprintln!("  plugin.toml  -- manifest");
-    eprintln!("  filter.py   — filter script (edit this)");
-    Ok(())
-}
-
-fn plugin_list() -> Result<()> {
-    // Scan project and user plugin directories
-    let dirs = [
-        PathBuf::from("_calepin/plugins"),
-        dirs::config_dir().map(|d| d.join("calepin/plugins")).unwrap_or_default(),
-    ];
-
-    let mut found = false;
-    for dir in &dirs {
-        if !dir.is_dir() {
-            continue;
-        }
-        if let Ok(entries) = fs::read_dir(dir) {
-            for entry in entries.filter_map(|e| e.ok()) {
-                let path = entry.path();
-                if path.join("plugin.toml").exists() || path.join("plugin.yml").exists() {
-                    if let Ok(manifest) = plugin_manifest::PluginManifest::load(&path) {
-                        let desc = manifest.description.as_deref().unwrap_or("");
-                        let mut caps = Vec::new();
-                        if !manifest.provides.filters.is_empty() { caps.push("filter"); }
-                        if manifest.provides.shortcode.is_some() { caps.push("shortcode"); }
-                        if manifest.provides.postprocess.is_some() { caps.push("postprocess"); }
-                        if manifest.provides.elements.is_some() { caps.push("elements"); }
-                        if manifest.provides.templates.is_some() { caps.push("templates"); }
-                        if manifest.provides.csl.is_some() { caps.push("csl"); }
-                        if manifest.provides.format.is_some() { caps.push("format"); }
-                        println!(
-                            "  {:<20} [{}] {}",
-                            manifest.name,
-                            caps.join(", "),
-                            desc,
-                        );
-                        found = true;
-                    }
-                }
-            }
-        }
-    }
-
-    if !found {
-        println!("No plugins found.");
-        println!("  Project: _calepin/plugins/");
-        println!("  User:    ~/.config/calepin/plugins/");
-    }
-
-    // Also list built-in plugins
-    println!("\nBuilt-in plugins:");
-    println!("  {:<20} [filter] Panel tabset rendering", "tabset");
-    println!("  {:<20} [filter] Layout grid rendering", "layout");
-    println!("  {:<20} [filter] Figure div rendering", "figure-div");
-    println!("  {:<20} [filter] Theorem auto-numbering", "theorem");
-    println!("  {:<20} [filter] Callout enrichment", "callout");
-
-    Ok(())
-}
-
-/// Get the user config directory (cross-platform).
-mod dirs {
-    use std::path::PathBuf;
-    pub fn config_dir() -> Option<PathBuf> {
-        std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".config"))
-    }
 }

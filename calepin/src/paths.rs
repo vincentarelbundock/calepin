@@ -103,14 +103,12 @@ pub fn resolve_path_cwd(dir: &str, filename: &str) -> Option<PathBuf> {
 // ---------------------------------------------------------------------------
 
 /// Map a base name to its file extension for template/component lookup.
+/// Derives the mapping from the built-in calepin.toml.
 pub fn base_to_ext(base: &str) -> &str {
-    match base {
-        "html" => "html",
-        "latex" => "tex",
-        "typst" => "typ",
-        "markdown" => "md",
-        _ => base,
-    }
+    let target = crate::project::builtin_config().targets.get(base);
+    target
+        .and_then(|t| t.extension.as_deref())
+        .unwrap_or(base)
 }
 
 /// Resolve a component (element template) using the three-layer model.
