@@ -67,10 +67,11 @@ pub struct RenderArgs {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
-    /// Output format: html, latex, typst, markdown.
+    /// Output target: a target name from calepin.toml (e.g., web, article)
+    /// or a base name (html, latex, typst, markdown).
     /// If omitted, auto-detected from output extension or YAML front matter.
     #[arg(short, long)]
-    pub format: Option<String>,
+    pub target: Option<String>,
 
     /// Quiet mode (suppress progress messages)
     #[arg(short, long)]
@@ -84,6 +85,10 @@ pub struct RenderArgs {
     /// Compile output to PDF (LaTeX via tectonic, Typst via typst)
     #[arg(long)]
     pub pdf: bool,
+
+    /// Run the target's compile step (e.g., .tex to .pdf)
+    #[arg(long)]
+    pub compile: bool,
 
     /// Remove output directory before building (project manifests only)
     #[arg(long)]
@@ -99,9 +104,9 @@ pub struct PreviewArgs {
     #[arg(short, long, default_value = "3456")]
     pub port: u16,
 
-    /// Output format: html, latex, typst, markdown
+    /// Output target: a target name or base name
     #[arg(short, long)]
-    pub format: Option<String>,
+    pub target: Option<String>,
 
     /// Override YAML metadata fields
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]

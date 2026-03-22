@@ -1,7 +1,7 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <div class="keywords"><strong>Keywords:</strong> {{keywords}}</div>
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 \paragraph{Keywords} {{keywords}}
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 #text(weight: "bold")[Keywords:] {{keywords}}
 {%- endif %}

@@ -1,16 +1,16 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <div class="figure" id="fig-{{label}}" style="{{align_style}}">
 {{image}}
 <p class="caption">{{caption}}</p>
 </div>
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 {{fig_begin}}{{fig_pos}}
 {{align_style}}
 {{image}}
 {{caption_cmd}}
 \label{{_lb}}fig-{{label}}{{_rb}}
 {{fig_end}}
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 #figure({{image}}, caption: [{{caption}}]) <fig-{{label}}>
 {%- else %}
 ![{{alt}}]({{path}})

@@ -372,13 +372,13 @@ impl PluginRegistry {
     // Template resolution
     // -----------------------------------------------------------------------
 
-    /// Resolve an element template by checking plugin element dirs (in order),
-    /// then falling back to `_calepin/elements/` and `~/.config/calepin/elements/`.
+    /// Resolve an element template (component) by checking plugin element dirs (in order),
+    /// then falling back to the three-layer component resolution.
     pub fn resolve_element_template(&self, name: &str, format: &str) -> Option<String> {
         let canonical = name.replace('-', "_");
         let filename = format!("{}.{}", canonical, format);
 
-        // Check plugin-provided element dirs
+        // Check plugin-provided element/component dirs
         for plugin in &self.plugins {
             if let Some(ref spec) = plugin.manifest.provides.elements {
                 let path = plugin.manifest.plugin_dir.join(&spec.dir).join(&filename);
@@ -390,13 +390,13 @@ impl PluginRegistry {
             }
         }
 
-        // Fall back to _calepin/elements/ and ~/.config/calepin/elements/
-        crate::paths::resolve_path_cwd("elements", &filename)
+        // Three-layer resolution: project components/ → user components/ → legacy
+        crate::paths::resolve_component(&canonical, format)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 
     /// Resolve a page template by checking plugin template dirs (in order),
-    /// then falling back to `_calepin/templates/` and `~/.config/calepin/templates/`.
+    /// then falling back to the three-layer template resolution.
     pub fn resolve_page_template(&self, filename: &str) -> Option<String> {
         // Check plugin-provided template dirs
         for plugin in &self.plugins {
@@ -410,7 +410,24 @@ impl PluginRegistry {
             }
         }
 
-        // Fall back to _calepin/templates/ and ~/.config/calepin/templates/
+        // Try new three-layer resolution if filename has a dot (e.g., "calepin.html")
+        if let Some(dot) = filename.rfind('.') {
+            let name = &filename[..dot];
+            let ext = &filename[dot + 1..];
+            let base = match ext {
+                "tex" => "latex",
+                "typ" => "typst",
+                "md" => "markdown",
+                other => other,
+            };
+            if let Some(path) = crate::paths::resolve_template(name, base) {
+                if let Ok(content) = std::fs::read_to_string(path) {
+                    return Some(content);
+                }
+            }
+        }
+
+        // Legacy fallback
         crate::paths::resolve_path_cwd("templates", filename)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }

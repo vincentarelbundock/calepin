@@ -53,7 +53,7 @@ pub fn render(
         for (k, val) in attrs {
             v.insert(k.clone(), val.clone());
         }
-        v.insert("format".to_string(), format.to_string());
+        v.insert("base".to_string(), format.to_string());
         v.insert("children".to_string(), children_rendered.to_string());
         v.insert("classes".to_string(), classes.join(" "));
 

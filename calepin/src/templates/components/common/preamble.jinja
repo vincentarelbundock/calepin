@@ -1,8 +1,8 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Inconsolata:wght@400;700&family=Inter:wght@300..700&display=swap" rel="stylesheet">
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 \usepackage{xcolor}
 \usepackage{amsmath,amssymb}
 \usepackage[normalem]{ulem}
@@ -38,7 +38,7 @@
   arc=0pt, outer arc=0pt,
   fontupper=\small
 }
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 #set document(title: "{{plain_title}}", author: "{{author}}")
 #set page(margin: (x: 4.5cm, y: 3.5cm))
 #set text(size: 11pt)

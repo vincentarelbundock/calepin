@@ -1,12 +1,12 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <pre><code class="{{diagnostic_class}}">{{text}}</code></pre>
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 \begin{outcode}
 \begin{verbatim}
 {{text}}
 \end{verbatim}
 \end{outcode}
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 #outbox[#raw("{{text}}", block: true)]
 {%- else %}
 ```

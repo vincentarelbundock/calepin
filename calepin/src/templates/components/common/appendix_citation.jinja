@@ -1,12 +1,12 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <section class="appendix-section">
 <h2>Citation</h2>
 <p>{{content}}</p>
 </section>
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 \subsection*{Citation}
 {{content}}
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 == Citation
 {{content}}
 {%- else %}

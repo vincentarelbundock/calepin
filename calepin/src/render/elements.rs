@@ -15,10 +15,10 @@ use crate::filters::highlighting::{Highlighter, HighlightConfig, ColorScope};
 // Each template is a single .jinja file with format conditionals
 // ({% if format == "html" %} ... {% elif format == "latex" %} ... {% endif %}).
 
-const THEOREM_ITALIC: &str = include_str!("../templates/elements/theorem_italic.jinja");
-const THEOREM_NORMAL: &str = include_str!("../templates/elements/theorem_normal.jinja");
-const CALLOUT: &str = include_str!("../templates/elements/callout.jinja");
-const CODE_DIAGNOSTIC: &str = include_str!("../templates/elements/code_diagnostic.jinja");
+const THEOREM_ITALIC: &str = include_str!("../templates/components/common/theorem_italic.jinja");
+const THEOREM_NORMAL: &str = include_str!("../templates/components/common/theorem_normal.jinja");
+const CALLOUT: &str = include_str!("../templates/components/common/callout.jinja");
+const CODE_DIAGNOSTIC: &str = include_str!("../templates/components/common/code_diagnostic.jinja");
 
 fn builtin_template(name: &str) -> Option<&'static str> {
     match name {
@@ -31,28 +31,28 @@ fn builtin_template(name: &str) -> Option<&'static str> {
         // Code diagnostics
         "code_error" | "code_warning" | "code_message" => Some(CODE_DIAGNOSTIC),
         // Single-file templates
-        "code_source" => Some(include_str!("../templates/elements/code_source.jinja")),
-        "code_output" => Some(include_str!("../templates/elements/code_output.jinja")),
-        "figure" => Some(include_str!("../templates/elements/figure.jinja")),
-        "div" => Some(include_str!("../templates/elements/div.jinja")),
-        "proof" => Some(include_str!("../templates/elements/proof.jinja")),
-        "landscape" => Some(include_str!("../templates/elements/landscape.jinja")),
-        "preamble" => Some(include_str!("../templates/elements/preamble.jinja")),
-        "appendix" => Some(include_str!("../templates/elements/appendix.jinja")),
-        "appendix_license" => Some(include_str!("../templates/elements/appendix_license.jinja")),
-        "appendix_copyright" => Some(include_str!("../templates/elements/appendix_copyright.jinja")),
-        "appendix_funding" => Some(include_str!("../templates/elements/appendix_funding.jinja")),
-        "appendix_citation" => Some(include_str!("../templates/elements/appendix_citation.jinja")),
-        "author_block" => Some(include_str!("../templates/elements/author_block.jinja")),
-        "author_item" => Some(include_str!("../templates/elements/author_item.jinja")),
-        "affiliation_item" => Some(include_str!("../templates/elements/affiliation_item.jinja")),
-        "title_block" => Some(include_str!("../templates/elements/title_block.jinja")),
-        "subtitle_block" => Some(include_str!("../templates/elements/subtitle_block.jinja")),
-        "date_block" => Some(include_str!("../templates/elements/date_block.jinja")),
-        "abstract_block" => Some(include_str!("../templates/elements/abstract_block.jinja")),
-        "keywords_block" => Some(include_str!("../templates/elements/keywords_block.jinja")),
-        "bibliography_block" => Some(include_str!("../templates/elements/bibliography_block.jinja")),
-        "math_block" => Some(include_str!("../templates/elements/math_block.jinja")),
+        "code_source" => Some(include_str!("../templates/components/common/code_source.jinja")),
+        "code_output" => Some(include_str!("../templates/components/common/code_output.jinja")),
+        "figure" => Some(include_str!("../templates/components/common/figure.jinja")),
+        "div" => Some(include_str!("../templates/components/common/div.jinja")),
+        "proof" => Some(include_str!("../templates/components/common/proof.jinja")),
+        "landscape" => Some(include_str!("../templates/components/common/landscape.jinja")),
+        "preamble" => Some(include_str!("../templates/components/common/preamble.jinja")),
+        "appendix" => Some(include_str!("../templates/components/common/appendix.jinja")),
+        "appendix_license" => Some(include_str!("../templates/components/common/appendix_license.jinja")),
+        "appendix_copyright" => Some(include_str!("../templates/components/common/appendix_copyright.jinja")),
+        "appendix_funding" => Some(include_str!("../templates/components/common/appendix_funding.jinja")),
+        "appendix_citation" => Some(include_str!("../templates/components/common/appendix_citation.jinja")),
+        "author_block" => Some(include_str!("../templates/components/common/author_block.jinja")),
+        "author_item" => Some(include_str!("../templates/components/common/author_item.jinja")),
+        "affiliation_item" => Some(include_str!("../templates/components/common/affiliation_item.jinja")),
+        "title_block" => Some(include_str!("../templates/components/common/title_block.jinja")),
+        "subtitle_block" => Some(include_str!("../templates/components/common/subtitle_block.jinja")),
+        "date_block" => Some(include_str!("../templates/components/common/date_block.jinja")),
+        "abstract_block" => Some(include_str!("../templates/components/common/abstract_block.jinja")),
+        "keywords_block" => Some(include_str!("../templates/components/common/keywords_block.jinja")),
+        "bibliography_block" => Some(include_str!("../templates/components/common/bibliography_block.jinja")),
+        "math_block" => Some(include_str!("../templates/components/common/math_block.jinja")),
         _ => None,
     }
 }
@@ -138,7 +138,8 @@ impl ElementRenderer {
 
     pub fn get_template(&self, name: &str) -> String {
         let mut vars = HashMap::new();
-        vars.insert("format".to_string(), self.ext.clone());
+        vars.insert("base".to_string(), self.ext.clone());
+        vars.insert("base".to_string(), self.ext.clone());
         self.template_env.render(name, &vars)
     }
 
@@ -226,7 +227,8 @@ impl ElementRenderer {
 
     fn build_template_output(&self, template_name: &str, element: &Element) -> String {
         let mut vars = HashMap::new();
-        vars.insert("format".to_string(), self.ext.clone());
+        vars.insert("base".to_string(), self.ext.clone());
+        vars.insert("base".to_string(), self.ext.clone());
 
         // Run element through pipeline filters
         let code_filter = crate::filters::code::CodeFilter::new(&self.highlighter);
@@ -325,15 +327,14 @@ impl ElementRenderer {
     }
 }
 
-/// Resolve an element template: project → user → built-in.
+/// Resolve an element template (component): project → user → built-in.
 /// Template names use underscores internally; hyphens are normalized.
-/// User overrides are per-format ({name}.{ext}); built-in templates are
-/// format-conditional single files.
+/// Uses the new three-layer resolution model (components/ directories),
+/// with legacy _calepin/elements/ fallback.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
-    // User override: per-format file
-    let filename = format!("{}.{}", canonical, ext);
-    if let Some(path) = crate::paths::resolve_path_cwd("elements", &filename) {
+    // Three-layer resolution: project components/ → user components/ → legacy _calepin/elements/
+    if let Some(path) = crate::paths::resolve_component(&canonical, ext) {
         if let Ok(content) = std::fs::read_to_string(&path) {
             return Some(content);
         }

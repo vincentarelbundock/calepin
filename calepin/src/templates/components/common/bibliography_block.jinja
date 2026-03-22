@@ -1,5 +1,5 @@
-{%- if format == "typst" %}
+{%- if base == "typst" %}
 #bibliography("{{path}}")
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 \bibliography{{_lb}}{{path}}{{_rb}}
 {%- endif %}

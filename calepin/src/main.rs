@@ -14,6 +14,7 @@ mod site;
 mod structures;
 mod jinja_engine;
 mod paths;
+mod project;
 mod types;
 mod util;
 mod value;
@@ -88,12 +89,40 @@ fn handle_render(args: RenderArgs) -> Result<()> {
         return site::build_site(Some(input.as_path()), &output, args.clean, args.quiet);
     }
 
+    // Detect project root and load calepin.toml
+    let input_dir = input.parent().unwrap_or(Path::new("."));
+    let abs_input_dir = if input_dir.is_relative() {
+        std::env::current_dir().unwrap_or_default().join(input_dir)
+    } else {
+        input_dir.to_path_buf()
+    };
+    let project_root = project::find_project_root(&abs_input_dir);
+    let project_config = project_root.as_ref().and_then(|root| {
+        let config_path = root.join("calepin.toml");
+        match project::load_project_config(&config_path) {
+            Ok(config) => Some(config),
+            Err(e) => {
+                eprintln!("Warning: failed to load {}: {}", config_path.display(), e);
+                None
+            }
+        }
+    });
+
+    // Resolve target from -f flag
+    let target = if let Some(ref format_str) = args.target {
+        Some(project::resolve_target(format_str, project_config.as_ref())?)
+    } else {
+        None
+    };
+
     // Single-file mode (.qmd)
     let (output_path, final_output, renderer) = render_file(
         input,
         args.output.as_deref(),
-        args.format.as_deref(),
+        args.target.as_deref(),
         &args.overrides,
+        target.as_ref(),
+        project_root.as_deref(),
     )?;
 
     renderer.write_output(&final_output, &output_path)?;
@@ -102,8 +131,54 @@ fn handle_render(args: RenderArgs) -> Result<()> {
         eprintln!("→ {}", output_path.display());
     }
 
+    // Compile step: --pdf (legacy) or --compile (target-based)
     if args.pdf {
         compile::compile_to_pdf(&output_path, args.quiet)?;
+    } else if args.compile || target.as_ref().map_or(false, |t| {
+        t.compile.as_ref().map_or(false, |c| c.auto)
+    }) {
+        if let Some(ref t) = target {
+            if let Some(ref compile_cfg) = t.compile {
+                run_compile_step(&output_path, compile_cfg, args.quiet)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Run a target's compile step.
+fn run_compile_step(
+    rendered_path: &Path,
+    compile_cfg: &project::CompileConfig,
+    quiet: bool,
+) -> Result<()> {
+    let command = compile_cfg.command.as_deref()
+        .ok_or_else(|| anyhow::anyhow!("Target compile section has no command"))?;
+    let compile_ext = compile_cfg.extension.as_deref()
+        .ok_or_else(|| anyhow::anyhow!("Target compile section has no extension"))?;
+
+    let output_path = rendered_path.with_extension(compile_ext);
+    let cmd = command
+        .replace("{input}", &rendered_path.to_string_lossy())
+        .replace("{output}", &output_path.to_string_lossy());
+
+    if !quiet {
+        eprintln!("  compiling: {}", cmd);
+    }
+
+    let status = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(&cmd)
+        .status()
+        .with_context(|| format!("Failed to run compile command: {}", cmd))?;
+
+    if !status.success() {
+        anyhow::bail!("Compile command failed: {}", cmd);
+    }
+
+    if !quiet {
+        eprintln!("→ {}", output_path.display());
     }
 
     Ok(())
@@ -249,7 +324,7 @@ pub fn render_core_with_brand(
     // 3. Create renderer for this format
     let format_str = format
         .map(|s| s.to_string())
-        .or_else(|| metadata.format.clone())
+        .or_else(|| metadata.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let renderer = formats::create_renderer(&format_str)?;
 
@@ -370,22 +445,37 @@ pub fn render_file(
     output: Option<&Path>,
     format: Option<&str>,
     overrides: &[String],
+    target: Option<&project::Target>,
+    project_root: Option<&Path>,
 ) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
-    // Resolve format from CLI flag or output extension; None falls back to metadata in render_core
-    let resolved_format = format
-        .map(|s| s.to_string())
-        .or_else(|| {
-            output
-                .and_then(|p| p.extension())
-                .and_then(|e| e.to_str())
-                .map(|ext| formats::format_from_extension(ext).to_string())
-        });
+    // If we have a target, use its base as the format
+    let resolved_format = if let Some(t) = target {
+        Some(t.base.clone())
+    } else {
+        format
+            .map(|s| s.to_string())
+            .or_else(|| {
+                output
+                    .and_then(|p| p.extension())
+                    .and_then(|e| e.to_str())
+                    .map(|ext| formats::format_from_extension(ext).to_string())
+            })
+    };
 
-    // We need a preliminary format to determine the output extension/path.
-    // render_core will finalize from metadata if this is None.
+    // Determine output extension (target override or renderer default)
     let preliminary_format = resolved_format.as_deref().unwrap_or("html");
     let renderer = formats::create_renderer(preliminary_format)?;
-    let output_path = resolve_output_path(input, output, renderer.extension());
+    let ext = target.map(|t| t.output_extension()).unwrap_or(renderer.extension());
+
+    // Resolve output path
+    let output_path = if let Some(o) = output {
+        o.to_path_buf()
+    } else if let (Some(t), Some(fmt)) = (target, format) {
+        // Use target-aware output path when a target is specified
+        project::resolve_target_output_path(input, fmt, ext, project_root)
+    } else {
+        input.with_extension(ext)
+    };
 
     let result = render_core(input, &output_path, resolved_format.as_deref(), overrides)?;
 

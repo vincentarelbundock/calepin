@@ -237,7 +237,7 @@ fn pdf_viewer_html(pdf_filename: &str, version: u64) -> String {
 /// Render to LaTeX/Typst, write the file, compile to PDF. Returns the PDF path.
 /// Always compiles quietly — the spinner shows status instead.
 fn render_and_compile(input: &Path, format: &str, overrides: &[String], _quiet: bool) -> Result<std::path::PathBuf> {
-    let (output_path, content, renderer) = crate::render_file(input, None, Some(format), overrides)?;
+    let (output_path, content, renderer) = crate::render_file(input, None, Some(format), overrides, None, None)?;
     renderer.write_output(&content, &output_path)?;
     crate::compile::compile_to_pdf(&output_path, true)?;
     Ok(output_path.with_extension("pdf"))
@@ -245,14 +245,14 @@ fn render_and_compile(input: &Path, format: &str, overrides: &[String], _quiet: 
 
 /// Detect the format for preview from CLI flags or YAML front matter.
 fn resolve_preview_format(args: &PreviewArgs, input: &Path) -> Result<String> {
-    if let Some(ref fmt) = args.format {
+    if let Some(ref fmt) = args.target {
         return Ok(fmt.clone());
     }
     // Check YAML front matter
     let text = fs::read_to_string(input)
         .with_context(|| format!("Failed to read {}", input.display()))?;
     let (metadata, _) = crate::parse::yaml::split_yaml(&text)?;
-    Ok(metadata.format.unwrap_or_else(|| "html".to_string()))
+    Ok(metadata.target.unwrap_or_else(|| "html".to_string()))
 }
 
 fn local_time_str() -> String {
@@ -266,7 +266,7 @@ fn local_time_str() -> String {
 }
 
 fn render_html(input: &Path, overrides: &[String]) -> Result<String> {
-    let (_path, html, _renderer) = crate::render_file(input, None, Some("html"), overrides)?;
+    let (_path, html, _renderer) = crate::render_file(input, None, Some("html"), overrides, None, None)?;
     Ok(html)
 }
 

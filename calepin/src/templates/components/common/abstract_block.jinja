@@ -1,12 +1,12 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <div class="abstract">
 {{abstract}}
 </div>
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 \begin{abstract}
 {{abstract}}
 \end{abstract}
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 #pad(x: 1cm)[
   #align(center)[#smallcaps[Abstract]]
   #v(0.5em)

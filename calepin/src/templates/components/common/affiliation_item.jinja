@@ -1,6 +1,6 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
     <p class="affiliation">{{number}}{{display}}</p>
-{%- elif format == "markdown" %}
+{%- elif base == "markdown" %}
 {{display}}
 {%- else %}
 {{number}}{{display}}

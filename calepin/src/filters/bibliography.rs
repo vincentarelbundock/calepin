@@ -236,7 +236,7 @@ fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
     }
 
     // 3. Built-in
-    let default_csl = include_str!("../templates/misc/default.csl");
+    let default_csl = include_str!("../templates/assets/csl/default.csl");
     IndependentStyle::from_xml(default_csl)
         .map_err(|e| anyhow::anyhow!("Failed to parse default CSL: {:?}", e))
 }

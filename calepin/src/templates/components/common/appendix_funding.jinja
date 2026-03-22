@@ -1,16 +1,16 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <section class="appendix-section">
 <h2>Funding</h2>
 <ul>
 {{items}}
 </ul>
 </section>
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 \subsection*{Funding}
 \begin{itemize}
 {{items}}
 \end{itemize}
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 == Funding
 {{items}}
 {%- else %}

@@ -1,13 +1,13 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <div class="theorem-env {{type_class}}"{{id_attr}}>
 <p class="thm-heading"><strong>{{type_name}} {{number}}.</strong></p>
 <div class="thm-body">
 {{children}}
 </div>
 </div>
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 \par\medskip\noindent\textbf{{_lb}}{{type_name}} {{number}}.{{_rb}}{{label}} {{children}}\medskip
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 #block(width: 100%, above: 1em, below: 1em)[*{{type_name}} {{number}}.* {{children}}]{{label}}
 {%- else %}
 **{{type_name}} {{number}}.** {{children}}

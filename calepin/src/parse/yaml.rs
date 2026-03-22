@@ -65,9 +65,9 @@ fn parse_metadata(table: &Table) -> Result<Metadata> {
             "citation" => meta.citation = parse_citation(v),
             "funding" => meta.funding = parse_funding(v),
             "appendix-style" => meta.appendix_style = v.as_str().map(String::from),
-            "format" => {
-                meta.format = v.as_str().map(String::from).or_else(|| {
-                    // Support `format: { html: default }` or [format]\n html = "default"
+            "target" | "format" => {
+                meta.target = v.as_str().map(String::from).or_else(|| {
+                    // Support `target: { html: default }` or [target]\n html = "default"
                     v.as_table()
                         .and_then(|t| t.first())
                         .map(|(k, _)| k.clone())
@@ -499,14 +499,14 @@ mod tests {
     fn test_format_mapping() {
         let text = "---\ntitle: Test\nformat:\n  html: default\n---\nBody";
         let (meta, _) = split_yaml(text).unwrap();
-        assert_eq!(meta.format.as_deref(), Some("html"));
+        assert_eq!(meta.target.as_deref(), Some("html"));
     }
 
     #[test]
     fn test_format_string() {
         let text = "---\nformat: latex\n---\nBody";
         let (meta, _) = split_yaml(text).unwrap();
-        assert_eq!(meta.format.as_deref(), Some("latex"));
+        assert_eq!(meta.target.as_deref(), Some("latex"));
     }
 
     #[test]
@@ -529,7 +529,7 @@ mod tests {
         let (meta, body) = split_yaml(text).unwrap();
         assert_eq!(meta.title.as_deref(), Some("Hello"));
         assert_eq!(meta.author, Some(vec!["World".to_string()]));
-        assert_eq!(meta.format.as_deref(), Some("html"));
+        assert_eq!(meta.target.as_deref(), Some("html"));
         assert_eq!(body, "Body");
     }
 

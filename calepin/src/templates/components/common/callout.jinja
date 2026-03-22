@@ -1,4 +1,4 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
   {%- if collapse == "true" %}
 <details class="callout callout-{{callout_type}} callout-{{appearance}}"{{id_attr}}>
 <summary>{{header}}</summary>
@@ -14,7 +14,7 @@
 </div>
 </div>
   {%- endif %}
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
   {%- if callout_type == "note" %}
 \begin{tcolorbox}[enhanced, breakable, colback=blue!5, colframe=blue!40,
   {%- elif callout_type == "tip" %}
@@ -33,7 +33,7 @@
   title={{title}}, fonttitle=\bfseries]
 {{children}}
 \end{tcolorbox}
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
   {%- if callout_type == "note" %}
 #block(fill: rgb("#dbeafe"), stroke: (left: 3pt + rgb("#3b82f6")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
   {%- elif callout_type == "tip" %}

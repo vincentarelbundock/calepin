@@ -112,34 +112,90 @@ fn strip_markdown_formatting(text: &str) -> String {
     result.trim().to_string()
 }
 
-const BUILTIN_HTML_TEMPLATE: &str = include_str!("../templates/pages/calepin.html");
-const BUILTIN_LATEX_TEMPLATE: &str = include_str!("../templates/pages/calepin.latex");
-const BUILTIN_TYPST_TEMPLATE: &str = include_str!("../templates/pages/calepin.typst");
-const BUILTIN_CSS: &str = include_str!("../templates/pages/calepin.css");
+const BUILTIN_HTML_TEMPLATE: &str = include_str!("../templates/templates/html/calepin.html");
+const BUILTIN_LATEX_TEMPLATE: &str = include_str!("../templates/templates/latex/calepin.latex");
+const BUILTIN_TYPST_TEMPLATE: &str = include_str!("../templates/templates/typst/calepin.typst");
+const BUILTIN_CSS: &str = include_str!("../templates/templates/html/calepin.css");
 
 /// Load a page template with override lookup:
-///   1. _calepin/templates/{filename}
-///   2. ~/.config/calepin/templates/{filename}
-///   3. Built-in (compiled into binary)
+///   1. Project templates/{base}/ or templates/common/
+///   2. Legacy _calepin/templates/
+///   3. User ~/.config/calepin/templates/
+///   4. Built-in (compiled into binary)
+///
+/// Accepts either a legacy filename like "calepin.html" or a (template_name, base)
+/// pair via load_page_template_for_base().
 pub fn load_page_template(filename: &str) -> String {
+    // Extract template name and base from filename (e.g., "calepin.html" -> ("calepin", "html"))
+    if let Some(dot) = filename.rfind('.') {
+        let name = &filename[..dot];
+        let ext = &filename[dot + 1..];
+        // Map extension back to base name for the new resolver
+        let base = match ext {
+            "tex" => "latex",
+            "typ" => "typst",
+            "md" => "markdown",
+            other => other,
+        };
+        let result = load_page_template_for_base(name, base);
+        if !result.is_empty() {
+            return result;
+        }
+    }
+    // Legacy fallback: direct path lookup
     if let Some(path) = crate::paths::resolve_path_cwd("templates", filename) {
         if let Ok(s) = std::fs::read_to_string(&path) {
             return s;
         }
     }
+    builtin_page_template(filename)
+}
+
+/// Load a page template by name and base using the three-layer model.
+pub fn load_page_template_for_base(template_name: &str, base: &str) -> String {
+    // Three-layer resolution
+    if let Some(path) = crate::paths::resolve_template(template_name, base) {
+        if let Ok(s) = std::fs::read_to_string(&path) {
+            return s;
+        }
+    }
+    // Built-in fallback
+    let ext = crate::paths::base_to_ext(base);
+    let filename = format!("{}.{}", template_name, ext);
+    builtin_page_template(&filename)
+}
+
+/// Return built-in page template content by filename.
+fn builtin_page_template(filename: &str) -> String {
     match filename {
         "calepin.html" => BUILTIN_HTML_TEMPLATE.to_string(),
-        "calepin.latex" => BUILTIN_LATEX_TEMPLATE.to_string(),
-        "calepin.typst" => BUILTIN_TYPST_TEMPLATE.to_string(),
+        "calepin.latex" | "calepin.tex" => BUILTIN_LATEX_TEMPLATE.to_string(),
+        "calepin.typst" | "calepin.typ" => BUILTIN_TYPST_TEMPLATE.to_string(),
         "calepin.css" => BUILTIN_CSS.to_string(),
         _ => String::new(),
     }
 }
 
-pub fn html_template() -> String { load_page_template("calepin.html") }
-pub fn latex_template() -> String { load_page_template("calepin.latex") }
-pub fn typst_template() -> String { load_page_template("calepin.typst") }
-pub fn default_css() -> String { load_page_template("calepin.css") }
+pub fn html_template() -> String { load_page_template_for_base("calepin", "html") }
+pub fn latex_template() -> String { load_page_template_for_base("calepin", "latex") }
+pub fn typst_template() -> String { load_page_template_for_base("calepin", "typst") }
+pub fn default_css() -> String {
+    // Check project/user overrides for CSS
+    let root = std::path::Path::new(".");
+    let p = root.join("templates").join("html").join("calepin.css");
+    if p.exists() {
+        if let Ok(s) = std::fs::read_to_string(&p) {
+            return s;
+        }
+    }
+    // Legacy path
+    if let Some(path) = crate::paths::resolve_path_cwd("templates", "calepin.css") {
+        if let Ok(s) = std::fs::read_to_string(&path) {
+            return s;
+        }
+    }
+    BUILTIN_CSS.to_string()
+}
 
 /// Apply MiniJinja template rendering to a template string with variable substitution.
 // ---------------------------------------------------------------------------
@@ -253,7 +309,7 @@ fn render_block(name: &str, ext: &str, vars: &HashMap<String, String>, fallback:
     use crate::render::elements::resolve_element_template;
     if let Some(tpl) = resolve_element_template(name, ext) {
         let mut vars = vars.clone();
-        vars.insert("format".to_string(), ext.to_string());
+        vars.insert("base".to_string(), ext.to_string());
         apply_template(&tpl, &vars)
     } else {
         fallback.to_string()
@@ -287,6 +343,11 @@ pub fn build_template_vars_with_headings(
         format!("calepin {}", env!("CARGO_PKG_VERSION")),
     );
     vars.insert("preamble".to_string(), String::new());
+
+    // `base` = rendering engine (html, latex, typst, markdown)
+    // `target` = named output profile (defaults to base when no target specified)
+    vars.insert("base".to_string(), ext.to_string());
+    vars.insert("target".to_string(), ext.to_string());
 
     // Plain title (used in <title> etc.) — strip markdown image/link syntax
     let plain_title = meta.title.as_deref().unwrap_or("Untitled");
@@ -490,7 +551,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
             let content = format_link(text, lic.url.as_deref(), ext);
             if let Some(tpl) = resolve_element_template("appendix_license", ext) {
                 let mut vars = HashMap::new();
-                vars.insert("format".to_string(), fmt.clone());
+                vars.insert("base".to_string(), fmt.clone());
                 vars.insert("content".to_string(), content);
                 sections.push(apply_template(&tpl, &vars));
             }
@@ -502,7 +563,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
         let content = build_citation_text(meta, cite, ext);
         if let Some(tpl) = resolve_element_template("appendix_citation", ext) {
             let mut vars = HashMap::new();
-            vars.insert("format".to_string(), fmt.clone());
+            vars.insert("base".to_string(), fmt.clone());
             vars.insert("content".to_string(), content);
             sections.push(apply_template(&tpl, &vars));
         }
@@ -514,7 +575,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
         if !text.is_empty() {
             if let Some(tpl) = resolve_element_template("appendix_copyright", ext) {
                 let mut vars = HashMap::new();
-                vars.insert("format".to_string(), fmt.clone());
+                vars.insert("base".to_string(), fmt.clone());
                 vars.insert("content".to_string(), text);
                 sections.push(apply_template(&tpl, &vars));
             }
@@ -527,7 +588,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
         if !items.is_empty() {
             if let Some(tpl) = resolve_element_template("appendix_funding", ext) {
                 let mut vars = HashMap::new();
-                vars.insert("format".to_string(), fmt.clone());
+                vars.insert("base".to_string(), fmt.clone());
                 vars.insert("items".to_string(), items);
                 sections.push(apply_template(&tpl, &vars));
             }
@@ -538,7 +599,7 @@ fn build_appendix(meta: &Metadata, ext: &str) -> String {
         String::new()
     } else if let Some(tpl) = resolve_element_template("appendix", ext) {
         let mut vars = HashMap::new();
-        vars.insert("format".to_string(), fmt);
+        vars.insert("base".to_string(), fmt);
         vars.insert("sections".to_string(), sections.join("\n"));
         apply_template(&tpl, &vars)
     } else {
@@ -719,7 +780,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
 
             if let Some(ref tpl) = author_tpl {
                 let mut vars = HashMap::new();
-                vars.insert("format".to_string(), ext.to_string());
+                vars.insert("base".to_string(), ext.to_string());
                 vars.insert("name".to_string(), author.name.literal.clone());
                 vars.insert("superscripts".to_string(), superscripts);
                 vars.insert("corresponding".to_string(), corresponding);
@@ -749,7 +810,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
             };
             if let Some(ref tpl) = aff_tpl {
                 let mut vars = HashMap::new();
-                vars.insert("format".to_string(), ext.to_string());
+                vars.insert("base".to_string(), ext.to_string());
                 vars.insert("number".to_string(), number);
                 vars.insert("display".to_string(), display);
                 Some(apply_template(tpl, &vars))
@@ -819,7 +880,7 @@ fn build_author_block(meta: &Metadata, ext: &str) -> String {
 
         if let Some(tpl) = resolve_element_template("author_block", ext) {
             let mut vars = HashMap::new();
-            vars.insert("format".to_string(), ext.to_string());
+            vars.insert("base".to_string(), ext.to_string());
             vars.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
             vars.insert("authors".to_string(), authors_joined);
             vars.insert("affiliations".to_string(), affiliations_joined);

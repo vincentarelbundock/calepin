@@ -390,7 +390,8 @@ pub fn process_body(
 
     // 3. Build context with metadata, variables, and environment
     let context = minijinja::context! {
-        format => format,
+        base => format,     // rendering engine (html, latex, typst, markdown)
+        target => format,   // target name (defaults to base when no target specified)
         meta => build_meta_map(metadata),
         var => build_variables_map(metadata),
         env => std::env::vars().collect::<HashMap<String, String>>(),

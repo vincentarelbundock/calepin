@@ -98,6 +98,112 @@ pub fn resolve_path_cwd(dir: &str, filename: &str) -> Option<PathBuf> {
     resolve_path(Path::new("."), dir, filename)
 }
 
+// ---------------------------------------------------------------------------
+// New three-layer resolution (project root / user config / built-in)
+// ---------------------------------------------------------------------------
+
+/// Map a base name to its file extension for template/component lookup.
+pub fn base_to_ext(base: &str) -> &str {
+    match base {
+        "html" => "html",
+        "latex" => "tex",
+        "typst" => "typ",
+        "markdown" => "md",
+        _ => base,
+    }
+}
+
+/// Resolve a component (element template) using the three-layer model.
+///
+/// Lookup order (first match wins):
+///   1. `{project_root}/components/{base}/{name}.{ext}` (base-specific)
+///   2. `{project_root}/components/common/{name}.jinja` (generic)
+///   3. `~/.config/calepin/components/{base}/{name}.{ext}`
+///   4. `~/.config/calepin/components/common/{name}.jinja`
+///   5. (caller falls back to built-in)
+///
+/// Also checks legacy `_calepin/elements/{name}.{ext}` for backward compatibility.
+pub fn resolve_component(name: &str, base: &str) -> Option<PathBuf> {
+    let ext = base_to_ext(base);
+    let base_specific = format!("{}.{}", name, ext);
+    let generic = format!("{}.jinja", name);
+
+    // Project root (CWD for now)
+    let root = Path::new(".");
+
+    // Base-specific in project
+    let p = root.join("components").join(base).join(&base_specific);
+    if p.exists() { return Some(p); }
+
+    // Generic in project
+    let p = root.join("components").join("common").join(&generic);
+    if p.exists() { return Some(p); }
+
+    // Legacy: _calepin/elements/
+    let p = root.join("_calepin").join("elements").join(&base_specific);
+    if p.exists() { return Some(p); }
+
+    // User config
+    if let Ok(home) = std::env::var("HOME") {
+        let user = Path::new(&home).join(".config/calepin");
+        let p = user.join("components").join(base).join(&base_specific);
+        if p.exists() { return Some(p); }
+        let p = user.join("components").join("common").join(&generic);
+        if p.exists() { return Some(p); }
+        // Legacy user path
+        let p = user.join("elements").join(&base_specific);
+        if p.exists() { return Some(p); }
+    }
+
+    None
+}
+
+/// Resolve a page template using the three-layer model.
+///
+/// Lookup order (first match wins):
+///   1. `{project_root}/templates/{base}/{template_name}.{ext}`
+///   2. `{project_root}/templates/common/{template_name}.jinja`
+///   3. `~/.config/calepin/templates/{base}/{template_name}.{ext}`
+///   4. `~/.config/calepin/templates/common/{template_name}.jinja`
+///   5. (caller falls back to built-in)
+///
+/// Also checks legacy `_calepin/templates/` for backward compatibility.
+pub fn resolve_template(template_name: &str, base: &str) -> Option<PathBuf> {
+    let ext = base_to_ext(base);
+    let base_specific = format!("{}.{}", template_name, ext);
+    let generic = format!("{}.jinja", template_name);
+
+    let root = Path::new(".");
+
+    // Base-specific in project
+    let p = root.join("templates").join(base).join(&base_specific);
+    if p.exists() { return Some(p); }
+
+    // Generic in project
+    let p = root.join("templates").join("common").join(&generic);
+    if p.exists() { return Some(p); }
+
+    // Legacy: _calepin/templates/
+    // Map base name to legacy filename format (e.g., "calepin.html")
+    let legacy_name = format!("{}.{}", template_name, base);
+    let p = root.join("_calepin").join("templates").join(&legacy_name);
+    if p.exists() { return Some(p); }
+
+    // User config
+    if let Ok(home) = std::env::var("HOME") {
+        let user = Path::new(&home).join(".config/calepin");
+        let p = user.join("templates").join(base).join(&base_specific);
+        if p.exists() { return Some(p); }
+        let p = user.join("templates").join("common").join(&generic);
+        if p.exists() { return Some(p); }
+        // Legacy user path
+        let p = user.join("templates").join(&legacy_name);
+        if p.exists() { return Some(p); }
+    }
+
+    None
+}
+
 /// Find the first file matching an extension in `{document_dir}/_calepin/{dir}/`
 /// then `~/.config/calepin/{dir}/`.
 /// Returns the alphabetically first match.

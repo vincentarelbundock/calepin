@@ -1,13 +1,13 @@
-{%- if format == "html" %}
+{%- if base == "html" %}
 <div class="authors">
 {{authors}}
 {{affiliations}}
 {{corresponding_note}}
 </div>
-{%- elif format == "latex" %}
+{%- elif base == "latex" %}
 {{authors_cmd}}
 {{affiliations}}
-{%- elif format == "typst" %}
+{%- elif base == "typst" %}
 #text(size: 12pt)[{{authors}}]
 {{affiliations}}
 {%- else %}
