@@ -70,7 +70,7 @@ fn serve_static(request: tiny_http::Request, url: &str, serve_dir: &PathBuf) {
     if file_path.is_file() {
         match std::fs::read(&file_path) {
             Ok(data) => {
-                let mime = guess_mime(&file_path);
+                let mime = resolve_mime(&file_path);
                 let header = Header::from_bytes("Content-Type", mime).unwrap();
                 let response = Response::from_data(data).with_header(header);
                 let _ = request.respond(response);
@@ -87,7 +87,7 @@ fn serve_static(request: tiny_http::Request, url: &str, serve_dir: &PathBuf) {
     }
 }
 
-fn guess_mime(path: &std::path::Path) -> &'static str {
+fn resolve_mime(path: &std::path::Path) -> &'static str {
     match path.extension().and_then(|e| e.to_str()) {
         Some("html") => "text/html; charset=utf-8",
         Some("css") => "text/css",
