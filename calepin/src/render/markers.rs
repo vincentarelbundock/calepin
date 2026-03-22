@@ -55,6 +55,21 @@ static RE_EQ_LABEL: LazyLock<Regex> = LazyLock::new(|| {
     )).unwrap()
 });
 
+/// Matches math markers: `\u{FFFF}M<digits>\u{FFFE}`
+static RE_MATH: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!("{}{}(\\d+){}", MS, TY_MATH, ME)).unwrap()
+});
+
+/// Matches raw span markers: `\u{FFFF}R<digits>\u{FFFE}`
+static RE_RAW: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!("{}{}(\\d+){}", MS, TY_RAW, ME)).unwrap()
+});
+
+/// Matches shortcode raw markers: `\u{FFFF}S<digits>\u{FFFE}`
+static RE_SC_RAW: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!("{}{}(\\d+){}", MS, TY_SC_RAW, ME)).unwrap()
+});
+
 // ---------------------------------------------------------------------------
 // Input sanitization
 // ---------------------------------------------------------------------------
@@ -234,12 +249,10 @@ pub fn protect_math(text: &str) -> (String, Vec<String>) {
 
 /// Restore math expressions from markers.
 pub fn restore_math(text: &str, expressions: &[String]) -> String {
-    // Fast path: no markers
     if !text.contains(MS) {
         return text.to_string();
     }
-    let re = Regex::new(&format!("{}{}(\\d+){}", MS, TY_MATH, ME)).unwrap();
-    re.replace_all(text, |caps: &regex::Captures| {
+    RE_MATH.replace_all(text, |caps: &regex::Captures| {
         let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
         expressions.get(idx).cloned().unwrap_or_default()
     }).to_string()
@@ -295,8 +308,7 @@ pub fn resolve_raw(text: &str, fragments: &[String]) -> String {
     if !text.contains(MS) {
         return text.to_string();
     }
-    let re = Regex::new(&format!("{}{}(\\d+){}", MS, TY_RAW, ME)).unwrap();
-    re.replace_all(text, |caps: &regex::Captures| {
+    RE_RAW.replace_all(text, |caps: &regex::Captures| {
         let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
         fragments.get(idx).cloned().unwrap_or_default()
     }).to_string()
@@ -307,8 +319,7 @@ pub fn resolve_shortcode_raw(text: &str, fragments: &[String]) -> String {
     if !text.contains(MS) {
         return text.to_string();
     }
-    let re = Regex::new(&format!("{}{}(\\d+){}", MS, TY_SC_RAW, ME)).unwrap();
-    re.replace_all(text, |caps: &regex::Captures| {
+    RE_SC_RAW.replace_all(text, |caps: &regex::Captures| {
         let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
         fragments.get(idx).cloned().unwrap_or_default()
     }).to_string()
@@ -388,7 +399,7 @@ fn expand_line_blocks(text: &str) -> String {
 }
 
 /// Apply Pandoc-extension preprocessing before comrak.
-pub fn preprocess(text: &str) -> String {
+pub fn preprocess_markdown(text: &str) -> String {
     let text = expand_inline_footnotes(text);
     expand_line_blocks(&text)
 }

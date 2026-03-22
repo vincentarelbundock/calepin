@@ -11,7 +11,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use crate::render::markdown::{comrak_options, ImageAttrs};
+use crate::render::markdown::{build_comrak_options, ImageAttrs};
 use crate::render::markers;
 use crate::util::slugify;
 
@@ -227,7 +227,7 @@ pub fn walk_and_render_with_metadata(
     raw_fragments: &[String],
     options: &WalkOptions,
 ) -> WalkResult {
-    let preprocessed = markers::preprocess(markdown);
+    let preprocessed = markers::preprocess_markdown(markdown);
     let (protected, math) = markers::protect_math(&preprocessed);
     let (raw, metadata) = walk_ast(emitter, &protected, options);
     let restored = markers::restore_math(&raw, &math);
@@ -291,7 +291,7 @@ struct PendingImage {
 
 fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) -> (String, WalkMetadata) {
     let arena = Arena::new();
-    let comrak_opts = comrak_options();
+    let comrak_opts = build_comrak_options();
     let root = parse_document(&arena, markdown, &comrak_opts);
 
     // Pre-pass 1: assign sequential footnote IDs (continuing from previous Text elements).

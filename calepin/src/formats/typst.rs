@@ -15,8 +15,8 @@ impl OutputRenderer for TypstRenderer {
         meta: &Metadata,
         _renderer: &ElementRenderer,
     ) -> Option<String> {
-        let vars = template::build_typst_vars(meta, body);
-        let tpl = template::typst_template();
+        let vars = template::build_template_vars(meta, body, "typst");
+        let tpl = template::load_page_template("page", "typst");
         Some(template::render_page_template(&tpl, &vars, "typst"))
     }
 }

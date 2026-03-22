@@ -36,7 +36,7 @@ fn resolve_template_alias(name: &str) -> &str {
 
 /// Look up a built-in template by name and base.
 /// Checks `templates/{base}/{name}.{ext}` then `templates/common/{name}.jinja`.
-pub fn builtin_template(name: &str, base: &str) -> Option<&'static str> {
+pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> {
     let resolved = resolve_template_alias(name);
     let ext = crate::paths::base_to_ext(base);
 
@@ -141,7 +141,7 @@ impl ElementRenderer {
 
     /// Render the combined footnote section from all accumulated Text elements.
     /// Returns empty string if no footnotes or if format is not HTML.
-    pub fn footnote_section(&self) -> String {
+    pub fn render_footnote_section(&self) -> String {
         let defs = self.accumulated_footnote_defs.borrow();
         if defs.is_empty() || self.ext != "html" {
             return String::new();
@@ -149,9 +149,8 @@ impl ElementRenderer {
         crate::render::html_ast::render_footnote_section(&defs)
     }
 
-    pub fn get_template(&self, name: &str) -> String {
+    pub fn render_template(&self, name: &str) -> String {
         let mut vars = HashMap::new();
-        vars.insert("base".to_string(), self.ext.clone());
         vars.insert("base".to_string(), self.ext.clone());
         self.template_env.render(name, &vars)
     }
@@ -182,7 +181,7 @@ impl ElementRenderer {
                             min_heading_level: self.min_heading_level.get(),
                             suppress_footnote_section: true,
                         };
-                        let result = crate::render::markdown::render_html_full_with_metadata(
+                        let result = crate::render::markdown::render_html_with_metadata(
                             &processed, &fragments, &options,
                         );
                         self.footnote_counter.set(result.metadata.footnote_counter_end);
@@ -211,7 +210,7 @@ impl ElementRenderer {
                     }
                     "latex" => {
                         let fn_start = self.footnote_counter.get();
-                        let (output, fn_end) = crate::render::latex_emit::markdown_to_latex_with_counter(
+                        let (output, fn_end) = crate::render::latex::markdown_to_latex_with_counter(
                             &processed, &fragments, self.number_sections, fn_start,
                         );
                         self.footnote_counter.set(fn_end);
@@ -257,7 +256,6 @@ impl ElementRenderer {
 
     fn build_template_output(&self, template_name: &str, element: &Element) -> String {
         let mut vars = HashMap::new();
-        vars.insert("base".to_string(), self.ext.clone());
         vars.insert("base".to_string(), self.ext.clone());
 
         // Run element through pipeline filters
@@ -314,29 +312,12 @@ impl ElementRenderer {
     /// These are collected so they can be appended to Text elements that contain
     /// footnote references (`[^name]`), enabling cross-block footnote resolution.
     pub fn collect_footnote_defs(&self, elements: &[Element]) {
-        use regex::Regex;
-        use std::sync::LazyLock;
-        static RE_FN_DEF: LazyLock<Regex> = LazyLock::new(|| {
-            Regex::new(r"(?m)^\[\^[^\]]+\]:.*(?:\n(?:    |\t).*)*").unwrap()
-        });
-
         let mut defs = String::new();
-        for el in elements {
-            if let Element::Text { content } = el {
-                for m in RE_FN_DEF.find_iter(content) {
-                    defs.push_str("\n\n");
-                    defs.push_str(m.as_str());
-                }
-            }
-            // Also recurse into divs
-            if let Element::Div { children, .. } = el {
-                self.collect_footnote_defs_recursive(children, &mut defs);
-            }
-        }
+        Self::collect_footnote_defs_recursive(elements, &mut defs);
         *self.global_footnote_defs.borrow_mut() = defs;
     }
 
-    fn collect_footnote_defs_recursive(&self, elements: &[Element], defs: &mut String) {
+    fn collect_footnote_defs_recursive(elements: &[Element], defs: &mut String) {
         use regex::Regex;
         use std::sync::LazyLock;
         static RE_FN_DEF: LazyLock<Regex> = LazyLock::new(|| {
@@ -351,7 +332,7 @@ impl ElementRenderer {
                 }
             }
             if let Element::Div { children, .. } = el {
-                self.collect_footnote_defs_recursive(children, defs);
+                Self::collect_footnote_defs_recursive(children, defs);
             }
         }
     }
@@ -368,5 +349,5 @@ pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
         }
     }
     // Built-in: discovered from embedded project tree
-    builtin_template(&canonical, ext).map(|s| s.to_string())
+    resolve_builtin_template(&canonical, ext).map(|s| s.to_string())
 }

@@ -195,12 +195,13 @@ impl OutputRenderer for CustomRenderer {
             // Try custom page template first: page.{name}
             let custom_tpl = crate::render::template::load_page_template(
                 &format!("page.{}", self.name),
+                self.base.format(),
             );
             if !custom_tpl.is_empty() {
                 let mut vars = match self.base.format() {
-                    "html" => crate::render::template::build_html_vars(meta, body),
-                    "latex" => crate::render::template::build_latex_vars(meta, body),
-                    "typst" => crate::render::template::build_typst_vars(meta, body),
+                    "html" => crate::render::template::build_template_vars(meta, body, "html"),
+                    "latex" => crate::render::template::build_template_vars(meta, body, "latex"),
+                    "typst" => crate::render::template::build_template_vars(meta, body, "typst"),
                     _ => return None,
                 };
                 // Add syntax highlighting CSS (not included by build_*_vars)

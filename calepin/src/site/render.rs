@@ -108,7 +108,7 @@ fn render_one_page(
         let syntax_css = result.element_renderer.syntax_css_with_scope(
             crate::filters::highlighting::ColorScope::DataTheme,
         );
-        let footnotes = result.element_renderer.footnote_section();
+        let footnotes = result.element_renderer.render_footnote_section();
         let mut body = result.rendered;
         if !syntax_css.is_empty() {
             body = format!("<style>\n{}</style>\n{}", syntax_css, body);
@@ -125,7 +125,7 @@ fn render_one_page(
     let toc = if format == "html" && result.metadata.toc.unwrap_or(true) {
         let depth = if result.metadata.toc_depth == 0 { 3 } else { result.metadata.toc_depth };
         let title = result.metadata.toc_title.as_deref().unwrap_or("Contents");
-        let toc_html = crate::render::template::build_html_toc_from_body(&body, depth, title);
+        let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
         if toc_html.is_empty() { None } else { Some(toc_html) }
     } else {
         None

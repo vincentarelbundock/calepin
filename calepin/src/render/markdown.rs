@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 use crate::render::markers;
 
 /// Common comrak options for all output formats.
-pub fn comrak_options() -> Options<'static> {
+pub fn build_comrak_options() -> Options<'static> {
     let mut options = Options::default();
     options.extension.table = true;
     options.extension.strikethrough = true;
@@ -33,7 +33,7 @@ pub fn render_html(markdown: &str, raw_fragments: &[String]) -> String {
 }
 
 /// Render markdown to HTML and return collected metadata (headings, IDs).
-pub fn render_html_full_with_metadata(
+pub fn render_html_with_metadata(
     markdown: &str,
     raw_fragments: &[String],
     options: &crate::render::ast::WalkOptions,
