@@ -3,7 +3,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use super::config::SiteConfig;
+use crate::project::ProjectConfig;
 use super::discover::PageInfo;
 
 /// Result of rendering a single page for the site.
@@ -20,8 +20,9 @@ pub struct SiteRenderResult {
 /// Returns a map from source path to rendered result.
 pub fn render_pages(
     pages: &[PageInfo],
-    config: &SiteConfig,
+    config: &ProjectConfig,
     base_dir: &Path,
+    output_dir: &Path,
     quiet: bool,
 ) -> Result<HashMap<String, SiteRenderResult>> {
     if pages.is_empty() {
@@ -36,16 +37,16 @@ pub fn render_pages(
     }
 
     // Render all pages in parallel using thread::scope
-    let site_brand = config.brand.as_ref();
     let results: Vec<(String, Result<SiteRenderResult>)> = std::thread::scope(|s| {
         let handles: Vec<_> = pages
             .iter()
             .map(|page| {
                 let overrides = &overrides;
                 let base_dir = base_dir;
+                let output_dir = output_dir;
                 s.spawn(move || {
                     let key = page.source.display().to_string();
-                    let result = render_one_page(page, overrides, base_dir, site_brand);
+                    let result = render_one_page(page, overrides, base_dir, output_dir);
                     (key, result)
                 })
             })
@@ -72,14 +73,12 @@ fn render_one_page(
     page: &PageInfo,
     overrides: &[String],
     base_dir: &Path,
-    site_brand: Option<&crate::brand::Brand>,
+    output_dir: &Path,
 ) -> Result<SiteRenderResult> {
     let input = base_dir.join(&page.source);
-    let output_path = base_dir.join(&page.output);
+    let output_path = output_dir.join(&page.output);
 
-    // Call calepin's render_core() directly — no subprocess, no JSON round-trip.
-    // render_core stops before page template application, giving us the body.
-    let result = crate::render_core_with_brand(&input, &output_path, Some("html"), overrides, site_brand)?;
+    let result = crate::render_core(&input, &output_path, Some("html"), overrides, None)?;
 
     // Prepend syntax highlighting CSS — normally injected by apply_template(),
     // which site mode skips since it has its own page shell.
@@ -118,32 +117,20 @@ fn render_inline_markdown(text: &str) -> String {
     crate::render::markdown::render_inline(text, "html")
 }
 
-fn build_overrides(config: &SiteConfig) -> Vec<String> {
+fn build_overrides(config: &ProjectConfig) -> Vec<String> {
     let mut overrides = Vec::new();
-    if let Some(cache) = config.execute.cache {
-        overrides.push(format!("execute.cache={}", cache));
-    }
-    if let Some(html) = &config.format.html {
-        if let Some(toc) = html.toc {
-            overrides.push(format!("toc={}", toc));
-        }
-        if let Some(ref hs) = html.highlight_style {
-            match hs {
-                super::config::HighlightStyle::Single(s) => {
-                    overrides.push(format!("highlight-style={}", s));
-                }
-                super::config::HighlightStyle::DualTheme { light, dark } => {
-                    overrides.push(format!("highlight-style.light={}", light));
-                    overrides.push(format!("highlight-style.dark={}", dark));
-                }
+
+    // Highlight style from [meta]
+    if let Some(ref meta) = config.meta {
+        if let Some(ref hl) = meta.highlight {
+            if let Some(ref light) = hl.light {
+                overrides.push(format!("highlight-style.light={}", light));
+            }
+            if let Some(ref dark) = hl.dark {
+                overrides.push(format!("highlight-style.dark={}", dark));
             }
         }
-        if let Some(cc) = html.code_copy {
-            overrides.push(format!("code-copy={}", cc));
-        }
-        if let Some(ref co) = html.code_overflow {
-            overrides.push(format!("code-overflow={}", co));
-        }
     }
+
     overrides
 }

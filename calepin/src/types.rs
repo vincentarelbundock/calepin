@@ -291,7 +291,6 @@ pub struct Metadata {
     pub files_dir: Option<String>,
     /// Custom cache directory name (default: _calepin_cache).
     pub cache_dir: Option<String>,
-    pub brand: Option<crate::brand::Brand>,
     pub var: HashMap<String, MetaValue>,
 }
 

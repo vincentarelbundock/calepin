@@ -1,0 +1,287 @@
+/* =================================================================
+   Layer 1 — Variables
+   Override these to re-theme calepin. All components reference
+   only --c-* tokens, never raw color values.
+   Default palette: Nord  https://www.nordtheme.com
+   ================================================================= */
+
+:root {
+  /* Surface & text */
+  --c-bg:           #fafbfc;
+  --c-bg-secondary: #f3f5f7;
+  --c-text:         #2e3440;
+  --c-text-muted:   #616e7c;
+  --c-link:         #5e81ac;
+  --c-border:       #e0e4e8;
+  --c-code-bg:      #f3f5f7;
+  --c-accent:       #5e81ac;
+
+  /* Component accents — semantic meaning */
+  --c-note:         #5e81ac;
+  --c-tip:          #a3be8c;
+  --c-warning:      #ebcb8b;
+  --c-error:        #bf616a;
+  --c-important:    #b48ead;
+}
+
+[data-theme="dark"] {
+  --c-bg:           #2f3643;
+  --c-bg-secondary: #353d4c;
+  --c-text:         #e5e9f0;
+  --c-text-muted:   #9aa3b0;
+  --c-link:         #88c0d0;
+  --c-border:       #4a5568;
+  --c-code-bg:      #343c4b;
+  --c-accent:       #88c0d0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-bg:           #2f3643;
+    --c-bg-secondary: #353d4c;
+    --c-text:         #e5e9f0;
+    --c-text-muted:   #9aa3b0;
+    --c-link:         #88c0d0;
+    --c-border:       #4a5568;
+    --c-code-bg:      #343c4b;
+    --c-accent:       #88c0d0;
+  }
+}
+
+/* =================================================================
+   Layer 2 — Classless base
+   Styles bare HTML elements. A plain .qmd with no calepin-specific
+   features looks good with just this layer.
+   ================================================================= */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scrollbar-color: color-mix(in srgb, var(--c-text-muted) 30%, transparent) transparent; }
+
+/* Thin, subtle scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--c-text-muted) 25%, transparent); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--c-text-muted) 45%, transparent); }
+
+body {
+  margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-size: 1rem; line-height: 1.6;
+  color: var(--c-text); background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+body > main { max-width: 48rem; margin: 0 auto; padding: 2rem 1.5rem; }
+
+a { color: var(--c-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img { max-width: 100%; height: auto; }
+hr { border: none; border-top: 1px solid var(--c-border); margin: 2em 0; }
+
+blockquote {
+  margin: 1em 0; padding: 0.5rem 1rem;
+  border-left: 4px solid var(--c-border); color: var(--c-text-muted);
+}
+
+table:not(.tinytable) { width: 100%; border-collapse: collapse; margin: 1em 0; }
+table:not(.tinytable) th, table:not(.tinytable) td { padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--c-border); text-align: left; }
+table:not(.tinytable) th { font-weight: 600; }
+
+.table-div { margin: 1.5rem 0; }
+.table-caption, .figure .caption { text-align: center; font-size: 0.9rem; color: color-mix(in srgb, var(--c-text) 70%, var(--c-text-muted)); }
+
+h1, h2, h3, h4, h5, h6 { font-weight: normal; line-height: 1.25; margin: 1.5em 0 0.5em; color: var(--c-text); }
+h1 { font-size: 1.8rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.15rem; }
+h4 { font-size: 1rem; }
+
+code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.875em; background: var(--c-code-bg); padding: 0.15em 0.35em; border-radius: 3px;
+}
+
+pre {
+  background: var(--c-code-bg); border: 1px solid var(--c-border); border-radius: 4px;
+  padding: 0.8em 1em; overflow-x: auto; line-height: 1.45;
+}
+pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
+
+@media print {
+  body { max-width: 100%; }
+  tr, img { break-inside: avoid; }
+}
+
+/* =================================================================
+   Layer 3 — Calepin components
+   Classes emitted by calepin for specific document features.
+   Each references --c-* tokens for easy re-theming.
+   ================================================================= */
+
+/* --- Heading hierarchy --- */
+article h1, article h2 { font-variant: small-caps; }
+article h3 { font-style: italic; }
+article h1 ~ h2, article h1 ~ * h2 { font-variant: normal; font-style: italic; }
+
+/* --- Code chunk accents --- */
+pre:has(> code.code),
+pre:has(> code.output),
+pre:has(> code.warning),
+pre:has(> code.error),
+pre:has(> code.message) { padding-left: 0.75rem; }
+pre:has(> code.code)    { border-left: 4px solid var(--c-accent); }
+pre:has(> code.output)  { border-left: 4px solid var(--c-text-muted); }
+pre:has(> code.warning) { border-left: 4px solid var(--c-warning); }
+pre:has(> code.error)   { border-left: 4px solid var(--c-error); }
+pre:has(> code.message) { border-left: 4px solid var(--c-note); }
+
+.code-with-filename { margin: 1rem 0; border: 1px solid var(--c-border); border-radius: 4px; overflow: hidden; }
+.code-with-filename .code-filename { background: var(--c-bg-secondary); padding: 0.25rem 0.75rem; font-size: 0.85rem; border-bottom: 1px solid var(--c-border); }
+.code-with-filename pre { margin: 0; border: none; border-radius: 0; border-left: 4px solid var(--c-accent); }
+
+/* --- Theme toggle --- */
+.theme-toggle { position: fixed; top: 0.75rem; right: 0.75rem; z-index: 200; margin: 0; padding: 0; }
+.theme-toggle button { all: unset; cursor: pointer; font-size: 1.2rem; opacity: 0.5; }
+.theme-toggle button:hover { opacity: 1; }
+
+/* --- Section numbers --- */
+.section-number { margin-right: 0.4em; }
+
+/* --- Front matter --- */
+.frontmatter { text-align: center; margin-bottom: 2rem; }
+.frontmatter h1 { margin-bottom: 0.2rem; font-variant: normal; }
+.frontmatter h2 { font-size: 1.1rem; font-weight: normal; font-variant: normal; font-style: normal; margin: 0 0 0.8rem; }
+.frontmatter h3 { font-size: 0.9rem; font-weight: normal; margin: 0; }
+.frontmatter .authors { margin-top: 0.8rem; }
+
+/* --- Abstract --- */
+.abstract { border-left: 3px solid var(--c-border); padding: 0.75rem 1.25rem; margin-bottom: 1.5rem; font-size: 0.95rem; }
+.abstract::before { content: "Abstract"; display: block; font-weight: normal; margin-bottom: 0.4rem; }
+
+/* --- Authors --- */
+.authors { margin: 0.5rem 0; }
+.authors .author { margin: 0.15rem 0; font-size: 1.05rem; }
+.authors .author-orcid { vertical-align: middle; margin-left: 0.2em; }
+.authors .affiliations { margin-top: 0.5rem; }
+.authors .affiliation { margin: 0; font-size: 0.85rem; color: var(--c-text-muted); }
+.authors .corresponding { font-size: 0.85rem; color: var(--c-text-muted); margin-top: 0.3rem; }
+.keywords { font-size: 0.9rem; margin-bottom: 1.5rem; text-align: center; }
+
+/* --- Appendix --- */
+.appendix { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--c-border); font-size: 0.9rem; }
+.appendix h2 { font-size: 1.1rem; }
+
+/* --- Figures --- */
+.figure { text-align: center; margin: 1.5rem 0; }
+.figure img { max-width: 60%; height: auto; }
+.figure .caption { font-size: 0.9rem; color: var(--c-text-muted); margin-top: 0.5rem; }
+.figure.cap-top { display: flex; flex-direction: column-reverse; }
+.figure.cap-top .caption { margin-top: 0; margin-bottom: 0.5rem; }
+
+/* --- Callouts --- */
+.callout { border-left: 4px solid var(--c-border); padding: 0.75rem 1.25rem; margin: 1.5rem 0; border-radius: 0; }
+.callout-header { font-weight: normal; margin-bottom: 0.4rem; }
+.callout-note      { border-color: var(--c-note);      background: color-mix(in srgb, var(--c-note) 8%, var(--c-bg)); }
+.callout-tip       { border-color: var(--c-tip);       background: color-mix(in srgb, var(--c-tip) 8%, var(--c-bg)); }
+.callout-warning   { border-color: var(--c-warning);   background: color-mix(in srgb, var(--c-warning) 8%, var(--c-bg)); }
+.callout-caution   { border-color: var(--c-error);     background: color-mix(in srgb, var(--c-error) 8%, var(--c-bg)); }
+.callout-important { border-color: var(--c-important);  background: color-mix(in srgb, var(--c-important) 8%, var(--c-bg)); }
+.callout-simple { background: transparent; }
+.callout-minimal { background: transparent; border-left: none; border-top: 1px solid var(--c-border); }
+details.callout { cursor: default; }
+details.callout > summary { cursor: pointer; font-weight: normal; margin-bottom: 0.4rem; list-style: none; }
+details.callout > summary::before { content: "\25b6 "; font-size: 0.75em; }
+details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; }
+
+/* --- Theorems --- */
+.theorem-env { margin: 1.5rem 0; padding: 0 0.5rem; }
+.theorem-env .thm-heading { margin-bottom: 0.25rem; }
+.theorem-env .thm-body-italic { font-style: italic; }
+.theorem-env.proof .qed { text-align: right; margin-top: -0.5rem; }
+
+/* --- Tabsets --- */
+.panel-tabset { margin: 1.5rem 0; }
+.panel-tabset .nav-tabs { list-style: none; padding: 0; margin: 0; display: flex; gap: 0; border-bottom: 1px solid var(--c-border); }
+.panel-tabset .nav-tabs li { list-style-type: none; padding: 0; margin: 0; }
+.panel-tabset .nav-tabs li::marker { content: none; }
+.panel-tabset .nav-item { margin: 0; }
+.panel-tabset .nav-link {
+  all: unset; display: block; padding: 0.5rem 1rem;
+  cursor: pointer; font-size: 0.9rem;
+  color: var(--c-text-muted);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+.panel-tabset .nav-link:hover { color: var(--c-text); border-bottom-color: var(--c-border); }
+.panel-tabset .nav-link.active { color: var(--c-text); border-bottom-color: var(--c-accent); font-weight: bold; }
+.panel-tabset .tab-content { padding: 1rem 0.5rem; }
+.panel-tabset .tab-pane { display: none; }
+.panel-tabset .tab-pane.active { display: block; }
+
+/* --- Footnotes --- */
+.footnotes { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--c-border); font-size: 0.9rem; }
+.footnotes ol { padding-left: 1.5rem; }
+.footnote-ref a { text-decoration: none; }
+.footnote-ref { position: relative; scroll-margin-top: 2rem; }
+.footnote-ref .fn-preview {
+  display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 0.25rem;
+  padding: 0.5rem 0.75rem; font-size: 0.85rem; line-height: 1.4;
+  max-width: 300px; width: max-content; box-shadow: 0 2px 8px rgba(0,0,0,0.12); z-index: 100;
+}
+.footnote-ref:hover .fn-preview { display: block; }
+.footnotes li { scroll-margin-top: 2rem; }
+
+/* --- Layout grid --- */
+.layout-grid { margin: 1rem 0; }
+.layout-cell { min-width: 0; }
+.layout-cell .figure { margin: 0; }
+
+/* --- Equations --- */
+.equation { position: relative; text-align: center; margin: 1em 0; }
+.eq-number { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+
+/* --- Page layout with TOC sidebar --- */
+.page-layout { display: flex; justify-content: center; }
+.page-layout > .container { max-width: 48rem; min-width: 0; padding: 2rem 1.5rem; }
+.toc-sidebar {
+  position: sticky; top: 2rem; align-self: flex-start;
+  width: 13rem; flex-shrink: 0;
+  max-height: calc(100vh - 4rem); overflow-y: auto;
+  padding: 2rem 1rem 2rem 0;
+  border-left: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
+}
+@media (max-width: 72rem) {
+  .toc-sidebar { display: none; }
+}
+
+/* --- Table of contents --- */
+.toc { font-size: 0.8rem; line-height: 1.4; }
+.toc-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--c-text-muted); margin-bottom: 0.75rem; }
+.toc ul { list-style: none; padding-left: 0; margin: 0; }
+.toc ul ul { padding-left: 0.8rem; }
+.toc li { margin: 0.15rem 0; }
+.toc a { display: block; padding: 0.2rem 0.5rem; color: var(--c-text-muted); text-decoration: none; border-left: 2px solid transparent; }
+.toc a:hover { color: var(--c-text); }
+.toc a.active { color: var(--c-accent); border-left-color: var(--c-accent); }
+
+/* --- Asides (margin notes) --- */
+.aside {
+  float: right; clear: right; width: 13rem;
+  margin: 0 -15rem 0.5rem 1rem;
+  font-size: 0.8rem; color: var(--c-text-muted); line-height: 1.4;
+}
+@media (max-width: 90rem) {
+  .aside { float: none; width: auto; margin: 0.5rem 0; padding: 0.5rem 0.75rem; border-left: 3px solid var(--c-border); }
+}
+
+/* --- Landscape --- */
+.landscape { page-break-before: always; page-break-after: always; }
+@media print { .landscape { size: landscape; } }
+
+/* --- Multi-column --- */
+.columns { display: flex; gap: 1rem; flex-wrap: wrap; }
+.columns > .column { flex: 1; min-width: 0; }
+
+@media print { .toc { display: none; } }

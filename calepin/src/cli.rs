@@ -107,12 +107,16 @@ pub enum InfoAction {
     },
 }
 
-/// Returns true if the input path looks like a project manifest (.yaml or .yml).
-pub fn is_project_manifest(path: &std::path::Path) -> bool {
-    matches!(
-        path.extension().and_then(|e| e.to_str()),
-        Some("yaml") | Some("yml")
-    )
+/// Returns true if the input is a site config file (_calepin.toml, calepin.toml, or .yaml/.yml).
+pub fn is_site_config(path: &std::path::Path) -> bool {
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    match name {
+        "_calepin.toml" | "calepin.toml" => true,
+        _ => matches!(
+            path.extension().and_then(|e| e.to_str()),
+            Some("yaml") | Some("yml")
+        ),
+    }
 }
 
 /// Print a yellow warning to stderr.

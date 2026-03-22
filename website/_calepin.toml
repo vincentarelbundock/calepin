@@ -1,0 +1,100 @@
+[meta]
+title = "Calepin"
+subtitle = "A notebook and website generator written in Rust"
+url = "https://vincentarelbundock.github.io/calepin"
+csl = "chicago-author-date"
+highlight = {light = "github", dark = "nord"}
+
+[site]
+favicon = "assets/Calepin.svg"
+logo = "assets/Calepin.svg"
+logo-dark = "assets/Calepin_dark.svg"
+pages = [
+  "content/index.qmd",
+  "content/installation.qmd",
+  "content/cli.qmd",
+  ["Authoring",
+    "content/authoring/basics.qmd",
+    "content/authoring/figures.qmd",
+    "content/authoring/tables.qmd",
+    "content/authoring/math.qmd",
+    "content/authoring/bibliography.qmd",
+    "content/authoring/paths.qmd",
+  ],
+  ["Code Execution",
+    "content/code/chunks.qmd",
+    "content/code/inline.qmd",
+    "content/code/r.qmd",
+    "content/code/python.qmd",
+    "content/code/sh.qmd",
+    "content/code/cache.qmd",
+  ],
+  ["Websites", "content/websites/*.qmd"],
+  ["Templates",
+    "content/templates/templates.qmd",
+    "content/templates/jinja.qmd",
+    "content/templates/shortcuts.qmd",
+    "content/templates/elements.qmd",
+    "content/templates/pages.qmd",
+    "content/templates/sites.qmd",
+    "content/templates/yaml.qmd",
+  ],
+  ["Misc", "content/misc/*.qmd"],
+]
+
+[var]
+primary = "#0066cc"
+background = "#ffffff"
+background_dark = "#1a1a2e"
+foreground = "#222222"
+foreground_dark = "#e0e0e0"
+font = "Inter"
+font_headings = "Inter"
+font_mono = "JetBrains Mono"
+navbar_background = "#fafafa"
+navbar_search = true
+sidebar_collapse_level = 0
+
+[[var.navbar_right]]
+icon = "github"
+href = "https://github.com/vincentarelbundock/calepin"
+
+[targets.html]
+base = "html"
+template = "calepin"
+extension = "html"
+fig-extension = "svg"
+preview = "serve"
+
+[targets.latex]
+base = "latex"
+template = "calepin"
+extension = "tex"
+fig-extension = "pdf"
+preview = "serve"
+
+[targets.typst]
+base = "typst"
+template = "calepin"
+extension = "typ"
+fig-extension = "svg"
+preview = "serve"
+
+[targets.pdf-latex]
+inherits = "latex"
+[targets.pdf-latex.compile]
+command = "tectonic {input}"
+extension = "pdf"
+
+[targets.pdf-typst]
+inherits = "typst"
+[targets.pdf-typst.compile]
+command = "typst compile {input} {output}"
+extension = "pdf"
+
+[targets.markdown]
+base = "markdown"
+template = "calepin"
+extension = "md"
+fig-extension = "png"
+preview = "none"

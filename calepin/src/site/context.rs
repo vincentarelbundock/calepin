@@ -1,47 +1,28 @@
+//! Site and page context for template rendering.
+//!
+//! The site builder passes structured context to Jinja templates.
+//! `[meta]` and `[site]` provide the site context. `[var]` is passed
+//! through as arbitrary template variables.
+
 use std::collections::HashMap;
 
 use serde::Serialize;
-use super::config::{NavItem, PageEntry, SiteConfig};
 use super::discover::PageInfo;
-use super::icons;
 use super::render::SiteRenderResult;
+use crate::project::{ProjectConfig, PageNode};
 
-/// Site-level context available to all templates.
+/// Site-level context available to all templates as `{{ site.* }}`.
 #[derive(Debug, Serialize)]
 pub struct SiteContext {
     pub title: Option<String>,
     pub subtitle: Option<String>,
     pub url: Option<String>,
     pub favicon: Option<String>,
-    pub navbar: NavbarContext,
-    pub sidebar: SidebarContext,
+    pub logo: Option<String>,
+    pub logo_dark: Option<String>,
     pub pages: Vec<NavNode>,
     pub dark_mode: bool,
     pub math_block: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct NavbarContext {
-    pub logo: Option<String>,
-    pub logo_dark: Option<String>,
-    pub logo_alt: Option<String>,
-    pub background: Option<String>,
-    pub left: Vec<NavItemContext>,
-    pub right: Vec<NavItemContext>,
-    pub search: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct NavItemContext {
-    pub text: Option<String>,
-    pub href: Option<String>,
-    pub icon: Option<String>,
-    pub icon_svg: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SidebarContext {
-    pub collapse_level: usize,
 }
 
 /// A node in the navigation tree (for sidebar rendering).
@@ -53,7 +34,7 @@ pub struct NavNode {
     pub children: Vec<NavNode>,
 }
 
-/// Per-page context.
+/// Per-page context available to templates as `{{ page.* }}`.
 #[derive(Debug, Serialize)]
 pub struct PageContext {
     pub title: Option<String>,
@@ -91,28 +72,21 @@ pub struct NavLink {
     pub href: String,
 }
 
-/// Build the site-level context from config.
-pub fn build_site_context(config: &SiteConfig, pages: &[PageInfo]) -> SiteContext {
-    let nav_items_left = config
-        .website
-        .navbar
-        .left
-        .iter()
-        .map(nav_item_to_context)
-        .collect();
-    let nav_items_right = config
-        .website
-        .navbar
-        .right
-        .iter()
-        .map(nav_item_to_context)
-        .collect();
+/// Build the site-level context from project config.
+pub fn build_site_context(
+    config: &ProjectConfig,
+    pages: &[PageInfo],
+    base_dir: &std::path::Path,
+) -> SiteContext {
+    let meta = config.meta.as_ref();
+    let site = config.site.as_ref();
 
-    let nav_tree = build_nav_tree(&config.website.pages, pages, "");
+    // Build nav tree from [site].pages
+    let page_nodes = site.map(|s| s.expand_pages(base_dir)).unwrap_or_default();
+    let nav_tree = build_nav_tree(&page_nodes, pages);
 
-    let html_math_method = config.format.html.as_ref()
-        .and_then(|h| h.html_math_method.clone())
-        .unwrap_or_else(|| "katex".to_string());
+    // Math block
+    let html_math_method = "katex".to_string();
     let math_block = {
         let mut vars = HashMap::new();
         vars.insert("html_math_method".to_string(), html_math_method);
@@ -121,94 +95,51 @@ pub fn build_site_context(config: &SiteConfig, pages: &[PageInfo]) -> SiteContex
     };
 
     SiteContext {
-        title: config.website.title.clone(),
-        subtitle: config.website.subtitle.clone(),
-        url: config.website.site_url.clone(),
-        favicon: config.website.favicon.clone(),
-        navbar: NavbarContext {
-            logo: config.website.navbar.logo.clone(),
-            logo_dark: config.website.navbar.logo_dark.clone(),
-            logo_alt: config.website.navbar.logo_alt.clone(),
-            background: config.website.navbar.background.clone(),
-            left: nav_items_left,
-            right: nav_items_right,
-            search: config.website.navbar.search,
-        },
-        sidebar: SidebarContext {
-            collapse_level: config.website.sidebar.collapse_level,
-        },
+        title: meta.and_then(|m| m.title.clone()),
+        subtitle: meta.and_then(|m| m.subtitle.clone()),
+        url: meta.and_then(|m| m.url.clone()),
+        favicon: site.and_then(|s| s.favicon.clone()),
+        logo: site.and_then(|s| s.logo.clone()),
+        logo_dark: site.and_then(|s| s.logo_dark.clone()),
         pages: nav_tree,
         dark_mode: true,
         math_block,
     }
 }
 
-fn nav_item_to_context(item: &NavItem) -> NavItemContext {
-    let icon_svg = item.icon.as_deref().map(icons::get_icon_svg);
-    NavItemContext {
-        text: item.text.clone(),
-        href: item.href.clone(),
-        icon: item.icon.clone(),
-        icon_svg,
-    }
-}
-
-/// Build the navigation tree from config page entries, resolving titles from page metadata.
-fn build_nav_tree(
-    entries: &[PageEntry],
-    pages: &[PageInfo],
-    _current_url: &str,
-) -> Vec<NavNode> {
+/// Build the navigation tree from expanded PageNodes, resolving titles from page metadata.
+fn build_nav_tree(nodes: &[PageNode], pages: &[PageInfo]) -> Vec<NavNode> {
     let page_map: HashMap<String, &PageInfo> = pages
         .iter()
         .map(|p| (p.source.display().to_string(), p))
         .collect();
 
-    entries
-        .iter()
-        .map(|entry| match entry {
-            PageEntry::Simple(path) => {
-                let info = page_map.get(path.as_str());
-                let text = info
-                    .and_then(|p| p.meta.title.clone())
-                    .unwrap_or_else(|| path.clone());
-                let href = info.map(|p| p.url.clone());
-                NavNode {
-                    text: render_inline_markdown(&text),
-                    href,
-                    active: false,
-                    children: vec![],
-                }
+    nodes.iter().map(|node| match node {
+        PageNode::Page(path) => {
+            let info = page_map.get(path.as_str());
+            let text = info
+                .and_then(|p| p.meta.title.clone())
+                .unwrap_or_else(|| path.clone());
+            let href = info.map(|p| p.url.clone());
+            NavNode {
+                text: render_inline_markdown(&text),
+                href,
+                active: false,
+                children: vec![],
             }
-            PageEntry::Page { text, href, .. } => {
-                let info = page_map.get(href.as_str());
-                let display_text = text
-                    .clone()
-                    .or_else(|| info.and_then(|p| p.meta.title.clone()))
-                    .unwrap_or_else(|| href.clone());
-                let resolved_href = if href.ends_with(".qmd") {
-                    info.map(|p| p.url.clone())
-                } else {
-                    Some(href.clone())
-                };
-                NavNode {
-                    text: render_inline_markdown(&display_text),
-                    href: resolved_href,
-                    active: false,
-                    children: vec![],
-                }
+        }
+        PageNode::Section { title, pages: children } => {
+            let child_nodes: Vec<PageNode> = children.iter()
+                .map(|p| PageNode::Page(p.clone()))
+                .collect();
+            NavNode {
+                text: title.clone(),
+                href: None,
+                active: false,
+                children: build_nav_tree(&child_nodes, pages),
             }
-            PageEntry::Section { section, pages: sub } => {
-                let children = build_nav_tree(sub, pages, _current_url);
-                NavNode {
-                    text: section.clone(),
-                    href: None,
-                    active: false,
-                    children,
-                }
-            }
-        })
-        .collect()
+        }
+    }).collect()
 }
 
 /// Mark the active page in the nav tree.
@@ -236,25 +167,13 @@ pub fn build_page_context(
     pages: &[PageInfo],
     listing_items: Option<Vec<ListingItem>>,
 ) -> PageContext {
-    let body = result
-        .map(|r| r.body.clone())
-        .unwrap_or_default();
+    let body = result.map(|r| r.body.clone()).unwrap_or_default();
 
-    // Use render result metadata if available, fall back to frontmatter
-    let title = result
-        .and_then(|r| r.title.clone())
-        .or_else(|| page.meta.title.clone());
-    let date = result
-        .and_then(|r| r.date.clone())
-        .or_else(|| page.meta.date.clone());
-    let subtitle = result
-        .and_then(|r| r.subtitle.clone())
-        .or_else(|| page.meta.subtitle.clone());
-    let abstract_text = result
-        .and_then(|r| r.abstract_text.clone())
-        .or_else(|| page.meta.r#abstract.clone());
+    let title = result.and_then(|r| r.title.clone()).or_else(|| page.meta.title.clone());
+    let date = result.and_then(|r| r.date.clone()).or_else(|| page.meta.date.clone());
+    let subtitle = result.and_then(|r| r.subtitle.clone()).or_else(|| page.meta.subtitle.clone());
+    let abstract_text = result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone());
 
-    // Build prev/next links
     let idx = pages.iter().position(|p| p.source == page.source);
     let prev = idx.and_then(|i| {
         if i > 0 {
@@ -263,9 +182,7 @@ pub fn build_page_context(
                 text: p.meta.title.clone().unwrap_or_else(|| p.source.display().to_string()),
                 href: p.url.clone(),
             })
-        } else {
-            None
-        }
+        } else { None }
     });
     let next = idx.and_then(|i| {
         if i + 1 < pages.len() {
@@ -274,27 +191,20 @@ pub fn build_page_context(
                 text: p.meta.title.clone().unwrap_or_else(|| p.source.display().to_string()),
                 href: p.url.clone(),
             })
-        } else {
-            None
-        }
+        } else { None }
     });
 
-    // Build breadcrumbs
     let breadcrumbs = build_breadcrumbs(page);
 
     PageContext {
-        title,
-        subtitle,
-        date,
+        title, subtitle, date,
         r#abstract: abstract_text,
         body,
         url: page.url.clone(),
         source_url: format!("/_source/{}", page.source.display()),
         toc: result.and_then(|r| r.toc.clone()),
         listing: listing_items,
-        breadcrumbs,
-        prev,
-        next,
+        breadcrumbs, prev, next,
     }
 }
 
@@ -303,9 +213,7 @@ fn build_breadcrumbs(page: &PageInfo) -> Vec<Breadcrumb> {
         text: "Home".to_string(),
         href: Some("/".to_string()),
     }];
-
-    // Add intermediate path components
-    let components: Vec<_> = page.source.components().collect();
+    let components: Vec<_> = page.output.components().collect();
     if components.len() > 1 {
         for comp in components[..components.len() - 1].iter() {
             crumbs.push(Breadcrumb {
@@ -314,19 +222,12 @@ fn build_breadcrumbs(page: &PageInfo) -> Vec<Breadcrumb> {
             });
         }
     }
-
-    // Current page (no link)
     if let Some(title) = &page.meta.title {
-        crumbs.push(Breadcrumb {
-            text: title.clone(),
-            href: None,
-        });
+        crumbs.push(Breadcrumb { text: title.clone(), href: None });
     }
-
     crumbs
 }
 
-/// Render inline markdown to HTML, stripping the <p> wrapper.
 fn render_inline_markdown(text: &str) -> String {
     crate::render::markdown::render_inline(text, "html")
 }

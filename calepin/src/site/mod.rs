@@ -13,7 +13,6 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 
-use config::SiteConfig;
 use context::{build_page_context, build_site_context, mark_active, ListingItem};
 use discover::{discover_listing_pages, discover_pages, PageInfo};
 
@@ -27,15 +26,14 @@ pub fn build_site(
     let cwd = std::env::current_dir()?;
 
     // 1. Load config
-    let (config, found_path) = SiteConfig::load(config_path, &cwd)?;
+    let (config, found_path) = config::load_config(config_path, &cwd)?;
 
-    // base_dir is the directory containing the config file
     let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
     if !quiet {
         eprintln!("Config: {}", found_path.display());
     }
 
-    // 2. Prepare output directory (resolve relative to config dir)
+    // 2. Prepare output directory
     let output = if output.is_relative() {
         &base_dir.join(output)
     } else {
@@ -61,8 +59,6 @@ pub fn build_site(
             all_listing_pages.insert(page.source.display().to_string(), listing_pages);
         }
     }
-
-    // Add listing-discovered pages that aren't already in the main list
     let existing_sources: Vec<String> = pages.iter().map(|p| p.source.display().to_string()).collect();
     for listing_pages in all_listing_pages.values() {
         for lp in listing_pages {
@@ -73,31 +69,32 @@ pub fn build_site(
     }
 
     // 5. Render all pages with calepin (in parallel)
-    let results = render::render_pages(&pages, &config, &base_dir, quiet)?;
+    let results = render::render_pages(&pages, &config, &base_dir, output, quiet)?;
 
     // 6. Initialize MiniJinja
     let env = templates::init_jinja(&base_dir)?;
 
     // 7. Build site context
-    let site_ctx = build_site_context(&config, &pages);
+    let site_ctx = build_site_context(&config, &pages, &base_dir);
 
-    // 8. Render each page through MiniJinja
+    // 8. Convert [var] to minijinja Value for template access
+    let var_ctx = config.var.as_ref()
+        .map(|v| crate::project::target_vars_to_jinja(Some(v)))
+        .unwrap_or_else(|| minijinja::Value::from(()));
+
+    // 9. Render each page through MiniJinja
     for page in &pages {
         let source_key = page.source.display().to_string();
         let result = results.get(&source_key);
 
-        // Build listing items if this page has a listing
         let listing_items = all_listing_pages.get(&source_key).map(|listing_pages| {
-            listing_pages
-                .iter()
-                .map(|lp| ListingItem {
-                    title: lp.meta.title.clone(),
-                    date: lp.meta.date.clone(),
-                    description: lp.meta.description.clone(),
-                    image: lp.meta.image.clone(),
-                    url: lp.url.clone(),
-                })
-                .collect()
+            listing_pages.iter().map(|lp| ListingItem {
+                title: lp.meta.title.clone(),
+                date: lp.meta.date.clone(),
+                description: lp.meta.description.clone(),
+                image: lp.meta.image.clone(),
+                url: lp.url.clone(),
+            }).collect()
         });
 
         let page_ctx = build_page_context(page, result, &pages, listing_items);
@@ -106,33 +103,22 @@ pub fn build_site(
         let mut nav_tree = site_ctx.pages.clone();
         mark_active(&mut nav_tree, &page.url);
 
-        // Build MiniJinja context with active-marked nav tree
         let site_with_active = minijinja::context! {
             site => context::SiteContext {
                 title: site_ctx.title.clone(),
                 subtitle: site_ctx.subtitle.clone(),
                 url: site_ctx.url.clone(),
                 favicon: site_ctx.favicon.clone(),
-                navbar: context::NavbarContext {
-                    logo: site_ctx.navbar.logo.clone(),
-                    logo_dark: site_ctx.navbar.logo_dark.clone(),
-                    logo_alt: site_ctx.navbar.logo_alt.clone(),
-                    background: site_ctx.navbar.background.clone(),
-                    left: site_ctx.navbar.left.clone(),
-                    right: site_ctx.navbar.right.clone(),
-                    search: site_ctx.navbar.search,
-                },
-                sidebar: context::SidebarContext {
-                    collapse_level: site_ctx.sidebar.collapse_level,
-                },
+                logo: site_ctx.logo.clone(),
+                logo_dark: site_ctx.logo_dark.clone(),
                 pages: nav_tree,
                 dark_mode: site_ctx.dark_mode,
                 math_block: site_ctx.math_block.clone(),
             },
             page => page_ctx,
+            var => var_ctx.clone(),
         };
 
-        // Choose template
         let template_name = if page.meta.listing.is_some() {
             "listing.html"
         } else {
@@ -144,7 +130,6 @@ pub fn build_site(
         let rendered = tpl.render(&site_with_active)
             .with_context(|| format!("Failed to render template for {}", source_key))?;
 
-        // Write output
         let output_path = output.join(&page.output);
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent)?;
@@ -152,19 +137,23 @@ pub fn build_site(
         fs::write(&output_path, &rendered)?;
 
         if !quiet {
-            eprintln!("  {} → {}", source_key, output_path.display());
+            eprintln!("  {} -> {}", source_key, output_path.display());
         }
     }
 
-    // 9. Generate search index
-    if config.website.navbar.search {
+    // 10. Generate search index
+    let search_enabled = config.var.as_ref()
+        .and_then(|v| v.get("navbar_search"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if search_enabled {
         search::generate_search_index(&pages, &results, output)?;
         if !quiet {
             eprintln!("  Generated search-index.json");
         }
     }
 
-    // 10. Copy .qmd source files to _source/ for the source viewer
+    // 11. Copy .qmd source files to _source/ for the source viewer
     for page in &pages {
         let source_dest = output.join("_source").join(&page.source);
         if let Some(parent) = source_dest.parent() {
@@ -176,11 +165,8 @@ pub fn build_site(
         }
     }
 
-    // 11. Copy _assets/ to output
+    // 12. Copy assets/ to output
     assets::copy_assets(&base_dir, output)?;
-
-    // 12. Copy resource directories
-    assets::copy_resources(&config.project.resources, &base_dir, output)?;
 
     if !quiet {
         eprintln!("Site built: {}", output.display());
@@ -196,7 +182,6 @@ pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
     let output = output.canonicalize()
         .with_context(|| format!("Site directory not found: {}", output.display()))?;
 
-    // Try requested port, then fall back to nearby ports
     let (server, actual_port) = {
         let mut result = None;
         for p in port..=port + 10 {
@@ -208,7 +193,7 @@ pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
                 break;
             }
         }
-        result.ok_or_else(|| anyhow::anyhow!("Could not find an available port in range {}–{}", port, port + 10))?
+        result.ok_or_else(|| anyhow::anyhow!("Could not find an available port in range {}-{}", port, port + 10))?
     };
 
     eprintln!("Serving at http://localhost:{}", actual_port);
@@ -218,7 +203,6 @@ pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
         let url = request.url().to_string();
         let rel = url.split('?').next().unwrap_or(&url).trim_start_matches('/');
 
-        // Try the path directly, then as index.html
         let mut file_path = output.join(rel);
         if file_path.is_dir() {
             file_path = file_path.join("index.html");

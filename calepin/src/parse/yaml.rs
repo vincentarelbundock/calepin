@@ -83,9 +83,6 @@ fn parse_metadata(table: &Table) -> Result<Metadata> {
             }
             "csl" => meta.csl = v.as_str().map(String::from),
             "html-math-method" => meta.html_math_method = v.as_str().map(String::from),
-            "brand" => {
-                meta.brand = crate::brand::parse_brand_from_value(v);
-            }
             "calepin" => {
                 if let Some(cmap) = v.as_table() {
                     if let Some(pv) = table_get(cmap, "plugins") {

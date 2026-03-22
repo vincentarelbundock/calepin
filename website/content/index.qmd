@@ -1,5 +1,5 @@
 ---
-bibliography: library.bib
+bibliography: ../assets/library.bib
 number-sections: true
 toc: true
 ---

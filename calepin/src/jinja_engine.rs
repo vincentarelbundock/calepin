@@ -6,7 +6,7 @@
 // - restore_code_blocks()  — Re-insert protected code after Jinja evaluation.
 //
 // Built-in Jinja functions:
-//   pagebreak(), video(url, ...), brand(type, name, mode?), kbd(keys),
+//   pagebreak(), video(url, ...), kbd(keys),
 //   lipsum(paragraphs|sentences|words), placeholder(width, height, text, color)
 //
 // Context variables:
@@ -206,48 +206,7 @@ pub fn process_body(
         });
     }
 
-    {
-        let fmt = format.to_string();
-        let frags = Arc::clone(&fragments);
-        // Safety: brand_addr is valid for the duration of process_body() where the
-        // metadata reference is valid. MiniJinja doesn't use threads for evaluation.
-        // We cast to usize to satisfy Send+Sync requirements on closures.
-        let brand_addr: usize = metadata.brand.as_ref()
-            .map_or(0, |b| b as *const _ as usize);
-        env.add_function("brand", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
-            if brand_addr == 0 {
-                return Ok(Value::from(""));
-            }
-            // Safety: brand_addr is valid for the duration of process_body()
-            let brand_ref = unsafe { &*(brand_addr as *const crate::brand::Brand) };
 
-            let typ: &str = kwargs.get("type")
-                .map_err(|_| Error::new(ErrorKind::MissingArgument, "brand() requires a `type` argument (\"color\" or \"logo\")"))?;
-            let name: &str = kwargs.get("name")
-                .map_err(|_| Error::new(ErrorKind::MissingArgument, "brand() requires a `name` argument"))?;
-            let mode: Option<&str> = kwargs.get("mode").ok();
-            kwargs.assert_all_used()?;
-
-            let output = match typ {
-                "color" => crate::brand::brand_color(brand_ref, name, mode).unwrap_or_default(),
-                "logo" => {
-                    let m = mode.unwrap_or("both");
-                    crate::brand::brand_logo_tag(brand_ref, name, m, &fmt).unwrap_or_default()
-                }
-                _ => {
-                    cwarn!("brand(): unknown type '{}'", typ);
-                    String::new()
-                }
-            };
-
-            // brand color returns a plain string (CSS color), doesn't need wrapping
-            if typ == "color" {
-                Ok(Value::from(output))
-            } else {
-                Ok(Value::from_safe_string(wrap_if_needed(&output, &fmt, &frags)))
-            }
-        });
-    }
 
     {
         let fmt = format.to_string();

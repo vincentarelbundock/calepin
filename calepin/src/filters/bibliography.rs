@@ -263,8 +263,9 @@ fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
 
     // 3. Default from calepin.toml
     let default_name = crate::project::builtin_config()
-        .csl.as_deref()
-        .unwrap_or("apa");
+        .meta.as_ref()
+        .and_then(|m| m.csl.as_deref())
+        .unwrap_or("chicago-author-date");
     if let Some(archived) = ArchivedStyle::by_name(default_name) {
         match archived.get() {
             citationberg::Style::Independent(style) => return Ok(style),

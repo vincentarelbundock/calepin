@@ -11,6 +11,7 @@ split css into core and style
 + [ ] Multi-format rendering: calepin basics.qmd -f html,latex,pdf
     - [ ] Validate that format names do not include commas
 + [ ] CSL helpers: https://github.com/citation-style-language/styles/
++ [ ] why is navbar_search in the .rs file rather than just the template.
 
 ## CSL
 

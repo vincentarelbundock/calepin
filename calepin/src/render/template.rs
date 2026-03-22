@@ -463,8 +463,6 @@ pub fn build_template_vars_with_headings(
         vars.insert("toc".to_string(), String::new());
     }
 
-    // Brand variables (from front matter `brand:` key)
-    crate::brand::inject_brand_vars(&mut vars, ext, meta.brand.as_ref());
 
     // Extra YAML fields override defaults (e.g., classoption, documentclass)
     for (key, value) in &meta.var {

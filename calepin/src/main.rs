@@ -1,6 +1,5 @@
 #[macro_use]
 mod cli;
-mod brand;
 mod engines;
 mod filters;
 mod formats;
@@ -35,10 +34,16 @@ use engines::cache::CacheState;
 /// Resolved project context: project config + target, shared by render and preview.
 struct ProjectContext {
     project_root: Option<PathBuf>,
-    #[allow(dead_code)]
     project_config: Option<project::ProjectConfig>,
     target_name: String,
     target: project::Target,
+}
+
+impl ProjectContext {
+    /// Get the project-level `[var]` table, if any.
+    fn project_var(&self) -> Option<&toml::Value> {
+        self.project_config.as_ref().and_then(|c| c.var.as_ref())
+    }
 }
 
 /// Resolve project config and target from an input file and optional CLI target flag.
@@ -131,9 +136,9 @@ fn main() -> Result<()> {
 fn handle_render(args: RenderArgs) -> Result<()> {
     let input = &args.input;
 
-    // Project manifest mode (.yaml / .yml)
-    if cli::is_project_manifest(input) {
-        let output = args.output.unwrap_or_else(|| PathBuf::from("_site"));
+    // Site mode: .toml config with [site] section, or legacy .yaml manifest
+    if cli::is_site_config(input) {
+        let output = args.output.unwrap_or_else(|| PathBuf::from("output"));
         return site::build_site(Some(input.as_path()), &output, args.clean, args.quiet);
     }
 
@@ -146,6 +151,7 @@ fn handle_render(args: RenderArgs) -> Result<()> {
         &args.overrides,
         Some(&ctx.target),
         ctx.project_root.as_deref(),
+        ctx.project_var(),
     )?;
 
     renderer.write_output(&final_output, &output_path)?;
@@ -205,7 +211,7 @@ fn handle_preview(args: PreviewArgs) -> Result<()> {
         return site::serve(&args.input, args.port);
     }
     // Project manifest: build then serve
-    if cli::is_project_manifest(&args.input) {
+    if cli::is_site_config(&args.input) {
         let config_dir = args.input.parent().unwrap_or(Path::new("."));
         let output = config_dir.join("_site");
         site::build_site(Some(args.input.as_path()), &PathBuf::from("_site"), true, false)?;
@@ -300,9 +306,8 @@ pub fn render_core(
     output_path: &Path,
     format: Option<&str>,
     overrides: &[String],
+    project_var: Option<&toml::Value>,
 ) -> Result<RenderResult> {
-    render_core_with_brand(input, output_path, format, overrides, None)
-}
 
 /// Whether `CALEPIN_TIMING=1` is set (checked once at startup).
 static TIMING: LazyLock<bool> = LazyLock::new(|| std::env::var("CALEPIN_TIMING").is_ok());
@@ -321,14 +326,6 @@ macro_rules! timed {
     }};
 }
 
-/// Core render pipeline with optional site-level brand fallback.
-pub fn render_core_with_brand(
-    input: &Path,
-    output_path: &Path,
-    format: Option<&str>,
-    overrides: &[String],
-    site_brand: Option<&brand::Brand>,
-) -> Result<RenderResult> {
     let t_total = if *TIMING { Some(Instant::now()) } else { None };
 
     // 1. Read input file
@@ -340,10 +337,15 @@ pub fn render_core_with_brand(
     let body = render::markers::sanitize(&body);
     metadata.apply_overrides(overrides);
     metadata.resolve_date(Some(input));
-    // Fall back to site-level brand if page doesn't define its own
-    if metadata.brand.is_none() {
-        if let Some(sb) = site_brand {
-            metadata.brand = Some(sb.clone());
+
+    // Merge project-level var as defaults (front matter wins)
+    if let Some(pv) = project_var {
+        if let Some(table) = pv.as_table() {
+            for (key, val) in table {
+                if !metadata.var.contains_key(key) {
+                    metadata.var.insert(key.clone(), crate::value::from_toml(val.clone()));
+                }
+            }
         }
     }
 
@@ -413,9 +415,9 @@ pub fn render_core_with_brand(
     let highlight_config = metadata.var.get("highlight-style")
         .map(|v| filters::highlighting::parse_highlight_config(v))
         .unwrap_or_else(|| {
-            // Defaults from built-in calepin.toml [highlight] section
+            // Defaults from built-in calepin.toml [meta].highlight
             let cfg = project::builtin_config();
-            let defaults = cfg.highlight.as_ref();
+            let defaults = cfg.meta.as_ref().and_then(|m| m.highlight.as_ref());
             filters::highlighting::HighlightConfig::LightDark {
                 light: defaults.and_then(|h| h.light.clone()).unwrap_or_else(|| "github".to_string()),
                 dark: defaults.and_then(|h| h.dark.clone()).unwrap_or_else(|| "nord".to_string()),
@@ -486,6 +488,7 @@ pub fn render_file(
     overrides: &[String],
     target: Option<&project::Target>,
     project_root: Option<&Path>,
+    project_var: Option<&toml::Value>,
 ) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
     // If we have a target, use its base as the format
     let resolved_format = if let Some(t) = target {
@@ -516,7 +519,7 @@ pub fn render_file(
         input.with_extension(ext)
     };
 
-    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides)?;
+    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, project_var)?;
 
     let final_output = renderer
         .apply_template(&result.rendered, &result.metadata, &result.element_renderer)

@@ -45,3 +45,7 @@ bench/profile.json
 *.snm
 *.vrb
 q2
+_calepin_files/
+_calepin_cache/
+output/
+_site/

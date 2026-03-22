@@ -12,18 +12,106 @@ use serde::Deserialize;
 
 /// Top-level calepin.toml structure.
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct ProjectConfig {
-    /// Default citation style name (from hayagriva's archive).
-    pub csl: Option<String>,
+    /// Project metadata: title, subtitle, author, url, csl, highlight.
+    /// Available in templates as `{{ meta.title }}`, etc.
+    #[serde(default)]
+    pub meta: Option<MetaSection>,
+
+    /// Site-specific configuration (pages, logo, favicon).
+    #[serde(default)]
+    pub site: Option<SiteSection>,
+
+    /// Arbitrary variables passed to all templates as `{{ var.key }}`.
+    #[serde(default)]
+    pub var: Option<toml::Value>,
 
     /// Named output profiles.
     #[serde(default)]
     pub targets: HashMap<String, Target>,
+}
 
-    /// Default syntax highlighting themes.
-    #[serde(default)]
+/// Project metadata, available in templates and body as `{{ meta.* }}`.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
+pub struct MetaSection {
+    pub title: Option<String>,
+    pub subtitle: Option<String>,
+    pub author: Option<toml::Value>,
+    pub url: Option<String>,
+    pub csl: Option<String>,
     pub highlight: Option<HighlightDefaults>,
+}
+
+/// Site-specific configuration: structure and identity for website builds.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct SiteSection {
+    pub favicon: Option<String>,
+    pub logo: Option<String>,
+    #[serde(rename = "logo-dark")]
+    pub logo_dark: Option<String>,
+    /// Page tree. Each entry is a string (file or glob) or an array
+    /// where the first element is a section title and the rest are files/globs.
+    #[serde(default)]
+    pub pages: Vec<toml::Value>,
+}
+
+impl SiteSection {
+    /// Expand the pages tree, resolving glob patterns relative to `base_dir`.
+    /// Returns a flat list of (section_title, file_path) pairs.
+    /// Top-level pages have section_title = None.
+    pub fn expand_pages(&self, base_dir: &std::path::Path) -> Vec<PageNode> {
+        let mut result = Vec::new();
+        for entry in &self.pages {
+            match entry {
+                toml::Value::String(s) => {
+                    for path in expand_glob(s, base_dir) {
+                        result.push(PageNode::Page(path));
+                    }
+                }
+                toml::Value::Array(arr) if !arr.is_empty() => {
+                    let title = arr[0].as_str().unwrap_or("").to_string();
+                    let mut children = Vec::new();
+                    for item in &arr[1..] {
+                        if let Some(s) = item.as_str() {
+                            for path in expand_glob(s, base_dir) {
+                                children.push(path);
+                            }
+                        }
+                    }
+                    result.push(PageNode::Section { title, pages: children });
+                }
+                _ => {}
+            }
+        }
+        result
+    }
+}
+
+/// A node in the expanded page tree.
+#[derive(Debug, Clone)]
+pub enum PageNode {
+    Page(String),
+    Section { title: String, pages: Vec<String> },
+}
+
+/// Expand a string as a glob pattern if it contains `*`, otherwise return as-is.
+fn expand_glob(pattern: &str, base_dir: &std::path::Path) -> Vec<String> {
+    if !pattern.contains('*') {
+        return vec![pattern.to_string()];
+    }
+    let full_pattern = base_dir.join(pattern).display().to_string();
+    let mut paths: Vec<String> = glob::glob(&full_pattern)
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.ok())
+        .filter_map(|path| {
+            path.strip_prefix(base_dir).ok()
+                .map(|rel| rel.display().to_string())
+        })
+        .collect();
+    paths.sort();
+    paths
 }
 
 /// Default syntax highlighting theme configuration.
@@ -260,9 +348,11 @@ pub fn load_project_config(path: &Path) -> Result<ProjectConfig> {
     }
 
     // Validate CSL
-    if let Some(ref csl) = config.csl {
-        validate_csl(csl, project_root)
-            .map_err(|e| anyhow::anyhow!("Invalid csl in {}: {}", path.display(), e))?;
+    if let Some(ref meta) = config.meta {
+        if let Some(ref csl) = meta.csl {
+            validate_csl(csl, project_root)
+                .map_err(|e| anyhow::anyhow!("Invalid csl in {}: {}", path.display(), e))?;
+        }
     }
 
     Ok(config)

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use super::config::SiteConfig;
+use crate::project::ProjectConfig;
 
 /// Metadata extracted from a page's YAML frontmatter.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -49,8 +49,8 @@ pub struct PageInfo {
 }
 
 /// Discover all pages referenced in the site config.
-pub fn discover_pages(config: &SiteConfig, base_dir: &Path) -> Result<Vec<PageInfo>> {
-    let page_paths = config.collect_page_paths();
+pub fn discover_pages(config: &ProjectConfig, base_dir: &Path) -> Result<Vec<PageInfo>> {
+    let page_paths = super::config::collect_page_paths(config, base_dir);
     let mut pages = Vec::new();
 
     for rel_path in &page_paths {
@@ -65,7 +65,9 @@ pub fn discover_pages(config: &SiteConfig, base_dir: &Path) -> Result<Vec<PageIn
         let meta = extract_frontmatter(&abs_path)
             .with_context(|| format!("Failed to read frontmatter: {}", rel_path))?;
 
-        let output = source.with_extension("html");
+        // Strip content/ prefix for output paths so content/index.qmd -> index.html
+        let output_rel = source.strip_prefix("content").unwrap_or(&source);
+        let output = output_rel.with_extension("html");
         let url = format!("/{}", output.display());
 
         pages.push(PageInfo {

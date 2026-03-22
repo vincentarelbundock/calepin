@@ -1,10 +1,9 @@
-# Default citation style (from hayagriva's bundled archive).
-# Override per-project with csl: in front matter or a .csl file in assets/csl/.
+[meta]
+title = "Calepin"
+subtitle = "A document and site generator"
+author = "Vincent Arel-Bundock"
 csl = "chicago-author-date"
-
-[highlight]
-light = "github"
-dark = "nord"
+highlight = {light = "github", dark = "nord"}
 
 [targets.html]
 base = "html"
