@@ -49,3 +49,4 @@ _calepin_files/
 _calepin_cache/
 output/
 _site/
+*.tar.gz

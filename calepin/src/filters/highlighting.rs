@@ -411,6 +411,9 @@ pub fn parse_highlight_config(yaml: &crate::value::Value) -> HighlightConfig {
 
 /// Resolve a single theme name to a HighlightConfig.
 fn resolve_single_theme(name: &str) -> HighlightConfig {
+    if name == "none" || name == "false" {
+        return HighlightConfig::None;
+    }
     if name.ends_with(".tmTheme") || name.ends_with(".tmtheme") {
         let path = std::path::Path::new(name);
         if !path.exists() {

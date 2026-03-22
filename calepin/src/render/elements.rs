@@ -87,6 +87,8 @@ pub struct ElementRenderer {
     global_footnote_defs: std::cell::RefCell<String>,
     /// Cache for resolved element templates (avoids repeated filesystem lookups).
     template_cache: std::cell::RefCell<HashMap<String, Option<String>>>,
+    /// Whether any code blocks were rendered (gates syntax CSS generation).
+    has_code: std::cell::Cell<bool>,
 }
 
 impl ElementRenderer {
@@ -128,6 +130,7 @@ impl ElementRenderer {
             accumulated_footnote_defs: std::cell::RefCell::new(Vec::new()),
             global_footnote_defs: std::cell::RefCell::new(String::new()),
             template_cache: std::cell::RefCell::new(HashMap::new()),
+            has_code: std::cell::Cell::new(false),
         }
     }
 
@@ -241,6 +244,9 @@ impl ElementRenderer {
                 )
             }
             _ => {
+                if matches!(element, Element::CodeSource { .. }) {
+                    self.has_code.set(true);
+                }
                 let name = element.template_name();
                 self.build_template_output(name, element)
             }
@@ -290,16 +296,17 @@ impl ElementRenderer {
     }
 
     pub fn syntax_css(&self) -> String {
-        if self.ext != "html" { return String::new(); }
+        if self.ext != "html" || !self.has_code.get() { return String::new(); }
         self.highlighter.syntax_css()
     }
 
     pub fn syntax_css_with_scope(&self, scope: ColorScope) -> String {
-        if self.ext != "html" { return String::new(); }
+        if self.ext != "html" || !self.has_code.get() { return String::new(); }
         self.highlighter.syntax_css_with_scope(scope)
     }
 
     pub fn latex_color_definitions(&self) -> String {
+        if !self.has_code.get() { return String::new(); }
         self.highlighter.latex_color_definitions()
     }
 

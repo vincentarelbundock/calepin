@@ -35,6 +35,12 @@ pub enum Command {
         template: String,
     },
 
+    /// Generate scaffolding files
+    New {
+        #[command(subcommand)]
+        action: NewAction,
+    },
+
     /// Show information and utilities
     Info {
         #[command(subcommand)]
@@ -44,11 +50,14 @@ pub enum Command {
 
 #[derive(clap::Args, Debug)]
 pub struct RenderArgs {
-    /// Input .qmd file or .yaml/.yml project manifest
-    pub input: PathBuf,
+    /// Input .qmd file(s) or .yaml/.yml project manifest.
+    /// Multiple files are rendered in parallel.
+    #[arg(required = true)]
+    pub input: Vec<PathBuf>,
 
-    /// Output file path (single-file only; not valid with project manifests).
-    /// If omitted, replaces .qmd extension with the format's default.
+    /// Output path. With a single input, specifies the output file.
+    /// With multiple inputs, specifies the output directory.
+    /// If omitted, output goes next to each input file.
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
@@ -66,6 +75,10 @@ pub struct RenderArgs {
     /// Example: --set title="My Title" bibliography=refs.bib toc=true
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
+
+    /// Disable syntax highlighting for code blocks
+    #[arg(long)]
+    pub no_highlight: bool,
 
     /// Remove output directory before building (project manifests only)
     #[arg(long)]
@@ -92,6 +105,29 @@ pub struct PreviewArgs {
     /// Quiet mode (suppress progress messages)
     #[arg(short, long)]
     pub quiet: bool,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum NewAction {
+    /// Generate .qmd files filled with lorem ipsum text
+    Gibberish {
+        /// Number of .qmd files to generate
+        #[arg(short = 'n', long, default_value = "50")]
+        files: usize,
+
+        /// Number of paragraphs per file
+        #[arg(short, long, default_value = "50")]
+        paragraphs: usize,
+
+        /// Output directory
+        #[arg(short, long, default_value = "gibberish")]
+        dir: std::path::PathBuf,
+
+        /// Complexity level: 0 = prose only, 1 = + code chunks,
+        /// 2 = + cross-references, footnotes, citations, and tables
+        #[arg(short, long, default_value = "1", value_parser = clap::value_parser!(u8).range(0..=2))]
+        complexity: u8,
+    },
 }
 
 #[derive(Subcommand, Debug)]

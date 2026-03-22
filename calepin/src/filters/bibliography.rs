@@ -15,10 +15,23 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, Mutex};
 
 use crate::types::Element;
 use crate::types::Metadata;
+
+// ---------------------------------------------------------------------------
+// Process-global CSL style cache
+// ---------------------------------------------------------------------------
+//
+// CSL style deserialization (CBOR → citationberg AST) is expensive (~5ms for
+// archive styles). In batch mode every file typically uses the same style,
+// so we cache the parsed IndependentStyle keyed by the resolved style name.
+// The cache persists for the process lifetime; entries are never evicted
+// (bounded by the small number of distinct styles a single run can use).
+
+static CSL_CACHE: LazyLock<Mutex<HashMap<String, IndependentStyle>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn format_plain(elem: &impl std::fmt::Display) -> String {
     format!("{:#}", elem)
@@ -27,6 +40,15 @@ fn format_plain(elem: &impl std::fmt::Display) -> String {
 #[inline(never)]
 pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, document_dir: &Path) -> Result<()> {
     if metadata.bibliography.is_empty() {
+        return Ok(());
+    }
+
+    // Quick scan: if no text element contains '@', there can be no citations,
+    // so skip all bib file parsing and CSL loading.
+    let has_at = elements.iter().any(|el| {
+        matches!(el, Element::Text { content } if content.contains('@'))
+    });
+    if !has_at {
         return Ok(());
     }
 
@@ -45,10 +67,9 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, docum
             library.push(entry);
         }
     }
-    let style = load_csl_style(metadata.csl.as_deref())?;
-    let locales: Vec<citationberg::Locale> = Vec::new();
 
-    // Collect cited keys
+    // Collect cited keys before loading the CSL style. CSL deserialization is
+    // expensive (~5ms), so we defer it until we know there are actual citations.
     static RE_ANY: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?:\[-)?@([a-zA-Z0-9_][-a-zA-Z0-9_:]*)\]?").unwrap()
     });
@@ -78,6 +99,9 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, docum
     if all_keys.is_empty() {
         return Ok(());
     }
+
+    let style = load_csl_style(metadata.csl.as_deref())?;
+    let locales: Vec<citationberg::Locale> = Vec::new();
 
     // Single driver call with all citations
     let mut driver = BibliographyDriver::new();
@@ -210,6 +234,27 @@ fn extract_year(cite: &str) -> String {
 }
 
 fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
+    // Build the cache key from the CSL path (or "default" for fallback)
+    let cache_key = csl_path.unwrap_or("__default__").to_string();
+
+    // Check cache first
+    if let Ok(cache) = CSL_CACHE.lock() {
+        if let Some(style) = cache.get(&cache_key) {
+            return Ok(style.clone());
+        }
+    }
+
+    let style = load_csl_style_uncached(csl_path)?;
+
+    // Store in cache
+    if let Ok(mut cache) = CSL_CACHE.lock() {
+        cache.insert(cache_key, style.clone());
+    }
+
+    Ok(style)
+}
+
+fn load_csl_style_uncached(csl_path: Option<&str>) -> Result<IndependentStyle> {
     use hayagriva::archive::ArchivedStyle;
 
     // 1. Explicit CSL from front matter: file path or archive name

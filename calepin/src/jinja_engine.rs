@@ -606,7 +606,7 @@ const LIPSUM_WORDS: &[&str] = &[
     "repellat",
 ];
 
-fn lipsum_words(n: usize) -> String {
+pub(crate) fn lipsum_words(n: usize) -> String {
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
         out.push(LIPSUM_WORDS[i % LIPSUM_WORDS.len()]);
@@ -618,7 +618,7 @@ fn lipsum_words(n: usize) -> String {
     s
 }
 
-fn lipsum_sentence(word_count: usize, offset: usize) -> String {
+pub(crate) fn lipsum_sentence(word_count: usize, offset: usize) -> String {
     let mut out = Vec::with_capacity(word_count);
     for i in 0..word_count {
         out.push(LIPSUM_WORDS[(i + offset) % LIPSUM_WORDS.len()]);
@@ -640,7 +640,7 @@ fn lipsum_sentences(n: usize) -> String {
     sentences.join(" ")
 }
 
-fn lipsum_paragraphs(n: usize) -> String {
+pub(crate) fn lipsum_paragraphs(n: usize) -> String {
     let mut paragraphs = Vec::with_capacity(n);
     for i in 0..n {
         let count = 3 + (i * 2) % 3;
