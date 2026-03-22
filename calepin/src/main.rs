@@ -16,6 +16,7 @@ mod jinja_engine;
 mod paths;
 mod types;
 mod util;
+mod value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
@@ -321,7 +322,7 @@ pub fn render_core_with_brand(
     let fig_dir = path_ctx.figures_dir(&stem);
     let fig_ext = renderer.default_fig_ext();
     let cache_enabled = metadata.var.get("execute")
-        .and_then(|v| v.as_mapping_get("cache"))
+        .and_then(|v| v.get("cache"))
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
     let cache_dir = path_ctx.cache_root(&stem);
@@ -409,10 +410,20 @@ fn plugin_init(name: &str) -> Result<()> {
     }
     fs::create_dir_all(&dir)?;
     let manifest = format!(
-        "name: {name}\nversion: 0.1.0\ndescription: \"\"\n\nprovides:\n  filter:\n    run: filter.py\n    match:\n      classes: [{name}]\n    contexts: [div, span]\n",
+        r#"name = "{name}"
+version = "0.1.0"
+description = ""
+
+[provides.filter]
+run = "filter.py"
+contexts = ["div", "span"]
+
+[provides.filter.match]
+classes = ["{name}"]
+"#,
         name = name,
     );
-    fs::write(dir.join("plugin.yml"), manifest)?;
+    fs::write(dir.join("plugin.toml"), manifest)?;
 
     // Create a minimal filter script
     let filter_script = r#"#!/usr/bin/env python3
@@ -439,7 +450,7 @@ print(content)
     }
 
     eprintln!("Created plugin scaffold at {}", dir.display());
-    eprintln!("  plugin.yml  — manifest");
+    eprintln!("  plugin.toml  -- manifest");
     eprintln!("  filter.py   — filter script (edit this)");
     Ok(())
 }
@@ -459,7 +470,7 @@ fn plugin_list() -> Result<()> {
         if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries.filter_map(|e| e.ok()) {
                 let path = entry.path();
-                if path.join("plugin.yml").exists() {
+                if path.join("plugin.toml").exists() || path.join("plugin.yml").exists() {
                     if let Ok(manifest) = plugin_manifest::PluginManifest::load(&path) {
                         let desc = manifest.description.as_deref().unwrap_or("");
                         let mut caps = Vec::new();

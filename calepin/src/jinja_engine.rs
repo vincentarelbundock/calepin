@@ -613,38 +613,9 @@ fn build_meta_map(meta: &Metadata) -> serde_json::Value {
 fn build_variables_map(metadata: &Metadata) -> serde_json::Value {
     let mut map = serde_json::Map::new();
     for (key, value) in &metadata.var {
-        map.insert(key.clone(), yaml_to_json(value));
+        map.insert(key.clone(), crate::value::to_json(value));
     }
     serde_json::Value::Object(map)
-}
-
-/// Convert a saphyr YAML value to serde_json::Value.
-fn yaml_to_json(yaml: &saphyr::YamlOwned) -> serde_json::Value {
-    if let Some(s) = yaml.as_str() {
-        return serde_json::Value::String(s.to_string());
-    }
-    if let Some(b) = yaml.as_bool() {
-        return serde_json::Value::Bool(b);
-    }
-    if let Some(n) = yaml.as_integer() {
-        return serde_json::json!(n);
-    }
-    if let Some(f) = yaml.as_floating_point() {
-        return serde_json::json!(f);
-    }
-    if let Some(mapping) = yaml.as_mapping() {
-        let mut map = serde_json::Map::new();
-        for (k, v) in mapping.iter() {
-            if let Some(key) = k.as_str() {
-                map.insert(key.to_string(), yaml_to_json(v));
-            }
-        }
-        return serde_json::Value::Object(map);
-    }
-    if let Some(seq) = yaml.as_sequence() {
-        return serde_json::Value::Array(seq.iter().map(yaml_to_json).collect());
-    }
-    serde_json::Value::Null
 }
 
 // ---------------------------------------------------------------------------

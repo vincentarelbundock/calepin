@@ -1,19 +1,21 @@
 //! Plugin manifest parsing.
 //!
-//! Each plugin is a directory containing a `plugin.yml` file that declares
-//! its capabilities: filters, shortcodes, postprocessors, element/page
-//! templates, CSL styles, and custom format definitions.
+//! Each plugin is a directory containing a `plugin.toml` file (or `plugin.yml`
+//! for backward compatibility) that declares its capabilities: filters,
+//! shortcodes, postprocessors, element/page templates, CSL styles, and
+//! custom format definitions.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use crate::value::{self, Value, value_string_list};
 
 // ---------------------------------------------------------------------------
 // Manifest types
 // ---------------------------------------------------------------------------
 
-/// Parsed `plugin.yml` manifest.
+/// Parsed plugin manifest.
 pub struct PluginManifest {
     pub name: String,
     pub version: Option<String>,
@@ -104,7 +106,6 @@ pub struct FormatSpec {
 
 impl FilterMatch {
     /// Check if this match rule applies to the given element properties.
-    /// Match fields are OR'd: any match triggers the filter.
     pub fn matches(
         &self,
         classes: &[String],
@@ -112,51 +113,57 @@ impl FilterMatch {
         id: Option<&str>,
         format: &str,
     ) -> bool {
-        // Format check: if formats list is non-empty, format must be in it
         if !self.formats.is_empty() && !self.formats.iter().any(|f| f == format) {
             return false;
         }
-
-        // Class match
         if self.classes.iter().any(|c| classes.iter().any(|cls| cls == c)) {
             return true;
         }
-
-        // Attribute match
         if self.attrs.iter().any(|a| attrs.contains_key(a)) {
             return true;
         }
-
-        // ID prefix match
         if let (Some(prefix), Some(id_val)) = (&self.id_prefix, id) {
             if id_val.starts_with(prefix.as_str()) {
                 return true;
             }
         }
-
         false
     }
 }
 
 // ---------------------------------------------------------------------------
-// YAML parsing
+// Parsing
 // ---------------------------------------------------------------------------
 
 impl PluginManifest {
-    /// Load a plugin manifest from a directory containing `plugin.yml`.
+    /// Load a plugin manifest from a directory.
+    /// Tries `plugin.toml` first, then falls back to `plugin.yml`.
     pub fn load(dir: &Path) -> Result<Self> {
+        let toml_path = dir.join("plugin.toml");
         let yml_path = dir.join("plugin.yml");
-        let content = std::fs::read_to_string(&yml_path)
-            .with_context(|| format!("Failed to read {}", yml_path.display()))?;
 
-        use saphyr::LoadableYamlNode;
-        let docs = saphyr::YamlOwned::load_from_str(&content)
-            .map_err(|e| anyhow::anyhow!("YAML parse error in {}: {:?}", yml_path.display(), e))?;
-        let root = docs.into_iter().next()
-            .unwrap_or(saphyr::YamlOwned::BadValue);
+        let (content, is_toml) = if toml_path.exists() {
+            (std::fs::read_to_string(&toml_path)
+                .with_context(|| format!("Failed to read {}", toml_path.display()))?, true)
+        } else {
+            (std::fs::read_to_string(&yml_path)
+                .with_context(|| format!("Failed to read {}", yml_path.display()))?, false)
+        };
 
-        let name = yaml_str(&root, "name")
-            .ok_or_else(|| anyhow::anyhow!("plugin.yml missing 'name' field: {}", yml_path.display()))?;
+        let root = if is_toml {
+            let tv: toml::Value = toml::from_str(&content)
+                .map_err(|e| anyhow::anyhow!("TOML parse error in {}: {}", toml_path.display(), e))?;
+            value::from_toml(tv)
+        } else {
+            Value::Table(value::parse_minimal_yaml(&content))
+        };
+
+        let manifest_path = if is_toml { &toml_path } else { &yml_path };
+
+        let name = root.get("name")
+            .and_then(|v| v.as_str())
+            .map(String::from)
+            .ok_or_else(|| anyhow::anyhow!("Plugin manifest missing 'name' field: {}", manifest_path.display()))?;
 
         let plugin_dir = dir.canonicalize()
             .unwrap_or_else(|_| dir.to_path_buf());
@@ -165,19 +172,19 @@ impl PluginManifest {
 
         Ok(PluginManifest {
             name,
-            version: yaml_str(&root, "version"),
-            description: yaml_str(&root, "description"),
+            version: root.get("version").and_then(|v| v.as_str()).map(String::from),
+            description: root.get("description").and_then(|v| v.as_str()).map(String::from),
             provides,
             plugin_dir,
         })
     }
 }
 
-fn parse_provides(root: &saphyr::YamlOwned, plugin_dir: &Path) -> Result<PluginProvides> {
-    let provides_node = &root["provides"];
-    if provides_node.is_badvalue() {
-        return Ok(PluginProvides::default());
-    }
+fn parse_provides(root: &Value, plugin_dir: &Path) -> Result<PluginProvides> {
+    let provides_node = match root.get("provides") {
+        Some(v) => v,
+        None => return Ok(PluginProvides::default()),
+    };
 
     Ok(PluginProvides {
         filters: parse_filter_specs(provides_node, plugin_dir),
@@ -185,20 +192,17 @@ fn parse_provides(root: &saphyr::YamlOwned, plugin_dir: &Path) -> Result<PluginP
         postprocess: parse_postprocess_spec(provides_node, plugin_dir),
         elements: parse_elements_spec(provides_node),
         templates: parse_templates_spec(provides_node),
-        csl: yaml_str(provides_node, "csl"),
+        csl: provides_node.get("csl").and_then(|v| v.as_str()).map(String::from),
         format: parse_format_spec(provides_node, plugin_dir),
     })
 }
 
-/// Parse filter specs. Supports both singular `filter:` (one object) and
-/// plural `filters:` (array of objects) in the manifest.
-fn parse_filter_specs(provides: &saphyr::YamlOwned, plugin_dir: &Path) -> Vec<FilterSpec> {
+fn parse_filter_specs(provides: &Value, plugin_dir: &Path) -> Vec<FilterSpec> {
     let mut specs = Vec::new();
 
     // Try plural `filters:` (array)
-    let filters_node = &provides["filters"];
-    if !filters_node.is_badvalue() {
-        if let Some(items) = filters_node.as_vec() {
+    if let Some(filters_node) = provides.get("filters") {
+        if let Some(items) = filters_node.as_array() {
             for item in items {
                 if let Some(spec) = parse_one_filter_spec(item, plugin_dir) {
                     specs.push(spec);
@@ -208,8 +212,7 @@ fn parse_filter_specs(provides: &saphyr::YamlOwned, plugin_dir: &Path) -> Vec<Fi
     }
 
     // Try singular `filter:` (single object)
-    let filter_node = &provides["filter"];
-    if !filter_node.is_badvalue() {
+    if let Some(filter_node) = provides.get("filter") {
         if let Some(spec) = parse_one_filter_spec(filter_node, plugin_dir) {
             specs.push(spec);
         }
@@ -218,27 +221,23 @@ fn parse_filter_specs(provides: &saphyr::YamlOwned, plugin_dir: &Path) -> Vec<Fi
     specs
 }
 
-fn parse_one_filter_spec(node: &saphyr::YamlOwned, plugin_dir: &Path) -> Option<FilterSpec> {
-    if node.is_badvalue() {
-        return None;
-    }
+fn parse_one_filter_spec(node: &Value, plugin_dir: &Path) -> Option<FilterSpec> {
+    let run = node.get("run")
+        .and_then(|v| v.as_str())
+        .map(|s| plugin_dir.join(s));
 
-    let run = yaml_str(node, "run").map(|s| plugin_dir.join(s));
-
-    let match_node = &node["match"];
-    let match_rule = if match_node.is_badvalue() {
-        FilterMatch::default()
-    } else {
-        FilterMatch {
-            classes: yaml_str_vec(match_node, "classes"),
-            attrs: yaml_str_vec(match_node, "attrs"),
-            id_prefix: yaml_str(match_node, "id_prefix"),
-            formats: yaml_str_vec(match_node, "formats"),
-        }
+    let match_rule = match node.get("match") {
+        Some(match_node) => FilterMatch {
+            classes: val_str_vec(match_node, "classes"),
+            attrs: val_str_vec(match_node, "attrs"),
+            id_prefix: match_node.get("id_prefix").and_then(|v| v.as_str()).map(String::from),
+            formats: val_str_vec(match_node, "formats"),
+        },
+        None => FilterMatch::default(),
     };
 
     let contexts = {
-        let v = yaml_str_vec(node, "contexts");
+        let v = val_str_vec(node, "contexts");
         if v.is_empty() {
             vec!["div".to_string(), "span".to_string()]
         } else {
@@ -246,91 +245,60 @@ fn parse_one_filter_spec(node: &saphyr::YamlOwned, plugin_dir: &Path) -> Option<
         }
     };
 
-    let persistent = yaml_str(node, "persistent")
-        .map(|s| s == "true")
+    let persistent = node.get("persistent")
+        .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
     Some(FilterSpec { run, match_rule, contexts, persistent })
 }
 
-fn parse_shortcode_spec(provides: &saphyr::YamlOwned, plugin_dir: &Path) -> Option<ShortcodeSpec> {
-    let node = &provides["shortcode"];
-    if node.is_badvalue() {
-        return None;
-    }
-
+fn parse_shortcode_spec(provides: &Value, plugin_dir: &Path) -> Option<ShortcodeSpec> {
+    let node = provides.get("shortcode")?;
     Some(ShortcodeSpec {
-        run: yaml_str(node, "run").map(|s| plugin_dir.join(s)),
-        names: yaml_str_vec(node, "names"),
+        run: node.get("run").and_then(|v| v.as_str()).map(|s| plugin_dir.join(s)),
+        names: val_str_vec(node, "names"),
     })
 }
 
-fn parse_postprocess_spec(provides: &saphyr::YamlOwned, plugin_dir: &Path) -> Option<PostprocessSpec> {
-    let node = &provides["postprocess"];
-    if node.is_badvalue() {
-        return None;
-    }
-
+fn parse_postprocess_spec(provides: &Value, plugin_dir: &Path) -> Option<PostprocessSpec> {
+    let node = provides.get("postprocess")?;
     Some(PostprocessSpec {
-        run: yaml_str(node, "run").map(|s| plugin_dir.join(s)),
-        formats: yaml_str_vec(node, "formats"),
+        run: node.get("run").and_then(|v| v.as_str()).map(|s| plugin_dir.join(s)),
+        formats: val_str_vec(node, "formats"),
     })
 }
 
-fn parse_elements_spec(provides: &saphyr::YamlOwned) -> Option<ElementsSpec> {
-    let node = &provides["elements"];
-    if node.is_badvalue() {
-        return None;
-    }
-    yaml_str(node, "dir").map(|s| ElementsSpec { dir: PathBuf::from(s) })
+fn parse_elements_spec(provides: &Value) -> Option<ElementsSpec> {
+    let node = provides.get("elements")?;
+    node.get("dir").and_then(|v| v.as_str()).map(|s| ElementsSpec { dir: PathBuf::from(s) })
 }
 
-fn parse_templates_spec(provides: &saphyr::YamlOwned) -> Option<TemplatesSpec> {
-    let node = &provides["templates"];
-    if node.is_badvalue() {
-        return None;
-    }
-    yaml_str(node, "dir").map(|s| TemplatesSpec { dir: PathBuf::from(s) })
+fn parse_templates_spec(provides: &Value) -> Option<TemplatesSpec> {
+    let node = provides.get("templates")?;
+    node.get("dir").and_then(|v| v.as_str()).map(|s| TemplatesSpec { dir: PathBuf::from(s) })
 }
 
-fn parse_format_spec(provides: &saphyr::YamlOwned, plugin_dir: &Path) -> Option<FormatSpec> {
-    let node = &provides["format"];
-    if node.is_badvalue() {
-        return None;
-    }
-
-    let name = yaml_str(node, "name")?;
-    let base = yaml_str(node, "base")?;
+fn parse_format_spec(provides: &Value, plugin_dir: &Path) -> Option<FormatSpec> {
+    let node = provides.get("format")?;
+    let name = node.get("name")?.as_str()?.to_string();
+    let base = node.get("base")?.as_str()?.to_string();
 
     Some(FormatSpec {
         name,
         base,
-        extension: yaml_str(node, "extension"),
-        preprocess: yaml_str(node, "preprocess").map(|s| plugin_dir.join(s)),
-        postprocess: yaml_str(node, "postprocess").map(|s| plugin_dir.join(s)),
+        extension: node.get("extension").and_then(|v| v.as_str()).map(String::from),
+        preprocess: node.get("preprocess").and_then(|v| v.as_str()).map(|s| plugin_dir.join(s)),
+        postprocess: node.get("postprocess").and_then(|v| v.as_str()).map(|s| plugin_dir.join(s)),
     })
 }
 
 // ---------------------------------------------------------------------------
-// YAML helpers
+// Helpers
 // ---------------------------------------------------------------------------
 
-fn yaml_str(node: &saphyr::YamlOwned, key: &str) -> Option<String> {
-    node[key].as_str().map(|s| s.to_string())
-}
-
-fn yaml_str_vec(node: &saphyr::YamlOwned, key: &str) -> Vec<String> {
-    let arr = &node[key];
-    if arr.is_badvalue() {
-        return Vec::new();
-    }
-    match arr.as_vec() {
-        Some(items) => items.iter()
-            .filter_map(|v| v.as_str().map(|s| s.to_string()))
-            .collect(),
-        None => {
-            // Single string → one-element vec
-            arr.as_str().map(|s| vec![s.to_string()]).unwrap_or_default()
-        }
+fn val_str_vec(node: &Value, key: &str) -> Vec<String> {
+    match node.get(key) {
+        Some(v) => value_string_list(v),
+        None => Vec::new(),
     }
 }

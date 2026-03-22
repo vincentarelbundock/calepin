@@ -1,17 +1,12 @@
 use anyhow::Result;
 use std::collections::HashMap;
 
-use saphyr::{LoadableYamlNode, MappingOwned, ScalarOwned, YamlOwned};
-
+use crate::value::{self, Value, Table, table_get, table_str, table_bool, value_string_list};
 use crate::types::{Affiliation, Author, AuthorName, CitationMeta, Copyright, Funding, License, Metadata};
 
-/// Construct a YAML key node from a string.
-fn yaml_key(key: &str) -> YamlOwned {
-    YamlOwned::Value(ScalarOwned::String(key.to_string()))
-}
-
-/// Split YAML front matter from the document body.
+/// Split front matter from the document body.
 /// Returns (metadata, body_text).
+/// Front matter is delimited by `---` and auto-detected as TOML or minimal YAML.
 #[inline(never)]
 pub fn split_yaml(text: &str) -> Result<(Metadata, String)> {
     let lines: Vec<&str> = text.lines().collect();
@@ -34,40 +29,26 @@ pub fn split_yaml(text: &str) -> Result<(Metadata, String)> {
         None => return Ok((Metadata::default(), text.to_string())),
     };
 
-    let yaml_str: String = lines[1..end].join("\n");
+    let fm_str: String = lines[1..end].join("\n");
     let body: String = lines[end + 1..].join("\n");
 
-    let metadata = parse_yaml(&yaml_str)?;
+    let table = value::parse_frontmatter(&fm_str)?;
+    let metadata = parse_metadata(&table)?;
     Ok((metadata, body))
 }
 
-fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
-    let docs = YamlOwned::load_from_str(yaml_str)?;
-    let value = match docs.into_iter().next() {
-        Some(v) => v,
-        None => return Ok(Metadata::default()),
-    };
-    let map = match value.as_mapping() {
-        Some(m) => m,
-        None => return Ok(Metadata::default()),
-    };
-
+fn parse_metadata(table: &Table) -> Result<Metadata> {
     let mut meta = Metadata::default();
     let mut extra = HashMap::new();
 
     // First pass: collect top-level affiliations (needed for ref: lookups)
-    let top_level_affiliations = map
-        .get(&yaml_key("affiliations"))
-        .and_then(|v| v.as_sequence())
+    let top_level_affiliations = table_get(table, "affiliations")
+        .and_then(|v| v.as_array())
         .cloned()
         .unwrap_or_default();
 
-    for (k, v) in map {
-        let key = match k.as_str() {
-            Some(s) => s,
-            None => continue,
-        };
-        match key {
+    for (key, v) in table {
+        match key.as_str() {
             "title" => meta.title = v.as_str().map(String::from),
             "subtitle" => meta.subtitle = v.as_str().map(String::from),
             "author" | "authors" => {
@@ -77,7 +58,7 @@ fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
             "date" => meta.date = v.as_str().map(String::from),
             "abstract" => meta.abstract_text = v.as_str().map(String::from),
             "keywords" => {
-                meta.keywords = yaml_string_list(v);
+                meta.keywords = value_string_list(v);
             }
             "copyright" => meta.copyright = Some(parse_copyright(v)),
             "license" => meta.license = Some(parse_license(v)),
@@ -86,11 +67,10 @@ fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
             "appendix-style" => meta.appendix_style = v.as_str().map(String::from),
             "format" => {
                 meta.format = v.as_str().map(String::from).or_else(|| {
-                    // Support `format: { html: default }` — extract first key
-                    v.as_mapping()
-                        .and_then(|m| m.keys().next())
-                        .and_then(|k| k.as_str())
-                        .map(String::from)
+                    // Support `format: { html: default }` or [format]\n html = "default"
+                    v.as_table()
+                        .and_then(|t| t.first())
+                        .map(|(k, _)| k.clone())
                 });
             }
             "number-sections" => meta.number_sections = v.as_bool().unwrap_or(false),
@@ -99,22 +79,22 @@ fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
             "toc-title" => meta.toc_title = v.as_str().map(String::from),
             "date-format" => meta.date_format = v.as_str().map(String::from),
             "bibliography" => {
-                meta.bibliography = yaml_string_list(v);
+                meta.bibliography = value_string_list(v);
             }
             "csl" => meta.csl = v.as_str().map(String::from),
             "html-math-method" => meta.html_math_method = v.as_str().map(String::from),
             "brand" => {
-                meta.brand = crate::brand::parse_brand_from_yaml(v);
+                meta.brand = crate::brand::parse_brand_from_value(v);
             }
             "calepin" => {
-                if let Some(cmap) = v.as_mapping() {
-                    if let Some(pv) = cmap.get(&yaml_key("plugins")) {
-                        meta.plugins = yaml_string_list(pv);
+                if let Some(cmap) = v.as_table() {
+                    if let Some(pv) = table_get(cmap, "plugins") {
+                        meta.plugins = value_string_list(pv);
                     }
-                    if let Some(fd) = cmap.get(&yaml_key("files-dir")) {
+                    if let Some(fd) = table_get(cmap, "files-dir") {
                         meta.files_dir = fd.as_str().map(String::from);
                     }
-                    if let Some(cd) = cmap.get(&yaml_key("cache-dir")) {
+                    if let Some(cd) = table_get(cmap, "cache-dir") {
                         meta.cache_dir = cd.as_str().map(String::from);
                     }
                 }
@@ -133,18 +113,17 @@ fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
 // Rich author / affiliation parsing
 // ---------------------------------------------------------------------------
 
-/// Parse the `author:` or `authors:` YAML value into rich `Author` structs
-/// and a flat, deduplicated affiliation list. Also populates `meta.author`
-/// (simple string list) for backward compatibility.
+/// Parse the `author:` or `authors:` value into rich `Author` structs
+/// and a flat, deduplicated affiliation list.
 fn parse_authors(
-    v: &YamlOwned,
+    v: &Value,
     meta: &mut Metadata,
-    top_level_affiliations: &[YamlOwned],
+    top_level_affiliations: &[Value],
 ) {
-    let entries: Vec<&YamlOwned> = match v {
-        YamlOwned::Value(ScalarOwned::String(_)) => vec![v],
-        YamlOwned::Mapping(_) => vec![v],
-        YamlOwned::Sequence(seq) => seq.iter().collect(),
+    let entries: Vec<&Value> = match v {
+        Value::String(_) => vec![v],
+        Value::Table(_) => vec![v],
+        Value::Array(seq) => seq.iter().collect(),
         _ => return,
     };
 
@@ -157,8 +136,8 @@ fn parse_authors(
             let name = parse_author_name_str(s);
             simple_names.push(name.literal.clone());
             authors.push(Author { name, ..Default::default() });
-        } else if let YamlOwned::Mapping(m) = entry {
-            let author = parse_author_mapping(m, &mut affiliations, top_level_affiliations);
+        } else if let Some(t) = entry.as_table() {
+            let author = parse_author_mapping(t, &mut affiliations, top_level_affiliations);
             simple_names.push(author.name.literal.clone());
             authors.push(author);
         }
@@ -178,7 +157,6 @@ fn parse_authors(
 fn parse_author_name_str(s: &str) -> AuthorName {
     let s = s.trim();
     if s.contains(',') {
-        // "Family, Given" (BibTeX convention)
         let mut parts = s.splitn(2, ',');
         let family = parts.next().unwrap_or("").trim().to_string();
         let given = parts.next().unwrap_or("").trim().to_string();
@@ -187,9 +165,7 @@ fn parse_author_name_str(s: &str) -> AuthorName {
         } else {
             format!("{} {}", given, family)
         };
-        AuthorName {
-            literal,
-        }
+        AuthorName { literal }
     } else {
         AuthorName { literal: s.to_string() }
     }
@@ -197,20 +173,20 @@ fn parse_author_name_str(s: &str) -> AuthorName {
 
 /// Parse a mapping-form author entry into an `Author`.
 fn parse_author_mapping(
-    m: &MappingOwned,
+    m: &Table,
     affiliations: &mut Vec<Affiliation>,
-    top_level_affiliations: &[YamlOwned],
+    top_level_affiliations: &[Value],
 ) -> Author {
     let mut author = Author::default();
 
     // Name
-    if let Some(name_val) = m.get(&yaml_key("name")) {
+    if let Some(name_val) = table_get(m, "name") {
         if let Some(s) = name_val.as_str() {
             author.name = parse_author_name_str(s);
-        } else if let Some(nm) = name_val.as_mapping() {
-            let given = yaml_str(nm, "given");
-            let family = yaml_str(nm, "family");
-            let literal = yaml_str(nm, "literal").unwrap_or_else(|| {
+        } else if let Some(nm) = name_val.as_table() {
+            let given = table_str(nm, "given");
+            let family = table_str(nm, "family");
+            let literal = table_str(nm, "literal").unwrap_or_else(|| {
                 match (&given, &family) {
                     (Some(g), Some(f)) => format!("{} {}", g, f),
                     (Some(g), None) => g.clone(),
@@ -223,30 +199,30 @@ fn parse_author_mapping(
     }
 
     // Scalar fields
-    author.email = yaml_str(m, "email");
-    author.url = yaml_str(m, "url");
-    author.orcid = yaml_str(m, "orcid");
-    author.note = yaml_str(m, "note");
+    author.email = table_str(m, "email");
+    author.url = table_str(m, "url");
+    author.orcid = table_str(m, "orcid");
+    author.note = table_str(m, "note");
 
     // Attributes (can appear at top level or under "attributes")
-    author.corresponding = yaml_bool(m, "corresponding");
-    author.equal_contributor = yaml_bool(m, "equal-contributor");
-    author.deceased = yaml_bool(m, "deceased");
-    if let Some(attrs) = m.get(&yaml_key("attributes")) {
-        if let Some(am) = attrs.as_mapping() {
-            if yaml_bool(am, "corresponding") { author.corresponding = true; }
-            if yaml_bool(am, "equal-contributor") { author.equal_contributor = true; }
-            if yaml_bool(am, "deceased") { author.deceased = true; }
+    author.corresponding = table_bool(m, "corresponding");
+    author.equal_contributor = table_bool(m, "equal-contributor");
+    author.deceased = table_bool(m, "deceased");
+    if let Some(attrs) = table_get(m, "attributes") {
+        if let Some(am) = attrs.as_table() {
+            if table_bool(am, "corresponding") { author.corresponding = true; }
+            if table_bool(am, "equal-contributor") { author.equal_contributor = true; }
+            if table_bool(am, "deceased") { author.deceased = true; }
         }
     }
 
     // Roles
-    let role_key = m.get(&yaml_key("roles"))
-        .or_else(|| m.get(&yaml_key("role")));
+    let role_key = table_get(m, "roles")
+        .or_else(|| table_get(m, "role"));
     if let Some(rv) = role_key {
         if let Some(s) = rv.as_str() {
             author.roles.push(s.to_string());
-        } else if let Some(seq) = rv.as_sequence() {
+        } else if let Some(seq) = rv.as_array() {
             for item in seq {
                 if let Some(s) = item.as_str() {
                     author.roles.push(s.to_string());
@@ -256,12 +232,12 @@ fn parse_author_mapping(
     }
 
     // Affiliations
-    let aff_key = m.get(&yaml_key("affiliations"))
-        .or_else(|| m.get(&yaml_key("affiliation")));
+    let aff_key = table_get(m, "affiliations")
+        .or_else(|| table_get(m, "affiliation"));
     if let Some(aff_val) = aff_key {
-        let aff_entries: Vec<&YamlOwned> = if aff_val.as_str().is_some() || aff_val.as_mapping().is_some() {
+        let aff_entries: Vec<&Value> = if aff_val.as_str().is_some() || aff_val.as_table().is_some() {
             vec![aff_val]
-        } else if let Some(seq) = aff_val.as_sequence() {
+        } else if let Some(seq) = aff_val.as_array() {
             seq.iter().collect()
         } else {
             vec![]
@@ -278,14 +254,12 @@ fn parse_author_mapping(
 }
 
 /// Resolve an affiliation entry to an index in the affiliations vec.
-/// Handles: plain string, `{ref: id}`, or inline affiliation mapping.
 fn resolve_affiliation(
-    entry: &YamlOwned,
+    entry: &Value,
     affiliations: &mut Vec<Affiliation>,
-    top_level: &[YamlOwned],
+    top_level: &[Value],
 ) -> Option<usize> {
     if let Some(s) = entry.as_str() {
-        // Deduplicate by name
         if let Some(idx) = affiliations.iter().position(|a| a.name.as_deref() == Some(s)) {
             return Some(idx);
         }
@@ -293,26 +267,24 @@ fn resolve_affiliation(
         affiliations.push(aff);
         return Some(affiliations.len() - 1);
     }
-    if let Some(m) = entry.as_mapping() {
+    if let Some(m) = entry.as_table() {
         // Check for ref:
-        if let Some(ref_val) = yaml_str(m, "ref") {
-            // Look up in top-level affiliations
+        if let Some(ref_val) = table_str(m, "ref") {
             for tl in top_level {
-                if let Some(tlm) = tl.as_mapping() {
-                    if yaml_str(tlm, "id").as_deref() == Some(ref_val.as_str()) {
+                if let Some(tlm) = tl.as_table() {
+                    if table_str(tlm, "id").as_deref() == Some(ref_val.as_str()) {
                         return resolve_affiliation(tl, affiliations, &[]);
                     }
                 }
             }
-            // Also check already-parsed affiliations by id
             if let Some(idx) = affiliations.iter().position(|a| a.id.as_deref() == Some(ref_val.as_str())) {
                 return Some(idx);
             }
             return None;
         }
-        // Inline affiliation — deduplicate by id or name
-        let id = yaml_str(m, "id");
-        let name = yaml_str(m, "name");
+        // Inline affiliation
+        let id = table_str(m, "id");
+        let name = table_str(m, "name");
         if let Some(ref id_str) = id {
             if let Some(idx) = affiliations.iter().position(|a| a.id.as_deref() == Some(id_str.as_str())) {
                 return Some(idx);
@@ -328,10 +300,10 @@ fn resolve_affiliation(
         let aff = Affiliation {
             id,
             name,
-            department: yaml_str(m, "department"),
-            city: yaml_str(m, "city"),
-            region: yaml_str(m, "region").or_else(|| yaml_str(m, "state")),
-            country: yaml_str(m, "country"),
+            department: table_str(m, "department"),
+            city: table_str(m, "city"),
+            region: table_str(m, "region").or_else(|| table_str(m, "state")),
+            country: table_str(m, "country"),
             ..Default::default()
         };
         affiliations.push(aff);
@@ -340,36 +312,10 @@ fn resolve_affiliation(
     None
 }
 
-/// Helper: get an optional string from a YAML mapping.
-fn yaml_str(m: &MappingOwned, key: &str) -> Option<String> {
-    m.get(&yaml_key(key))
-        .and_then(|v| v.as_str())
-        .map(String::from)
-}
-
-/// Helper: get a bool from a YAML mapping (default false).
-fn yaml_bool(m: &MappingOwned, key: &str) -> bool {
-    m.get(&yaml_key(key))
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false)
-}
-
-/// Helper: parse a YAML value that is either a string or a sequence of strings.
-fn yaml_string_list(v: &YamlOwned) -> Vec<String> {
-    if let Some(s) = v.as_str() {
-        return vec![s.to_string()];
-    }
-    if let Some(seq) = v.as_sequence() {
-        return seq.iter().filter_map(|v| v.as_str().map(String::from)).collect();
-    }
-    vec![]
-}
-
 // ---------------------------------------------------------------------------
 // Copyright, license, citation, funding parsing
 // ---------------------------------------------------------------------------
 
-/// Known Creative Commons abbreviation expansions.
 fn expand_cc_license(s: &str) -> Option<(&'static str, &'static str)> {
     match s.to_uppercase().replace('-', " ").trim() {
         s if s == "CC0" => Some(("CC0 1.0 Universal", "https://creativecommons.org/publicdomain/zero/1.0/")),
@@ -383,23 +329,23 @@ fn expand_cc_license(s: &str) -> Option<(&'static str, &'static str)> {
     }
 }
 
-fn parse_copyright(v: &YamlOwned) -> Copyright {
+fn parse_copyright(v: &Value) -> Copyright {
     if let Some(s) = v.as_str() {
         return Copyright { statement: Some(s.to_string()), ..Default::default() };
     }
-    if let Some(m) = v.as_mapping() {
+    if let Some(m) = v.as_table() {
         return Copyright {
-            holder: yaml_str(m, "holder"),
-            year: yaml_str(m, "year")
-                .or_else(|| m.get(&yaml_key("year"))
+            holder: table_str(m, "holder"),
+            year: table_str(m, "year")
+                .or_else(|| table_get(m, "year")
                     .and_then(|v| v.as_integer()).map(|n| n.to_string())),
-            statement: yaml_str(m, "statement"),
+            statement: table_str(m, "statement"),
         };
     }
     Copyright::default()
 }
 
-fn parse_license(v: &YamlOwned) -> License {
+fn parse_license(v: &Value) -> License {
     if let Some(s) = v.as_str() {
         return if let Some((text, url)) = expand_cc_license(s) {
             License { text: Some(text.to_string()), url: Some(url.to_string()) }
@@ -407,14 +353,13 @@ fn parse_license(v: &YamlOwned) -> License {
             License { text: Some(s.to_string()), ..Default::default() }
         };
     }
-    if let Some(m) = v.as_mapping() {
+    if let Some(m) = v.as_table() {
         let mut lic = License {
-            text: yaml_str(m, "text"),
-            url: yaml_str(m, "url"),
+            text: table_str(m, "text"),
+            url: table_str(m, "url"),
             ..Default::default()
         };
-        // If type: is a CC abbreviation, expand it
-        if let Some(t) = yaml_str(m, "type") {
+        if let Some(t) = table_str(m, "type") {
             if let Some((text, url)) = expand_cc_license(&t) {
                 if lic.text.is_none() { lic.text = Some(text.to_string()); }
                 if lic.url.is_none() { lic.url = Some(url.to_string()); }
@@ -427,27 +372,27 @@ fn parse_license(v: &YamlOwned) -> License {
     License::default()
 }
 
-fn parse_citation(v: &YamlOwned) -> Option<CitationMeta> {
-    let m = v.as_mapping()?;
+fn parse_citation(v: &Value) -> Option<CitationMeta> {
+    let m = v.as_table()?;
     Some(CitationMeta {
-        container_title: yaml_str(m, "container-title"),
-        volume: yaml_str(m, "volume")
-            .or_else(|| m.get(&yaml_key("volume"))
+        container_title: table_str(m, "container-title"),
+        volume: table_str(m, "volume")
+            .or_else(|| table_get(m, "volume")
                 .and_then(|v| v.as_integer()).map(|n| n.to_string())),
-        issue: yaml_str(m, "issue")
-            .or_else(|| m.get(&yaml_key("issue"))
+        issue: table_str(m, "issue")
+            .or_else(|| table_get(m, "issue")
                 .and_then(|v| v.as_integer()).map(|n| n.to_string())),
-        issued: yaml_str(m, "issued"),
-        doi: yaml_str(m, "doi"),
-        url: yaml_str(m, "url"),
-        page: yaml_str(m, "page"),
+        issued: table_str(m, "issued"),
+        doi: table_str(m, "doi"),
+        url: table_str(m, "url"),
+        page: table_str(m, "page"),
     })
 }
 
-fn parse_funding(v: &YamlOwned) -> Vec<Funding> {
-    let entries: Vec<&YamlOwned> = if v.as_str().is_some() || v.as_mapping().is_some() {
+fn parse_funding(v: &Value) -> Vec<Funding> {
+    let entries: Vec<&Value> = if v.as_str().is_some() || v.as_table().is_some() {
         vec![v]
-    } else if let Some(seq) = v.as_sequence() {
+    } else if let Some(seq) = v.as_array() {
         seq.iter().collect()
     } else {
         return vec![];
@@ -455,88 +400,17 @@ fn parse_funding(v: &YamlOwned) -> Vec<Funding> {
     entries.iter().map(|e| {
         if let Some(s) = e.as_str() {
             Funding { statement: Some(s.to_string()), ..Default::default() }
-        } else if let Some(m) = e.as_mapping() {
+        } else if let Some(m) = e.as_table() {
             Funding {
-                source: yaml_str(m, "source"),
-                award: yaml_str(m, "award"),
-                recipient: yaml_str(m, "recipient"),
-                statement: yaml_str(m, "statement"),
+                source: table_str(m, "source"),
+                award: table_str(m, "award"),
+                recipient: table_str(m, "recipient"),
+                statement: table_str(m, "statement"),
             }
         } else {
             Funding::default()
         }
     }).collect()
-}
-
-// ---------------------------------------------------------------------------
-// YAML value helpers (used by Metadata::apply_overrides)
-// ---------------------------------------------------------------------------
-
-/// Coerce a string value into the appropriate YAML scalar type.
-/// "true"/"false" → Bool, integer → Number, float → Number, otherwise → String.
-pub(crate) fn coerce_yaml_value(s: &str) -> YamlOwned {
-    match s {
-        "true" | "TRUE" | "True" => YamlOwned::Value(ScalarOwned::Boolean(true)),
-        "false" | "FALSE" | "False" => YamlOwned::Value(ScalarOwned::Boolean(false)),
-        "null" | "NULL" | "~" => YamlOwned::Value(ScalarOwned::Null),
-        _ => {
-            if let Ok(n) = s.parse::<i64>() {
-                YamlOwned::Value(ScalarOwned::Integer(n))
-            } else if let Ok(f) = s.parse::<f64>() {
-                YamlOwned::Value(ScalarOwned::FloatingPoint(f.into()))
-            } else {
-                YamlOwned::Value(ScalarOwned::String(s.to_string()))
-            }
-        }
-    }
-}
-
-/// Build a nested YamlOwned from dot-separated key parts.
-/// `["a", "b", "c"]` with leaf `"val"` → `{"a": {"b": {"c": "val"}}}`.
-/// Returns the value rooted at parts[1] (caller handles parts[0]).
-pub(crate) fn build_nested_yaml(parts: &[&str], leaf: YamlOwned) -> YamlOwned {
-    let mut val = leaf;
-    for &part in parts[1..].iter().rev() {
-        let mut map = MappingOwned::new();
-        map.insert(yaml_key(part), val);
-        val = YamlOwned::Mapping(map);
-    }
-    val
-}
-
-/// Merge a nested YAML value into the extra map at the given top-level key.
-/// If the key already exists and both values are mappings, merge recursively.
-pub(crate) fn merge_yaml_value(
-    extra: &mut HashMap<String, YamlOwned>,
-    key: &str,
-    new_val: YamlOwned,
-) {
-    match extra.get_mut(key) {
-        Some(YamlOwned::Mapping(existing)) => {
-            if let YamlOwned::Mapping(new_map) = new_val {
-                merge_yaml_mappings(existing, new_map);
-            } else {
-                extra.insert(key.to_string(), new_val);
-            }
-        }
-        _ => {
-            extra.insert(key.to_string(), new_val);
-        }
-    }
-}
-
-/// Recursively merge two YAML mappings. Values in `source` override `target`.
-fn merge_yaml_mappings(target: &mut MappingOwned, source: MappingOwned) {
-    for (k, v) in source {
-        match (target.get_mut(&k), &v) {
-            (Some(YamlOwned::Mapping(t)), YamlOwned::Mapping(s)) => {
-                merge_yaml_mappings(t, s.clone());
-            }
-            _ => {
-                target.insert(k, v);
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -614,7 +488,6 @@ mod tests {
 
     #[test]
     fn test_yaml_block_scalar_with_dashes() {
-        // Indented --- inside a block scalar should NOT terminate the front matter
         let text = "---\ntitle: Test\nabstract: |\n  some content\n  ---\n  more content\n---\nBody";
         let (meta, body) = split_yaml(text).unwrap();
         assert_eq!(meta.title.as_deref(), Some("Test"));
@@ -624,7 +497,6 @@ mod tests {
 
     #[test]
     fn test_format_mapping() {
-        // format: { html: default } should extract "html"
         let text = "---\ntitle: Test\nformat:\n  html: default\n---\nBody";
         let (meta, _) = split_yaml(text).unwrap();
         assert_eq!(meta.format.as_deref(), Some("html"));
@@ -649,5 +521,23 @@ mod tests {
         let text = "---\nbibliography: refs.bib\n---\nBody";
         let (meta, _) = split_yaml(text).unwrap();
         assert_eq!(meta.bibliography, vec!["refs.bib"]);
+    }
+
+    #[test]
+    fn test_toml_frontmatter() {
+        let text = "---\ntitle = \"Hello\"\nauthor = \"World\"\nformat = \"html\"\n---\nBody";
+        let (meta, body) = split_yaml(text).unwrap();
+        assert_eq!(meta.title.as_deref(), Some("Hello"));
+        assert_eq!(meta.author, Some(vec!["World".to_string()]));
+        assert_eq!(meta.format.as_deref(), Some("html"));
+        assert_eq!(body, "Body");
+    }
+
+    #[test]
+    fn test_toml_frontmatter_nested() {
+        let text = "---\ntitle = \"Hello\"\n\n[calepin]\nplugins = [\"txtfmt\"]\n---\nBody";
+        let (meta, _) = split_yaml(text).unwrap();
+        assert_eq!(meta.title.as_deref(), Some("Hello"));
+        assert_eq!(meta.plugins, vec!["txtfmt"]);
     }
 }

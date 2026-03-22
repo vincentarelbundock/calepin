@@ -16,9 +16,9 @@ clap_complete = "4"
 # Markdown rendering
 comrak = "0.51"
 
-# YAML front matter
+# Front matter (TOML + minimal YAML)
 serde = { version = "1", features = ["derive"] }
-saphyr = "0.0"
+toml = "0.8"
 
 # Syntax highlighting
 syntect = "5"
@@ -41,7 +41,6 @@ hayagriva = { version = "0.9", features = ["biblatex"] }
 
 # Template engine
 minijinja = "2"
-serde-saphyr = "0.0"
 glob = "0.3"
 walkdir = "2"
 

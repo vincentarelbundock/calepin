@@ -394,15 +394,15 @@ impl Highlighter {
 
 /// Parse the YAML `highlight-style` value into a HighlightConfig.
 /// Accepts a string or a map with `light` and `dark` keys.
-pub fn parse_highlight_config(yaml: &saphyr::YamlOwned) -> HighlightConfig {
+pub fn parse_highlight_config(yaml: &crate::value::Value) -> HighlightConfig {
     // String value: single theme
     if let Some(name) = yaml.as_str() {
         return resolve_single_theme(name);
     }
 
     // Map value: light/dark
-    if let Some(light_val) = yaml.as_mapping_get("light") {
-        if let Some(dark_val) = yaml.as_mapping_get("dark") {
+    if let Some(light_val) = yaml.get("light") {
+        if let Some(dark_val) = yaml.get("dark") {
             if let (Some(light_name), Some(dark_name)) = (light_val.as_str(), dark_val.as_str()) {
                 let light = resolve_theme_key(light_name);
                 let dark = resolve_theme_key(dark_name);

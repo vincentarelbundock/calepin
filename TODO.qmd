@@ -1,10 +1,19 @@
+
 # TODO
+
+split css into core and style
 
 + [ ] Convert elements templates to Tera and simplify the dispatch
 + [ ] Blog post site template
 + [ ] Accessibility
 + [ ] katex by default -- switchable to mathjax via YAML
 + [ ] Batch over different formats
++ [ ] Right side bar in HTML has {#sec-tags}
+
+## YAML to TOML
+
+- [ ] Work only in TOML internally but write a translation layer from Quarto to Calepin when YAML is detected.
+    - [ ] Feature complete
 
 ## Templates
 

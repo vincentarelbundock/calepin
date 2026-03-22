@@ -144,7 +144,7 @@ fn get_sort_value(page: &PageInfo, field: &str) -> String {
     }
 }
 
-/// Extract YAML frontmatter from a .qmd file.
+/// Extract frontmatter from a .qmd file.
 fn extract_frontmatter(path: &Path) -> Result<PageMeta> {
     let text = fs::read_to_string(path)?;
     let trimmed = text.trim_start();
@@ -161,8 +161,10 @@ fn extract_frontmatter(path: &Path) -> Result<PageMeta> {
 
     match end {
         Some(pos) => {
-            let yaml_str = &after_first[..pos];
-            let meta: PageMeta = serde_saphyr::from_str(yaml_str).unwrap_or_default();
+            let fm_str = &after_first[..pos];
+            let table = crate::value::parse_frontmatter(fm_str).unwrap_or_default();
+            let json_val = crate::value::to_json(&crate::value::Value::Table(table));
+            let meta: PageMeta = serde_json::from_value(json_val).unwrap_or_default();
             Ok(meta)
         }
         None => Ok(PageMeta::default()),

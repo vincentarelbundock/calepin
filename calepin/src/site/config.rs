@@ -140,32 +140,30 @@ pub enum HighlightStyle {
 }
 
 impl SiteConfig {
-    /// Load config from file. Tries `_calepin.yaml`, then `_site.yml`.
+    /// Load config from file. Tries `_calepin.toml`, `_calepin.yaml`, then `_site.yml`.
     pub fn load(config_path: Option<&Path>, base_dir: &Path) -> Result<(Self, PathBuf)> {
         if let Some(path) = config_path {
             let text = fs::read_to_string(path)
                 .with_context(|| format!("Failed to read config: {}", path.display()))?;
-            let mut config: SiteConfig = serde_saphyr::from_str(&text)
-                .with_context(|| format!("Failed to parse config: {}", path.display()))?;
-            config.brand = parse_brand_from_text(&text);
+            let mut config: SiteConfig = parse_site_config(&text, path)?;
+            config.brand = parse_brand_from_text(&text, path);
             return Ok((config, path.to_path_buf()));
         }
 
         // Try default names
-        for name in &["_calepin.yaml", "_calepin.yml", "_site.yml", "_site.yaml"] {
+        for name in &["_calepin.toml", "_calepin.yaml", "_calepin.yml", "_site.yml", "_site.yaml"] {
             let path = base_dir.join(name);
             if path.exists() {
                 let text = fs::read_to_string(&path)
                     .with_context(|| format!("Failed to read config: {}", path.display()))?;
-                let mut config: SiteConfig = serde_saphyr::from_str(&text)
-                    .with_context(|| format!("Failed to parse config: {}", path.display()))?;
-                config.brand = parse_brand_from_text(&text);
+                let mut config: SiteConfig = parse_site_config(&text, &path)?;
+                config.brand = parse_brand_from_text(&text, &path);
                 return Ok((config, path));
             }
         }
 
         anyhow::bail!(
-            "No site config found. Create _calepin.yaml or _site.yml in {}",
+            "No site config found. Create _calepin.toml or _calepin.yaml in {}",
             base_dir.display()
         );
     }
@@ -198,13 +196,34 @@ fn collect_paths_recursive(entries: &[PageEntry], out: &mut Vec<String>) {
     }
 }
 
-/// Extract `brand:` from raw YAML text and parse into a Brand.
-fn parse_brand_from_text(text: &str) -> Option<crate::brand::Brand> {
-    use saphyr::LoadableYamlNode;
-    let docs = saphyr::YamlOwned::load_from_str(text).ok()?;
-    let root = docs.into_iter().next()?;
-    let map = root.as_mapping()?;
-    let brand_key = saphyr::YamlOwned::Value(saphyr::ScalarOwned::String("brand".to_string()));
-    let brand_val = map.get(&brand_key)?;
-    crate::brand::parse_brand_from_yaml(brand_val)
+/// Parse site config text (TOML or YAML depending on file extension).
+fn parse_site_config(text: &str, path: &Path) -> Result<SiteConfig> {
+    let is_toml = path.extension().map_or(false, |e| e == "toml");
+    if is_toml {
+        toml::from_str(text)
+            .with_context(|| format!("Failed to parse config: {}", path.display()))
+    } else {
+        // For YAML site configs, use the toml deserializer on the YAML
+        // by first converting through our Value type, then to JSON, then deserializing.
+        let table = crate::value::parse_minimal_yaml(text);
+        let json_val = crate::value::to_json(&crate::value::Value::Table(table));
+        serde_json::from_value(json_val)
+            .with_context(|| format!("Failed to parse config: {}", path.display()))
+    }
+}
+
+/// Extract `brand:` from config text and parse into a Brand.
+fn parse_brand_from_text(text: &str, path: &Path) -> Option<crate::brand::Brand> {
+    let is_toml = path.extension().map_or(false, |e| e == "toml");
+    let table = if is_toml {
+        let tv: toml::Value = toml::from_str(text).ok()?;
+        match tv {
+            toml::Value::Table(map) => crate::value::table_from_toml(map),
+            _ => return None,
+        }
+    } else {
+        crate::value::parse_minimal_yaml(text)
+    };
+    let brand_val = crate::value::table_get(&table, "brand")?;
+    crate::brand::parse_brand_from_value(brand_val)
 }

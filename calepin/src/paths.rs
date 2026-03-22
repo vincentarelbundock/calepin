@@ -126,17 +126,17 @@ pub fn resolve_first_match(document_dir: &Path, dir: &str, extension: &str) -> O
 }
 
 /// Resolve a plugin directory by name.
-/// Checks `{document_dir}/_calepin/plugins/{name}/plugin.yml`
-/// then `~/.config/calepin/plugins/{name}/plugin.yml`.
+/// Checks `{document_dir}/_calepin/plugins/{name}/plugin.toml` (or `plugin.yml`)
+/// then `~/.config/calepin/plugins/{name}/plugin.toml` (or `plugin.yml`).
 pub fn resolve_plugin_dir(name: &str, document_dir: &Path) -> Option<PathBuf> {
     let local = document_dir.join("_calepin").join("plugins").join(name);
-    if local.join("plugin.yml").exists() {
+    if local.join("plugin.toml").exists() || local.join("plugin.yml").exists() {
         return Some(local);
     }
 
     if let Ok(home) = std::env::var("HOME") {
         let user = Path::new(&home).join(".config/calepin/plugins").join(name);
-        if user.join("plugin.yml").exists() {
+        if user.join("plugin.toml").exists() || user.join("plugin.yml").exists() {
             return Some(user);
         }
     }
@@ -182,12 +182,15 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
         if is_builtin_plugin(plugin) {
             continue;
         }
-        let local_path = ctx.document_dir.join("_calepin/plugins").join(plugin).join("plugin.yml");
+        let local_dir = ctx.document_dir.join("_calepin/plugins").join(plugin);
+        let local_path = local_dir.join("plugin.toml");
         let user_path = std::env::var("HOME").ok().map(|h| {
-            Path::new(&h).join(".config/calepin/plugins").join(plugin).join("plugin.yml")
+            Path::new(&h).join(".config/calepin/plugins").join(plugin).join("plugin.toml")
         });
-        let found = local_path.exists()
-            || user_path.as_ref().map_or(false, |p| p.exists());
+        let found = local_dir.join("plugin.toml").exists()
+            || local_dir.join("plugin.yml").exists()
+            || user_path.as_ref().map_or(false, |p| p.exists())
+            || user_path.as_ref().map_or(false, |p| p.with_file_name("plugin.yml").exists());
         if !found {
             let mut msg = format!(
                 "  calepin.plugins: {}\n    -> not found: {}",

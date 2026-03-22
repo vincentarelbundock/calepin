@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use saphyr::{YamlOwned, ScalarOwned};
+use crate::value::{Value, Table, table_get, table_str};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,9 +65,9 @@ pub struct FontDef {
     pub family: String,
 }
 
-/// Parse a `Brand` from a YAML mapping node (front matter `brand:` key).
-pub fn parse_brand_from_yaml(val: &YamlOwned) -> Option<Brand> {
-    let map = val.as_mapping()?;
+/// Parse a `Brand` from a Value (front matter `brand:` key).
+pub fn parse_brand_from_value(val: &Value) -> Option<Brand> {
+    let map = val.as_table()?;
     let color = parse_color(map);
     let logo = parse_logo(map);
     let typography = parse_typography(map);
@@ -76,36 +76,20 @@ pub fn parse_brand_from_yaml(val: &YamlOwned) -> Option<Brand> {
 }
 
 // ---------------------------------------------------------------------------
-// YAML helpers
-// ---------------------------------------------------------------------------
-
-fn yaml_key(key: &str) -> YamlOwned {
-    YamlOwned::Value(ScalarOwned::String(key.to_string()))
-}
-
-fn yaml_get<'a>(map: &'a saphyr::MappingOwned, key: &str) -> Option<&'a YamlOwned> {
-    map.get(&yaml_key(key))
-}
-
-fn yaml_str<'a>(map: &'a saphyr::MappingOwned, key: &str) -> Option<&'a str> {
-    yaml_get(map, key).and_then(|v| v.as_str())
-}
-
-// ---------------------------------------------------------------------------
 // Parsing
 // ---------------------------------------------------------------------------
 
-fn parse_color(root: &saphyr::MappingOwned) -> BrandColor {
-    let empty_map = saphyr::MappingOwned::new();
-    let color_val = yaml_get(root, "color");
-    let color_map = color_val.and_then(|v| v.as_mapping()).unwrap_or(&empty_map);
+fn parse_color(root: &Table) -> BrandColor {
+    let empty_table = Table::new();
+    let color_val = table_get(root, "color");
+    let color_map = color_val.and_then(|v| v.as_table()).unwrap_or(&empty_table);
 
     // Parse palette
     let mut palette = HashMap::new();
-    if let Some(pal_map) = yaml_get(color_map, "palette").and_then(|v| v.as_mapping()) {
-        for (k, v) in pal_map {
-            if let (Some(name), Some(hex)) = (k.as_str(), v.as_str()) {
-                palette.insert(name.to_string(), hex.to_string());
+    if let Some(pal_map) = table_get(color_map, "palette").and_then(|v| v.as_table()) {
+        for (name, v) in pal_map {
+            if let Some(hex) = v.as_str() {
+                palette.insert(name.clone(), hex.to_string());
             }
         }
     }
@@ -117,7 +101,7 @@ fn parse_color(root: &saphyr::MappingOwned) -> BrandColor {
         "success", "info", "warning", "danger", "light", "dark",
     ];
     for key in semantic_keys {
-        if let Some(val) = yaml_get(color_map, key) {
+        if let Some(val) = table_get(color_map, key) {
             if let Some(cv) = parse_color_value(val, &palette) {
                 semantic.insert(key.to_string(), cv);
             }
@@ -127,13 +111,13 @@ fn parse_color(root: &saphyr::MappingOwned) -> BrandColor {
     BrandColor { semantic }
 }
 
-fn parse_color_value(val: &YamlOwned, palette: &HashMap<String, String>) -> Option<ColorValue> {
+fn parse_color_value(val: &Value, palette: &HashMap<String, String>) -> Option<ColorValue> {
     if let Some(s) = val.as_str() {
         return Some(ColorValue::Flat(resolve_color(s, palette)));
     }
-    if let Some(map) = val.as_mapping() {
-        let light = yaml_str(map, "light").map(|s| resolve_color(s, palette));
-        let dark = yaml_str(map, "dark").map(|s| resolve_color(s, palette));
+    if let Some(map) = val.as_table() {
+        let light = table_str(map, "light").map(|s| resolve_color(&s, palette));
+        let dark = table_str(map, "dark").map(|s| resolve_color(&s, palette));
         if light.is_some() || dark.is_some() {
             return Some(ColorValue::Themed { light, dark });
         }
@@ -149,66 +133,61 @@ fn resolve_color(val: &str, palette: &HashMap<String, String>) -> String {
     }
 }
 
-fn parse_logo(root: &saphyr::MappingOwned) -> BrandLogo {
-    let empty_map = saphyr::MappingOwned::new();
-    let logo_val = yaml_get(root, "logo");
-    let logo_map = logo_val.and_then(|v| v.as_mapping()).unwrap_or(&empty_map);
+fn parse_logo(root: &Table) -> BrandLogo {
+    let empty_table = Table::new();
+    let logo_val = table_get(root, "logo");
+    let logo_map = logo_val.and_then(|v| v.as_table()).unwrap_or(&empty_table);
 
     // Parse named images
     let mut images = HashMap::new();
-    if let Some(img_map) = yaml_get(logo_map, "images").and_then(|v| v.as_mapping()) {
-        for (k, v) in img_map {
-            if let Some(name) = k.as_str() {
-                if let Some(img) = parse_logo_image(v) {
-                    images.insert(name.to_string(), img);
-                }
+    if let Some(img_map) = table_get(logo_map, "images").and_then(|v| v.as_table()) {
+        for (name, v) in img_map {
+            if let Some(img) = parse_logo_image(v) {
+                images.insert(name.clone(), img);
             }
         }
     }
 
-    let small = yaml_get(logo_map, "small").and_then(|v| parse_logo_slot(v, &images));
-    let medium = yaml_get(logo_map, "medium").and_then(|v| parse_logo_slot(v, &images));
-    let large = yaml_get(logo_map, "large").and_then(|v| parse_logo_slot(v, &images));
+    let small = table_get(logo_map, "small").and_then(|v| parse_logo_slot(v, &images));
+    let medium = table_get(logo_map, "medium").and_then(|v| parse_logo_slot(v, &images));
+    let large = table_get(logo_map, "large").and_then(|v| parse_logo_slot(v, &images));
 
     BrandLogo { small, medium, large }
 }
 
-fn parse_logo_image(val: &YamlOwned) -> Option<LogoImage> {
+fn parse_logo_image(val: &Value) -> Option<LogoImage> {
     if let Some(s) = val.as_str() {
         return Some(LogoImage { path: s.to_string(), alt: None });
     }
-    if let Some(map) = val.as_mapping() {
-        let path = yaml_str(map, "path")?.to_string();
-        let alt = yaml_str(map, "alt").map(String::from);
+    if let Some(map) = val.as_table() {
+        let path = table_str(map, "path")?.to_string();
+        let alt = table_str(map, "alt");
         return Some(LogoImage { path, alt });
     }
     None
 }
 
-fn parse_logo_slot(val: &YamlOwned, images: &HashMap<String, LogoImage>) -> Option<LogoSlot> {
-    // String: direct path or named reference
+fn parse_logo_slot(val: &Value, images: &HashMap<String, LogoImage>) -> Option<LogoSlot> {
     if let Some(s) = val.as_str() {
         let img = resolve_logo_ref(s, images);
         return Some(LogoSlot::Single(img));
     }
 
-    if let Some(map) = val.as_mapping() {
-        // Check for light/dark themed
-        let has_light = yaml_get(map, "light").is_some();
-        let has_dark = yaml_get(map, "dark").is_some();
+    if let Some(map) = val.as_table() {
+        let has_light = table_get(map, "light").is_some();
+        let has_dark = table_get(map, "dark").is_some();
         if has_light || has_dark {
-            let light = yaml_get(map, "light").and_then(|v| {
+            let light = table_get(map, "light").and_then(|v| {
                 if let Some(s) = v.as_str() { Some(resolve_logo_ref(s, images)) }
                 else { parse_logo_image(v) }
             });
-            let dark = yaml_get(map, "dark").and_then(|v| {
+            let dark = table_get(map, "dark").and_then(|v| {
                 if let Some(s) = v.as_str() { Some(resolve_logo_ref(s, images)) }
                 else { parse_logo_image(v) }
             });
             return Some(LogoSlot::Themed { light, dark });
         }
 
-        // Otherwise it's a {path, alt} object
         let img = parse_logo_image(val)?;
         return Some(LogoSlot::Single(img));
     }
@@ -224,17 +203,17 @@ fn resolve_logo_ref(name: &str, images: &HashMap<String, LogoImage>) -> LogoImag
     }
 }
 
-fn parse_typography(root: &saphyr::MappingOwned) -> BrandTypography {
-    let empty_map = saphyr::MappingOwned::new();
-    let typo_val = yaml_get(root, "typography");
-    let typo_map = typo_val.and_then(|v| v.as_mapping()).unwrap_or(&empty_map);
+fn parse_typography(root: &Table) -> BrandTypography {
+    let empty_table = Table::new();
+    let typo_val = table_get(root, "typography");
+    let typo_map = typo_val.and_then(|v| v.as_table()).unwrap_or(&empty_table);
 
     let mut fonts = Vec::new();
-    if let Some(seq) = yaml_get(typo_map, "fonts").and_then(|v| v.as_sequence()) {
+    if let Some(seq) = table_get(typo_map, "fonts").and_then(|v| v.as_array()) {
         for item in seq {
-            if let Some(map) = item.as_mapping() {
-                let family = yaml_str(map, "family").unwrap_or_default().to_string();
-                let source = yaml_str(map, "source").unwrap_or("system").to_string();
+            if let Some(map) = item.as_table() {
+                let family = table_str(map, "family").unwrap_or_default();
+                let source = table_str(map, "source").unwrap_or_else(|| "system".to_string());
                 if !family.is_empty() {
                     fonts.push(FontDef { source, family });
                 }
@@ -242,13 +221,13 @@ fn parse_typography(root: &saphyr::MappingOwned) -> BrandTypography {
         }
     }
 
-    fn get_family(map: &saphyr::MappingOwned, key: &str) -> Option<String> {
-        let val = yaml_get(map, key)?;
+    fn get_family(map: &Table, key: &str) -> Option<String> {
+        let val = table_get(map, key)?;
         if let Some(s) = val.as_str() {
             return Some(s.to_string());
         }
-        if let Some(m) = val.as_mapping() {
-            return yaml_str(m, "family").map(String::from);
+        if let Some(m) = val.as_table() {
+            return table_str(m, "family");
         }
         None
     }
@@ -261,12 +240,12 @@ fn parse_typography(root: &saphyr::MappingOwned) -> BrandTypography {
     }
 }
 
-fn parse_meta(root: &saphyr::MappingOwned) -> HashMap<String, String> {
+fn parse_meta(root: &Table) -> HashMap<String, String> {
     let mut meta = HashMap::new();
-    if let Some(map) = yaml_get(root, "meta").and_then(|v| v.as_mapping()) {
-        for (k, v) in map {
-            if let (Some(key), Some(val)) = (k.as_str(), v.as_str()) {
-                meta.insert(key.to_string(), val.to_string());
+    if let Some(map) = table_get(root, "meta").and_then(|v| v.as_table()) {
+        for (key, v) in map {
+            if let Some(val) = v.as_str() {
+                meta.insert(key.clone(), val.to_string());
             }
         }
     }
@@ -322,7 +301,6 @@ pub fn brand_logo_tag(brand: &Brand, size: &str, mode: &str, format: &str) -> Op
     match format {
         "html" => Some(logo_slot_to_html(slot, mode)),
         _ => {
-            // For non-HTML, just return the path
             let img = match slot {
                 LogoSlot::Single(img) => img,
                 LogoSlot::Themed { light, dark } => {
@@ -481,7 +459,6 @@ fn build_brand_css_inner(brand: &Brand, scope: CssScope) -> String {
         parts.push(":root {".to_string());
         parts.extend(font_props);
         parts.push("}".to_string());
-        // Apply fonts to elements
         if brand.typography.base.is_some() {
             parts.push("body { font-family: var(--brand-font-base); }".to_string());
         }
@@ -520,7 +497,6 @@ pub fn inject_brand_vars(vars: &mut HashMap<String, String>, ext: &str, brand: O
                 if let Some(d) = dark {
                     vars.insert(format!("brand-{}-dark", name), d.clone());
                 }
-                // Default: light fallback
                 let default = light.as_ref().or(dark.as_ref());
                 if let Some(d) = default {
                     vars.insert(format!("brand-{}", name), d.clone());
@@ -529,7 +505,7 @@ pub fn inject_brand_vars(vars: &mut HashMap<String, String>, ext: &str, brand: O
         }
     }
 
-    // Logo paths (preferred size: medium > small > large)
+    // Logo paths
     if let Some(img) = resolve_preferred_logo(brand, "light") {
         vars.insert("brand_logo_light".to_string(), img.path);
         if let Some(alt) = img.alt {

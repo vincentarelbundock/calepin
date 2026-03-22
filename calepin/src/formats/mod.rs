@@ -258,22 +258,26 @@ pub fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<Stri
     Ok(String::from_utf8(output.stdout)?)
 }
 
-/// Load a custom format from `_calepin/formats/{name}.yaml`.
+/// Load a custom format from `_calepin/formats/{name}.toml` (or `{name}.yaml` fallback).
 fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
-    let config_file = format!("{}.yaml", name);
-    let path = crate::paths::resolve_path_cwd("formats", &config_file)
+    // Try TOML first, then YAML fallback
+    let path = crate::paths::resolve_path_cwd("formats", &format!("{}.toml", name))
+        .or_else(|| crate::paths::resolve_path_cwd("formats", &format!("{}.yaml", name)))
         .ok_or_else(|| anyhow::anyhow!(
-            "Unknown format: '{}'. No built-in format or config at _calepin/formats/{}.yaml",
+            "Unknown format: '{}'. No built-in format or config at _calepin/formats/{}.toml",
             name, name
         ))?;
 
     let content = std::fs::read_to_string(&path)?;
-    use saphyr::LoadableYamlNode;
-    let docs = saphyr::YamlOwned::load_from_str(&content)?;
-    let config = docs.into_iter().next().unwrap_or(saphyr::YamlOwned::BadValue);
+    let config = if path.extension().map_or(false, |e| e == "toml") {
+        let tv: toml::Value = toml::from_str(&content)?;
+        crate::value::from_toml(tv)
+    } else {
+        crate::value::Value::Table(crate::value::parse_minimal_yaml(&content))
+    };
 
-    let base_name = config["base"]
-        .as_str()
+    let base_name = config.get("base")
+        .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Custom format '{}': missing 'base' field", name))?;
 
     // Create the base renderer (must be a built-in)
@@ -285,16 +289,16 @@ fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
         other => anyhow::bail!("Custom format '{}': unknown base format '{}'", name, other),
     };
 
-    let ext = config.as_mapping_get("extension")
+    let ext = config.get("extension")
         .and_then(|v| v.as_str())
         .unwrap_or(base.extension())
         .to_string();
 
     let config_dir = path.parent().unwrap_or(Path::new("."));
-    let preprocess_script = config.as_mapping_get("preprocess")
+    let preprocess_script = config.get("preprocess")
         .and_then(|v| v.as_str())
         .map(|s| config_dir.join(s));
-    let postprocess_script = config.as_mapping_get("postprocess")
+    let postprocess_script = config.get("postprocess")
         .and_then(|v| v.as_str())
         .map(|s| config_dir.join(s));
 

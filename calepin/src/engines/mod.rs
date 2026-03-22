@@ -323,7 +323,7 @@ fn div_is_visible(
     classes: &[String],
     attrs: &HashMap<String, String>,
     output_format: &str,
-    meta_extra: &HashMap<String, saphyr::YamlOwned>,
+    meta_extra: &HashMap<String, crate::value::Value>,
 ) -> bool {
     content_is_visible(classes, attrs, output_format, Some(meta_extra))
 }
@@ -332,7 +332,7 @@ pub fn content_is_visible(
     classes: &[String],
     attrs: &HashMap<String, String>,
     output_format: &str,
-    meta_extra: Option<&HashMap<String, saphyr::YamlOwned>>,
+    meta_extra: Option<&HashMap<String, crate::value::Value>>,
 ) -> bool {
     let is_content_visible = classes.iter().any(|c| c == "content-visible");
     let is_content_hidden = classes.iter().any(|c| c == "content-hidden");
@@ -361,19 +361,19 @@ pub fn content_is_visible(
     }
 }
 
-fn meta_is_truthy(extra: Option<&HashMap<String, saphyr::YamlOwned>>, key: &str) -> bool {
-    use saphyr::YamlOwned;
+fn meta_is_truthy(extra: Option<&HashMap<String, crate::value::Value>>, key: &str) -> bool {
+    use crate::value::Value;
     let extra = match extra {
         Some(e) => e,
         None => return false,
     };
     let parts: Vec<&str> = key.split('.').collect();
-    let mut current: &YamlOwned = match extra.get(parts[0]) {
+    let mut current: &Value = match extra.get(parts[0]) {
         Some(v) => v,
         None => return false,
     };
     for part in &parts[1..] {
-        match current.as_mapping_get(part) {
+        match current.get(part) {
             Some(v) => current = v,
             None => return false,
         }
@@ -463,40 +463,40 @@ mod tests {
 
     #[test]
     fn test_when_meta_truthy() {
+        use crate::value::Value;
         let classes = vec!["content-visible".to_string()];
         let mut attrs = HashMap::new();
         attrs.insert("when-meta".to_string(), "draft".to_string());
         let mut extra = HashMap::new();
-        extra.insert("draft".to_string(), saphyr::YamlOwned::Value(saphyr::ScalarOwned::Boolean(true)));
+        extra.insert("draft".to_string(), Value::Bool(true));
         assert!(content_is_visible(&classes, &attrs, "html", Some(&extra)));
-        extra.insert("draft".to_string(), saphyr::YamlOwned::Value(saphyr::ScalarOwned::Boolean(false)));
+        extra.insert("draft".to_string(), Value::Bool(false));
         assert!(!content_is_visible(&classes, &attrs, "html", Some(&extra)));
     }
 
     #[test]
     fn test_unless_meta() {
+        use crate::value::Value;
         let classes = vec!["content-hidden".to_string()];
         let mut attrs = HashMap::new();
         attrs.insert("unless-meta".to_string(), "published".to_string());
         let mut extra = HashMap::new();
-        extra.insert("published".to_string(), saphyr::YamlOwned::Value(saphyr::ScalarOwned::Boolean(true)));
+        extra.insert("published".to_string(), Value::Bool(true));
         assert!(content_is_visible(&classes, &attrs, "html", Some(&extra)));
-        extra.insert("published".to_string(), saphyr::YamlOwned::Value(saphyr::ScalarOwned::Boolean(false)));
+        extra.insert("published".to_string(), Value::Bool(false));
         assert!(!content_is_visible(&classes, &attrs, "html", Some(&extra)));
     }
 
     #[test]
     fn test_when_meta_dot_notation() {
+        use crate::value::Value;
         let classes = vec!["content-visible".to_string()];
         let mut attrs = HashMap::new();
         attrs.insert("when-meta".to_string(), "options.show-code".to_string());
-        let mut inner = saphyr::MappingOwned::new();
-        inner.insert(
-            saphyr::YamlOwned::Value(saphyr::ScalarOwned::String("show-code".to_string())),
-            saphyr::YamlOwned::Value(saphyr::ScalarOwned::Boolean(true)),
-        );
         let mut extra = HashMap::new();
-        extra.insert("options".to_string(), saphyr::YamlOwned::Mapping(inner));
+        extra.insert("options".to_string(), Value::Table(vec![
+            ("show-code".to_string(), Value::Bool(true)),
+        ]));
         assert!(content_is_visible(&classes, &attrs, "html", Some(&extra)));
     }
 }

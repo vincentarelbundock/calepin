@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::parse::yaml::{coerce_yaml_value, build_nested_yaml, merge_yaml_value};
+use crate::value::{self, Value as MetaValue};
 
 /// A parsed block from the .qmd file
 #[derive(Debug, Clone)]
@@ -292,7 +292,7 @@ pub struct Metadata {
     /// Custom cache directory name (default: _calepin_cache).
     pub cache_dir: Option<String>,
     pub brand: Option<crate::brand::Brand>,
-    pub var: HashMap<String, saphyr::YamlOwned>,
+    pub var: HashMap<String, MetaValue>,
 }
 
 impl Metadata {
@@ -310,20 +310,20 @@ impl Metadata {
                 "date" => self.date = Some(value.to_string()),
                 "abstract" => self.abstract_text = Some(value.to_string()),
                 "format" => self.format = Some(value.to_string()),
-                "number-sections" => self.number_sections = coerce_yaml_value(value).as_bool() == Some(true),
-                "toc" => self.toc = Some(coerce_yaml_value(value).as_bool() == Some(true)),
+                "number-sections" => self.number_sections = value::coerce_value(value).as_bool() == Some(true),
+                "toc" => self.toc = Some(value::coerce_value(value).as_bool() == Some(true)),
                 "bibliography" => self.bibliography = vec![value.to_string()],
                 "csl" => self.csl = Some(value.to_string()),
                 _ => {
                     // Support dot-notation for nested keys: "a.b.c=val"
                     let parts: Vec<&str> = key.split('.').collect();
-                    let coerced = coerce_yaml_value(value);
+                    let coerced = value::coerce_value(value);
                     if parts.len() == 1 {
                         self.var.insert(key.to_string(), coerced);
                     } else {
                         let leaf = coerced;
-                        let nested = build_nested_yaml(&parts, leaf);
-                        merge_yaml_value(&mut self.var, &parts[0].to_string(), nested);
+                        let nested = value::build_nested_value(&parts, leaf);
+                        value::merge_value(&mut self.var, parts[0], nested);
                     }
                 }
             }
