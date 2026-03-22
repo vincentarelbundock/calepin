@@ -59,29 +59,18 @@ These variables contain already-rendered markup, produced through overridable el
 | {% raw %}`{{appendix_block}}`{% endraw %} | License, citation, copyright, funding |
 | {% raw %}`{{bibliography_block}}`{% endraw %} | Bibliography section |
 
-## Includes
-
-| Variable | Description |
-|----------|-------------|
-| {% raw %}`{{header_includes}}`{% endraw %} | Raw content for `<head>` (from `header-includes:` in YAML) |
-| {% raw %}`{{include_before}}`{% endraw %} | Content before body |
-| {% raw %}`{{include_after}}`{% endraw %} | Content after body |
-
 ## HTML-specific
 
 | Variable | Description |
 |----------|-------------|
-| {% raw %}`{{css}}`{% endraw %} | `<style>` tag + external stylesheet links |
+| {% raw %}`{{css}}`{% endraw %} | `<style>` tag with default CSS |
 | {% raw %}`{{js}}`{% endraw %} | JavaScript block |
-| {% raw %}`{{body_class}}`{% endraw %} | CSS class for the body element |
+| {% raw %}`{{math_block}}`{% endraw %} | KaTeX/MathJax script tags |
 
 ## LaTeX-specific
 
 | Variable | Description |
 |----------|-------------|
-| {% raw %}`{{documentclass_line}}`{% endraw %} | `\documentclass[classoption]{documentclass}` |
-| {% raw %}`{{documentclass}}`{% endraw %} | Document class name (default: `article`) |
-| {% raw %}`{{classoption}}`{% endraw %} | Class options (default: `11pt`) |
 | {% raw %}`{{bib_preamble}}`{% endraw %} | Bibliography preamble commands |
 | {% raw %}`{{bib_end}}`{% endraw %} | Bibliography end commands |
 

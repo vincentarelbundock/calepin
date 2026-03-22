@@ -181,7 +181,7 @@ These are compiled into *Calepin* and registered as built-in plugins. They run a
 
 ## TheoremFilter
 
-Handles theorem-type classes and maintains per-type counters. See [Math](math.qmd#theorem-environments) for the full list of supported types, cross-reference prefixes, and template customization.
+Handles theorem-type classes and maintains per-type counters. See [Math](../authoring/math.qmd#theorem-environments) for the full list of supported types, cross-reference prefixes, and template customization.
 
 Matches: `.theorem`, `.lemma`, `.corollary`, `.proposition`, `.conjecture`, `.definition`, `.example`, `.exercise`, `.solution`, `.remark`, `.algorithm`, `.proof`.
 
@@ -221,4 +221,4 @@ The variable is available: `{r} hidden_value`.
 
 # Cross-references
 
-See [Math](math.qmd#cross-references) for theorem cross-reference prefixes and label resolution.
+See [Math](../authoring/math.qmd#cross-references) for theorem cross-reference prefixes and label resolution.

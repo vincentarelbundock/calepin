@@ -26,7 +26,7 @@
 //
 // ## Functions
 //
-// - CacheState::new()              — Initialize cache state for a document.
+// - CacheState::new()              — Initialize cache state with an explicit cache directory.
 // - CacheState::advance_digest()   — Mix a chunk's key hash into the running upstream digest.
 // - CacheState::advance_digest_inline() — Mix inline code expressions into the upstream digest.
 // - execute_chunk_cached()         — Execute a chunk with cache lookup: compute key from source,
@@ -51,18 +51,7 @@ pub struct CacheState {
 }
 
 impl CacheState {
-    pub fn new(input_path: &Path, enabled: bool) -> Self {
-        let stem = input_path.file_stem().unwrap_or_default().to_string_lossy();
-        let cache_dir = input_path.with_file_name(format!("{}_cache", stem));
-        Self {
-            cache_dir,
-            upstream_digest: 0,
-            enabled,
-        }
-    }
-
-    /// Create a CacheState with an explicit cache directory.
-    pub fn new_with_dir(input_path: &Path, cache_dir: &Path, enabled: bool) -> Self {
+    pub fn new(input_path: &Path, cache_dir: &Path, enabled: bool) -> Self {
         let _ = input_path; // input_path reserved for future hash seeding
         Self {
             cache_dir: cache_dir.to_path_buf(),

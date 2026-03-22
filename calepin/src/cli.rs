@@ -28,6 +28,9 @@ pub enum Command {
     /// Watch file or project and live-reload on changes
     Preview(PreviewArgs),
 
+    /// Serve a directory over HTTP
+    Serve(ServeArgs),
+
     /// Initialize a new project
     Init {
         /// Project template: blank, docs, blog
@@ -103,6 +106,21 @@ pub struct PreviewArgs {
     /// Override YAML metadata fields
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
+
+    /// Quiet mode (suppress progress messages)
+    #[arg(short, long)]
+    pub quiet: bool,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct ServeArgs {
+    /// Directory to serve (default: current directory)
+    #[arg(default_value = ".")]
+    pub dir: PathBuf,
+
+    /// Port for the server
+    #[arg(short, long, default_value = "3456")]
+    pub port: u16,
 
     /// Quiet mode (suppress progress messages)
     #[arg(short, long)]

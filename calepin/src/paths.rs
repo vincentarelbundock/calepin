@@ -177,21 +177,6 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
         }
     }
 
-    // CSS files (skip URLs)
-    for css in &meta.css {
-        if css.starts_with("http://") || css.starts_with("https://") {
-            continue;
-        }
-        let resolved = ctx.document_dir.join(css);
-        if !resolved.exists() {
-            errors.push(format!(
-                "  css: {}\n    -> not found: {}",
-                css,
-                resolved.display()
-            ));
-        }
-    }
-
     // Plugins
     for plugin in &meta.plugins {
         if is_builtin_plugin(plugin) {
@@ -265,21 +250,6 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_css() {
-        let mut meta = Metadata::default();
-        meta.css = vec!["missing.css".to_string()];
-        let err = validate_paths(&meta, &test_ctx(), "test.qmd").unwrap_err();
-        assert!(err.to_string().contains("css: missing.css"));
-    }
-
-    #[test]
-    fn test_url_css_not_validated() {
-        let mut meta = Metadata::default();
-        meta.css = vec!["https://example.com/style.css".to_string()];
-        assert!(validate_paths(&meta, &test_ctx(), "test.qmd").is_ok());
-    }
-
-    #[test]
     fn test_missing_plugin() {
         let mut meta = Metadata::default();
         meta.plugins = vec!["nonexistent-plugin".to_string()];
@@ -298,10 +268,9 @@ mod tests {
     fn test_multiple_errors_collected() {
         let mut meta = Metadata::default();
         meta.bibliography = vec!["missing.bib".to_string()];
-        meta.css = vec!["missing.css".to_string()];
         meta.csl = Some("missing.csl".to_string());
         let err = validate_paths(&meta, &test_ctx(), "test.qmd").unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("3 path errors"), "got: {}", msg);
+        assert!(msg.contains("2 path errors"), "got: {}", msg);
     }
 }

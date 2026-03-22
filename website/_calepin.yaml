@@ -34,6 +34,7 @@ website:
         - authoring/tables.qmd
         - authoring/math.qmd
         - authoring/bibliography.qmd
+        - authoring/paths.qmd
     - section: "Code Execution"
       pages:
         - code/chunks.qmd

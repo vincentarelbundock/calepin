@@ -84,12 +84,6 @@ fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
             "citation" => meta.citation = parse_citation(v),
             "funding" => meta.funding = parse_funding(v),
             "appendix-style" => meta.appendix_style = v.as_str().map(String::from),
-            "css" => {
-                meta.css = yaml_string_list(v);
-            }
-            "header-includes" => meta.header_includes = v.as_str().map(String::from),
-            "include-before" => meta.include_before = v.as_str().map(String::from),
-            "include-after" => meta.include_after = v.as_str().map(String::from),
             "format" => {
                 meta.format = v.as_str().map(String::from).or_else(|| {
                     // Support `format: { html: default }` — extract first key
@@ -621,10 +615,10 @@ mod tests {
     #[test]
     fn test_yaml_block_scalar_with_dashes() {
         // Indented --- inside a block scalar should NOT terminate the front matter
-        let text = "---\ntitle: Test\nheader-includes: |\n  some content\n  ---\n  more content\n---\nBody";
+        let text = "---\ntitle: Test\nabstract: |\n  some content\n  ---\n  more content\n---\nBody";
         let (meta, body) = split_yaml(text).unwrap();
         assert_eq!(meta.title.as_deref(), Some("Test"));
-        assert!(meta.header_includes.as_ref().unwrap().contains("more content"));
+        assert!(meta.abstract_text.as_ref().unwrap().contains("more content"));
         assert_eq!(body, "Body");
     }
 

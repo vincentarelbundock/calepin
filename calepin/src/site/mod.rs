@@ -35,7 +35,12 @@ pub fn build_site(
         eprintln!("Config: {}", found_path.display());
     }
 
-    // 2. Prepare output directory
+    // 2. Prepare output directory (resolve relative to config dir)
+    let output = if output.is_relative() {
+        &base_dir.join(output)
+    } else {
+        output
+    };
     if clean && output.exists() {
         fs::remove_dir_all(output)
             .with_context(|| format!("Failed to clean output dir: {}", output.display()))?;

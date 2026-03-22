@@ -44,23 +44,6 @@ format: html
 | `bibliography` | string or list | Path(s) to `.bib` file(s) |
 | `csl` | string | Path to CSL style file |
 
-## Includes
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `header-includes` | string | Raw content inserted in `<head>` (HTML) or preamble (LaTeX) |
-| `include-before` | string | Content inserted before the body |
-| `include-after` | string | Content inserted after the body |
-| `css` | string or list | Additional CSS files (HTML only) |
-
-## LaTeX options
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `documentclass` | string | LaTeX document class (default: `article`) |
-| `classoption` | string | Class options (default: `11pt`) |
-
-
 # Rich author metadata
 
 Authors can be simple strings or detailed objects:
@@ -202,7 +185,6 @@ Use the `-s` flag to override front matter values from the command line:
 
 ```
 calepin doc.qmd -s title="New Title" -s toc=false
-calepin doc.qmd -s documentclass=report -s classoption=12pt
 ```
 
 This is useful for batch rendering with different configurations.

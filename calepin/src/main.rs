@@ -36,7 +36,7 @@ use engines::cache::CacheState;
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "init", "plugin", "highlight", "completions"];
+    let known = ["render", "preview", "serve", "init", "plugin", "highlight", "completions"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -62,6 +62,7 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Render(args) => handle_render(args),
         Command::Preview(args) => handle_preview(args),
+        Command::Serve(args) => site::serve(&args.dir, args.port),
         Command::Init { template } => {
             eprintln!("Project init (template: {}) is not yet implemented.", template);
             Ok(())
@@ -81,11 +82,8 @@ fn handle_render(args: RenderArgs) -> Result<()> {
 
     // Project manifest mode (.yaml / .yml)
     if cli::is_project_manifest(input) {
-        if args.output.is_some() {
-            anyhow::bail!("-o/--output is not valid with project manifests. Set output-dir in the YAML instead.");
-        }
-        // Delegate to the site builder with the manifest as config
-        let output = PathBuf::from("_site"); // TODO: read from manifest
+        // -o overrides the output directory for project manifests
+        let output = args.output.unwrap_or_else(|| PathBuf::from("_site"));
         return site::build_site(Some(input.as_path()), &output, args.clean, args.quiet);
     }
 
@@ -112,9 +110,9 @@ fn handle_render(args: RenderArgs) -> Result<()> {
 
 fn handle_preview(args: PreviewArgs) -> Result<()> {
     if cli::is_project_manifest(&args.input) {
-        // Build the site then serve it
-        let output = PathBuf::from("_site");
-        site::build_site(Some(args.input.as_path()), &output, true, false)?;
+        let config_dir = args.input.parent().unwrap_or(Path::new("."));
+        let output = config_dir.join("_site");
+        site::build_site(Some(args.input.as_path()), &PathBuf::from("_site"), true, false)?;
         return site::serve(&output, args.port);
     }
     preview::run(&args.input, &args)
@@ -327,7 +325,7 @@ pub fn render_core_with_brand(
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
     let cache_dir = path_ctx.cache_root(&stem);
-    let mut cache = CacheState::new_with_dir(input, &cache_dir, cache_enabled);
+    let mut cache = CacheState::new(input, &cache_dir, cache_enabled);
     let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &registry, &mut ctx, &mut cache)?);
     let mut elements = eval_result.elements;
 

@@ -151,6 +151,6 @@ These are compiled into *Calepin* and always active. A user plugin can override 
 
 The following pages cover each plugin capability in detail:
 
-- [Shortcuts](templates/shortcuts.qmd) --- built-in functions, context variables, and plugin functions.
+- [Shortcuts](../templates/shortcuts.qmd) --- built-in functions, context variables, and plugin functions.
 - [Filters](filters.qmd) --- writing filter plugins for divs and spans.
-- [Templates](templates/elements.qmd) --- element and page templates, and template plugins.
+- [Templates](../templates/elements.qmd) --- element and page templates, and template plugins.

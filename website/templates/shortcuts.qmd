@@ -217,7 +217,7 @@ else:
 
 {% raw %}Use it as `{{ greeting(name="Alice") }}`.{% endraw %}
 
-The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, and `meta` fields, and prints replacement text to stdout. See [Plugins](../plugins.html) for the full protocol.
+The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, and `meta` fields, and prints replacement text to stdout. See [Plugins](../misc/plugins.html) for the full protocol.
 
 
 # Resolution order

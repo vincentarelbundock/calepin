@@ -27,11 +27,11 @@ impl OutputRenderer for LatexRenderer {
         let mut vars = build_latex_vars(meta, body);
         let preamble = renderer.get_template("preamble");
         if !preamble.is_empty() {
-            let header = vars.entry("header_includes".to_string()).or_default();
-            if !header.is_empty() {
-                header.push('\n');
+            let p = vars.entry("preamble".to_string()).or_default();
+            if !p.is_empty() {
+                p.push('\n');
             }
-            header.push_str(&preamble);
+            p.push_str(&preamble);
         }
         let tpl = template::latex_template();
         Some(template::apply_template(&tpl, &vars))

@@ -391,13 +391,8 @@ pub fn build_template_vars_with_headings(
 
     // CSS (HTML only)
     if ext == "html" {
-        let mut css_parts = vec![format!("<style>\n{}\n</style>", default_css())];
-        for css_file in &meta.css {
-            css_parts.push(format!("<link rel=\"stylesheet\" href=\"{}\">", css_file));
-        }
-        vars.insert("css".to_string(), css_parts.join("\n"));
+        vars.insert("css".to_string(), format!("<style>\n{}\n</style>", default_css()));
         vars.insert("js".to_string(), String::new());
-        vars.insert("body_class".to_string(), "body".to_string());
         let mut math_vars = HashMap::new();
         math_vars.insert("html_math_method".to_string(),
             meta.html_math_method.as_deref().unwrap_or("katex").to_string());
@@ -407,8 +402,6 @@ pub fn build_template_vars_with_headings(
 
     // LaTeX-specific defaults
     if ext == "latex" {
-        vars.insert("documentclass".to_string(), "article".to_string());
-        vars.insert("classoption".to_string(), "11pt".to_string());
         vars.insert("bib_preamble".to_string(), String::new());
         vars.insert("bib_end".to_string(), String::new());
     }
@@ -421,20 +414,6 @@ pub fn build_template_vars_with_headings(
         vars.insert("bibliography_block".to_string(),
             render_block("bibliography_block", ext, &bvars, ""));
     }
-
-    // Common include variables
-    vars.insert(
-        "header_includes".to_string(),
-        meta.header_includes.clone().unwrap_or_default(),
-    );
-    vars.insert(
-        "include_before".to_string(),
-        meta.include_before.clone().unwrap_or_default(),
-    );
-    vars.insert(
-        "include_after".to_string(),
-        meta.include_after.clone().unwrap_or_default(),
-    );
 
     // Table of contents (defaults to true for HTML)
     let toc_enabled = match meta.toc {
@@ -472,14 +451,6 @@ pub fn build_template_vars_with_headings(
             continue
         };
         vars.insert(key.clone(), s);
-    }
-
-    // Precompute LaTeX command line (after YAML overrides may have changed classoption/documentclass)
-    if ext == "latex" {
-        let classoption = vars.get("classoption").cloned().unwrap_or_default();
-        let documentclass = vars.get("documentclass").cloned().unwrap_or_default();
-        vars.insert("documentclass_line".to_string(),
-            format!("\\documentclass[{}]{{{}}}", classoption, documentclass));
     }
 
     vars

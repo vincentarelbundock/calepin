@@ -13,7 +13,7 @@ Click the `</>` button in the top navigation bar to view the original `.qmd` sou
 A code chunk has four parts:
 
 1. **Language** --- The header starts with the language engine: `{r}`, `{python}`, or `{sh}`.
-2. **Label** (optional) --- After the language, separated by a comma: `my-chunk`. Labels identify chunks in error messages and are used for cross-referencing figures (see [Figures](../figures.qmd)).
+2. **Label** (optional) --- After the language, separated by a comma: `my-chunk`. Labels identify chunks in error messages and are used for cross-referencing figures (see [Figures](../authoring/figures.qmd)).
 3. **Chunk options** --- Lines starting with `#|` inside the chunk set options in `key: value` format. Option names use dashes, not dots (e.g., `fig-width` not `fig.width`). See [Chunk options] below for the full list.
 4. **Code** --- The body of the chunk is executed by the language engine. Output is captured and inserted into the document.
 
@@ -114,11 +114,11 @@ log(-1)
 | `results` | `markup` | Output handling: `markup`, `asis`, or `hide` |
 | `warning` | `true` | Display warnings |
 | `message` | `true` | Display messages |
-| `fig-width` | 7 | Figure width in inches (see [Figures](../figures.qmd)) |
-| `fig-height` | 5 | Figure height in inches (see [Figures](../figures.qmd)) |
-| `fig-cap` | | Figure caption (see [Figures](../figures.qmd)) |
-| `fig-alt` | | Figure alt text (see [Figures](../figures.qmd)) |
-| `dev` | `png` | Graphics device (see [Figures](../figures.qmd)) |
+| `fig-width` | 7 | Figure width in inches (see [Figures](../authoring/figures.qmd)) |
+| `fig-height` | 5 | Figure height in inches (see [Figures](../authoring/figures.qmd)) |
+| `fig-cap` | | Figure caption (see [Figures](../authoring/figures.qmd)) |
+| `fig-alt` | | Figure alt text (see [Figures](../authoring/figures.qmd)) |
+| `dev` | `png` | Graphics device (see [Figures](../authoring/figures.qmd)) |
 
 
 # Syntax highlighting

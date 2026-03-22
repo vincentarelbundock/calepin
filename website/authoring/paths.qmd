@@ -1,0 +1,40 @@
+---
+title: Paths
+---
+
+*Calepin* uses one rule for path resolution: **all input paths resolve relative to the document directory** (the parent of the `.qmd` file). There is no concept of "project root."
+
+# Input paths
+
+All path-bearing front matter fields -- `bibliography`, `csl`, `css`, and `{% include %}` directives -- resolve relative to the document directory. Markdown image paths and code chunk file I/O follow the same rule.
+
+# Output paths
+
+By default, output is written alongside the input file with the appropriate extension. The `-o` flag overrides this. Generated figures go in `_calepin_files/{stem}/` inside the output directory. The execution cache goes in `_calepin_cache/{stem}/` inside the document directory. Both are customizable via `calepin.files-dir` and `calepin.cache-dir` in front matter.
+
+# Override resolution
+
+Templates, element overrides, CSL files, and plugins follow a three-level fallback:
+
+1. `_calepin/` in the document directory
+2. `~/.config/calepin/`
+3. Built-in defaults
+
+Plugins specifically resolve from `_calepin/plugins/{name}/plugin.yml`, then `~/.config/calepin/plugins/{name}/plugin.yml`. Built-in plugins (tabset, layout, callout, theorem, figure-div, table-div) need no files on disk.
+
+# Validation
+
+*Calepin* validates `bibliography`, `csl`, and `calepin.plugins` paths before rendering. Missing files produce a hard error listing every unresolved path. Template and element overrides are not validated -- they silently fall back to built-in defaults.
+
+# Summary
+
+| Path | Resolves from | On missing |
+|------|--------------|------------|
+| `bibliography`, `csl`, `css` | Document directory | Hard error |
+| `{% include %}` | Document directory | Error in output |
+| Images, code chunk I/O | Document directory | -- |
+| Plugins | `_calepin/plugins/` | Hard error |
+| Templates, elements | `_calepin/` | Falls back to built-in |
+| Output file | Document directory or `-o` | Created |
+| `_calepin_files/` | Output directory | Created |
+| `_calepin_cache/` | Document directory | Created |

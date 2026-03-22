@@ -97,7 +97,7 @@ Related templates: `code_source`, `code_output` ({% raw %}`{{output}}`{% endraw 
 | {% raw %}`{{align}}`{% endraw %} | Alignment: `left`, `center`, `right` |
 | {% raw %}`{{cap_location}}`{% endraw %} | Caption position: `top`, `bottom`, `margin` |
 
-See [Figures](../figures.html) for more details on figure rendering.
+See [Figures](../authoring/figures.html) for more details on figure rendering.
 
 
 # Theorem variables
