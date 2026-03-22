@@ -5,7 +5,7 @@ project:
 
 website:
   title: "Calepin"
-  subtitle: "A fast rendering engine for Quarto, written in Rust"
+  subtitle: "A notebook, website, and documentation generator written in Rust"
   site-url: https://calepin.io
   favicon: assets/Calepin.svg
 
@@ -43,6 +43,10 @@ website:
         - code/python.qmd
         - code/sh.qmd
         - code/cache.qmd
+    - section: "Websites"
+      pages:
+        - websites/structure.qmd
+        - websites/serve.qmd
     - section: "Templates"
       pages:
         - templates/templates.qmd

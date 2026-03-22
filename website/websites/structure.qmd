@@ -1,0 +1,49 @@
+---
+title: Structure
+---
+
+A *Calepin* website is a directory containing a `_calepin.yaml` manifest and `.qmd` source files. Here is the structure of the *Calepin* documentation website itself:
+
+```{sh}
+tree website -I '_site|*_files|*_cache|*.html|*.qmd|*.tex|*.typ' --dirsfirst -L 4
+```
+
+# Key components
+
+| Path | Purpose |
+|------|---------|
+| `_calepin.yaml` | Site manifest: metadata, navbar, sidebar, pages, brand, format options |
+| `_calepin/` | Project-level overrides for templates, elements, and assets |
+| `_site/` | Default output directory (generated, should be in `.gitignore`) |
+| `_calepin_files/` | Generated figures and supporting files (per-document) |
+| `_calepin_cache/` | Execution cache (per-document) |
+
+# Manifest
+
+The `_calepin.yaml` file configures the site. See [Sites](../templates/sites.qmd) for the full reference. The main sections are:
+
+| Section | Controls |
+|---------|----------|
+| `project` | Type, resources to copy |
+| `website` | Title, subtitle, URL, favicon, navbar, sidebar, pages |
+| `brand` | Colors, logos, typography |
+| `format` | Output format options (toc, highlighting, code display) |
+| `execute` | Code execution defaults (cache) |
+
+# Pages
+
+The `website.pages` list defines the sidebar navigation. Pages can be flat entries, labeled entries, or nested sections:
+
+```yaml
+website:
+  pages:
+    - index.qmd
+    - text: "Custom Label"
+      href: about.qmd
+    - section: "Guide"
+      pages:
+        - guide/intro.qmd
+        - guide/advanced.qmd
+```
+
+Page titles are extracted from YAML front matter. Use `text:` to override the navigation label. Files prefixed with `_` are excluded from rendering.

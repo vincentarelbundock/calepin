@@ -1,0 +1,38 @@
+---
+title: Serve
+---
+
+*Calepin* has two commands for local development: `preview` and `serve`.
+
+# Preview
+
+`calepin preview` renders the site, starts a local server, and watches for changes. When a `.qmd` file is saved, the page is re-rendered and the browser reloads automatically.
+
+```
+calepin preview _calepin.yaml
+calepin preview _calepin.yaml -p 4000
+calepin preview _calepin.yaml -q
+```
+
+| Flag | Description |
+|------|-------------|
+| `-p`, `--port` | Server port (default: 3456) |
+| `-f`, `--format` | Output format |
+| `-s`, `--set` | Override YAML metadata fields |
+| `-q`, `--quiet` | Suppress progress messages |
+
+For single files, `calepin preview file.qmd` renders and serves one document with live reload.
+
+# Serve
+
+`calepin serve` is a static file server with no rendering or watching. Use it to serve a pre-built `_site/` directory.
+
+```
+calepin serve _site
+calepin serve _site -p 8080
+```
+
+| Flag | Description |
+|------|-------------|
+| `-p`, `--port` | Server port (default: 3456) |
+| `-q`, `--quiet` | Suppress progress messages |

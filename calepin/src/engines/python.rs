@@ -101,6 +101,8 @@ while True:
         import warnings
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            if "matplotlib.pyplot" in sys.modules:
+                sys.modules["matplotlib.pyplot"].show = lambda *a, **k: None
             exec(compile(code, "<chunk>", "exec"), _globals)
             warns_list = [str(x.message) for x in w]
     except Exception:
@@ -160,12 +162,13 @@ pub struct PythonSession {
 
 impl PythonSession {
     /// Spawn a python3 subprocess running the bootstrap script.
-    /// Uses -S (skip site-import), -s (no user site), -u (unbuffered stdio),
+    /// Uses -s (no user site), -u (unbuffered stdio),
     /// and passes the bootstrap as a -c argument (no temp file needed).
     pub fn init() -> Result<Self> {
         let proc = SubprocessSession::spawn_with_env(
             "python3",
-            &["-S", "-s", "-u", "-c", PYTHON_BOOTSTRAP],
+            // No -S here: site-packages must be importable for `uv run calepin` to work.
+            &["-s", "-u", "-c", PYTHON_BOOTSTRAP],
             &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
         )
         .context("Failed to start Python")?;
