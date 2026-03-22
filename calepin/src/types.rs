@@ -291,6 +291,10 @@ pub struct Metadata {
     pub csl: Option<String>,
     pub plugins: Vec<String>,
     pub html_math_method: Option<String>,
+    /// Custom figure output directory name (default: _calepin_files).
+    pub files_dir: Option<String>,
+    /// Custom cache directory name (default: _calepin_cache).
+    pub cache_dir: Option<String>,
     pub brand: Option<crate::brand::Brand>,
     pub var: HashMap<String, saphyr::YamlOwned>,
 }

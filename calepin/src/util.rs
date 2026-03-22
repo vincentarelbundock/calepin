@@ -1,6 +1,6 @@
-//! Shared utility functions.
+//! Shared utility functions (non-path).
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// HTML-escape the minimal set of characters for safe embedding.
 pub fn escape_html(s: &str) -> String {
@@ -23,31 +23,6 @@ pub fn slugify(text: &str) -> String {
         }
     }
     slug.trim_matches('-').to_string()
-}
-
-/// Resolve a file by checking project then user directories.
-/// Returns the first path that exists, or None.
-///
-/// Resolution order:
-///   1. `_calepin/{dir}/{filename}` (project)
-///   2. `~/.config/calepin/{dir}/{filename}` (user)
-pub fn resolve_path(dir: &str, filename: &str) -> Option<PathBuf> {
-    let project = Path::new("_calepin").join(dir).join(filename);
-    if project.exists() {
-        return Some(project);
-    }
-
-    if let Ok(home) = std::env::var("HOME") {
-        let user = Path::new(&home)
-            .join(".config/calepin")
-            .join(dir)
-            .join(filename);
-        if user.exists() {
-            return Some(user);
-        }
-    }
-
-    None
 }
 
 /// Run a subprocess with JSON on stdin, return stdout on success.
@@ -86,32 +61,6 @@ pub fn run_json_process(path: &Path, input: &serde_json::Value) -> Option<String
             None
         }
     }
-}
-
-/// Find the first file matching a glob pattern in `_calepin/{dir}/` then `~/.config/calepin/{dir}/`.
-/// Returns the alphabetically first match across both directories.
-pub fn resolve_first_match(dir: &str, extension: &str) -> Option<PathBuf> {
-    let dirs: Vec<PathBuf> = {
-        let mut v = vec![Path::new("_calepin").join(dir)];
-        if let Ok(home) = std::env::var("HOME") {
-            v.push(Path::new(&home).join(".config/calepin").join(dir));
-        }
-        v
-    };
-    for d in &dirs {
-        if let Ok(entries) = std::fs::read_dir(d) {
-            let mut matches: Vec<PathBuf> = entries
-                .filter_map(|e| e.ok())
-                .map(|e| e.path())
-                .filter(|p| p.extension().and_then(|e| e.to_str()) == Some(extension))
-                .collect();
-            matches.sort();
-            if let Some(first) = matches.into_iter().next() {
-                return Some(first);
-            }
-        }
-    }
-    None
 }
 
 #[cfg(test)]

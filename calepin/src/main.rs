@@ -1,6 +1,5 @@
 #[macro_use]
 mod cli;
-mod batch;
 mod brand;
 mod compile;
 mod engines;
@@ -14,6 +13,7 @@ mod render;
 mod site;
 mod structures;
 mod jinja_engine;
+mod paths;
 mod types;
 mod util;
 use std::fs;
@@ -24,7 +24,7 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use cli::{Cli, Command, RenderArgs, PreviewArgs, SiteAction, PluginAction, HighlightAction};
+use cli::{Cli, Command, RenderArgs, PreviewArgs, PluginAction, HighlightAction};
 use render::elements::ElementRenderer;
 use engines::r::RSession;
 use engines::python::PythonSession;
@@ -36,7 +36,7 @@ use engines::cache::CacheState;
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "site", "plugin", "highlight", "completions"];
+    let known = ["render", "preview", "init", "plugin", "highlight", "completions"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -62,7 +62,10 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Render(args) => handle_render(args),
         Command::Preview(args) => handle_preview(args),
-        Command::Site { action } => handle_site(action),
+        Command::Init { template } => {
+            eprintln!("Project init (template: {}) is not yet implemented.", template);
+            Ok(())
+        }
         Command::Plugin { action } => handle_plugin(action),
         Command::Highlight { action } => handle_highlight(action),
         Command::Completions { shell } => {
@@ -74,14 +77,19 @@ fn main() -> Result<()> {
 }
 
 fn handle_render(args: RenderArgs) -> Result<()> {
-    // Batch mode
-    if let Some(ref manifest) = args.batch {
-        return batch::run_batch(manifest, !args.stdout, args.quiet);
+    let input = &args.input;
+
+    // Project manifest mode (.yaml / .yml)
+    if cli::is_project_manifest(input) {
+        if args.output.is_some() {
+            anyhow::bail!("-o/--output is not valid with project manifests. Set output-dir in the YAML instead.");
+        }
+        // Delegate to the site builder with the manifest as config
+        let output = PathBuf::from("_site"); // TODO: read from manifest
+        return site::build_site(Some(input.as_path()), &output, args.clean, args.quiet);
     }
 
-    let input = args.input.as_ref()
-        .context("No input file specified. Run with --help for usage.")?;
-
+    // Single-file mode (.qmd)
     let (output_path, final_output, renderer) = render_file(
         input,
         args.output.as_deref(),
@@ -103,24 +111,13 @@ fn handle_render(args: RenderArgs) -> Result<()> {
 }
 
 fn handle_preview(args: PreviewArgs) -> Result<()> {
-    preview::run(&args.input, &args)
-}
-
-fn handle_site(action: SiteAction) -> Result<()> {
-    match action {
-        SiteAction::Build { config, output, clean, quiet } => {
-            site::build_site(config.as_deref(), &output, clean, quiet)
-        }
-        SiteAction::Init { template } => {
-            eprintln!("Site init (template: {}) is not yet implemented.", template);
-            Ok(())
-        }
-        SiteAction::Preview { config, port } => {
-            let output = std::path::PathBuf::from("_site");
-            site::build_site(config.as_deref(), &output, true, false)?;
-            site::serve(&output, port)
-        }
+    if cli::is_project_manifest(&args.input) {
+        // Build the site then serve it
+        let output = PathBuf::from("_site");
+        site::build_site(Some(args.input.as_path()), &output, true, false)?;
+        return site::serve(&output, args.port);
     }
+    preview::run(&args.input, &args)
 }
 
 fn handle_plugin(action: PluginAction) -> Result<()> {
@@ -242,6 +239,14 @@ pub fn render_core_with_brand(
         }
     }
 
+    // 2b. Construct path context and validate paths
+    let mut path_ctx = paths::PathContext::for_single_file(input, output_path);
+    path_ctx.apply_metadata(&metadata);
+    let input_name = input.file_name()
+        .unwrap_or_default()
+        .to_string_lossy();
+    paths::validate_paths(&metadata, &path_ctx, &input_name)?;
+
     // 3. Create renderer for this format
     let format_str = format
         .map(|s| s.to_string())
@@ -250,7 +255,7 @@ pub fn render_core_with_brand(
     let renderer = formats::create_renderer(&format_str)?;
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
-    let body = timed!("expand_includes", jinja_engine::expand_includes(&body));
+    let body = timed!("expand_includes", jinja_engine::expand_includes(&body, &path_ctx.document_dir));
 
     // 4a. Preprocess hook: pipe body through script if custom format defines one
     let body = if let Some(script) = renderer.preprocess() {
@@ -292,7 +297,9 @@ pub fn render_core_with_brand(
     metadata.evaluate_inline(&mut ctx);
 
     // 6. Load plugin registry
-    let registry = timed!("load_plugins", std::rc::Rc::new(registry::PluginRegistry::load(&metadata.plugins)));
+    let registry = timed!("load_plugins", std::rc::Rc::new(
+        registry::PluginRegistry::load(&metadata.plugins, &path_ctx.document_dir)
+    ));
 
     // 7. Create element renderer
     let highlight_config = metadata.var.get("highlight-style")
@@ -308,24 +315,24 @@ pub fn render_core_with_brand(
         .and_then(|v| v.as_str()).map(|s| s.to_string());
 
     // 8. Evaluate: execute code chunks and produce elements
-    let fig_dir = output_path.with_file_name(format!(
-        "{}_files",
-        output_path
-            .file_stem()
-            .unwrap_or_default()
-            .to_string_lossy()
-    ));
+    let stem = output_path
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let fig_dir = path_ctx.figures_dir(&stem);
     let fig_ext = renderer.default_fig_ext();
     let cache_enabled = metadata.var.get("execute")
         .and_then(|v| v.as_mapping_get("cache"))
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
-    let mut cache = CacheState::new(input, cache_enabled);
+    let cache_dir = path_ctx.cache_root(&stem);
+    let mut cache = CacheState::new_with_dir(input, &cache_dir, cache_enabled);
     let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &registry, &mut ctx, &mut cache)?);
     let mut elements = eval_result.elements;
 
     // 9. Bibliography
-    timed!("bibliography", filters::bibliography::process_citations(&mut elements, &metadata)?);
+    timed!("bibliography", filters::bibliography::process_citations(&mut elements, &metadata, &path_ctx.document_dir)?);
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);

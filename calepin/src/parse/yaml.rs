@@ -117,6 +117,12 @@ fn parse_yaml(yaml_str: &str) -> Result<Metadata> {
                     if let Some(pv) = cmap.get(&yaml_key("plugins")) {
                         meta.plugins = yaml_string_list(pv);
                     }
+                    if let Some(fd) = cmap.get(&yaml_key("files-dir")) {
+                        meta.files_dir = fd.as_str().map(String::from);
+                    }
+                    if let Some(cd) = cmap.get(&yaml_key("cache-dir")) {
+                        meta.cache_dir = cd.as_str().map(String::from);
+                    }
                 }
             }
             _ => {

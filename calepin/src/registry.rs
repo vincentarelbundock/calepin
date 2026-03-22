@@ -123,13 +123,14 @@ pub struct PluginRegistry {
 
 impl PluginRegistry {
     /// Create a new registry from the front matter plugin list.
+    /// Resolves plugins relative to `document_dir`.
     /// Loads user plugins first (in order), then appends built-in plugins.
-    pub fn load(names: &[String]) -> Self {
+    pub fn load(names: &[String], document_dir: &Path) -> Self {
         let mut plugins = Vec::new();
 
         // Load user plugins
         for name in names {
-            match resolve_plugin_dir(name) {
+            match crate::paths::resolve_plugin_dir(name, document_dir) {
                 Some(dir) => match PluginManifest::load(&dir) {
                     Ok(manifest) => {
                         // Check if any filter is persistent
@@ -390,7 +391,7 @@ impl PluginRegistry {
         }
 
         // Fall back to _calepin/elements/ and ~/.config/calepin/elements/
-        crate::util::resolve_path("elements", &filename)
+        crate::paths::resolve_path_cwd("elements", &filename)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 
@@ -410,7 +411,7 @@ impl PluginRegistry {
         }
 
         // Fall back to _calepin/templates/ and ~/.config/calepin/templates/
-        crate::util::resolve_path("templates", filename)
+        crate::paths::resolve_path_cwd("templates", filename)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 
@@ -675,23 +676,6 @@ fn builtin_filter(
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Resolve a plugin directory by name.
-/// Checks `_calepin/plugins/{name}/plugin.yml` then `~/.config/calepin/plugins/{name}/plugin.yml`.
-fn resolve_plugin_dir(name: &str) -> Option<PathBuf> {
-    let project = Path::new("_calepin").join("plugins").join(name);
-    if project.join("plugin.yml").exists() {
-        return Some(project);
-    }
-
-    if let Ok(home) = std::env::var("HOME") {
-        let user = Path::new(&home).join(".config/calepin/plugins").join(name);
-        if user.join("plugin.yml").exists() {
-            return Some(user);
-        }
-    }
-
-    None
-}
 
 /// Build the JSON payload for a filter subprocess call.
 fn build_filter_json(

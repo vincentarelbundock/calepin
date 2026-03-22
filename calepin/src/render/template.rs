@@ -122,7 +122,7 @@ const BUILTIN_CSS: &str = include_str!("../templates/pages/calepin.css");
 ///   2. ~/.config/calepin/templates/{filename}
 ///   3. Built-in (compiled into binary)
 pub fn load_page_template(filename: &str) -> String {
-    if let Some(path) = crate::util::resolve_path("templates", filename) {
+    if let Some(path) = crate::paths::resolve_path_cwd("templates", filename) {
         if let Ok(s) = std::fs::read_to_string(&path) {
             return s;
         }

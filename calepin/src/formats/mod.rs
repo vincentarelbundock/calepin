@@ -261,7 +261,7 @@ pub fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<Stri
 /// Load a custom format from `_calepin/formats/{name}.yaml`.
 fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
     let config_file = format!("{}.yaml", name);
-    let path = crate::util::resolve_path("formats", &config_file)
+    let path = crate::paths::resolve_path_cwd("formats", &config_file)
         .ok_or_else(|| anyhow::anyhow!(
             "Unknown format: '{}'. No built-in format or config at _calepin/formats/{}.yaml",
             name, name

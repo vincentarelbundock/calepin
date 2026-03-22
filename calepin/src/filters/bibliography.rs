@@ -25,19 +25,20 @@ fn format_plain(elem: &impl std::fmt::Display) -> String {
 }
 
 #[inline(never)]
-pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata) -> Result<()> {
+pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, document_dir: &Path) -> Result<()> {
     if metadata.bibliography.is_empty() {
         return Ok(());
     }
 
     let mut library = hayagriva::Library::new();
     for bib_path in &metadata.bibliography {
-        if !Path::new(bib_path).exists() {
-            cwarn!("bibliography '{}' not found, skipping", bib_path);
+        let resolved = document_dir.join(bib_path);
+        if !resolved.exists() {
+            cwarn!("bibliography '{}' not found, skipping", resolved.display());
             continue;
         }
-        let bib_src = fs::read_to_string(bib_path)
-            .with_context(|| format!("Failed to read bibliography: {}", bib_path))?;
+        let bib_src = fs::read_to_string(&resolved)
+            .with_context(|| format!("Failed to read bibliography: {}", resolved.display()))?;
         let lib = hayagriva::io::from_biblatex_str(&bib_src)
             .map_err(|e| anyhow::anyhow!("Failed to parse bibliography '{}': {:?}", bib_path, e))?;
         for entry in lib.iter() {
@@ -226,7 +227,7 @@ fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
     }
 
     // 2. Project/user: first .csl file (alphabetically) in _calepin/templates/
-    if let Some(path) = crate::util::resolve_first_match("templates", "csl") {
+    if let Some(path) = crate::paths::resolve_first_match(std::path::Path::new("."), "templates", "csl") {
         if let Ok(xml) = fs::read_to_string(&path) {
             if let Ok(style) = IndependentStyle::from_xml(&xml) {
                 return Ok(style);

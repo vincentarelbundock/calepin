@@ -5,37 +5,15 @@ use minijinja::Environment;
 
 use super::icons;
 
-// Built-in templates embedded at compile time
-const BASE_HTML: &str = include_str!("built_in/templates/base.html");
-const PAGE_HTML: &str = include_str!("built_in/templates/page.html");
-const LISTING_HTML: &str = include_str!("built_in/templates/listing.html");
-const NAVBAR_HTML: &str = include_str!("built_in/templates/navbar.html");
-const SIDEBAR_LEFT_HTML: &str = include_str!("built_in/templates/sidebar_left.html");
-const SIDEBAR_RIGHT_HTML: &str = include_str!("built_in/templates/sidebar_right.html");
-const SEARCH_HTML: &str = include_str!("built_in/templates/search.html");
-
-/// Initialize MiniJinja with built-in templates, then overlay user templates from `_templates/`.
+/// Initialize MiniJinja by loading all `.html` files from `_calepin/templates/`.
+///
+/// There are no built-in templates. The site is fully defined by the templates
+/// in the `_calepin/templates/` directory. Users customize the site by editing those files.
 pub fn init_jinja(base_dir: &Path) -> Result<Environment<'static>> {
     let mut env = Environment::new();
 
     // Disable auto-escaping — calepin output is trusted HTML
     env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
-
-    // Register built-in templates
-    env.add_template("base.html", BASE_HTML)
-        .context("Failed to register base.html")?;
-    env.add_template("page.html", PAGE_HTML)
-        .context("Failed to register page.html")?;
-    env.add_template("listing.html", LISTING_HTML)
-        .context("Failed to register listing.html")?;
-    env.add_template("navbar.html", NAVBAR_HTML)
-        .context("Failed to register navbar.html")?;
-    env.add_template("sidebar_left.html", SIDEBAR_LEFT_HTML)
-        .context("Failed to register sidebar_left.html")?;
-    env.add_template("sidebar_right.html", SIDEBAR_RIGHT_HTML)
-        .context("Failed to register sidebar_right.html")?;
-    env.add_template("search.html", SEARCH_HTML)
-        .context("Failed to register search.html")?;
 
     // Register custom Jinja function for icons
     env.add_function("icon", |kwargs: minijinja::value::Kwargs| -> Result<minijinja::Value, minijinja::Error> {
@@ -45,28 +23,37 @@ pub fn init_jinja(base_dir: &Path) -> Result<Environment<'static>> {
         Ok(minijinja::Value::from_safe_string(icons::get_icon_svg(name)))
     });
 
-    // Overlay user templates from _templates/
-    let user_templates = base_dir.join("_templates");
-    if user_templates.is_dir() {
-        let pattern = user_templates.join("**").join("*.html");
-        let pattern_str = pattern.display().to_string();
+    // Load all templates from _calepin/templates/
+    let templates_dir = base_dir.join("_calepin/templates");
+    anyhow::ensure!(
+        templates_dir.is_dir(),
+        "No _calepin/templates/ directory found in {}. Site templates must be provided.",
+        base_dir.display()
+    );
 
-        for entry in glob::glob(&pattern_str).unwrap_or_else(|_| glob::glob("").unwrap()) {
-            if let Ok(path) = entry {
-                if let Ok(content) = std::fs::read_to_string(&path) {
-                    // Compute template name relative to _templates/
-                    let rel = path.strip_prefix(&user_templates)
-                        .unwrap_or(&path);
-                    let name = rel.display().to_string();
-                    // Leak the content string so it lives for 'static
-                    let content: &'static str = Box::leak(content.into_boxed_str());
-                    if let Err(e) = env.add_template(Box::leak(name.into_boxed_str()), content) {
-                        eprintln!("Warning: failed to parse user template {}: {}", rel.display(), e);
-                    }
-                }
-            }
+    let pattern = templates_dir.join("**").join("*.html");
+    let pattern_str = pattern.display().to_string();
+
+    let mut count = 0;
+    for entry in glob::glob(&pattern_str).unwrap_or_else(|_| glob::glob("").unwrap()) {
+        if let Ok(path) = entry {
+            let content = std::fs::read_to_string(&path)
+                .with_context(|| format!("Failed to read template: {}", path.display()))?;
+            let rel = path.strip_prefix(&templates_dir).unwrap_or(&path);
+            let name = rel.display().to_string();
+            // Leak strings so they live for 'static (MiniJinja requirement)
+            let content: &'static str = Box::leak(content.into_boxed_str());
+            let name: &'static str = Box::leak(name.into_boxed_str());
+            env.add_template(name, content)
+                .with_context(|| format!("Failed to parse template: {}", rel.display()))?;
+            count += 1;
         }
     }
+
+    anyhow::ensure!(
+        count > 0,
+        "_calepin/templates/ directory is empty. At least base.html and page.html are required."
+    );
 
     Ok(env)
 }

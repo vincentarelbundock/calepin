@@ -29,11 +29,11 @@ website:
     - cli.qmd
     - section: "Authoring"
       pages:
-        - basics.qmd
-        - figures.qmd
-        - tables.qmd
-        - math.qmd
-        - bibliography.qmd
+        - authoring/basics.qmd
+        - authoring/figures.qmd
+        - authoring/tables.qmd
+        - authoring/math.qmd
+        - authoring/bibliography.qmd
     - section: "Code Execution"
       pages:
         - code/chunks.qmd
@@ -41,7 +41,7 @@ website:
         - code/r.qmd
         - code/python.qmd
         - code/sh.qmd
-        - cache.qmd
+        - code/cache.qmd
     - section: "Templates"
       pages:
         - templates/templates.qmd
@@ -55,7 +55,7 @@ website:
       pages:
         - text: "PDF Example"
           href: assets/pdf.pdf
-        - quarto.qmd
+        - misc/quarto.qmd
 
 brand:
   color:

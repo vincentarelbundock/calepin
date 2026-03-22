@@ -22,16 +22,17 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// Render a .qmd file to HTML, LaTeX, Typst, or Markdown
+    /// Render a .qmd file or a project .yaml manifest
     Render(RenderArgs),
 
-    /// Watch file and live-reload on changes
+    /// Watch file or project and live-reload on changes
     Preview(PreviewArgs),
 
-    /// Static site operations
-    Site {
-        #[command(subcommand)]
-        action: SiteAction,
+    /// Initialize a new project
+    Init {
+        /// Project template: blank, docs, blog
+        #[arg(long, default_value = "blank")]
+        template: String,
     },
 
     /// Plugin management
@@ -55,10 +56,10 @@ pub enum Command {
 
 #[derive(clap::Args, Debug)]
 pub struct RenderArgs {
-    /// Input .qmd file path
-    pub input: Option<PathBuf>,
+    /// Input .qmd file or .yaml/.yml project manifest
+    pub input: PathBuf,
 
-    /// Output file path (e.g., output.html, output.tex, output.typ, output.md).
+    /// Output file path (single-file only; not valid with project manifests).
     /// If omitted, replaces .qmd extension with the format's default.
     #[arg(short, long)]
     pub output: Option<PathBuf>,
@@ -81,19 +82,14 @@ pub struct RenderArgs {
     #[arg(long)]
     pub pdf: bool,
 
-    /// Render multiple files in parallel from a JSON manifest.
-    /// Pass a file path or "-" to read from stdin.
-    #[arg(long, value_name = "MANIFEST")]
-    pub batch: Option<String>,
-
-    /// With --batch: emit rendered bodies in JSON stdout instead of writing files
+    /// Remove output directory before building (project manifests only)
     #[arg(long)]
-    pub stdout: bool,
+    pub clean: bool,
 }
 
 #[derive(clap::Args, Debug)]
 pub struct PreviewArgs {
-    /// Input .qmd file path
+    /// Input .qmd file or .yaml/.yml project manifest
     pub input: PathBuf,
 
     /// Port for the preview server
@@ -111,46 +107,6 @@ pub struct PreviewArgs {
     /// Quiet mode (suppress progress messages)
     #[arg(short, long)]
     pub quiet: bool,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum SiteAction {
-    /// Build a static site from .qmd files
-    Build {
-        /// Path to site config file (_calepin.yaml)
-        #[arg(short, long, value_name = "PATH")]
-        config: Option<PathBuf>,
-
-        /// Output directory
-        #[arg(short, long, default_value = "_site")]
-        output: PathBuf,
-
-        /// Remove output directory before building
-        #[arg(long)]
-        clean: bool,
-
-        /// Quiet mode
-        #[arg(short, long)]
-        quiet: bool,
-    },
-
-    /// Initialize a new site project
-    Init {
-        /// Site template: blank, docs, blog
-        #[arg(long, default_value = "blank")]
-        template: String,
-    },
-
-    /// Preview the site with live-reload
-    Preview {
-        /// Path to site config file
-        #[arg(short, long, value_name = "PATH")]
-        config: Option<PathBuf>,
-
-        /// Port for the preview server
-        #[arg(short, long, default_value = "3456")]
-        port: u16,
-    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -173,6 +129,14 @@ pub enum HighlightAction {
         /// Theme name
         theme: String,
     },
+}
+
+/// Returns true if the input path looks like a project manifest (.yaml or .yml).
+pub fn is_project_manifest(path: &std::path::Path) -> bool {
+    matches!(
+        path.extension().and_then(|e| e.to_str()),
+        Some("yaml") | Some("yml")
+    )
 }
 
 /// Print a yellow warning to stderr.

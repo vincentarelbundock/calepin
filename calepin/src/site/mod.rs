@@ -24,10 +24,13 @@ pub fn build_site(
     clean: bool,
     quiet: bool,
 ) -> Result<()> {
-    let base_dir = std::env::current_dir()?;
+    let cwd = std::env::current_dir()?;
 
     // 1. Load config
-    let (config, found_path) = SiteConfig::load(config_path, &base_dir)?;
+    let (config, found_path) = SiteConfig::load(config_path, &cwd)?;
+
+    // base_dir is the directory containing the config file
+    let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
     if !quiet {
         eprintln!("Config: {}", found_path.display());
     }
@@ -168,10 +171,10 @@ pub fn build_site(
         }
     }
 
-    // 11. Write built-in assets
-    assets::write_builtin_assets(output)?;
+    // 11. Copy _assets/ to output
+    assets::copy_assets(&base_dir, output)?;
 
-    // 11. Copy resource directories
+    // 12. Copy resource directories
     assets::copy_resources(&config.project.resources, &base_dir, output)?;
 
     if !quiet {

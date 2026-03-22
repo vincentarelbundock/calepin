@@ -333,7 +333,7 @@ pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
     // User override: per-format file
     let filename = format!("{}.{}", canonical, ext);
-    if let Some(path) = crate::util::resolve_path("elements", &filename) {
+    if let Some(path) = crate::paths::resolve_path_cwd("elements", &filename) {
         if let Ok(content) = std::fs::read_to_string(&path) {
             return Some(content);
         }

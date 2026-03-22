@@ -61,6 +61,16 @@ impl CacheState {
         }
     }
 
+    /// Create a CacheState with an explicit cache directory.
+    pub fn new_with_dir(input_path: &Path, cache_dir: &Path, enabled: bool) -> Self {
+        let _ = input_path; // input_path reserved for future hash seeding
+        Self {
+            cache_dir: cache_dir.to_path_buf(),
+            upstream_digest: 0,
+            enabled,
+        }
+    }
+
     /// Update the upstream digest by mixing in a chunk's key hash.
     pub fn advance_digest(&mut self, chunk_hash: u128) {
         let mut buf = [0u8; 32];

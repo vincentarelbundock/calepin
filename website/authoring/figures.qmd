@@ -1,6 +1,6 @@
 ---
 title: Figures
-bibliography: library.bib
+bibliography: ../library.bib
 ---
 
 ::: {.callout-tip}

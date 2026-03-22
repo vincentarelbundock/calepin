@@ -36,8 +36,9 @@ use crate::types::Metadata;
 /// Expand `{% include "file" %}` directives before block parsing.
 /// This must run on the raw body text so that included content gets
 /// parsed as blocks (code chunks, divs, etc.) rather than inline text.
+/// Paths are resolved relative to `document_dir`.
 #[inline(never)]
-pub fn expand_includes(text: &str) -> String {
+pub fn expand_includes(text: &str, document_dir: &std::path::Path) -> String {
     // {% include "file" %} or {% include 'file' %}
     static INCLUDE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r#"\{%[-\s]\s*include\s+["'](.+?)["']\s*[-\s]?%\}"#).unwrap()
@@ -58,10 +59,11 @@ pub fn expand_includes(text: &str) -> String {
         format!("\u{FDD2}RAW{}\u{FDD3}", idx)
     }).to_string();
 
-    // Expand includes
+    // Expand includes (resolve relative to document directory)
     let text = INCLUDE_RE.replace_all(&text, |caps: &regex::Captures| {
         let path = caps[1].trim();
-        include_file(path)
+        let resolved = document_dir.join(path);
+        include_file(&resolved.to_string_lossy())
     }).to_string();
 
     // Restore {% raw %} blocks
@@ -77,8 +79,8 @@ pub fn expand_includes(text: &str) -> String {
 /// Read and include a file, stripping YAML front matter if present.
 fn include_file(path: &str) -> String {
     if path.is_empty() {
-        cwarn!("{{% include %}} requires a file path");
-        return String::new();
+        // Return error marker that will surface later
+        return "\n\n**Error: `{% include %}` requires a file path**\n\n".to_string();
     }
     match std::fs::read_to_string(path) {
         Ok(content) => {
@@ -92,8 +94,8 @@ fn include_file(path: &str) -> String {
             content
         }
         Err(e) => {
-            cwarn!("{{% include \"{}\" %}}: {}", path, e);
-            String::new()
+            // Surface as visible error in the rendered output
+            format!("\n\n**Error: `{{%% include \"{}\" %}}`: {}**\n\n", path, e)
         }
     }
 }
