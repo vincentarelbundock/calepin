@@ -1,0 +1,33 @@
+\documentclass[11pt,openany]{book}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,hyperref}
+\usepackage[margin=1in]{geometry}
+
+{% include "preamble.jinja" %}
+
+\title{ {{meta.title}} }
+\author{ {{meta.author}} }
+\date{}
+
+\begin{document}
+
+\frontmatter
+\maketitle
+\tableofcontents
+
+\mainmatter
+
+{% for node in pages %}
+{% if node.children %}
+\part{ {{node.title}} }
+{% for child in node.children %}
+\chapter{ {{child.title}} }
+\include{ {{child.path}} }
+{% endfor %}
+{% else %}
+\chapter{ {{node.title}} }
+\include{ {{node.path}} }
+{% endif %}
+{% endfor %}
+
+\end{document}

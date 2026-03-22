@@ -29,14 +29,13 @@ impl OutputRenderer for HtmlRenderer {
     ) -> Option<String> {
         let walk_meta = renderer.walk_metadata();
         let mut vars = build_html_vars_with_headings(meta, body, &walk_meta.headings);
-        vars.insert("preamble".to_string(), renderer.get_template("preamble"));
         let syntax_css = renderer.syntax_css_with_scope(
             crate::filters::highlighting::ColorScope::Both,
         );
         let css = vars.entry("css".to_string()).or_default();
         css.push_str(&format!("\n<style>\n{}</style>", syntax_css));
         let tpl = template::html_template();
-        let html = template::apply_template(&tpl, &vars);
+        let html = template::render_page_template(&tpl, &vars, "html");
         Some(embed_images_base64(&html))
     }
 }

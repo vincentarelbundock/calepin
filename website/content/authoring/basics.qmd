@@ -2,10 +2,6 @@
 title: Basics
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 This page reviews some of the basics of Quarto and Markdown syntax supported by *Calepin*. It covers document structure, code chunks, figures, math, cross-references, citations, and other features that work out of the box.
 
 # Getting started

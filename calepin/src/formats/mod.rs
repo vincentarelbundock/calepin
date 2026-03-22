@@ -192,9 +192,9 @@ impl OutputRenderer for CustomRenderer {
     ) -> Option<String> {
         // Base format template (produces complete document)
         let templated = {
-            // Try custom page template first: calepin.{name}
+            // Try custom page template first: page.{name}
             let custom_tpl = crate::render::template::load_page_template(
-                &format!("calepin.{}", self.name),
+                &format!("page.{}", self.name),
             );
             if !custom_tpl.is_empty() {
                 let mut vars = match self.base.format() {
@@ -218,7 +218,7 @@ impl OutputRenderer for CustomRenderer {
                         vars.insert("syntax_css_datatheme".to_string(), datatheme_css);
                     }
                 }
-                Some(crate::render::template::apply_template(&custom_tpl, &vars))
+                Some(crate::render::template::render_page_template(&custom_tpl, &vars, self.base.format()))
             } else {
                 self.base.apply_template(body, meta, renderer)
             }

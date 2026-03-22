@@ -3,11 +3,32 @@
 //! All input paths resolve relative to `document_dir` (the parent of the .qmd file).
 //! The output directory is where finished files are written; no inputs resolve from it.
 
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 
 use crate::types::Metadata;
+
+// ---------------------------------------------------------------------------
+// Active target name (thread-local)
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    static ACTIVE_TARGET: RefCell<Option<String>> = RefCell::new(None);
+}
+
+/// Set the active target name for template resolution.
+/// When set, `resolve_template` checks `templates/{target}/` before `templates/{base}/`.
+pub fn set_active_target(target: Option<&str>) {
+    ACTIVE_TARGET.with(|t| {
+        *t.borrow_mut() = target.map(|s| s.to_string());
+    });
+}
+
+pub fn get_active_target() -> Option<String> {
+    ACTIVE_TARGET.with(|t| t.borrow().clone())
+}
 
 // ---------------------------------------------------------------------------
 // PathContext
@@ -111,79 +132,44 @@ pub fn base_to_ext(base: &str) -> &str {
         .unwrap_or(base)
 }
 
-/// Resolve a component (element template) using the three-layer model.
+/// Resolve a template (element or page) using the three-layer model.
 ///
 /// Lookup order (first match wins):
-///   1. `{project_root}/components/{base}/{name}.{ext}` (base-specific)
-///   2. `{project_root}/components/common/{name}.jinja` (generic)
-///   3. `~/.config/calepin/components/{base}/{name}.{ext}`
-///   4. `~/.config/calepin/components/common/{name}.jinja`
-///   5. (caller falls back to built-in)
-///
-/// Also checks legacy `_calepin/elements/{name}.{ext}` for backward compatibility.
-pub fn resolve_component(name: &str, base: &str) -> Option<PathBuf> {
+///   1. `{project_root}/templates/{target}/{name}.{ext}` (target-specific)
+///   2. `{project_root}/templates/{base}/{name}.{ext}` (base-specific, when target != base)
+///   3. `{project_root}/templates/common/{name}.jinja` (format-agnostic)
+///   4. Legacy: `_calepin/elements/{name}.{ext}`, `_calepin/templates/{name}.{base}`
+///   5. `~/.config/calepin/templates/{base}/{name}.{ext}`
+///   6. `~/.config/calepin/templates/common/{name}.jinja`
+///   7. (caller falls back to built-in)
+pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
     let ext = base_to_ext(base);
     let base_specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
 
-    // Project root (CWD for now)
     let root = Path::new(".");
+    let active_target = get_active_target();
 
-    // Base-specific in project
-    let p = root.join("components").join(base).join(&base_specific);
-    if p.exists() { return Some(p); }
-
-    // Generic in project
-    let p = root.join("components").join("common").join(&generic);
-    if p.exists() { return Some(p); }
-
-    // Legacy: _calepin/elements/
-    let p = root.join("_calepin").join("elements").join(&base_specific);
-    if p.exists() { return Some(p); }
-
-    // User config
-    if let Ok(home) = std::env::var("HOME") {
-        let user = Path::new(&home).join(".config/calepin");
-        let p = user.join("components").join(base).join(&base_specific);
-        if p.exists() { return Some(p); }
-        let p = user.join("components").join("common").join(&generic);
-        if p.exists() { return Some(p); }
-        // Legacy user path
-        let p = user.join("elements").join(&base_specific);
-        if p.exists() { return Some(p); }
+    // Target-specific in project (e.g., templates/book_latex/)
+    if let Some(ref target) = active_target {
+        if target != base {
+            let p = root.join("templates").join(target).join(&base_specific);
+            if p.exists() { return Some(p); }
+        }
     }
 
-    None
-}
-
-/// Resolve a page template using the three-layer model.
-///
-/// Lookup order (first match wins):
-///   1. `{project_root}/templates/{base}/{template_name}.{ext}`
-///   2. `{project_root}/templates/common/{template_name}.jinja`
-///   3. `~/.config/calepin/templates/{base}/{template_name}.{ext}`
-///   4. `~/.config/calepin/templates/common/{template_name}.jinja`
-///   5. (caller falls back to built-in)
-///
-/// Also checks legacy `_calepin/templates/` for backward compatibility.
-pub fn resolve_template(template_name: &str, base: &str) -> Option<PathBuf> {
-    let ext = base_to_ext(base);
-    let base_specific = format!("{}.{}", template_name, ext);
-    let generic = format!("{}.jinja", template_name);
-
-    let root = Path::new(".");
-
-    // Base-specific in project
+    // Base-specific in project (e.g., templates/latex/)
     let p = root.join("templates").join(base).join(&base_specific);
     if p.exists() { return Some(p); }
 
-    // Generic in project
+    // Generic in project (e.g., templates/common/)
     let p = root.join("templates").join("common").join(&generic);
     if p.exists() { return Some(p); }
 
-    // Legacy: _calepin/templates/
-    // Map base name to legacy filename format (e.g., "calepin.html")
-    let legacy_name = format!("{}.{}", template_name, base);
+    // Legacy: _calepin/elements/ and _calepin/templates/
+    let p = root.join("_calepin").join("elements").join(&base_specific);
+    if p.exists() { return Some(p); }
+    let legacy_name = format!("{}.{}", name, base);
     let p = root.join("_calepin").join("templates").join(&legacy_name);
     if p.exists() { return Some(p); }
 
@@ -193,9 +179,6 @@ pub fn resolve_template(template_name: &str, base: &str) -> Option<PathBuf> {
         let p = user.join("templates").join(base).join(&base_specific);
         if p.exists() { return Some(p); }
         let p = user.join("templates").join("common").join(&generic);
-        if p.exists() { return Some(p); }
-        // Legacy user path
-        let p = user.join("templates").join(&legacy_name);
         if p.exists() { return Some(p); }
     }
 

@@ -2,10 +2,6 @@
 title: Tables
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 # Markdown
 
 Tables use the standard GFM pipe syntax. Column alignment is controlled by colons in the separator row: left (default), right (`---:`), or center (`:---:`).

@@ -2,10 +2,6 @@
 title: Shell
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 *Calepin* runs shell chunks in a persistent `/bin/sh` subprocess. Shell state --- variables, working directory, and environment --- persists across chunks.
 
 # Basic usage

@@ -2,10 +2,6 @@
 title: Cache
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 Documents with expensive code chunks (model fitting, simulations, large data imports) can take a long time to render. Since most edits only touch prose or a single chunk, re-executing every chunk from scratch is wasteful and slow. This is especially painful with `calepin --preview`, which watches the source file and re-renders on every save, ideally instantly, without waiting for expensive code chunks to run again.
 
 *Calepin* solves this by caching code chunk results. Unchanged chunks are skipped entirely on subsequent renders, reducing rebuild times from minutes to milliseconds. Caching is on by default.

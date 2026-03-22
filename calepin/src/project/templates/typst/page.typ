@@ -1,17 +1,17 @@
-{{preamble}}
+{% include "preamble.jinja" %}
 
 #align(center)[
   #text(size: 17pt)[{{title}}]
   #v(0.5em)
-  {{subtitle_block}}
+  {% include "subtitle.jinja" %}
   #v(0.5em)
-  {{author_block}}
+  {% include "author_block.jinja" %}
   #v(0.3em)
   #text(size: 10pt)[{{date}}]
 ]
 
-{{abstract_block}}
-{{keywords_block}}
+{% include "abstract.jinja" %}
+{% include "keywords.jinja" %}
 {{toc}}
 
 {{body}}

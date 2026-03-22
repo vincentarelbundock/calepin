@@ -6,10 +6,11 @@ csl = "chicago-author-date"
 highlight = {light = "github", dark = "nord"}
 
 [site]
+target = "website"
 favicon = "assets/Calepin.svg"
 logo = "assets/Calepin.svg"
 logo-dark = "assets/Calepin_dark.svg"
-pages = [
+content = [
   "content/index.qmd",
   "content/installation.qmd",
   "content/cli.qmd",
@@ -59,9 +60,9 @@ sidebar_collapse_level = 0
 icon = "github"
 href = "https://github.com/vincentarelbundock/calepin"
 
-[targets.html]
+[targets.website]
 base = "html"
-template = "calepin"
+template = "page"
 extension = "html"
 fig-extension = "svg"
 preview = "serve"
@@ -98,3 +99,12 @@ template = "calepin"
 extension = "md"
 fig-extension = "png"
 preview = "none"
+
+[targets.book]
+base = "latex"
+extension = "tex"
+fig-extension = "pdf"
+
+[targets.book.compile]
+command = "tectonic {input}"
+extension = "pdf"

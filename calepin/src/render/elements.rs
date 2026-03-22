@@ -18,8 +18,8 @@ use crate::filters::highlighting::{Highlighter, HighlightConfig, ColorScope};
 /// Files are discovered by path at runtime -- no hardcoded file list.
 pub static BUILTIN_PROJECT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/project");
 
-/// Component name aliases: multiple names can map to the same template file.
-fn resolve_component_alias(name: &str) -> &str {
+/// Template name aliases: multiple names can map to the same template file.
+fn resolve_template_alias(name: &str) -> &str {
     match name {
         // Italic-body theorem environments share one template
         "theorem" | "lemma" | "corollary" | "conjecture" | "proposition" => "theorem_italic",
@@ -34,34 +34,20 @@ fn resolve_component_alias(name: &str) -> &str {
     }
 }
 
-/// Look up a built-in component template by name.
-/// Checks `components/{base}/{name}.{ext}` then `components/common/{name}.jinja`.
-fn builtin_component(name: &str, base: &str) -> Option<&'static str> {
-    let resolved = resolve_component_alias(name);
+/// Look up a built-in template by name and base.
+/// Checks `templates/{base}/{name}.{ext}` then `templates/common/{name}.jinja`.
+pub fn builtin_template(name: &str, base: &str) -> Option<&'static str> {
+    let resolved = resolve_template_alias(name);
     let ext = crate::paths::base_to_ext(base);
 
-    // Base-specific override
-    let base_path = format!("components/{}/{}.{}", base, resolved, ext);
+    // Base-specific
+    let base_path = format!("templates/{}/{}.{}", base, resolved, ext);
     if let Some(file) = BUILTIN_PROJECT.get_file(&base_path) {
         return file.contents_utf8();
     }
 
     // Generic .jinja
-    let common_path = format!("components/common/{}.jinja", resolved);
-    BUILTIN_PROJECT.get_file(&common_path).and_then(|f| f.contents_utf8())
-}
-
-/// Look up a built-in page template by name and base.
-/// Checks `templates/{base}/{name}.{ext}` then `templates/common/{name}.jinja`.
-pub fn builtin_template(name: &str, base: &str) -> Option<&'static str> {
-    let ext = crate::paths::base_to_ext(base);
-
-    let base_path = format!("templates/{}/{}.{}", base, name, ext);
-    if let Some(file) = BUILTIN_PROJECT.get_file(&base_path) {
-        return file.contents_utf8();
-    }
-
-    let common_path = format!("templates/common/{}.jinja", name);
+    let common_path = format!("templates/common/{}.jinja", resolved);
     BUILTIN_PROJECT.get_file(&common_path).and_then(|f| f.contents_utf8())
 }
 
@@ -335,16 +321,16 @@ impl ElementRenderer {
     }
 }
 
-/// Resolve an element template (component): project → user → built-in.
+/// Resolve an element template: project → user → built-in.
 /// Template names use underscores internally; hyphens are normalized.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
     // Project/user filesystem resolution
-    if let Some(path) = crate::paths::resolve_component(&canonical, ext) {
+    if let Some(path) = crate::paths::resolve_template(&canonical, ext) {
         if let Ok(content) = std::fs::read_to_string(&path) {
             return Some(content);
         }
     }
     // Built-in: discovered from embedded project tree
-    builtin_component(&canonical, ext).map(|s| s.to_string())
+    builtin_template(&canonical, ext).map(|s| s.to_string())
 }

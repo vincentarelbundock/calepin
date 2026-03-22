@@ -7,21 +7,21 @@ highlight = {light = "github", dark = "nord"}
 
 [targets.html]
 base = "html"
-template = "calepin"
+template = "page"
 extension = "html"
 fig-extension = "svg"
 preview = "serve"
 
 [targets.latex]
 base = "latex"
-template = "calepin"
+template = "page"
 extension = "tex"
 fig-extension = "pdf"
 preview = "serve"
 
 [targets.typst]
 base = "typst"
-template = "calepin"
+template = "page"
 extension = "typ"
 fig-extension = "svg"
 preview = "serve"
@@ -40,7 +40,7 @@ extension = "pdf"
 
 [targets.markdown]
 base = "markdown"
-template = "calepin"
+template = "page"
 extension = "md"
 fig-extension = "png"
 preview = "none"

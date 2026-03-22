@@ -2,10 +2,6 @@
 title: R
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 *Calepin* embeds R via [extendr](https://extendr.github.io/extendr/extendr_api/), running code directly in process. Variables, loaded packages, and state persist across chunks.
 
 # Basic usage

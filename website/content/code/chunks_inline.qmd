@@ -2,10 +2,6 @@
 title: Chunks and Inline Code
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 *Calepin* embeds R, Python, and shell runtimes directly in the binary, so code chunks are executed during rendering without spawning external processes. Variables persist across chunks within the same language, plots are captured automatically, and results are woven into the final document.
 
 # Code chunks

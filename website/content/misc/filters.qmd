@@ -2,10 +2,6 @@
 title: Filters
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 Filters handle fenced divs and bracketed spans that need logic beyond `{{variable}}` substitution: conditional rendering, computed values, content rewriting.
 
 Filters are implemented as plugins. Each plugin declares which elements it handles via match rules in its `plugin.yml` manifest.

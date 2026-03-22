@@ -50,10 +50,17 @@ pub struct SiteSection {
     pub logo: Option<String>,
     #[serde(rename = "logo-dark")]
     pub logo_dark: Option<String>,
-    /// Page tree. Each entry is a string (file or glob) or an array
+    /// Which `[targets.*]` to use for rendering. Determines format and extension.
+    /// Defaults to "html" if absent.
+    pub target: Option<String>,
+    /// Path to the master template that assembles rendered page fragments.
+    /// The template receives the page tree with file paths and can use
+    /// `\include{}` or equivalent to pull in fragments.
+    pub orchestrator: Option<String>,
+    /// Content tree. Each entry is a string (file or glob) or an array
     /// where the first element is a section title and the rest are files/globs.
     #[serde(default)]
-    pub pages: Vec<toml::Value>,
+    pub content: Vec<toml::Value>,
 }
 
 impl SiteSection {
@@ -62,7 +69,7 @@ impl SiteSection {
     /// Top-level pages have section_title = None.
     pub fn expand_pages(&self, base_dir: &std::path::Path) -> Vec<PageNode> {
         let mut result = Vec::new();
-        for entry in &self.pages {
+        for entry in &self.content {
             match entry {
                 toml::Value::String(s) => {
                     for path in expand_glob(s, base_dir) {
@@ -137,7 +144,7 @@ pub struct Target {
     #[serde(default)]
     pub base: String,
 
-    /// Document template name (default: "calepin").
+    /// Document template name (default: "page").
     pub template: Option<String>,
 
     /// Output file extension (no dot). Defaults to base's default.
@@ -280,7 +287,7 @@ fn validate_extension(ext: &str, field: &str) -> Result<()> {
 impl Target {
     /// Template name. Always set after resolution against the built-in config.
     pub fn template_name(&self) -> &str {
-        self.template.as_deref().unwrap_or("calepin")
+        self.template.as_deref().unwrap_or("page")
     }
 
     /// Output file extension. Always set after resolution against the built-in config.
@@ -529,7 +536,7 @@ base = "html"
         assert_eq!(config.targets.len(), 1);
         let web = &config.targets["web"];
         assert_eq!(web.base, "html");
-        assert_eq!(web.template_name(), "calepin");
+        assert_eq!(web.template_name(), "page");
         assert_eq!(web.output_extension(), "html");
     }
 
@@ -587,7 +594,7 @@ unknown_field = "oops"
     fn test_implicit_target_resolution() {
         let target = resolve_target("html", None).unwrap();
         assert_eq!(target.base, "html");
-        assert_eq!(target.template_name(), "calepin");
+        assert_eq!(target.template_name(), "page");
 
         let target = resolve_target("tex", None).unwrap();
         assert_eq!(target.base, "latex");

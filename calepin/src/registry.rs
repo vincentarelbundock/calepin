@@ -390,8 +390,8 @@ impl PluginRegistry {
             }
         }
 
-        // Three-layer resolution: project components/ → user components/ → legacy
-        crate::paths::resolve_component(&canonical, format)
+        // Three-layer resolution: project templates/ → user templates/ → legacy
+        crate::paths::resolve_template(&canonical, format)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 

@@ -12,11 +12,11 @@
 (function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)})();
 </script>
 
-{{preamble}}
+{% include "preamble.jinja" %}
 
 {{css}}
 
-{{math_block}}
+{% include "math.jinja" %}
 </head>
 
 <body>
@@ -26,14 +26,14 @@
 <div class="page-layout">
 <main class="container">
 <header class="frontmatter">
-{{title_block}}
-{{subtitle_block}}
-{{author_block}}
-{{date_block}}
+{% include "title.jinja" %}
+{% include "subtitle.jinja" %}
+{% include "author_block.jinja" %}
+{% include "date.jinja" %}
 </header>
 
-{{abstract_block}}
-{{keywords_block}}
+{% include "abstract.jinja" %}
+{% include "keywords.jinja" %}
 
 <article>
 {{body}}

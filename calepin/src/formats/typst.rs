@@ -13,11 +13,10 @@ impl OutputRenderer for TypstRenderer {
         &self,
         body: &str,
         meta: &Metadata,
-        renderer: &ElementRenderer,
+        _renderer: &ElementRenderer,
     ) -> Option<String> {
-        let mut vars = template::build_typst_vars(meta, body);
-        vars.insert("preamble".to_string(), renderer.get_template("preamble"));
+        let vars = template::build_typst_vars(meta, body);
         let tpl = template::typst_template();
-        Some(template::apply_template(&tpl, &vars))
+        Some(template::render_page_template(&tpl, &vars, "typst"))
     }
 }

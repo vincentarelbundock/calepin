@@ -139,7 +139,7 @@ fn handle_render(args: RenderArgs) -> Result<()> {
     // Site mode: .toml config with [site] section, or legacy .yaml manifest
     if cli::is_site_config(input) {
         let output = args.output.unwrap_or_else(|| PathBuf::from("output"));
-        return site::build_site(Some(input.as_path()), &output, args.clean, args.quiet);
+        return site::build_site(Some(input.as_path()), &output, args.clean, args.quiet, args.target.as_deref());
     }
 
     let ctx = resolve_context(input, args.target.as_deref())?;
@@ -210,11 +210,27 @@ fn handle_preview(args: PreviewArgs) -> Result<()> {
     if args.input.is_dir() {
         return site::serve(&args.input, args.port);
     }
-    // Project manifest: build then serve
+    // Project manifest: build then serve/open
     if cli::is_site_config(&args.input) {
-        let config_dir = args.input.parent().unwrap_or(Path::new("."));
-        let output = config_dir.join("_site");
-        site::build_site(Some(args.input.as_path()), &PathBuf::from("_site"), true, false)?;
+        let output = PathBuf::from("output");
+        site::build_site(Some(args.input.as_path()), &output, true, false, args.target.as_deref())?;
+
+        // For non-HTML targets, open the compiled output instead of serving.
+        let is_html = {
+            let target_name = args.target.as_deref().unwrap_or("html");
+            let config = project::load_project_config(&args.input)?;
+            let target = project::resolve_target(target_name, Some(&config))?;
+            target.base == "html"
+        };
+        if !is_html {
+            let pdf = output.join("book.pdf");
+            if pdf.exists() {
+                eprintln!("Opening {}", pdf.display());
+                let _ = open::that(&pdf);
+            }
+            return Ok(());
+        }
+
         return site::serve(&output, args.port);
     }
     // Resolve target using the same path as render

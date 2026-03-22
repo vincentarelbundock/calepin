@@ -145,12 +145,19 @@ pub fn load_page_template(filename: &str) -> String {
     String::new()
 }
 
-pub fn html_template() -> String { load_page_template_for_base("calepin", "html") }
-pub fn latex_template() -> String { load_page_template_for_base("calepin", "latex") }
-pub fn typst_template() -> String { load_page_template_for_base("calepin", "typst") }
+pub fn html_template() -> String { load_page_template_for_base("page", "html") }
+pub fn latex_template() -> String { load_page_template_for_base("page", "latex") }
+pub fn typst_template() -> String { load_page_template_for_base("page", "typst") }
 pub fn default_css() -> String {
     // Check project/user overrides for CSS
     let root = std::path::Path::new(".");
+    // Try new name first, then legacy
+    let p = root.join("templates").join("html").join("page.css");
+    if p.exists() {
+        if let Ok(s) = std::fs::read_to_string(&p) {
+            return s;
+        }
+    }
     let p = root.join("templates").join("html").join("calepin.css");
     if p.exists() {
         if let Ok(s) = std::fs::read_to_string(&p) {
@@ -159,7 +166,7 @@ pub fn default_css() -> String {
     }
     // Built-in: discovered from embedded project tree
     crate::render::elements::BUILTIN_PROJECT
-        .get_file("templates/html/calepin.css")
+        .get_file("templates/html/page.css")
         .and_then(|f| f.contents_utf8())
         .unwrap_or("")
         .to_string()
@@ -875,6 +882,99 @@ pub fn build_latex_vars(meta: &Metadata, body: &str) -> HashMap<String, String> 
 /// Convenience: build Typst template variables.
 pub fn build_typst_vars(meta: &Metadata, body: &str) -> HashMap<String, String> {
     build_template_vars(meta, body, "typst")
+}
+
+/// Render a page template with {% include %} support.
+///
+/// Sets up a MiniJinja environment with:
+///   1. templates/{target}/ (target-specific, from active target)
+///   2. templates/{base}/ (base-specific)
+///   3. templates/common/ (format-agnostic .jinja)
+///   4. Built-in templates/common/ (embedded in binary)
+///
+/// The page template and all included component templates share the same
+/// context, so `{% include "preamble.jinja" %}` in the page template can
+/// access all variables (base, title, author, body, etc.).
+pub fn render_page_template(
+    page_template: &str,
+    vars: &HashMap<String, String>,
+    base: &str,
+) -> String {
+    let mut env = minijinja::Environment::new();
+    env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
+    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
+
+    let root = std::path::Path::new(".");
+    let active_target = crate::paths::get_active_target();
+
+    // Load templates from filesystem directories
+    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
+    if let Some(ref target) = active_target {
+        if target != base {
+            dirs.push(root.join("templates").join(target));
+        }
+    }
+    dirs.push(root.join("templates").join(base));
+    dirs.push(root.join("templates").join("common"));
+
+    for dir in &dirs {
+        if !dir.is_dir() { continue; }
+        let pattern = dir.join("**").join("*.*");
+        let pattern_str = pattern.display().to_string();
+        for entry in glob::glob(&pattern_str).unwrap_or_else(|_| glob::glob("").unwrap()) {
+            if let Ok(path) = entry {
+                if !path.is_file() { continue; }
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    let rel = path.strip_prefix(dir).unwrap_or(&path);
+                    let name = rel.display().to_string();
+                    let content: &'static str = Box::leak(content.into_boxed_str());
+                    let name: &'static str = Box::leak(name.into_boxed_str());
+                    if env.get_template(name).is_err() {
+                        let _ = env.add_template(name, content);
+                    }
+                }
+            }
+        }
+    }
+
+    // Load built-in common templates as fallback
+    if let Some(common_dir) = crate::render::elements::BUILTIN_PROJECT.get_dir("templates/common") {
+        for entry in common_dir.files() {
+            if let Some(content) = entry.contents_utf8() {
+                let name = entry.path().file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                if !name.is_empty() && env.get_template(name).is_err() {
+                    let content: &'static str = Box::leak(content.to_string().into_boxed_str());
+                    let name: &'static str = Box::leak(name.to_string().into_boxed_str());
+                    let _ = env.add_template(name, content);
+                }
+            }
+        }
+    }
+
+    // Add the page template itself
+    if let Err(e) = env.add_template("__page__", page_template) {
+        cwarn!("page template parse error: {}", e);
+        return page_template.to_string();
+    }
+
+    // Build context
+    let mut ctx = std::collections::BTreeMap::new();
+    for (key, value) in vars {
+        ctx.insert(key.as_str(), minijinja::Value::from(value.as_str()));
+    }
+    ctx.insert("_lb", minijinja::Value::from("{"));
+    ctx.insert("_rb", minijinja::Value::from("}"));
+
+    let tpl = env.get_template("__page__").unwrap();
+    match tpl.render(minijinja::Value::from_serialize(&ctx)) {
+        Ok(rendered) => rendered,
+        Err(e) => {
+            cwarn!("page template render error: {}", e);
+            page_template.to_string()
+        }
+    }
 }
 
 #[cfg(test)]

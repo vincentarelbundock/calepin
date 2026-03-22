@@ -49,7 +49,7 @@ pub struct PageInfo {
 }
 
 /// Discover all pages referenced in the site config.
-pub fn discover_pages(config: &ProjectConfig, base_dir: &Path) -> Result<Vec<PageInfo>> {
+pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<PageInfo>> {
     let page_paths = super::config::collect_page_paths(config, base_dir);
     let mut pages = Vec::new();
 
@@ -67,7 +67,7 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path) -> Result<Vec<Pag
 
         // Strip content/ prefix for output paths so content/index.qmd -> index.html
         let output_rel = source.strip_prefix("content").unwrap_or(&source);
-        let output = output_rel.with_extension("html");
+        let output = output_rel.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
         pages.push(PageInfo {
@@ -86,6 +86,7 @@ pub fn discover_listing_pages(
     listing: &ListingConfig,
     base_dir: &Path,
     existing: &[PageInfo],
+    output_ext: &str,
 ) -> Result<Vec<PageInfo>> {
     let pattern = base_dir.join(&listing.contents).display().to_string();
     let existing_sources: Vec<_> = existing.iter().map(|p| &p.source).collect();
@@ -103,7 +104,7 @@ pub fn discover_listing_pages(
         }
 
         let meta = extract_frontmatter(&abs_path)?;
-        let output = rel_path.with_extension("html");
+        let output = rel_path.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
         pages.push(PageInfo {

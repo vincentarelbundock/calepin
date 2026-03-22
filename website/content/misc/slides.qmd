@@ -4,10 +4,6 @@ date: 2026-03-19
 format: revealjs
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 ## What is *Calepin*?
 
 A Rust CLI that renders `.qmd` documents to HTML, LaTeX, Typst, and Markdown.

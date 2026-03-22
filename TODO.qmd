@@ -2,6 +2,7 @@
 
 split css into core and style
 
++ [ ] 404.qmd
 + [ ] Convert elements templates to Tera and simplify the dispatch
 + [ ] Blog post site template
 + [ ] Accessibility

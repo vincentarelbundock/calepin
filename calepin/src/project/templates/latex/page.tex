@@ -3,17 +3,17 @@
 \usepackage{graphicx,hyperref}
 \usepackage{titling}
 {{bib_preamble}}
-{{preamble}}
-{{title_block}}
-{{subtitle_block}}
-{{author_block}}
-{{date_block}}
+{% include "preamble.jinja" %}
+{% include "title.jinja" %}
+{% include "subtitle.jinja" %}
+{% include "author_block.jinja" %}
+{% include "date.jinja" %}
 \begin{document}
 \maketitle
 \ifdefined\affiliationblock\affiliationblock\fi
 
-{{abstract_block}}
-{{keywords_block}}
+{% include "abstract.jinja" %}
+{% include "keywords.jinja" %}
 {{toc}}
 
 {{body}}

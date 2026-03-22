@@ -15,13 +15,16 @@ use anyhow::{Context, Result};
 
 use context::{build_page_context, build_site_context, mark_active, ListingItem};
 use discover::{discover_listing_pages, discover_pages, PageInfo};
+use crate::project::PageNode;
 
 /// Build a static site from .qmd files.
+/// `cli_target` overrides `[site].target` when provided via `-t` on the command line.
 pub fn build_site(
     config_path: Option<&Path>,
     output: &Path,
     clean: bool,
     quiet: bool,
+    cli_target: Option<&str>,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -33,7 +36,29 @@ pub fn build_site(
         eprintln!("Config: {}", found_path.display());
     }
 
-    // 2. Prepare output directory
+    // 2. Resolve site target (format and extension)
+    //    CLI -t flag takes precedence over [site].target, which defaults to "html".
+    let site_target_name = cli_target.map(|s| s.to_string())
+        .or_else(|| config.site.as_ref().and_then(|s| s.target.clone()))
+        .unwrap_or_else(|| "html".to_string());
+    let site_target = crate::project::resolve_target(&site_target_name, Some(&config))?;
+    let format = &site_target.base;
+    let output_ext = site_target.output_extension();
+
+    // Set active target for template/component resolution
+    crate::paths::set_active_target(Some(&site_target_name));
+
+    // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
+    let ext = crate::paths::base_to_ext(format);
+    let orchestrator = config.site.as_ref()
+        .and_then(|s| s.orchestrator.clone())
+        .or_else(|| {
+            let p = base_dir.join("templates").join(&site_target_name)
+                .join(format!("orchestrator.{}", ext));
+            if p.exists() { Some(p.display().to_string()) } else { None }
+        });
+
+    // 3. Prepare output directory
     let output = if output.is_relative() {
         &base_dir.join(output)
     } else {
@@ -45,17 +70,17 @@ pub fn build_site(
     }
     fs::create_dir_all(output)?;
 
-    // 3. Discover pages
-    let mut pages = discover_pages(&config, &base_dir)?;
+    // 4. Discover pages
+    let mut pages = discover_pages(&config, &base_dir, output_ext)?;
     if !quiet {
         eprintln!("Found {} pages", pages.len());
     }
 
-    // 4. Discover listing pages and merge into the page list
+    // 5. Discover listing pages and merge into the page list
     let mut all_listing_pages: HashMap<String, Vec<PageInfo>> = HashMap::new();
     for page in &pages {
         if let Some(ref listing) = page.meta.listing {
-            let listing_pages = discover_listing_pages(listing, &base_dir, &pages)?;
+            let listing_pages = discover_listing_pages(listing, &base_dir, &pages, output_ext)?;
             all_listing_pages.insert(page.source.display().to_string(), listing_pages);
         }
     }
@@ -68,22 +93,96 @@ pub fn build_site(
         }
     }
 
-    // 5. Render all pages with calepin (in parallel)
-    let results = render::render_pages(&pages, &config, &base_dir, output, quiet)?;
+    // 6. Render all pages with calepin (in parallel)
+    //    When an orchestrator is set, apply the page template to each fragment
+    //    (the project's templates/latex/page.tex or similar).
+    //    When no orchestrator (HTML sites), return raw bodies for site Jinja wrapping.
+    let apply_page_template = orchestrator.is_some();
+    let results = render::render_pages(&pages, &config, &base_dir, output, format, apply_page_template, Some(&site_target_name), quiet)?;
 
-    // 6. Initialize MiniJinja
-    let env = templates::init_jinja(&base_dir)?;
+    // 7. Write page output files
+    //    For orchestrated builds, strip the output directory prefix from paths
+    //    in the rendered bodies so they resolve correctly when the compile
+    //    command runs from the output directory.
+    let output_prefix = format!("{}/", output.display());
+    for page in &pages {
+        let source_key = page.source.display().to_string();
+        if let Some(result) = results.get(&source_key) {
+            let output_path = output.join(&page.output);
+            if let Some(parent) = output_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let body = if orchestrator.is_some() {
+                result.body.replace(&output_prefix, "")
+            } else {
+                result.body.clone()
+            };
+            fs::write(&output_path, &body)?;
+            if !quiet {
+                eprintln!("  {} -> {}", source_key, output_path.display());
+            }
+        }
+    }
 
-    // 7. Build site context
-    let site_ctx = build_site_context(&config, &pages, &base_dir);
+    // 8. Site-specific wrapping (HTML) or orchestrator assembly
+    if let Some(ref orchestrator_path) = orchestrator {
+        // Render the orchestrator template with page tree
+        render_orchestrator(&config, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &site_target_name, quiet)?;
+    } else {
+        // HTML site path: re-wrap pages through Jinja site templates
+        apply_site_templates(&config, &pages, &results, &all_listing_pages, &base_dir, output, format, &site_target_name, quiet)?;
+    }
 
-    // 8. Convert [var] to minijinja Value for template access
+    // 9. Copy assets/ to output
+    assets::copy_assets(&base_dir, output)?;
+
+    if !quiet {
+        eprintln!("Site built: {}", output.display());
+    }
+
+    Ok(())
+}
+
+/// HTML site path: wrap each page's body through Jinja site templates
+/// (page.html, listing.html with extends/includes).
+/// Overwrites the raw body files written in step 7 with fully templated HTML.
+fn apply_site_templates(
+    config: &crate::project::ProjectConfig,
+    pages: &[PageInfo],
+    results: &HashMap<String, render::SiteRenderResult>,
+    all_listing_pages: &HashMap<String, Vec<PageInfo>>,
+    base_dir: &Path,
+    output: &Path,
+    format: &str,
+    target_name: &str,
+    quiet: bool,
+) -> Result<()> {
+    // Initialize MiniJinja from templates/{target}/
+    let env = templates::init_jinja(base_dir, target_name)?
+        .ok_or_else(|| anyhow::anyhow!(
+            "No template files found in templates/{}/. \
+             At least base and page templates are required for multi-file site mode.",
+            target_name
+        ))?;
+
+    // Build site context
+    let site_ctx = build_site_context(config, pages, base_dir);
+
+    // Convert [var] to minijinja Value for template access
     let var_ctx = config.var.as_ref()
         .map(|v| crate::project::target_vars_to_jinja(Some(v)))
         .unwrap_or_else(|| minijinja::Value::from(()));
 
-    // 9. Render each page through MiniJinja
-    for page in &pages {
+    // Determine template extension
+    let tpl_ext = match format {
+        "latex" => "tex",
+        "typst" => "typ",
+        "markdown" => "md",
+        _ => format,
+    };
+
+    // Render each page through MiniJinja, overwriting the raw body files
+    for page in pages {
         let source_key = page.source.display().to_string();
         let result = results.get(&source_key);
 
@@ -97,7 +196,7 @@ pub fn build_site(
             }).collect()
         });
 
-        let page_ctx = build_page_context(page, result, &pages, listing_items);
+        let page_ctx = build_page_context(page, result, pages, listing_items);
 
         // Mark active page in nav tree
         let mut nav_tree = site_ctx.pages.clone();
@@ -120,59 +219,269 @@ pub fn build_site(
         };
 
         let template_name = if page.meta.listing.is_some() {
-            "listing.html"
+            format!("listing.{}", tpl_ext)
         } else {
-            "page.html"
+            format!("page.{}", tpl_ext)
         };
 
-        let tpl = env.get_template(template_name)
+        let tpl = env.get_template(&template_name)
             .with_context(|| format!("Failed to get template {} for {}", template_name, source_key))?;
         let rendered = tpl.render(&site_with_active)
             .with_context(|| format!("Failed to render template for {}", source_key))?;
 
+        // Overwrite the raw body file with fully templated output
         let output_path = output.join(&page.output);
-        if let Some(parent) = output_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
         fs::write(&output_path, &rendered)?;
-
-        if !quiet {
-            eprintln!("  {} -> {}", source_key, output_path.display());
-        }
     }
 
-    // 10. Generate search index
-    let search_enabled = config.var.as_ref()
-        .and_then(|v| v.get("navbar_search"))
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-    if search_enabled {
-        search::generate_search_index(&pages, &results, output)?;
-        if !quiet {
-            eprintln!("  Generated search-index.json");
+    // Generate search index (HTML only)
+    if format == "html" {
+        let search_enabled = config.var.as_ref()
+            .and_then(|v| v.get("navbar_search"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        if search_enabled {
+            search::generate_search_index(pages, results, output)?;
+            if !quiet {
+                eprintln!("  Generated search-index.json");
+            }
         }
-    }
 
-    // 11. Copy .qmd source files to _source/ for the source viewer
-    for page in &pages {
-        let source_dest = output.join("_source").join(&page.source);
-        if let Some(parent) = source_dest.parent() {
-            fs::create_dir_all(parent)?;
+        // Copy .qmd source files to _source/ for the source viewer
+        for page in pages {
+            let source_dest = output.join("_source").join(&page.source);
+            if let Some(parent) = source_dest.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let source_src = base_dir.join(&page.source);
+            if source_src.exists() {
+                fs::copy(&source_src, &source_dest)?;
+            }
         }
-        let source_src = base_dir.join(&page.source);
-        if source_src.exists() {
-            fs::copy(&source_src, &source_dest)?;
-        }
-    }
-
-    // 12. Copy assets/ to output
-    assets::copy_assets(&base_dir, output)?;
-
-    if !quiet {
-        eprintln!("Site built: {}", output.display());
     }
 
     Ok(())
+}
+
+/// Render the orchestrator template with the page tree.
+/// Fragment files are already written; this produces the master file
+/// that references them via \include{} or equivalent.
+fn render_orchestrator(
+    config: &crate::project::ProjectConfig,
+    pages: &[PageInfo],
+    results: &HashMap<String, render::SiteRenderResult>,
+    base_dir: &Path,
+    output: &Path,
+    orchestrator_path: &str,
+    format: &str,
+    output_ext: &str,
+    target_name: &str,
+    quiet: bool,
+) -> Result<()> {
+    // Build the page tree with titles and paths
+    let page_tree = config.site.as_ref()
+        .map(|s| s.expand_pages(base_dir))
+        .unwrap_or_default();
+
+    let page_map: HashMap<String, &PageInfo> = pages.iter()
+        .map(|p| (p.source.display().to_string(), p))
+        .collect();
+
+    let nav_nodes = build_orchestrator_tree(&page_tree, &page_map, results, format);
+
+    // Build template context
+    let meta = config.meta.as_ref();
+    let meta_ctx = minijinja::context! {
+        title => meta.and_then(|m| m.title.clone()),
+        subtitle => meta.and_then(|m| m.subtitle.clone()),
+        author => meta.and_then(|m| m.author.as_ref().map(|a| format_author(a))),
+        url => meta.and_then(|m| m.url.clone()),
+    };
+
+    let var_ctx = config.var.as_ref()
+        .map(|v| crate::project::target_vars_to_jinja(Some(v)))
+        .unwrap_or_else(|| minijinja::Value::from(()));
+
+    let ctx = minijinja::context! {
+        meta => meta_ctx,
+        var => var_ctx,
+        pages => nav_nodes,
+        format => format,
+        base => format,
+    };
+
+    // Build a Jinja environment with all templates from the target and common dirs.
+    // This lets the orchestrator use {% include "preamble.jinja" %} etc.
+    let mut env = minijinja::Environment::new();
+    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
+
+    // Load templates from templates/{target}/ and templates/common/
+    let dirs = [
+        base_dir.join("templates").join(target_name),
+        base_dir.join("templates").join("common"),
+    ];
+    for dir in &dirs {
+        if !dir.is_dir() { continue; }
+        // Load all files (any extension) so .jinja, .tex, .typ all work
+        let pattern = dir.join("**").join("*.*");
+        let pattern_str = pattern.display().to_string();
+        for entry in glob::glob(&pattern_str).unwrap_or_else(|_| glob::glob("").unwrap()) {
+            if let Ok(path) = entry {
+                if !path.is_file() { continue; }
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    let rel = path.strip_prefix(dir).unwrap_or(&path);
+                    let name = rel.display().to_string();
+                    let content: &'static str = Box::leak(content.into_boxed_str());
+                    let name: &'static str = Box::leak(name.into_boxed_str());
+                    // Don't overwrite target-specific with common (target loaded first)
+                    if env.get_template(name).is_err() {
+                        let _ = env.add_template(name, content);
+                    }
+                }
+            }
+        }
+    }
+
+    // Also load built-in common templates as fallback
+    for entry in crate::render::elements::BUILTIN_PROJECT.get_dir("templates/common").into_iter().flat_map(|d| d.files()) {
+        if let Some(content) = entry.contents_utf8() {
+            let name = entry.path().file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
+            if !name.is_empty() && env.get_template(name).is_err() {
+                let content: &'static str = Box::leak(content.to_string().into_boxed_str());
+                let name: &'static str = Box::leak(name.to_string().into_boxed_str());
+                let _ = env.add_template(name, content);
+            }
+        }
+    }
+
+    // Load the orchestrator template itself
+    let tpl_path = base_dir.join(orchestrator_path);
+    let tpl_source = fs::read_to_string(&tpl_path)
+        .with_context(|| format!("Failed to read orchestrator template: {}", tpl_path.display()))?;
+    env.add_template("orchestrator", &tpl_source)
+        .with_context(|| format!("Failed to parse orchestrator template: {}", orchestrator_path))?;
+
+    let tpl = env.get_template("orchestrator")?;
+    let rendered = tpl.render(&ctx)
+        .with_context(|| format!("Failed to render orchestrator template: {}", orchestrator_path))?;
+
+    // Write the master file
+    let master_name = format!("book.{}", output_ext);
+    let master_path = output.join(&master_name);
+    fs::write(&master_path, &rendered)?;
+
+    if !quiet {
+        eprintln!("  Master: {}", master_path.display());
+    }
+
+    // Run compile command if configured
+    let compile_target = config.targets.get(target_name)
+        .and_then(|t| t.compile.as_ref());
+
+    if let Some(compile) = compile_target {
+        if let Some(ref cmd) = compile.command {
+            let compile_ext = compile.extension.as_deref().unwrap_or("pdf");
+            let output_filename = format!("book.{}", compile_ext);
+            let expanded = cmd
+                .replace("{input}", &master_name)
+                .replace("{output}", &output_filename);
+
+            if !quiet {
+                eprintln!("  Compiling: {}", expanded);
+            }
+
+            // Run from the output directory (so \include paths resolve),
+            // but add both the output dir and the project root to TEXINPUTS
+            // so image paths (relative to either) resolve correctly.
+            let texinputs = format!(
+                "{}:{}:",
+                output.display(),
+                base_dir.display(),
+            );
+            let status = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(&expanded)
+                .current_dir(output)
+                .env("TEXINPUTS", &texinputs)
+                .status()
+                .with_context(|| format!("Failed to run compile command: {}", expanded))?;
+
+            if !status.success() {
+                anyhow::bail!("Compile command failed: {}", expanded);
+            }
+
+            if !quiet {
+                eprintln!("  Output: {}", output.join(&output_filename).display());
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// A node in the orchestrator page tree, serializable to MiniJinja.
+#[derive(Debug, Clone, serde::Serialize)]
+struct OrchestratorNode {
+    /// Display title (section title or page title from frontmatter)
+    title: String,
+    /// Relative path to the fragment file (without extension for LaTeX \include)
+    path: Option<String>,
+    /// Path with extension
+    file: Option<String>,
+    /// Child nodes (pages within a section)
+    children: Vec<OrchestratorNode>,
+}
+
+fn build_orchestrator_tree(
+    nodes: &[PageNode],
+    page_map: &HashMap<String, &PageInfo>,
+    results: &HashMap<String, render::SiteRenderResult>,
+    format: &str,
+) -> Vec<OrchestratorNode> {
+    nodes.iter().map(|node| match node {
+        PageNode::Page(source) => {
+            let info = page_map.get(source.as_str());
+            let title = results.get(source.as_str())
+                .and_then(|r| r.title.clone())
+                .or_else(|| info.and_then(|p| p.meta.title.clone()))
+                .unwrap_or_else(|| source.clone());
+            let file = info.map(|p| p.output.display().to_string());
+            // For LaTeX \include, strip the extension
+            let path = file.as_ref().map(|f| {
+                if format == "latex" {
+                    f.strip_suffix(".tex").unwrap_or(f).to_string()
+                } else {
+                    f.clone()
+                }
+            });
+            OrchestratorNode { title, path, file, children: vec![] }
+        }
+        PageNode::Section { title, pages } => {
+            let child_nodes: Vec<PageNode> = pages.iter()
+                .map(|p| PageNode::Page(p.clone()))
+                .collect();
+            OrchestratorNode {
+                title: title.clone(),
+                path: None,
+                file: None,
+                children: build_orchestrator_tree(&child_nodes, page_map, results, format),
+            }
+        }
+    }).collect()
+}
+
+/// Format author from TOML value (string or array of strings).
+fn format_author(val: &toml::Value) -> String {
+    match val {
+        toml::Value::String(s) => s.clone(),
+        toml::Value::Array(arr) => arr.iter()
+            .filter_map(|v| v.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+        _ => String::new(),
+    }
 }
 
 /// Serve a built site directory using the built-in HTTP server.

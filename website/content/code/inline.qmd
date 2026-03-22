@@ -2,10 +2,6 @@
 title: Inline
 ---
 
-::: {.callout-tip}
-Click the `</>` button in the top navigation bar to view the original `.qmd` source code.
-:::
-
 Inline expressions let you embed computed values directly in your prose. Wrap an expression in backticks with the engine name, and *Calepin* evaluates it during rendering.
 
 # Syntax
