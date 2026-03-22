@@ -104,15 +104,19 @@ fn render_one_page(
         renderer.apply_template(&result.rendered, &result.metadata, &result.element_renderer)
             .unwrap_or(result.rendered)
     } else if format == "html" {
-        // HTML site mode: prepend syntax highlighting CSS
+        // HTML site mode: prepend syntax highlighting CSS, append footnotes
         let syntax_css = result.element_renderer.syntax_css_with_scope(
             crate::filters::highlighting::ColorScope::DataTheme,
         );
-        if syntax_css.is_empty() {
-            result.rendered
-        } else {
-            format!("<style>\n{}</style>\n{}", syntax_css, result.rendered)
+        let footnotes = result.element_renderer.footnote_section();
+        let mut body = result.rendered;
+        if !syntax_css.is_empty() {
+            body = format!("<style>\n{}</style>\n{}", syntax_css, body);
         }
+        if !footnotes.is_empty() {
+            body.push_str(&footnotes);
+        }
+        body
     } else {
         result.rendered
     };

@@ -14,20 +14,23 @@ pub fn markdown_to_html_ast(
     number_sections: bool,
     shift_headings: bool,
 ) -> String {
-    markdown_to_html_ast_with_metadata(markdown, raw_fragments, number_sections, shift_headings, 0).output
+    let options = WalkOptions { number_sections, shift_headings, ..WalkOptions::default() };
+    markdown_to_html_ast_with_metadata(markdown, raw_fragments, &options).output
 }
 
 /// Convert markdown to HTML and return collected metadata (headings, IDs).
 pub fn markdown_to_html_ast_with_metadata(
     markdown: &str,
     raw_fragments: &[String],
-    number_sections: bool,
-    shift_headings: bool,
-    footnote_counter_start: usize,
+    options: &WalkOptions,
 ) -> WalkResult {
     let emitter = HtmlEmitter;
-    let options = WalkOptions { number_sections, shift_headings, footnote_counter_start };
-    walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options)
+    walk_and_render_with_metadata(&emitter, markdown, raw_fragments, options)
+}
+
+/// Render a combined footnote section from accumulated defs.
+pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
+    HtmlEmitter.footnote_section(defs)
 }
 
 impl FormatEmitter for HtmlEmitter {
@@ -192,10 +195,17 @@ impl FormatEmitter for HtmlEmitter {
     fn footnote_section(&self, defs: &[(usize, String)]) -> String {
         let mut out = String::from("\n<section class=\"footnotes\" data-footnotes>\n<ol>\n");
         for (id, content) in defs {
-            out.push_str(&format!(
-                "<li id=\"fn-{}\">\n{}<a href=\"#fnref-{}\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"{}\" aria-label=\"Back to reference {}\">↩</a>\n</li>\n",
-                id, content, id, id, id
-            ));
+            let backref = format!(
+                " <a href=\"#fnref-{}\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"{}\" aria-label=\"Back to reference {}\">↩</a>",
+                id, id, id
+            );
+            // Insert backref before the last </p> so it appears inline
+            let body = if let Some(pos) = content.rfind("</p>") {
+                format!("{}{}{}", &content[..pos], backref, &content[pos..])
+            } else {
+                format!("{}{}", content, backref)
+            };
+            out.push_str(&format!("<li id=\"fn-{}\">\n{}\n</li>\n", id, body));
         }
         out.push_str("</ol>\n</section>\n");
         out
@@ -329,5 +339,104 @@ mod tests {
     fn test_hr() {
         let html = markdown_to_html_ast("---", &[], false, false);
         assert!(html.contains("<hr"), "html: {}", html);
+    }
+
+    #[test]
+    fn test_toc_strips_heading_attrs() {
+        let md = "# Introduction {#sec-intro}\n\n## Methods {#sec-methods .custom}";
+        let options = WalkOptions { number_sections: false, ..WalkOptions::default() };
+        let result = markdown_to_html_ast_with_metadata(md, &[], &options);
+        let headings = &result.metadata.headings;
+        assert_eq!(headings.len(), 2);
+        assert_eq!(headings[0].text, "Introduction");
+        assert_eq!(headings[1].text, "Methods");
+        assert_eq!(headings[0].id, "sec-intro");
+        assert_eq!(headings[1].id, "sec-methods");
+    }
+
+    #[test]
+    fn test_section_counters_chain_across_walks() {
+        // First walk: two headings -> counters 1, 2
+        let opts1 = WalkOptions { number_sections: true, ..WalkOptions::default() };
+        let r1 = markdown_to_html_ast_with_metadata("# First\n\n# Second", &[], &opts1);
+        assert!(r1.output.contains("section-number\">1</span> First"), "r1: {}", r1.output);
+        assert!(r1.output.contains("section-number\">2</span> Second"), "r1: {}", r1.output);
+
+        // Second walk: chain counters -> should continue as 3
+        let opts2 = WalkOptions {
+            number_sections: true,
+            section_counters_start: Some(r1.metadata.section_counters_end),
+            min_heading_level: Some(r1.metadata.min_heading_level),
+            ..WalkOptions::default()
+        };
+        let r2 = markdown_to_html_ast_with_metadata("# Third", &[], &opts2);
+        assert!(r2.output.contains("section-number\">3</span> Third"), "r2: {}", r2.output);
+    }
+
+    #[test]
+    fn test_footnotes_suppressed_and_collected() {
+        let md = "Text[^1].\n\n[^1]: Footnote content.";
+        let opts = WalkOptions { suppress_footnote_section: true, ..WalkOptions::default() };
+        let result = markdown_to_html_ast_with_metadata(md, &[], &opts);
+        // Footnote section should NOT be in the output
+        assert!(!result.output.contains("class=\"footnotes\""), "should suppress: {}", result.output);
+        // But defs should be returned in metadata
+        assert_eq!(result.metadata.footnote_defs.len(), 1);
+        assert_eq!(result.metadata.footnote_defs[0].0, 1); // ID = 1
+        assert!(result.metadata.footnote_defs[0].1.contains("Footnote content"));
+    }
+
+    #[test]
+    fn test_footnote_counter_chains_without_gaps() {
+        // First walk: footnotes 1, 2
+        let md1 = "A[^a] B[^b].\n\n[^a]: Note A.\n[^b]: Note B.";
+        let opts1 = WalkOptions { suppress_footnote_section: true, ..WalkOptions::default() };
+        let r1 = markdown_to_html_ast_with_metadata(md1, &[], &opts1);
+        assert_eq!(r1.metadata.footnote_counter_end, 2);
+        assert!(r1.output.contains("fnref-1"), "r1: {}", r1.output);
+        assert!(r1.output.contains("fnref-2"), "r1: {}", r1.output);
+
+        // Second walk: footnote 3 (continues from 2), with global defs appended
+        let md2 = "C[^c].\n\n[^c]: Note C.\n\n[^a]: Note A.\n[^b]: Note B.";
+        let opts2 = WalkOptions {
+            footnote_counter_start: r1.metadata.footnote_counter_end,
+            suppress_footnote_section: true,
+            ..WalkOptions::default()
+        };
+        let r2 = markdown_to_html_ast_with_metadata(md2, &[], &opts2);
+        // Ref should be fnref-3, not fnref-1
+        assert!(r2.output.contains("fnref-3"), "r2: {}", r2.output);
+        assert!(!r2.output.contains("fnref-1"), "should not have fnref-1: {}", r2.output);
+        // Counter should advance by 1 (only the ref, not the global defs)
+        assert_eq!(r2.metadata.footnote_counter_end, 3);
+        // Only 1 def collected (for [^c], not [^a] or [^b])
+        assert_eq!(r2.metadata.footnote_defs.len(), 1);
+    }
+
+    #[test]
+    fn test_footnote_backref_inline() {
+        let md = "Text[^1].\n\n[^1]: Footnote content here.";
+        let opts = WalkOptions::default();
+        let result = markdown_to_html_ast_with_metadata(md, &[], &opts);
+        // Backref should be inside the <p>, before </p>
+        assert!(
+            result.output.contains("Footnote content here. <a href=\"#fnref-1\""),
+            "backref should be inline: {}", result.output
+        );
+    }
+
+    #[test]
+    fn test_render_footnote_section_helper() {
+        let defs = vec![
+            (1, "<p>First note.</p>".to_string()),
+            (2, "<p>Second note.</p>".to_string()),
+        ];
+        let html = render_footnote_section(&defs);
+        assert!(html.contains("id=\"fn-1\""), "html: {}", html);
+        assert!(html.contains("id=\"fn-2\""), "html: {}", html);
+        assert!(html.contains("fnref-1"), "html: {}", html);
+        assert!(html.contains("fnref-2"), "html: {}", html);
+        // Backref should be before </p>, not on a separate line
+        assert!(html.contains("First note. <a href=\"#fnref-1\""), "backref inline: {}", html);
     }
 }

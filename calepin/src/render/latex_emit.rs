@@ -22,7 +22,7 @@ pub fn markdown_to_latex_with_counter(
     footnote_counter_start: usize,
 ) -> (String, usize) {
     let emitter = LatexEmitter { number_sections };
-    let options = WalkOptions { number_sections, shift_headings: false, footnote_counter_start };
+    let options = WalkOptions { number_sections, shift_headings: false, footnote_counter_start, ..WalkOptions::default() };
     let result = walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options);
     (result.output, result.metadata.footnote_counter_end)
 }

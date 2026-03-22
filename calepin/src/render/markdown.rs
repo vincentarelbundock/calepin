@@ -36,13 +36,9 @@ pub fn render_html(markdown: &str, raw_fragments: &[String]) -> String {
 pub fn render_html_full_with_metadata(
     markdown: &str,
     raw_fragments: &[String],
-    number_sections: bool,
-    shift_headings: bool,
-    footnote_counter_start: usize,
+    options: &crate::render::ast::WalkOptions,
 ) -> crate::render::ast::WalkResult {
-    crate::render::html_ast::markdown_to_html_ast_with_metadata(
-        markdown, raw_fragments, number_sections, shift_headings, footnote_counter_start,
-    )
+    crate::render::html_ast::markdown_to_html_ast_with_metadata(markdown, raw_fragments, options)
 }
 
 /// Render markdown to Typst via AST walk.

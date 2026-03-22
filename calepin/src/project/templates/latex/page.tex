@@ -4,13 +4,13 @@
 \usepackage{titling}
 {{bib_preamble}}
 {% include "preamble.jinja" %}
-{% include "title.jinja" %}
+{% if title %}{% include "title.jinja" %}
 {% include "subtitle.jinja" %}
 {% include "author_block.jinja" %}
-{% include "date.jinja" %}
+{% include "date.jinja" %}{% else %}\date{}{% endif %}
 \begin{document}
-\maketitle
-\ifdefined\affiliationblock\affiliationblock\fi
+{% if title %}\maketitle
+\ifdefined\affiliationblock\affiliationblock\fi{% endif %}
 
 {% include "abstract.jinja" %}
 {% include "keywords.jinja" %}

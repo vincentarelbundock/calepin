@@ -76,6 +76,12 @@ pub struct ElementRenderer {
     pub walk_metadata: std::cell::RefCell<crate::render::ast::WalkMetadata>,
     /// Running footnote counter across Text elements.
     footnote_counter: std::cell::Cell<usize>,
+    /// Section counters chained across Text elements.
+    section_counters: std::cell::Cell<Option<[usize; 6]>>,
+    /// Minimum heading level chained across Text elements.
+    min_heading_level: std::cell::Cell<Option<usize>>,
+    /// Accumulated footnote defs from all Text elements (for combined section at end).
+    accumulated_footnote_defs: std::cell::RefCell<Vec<(usize, String)>>,
     /// Footnote definitions collected from all Text elements (for cross-block resolution).
     /// Each entry is the full `[^name]: content` line(s).
     global_footnote_defs: std::cell::RefCell<String>,
@@ -117,6 +123,9 @@ impl ElementRenderer {
             theorem_numbers: std::cell::RefCell::new(HashMap::new()),
             walk_metadata: std::cell::RefCell::new(crate::render::ast::WalkMetadata::default()),
             footnote_counter: std::cell::Cell::new(0),
+            section_counters: std::cell::Cell::new(None),
+            min_heading_level: std::cell::Cell::new(None),
+            accumulated_footnote_defs: std::cell::RefCell::new(Vec::new()),
             global_footnote_defs: std::cell::RefCell::new(String::new()),
             template_cache: std::cell::RefCell::new(HashMap::new()),
         }
@@ -128,6 +137,16 @@ impl ElementRenderer {
 
     pub fn set_sc_fragments(&mut self, sc: Vec<String>) {
         self.sc_fragments = sc;
+    }
+
+    /// Render the combined footnote section from all accumulated Text elements.
+    /// Returns empty string if no footnotes or if format is not HTML.
+    pub fn footnote_section(&self) -> String {
+        let defs = self.accumulated_footnote_defs.borrow();
+        if defs.is_empty() || self.ext != "html" {
+            return String::new();
+        }
+        crate::render::html_ast::render_footnote_section(&defs)
     }
 
     pub fn get_template(&self, name: &str) -> String {
@@ -155,11 +174,28 @@ impl ElementRenderer {
                 let fragments = self.raw_fragments.borrow();
                 let rendered = match self.ext.as_str() {
                     "html" => {
-                        let fn_start = self.footnote_counter.get();
+                        let options = crate::render::ast::WalkOptions {
+                            number_sections: self.number_sections,
+                            shift_headings: self.shift_headings,
+                            footnote_counter_start: self.footnote_counter.get(),
+                            section_counters_start: self.section_counters.get(),
+                            min_heading_level: self.min_heading_level.get(),
+                            suppress_footnote_section: true,
+                        };
                         let result = crate::render::markdown::render_html_full_with_metadata(
-                            &processed, &fragments, self.number_sections, self.shift_headings, fn_start,
+                            &processed, &fragments, &options,
                         );
                         self.footnote_counter.set(result.metadata.footnote_counter_end);
+                        self.section_counters.set(Some(result.metadata.section_counters_end));
+                        self.min_heading_level.set(Some(result.metadata.min_heading_level));
+                        if !result.metadata.footnote_defs.is_empty() {
+                            let mut acc = self.accumulated_footnote_defs.borrow_mut();
+                            for def in result.metadata.footnote_defs {
+                                if !acc.iter().any(|(id, _)| *id == def.0) {
+                                    acc.push(def);
+                                }
+                            }
+                        }
                         let mut meta = self.walk_metadata.borrow_mut();
                         meta.headings.extend(result.metadata.headings);
                         meta.ids.extend(result.metadata.ids);

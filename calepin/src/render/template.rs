@@ -344,68 +344,36 @@ pub fn build_template_vars_with_headings(
     );
     vars.insert("date".to_string(), meta.date.clone().unwrap_or_default());
 
-    // Title block
+    // Title command (LaTeX preamble)
     if let Some(ref title) = meta.title {
         let rendered_title = crate::render::markdown::render_inline(title, ext);
-        let mut bvars = HashMap::new();
-        bvars.insert("title".to_string(), rendered_title.clone());
-        bvars.insert("title_cmd".to_string(), format!("\\title{{{}}}", rendered_title));
-        vars.insert("title_block".to_string(), render_block("title", ext, &bvars, &rendered_title));
-    } else {
-        // LaTeX requires \title{} even if empty (for \maketitle)
-        vars.insert("title_block".to_string(), match ext {
-            "latex" => "\\title{}".to_string(),
-            _ => String::new(),
-        });
+        vars.insert("title_cmd".to_string(), format!("\\title{{{}}}", rendered_title));
     }
 
-    // Subtitle block (HTML only by default, but templates can provide others)
+    // Subtitle (already available as {{subtitle}} via vars set above)
     if let Some(ref subtitle) = meta.subtitle {
-        let rendered_subtitle = crate::render::markdown::render_inline(subtitle, ext);
-        let mut bvars = HashMap::new();
-        bvars.insert("subtitle".to_string(), rendered_subtitle.clone());
-        vars.insert("subtitle_block".to_string(), render_block("subtitle", ext, &bvars, &rendered_subtitle));
-    } else {
-        vars.insert("subtitle_block".to_string(), String::new());
+        vars.insert("subtitle".to_string(), crate::render::markdown::render_inline(subtitle, ext));
     }
 
     // Author block
     vars.insert("author_block".to_string(), build_author_block(meta, ext));
 
-    // Date block
+    // Date command (LaTeX preamble)
     if let Some(ref date) = meta.date {
-        let mut bvars = HashMap::new();
-        bvars.insert("date".to_string(), date.clone());
-        bvars.insert("date_cmd".to_string(), format!("\\date{{{}}}", date));
-        let fallback = match ext {
-            "latex" => format!("\\date{{{}}}", date),
-            _ => date.clone(),
-        };
-        vars.insert("date_block".to_string(), render_block("date", ext, &bvars, &fallback));
-    } else {
-        // LaTeX needs an empty \date{} to suppress "today"
-        vars.insert("date_block".to_string(), match ext {
-            "latex" => "\\date{}".to_string(),
-            _ => String::new(),
-        });
+        vars.insert("date_cmd".to_string(), format!("\\date{{{}}}", date));
     }
 
     // Abstract block
     if let Some(ref abs) = meta.abstract_text {
-        let rendered_abs = crate::render::markdown::render_inline(abs, ext);
-        let mut bvars = HashMap::new();
-        bvars.insert("abstract".to_string(), rendered_abs.clone());
-        vars.insert("abstract".to_string(), render_block("abstract", ext, &bvars, &rendered_abs));
+        vars.insert("abstract".to_string(), crate::render::markdown::render_inline(abs, ext));
     } else {
         vars.insert("abstract".to_string(), String::new());
     }
 
-    // Keywords block
+    // Keywords
     if !meta.keywords.is_empty() {
         let joined = meta.keywords.join(", ");
-        let mut bvars = HashMap::new();
-        bvars.insert("keywords".to_string(), joined.clone());
-        vars.insert("keywords_block".to_string(), render_block("keywords", ext, &bvars, &joined));
+        vars.insert("keywords".to_string(), joined.clone());
 
         // HTML meta tag for keywords
         if ext == "html" {
@@ -418,8 +386,6 @@ pub fn build_template_vars_with_headings(
                 ),
             );
         }
-    } else {
-        vars.insert("keywords_block".to_string(), String::new());
     }
 
     // Appendix

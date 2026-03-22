@@ -71,6 +71,12 @@ pub struct WalkMetadata {
     pub ids: HashMap<String, String>,
     /// Final footnote counter value (for chaining across multiple Text elements).
     pub footnote_counter_end: usize,
+    /// Section counters at end of walk (for chaining across multiple Text elements).
+    pub section_counters_end: [usize; 6],
+    /// Minimum heading level seen (for chaining).
+    pub min_heading_level: usize,
+    /// Collected footnote definitions (for deferred rendering).
+    pub footnote_defs: Vec<(usize, String)>,
 }
 
 /// Result of `walk_and_render`: the rendered string plus collected metadata.
@@ -188,11 +194,24 @@ pub struct WalkOptions {
     pub shift_headings: bool,
     /// Starting footnote counter (for documents with multiple Text elements).
     pub footnote_counter_start: usize,
+    /// Section counters carried from a previous Text element. None = start fresh.
+    pub section_counters_start: Option<[usize; 6]>,
+    /// Minimum heading level carried from a previous Text element. None = compute via pre-pass.
+    pub min_heading_level: Option<usize>,
+    /// When true, don't append the footnote section inline; defs are returned in metadata.
+    pub suppress_footnote_section: bool,
 }
 
 impl Default for WalkOptions {
     fn default() -> Self {
-        Self { number_sections: false, shift_headings: false, footnote_counter_start: 0 }
+        Self {
+            number_sections: false,
+            shift_headings: false,
+            footnote_counter_start: 0,
+            section_counters_start: None,
+            min_heading_level: None,
+            suppress_footnote_section: false,
+        }
     }
 }
 
@@ -239,6 +258,8 @@ struct WalkState {
     min_heading_level: usize,
 
     footnote_ids: HashMap<String, usize>,
+    /// Names of footnotes that have actual references (not just global defs).
+    footnote_ref_names: std::collections::HashSet<String>,
     /// Pre-collected footnote text (for InlineAtRef strategy).
     footnote_text: HashMap<String, String>,
     /// Collected rendered footnote defs (for CollectToSection strategy).
@@ -246,6 +267,7 @@ struct WalkState {
     in_footnote_def: bool,
     footnote_def_buf: String,
     footnote_def_id: usize,
+    footnote_def_name: String,
 
     skip_image_text: bool,
     image_alt: String,
@@ -272,25 +294,36 @@ fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) 
     let comrak_opts = comrak_options();
     let root = parse_document(&arena, markdown, &comrak_opts);
 
-    // Pre-pass 1: assign sequential footnote IDs (continuing from previous Text elements)
+    // Pre-pass 1: assign sequential footnote IDs (continuing from previous Text elements).
+    // First pass: collect ref names and assign IDs to refs only (so refs get
+    // sequential numbers without gaps from globally-appended defs).
     let mut footnote_ids: HashMap<String, usize> = HashMap::new();
+    let mut footnote_ref_names = std::collections::HashSet::new();
     let mut fn_counter = options.footnote_counter_start;
     for edge in root.traverse() {
         if let comrak::arena_tree::NodeEdge::Start(node) = edge {
-            match &node.data.borrow().value {
-                NodeValue::FootnoteDefinition(def) => {
-                    if !footnote_ids.contains_key(&def.name) {
-                        fn_counter += 1;
-                        footnote_ids.insert(def.name.clone(), fn_counter);
-                    }
+            if let NodeValue::FootnoteReference(r) = &node.data.borrow().value {
+                footnote_ref_names.insert(r.name.clone());
+                if !footnote_ids.contains_key(&r.name) {
+                    fn_counter += 1;
+                    footnote_ids.insert(r.name.clone(), fn_counter);
                 }
-                NodeValue::FootnoteReference(r) => {
-                    if !footnote_ids.contains_key(&r.name) {
-                        fn_counter += 1;
-                        footnote_ids.insert(r.name.clone(), fn_counter);
-                    }
+            }
+        }
+    }
+    // Record the ref-only counter for chaining to the next walk.
+    let fn_counter_refs = fn_counter;
+    // Second: assign IDs to def-only footnotes (needed for comrak to render them,
+    // but these won't produce visible output since they have no refs).
+    // Use a separate counter so these don't create gaps in ref numbering.
+    let mut fn_counter_defs = fn_counter;
+    for edge in root.traverse() {
+        if let comrak::arena_tree::NodeEdge::Start(node) = edge {
+            if let NodeValue::FootnoteDefinition(def) = &node.data.borrow().value {
+                if !footnote_ids.contains_key(&def.name) {
+                    fn_counter_defs += 1;
+                    footnote_ids.insert(def.name.clone(), fn_counter_defs);
                 }
-                _ => {}
             }
         }
     }
@@ -314,7 +347,9 @@ fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) 
     };
 
     // Pre-pass 3: find minimum heading level for numbering baseline
-    let min_level = if options.number_sections {
+    let min_level = if let Some(ml) = options.min_heading_level {
+        ml
+    } else if options.number_sections {
         let mut min = 6u8;
         for edge in root.traverse() {
             if let comrak::arena_tree::NodeEdge::Start(node) = edge {
@@ -340,14 +375,16 @@ fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) 
         table_in_header: false,
         number_sections: options.number_sections,
         shift_headings: options.shift_headings,
-        section_counters: [0; 6],
+        section_counters: options.section_counters_start.unwrap_or([0; 6]),
         min_heading_level: min_level,
         footnote_ids,
+        footnote_ref_names,
         footnote_text,
         footnote_defs: Vec::new(),
         in_footnote_def: false,
         footnote_def_buf: String::new(),
         footnote_def_id: 0,
+        footnote_def_name: String::new(),
         skip_image_text: false,
         image_alt: String::new(),
         pending_image: None,
@@ -376,14 +413,20 @@ fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) 
         out.push_str(&emitter.image(&img.url, &img.alt, &ImageAttrs::empty()));
     }
 
-    // Append footnote section if strategy is CollectToSection
+    // Append footnote section if strategy is CollectToSection (unless suppressed)
     if let FootnoteStrategy::CollectToSection = emitter.footnote_strategy() {
         if !state.footnote_defs.is_empty() {
-            out.push_str(&emitter.footnote_section(&state.footnote_defs));
+            if options.suppress_footnote_section {
+                state.meta.footnote_defs = std::mem::take(&mut state.footnote_defs);
+            } else {
+                out.push_str(&emitter.footnote_section(&state.footnote_defs));
+            }
         }
     }
 
-    state.meta.footnote_counter_end = fn_counter;
+    state.meta.footnote_counter_end = fn_counter_refs;
+    state.meta.section_counters_end = state.section_counters;
+    state.meta.min_heading_level = state.min_heading_level;
     (out, state.meta)
 }
 
@@ -528,6 +571,7 @@ fn emit_entering(
                     s.in_footnote_def = true;
                     s.footnote_def_buf.clear();
                     s.footnote_def_id = id;
+                    s.footnote_def_name = def.name.clone();
                 }
                 FootnoteStrategy::InlineAtRef => {
                     // Skip def entirely; content was pre-collected
@@ -620,7 +664,7 @@ fn emit_leaving(
                     s.meta.headings.push(TocEntry {
                         level,
                         id: attrs.id.clone(),
-                        text: s.heading_raw_text.clone(),
+                        text: RE_HEADING_ATTR.replace(&s.heading_raw_text, "").trim().to_string(),
                         number: section_number.clone(),
                         classes: attrs.classes.clone(),
                     });
@@ -677,9 +721,17 @@ fn emit_leaving(
                     buf.push_str(e.footnote_def_close());
                 }
                 FootnoteStrategy::CollectToSection => {
-                    let content = s.footnote_def_buf.clone();
+                    // Only collect defs for footnotes that were actually referenced
+                    // in this Text block (not globally-appended defs from other blocks).
+                    // Deduplicate by ID to avoid double-collecting when global defs
+                    // duplicate a def already present in this block.
                     let id = s.footnote_def_id;
-                    s.footnote_defs.push((id, content));
+                    if s.footnote_ref_names.contains(&s.footnote_def_name)
+                        && !s.footnote_defs.iter().any(|(existing_id, _)| *existing_id == id)
+                    {
+                        let content = s.footnote_def_buf.clone();
+                        s.footnote_defs.push((id, content));
+                    }
                     s.in_footnote_def = false;
                     s.footnote_def_buf.clear();
                 }

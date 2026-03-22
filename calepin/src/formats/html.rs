@@ -27,8 +27,15 @@ impl OutputRenderer for HtmlRenderer {
         meta: &Metadata,
         renderer: &ElementRenderer,
     ) -> Option<String> {
+        // Append combined footnote section at end of body
+        let footnotes = renderer.footnote_section();
+        let full_body = if footnotes.is_empty() {
+            body.to_string()
+        } else {
+            format!("{}{}", body, footnotes)
+        };
         let walk_meta = renderer.walk_metadata();
-        let mut vars = build_html_vars_with_headings(meta, body, &walk_meta.headings);
+        let mut vars = build_html_vars_with_headings(meta, &full_body, &walk_meta.headings);
         let syntax_css = renderer.syntax_css_with_scope(
             crate::filters::highlighting::ColorScope::Both,
         );
