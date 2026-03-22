@@ -1,3 +1,39 @@
+# TOML spec issues
+
+## Stable template API is too large
+
+The draft exposes a very big set of template variables and component-specific variables: title blocks, appendix blocks, author sub-components, theorem variants, brand variables, bibliography fragments, _lb and _rb, and more. That is generous, but it also turns internal rendering choices into a public ABI.
+
+That creates two problems:
+
+you will be afraid to refactor internals,
+users will come to depend on variables that were only meant as conveniences.
+
+I would define a smaller stable core:
+
+Stable, guaranteed
+body
+format
+meta
+page
+target
+format_vars
+toc
+preamble
+css
+js
+Best-effort / internal
+
+Put everything else under something like:
+
+internal.*
+or computed.*
+or mark it explicitly as experimental
+
+Also, the brand-{name} variables are awkward. Hyphenated variable names are not a good Jinja-facing API. A dictionary is cleaner:
+
+{{ brand.colors.primary }}
+{{ brand.colors["primary-light"] }}
 
 # TODO
 
@@ -9,6 +45,8 @@ split css into core and style
 + [ ] katex by default -- switchable to mathjax via YAML
 + [ ] Batch over different formats
 + [ ] Right side bar in HTML has {#sec-tags}
++ [ ] Multi-format rendering: calepin basics.qmd -f html,latex,pdf
+    - [ ] Validate that format names do not include commas
 
 ## YAML to TOML
 
