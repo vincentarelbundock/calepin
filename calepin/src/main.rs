@@ -516,7 +516,7 @@ pub fn render_file(
                 output
                     .and_then(|p| p.extension())
                     .and_then(|e| e.to_str())
-                    .map(|ext| formats::format_from_extension(ext).to_string())
+                    .map(|ext| formats::resolve_format_from_extension(ext).to_string())
             })
     };
 

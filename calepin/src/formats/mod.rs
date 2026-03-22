@@ -124,6 +124,14 @@ pub trait OutputRenderer {
     }
 }
 
+/// Default apply_template: build vars, load page template, render.
+/// Shared by LatexRenderer and TypstRenderer.
+fn apply_page_template(body: &str, meta: &Metadata, format: &str) -> Option<String> {
+    let vars = crate::render::template::build_template_vars(meta, body, format);
+    let tpl = crate::render::template::load_page_template("page", format);
+    Some(crate::render::template::render_page_template(&tpl, &vars, format))
+}
+
 /// Create a renderer from a format name string.
 /// Checks built-in formats first, then custom format configs.
 pub fn create_renderer(format: &str) -> Result<Box<dyn OutputRenderer>> {
@@ -138,7 +146,7 @@ pub fn create_renderer(format: &str) -> Result<Box<dyn OutputRenderer>> {
 }
 
 /// Map a file extension to a canonical format name.
-pub fn format_from_extension(ext: &str) -> &str {
+pub fn resolve_format_from_extension(ext: &str) -> &str {
     match ext {
         "tex" => "latex",
         "pdf" => "latex",
@@ -198,12 +206,11 @@ impl OutputRenderer for CustomRenderer {
                 self.base.format(),
             );
             if !custom_tpl.is_empty() {
-                let mut vars = match self.base.format() {
-                    "html" => crate::render::template::build_template_vars(meta, body, "html"),
-                    "latex" => crate::render::template::build_template_vars(meta, body, "latex"),
-                    "typst" => crate::render::template::build_template_vars(meta, body, "typst"),
-                    _ => return None,
-                };
+                let base = self.base.format();
+                if !matches!(base, "html" | "latex" | "typst") {
+                    return None;
+                }
+                let mut vars = crate::render::template::build_template_vars(meta, body, base);
                 // Add syntax highlighting CSS (not included by build_*_vars)
                 if self.base.format() == "html" {
                     let syntax_css = renderer.syntax_css();
@@ -225,7 +232,7 @@ impl OutputRenderer for CustomRenderer {
             }
         };
 
-        // 3. Script postprocess (transforms the complete document)
+        // Script postprocess (transforms the complete document)
         if let Some(ref script) = self.postprocess_script {
             let input = templated.as_deref().unwrap_or(body);
             match run_script(script, input, &[&self.name]) {

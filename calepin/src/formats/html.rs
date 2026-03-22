@@ -15,12 +15,6 @@ impl OutputRenderer for HtmlRenderer {
     fn format(&self) -> &str { "html" }
     fn extension(&self) -> &str { "html" }
 
-    fn postprocess(&self, body: &str, _renderer: &ElementRenderer) -> String {
-        // Heading IDs, section numbering, and footnote consolidation are
-        // handled structurally in the AST walker (render/html_ast.rs).
-        body.to_string()
-    }
-
     fn apply_template(
         &self,
         body: &str,
