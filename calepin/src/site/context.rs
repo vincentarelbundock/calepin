@@ -122,7 +122,7 @@ fn build_nav_tree(nodes: &[PageNode], pages: &[PageInfo]) -> Vec<NavNode> {
                 .unwrap_or_else(|| path.clone());
             let href = info.map(|p| p.url.clone());
             NavNode {
-                text: render_inline_markdown(&text),
+                text: crate::render::markdown::render_inline(&text, "html"),
                 href,
                 active: false,
                 children: vec![],
@@ -228,6 +228,3 @@ fn build_breadcrumbs(page: &PageInfo) -> Vec<Breadcrumb> {
     crumbs
 }
 
-fn render_inline_markdown(text: &str) -> String {
-    crate::render::markdown::render_inline(text, "html")
-}

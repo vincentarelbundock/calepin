@@ -129,8 +129,8 @@ fn sort_pages(pages: &mut Vec<PageInfo>, sort_spec: &str) {
     let descending = parts.get(1).copied() == Some("desc");
 
     pages.sort_by(|a, b| {
-        let va = get_sort_value(a, field);
-        let vb = get_sort_value(b, field);
+        let va = resolve_sort_value(a, field);
+        let vb = resolve_sort_value(b, field);
         if descending {
             vb.cmp(&va)
         } else {
@@ -139,7 +139,7 @@ fn sort_pages(pages: &mut Vec<PageInfo>, sort_spec: &str) {
     });
 }
 
-fn get_sort_value(page: &PageInfo, field: &str) -> String {
+fn resolve_sort_value(page: &PageInfo, field: &str) -> String {
     match field {
         "date" => page.meta.date.clone().unwrap_or_default(),
         "title" => page.meta.title.clone().unwrap_or_default(),

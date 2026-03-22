@@ -134,16 +134,11 @@ fn render_one_page(
     Ok(SiteRenderResult {
         body,
         toc,
-        title: result.metadata.title.map(|t| render_inline(&t, format)),
+        title: result.metadata.title.map(|t| crate::render::markdown::render_inline(&t, format)),
         date: result.metadata.date,
-        subtitle: result.metadata.subtitle.map(|t| render_inline(&t, format)),
+        subtitle: result.metadata.subtitle.map(|t| crate::render::markdown::render_inline(&t, format)),
         abstract_text: result.metadata.abstract_text,
     })
-}
-
-/// Render inline markdown, stripping the <p> wrapper.
-fn render_inline(text: &str, format: &str) -> String {
-    crate::render::markdown::render_inline(text, format)
 }
 
 fn build_overrides(config: &ProjectConfig) -> Vec<String> {

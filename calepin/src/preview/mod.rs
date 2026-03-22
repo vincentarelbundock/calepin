@@ -1,5 +1,5 @@
 mod reload;
-mod server;
+pub(crate) mod server;
 mod watcher;
 
 use std::path::Path;

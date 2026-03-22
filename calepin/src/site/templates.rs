@@ -25,7 +25,7 @@ pub fn init_jinja(base_dir: &Path, target_name: &str) -> Result<Option<Environme
         let name: &str = kwargs.get("name")
             .map_err(|_| minijinja::Error::new(minijinja::ErrorKind::MissingArgument, "icon() requires a 'name' argument"))?;
         kwargs.assert_all_used()?;
-        Ok(minijinja::Value::from_safe_string(icons::get_icon_svg(name)))
+        Ok(minijinja::Value::from_safe_string(icons::resolve_icon_svg(name)))
     });
 
     // Load all files from templates/{target_name}/ (any extension)

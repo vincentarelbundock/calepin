@@ -44,7 +44,7 @@ pub fn start(
 }
 
 /// Try the requested port, then fall back to nearby ports.
-fn try_bind(port: u16) -> Result<(Server, u16)> {
+pub(crate) fn try_bind(port: u16) -> Result<(Server, u16)> {
     // Try the requested port first
     if let Ok(server) = Server::http(format!("0.0.0.0:{}", port)) {
         return Ok((server, port));
@@ -87,17 +87,20 @@ fn serve_static(request: tiny_http::Request, url: &str, serve_dir: &PathBuf) {
     }
 }
 
-fn resolve_mime(path: &std::path::Path) -> &'static str {
+pub(crate) fn resolve_mime(path: &std::path::Path) -> &'static str {
     match path.extension().and_then(|e| e.to_str()) {
         Some("html") => "text/html; charset=utf-8",
         Some("css") => "text/css",
         Some("js") => "application/javascript",
+        Some("json") => "application/json",
         Some("png") => "image/png",
         Some("jpg" | "jpeg") => "image/jpeg",
         Some("gif") => "image/gif",
         Some("svg") => "image/svg+xml",
         Some("pdf") => "application/pdf",
-        Some("json") => "application/json",
+        Some("woff2") => "font/woff2",
+        Some("woff") => "font/woff",
+        Some("qmd") => "text/plain; charset=utf-8",
         _ => "application/octet-stream",
     }
 }

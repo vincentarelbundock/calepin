@@ -2,6 +2,7 @@
 
 split css into core and style
 
++ [ ] Convert src/structures/tabsets and friends to templates where possible
 + [ ] 404.qmd
 + [ ] Convert elements templates to Tera and simplify the dispatch
 + [ ] Blog post site template
