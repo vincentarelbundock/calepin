@@ -1,6 +1,13 @@
 use clap::{Parser, Subcommand};
 use clap_complete::Shell;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Global quiet flag, set once from CLI args and readable anywhere.
+pub static QUIET: AtomicBool = AtomicBool::new(false);
+
+pub fn set_quiet(q: bool) { QUIET.store(q, Ordering::Relaxed); }
+pub fn is_quiet() -> bool { QUIET.load(Ordering::Relaxed) }
 
 #[derive(Parser, Debug)]
 #[command(

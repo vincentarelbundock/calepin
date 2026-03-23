@@ -229,6 +229,7 @@ fn handle_flush(path: &Path, skip_confirm: bool) -> Result<()> {
 }
 
 fn handle_render(args: RenderArgs) -> Result<()> {
+    cli::set_quiet(args.quiet);
     let mut overrides = args.overrides;
     if args.no_highlight {
         overrides.push("highlight-style=none".to_string());
@@ -242,6 +243,16 @@ fn handle_render(args: RenderArgs) -> Result<()> {
 
     // Single file: may use -o as output file path
     if args.input.len() == 1 {
+        // Multi-target: split comma-separated targets and render each
+        if let Some(ref target_str) = args.target {
+            if target_str.contains(',') {
+                let targets: Vec<&str> = target_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+                for t in &targets {
+                    render_one(&args.input[0], None, Some(t), &overrides, args.quiet)?;
+                }
+                return Ok(());
+            }
+        }
         return render_one(&args.input[0], args.output.as_deref(), args.target.as_deref(), &overrides, args.quiet);
     }
 

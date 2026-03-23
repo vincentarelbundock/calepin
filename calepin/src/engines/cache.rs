@@ -89,10 +89,13 @@ const DISPLAY_ONLY_OPTIONS: &[&str] = &[
 ];
 
 /// Compute the cache key hash for a chunk.
+/// Includes `fig_ext` so that rendering the same chunk for different output
+/// formats (e.g., SVG for HTML vs PDF for LaTeX) produces separate cache entries.
 fn compute_key(
     source: &[String],
     options: &ChunkOptions,
     upstream_digest: u128,
+    fig_ext: &str,
 ) -> u128 {
     // Build a single buffer with all key material, then hash once
     let mut buf = Vec::new();
@@ -119,6 +122,11 @@ fn compute_key(
         }
         buf.push(b'\n');
     }
+
+    // Figure extension (so svg vs pdf produce different keys)
+    buf.extend_from_slice(b"fig_ext:");
+    buf.extend_from_slice(fig_ext.as_bytes());
+    buf.push(b'\n');
 
     // Upstream digest (cumulative hash of all prior chunks)
     buf.extend_from_slice(b"upstream:");
@@ -221,7 +229,7 @@ pub fn execute_chunk_cached(
 ) -> Result<Vec<ChunkResult>> {
     // Compute cache key for this chunk (always, even if cache is off for this chunk).
     // This ensures every chunk contributes to the upstream digest chain.
-    let key_hash = compute_key(source, options, cache.upstream_digest);
+    let key_hash = compute_key(source, options, cache.upstream_digest, fig_ext);
 
     // Always advance the upstream digest, even for eval=false or non-cached chunks
     cache.advance_digest(key_hash);
@@ -241,6 +249,13 @@ pub fn execute_chunk_cached(
 
     // Try cache hit
     if let Some((results, plot_files)) = load_cache(&cache.cache_dir, cache_id, key_hash) {
+        {
+            use std::sync::atomic::{AtomicBool, Ordering};
+            static CACHE_WARNED: AtomicBool = AtomicBool::new(false);
+            if !crate::cli::is_quiet() && !CACHE_WARNED.swap(true, Ordering::Relaxed) {
+                eprintln!("  \x1b[36mcache:\x1b[0m using cached results. To clear: calepin flush. To disable: #| cache: false");
+            }
+        }
         // Restore plot files to fig_dir
         let chunk_dir = cache.cache_dir.join(cache_id);
         for filename in &plot_files {
@@ -272,8 +287,8 @@ mod tests {
     #[test]
     fn test_cache_key_changes_with_source() {
         let opts = ChunkOptions::default();
-        let k1 = compute_key(&["x <- 1".into()], &opts, 0);
-        let k2 = compute_key(&["x <- 2".into()], &opts, 0);
+        let k1 = compute_key(&["x <- 1".into()], &opts, 0, "png");
+        let k2 = compute_key(&["x <- 2".into()], &opts, 0, "png");
         assert_ne!(k1, k2);
     }
 
@@ -281,8 +296,8 @@ mod tests {
     fn test_cache_key_changes_with_upstream() {
         let opts = ChunkOptions::default();
         let source = vec!["x <- 1".into()];
-        let k1 = compute_key(&source, &opts, 0);
-        let k2 = compute_key(&source, &opts, 12345);
+        let k1 = compute_key(&source, &opts, 0, "png");
+        let k2 = compute_key(&source, &opts, 12345, "png");
         assert_ne!(k1, k2);
     }
 
@@ -290,8 +305,8 @@ mod tests {
     fn test_cache_key_stable() {
         let opts = ChunkOptions::default();
         let source = vec!["x <- 1".into()];
-        let k1 = compute_key(&source, &opts, 42);
-        let k2 = compute_key(&source, &opts, 42);
+        let k1 = compute_key(&source, &opts, 42, "png");
+        let k2 = compute_key(&source, &opts, 42, "png");
         assert_eq!(k1, k2);
     }
 

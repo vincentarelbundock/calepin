@@ -38,13 +38,24 @@ calepin document.qmd -o paper.tex
 ```
 
 
-# PDF compilation
+# Multiple formats
 
-The `--compile` flag renders the document and then compiles the output to PDF. It uses [tectonic](https://tectonic-typesetting.github.io/) for LaTeX and [typst](https://typst.app/) for Typst.
+Render to several formats at once by passing comma-separated target names:
 
 ```bash
-calepin document.qmd --format latex --compile  # → document.pdf (via tectonic)
-calepin document.qmd --format typst --compile  # → document.pdf (via typst)
+calepin render document.qmd -t html,latex,typst
+```
+
+Each target produces its own output file. Code chunks execute once per unique figure format (e.g., SVG for HTML, PDF for LaTeX), and the cache distinguishes them automatically.
+
+
+# PDF compilation
+
+Use a target with a `[compile]` section in `calepin.toml` to produce PDFs:
+
+```bash
+calepin render document.qmd -t pdf-latex   # → .tex then tectonic → .pdf
+calepin render document.qmd -t pdf-typst   # → .typ then typst → .pdf
 ```
 
 

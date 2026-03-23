@@ -3,8 +3,7 @@
 
 ## CLI
 
-- [ ] Multi-format rendering: `calepin basics.qmd -f html,latex,pdf`
-    - [ ] Validate that format names do not include commas
+- [x] Multi-format rendering: `calepin render file.qmd -t html,latex,pdf-latex`
 - [ ] `calepin preview` on a website should watch all `.qmd` files in the content/ directory
 
 
@@ -123,6 +122,7 @@
 - [ ] Performance profiling
 - [ ] Architecture refactor / DRY / simplification
 - [ ] Singular vs Plural file names
+- [ ] User input validation. Brainstorm with AI to be super strict and informative. Paths, formats, front matter options, etc.
 
 
 ## Manual code review
