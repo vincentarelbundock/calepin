@@ -79,12 +79,12 @@ pub fn expand_includes(text: &str, document_dir: &std::path::Path, format: &str)
                 Ok(content) => content,
                 Err(e) => {
                     cwarn!("snippet '{}': {}", file_name, e);
-                    format!("\n\n**Error: snippet '{}': {}**\n\n", name, e)
+                    String::new()
                 }
             },
             None => {
                 cwarn!("snippet '{}' not found", file_name);
-                format!("\n\n**Error: snippet '{}' not found**\n\n", name)
+                String::new()
             }
         }
     }).to_string();
