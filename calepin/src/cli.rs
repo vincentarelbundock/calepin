@@ -28,6 +28,17 @@ pub enum Command {
     /// Preview a file, project, or directory with live-reload
     Preview(PreviewArgs),
 
+    /// Delete generated files (_calepin_cache/, _calepin_files/, and LaTeX artefacts)
+    Flush {
+        /// Directory to clean (default: current directory)
+        #[arg(default_value = ".")]
+        path: PathBuf,
+
+        /// Skip confirmation prompt
+        #[arg(short = 'y', long)]
+        yes: bool,
+    },
+
     /// Initialize a new project
     Init {
         /// Project template: blank, docs, blog

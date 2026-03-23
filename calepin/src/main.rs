@@ -113,7 +113,7 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "init", "new", "info"];
+    let known = ["render", "preview", "flush", "init", "new", "info"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -139,6 +139,7 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Render(args) => handle_render(args),
         Command::Preview(args) => handle_preview(args),
+        Command::Flush { path, yes } => handle_flush(&path, yes),
         Command::Init { template } => {
             eprintln!("Project init (template: {}) is not yet implemented.", template);
             Ok(())
@@ -146,6 +147,85 @@ fn main() -> Result<()> {
         Command::New { action } => handle_new(action),
         Command::Info { action } => handle_info(action),
     }
+}
+
+fn handle_flush(path: &Path, skip_confirm: bool) -> Result<()> {
+    use std::io::Write;
+
+    let root = if path.is_relative() {
+        std::env::current_dir()?.join(path)
+    } else {
+        path.to_path_buf()
+    };
+
+    // Collect directories and files to delete
+    let mut targets: Vec<PathBuf> = Vec::new();
+    let latex_exts = ["aux", "log", "out", "toc", "fls", "fdb_latexmk", "synctex.gz", "xdv"];
+
+    // Walk recursively to find _calepin_cache/_calepin_files dirs and LaTeX artefacts
+    fn find_targets(dir: &Path, targets: &mut Vec<PathBuf>, latex_exts: &[&str]) {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                let name = entry.file_name();
+                if name == "_calepin_cache" || name == "_calepin_files" {
+                    targets.push(p);
+                } else if name != "." && name != ".." && name != ".git" && name != "node_modules" {
+                    find_targets(&p, targets, latex_exts);
+                }
+            } else if p.is_file() {
+                if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                    if latex_exts.contains(&ext) {
+                        targets.push(p);
+                    }
+                }
+            }
+        }
+    }
+    find_targets(&root, &mut targets, &latex_exts);
+
+    if targets.is_empty() {
+        eprintln!("Nothing to clean.");
+        return Ok(());
+    }
+
+    // Show what will be deleted
+    for t in &targets {
+        let display = t.strip_prefix(&root).unwrap_or(t);
+        if t.is_dir() {
+            eprintln!("  rm -rf {}/", display.display());
+        } else {
+            eprintln!("  rm {}", display.display());
+        }
+    }
+
+    // Confirm
+    if !skip_confirm {
+        eprint!("\nDelete these? [y/N] ");
+        std::io::stderr().flush()?;
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        if !input.trim().eq_ignore_ascii_case("y") {
+            eprintln!("Cancelled.");
+            return Ok(());
+        }
+    }
+
+    // Delete
+    for t in &targets {
+        if t.is_dir() {
+            std::fs::remove_dir_all(t)?;
+        } else {
+            std::fs::remove_file(t)?;
+        }
+    }
+
+    eprintln!("Done.");
+    Ok(())
 }
 
 fn handle_render(args: RenderArgs) -> Result<()> {

@@ -1,158 +1,141 @@
 # TODO
 
-split css into core and style
 
-+ [ ] flush deletes _calepin_cache/ and _calepin_files/ directories recursively but asks for confirmation. Also deletes latex compilation artefacts.
-+ [ ] Convert src/structures/tabsets and friends to templates where possible
-+ [ ] 404.qmd
-+ [ ] Convert elements templates to Tera and simplify the dispatch
-+ [ ] Blog post site template
-+ [ ] Accessibility
-+ [ ] Multi-format rendering: calepin basics.qmd -f html,latex,pdf
+## CLI
+
+- [ ] Multi-format rendering: `calepin basics.qmd -f html,latex,pdf`
     - [ ] Validate that format names do not include commas
-+ [ ] CSL helpers: https://github.com/citation-style-language/styles/
-+ [ ] why is navbar_search in the .rs file rather than just the template.
+- [ ] `calepin preview` on a website should watch all `.qmd` files in the content/ directory
 
-## YAML -> TOML compatibility layer
 
-- [ ] Decide on a minimal set of supported Quarto preamble features
-- [ ] Convert YAML to TOML for Quarto -> Calepin compatibility
+## Rendering
 
-## Math
+- [ ] Split CSS into core and style
+- [ ] Better CSS
+- [ ] Accessibility
+- [ ] 404.qmd
+- [ ] *Calepin* always in italics with capital letter in website/
+- [ ] Language / localization (`lang:` option, custom translation strings)
+- [ ] Allow users to supply `postprocess.latex` or `postprocess.html` in `_calepin/`
+- [ ] How do lettered appendices work?
 
-+ [ ] Typst math is currently suppressed
-+ [ ] LaTeX -> Typst math plugin
 
-## Plugins
+## Templates
 
-I want each format to be a separate plugin. That will force me to design a good plugin infrastructure for users.
+- [ ] Convert `src/structures/tabsets` and friends to templates where possible
+- [ ] Convert element templates to Tera and simplify the dispatch
+- [ ] Move `navbar_search` from `.rs` file to the template
 
-## Engines
 
-- [ ] docx should be more powerful and maybe not go through pandoc.
+## Code execution
 
-## Misc
-
-- [ ] $ handling. Quarto does not require escape, IIRC.
-    - Do NOT do this. I think we should stay strict and document it.
-- [x] Table of contents
-
-## Execution
-
-- [ ] How can an R tool add stuff to the preamble? Often useful in LaTeX.
+- [ ] How can an R chunk add content to the LaTeX preamble?
 - [ ] Code annotation (line markers `# <1>` with numbered explanations)
 - [ ] Multiple figures from a single code chunk with `fig-subcap`
 - [ ] Layout attributes on code chunks (`layout-ncol`, `layout`)
 - [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
+- [ ] Diagrams: Penrose (requires trio format -- three separate files, not inline code)
+- [ ] docx should be more powerful and maybe not go through pandoc
+
 
 ## Tables
 
-- [ ] knitr_print() support
-- [ ] Tables should be using a template and filter
+- [ ] `knitr_print()` support
+- [ ] Tables should use a template and filter
 - [ ] Advanced table features (Bootstrap classes, embedded markdown in cells)
 - [ ] Subtables
 - [ ] Table caption location: margin
 
-## Websites
 
-- [ ] built-in website template
-- [ ] built-in website_minimal template
-- [ ] built-in website_blog template
-- [ ] countrycode
-- [ ] tinytable
-- [ ] modelsummary
-- [ ] marginaleffects
-- [ ] TODO calepin preview on a website should watch all the .qmd files in the directory. Is that expensive?
+## Math
 
-## HTML
+- [ ] Typst math is currently suppressed
+- [ ] LaTeX to Typst math plugin
 
-- [ ] Do not base64 by default?
-- [ ] Embed resources
 
 ## Layout
 
-- [ ] Column classes for content width (`.column-body`, `.column-page`, `.column-screen`, `.column-margin`)
+- [ ] Column classes (`.column-body`, `.column-page`, `.column-screen`, `.column-margin`)
 - [ ] Outset variants (`.column-body-outset`, `.column-page-inset`)
 - [ ] Left/right overflow (`.column-screen-left`, `.column-page-right`, etc.)
 - [ ] Margin content (`.column-margin` for text, figures, tables)
 - [ ] Margin references (`reference-location: margin`)
 - [ ] Margin citations (`citation-location: margin`)
 - [ ] Margin captions (`cap-location: margin`, `fig-cap-location: margin`)
-- [x] Asides (`[text]{.aside}` → margin notes)
-- [x] Landscape mode (`::: {.landscape}`)
 - [ ] PDF page geometry options (`geometry:` front matter)
 - [ ] Screen inset shaded (`column: screen-inset-shaded`)
 
-## Cross-References
+
+## Cross-references
 
 - [ ] Custom cross-reference types
 - [ ] Code listing cross-references (`#lst-` prefix)
 - [ ] Callout cross-references
 - [ ] Custom numbered float types
 
-## Document
 
-- [ ] Language / localization (`lang:` option, custom translation strings)
+## HTML
 
-## Misc
+- [ ] Do not base64 by default?
+- [ ] Embed resources
 
-- [ ] Performance profiling
-- [ ] Architecture refactor
-- [ ] DRY
-- [ ] Simplification
-- [ ] ANSI colors in txtfmt plugin
-- [x] lorem plugin
-- [ ] cache
-- [ ] _calepin_cache/ directory for storing all the caches. Otherwise we get many folders. 
-- [ ] _calepin_files/ directory for storing files. [should be customizable]
-- [ ] _calepin_plugins/ directory for storing files
-- [x] websites via plugin-based site builder
-- [ ] websites with navbar
-- [ ] better CSS
-- [ ] Calepin always in italics with capital letter.
-- [x] Calepin vs Quarto (docs/quarto.qmd)
-- [x] Warn on dot-style option names (use dashes instead)
-- [x] `-v` / `--version` flag
-- [ ] Allow users to supply a postprocess.latex or postprocess.html that accepts the raw code and returns the same thing but modified. That is done automatically if in the _calepin directory
-- [ ] How do lettered addpendices work?
-- [x] `{.unnumbered}` / `{.unlisted}` sections
-- [ ] Accessibility
 
-## Plugin API
+## Websites
 
-- [ ] Stable template API is too large: Exposing too many template variables as public API locks in internal rendering details, making refactoring risky and encouraging users to depend on implementation conveniences that were never meant to be stable contracts.
-- [ ] How to register new plugins? What are they allowed to do?
+- [ ] Built-in website template
+- [ ] Built-in minimal website template
+- [ ] Built-in blog template
+- [ ] Websites with navbar
+- [ ] Example sites: countrycode, tinytable, modelsummary, marginaleffects
 
-## File paths are still a terrible mess
-
-- [ ] Be super strict
-- [ ] Be super consistent
-- [ ] Be super simple
-- [ ] Be cross platform
-- [ ] Be clear about location of output and location of intputs
-- [ ] Files paths are different in Typst, LaTeX, HTML, and Markdown
-- [ ] tectonic has weird path resolution
 
 ## Plugins
 
-- [x] `lightbox` (postprocessor plugin)
-- [x] `txtfmt`
-- [x] `lorem` (shortcode plugin)
-- [x] `astro` (site builder plugin)
+- [ ] Stable template API is too large: exposing too many template variables as public API locks in internal rendering details
+- [ ] How to register new plugins? What are they allowed to do?
+- [ ] ANSI colors in txtfmt plugin
+- [ ] CSL helpers: https://github.com/citation-style-language/styles/
+
+
+## Quarto compatibility
+
+- [ ] Decide on a minimal set of supported Quarto preamble features
+- [ ] YAML to TOML translation layer
+
+
+## File paths
+
+- [ ] Strict, consistent, simple, cross-platform
+- [ ] Clear separation of output and input locations
+- [ ] Format-specific path handling (Typst, LaTeX, HTML, Markdown)
+- [ ] Tectonic path resolution quirks
+
+
+## Caching
+
+- [ ] Cache invalidation improvements
+- [ ] `_calepin_cache/` for all caches
+- [ ] `_calepin_files/` for generated files (customizable)
+- [ ] `_calepin_plugins/` for plugin files
+
 
 ## Docs
 
-- [ ] HTML sales pitch
-    - [ ] Classless CSS
-    - [ ] Standalone files by default
+- [ ] HTML sales pitch: classless CSS, standalone files by default
 
-## Manual Code Review
 
-- [x] `src/engines/`
+## Internal
+
+- [ ] Performance profiling
+- [ ] Architecture refactor / DRY / simplification
+- [ ] Singular vs Plural file and function names
+
+
+## Manual code review
+
 - [ ] `src/filters/`
 - [ ] `src/render/`
 - [ ] `src/formats/`
 - [ ] `src/structures/`
 - [ ] `src/parse/`
 - [ ] `src/` (root modules: main, types, plugins, cli, util, website, site_builder, preview, compile)
-
