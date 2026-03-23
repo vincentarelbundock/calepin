@@ -4,7 +4,6 @@ mod context;
 mod discover;
 mod icons;
 mod render;
-mod search;
 mod templates;
 
 use std::collections::HashMap;
@@ -234,17 +233,14 @@ fn apply_site_templates(
         fs::write(&output_path, &rendered)?;
     }
 
-    // Generate search index (HTML only)
+    // Run pagefind for search indexing (HTML only)
     if format == "html" {
         let search_enabled = config.var.as_ref()
             .and_then(|v| v.get("navbar_search"))
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         if search_enabled {
-            search::generate_search_index(pages, results, output)?;
-            if !quiet {
-                eprintln!("  Generated search-index.json");
-            }
+            run_pagefind(output, quiet)?;
         }
 
         // Copy .qmd source files to _source/ for the source viewer
@@ -260,6 +256,31 @@ fn apply_site_templates(
         }
     }
 
+    Ok(())
+}
+
+/// Run pagefind to generate the search index for the site.
+fn run_pagefind(output: &Path, quiet: bool) -> Result<()> {
+    let tool = &crate::tools::PAGEFIND;
+    let result = std::process::Command::new(tool.cmd)
+        .arg("--site")
+        .arg(output)
+        .output();
+
+    match result {
+        Ok(out) => {
+            if !out.status.success() {
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                eprintln!("Warning: pagefind failed: {}", stderr.trim());
+            } else if !quiet {
+                eprintln!("  Generated search index (pagefind)");
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            eprintln!("Warning: {}. Search will not be available.", crate::tools::not_found_message(tool));
+        }
+        Err(e) => return Err(e.into()),
+    }
     Ok(())
 }
 

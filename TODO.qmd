@@ -23,8 +23,7 @@
 ## Templates
 
 - [ ] Convert `src/structures/tabsets` and friends to templates where possible
-- [ ] Convert element templates to Tera and simplify the dispatch
-- [ ] Move `navbar_search` from `.rs` file to the template
+- [ ] Convert element templates to MiniJinja and simplify the dispatch
 
 
 ## Code execution
@@ -41,6 +40,10 @@
 ## Tables
 
 - [ ] `knitr_print()` support
+- [ ] `tinytable`
+- [ ] `gt`
+- [ ] `flextable`
+- [ ] `knitr::kable()`
 - [ ] Tables should use a template and filter
 - [ ] Advanced table features (Bootstrap classes, embedded markdown in cells)
 - [ ] Subtables
@@ -80,12 +83,11 @@
 - [ ] Embed resources
 
 
-## Websites
+## calepin new
 
 - [ ] Built-in website template
 - [ ] Built-in minimal website template
 - [ ] Built-in blog template
-- [ ] Websites with navbar
 - [ ] Example sites: countrycode, tinytable, modelsummary, marginaleffects
 
 
@@ -111,14 +113,6 @@
 - [ ] Tectonic path resolution quirks
 
 
-## Caching
-
-- [ ] Cache invalidation improvements
-- [ ] `_calepin_cache/` for all caches
-- [ ] `_calepin_files/` for generated files (customizable)
-- [ ] `_calepin_plugins/` for plugin files
-
-
 ## Docs
 
 - [ ] HTML sales pitch: classless CSS, standalone files by default
@@ -128,7 +122,7 @@
 
 - [ ] Performance profiling
 - [ ] Architecture refactor / DRY / simplification
-- [ ] Singular vs Plural file and function names
+- [ ] Singular vs Plural file names
 
 
 ## Manual code review
