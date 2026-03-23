@@ -25,7 +25,7 @@ fn separate_table_caption(children: &[Element]) -> (Vec<Element>, String) {
                     content[last_idx] = Element::Text { content: remaining };
                 }
             } else if !trimmed.starts_with('|') && !trimmed.is_empty() {
-                // Single paragraph with no table — it's just a caption
+                // Single paragraph with no table -- it's just a caption
                 caption = trimmed.to_string();
                 content.remove(last_idx);
             }
@@ -42,7 +42,7 @@ pub fn render_div(
     children: &[Element],
     format: &str,
     render_element: &dyn Fn(&Element) -> String,
-    _raw_fragments: &std::cell::RefCell<Vec<String>>,
+    resolve_template: &dyn Fn(&str) -> Option<String>,
 ) -> String {
     let (content_children, caption) = separate_table_caption(children);
 
@@ -63,66 +63,28 @@ pub fn render_div(
         .map(|s| s.as_str())
         .unwrap_or("top");
 
-    match format {
-        "html" => {
-            let cap_html = if cap_rendered.is_empty() {
-                String::new()
-            } else {
-                format!("<p class=\"table-caption\">{}</p>\n", cap_rendered)
-            };
-            if cap_location == "bottom" {
-                format!(
-                    "<div class=\"table-div\" id=\"{}\">\n{}\n{}</div>",
-                    id, content_rendered, cap_html
-                )
-            } else {
-                format!(
-                    "<div class=\"table-div\" id=\"{}\">\n{}{}\n</div>",
-                    id, cap_html, content_rendered
-                )
-            }
-        }
-        "latex" => {
-            let pos = attrs
-                .get("tbl-pos")
-                .map(|s| format!("[{}]", s))
-                .unwrap_or_default();
-            let cap = if cap_rendered.is_empty() {
-                String::new()
-            } else {
-                format!("\\caption{{{}}}\n", cap_rendered)
-            };
-            let label = format!("\\label{{{}}}\n", id);
-            if cap_location == "bottom" {
-                format!(
-                    "\\begin{{table}}{}\n\\centering\n{}\n{}{}\n\\end{{table}}",
-                    pos, content_rendered, cap, label
-                )
-            } else {
-                format!(
-                    "\\begin{{table}}{}\n\\centering\n{}{}{}\n\\end{{table}}",
-                    pos, cap, label, content_rendered
-                )
-            }
-        }
-        "typst" => {
-            if cap_rendered.is_empty() {
-                format!("{} <{}>", content_rendered, id)
-            } else {
-                format!(
-                    "#figure(kind: table, [\n{}\n], caption: [{}]) <{}>",
-                    content_rendered, cap_rendered, id
-                )
-            }
-        }
-        _ => {
-            if cap_rendered.is_empty() {
-                content_rendered
-            } else if cap_location == "bottom" {
-                format!("{}\n\n: {}", content_rendered, cap_rendered)
-            } else {
-                format!(": {}\n\n{}", cap_rendered, content_rendered)
-            }
-        }
-    }
+    let mut vars = HashMap::new();
+    vars.insert("base".to_string(), format.to_string());
+    vars.insert("children".to_string(), content_rendered);
+    vars.insert("id".to_string(), id.to_string());
+    vars.insert("cap_location".to_string(), cap_location.to_string());
+
+    // Pre-built format-specific strings (avoids triple-brace issues in Jinja)
+    let tbl_pos = attrs.get("tbl-pos").map(|s| format!("[{}]", s)).unwrap_or_default();
+    vars.insert("tbl_begin".to_string(), format!("\\begin{{table}}{}", tbl_pos));
+    vars.insert("caption_cmd".to_string(), if cap_rendered.is_empty() {
+        String::new()
+    } else {
+        format!("\\caption{{{}}}", &cap_rendered)
+    });
+    vars.insert("caption".to_string(), cap_rendered);
+    vars.insert("label".to_string(), match format {
+        "latex" => format!("\\label{{{}}}", id),
+        "typst" => format!("<{}>", id),
+        _ => String::new(),
+    });
+
+    let tpl = resolve_template("table_div")
+        .unwrap_or_else(|| include_str!("../project/templates/common/table_div.jinja").to_string());
+    crate::render::template::apply_template(&tpl, &vars)
 }

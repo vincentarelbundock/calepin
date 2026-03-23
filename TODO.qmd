@@ -28,7 +28,6 @@
 ## Templates
 
 - [ ] Convert `src/structures/tabsets` and friends to templates where possible
-- [ ] Convert element templates to MiniJinja and simplify the dispatch
 
 
 ## Code execution
@@ -61,6 +60,11 @@
 - [ ] LaTeX to Typst math plugin
 
 
+## Figures
+
+- [ ] Figure templates in latex  are pre-computed. Templates need to handle \begin{ {{variables}} }
+- [ ] Check insertion of static images
+
 ## Layout
 
 - [ ] Column classes (`.column-body`, `.column-page`, `.column-screen`, `.column-margin`)
@@ -77,14 +81,14 @@
 ## Cross-references
 
 - [ ] Custom cross-reference types
+- [ ] Custom numbered float types
 - [ ] Code listing cross-references (`#lst-` prefix)
 - [ ] Callout cross-references
-- [ ] Custom numbered float types
 
 
 ## HTML
 
-- [ ] Do not base64 by default?
+- [ ] Do not base64 in website/ but always do it in html/
 - [ ] Embed resources
 - [ ] responsive html: Previous / Next buttons at the bottom of the page get a line return when the page narrows isntead of getting closer to each other.
 

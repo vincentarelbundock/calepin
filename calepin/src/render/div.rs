@@ -81,7 +81,7 @@ pub fn render(
         match &plugin.kind {
             PluginKind::BuiltinStructural(handler) => {
                 if let Some(output) = handler.render_div(
-                    classes, id, attrs, children, format, render_element, raw_fragments,
+                    classes, id, attrs, children, format, render_element, resolve_template, raw_fragments,
                 ) {
                     return output;
                 }

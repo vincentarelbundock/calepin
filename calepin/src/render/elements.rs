@@ -225,10 +225,19 @@ impl ElementRenderer {
             }
             Element::CodeAsis { text } => text.clone(),
             Element::Div { classes, id, attrs, children } => {
-                // Track fig-/tbl- IDs for cross-reference resolution
+                // Track cross-referenceable div IDs
                 if let Some(ref div_id) = id {
-                    if div_id.starts_with("fig-") || div_id.starts_with("tbl-") {
-                        let prefix = &div_id[..4]; // "fig-" or "tbl-"
+                    let trackable_prefix = if div_id.starts_with("fig-") || div_id.starts_with("tbl-") {
+                        Some(&div_id[..4])
+                    } else if div_id.starts_with("tip-") || div_id.starts_with("nte-")
+                        || div_id.starts_with("wrn-") || div_id.starts_with("imp-")
+                        || div_id.starts_with("cau-") || div_id.starts_with("lst-")
+                    {
+                        Some(&div_id[..4])
+                    } else {
+                        None
+                    };
+                    if let Some(prefix) = trackable_prefix {
                         let mut meta = self.walk_metadata.borrow_mut();
                         let count = meta.ids.keys().filter(|k| k.starts_with(prefix)).count();
                         meta.ids.insert(div_id.clone(), (count + 1).to_string());
@@ -248,7 +257,43 @@ impl ElementRenderer {
                     self.has_code.set(true);
                 }
                 let name = element.template_name();
-                self.build_template_output(name, element)
+                let rendered = self.build_template_output(name, element);
+
+                // Wrap code source in a listing div when the label has a lst- prefix
+                if let Element::CodeSource { label, lst_cap, .. } = element {
+                    if label.starts_with("lst-") {
+                        // Track listing ID for cross-references
+                        let mut meta = self.walk_metadata.borrow_mut();
+                        let count = meta.ids.keys().filter(|k| k.starts_with("lst-")).count();
+                        meta.ids.insert(label.clone(), (count + 1).to_string());
+                        let num = count + 1;
+
+                        let cap_text = lst_cap.as_deref().unwrap_or("");
+
+                        return match self.ext.as_str() {
+                            "html" => {
+                                let caption = if cap_text.is_empty() {
+                                    format!("<p class=\"listing-caption\">Listing {}</p>", num)
+                                } else {
+                                    format!("<p class=\"listing-caption\">Listing {}: {}</p>", num, cap_text)
+                                };
+                                format!(
+                                    "<div class=\"code-listing\" id=\"{}\">\n{}\n{}\n</div>",
+                                    label, caption, rendered
+                                )
+                            }
+                            "latex" => format!(
+                                "{}\n\\label{{{}}}", rendered, label
+                            ),
+                            "typst" => format!(
+                                "{} <{}>", rendered, label
+                            ),
+                            _ => rendered,
+                        };
+                    }
+                }
+
+                rendered
             }
         }
     }

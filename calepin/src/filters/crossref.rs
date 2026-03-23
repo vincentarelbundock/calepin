@@ -16,7 +16,7 @@ use std::sync::LazyLock;
 use crate::render::markers;
 
 /// All cross-referenceable prefixes (used in regex patterns).
-const REF_PREFIXES: &str = "fig|sec|tbl|eq|thm|lem|cor|prp|cnj|def|exm|exr|sol|rem|alg";
+const REF_PREFIXES: &str = "fig|sec|tbl|eq|thm|lem|cor|prp|cnj|def|exm|exr|sol|rem|alg|lst|tip|nte|wrn|imp|cau";
 
 // Cached regex patterns for cross-reference resolution.
 // References use @prefix-label syntax (Quarto-compatible).
@@ -554,6 +554,12 @@ fn type_label(typ: &str) -> &str {
         "sol" => "Solution",
         "rem" => "Remark",
         "alg" => "Algorithm",
+        "lst" => "Listing",
+        "tip" => "Tip",
+        "nte" => "Note",
+        "wrn" => "Warning",
+        "imp" => "Important",
+        "cau" => "Caution",
         _ => "",
     }
 }
@@ -601,5 +607,69 @@ mod tests {
         let result = resolve_html(html, &HashMap::new());
         assert!(result.contains("[<a"), "result: {}", result);
         assert!(result.contains("Section 1</a>]"), "result: {}", result);
+    }
+
+    #[test]
+    fn test_resolve_callout_tip() {
+        let mut nums = HashMap::new();
+        nums.insert("tip-example".to_string(), "1".to_string());
+        let html = "<div class=\"callout\" id=\"tip-example\"></div>\n\
+                     <p>See @tip-example</p>";
+        let result = resolve_html(html, &nums);
+        assert!(result.contains("Tip 1"), "result: {}", result);
+        assert!(result.contains("href=\"#tip-example\""), "result: {}", result);
+    }
+
+    #[test]
+    fn test_resolve_callout_note() {
+        let mut nums = HashMap::new();
+        nums.insert("nte-important-info".to_string(), "1".to_string());
+        let html = "<div class=\"callout\" id=\"nte-important-info\"></div>\n\
+                     <p>See @nte-important-info</p>";
+        let result = resolve_html(html, &nums);
+        assert!(result.contains("Note 1"), "result: {}", result);
+    }
+
+    #[test]
+    fn test_resolve_callout_warning() {
+        let mut nums = HashMap::new();
+        nums.insert("wrn-danger".to_string(), "1".to_string());
+        let html = "<div class=\"callout\" id=\"wrn-danger\"></div>\n\
+                     <p>See @wrn-danger</p>";
+        let result = resolve_html(html, &nums);
+        assert!(result.contains("Warning 1"), "result: {}", result);
+    }
+
+    #[test]
+    fn test_resolve_callout_suppress() {
+        let mut nums = HashMap::new();
+        nums.insert("tip-example".to_string(), "1".to_string());
+        let html = "<div class=\"callout\" id=\"tip-example\"></div>\n\
+                     <p>number [-@tip-example]</p>";
+        let result = resolve_html(html, &nums);
+        assert!(result.contains(">1<"), "result: {}", result);
+        assert!(!result.contains("Tip"), "result: {}", result);
+    }
+
+    #[test]
+    fn test_resolve_listing() {
+        let mut nums = HashMap::new();
+        nums.insert("lst-pyplot".to_string(), "1".to_string());
+        let html = "<div class=\"code-listing\" id=\"lst-pyplot\"></div>\n\
+                     <p>See @lst-pyplot</p>";
+        let result = resolve_html(html, &nums);
+        assert!(result.contains("Listing 1"), "result: {}", result);
+        assert!(result.contains("href=\"#lst-pyplot\""), "result: {}", result);
+    }
+
+    #[test]
+    fn test_resolve_listing_bracket() {
+        let mut nums = HashMap::new();
+        nums.insert("lst-sort".to_string(), "2".to_string());
+        let html = "<div class=\"code-listing\" id=\"lst-sort\"></div>\n\
+                     <p>see [@lst-sort]</p>";
+        let result = resolve_html(html, &nums);
+        assert!(result.contains("[<a"), "result: {}", result);
+        assert!(result.contains("Listing 2"), "result: {}", result);
     }
 }

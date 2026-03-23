@@ -1,0 +1,29 @@
+{%- if base == "html" %}
+<div class="figure" id="{{id}}" style="{{align_style}}">
+{{children}}
+{%- if caption %}
+<p class="caption">{{caption}}</p>
+{%- endif %}
+</div>
+{%- elif base == "latex" %}
+{{fig_begin}}
+{{align_style}}
+{{children}}
+{{caption_cmd}}
+{{label}}
+{{fig_end}}
+{%- elif base == "typst" %}
+{%- if caption %}
+#figure([
+{{children}}
+], caption: [{{caption}}]) {{label}}
+{%- else %}
+{{children}} {{label}}
+{%- endif %}
+{%- else %}
+{{children}}
+{%- if caption %}
+
+*{{caption}}*
+{%- endif %}
+{%- endif %}

@@ -32,6 +32,7 @@
   boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
   title={{title}}, fonttitle=\bfseries]
 {{children}}
+{{label}}
 \end{tcolorbox}
 {%- elif base == "typst" %}
   {%- if callout_type == "note" %}
@@ -49,7 +50,7 @@
   {%- endif %}
   #text(weight: "bold")[{{header}}] \
   {{children}}
-]
+] {{label}}
 {%- else %}
 > **{{header}}**
 >

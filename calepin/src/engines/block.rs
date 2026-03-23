@@ -55,6 +55,7 @@ pub fn evaluate_block(
                         lang: lang.clone(),
                         label: chunk.label.clone(),
                         filename: opts.get_string("filename", ""),
+                        lst_cap: opts.lst_cap(),
                     });
                 }
             }

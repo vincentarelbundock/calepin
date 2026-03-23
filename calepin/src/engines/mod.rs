@@ -99,6 +99,7 @@ pub fn evaluate(
                     lang: cb.lang.clone(),
                     label: String::new(),
                     filename: cb.filename.clone(),
+                    lst_cap: None,
                 });
             }
             Block::Div(div) => {
@@ -122,6 +123,7 @@ pub fn evaluate(
                         lang: String::new(),
                         label: String::new(),
                         filename: String::new(),
+                        lst_cap: None,
                     });
                     continue;
                 }

@@ -12,7 +12,7 @@ pub fn render_div(
     children: &[Element],
     format: &str,
     render_element: &dyn Fn(&Element) -> String,
-    _raw_fragments: &std::cell::RefCell<Vec<String>>,
+    resolve_template: &dyn Fn(&str) -> Option<String>,
 ) -> String {
     // Caption: fig-cap attribute takes priority, then last text element in div
     let (content_children, caption) = if let Some(cap) = attrs.get("fig-cap") {
@@ -33,32 +33,35 @@ pub fn render_div(
     };
 
     let align = attrs.get("fig-align").map(|s| s.as_str()).unwrap_or("center");
+    let align_style = format_align(align, format);
 
-    match format {
-        "html" => {
-            let align_style = format_align(align, format);
-            format!(
-                "<div class=\"figure\" id=\"{}\" style=\"{}\">\n{}\n<p class=\"caption\">{}</p>\n</div>",
-                id, align_style, content_rendered, cap_rendered
-            )
-        }
-        "latex" => {
-            let env = attrs.get("fig-env").map(|s| s.as_str()).unwrap_or("figure");
-            let pos = attrs.get("fig-pos").map(|s| format!("[{}]", s)).unwrap_or_default();
-            let align_cmd = format_align(align, format);
-            format!(
-                "\\begin{{{}}}{}\n{}\n{}\n\\caption{{{}}}\n\\label{{{}}}\n\\end{{{}}}",
-                env, pos, align_cmd, content_rendered, cap_rendered, id, env
-            )
-        }
-        "typst" => {
-            format!("#figure([\n{}\n], caption: [{}]) <{}>", content_rendered, cap_rendered, id)
-        }
-        _ => {
-            if cap_rendered.is_empty() { content_rendered }
-            else { format!("{}\n\n*{}*", content_rendered, cap_rendered) }
-        }
-    }
+    let mut vars = HashMap::new();
+    vars.insert("base".to_string(), format.to_string());
+    vars.insert("children".to_string(), content_rendered);
+    vars.insert("id".to_string(), id.to_string());
+    vars.insert("align".to_string(), align.to_string());
+    vars.insert("align_style".to_string(), align_style);
+
+    // Pre-built format-specific strings (avoids triple-brace issues in Jinja)
+    let fig_env = attrs.get("fig-env").map(|s| s.as_str()).unwrap_or("figure");
+    let fig_pos = attrs.get("fig-pos").map(|s| format!("[{}]", s)).unwrap_or_default();
+    vars.insert("fig_begin".to_string(), format!("\\begin{{{}}}{}", fig_env, fig_pos));
+    vars.insert("fig_end".to_string(), format!("\\end{{{}}}", fig_env));
+    vars.insert("caption_cmd".to_string(), if cap_rendered.is_empty() {
+        String::new()
+    } else {
+        format!("\\caption{{{}}}", &cap_rendered)
+    });
+    vars.insert("caption".to_string(), cap_rendered);
+    vars.insert("label".to_string(), match format {
+        "latex" => format!("\\label{{{}}}", id),
+        "typst" => format!("<{}>", id),
+        _ => String::new(),
+    });
+
+    let tpl = resolve_template("figure_div")
+        .unwrap_or_else(|| include_str!("../project/templates/common/figure_div.jinja").to_string());
+    crate::render::template::apply_template(&tpl, &vars)
 }
 
 /// Separate the caption from children in a figure div.

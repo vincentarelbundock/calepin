@@ -23,7 +23,7 @@ impl<'a> CodeFilter<'a> {
 impl<'a> Filter for CodeFilter<'a> {
     fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>) -> FilterResult {
         match element {
-            Element::CodeSource { code, lang, label, filename } => {
+            Element::CodeSource { code, lang, label, filename, .. } => {
                 let escaped = escape_code_for_format(code, format);
                 let highlighted = self.highlighter.highlight(code, lang, format);
                 if !filename.is_empty() {

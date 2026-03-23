@@ -170,6 +170,7 @@ impl ChunkOptions {
     }
     pub fn fig_cap(&self) -> Option<String> { self.get_opt_string("fig.cap") }
     pub fn tbl_cap(&self) -> Option<String> { self.get_opt_string("tbl.cap") }
+    pub fn lst_cap(&self) -> Option<String> { self.get_opt_string("lst.cap") }
     pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig.alt") }
     pub fn dev(&self) -> String { self.get_string("dev", "png") }
     pub fn fig_align(&self) -> Option<String> { self.get_opt_string("fig.align") }
@@ -486,7 +487,7 @@ pub struct InlineCode {
 #[derive(Debug, Clone)]
 pub enum Element {
     Text { content: String },
-    CodeSource { code: String, lang: String, label: String, filename: String },
+    CodeSource { code: String, lang: String, label: String, filename: String, lst_cap: Option<String> },
     CodeOutput { text: String },
     CodeWarning { text: String },
     CodeMessage { text: String },

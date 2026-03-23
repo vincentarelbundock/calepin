@@ -32,6 +32,7 @@ pub trait StructuralHandler {
         children: &[Element],
         format: &str,
         render_element: &dyn Fn(&Element) -> String,
+        resolve_template: &dyn Fn(&str) -> Option<String>,
         raw_fragments: &RefCell<Vec<String>>,
     ) -> Option<String>;
 }
@@ -481,6 +482,7 @@ impl StructuralHandler for TabsetHandler {
         children: &[Element],
         format: &str,
         render_element: &dyn Fn(&Element) -> String,
+        _resolve_template: &dyn Fn(&str) -> Option<String>,
         _raw_fragments: &RefCell<Vec<String>>,
     ) -> Option<String> {
         Some(crate::structures::tabset::render(format, attrs, children, render_element))
@@ -498,6 +500,7 @@ impl StructuralHandler for LayoutHandler {
         children: &[Element],
         format: &str,
         render_element: &dyn Fn(&Element) -> String,
+        _resolve_template: &dyn Fn(&str) -> Option<String>,
         raw_fragments: &RefCell<Vec<String>>,
     ) -> Option<String> {
         Some(crate::structures::layout::render(id, attrs, children, format, render_element, raw_fragments))
@@ -515,14 +518,15 @@ impl StructuralHandler for FigureDivHandler {
         children: &[Element],
         format: &str,
         render_element: &dyn Fn(&Element) -> String,
-        raw_fragments: &RefCell<Vec<String>>,
+        resolve_template: &dyn Fn(&str) -> Option<String>,
+        _raw_fragments: &RefCell<Vec<String>>,
     ) -> Option<String> {
         // Guard: don't handle figure divs that are also callouts
         if classes.iter().any(|c| c.starts_with("callout-")) {
             return None;
         }
         let id_val = id.as_ref()?;
-        Some(crate::structures::figure::render_div(id_val, attrs, children, format, render_element, raw_fragments))
+        Some(crate::structures::figure::render_div(id_val, attrs, children, format, render_element, resolve_template))
     }
 }
 
@@ -537,10 +541,11 @@ impl StructuralHandler for TableDivHandler {
         children: &[Element],
         format: &str,
         render_element: &dyn Fn(&Element) -> String,
-        raw_fragments: &RefCell<Vec<String>>,
+        resolve_template: &dyn Fn(&str) -> Option<String>,
+        _raw_fragments: &RefCell<Vec<String>>,
     ) -> Option<String> {
         let id_val = id.as_ref()?;
-        Some(crate::structures::table::render_div(id_val, attrs, children, format, render_element, raw_fragments))
+        Some(crate::structures::table::render_div(id_val, attrs, children, format, render_element, resolve_template))
     }
 }
 
