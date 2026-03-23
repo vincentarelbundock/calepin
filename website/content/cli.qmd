@@ -51,12 +51,14 @@ Each target produces its own output file. Code chunks execute once per unique fi
 
 # PDF compilation
 
-Use a target with a `[compile]` section in `calepin.toml` to produce PDFs:
+Add `--compile` to run the target's compile step after rendering:
 
 ```bash
-calepin render document.qmd -t pdf-latex   # → .tex then tectonic → .pdf
-calepin render document.qmd -t pdf-typst   # → .typ then typst → .pdf
+calepin render document.qmd -t latex --compile   # → .tex then tectonic → .pdf
+calepin render document.qmd -t typst --compile   # → .typ then typst → .pdf
 ```
+
+The shorthand `-t pdf` is equivalent to `-t latex --compile`.
 
 
 # Live preview

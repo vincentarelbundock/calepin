@@ -114,6 +114,10 @@ pub struct RenderArgs {
     #[arg(long)]
     pub no_highlight: bool,
 
+    /// Compile the rendered output (e.g., .tex to .pdf, .typ to .pdf)
+    #[arg(long)]
+    pub compile: bool,
+
     /// Remove output directory before building (project manifests only)
     #[arg(long)]
     pub clean: bool,

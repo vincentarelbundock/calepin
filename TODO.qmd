@@ -13,7 +13,7 @@
     - [ ] typst
     - [ ] latex
     - [ ] pdf
-- [ ] `content_standalone` in .toml for website/ should render standalone .qmd documents without inserting them in the sitemap.
+- [ ] `content_standalone` in .toml for website/ should render standalone .qmd documents without inserting them in the toc.
 - [ ] 404.qmd
 - [ ] *Calepin* always in italics with capital letter in website/
 - [ ] Language / localization (`lang:` option, custom translation strings)

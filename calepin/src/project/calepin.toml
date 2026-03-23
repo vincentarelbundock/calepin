@@ -18,6 +18,9 @@ template = "page"
 extension = "tex"
 fig-extension = "pdf"
 preview = "serve"
+[targets.latex.compile]
+command = "tectonic {input}"
+extension = "pdf"
 
 [targets.typst]
 base = "typst"
@@ -25,16 +28,7 @@ template = "page"
 extension = "typ"
 fig-extension = "svg"
 preview = "serve"
-
-[targets.pdf-latex]
-inherits = "latex"
-[targets.pdf-latex.compile]
-command = "tectonic {input}"
-extension = "pdf"
-
-[targets.pdf-typst]
-inherits = "typst"
-[targets.pdf-typst.compile]
+[targets.typst.compile]
 command = "typst compile {input} {output}"
 extension = "pdf"
 

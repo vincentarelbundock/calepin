@@ -259,12 +259,12 @@ fn handle_render(args: RenderArgs) -> Result<()> {
             if target_str.contains(',') {
                 let targets: Vec<&str> = target_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
                 for t in &targets {
-                    render_one(&args.input[0], None, Some(t), &overrides, args.quiet)?;
+                    render_one(&args.input[0], None, Some(t), &overrides, args.quiet, args.compile)?;
                 }
                 return Ok(());
             }
         }
-        return render_one(&args.input[0], args.output.as_deref(), args.target.as_deref(), &overrides, args.quiet);
+        return render_one(&args.input[0], args.output.as_deref(), args.target.as_deref(), &overrides, args.quiet, args.compile);
     }
 
     // Multiple files: render in parallel.
@@ -291,7 +291,7 @@ fn handle_render(args: RenderArgs) -> Result<()> {
             let file_output = output_ext.as_ref().map(|(dir, ext)| {
                 dir.join(input.file_name().unwrap()).with_extension(ext)
             });
-            match render_one_with_context(input, file_output.as_deref(), &ctx, &overrides, args.quiet) {
+            match render_one_with_context(input, file_output.as_deref(), &ctx, &overrides, args.quiet, args.compile) {
                 Ok(()) => None,
                 Err(e) => Some(format!("{:#}", e)),
             }
@@ -315,9 +315,15 @@ fn render_one(
     target: Option<&str>,
     overrides: &[String],
     quiet: bool,
+    compile: bool,
 ) -> Result<()> {
+    // "pdf" is shorthand for "latex --compile"
+    let (target, compile) = match target {
+        Some("pdf") => (Some("latex"), true),
+        t => (t, compile),
+    };
     let ctx = resolve_context(input, target)?;
-    render_one_with_context(input, output, &ctx, overrides, quiet)
+    render_one_with_context(input, output, &ctx, overrides, quiet, compile)
 }
 
 /// Render a single .qmd file with a pre-resolved project context.
@@ -327,6 +333,7 @@ fn render_one_with_context(
     ctx: &ProjectContext,
     overrides: &[String],
     quiet: bool,
+    compile: bool,
 ) -> Result<()> {
     let (output_path, final_output, renderer) = render_file(
         input,
@@ -345,8 +352,11 @@ fn render_one_with_context(
         eprintln!("-> {}", output_path.display());
     }
 
-    if let Some(ref compile_cfg) = ctx.target.compile {
-        run_compile_step(&output_path, compile_cfg, quiet)?;
+    // Compile: explicit --compile flag, or implicit for typst (always produces PDF)
+    if compile || ctx.target.base == "typst" {
+        if let Some(ref compile_cfg) = ctx.target.compile {
+            run_compile_step(&output_path, compile_cfg, quiet)?;
+        }
     }
 
     Ok(())
