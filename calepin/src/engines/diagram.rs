@@ -1,43 +1,26 @@
 // Diagram engines: stateless CLI tools that convert source code to SVG.
 //
-// Supported engines: mermaid (mmdc), dot (graphviz), tikz (tectonic + pdf2svg),
-// d2, penrose (roger).
+// Supported engines: mermaid (mmdc), dot (graphviz), tikz (tectonic + pdf2svg), d2.
 
 use anyhow::Result;
 use std::ffi::OsString;
 use std::path::Path;
 
+use crate::tools::{self, Tool};
 use crate::types::{ChunkOptions, ChunkResult};
 
-/// Diagram engine spec: input extension, CLI command, install hint.
+/// Diagram engine spec: input file extension and primary tool.
 struct DiagramSpec {
     input_ext: &'static str,
-    cmd: &'static str,
-    install_hint: &'static str,
+    tool: &'static Tool,
 }
 
 fn diagram_spec(engine: &str) -> Option<DiagramSpec> {
     match engine {
-        "mermaid" => Some(DiagramSpec {
-            input_ext: "mmd",
-            cmd: "mmdc",
-            install_hint: "install with: npm install -g @mermaid-js/mermaid-cli",
-        }),
-        "dot" => Some(DiagramSpec {
-            input_ext: "dot",
-            cmd: "dot",
-            install_hint: "install Graphviz: https://graphviz.org/download/",
-        }),
-        "tikz" => Some(DiagramSpec {
-            input_ext: "tex",
-            cmd: "tectonic",
-            install_hint: "install Tectonic: https://tectonic-typesetting.github.io/",
-        }),
-        "d2" => Some(DiagramSpec {
-            input_ext: "d2",
-            cmd: "d2",
-            install_hint: "install D2: https://d2lang.com/",
-        }),
+        "mermaid" => Some(DiagramSpec { input_ext: "mmd", tool: &tools::MMDC }),
+        "dot" => Some(DiagramSpec { input_ext: "dot", tool: &tools::DOT }),
+        "tikz" => Some(DiagramSpec { input_ext: "tex", tool: &tools::TECTONIC }),
+        "d2" => Some(DiagramSpec { input_ext: "d2", tool: &tools::D2 }),
         _ => None,
     }
 }
@@ -64,6 +47,23 @@ fn diagram_args(engine: &str, input_path: &Path, fig_path: &Path) -> Vec<OsStrin
 /// Check whether `engine` is a supported diagram engine.
 pub fn is_diagram_engine(engine: &str) -> bool {
     diagram_spec(engine).is_some()
+}
+
+/// Run a command, returning output or a ChunkResult::Error for not-found.
+/// Returns Ok(None) with error pushed to results if the tool is missing.
+fn run_tool(
+    tool: &Tool,
+    args: &[OsString],
+    results: &mut Vec<ChunkResult>,
+) -> Result<Option<std::process::Output>> {
+    match std::process::Command::new(tool.cmd).args(args).output() {
+        Ok(out) => Ok(Some(out)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            results.push(ChunkResult::Error(tools::not_found_message(tool)));
+            Ok(None)
+        }
+        Err(e) => Err(e.into()),
+    }
 }
 
 /// Execute a diagram engine by writing source to a temp file, calling the CLI,
@@ -105,56 +105,41 @@ pub fn execute_diagram(
         f.write_all(full_code.as_bytes())?;
     }
 
-    let run_cmd = |cmd: &str, args: &[OsString]| -> std::io::Result<std::process::Output> {
-        std::process::Command::new(cmd).args(args).output()
-    };
-
     // TikZ: compile to PDF, then convert to SVG with pdf2svg
     if engine_name == "tikz" {
         let args = diagram_args(engine_name, &input_path, fig_path);
-        match run_cmd(spec.cmd, &args) {
-            Ok(out) if !out.status.success() => {
+        match run_tool(spec.tool, &args, &mut results)? {
+            Some(out) if !out.status.success() => {
                 let stderr = String::from_utf8_lossy(&out.stderr);
-                results.push(ChunkResult::Error(format!("{} failed: {}", spec.cmd, stderr)));
+                results.push(ChunkResult::Error(format!("{} failed: {}", spec.tool.cmd, stderr)));
                 std::fs::remove_file(&input_path).ok();
                 return Ok(results);
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                std::fs::remove_file(&input_path).ok();
-                results.push(ChunkResult::Error(format!("{} not found on PATH. {}", spec.cmd, spec.install_hint)));
-                return Ok(results);
-            }
-            Err(e) => { std::fs::remove_file(&input_path).ok(); return Err(e.into()); }
+            None => { std::fs::remove_file(&input_path).ok(); return Ok(results); }
             _ => {}
         }
         let pdf_path = input_path.with_extension("pdf");
-        match run_cmd("pdf2svg", &[pdf_path.as_os_str().into(), fig_path.as_os_str().into()]) {
-            Ok(out) if !out.status.success() => {
+        let pdf2svg_args: Vec<OsString> = vec![pdf_path.as_os_str().into(), fig_path.as_os_str().into()];
+        match run_tool(&tools::PDF2SVG, &pdf2svg_args, &mut results)? {
+            Some(out) if !out.status.success() => {
                 results.push(ChunkResult::Error("pdf2svg conversion failed".to_string()));
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            None => {
                 std::fs::remove_file(&input_path).ok();
                 std::fs::remove_file(&pdf_path).ok();
-                results.push(ChunkResult::Error("pdf2svg not found on PATH. Install: https://github.com/dawbarton/pdf2svg".to_string()));
                 return Ok(results);
             }
-            Err(e) => { std::fs::remove_file(&input_path).ok(); return Err(e.into()); }
             _ => {}
         }
         std::fs::remove_file(&pdf_path).ok();
     } else {
         let args = diagram_args(engine_name, &input_path, fig_path);
-        match run_cmd(spec.cmd, &args) {
-            Ok(out) if !out.status.success() => {
+        match run_tool(spec.tool, &args, &mut results)? {
+            Some(out) if !out.status.success() => {
                 let stderr = String::from_utf8_lossy(&out.stderr);
-                results.push(ChunkResult::Error(format!("{} failed: {}", spec.cmd, stderr)));
+                results.push(ChunkResult::Error(format!("{} failed: {}", spec.tool.cmd, stderr)));
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                std::fs::remove_file(&input_path).ok();
-                results.push(ChunkResult::Error(format!("{} not found on PATH. {}", spec.cmd, spec.install_hint)));
-                return Ok(results);
-            }
-            Err(e) => { std::fs::remove_file(&input_path).ok(); return Err(e.into()); }
+            None => { std::fs::remove_file(&input_path).ok(); return Ok(results); }
             _ => {}
         }
     }

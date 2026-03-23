@@ -36,13 +36,7 @@ impl OutputRenderer for WordRenderer {
                 &output_path.to_string_lossy() as &str,
             ])
             .output()
-            .map_err(|e| match e.kind() {
-                std::io::ErrorKind::NotFound => anyhow::anyhow!(
-                    "pandoc not found. The Word format requires pandoc.\n\
-                     Install it from https://pandoc.org/installing.html"
-                ),
-                _ => anyhow::anyhow!("Failed to run pandoc: {}", e),
-            })?;
+            .map_err(|e| crate::tools::check_spawn_error(e, &crate::tools::PANDOC))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

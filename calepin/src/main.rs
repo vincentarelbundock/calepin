@@ -13,6 +13,8 @@ mod structures;
 mod jinja_engine;
 mod paths;
 mod project;
+#[allow(dead_code)]
+mod tools;
 mod types;
 mod util;
 mod value;

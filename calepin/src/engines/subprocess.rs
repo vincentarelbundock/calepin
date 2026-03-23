@@ -79,7 +79,13 @@ impl SubprocessSession {
         }
         let mut child = cmd
             .spawn()
-            .with_context(|| format!("Failed to spawn {}. Is it installed and on PATH?", program))?;
+            .map_err(|e| {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    anyhow::anyhow!("{} not found on PATH", program)
+                } else {
+                    anyhow::anyhow!("Failed to spawn {}: {}", program, e)
+                }
+            })?;
 
         let stdin = BufWriter::new(child.stdin.take().unwrap());
         let stdout = child.stdout.take().unwrap();
