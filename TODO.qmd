@@ -3,9 +3,6 @@
 
 ## CLI
 
-- [x] Multi-format rendering: `calepin render file.qmd -t html,latex,pdf-latex`
-- [x] `calepin preview` on a website/ should watch all `.qmd` files in the content/ directory
-
 
 ## Rendering
 
@@ -17,17 +14,11 @@
     - [ ] latex
     - [ ] pdf
 - [ ] `content_standalone` in .toml for website/ should render standalone .qmd documents without inserting them in the sitemap.
-- [ ] `content_exclude`
 - [ ] 404.qmd
 - [ ] *Calepin* always in italics with capital letter in website/
 - [ ] Language / localization (`lang:` option, custom translation strings)
 - [ ] Allow users to supply `postprocess.latex` or `postprocess.html` in `_calepin/`
 - [ ] How do lettered appendices work?
-
-
-## Templates
-
-- [ ] Convert `src/structures/tabsets` and friends to templates where possible
 
 
 ## Code execution
@@ -82,8 +73,6 @@
 
 - [ ] Custom cross-reference types
 - [ ] Custom numbered float types
-- [ ] Code listing cross-references (`#lst-` prefix)
-- [ ] Callout cross-references
 
 
 ## HTML
@@ -121,6 +110,15 @@
 - [ ] Clear separation of output and input locations
 - [ ] Format-specific path handling (Typst, LaTeX, HTML, Markdown)
 - [ ] Tectonic path resolution quirks
+- [ ] _calepin/ directory
+
+
+## Flush options
+
+- [ ] calepin flush --cache
+- [ ] calepin flush --files
+- [ ] calepin flush --compilation
+- [ ] calepin flush --all (default)
 
 
 ## Docs

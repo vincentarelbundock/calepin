@@ -139,7 +139,15 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Render(args) => handle_render(args),
         Command::Preview(args) => handle_preview(args),
-        Command::Flush { path, yes } => handle_flush(&path, yes),
+        Command::Flush { path, yes, cache, files, compilation, all } => {
+            // Default to --all when no category flag is given
+            let (do_cache, do_files, do_compilation) = if all || (!cache && !files && !compilation) {
+                (true, true, true)
+            } else {
+                (cache, files, compilation)
+            };
+            handle_flush(&path, yes, do_cache, do_files, do_compilation)
+        }
         Command::Init { template } => {
             eprintln!("Project init (template: {}) is not yet implemented.", template);
             Ok(())
@@ -149,7 +157,7 @@ fn main() -> Result<()> {
     }
 }
 
-fn handle_flush(path: &Path, skip_confirm: bool) -> Result<()> {
+fn handle_flush(path: &Path, skip_confirm: bool, do_cache: bool, do_files: bool, do_compilation: bool) -> Result<()> {
     use std::io::Write;
 
     let root = if path.is_relative() {
@@ -162,8 +170,9 @@ fn handle_flush(path: &Path, skip_confirm: bool) -> Result<()> {
     let mut targets: Vec<PathBuf> = Vec::new();
     let latex_exts = ["aux", "log", "out", "toc", "fls", "fdb_latexmk", "synctex.gz", "xdv"];
 
-    // Walk recursively to find _calepin_cache/_calepin_files dirs and LaTeX artefacts
-    fn find_targets(dir: &Path, targets: &mut Vec<PathBuf>, latex_exts: &[&str]) {
+    // Walk recursively to find matching artefacts
+    fn find_targets(dir: &Path, targets: &mut Vec<PathBuf>, latex_exts: &[&str],
+                    do_cache: bool, do_files: bool, do_compilation: bool) {
         let entries = match std::fs::read_dir(dir) {
             Ok(e) => e,
             Err(_) => return,
@@ -172,12 +181,14 @@ fn handle_flush(path: &Path, skip_confirm: bool) -> Result<()> {
             let p = entry.path();
             if p.is_dir() {
                 let name = entry.file_name();
-                if name == "_calepin_cache" || name == "_calepin_files" {
+                if do_cache && name == "_calepin_cache" {
+                    targets.push(p);
+                } else if do_files && name == "_calepin_files" {
                     targets.push(p);
                 } else if name != "." && name != ".." && name != ".git" && name != "node_modules" {
-                    find_targets(&p, targets, latex_exts);
+                    find_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation);
                 }
-            } else if p.is_file() {
+            } else if do_compilation && p.is_file() {
                 if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
                     if latex_exts.contains(&ext) {
                         targets.push(p);
@@ -186,7 +197,7 @@ fn handle_flush(path: &Path, skip_confirm: bool) -> Result<()> {
             }
         }
     }
-    find_targets(&root, &mut targets, &latex_exts);
+    find_targets(&root, &mut targets, &latex_exts, do_cache, do_files, do_compilation);
 
     if targets.is_empty() {
         eprintln!("Nothing to clean.");

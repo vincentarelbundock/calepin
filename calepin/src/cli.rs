@@ -44,6 +44,22 @@ pub enum Command {
         /// Skip confirmation prompt
         #[arg(short = 'y', long)]
         yes: bool,
+
+        /// Delete only _calepin_cache/ directories
+        #[arg(long)]
+        cache: bool,
+
+        /// Delete only _calepin_files/ directories
+        #[arg(long)]
+        files: bool,
+
+        /// Delete only LaTeX compilation artefacts (.aux, .log, etc.)
+        #[arg(long)]
+        compilation: bool,
+
+        /// Delete everything (default when no category flag is given)
+        #[arg(long)]
+        all: bool,
     },
 
     /// Initialize a new project
