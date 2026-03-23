@@ -21,6 +21,7 @@
         sunIcon.style.display = theme === 'dark' ? 'block' : 'none';
         moonIcon.style.display = theme === 'dark' ? 'none' : 'block';
       }
+      btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
     }
   }
 
@@ -45,6 +46,8 @@
     if (menuBtn && sidebar) {
       menuBtn.addEventListener('click', function() {
         sidebar.classList.toggle('open');
+        var isOpen = sidebar.classList.contains('open');
+        menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
     }
 

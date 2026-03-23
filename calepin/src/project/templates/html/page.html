@@ -20,11 +20,12 @@
 </head>
 
 <body>
-<nav class="theme-toggle">
-  <button id="theme-btn" aria-label="Toggle dark mode"></button>
+<a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
+<nav class="theme-toggle" aria-label="Theme">
+  <button id="theme-btn" aria-label="Toggle dark mode" aria-pressed="false"></button>
 </nav>
 <div class="page-layout">
-<main class="container">
+<main id="main-content" class="container">
 <header class="frontmatter">
 {% include "title.jinja" %}
 {% include "subtitle.jinja" %}
@@ -41,7 +42,7 @@
 
 {{appendix_block}}
 </main>
-{% if toc %}<aside class="toc-sidebar">{{toc}}</aside>{% endif %}
+{% if toc %}<aside class="toc-sidebar" role="complementary" aria-label="Table of contents">{{toc}}</aside>{% endif %}
 </div>
 
 {{js}}
@@ -58,10 +59,14 @@ document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
       : [tabset];
     targets.forEach(function(ts) {
       ts.querySelectorAll('.nav-link').forEach(function(b) {
-        b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
+        var isActive = b.getAttribute('data-tab') === tabId;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
       });
       ts.querySelectorAll('.tab-pane').forEach(function(p) {
-        p.classList.toggle('active', p.getAttribute('data-tab') === tabId);
+        var isActive = p.getAttribute('data-tab') === tabId;
+        p.classList.toggle('active', isActive);
+        p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
       });
     });
   });
@@ -74,7 +79,10 @@ document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
     return document.documentElement.getAttribute('data-theme') ||
       (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   }
-  function update(t) { btn.textContent = t === 'dark' ? '\u2600' : '\u263e'; }
+  function update(t) {
+    btn.textContent = t === 'dark' ? '\u2600' : '\u263e';
+    btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+  }
   update(current());
   btn.addEventListener('click', function() {
     var t = current() === 'dark' ? 'light' : 'dark';

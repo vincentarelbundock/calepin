@@ -13,12 +13,13 @@
   {% block head_extra %}{% endblock %}
 </head>
 <body>
+  <a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
   {% include "navbar.html" %}
 
   <div class="site-container">
     {% include "sidebar_left.html" %}
 
-    <main class="content-main">
+    <main id="main-content" class="content-main">
       <article>
         {% block content %}{% endblock %}
       </article>

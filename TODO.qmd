@@ -1,9 +1,5 @@
 # TODO
 
-
-## CLI
-
-
 ## Rendering
 
 - [ ] Split CSS into core and style
@@ -94,6 +90,7 @@
 - [ ] Built-in website template
 - [ ] Built-in minimal website template
 - [ ] Built-in blog template
+- [ ] --variant
 
 
 ## Evangelism
@@ -156,6 +153,10 @@
 
 - [ ] HTML sales pitch: classless CSS, standalone files by default
 - [ ] Performance page with `bench/rubbish.sh`
+- [ ] Accessibility: 
+    - [x] HTML: aria codes, skip to content, etc.
+    - [ ] PDF: ???
+    - [ ] Automatic alt-text for generated figures?
 
 
 ## Internal
@@ -175,3 +176,5 @@
 - [ ] `src/structures/`
 - [ ] `src/parse/`
 - [ ] `src/` (root modules: main, types, plugins, cli, util, website, site_builder, preview, compile)
+
+

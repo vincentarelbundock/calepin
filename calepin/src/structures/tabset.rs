@@ -63,20 +63,22 @@ pub fn render(
 
     for (i, (title, _)) in tabs.iter().enumerate() {
         let active = if i == 0 { " active" } else { "" };
+        let selected = if i == 0 { "true" } else { "false" };
         let id = crate::util::slugify(title);
         html.push_str(&format!(
-            "  <li class=\"nav-item\" role=\"presentation\"><button class=\"nav-link{}\" data-tab=\"{}\" role=\"tab\">{}</button></li>\n",
-            active, id, title
+            "  <li class=\"nav-item\" role=\"presentation\"><button class=\"nav-link{}\" data-tab=\"{}\" role=\"tab\" aria-selected=\"{}\" aria-controls=\"tabpanel-{}\">{}</button></li>\n",
+            active, id, selected, id, title
         ));
     }
     html.push_str("</ul>\n<div class=\"tab-content\">\n");
 
     for (i, (title, content)) in tabs.iter().enumerate() {
         let active = if i == 0 { " active" } else { "" };
+        let hidden = if i == 0 { "" } else { " aria-hidden=\"true\"" };
         let id = crate::util::slugify(title);
         html.push_str(&format!(
-            "<div class=\"tab-pane{}\" data-tab=\"{}\" role=\"tabpanel\">\n{}\n</div>\n",
-            active, id, content
+            "<div class=\"tab-pane{}\" id=\"tabpanel-{}\" data-tab=\"{}\" role=\"tabpanel\"{}>\n{}\n</div>\n",
+            active, id, id, hidden, content
         ));
     }
     html.push_str("</div>\n</div>");

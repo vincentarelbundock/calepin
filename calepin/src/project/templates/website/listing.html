@@ -38,7 +38,7 @@
 <div class="listing-grid">
   {% for item in page.listing %}
   <a href="{{ item.url }}" class="listing-item">
-    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="">{% endif %}
+    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="{{ item.title | default(value='') }}">{% endif %}
     <div class="listing-item-content">
       <h3>{{ item.title | default(value="Untitled") }}</h3>
       {% if item.date %}<div class="date">{{ item.date }}</div>{% endif %}
@@ -52,7 +52,7 @@
 <div class="listing-default">
   {% for item in page.listing %}
   <a href="{{ item.url }}" class="listing-item">
-    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="">{% endif %}
+    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="{{ item.title | default(value='') }}">{% endif %}
     <div class="listing-item-content">
       <h3>{{ item.title | default(value="Untitled") }}</h3>
       {% if item.date %}<div class="date">{{ item.date }}</div>{% endif %}

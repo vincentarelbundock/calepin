@@ -1,5 +1,5 @@
 <li>
-  <button class="navbar-btn source-toggle" id="source-toggle" aria-label="Toggle source view" title="Toggle source view">
+  <button class="navbar-btn source-toggle" id="source-toggle" aria-label="Toggle source view" aria-expanded="false" aria-controls="source-code">
     <span style="font-family:monospace;font-weight:700;font-size:0.85rem">&lt;/&gt;</span>
   </button>
 </li>
@@ -10,6 +10,8 @@
   btn.addEventListener('click', function() {
     document.body.classList.toggle('split-active');
     btn.classList.toggle('active');
+    var isActive = btn.classList.contains('active');
+    btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
     var code = document.getElementById('source-code');
     if (code && code.textContent === 'Loading source...') {
       fetch('{{ page.source_url }}')
