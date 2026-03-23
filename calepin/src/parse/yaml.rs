@@ -88,12 +88,6 @@ fn parse_metadata(table: &Table) -> Result<Metadata> {
                     if let Some(pv) = table_get(cmap, "plugins") {
                         meta.plugins = value_string_list(pv);
                     }
-                    if let Some(fd) = table_get(cmap, "files-dir") {
-                        meta.files_dir = fd.as_str().map(String::from);
-                    }
-                    if let Some(cd) = table_get(cmap, "cache-dir") {
-                        meta.cache_dir = cd.as_str().map(String::from);
-                    }
                 }
             }
             _ => {

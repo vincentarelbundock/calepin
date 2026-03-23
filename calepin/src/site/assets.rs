@@ -30,7 +30,7 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path) -> Result<()> {
     let assets_dst = output_dir.join("assets");
 
     // Copy project assets first (user files take priority)
-    let assets_src = base_dir.join("assets");
+    let assets_src = base_dir.join("_calepin").join("assets");
     if assets_src.is_dir() {
         copy_dir_recursive(&assets_src, &assets_dst)
             .context("Failed to copy assets/ to output directory")?;

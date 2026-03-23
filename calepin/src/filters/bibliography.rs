@@ -38,7 +38,7 @@ fn format_plain(elem: &impl std::fmt::Display) -> String {
 }
 
 #[inline(never)]
-pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, document_dir: &Path) -> Result<()> {
+pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, project_root: &Path) -> Result<()> {
     if metadata.bibliography.is_empty() {
         return Ok(());
     }
@@ -54,7 +54,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, docum
 
     let mut library = hayagriva::Library::new();
     for bib_path in &metadata.bibliography {
-        let resolved = document_dir.join(bib_path);
+        let resolved = project_root.join(bib_path);
         if !resolved.exists() {
             cwarn!("bibliography '{}' not found, skipping", resolved.display());
             continue;

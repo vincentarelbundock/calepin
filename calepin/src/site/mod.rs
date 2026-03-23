@@ -55,7 +55,7 @@ pub fn build_site(
     let orchestrator = config.site.as_ref()
         .and_then(|s| s.orchestrator.clone())
         .or_else(|| {
-            let p = base_dir.join("templates").join(&site_target_name)
+            let p = base_dir.join("_calepin").join("templates").join(&site_target_name)
                 .join(&orchestrator_filename);
             if p.exists() { return Some(p.display().to_string()); }
             // Check built-in templates
@@ -506,8 +506,8 @@ fn render_orchestrator(
 
     // Load templates from templates/{target}/ and templates/common/
     let dirs = [
-        base_dir.join("templates").join(target_name),
-        base_dir.join("templates").join("common"),
+        base_dir.join("_calepin").join("templates").join(target_name),
+        base_dir.join("_calepin").join("templates").join("common"),
     ];
     for dir in &dirs {
         if !dir.is_dir() { continue; }
@@ -580,9 +580,21 @@ fn render_orchestrator(
         .and_then(|t| t.compile.as_ref());
 
     if let Some(compile) = compile_target {
-        if let Some(ref cmd) = compile.command {
-            let compile_ext = compile.extension.as_deref().unwrap_or("pdf");
-            let output_filename = format!("book.{}", compile_ext);
+        let compile_ext = compile.extension.as_deref().unwrap_or("pdf");
+        let output_filename = format!("book.{}", compile_ext);
+
+        if compile.command.is_none() && master_name.ends_with(".typ") {
+            // Native Typst compilation
+            let input_path = output.join(&master_name);
+            let output_file = output.join(&output_filename);
+            if !quiet {
+                eprintln!("  Compiling: {} → {}", input_path.display(), output_file.display());
+            }
+            crate::typst_compile::compile_typst_to_pdf(&input_path, &output_file)?;
+            if !quiet {
+                eprintln!("  Output: {}", output_file.display());
+            }
+        } else if let Some(ref cmd) = compile.command {
             let expanded = cmd
                 .replace("{input}", &master_name)
                 .replace("{output}", &output_filename);

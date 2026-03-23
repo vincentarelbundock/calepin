@@ -142,8 +142,16 @@ impl FormatEmitter for HtmlEmitter {
         let resolved = crate::filters::figure::resolve_path(
             std::path::Path::new(url), "html",
         );
+        let embed = crate::project::get_defaults().embed_resources.unwrap_or(true);
+        let src = if embed && !url.starts_with("http://") && !url.starts_with("https://") {
+            crate::util::base64_encode_image(&resolved)
+                .map(|(mime, data)| format!("data:{};base64,{}", mime, data))
+                .unwrap_or_else(|_| self.escape_text(&resolved.display().to_string()))
+        } else {
+            self.escape_text(&resolved.display().to_string())
+        };
         let (style, extra) = attrs.to_html();
-        let mut out = format!("<img src=\"{}\" alt=\"{}\"", self.escape_text(&resolved.display().to_string()), self.escape_text(alt));
+        let mut out = format!("<img src=\"{}\" alt=\"{}\"", src, self.escape_text(alt));
         out.push_str(&style);
         for a in &extra {
             out.push_str(&format!(" {}", a));

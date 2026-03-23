@@ -2,6 +2,10 @@
 
 use std::path::Path;
 
+use anyhow::Context;
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64;
+
 /// HTML-escape the minimal set of characters for safe embedding.
 pub fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")
@@ -61,6 +65,22 @@ pub fn run_json_process(path: &Path, input: &serde_json::Value) -> Option<String
             None
         }
     }
+}
+
+/// Read an image file and return `(mime_type, base64_data)`.
+pub fn base64_encode_image(path: &Path) -> anyhow::Result<(String, String)> {
+    let data = std::fs::read(path)
+        .with_context(|| format!("Failed to read image file: {}", path.display()))?;
+    let encoded = BASE64.encode(&data);
+    let mime = match path.extension().and_then(|e| e.to_str()) {
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("svg") => "image/svg+xml",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        _ => "application/octet-stream",
+    };
+    Ok((mime.to_string(), encoded))
 }
 
 #[cfg(test)]

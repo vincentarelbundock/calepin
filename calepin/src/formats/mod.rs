@@ -1,9 +1,9 @@
 //! Output format backends.
 //!
 //! Built-in formats: html, latex, typst, markdown.
-//! Custom formats: defined via `_calepin/formats/{name}.yaml` with a base
-//! format, optional file extension override, and optional WASM plugin
-//! for post-processing.
+//! Custom formats: defined via `_calepin/formats/{name}.toml` with a base
+//! format, optional file extension override, and optional script
+//! for pre/post-processing.
 
 pub mod html;
 pub mod latex;
@@ -269,23 +269,17 @@ pub fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<Stri
     Ok(String::from_utf8(output.stdout)?)
 }
 
-/// Load a custom format from `_calepin/formats/{name}.toml` (or `{name}.yaml` fallback).
+/// Load a custom format from `_calepin/formats/{name}.toml`.
 fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
-    // Try TOML first, then YAML fallback
     let path = crate::paths::resolve_path_cwd("formats", &format!("{}.toml", name))
-        .or_else(|| crate::paths::resolve_path_cwd("formats", &format!("{}.yaml", name)))
         .ok_or_else(|| anyhow::anyhow!(
             "Unknown format: '{}'. No built-in format or config at _calepin/formats/{}.toml",
             name, name
         ))?;
 
     let content = std::fs::read_to_string(&path)?;
-    let config = if path.extension().map_or(false, |e| e == "toml") {
-        let tv: toml::Value = toml::from_str(&content)?;
-        crate::value::from_toml(tv)
-    } else {
-        crate::value::Value::Table(crate::value::parse_minimal_yaml(&content))
-    };
+    let tv: toml::Value = toml::from_str(&content)?;
+    let config = crate::value::from_toml(tv);
 
     let base_name = config.get("base")
         .and_then(|v| v.as_str())

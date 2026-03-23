@@ -1,5 +1,7 @@
 # TODO
 
+PATH CHECKFOR SINGLE typst file
+
 ## Rendering
 
 - [ ] Split CSS into core and style
@@ -21,6 +23,7 @@
 - [ ] Multiple figures from a single code chunk with `fig-subcap`
 - [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
 - [ ] Chunk labels should not add a fig- or a tbl- automatically if that is already in the label specified in ```{lang, fig-blahblah}. Otherwise we get duplicated fig-fig-blahblah.
+- [ ] Render websites in parallel limit ncpu
 
 
 ## Tables
@@ -60,7 +63,7 @@
 
 ## Figures
 
-- [ ] Figure templates in latex  are pre-computed. Templates need to handle \begin{ {{variables}} }
+- [ ] Figure templates in latex are pre-computed. Templates need to handle \begin{ {{variables}} }
 - [ ] Check insertion of static images
 - [ ] Match default DPI in python and R. Or does it matter for .svg files? Are we doing svg in python?
 - [ ] Can we convert svg2pdf without calling an external tool?

@@ -11,10 +11,6 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use anyhow::Context;
-use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD as BASE64;
-
 use super::{Filter, FilterResult};
 use crate::types::Element;
 
@@ -116,10 +112,10 @@ fn build_figure_vars(
 // ---------------------------------------------------------------------------
 
 /// Make a figure path relative to the output file's directory.
-/// Strips everything before the `_calepin_files` component.
+/// Strips everything before the `_calepin/files` component.
 fn relative_figure_path(path: &Path) -> String {
     let s = path.display().to_string();
-    if let Some(idx) = s.find("_calepin_files") {
+    if let Some(idx) = s.find("_calepin/files") {
         s[idx..].to_string()
     } else {
         s
@@ -146,12 +142,16 @@ fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, forma
             if !styles.is_empty() {
                 html_attrs.push_str(&format!(" style=\"{}\"", styles.join(";")));
             }
-            render_base64_image(path, &safe_alt)
-                .map(|tag| {
-                    if html_attrs.is_empty() { tag }
-                    else { tag.replace("<img ", &format!("<img{} ", html_attrs)) }
-                })
-                .unwrap_or_else(|_| format!("<img src=\"{}\" alt=\"{}\"{}/>", crate::util::escape_html(&path.display().to_string()), safe_alt, html_attrs))
+            let embed = crate::project::get_defaults().embed_resources.unwrap_or(true);
+            let src = if embed {
+                crate::util::base64_encode_image(path)
+                    .map(|(mime, data)| format!("data:{};base64,{}", mime, data))
+                    .ok()
+            } else {
+                None
+            };
+            let src = src.unwrap_or_else(|| crate::util::escape_html(&path.display().to_string()));
+            format!("<img src=\"{}\" alt=\"{}\"{}/>", src, safe_alt, html_attrs)
         }
         "latex" => {
             let width_opt = if attrs.width.is_some() {
@@ -177,22 +177,6 @@ fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, forma
         "markdown" => format!("![{}]({})", alt, path.display()),
         _ => String::new(),
     }
-}
-
-fn render_base64_image(path: &Path, alt: &str) -> anyhow::Result<String> {
-    let data = std::fs::read(path)
-        .with_context(|| format!("Failed to read plot file: {}", path.display()))?;
-    let encoded = BASE64.encode(&data);
-    let mime = match path.extension().and_then(|e| e.to_str()) {
-        Some("png") => "image/png",
-        Some("jpg") | Some("jpeg") => "image/jpeg",
-        Some("svg") => "image/svg+xml",
-        Some("gif") => "image/gif",
-        Some("webp") => "image/webp",
-        _ => "application/octet-stream",
-    };
-    // alt is already HTML-escaped by the caller
-    Ok(format!("<img src=\"data:{};base64,{}\" alt=\"{}\" />", mime, encoded, alt))
 }
 
 pub fn format_width(attrs: &crate::types::FigureAttrs, format: &str) -> String {

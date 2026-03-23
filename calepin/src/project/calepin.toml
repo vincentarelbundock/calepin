@@ -1,12 +1,11 @@
 [defaults]
 format = "html"
-files-dir = "_calepin_files"
-cache-dir = "_calepin_cache"
 preview-port = 3456
 csl = "chicago-author-date"
 dpi = 150.0
 timeout = 30
 math = "katex"
+embed-resources = true
 
 [defaults.highlight]
 light = "github"
@@ -91,7 +90,6 @@ extension = "typ"
 fig-extension = "svg"
 preview = "serve"
 [targets.typst.compile]
-command = "typst compile {input} {output}"
 extension = "pdf"
 
 [targets.website]

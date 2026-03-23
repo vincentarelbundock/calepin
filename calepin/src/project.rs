@@ -218,10 +218,6 @@ pub struct CompileConfig {
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Defaults {
     pub format: Option<String>,
-    #[serde(rename = "files-dir")]
-    pub files_dir: Option<String>,
-    #[serde(rename = "cache-dir")]
-    pub cache_dir: Option<String>,
     #[serde(rename = "preview-port")]
     pub preview_port: Option<u16>,
     pub csl: Option<String>,
@@ -237,6 +233,8 @@ pub struct Defaults {
     pub placeholder: Option<PlaceholderDefaults>,
     pub lipsum: Option<LipsumDefaults>,
     pub layout: Option<LayoutDefaults>,
+    #[serde(rename = "embed-resources")]
+    pub embed_resources: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -314,8 +312,6 @@ impl Defaults {
         }
         Defaults {
             format: or!(user.format, builtin.format),
-            files_dir: or!(user.files_dir, builtin.files_dir),
-            cache_dir: or!(user.cache_dir, builtin.cache_dir),
             preview_port: user.preview_port.or(builtin.preview_port),
             csl: or!(user.csl, builtin.csl),
             dpi: user.dpi.or(builtin.dpi),
@@ -400,6 +396,7 @@ impl Defaults {
                 (Some(u), None) => Some(u.clone()),
                 (None, b) => b.clone(),
             },
+            embed_resources: user.embed_resources.or(builtin.embed_resources),
             layout: match (&user.layout, &builtin.layout) {
                 (Some(u), Some(b)) => Some(LayoutDefaults {
                     valign: or!(u.valign, b.valign),
@@ -547,12 +544,12 @@ impl Target {
 // Project root detection and config loading
 // ---------------------------------------------------------------------------
 
-/// Walk up from `start_dir` looking for `calepin.toml` or `_calepin.toml`.
+/// Walk up from `start_dir` looking for `_calepin.toml`.
 /// Returns the directory containing it (the project root).
 pub fn find_project_root(start_dir: &Path) -> Option<PathBuf> {
     let mut dir = start_dir.to_path_buf();
     loop {
-        if dir.join("calepin.toml").exists() || dir.join("_calepin.toml").exists() {
+        if dir.join("_calepin.toml").exists() {
             return Some(dir);
         }
         if !dir.pop() {
@@ -562,10 +559,7 @@ pub fn find_project_root(start_dir: &Path) -> Option<PathBuf> {
 }
 
 /// Find the config file in a project root directory.
-/// Prefers `calepin.toml` over `_calepin.toml`.
 pub fn config_path(project_root: &Path) -> Option<PathBuf> {
-    let p = project_root.join("calepin.toml");
-    if p.exists() { return Some(p); }
     let p = project_root.join("_calepin.toml");
     if p.exists() { return Some(p); }
     None
@@ -701,7 +695,7 @@ pub fn resolve_target(name: &str, config: Option<&ProjectConfig>) -> Result<Targ
         "typ" => "typst",
         "md" => "markdown",
         _ => bail!(
-            "Unknown target '{}'. Define it in calepin.toml under [targets.{}].",
+            "Unknown target '{}'. Define it in _calepin.toml under [targets.{}].",
             name, name,
         ),
     };

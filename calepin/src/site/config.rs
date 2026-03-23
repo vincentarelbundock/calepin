@@ -10,20 +10,17 @@ use anyhow::Result;
 use crate::project::ProjectConfig;
 
 /// Load the project config, which contains all site configuration.
-/// Tries `_calepin.toml` then `calepin.toml` in `base_dir`.
+/// Looks for `_calepin.toml` in `base_dir`.
 pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(ProjectConfig, PathBuf)> {
     if let Some(path) = config_path {
         let config = crate::project::load_project_config(path)?;
         return Ok((config, path.to_path_buf()));
     }
 
-    // Try default names
-    for name in &["_calepin.toml", "calepin.toml"] {
-        let path = base_dir.join(name);
-        if path.exists() {
-            let config = crate::project::load_project_config(&path)?;
-            return Ok((config, path));
-        }
+    let path = base_dir.join("_calepin.toml");
+    if path.exists() {
+        let config = crate::project::load_project_config(&path)?;
+        return Ok((config, path));
     }
 
     anyhow::bail!(

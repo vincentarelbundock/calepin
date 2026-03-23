@@ -109,15 +109,8 @@ pub fn load_page_template(template_name: &str, base: &str) -> String {
 
 pub fn load_default_css() -> String {
     // Check project/user overrides for CSS
-    let root = std::path::Path::new(".");
-    // Try new name first, then legacy
-    let p = root.join("templates").join("html").join("page.css");
-    if p.exists() {
-        if let Ok(s) = std::fs::read_to_string(&p) {
-            return s;
-        }
-    }
-    let p = root.join("templates").join("html").join("calepin.css");
+    let root = crate::paths::get_project_root();
+    let p = root.join("_calepin").join("templates").join("html").join("page.css");
     if p.exists() {
         if let Ok(s) = std::fs::read_to_string(&p) {
             return s;
@@ -436,18 +429,19 @@ pub fn render_page_template(
     env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
     env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
 
-    let root = std::path::Path::new(".");
+    let root = crate::paths::get_project_root();
     let active_target = crate::paths::get_active_target();
+    let tpl = root.join("_calepin").join("templates");
 
     // Load templates from filesystem directories
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();
     if let Some(ref target) = active_target {
         if target != base {
-            dirs.push(root.join("templates").join(target));
+            dirs.push(tpl.join(target));
         }
     }
-    dirs.push(root.join("templates").join(base));
-    dirs.push(root.join("templates").join("common"));
+    dirs.push(tpl.join(base));
+    dirs.push(tpl.join("common"));
 
     for dir in &dirs {
         if !dir.is_dir() { continue; }

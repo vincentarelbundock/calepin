@@ -16,6 +16,7 @@ mod project;
 #[allow(dead_code)]
 mod tools;
 mod types;
+mod typst_compile;
 mod util;
 mod value;
 use std::fs;
@@ -222,10 +223,16 @@ fn handle_flush(path: &Path, skip_confirm: bool, do_cache: bool, do_files: bool,
             let p = entry.path();
             if p.is_dir() {
                 let name = entry.file_name();
-                if do_cache && name == "_calepin_cache" {
-                    targets.push(p);
-                } else if do_files && name == "_calepin_files" {
-                    targets.push(p);
+                if name == "_calepin" {
+                    // Check for cache/ and files/ inside _calepin/
+                    if do_cache {
+                        let cache = p.join("cache");
+                        if cache.is_dir() { targets.push(cache); }
+                    }
+                    if do_files {
+                        let files = p.join("files");
+                        if files.is_dir() { targets.push(files); }
+                    }
                 } else if name != "." && name != ".." && name != ".git" && name != "node_modules" {
                     find_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation);
                 }
@@ -399,17 +406,36 @@ fn render_one_with_context(
 }
 
 /// Run a target's compile step.
+///
+/// If no command is specified and the input is a `.typ` file, uses the
+/// built-in Typst compiler (no external binary needed). Otherwise shells
+/// out to the configured command.
 pub fn run_compile_step(
     rendered_path: &Path,
     compile_cfg: &project::CompileConfig,
     quiet: bool,
 ) -> Result<()> {
-    let command = compile_cfg.command.as_deref()
-        .ok_or_else(|| anyhow::anyhow!("Target compile section has no command"))?;
     let compile_ext = compile_cfg.extension.as_deref()
         .ok_or_else(|| anyhow::anyhow!("Target compile section has no extension"))?;
-
     let output_path = rendered_path.with_extension(compile_ext);
+
+    // Native Typst compilation when no command override is set.
+    if compile_cfg.command.is_none()
+        && rendered_path.extension().is_some_and(|e| e == "typ")
+    {
+        if !quiet {
+            eprintln!("  compiling: {} → {}", rendered_path.display(), output_path.display());
+        }
+        typst_compile::compile_typst_to_pdf(rendered_path, &output_path)?;
+        if !quiet {
+            eprintln!("→ {}", output_path.display());
+        }
+        return Ok(());
+    }
+
+    let command = compile_cfg.command.as_deref()
+        .ok_or_else(|| anyhow::anyhow!("Target compile section has no command"))?;
+
     let cmd = command
         .replace("{input}", &rendered_path.to_string_lossy())
         .replace("{output}", &output_path.to_string_lossy());
@@ -822,7 +848,7 @@ fn handle_info(action: InfoAction) -> Result<()> {
             println!();
             println!("  https://www.zotero.org/styles");
             println!();
-            println!("Download a .csl file and set csl: to its path in calepin.toml");
+            println!("Download a .csl file and set csl: to its path in _calepin.toml");
             println!("or in document front matter.");
             println!();
             println!("The following shortcuts are also available as built-in names");
@@ -869,7 +895,7 @@ fn handle_info(action: InfoAction) -> Result<()> {
                 }
                 println!("\n{} themes available.", names.len());
             }
-            println!("Custom themes: place a .tmTheme file in assets/highlighting/");
+            println!("Custom themes: place a .tmTheme file in _calepin/assets/highlighting/");
             Ok(())
         }
         InfoAction::Completions { shell } => {
@@ -938,8 +964,7 @@ macro_rules! timed {
     }
 
     // 2b. Construct path context and validate paths
-    let mut path_ctx = paths::PathContext::for_single_file(input, output_path);
-    path_ctx.apply_metadata(&metadata);
+    let path_ctx = paths::PathContext::for_single_file(input, output_path);
     let input_name = input.file_name()
         .unwrap_or_default()
         .to_string_lossy();
@@ -953,7 +978,7 @@ macro_rules! timed {
     let renderer = formats::create_renderer(&format_str)?;
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
-    let body = timed!("expand_includes", jinja_engine::expand_includes(&body, &path_ctx.document_dir, &format_str));
+    let body = timed!("expand_includes", jinja_engine::expand_includes(&body, &path_ctx.project_root, &format_str));
 
     // 4a. Preprocess hook: pipe body through script if custom format defines one
     let body = if let Some(script) = renderer.preprocess() {
@@ -996,7 +1021,7 @@ macro_rules! timed {
 
     // 6. Load plugin registry
     let registry = timed!("load_plugins", std::rc::Rc::new(
-        registry::PluginRegistry::load(&metadata.plugins, &path_ctx.document_dir)
+        registry::PluginRegistry::load(&metadata.plugins, &path_ctx.project_root)
     ));
 
     // 7. Create element renderer
@@ -1040,7 +1065,7 @@ macro_rules! timed {
     let mut elements = eval_result.elements;
 
     // 9. Bibliography
-    timed!("bibliography", filters::bibliography::process_citations(&mut elements, &metadata, &path_ctx.document_dir)?);
+    timed!("bibliography", filters::bibliography::process_citations(&mut elements, &metadata, &path_ctx.project_root)?);
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);

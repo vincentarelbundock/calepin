@@ -37,9 +37,9 @@ use crate::types::Metadata;
 /// Expand `{% include "file" %}` directives before block parsing.
 /// This must run on the raw body text so that included content gets
 /// parsed as blocks (code chunks, divs, etc.) rather than inline text.
-/// Paths are resolved relative to `document_dir`.
+/// Paths are resolved relative to `project_root`.
 #[inline(never)]
-pub fn expand_includes(text: &str, document_dir: &std::path::Path, format: &str) -> String {
+pub fn expand_includes(text: &str, project_root: &std::path::Path, format: &str) -> String {
     // {% include "file" %} or {% include 'file' %}
     static INCLUDE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r#"\{%[-\s]\s*include\s+["'](.+?)["']\s*[-\s]?%\}"#).unwrap()
@@ -60,10 +60,10 @@ pub fn expand_includes(text: &str, document_dir: &std::path::Path, format: &str)
         format!("\u{FDD2}RAW{}\u{FDD3}", idx)
     }).to_string();
 
-    // Expand includes (resolve relative to document directory)
+    // Expand includes (resolve relative to project root)
     let text = INCLUDE_RE.replace_all(&text, |caps: &regex::Captures| {
         let path = caps[1].trim();
-        let resolved = document_dir.join(path);
+        let resolved = project_root.join(path);
         include_file(&resolved.to_string_lossy())
     }).to_string();
 

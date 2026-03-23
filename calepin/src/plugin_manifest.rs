@@ -1,7 +1,7 @@
 //! Plugin manifest parsing.
 //!
-//! Each plugin is a directory containing a `plugin.toml` file (or `plugin.yml`
-//! for backward compatibility) that declares its capabilities: filters,
+//! Each plugin is a directory containing a `plugin.toml` file
+//! that declares its capabilities: filters,
 //! shortcodes, postprocessors, element/page templates, CSL styles, and
 //! custom format definitions.
 
@@ -137,28 +137,20 @@ impl FilterMatch {
 
 impl PluginManifest {
     /// Load a plugin manifest from a directory.
-    /// Tries `plugin.toml` first, then falls back to `plugin.yml`.
+    /// Load a plugin manifest from `plugin.toml` in the given directory.
     pub fn load(dir: &Path) -> Result<Self> {
         let toml_path = dir.join("plugin.toml");
-        let yml_path = dir.join("plugin.yml");
 
-        let (content, is_toml) = if toml_path.exists() {
-            (std::fs::read_to_string(&toml_path)
-                .with_context(|| format!("Failed to read {}", toml_path.display()))?, true)
-        } else {
-            (std::fs::read_to_string(&yml_path)
-                .with_context(|| format!("Failed to read {}", yml_path.display()))?, false)
-        };
+        let content = std::fs::read_to_string(&toml_path)
+            .with_context(|| format!("Failed to read {}", toml_path.display()))?;
 
-        let root = if is_toml {
+        let root = {
             let tv: toml::Value = toml::from_str(&content)
                 .map_err(|e| anyhow::anyhow!("TOML parse error in {}: {}", toml_path.display(), e))?;
             value::from_toml(tv)
-        } else {
-            Value::Table(value::parse_minimal_yaml(&content))
         };
 
-        let manifest_path = if is_toml { &toml_path } else { &yml_path };
+        let manifest_path = &toml_path;
 
         let name = root.get("name")
             .and_then(|v| v.as_str())

@@ -114,7 +114,7 @@ pub struct Highlighter {
 /// Load a .tmTheme by name.
 ///
 /// Resolution order:
-///   1. Project filesystem: `assets/highlighting/{name}.tmTheme`
+///   1. Project filesystem: `_calepin/assets/highlighting/{name}.tmTheme`
 ///   2. Built-in: discovered from embedded project tree
 ///   3. Filesystem path (for absolute/relative .tmTheme file paths)
 fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
@@ -123,7 +123,8 @@ fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
     let filename = format!("{}.tmTheme", name);
 
     // 1. Project filesystem
-    let project_path = std::path::Path::new("assets/highlighting").join(&filename);
+    let root = crate::paths::get_project_root();
+    let project_path = root.join("_calepin").join("assets").join("highlighting").join(&filename);
     if project_path.exists() {
         if let Ok(theme) = ThemeSet::get_theme(&project_path) {
             return Some(theme);

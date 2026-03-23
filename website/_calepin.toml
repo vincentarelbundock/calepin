@@ -83,7 +83,6 @@ extension = "typ"
 fig-extension = "svg"
 preview = "serve"
 [targets.typst.compile]
-command = "typst compile {input} {output}"
 extension = "pdf"
 
 [targets.markdown]

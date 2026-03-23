@@ -124,14 +124,14 @@ pub struct PluginRegistry {
 
 impl PluginRegistry {
     /// Create a new registry from the front matter plugin list.
-    /// Resolves plugins relative to `document_dir`.
+    /// Resolves plugins relative to `project_root`.
     /// Loads user plugins first (in order), then appends built-in plugins.
-    pub fn load(names: &[String], document_dir: &Path) -> Self {
+    pub fn load(names: &[String], project_root: &Path) -> Self {
         let mut plugins = Vec::new();
 
         // Load user plugins
         for name in names {
-            match crate::paths::resolve_plugin_dir(name, document_dir) {
+            match crate::paths::resolve_plugin_dir(name, project_root) {
                 Some(dir) => match PluginManifest::load(&dir) {
                     Ok(manifest) => {
                         // Check if any filter is persistent

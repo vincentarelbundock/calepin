@@ -1,7 +1,10 @@
 //! Centralized path resolution, validation, and context.
 //!
-//! All input paths resolve relative to `document_dir` (the parent of the .qmd file).
-//! The output directory is where finished files are written; no inputs resolve from it.
+//! All input paths resolve relative to the project root (the directory
+//! containing `_calepin.toml`). For single-file renders without a project
+//! config, the project root is the parent directory of the `.qmd` file.
+//! The output directory is where finished files are written; no inputs
+//! resolve from it.
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
@@ -20,7 +23,8 @@ thread_local! {
 }
 
 /// Set the active target name for template resolution.
-/// When set, `resolve_template` checks `templates/{target}/` before `templates/{base}/`.
+/// When set, `resolve_template` checks `_calepin/templates/{target}/`
+/// before `_calepin/templates/{base}/`.
 pub fn set_active_target(target: Option<&str>) {
     ACTIVE_TARGET.with(|t| {
         *t.borrow_mut() = target.map(|s| s.to_string());
@@ -31,16 +35,14 @@ pub fn get_active_target() -> Option<String> {
     ACTIVE_TARGET.with(|t| t.borrow().clone())
 }
 
-/// Set the project root for template and snippet resolution.
-/// When set, `resolve_template` and `resolve_snippet` look under this directory
-/// instead of the current working directory.
+/// Set the project root for all path resolution.
 pub fn set_project_root(root: Option<&Path>) {
     PROJECT_ROOT.with(|r| {
         *r.borrow_mut() = root.map(|p| p.to_path_buf());
     });
 }
 
-fn get_project_root() -> PathBuf {
+pub fn get_project_root() -> PathBuf {
     PROJECT_ROOT.with(|r| {
         r.borrow().clone().unwrap_or_else(|| PathBuf::from("."))
     })
@@ -52,52 +54,37 @@ fn get_project_root() -> PathBuf {
 
 /// Path context carried through the render pipeline.
 ///
-/// All input paths resolve relative to `document_dir`. The output directory
-/// is only for writing; no input files are ever resolved from it.
+/// All input paths resolve relative to `project_root` (the directory
+/// containing `_calepin.toml`, or the `.qmd` parent in single-file mode).
+/// The output directory is only for writing; no input files resolve from it.
 #[derive(Debug, Clone)]
 pub struct PathContext {
-    /// Parent directory of the .qmd file being rendered.
-    /// All input paths (bibliography, css, includes, plugins, _calepin/) resolve from here.
-    pub document_dir: PathBuf,
+    /// Project root: directory containing `_calepin.toml`, or `.qmd` parent
+    /// in single-file mode. All input paths resolve from here.
+    pub project_root: PathBuf,
     /// Where output files are written. No input files resolve from here.
     pub output_dir: PathBuf,
-    /// Subdirectory name for generated figures (default: "_calepin_files").
-    pub files_dir: String,
-    /// Subdirectory name for execution cache (default: "_calepin_cache").
-    pub cache_dir: String,
 }
 
 impl PathContext {
     /// Build a PathContext for a single-file render.
     pub fn for_single_file(input: &Path, output: &Path) -> Self {
-        let document_dir = input.parent().unwrap_or(Path::new(".")).to_path_buf();
+        let project_root = input.parent().unwrap_or(Path::new(".")).to_path_buf();
         let output_dir = output.parent().unwrap_or(Path::new(".")).to_path_buf();
         Self {
-            document_dir,
+            project_root,
             output_dir,
-            files_dir: crate::project::get_defaults().files_dir.clone().unwrap_or_else(|| "_calepin_files".to_string()),
-            cache_dir: crate::project::get_defaults().cache_dir.clone().unwrap_or_else(|| "_calepin_cache".to_string()),
-        }
-    }
-
-    /// Apply overrides from parsed metadata (calepin.files-dir, calepin.cache-dir).
-    pub fn apply_metadata(&mut self, meta: &Metadata) {
-        if let Some(ref d) = meta.files_dir {
-            self.files_dir = d.clone();
-        }
-        if let Some(ref d) = meta.cache_dir {
-            self.cache_dir = d.clone();
         }
     }
 
     /// Resolve the figure output directory for a given document stem.
     pub fn figures_dir(&self, stem: &str) -> PathBuf {
-        self.output_dir.join(&self.files_dir).join(stem)
+        self.output_dir.join("_calepin").join("files").join(stem)
     }
 
     /// Resolve the cache directory for a given document stem.
     pub fn cache_root(&self, stem: &str) -> PathBuf {
-        self.document_dir.join(&self.cache_dir).join(stem)
+        self.project_root.join("_calepin").join("cache").join(stem)
     }
 }
 
@@ -105,12 +92,12 @@ impl PathContext {
 // Path resolution
 // ---------------------------------------------------------------------------
 
-/// Resolve a file by checking the document-local `_calepin/` directory.
+/// Resolve a file under the project `_calepin/` directory.
 /// Returns the first path that exists, or None.
 ///
-/// Resolution: `{document_dir}/_calepin/{dir}/{filename}`
-pub fn resolve_path(document_dir: &Path, dir: &str, filename: &str) -> Option<PathBuf> {
-    let local = document_dir.join("_calepin").join(dir).join(filename);
+/// Resolution: `{project_root}/_calepin/{dir}/{filename}`
+pub fn resolve_path(project_root: &Path, dir: &str, filename: &str) -> Option<PathBuf> {
+    let local = project_root.join("_calepin").join(dir).join(filename);
     if local.exists() {
         return Some(local);
     }
@@ -118,17 +105,17 @@ pub fn resolve_path(document_dir: &Path, dir: &str, filename: &str) -> Option<Pa
     None
 }
 
-/// Backward-compatible wrapper: resolves relative to CWD.
+/// Wrapper: resolves relative to the thread-local project root.
 pub fn resolve_path_cwd(dir: &str, filename: &str) -> Option<PathBuf> {
-    resolve_path(Path::new("."), dir, filename)
+    resolve_path(&get_project_root(), dir, filename)
 }
 
 // ---------------------------------------------------------------------------
-// New three-layer resolution (project root / user config / built-in)
+// Template, snippet, and plugin resolution
 // ---------------------------------------------------------------------------
 
 /// Map a base name to its file extension for template/component lookup.
-/// Derives the mapping from the built-in calepin.toml.
+/// Derives the mapping from the built-in _calepin.toml.
 pub fn base_to_ext(base: &str) -> &str {
     let target = crate::project::builtin_config().targets.get(base);
     target
@@ -136,86 +123,80 @@ pub fn base_to_ext(base: &str) -> &str {
         .unwrap_or(base)
 }
 
-/// Resolve a template (element or page) using the three-layer model.
+/// Resolve a template (element or page) under `_calepin/templates/`.
 ///
 /// Lookup order (first match wins):
-///   1. `templates/{target}/{name}.{ext}` (target-specific)
-///   2. `templates/{base}/{name}.{ext}` (base-specific, when target != base)
-///   3. `templates/common/{name}.jinja` (format-agnostic)
-///   4. Legacy: `_calepin/elements/{name}.{ext}`, `_calepin/templates/{name}.{base}`
-///   5. (caller falls back to built-in)
+///   1. `_calepin/templates/{target}/{name}.{ext}` (target-specific)
+///   2. `_calepin/templates/{base}/{name}.{ext}` (base-specific, when target != base)
+///   3. `_calepin/templates/common/{name}.jinja` (format-agnostic)
+///   4. (caller falls back to built-in)
 pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
     let ext = base_to_ext(base);
     let base_specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
 
     let root = get_project_root();
+    let tpl = root.join("_calepin").join("templates");
     let active_target = get_active_target();
 
-    // Target-specific in project (e.g., templates/book_latex/)
+    // Target-specific (e.g., _calepin/templates/book_latex/)
     if let Some(ref target) = active_target {
         if target != base {
-            let p = root.join("templates").join(target).join(&base_specific);
+            let p = tpl.join(target).join(&base_specific);
             if p.exists() { return Some(p); }
         }
     }
 
-    // Base-specific in project (e.g., templates/latex/)
-    let p = root.join("templates").join(base).join(&base_specific);
+    // Base-specific (e.g., _calepin/templates/latex/)
+    let p = tpl.join(base).join(&base_specific);
     if p.exists() { return Some(p); }
 
-    // Generic in project (e.g., templates/common/)
-    let p = root.join("templates").join("common").join(&generic);
-    if p.exists() { return Some(p); }
-
-    // Legacy: _calepin/elements/ and _calepin/templates/
-    let p = root.join("_calepin").join("elements").join(&base_specific);
-    if p.exists() { return Some(p); }
-    let legacy_name = format!("{}.{}", name, base);
-    let p = root.join("_calepin").join("templates").join(&legacy_name);
+    // Format-agnostic (e.g., _calepin/templates/common/)
+    let p = tpl.join("common").join(&generic);
     if p.exists() { return Some(p); }
 
     None
 }
 
-/// Resolve a snippet file using the same three-layer model as templates.
+/// Resolve a snippet file under `_calepin/snippets/`.
 ///
 /// Lookup order (first match wins):
-///   1. `snippets/{target}/{name}.{ext}` (target-specific)
-///   2. `snippets/{base}/{name}.{ext}` (base-specific, when target != base)
-///   3. `snippets/common/{name}.jinja` (format-agnostic)
+///   1. `_calepin/snippets/{target}/{name}.{ext}` (target-specific)
+///   2. `_calepin/snippets/{base}/{name}.{ext}` (base-specific, when target != base)
+///   3. `_calepin/snippets/common/{name}.jinja` (format-agnostic)
 pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
     let ext = base_to_ext(base);
     let specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
 
     let root = get_project_root();
+    let snip = root.join("_calepin").join("snippets");
     let active_target = get_active_target();
 
-    // Target-specific in project
+    // Target-specific
     if let Some(ref target) = active_target {
         if target != base {
-            let p = root.join("snippets").join(target).join(&specific);
+            let p = snip.join(target).join(&specific);
             if p.exists() { return Some(p); }
         }
     }
 
-    // Base-specific in project
-    let p = root.join("snippets").join(base).join(&specific);
+    // Base-specific
+    let p = snip.join(base).join(&specific);
     if p.exists() { return Some(p); }
 
-    // Format-agnostic in project
-    let p = root.join("snippets").join("common").join(&generic);
+    // Format-agnostic
+    let p = snip.join("common").join(&generic);
     if p.exists() { return Some(p); }
 
     None
 }
 
 /// Resolve a plugin directory by name.
-/// Checks `{document_dir}/_calepin/plugins/{name}/plugin.toml` (or `plugin.yml`).
-pub fn resolve_plugin_dir(name: &str, document_dir: &Path) -> Option<PathBuf> {
-    let local = document_dir.join("_calepin").join("plugins").join(name);
-    if local.join("plugin.toml").exists() || local.join("plugin.yml").exists() {
+/// Checks `{project_root}/_calepin/plugins/{name}/plugin.toml`.
+pub fn resolve_plugin_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
+    let local = project_root.join("_calepin").join("plugins").join(name);
+    if local.join("plugin.toml").exists() {
         return Some(local);
     }
 
@@ -233,7 +214,7 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
 
     // Bibliography files
     for bib in &meta.bibliography {
-        let resolved = ctx.document_dir.join(bib);
+        let resolved = ctx.project_root.join(bib);
         if !resolved.exists() {
             errors.push(format!(
                 "  bibliography: {}\n    -> not found: {}",
@@ -245,7 +226,7 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
 
     // CSL file (only if explicitly specified)
     if let Some(ref csl) = meta.csl {
-        let resolved = ctx.document_dir.join(csl);
+        let resolved = ctx.project_root.join(csl);
         if !resolved.exists() {
             errors.push(format!(
                 "  csl: {}\n    -> not found: {}",
@@ -260,11 +241,9 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
         if is_builtin_plugin(plugin) {
             continue;
         }
-        let local_dir = ctx.document_dir.join("_calepin/plugins").join(plugin);
+        let local_dir = ctx.project_root.join("_calepin/plugins").join(plugin);
         let local_path = local_dir.join("plugin.toml");
-        let found = local_dir.join("plugin.toml").exists()
-            || local_dir.join("plugin.yml").exists();
-        if !found {
+        if !local_path.exists() {
             errors.push(format!(
                 "  calepin.plugins: {}\n    -> not found: {}",
                 plugin,
@@ -298,10 +277,8 @@ mod tests {
 
     fn test_ctx() -> PathContext {
         PathContext {
-            document_dir: PathBuf::from("/nonexistent/dir"),
+            project_root: PathBuf::from("/nonexistent/dir"),
             output_dir: PathBuf::from("/nonexistent/dir"),
-            files_dir: "_calepin_files".to_string(),
-            cache_dir: "_calepin_cache".to_string(),
         }
     }
 

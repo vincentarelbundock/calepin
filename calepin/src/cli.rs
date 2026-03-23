@@ -35,7 +35,7 @@ pub enum Command {
     /// Preview a file, project, or directory with live-reload
     Preview(PreviewArgs),
 
-    /// Delete generated files (_calepin_cache/, _calepin_files/, and LaTeX artefacts)
+    /// Delete generated files (_calepin/cache/, _calepin/files/, and LaTeX artefacts)
     Flush {
         /// Directory to clean (default: current directory)
         #[arg(default_value = ".")]
@@ -45,11 +45,11 @@ pub enum Command {
         #[arg(short = 'y', long)]
         yes: bool,
 
-        /// Delete only _calepin_cache/ directories
+        /// Delete only _calepin/cache/ directories
         #[arg(long)]
         cache: bool,
 
-        /// Delete only _calepin_files/ directories
+        /// Delete only _calepin/files/ directories
         #[arg(long)]
         files: bool,
 
@@ -88,7 +88,7 @@ pub struct RenderArgs {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
-    /// Output target: a target name from calepin.toml (e.g., web, article)
+    /// Output target: a target name from _calepin.toml (e.g., web, article)
     /// or a base name (html, latex, typst, markdown).
     /// If omitted, auto-detected from output extension or YAML front matter.
     #[arg(short, long)]
@@ -176,11 +176,11 @@ pub enum InfoAction {
     },
 }
 
-/// Returns true if the input is a site config file (_calepin.toml, calepin.toml, or .yaml/.yml).
+/// Returns true if the input is a site config file (_calepin.toml or .yaml/.yml).
 pub fn is_site_config(path: &std::path::Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     match name {
-        "_calepin.toml" | "calepin.toml" => true,
+        "_calepin.toml" => true,
         _ => matches!(
             path.extension().and_then(|e| e.to_str()),
             Some("yaml") | Some("yml")
