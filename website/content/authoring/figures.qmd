@@ -32,11 +32,11 @@ ggplot(mtcars, aes(wt, mpg, color = factor(cyl))) +
 ```
 
 
-# Consistent figure sizing
+# Size
 
-In Quarto, figure appearance is governed by four parameters: `fig-width`, `fig-height`, `fig-asp`, and `out-width`. Unless users pick exactly the right combination, figures end up with inconsistent font sizes, axis labels, and line widths -- a narrow figure has tiny text while a wide figure has huge text, because the graphics device size changes but the display size does not (or vice versa).
+In Quarto, figure appearance is governed by four parameters: `fig-width`, `fig-height`, `fig-asp`, and `out-width`. Unless users pick exactly the right combination, figures end up with inconsistent font sizes, axis labels, and line widths. A narrow figure has tiny text while a wide figure has huge text, because the graphics device size changes but the display size does not (or vice versa).
 
-*Calepin* uses pragmatic defaults and adjusts some parameters automatically. In practice, we normally only need two options:
+*Calepin* uses pragmatic defaults and adjusts some parameters automatically to maintain a consistent look. In practice, we normally only need two options:
 
 | Option | Default | What it controls |
 |--------|---------|------------------|
@@ -45,19 +45,23 @@ In Quarto, figure appearance is governed by four parameters: `fig-width`, `fig-h
 
 *Calepin* automatically scales the internal graphics device (`fig-width`) to match `out-width`, so text and labels inside figures stay the same size regardless of how wide the figure is displayed. This means a narrow figure and a wide figure will have consistent font sizes.
 
-**Want a wider figure?** Change `out-width`. **Want a taller figure?** Change `fig-asp`. That is all.
+* Want a wider figure? Change `out-width`. 
+* Want a taller figure? Change `fig-asp`. 
+
+That is all.
 
 ```{r}
 #| fig-asp: 0.4
 #| out-width: "95%"
 #| fig-cap: "A wide, short figure"
+#| echo: fenced
 plot(1:20, sin(1:20), type = "l", col = "steelblue", lwd = 2)
 ```
 
 The `fig-width` and `fig-height` options still exist for full manual control, but you rarely need them. When you set `fig-width` explicitly, auto-scaling is disabled.
 
 
-# Figure options
+# Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -71,9 +75,11 @@ The `fig-width` and `fig-height` options still exist for full manual control, bu
 | `dev` | `png` | Graphics device (`png`, `pdf`, `svg`) |
 
 
-# Figure layouts
+# Layouts
 
 Figures can be arranged in grids using `layout-ncol`. The following example places three plots side by side with individual subcaptions and an overall caption.
+
+{{ snip.source_tip }}
 
 ::: {#fig-panels layout-ncol=3 fig-cap="Three growth patterns compared."}
 ```{r, line}
@@ -105,31 +111,3 @@ plot(1:10, log(1:10), type = "l", col = "forestgreen", lwd = 2)
 :::
 
 See @fig-panels for the result. The `layout` attribute supports custom grids with relative widths (e.g., `layout="[[1,1],[1]]"`) and negative values for spacing gaps.
-
-
-# Figure templates
-
-The figure element template controls how each figure is rendered. The built-in template uses these variables:
-
-| Variable | Description |
-|----------|-------------|
-| `{{path}}` | Image file path |
-| `{{alt}}` | Alt text |
-| `{{caption}}` | Figure caption |
-| `{{label}}` / `{{number}}` | Label and number |
-| `{{image}}` | Pre-rendered image markup |
-
-To customize figure output, create `_calepin/elements/figure.html` (or `.tex`, `.typ`, `.md`) with these placeholders.
-
-
-# Lightbox
-
-The `lightbox` plugin wraps images inside `.figure` divs with click-to-enlarge overlays. Clicking an image opens it full-screen; clicking the overlay dismisses it. Only applies to HTML output.
-
-```yaml
-calepin:
-  plugins:
-    - lightbox
-```
-
-No per-image configuration needed---all figure images get lightbox behavior automatically.

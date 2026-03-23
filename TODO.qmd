@@ -69,6 +69,8 @@
 - [ ] Check insertion of static images
 - [ ] Match default DPI in python and R. Or does it matter for .svg files? Are we doing svg in python?
 - [ ] Can we convert svg2pdf without calling an external tool?
+- [ ] Auto-scaling of figures should not be disabled when fig-width is set in the .toml file. Only when set on a per-figure basis.
+- [ ] Check if #| fig-align works in all base formats.
 
 ## Layout
 
@@ -120,6 +122,7 @@
 - [ ] How to register new plugins? What are they allowed to do?
 - [ ] ANSI colors in txtfmt plugin
 - [ ] CSL helpers: https://github.com/citation-style-language/styles/
+- [ ] Test lightbox
 
 
 ## Quarto compatibility

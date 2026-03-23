@@ -181,9 +181,9 @@ pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
 /// Resolve a snippet file using the same three-layer model as templates.
 ///
 /// Lookup order (first match wins):
-///   1. `templates/{target}/snippets/{name}.{ext}` (target-specific)
-///   2. `templates/{base}/snippets/{name}.{ext}` (base-specific, when target != base)
-///   3. `templates/common/snippets/{name}.jinja` (format-agnostic)
+///   1. `snippets/{target}/{name}.{ext}` (target-specific)
+///   2. `snippets/{base}/{name}.{ext}` (base-specific, when target != base)
+///   3. `snippets/common/{name}.jinja` (format-agnostic)
 pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
     let ext = base_to_ext(base);
     let specific = format!("{}.{}", name, ext);
@@ -195,17 +195,17 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
     // Target-specific in project
     if let Some(ref target) = active_target {
         if target != base {
-            let p = root.join("templates").join(target).join("snippets").join(&specific);
+            let p = root.join("snippets").join(target).join(&specific);
             if p.exists() { return Some(p); }
         }
     }
 
     // Base-specific in project
-    let p = root.join("templates").join(base).join("snippets").join(&specific);
+    let p = root.join("snippets").join(base).join(&specific);
     if p.exists() { return Some(p); }
 
     // Format-agnostic in project
-    let p = root.join("templates").join("common").join("snippets").join(&generic);
+    let p = root.join("snippets").join("common").join(&generic);
     if p.exists() { return Some(p); }
 
     None

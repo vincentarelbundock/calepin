@@ -330,6 +330,7 @@ fn parse_code_chunk(
     let code_lines: Vec<String> = body_lines.iter().map(|l| l.to_string()).collect();
 
     let (pipe_lines, actual_code) = collect_pipe_comments(&code_lines);
+    let pipe_comments: Vec<String> = pipe_lines.iter().map(|s| s.to_string()).collect();
     let mut options = parse_pipe_options(&pipe_lines);
     options
         .inner
@@ -344,6 +345,7 @@ fn parse_code_chunk(
             source: actual_code,
             options,
             label,
+            pipe_comments,
         }),
         j,
     )))

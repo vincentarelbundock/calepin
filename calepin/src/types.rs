@@ -53,6 +53,8 @@ pub struct CodeChunk {
     pub options: ChunkOptions,
     /// Auto-generated or user-specified label
     pub label: String,
+    /// Raw `#| key: value` lines (without the `#| ` prefix), for `echo: fenced`
+    pub pipe_comments: Vec<String>,
 }
 
 /// Chunk options stored as a string-keyed map with typed access

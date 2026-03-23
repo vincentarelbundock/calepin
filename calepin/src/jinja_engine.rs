@@ -14,7 +14,7 @@
 //   var.key.subkey                            — from front matter `variables:` block
 //   env.HOME, env.USER, ...                   — system environment variables
 //   format                                   — current output format
-//   snip.snippet_name                          — lazy snippet inclusion from templates/snippets/
+//   snip.snippet_name                          — lazy snippet inclusion from snippets/
 //
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};

@@ -46,7 +46,14 @@ pub fn evaluate_block(
                         } else {
                             format!("```{{{}, {}}}", lang, chunk.label)
                         };
-                        format!("{}\n{}\n```", header, lines.join("\n"))
+                        let mut body = String::new();
+                        for pc in &chunk.pipe_comments {
+                            body.push_str("#| ");
+                            body.push_str(pc);
+                            body.push('\n');
+                        }
+                        body.push_str(&lines.join("\n"));
+                        format!("{}\n{}\n```", header, body)
                     } else {
                         lines.join("\n")
                     };
