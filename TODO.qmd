@@ -15,17 +15,12 @@
 - [ ] How do lettered appendices work?
 
 
-## Book
-
-- [ ] UI for targets with multiple "base"
-- [ ] UI for compilation of books
-
-
 ## Code execution
 
 - [ ] Code annotation (line markers `# <1>` with numbered explanations)
 - [ ] Multiple figures from a single code chunk with `fig-subcap`
 - [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
+- [ ] Chunk labels should not add a fig- or a tbl- automatically if that is already in the label specified in ```{lang, fig-blahblah}. Otherwise we get duplicated fig-fig-blahblah.
 
 
 ## Tables

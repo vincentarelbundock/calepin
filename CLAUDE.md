@@ -35,7 +35,7 @@ make bench          # Benchmark vs litedown and Quarto (uses website/basics.qmd)
 
 Run a single test: `cargo test test_name`
 
-CLI: `calepin <input.qmd> [-o PATH] [-f FORMAT] [-s KEY=VALUE ...] [-q] [--compile] [--preview] [--completions SHELL]`
+CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--base FORMAT] [--completions SHELL]`
 
 Batch mode: `calepin --batch manifest.json` or `calepin --batch - < manifest.json`. Add `--batch-stdout` to get rendered bodies in JSON output instead of writing files. See `batch.rs` for manifest format.
 

@@ -114,9 +114,11 @@ pub struct RenderArgs {
     #[arg(long)]
     pub no_highlight: bool,
 
-    /// Compile the rendered output (e.g., .tex to .pdf, .typ to .pdf)
-    #[arg(long)]
-    pub compile: bool,
+    /// Override the base format for compound targets (pdf, book).
+    /// Allowed values depend on the target: pdf accepts html/latex/typst/markdown,
+    /// book accepts latex/typst.
+    #[arg(long, value_parser = ["html", "latex", "typst", "markdown"])]
+    pub base: Option<String>,
 
     /// Remove output directory before building (project manifests only)
     #[arg(long)]

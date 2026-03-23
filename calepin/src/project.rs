@@ -464,7 +464,7 @@ pub fn resolve_target(name: &str, config: Option<&ProjectConfig>) -> Result<Targ
 
     // 3. Aliases: map to a canonical target name and retry
     let canonical = match name {
-        "tex" | "pdf" => "latex",
+        "tex" => "latex",
         "typ" => "typst",
         "md" => "markdown",
         _ => bail!(

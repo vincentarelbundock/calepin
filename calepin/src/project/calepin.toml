@@ -48,6 +48,15 @@ fig-extension = "pdf"
 command = "tectonic {input}"
 extension = "pdf"
 
+[targets.pdf]
+base = "latex"
+template = "page"
+extension = "tex"
+fig-extension = "pdf"
+[targets.pdf.compile]
+command = "tectonic {input}"
+extension = "pdf"
+
 [targets.markdown]
 base = "markdown"
 template = "page"

@@ -108,6 +108,45 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
     })
 }
 
+/// Apply `--base` override to a resolved project context.
+///
+/// Validates that the base is allowed for the target:
+///   - `pdf`: html, latex, typst, markdown
+///   - `book`: latex, typst
+///   - `website`: html
+///   - others: no override allowed (base is fixed)
+fn apply_base_override(ctx: &mut ProjectContext, base: Option<&str>) -> Result<()> {
+    let Some(base) = base else { return Ok(()) };
+
+    let allowed: &[&str] = match ctx.target_name.as_str() {
+        "pdf" => &["html", "latex", "typst", "markdown"],
+        "book" => &["latex", "typst"],
+        other => anyhow::bail!(
+            "--base is only valid for pdf or book targets (got '{}')", other
+        ),
+    };
+
+    if !allowed.contains(&base) {
+        anyhow::bail!(
+            "--base '{}' is not valid for target '{}'. Allowed: {}",
+            base, ctx.target_name, allowed.join(", ")
+        );
+    }
+
+    ctx.target.base = base.to_string();
+
+    // Update extension and fig-extension to match the new base
+    let builtin = project::builtin_config().targets.get(base);
+    if let Some(b) = builtin {
+        ctx.target.extension = b.extension.clone();
+        ctx.target.fig_extension = b.fig_extension.clone();
+        ctx.target.compile = b.compile.clone();
+        ctx.target.preview = b.preview.clone();
+    }
+
+    Ok(())
+}
+
 /// Parse CLI args, injecting "render" as default subcommand when the first
 /// positional argument looks like a file path rather than a known subcommand.
 fn parse_cli() -> Cli {
@@ -259,12 +298,12 @@ fn handle_render(args: RenderArgs) -> Result<()> {
             if target_str.contains(',') {
                 let targets: Vec<&str> = target_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
                 for t in &targets {
-                    render_one(&args.input[0], None, Some(t), &overrides, args.quiet, args.compile)?;
+                    render_one(&args.input[0], None, Some(t), &overrides, args.quiet, args.base.as_deref())?;
                 }
                 return Ok(());
             }
         }
-        return render_one(&args.input[0], args.output.as_deref(), args.target.as_deref(), &overrides, args.quiet, args.compile);
+        return render_one(&args.input[0], args.output.as_deref(), args.target.as_deref(), &overrides, args.quiet, args.base.as_deref());
     }
 
     // Multiple files: render in parallel.
@@ -277,7 +316,8 @@ fn handle_render(args: RenderArgs) -> Result<()> {
     // Resolve project context once and share it across all files.
     // Previously each file called resolve_context() independently, which
     // re-parsed calepin.toml on every thread (~27% of batch time in profiles).
-    let ctx = resolve_context(&args.input[0], args.target.as_deref())?;
+    let mut ctx = resolve_context(&args.input[0], args.target.as_deref())?;
+    apply_base_override(&mut ctx, args.base.as_deref())?;
 
     let output_ext = args.output.as_ref().map(|dir| {
         (dir.clone(), ctx.target.output_extension().to_string())
@@ -291,7 +331,7 @@ fn handle_render(args: RenderArgs) -> Result<()> {
             let file_output = output_ext.as_ref().map(|(dir, ext)| {
                 dir.join(input.file_name().unwrap()).with_extension(ext)
             });
-            match render_one_with_context(input, file_output.as_deref(), &ctx, &overrides, args.quiet, args.compile) {
+            match render_one_with_context(input, file_output.as_deref(), &ctx, &overrides, args.quiet) {
                 Ok(()) => None,
                 Err(e) => Some(format!("{:#}", e)),
             }
@@ -315,15 +355,11 @@ fn render_one(
     target: Option<&str>,
     overrides: &[String],
     quiet: bool,
-    compile: bool,
+    base_override: Option<&str>,
 ) -> Result<()> {
-    // "pdf" is shorthand for "latex --compile"
-    let (target, compile) = match target {
-        Some("pdf") => (Some("latex"), true),
-        t => (t, compile),
-    };
-    let ctx = resolve_context(input, target)?;
-    render_one_with_context(input, output, &ctx, overrides, quiet, compile)
+    let mut ctx = resolve_context(input, target)?;
+    apply_base_override(&mut ctx, base_override)?;
+    render_one_with_context(input, output, &ctx, overrides, quiet)
 }
 
 /// Render a single .qmd file with a pre-resolved project context.
@@ -333,7 +369,6 @@ fn render_one_with_context(
     ctx: &ProjectContext,
     overrides: &[String],
     quiet: bool,
-    compile: bool,
 ) -> Result<()> {
     let (output_path, final_output, renderer) = render_file(
         input,
@@ -352,11 +387,9 @@ fn render_one_with_context(
         eprintln!("-> {}", output_path.display());
     }
 
-    // Compile: explicit --compile flag, or implicit for typst (always produces PDF)
-    if compile || ctx.target.base == "typst" {
-        if let Some(ref compile_cfg) = ctx.target.compile {
-            run_compile_step(&output_path, compile_cfg, quiet)?;
-        }
+    // Run compile step if the target defines one
+    if let Some(ref compile_cfg) = ctx.target.compile {
+        run_compile_step(&output_path, compile_cfg, quiet)?;
     }
 
     Ok(())
