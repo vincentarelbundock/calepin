@@ -14,13 +14,12 @@ By default, output is written alongside the input file with the appropriate exte
 
 # Override resolution
 
-Templates, element overrides, CSL files, and plugins follow a three-level fallback:
+Templates, element overrides, CSL files, and plugins follow a two-level fallback:
 
 1. `_calepin/` in the document directory
-2. `~/.config/calepin/`
-3. Built-in defaults
+2. Built-in defaults
 
-Plugins specifically resolve from `_calepin/plugins/{name}/plugin.yml`, then `~/.config/calepin/plugins/{name}/plugin.yml`. Built-in plugins (tabset, layout, callout, theorem, figure-div, table-div) need no files on disk.
+Plugins resolve from `_calepin/plugins/{name}/plugin.yml`. Built-in plugins (tabset, layout, callout, theorem, figure-div, table-div) need no files on disk.
 
 # Validation
 

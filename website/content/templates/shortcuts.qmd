@@ -71,6 +71,32 @@ The `SHELL` environment variable on the local machine is: {{ env.SHELL }}.
 
 The current output format is available as {% raw %}`{{ format }}`{% endraw %}, one of `html`, `latex`, `typst`, or `markdown`.
 
+## snip
+
+Insert reusable snippets from `templates/snippets/` by name:
+
+{% raw %}`{{ snip.source_tip }}`{% endraw %}
+
+This looks for a file named `source-tip` through the standard resolution chain:
+
+1. `templates/{target}/snippets/source-tip.{ext}` (target-specific)
+2. `templates/{base}/snippets/source-tip.{ext}` (base-specific)
+3. `templates/common/snippets/source-tip.jinja` (format-agnostic)
+
+Underscores in the accessor name are normalized to dashes for file lookup. Snippets are expanded before block parsing, so fenced divs (`:::`), code chunks, and other block-level syntax work inside them. The expanded content then goes through normal Jinja processing, so snippets can contain `{{ meta.title }}`, conditionals, and other Jinja expressions.
+
+Example snippet file `templates/common/snippets/source-tip.jinja`:
+
+````
+{% raw %}
+::: {.callout-tip}
+## View the source
+
+Click the **</>** button in the navbar to see the `.qmd` source code for this page.
+:::
+{% endraw %}
+````
+
 
 # Conditionals and loops
 
@@ -229,7 +255,7 @@ The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, a
 For each function call, *Calepin* checks:
 
 1. Built-in functions (`pagebreak`, `video`, `brand`, `kbd`, `lipsum`, `placeholder`)
-2. Context variables (`meta`, `var`, `env`, `format`)
+2. Context variables (`meta`, `var`, `env`, `format`, `snip`)
 3. Plugin registry (in front matter order)
 
 Built-in functions take precedence over plugin functions.

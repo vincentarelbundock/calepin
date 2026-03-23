@@ -30,8 +30,7 @@ Resolution order:
 
 1. Plugin `elements/` directory (in plugin order)
 2. `_calepin/elements/{name}.{format}` (project override)
-3. `~/.config/calepin/elements/{name}.{format}` (user default)
-4. Built-in (compiled into the binary)
+3. Built-in (compiled into the binary)
 
 ::: {.callout-tip}
 Hyphens in class names are normalized to underscores when looking up templates. A div with class `.highlight-box` matches a template file named `highlight-box.html` or `highlight_box.html`.

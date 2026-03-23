@@ -105,7 +105,7 @@ Example plugins are available in the [plugins/ directory on GitHub](https://gith
 
 # Using plugins
 
-1. Place the plugin directory in `_calepin/plugins/` (project) or `~/.config/calepin/plugins/` (user).
+1. Place the plugin directory in `_calepin/plugins/` (project).
 2. List it in front matter:
 
 ```yaml

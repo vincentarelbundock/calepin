@@ -14,6 +14,7 @@
 //   var.key.subkey                            — from front matter `variables:` block
 //   env.HOME, env.USER, ...                   — system environment variables
 //   format                                   — current output format
+//   snip.snippet_name                          — lazy snippet inclusion from templates/snippets/
 //
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
@@ -38,7 +39,7 @@ use crate::types::Metadata;
 /// parsed as blocks (code chunks, divs, etc.) rather than inline text.
 /// Paths are resolved relative to `document_dir`.
 #[inline(never)]
-pub fn expand_includes(text: &str, document_dir: &std::path::Path) -> String {
+pub fn expand_includes(text: &str, document_dir: &std::path::Path, format: &str) -> String {
     // {% include "file" %} or {% include 'file' %}
     static INCLUDE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r#"\{%[-\s]\s*include\s+["'](.+?)["']\s*[-\s]?%\}"#).unwrap()
@@ -64,6 +65,28 @@ pub fn expand_includes(text: &str, document_dir: &std::path::Path) -> String {
         let path = caps[1].trim();
         let resolved = document_dir.join(path);
         include_file(&resolved.to_string_lossy())
+    }).to_string();
+
+    // Expand {{ snip.name }} references (pre-parse, so div syntax works)
+    static SNIP_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\{\{\s*snip\.(\w+)\s*\}\}").unwrap()
+    });
+    let text = SNIP_RE.replace_all(&text, |caps: &regex::Captures| {
+        let name = &caps[1];
+        let file_name = name.replace('_', "-");
+        match crate::paths::resolve_snippet(&file_name, format) {
+            Some(path) => match std::fs::read_to_string(&path) {
+                Ok(content) => content,
+                Err(e) => {
+                    cwarn!("snippet '{}': {}", file_name, e);
+                    format!("\n\n**Error: snippet '{}': {}**\n\n", name, e)
+                }
+            },
+            None => {
+                cwarn!("snippet '{}' not found", file_name);
+                format!("\n\n**Error: snippet '{}' not found**\n\n", name)
+            }
+        }
     }).to_string();
 
     // Restore {% raw %} blocks
@@ -348,12 +371,16 @@ pub fn process_body(
     }
 
     // 3. Build context with metadata, variables, and environment
+    let meta_val = build_meta_map(metadata);
+    let var_val = build_variables_map(metadata);
+    let env_val: HashMap<String, String> = std::env::vars().collect();
+
     let context = minijinja::context! {
         base => format,     // rendering engine (html, latex, typst, markdown)
         target => format,   // target name (defaults to base when no target specified)
-        meta => build_meta_map(metadata),
-        var => build_variables_map(metadata),
-        env => std::env::vars().collect::<HashMap<String, String>>(),
+        meta => meta_val,
+        var => var_val,
+        env => env_val,
     };
 
     // 4. Render through MiniJinja (on error, fall back to protected text so that

@@ -55,7 +55,7 @@ The pipeline transforms data through three representations:
 
 1. **Parse** — YAML front matter (`parse/yaml.rs`), then recursive block parsing into `Block` enum (`parse/blocks.rs`). Chunk options use pipe-only syntax (`#| key: value`). Dashes in option names are normalized to dots internally (`fig-width` → `fig.width`).
 2. **Evaluate** (`engines/mod.rs`) — Jinja body processing replaces shortcodes (via `jinja_engine::process_body()`), then inline code, then blocks become `Element`s. `engines::evaluate()` orchestrates; `engines::block::evaluate_block()` handles code chunks; `engines::inline::evaluate_inline()` handles inline expressions. Conditional content (`.content-visible`/`.content-hidden` with `when-format`/`unless-format`/`when-meta`/`unless-meta`) filtered here. `.hidden` divs execute but emit nothing.
-3. **Load plugin registry** (`registry.rs`) — Plugins from front matter `calepin: { plugins: [name] }`. Each plugin is a directory with a `plugin.yml` manifest. Resolved from `_calepin/plugins/{name}/` → `~/.config/calepin/plugins/{name}/`. Built-in plugins (tabset, layout, figure-div, theorem, callout) are appended automatically.
+3. **Load plugin registry** (`registry.rs`) — Plugins from front matter `calepin: { plugins: [name] }`. Each plugin is a directory with a `plugin.yml` manifest. Resolved from `_calepin/plugins/{name}/`. Built-in plugins (tabset, layout, figure-div, theorem, callout) are appended automatically.
 4. **Bibliography** (`filters/bibliography.rs`) — Citation keys resolved via hayagriva.
 5. **Cross-ref markers** (`filters/crossref.rs`) — Inject anchors into elements.
 6. **Render** — `ElementRenderer` dispatches each element to the appropriate filter, then applies a template. `Element::Text` blocks are converted from markdown to the output format by a shared AST walker (`render/ast.rs`) that traverses comrak's parsed node tree via a `FormatEmitter` trait (one implementation per format: HTML, LaTeX, Typst). Heading IDs, section numbering, footnotes, table structure, and image attributes are resolved structurally during this walk. `OutputRenderer` wraps the result in a page template.
@@ -192,7 +192,6 @@ provides:
 ### Resolution
 
 1. `_calepin/plugins/{name}/plugin.yml` (project)
-2. `~/.config/calepin/plugins/{name}/plugin.yml` (user)
 
 ### CLI
 
@@ -228,7 +227,7 @@ Standard Quarto fields (`title`, `author`, `bibliography`, `format`, etc.) remai
 
 Templates use Jinja syntax (`{{variable}}`, `{% if %}`, `{% for %}`, filters, macros). Template variable names use underscores (e.g., `id_attr`, `plain_title`). CSS class names in source documents keep dashes; the template resolver normalizes dashes to underscores when looking up templates by class name.
 
-Resolution order: plugin-provided dirs (in plugin order) → `_calepin/{elements,templates}/` → `~/.config/calepin/` → built-in.
+Resolution order: plugin-provided dirs (in plugin order) → `_calepin/{elements,templates}/` → built-in.
 
 - Element templates: plugin `elements/` dir → `_calepin/elements/{name}.{format}` → built-in
 - Page templates: plugin `templates/` dir → `_calepin/templates/calepin.{format}` → built-in

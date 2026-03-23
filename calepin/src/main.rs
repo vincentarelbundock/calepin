@@ -950,7 +950,7 @@ macro_rules! timed {
     let renderer = formats::create_renderer(&format_str)?;
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
-    let body = timed!("expand_includes", jinja_engine::expand_includes(&body, &path_ctx.document_dir));
+    let body = timed!("expand_includes", jinja_engine::expand_includes(&body, &path_ctx.document_dir, &format_str));
 
     // 4a. Preprocess hook: pipe body through script if custom format defines one
     let body = if let Some(script) = renderer.preprocess() {

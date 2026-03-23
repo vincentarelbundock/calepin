@@ -91,9 +91,8 @@ use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_a
 /// Load a page template by name and base.
 ///
 /// Resolution order:
-///   1. Project filesystem (templates/{base}/ or templates/common/)
-///   2. User ~/.config/calepin/templates/
-///   3. Built-in (discovered from embedded project tree)
+///   1. Project filesystem (templates/{target}/, templates/{base}/, or templates/common/)
+///   2. Built-in (discovered from embedded project tree)
 pub fn load_page_template(template_name: &str, base: &str) -> String {
     // Filesystem resolution
     if let Some(path) = crate::paths::resolve_template(template_name, base) {

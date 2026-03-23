@@ -89,26 +89,14 @@ impl PathContext {
 // Path resolution
 // ---------------------------------------------------------------------------
 
-/// Resolve a file by checking document-local then user-global directories.
+/// Resolve a file by checking the document-local `_calepin/` directory.
 /// Returns the first path that exists, or None.
 ///
-/// Resolution order:
-///   1. `{document_dir}/_calepin/{dir}/{filename}`
-///   2. `~/.config/calepin/{dir}/{filename}`
+/// Resolution: `{document_dir}/_calepin/{dir}/{filename}`
 pub fn resolve_path(document_dir: &Path, dir: &str, filename: &str) -> Option<PathBuf> {
     let local = document_dir.join("_calepin").join(dir).join(filename);
     if local.exists() {
         return Some(local);
-    }
-
-    if let Ok(home) = std::env::var("HOME") {
-        let user = Path::new(&home)
-            .join(".config/calepin")
-            .join(dir)
-            .join(filename);
-        if user.exists() {
-            return Some(user);
-        }
     }
 
     None
@@ -135,13 +123,11 @@ pub fn base_to_ext(base: &str) -> &str {
 /// Resolve a template (element or page) using the three-layer model.
 ///
 /// Lookup order (first match wins):
-///   1. `{project_root}/templates/{target}/{name}.{ext}` (target-specific)
-///   2. `{project_root}/templates/{base}/{name}.{ext}` (base-specific, when target != base)
-///   3. `{project_root}/templates/common/{name}.jinja` (format-agnostic)
+///   1. `templates/{target}/{name}.{ext}` (target-specific)
+///   2. `templates/{base}/{name}.{ext}` (base-specific, when target != base)
+///   3. `templates/common/{name}.jinja` (format-agnostic)
 ///   4. Legacy: `_calepin/elements/{name}.{ext}`, `_calepin/templates/{name}.{base}`
-///   5. `~/.config/calepin/templates/{base}/{name}.{ext}`
-///   6. `~/.config/calepin/templates/common/{name}.jinja`
-///   7. (caller falls back to built-in)
+///   5. (caller falls back to built-in)
 pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
     let ext = base_to_ext(base);
     let base_specific = format!("{}.{}", name, ext);
@@ -173,29 +159,46 @@ pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
     let p = root.join("_calepin").join("templates").join(&legacy_name);
     if p.exists() { return Some(p); }
 
-    // User config
-    if let Ok(home) = std::env::var("HOME") {
-        let user = Path::new(&home).join(".config/calepin");
-        let p = user.join("templates").join(base).join(&base_specific);
-        if p.exists() { return Some(p); }
-        let p = user.join("templates").join("common").join(&generic);
-        if p.exists() { return Some(p); }
+    None
+}
+
+/// Resolve a snippet file using the same three-layer model as templates.
+///
+/// Lookup order (first match wins):
+///   1. `templates/{target}/snippets/{name}.{ext}` (target-specific)
+///   2. `templates/{base}/snippets/{name}.{ext}` (base-specific, when target != base)
+///   3. `templates/common/snippets/{name}.jinja` (format-agnostic)
+pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
+    let ext = base_to_ext(base);
+    let specific = format!("{}.{}", name, ext);
+    let generic = format!("{}.jinja", name);
+
+    let root = Path::new(".");
+    let active_target = get_active_target();
+
+    // Target-specific in project
+    if let Some(ref target) = active_target {
+        if target != base {
+            let p = root.join("templates").join(target).join("snippets").join(&specific);
+            if p.exists() { return Some(p); }
+        }
     }
+
+    // Base-specific in project
+    let p = root.join("templates").join(base).join("snippets").join(&specific);
+    if p.exists() { return Some(p); }
+
+    // Format-agnostic in project
+    let p = root.join("templates").join("common").join("snippets").join(&generic);
+    if p.exists() { return Some(p); }
 
     None
 }
 
-/// Find the first file matching an extension in `{document_dir}/_calepin/{dir}/`
-/// then `~/.config/calepin/{dir}/`.
+/// Find the first file matching an extension in `{document_dir}/_calepin/{dir}/`.
 /// Returns the alphabetically first match.
 pub fn resolve_first_match(document_dir: &Path, dir: &str, extension: &str) -> Option<PathBuf> {
-    let dirs: Vec<PathBuf> = {
-        let mut v = vec![document_dir.join("_calepin").join(dir)];
-        if let Ok(home) = std::env::var("HOME") {
-            v.push(Path::new(&home).join(".config/calepin").join(dir));
-        }
-        v
-    };
+    let dirs = [document_dir.join("_calepin").join(dir)];
     for d in &dirs {
         if let Ok(entries) = std::fs::read_dir(d) {
             let mut matches: Vec<PathBuf> = entries
@@ -213,19 +216,11 @@ pub fn resolve_first_match(document_dir: &Path, dir: &str, extension: &str) -> O
 }
 
 /// Resolve a plugin directory by name.
-/// Checks `{document_dir}/_calepin/plugins/{name}/plugin.toml` (or `plugin.yml`)
-/// then `~/.config/calepin/plugins/{name}/plugin.toml` (or `plugin.yml`).
+/// Checks `{document_dir}/_calepin/plugins/{name}/plugin.toml` (or `plugin.yml`).
 pub fn resolve_plugin_dir(name: &str, document_dir: &Path) -> Option<PathBuf> {
     let local = document_dir.join("_calepin").join("plugins").join(name);
     if local.join("plugin.toml").exists() || local.join("plugin.yml").exists() {
         return Some(local);
-    }
-
-    if let Ok(home) = std::env::var("HOME") {
-        let user = Path::new(&home).join(".config/calepin/plugins").join(name);
-        if user.join("plugin.toml").exists() || user.join("plugin.yml").exists() {
-            return Some(user);
-        }
     }
 
     None
@@ -271,23 +266,14 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
         }
         let local_dir = ctx.document_dir.join("_calepin/plugins").join(plugin);
         let local_path = local_dir.join("plugin.toml");
-        let user_path = std::env::var("HOME").ok().map(|h| {
-            Path::new(&h).join(".config/calepin/plugins").join(plugin).join("plugin.toml")
-        });
         let found = local_dir.join("plugin.toml").exists()
-            || local_dir.join("plugin.yml").exists()
-            || user_path.as_ref().map_or(false, |p| p.exists())
-            || user_path.as_ref().map_or(false, |p| p.with_file_name("plugin.yml").exists());
+            || local_dir.join("plugin.yml").exists();
         if !found {
-            let mut msg = format!(
+            errors.push(format!(
                 "  calepin.plugins: {}\n    -> not found: {}",
                 plugin,
                 local_path.display()
-            );
-            if let Some(ref up) = user_path {
-                msg.push_str(&format!("\n    -> not found: {}", up.display()));
-            }
-            errors.push(msg);
+            ));
         }
     }
 

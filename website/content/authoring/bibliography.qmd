@@ -49,7 +49,7 @@ These are compatible with Quarto and Pandoc syntax.
 By default, *Calepin* uses an author-year style. To customize citation formatting, provide a `.csl` file via one of three methods (checked in order):
 
 1. **Front matter** --- Set `csl: path/to/style.csl` explicitly.
-2. **Project or user directory** --- Place a `.csl` file in `_calepin/templates/` (project) or `~/.config/calepin/templates/` (user). *Calepin* picks the first `.csl` file alphabetically.
+2. **Project directory** --- Place a `.csl` file in `_calepin/templates/` (project). *Calepin* picks the first `.csl` file alphabetically.
 3. **Built-in** --- If no CSL file is found, the built-in default style is used.
 
 CSL files for most major journals are available from the [CSL repository](https://github.com/citation-style-language/styles).

@@ -115,9 +115,8 @@ pub struct Highlighter {
 ///
 /// Resolution order:
 ///   1. Project filesystem: `assets/highlighting/{name}.tmTheme`
-///   2. User config: `~/.config/calepin/assets/highlighting/{name}.tmTheme`
-///   3. Built-in: discovered from embedded project tree
-///   4. Filesystem path (for absolute/relative .tmTheme file paths)
+///   2. Built-in: discovered from embedded project tree
+///   3. Filesystem path (for absolute/relative .tmTheme file paths)
 fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
     use std::io::Cursor;
 
@@ -128,18 +127,6 @@ fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
     if project_path.exists() {
         if let Ok(theme) = ThemeSet::get_theme(&project_path) {
             return Some(theme);
-        }
-    }
-
-    // 2. User config
-    if let Ok(home) = std::env::var("HOME") {
-        let user_path = std::path::Path::new(&home)
-            .join(".config/calepin/assets/highlighting")
-            .join(&filename);
-        if user_path.exists() {
-            if let Ok(theme) = ThemeSet::get_theme(&user_path) {
-                return Some(theme);
-            }
         }
     }
 

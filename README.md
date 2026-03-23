@@ -93,7 +93,7 @@ Then use `format: revealjs` in front matter or `--format revealjs` on the CLI.
 
 ## Customization
 
-Place files in `_calepin/` (project-level) or `~/.config/calepin/` (user-level):
+Place files in `_calepin/` (project-level):
 
 - `elements/` — templates for divs, spans, code blocks, figures
 - `filters/` — executable filters for fenced divs and spans

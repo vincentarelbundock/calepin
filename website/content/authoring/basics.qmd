@@ -4,6 +4,8 @@ title: Basics
 
 This page reviews some of the basics of Quarto and Markdown syntax supported by *Calepin*. It covers document structure, code chunks, figures, math, cross-references, citations, and other features that work out of the box.
 
+{{ snip.source_tip }}
+
 # Getting started
 
 *Calepin* renders `.qmd` documents to HTML, LaTeX, Typst, and Markdown. It executes R code chunks, captures output and plots, resolves citations and cross-references, and wraps everything in a template.

@@ -30,11 +30,25 @@
 - [ ] `gt`
 - [ ] `flextable`
 - [ ] `knitr::kable()`
-- [ ] How can an R chunk add content to the LaTeX preamble?
+- [ ] How can an R and Python chunks add content to the LaTeX preamble?
+- [ ] How can I make the full TOML available to R and PYthon?
 - [ ] Tables should use a template and filter
 - [ ] Advanced table features (Bootstrap classes, embedded markdown in cells)
 - [ ] Subtables
 - [ ] Table caption location: margin
+
+
+## Philosophy
+
+- [ ] High performance
+- [ ] Simplicity
+    - [ ] Classless HTML with simple CSS.
+    - [ ] Minimal preambles in LaTeX and Typst, with optional variants.
+- [ ] Everything is local. No global config.
+- [ ] Templates everywhere
+- [ ] Limited compatibility layer with Quarto
+- [ ] Robust configuration in TOML
+- [ ] Experimental stage to allow experimentation and breaking changes in the first stages of dev.
 
 
 ## Math
@@ -123,6 +137,8 @@
 - [ ] Format-specific path handling (Typst, LaTeX, HTML, Markdown)
 - [ ] Tectonic path resolution quirks
 - [ ] _calepin/ directory with cache, files, and output subdirectories?
+- [ ] Ask Claude to list all write locations
+- [ ] Brainstorm on trade-offs for defaults: intuitive defaults, not too much clutter, not too deeply nested.
 
 
 ## calepin new

@@ -18,8 +18,7 @@ Resolution order:
 
 1. Plugin `templates/` directory (in plugin order)
 2. `_calepin/templates/calepin.{format}` (project)
-3. `~/.config/calepin/templates/calepin.{format}` (user default)
-4. Built-in (compiled into the binary)
+3. Built-in (compiled into the binary)
 
 
 # Page template variables
