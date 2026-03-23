@@ -8,17 +8,21 @@ urls:
 *Calepin* processes the body of every `.qmd` document through the [MiniJinja](https://github.com/mitsuhiko/minijinja) template engine. This means you can use expressions, functions, conditionals, and loops directly in your prose. Fenced code blocks and inline code spans are automatically protected from evaluation.
 
 ::: {.callout-note}
-Jinja expressions inside fenced code blocks and inline code spans are not evaluated by default. To opt-in to Jinja processing inside a code chunk, use the `#| jinja: true` chunk option:
+Jinja expressions inside fenced code blocks and inline code spans are not evaluated by default. To opt-in to Jinja processing inside a code chunk, use the `#| jinja: true` chunk option.
 :::
+
+For example, with `sample_size: 100` in your YAML front matter:
 
 ````
 ```{r}
 #| jinja: true
-n <- {{var.sample_size}}
+n <- {{ var.sample_size }}
 x <- rnorm(n)
-summary(x)
+cat("Generated", n, "observations. Mean:", round(mean(x), 3))
 ```
 ````
+
+*Calepin* replaces {% raw %}`{{ var.sample_size }}`{% endraw %} with `100` before sending the code to R, so R sees `n <- 100`.
 
 
 # Context variables

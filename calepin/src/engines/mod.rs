@@ -11,6 +11,7 @@
 
 pub mod block;
 pub mod cache;
+pub mod diagram;
 pub mod inline;
 pub mod python;
 pub mod r;
@@ -184,6 +185,17 @@ pub fn execute_chunk(
 
     // Dispatch to engine-specific capture
     let captured = match options.engine().as_str() {
+        eng if diagram::is_diagram_engine(eng) => {
+            // Diagram engines always produce SVG
+            let svg_path = fig_dir.join(format!("{}-1.svg", label));
+            return diagram::execute_diagram(
+                &code,
+                eng,
+                &svg_path,
+                source,
+                options,
+            );
+        }
         "sh" => {
             let session = ctx.sh.as_mut()
                 .ok_or_else(|| anyhow::anyhow!("sh is not available. Is /bin/sh on PATH?"))?;

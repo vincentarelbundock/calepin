@@ -1,3 +1,5 @@
+output = "output"
+
 [meta]
 title = "Calepin"
 subtitle = "A notebook and website generator written in Rust"

@@ -13,6 +13,11 @@ use serde::Deserialize;
 /// Top-level calepin.toml structure.
 #[derive(Debug, Deserialize)]
 pub struct ProjectConfig {
+    /// Output directory for rendered files, relative to the project root.
+    /// Defaults to the input file's directory when absent.
+    #[serde(default)]
+    pub output: Option<String>,
+
     /// Project metadata: title, subtitle, author, url, csl, highlight.
     /// Available in templates as `{{ meta.title }}`, etc.
     #[serde(default)]
@@ -500,23 +505,31 @@ fn toml_to_jinja(v: &toml::Value) -> minijinja::Value {
 
 /// Compute the output path for a target render.
 ///
-/// When a project root exists and no -o override is given:
-///   output/<target>/<relative_path>.<ext>
+/// When an output dir is configured (via `output` in calepin.toml):
+///   <root>/<output_dir>/<target>/<relative_path>.<ext>
 ///
-/// When no project root: input.with_extension(ext) (backward compatible).
+/// When no output dir is configured:
+///   input file's directory with new extension (backward compatible).
 pub fn resolve_target_output_path(
     input: &Path,
     target_name: &str,
     ext: &str,
     project_root: Option<&Path>,
+    output_dir: Option<&str>,
 ) -> PathBuf {
-    if let Some(root) = project_root {
+    if let (Some(root), Some(out)) = (project_root, output_dir) {
+        // Canonicalize input so strip_prefix works from any working directory
+        let abs_input = if input.is_relative() {
+            std::env::current_dir().unwrap_or_default().join(input)
+        } else {
+            input.to_path_buf()
+        };
         // Try stripping content/ prefix first, then project root
         let content_dir = root.join("content");
-        let relative = input.strip_prefix(&content_dir)
-            .or_else(|_| input.strip_prefix(root))
-            .unwrap_or(input);
-        root.join("output").join(target_name).join(relative).with_extension(ext)
+        let relative = abs_input.strip_prefix(&content_dir)
+            .or_else(|_| abs_input.strip_prefix(root))
+            .unwrap_or(&abs_input);
+        root.join(out).join(target_name).join(relative).with_extension(ext)
     } else {
         input.with_extension(ext)
     }
@@ -609,6 +622,7 @@ unknown_field = "oops"
             "web",
             "html",
             Some(Path::new("/project")),
+            Some("output"),
         );
         assert_eq!(path, PathBuf::from("/project/output/web/book/ch1.html"));
     }
@@ -620,7 +634,82 @@ unknown_field = "oops"
             "html",
             "html",
             None,
+            None,
         );
         assert_eq!(path, PathBuf::from("/docs/paper.html"));
+    }
+
+    #[test]
+    fn test_output_path_no_output_dir() {
+        // With project root but no output dir configured: same dir as input
+        let path = resolve_target_output_path(
+            Path::new("/project/content/ch1.qmd"),
+            "web",
+            "html",
+            Some(Path::new("/project")),
+            None,
+        );
+        assert_eq!(path, PathBuf::from("/project/content/ch1.html"));
+    }
+
+    #[test]
+    fn test_output_path_custom_output_dir() {
+        let path = resolve_target_output_path(
+            Path::new("/project/content/ch1.qmd"),
+            "web",
+            "html",
+            Some(Path::new("/project")),
+            Some("build"),
+        );
+        assert_eq!(path, PathBuf::from("/project/build/web/ch1.html"));
+    }
+
+    #[test]
+    fn test_output_path_subdirectory_preserved() {
+        // Files in content subdirectories keep their relative path
+        let path = resolve_target_output_path(
+            Path::new("/project/content/code/diagrams.qmd"),
+            "website",
+            "html",
+            Some(Path::new("/project")),
+            Some("output"),
+        );
+        assert_eq!(path, PathBuf::from("/project/output/website/code/diagrams.html"));
+    }
+
+    #[test]
+    fn test_config_output_field() {
+        let toml = r#"
+output = "output"
+
+[targets.web]
+base = "html"
+"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        assert_eq!(config.output.as_deref(), Some("output"));
+    }
+
+    #[test]
+    fn test_config_output_field_absent() {
+        let toml = r#"
+[targets.web]
+base = "html"
+"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        assert_eq!(config.output, None);
+    }
+
+    #[test]
+    fn test_site_target_fallback() {
+        let toml = r#"
+[site]
+target = "website"
+
+[targets.website]
+base = "html"
+"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        let site_target = config.site.as_ref().and_then(|s| s.target.as_deref());
+        assert_eq!(site_target, Some("website"));
     }
 }

@@ -37,12 +37,20 @@ struct ProjectContext {
     project_config: Option<project::ProjectConfig>,
     target_name: String,
     target: project::Target,
+    /// True when the target was explicitly set (CLI flag or front matter),
+    /// false when it fell back to the default "html".
+    explicit_target: bool,
 }
 
 impl ProjectContext {
     /// Get the project-level `[var]` table, if any.
     fn project_var(&self) -> Option<&toml::Value> {
         self.project_config.as_ref().and_then(|c| c.var.as_ref())
+    }
+
+    /// Get the configured output directory, if any.
+    fn output_dir(&self) -> Option<&str> {
+        self.project_config.as_ref().and_then(|c| c.output.as_deref())
     }
 }
 
@@ -69,18 +77,21 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
     });
 
     // Target name: CLI flag -> front matter -> "html"
-    let target_name = if let Some(name) = cli_target {
-        name.to_string()
+    let (target_name, explicit_target) = if let Some(name) = cli_target {
+        (name.to_string(), true)
     } else {
         // Read front matter to check for target:
         if let Ok(text) = fs::read_to_string(input) {
             if let Ok((meta, _)) = parse::yaml::split_yaml(&text) {
-                meta.target.unwrap_or_else(|| "html".to_string())
+                match meta.target {
+                    Some(t) => (t, true),
+                    None => ("html".to_string(), false),
+                }
             } else {
-                "html".to_string()
+                ("html".to_string(), false)
             }
         } else {
-            "html".to_string()
+            ("html".to_string(), false)
         }
     };
 
@@ -91,6 +102,7 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
         project_config,
         target_name,
         target,
+        explicit_target,
     })
 }
 
@@ -220,6 +232,7 @@ fn render_one_with_context(
         Some(&ctx.target),
         ctx.project_root.as_deref(),
         ctx.project_var(),
+        if ctx.explicit_target { ctx.output_dir() } else { None },
     )?;
 
     renderer.write_output(&final_output, &output_path)?;
@@ -915,6 +928,7 @@ pub fn render_file(
     target: Option<&project::Target>,
     project_root: Option<&Path>,
     project_var: Option<&toml::Value>,
+    output_dir: Option<&str>,
 ) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
     // If we have a target, use its base as the format
     let resolved_format = if let Some(t) = target {
@@ -940,7 +954,7 @@ pub fn render_file(
         o.to_path_buf()
     } else if let (Some(_), Some(fmt)) = (target, format) {
         // Use target-aware output path when a target is specified
-        project::resolve_target_output_path(input, fmt, ext, project_root)
+        project::resolve_target_output_path(input, fmt, ext, project_root, output_dir)
     } else {
         input.with_extension(ext)
     };

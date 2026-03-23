@@ -126,6 +126,7 @@ fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, forma
                     html_attrs.push_str(&format!(" width=\"{}\"", crate::util::escape_html(w)));
                 } else {
                     styles.push(format!("width:{}", w));
+                    styles.push(format!("max-width:{}", w));
                 }
             }
             if let Some(ref h) = attrs.height {
