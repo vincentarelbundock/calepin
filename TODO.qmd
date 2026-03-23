@@ -165,6 +165,11 @@
 - [ ] ebook?
 
 
+## Markdown
+
+- [ ] footnotes should have hover in HTML
+
+
 ## Docs
 
 - [ ] HTML sales pitch: classless CSS, standalone files by default
@@ -187,6 +192,7 @@
     - [ ] homebrew
     - [ ] linux
     - [ ] windows
+- [ ] all variables should be underscore, never dash
 
 
 ## Preview
