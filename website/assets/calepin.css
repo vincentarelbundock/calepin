@@ -174,7 +174,7 @@ pre:has(> code.message) { border-left: 4px solid var(--c-note); }
 
 /* --- Figures --- */
 .figure { text-align: center; margin: 1.5rem 0; }
-.figure img { max-width: 60%; height: auto; }
+.figure img { max-width: 100%; height: auto; }
 .figure .caption { font-size: 0.9rem; color: var(--c-text-muted); margin-top: 0.5rem; }
 .figure.cap-top { display: flex; flex-direction: column-reverse; }
 .figure.cap-top .caption { margin-top: 0; margin-bottom: 0.5rem; }

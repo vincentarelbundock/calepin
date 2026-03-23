@@ -6,8 +6,7 @@ bibliography: ../../assets/library.bib
 Code chunks that produce plots automatically generate figures. Use `fig-cap` for a caption and a label in the chunk header for cross-referencing.
 
 ```{r, scatter}
-#| fig-width: 7
-#| fig-height: 5
+#| echo: fenced
 #| fig-cap: "A simple scatter plot"
 plot(
     1:10,
@@ -23,8 +22,7 @@ Figures with labels can be cross-referenced with `@fig-label`. See @fig-scatter 
 Any plotting library works — here is a ggplot2 example:
 
 ```{r, fig-ggplot}
-#| fig-width: 6
-#| fig-height: 4
+#| echo: fenced
 #| fig-cap: "Fuel efficiency by weight (ggplot2)"
 library(ggplot2)
 ggplot(mtcars, aes(wt, mpg, color = factor(cyl))) +
@@ -34,14 +32,42 @@ ggplot(mtcars, aes(wt, mpg, color = factor(cyl))) +
 ```
 
 
+# Consistent figure sizing
+
+In Quarto, figure appearance is governed by four parameters: `fig-width`, `fig-height`, `fig-asp`, and `out-width`. Unless users pick exactly the right combination, figures end up with inconsistent font sizes, axis labels, and line widths -- a narrow figure has tiny text while a wide figure has huge text, because the graphics device size changes but the display size does not (or vice versa).
+
+*Calepin* uses pragmatic defaults and adjusts some parameters automatically. In practice, we normally only need two options:
+
+| Option | Default | What it controls |
+|--------|---------|------------------|
+| `out-width` | `70%` | Horizontal space in the document |
+| `fig-asp` | `0.618` | Aspect ratio (golden ratio) |
+
+*Calepin* automatically scales the internal graphics device (`fig-width`) to match `out-width`, so text and labels inside figures stay the same size regardless of how wide the figure is displayed. This means a narrow figure and a wide figure will have consistent font sizes.
+
+**Want a wider figure?** Change `out-width`. **Want a taller figure?** Change `fig-asp`. That is all.
+
+```{r}
+#| fig-asp: 0.4
+#| out-width: "95%"
+#| fig-cap: "A wide, short figure"
+plot(1:20, sin(1:20), type = "l", col = "steelblue", lwd = 2)
+```
+
+The `fig-width` and `fig-height` options still exist for full manual control, but you rarely need them. When you set `fig-width` explicitly, auto-scaling is disabled.
+
+
 # Figure options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `fig-width` | 7 | Width in inches |
-| `fig-height` | 5 | Height in inches |
+| `out-width` | `70%` | Display width in the document |
+| `fig-asp` | `0.618` | Aspect ratio (height / width) |
+| `fig-width` | `6` | Graphics device width in inches (auto-scaled from `out-width`) |
+| `fig-height` | | Derived from `fig-width * fig-asp` |
 | `fig-cap` | | Caption text |
 | `fig-alt` | | Alt text for accessibility |
+| `fig-align` | `center` | Alignment (`left`, `center`, `right`) |
 | `dev` | `png` | Graphics device (`png`, `pdf`, `svg`) |
 
 
@@ -49,27 +75,33 @@ ggplot(mtcars, aes(wt, mpg, color = factor(cyl))) +
 
 Figures can be arranged in grids using `layout-ncol`. The following example places three plots side by side with individual subcaptions and an overall caption.
 
-::: {#fig-panels layout-ncol=3}
-
+::: {#fig-panels layout-ncol=3 fig-cap="Three growth patterns compared."}
 ```{r, line}
 #| echo: false
+#| out-width: "100%"
+#| fig-width: 3
+#| fig-height: 3
 #| fig-cap: "Linear"
 plot(1:10, 1:10, type = "l", col = "steelblue", lwd = 2)
 ```
 
 ```{r, quad}
 #| echo: false
+#| out-width: "100%"
+#| fig-width: 3
+#| fig-height: 3
 #| fig-cap: "Quadratic"
 plot(1:10, (1:10)^2, type = "l", col = "firebrick", lwd = 2)
 ```
 
 ```{r, log}
 #| echo: false
+#| out-width: "100%"
+#| fig-width: 3
+#| fig-height: 3
 #| fig-cap: "Logarithmic"
 plot(1:10, log(1:10), type = "l", col = "forestgreen", lwd = 2)
 ```
-
-Three growth patterns compared.
 :::
 
 See @fig-panels for the result. The `layout` attribute supports custom grids with relative widths (e.g., `layout="[[1,1],[1]]"`) and negative values for spacing gaps.

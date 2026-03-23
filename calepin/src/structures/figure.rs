@@ -14,7 +14,12 @@ pub fn render_div(
     render_element: &dyn Fn(&Element) -> String,
     _raw_fragments: &std::cell::RefCell<Vec<String>>,
 ) -> String {
-    let (content_children, caption) = separate_figure_caption(children);
+    // Caption: fig-cap attribute takes priority, then last text element in div
+    let (content_children, caption) = if let Some(cap) = attrs.get("fig-cap") {
+        (children.to_vec(), cap.clone())
+    } else {
+        separate_figure_caption(children)
+    };
 
     let content_rendered: String = content_children.iter()
         .map(render_element)

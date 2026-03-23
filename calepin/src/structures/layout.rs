@@ -19,7 +19,11 @@ pub fn render(
     let is_figure = id.as_ref().map_or(false, |id| id.starts_with("fig-"));
 
     let (content_children, caption) = if is_figure {
-        figure::separate_figure_caption(children)
+        if let Some(cap) = attrs.get("fig-cap") {
+            (children.to_vec(), cap.clone())
+        } else {
+            figure::separate_figure_caption(children)
+        }
     } else {
         (children.to_vec(), String::new())
     };

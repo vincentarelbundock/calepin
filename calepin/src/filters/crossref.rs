@@ -132,7 +132,7 @@ fn resolve_grouped_html(ids: &[String], db: &HashMap<String, String>) -> String 
             None => { warn_unresolved(id); format!("@{}", id) }
         }
     }).collect();
-    format!("[{}]", parts.join("; "))
+    format!("({})", parts.join("; "))
 }
 
 /// Resolve grouped refs for LaTeX: produces comma-separated hyperrefs.
@@ -145,7 +145,7 @@ fn resolve_grouped_latex(ids: &[String], db: &HashMap<String, String>) -> String
             None => format!("{} \\ref{{{}}}", label, id),
         }
     }).collect();
-    format!("[{}]", parts.join("; "))
+    format!("({})", parts.join("; "))
 }
 
 /// Resolve grouped refs for plain text (Typst/Markdown).
@@ -158,7 +158,7 @@ fn resolve_grouped_plain(ids: &[String], db: &HashMap<String, String>) -> String
             None => format!("@{}", id),
         }
     }).collect();
-    format!("[{}]", parts.join("; "))
+    format!("({})", parts.join("; "))
 }
 
 /// Post-process rendered HTML: resolve all cross-references (no pre-collected IDs).

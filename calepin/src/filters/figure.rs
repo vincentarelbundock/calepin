@@ -146,7 +146,7 @@ fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, forma
             let width_opt = if attrs.width.is_some() {
                 format_width(attrs, format)
             } else {
-                "width=0.60\\textwidth".to_string()
+                "width=0.70\\textwidth".to_string()
             };
             format!("\\includegraphics[{}]{{{}}}", width_opt, path.display())
         }
@@ -154,7 +154,7 @@ fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, forma
             let mut args = vec![format!("\"{}\"", path.display())];
             args.push(format!("width: {}", match &attrs.width {
                 Some(w) => typst_length(w),
-                None => "60%".to_string(),
+                None => "70%".to_string(),
             }));
             if let Some(ref h) = attrs.height {
                 args.push(format!("height: {}", typst_length(h)));

@@ -121,8 +121,53 @@ impl ChunkOptions {
         }
     }
     pub fn engine(&self) -> String { self.get_string("engine", "r") }
-    pub fn fig_width(&self) -> f64 { self.get_number("fig.width", 7.0) }
-    pub fn fig_height(&self) -> f64 { self.get_number("fig.height", 5.0) }
+
+    /// Default graphics device width in inches.
+    const DEFAULT_FIG_WIDTH: f64 = 6.0;
+    /// Default out-width as a fraction (70%).
+    const DEFAULT_OUT_WIDTH_FRAC: f64 = 0.70;
+    /// Default aspect ratio (golden ratio).
+    const DEFAULT_FIG_ASP: f64 = 0.618;
+
+    /// Graphics device width in inches.
+    /// When `out-width` is set but `fig-width` is not, auto-scales to keep
+    /// text size consistent: `default_fig_width * (out_width / default_out_width)`.
+    pub fn fig_width(&self) -> f64 {
+        if self.get_opt_string("fig.width").is_some() {
+            return self.get_number("fig.width", Self::DEFAULT_FIG_WIDTH);
+        }
+        // Auto-scale from out-width if set
+        if let Some(frac) = self.out_width_fraction() {
+            return Self::DEFAULT_FIG_WIDTH * (frac / Self::DEFAULT_OUT_WIDTH_FRAC);
+        }
+        Self::DEFAULT_FIG_WIDTH
+    }
+
+    /// Graphics device height in inches.
+    /// Derived from `fig-width * fig-asp` unless explicitly set.
+    pub fn fig_height(&self) -> f64 {
+        if self.get_opt_string("fig.height").is_some() {
+            return self.get_number("fig.height", Self::DEFAULT_FIG_WIDTH * Self::DEFAULT_FIG_ASP);
+        }
+        self.fig_width() * self.fig_asp()
+    }
+
+    /// Aspect ratio (height / width). Defaults to golden ratio.
+    pub fn fig_asp(&self) -> f64 {
+        self.get_number("fig.asp", Self::DEFAULT_FIG_ASP)
+    }
+
+    /// Parse out-width as a fraction (e.g., "70%" -> 0.70, "0.5" -> 0.5).
+    /// Returns None if out-width is not set or not a percentage/fraction.
+    fn out_width_fraction(&self) -> Option<f64> {
+        let s = self.get_opt_string("out.width")?;
+        if let Some(pct) = s.strip_suffix('%') {
+            pct.trim().parse::<f64>().ok().map(|v| v / 100.0)
+        } else {
+            let v = s.trim().parse::<f64>().ok()?;
+            if v > 0.0 && v <= 1.0 { Some(v) } else { None }
+        }
+    }
     pub fn fig_cap(&self) -> Option<String> { self.get_opt_string("fig.cap") }
     pub fn tbl_cap(&self) -> Option<String> { self.get_opt_string("tbl.cap") }
     pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig.alt") }
@@ -139,7 +184,7 @@ impl ChunkOptions {
     /// Build figure rendering attributes from chunk options.
     pub fn to_figure_attrs(&self) -> FigureAttrs {
         FigureAttrs {
-            width: self.out_width(),
+            width: self.out_width().or_else(|| Some("70%".to_string())),
             height: self.out_height(),
             fig_align: self.fig_align(),
             fig_scap: self.fig_scap(),

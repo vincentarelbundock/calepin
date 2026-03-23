@@ -45,22 +45,12 @@ I want each format to be a separate plugin. That will force me to design a good 
 ## Engines
 
 - [ ] docx should be more powerful and maybe not go through pandoc.
-- [x] sh engine
-- [x] Create an engines module to split code execution by language
-- [x] Re-use key building blocks across languages languages
-- [x] Python support
-- [x] --preview
 
 ## Misc
 
-- [ ] What is the point of _brand.yml if we already have YAML? Still support it, though.
 - [ ] $ handling. Quarto does not require escape, IIRC.
     - Do NOT do this. I think we should stay strict and document it.
 - [x] Table of contents
-
-## Figures
-
-- [ ] Default out-width for figures and diagrams (see tikz in diagrams.qmd in particular). Look at my golden ratio post.
 
 ## Execution
 
@@ -87,6 +77,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] tinytable
 - [ ] modelsummary
 - [ ] marginaleffects
+- [ ] TODO calepin preview on a website should watch all the .qmd files in the directory. Is that expensive?
 
 ## HTML
 
@@ -107,18 +98,10 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] PDF page geometry options (`geometry:` front matter)
 - [ ] Screen inset shaded (`column: screen-inset-shaded`)
 
-## Conditional Content
-
-- [x] `.content-visible` / `.content-hidden` with `when-format` / `unless-format`
-- [x] `when-meta` / `unless-meta` (match against boolean metadata values with dot notation)
-
 ## Cross-References
 
-- [x] Basic cross-refs: `@fig:`, `@sec:`, `@thm:` etc.
 - [ ] Custom cross-reference types
-- [x] Grouped references (`[@fig-one; @fig-two]` → "Figure 1; Figure 2")
 - [ ] Code listing cross-references (`#lst-` prefix)
-- [x] Equation numbering and cross-references (`$$ ... $$ {#eq-label}`, `@eq-label`)
 - [ ] Callout cross-references
 - [ ] Custom numbered float types
 

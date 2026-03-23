@@ -37,6 +37,9 @@ Three citation forms are supported:
 | `@key` | Author et al. (Year) | Narrative citation |
 | `[@key]` | (Author et al. Year) | Parenthetical citation |
 | `[-@key]` | Year | Suppress author, year only |
+| `[@key1; @key2]` | (Author1 Year1; Author2 Year2) | Grouped citations |
+
+Grouped references also work for cross-references: `[@fig-one; @fig-two]` produces linked references like [@fig-one; @fig-two].
 
 These are compatible with Quarto and Pandoc syntax.
 
@@ -51,7 +54,22 @@ By default, *Calepin* uses an author-year style. To customize citation formattin
 
 CSL files for most major journals are available from the [CSL repository](https://github.com/citation-style-language/styles).
 
-
 # References section
 
 When a document contains at least one resolved citation, *Calepin* appends a **References** section at the end of the output automatically. Unresolved keys (those not found in any `.bib` file) are left as-is.
+
+
+Two dummy figures so we can demonstrate cross-references:
+
+::: {#fig-one}
+{{ placeholder(width=100, height=100) }}
+
+First figure
+:::
+
+::: {#fig-two}
+{{ placeholder(width=100, height=100) }}
+
+Second figure
+:::
+
