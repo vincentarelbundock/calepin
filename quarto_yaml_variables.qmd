@@ -1,0 +1,1254 @@
+---
+title: "Exhaustive List of Quarto YAML Variables"
+date: 2026-03-23
+format: html
+toc: true
+toc-depth: 3
+number-sections: true
+---
+
+## Document Metadata (All Formats)
+
+| Variable | Description |
+|---|---|
+| `title` | Document title |
+| `subtitle` | Document subtitle |
+| `date` | Document date |
+| `date-format` | Date display format |
+| `date-modified` | Last modified date (HTML) |
+| `author` | Author name(s) |
+| `institute` | Author affiliation (Beamer/Revealjs) |
+| `abstract` | Document abstract |
+| `abstract-title` | Title for abstract section |
+| `thanks` | Acknowledgments (PDF/Beamer) |
+| `doi` | Digital Object Identifier |
+| `order` | Sort order for navigation |
+| `keywords` | Document keywords |
+| `subject` | Document subject metadata |
+| `description` | Document description |
+| `description-meta` | HTML meta description |
+| `category` | Document categories |
+| `copyright` | Copyright info |
+| `license` | License info |
+| `pagetitle` | Browser tab title (HTML) |
+| `title-prefix` | Title prefix (HTML) |
+| `author-meta` | HTML meta author |
+| `date-meta` | HTML meta date |
+| `title-meta` | PDF meta title |
+
+## Format Selection & Engine
+
+| Variable | Description |
+|---|---|
+| `format` | Output format(s) (html, pdf, docx, etc.) |
+| `from` | Input format (markdown variant) |
+| `output-file` | Output filename |
+| `output-ext` | Output file extension |
+| `brand` | Brand YAML file reference |
+| `brand-mode` | Brand application mode |
+| `quarto-required` | Minimum Quarto version |
+
+## Table of Contents
+
+| Variable | Description |
+|---|---|
+| `toc` | Enable table of contents |
+| `toc-depth` | Heading depth for TOC |
+| `toc-title` | TOC title text |
+| `toc-location` | TOC placement (HTML: left/right/body) |
+| `toc-expand` | Expand depth in sidebar TOC (HTML) |
+| `toc-indent` | TOC indentation (Typst) |
+| `lof` | List of figures (PDF/Beamer) |
+| `lot` | List of tables (PDF/Beamer) |
+
+## Section Numbering
+
+| Variable | Description |
+|---|---|
+| `number-sections` | Enable section numbering |
+| `number-depth` | Depth of numbered sections |
+| `number-offset` | Starting offset for numbering |
+| `shift-heading-level-by` | Shift heading levels |
+| `top-level-division` | Top division type (PDF): chapter/section/part |
+| `section-numbering` | Numbering pattern (Typst) |
+| `page-numbering` | Page number format (Typst) |
+
+## Fonts & Typography
+
+| Variable | Description |
+|---|---|
+| `mainfont` | Main body font |
+| `sansfont` | Sans-serif font (PDF) |
+| `monofont` | Monospace font |
+| `mathfont` | Math font (PDF) |
+| `fontsize` | Base font size |
+| `fontenc` | Font encoding (PDF) |
+| `fontfamily` | LaTeX font family (PDF) |
+| `fontfamilyoptions` | Font family options (PDF) |
+| `mainfontoptions` | Main font options (PDF) |
+| `sansfontoptions` | Sans font options (PDF) |
+| `monofontoptions` | Mono font options (PDF) |
+| `mathfontoptions` | Math font options (PDF) |
+| `CJKmainfont` | CJK main font (PDF) |
+| `CJKoptions` | CJK font options (PDF) |
+| `microtypeoptions` | Microtype options (PDF) |
+| `linestretch` | Line spacing multiplier |
+| `font-paths` | Font search paths (Typst) |
+
+## Colors
+
+| Variable | Description |
+|---|---|
+| `fontcolor` | Text color (HTML) |
+| `linkcolor` | Link color |
+| `filecolor` | File link color (PDF) |
+| `citecolor` | Citation link color (PDF) |
+| `urlcolor` | URL color (PDF) |
+| `toccolor` | TOC link color (PDF) |
+| `colorlinks` | Enable colored links (PDF) |
+| `monobackgroundcolor` | Code background color (HTML) |
+| `backgroundcolor` | Page background color (HTML) |
+
+## Page Layout
+
+| Variable | Description |
+|---|---|
+| `page-layout` | Page layout mode (HTML: article/full/custom) |
+| `grid` | Grid column widths |
+| `documentclass` | LaTeX document class (PDF) |
+| `classoption` | Document class options |
+| `pagestyle` | LaTeX page style (PDF) |
+| `papersize` | Paper size (PDF/Typst) |
+| `geometry` | Page geometry (PDF) |
+| `margin-left` | Left margin |
+| `margin-right` | Right margin |
+| `margin-top` | Top margin |
+| `margin-bottom` | Bottom margin |
+| `margin` | All margins (Revealjs/Typst) |
+| `max-width` | Maximum content width (HTML) |
+| `page-width` | Page width (DOCX/ODT) |
+| `hyperrefoptions` | Hyperref package options (PDF) |
+| `indent` | Enable paragraph indentation (PDF) |
+| `block-headings` | Block-level headings (PDF) |
+| `cap-location` | Caption location (top/bottom/margin) |
+| `fig-cap-location` | Figure caption location |
+| `tbl-cap-location` | Table caption location |
+
+## HTML-Specific Layout & Appearance
+
+| Variable | Description |
+|---|---|
+| `theme` | Bootstrap theme (HTML/Revealjs/Dashboard) |
+| `css` | Custom CSS files |
+| `body-classes` | Additional body CSS classes |
+| `minimal` | Minimal HTML output |
+| `anchor-sections` | Enable anchor links on headings |
+| `tabsets` | Enable tabsets |
+| `smooth-scroll` | Enable smooth scrolling |
+| `respect-user-color-scheme` | Honor system dark/light preference |
+| `section-divs` | Wrap sections in div tags |
+| `html-q-tags` | Use `<q>` tags for quotes |
+| `html-math-method` | Math rendering method (mathjax/katex/etc.) |
+| `embed-resources` | Embed all resources in HTML |
+| `self-contained-math` | Self-contained math resources |
+| `appendix-style` | Appendix display style |
+| `appendix-cite-as` | Citation format in appendix |
+| `title-block-style` | Title block display style |
+| `title-block-banner` | Title block banner image/color |
+| `title-block-banner-color` | Banner text color |
+| `title-block-categories` | Show categories in title block |
+| `image-lazy-loading` | Lazy-load images |
+
+## Code Display
+
+| Variable | Description |
+|---|---|
+| `code-fold` | Collapse code blocks (HTML) |
+| `code-summary` | Summary text for folded code |
+| `code-overflow` | Code overflow behavior (scroll/wrap) |
+| `code-line-numbers` | Show line numbers |
+| `code-copy` | Show copy button (HTML) |
+| `code-link` | Link function names to docs (HTML) |
+| `code-annotations` | Code annotation style |
+| `code-tools` | Show code tools menu (HTML) |
+| `code-block-border-left` | Left border on code blocks |
+| `code-block-bg` | Code block background |
+| `code-block-height` | Max code block height (Revealjs) |
+| `highlight-style` | Syntax highlighting theme |
+| `syntax-definitions` | Custom syntax definition files |
+| `indented-code-classes` | Classes for indented code blocks |
+| `listings` | Use LaTeX listings package (PDF) |
+
+## Execution Options
+
+| Variable | Description |
+|---|---|
+| `eval` | Evaluate code chunks |
+| `echo` | Display code in output |
+| `output` | Include code output |
+| `warning` | Include warnings |
+| `error` | Include errors |
+| `include` | Include chunk in output |
+| `cache` | Cache results |
+| `freeze` | Freeze computational output |
+
+## Figures
+
+| Variable | Description |
+|---|---|
+| `fig-align` | Figure alignment |
+| `fig-width` | Default figure width |
+| `fig-height` | Default figure height |
+| `fig-format` | Figure output format (png/svg/pdf/etc.) |
+| `fig-dpi` | Figure DPI resolution |
+| `fig-asp` | Figure aspect ratio |
+| `fig-responsive` | Responsive figures (HTML) |
+| `fig-env` | LaTeX figure environment (PDF) |
+| `fig-pos` | LaTeX figure position (PDF) |
+| `lightbox` | Enable lightbox for images (HTML) |
+
+## Tables
+
+| Variable | Description |
+|---|---|
+| `tbl-colwidths` | Table column widths |
+| `df-print` | Data frame print method (default/kable/tibble/paged) |
+| `html-table-processing` | HTML table processing mode |
+
+## Links
+
+| Variable | Description |
+|---|---|
+| `link-external-icon` | Show icon for external links (HTML) |
+| `link-external-newwindow` | Open external links in new window (HTML) |
+| `link-external-filter` | Regex filter for external links (HTML) |
+| `format-links` | Show links to other formats (HTML) |
+| `notebook-links` | Notebook download links (HTML) |
+| `other-links` | Custom sidebar links (HTML) |
+| `code-links` | Code download links (HTML) |
+| `notebook-view` | Notebook view configuration (HTML) |
+| `notebook-preview-options` | Notebook preview options (HTML) |
+| `canonical-url` | Canonical URL (HTML) |
+| `notebook-subarticles` | Notebook sub-articles (JATS) |
+
+## References & Bibliography
+
+| Variable | Description |
+|---|---|
+| `bibliography` | Bibliography file(s) |
+| `csl` | CSL style file |
+| `citeproc` | Enable citeproc processing |
+| `cite-method` | Citation method (PDF: citeproc/natbib/biblatex) |
+| `citation-abbreviations` | Journal abbreviations file |
+| `citation-location` | Citation placement (HTML) |
+| `citations-hover` | Hover preview for citations (HTML) |
+| `link-citations` | Link citations to bibliography |
+| `link-bibliography` | Link bibliography entries to citations |
+| `notes-after-punctuation` | Move notes after punctuation |
+| `biblatexoptions` | Biblatex options (PDF) |
+| `natbiboptions` | Natbib options (PDF) |
+| `biblio-style` | Bibliography style (PDF) |
+| `biblio-title` | Bibliography section title (PDF) |
+| `biblio-config` | Bibliography config (PDF) |
+| `bibliographystyle` | Bibliography style (Typst) |
+
+## Footnotes
+
+| Variable | Description |
+|---|---|
+| `footnotes-hover` | Hover preview for footnotes (HTML) |
+| `reference-location` | Footnote/reference placement |
+| `links-as-notes` | Render links as footnotes (PDF) |
+
+## Cross-References (`crossref`)
+
+| Variable | Description |
+|---|---|
+| `crossref` | Cross-reference options (parent key) |
+| `crossrefs-hover` | Hover preview for cross-refs (HTML) |
+| `chapters` | Chapter-based numbering |
+| `custom` | Custom cross-reference types |
+| `title-delim` | Title delimiter |
+| `labels` | Default label style (arabic/roman/alpha) |
+| `subref-labels` | Sub-reference label style |
+| `ref-hyperlink` | Hyperlink cross-references |
+| `appendix-title` | Appendix title |
+| `appendix-delim` | Appendix delimiter |
+| `fig-title` | Figure title prefix |
+| `tbl-title` | Table title prefix |
+| `eq-title` | Equation title prefix |
+| `lst-title` | Listing title prefix |
+| `thm-title` | Theorem title prefix |
+| `lem-title` | Lemma title prefix |
+| `cor-title` | Corollary title prefix |
+| `prp-title` | Proposition title prefix |
+| `cnj-title` | Conjecture title prefix |
+| `def-title` | Definition title prefix |
+| `exm-title` | Example title prefix |
+| `exr-title` | Exercise title prefix |
+| `fig-prefix` | Figure reference prefix |
+| `tbl-prefix` | Table reference prefix |
+| `eq-prefix` | Equation reference prefix |
+| `sec-prefix` | Section reference prefix |
+| `lst-prefix` | Listing reference prefix |
+| `thm-prefix` | Theorem reference prefix |
+| `lem-prefix` | Lemma reference prefix |
+| `cor-prefix` | Corollary reference prefix |
+| `prp-prefix` | Proposition reference prefix |
+| `cnj-prefix` | Conjecture reference prefix |
+| `def-prefix` | Definition reference prefix |
+| `exm-prefix` | Example reference prefix |
+| `exr-prefix` | Exercise reference prefix |
+| `fig-labels` | Figure label style |
+| `tbl-labels` | Table label style |
+| `eq-labels` | Equation label style |
+| `sec-labels` | Section label style |
+| `lst-labels` | Listing label style |
+| `thm-labels` | Theorem label style |
+| `lem-labels` | Lemma label style |
+| `cor-labels` | Corollary label style |
+| `prp-labels` | Proposition label style |
+| `cnj-labels` | Conjecture label style |
+| `def-labels` | Definition label style |
+| `exm-labels` | Example label style |
+| `exr-labels` | Exercise label style |
+| `lof-title` | List of figures title |
+| `lot-title` | List of tables title |
+| `lol-title` | List of listings title |
+
+### Custom Cross-Reference Type
+
+| Variable | Description |
+|---|---|
+| `kind` | float or non-float |
+| `reference-prefix` | Prefix in references |
+| `caption-prefix` | Prefix in captions |
+| `space-before-numbering` | Space before number |
+| `key` | Short key identifier |
+| `latex-env` | LaTeX environment name |
+| `latex-list-of-file-extension` | LaTeX list-of extension |
+| `latex-list-of-description` | LaTeX list-of description |
+| `caption-location` | Caption position |
+
+## Citation Metadata (`citation`)
+
+| Variable | Description |
+|---|---|
+| `citation` | Citation metadata (parent key) |
+| `id` | Citation ID |
+| `type` | Citation type |
+| `url` | Citation URL |
+| `title` | Citation title |
+| `author` | Citation author(s) |
+| `doi` | Citation DOI |
+| `issued` | Issue date |
+| `abstract` | Citable abstract |
+| `abstract-url` | Abstract URL |
+| `accessed` | Date accessed |
+| `annote` | Annotation |
+| `archive` | Archive name |
+| `archive-collection` | Archive collection |
+| `archive-location` | Archive location |
+| `archive-place` | Archive place |
+| `authority` | Authority |
+| `available-date` | Availability date |
+| `call-number` | Call number |
+| `chair` | Chair |
+| `chapter-number` | Chapter number |
+| `citation-key` | Citation key |
+| `citation-label` | Citation label |
+| `collection-editor` | Collection editor |
+| `collection-number` | Collection number |
+| `collection-title` | Collection title |
+| `compiler` | Compiler |
+| `composer` | Composer |
+| `container-author` | Container author |
+| `container-title` | Container title |
+| `contributor` | Contributor |
+| `curator` | Curator |
+| `dimensions` | Dimensions |
+| `director` | Director |
+| `division` | Division |
+| `edition` | Edition |
+| `editor` | Editor |
+| `editorial-director` | Editorial director |
+| `editor-translator` | Editor-translator |
+| `event-date` | Event date |
+| `event-title` | Event title |
+| `event-place` | Event place |
+| `executive-producer` | Executive producer |
+| `fulltext-url` | Full text URL |
+| `genre` | Genre |
+| `guest` | Guest |
+| `host` | Host |
+| `illustrator` | Illustrator |
+| `interviewer` | Interviewer |
+| `isbn` | ISBN |
+| `issn` | ISSN |
+| `issue` | Issue number |
+| `jurisdiction` | Jurisdiction |
+| `keyword` | Keyword |
+| `language` | Language |
+| `license` | License |
+| `locator` | Locator |
+| `medium` | Medium |
+| `narrator` | Narrator |
+| `note` | Note |
+| `number` | Number |
+| `number-of-pages` | Number of pages |
+| `number-of-volumes` | Number of volumes |
+| `organizer` | Organizer |
+| `original-author` | Original author |
+| `original-date` | Original date |
+| `original-publisher` | Original publisher |
+| `original-publisher-place` | Original publisher place |
+| `original-title` | Original title |
+| `page` | Page range |
+| `page-first` | First page |
+| `page-last` | Last page |
+| `part-number` | Part number |
+| `part-title` | Part title |
+| `pdf-url` | PDF URL |
+| `performer` | Performer |
+| `pmcid` | PubMed Central ID |
+| `pmid` | PubMed ID |
+| `printing-number` | Printing number |
+| `producer` | Producer |
+| `public-url` | Public URL |
+| `publisher` | Publisher |
+| `publisher-place` | Publisher place |
+| `recipient` | Recipient |
+| `reviewed-author` | Reviewed author |
+| `reviewed-genre` | Reviewed genre |
+| `reviewed-title` | Reviewed title |
+| `scale` | Scale |
+| `script-writer` | Script writer |
+| `section` | Section |
+| `series-creator` | Series creator |
+| `source` | Source |
+| `status` | Status |
+| `submitted` | Date submitted |
+| `supplement-number` | Supplement number |
+| `translator` | Translator |
+| `version` | Version |
+| `volume` | Volume |
+| `volume-title` | Volume title |
+| `year-suffix` | Year suffix |
+
+## Language & Localization
+
+| Variable | Description |
+|---|---|
+| `lang` | Document language (BCP 47) |
+| `language` | Custom language translations file |
+| `dir` | Text direction (ltr/rtl) |
+
+## Includes & Resources
+
+| Variable | Description |
+|---|---|
+| `include-before-body` | Content before body |
+| `include-after-body` | Content after body |
+| `include-in-header` | Content in header |
+| `resources` | Additional resource files |
+| `metadata-files` | Additional metadata YAML files |
+| `template` | Custom Pandoc template |
+| `template-partials` | Template partial overrides |
+
+## Rendering & Processing
+
+| Variable | Description |
+|---|---|
+| `filters` | Pandoc/Lua filters |
+| `shortcodes` | Shortcode extensions |
+| `keep-md` | Keep intermediate markdown |
+| `keep-ipynb` | Keep intermediate notebook |
+| `keep-tex` | Keep intermediate LaTeX (PDF) |
+| `keep-typ` | Keep intermediate Typst source |
+| `ipynb-filters` | Notebook filters |
+| `ipynb-shell-interactivity` | IPython shell interactivity |
+| `plotly-connected` | Use connected Plotly.js |
+| `extract-media` | Extract media directory |
+| `resource-path` | Resource search path |
+| `default-image-extension` | Default image file extension |
+| `abbreviations` | Abbreviation definitions |
+| `dpi` | Default DPI |
+| `identifier-prefix` | ID prefix for elements |
+| `email-obfuscation` | Email obfuscation method |
+| `html-pre-tag-processing` | HTML pre tag processing (Typst) |
+| `css-property-processing` | CSS property processing (Typst) |
+| `use-rsvg-convert` | Use rsvg-convert for SVGs (PDF) |
+
+## PDF/LaTeX-Specific
+
+### PDF Engine
+
+| Variable | Description |
+|---|---|
+| `pdf-engine` | LaTeX engine (pdflatex/xelatex/lualatex/tectonic) |
+| `pdf-engine-opt` | Single engine option |
+| `pdf-engine-opts` | Multiple engine options |
+
+### Latexmk Options
+
+| Variable | Description |
+|---|---|
+| `latex-auto-mk` | Auto-run latexmk |
+| `latex-auto-install` | Auto-install missing packages |
+| `latex-min-runs` | Minimum LaTeX runs |
+| `latex-max-runs` | Maximum LaTeX runs |
+| `latex-clean` | Clean auxiliary files |
+| `latex-makeindex` | Makeindex program |
+| `latex-makeindex-opts` | Makeindex options |
+| `latex-tlmgr-opts` | tlmgr options |
+| `latex-output-dir` | LaTeX output directory |
+| `latex-tinytex` | Use TinyTeX |
+| `latex-input-paths` | Additional TeX input paths |
+| `beamerarticle` | Beamer article mode |
+
+## Reveal.js Presentation-Specific
+
+### Slides
+
+| Variable | Description |
+|---|---|
+| `incremental` | Incremental bullet points |
+| `slide-level` | Heading level for slides |
+| `slide-number` | Slide number format |
+| `show-slide-number` | When to show slide numbers |
+| `title-slide-attributes` | Title slide HTML attributes |
+| `title-slide-style` | Title slide style |
+| `center-title-slide` | Center title slide content |
+| `show-notes` | Show speaker notes |
+| `rtl` | Right-to-left mode |
+
+### Slide Content
+
+| Variable | Description |
+|---|---|
+| `logo` | Slide logo image |
+| `footer` | Slide footer text |
+| `scrollable` | Enable scrolling |
+| `smaller` | Smaller text |
+| `output-location` | Output placement |
+
+### Slide Tools
+
+| Variable | Description |
+|---|---|
+| `overview` | Enable overview mode |
+| `menu` | Enable menu plugin |
+| `chalkboard` | Enable chalkboard plugin |
+| `multiplex` | Enable multiplex plugin |
+| `scroll-view` | Enable scroll view |
+
+### Transitions
+
+| Variable | Description |
+|---|---|
+| `transition` | Slide transition style |
+| `transition-speed` | Transition speed |
+| `background-transition` | Background transition |
+| `fragments` | Enable fragments |
+| `auto-animate` | Auto-animate between slides |
+| `auto-animate-easing` | Animation easing |
+| `auto-animate-duration` | Animation duration |
+| `auto-animate-unmatched` | Animate unmatched elements |
+| `auto-animate-styles` | CSS properties to animate |
+
+### Navigation
+
+| Variable | Description |
+|---|---|
+| `progress` | Show progress bar |
+| `history` | Push slide changes to browser history |
+| `navigation-mode` | Navigation mode (default/linear/grid) |
+| `touch` | Enable touch navigation |
+| `keyboard` | Enable keyboard shortcuts |
+| `mouse-wheel` | Enable mouse wheel navigation |
+| `hide-inactive-cursor` | Hide cursor when inactive |
+| `hide-cursor-time` | Time before cursor hides |
+| `loop` | Loop presentation |
+| `shuffle` | Randomize slide order |
+| `controls` | Show navigation controls |
+| `controls-layout` | Controls position |
+| `controls-tutorial` | Show controls tutorial |
+| `controls-back-arrows` | Back arrow visibility |
+| `auto-slide` | Auto-advance interval (ms) |
+| `auto-slide-stoppable` | Allow stopping auto-slide |
+| `auto-slide-method` | Auto-slide method |
+| `default-timing` | Default timing per slide |
+| `pause` | Enable pause key |
+| `help` | Enable help overlay |
+| `hash` | Enable URL hashing |
+| `hash-type` | Hash type (number/title) |
+| `hash-one-based-index` | One-based hash index |
+| `respond-to-hash-changes` | Respond to URL hash changes |
+| `fragment-in-url` | Include fragments in URL |
+| `slide-tone` | Audio tone on slide change |
+| `jump-to-slide` | Enable jump-to-slide |
+
+### Media
+
+| Variable | Description |
+|---|---|
+| `preview-links` | Preview links in iframe |
+| `auto-play-media` | Auto-play media |
+| `preload-iframes` | Preload iframes |
+| `view-distance` | Preload distance |
+| `mobile-view-distance` | Mobile preload distance |
+| `parallax-background-image` | Parallax background image |
+| `parallax-background-size` | Parallax background size |
+| `parallax-background-horizontal` | Horizontal parallax pixels |
+| `parallax-background-vertical` | Vertical parallax pixels |
+
+### Print to PDF
+
+| Variable | Description |
+|---|---|
+| `pdf-max-pages-per-slide` | Max pages per slide |
+| `pdf-separate-fragments` | Separate fragments to pages |
+| `pdf-page-height-offset` | Page height offset |
+
+### Slide Layout
+
+| Variable | Description |
+|---|---|
+| `auto-stretch` | Auto-stretch images |
+| `width` | Slide width |
+| `height` | Slide height |
+| `min-scale` | Minimum scale |
+| `max-scale` | Maximum scale |
+| `center` | Center slide content |
+| `disable-layout` | Disable layout engine |
+| `revealjs-url` | Custom Reveal.js library URL |
+
+## Beamer Presentation-Specific
+
+| Variable | Description |
+|---|---|
+| `theme` | Beamer theme |
+| `colortheme` | Color theme |
+| `colorthemeoptions` | Color theme options |
+| `fonttheme` | Font theme |
+| `fontthemeoptions` | Font theme options |
+| `innertheme` | Inner theme |
+| `innerthemeoptions` | Inner theme options |
+| `outertheme` | Outer theme |
+| `outerthemeoptions` | Outer theme options |
+| `themeoptions` | General theme options |
+| `beameroption` | Beamer options |
+| `aspectratio` | Aspect ratio |
+| `logo` | Logo image |
+| `titlegraphic` | Title graphic |
+| `navigation` | Navigation symbols |
+| `section-titles` | Section title slides |
+
+## Dashboard-Specific
+
+| Variable | Description |
+|---|---|
+| `logo` | Dashboard logo |
+| `orientation` | Layout direction (rows/columns) |
+| `scrolling` | Enable scrolling |
+| `expandable` | Cards expandable to full-screen |
+| `nav-buttons` | Navigation buttons |
+
+## ePub-Specific
+
+| Variable | Description |
+|---|---|
+| `identifier` | Publication identifier |
+| `creator` | Creator metadata |
+| `contributor` | Contributor metadata |
+| `subject` | Subject metadata |
+| `type` | Publication type |
+| `format` | ePub format |
+| `relation` | Related works |
+| `coverage` | Coverage scope |
+| `rights` | Rights statement |
+| `belongs-to-collection` | Collection membership |
+| `group-position` | Position in collection |
+| `page-progression-direction` | Page direction (ltr/rtl) |
+| `ibooks` | iBooks-specific metadata |
+| `epub-metadata` | Additional ePub metadata file |
+| `epub-subdirectory` | Content subdirectory |
+| `epub-fonts` | Embedded fonts |
+| `epub-chapter-level` | Chapter split level |
+| `epub-cover-image` | Cover image |
+| `epub-title-page` | Include title page |
+| `split-level` | Section split level |
+
+## DOCX/ODT/PPTX-Specific
+
+| Variable | Description |
+|---|---|
+| `reference-doc` | Reference document template |
+
+## JATS-Specific
+
+| Variable | Description |
+|---|---|
+| `affiliation` | Author affiliations |
+| `article` | Article metadata |
+| `journal` | Journal metadata |
+| `notes` | Article notes |
+| `tags` | Article tags |
+| `preview-mode` | Preview rendering mode |
+
+## Text Output Options (Markdown/Plain Formats)
+
+| Variable | Description |
+|---|---|
+| `wrap` | Line wrapping mode (auto/none/preserve) |
+| `columns` | Column width for wrapping |
+| `tab-stop` | Tab stop width |
+| `preserve-tabs` | Preserve tab characters |
+| `eol` | End-of-line character |
+| `strip-comments` | Strip HTML comments |
+| `ascii` | ASCII-only output |
+| `variant` | Markdown variant |
+| `markdown-headings` | Heading style (atx/setext) |
+
+## Project Configuration (`_quarto.yml` --- `project`)
+
+| Variable | Description |
+|---|---|
+| `project.title` | Project title |
+| `project.type` | Project type (website/book/manuscript/default) |
+| `project.render` | Files to render |
+| `project.execute-dir` | Execution working directory |
+| `project.output-dir` | Output directory |
+| `project.lib-dir` | Library directory |
+| `project.resources` | Additional resources |
+| `project.brand` | Project-level brand |
+| `project.pre-render` | Pre-render scripts |
+| `project.post-render` | Post-render scripts |
+
+### Preview (`project.preview`)
+
+| Variable | Description |
+|---|---|
+| `port` | Preview server port |
+| `host` | Preview server host |
+| `browser` | Open browser on preview |
+| `watch-inputs` | Watch input files |
+| `navigate` | Auto-navigate on render |
+| `timeout` | Preview timeout |
+
+### Serve (`project.preview.serve`)
+
+| Variable | Description |
+|---|---|
+| `cmd` | Server command |
+| `args` | Server arguments |
+| `env` | Environment variables |
+| `ready` | Ready signal pattern |
+
+## Website Configuration (`website`)
+
+| Variable | Description |
+|---|---|
+| `website.title` | Site title |
+| `website.description` | Site description |
+| `website.favicon` | Favicon path |
+| `website.site-url` | Base URL |
+| `website.site-path` | Base path |
+| `website.repo-url` | Source repo URL |
+| `website.repo-link-target` | Repo link target |
+| `website.repo-link-rel` | Repo link rel attribute |
+| `website.repo-subdir` | Repo subdirectory |
+| `website.repo-branch` | Repo branch name |
+| `website.issue-url` | Issue tracker URL |
+| `website.repo-actions` | Repo action links (edit/source/issue) |
+| `website.reader-mode` | Enable reader mode |
+| `website.google-analytics` | GA tracking ID |
+| `website.image` | Default social image |
+| `website.image-alt` | Default social image alt |
+| `website.page-navigation` | Enable prev/next navigation |
+| `website.back-to-top-navigation` | Back-to-top button |
+| `website.bread-crumbs` | Enable breadcrumbs |
+| `website.body-header` | Body header content |
+| `website.body-footer` | Body footer content |
+| `website.margin-header` | Margin header content |
+| `website.margin-footer` | Margin footer content |
+| `website.drafts` | Draft documents list |
+| `website.draft-mode` | How to handle drafts |
+
+### Announcement (`website.announcement`)
+
+| Variable | Description |
+|---|---|
+| `content` | Announcement text |
+| `dismissable` | Can be dismissed |
+| `icon` | Icon |
+| `position` | Position (above-navbar/below-navbar) |
+| `type` | Style type |
+
+### Navbar (`website.navbar`)
+
+| Variable | Description |
+|---|---|
+| `title` | Navbar title |
+| `logo` | Logo image |
+| `logo-alt` | Logo alt text |
+| `logo-href` | Logo link URL |
+| `background` | Navbar background color |
+| `foreground` | Navbar foreground color |
+| `search` | Show search |
+| `pinned` | Pin to top |
+| `collapse` | Enable collapse on mobile |
+| `collapse-below` | Collapse breakpoint |
+| `left` | Left-aligned nav items |
+| `right` | Right-aligned nav items |
+| `toggle-position` | Mobile toggle position |
+| `tools-collapse` | Collapse tools on mobile |
+
+### Nav Items
+
+| Variable | Description |
+|---|---|
+| `text` | Display text |
+| `href` | Link URL |
+| `icon` | Bootstrap icon |
+| `menu` | Dropdown menu items |
+| `aria-label` | Accessibility label |
+| `rel` | Link rel attribute |
+| `target` | Link target attribute |
+
+### Sidebar (`website.sidebar`)
+
+| Variable | Description |
+|---|---|
+| `id` | Sidebar identifier |
+| `title` | Sidebar title |
+| `logo` | Logo image |
+| `logo-alt` | Logo alt text |
+| `logo-href` | Logo link URL |
+| `search` | Show search |
+| `tools` | Sidebar tools |
+| `contents` | Navigation items |
+| `style` | Style (docked/floating) |
+| `background` | Background color |
+| `foreground` | Foreground color |
+| `border` | Show border |
+| `alignment` | Content alignment |
+| `collapse-level` | Auto-collapse depth |
+| `pinned` | Pin sidebar |
+| `header` | Header content |
+| `footer` | Footer content |
+
+### Page Footer (`website.page-footer`)
+
+| Variable | Description |
+|---|---|
+| `left` | Left content |
+| `right` | Right content |
+| `center` | Center content |
+| `border` | Show border |
+| `background` | Background color |
+| `foreground` | Foreground color |
+
+### Search (`website.search`)
+
+| Variable | Description |
+|---|---|
+| `location` | Search location |
+| `type` | Search type (overlay/textbox) |
+| `limit` | Max results |
+| `collapse-after` | Collapse results threshold |
+| `copy-button` | Show copy button |
+| `merge-navbar-crumbs` | Merge breadcrumbs |
+| `keyboard-shortcut` | Keyboard shortcut |
+| `show-item-context` | Show result context |
+
+### Algolia (`website.search.algolia`)
+
+| Variable | Description |
+|---|---|
+| `index-name` | Algolia index |
+| `application-id` | App ID |
+| `search-only-api-key` | API key |
+| `analytics-events` | Track analytics |
+| `show-logo` | Show Algolia logo |
+| `index-fields` | Field mapping (href/title/text/section) |
+| `params` | Additional parameters |
+
+### Open Graph (`website.open-graph`)
+
+| Variable | Description |
+|---|---|
+| `title` | OG title |
+| `description` | OG description |
+| `image` | OG image |
+| `image-alt` | OG image alt text |
+| `image-width` | OG image width |
+| `image-height` | OG image height |
+| `locale` | OG locale |
+| `site-name` | OG site name |
+
+### Twitter Card (`website.twitter-card`)
+
+| Variable | Description |
+|---|---|
+| `title` | Card title |
+| `description` | Card description |
+| `image` | Card image |
+| `image-alt` | Card image alt text |
+| `image-width` | Card image width |
+| `image-height` | Card image height |
+| `card-style` | Card type (summary/summary_large_image) |
+| `creator` | Twitter handle |
+| `site` | Site Twitter handle |
+
+### Comments: Hypothesis (`website.comments.hypothesis`)
+
+| Variable | Description |
+|---|---|
+| `openSidebar` | Open sidebar on load |
+| `showHighlights` | Show highlights |
+| `theme` | Widget theme |
+| `enableExperimentalNewNoteButton` | New note button |
+| `usernameUrl` | Username URL |
+| `services` | Services configuration |
+| `branding` | Branding options |
+| `externalContainerSelector` | External container selector |
+| `focus` | Focus user |
+| `requestConfigFromFrame` | Frame config |
+| `assetRoot` | Asset root URL |
+| `sidebarAppUrl` | Sidebar app URL |
+
+### Comments: Utterances (`website.comments.utterances`)
+
+| Variable | Description |
+|---|---|
+| `repo` | GitHub repo |
+| `label` | Issue label |
+| `theme` | Widget theme |
+| `issue-term` | Issue matching term |
+
+### Comments: Giscus (`website.comments.giscus`)
+
+| Variable | Description |
+|---|---|
+| `repo` | GitHub repo |
+| `repo-id` | GitHub repo ID |
+| `category` | Discussion category |
+| `category-id` | Discussion category ID |
+| `mapping` | Discussion mapping |
+| `reactions-enabled` | Enable reactions |
+| `loading` | Loading mode (lazy) |
+| `input-position` | Input position |
+| `theme` | Widget theme |
+| `language` | Widget language |
+
+### Listings (Page-Level `listing`)
+
+| Variable | Description |
+|---|---|
+| `id` | Listing identifier |
+| `type` | Listing type (default/grid/table) |
+| `contents` | Content source |
+| `sort` | Sort field and order |
+| `max-items` | Maximum items to display |
+| `page-size` | Items per page |
+| `sort-ui` | Show sort controls |
+| `filter-ui` | Show filter controls |
+| `categories` | Show category filter |
+| `feed` | RSS feed configuration |
+| `date-format` | Date display format |
+| `max-description-length` | Description truncation length |
+| `image-placeholder` | Placeholder image |
+| `image-lazy-loading` | Lazy-load images |
+| `image-align` | Image alignment |
+| `image-height` | Image height |
+| `grid-columns` | Number of grid columns |
+| `grid-item-border` | Grid item border |
+| `grid-item-align` | Grid item alignment |
+| `table-striped` | Striped table rows |
+| `table-hover` | Table hover effect |
+| `template` | Custom EJS template |
+| `template-params` | Template parameters |
+| `fields` | Fields to display |
+| `field-display-names` | Field display names |
+| `field-types` | Field types |
+| `field-links` | Field link targets |
+| `field-required` | Required fields |
+| `include` | Include filter |
+| `exclude` | Exclude filter |
+
+### Listing Feed (`listing.feed`)
+
+| Variable | Description |
+|---|---|
+| `items` | Number of feed items |
+| `type` | Feed type (full/partial) |
+| `title` | Feed title |
+| `image` | Feed image |
+| `description` | Feed description |
+| `language` | Feed language |
+| `categories` | Feed categories |
+| `xml-stylesheet` | Custom XML stylesheet |
+
+### About Pages (`about`)
+
+| Variable | Description |
+|---|---|
+| `id` | About page ID |
+| `template` | Template (jolla/trestles/solana/marquee/broadside) |
+| `image` | Profile image |
+| `image-alt` | Image alt text |
+| `image-title` | Image title |
+| `image-width` | Image width |
+| `image-shape` | Image shape (circle/rounded/rectangle) |
+| `links` | Social/contact links |
+
+## Book Configuration (`book`)
+
+| Variable | Description |
+|---|---|
+| `book.title` | Book title |
+| `book.subtitle` | Book subtitle |
+| `book.author` | Book author(s) |
+| `book.date` | Publication date |
+| `book.date-format` | Date format |
+| `book.abstract` | Book abstract |
+| `book.description` | Book description |
+| `book.references` | Bibliography file |
+| `book.output-file` | Combined output filename |
+| `book.cover-image` | Cover image |
+| `book.cover-image-alt` | Cover image alt text |
+| `book.sharing` | Social sharing buttons |
+| `book.downloads` | Download format links |
+| `book.tools` | Book tools |
+| `book.doi` | Book DOI |
+| `book.chapters` | Chapter list |
+| `book.appendices` | Appendix list |
+| `book.parts` | Book parts |
+
+Book projects also inherit all `website.*` variables for navbar, sidebar, footer, search, comments, etc.
+
+## Manuscript Configuration (`manuscript`)
+
+| Variable | Description |
+|---|---|
+| `manuscript.article` | Main article file |
+| `manuscript.code-links` | Code repository links |
+| `manuscript.manuscript-url` | Published manuscript URL |
+| `manuscript.meca-bundle` | Generate MECA bundle |
+| `manuscript.notebooks` | Supplementary notebooks |
+| `manuscript.resources` | Additional resources |
+| `manuscript.environment` | Computational environment |
+
+## Brand Configuration (`_brand.yml`)
+
+### Meta
+
+| Variable | Description |
+|---|---|
+| `meta.name` | Brand name |
+| `meta.link` | Brand link |
+
+### Logo
+
+| Variable | Description |
+|---|---|
+| `logo.images` | Logo image definitions |
+| `logo.small` | Small logo |
+| `logo.medium` | Medium logo |
+| `logo.large` | Large logo |
+
+### Color (`color`)
+
+| Variable | Description |
+|---|---|
+| `palette` | Named color palette |
+| `foreground` | Base foreground color |
+| `background` | Base background color |
+| `primary` | Primary theme color |
+| `secondary` | Secondary theme color |
+| `tertiary` | Tertiary theme color |
+| `success` | Success color |
+| `info` | Info color |
+| `warning` | Warning color |
+| `danger` | Danger color |
+| `light` | Light color |
+| `dark` | Dark color |
+| `link` | Link color |
+
+### Typography (`typography`)
+
+| Variable | Description |
+|---|---|
+| `fonts` | Font resource definitions |
+| `base` | Base text: `family`, `size`, `weight`, `line-height` |
+| `headings` | Headings: `family`, `weight`, `style`, `color`, `line-height` |
+| `monospace` | Monospace: `family`, `size`, `weight`, `color`, `background-color` |
+| `monospace-inline` | Inline code typography |
+| `monospace-block` | Code block typography (+ `line-height`) |
+| `link` | Link: `weight`, `color`, `background-color`, `decoration` |
+
+### Font Sources
+
+| Variable | Description |
+|---|---|
+| `source` | Font source (google/bunny/file/system) |
+| `family` | Font family name |
+| `weight` | Font weight(s) |
+| `style` | Font style(s) |
+| `display` | Font display strategy |
+| `files` | Local font file paths (file source) |
+
+## Cell-Level Options: Jupyter
+
+### Attributes
+
+| Variable | Description |
+|---|---|
+| `label` | Cell label |
+| `classes` | CSS classes |
+| `renderings` | Rendering targets |
+| `tags` | Cell tags |
+| `id` | Cell ID |
+
+### Code Output
+
+| Variable | Description |
+|---|---|
+| `eval` | Evaluate cell |
+| `echo` | Display source code |
+| `code-fold` | Fold code |
+| `code-summary` | Fold summary text |
+| `code-overflow` | Overflow behavior |
+| `code-line-numbers` | Line numbers |
+| `lst-label` | Listing label |
+| `lst-cap` | Listing caption |
+
+### Cell Output
+
+| Variable | Description |
+|---|---|
+| `output` | Include output |
+| `warning` | Include warnings |
+| `error` | Include errors |
+| `include` | Include cell |
+| `panel` | Panel placement |
+| `output-location` | Output location |
+
+### Figures
+
+| Variable | Description |
+|---|---|
+| `fig-cap` | Figure caption |
+| `fig-subcap` | Sub-figure captions |
+| `fig-link` | Figure link |
+| `fig-align` | Figure alignment |
+| `fig-alt` | Figure alt text |
+| `fig-env` | LaTeX figure environment |
+| `fig-pos` | LaTeX figure position |
+| `fig-scap` | Short caption (PDF) |
+
+### Tables
+
+| Variable | Description |
+|---|---|
+| `tbl-cap` | Table caption |
+| `tbl-subcap` | Sub-table captions |
+| `tbl-colwidths` | Column widths |
+| `html-table-processing` | Table processing mode |
+
+### Panel Layout
+
+| Variable | Description |
+|---|---|
+| `layout` | Custom layout specification |
+| `layout-ncol` | Number of columns |
+| `layout-nrow` | Number of rows |
+| `layout-align` | Layout alignment |
+| `layout-valign` | Layout vertical alignment |
+
+### Page Columns
+
+| Variable | Description |
+|---|---|
+| `column` | Page column placement |
+| `fig-column` | Figure column |
+| `tbl-column` | Table column |
+| `cap-location` | Caption location |
+| `fig-cap-location` | Figure caption location |
+| `tbl-cap-location` | Table caption location |
+
+## Cell-Level Options: Knitr (Additional)
+
+### Code Output (Extra)
+
+| Variable | Description |
+|---|---|
+| `tidy` | Tidy R code |
+| `tidy-opts` | Tidy options |
+| `collapse` | Collapse output into code block |
+| `prompt` | Show R prompt |
+| `class-source` | Source block CSS class |
+| `attr-source` | Source block attributes |
+
+### Cell Output (Extra)
+
+| Variable | Description |
+|---|---|
+| `message` | Include messages |
+| `results` | Output handling (markup/asis/hold/hide) |
+| `comment` | Output comment prefix |
+| `class-output` | Output block CSS class |
+| `attr-output` | Output block attributes |
+| `class-warning` | Warning block CSS class |
+| `attr-warning` | Warning block attributes |
+| `class-message` | Message block CSS class |
+| `attr-message` | Message block attributes |
+| `class-error` | Error block CSS class |
+| `attr-error` | Error block attributes |
+
+### Figures (Extra)
+
+| Variable | Description |
+|---|---|
+| `fig-width` | Figure width (inches) |
+| `fig-height` | Figure height (inches) |
+| `fig-format` | Output format (png/svg/pdf) |
+| `fig-dpi` | DPI resolution |
+| `fig-asp` | Aspect ratio |
+| `out-width` | Output width (CSS/LaTeX) |
+| `out-height` | Output height (CSS/LaTeX) |
+| `fig-keep` | Which figures to keep |
+| `fig-show` | How to show figures |
+| `out-extra` | Extra output attributes |
+| `external` | Tikz external mode |
+| `sanitize` | Sanitize SVG output |
+| `interval` | Animation interval |
+| `aniopts` | Animation options |
+| `animation-hook` | Animation hook |
+
+### Cache
+
+| Variable | Description |
+|---|---|
+| `cache` | Enable caching |
+| `cache-vars` | Variables to cache |
+| `cache-globals` | Global variables for cache key |
+| `cache-lazy` | Lazy-load cached objects |
+| `cache-rebuild` | Force cache rebuild |
+| `cache-comments` | Include comments in cache key |
+| `dependson` | Cache dependencies |
+| `autodep` | Automatic dependency detection |
+
+### Include
+
+| Variable | Description |
+|---|---|
+| `child` | Child document |
+| `file` | External code file |
+| `code` | Inline code string |
+| `purl` | Include in tangled script |
+
+## Cell-Level Options: Observable JS
+
+Same as Jupyter cell options except: no `tags` or `id` attributes, and no `tbl-colwidths` in the tables section.
