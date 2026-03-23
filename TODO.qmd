@@ -4,7 +4,7 @@
 ## CLI
 
 - [x] Multi-format rendering: `calepin render file.qmd -t html,latex,pdf-latex`
-- [ ] `calepin preview` on a website should watch all `.qmd` files in the content/ directory
+- [x] `calepin preview` on a website/ should watch all `.qmd` files in the content/ directory
 
 
 ## Rendering
@@ -12,6 +12,12 @@
 - [ ] Split CSS into core and style
 - [ ] Better CSS
 - [ ] Accessibility
+    - [ ] html + css
+    - [ ] typst
+    - [ ] latex
+    - [ ] pdf
+- [ ] `content_standalone` in .toml for website/ should render standalone .qmd documents without inserting them in the sitemap.
+- [ ] `content_exclude`
 - [ ] 404.qmd
 - [ ] *Calepin* always in italics with capital letter in website/
 - [ ] Language / localization (`lang:` option, custom translation strings)
@@ -80,6 +86,7 @@
 
 - [ ] Do not base64 by default?
 - [ ] Embed resources
+- [ ] responsive html: Previous / Next buttons at the bottom of the page get a line return when the page narrows isntead of getting closer to each other.
 
 
 ## calepin new
@@ -123,6 +130,7 @@
 - [ ] Architecture refactor / DRY / simplification
 - [ ] Singular vs Plural file names
 - [ ] User input validation. Brainstorm with AI to be super strict and informative. Paths, formats, front matter options, etc.
+- [ ] run_pagefind() should be specified as a more generic post-processing step that can be specified by the user.
 
 
 ## Manual code review

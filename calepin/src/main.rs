@@ -383,12 +383,9 @@ fn handle_preview(args: PreviewArgs) -> Result<()> {
     if args.input.is_dir() {
         return site::serve(&args.input, args.port);
     }
-    // Project manifest: build then serve/open
+    // Project manifest: build, serve with live-reload, and watch for changes
     if cli::is_site_config(&args.input) {
-        let output = PathBuf::from("output");
-        site::build_site(Some(args.input.as_path()), &output, true, false, args.target.as_deref())?;
-
-        // For non-HTML targets, open the compiled output instead of serving.
+        // For non-HTML targets, do a one-shot build and open the output.
         let is_html = {
             let target_name = args.target.as_deref().unwrap_or("html");
             let config = project::load_project_config(&args.input)?;
@@ -396,6 +393,8 @@ fn handle_preview(args: PreviewArgs) -> Result<()> {
             target.base == "html"
         };
         if !is_html {
+            let output = PathBuf::from("output");
+            site::build_site(Some(args.input.as_path()), &output, true, false, args.target.as_deref())?;
             let pdf = output.join("book.pdf");
             if pdf.exists() {
                 eprintln!("Opening {}", pdf.display());
@@ -404,7 +403,7 @@ fn handle_preview(args: PreviewArgs) -> Result<()> {
             return Ok(());
         }
 
-        return site::serve(&output, args.port);
+        return preview::run_site(&args.input, &args);
     }
     // Resolve target using the same path as render
     let ctx = resolve_context(&args.input, args.target.as_deref())?;

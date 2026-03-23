@@ -12,6 +12,104 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use crate::cli::PreviewArgs;
 
+/// Preview a site project: build, serve with live-reload, and watch for changes.
+pub fn run_site(
+    config_path: &Path,
+    args: &PreviewArgs,
+) -> Result<()> {
+    let config_abs = config_path.canonicalize()
+        .with_context(|| format!("Config file not found: {}", config_path.display()))?;
+    let base_dir = config_abs.parent().unwrap().to_path_buf();
+    let output = base_dir.join("output");
+
+    let version = Arc::new(AtomicU64::new(1));
+
+    let mp = MultiProgress::new();
+    let style = ProgressStyle::default_spinner()
+        .template("{spinner:.cyan} {msg}")
+        .unwrap();
+
+    let status = mp.add(ProgressBar::new_spinner());
+    status.set_style(style.clone());
+
+    let spinner = mp.add(ProgressBar::new_spinner());
+    spinner.set_style(style);
+    spinner.enable_steady_tick(Duration::from_millis(80));
+
+    // Initial build
+    spinner.set_message("building site...");
+    crate::site::build_site(
+        Some(config_path),
+        &std::path::PathBuf::from("output"),
+        true,
+        true, // quiet -- we show our own status
+        args.target.as_deref(),
+    )?;
+
+    // Start site server (serves from disk with live-reload)
+    let (_server, actual_port) = server::start_site(
+        args.port,
+        Arc::clone(&version),
+        output.clone(),
+    )?;
+
+    let url = format!("http://localhost:{}", actual_port);
+    if !args.quiet {
+        mp.println(format!("-> preview at {}", url)).ok();
+    }
+    let _ = open::that(&url);
+
+    // Ctrl+C handler
+    let stop = Arc::new(AtomicBool::new(false));
+    let stop_clone = Arc::clone(&stop);
+    ctrlc::set_handler(move || {
+        stop_clone.store(true, Ordering::Relaxed);
+    }).context("Failed to set Ctrl+C handler")?;
+
+    status.set_message(format!("built at {}", format_local_time()));
+    spinner.set_message("watching for changes... (Ctrl+C to stop)");
+
+    // Watch content directory (and fall back to base_dir if content/ doesn't exist)
+    let watch_dir = {
+        let content = base_dir.join("content");
+        if content.is_dir() { content } else { base_dir.clone() }
+    };
+
+    let config_path = config_path.to_path_buf();
+    let target = args.target.clone();
+    let quiet = args.quiet;
+    watcher::watch_dir(&watch_dir, Arc::clone(&stop), |changed_paths| {
+        let names: Vec<_> = changed_paths.iter()
+            .filter_map(|p| p.file_name())
+            .map(|n| n.to_string_lossy().to_string())
+            .collect();
+        spinner.set_message(format!("rebuilding {}...", names.join(", ")));
+        let start = std::time::Instant::now();
+        let result = crate::site::rebuild_pages(
+            Some(config_path.as_path()),
+            target.as_deref(),
+            changed_paths,
+        );
+        match result {
+            Ok(()) => {
+                version.fetch_add(1, Ordering::Relaxed);
+                let elapsed = start.elapsed();
+                status.set_message(format!("rebuilt {} at {} ({:.1}s)", names.join(", "), format_local_time(), elapsed.as_secs_f64()));
+            }
+            Err(e) => {
+                if !quiet {
+                    mp.println(format!("\x1b[33mWarning:\x1b[0m rebuild failed: {}", e)).ok();
+                }
+            }
+        }
+        spinner.set_message("watching for changes... (Ctrl+C to stop)");
+    })?;
+
+    status.finish_and_clear();
+    spinner.finish_with_message("stopped.");
+    Ok(())
+}
+
 pub fn run(
     input: &Path,
     args: &PreviewArgs,

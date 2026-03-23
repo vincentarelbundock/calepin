@@ -142,6 +142,159 @@ pub fn build_site(
     Ok(())
 }
 
+/// Rebuild only the specified pages within an already-built site.
+/// Discovers all pages (for nav context) but only re-renders those whose
+/// source paths are in `changed_sources`. Skips the clean step and assets copy.
+pub fn rebuild_pages(
+    config_path: Option<&Path>,
+    cli_target: Option<&str>,
+    changed_sources: &[std::path::PathBuf],
+) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+    let (config, found_path) = config::load_config(config_path, &cwd)?;
+    let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
+
+    let site_target_name = cli_target.map(|s| s.to_string())
+        .or_else(|| config.site.as_ref().and_then(|s| s.target.clone()))
+        .unwrap_or_else(|| "html".to_string());
+    let site_target = crate::project::resolve_target(&site_target_name, Some(&config))?;
+    let format = &site_target.base;
+    let output_ext = site_target.output_extension();
+
+    crate::paths::set_active_target(Some(&site_target_name));
+
+    let output_dir = base_dir.join("output");
+
+    // Discover all pages (needed for nav context)
+    let pages = discover_pages(&config, &base_dir, output_ext)?;
+
+    // Determine which pages to re-render by matching changed absolute paths
+    // against the discovered page sources. Canonicalize both sides so that
+    // symlinks and path normalization differences don't cause mismatches.
+    let canon_changed: Vec<std::path::PathBuf> = changed_sources.iter()
+        .filter_map(|c| c.canonicalize().ok())
+        .collect();
+    let changed_pages: Vec<&PageInfo> = pages.iter().filter(|p| {
+        let abs = base_dir.join(&p.source);
+        let canon = abs.canonicalize().unwrap_or(abs);
+        canon_changed.iter().any(|c| c == &canon)
+    }).collect();
+
+    if changed_pages.is_empty() {
+        return Ok(());
+    }
+
+    // Render only the changed pages
+    let pages_to_render: Vec<PageInfo> = changed_pages.iter().map(|p| (*p).clone()).collect();
+    let results = render::render_pages(
+        &pages_to_render, &config, &base_dir, &output_dir, format,
+        false, Some(&site_target_name), true,
+    )?;
+
+    // Write raw body files
+    for page in &pages_to_render {
+        let source_key = page.source.display().to_string();
+        if let Some(result) = results.get(&source_key) {
+            let output_path = output_dir.join(&page.output);
+            if let Some(parent) = output_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(&output_path, &result.body)?;
+        }
+    }
+
+    // Apply site templates to the changed pages (with full nav context)
+    if format == "html" {
+        let env = templates::init_jinja(&base_dir, &site_target_name)?
+            .ok_or_else(|| anyhow::anyhow!("No template files found"))?;
+
+        let site_ctx = build_site_context(&config, &pages, &base_dir);
+        let var_ctx = config.var.as_ref()
+            .map(|v| crate::project::target_vars_to_jinja(Some(v)))
+            .unwrap_or_else(|| minijinja::Value::from(()));
+
+        let tpl_ext = match format.as_str() {
+            "latex" => "tex",
+            "typst" => "typ",
+            "markdown" => "md",
+            _ => format,
+        };
+
+        // Also discover listings that the changed pages might need
+        let mut all_listing_pages: HashMap<String, Vec<PageInfo>> = HashMap::new();
+        for page in &pages_to_render {
+            if let Some(ref listing) = page.meta.listing {
+                let listing_pages = discover_listing_pages(listing, &base_dir, &pages, output_ext)?;
+                all_listing_pages.insert(page.source.display().to_string(), listing_pages);
+            }
+        }
+
+        for page in &pages_to_render {
+            let source_key = page.source.display().to_string();
+            let result = results.get(&source_key);
+
+            let listing_items = all_listing_pages.get(&source_key).map(|listing_pages| {
+                listing_pages.iter().map(|lp| ListingItem {
+                    title: lp.meta.title.clone(),
+                    date: lp.meta.date.clone(),
+                    description: lp.meta.description.clone(),
+                    image: lp.meta.image.clone(),
+                    url: lp.url.clone(),
+                }).collect()
+            });
+
+            let page_ctx = build_page_context(page, result, &pages, listing_items);
+
+            let mut nav_tree = site_ctx.pages.clone();
+            mark_active(&mut nav_tree, &page.url);
+
+            let site_with_active = minijinja::context! {
+                site => context::SiteContext {
+                    title: site_ctx.title.clone(),
+                    subtitle: site_ctx.subtitle.clone(),
+                    url: site_ctx.url.clone(),
+                    favicon: site_ctx.favicon.clone(),
+                    logo: site_ctx.logo.clone(),
+                    logo_dark: site_ctx.logo_dark.clone(),
+                    pages: nav_tree,
+                    dark_mode: site_ctx.dark_mode,
+                    math_block: site_ctx.math_block.clone(),
+                },
+                page => page_ctx,
+                var => var_ctx.clone(),
+            };
+
+            let template_name = if page.meta.listing.is_some() {
+                format!("listing.{}", tpl_ext)
+            } else {
+                format!("page.{}", tpl_ext)
+            };
+
+            let tpl = env.get_template(&template_name)
+                .with_context(|| format!("Failed to get template {} for {}", template_name, source_key))?;
+            let rendered = tpl.render(&site_with_active)
+                .with_context(|| format!("Failed to render template for {}", source_key))?;
+
+            let output_path = output_dir.join(&page.output);
+            fs::write(&output_path, &rendered)?;
+        }
+
+        // Update _source/ copies for the changed pages
+        for page in &pages_to_render {
+            let source_dest = output_dir.join("_source").join(&page.source);
+            if let Some(parent) = source_dest.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let source_src = base_dir.join(&page.source);
+            if source_src.exists() {
+                fs::copy(&source_src, &source_dest)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// HTML site path: wrap each page's body through Jinja site templates
 /// (page.html, listing.html with extends/includes).
 /// Overwrites the raw body files written in step 7 with fully templated HTML.
