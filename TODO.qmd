@@ -13,21 +13,6 @@ split css into core and style
 + [ ] CSL helpers: https://github.com/citation-style-language/styles/
 + [ ] why is navbar_search in the .rs file rather than just the template.
 
-## CSL
-
-Searched the webSearched the webYes, hayagriva fully supports CSL. Here's a summary:
-CSL support:
-
-Hayagriva supports all styles provided in the official Citation Style Language repository — currently over 2,600. Rust
-You can either supply your own CSL files or choose from about 100 bundled citation styles using the archive feature. GitHub
-
-Architecture:
-
-The Typst team built two Rust libraries for this: citationberg (a CSL 1.0 parser using serde) and hayagriva itself, which uses citationberg to implement CSL processing. Citationstyles
-
-Usage in code involves loading a .csl file, parsing it with IndependentStyle::from_xml, and passing it to a BibliographyDriver. The docs have a full worked example for this.
-Caveats: CSL compliance isn't 100% complete — there are some open issues around edge cases like ibid handling and certain position attributes not yet being fully spec-compliant, but for standard use it works well.
-
 ## YAML -> TOML compatibility layer
 
 - [ ] Decide on a minimal set of supported Quarto preamble features
@@ -107,27 +92,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 
 ## Document
 
-- [x] Numbered sections (`number-sections: true`)
-- [x] Date handling (keywords `today`/`now`/`last-modified`)
-- [x] Date format strings (`date-format: "%B %e, %Y"`)
 - [ ] Language / localization (`lang:` option, custom translation strings)
-- [x] File includes (`{{< include file.qmd >}}` shortcode)
-- [x] Variables file (`_variables.yml` with `{{< var name >}}` shortcode)
-- [x] Callout collapse/expand (`collapse=true`)
-- [x] Callout appearance styles (`appearance: simple/minimal`)
-- [x] Callout custom titles
-
-## Scholarly Front Matter
-
-- [x] Rich author metadata (affiliation, ORCID, email, roles, corresponding author)
-- [x] Affiliation details (department, city, country, ROR/ISNI/Ringgold IDs)
-- [x] Multiple authors with shared affiliations (`ref:` system)
-- [x] Keywords
-- [x] Copyright (holder, year, statement)
-- [x] License (Creative Commons abbreviations, custom text, URL)
-- [x] Citation metadata (`citation:` key for citeable articles)
-- [x] Funding (awards, sources, investigator references)
-- [x] Appendices
 
 ## Misc
 
@@ -153,8 +118,12 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [x] `{.unnumbered}` / `{.unlisted}` sections
 - [ ] Accessibility
 
+## Plugin API
 
-## File paths
+- [ ] Stable template API is too large: Exposing too many template variables as public API locks in internal rendering details, making refactoring risky and encouraging users to depend on implementation conveniences that were never meant to be stable contracts.
+- [ ] How to register new plugins? What are they allowed to do?
+
+## File paths are still a terrible mess
 
 - [ ] Be super strict
 - [ ] Be super consistent
@@ -162,6 +131,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] Be cross platform
 - [ ] Be clear about location of output and location of intputs
 - [ ] Files paths are different in Typst, LaTeX, HTML, and Markdown
+- [ ] tectonic has weird path resolution
 
 ## Plugins
 
@@ -172,7 +142,7 @@ I want each format to be a separate plugin. That will force me to design a good 
 
 ## Docs
 
-- [ ] HTML
+- [ ] HTML sales pitch
     - [ ] Classless CSS
     - [ ] Standalone files by default
 
@@ -185,42 +155,4 @@ I want each format to be a separate plugin. That will force me to design a good 
 - [ ] `src/structures/`
 - [ ] `src/parse/`
 - [ ] `src/` (root modules: main, types, plugins, cli, util, website, site_builder, preview, compile)
-
-
-# TOML spec issues
-
-## Stable template API is too large
-
-The draft exposes a very big set of template variables and component-specific variables: title blocks, appendix blocks, author sub-components, theorem variants, brand variables, bibliography fragments, _lb and _rb, and more. That is generous, but it also turns internal rendering choices into a public ABI.
-
-That creates two problems:
-
-you will be afraid to refactor internals,
-users will come to depend on variables that were only meant as conveniences.
-
-I would define a smaller stable core:
-
-Stable, guaranteed
-body
-format
-meta
-page
-target
-format_vars
-toc
-preamble
-css
-js
-Best-effort / internal
-
-Put everything else under something like:
-
-internal.*
-or computed.*
-or mark it explicitly as experimental
-
-Also, the brand-{name} variables are awkward. Hyphenated variable names are not a good Jinja-facing API. A dictionary is cleaner:
-
-{{ brand.colors.primary }}
-{{ brand.colors["primary-light"] }}
 

@@ -115,6 +115,17 @@ fn build_figure_vars(
 // Image helpers
 // ---------------------------------------------------------------------------
 
+/// Make a figure path relative to the output file's directory.
+/// Strips everything before the `_calepin_files` component.
+fn relative_figure_path(path: &Path) -> String {
+    let s = path.display().to_string();
+    if let Some(idx) = s.find("_calepin_files") {
+        s[idx..].to_string()
+    } else {
+        s
+    }
+}
+
 fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, format: &str) -> String {
     let safe_alt = crate::util::escape_html(alt);
     match format {
@@ -148,10 +159,12 @@ fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, forma
             } else {
                 "width=0.70\\textwidth".to_string()
             };
-            format!("\\includegraphics[{}]{{{}}}", width_opt, path.display())
+            let rel_path = relative_figure_path(path);
+            format!("\\includegraphics[{}]{{{}}}", width_opt, rel_path)
         }
         "typst" => {
-            let mut args = vec![format!("\"{}\"", path.display())];
+            let rel_path = relative_figure_path(path);
+            let mut args = vec![format!("\"{}\"", rel_path)];
             args.push(format!("width: {}", match &attrs.width {
                 Some(w) => typst_length(w),
                 None => "70%".to_string(),
