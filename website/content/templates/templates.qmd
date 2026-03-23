@@ -48,7 +48,7 @@ To use a custom layout, drop a template file in your project directory with plac
 
 *Calepin* can render a collection of documents into a structured website with navigation, search, and a consistent layout. The site system has its own set of templates for the navbar, sidebar, page shell, and more.
 
-To override any site template, create files in your project root. See [Sites](sites.html) for configuration and customization.
+To override any site template, create files in `templates/website/` at your project root. See [Sites](sites.html) for configuration and customization.
 
 
 ## 5. Preamble

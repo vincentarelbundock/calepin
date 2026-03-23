@@ -2,37 +2,40 @@
 title: Serve
 ---
 
-*Calepin* has two commands for local development: `preview` and `serve`.
+*Calepin* uses the `preview` subcommand for local development.
 
 # Preview
 
-`calepin preview` renders the site, starts a local server, and watches for changes. When a `.qmd` file is saved, the page is re-rendered and the browser reloads automatically.
+`calepin preview` renders the site or file, starts a local server, and watches for changes. When a `.qmd` file is saved, the page is re-rendered and the browser reloads automatically.
+
+For a site:
 
 ```
-calepin preview _calepin.yaml
-calepin preview _calepin.yaml -p 4000
-calepin preview _calepin.yaml -q
+calepin preview _calepin.toml
+calepin preview _calepin.toml -p 4000
+calepin preview _calepin.toml -q
+```
+
+For a single file:
+
+```
+calepin preview file.qmd
+calepin preview file.qmd -p 8080
 ```
 
 | Flag | Description |
 |------|-------------|
 | `-p`, `--port` | Server port (default: 3456) |
-| `-f`, `--format` | Output format |
+| `-t`, `--target` | Output target |
 | `-s`, `--set` | Override YAML metadata fields |
 | `-q`, `--quiet` | Suppress progress messages |
 
-For single files, `calepin preview file.qmd` renders and serves one document with live reload.
+# Static file server
 
-# Serve
-
-`calepin serve` is a static file server with no rendering or watching. Use it to serve a pre-built `_site/` directory.
+When given a directory path, `calepin preview` acts as a plain static file server --- no rendering, no watching, no live reload. This works with any directory that contains an `index.html`, not just *Calepin* sites.
 
 ```
-calepin serve _site
-calepin serve _site -p 8080
+calepin preview _site
+calepin preview docs -p 8080
+calepin preview /path/to/any/website
 ```
-
-| Flag | Description |
-|------|-------------|
-| `-p`, `--port` | Server port (default: 3456) |
-| `-q`, `--quiet` | Suppress progress messages |

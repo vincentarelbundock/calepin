@@ -67,9 +67,9 @@ System environment variables are available under `env`:
 
 The `SHELL` environment variable on the local machine is: {{ env.SHELL }}.
 
-## format
+## base and target
 
-The current output format is available as {% raw %}`{{ format }}`{% endraw %}, one of `html`, `latex`, `typst`, or `markdown`.
+The current output format is available as {% raw %}`{{ base }}`{% endraw %}, one of `html`, `latex`, `typst`, or `markdown`. The target name is available as {% raw %}`{{ target }}`{% endraw %} (defaults to the base name when no named target is used).
 
 ## snip
 
@@ -85,7 +85,7 @@ See [Snippets](snippets.html) for the full reference, including resolution order
 Because the document body is a Jinja template, you can use control flow:
 
 ````
-{% if format == "html" %}
+{% if base == "html" %}
 This paragraph only appears in HTML output.
 {% endif %}
 ````
@@ -237,7 +237,7 @@ The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, a
 For each function call, *Calepin* checks:
 
 1. Built-in functions (`pagebreak`, `video`, `brand`, `kbd`, `lipsum`, `placeholder`)
-2. Context variables (`meta`, `var`, `env`, `format`, `snip`)
+2. Context variables (`meta`, `var`, `env`, `base`, `target`, `snip`)
 3. Plugin registry (in front matter order)
 
 Built-in functions take precedence over plugin functions.

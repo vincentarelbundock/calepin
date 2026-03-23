@@ -192,6 +192,6 @@ This is useful for batch rendering with different configurations.
 
 # Site configuration
 
-For sites, `_calepin.yaml` (or `_site.yml`) provides project-wide settings. The `website:` block configures navigation, sidebar, and other site-wide options. See [Sites](sites.html) for the full reference.
+For sites, `_calepin.toml` (or `calepin.toml`) provides project-wide settings. The `[site]` section configures navigation, sidebar, and other site-wide options. See [Sites](sites.html) for the full reference.
 
 Document-level front matter takes precedence over site configuration for metadata fields like `title`, `author`, and `date`.

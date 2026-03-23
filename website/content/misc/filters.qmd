@@ -191,7 +191,7 @@ Enriches `callout-note`, `callout-tip`, `callout-warning`, `callout-important`, 
 When *Calepin* encounters a fenced div or bracketed span, it iterates over all plugins in registry order (user plugins first, then built-in):
 
 1. For each plugin whose `match` rules apply to the element:
-   - **Structural plugins** (tabset, layout, figure-div): receive raw children, return if handled.
+   - **Structural plugins** (tabset, layout, figure-div, table-div): receive raw children, return if handled.
    - **Filter plugins**: receive rendered children, return if output produced.
    - **Subprocess plugins**: receive JSON, return if stdout is non-empty.
 2. **Template** (by class name, then `div.{ext}`)

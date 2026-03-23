@@ -2,7 +2,7 @@
 title: Differences with Quarto
 ---
 
-*Calepin* aims for compatibility with Quarto's `.qmd` syntax, but there are deliberate differences and simplifications. Most notably, *Calepin* does not use Pandoc. Quarto delegates most of its parsing and format conversion to Pandoc, whereas *Calepin* handles everything internally — markdown parsing (via comrak), code execution, citation processing, cross-references, and template rendering are all built into a single Rust binary. The only exception is `.docx` output, which relies on Pandoc for the final conversion. This page documents the differences.
+*Calepin* aims for compatibility with Quarto's `.qmd` syntax, but there are deliberate differences and simplifications. Most notably, *Calepin* does not use Pandoc. Quarto delegates most of its parsing and format conversion to Pandoc, whereas *Calepin* handles everything internally — markdown parsing (via comrak), code execution, citation processing, cross-references, and template rendering are all built into a single Rust binary. This page documents the differences.
 
 
 # Chunk headers
@@ -65,14 +65,21 @@ In *Calepin*, the label must be in the header. Using `#| label:` in a pipe comme
 
 # Extensions directory
 
-Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `_calepin/` with a different structure:
+Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses a project-level directory structure:
 
 ```
+templates/
+  common/         # format-agnostic templates (.jinja)
+  html/           # HTML-specific templates
+  latex/          # LaTeX-specific templates
+  typst/          # Typst-specific templates
+snippets/
+  common/         # format-agnostic snippets (.jinja)
 _calepin/
-  elements/       # element templates
-  templates/      # page templates
   plugins/        # plugin directories (filters, custom functions, etc.)
 ```
+
+The legacy `_calepin/elements/` and `_calepin/templates/` paths are still supported as fallbacks.
 
 
 # Raw inline content

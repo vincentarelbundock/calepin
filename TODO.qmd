@@ -25,11 +25,6 @@
 
 ## Tables
 
-- [ ] `knitr_print()` support
-- [ ] `tinytable`
-- [ ] `gt`
-- [ ] `flextable`
-- [ ] `knitr::kable()`
 - [ ] How can an R and Python chunks add content to the LaTeX preamble?
 - [ ] How can I make the full TOML available to R and PYthon?
 - [ ] Tables should use a template and filter

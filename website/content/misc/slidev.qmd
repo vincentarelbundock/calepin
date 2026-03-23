@@ -8,9 +8,9 @@ format: slidev
 
 A Rust CLI that renders `.qmd` documents to HTML, LaTeX, Typst, and Markdown.
 
-- Embeds R via extendr
+- Persistent R and Python subprocesses
 - Citations via hayagriva
-- WASM plugin system
+- Subprocess plugin system
 
 ## Code Chunks
 
@@ -31,10 +31,10 @@ $$
 
 ## Plugins
 
-Extend *Calepin* with `.wasm` files:
+Extend *Calepin* with plugins:
 
-- **txtfmt**: inline text styling
-- **imgur**: image upload
+- **Filters**: transform divs and spans
+- **Custom functions**: Jinja shortcodes
 - **revealjs**: these slides!
 
 Custom formats via `_calepin/formats/revealjs.yaml`:

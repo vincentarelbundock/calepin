@@ -77,12 +77,16 @@ pub fn evaluate_block(
                 }
             },
             ChunkResult::Asis(text) => {
-                // knit_asis output is always verbatim, regardless of results option.
                 // knit_print methods often wrap output in Pandoc raw blocks:
                 //   ```{=html}\n...\n```
-                // Strip the wrapper and emit the inner content directly.
-                let text = strip_raw_block_wrapper(&text);
-                elements.push(Element::CodeAsis { text });
+                // Strip the wrapper and emit the inner content directly as CodeAsis.
+                // If there is no raw block wrapper, the content is markdown (e.g.,
+                // knitr::kable pipe tables) and should be rendered as Text.
+                if let Some(inner) = strip_raw_block_wrapper(&text) {
+                    elements.push(Element::CodeAsis { text: inner });
+                } else {
+                    elements.push(Element::Text { content: text });
+                }
             }
             ChunkResult::Warning(text) => {
                 if opts.warning() {
@@ -118,7 +122,7 @@ pub fn evaluate_block(
         let mut other = Vec::new();
         for el in elements {
             match &el {
-                Element::CodeAsis { .. } => div_children.push(el),
+                Element::CodeAsis { .. } | Element::Text { .. } => div_children.push(el),
                 _ => other.push(el),
             }
         }
@@ -140,9 +144,9 @@ pub fn evaluate_block(
 }
 
 /// Strip Pandoc raw block wrappers (` ```{=html}\n...\n``` `) from knit_asis output.
-/// If the text is wrapped in a raw block fence, returns the inner content.
-/// Otherwise returns the text unchanged.
-fn strip_raw_block_wrapper(text: &str) -> String {
+/// Returns `Some(inner)` if the text was wrapped in a raw block fence,
+/// or `None` if there was no wrapper (i.e., the content is plain markdown).
+fn strip_raw_block_wrapper(text: &str) -> Option<String> {
     let trimmed = text.trim();
     if let Some(rest) = trimmed.strip_prefix("```{=") {
         if let Some(after_lang) = rest.strip_suffix("```") {
@@ -150,12 +154,12 @@ fn strip_raw_block_wrapper(text: &str) -> String {
             if let Some(newline_pos) = after_lang.find('\n') {
                 let lang_close = &after_lang[..newline_pos];
                 if lang_close.ends_with('}') {
-                    return after_lang[newline_pos + 1..].trim().to_string();
+                    return Some(after_lang[newline_pos + 1..].trim().to_string());
                 }
             }
         }
     }
-    text.to_string()
+    None
 }
 
 /// Apply comment prefix to output lines.

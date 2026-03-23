@@ -72,11 +72,16 @@ tt(mtcars[1:5, 1:4]) |>
 
 Cross-reference work as expected, by referring to the figure label: see @tbl-cars.
 
-The [gt](https://gt.rstudio.com/) is another package that generates tables:
+The [gt](https://gt.rstudio.com/) and [`knitr`](https://yihui.org/knitr/) are two other popular packages in `R` to generate tables:
 
 ```{r, tbl-cars}
 #| tbl-cap: Motor Trend car data
 #| echo: fenced
-library(gt)
-gt(mtcars[1:5, 1:4])
+gt::gt(mtcars[1:5, 1:4])
+```
+
+```{r, tbl-cars}
+#| tbl-cap: Motor Trend car data
+#| echo: fenced
+knitr::kable(mtcars[1:5, 1:4])
 ```

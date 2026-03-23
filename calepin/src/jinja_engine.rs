@@ -13,7 +13,7 @@
 //   meta.title, meta.author, meta.date, ...  — from Metadata
 //   var.key.subkey                            — from front matter `variables:` block
 //   env.HOME, env.USER, ...                   — system environment variables
-//   format                                   — current output format
+//   base, target                              — current output format
 //   snip.snippet_name                          — lazy snippet inclusion from snippets/
 //
 use std::collections::HashMap;

@@ -2,117 +2,131 @@
 title: Sites
 ---
 
-When you run `calepin site`, *Calepin* renders a collection of `.qmd` files into a structured website with navigation, sidebar, search, dark mode, and a consistent layout.
+When you render a `_calepin.toml` manifest, *Calepin* renders a collection of `.qmd` files into a structured website with navigation, sidebar, search, dark mode, and a consistent layout.
 
 
 # Quick start
 
-1. Create a `_calepin.yaml` in your project root:
+1. Create a `_calepin.toml` in your project root:
 
-```yaml
-project:
-  type: website
+```toml
+[meta]
+title = "My Site"
 
-website:
-  title: "My Site"
-  pages:
-    - index.qmd
-    - about.qmd
-    - section: "Guide"
-      pages:
-        - guide/intro.qmd
-        - guide/advanced.qmd
+[site]
+target = "website"
+content = [
+  "index.qmd",
+  "about.qmd",
+  ["Guide",
+    "guide/intro.qmd",
+    "guide/advanced.qmd",
+  ],
+]
 ```
 
 2. Build the site:
 
 ```
-calepin site
+calepin render _calepin.toml
 ```
 
 3. Preview locally:
 
 ```
-calepin site --serve
+calepin preview _calepin.toml
 ```
 
-The site is written to `_site/` by default.
+The site is written to `_site/` by default (or the `output` field if specified).
 
 
 # Configuration
 
-The `_calepin.yaml` file (or `_site.yml`) configures your site. Here are the main sections:
+The `_calepin.toml` file configures your site. You can also name it `calepin.toml`.
 
-## Project
+## Output
 
-```yaml
-project:
-  type: website
-  resources:
-    - images    # Directories copied to output
-    - data
+```toml
+output = "docs"    # output directory (default: inferred from target)
 ```
 
-## Website metadata
+## Site metadata
 
-```yaml
-website:
-  title: "My Site"
-  subtitle: "A description"
-  site-url: https://example.com
-  favicon: assets/favicon.svg
+```toml
+[meta]
+title = "My Site"
+subtitle = "A description"
+url = "https://example.com"
+csl = "chicago-author-date"
+highlight = {light = "github", dark = "nord"}
 ```
 
-## Navbar
+## Site section
 
-```yaml
-website:
-  navbar:
-    logo: assets/logo.svg
-    logo-dark: assets/logo-dark.svg   # Dark mode variant
-    logo-alt: "Site logo"
-    background: "#fafafa"
-    search: true                       # Enable search
-    left:
-      - text: "Home"
-        href: index.qmd
-    right:
-      - icon: github
-        href: https://github.com/user/repo
+```toml
+[site]
+target = "website"
+favicon = "assets/favicon.svg"
+logo = "assets/logo.svg"
+logo-dark = "assets/logo-dark.svg"
+```
+
+## Content tree
+
+The `content` field defines the sidebar navigation. It accepts flat entries, glob patterns, and nested sections (using arrays where the first element is the section label):
+
+```toml
+[site]
+content = [
+  "index.qmd",
+  ["Guide",
+    "guide/intro.qmd",
+    "guide/advanced.qmd",
+    ["Subsection",
+      "guide/sub/a.qmd",
+    ],
+  ],
+  ["Blog", "posts/*.qmd"],    # glob pattern
+]
+content_standalone = [         # rendered but not in navigation
+  "404.qmd",
+]
+```
+
+Page titles are extracted from YAML front matter.
+
+## Variables
+
+The `[var]` section provides site-wide variables accessible in templates and document bodies:
+
+```toml
+[var]
+primary = "#0066cc"
+font = "Inter"
+navbar_search = true
+sidebar_collapse_level = 0
+
+[[var.navbar_right]]
+icon = "github"
+href = "https://github.com/user/repo"
 ```
 
 Available icons: `github`, `twitter`, `x`, `bluesky`, `mastodon`, `linkedin`, `orcid`, `rss`, `email`, `globe`, `youtube`.
 
-## Sidebar
+## Custom targets
 
-```yaml
-website:
-  sidebar:
-    collapse-level: 1    # 0 = all collapsed, higher = more open
+Override built-in targets or define new ones:
+
+```toml
+[targets.latex]
+base = "latex"
+template = "calepin"
+extension = "tex"
+fig-extension = "pdf"
+[targets.latex.compile]
+command = "tectonic {input}"
+extension = "pdf"
 ```
-
-## Pages
-
-The `pages:` list defines the sidebar navigation tree:
-
-```yaml
-website:
-  pages:
-    - index.qmd                     # Simple page
-    - text: "Custom Label"          # Page with custom nav label
-      href: about.qmd
-    - section: "Guide"              # Section with nested pages
-      pages:
-        - guide/intro.qmd
-        - guide/advanced.qmd
-        - section: "Subsection"     # Nested sections
-          pages:
-            - guide/sub/a.qmd
-    - text: "External Link"
-      href: https://example.com
-```
-
-Page titles are extracted from YAML front matter. The `text:` field overrides the title shown in navigation.
 
 
 # Listings
@@ -124,7 +138,7 @@ A page can display a listing of other pages (for blogs, news, etc.):
 title: Blog
 listing:
   contents: "posts/*.qmd"
-  type: default           # default, table, or grid
+  type: default
   sort: "date desc"
 ---
 ```
@@ -136,56 +150,9 @@ listing:
 | `sort` | Sort order: `"date desc"`, `"title asc"`, etc. |
 
 
-# Output options
-
-```yaml
-format:
-  html:
-    toc: true
-    highlight-style:
-      light: github      # Light mode syntax theme
-      dark: nord          # Dark mode syntax theme
-    code-copy: true       # Show copy button on code blocks
-    code-overflow: scroll
-```
-
-
-# Brand
-
-Site-wide branding (colors, logos, typography) is configured under the `brand:` key:
-
-```yaml
-brand:
-  color:
-    primary: "#0066cc"
-    background:
-      light: "#ffffff"
-      dark: "#1a1a2e"
-    foreground:
-      light: "#222222"
-      dark: "#e0e0e0"
-  logo:
-    images:
-      main:
-        path: assets/logo.svg
-        alt: "Logo"
-    medium:
-      light: main
-      dark: main-dark
-  typography:
-    fonts:
-      - family: Inter
-        source: google
-    base: Inter
-    headings: Inter
-```
-
-Brand values are available in document bodies via the {% raw %}`{{ brand() }}`{% endraw %} function. See [Shortcuts](shortcuts.qmd#brand).
-
-
 # Customizing site templates
 
-Site templates control the HTML structure of every page. To override any template, create files in `_templates/` at your project root.
+Site templates control the HTML structure of every page. To override any template, create files in `templates/website/` at your project root.
 
 ## Built-in templates
 
@@ -211,10 +178,11 @@ Site templates receive two main context objects:
 | {% raw %}`{{ site.subtitle }}`{% endraw %} | Site subtitle |
 | {% raw %}`{{ site.url }}`{% endraw %} | Site URL |
 | {% raw %}`{{ site.favicon }}`{% endraw %} | Favicon path |
-| {% raw %}`{{ site.navbar }}`{% endraw %} | Navbar config (logo, left/right items, search) |
-| {% raw %}`{{ site.sidebar }}`{% endraw %} | Sidebar config (collapse level) |
+| {% raw %}`{{ site.logo }}`{% endraw %} | Logo path |
+| {% raw %}`{{ site.logo_dark }}`{% endraw %} | Dark mode logo path |
 | {% raw %}`{{ site.pages }}`{% endraw %} | Navigation tree (with active page marked) |
 | {% raw %}`{{ site.dark_mode }}`{% endraw %} | Whether dark mode is enabled |
+| {% raw %}`{{ site.math_block }}`{% endraw %} | Math library script tags |
 
 ### page
 
@@ -240,7 +208,7 @@ Site templates receive two main context objects:
 
 ## Example: custom page template
 
-Create `_templates/page.html` to override the default page layout:
+Create `templates/website/page.html` to override the default page layout:
 
 ```html
 {% extends "base.html" %}
@@ -266,10 +234,9 @@ The base template provides blocks you can override: `head_extra`, `content`, `pa
 # CLI
 
 ```
-calepin site                    # Build to _site/
-calepin site -o docs            # Build to docs/
-calepin site --clean            # Clean output before building
-calepin site --serve            # Build and serve locally
-calepin site --serve --port 4000
-calepin site -c my-config.yaml  # Use custom config file
+calepin render _calepin.toml             # Build site
+calepin render _calepin.toml -o docs     # Build to docs/
+calepin render _calepin.toml --clean     # Clean output before building
+calepin preview _calepin.toml            # Build and serve locally
+calepin preview _calepin.toml -p 4000    # Custom port
 ```

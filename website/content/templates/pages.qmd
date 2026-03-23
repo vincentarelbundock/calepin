@@ -7,18 +7,22 @@ The page template wraps the entire rendered body in a document shell: the `<html
 
 # Customizing page templates
 
-To customize the page layout for a format, create a file in `_calepin/templates/`:
+To customize the page layout for a format, create a template file in your project:
 
-- `_calepin/templates/calepin.html`: HTML page wrapper
-- `_calepin/templates/calepin.css`: default stylesheet (HTML only)
-- `_calepin/templates/calepin.latex`: LaTeX document wrapper
-- `_calepin/templates/calepin.typst`: Typst document wrapper
+- `templates/html/page.html`: HTML page wrapper
+- `templates/html/page.css`: default stylesheet (HTML only)
+- `templates/latex/page.tex`: LaTeX document wrapper
+- `templates/typst/page.typ`: Typst document wrapper
+- `templates/common/page.jinja`: format-agnostic (with conditionals)
 
 Resolution order:
 
 1. Plugin `templates/` directory (in plugin order)
-2. `_calepin/templates/calepin.{format}` (project)
-3. Built-in (compiled into the binary)
+2. `templates/{target}/page.{ext}` (target-specific)
+3. `templates/{base}/page.{ext}` (base-specific)
+4. `templates/common/page.jinja` (format-agnostic)
+5. Legacy: `_calepin/templates/calepin.{format}`
+6. Built-in (compiled into the binary)
 
 
 # Page template variables
@@ -84,7 +88,7 @@ custom_footer: "Confidential"
 ---
 ```
 
-Then in `_calepin/templates/calepin.html`:
+Then in `templates/html/page.html`:
 
 ```html
 <footer>{{custom_footer}}</footer>
@@ -124,7 +128,7 @@ renders as `\label{my-id}`.
 </html>
 ```
 
-Save as `_calepin/templates/calepin.html` and all HTML output in your project will use it.
+Save as `templates/html/page.html` and all HTML output in your project will use it.
 
 ## Blog post layout
 
@@ -152,7 +156,7 @@ Save as `_calepin/templates/calepin.html` and all HTML output in your project wi
 
 ## Custom CSS
 
-To change the stylesheet without replacing the entire HTML template, create `_calepin/templates/calepin.css`. This replaces the default styles but keeps the HTML structure unchanged.
+To change the stylesheet without replacing the entire HTML template, create `templates/html/page.css`. This replaces the default styles but keeps the HTML structure unchanged.
 
 ```css
 body {

@@ -29,8 +29,11 @@ Templates are named `{element}.{format}` where format is `html`, `latex`, `typst
 Resolution order:
 
 1. Plugin `elements/` directory (in plugin order)
-2. `_calepin/elements/{name}.{format}` (project override)
-3. Built-in (compiled into the binary)
+2. `templates/{target}/{name}.{ext}` (target-specific, e.g., `templates/website/callout.html`)
+3. `templates/{base}/{name}.{ext}` (base-specific, e.g., `templates/html/callout.html`)
+4. `templates/common/{name}.jinja` (format-agnostic)
+5. Legacy: `_calepin/elements/{name}.{ext}`
+6. Built-in (compiled into the binary)
 
 ::: {.callout-tip}
 Hyphens in class names are normalized to underscores when looking up templates. A div with class `.highlight-box` matches a template file named `highlight-box.html` or `highlight_box.html`.
@@ -153,7 +156,7 @@ User overrides are per-format (one file per format), so you only need to create 
 
 # Custom template example
 
-Create `_calepin/elements/highlight-box.html`:
+Create `templates/html/highlight-box.html` (or `_calepin/elements/highlight-box.html`):
 
 ```html
 <div class="highlight-box" style="background: {{color}};
@@ -170,7 +173,7 @@ Used as:
     :::
 
 ::: {.highlight-box title="Key takeaway" color="#e8f4f8"}
-Templates are the simplest way to customize *Calepin*. Drop a file in `_calepin/elements/` and any fenced div with that class will use it.
+Templates are the simplest way to customize *Calepin*. Drop a file in `templates/html/` (or `_calepin/elements/`) and any fenced div with that class will use it.
 :::
 
 ::: {.highlight-box title="Different colors work too" color="#fef3c7"}
@@ -204,4 +207,4 @@ Each instance can pass different key-value attributes. Here `color` is yellow in
 | `appendix` | Appendix wrapper |
 | `preamble` | Format-specific preamble |
 
-Override any of these by placing a file with the same name and format extension in `_calepin/elements/`.
+Override any of these by placing a file in `templates/{base}/` (e.g., `templates/html/callout.html`) or `templates/common/` (e.g., `templates/common/callout.jinja`). The legacy path `_calepin/elements/` is also supported.

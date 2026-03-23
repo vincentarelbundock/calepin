@@ -117,17 +117,7 @@ calepin:
 
 Plugins are dispatched in the order listed. Built-in plugins (tabset, layout, figure-div, theorem, callout) run after user plugins. The first plugin to handle an element wins.
 
-To scaffold a new plugin quickly:
-
-```bash
-calepin plugin init myplugin
-```
-
-To see all available plugins:
-
-```bash
-calepin plugin list
-```
+To scaffold a new plugin, create a directory in `_calepin/plugins/` with a `plugin.yml` manifest. See the [plugin structure](#plugin-structure) section above for the expected layout.
 
 
 # Built-in plugins
@@ -139,6 +129,7 @@ These are compiled into *Calepin* and always active. A user plugin can override 
 | `tabset` | `.panel-tabset` class | Tabbed panels |
 | `layout` | `layout-ncol`, `layout-nrow`, `layout` attrs | Grid layouts |
 | `figure-div` | `fig-` id prefix | Figure divs with captions |
+| `table-div` | `tbl-` id prefix | Table divs with captions |
 | `theorem` | `.theorem`, `.lemma`, `.corollary`, etc. | Auto-numbered theorem environments |
 | `callout` | `.callout-note`, `.callout-tip`, etc. | Callout boxes with icons |
 
