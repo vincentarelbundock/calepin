@@ -32,7 +32,9 @@ pub fn render_div(
         String::new()
     };
 
-    let align = attrs.get("fig-align").map(|s| s.as_str()).unwrap_or("center");
+    let defs = crate::project::get_defaults();
+    let default_align = defs.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
+    let align = attrs.get("fig-align").map(|s| s.as_str()).unwrap_or(default_align);
     let align_style = format_align(align, format);
 
     let mut vars = HashMap::new();
@@ -42,11 +44,12 @@ pub fn render_div(
     vars.insert("align".to_string(), align.to_string());
     vars.insert("align_style".to_string(), align_style);
 
-    // Pre-built format-specific strings (avoids triple-brace issues in Jinja)
-    let fig_env = attrs.get("fig-env").map(|s| s.as_str()).unwrap_or("figure");
-    let fig_pos = attrs.get("fig-pos").map(|s| format!("[{}]", s)).unwrap_or_default();
-    vars.insert("fig_begin".to_string(), format!("\\begin{{{}}}{}", fig_env, fig_pos));
-    vars.insert("fig_end".to_string(), format!("\\end{{{}}}", fig_env));
+    if let Some(env) = attrs.get("fig-env") {
+        vars.insert("fig_env".to_string(), env.clone());
+    }
+    if let Some(pos) = attrs.get("fig-pos") {
+        vars.insert("fig_pos".to_string(), format!("[{}]", pos));
+    }
     vars.insert("caption_cmd".to_string(), if cap_rendered.is_empty() {
         String::new()
     } else {

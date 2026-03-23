@@ -46,13 +46,14 @@ impl Filter for CalloutFilter {
             None => return FilterResult::Pass,
         };
 
+        let callout_defs = crate::project::get_defaults().callout;
         let (default_title, icon) = match callout_class.as_str() {
-            "callout-note" => ("Note", "\u{2139}\u{fe0f}"),
-            "callout-tip" => ("Tip", "\u{1f4a1}"),
-            "callout-warning" => ("Warning", "\u{26a0}\u{fe0f}"),
-            "callout-important" => ("Important", "\u{2757}"),
-            "callout-caution" => ("Caution", "\u{1f525}"),
-            _ => ("Note", "\u{2139}\u{fe0f}"),
+            "callout-note" => (callout_defs.as_ref().and_then(|c| c.note.clone()).unwrap_or_else(|| "Note".to_string()), "\u{2139}\u{fe0f}"),
+            "callout-tip" => (callout_defs.as_ref().and_then(|c| c.tip.clone()).unwrap_or_else(|| "Tip".to_string()), "\u{1f4a1}"),
+            "callout-warning" => (callout_defs.as_ref().and_then(|c| c.warning.clone()).unwrap_or_else(|| "Warning".to_string()), "\u{26a0}\u{fe0f}"),
+            "callout-important" => (callout_defs.as_ref().and_then(|c| c.important.clone()).unwrap_or_else(|| "Important".to_string()), "\u{2757}"),
+            "callout-caution" => (callout_defs.as_ref().and_then(|c| c.caution.clone()).unwrap_or_else(|| "Caution".to_string()), "\u{1f525}"),
+            _ => (callout_defs.as_ref().and_then(|c| c.note.clone()).unwrap_or_else(|| "Note".to_string()), "\u{2139}\u{fe0f}"),
         };
 
         let callout_type = callout_class.strip_prefix("callout-").unwrap_or("note");
@@ -72,7 +73,7 @@ impl Filter for CalloutFilter {
 
         let title = vars.get("title").filter(|t| !t.is_empty())
             .cloned()
-            .unwrap_or_else(|| default_title.to_string());
+            .unwrap_or(default_title);
         vars.insert("title".to_string(), title.clone());
         vars.insert("icon".to_string(), icon.to_string());
 
@@ -87,7 +88,9 @@ impl Filter for CalloutFilter {
         let collapse = vars.get("collapse").map(|v| v == "true").unwrap_or(false);
         vars.insert("collapse".to_string(), collapse.to_string());
 
-        let appearance = vars.get("appearance").cloned().unwrap_or_else(|| "default".to_string());
+        let appearance = vars.get("appearance").cloned().unwrap_or_else(|| {
+            callout_defs.as_ref().and_then(|c| c.appearance.clone()).unwrap_or_else(|| "default".to_string())
+        });
         vars.insert("appearance".to_string(), appearance.clone());
 
         FilterResult::Continue

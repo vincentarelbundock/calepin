@@ -62,13 +62,6 @@ pub enum Command {
         all: bool,
     },
 
-    /// Initialize a new project
-    Init {
-        /// Project template: blank, docs, blog
-        #[arg(long, default_value = "blank")]
-        template: String,
-    },
-
     /// Generate scaffolding files
     New {
         #[command(subcommand)]

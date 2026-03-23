@@ -44,8 +44,9 @@ pub fn build_site(
     let format = &site_target.base;
     let output_ext = site_target.output_extension();
 
-    // Set active target for template/component resolution
+    // Set active target and project root for template/component resolution
     crate::paths::set_active_target(Some(&site_target_name));
+    crate::paths::set_project_root(Some(&base_dir));
 
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
     // Falls back to built-in templates if not found on filesystem.
@@ -173,6 +174,7 @@ pub fn rebuild_pages(
     let output_ext = site_target.output_extension();
 
     crate::paths::set_active_target(Some(&site_target_name));
+    crate::paths::set_project_root(Some(&base_dir));
 
     let output_dir = base_dir.join("output");
 

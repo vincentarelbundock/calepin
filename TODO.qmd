@@ -67,6 +67,8 @@
 
 - [ ] Figure templates in latex  are pre-computed. Templates need to handle \begin{ {{variables}} }
 - [ ] Check insertion of static images
+- [ ] Match default DPI in python and R. Or does it matter for .svg files? Are we doing svg in python?
+- [ ] Can we convert svg2pdf without calling an external tool?
 
 ## Layout
 
@@ -83,8 +85,9 @@
 
 ## Cross-references
 
-- [ ] Custom cross-reference types
-- [ ] Custom numbered float types
+- [ ] Custom cross-reference types.
+- [ ] Custom numbered float types.
+- [ ] Cross-references across pages in website and book collections.
 
 
 ## HTML
@@ -127,6 +130,8 @@
 
 ## TOML
 
+- [ ] Collect all hard-coded values from the rust code
+- [ ] Transfer everythin we can to .toml
 - [ ] Formal categories: content, content_standalone, what else?
 
 
@@ -172,6 +177,7 @@
 
 ## Internal
 
+- [ ] document vs. collection (better than "site")
 - [ ] Performance profiling
 - [ ] Architecture refactor / DRY / simplification
 - [ ] Singular vs Plural file names
@@ -181,6 +187,11 @@
     - [ ] homebrew
     - [ ] linux
     - [ ] windows
+
+
+## Preview
+
+- [ ] website watch doesn't work in preview mode
 
 
 ## Manual code review

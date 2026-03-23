@@ -14,7 +14,9 @@ pub fn render(
     render_element: &dyn Fn(&Element) -> String,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
 ) -> String {
-    let valign = attrs.get("layout-valign").map(|s| s.as_str()).unwrap_or("top");
+    let defs = crate::project::get_defaults();
+    let default_valign = defs.layout.as_ref().and_then(|l| l.valign.clone()).unwrap_or_else(|| "top".to_string());
+    let valign = attrs.get("layout-valign").map(|s| s.as_str()).unwrap_or(&default_valign);
 
     let is_figure = id.as_ref().map_or(false, |id| id.starts_with("fig-"));
 

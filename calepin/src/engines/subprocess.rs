@@ -38,7 +38,7 @@ static CHUNK_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
     let secs: u64 = std::env::var("CALEPIN_TIMEOUT")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(30);
+        .unwrap_or_else(|| crate::project::get_defaults().timeout.unwrap_or(30));
     Duration::from_secs(secs)
 });
 

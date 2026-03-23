@@ -16,6 +16,7 @@ use crate::types::Metadata;
 
 thread_local! {
     static ACTIVE_TARGET: RefCell<Option<String>> = RefCell::new(None);
+    static PROJECT_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
 }
 
 /// Set the active target name for template resolution.
@@ -28,6 +29,21 @@ pub fn set_active_target(target: Option<&str>) {
 
 pub fn get_active_target() -> Option<String> {
     ACTIVE_TARGET.with(|t| t.borrow().clone())
+}
+
+/// Set the project root for template and snippet resolution.
+/// When set, `resolve_template` and `resolve_snippet` look under this directory
+/// instead of the current working directory.
+pub fn set_project_root(root: Option<&Path>) {
+    PROJECT_ROOT.with(|r| {
+        *r.borrow_mut() = root.map(|p| p.to_path_buf());
+    });
+}
+
+fn get_project_root() -> PathBuf {
+    PROJECT_ROOT.with(|r| {
+        r.borrow().clone().unwrap_or_else(|| PathBuf::from("."))
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -59,8 +75,8 @@ impl PathContext {
         Self {
             document_dir,
             output_dir,
-            files_dir: "_calepin_files".to_string(),
-            cache_dir: "_calepin_cache".to_string(),
+            files_dir: crate::project::get_defaults().files_dir.clone().unwrap_or_else(|| "_calepin_files".to_string()),
+            cache_dir: crate::project::get_defaults().cache_dir.clone().unwrap_or_else(|| "_calepin_cache".to_string()),
         }
     }
 
@@ -133,7 +149,7 @@ pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
     let base_specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
 
-    let root = Path::new(".");
+    let root = get_project_root();
     let active_target = get_active_target();
 
     // Target-specific in project (e.g., templates/book_latex/)
@@ -173,7 +189,7 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
     let specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
 
-    let root = Path::new(".");
+    let root = get_project_root();
     let active_target = get_active_target();
 
     // Target-specific in project

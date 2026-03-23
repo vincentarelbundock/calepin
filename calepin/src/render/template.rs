@@ -350,8 +350,10 @@ pub fn build_template_vars_with_headings(
         vars.insert("css".to_string(), format!("<style>\n{}\n</style>", load_default_css()));
         vars.insert("js".to_string(), String::new());
         let mut math_vars = HashMap::new();
+        let defs = crate::project::get_defaults();
         math_vars.insert("html_math_method".to_string(),
-            meta.html_math_method.as_deref().unwrap_or("katex").to_string());
+            meta.html_math_method.as_deref()
+                .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
         vars.insert("math_block".to_string(),
             render_element_block("math", ext, &math_vars));
     }
@@ -371,14 +373,15 @@ pub fn build_template_vars_with_headings(
             render_element_block("bibliography", ext, &bvars));
     }
 
-    // Table of contents (defaults to true for HTML)
+    // Table of contents
+    let toc_defs = crate::project::get_defaults().toc;
     let toc_enabled = match meta.toc {
         Some(v) => v,
-        None => ext == "html",
+        None => toc_defs.as_ref().and_then(|t| t.enabled).unwrap_or(ext == "html"),
     };
     if toc_enabled {
-        let toc_depth = if meta.toc_depth == 0 { 3 } else { meta.toc_depth };
-        let toc_title = meta.toc_title.as_deref().unwrap_or("Contents");
+        let toc_depth = if meta.toc_depth == 0 { toc_defs.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8 } else { meta.toc_depth };
+        let toc_title = meta.toc_title.as_deref().unwrap_or_else(|| toc_defs.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents"));
         let toc = match ext {
             "html" => build_toc_html(headings, toc_depth, toc_title),
             "latex" => format!("\\setcounter{{tocdepth}}{{{}}}\n\\tableofcontents", toc_depth),

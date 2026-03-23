@@ -209,7 +209,7 @@ pub fn execute_chunk(
             let dpi: f64 = options
                 .get_opt_string("dpi")
                 .and_then(|s| s.parse().ok())
-                .unwrap_or(150.0);
+                .unwrap_or_else(|| crate::project::get_defaults().dpi.unwrap_or(150.0));
             session.capture(&code, &fig_full_str, fig_width, fig_height, dpi)?
         }
         _ => {

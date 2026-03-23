@@ -31,6 +31,10 @@ pub struct ProjectConfig {
     #[serde(default)]
     pub var: Option<toml::Value>,
 
+    /// Configurable defaults for rendering, figures, chunks, etc.
+    #[serde(default)]
+    pub defaults: Option<Defaults>,
+
     /// Named output profiles.
     #[serde(default)]
     pub targets: HashMap<String, Target>,
@@ -203,6 +207,210 @@ pub struct CompileConfig {
 
     /// Extension of the compiled artifact.
     pub extension: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Defaults
+// ---------------------------------------------------------------------------
+
+/// Configurable defaults, loaded from [defaults] in calepin.toml.
+/// All fields are Option so user configs can partially override the built-in defaults.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct Defaults {
+    pub format: Option<String>,
+    #[serde(rename = "files-dir")]
+    pub files_dir: Option<String>,
+    #[serde(rename = "cache-dir")]
+    pub cache_dir: Option<String>,
+    #[serde(rename = "preview-port")]
+    pub preview_port: Option<u16>,
+    pub csl: Option<String>,
+    pub dpi: Option<f64>,
+    pub timeout: Option<u64>,
+    pub math: Option<String>,
+    pub highlight: Option<HighlightDefaults>,
+    pub figure: Option<FigureDefaults>,
+    pub chunk: Option<ChunkDefaults>,
+    pub toc: Option<TocDefaults>,
+    pub callout: Option<CalloutDefaults>,
+    pub video: Option<VideoDefaults>,
+    pub placeholder: Option<PlaceholderDefaults>,
+    pub lipsum: Option<LipsumDefaults>,
+    pub layout: Option<LayoutDefaults>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct FigureDefaults {
+    pub width: Option<f64>,
+    #[serde(rename = "out-width")]
+    pub out_width: Option<f64>,
+    #[serde(rename = "aspect-ratio")]
+    pub aspect_ratio: Option<f64>,
+    pub device: Option<String>,
+    pub alignment: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ChunkDefaults {
+    pub cache: Option<bool>,
+    pub eval: Option<bool>,
+    pub echo: Option<bool>,
+    pub include: Option<bool>,
+    pub warning: Option<bool>,
+    pub message: Option<bool>,
+    pub comment: Option<String>,
+    pub results: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct TocDefaults {
+    pub enabled: Option<bool>,
+    pub depth: Option<u32>,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct CalloutDefaults {
+    pub appearance: Option<String>,
+    pub note: Option<String>,
+    pub tip: Option<String>,
+    pub warning: Option<String>,
+    pub important: Option<String>,
+    pub caution: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct VideoDefaults {
+    pub width: Option<String>,
+    pub height: Option<String>,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct PlaceholderDefaults {
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LipsumDefaults {
+    pub paragraphs: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LayoutDefaults {
+    pub valign: Option<String>,
+    pub columns: Option<usize>,
+    pub rows: Option<usize>,
+}
+
+impl Defaults {
+    /// Merge user defaults on top of built-in defaults.
+    /// User values take priority; missing fields fall back to built-in.
+    pub fn merge(builtin: &Defaults, user: &Defaults) -> Defaults {
+        macro_rules! or {
+            ($u:expr, $b:expr) => { $u.clone().or_else(|| $b.clone()) };
+        }
+        Defaults {
+            format: or!(user.format, builtin.format),
+            files_dir: or!(user.files_dir, builtin.files_dir),
+            cache_dir: or!(user.cache_dir, builtin.cache_dir),
+            preview_port: user.preview_port.or(builtin.preview_port),
+            csl: or!(user.csl, builtin.csl),
+            dpi: user.dpi.or(builtin.dpi),
+            timeout: user.timeout.or(builtin.timeout),
+            math: or!(user.math, builtin.math),
+            highlight: match (&user.highlight, &builtin.highlight) {
+                (Some(u), Some(b)) => Some(HighlightDefaults {
+                    light: or!(u.light, b.light),
+                    dark: or!(u.dark, b.dark),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+            figure: match (&user.figure, &builtin.figure) {
+                (Some(u), Some(b)) => Some(FigureDefaults {
+                    width: u.width.or(b.width),
+                    out_width: u.out_width.or(b.out_width),
+                    aspect_ratio: u.aspect_ratio.or(b.aspect_ratio),
+                    device: or!(u.device, b.device),
+                    alignment: or!(u.alignment, b.alignment),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+            chunk: match (&user.chunk, &builtin.chunk) {
+                (Some(u), Some(b)) => Some(ChunkDefaults {
+                    cache: u.cache.or(b.cache),
+                    eval: u.eval.or(b.eval),
+                    echo: u.echo.or(b.echo),
+                    include: u.include.or(b.include),
+                    warning: u.warning.or(b.warning),
+                    message: u.message.or(b.message),
+                    comment: or!(u.comment, b.comment),
+                    results: or!(u.results, b.results),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+            toc: match (&user.toc, &builtin.toc) {
+                (Some(u), Some(b)) => Some(TocDefaults {
+                    enabled: u.enabled.or(b.enabled),
+                    depth: u.depth.or(b.depth),
+                    title: or!(u.title, b.title),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+            callout: match (&user.callout, &builtin.callout) {
+                (Some(u), Some(b)) => Some(CalloutDefaults {
+                    appearance: or!(u.appearance, b.appearance),
+                    note: or!(u.note, b.note),
+                    tip: or!(u.tip, b.tip),
+                    warning: or!(u.warning, b.warning),
+                    important: or!(u.important, b.important),
+                    caution: or!(u.caution, b.caution),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+            video: match (&user.video, &builtin.video) {
+                (Some(u), Some(b)) => Some(VideoDefaults {
+                    width: or!(u.width, b.width),
+                    height: or!(u.height, b.height),
+                    title: or!(u.title, b.title),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+            placeholder: match (&user.placeholder, &builtin.placeholder) {
+                (Some(u), Some(b)) => Some(PlaceholderDefaults {
+                    width: u.width.or(b.width),
+                    height: u.height.or(b.height),
+                    color: or!(u.color, b.color),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+            lipsum: match (&user.lipsum, &builtin.lipsum) {
+                (Some(u), Some(b)) => Some(LipsumDefaults {
+                    paragraphs: u.paragraphs.or(b.paragraphs),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+            layout: match (&user.layout, &builtin.layout) {
+                (Some(u), Some(b)) => Some(LayoutDefaults {
+                    valign: or!(u.valign, b.valign),
+                    columns: u.columns.or(b.columns),
+                    rows: u.rows.or(b.rows),
+                }),
+                (Some(u), None) => Some(u.clone()),
+                (None, b) => b.clone(),
+            },
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -438,6 +646,37 @@ pub fn builtin_config() -> &'static ProjectConfig {
         config
     });
     &CONFIG
+}
+
+/// Get resolved defaults, merging project config with built-in.
+pub fn resolve_defaults(config: Option<&ProjectConfig>) -> Defaults {
+    let builtin = builtin_config().defaults.as_ref()
+        .expect("built-in calepin.toml must have [defaults]");
+    match config.and_then(|c| c.defaults.as_ref()) {
+        Some(user) => Defaults::merge(builtin, user),
+        None => builtin.clone(),
+    }
+}
+
+/// Thread-local resolved defaults, set once per render.
+use std::cell::RefCell;
+thread_local! {
+    static ACTIVE_DEFAULTS: RefCell<Option<Defaults>> = RefCell::new(None);
+}
+
+/// Set the active defaults for the current render.
+pub fn set_active_defaults(defaults: Defaults) {
+    ACTIVE_DEFAULTS.with(|d| *d.borrow_mut() = Some(defaults));
+}
+
+/// Get a reference to the active defaults. Falls back to built-in if not set.
+pub fn get_defaults() -> Defaults {
+    ACTIVE_DEFAULTS.with(|d| {
+        d.borrow().clone().unwrap_or_else(|| {
+            builtin_config().defaults.clone()
+                .expect("built-in calepin.toml must have [defaults]")
+        })
+    })
 }
 
 /// Resolve a target by name.

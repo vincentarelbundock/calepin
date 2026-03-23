@@ -73,17 +73,16 @@ pub fn expand_includes(text: &str, document_dir: &std::path::Path, format: &str)
     });
     let text = SNIP_RE.replace_all(&text, |caps: &regex::Captures| {
         let name = &caps[1];
-        let file_name = name.replace('_', "-");
-        match crate::paths::resolve_snippet(&file_name, format) {
+        match crate::paths::resolve_snippet(name, format) {
             Some(path) => match std::fs::read_to_string(&path) {
                 Ok(content) => content,
                 Err(e) => {
-                    cwarn!("snippet '{}': {}", file_name, e);
+                    cwarn!("snippet '{}': {}", name, e);
                     String::new()
                 }
             },
             None => {
-                cwarn!("snippet '{}' not found", file_name);
+                cwarn!("snippet '{}' not found", name);
                 String::new()
             }
         }
@@ -188,9 +187,13 @@ pub fn process_body(
         env.add_function("video", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
             let url: &str = kwargs.get("url")
                 .map_err(|_| Error::new(ErrorKind::MissingArgument, "video() requires a `url` argument"))?;
-            let width: &str = kwargs.get("width").unwrap_or("100%");
-            let height: &str = kwargs.get("height").unwrap_or("400");
-            let title: &str = kwargs.get("title").unwrap_or("Video");
+            let vdefs = crate::project::get_defaults().video;
+            let default_width = vdefs.as_ref().and_then(|v| v.width.clone()).unwrap_or_else(|| "100%".to_string());
+            let default_height = vdefs.as_ref().and_then(|v| v.height.clone()).unwrap_or_else(|| "400".to_string());
+            let default_title = vdefs.as_ref().and_then(|v| v.title.clone()).unwrap_or_else(|| "Video".to_string());
+            let width: &str = kwargs.get("width").unwrap_or(&default_width);
+            let height: &str = kwargs.get("height").unwrap_or(&default_height);
+            let title: &str = kwargs.get("title").unwrap_or(&default_title);
             kwargs.assert_all_used()?;
 
             // Detect YouTube/Vimeo and convert to embed URLs
@@ -279,7 +282,8 @@ pub fn process_body(
             kwargs.assert_all_used()?;
             return Ok(Value::from(lipsum_sentences(n as usize)));
         }
-        let n: u64 = kwargs.get("paragraphs").unwrap_or(1);
+        let default_paragraphs = crate::project::get_defaults().lipsum.as_ref().and_then(|l| l.paragraphs).unwrap_or(1);
+        let n: u64 = kwargs.get("paragraphs").unwrap_or(default_paragraphs);
         kwargs.assert_all_used()?;
         Ok(Value::from(lipsum_paragraphs(n as usize)))
     });
@@ -288,9 +292,13 @@ pub fn process_body(
         let fmt = format.to_string();
         let frags = Arc::clone(&fragments);
         env.add_function("placeholder", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
-            let width: u32 = kwargs.get("width").unwrap_or(600);
-            let height: u32 = kwargs.get("height").unwrap_or(400);
-            let color: &str = kwargs.get("color").unwrap_or("#cccccc");
+            let pdefs = crate::project::get_defaults().placeholder;
+            let default_pw = pdefs.as_ref().and_then(|p| p.width).unwrap_or(600);
+            let default_ph = pdefs.as_ref().and_then(|p| p.height).unwrap_or(400);
+            let default_color = pdefs.as_ref().and_then(|p| p.color.clone()).unwrap_or_else(|| "#cccccc".to_string());
+            let width: u32 = kwargs.get("width").unwrap_or(default_pw);
+            let height: u32 = kwargs.get("height").unwrap_or(default_ph);
+            let color: &str = kwargs.get("color").unwrap_or(&default_color);
             let text: Option<&str> = kwargs.get("text").ok();
             let text = text.map(|s| s.to_string())
                 .unwrap_or_else(|| format!("{}×{}", width, height));

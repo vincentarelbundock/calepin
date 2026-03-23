@@ -67,9 +67,16 @@ pub fn watch_dir(dir: &Path, stop: Arc<AtomicBool>, on_change: impl Fn(&[std::pa
     loop {
         match rx.recv_timeout(Duration::from_millis(200)) {
             Ok(Ok(event)) => {
-                // Accept any non-Remove event kind -- macOS FSEvents does not
-                // always report specific Modify/Create variants.
-                if matches!(event.kind, notify::EventKind::Remove(_)) {
+                // Only react to content modifications and file creation.
+                // macOS FSEvents may report generic Modify without a sub-kind,
+                // so accept Modify(Any) and Modify(Data) but not Modify(Metadata).
+                let dominated = matches!(
+                    event.kind,
+                    notify::EventKind::Modify(notify::event::ModifyKind::Data(_))
+                    | notify::EventKind::Modify(notify::event::ModifyKind::Any)
+                    | notify::EventKind::Create(_)
+                );
+                if !dominated {
                     continue;
                 }
                 let qmd_paths: Vec<std::path::PathBuf> = event.paths.iter()

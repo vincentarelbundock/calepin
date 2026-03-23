@@ -316,7 +316,7 @@ fn parse_code_chunk(
 
     let prefix = caps.get(1).map_or("", |m| m.as_str()).to_string();
     let fence_marker = caps.get(2).map_or("```", |m| m.as_str());
-    let engine = caps.get(3).map_or("r", |m| m.as_str()).to_string();
+    let engine = caps[3].to_string();
     let header_str = caps.get(4).map_or("", |m| m.as_str());
 
     // Parse header: only label allowed, key=value options are an error

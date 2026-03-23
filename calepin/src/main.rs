@@ -78,7 +78,8 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
         }
     });
 
-    // Target name: CLI flag -> front matter -> "html"
+    // Target name: CLI flag -> front matter -> default from config
+    let default_format = project::get_defaults().format.clone().unwrap_or_else(|| "html".to_string());
     let (target_name, explicit_target) = if let Some(name) = cli_target {
         (name.to_string(), true)
     } else {
@@ -87,17 +88,22 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
             if let Ok((meta, _)) = parse::yaml::split_yaml(&text) {
                 match meta.target {
                     Some(t) => (t, true),
-                    None => ("html".to_string(), false),
+                    None => (default_format.clone(), false),
                 }
             } else {
-                ("html".to_string(), false)
+                (default_format.clone(), false)
             }
         } else {
-            ("html".to_string(), false)
+            (default_format.clone(), false)
         }
     };
 
     let target = project::resolve_target(&target_name, project_config.as_ref())?;
+
+    let defaults = project::resolve_defaults(project_config.as_ref());
+    project::set_active_defaults(defaults);
+
+    paths::set_project_root(project_root.as_deref());
 
     Ok(ProjectContext {
         project_root,
@@ -152,7 +158,7 @@ fn apply_base_override(ctx: &mut ProjectContext, base: Option<&str>) -> Result<(
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "flush", "init", "new", "info"];
+    let known = ["render", "preview", "flush", "new", "info"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -186,10 +192,6 @@ fn main() -> Result<()> {
                 (cache, files, compilation)
             };
             handle_flush(&path, yes, do_cache, do_files, do_compilation)
-        }
-        Command::Init { template } => {
-            eprintln!("Project init (template: {}) is not yet implemented.", template);
-            Ok(())
         }
         Command::New { action } => handle_new(action),
         Command::Info { action } => handle_info(action),
@@ -328,6 +330,7 @@ fn handle_render(args: RenderArgs) -> Result<()> {
     let errors: Vec<String> = args.input
         .par_iter()
         .filter_map(|input| {
+            paths::set_project_root(ctx.project_root.as_deref());
             let file_output = output_ext.as_ref().map(|(dir, ext)| {
                 dir.join(input.file_name().unwrap()).with_extension(ext)
             });
@@ -1000,12 +1003,17 @@ macro_rules! timed {
     let highlight_config = metadata.var.get("highlight-style")
         .map(|v| filters::highlighting::parse_highlight_config(v))
         .unwrap_or_else(|| {
-            // Defaults from built-in calepin.toml [meta].highlight
+            let defs = project::get_defaults();
+            let hl = defs.highlight.as_ref();
             let cfg = project::builtin_config();
-            let defaults = cfg.meta.as_ref().and_then(|m| m.highlight.as_ref());
+            let meta_hl = cfg.meta.as_ref().and_then(|m| m.highlight.as_ref());
             filters::highlighting::HighlightConfig::LightDark {
-                light: defaults.and_then(|h| h.light.clone()).unwrap_or_else(|| "github".to_string()),
-                dark: defaults.and_then(|h| h.dark.clone()).unwrap_or_else(|| "nord".to_string()),
+                light: hl.and_then(|h| h.light.clone())
+                    .or_else(|| meta_hl.and_then(|h| h.light.clone()))
+                    .unwrap_or_else(|| "github".to_string()),
+                dark: hl.and_then(|h| h.dark.clone())
+                    .or_else(|| meta_hl.and_then(|h| h.dark.clone()))
+                    .unwrap_or_else(|| "nord".to_string()),
             }
         });
     let mut element_renderer = ElementRenderer::new(renderer.base_format(), highlight_config);

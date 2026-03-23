@@ -59,8 +59,9 @@ pub fn render_pages(
                 let format = &format_owned;
                 let target = &target_owned;
                 s.spawn(move || {
-                    // Set active target in this thread for template resolution
+                    // Set active target and project root in this thread for template resolution
                     crate::paths::set_active_target(target.as_deref());
+                    crate::paths::set_project_root(Some(base_dir));
                     let key = page.source.display().to_string();
                     let result = render_one_page(page, overrides, base_dir, output_dir, format, apply_page_template);
                     (key, result)

@@ -69,14 +69,15 @@ fn build_figure_vars(
     vars.insert("width_attr".to_string(), format_width(attrs, format));
     vars.insert("height_attr".to_string(), format_height(attrs));
 
-    let align = attrs.fig_align.as_deref().unwrap_or("center");
+    let defs = crate::project::get_defaults();
+    let default_align = defs.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
+    let align = attrs.fig_align.as_deref().unwrap_or(default_align);
     vars.insert("align_style".to_string(), format_align(align, format));
     vars.insert("align".to_string(), align.to_string());
 
-    let fig_env = attrs.fig_env.as_deref().unwrap_or("figure");
-    vars.insert("fig_env".to_string(), fig_env.to_string());
-    vars.insert("fig_begin".to_string(), format!("\\begin{{{}}}", fig_env));
-    vars.insert("fig_end".to_string(), format!("\\end{{{}}}", fig_env));
+    if let Some(ref env) = attrs.fig_env {
+        vars.insert("fig_env".to_string(), env.clone());
+    }
     vars.insert("fig_pos".to_string(), match attrs.fig_pos.as_deref() {
         Some(pos) => format!("[{}]", pos),
         None => String::new(),
@@ -95,10 +96,9 @@ fn build_figure_vars(
         }
     );
 
-    let cap_loc = attrs.cap_location.as_deref()
-        .or(default_cap_location)
-        .unwrap_or("bottom");
-    vars.insert("cap_location".to_string(), cap_loc.to_string());
+    if let Some(loc) = attrs.cap_location.as_deref().or(default_cap_location) {
+        vars.insert("cap_location".to_string(), loc.to_string());
+    }
 
     if let Some(ref link) = attrs.link {
         let img = vars.get("image").cloned().unwrap_or_default();

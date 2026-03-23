@@ -1,5 +1,6 @@
+{%- set loc = cap_location | default("bottom") -%}
 {%- if base == "html" %}
-{%- if cap_location == "bottom" %}
+{%- if loc == "bottom" %}
 <div class="table-div" id="{{id}}">
 {{children}}
 {%- if caption %}
@@ -15,7 +16,7 @@
 </div>
 {%- endif %}
 {%- elif base == "latex" %}
-{%- if cap_location == "bottom" %}
+{%- if loc == "bottom" %}
 {{tbl_begin}}
 \centering
 {{children}}
@@ -39,7 +40,7 @@
 {{children}} {{label}}
 {%- endif %}
 {%- else %}
-{%- if cap_location == "bottom" %}
+{%- if loc == "bottom" %}
 {{children}}
 
 : {{caption}}

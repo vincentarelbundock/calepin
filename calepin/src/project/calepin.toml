@@ -1,3 +1,65 @@
+[defaults]
+format = "html"
+files-dir = "_calepin_files"
+cache-dir = "_calepin_cache"
+preview-port = 3456
+csl = "chicago-author-date"
+dpi = 150.0
+timeout = 30
+math = "katex"
+
+[defaults.highlight]
+light = "github"
+dark = "nord"
+
+[defaults.figure]
+width = 6.0
+out-width = 0.70
+aspect-ratio = 0.618
+device = "png"
+alignment = "center"
+
+[defaults.chunk]
+cache = true
+eval = true
+echo = true
+include = true
+warning = true
+message = true
+comment = "> "
+results = "markup"
+
+[defaults.toc]
+enabled = true
+depth = 3
+title = "Contents"
+
+[defaults.callout]
+appearance = "default"
+note = "Note"
+tip = "Tip"
+warning = "Warning"
+important = "Important"
+caution = "Caution"
+
+[defaults.video]
+width = "100%"
+height = "400"
+title = "Video"
+
+[defaults.placeholder]
+width = 600
+height = 400
+color = "#cccccc"
+
+[defaults.lipsum]
+paragraphs = 1
+
+[defaults.layout]
+valign = "top"
+columns = 1
+rows = 1
+
 [meta]
 title = "Calepin"
 subtitle = "A document and site generator"

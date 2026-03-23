@@ -105,56 +105,84 @@ impl ChunkOptions {
     }
 
     // Convenience accessors mirroring calepin's reactor defaults
-    pub fn cache(&self) -> bool { self.get_bool("cache", true) }
-    pub fn eval(&self) -> bool { self.get_bool("eval", true) }
+    pub fn cache(&self) -> bool {
+        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.cache).unwrap_or(true);
+        self.get_bool("cache", d)
+    }
+    pub fn eval(&self) -> bool {
+        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.eval).unwrap_or(true);
+        self.get_bool("eval", d)
+    }
     #[allow(dead_code)]
-    pub fn echo(&self) -> bool { self.get_bool("echo", true) }
-    pub fn include(&self) -> bool { self.get_bool("include", true) }
-    pub fn warning(&self) -> bool { self.get_bool("warning", true) }
-    pub fn message(&self) -> bool { self.get_bool("message", true) }
-    pub fn comment(&self) -> String { self.get_string("comment", "> ") }
+    pub fn echo(&self) -> bool {
+        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.echo).unwrap_or(true);
+        self.get_bool("echo", d)
+    }
+    pub fn include(&self) -> bool {
+        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.include).unwrap_or(true);
+        self.get_bool("include", d)
+    }
+    pub fn warning(&self) -> bool {
+        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.warning).unwrap_or(true);
+        self.get_bool("warning", d)
+    }
+    pub fn message(&self) -> bool {
+        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.message).unwrap_or(true);
+        self.get_bool("message", d)
+    }
+    pub fn comment(&self) -> String {
+        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.comment.clone()).unwrap_or_else(|| "> ".to_string());
+        self.get_string("comment", &d)
+    }
     pub fn results(&self) -> ResultsMode {
-        match self.get_string("results", "markup").as_str() {
+        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.results.clone()).unwrap_or_else(|| "markup".to_string());
+        match self.get_string("results", &d).as_str() {
             "asis" => ResultsMode::Asis,
             "hide" => ResultsMode::Hide,
             _ => ResultsMode::Markup,
         }
     }
-    pub fn engine(&self) -> String { self.get_string("engine", "r") }
+    pub fn engine(&self) -> String {
+        self.get_opt_string("engine")
+            .expect("engine must be set by the parser (e.g., {r} or {python})")
+    }
 
-    /// Default graphics device width in inches.
-    const DEFAULT_FIG_WIDTH: f64 = 6.0;
-    /// Default out-width as a fraction (70%).
-    const DEFAULT_OUT_WIDTH_FRAC: f64 = 0.70;
-    /// Default aspect ratio (golden ratio).
-    const DEFAULT_FIG_ASP: f64 = 0.618;
+    fn default_fig_width() -> f64 {
+        crate::project::get_defaults().figure.as_ref().and_then(|f| f.width).unwrap_or(6.0)
+    }
+    fn default_out_width_frac() -> f64 {
+        crate::project::get_defaults().figure.as_ref().and_then(|f| f.out_width).unwrap_or(0.70)
+    }
+    fn default_fig_asp() -> f64 {
+        crate::project::get_defaults().figure.as_ref().and_then(|f| f.aspect_ratio).unwrap_or(0.618)
+    }
 
     /// Graphics device width in inches.
     /// When `out-width` is set but `fig-width` is not, auto-scales to keep
     /// text size consistent: `default_fig_width * (out_width / default_out_width)`.
     pub fn fig_width(&self) -> f64 {
         if self.get_opt_string("fig.width").is_some() {
-            return self.get_number("fig.width", Self::DEFAULT_FIG_WIDTH);
+            return self.get_number("fig.width", Self::default_fig_width());
         }
         // Auto-scale from out-width if set
         if let Some(frac) = self.out_width_fraction() {
-            return Self::DEFAULT_FIG_WIDTH * (frac / Self::DEFAULT_OUT_WIDTH_FRAC);
+            return Self::default_fig_width() * (frac / Self::default_out_width_frac());
         }
-        Self::DEFAULT_FIG_WIDTH
+        Self::default_fig_width()
     }
 
     /// Graphics device height in inches.
     /// Derived from `fig-width * fig-asp` unless explicitly set.
     pub fn fig_height(&self) -> f64 {
         if self.get_opt_string("fig.height").is_some() {
-            return self.get_number("fig.height", Self::DEFAULT_FIG_WIDTH * Self::DEFAULT_FIG_ASP);
+            return self.get_number("fig.height", Self::default_fig_width() * Self::default_fig_asp());
         }
         self.fig_width() * self.fig_asp()
     }
 
     /// Aspect ratio (height / width). Defaults to golden ratio.
     pub fn fig_asp(&self) -> f64 {
-        self.get_number("fig.asp", Self::DEFAULT_FIG_ASP)
+        self.get_number("fig.asp", Self::default_fig_asp())
     }
 
     /// Parse out-width as a fraction (e.g., "70%" -> 0.70, "0.5" -> 0.5).
@@ -172,7 +200,10 @@ impl ChunkOptions {
     pub fn tbl_cap(&self) -> Option<String> { self.get_opt_string("tbl.cap") }
     pub fn lst_cap(&self) -> Option<String> { self.get_opt_string("lst.cap") }
     pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig.alt") }
-    pub fn dev(&self) -> String { self.get_string("dev", "png") }
+    pub fn dev(&self) -> String {
+        let default = crate::project::get_defaults().figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
+        self.get_string("dev", &default)
+    }
     pub fn fig_align(&self) -> Option<String> { self.get_opt_string("fig.align") }
     pub fn fig_scap(&self) -> Option<String> { self.get_opt_string("fig.scap") }
     pub fn fig_env(&self) -> Option<String> { self.get_opt_string("fig.env") }
@@ -184,8 +215,9 @@ impl ChunkOptions {
 
     /// Build figure rendering attributes from chunk options.
     pub fn to_figure_attrs(&self) -> FigureAttrs {
+        let default_out_width = format!("{}%", (Self::default_out_width_frac() * 100.0) as u32);
         FigureAttrs {
-            width: self.out_width().or_else(|| Some("70%".to_string())),
+            width: self.out_width().or_else(|| Some(default_out_width)),
             height: self.out_height(),
             fig_align: self.fig_align(),
             fig_scap: self.fig_scap(),

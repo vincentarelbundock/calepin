@@ -1,3 +1,4 @@
+{%- set env = fig_env | default("figure") -%}
 {%- if base == "html" %}
 <div class="figure" id="{{id}}" style="{{align_style}}">
 {{children}}
@@ -6,12 +7,12 @@
 {%- endif %}
 </div>
 {%- elif base == "latex" %}
-{{fig_begin}}
+\begin{{_lb}}{{env}}{{_rb}}{{fig_pos}}
 {{align_style}}
 {{children}}
 {{caption_cmd}}
 {{label}}
-{{fig_end}}
+\end{{_lb}}{{env}}{{_rb}}
 {%- elif base == "typst" %}
 {%- if caption %}
 #figure([

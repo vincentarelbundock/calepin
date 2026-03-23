@@ -77,15 +77,15 @@ Insert reusable snippets from `templates/snippets/` by name:
 
 {% raw %}`{{ snip.source_tip }}`{% endraw %}
 
-This looks for a file named `source-tip` through the standard resolution chain:
+This looks for a file named `source_tip` through the standard resolution chain:
 
-1. `templates/{target}/snippets/source-tip.{ext}` (target-specific)
-2. `templates/{base}/snippets/source-tip.{ext}` (base-specific)
-3. `templates/common/snippets/source-tip.jinja` (format-agnostic)
+1. `templates/{target}/snippets/source_tip.{ext}` (target-specific)
+2. `templates/{base}/snippets/source_tip.{ext}` (base-specific)
+3. `templates/common/snippets/source_tip.jinja` (format-agnostic)
 
-Underscores in the accessor name are normalized to dashes for file lookup. Snippets are expanded before block parsing, so fenced divs (`:::`), code chunks, and other block-level syntax work inside them. The expanded content then goes through normal Jinja processing, so snippets can contain `{{ meta.title }}`, conditionals, and other Jinja expressions.
+The file name matches the accessor exactly (use underscores, since Jinja dot-access doesn't allow dashes). Snippets are expanded before block parsing, so fenced divs (`:::`), code chunks, and other block-level syntax work inside them. The expanded content then goes through normal Jinja processing, so snippets can contain `{{ meta.title }}`, conditionals, and other Jinja expressions.
 
-Example snippet file `templates/common/snippets/source-tip.jinja`:
+Example snippet file `templates/common/snippets/source_tip.jinja`:
 
 ````
 {% raw %}

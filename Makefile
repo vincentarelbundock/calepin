@@ -48,7 +48,8 @@ check:  ## Run cargo check (fast compile check)
 	cargo check --manifest-path calepin/Cargo.toml
 
 site: build ## Build and serve static site from website/
-	uv run calepin preview website/_calepin.yaml
+	calepin flush -y
+	uv run calepin preview website/_calepin.toml
 
 # ==============================================================================
 # Render targets

@@ -4,8 +4,6 @@ title: Basics
 
 This page reviews some of the basics of Quarto and Markdown syntax supported by *Calepin*. It covers document structure, code chunks, figures, math, cross-references, citations, and other features that work out of the box.
 
-{{ snip.source_tip }}
-
 # Getting started
 
 *Calepin* renders `.qmd` documents to HTML, LaTeX, Typst, and Markdown. It executes R code chunks, captures output and plots, resolves citations and cross-references, and wraps everything in a template.
@@ -16,47 +14,67 @@ To render this tutorial:
 calepin tutorial.qmd
 ```
 
-
 # Markdown basics
 
-*Calepin* supports standard CommonMark and GitHub Flavored Markdown.
+*Calepin* supports standard CommonMark and GitHub Flavored Markdown. The table below summarizes the basic Markdown notation from the original specification.
 
-Lorem ipsum dolor sit amet, *consectetur* adipiscing elit.
-Sed do **eiusmod tempor** incididunt ut labore.
+| Element | Syntax |
+|---|---|
+| Heading | `# H1`, `## H2`, ..., `###### H6` |
+| Paragraph | Blank line between blocks of text |
+| Line break | Two trailing spaces or `\` at end of line |
+| Italic | `*text*` or `_text_` |
+| Bold | `**text**` or `__text__` |
+| Bold + italic | `***text***` |
+| Blockquote | `> quoted text` |
+| Ordered list | `1. item` |
+| Unordered list | `- item`, `* item`, or `+ item` |
+| Inline code | `` `code` `` |
+| Code block | Indent by 4 spaces or fence with ` ``` ` |
+| Horizontal rule | `---`, `***`, or `___` |
+| Link | `[text](url)` or `[text](url "title")` |
+| Reference link | `[text][id]` then `[id]: url` |
+| Image | `![alt text](path)` |
+| Escape | `\*`, `\[`, `\\`, etc. |
 
-Ordered list:
+Here is a paragraph about Montreal that illustrates all of these features.
 
-1. First item
-2. Second item
-3. Third item
+{{ snip.source_tip }}
 
-Unordered list:
+---
 
-* Alpha
-* Beta
-* Gamma
+## Montréal
 
-A [hyperlink](https://example.com) and some `inline code`.
+> *Montréal is a city of contrasts: old-world charm meets modern ambition.*
 
-> A blockquote: Ut enim ad minim veniam, quis nostrud
-> exercitation ullamco laboris.
+Montréal is the **largest city** in the province of Québec and the *second most populous* in Canada. Founded in 1642, the city sits on an island in the ***Saint Lawrence River***. Visitors should explore these landmarks:
 
-Text with a footnote[^1] and another[^2].
+1. **Old Montréal** -- cobblestone streets and the [Notre-Dame Basilica](https://www.basiliquenotredame.ca)
+2. **Mount Royal** -- the park designed by Frederick Law Olmsted
+3. **The Plateau** -- colourful row houses and lively cafés
 
-[^1]: This is the first footnote.
-[^2]: This is the second footnote.
+Local specialties worth trying:
 
-Superscript: E = mc^2^. Strikethrough: ~~deleted~~.
+- Poutine
+- Smoked meat sandwiches
+- Bagels from [St-Viateur](https://www.stviateurbagel.com "St-Viateur Bagel")
 
-En dash: -- and em dash: ---
+The city's motto is `Concordia Salus`[^mtl], meaning "well-being through harmony."
+
+[^mtl]: The motto was adopted in 1833 and appears on the city's coat of arms.
+
+As the Montréal tourism board puts it:\
+"*There is no place quite like it.*"
+
+![A view of the Montréal skyline](/assets/placeholder.png)
 
 
 # Code chunks
 
-Code chunks are fenced with triple backticks and a `{r}` header. Options go inside the chunk as `#|` pipe comments.
+Code chunks are fenced with triple backticks and a `{r}` header. Options go inside the chunk as `#|` pipe comments. See the [Chunks](/code/chunks.html) vignette for the full list of chunk options.
 
 ```{r}
-#| echo: true
+#| echo: fenced
 x <- 1:10
 mean(x)
 ```
@@ -64,7 +82,13 @@ mean(x)
 
 # Inline code
 
-R expressions can be evaluated inline. The mean of 1:10 is `{r} mean(1:10)` and pi is approximately `{r} round(pi, 4)`.
+R expressions can be evaluated inline using back ticks and curly braces. See the [Inline](/code/inline.html) vignette for more details.
+
+```
+`{r} round(pi, 4)`
+```
+
+The numbers in this sentence are computed dynamically: The mean of 1:10 is `{r} mean(1:10)` and pi is approximately `{r} round(pi, 4)`.
 
 
 # Figures

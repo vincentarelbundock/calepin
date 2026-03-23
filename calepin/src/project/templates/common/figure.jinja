@@ -1,17 +1,30 @@
+{%- set env = fig_env | default("figure") -%}
+{%- set loc = cap_location | default("bottom") -%}
 {%- if base == "html" %}
 <div class="figure" id="fig-{{label}}" style="{{align_style}}">
-{{image}}
+{%- if loc == "top" and caption %}
 <p class="caption">{{caption}}</p>
+{%- endif %}
+{{image}}
+{%- if loc != "top" and caption %}
+<p class="caption">{{caption}}</p>
+{%- endif %}
 </div>
 {%- elif base == "latex" %}
-{{fig_begin}}{{fig_pos}}
+\begin{{_lb}}{{env}}{{_rb}}{{fig_pos}}
 {{align_style}}
-{{image}}
+{%- if loc == "top" %}
 {{caption_cmd}}
 \label{{_lb}}fig-{{label}}{{_rb}}
-{{fig_end}}
+{%- endif %}
+{{image}}
+{%- if loc != "top" %}
+{{caption_cmd}}
+\label{{_lb}}fig-{{label}}{{_rb}}
+{%- endif %}
+\end{{_lb}}{{env}}{{_rb}}
 {%- elif base == "typst" %}
-#figure({{image}}, caption: [{{caption}}]) <fig-{{label}}>
+#figure({{image}}, caption: [{{caption}}], placement: none) <fig-{{label}}>
 {%- else %}
 ![{{alt}}]({{path}})
 {%- endif %}
