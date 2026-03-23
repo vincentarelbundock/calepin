@@ -13,23 +13,23 @@
     - [ ] typst
     - [ ] latex
     - [ ] pdf
-- [ ] `content_standalone` in .toml for website/ should render standalone .qmd documents without inserting them in the toc.
-- [ ] 404.qmd
 - [ ] *Calepin* always in italics with capital letter in website/
 - [ ] Language / localization (`lang:` option, custom translation strings)
 - [ ] Allow users to supply `postprocess.latex` or `postprocess.html` in `_calepin/`
 - [ ] How do lettered appendices work?
 
 
+## Book
+
+- [ ] UI for targets with multiple "base"
+- [ ] UI for compilation of books
+
+
 ## Code execution
 
-- [ ] How can an R chunk add content to the LaTeX preamble?
 - [ ] Code annotation (line markers `# <1>` with numbered explanations)
 - [ ] Multiple figures from a single code chunk with `fig-subcap`
-- [ ] Layout attributes on code chunks (`layout-ncol`, `layout`)
 - [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
-- [ ] Diagrams: Penrose (requires trio format -- three separate files, not inline code)
-- [ ] docx should be more powerful and maybe not go through pandoc
 
 
 ## Tables
@@ -39,6 +39,7 @@
 - [ ] `gt`
 - [ ] `flextable`
 - [ ] `knitr::kable()`
+- [ ] How can an R chunk add content to the LaTeX preamble?
 - [ ] Tables should use a template and filter
 - [ ] Advanced table features (Bootstrap classes, embedded markdown in cells)
 - [ ] Subtables
@@ -49,6 +50,12 @@
 
 - [ ] Typst math is currently suppressed
 - [ ] LaTeX to Typst math plugin
+
+
+## Typst
+
+- [ ] ship with typst-lib in rust since this is our default -t pdf engine
+- [ ] book template
 
 
 ## Figures
@@ -87,7 +94,15 @@
 - [ ] Built-in website template
 - [ ] Built-in minimal website template
 - [ ] Built-in blog template
-- [ ] Example sites: arelbundock.com, countrycode, tinytable, modelsummary, marginaleffects
+
+
+## Evangelism
+
+- [ ] arelbundock.com
+- [ ] countrycode
+- [ ] tinytable
+- [ ] modelsummary
+- [ ] marginaleffects
 
 
 ## Plugins
@@ -104,26 +119,43 @@
 - [ ] YAML to TOML translation layer
 
 
+## TOML
+
+- [ ] Formal categories: content, content_standalone, what else?
+
+
 ## File paths
 
 - [ ] Strict, consistent, simple, cross-platform
 - [ ] Clear separation of output and input locations
 - [ ] Format-specific path handling (Typst, LaTeX, HTML, Markdown)
 - [ ] Tectonic path resolution quirks
-- [ ] _calepin/ directory
+- [ ] _calepin/ directory with cache, files, and output subdirectories?
 
 
-## Flush options
+## calepin new
 
-- [ ] calepin flush --cache
-- [ ] calepin flush --files
-- [ ] calepin flush --compilation
-- [ ] calepin flush --all (default)
+- [ ] site
+    - [ ] website (calepin)
+    - [ ] simple (arelbundock.com)
+    - [ ] single (litedown)
+    - [ ] blog
+- [ ] ebook
+    - [ ] book
+- [ ] document
+- [ ] book
+
+
+## Other formats
+
+- [ ] docx should be more powerful and maybe not go through pandoc
+- [ ] ebook?
 
 
 ## Docs
 
 - [ ] HTML sales pitch: classless CSS, standalone files by default
+- [ ] Performance page with `bench/rubbish.sh`
 
 
 ## Internal

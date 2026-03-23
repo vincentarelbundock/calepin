@@ -24,12 +24,41 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
 }
 
 /// Copy `assets/` directory to `assets/` in the output directory.
+/// Also copies built-in target-scoped assets as fallback for files not
+/// present in the project's assets/ directory.
 pub fn copy_assets(base_dir: &Path, output_dir: &Path) -> Result<()> {
-    let assets_src = base_dir.join("assets");
-    if !assets_src.is_dir() {
-        return Ok(());
-    }
     let assets_dst = output_dir.join("assets");
-    copy_dir_recursive(&assets_src, &assets_dst)
-        .context("Failed to copy assets/ to output directory")
+
+    // Copy project assets first (user files take priority)
+    let assets_src = base_dir.join("assets");
+    if assets_src.is_dir() {
+        copy_dir_recursive(&assets_src, &assets_dst)
+            .context("Failed to copy assets/ to output directory")?;
+    }
+
+    // Copy built-in target-scoped assets as fallback.
+    // Resolve the active target name to find assets/{target}/ in BUILTIN_PROJECT.
+    if let Some(target_name) = crate::paths::get_active_target() {
+        let builtin_path = format!("assets/{}", target_name);
+        if let Some(builtin_dir) = crate::render::elements::BUILTIN_PROJECT.get_dir(&builtin_path) {
+            fs::create_dir_all(&assets_dst)?;
+            for file in builtin_dir.files() {
+                let name = file.path().file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                if name.is_empty() { continue; }
+                let dst_file = assets_dst.join(name);
+                // Only copy if project doesn't have this file
+                if !dst_file.exists() {
+                    if let Some(content) = file.contents_utf8() {
+                        fs::write(&dst_file, content)?;
+                    } else {
+                        fs::write(&dst_file, file.contents())?;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }

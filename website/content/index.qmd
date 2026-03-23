@@ -2,7 +2,6 @@
 bibliography: ../assets/library.bib
 number-sections: true
 toc: true
-title: Home
 ---
 
 ```{=html}
@@ -13,7 +12,11 @@ title: Home
 </div>
 ```
 
-What is a *calepin*? In French, it's a small pocket notebook---the kind you carry around to jot down ideas. *Calepin* is a fast rendering engine for Quarto-compatible notebooks, written in Rust.
+What is a *calepin*? In French, it's a small pocket notebook -- the kind you carry around to jot down ideas. *Calepin* is a fast rendering engine for Quarto-compatible notebooks, written in Rust.
+
+::: {.callout-tip}
+Click the `</>` button in the top navigation bar to view the original `.qmd` source code for any page.
+:::
 
 ::: {.callout-warning}
 *Calepin* is Alpha-quality software in very early stages of development. Expect bugs and breaking changes without warning.

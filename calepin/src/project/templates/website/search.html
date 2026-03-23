@@ -1,0 +1,103 @@
+<li>
+  <button class="navbar-btn" data-search-toggle aria-label="Search (Ctrl+K)">
+    {{ icon(name="search") }}
+  </button>
+</li>
+<div class="search-overlay" role="dialog" aria-label="Search">
+  <div class="search-modal">
+    <div class="search-input-wrap">
+      {{ icon(name="search") }}
+      <input class="search-input" type="text" placeholder="Search..." aria-label="Search">
+      <span class="search-kbd">Esc</span>
+    </div>
+    <div class="search-results">
+      <div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>
+    </div>
+  </div>
+</div>
+<script type="module">
+  const overlay = document.querySelector('.search-overlay');
+  const toggle = document.querySelector('[data-search-toggle]');
+  const input = overlay.querySelector('.search-input');
+  const resultsEl = overlay.querySelector('.search-results');
+  let selectedIdx = -1;
+
+  // Preload pagefind immediately
+  const pagefind = await import('/pagefind/pagefind.js');
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function doSearch(query) {
+    if (!query.trim()) {
+      resultsEl.innerHTML = '<div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>';
+      selectedIdx = -1;
+      return;
+    }
+
+    const search = await pagefind.search(query);
+    const results = await Promise.all(search.results.slice(0, 15).map(r => r.data()));
+    selectedIdx = -1;
+
+    if (results.length === 0) {
+      resultsEl.innerHTML = '<div class="search-hint">No results found.</div>';
+      return;
+    }
+
+    resultsEl.innerHTML = results.map((r, i) =>
+      '<a class="search-result" href="' + escHtml(r.url) + '">' +
+        '<div class="search-result-title">' + escHtml(r.meta.title || r.url) + '</div>' +
+        '<div class="search-result-text">' + (r.excerpt || '') + '</div>' +
+      '</a>'
+    ).join('');
+  }
+
+  function updateSelected() {
+    const items = resultsEl.querySelectorAll('.search-result');
+    items.forEach((el, i) => el.classList.toggle('selected', i === selectedIdx));
+    if (items[selectedIdx]) items[selectedIdx].scrollIntoView({ block: 'nearest' });
+  }
+
+  function open() {
+    overlay.classList.add('active');
+    input.value = '';
+    resultsEl.innerHTML = '<div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>';
+    selectedIdx = -1;
+    setTimeout(() => input.focus(), 50);
+  }
+  function close() {
+    overlay.classList.remove('active');
+  }
+
+  let debounce = null;
+  input.addEventListener('input', function() {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => doSearch(input.value), 100);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    const items = resultsEl.querySelectorAll('.search-result');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIdx = Math.min(selectedIdx + 1, items.length - 1);
+      updateSelected();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIdx = Math.max(selectedIdx - 1, 0);
+      updateSelected();
+    } else if (e.key === 'Enter' && items[selectedIdx]) {
+      e.preventDefault();
+      items[selectedIdx].click();
+    }
+  });
+
+  if (toggle) toggle.addEventListener('click', open);
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) close();
+  });
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); open(); }
+    if (e.key === 'Escape') close();
+  });
+</script>

@@ -1,0 +1,5 @@
+---
+title: Home
+---
+
+Welcome to your new *Calepin* website. Edit this file at `content/index.qmd` to get started.

@@ -70,32 +70,35 @@ pub fn start_site(
                 file_path = file_path.join("index.html");
             }
 
-            if file_path.is_file() {
-                match std::fs::read(&file_path) {
-                    Ok(data) => {
-                        let mime = resolve_mime(&file_path);
-                        // Inject live-reload script into HTML responses
-                        if mime.starts_with("text/html") {
-                            let html = String::from_utf8_lossy(&data);
-                            let v = version.load(Ordering::Relaxed);
-                            let html = super::reload::inject_reload_script(&html, v);
-                            let header = Header::from_bytes("Content-Type", mime).unwrap();
-                            let _ = request.respond(Response::from_string(html).with_header(header));
-                        } else {
-                            let header = Header::from_bytes("Content-Type", mime).unwrap();
-                            let _ = request.respond(Response::from_data(data).with_header(header));
-                        }
-                    }
-                    Err(_) => {
-                        let _ = request.respond(
-                            Response::from_string("Not found").with_status_code(StatusCode(404)),
-                        );
-                    }
+            let data = if file_path.is_file() {
+                std::fs::read(&file_path).ok()
+            } else {
+                None
+            };
+
+            if let Some(data) = data {
+                let mime = resolve_mime(&file_path);
+                if mime.starts_with("text/html") {
+                    let html = String::from_utf8_lossy(&data);
+                    let v = version.load(Ordering::Relaxed);
+                    let html = super::reload::inject_reload_script(&html, v);
+                    let header = Header::from_bytes("Content-Type", mime).unwrap();
+                    let _ = request.respond(Response::from_string(html).with_header(header));
+                } else {
+                    let header = Header::from_bytes("Content-Type", mime).unwrap();
+                    let _ = request.respond(Response::from_data(data).with_header(header));
                 }
             } else {
-                let _ = request.respond(
-                    Response::from_string("Not found").with_status_code(StatusCode(404)),
-                );
+                // Serve 404.html if it exists, otherwise plain text
+                let page_404 = serve_dir.join("404.html");
+                if let Ok(body) = std::fs::read_to_string(&page_404) {
+                    let v = version.load(Ordering::Relaxed);
+                    let html = super::reload::inject_reload_script(&body, v);
+                    let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
+                    let _ = request.respond(Response::from_string(html).with_header(header).with_status_code(StatusCode(404)));
+                } else {
+                    let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+                }
             }
         }
     });

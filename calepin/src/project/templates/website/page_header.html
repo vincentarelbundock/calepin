@@ -1,0 +1,8 @@
+{% if page.title or page.subtitle or page.date or page.abstract %}
+<header class="page-header">
+  {% if page.title %}<h1>{{ page.title }}</h1>{% endif %}
+  {% if page.subtitle %}<p class="subtitle">{{ page.subtitle }}</p>{% endif %}
+  {% if page.date %}<p class="date">{{ page.date }}</p>{% endif %}
+  {% if page.abstract %}<div class="abstract">{{ page.abstract }}</div>{% endif %}
+</header>
+{% endif %}

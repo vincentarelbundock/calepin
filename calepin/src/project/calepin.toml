@@ -32,6 +32,22 @@ preview = "serve"
 command = "typst compile {input} {output}"
 extension = "pdf"
 
+[targets.website]
+base = "html"
+template = "page"
+extension = "html"
+fig-extension = "svg"
+preview = "serve"
+
+[targets.book]
+base = "latex"
+template = "page"
+extension = "tex"
+fig-extension = "pdf"
+[targets.book.compile]
+command = "tectonic {input}"
+extension = "pdf"
+
 [targets.markdown]
 base = "markdown"
 template = "page"

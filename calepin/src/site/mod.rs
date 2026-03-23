@@ -13,7 +13,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use context::{build_page_context, build_site_context, mark_active, ListingItem};
-use discover::{discover_listing_pages, discover_pages, PageInfo};
+use discover::{discover_listing_pages, discover_pages, discover_standalone_pages, PageInfo};
 use crate::project::PageNode;
 
 /// Build a static site from .qmd files.
@@ -48,13 +48,22 @@ pub fn build_site(
     crate::paths::set_active_target(Some(&site_target_name));
 
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
+    // Falls back to built-in templates if not found on filesystem.
     let ext = crate::paths::base_to_ext(format);
+    let orchestrator_filename = format!("orchestrator.{}", ext);
     let orchestrator = config.site.as_ref()
         .and_then(|s| s.orchestrator.clone())
         .or_else(|| {
             let p = base_dir.join("templates").join(&site_target_name)
-                .join(format!("orchestrator.{}", ext));
-            if p.exists() { Some(p.display().to_string()) } else { None }
+                .join(&orchestrator_filename);
+            if p.exists() { return Some(p.display().to_string()); }
+            // Check built-in templates
+            let builtin_path = format!("templates/{}/{}", site_target_name, orchestrator_filename);
+            if crate::render::elements::BUILTIN_PROJECT.get_file(&builtin_path).is_some() {
+                Some(format!("__builtin__:{}", builtin_path))
+            } else {
+                None
+            }
         });
 
     // 3. Prepare output directory
@@ -69,8 +78,10 @@ pub fn build_site(
     }
     fs::create_dir_all(output)?;
 
-    // 4. Discover pages
+    // 4. Discover pages (nav + standalone)
     let mut pages = discover_pages(&config, &base_dir, output_ext)?;
+    let standalone = discover_standalone_pages(&config, &base_dir, output_ext)?;
+    pages.extend(standalone);
     if !quiet {
         eprintln!("Found {} pages", pages.len());
     }
@@ -165,8 +176,10 @@ pub fn rebuild_pages(
 
     let output_dir = base_dir.join("output");
 
-    // Discover all pages (needed for nav context)
-    let pages = discover_pages(&config, &base_dir, output_ext)?;
+    // Discover all pages (needed for nav context), including standalone
+    let mut pages = discover_pages(&config, &base_dir, output_ext)?;
+    let standalone = discover_standalone_pages(&config, &base_dir, output_ext)?;
+    pages.extend(standalone);
 
     // Determine which pages to re-render by matching changed absolute paths
     // against the discovered page sources. Canonicalize both sides so that
@@ -516,24 +529,34 @@ fn render_orchestrator(
         }
     }
 
-    // Also load built-in common templates as fallback
-    for entry in crate::render::elements::BUILTIN_PROJECT.get_dir("templates/common").into_iter().flat_map(|d| d.files()) {
-        if let Some(content) = entry.contents_utf8() {
-            let name = entry.path().file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("");
-            if !name.is_empty() && env.get_template(name).is_err() {
-                let content: &'static str = Box::leak(content.to_string().into_boxed_str());
-                let name: &'static str = Box::leak(name.to_string().into_boxed_str());
-                let _ = env.add_template(name, content);
+    // Also load built-in templates as fallback (target-specific + common)
+    for builtin_dir_name in &[format!("templates/{}", target_name), "templates/common".to_string()] {
+        for entry in crate::render::elements::BUILTIN_PROJECT.get_dir(builtin_dir_name.as_str()).into_iter().flat_map(|d| d.files()) {
+            if let Some(content) = entry.contents_utf8() {
+                let name = entry.path().file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                if !name.is_empty() && env.get_template(name).is_err() {
+                    let content: &'static str = Box::leak(content.to_string().into_boxed_str());
+                    let name: &'static str = Box::leak(name.to_string().into_boxed_str());
+                    let _ = env.add_template(name, content);
+                }
             }
         }
     }
 
     // Load the orchestrator template itself
-    let tpl_path = base_dir.join(orchestrator_path);
-    let tpl_source = fs::read_to_string(&tpl_path)
-        .with_context(|| format!("Failed to read orchestrator template: {}", tpl_path.display()))?;
+    let tpl_source = if let Some(builtin_path) = orchestrator_path.strip_prefix("__builtin__:") {
+        // Load from embedded built-in templates
+        crate::render::elements::BUILTIN_PROJECT.get_file(builtin_path)
+            .and_then(|f| f.contents_utf8())
+            .map(|s| s.to_string())
+            .ok_or_else(|| anyhow::anyhow!("Built-in orchestrator template not found: {}", builtin_path))?
+    } else {
+        let tpl_path = base_dir.join(orchestrator_path);
+        fs::read_to_string(&tpl_path)
+            .with_context(|| format!("Failed to read orchestrator template: {}", tpl_path.display()))?
+    };
     env.add_template("orchestrator", &tpl_source)
         .with_context(|| format!("Failed to parse orchestrator template: {}", orchestrator_path))?;
 
@@ -658,6 +681,7 @@ fn format_author(val: &toml::Value) -> String {
     }
 }
 
+
 /// Serve a built site directory using the built-in HTTP server.
 pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
     use tiny_http::{Header, Response, StatusCode};
@@ -687,11 +711,23 @@ pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
                     let _ = request.respond(Response::from_data(data).with_header(header));
                 }
                 Err(_) => {
-                    let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+                    let page_404 = output.join("404.html");
+                    if let Ok(body) = fs::read(&page_404) {
+                        let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
+                        let _ = request.respond(Response::from_data(body).with_header(header).with_status_code(StatusCode(404)));
+                    } else {
+                        let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+                    }
                 }
             }
         } else {
-            let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+            let page_404 = output.join("404.html");
+            if let Ok(body) = fs::read(&page_404) {
+                let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
+                let _ = request.respond(Response::from_data(body).with_header(header).with_status_code(StatusCode(404)));
+            } else {
+                let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+            }
         }
     }
 

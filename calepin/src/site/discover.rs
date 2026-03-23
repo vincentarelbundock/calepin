@@ -46,6 +46,8 @@ pub struct PageInfo {
     pub url: String,
     /// Metadata from frontmatter
     pub meta: PageMeta,
+    /// Standalone pages are rendered but excluded from navigation.
+    pub standalone: bool,
 }
 
 /// Discover all pages referenced in the site config.
@@ -75,6 +77,40 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str)
             output,
             url,
             meta,
+            standalone: false,
+        });
+    }
+
+    Ok(pages)
+}
+
+/// Discover standalone pages (rendered but not in nav).
+pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<PageInfo>> {
+    let paths = super::config::collect_standalone_paths(config, base_dir);
+    let mut pages = Vec::new();
+
+    for rel_path in &paths {
+        let source = PathBuf::from(rel_path);
+        let abs_path = base_dir.join(&source);
+
+        if !abs_path.exists() {
+            eprintln!("Warning: standalone page not found: {}", abs_path.display());
+            continue;
+        }
+
+        let meta = extract_frontmatter(&abs_path)
+            .with_context(|| format!("Failed to read frontmatter: {}", rel_path))?;
+
+        let output_rel = source.strip_prefix("content").unwrap_or(&source);
+        let output = output_rel.with_extension(output_ext);
+        let url = format!("/{}", output.display());
+
+        pages.push(PageInfo {
+            source,
+            output,
+            url,
+            meta,
+            standalone: true,
         });
     }
 
@@ -112,6 +148,7 @@ pub fn discover_listing_pages(
             output,
             url,
             meta,
+            standalone: false,
         });
     }
 

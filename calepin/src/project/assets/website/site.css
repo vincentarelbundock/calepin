@@ -318,8 +318,7 @@ details.sidebar-section[open] > .sidebar-section-title::before { transform: rota
   .sidebar-left.open { transform: translateX(0); }
   .content-main { margin-left: 0; max-width: 100%; padding: 1.5rem 1rem; }
   .site-footer { margin-left: 0; padding: 1.5rem 1rem; }
-  .page-nav { flex-direction: column; }
-  .page-nav a { max-width: 100%; }
+  .page-nav a { max-width: 50%; }
 }
 
 /* ============================================================

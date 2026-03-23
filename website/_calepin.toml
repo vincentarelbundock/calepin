@@ -13,36 +13,39 @@ favicon = "assets/Calepin.svg"
 logo = "assets/Calepin.svg"
 logo-dark = "assets/Calepin_dark.svg"
 content = [
-  "content/index.qmd",
-  "content/installation.qmd",
-  "content/cli.qmd",
+  "installation.qmd",
+  "cli.qmd",
   ["Authoring",
-    "content/authoring/basics.qmd",
-    "content/authoring/figures.qmd",
-    "content/authoring/tables.qmd",
-    "content/authoring/math.qmd",
-    "content/authoring/bibliography.qmd",
-    "content/authoring/paths.qmd",
+    "authoring/basics.qmd",
+    "authoring/figures.qmd",
+    "authoring/tables.qmd",
+    "authoring/math.qmd",
+    "authoring/bibliography.qmd",
+    "authoring/paths.qmd",
   ],
   ["Code Execution",
-    "content/code/chunks.qmd",
-    "content/code/inline.qmd",
-    "content/code/r.qmd",
-    "content/code/python.qmd",
-    "content/code/sh.qmd",
-    "content/code/cache.qmd",
+    "code/chunks.qmd",
+    "code/inline.qmd",
+    "code/r.qmd",
+    "code/python.qmd",
+    "code/sh.qmd",
+    "code/cache.qmd",
   ],
-  ["Websites", "content/websites/*.qmd"],
+  ["Websites", "websites/*.qmd"],
   ["Templates",
-    "content/templates/templates.qmd",
-    "content/templates/jinja.qmd",
-    "content/templates/shortcuts.qmd",
-    "content/templates/elements.qmd",
-    "content/templates/pages.qmd",
-    "content/templates/sites.qmd",
-    "content/templates/yaml.qmd",
+    "templates/templates.qmd",
+    "templates/jinja.qmd",
+    "templates/shortcuts.qmd",
+    "templates/elements.qmd",
+    "templates/pages.qmd",
+    "templates/sites.qmd",
+    "templates/yaml.qmd",
   ],
-  ["Misc", "content/misc/*.qmd"],
+  ["Misc", "misc/*.qmd"],
+]
+content_standalone = [
+  "index.qmd",
+  "404.qmd",
 ]
 
 [var]
@@ -61,13 +64,6 @@ sidebar_collapse_level = 0
 [[var.navbar_right]]
 icon = "github"
 href = "https://github.com/vincentarelbundock/calepin"
-
-[targets.website]
-base = "html"
-template = "page"
-extension = "html"
-fig-extension = "svg"
-preview = "serve"
 
 [targets.latex]
 base = "latex"
@@ -96,11 +92,3 @@ extension = "md"
 fig-extension = "png"
 preview = "none"
 
-[targets.book]
-base = "latex"
-extension = "tex"
-fig-extension = "pdf"
-
-[targets.book.compile]
-command = "tectonic {input}"
-extension = "pdf"

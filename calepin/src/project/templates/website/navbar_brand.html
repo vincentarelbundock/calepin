@@ -1,0 +1,8 @@
+<a class="navbar-brand" href="/">
+  {% if site.logo %}
+  <img class="logo-light" src="/{{ site.logo }}" alt="{{ site.title | default(value='Logo') }}">
+  {% if site.logo_dark %}
+  <img class="logo-dark" src="/{{ site.logo_dark }}" alt="{{ site.title | default(value='Logo') }}">
+  {% endif %}
+  {% elif site.title %}{{ site.title }}{% endif %}
+</a>

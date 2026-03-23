@@ -7,13 +7,13 @@ use super::icons;
 
 /// Initialize MiniJinja by loading template files from `templates/{target_name}/`.
 ///
-/// `file_ext` determines which files to load (e.g., "html", "tex").
-///
 /// Files use flat namespacing: `{% extends "base.html" %}`
 /// and `{% include "search.html" %}` work by filename alone.
 ///
-/// Returns Ok(None) if no template files are found (e.g., for non-HTML
-/// formats that use the orchestrator path instead).
+/// Falls back to built-in templates embedded in the binary when no project
+/// templates are found, or to fill in templates the project doesn't override.
+///
+/// Returns Ok(None) if no templates are found at all (triggers orchestrator path).
 pub fn init_jinja(base_dir: &Path, target_name: &str) -> Result<Option<Environment<'static>>> {
     let mut env = Environment::new();
 
@@ -28,10 +28,10 @@ pub fn init_jinja(base_dir: &Path, target_name: &str) -> Result<Option<Environme
         Ok(minijinja::Value::from_safe_string(icons::resolve_icon_svg(name)))
     });
 
-    // Load all files from templates/{target_name}/ (any extension)
-    let dir = base_dir.join(format!("templates/{}", target_name));
     let mut count = 0;
 
+    // Load project templates from templates/{target_name}/ (any extension)
+    let dir = base_dir.join(format!("templates/{}", target_name));
     if dir.is_dir() {
         let pattern = dir.join("**").join("*.*");
         let pattern_str = pattern.display().to_string();
@@ -42,11 +42,29 @@ pub fn init_jinja(base_dir: &Path, target_name: &str) -> Result<Option<Environme
                     .with_context(|| format!("Failed to read template: {}", path.display()))?;
                 let rel = path.strip_prefix(&dir).unwrap_or(&path);
                 let name = rel.display().to_string();
-                // Leak strings so they live for 'static (MiniJinja requirement)
                 let content: &'static str = Box::leak(content.into_boxed_str());
                 let name: &'static str = Box::leak(name.into_boxed_str());
                 env.add_template(name, content)
                     .with_context(|| format!("Failed to parse template: {}", rel.display()))?;
+                count += 1;
+            }
+        }
+    }
+
+    // Fall back to built-in templates for any names not already loaded
+    let builtin_path = format!("templates/{}", target_name);
+    if let Some(builtin_dir) = crate::render::elements::BUILTIN_PROJECT.get_dir(&builtin_path) {
+        for file in builtin_dir.files() {
+            if let Some(content) = file.contents_utf8() {
+                let name = file.path().file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                if name.is_empty() { continue; }
+                // Skip if already loaded from project (project wins)
+                if env.get_template(name).is_ok() { continue; }
+                let content: &'static str = Box::leak(content.to_string().into_boxed_str());
+                let name: &'static str = Box::leak(name.to_string().into_boxed_str());
+                let _ = env.add_template(name, content);
                 count += 1;
             }
         }

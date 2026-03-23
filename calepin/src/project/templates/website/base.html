@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en"{% if site.dark_mode %} data-theme="light"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if page.title %}<title>{{ page.title }}{% if site.title %} — {{ site.title }}{% endif %}</title>
+  {% elif site.title %}<title>{{ site.title }}</title>{% endif %}
+  {% if page.abstract %}<meta name="description" content="{{ page.abstract }}">{% endif %}
+  {% if site.favicon %}<link rel="icon" href="/{{ site.favicon }}">{% endif %}
+  <link rel="stylesheet" href="/assets/calepin.css">
+  <link rel="stylesheet" href="/assets/site.css">
+  {{ site.math_block }}
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  {% include "navbar.html" %}
+
+  <div class="site-container">
+    {% include "sidebar_left.html" %}
+
+    <main class="content-main">
+      <article>
+        {% block content %}{% endblock %}
+      </article>
+
+      {% block page_nav %}{% endblock %}
+    </main>
+
+    {% include "sidebar_right.html" %}
+  </div>
+
+  {% include "footer.html" %}
+</body>
+</html>

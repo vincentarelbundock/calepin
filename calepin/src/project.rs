@@ -66,18 +66,36 @@ pub struct SiteSection {
     /// where the first element is a section title and the rest are files/globs.
     #[serde(default)]
     pub content: Vec<toml::Value>,
+    /// Standalone pages: rendered with site templates but excluded from the
+    /// navigation tree. Useful for 404 pages, landing pages, etc.
+    #[serde(default)]
+    pub content_standalone: Vec<String>,
 }
 
 impl SiteSection {
+    /// Content directory prefix: if `content/` exists in `base_dir`, paths in
+    /// `content` and `content_standalone` are automatically prefixed with it.
+    pub fn content_prefix(base_dir: &std::path::Path) -> &'static str {
+        if base_dir.join("content").is_dir() { "content/" } else { "" }
+    }
+
+    /// Prepend the content prefix to a path if it doesn't already have it.
+    pub fn prefixed(s: &str, prefix: &str) -> String {
+        if prefix.is_empty() || s.starts_with(prefix) { s.to_string() }
+        else { format!("{}{}", prefix, s) }
+    }
+
     /// Expand the pages tree, resolving glob patterns relative to `base_dir`.
     /// Returns a flat list of (section_title, file_path) pairs.
     /// Top-level pages have section_title = None.
     pub fn expand_pages(&self, base_dir: &std::path::Path) -> Vec<PageNode> {
+        let prefix = Self::content_prefix(base_dir);
         let mut result = Vec::new();
         for entry in &self.content {
             match entry {
                 toml::Value::String(s) => {
-                    for path in expand_glob(s, base_dir) {
+                    let s = Self::prefixed(s, prefix);
+                    for path in expand_glob(&s, base_dir) {
                         result.push(PageNode::Page(path));
                     }
                 }
@@ -86,7 +104,8 @@ impl SiteSection {
                     let mut children = Vec::new();
                     for item in &arr[1..] {
                         if let Some(s) = item.as_str() {
-                            for path in expand_glob(s, base_dir) {
+                            let s = Self::prefixed(s, prefix);
+                            for path in expand_glob(&s, base_dir) {
                                 children.push(path);
                             }
                         }
@@ -105,6 +124,11 @@ impl SiteSection {
 pub enum PageNode {
     Page(String),
     Section { title: String, pages: Vec<String> },
+}
+
+/// Public wrapper for glob expansion, used by site config.
+pub fn expand_glob_pub(pattern: &str, base_dir: &std::path::Path) -> Vec<String> {
+    expand_glob(pattern, base_dir)
 }
 
 /// Expand a string as a glob pattern if it contains `*`, otherwise return as-is.

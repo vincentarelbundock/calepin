@@ -174,10 +174,12 @@ pub fn build_page_context(
     let subtitle = result.and_then(|r| r.subtitle.clone()).or_else(|| page.meta.subtitle.clone());
     let abstract_text = result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone());
 
-    let idx = pages.iter().position(|p| p.source == page.source);
+    // Prev/next navigation excludes standalone pages
+    let nav_pages: Vec<&PageInfo> = pages.iter().filter(|p| !p.standalone).collect();
+    let idx = nav_pages.iter().position(|p| p.source == page.source);
     let prev = idx.and_then(|i| {
         if i > 0 {
-            let p = &pages[i - 1];
+            let p = nav_pages[i - 1];
             Some(NavLink {
                 text: p.meta.title.clone().unwrap_or_else(|| p.source.display().to_string()),
                 href: p.url.clone(),
@@ -185,8 +187,8 @@ pub fn build_page_context(
         } else { None }
     });
     let next = idx.and_then(|i| {
-        if i + 1 < pages.len() {
-            let p = &pages[i + 1];
+        if i + 1 < nav_pages.len() {
+            let p = nav_pages[i + 1];
             Some(NavLink {
                 text: p.meta.title.clone().unwrap_or_else(|| p.source.display().to_string()),
                 href: p.url.clone(),

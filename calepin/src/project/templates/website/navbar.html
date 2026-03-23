@@ -1,0 +1,11 @@
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+  {% include "sidebar_toggle.html" %}
+  {% include "navbar_brand.html" %}
+
+  <ul class="navbar-nav right">
+    {% include "navbar_links.html" %}
+    {% include "source_viewer.html" %}
+    {% if var.navbar_search %}{% include "search.html" %}{% endif %}
+    {% if site.dark_mode %}{% include "theme_toggle.html" %}{% endif %}
+  </ul>
+</nav>

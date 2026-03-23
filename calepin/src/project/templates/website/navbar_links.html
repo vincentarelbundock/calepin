@@ -1,0 +1,8 @@
+{% for item in var.navbar_right %}
+<li>
+  <a href="{{ item.href | default(value='#') }}"{% if item.href and "://" in item.href %} target="_blank" rel="noopener"{% endif %}>
+    {% if item.icon %}{{ icon(name=item.icon) }}{% endif %}
+    {% if item.text %}{{ item.text }}{% endif %}
+  </a>
+</li>
+{% endfor %}
