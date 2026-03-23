@@ -87,7 +87,7 @@
 - [ ] Built-in website template
 - [ ] Built-in minimal website template
 - [ ] Built-in blog template
-- [ ] Example sites: countrycode, tinytable, modelsummary, marginaleffects
+- [ ] Example sites: arelbundock.com, countrycode, tinytable, modelsummary, marginaleffects
 
 
 ## Plugins
