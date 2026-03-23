@@ -2,9 +2,11 @@
 title: Math
 ---
 
-*Calepin* renders LaTeX math notation using MathJax (HTML) or natively (LaTeX and Typst). Use `\$` for a literal dollar sign.
+*Calepin* renders LaTeX math notation using KaTeX (HTML, optionally MathJax) or natively (LaTeX and Typst). Use `\$` for a literal dollar sign.
 
 # Inline and display math
+
+{{ snip.source_tip }}
 
 Inline math is enclosed in single dollar signs: $a^2 + b^2 = c^2$.
 
@@ -23,8 +25,9 @@ $$
 \nabla \times \mathbf{E} &= -\frac{\partial \mathbf{B}}{\partial t} \\
 \nabla \times \mathbf{B} &= \mu_0 \mathbf{J} + \mu_0 \varepsilon_0 \frac{\partial \mathbf{E}}{\partial t}
 \end{aligned}
-$$
+$$ {#eq-hello}
 
+And we can use standard cross-references as in @eq-hello.
 
 # Theorem environments
 
@@ -58,16 +61,3 @@ Fenced divs with reserved id prefixes participate in the cross-reference system:
 | `example` | `exm` | `::: {.example #exm-basic}` |
 
 References like `@thm-pythagoras` resolve to the theorem number. The `{{label}}` variable generates format-specific anchors: `\label{thm-pythagoras}` (LaTeX), `<thm-pythagoras>` (Typst).
-
-## Customizing appearance
-
-You can override the appearance by replacing the template while keeping automatic numbering. Create `_calepin/elements/theorem.html`:
-
-```html
-<div class="my-theorem"{{id-attr}}>
-  <h4>Theorem {{number}}</h4>
-  {{children}}
-</div>
-```
-
-See [Element Templates](templates/elements.qmd) for more on element templates.

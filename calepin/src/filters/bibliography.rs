@@ -280,15 +280,6 @@ fn load_csl_style_uncached(csl_path: Option<&str>) -> Result<IndependentStyle> {
                 }
             }
         }
-        // Try in project assets/csl/
-        let project_csl = std::path::Path::new("assets/csl").join(format!("{}.csl", name));
-        if project_csl.exists() {
-            if let Ok(xml) = fs::read_to_string(&project_csl) {
-                if let Ok(style) = IndependentStyle::from_xml(&xml) {
-                    return Ok(style);
-                }
-            }
-        }
         if path.extension().is_some() {
             // Had an extension but file not found
             cwarn!("CSL file '{}' not found, falling back to default", name);
@@ -297,16 +288,7 @@ fn load_csl_style_uncached(csl_path: Option<&str>) -> Result<IndependentStyle> {
         }
     }
 
-    // 2. Project: first .csl file in assets/csl/
-    if let Some(path) = crate::paths::resolve_first_match(std::path::Path::new("."), "assets/csl", "csl") {
-        if let Ok(xml) = fs::read_to_string(&path) {
-            if let Ok(style) = IndependentStyle::from_xml(&xml) {
-                return Ok(style);
-            }
-        }
-    }
-
-    // 3. Default from calepin.toml
+    // 2. Default from calepin.toml
     let defs = crate::project::get_defaults();
     let default_name = defs.csl.as_deref()
         .or_else(|| crate::project::builtin_config().meta.as_ref().and_then(|m| m.csl.as_deref()))

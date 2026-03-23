@@ -617,12 +617,6 @@ fn validate_csl(csl: &str, project_root: &Path) -> Result<()> {
         return Ok(());
     }
 
-    // File in assets/csl/
-    let assets_path = project_root.join("assets/csl").join(format!("{}.csl", csl));
-    if assets_path.exists() {
-        return Ok(());
-    }
-
     bail!(
         "'{}' is not a known CSL style or an existing file.\n  \
          Run `calepin info csl` to see available styles.",

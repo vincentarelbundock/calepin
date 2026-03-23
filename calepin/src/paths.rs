@@ -211,26 +211,6 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
     None
 }
 
-/// Find the first file matching an extension in `{document_dir}/_calepin/{dir}/`.
-/// Returns the alphabetically first match.
-pub fn resolve_first_match(document_dir: &Path, dir: &str, extension: &str) -> Option<PathBuf> {
-    let dirs = [document_dir.join("_calepin").join(dir)];
-    for d in &dirs {
-        if let Ok(entries) = std::fs::read_dir(d) {
-            let mut matches: Vec<PathBuf> = entries
-                .filter_map(|e| e.ok())
-                .map(|e| e.path())
-                .filter(|p| p.extension().and_then(|e| e.to_str()) == Some(extension))
-                .collect();
-            matches.sort();
-            if let Some(first) = matches.into_iter().next() {
-                return Some(first);
-            }
-        }
-    }
-    None
-}
-
 /// Resolve a plugin directory by name.
 /// Checks `{document_dir}/_calepin/plugins/{name}/plugin.toml` (or `plugin.yml`).
 pub fn resolve_plugin_dir(name: &str, document_dir: &Path) -> Option<PathBuf> {

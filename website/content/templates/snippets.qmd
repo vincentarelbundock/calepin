@@ -1,0 +1,105 @@
+---
+title: Snippets
+---
+
+Snippets are reusable text fragments that you can insert into any document. They are useful when you find yourself copying the same block of content --- a callout, a disclaimer, a standard methods section --- across multiple pages. Instead of duplicating the text, write it once as a snippet file and reference it by name.
+
+
+# Syntax
+
+Insert a snippet with {% raw %}`{{ snip.name }}`{% endraw %}, where `name` matches the file name (without extension):
+
+{% raw %}
+```
+{{ snip.source_tip }}
+```
+{% endraw %}
+
+Use underscores in snippet names, since Jinja dot-access does not allow dashes.
+
+
+# Where to store snippets
+
+Snippet files live in a `snippets/` directory at the project root, organized into subdirectories by format:
+
+```
+snippets/
+  common/          # format-agnostic (.jinja extension)
+  html/            # HTML-specific (.html extension)
+  latex/           # LaTeX-specific (.tex extension)
+  typst/           # Typst-specific (.typ extension)
+```
+
+
+# Resolution order
+
+When *Calepin* encounters {% raw %}`{{ snip.source_tip }}`{% endraw %}, it looks for a file in this order (first match wins):
+
+1. **Target-specific** --- `snippets/{target}/source_tip.{ext}` (e.g., `snippets/website/source_tip.html` when rendering the `website` target)
+2. **Base-specific** --- `snippets/{base}/source_tip.{ext}` (e.g., `snippets/html/source_tip.html`)
+3. **Format-agnostic** --- `snippets/common/source_tip.jinja`
+
+Most snippets only need a single file in `common/`. Use the format-specific directories when the content must differ between output formats --- for example, when it contains raw HTML or LaTeX.
+
+
+# Examples
+
+## A reusable callout
+
+File `snippets/common/source_tip.jinja`:
+
+{% raw %}
+````
+::: {.callout-tip}
+::: {.content-visible when-format="html"}
+Click the **</>** button in the menu at the top of this page to see the `.qmd` source code for this example.
+:::
+
+::: {.content-visible when-format="latex"}
+The source code for this page is available at: <https://vincentarelbundock.github.io/calepin>
+:::
+:::
+````
+{% endraw %}
+
+Then in any document:
+
+{% raw %}
+```
+{{ snip.source_tip }}
+```
+{% endraw %}
+
+## A standard disclaimer with metadata
+
+Snippets go through normal Jinja processing after expansion, so they can reference front matter fields and variables:
+
+File `snippets/common/draft_notice.jinja`:
+
+{% raw %}
+````
+::: {.callout-warning}
+## Draft
+
+This is a draft of *{{ meta.title }}*. Do not cite or circulate.
+:::
+````
+{% endraw %}
+
+## Format-specific content
+
+When the same snippet needs fundamentally different markup per format, use the format-specific directories. For example, to embed a custom HTML widget in HTML output and a static image in LaTeX:
+
+File `snippets/html/widget.html`:
+
+```html
+<div id="interactive-widget">…</div>
+```
+
+File `snippets/latex/widget.tex`:
+
+```latex
+\includegraphics[width=\textwidth]{fig/widget-static.pdf}
+```
+
+Both are accessed with the same call: {% raw %}`{{ snip.widget }}`{% endraw %}.

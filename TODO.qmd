@@ -35,7 +35,7 @@
 - [ ] Tables should use a template and filter
 - [ ] Advanced table features (Bootstrap classes, embedded markdown in cells)
 - [ ] Subtables
-- [ ] Table caption location: margin
+- [ ] Table caption location: does this work in all formats?
 
 
 ## Philosophy

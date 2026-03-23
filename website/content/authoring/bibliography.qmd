@@ -46,17 +46,28 @@ These are compatible with Quarto and Pandoc syntax.
 
 # CSL styles
 
-By default, *Calepin* uses an author-year style. To customize citation formatting, provide a `.csl` file via one of three methods (checked in order):
+By default, *Calepin* uses the Chicago author-date style. To customize citation formatting, set the `csl` field in the front matter or in `calepin.toml`. The value can be a **built-in style name** or a **file path**:
 
-1. **Front matter** --- Set `csl: path/to/style.csl` explicitly.
-2. **Project directory** --- Place a `.csl` file in `_calepin/templates/` (project). *Calepin* picks the first `.csl` file alphabetically.
-3. **Built-in** --- If no CSL file is found, the built-in default style is used.
+```yaml
+---
+csl: apa                          # built-in name (no .csl extension)
+csl: styles/my-journal.csl       # file path
+---
+```
 
-CSL files for most major journals are available from the [CSL repository](https://github.com/citation-style-language/styles).
+Resolution order (first match wins):
+
+1. **File path** --- If the `csl` value points to an existing `.csl` file, it is used directly.
+2. **Built-in name** --- *Calepin* ships with hundreds of styles from the [hayagriva](https://github.com/typst/hayagriva) archive. Run `calepin info csl` to list all available names.
+3. **Default** --- If no `csl` field is set, *Calepin* falls back to `chicago-author-date`.
+
+If the specified style is not found or is a dependent style, *Calepin* warns and falls back to the default.
+
+Additional `.csl` files for journals not covered by the built-in archive are available from the [Zotero style repository](https://www.zotero.org/styles).
 
 # References section
 
-When a document contains at least one resolved citation, *Calepin* appends a **References** section at the end of the output automatically. Unresolved keys (those not found in any `.bib` file) are left as-is.
+When a document contains at least one resolved citation, *Calepin* appends a References section at the end of the output automatically. Unresolved keys (those not found in any `.bib` file) are left as-is.
 
 
 Two dummy figures so we can demonstrate cross-references:

@@ -822,8 +822,8 @@ fn handle_info(action: InfoAction) -> Result<()> {
             println!();
             println!("  https://www.zotero.org/styles");
             println!();
-            println!("Download a .csl file and place it in assets/csl/, then set");
-            println!("csl: in calepin.toml or in document front matter.");
+            println!("Download a .csl file and set csl: to its path in calepin.toml");
+            println!("or in document front matter.");
             println!();
             println!("The following shortcuts are also available as built-in names");
             println!("(no download required):");

@@ -36,6 +36,7 @@ content = [
     "templates/templates.qmd",
     "templates/jinja.qmd",
     "templates/shortcuts.qmd",
+    "templates/snippets.qmd",
     "templates/elements.qmd",
     "templates/pages.qmd",
     "templates/sites.qmd",

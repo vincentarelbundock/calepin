@@ -116,33 +116,38 @@ local({
 
     warns <- character(0)
     msgs <- character(0)
-    is_asis <- FALSE
-    out <- tryCatch(
+    .calepin_env <- environment()
+    expr_outputs <- list()  # list of list(text=..., asis=TRUE/FALSE)
+    err_out <- NULL
+    tryCatch(
       withCallingHandlers(
         {
           exprs <- parse(text = code)
-          res <- character(0)
           for (expr in exprs) {
             .val <- withVisible(eval(expr, envir = globalenv()))
             if (.val$visible) {
+              is_asis <- FALSE
+              r <- character(0)
               if (.calepin_has_knitr) {
-                # Capture both the return value and any printed output
-                kp_val <- NULL
-                r <- capture.output(kp_val <<- knitr::knit_print(.val$value))
+                # capture.output() evaluates in its own environment, so <<-
+                # would skip the function scope. Use assign() instead.
+                r <- capture.output(assign("kp_val", knitr::knit_print(.val$value), envir = .calepin_env))
                 if (inherits(kp_val, "knit_asis")) {
                   is_asis <- TRUE
                   r <- as.character(kp_val)
                 } else if (length(r) == 0) {
-                  # knit_print returned silently; fall back to print()
                   r <- capture.output(print(.val$value))
                 }
               } else {
                 r <- capture.output(print(.val$value))
               }
-              if (length(r) > 0) res <- c(res, r)
+              if (length(r) > 0) {
+                expr_outputs[[length(expr_outputs) + 1]] <- list(
+                  text = paste(r, collapse = "\n"), asis = is_asis
+                )
+              }
             }
           }
-          paste(res, collapse = "\n")
         },
         warning = function(w) {
           warns <<- c(warns, conditionMessage(w))
@@ -154,7 +159,7 @@ local({
         }
       ),
       error = function(e) {
-        paste0(sentinel, "_ERROR:", conditionMessage(e))
+        err_out <<- conditionMessage(e)
       }
     )
 
@@ -171,9 +176,12 @@ local({
     }
 
     parts <- character(0)
-    if (nzchar(out)) {
-      tag <- if (is_asis) "_ASIS:" else "_OUTPUT:"
-      parts <- c(parts, paste0(sentinel, tag, out))
+    if (!is.null(err_out)) {
+      parts <- c(parts, paste0(sentinel, "_ERROR:", err_out))
+    }
+    for (eo in expr_outputs) {
+      tag <- if (isTRUE(eo$asis)) "_ASIS:" else "_OUTPUT:"
+      parts <- c(parts, paste0(sentinel, tag, eo$text))
     }
     if (length(warns) > 0) parts <- c(parts, paste0(sentinel, "_WARNING:", paste(warns, collapse = "\n")))
     if (length(msgs) > 0) parts <- c(parts, paste0(sentinel, "_MESSAGE:", paste(msgs, collapse = "\n")))

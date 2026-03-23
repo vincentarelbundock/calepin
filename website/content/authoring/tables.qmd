@@ -4,7 +4,7 @@ title: Tables
 
 # Markdown
 
-Tables use the standard GFM pipe syntax. Column alignment is controlled by colons in the separator row: left (default), right (`---:`), or center (`:---:`).
+Tables can use the standard Github-Flavored Markdown pipe syntax. Column alignment is controlled by colons in the separator row: left (default), right (`---:`), or center (`:---:`).
 
 | Name  | Score | Grade |
 |-------|------:|:-----:|
@@ -57,23 +57,26 @@ This caption appears below the table.
 :::
 
 
-# Code generation
+# R
 
 The [tinytable](https://vincentarelbundock.github.io/tinytable/) R package generates format-aware tables that work automatically in *Calepin*. Use a `tbl-` label on the chunk and `tbl-cap` for the caption. The `style_tt()` function applies cell-level formatting, and `group_tt()` adds spanning headers.
 
 ```{r, tbl-cars}
 #| tbl-cap: Motor Trend car data
+#| echo: fenced
 library(tinytable)
 tt(mtcars[1:5, 1:4]) |>
   style_tt(2:3, background = "#5E81AC", color = "white") |>
   group_tt(j = list("Group" = 3:4))
 ```
 
-Cross-reference: see @tbl-cars.
+Cross-reference work as expected, by referring to the figure label: see @tbl-cars.
 
+The [gt](https://gt.rstudio.com/) is another package that generates tables:
 
 ```{r, tbl-cars}
 #| tbl-cap: Motor Trend car data
+#| echo: fenced
 library(gt)
 gt(mtcars[1:5, 1:4])
 ```
