@@ -41,7 +41,12 @@ impl OutputRenderer for HtmlRenderer {
                 }
             },
         );
-        Some(embed_images_base64(&html))
+        let embed = crate::project::get_defaults().embed_resources.unwrap_or(true);
+        if embed {
+            Some(embed_images_base64(&html))
+        } else {
+            Some(html)
+        }
     }
 }
 

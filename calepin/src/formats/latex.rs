@@ -23,9 +23,10 @@ impl OutputRenderer for LatexRenderer {
         meta: &Metadata,
         renderer: &ElementRenderer,
     ) -> Option<String> {
-        let body = self.postprocess(body, renderer);
+        // Note: postprocess() is already called by the render pipeline before
+        // apply_template, so color definitions are already prepended to body.
         Some(crate::render::template::assemble_page(
-            &body, meta, "latex", &[], renderer.preamble(), |_| {},
+            body, meta, "latex", &[], renderer.preamble(), |_| {},
         ))
     }
 }

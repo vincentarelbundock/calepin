@@ -46,12 +46,14 @@ pub trait OutputRenderer {
     /// Render a list of elements into the final document body.
     fn render(&self, elements: &[Element], renderer: &ElementRenderer) -> Result<String> {
         use std::time::Instant;
+        use std::sync::LazyLock;
 
         // Pre-collect footnote definitions across all Text elements so that
         // references in one block can resolve against definitions in another.
         renderer.collect_footnote_defs(elements);
 
-        let timing = std::env::var("CALEPIN_TIMING").is_ok();
+        static TIMING_ENABLED: LazyLock<bool> = LazyLock::new(|| std::env::var("CALEPIN_TIMING").is_ok());
+        let timing = *TIMING_ENABLED;
         let mut t_text = 0f64;
         let mut t_div = 0f64;
         let mut n_text = 0usize;
@@ -129,8 +131,8 @@ pub trait OutputRenderer {
 pub fn create_renderer(format: &str) -> Result<Box<dyn OutputRenderer>> {
     match format {
         "html" => Ok(Box::new(html::HtmlRenderer)),
-        "latex" | "tex" => Ok(Box::new(latex::LatexRenderer)),
-        "markdown" | "md" | "reprex" => Ok(Box::new(markdown::MarkdownRenderer)),
+        "latex" | "tex" | "pdf" => Ok(Box::new(latex::LatexRenderer)),
+        "markdown" | "md" => Ok(Box::new(markdown::MarkdownRenderer)),
         "typst" | "typ" => Ok(Box::new(typst::TypstRenderer)),
         "word" | "docx" => Ok(Box::new(word::WordRenderer)),
         other => load_custom_format(other),
@@ -154,7 +156,7 @@ pub fn resolve_format_from_extension(ext: &str) -> &str {
 // Custom format support
 // ---------------------------------------------------------------------------
 
-/// A custom format defined via `_calepin/formats/{name}.yaml`.
+/// A custom format defined via `_calepin/formats/{name}.toml`.
 struct CustomRenderer {
     name: String,
     ext: String,
@@ -244,6 +246,7 @@ impl OutputRenderer for CustomRenderer {
 }
 
 /// Run a script, piping `stdin_data` to its stdin and returning stdout.
+/// Writes stdin in a separate thread to avoid deadlock when pipe buffers fill.
 pub fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<String> {
     let mut child = Command::new(script)
         .args(args)
@@ -252,8 +255,19 @@ pub fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<Stri
         .stderr(Stdio::piped())
         .spawn()
         .with_context(|| format!("Failed to run script: {}", script.display()))?;
-    child.stdin.take().unwrap().write_all(stdin_data.as_bytes())?;
+
+    // Write stdin in a separate thread to prevent deadlock: if the child's
+    // stdout buffer fills before we finish writing, both sides block.
+    let mut stdin = child.stdin.take().unwrap();
+    let data = stdin_data.to_string();
+    let writer = std::thread::spawn(move || {
+        let _ = stdin.write_all(data.as_bytes());
+        // stdin is dropped here, closing the pipe
+    });
+
     let output = child.wait_with_output()?;
+    let _ = writer.join();
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!("Script {} failed: {}", script.display(), stderr);
