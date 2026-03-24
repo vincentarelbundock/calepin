@@ -420,6 +420,47 @@ pub fn deduplicate_preamble(lines: &[String]) -> String {
     result.join("\n")
 }
 
+/// Inject deduplicated preamble content into template variables.
+///
+/// Preamble lines from code chunks (e.g., `\usepackage{...}` for LaTeX,
+/// `<link>` tags for HTML) are deduplicated and merged into the `preamble`
+/// template variable.
+pub fn inject_preamble(vars: &mut HashMap<String, String>, preamble: &[String]) {
+    let content = deduplicate_preamble(preamble);
+    if !content.is_empty() {
+        let entry = vars.entry("preamble".to_string()).or_default();
+        if !entry.is_empty() { entry.push('\n'); }
+        entry.push_str(&content);
+    }
+}
+
+/// Assemble a complete page: build vars, inject preamble, customize, render.
+///
+/// Single entry point for page template assembly across all built-in formats.
+/// The pipeline is:
+///   1. Build template variables from metadata (`build_template_vars_with_headings`)
+///   2. Inject deduplicated preamble
+///   3. Apply format-specific customizations via the `customize` closure
+///   4. Load and render the page template
+///
+/// Formats pre-process the body before calling this (e.g., append footnotes,
+/// prepend color definitions) and post-process the rendered output after
+/// (e.g., embed base64 images).
+pub fn assemble_page(
+    body: &str,
+    meta: &Metadata,
+    format: &str,
+    headings: &[crate::render::ast::TocEntry],
+    preamble: &[String],
+    customize: impl FnOnce(&mut HashMap<String, String>),
+) -> String {
+    let mut vars = build_template_vars_with_headings(meta, body, format, headings);
+    inject_preamble(&mut vars, preamble);
+    customize(&mut vars);
+    let tpl = load_page_template("page", format);
+    render_page_template(&tpl, &vars, format)
+}
+
 /// Render a page template with {% include %} support.
 ///
 /// Sets up a MiniJinja environment with:

@@ -21,7 +21,6 @@ impl OutputRenderer for HtmlRenderer {
         meta: &Metadata,
         renderer: &ElementRenderer,
     ) -> Option<String> {
-        // Append combined footnote section at end of body
         let footnotes = renderer.render_footnote_section();
         let full_body = if footnotes.is_empty() {
             body.to_string()
@@ -29,24 +28,19 @@ impl OutputRenderer for HtmlRenderer {
             format!("{}{}", body, footnotes)
         };
         let walk_meta = renderer.walk_metadata();
-        let mut vars = template::build_template_vars_with_headings(meta, &full_body, "html", &walk_meta.headings);
-        // Inject preamble content from code chunks (e.g. HTML head elements)
-        let preamble_content = template::deduplicate_preamble(renderer.preamble());
-        if !preamble_content.is_empty() {
-            let entry = vars.entry("preamble".to_string()).or_default();
-            if !entry.is_empty() { entry.push('\n'); }
-            entry.push_str(&preamble_content);
-        }
-        let syntax_css = renderer.syntax_css_with_scope(
-            crate::filters::highlighting::ColorScope::Both,
+        let html = template::assemble_page(
+            &full_body, meta, "html", &walk_meta.headings, renderer.preamble(),
+            |vars| {
+                let syntax_css = renderer.syntax_css_with_scope(
+                    crate::filters::highlighting::ColorScope::Both,
+                );
+                if !syntax_css.is_empty() {
+                    let css = vars.entry("css".to_string()).or_default();
+                    css.push('\n');
+                    css.push_str(&syntax_css);
+                }
+            },
         );
-        let css = vars.entry("css".to_string()).or_default();
-        if !syntax_css.is_empty() {
-            css.push('\n');
-            css.push_str(&syntax_css);
-        }
-        let tpl = template::load_page_template("page", "html");
-        let html = template::render_page_template(&tpl, &vars, "html");
         Some(embed_images_base64(&html))
     }
 }

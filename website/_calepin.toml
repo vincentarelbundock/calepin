@@ -36,7 +36,7 @@ pages = [
 
 [[contents]]
 title = "Collections"
-pages = ["collections/*.qmd"]
+pages = ["collections/toml.qmd", "collections/structure.qmd", "collections/serve.qmd"]
 
 [[contents]]
 title = "Templates"

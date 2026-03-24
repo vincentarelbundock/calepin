@@ -190,9 +190,8 @@ impl OutputRenderer for CustomRenderer {
         meta: &Metadata,
         renderer: &ElementRenderer,
     ) -> Option<String> {
-        // Base format template (produces complete document)
+        // Try custom page template first: page.{name}
         let templated = {
-            // Try custom page template first: page.{name}
             let custom_tpl = crate::render::template::load_page_template(
                 &format!("page.{}", self.name),
                 self.base.format(),
@@ -203,8 +202,8 @@ impl OutputRenderer for CustomRenderer {
                     return None;
                 }
                 let mut vars = crate::render::template::build_template_vars(meta, body, base);
-                // Add syntax highlighting CSS (not included by build_*_vars)
-                if self.base.format() == "html" {
+                crate::render::template::inject_preamble(&mut vars, renderer.preamble());
+                if base == "html" {
                     let syntax_css = renderer.syntax_css();
                     if !syntax_css.is_empty() {
                         let css = vars.entry("css".to_string()).or_default();
@@ -218,8 +217,9 @@ impl OutputRenderer for CustomRenderer {
                         vars.insert("syntax_css_datatheme".to_string(), datatheme_css);
                     }
                 }
-                Some(crate::render::template::render_page_template(&custom_tpl, &vars, self.base.format()))
+                Some(crate::render::template::render_page_template(&custom_tpl, &vars, base))
             } else {
+                // No custom template: delegate to base format
                 self.base.apply_template(body, meta, renderer)
             }
         };
