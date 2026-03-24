@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, Mutex};
 
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, ThemeSet};
@@ -39,18 +39,18 @@ static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_
 // The cache persists for the process lifetime. For a 1000-line document with
 // 50 code blocks, this saves ~5-8ms per re-render (the full syntect cost).
 
-use std::sync::Mutex;
-
 static HIGHLIGHT_CACHE: LazyLock<Mutex<HashMap<u64, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn highlight_cache_key(code: &str, lang: &str, ext: &str) -> u64 {
-    use std::hash::{Hash, Hasher};
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    code.hash(&mut hasher);
-    lang.hash(&mut hasher);
-    ext.hash(&mut hasher);
-    hasher.finish()
+    use xxhash_rust::xxh3::xxh3_64;
+    let mut buf = Vec::with_capacity(code.len() + lang.len() + ext.len() + 2);
+    buf.extend_from_slice(code.as_bytes());
+    buf.push(0);
+    buf.extend_from_slice(lang.as_bytes());
+    buf.push(0);
+    buf.extend_from_slice(ext.as_bytes());
+    xxh3_64(&buf)
 }
 
 /// Resolve a user-facing theme name to an internal key.
@@ -71,8 +71,16 @@ fn resolve_theme_name(name: &str) -> Option<&'static str> {
     // Check if a .tmTheme file exists in the built-in highlighting themes
     let path = format!("{}.tmTheme", name);
     if crate::render::elements::BUILTIN_HIGHLIGHTING.get_file(&path).is_some() {
-        // Leak a &'static str for the name (small, bounded set)
-        return Some(Box::leak(name.to_string().into_boxed_str()));
+        // Intern the name so we return &'static str without leaking duplicates.
+        static INTERNED: LazyLock<Mutex<std::collections::HashSet<&'static str>>> =
+            LazyLock::new(|| Mutex::new(std::collections::HashSet::new()));
+        let mut set = INTERNED.lock().unwrap();
+        if let Some(existing) = set.get(name) {
+            return Some(*existing);
+        }
+        let leaked: &'static str = Box::leak(name.to_string().into_boxed_str());
+        set.insert(leaked);
+        return Some(leaked);
     }
 
     cwarn!("unknown highlight-style '{}'", name);
@@ -131,12 +139,12 @@ fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
         }
     }
 
-    // 3. Built-in: embedded highlighting themes
+    // 2. Built-in: embedded highlighting themes
     if let Some(file) = crate::render::elements::BUILTIN_HIGHLIGHTING.get_file(&filename) {
         return ThemeSet::load_from_reader(&mut Cursor::new(file.contents())).ok();
     }
 
-    // 4. Direct filesystem path (user-provided .tmTheme path)
+    // 3. Direct filesystem path (user-provided .tmTheme path)
     let path = std::path::Path::new(name);
     if path.exists() {
         return ThemeSet::get_theme(path).ok();

@@ -205,12 +205,15 @@ fn parse_grouped_refs(s: &str) -> Vec<String> {
 }
 
 /// Resolve grouped refs for HTML: produces comma-separated linked refs.
-fn resolve_grouped_html(ids: &[String], db: &HashMap<String, String>) -> String {
+fn resolve_grouped_html(ids: &[String], db: &HashMap<String, String>, make_href: &dyn Fn(&str) -> String) -> String {
     let parts: Vec<String> = ids.iter().map(|id| {
         let (typ, _) = split_ref_id(id);
         let label = type_label(typ);
         match db.get(id) {
-            Some(num) => format!("<a class=\"cross-ref-{}\" href=\"#{}\">{} {}</a>", typ, id, label, num),
+            Some(num) => {
+                let href = make_href(id);
+                format!("<a class=\"cross-ref-{}\" href=\"{}\">{} {}</a>", typ, href, label, num)
+            }
             None => { warn_unresolved(id); format!("@{}", id) }
         }
     }).collect();
@@ -260,57 +263,20 @@ pub fn resolve_html_with_ids(
     theorem_nums: &HashMap<String, String>,
     walk_ids: &HashMap<String, String>,
 ) -> String {
-    let mut db: HashMap<String, String> = HashMap::new();
+    let ref_data = collect_ids_html(html, theorem_nums, walk_ids);
+    let make_href = |id: &str| format!("#{}", id);
+    resolve_html_refs(html, &ref_data.ids, &make_href)
+}
 
-    // Use pre-collected section IDs from the AST walk
-    db.extend(walk_ids.iter().map(|(k, v)| (k.clone(), v.clone())));
-
-    // Fallback: if no walk IDs, collect from rendered HTML (backward compat)
-    if walk_ids.is_empty() {
-        let mut counters = [0usize; 6];
-        for caps in RE_HTML_HEADING.captures_iter(html) {
-            let level: usize = caps[1].parse().unwrap_or(1);
-            let tag = caps.get(0).map_or("", |m| m.as_str());
-            let id = RE_HTML_ID.captures(tag)
-                .and_then(|c| c.get(1))
-                .map_or("", |m| m.as_str());
-            advance_section_counter(&mut counters, level);
-            if !id.is_empty() {
-                let key = if id.starts_with("sec-") {
-                    id.to_string()
-                } else {
-                    format!("sec-{}", id)
-                };
-                db.insert(key, format_section_number(&counters, level));
-            }
-        }
-    }
-
-    // Count figures from id="fig-*" (still regex -- these come from div rendering, not AST)
-    let mut fig_counter = 0usize;
-    for caps in RE_HTML_FIG.captures_iter(html) {
-        fig_counter += 1;
-        db.insert(format!("fig-{}", &caps[1]), fig_counter.to_string());
-    }
-
-    // Count tables from id="tbl-*"
-    let mut tbl_counter = 0usize;
-    for caps in RE_HTML_TBL.captures_iter(html) {
-        tbl_counter += 1;
-        db.insert(format!("tbl-{}", &caps[1]), tbl_counter.to_string());
-    }
-
-    // Theorem numbers from rendering phase
-    db.extend(theorem_nums.iter().map(|(k, v)| (k.clone(), v.clone())));
-
-    // Count equations from id="eq-*"
-    let mut eq_counter = 0usize;
-    for caps in RE_HTML_EQ.captures_iter(html) {
-        eq_counter += 1;
-        db.insert(format!("eq-{}", &caps[1]), eq_counter.to_string());
-    }
-
-    // Pass 5: Inject equation numbers (single regex pass)
+/// Shared HTML cross-reference resolution: inject equation numbers, protect code blocks,
+/// resolve all ref forms (@id, [@id], [-@id], grouped), and restore code blocks.
+/// `make_href` builds the href for a given ID (local: `#id`, global: relative URL).
+fn resolve_html_refs(
+    html: &str,
+    db: &HashMap<String, String>,
+    make_href: &dyn Fn(&str) -> String,
+) -> String {
+    // Inject equation numbers
     static RE_EQ_DIV: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r#"<div class="equation" id="(eq-[^"]+)">"#).unwrap()
     });
@@ -325,22 +291,20 @@ pub fn resolve_html_with_ids(
         }
     }).to_string();
 
-    // Pass 6: Protect code blocks from cross-ref resolution
+    // Protect code blocks from cross-ref resolution
     let mut code_blocks: Vec<String> = Vec::new();
     static RE_HTML_CODE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?s)<(?:pre|code)[^>]*>.*?</(?:pre|code)>").unwrap()
+        Regex::new(r"(?s)<pre[^>]*>.*?</pre>").unwrap()
     });
     result = RE_HTML_CODE.replace_all(&result, |caps: &regex::Captures| {
         markers::wrap_raw(&mut code_blocks, caps[0].to_string())
     }).to_string();
 
-    // Pass 7: Resolve cross-references
-
-    // Grouped refs first (before single refs consume the @ids)
+    // Resolve cross-references (grouped first, then suppress, bracket, bare)
     result = RE_REF_GROUPED
         .replace_all(&result, |caps: &regex::Captures| {
             let ids = parse_grouped_refs(&caps[1]);
-            resolve_grouped_html(&ids, &db)
+            resolve_grouped_html(&ids, db, make_href)
         }).to_string();
 
     result = RE_REF_SUPPRESS
@@ -349,7 +313,8 @@ pub fn resolve_html_with_ids(
             match db.get(id) {
                 Some(num) => {
                     let (typ, _) = split_ref_id(id);
-                    format!("<a class=\"cross-ref-{}\" href=\"#{}\">{}</a>", typ, id, num)
+                    let href = make_href(id);
+                    format!("<a class=\"cross-ref-{}\" href=\"{}\">{}</a>", typ, href, num)
                 }
                 None => { warn_unresolved(id); caps[0].to_string() }
             }
@@ -362,7 +327,8 @@ pub fn resolve_html_with_ids(
                 Some(num) => {
                     let (typ, _) = split_ref_id(id);
                     let label = type_label(typ);
-                    format!("[<a class=\"cross-ref-{}\" href=\"#{}\">{} {}</a>]", typ, id, label, num)
+                    let href = make_href(id);
+                    format!("[<a class=\"cross-ref-{}\" href=\"{}\">{} {}</a>]", typ, href, label, num)
                 }
                 None => { warn_unresolved(id); caps[0].to_string() }
             }
@@ -375,16 +341,15 @@ pub fn resolve_html_with_ids(
                 Some(num) => {
                     let (typ, _) = split_ref_id(id);
                     let label = type_label(typ);
-                    format!("<a class=\"cross-ref-{}\" href=\"#{}\">{} {}</a>", typ, id, label, num)
+                    let href = make_href(id);
+                    format!("<a class=\"cross-ref-{}\" href=\"{}\">{} {}</a>", typ, href, label, num)
                 }
                 None => { warn_unresolved(id); caps[0].to_string() }
             }
         }).to_string();
 
     // Restore code blocks
-    result = markers::resolve_raw(&result, &code_blocks);
-
-    result
+    markers::resolve_raw(&result, &code_blocks)
 }
 
 /// Collect all cross-referenceable IDs from rendered HTML without resolving refs.
@@ -457,42 +422,15 @@ pub fn resolve_html_global(
     registry: &CrossRefRegistry,
     current_page_url: &str,
 ) -> String {
-    // Build a simple db for the shared resolution helpers
     let db: HashMap<String, String> = registry.entries.iter()
         .map(|(id, entry)| (id.clone(), entry.number.clone()))
         .collect();
 
-    // Inject equation numbers
-    static RE_EQ_DIV: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r#"<div class="equation" id="(eq-[^"]+)">"#).unwrap()
-    });
-    let mut result = RE_EQ_DIV.replace_all(html, |caps: &regex::Captures| {
-        let label = &caps[1];
-        match db.get(label) {
-            Some(num) => format!(
-                "<div class=\"equation\" id=\"{}\">\n<span class=\"eq-number\">({})</span>",
-                label, num
-            ),
-            None => caps[0].to_string(),
-        }
-    }).to_string();
-
-    // Protect code blocks
-    let mut code_blocks: Vec<String> = Vec::new();
-    static RE_HTML_CODE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?s)<(?:pre|code)[^>]*>.*?</(?:pre|code)>").unwrap()
-    });
-    result = RE_HTML_CODE.replace_all(&result, |caps: &regex::Captures| {
-        markers::wrap_raw(&mut code_blocks, caps[0].to_string())
-    }).to_string();
-
-    // Helper to build an <a> tag with correct href (same-page vs cross-file)
     let make_href = |id: &str| -> String {
         if let Some(entry) = registry.entries.get(id) {
             if entry.source_url == current_page_url {
                 format!("#{}", id)
             } else {
-                // Compute relative URL from current page to target page
                 let relative = relative_url(current_page_url, &entry.source_url);
                 format!("{}#{}", relative, id)
             }
@@ -501,89 +439,7 @@ pub fn resolve_html_global(
         }
     };
 
-    // Grouped refs
-    result = RE_REF_GROUPED
-        .replace_all(&result, |caps: &regex::Captures| {
-            let ids = parse_grouped_refs(&caps[1]);
-            resolve_grouped_html_global(&ids, &db, registry, current_page_url)
-        }).to_string();
-
-    // Suppress: [-@id] -> just the number
-    result = RE_REF_SUPPRESS
-        .replace_all(&result, |caps: &regex::Captures| {
-            let id = &caps[1];
-            match db.get(id) {
-                Some(num) => {
-                    let (typ, _) = split_ref_id(id);
-                    let href = make_href(id);
-                    format!("<a class=\"cross-ref-{}\" href=\"{}\">{}</a>", typ, href, num)
-                }
-                None => { warn_unresolved(id); caps[0].to_string() }
-            }
-        }).to_string();
-
-    // Bracket: [@id] -> [Type N]
-    result = RE_REF_BRACKET
-        .replace_all(&result, |caps: &regex::Captures| {
-            let id = &caps[1];
-            match db.get(id) {
-                Some(num) => {
-                    let (typ, _) = split_ref_id(id);
-                    let label = type_label(typ);
-                    let href = make_href(id);
-                    format!("[<a class=\"cross-ref-{}\" href=\"{}\">{} {}</a>]", typ, href, label, num)
-                }
-                None => { warn_unresolved(id); caps[0].to_string() }
-            }
-        }).to_string();
-
-    // Bare: @id -> Type N
-    result = RE_REF_BARE
-        .replace_all(&result, |caps: &regex::Captures| {
-            let id = &caps[1];
-            match db.get(id) {
-                Some(num) => {
-                    let (typ, _) = split_ref_id(id);
-                    let label = type_label(typ);
-                    let href = make_href(id);
-                    format!("<a class=\"cross-ref-{}\" href=\"{}\">{} {}</a>", typ, href, label, num)
-                }
-                None => { warn_unresolved(id); caps[0].to_string() }
-            }
-        }).to_string();
-
-    // Restore code blocks
-    result = markers::resolve_raw(&result, &code_blocks);
-    result
-}
-
-/// Resolve grouped refs for HTML with global registry (cross-file aware).
-fn resolve_grouped_html_global(
-    ids: &[String],
-    db: &HashMap<String, String>,
-    registry: &CrossRefRegistry,
-    current_page_url: &str,
-) -> String {
-    let parts: Vec<String> = ids.iter().map(|id| {
-        let (typ, _) = split_ref_id(id);
-        let label = type_label(typ);
-        match db.get(id) {
-            Some(num) => {
-                let href = if let Some(entry) = registry.entries.get(id) {
-                    if entry.source_url == current_page_url {
-                        format!("#{}", id)
-                    } else {
-                        format!("{}#{}", relative_url(current_page_url, &entry.source_url), id)
-                    }
-                } else {
-                    format!("#{}", id)
-                };
-                format!("<a class=\"cross-ref-{}\" href=\"{}\">{} {}</a>", typ, href, label, num)
-            }
-            None => { warn_unresolved(id); format!("@{}", id) }
-        }
-    }).collect();
-    format!("({})", parts.join("; "))
+    resolve_html_refs(html, &db, &make_href)
 }
 
 /// Patch in-page display numbers in rendered HTML to use chapter-prefixed numbers.
@@ -647,24 +503,27 @@ pub fn renumber_display_html(html: &str, registry: &CrossRefRegistry) -> String 
     }).to_string();
 
     // Theorem/callout headers: id="thm-xxx" followed by "Theorem N" etc.
-    // This handles all theorem-like types.
-    for prefix in ["thm", "lem", "cor", "prp", "cnj", "def", "exm", "exr", "sol", "rem", "alg", "lst", "tip", "nte", "wrn", "imp", "cau"] {
-        let label = type_label(prefix);
-        if label.is_empty() { continue; }
-        let pattern = format!(r#"(?s)id="({prefix}-[^"]+)"[^>]*>.*?{label}\s+(\d+)"#);
-        if let Ok(re) = Regex::new(&pattern) {
-            result = re.replace_all(&result, |caps: &regex::Captures| {
-                let id = &caps[1];
-                if let Some(entry) = registry.entries.get(id) {
-                    caps[0].replace(
-                        &format!("{} {}", label, &caps[2]),
-                        &format!("{} {}", label, entry.number),
-                    )
-                } else {
-                    caps[0].to_string()
-                }
-            }).to_string();
-        }
+    static RENUMBER_REGEXES: LazyLock<Vec<(&str, Regex)>> = LazyLock::new(|| {
+        let prefixes = ["thm", "lem", "cor", "prp", "cnj", "def", "exm", "exr", "sol", "rem", "alg", "lst", "tip", "nte", "wrn", "imp", "cau"];
+        prefixes.iter().filter_map(|prefix| {
+            let label = type_label(prefix);
+            if label.is_empty() { return None; }
+            let pattern = format!(r#"(?s)id="({prefix}-[^"]+)"[^>]*>.*?{label}\s+(\d+)"#);
+            Regex::new(&pattern).ok().map(|re| (label, re))
+        }).collect()
+    });
+    for (label, re) in RENUMBER_REGEXES.iter() {
+        result = re.replace_all(&result, |caps: &regex::Captures| {
+            let id = &caps[1];
+            if let Some(entry) = registry.entries.get(id) {
+                caps[0].replace(
+                    &format!("{} {}", label, &caps[2]),
+                    &format!("{} {}", label, entry.number),
+                )
+            } else {
+                caps[0].to_string()
+            }
+        }).to_string();
     }
 
     result
@@ -959,6 +818,14 @@ fn type_label(typ: &str) -> &str {
 }
 
 fn warn_unresolved(id: &str) {
+    use std::sync::Mutex;
+    static WARNED: LazyLock<Mutex<std::collections::HashSet<String>>> =
+        LazyLock::new(|| Mutex::new(std::collections::HashSet::new()));
+    if let Ok(mut set) = WARNED.lock() {
+        if !set.insert(id.to_string()) {
+            return;
+        }
+    }
     cwarn!("unresolved reference @{}", id);
 }
 

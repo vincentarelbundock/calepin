@@ -53,7 +53,18 @@ impl Filter for CalloutFilter {
             "callout-warning" => (callout_defs.as_ref().and_then(|c| c.warning.clone()).unwrap_or_else(|| "Warning".to_string()), "\u{26a0}\u{fe0f}"),
             "callout-important" => (callout_defs.as_ref().and_then(|c| c.important.clone()).unwrap_or_else(|| "Important".to_string()), "\u{2757}"),
             "callout-caution" => (callout_defs.as_ref().and_then(|c| c.caution.clone()).unwrap_or_else(|| "Caution".to_string()), "\u{1f525}"),
-            _ => (callout_defs.as_ref().and_then(|c| c.note.clone()).unwrap_or_else(|| "Note".to_string()), "\u{2139}\u{fe0f}"),
+            other => {
+                let fallback_title = other.strip_prefix("callout-")
+                    .map(|s| {
+                        let mut c = s.chars();
+                        match c.next() {
+                            None => String::new(),
+                            Some(f) => f.to_uppercase().to_string() + c.as_str(),
+                        }
+                    })
+                    .unwrap_or_else(|| "Note".to_string());
+                (fallback_title, "\u{2139}\u{fe0f}")
+            }
         };
 
         let callout_type = callout_class.strip_prefix("callout-").unwrap_or("note");

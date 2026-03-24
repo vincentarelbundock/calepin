@@ -186,9 +186,6 @@ pub fn select_image_variant(path: &Path, format: &str) -> PathBuf {
                             }
                         }
                     }
-                    if candidate != path {
-                        cwarn!("image: {} → {}", path.display(), candidate.display());
-                    }
                     return candidate;
                 }
             }
