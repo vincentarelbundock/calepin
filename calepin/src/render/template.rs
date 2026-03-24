@@ -406,8 +406,23 @@ pub fn build_template_vars_with_headings(
     vars
 }
 
-
-
+/// Deduplicate preamble lines, preserving first-occurrence order.
+/// Each entry in `lines` may contain multiple newline-separated lines;
+/// deduplication is per-line so identical `\usepackage` entries from
+/// different chunks appear only once.
+pub fn deduplicate_preamble(lines: &[String]) -> String {
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::new();
+    for chunk in lines {
+        for line in chunk.lines() {
+            let trimmed = line.trim();
+            if !trimmed.is_empty() && seen.insert(trimmed.to_string()) {
+                result.push(trimmed);
+            }
+        }
+    }
+    result.join("\n")
+}
 
 /// Render a page template with {% include %} support.
 ///

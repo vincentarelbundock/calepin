@@ -30,6 +30,13 @@ impl OutputRenderer for HtmlRenderer {
         };
         let walk_meta = renderer.walk_metadata();
         let mut vars = template::build_template_vars_with_headings(meta, &full_body, "html", &walk_meta.headings);
+        // Inject preamble content from code chunks (e.g. HTML head elements)
+        let preamble_content = template::deduplicate_preamble(renderer.preamble());
+        if !preamble_content.is_empty() {
+            let entry = vars.entry("preamble".to_string()).or_default();
+            if !entry.is_empty() { entry.push('\n'); }
+            entry.push_str(&preamble_content);
+        }
         let syntax_css = renderer.syntax_css_with_scope(
             crate::filters::highlighting::ColorScope::Both,
         );

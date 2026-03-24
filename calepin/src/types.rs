@@ -249,6 +249,8 @@ pub enum ChunkResult {
     Plot(PathBuf),
     /// Raw output from knit_print (knit_asis class) — included verbatim, bypassing comment wrapping.
     Asis(String),
+    /// Content to inject into the document preamble (e.g. \usepackage lines from knitr::knit_meta).
+    Preamble(String),
 }
 
 // ---------------------------------------------------------------------------

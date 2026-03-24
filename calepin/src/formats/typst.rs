@@ -12,8 +12,16 @@ impl OutputRenderer for TypstRenderer {
         &self,
         body: &str,
         meta: &Metadata,
-        _renderer: &ElementRenderer,
+        renderer: &ElementRenderer,
     ) -> Option<String> {
-        super::apply_page_template(body, meta, "typst")
+        let mut vars = crate::render::template::build_template_vars(meta, body, "typst");
+        let preamble_content = crate::render::template::deduplicate_preamble(renderer.preamble());
+        if !preamble_content.is_empty() {
+            let entry = vars.entry("preamble".to_string()).or_default();
+            if !entry.is_empty() { entry.push('\n'); }
+            entry.push_str(&preamble_content);
+        }
+        let tpl = crate::render::template::load_page_template("page", "typst");
+        Some(crate::render::template::render_page_template(&tpl, &vars, "typst"))
     }
 }

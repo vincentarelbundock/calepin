@@ -50,6 +50,15 @@ local({
 
 .calepin_has_knitr <- requireNamespace("knitr", quietly = TRUE)
 
+# Preamble buffer: R code can call calepin.preamble() to inject content
+# into the document preamble (e.g. \usepackage lines, HTML <head> elements).
+.calepin_preamble_buf <- character(0)
+
+calepin.preamble <- function(text) {
+  .calepin_preamble_buf <<- c(.calepin_preamble_buf, text)
+  invisible(NULL)
+}
+
 .calepin_loop <- function() {
   con <- file("stdin", "r")
   while (TRUE) {
@@ -175,6 +184,37 @@ local({
       if (!has_plot) file.remove(fig_path)
     }
 
+    # Collect knitr::knit_meta (used by tinytable, gt, etc. for LaTeX dependencies)
+    if (.calepin_has_knitr) {
+      .km <- knitr::knit_meta("get")
+      if (length(.km) > 0) {
+        for (m in .km) {
+          if (inherits(m, "latex_dependency")) {
+            pkg <- m$name
+            opts <- m$options
+            extra <- m$extra_lines
+            if (isTRUE(nzchar(pkg))) {
+              if (!is.null(opts) && length(opts) > 0) {
+                .calepin_preamble_buf <<- c(.calepin_preamble_buf,
+                  paste0("\\usepackage[", paste(opts, collapse = ","), "]{", pkg, "}"))
+              } else {
+                .calepin_preamble_buf <<- c(.calepin_preamble_buf,
+                  paste0("\\usepackage{", pkg, "}"))
+              }
+              if (!is.null(extra) && length(extra) > 0) {
+                .calepin_preamble_buf <<- c(.calepin_preamble_buf, extra)
+              }
+            }
+          } else if (inherits(m, "html_dependency")) {
+            if (!is.null(m$head) && nzchar(m$head)) {
+              .calepin_preamble_buf <<- c(.calepin_preamble_buf, m$head)
+            }
+          }
+        }
+        knitr::knit_meta("clear")
+      }
+    }
+
     parts <- character(0)
     if (!is.null(err_out)) {
       parts <- c(parts, paste0(sentinel, "_ERROR:", err_out))
@@ -186,6 +226,13 @@ local({
     if (length(warns) > 0) parts <- c(parts, paste0(sentinel, "_WARNING:", paste(warns, collapse = "\n")))
     if (length(msgs) > 0) parts <- c(parts, paste0(sentinel, "_MESSAGE:", paste(msgs, collapse = "\n")))
     if (has_plot) parts <- c(parts, paste0(sentinel, "_PLOT:", fig_path))
+
+    if (length(.calepin_preamble_buf) > 0) {
+      for (p in .calepin_preamble_buf) {
+        parts <- c(parts, paste0(sentinel, "_PREAMBLE:", p))
+      }
+      .calepin_preamble_buf <<- character(0)
+    }
 
     result <- paste(parts, collapse = paste0("\n", sep, "\n"))
     cat(result, "\n", sep = "")

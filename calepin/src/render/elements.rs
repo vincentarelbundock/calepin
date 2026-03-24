@@ -69,6 +69,7 @@ pub struct ElementRenderer {
     registry: Rc<PluginRegistry>,
     raw_fragments: std::cell::RefCell<Vec<String>>,
     sc_fragments: Vec<String>,
+    preamble: Vec<String>,
     pub number_sections: bool,
     pub shift_headings: bool,
     pub default_fig_cap_location: Option<String>,
@@ -122,6 +123,7 @@ impl ElementRenderer {
             registry: Rc::new(PluginRegistry::empty()),
             raw_fragments: std::cell::RefCell::new(Vec::new()),
             sc_fragments: Vec::new(),
+            preamble: Vec::new(),
             number_sections: false,
             shift_headings: false,
             default_fig_cap_location: None,
@@ -143,6 +145,14 @@ impl ElementRenderer {
 
     pub fn set_sc_fragments(&mut self, sc: Vec<String>) {
         self.sc_fragments = sc;
+    }
+
+    pub fn set_preamble(&mut self, preamble: Vec<String>) {
+        self.preamble = preamble;
+    }
+
+    pub fn preamble(&self) -> &[String] {
+        &self.preamble
     }
 
     /// Render the combined footnote section from all accumulated Text elements.

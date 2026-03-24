@@ -124,14 +124,6 @@ pub trait OutputRenderer {
     }
 }
 
-/// Default apply_template: build vars, load page template, render.
-/// Shared by LatexRenderer and TypstRenderer.
-fn apply_page_template(body: &str, meta: &Metadata, format: &str) -> Option<String> {
-    let vars = crate::render::template::build_template_vars(meta, body, format);
-    let tpl = crate::render::template::load_page_template("page", format);
-    Some(crate::render::template::render_page_template(&tpl, &vars, format))
-}
-
 /// Create a renderer from a format name string.
 /// Checks built-in formats first, then custom format configs.
 pub fn create_renderer(format: &str) -> Result<Box<dyn OutputRenderer>> {

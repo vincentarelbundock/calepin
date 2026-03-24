@@ -38,6 +38,8 @@ pub struct EngineContext<'a> {
 pub struct EvalResult {
     pub elements: Vec<Element>,
     pub sc_fragments: Vec<String>,
+    /// Preamble content collected from code chunks (e.g. \usepackage lines).
+    pub preamble: Vec<String>,
 }
 
 /// Evaluate all blocks and produce a flat list of Elements.
@@ -55,6 +57,7 @@ pub fn evaluate(
 ) -> Result<EvalResult> {
     let mut elements: Vec<Element> = Vec::new();
     let mut sc_fragments: Vec<String> = Vec::new();
+    let mut preamble: Vec<String> = Vec::new();
 
     for block in blocks {
         match block {
@@ -90,8 +93,9 @@ pub fn evaluate(
                 } else {
                     chunk
                 };
-                let mut chunk_elements = block::evaluate_block(chunk_ref, fig_dir, fig_ext, ctx, cache)?;
+                let (mut chunk_elements, chunk_preamble) = block::evaluate_block(chunk_ref, fig_dir, fig_ext, ctx, cache)?;
                 elements.append(&mut chunk_elements);
+                preamble.extend(chunk_preamble);
             }
             Block::CodeBlock(cb) => {
                 elements.push(Element::CodeSource {
@@ -107,7 +111,8 @@ pub fn evaluate(
                     continue;
                 }
                 if div.classes.iter().any(|c| c == "hidden") {
-                    let _children = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
+                    let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
+                    preamble.extend(child_result.preamble);
                     continue;
                 }
                 if div.classes.iter().any(|c| c == "verbatim") {
@@ -129,6 +134,7 @@ pub fn evaluate(
                 }
                 let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
                 sc_fragments.extend(child_result.sc_fragments);
+                preamble.extend(child_result.preamble);
                 elements.push(Element::Div {
                     classes: div.classes.clone(),
                     id: div.id.clone(),
@@ -146,7 +152,7 @@ pub fn evaluate(
         }
     }
 
-    Ok(EvalResult { elements, sc_fragments })
+    Ok(EvalResult { elements, sc_fragments, preamble })
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +287,7 @@ fn process_results(
     let warning_prefix = format!("{}_WARNING:", sentinel);
     let message_prefix = format!("{}_MESSAGE:", sentinel);
     let plot_prefix = format!("{}_PLOT:", sentinel);
+    let preamble_prefix = format!("{}_PREAMBLE:", sentinel);
 
     for part in rest.split(&sep) {
         let part = part.trim();
@@ -312,6 +319,10 @@ fn process_results(
         } else if part.starts_with(&plot_prefix) {
             if fig_path.exists() {
                 results.push(ChunkResult::Plot(fig_path.to_path_buf()));
+            }
+        } else if let Some(text) = part.strip_prefix(&preamble_prefix) {
+            if !text.is_empty() {
+                results.push(ChunkResult::Preamble(text.to_string()));
             }
         }
     }

@@ -21,15 +21,21 @@ pub fn evaluate_block(
     fig_ext: &str,
     ctx: &mut EngineContext,
     cache: &mut CacheState,
-) -> Result<Vec<Element>> {
+) -> Result<(Vec<Element>, Vec<String>)> {
     let opts = &chunk.options;
 
     // Always go through execute_chunk_cached so the upstream digest advances,
     // even for include=false or eval=false chunks.
     let results = engines::cache::execute_chunk_cached(&chunk.source, opts, &chunk.label, fig_dir, fig_ext, ctx, cache)?;
 
+    // Extract preamble before any early returns — preamble is always collected.
+    let preamble: Vec<String> = results.iter().filter_map(|r| match r {
+        ChunkResult::Preamble(text) => Some(text.clone()),
+        _ => None,
+    }).collect();
+
     if !opts.include() {
-        return Ok(vec![]);
+        return Ok((vec![], preamble));
     }
     let comment = opts.comment();
     let lang = opts.engine();
@@ -111,6 +117,7 @@ pub fn evaluate_block(
                     attrs: opts.to_figure_attrs(),
                 });
             }
+            ChunkResult::Preamble(_) => {} // already extracted above
         }
     }
 
@@ -137,10 +144,10 @@ pub fn evaluate_block(
                 children: div_children,
             });
         }
-        return Ok(other);
+        return Ok((other, preamble));
     }
 
-    Ok(elements)
+    Ok((elements, preamble))
 }
 
 /// Strip Pandoc raw block wrappers (` ```{=html}\n...\n``` `) from knit_asis output.

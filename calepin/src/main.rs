@@ -1139,6 +1139,7 @@ macro_rules! timed {
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);
     element_renderer.set_sc_fragments(eval_result.sc_fragments);
+    element_renderer.set_preamble(eval_result.preamble);
 
     // 12. Render elements to final format
     let rendered = timed!("render", renderer.render(&elements, &element_renderer)?);
