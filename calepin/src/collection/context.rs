@@ -203,7 +203,7 @@ fn build_nav_tree(nodes: &[DocumentNode], pages: &[DocumentInfo]) -> Vec<NavNode
                 .unwrap_or_else(|| path.clone());
             let href = info.map(|p| p.url.clone());
             NavNode {
-                text: crate::render::markdown::render_inline(&text, "html"),
+                text: crate::render::convert::render_inline(&text, "html"),
                 href,
                 active: false,
                 children: vec![],

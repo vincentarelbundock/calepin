@@ -7,19 +7,20 @@
 //!
 //! Shared machinery:
 //!   - `template` — {{variable}} substitution + page templates
-//!   - `markdown` — comrak markdown-to-HTML/Typst conversion
-//!   - `latex` — markdown-to-LaTeX AST conversion
+//!   - `convert` — comrak options, image attrs, render entry points
+//!   - `html_emit` / `latex_emit` / `typst_emit` / `markdown_emit` — format emitters
 //!   - `markers` — math/raw output protection
 
 pub mod ast;
 pub mod div;
 pub mod elements;
-pub mod html_ast;
-pub mod latex;
-pub mod markdown;
+pub mod html_emit;
+pub mod latex_emit;
+pub mod convert;
+pub mod markdown_emit;
 pub mod markers;
 pub mod metadata;
-pub mod typst_ast;
+pub mod typst_emit;
 
 pub mod span;
 pub mod template;

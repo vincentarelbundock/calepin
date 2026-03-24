@@ -166,7 +166,7 @@ impl ElementRenderer {
         if defs.is_empty() || self.ext != "html" {
             return String::new();
         }
-        crate::render::html_ast::render_footnote_section(&defs)
+        crate::render::html_emit::render_footnote_section(&defs)
     }
 
     pub fn render_template(&self, name: &str) -> String {
@@ -192,52 +192,48 @@ impl ElementRenderer {
                     }
                 };
                 let fragments = self.raw_fragments.borrow();
-                let rendered = match self.ext.as_str() {
-                    "html" => {
-                        let options = crate::render::ast::WalkOptions {
-                            number_sections: self.number_sections,
-                            shift_headings: self.shift_headings,
-                            footnote_counter_start: self.footnote_counter.get(),
-                            section_counters_start: self.section_counters.get(),
-                            min_heading_level: self.min_heading_level.get(),
-                            suppress_footnote_section: true,
-                        };
-                        let result = crate::render::markdown::render_html_with_metadata(
-                            &processed, &fragments, &options,
-                        );
-                        self.footnote_counter.set(result.metadata.footnote_counter_end);
-                        self.section_counters.set(Some(result.metadata.section_counters_end));
-                        self.min_heading_level.set(Some(result.metadata.min_heading_level));
-                        if !result.metadata.footnote_defs.is_empty() {
-                            let mut acc = self.accumulated_footnote_defs.borrow_mut();
-                            for def in result.metadata.footnote_defs {
-                                if !acc.iter().any(|(id, _)| *id == def.0) {
-                                    acc.push(def);
-                                }
+                let rendered = if self.ext == "html" {
+                    let options = crate::render::ast::WalkOptions {
+                        number_sections: self.number_sections,
+                        shift_headings: self.shift_headings,
+                        footnote_counter_start: self.footnote_counter.get(),
+                        section_counters_start: self.section_counters.get(),
+                        min_heading_level: self.min_heading_level.get(),
+                        suppress_footnote_section: true,
+                    };
+                    let result = crate::render::convert::render_html_with_metadata(
+                        &processed, &fragments, &options,
+                    );
+                    self.footnote_counter.set(result.metadata.footnote_counter_end);
+                    self.section_counters.set(Some(result.metadata.section_counters_end));
+                    self.min_heading_level.set(Some(result.metadata.min_heading_level));
+                    if !result.metadata.footnote_defs.is_empty() {
+                        let mut acc = self.accumulated_footnote_defs.borrow_mut();
+                        for def in result.metadata.footnote_defs {
+                            if !acc.iter().any(|(id, _)| *id == def.0) {
+                                acc.push(def);
                             }
                         }
-                        let mut meta = self.walk_metadata.borrow_mut();
-                        meta.headings.extend(result.metadata.headings);
-                        meta.ids.extend(result.metadata.ids);
-                        result.output
                     }
-                    "typst" => {
-                        let fn_start = self.footnote_counter.get();
-                        let (output, fn_end) = crate::render::typst_ast::markdown_to_typst_with_counter(
+                    let mut meta = self.walk_metadata.borrow_mut();
+                    meta.headings.extend(result.metadata.headings);
+                    meta.ids.extend(result.metadata.ids);
+                    result.output
+                } else {
+                    let fn_start = self.footnote_counter.get();
+                    let (output, fn_end) = match self.ext.as_str() {
+                        "typst" => crate::render::typst_emit::markdown_to_typst_with_counter(
                             &processed, &fragments, fn_start,
-                        );
-                        self.footnote_counter.set(fn_end);
-                        output
-                    }
-                    "latex" => {
-                        let fn_start = self.footnote_counter.get();
-                        let (output, fn_end) = crate::render::latex::markdown_to_latex_with_counter(
+                        ),
+                        "latex" => crate::render::latex_emit::markdown_to_latex_with_counter(
                             &processed, &fragments, self.number_sections, fn_start,
-                        );
-                        self.footnote_counter.set(fn_end);
-                        output
-                    }
-                    _ => crate::render::markdown::resolve_raw(&processed, &fragments),
+                        ),
+                        _ => crate::render::markdown_emit::markdown_to_markdown_with_counter(
+                            &processed, &fragments, fn_start,
+                        ),
+                    };
+                    self.footnote_counter.set(fn_end);
+                    output
                 };
                 crate::render::markers::resolve_shortcode_raw(&rendered, &self.sc_fragments)
             }

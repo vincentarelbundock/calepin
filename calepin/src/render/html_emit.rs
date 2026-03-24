@@ -3,7 +3,7 @@
 use comrak::nodes::TableAlignment;
 
 use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, WalkResult, walk_and_render_with_metadata};
-use crate::render::markdown::ImageAttrs;
+use crate::render::convert::ImageAttrs;
 
 pub struct HtmlEmitter;
 
@@ -136,7 +136,7 @@ impl FormatEmitter for HtmlEmitter {
     fn link_open(&self, url: &str) -> String {
         format!("<a href=\"{}\">", self.escape_text(url))
     }
-    fn link_close(&self) -> &str { "</a>" }
+    fn link_close(&self, _url: &str) -> String { "</a>".to_string() }
 
     fn image(&self, url: &str, alt: &str, attrs: &ImageAttrs) -> String {
         let resolved = crate::filters::figure::select_image_variant(

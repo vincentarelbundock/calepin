@@ -34,7 +34,7 @@ pub fn render(
         let first_class = classes.first().map(|s| s.as_str()).unwrap_or("");
 
         // Render inline markdown in span content (e.g. **bold**, *italic*)
-        let rendered_content = crate::render::markdown::render_inline(content, format);
+        let rendered_content = crate::render::convert::render_inline(content, format);
 
         let mut vars = HashMap::new();
         for (k, v) in &kv {
@@ -109,6 +109,6 @@ fn wrap_output(
 ) -> String {
     match format {
         "html" => output,
-        _ => crate::render::markdown::wrap_raw(&mut raw_fragments.borrow_mut(), output),
+        _ => crate::render::convert::wrap_raw(&mut raw_fragments.borrow_mut(), output),
     }
 }

@@ -34,7 +34,7 @@ fn build_listing_item(
         results.get(&key).and_then(|r| extract_first_image(&r.body))
     });
     ListingItem {
-        title: lp.meta.title.as_ref().map(|t| crate::render::markdown::render_inline(t, "html")),
+        title: lp.meta.title.as_ref().map(|t| crate::render::convert::render_inline(t, "html")),
         date: lp.meta.date.as_ref().map(|d| crate::collection::context::format_date(d)),
         description: lp.meta.description.clone(),
         image,

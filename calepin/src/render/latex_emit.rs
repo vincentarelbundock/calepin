@@ -3,7 +3,7 @@
 use comrak::nodes::TableAlignment;
 
 use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
-use crate::render::markdown::ImageAttrs;
+use crate::render::convert::ImageAttrs;
 
 pub struct LatexEmitter {
     pub number_sections: bool,
@@ -162,7 +162,7 @@ impl FormatEmitter for LatexEmitter {
             format!("\\href{{{}}}{{{}", escaped, "")
         }
     }
-    fn link_close(&self) -> &str { "}" }
+    fn link_close(&self, _url: &str) -> String { "}".to_string() }
 
     fn image(&self, url: &str, _alt: &str, attrs: &ImageAttrs) -> String {
         let resolved = crate::filters::figure::select_image_variant(

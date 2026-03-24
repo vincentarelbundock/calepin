@@ -192,9 +192,9 @@ fn render_one_document(
     Ok(CollectionRenderResult {
         body,
         toc,
-        title: result.metadata.title.map(|t| crate::render::markdown::render_inline(&t, format)),
+        title: result.metadata.title.map(|t| crate::render::convert::render_inline(&t, format)),
         date: result.metadata.date,
-        subtitle: result.metadata.subtitle.map(|t| crate::render::markdown::render_inline(&t, format)),
+        subtitle: result.metadata.subtitle.map(|t| crate::render::convert::render_inline(&t, format)),
         abstract_text: result.metadata.abstract_text,
     })
 }
@@ -396,9 +396,9 @@ fn render_one_document_pass1(
     Ok(Pass1Result {
         body,
         toc,
-        title: result.metadata.title.map(|t| crate::render::markdown::render_inline(&t, "html")),
+        title: result.metadata.title.map(|t| crate::render::convert::render_inline(&t, "html")),
         date: result.metadata.date,
-        subtitle: result.metadata.subtitle.map(|t| crate::render::markdown::render_inline(&t, "html")),
+        subtitle: result.metadata.subtitle.map(|t| crate::render::convert::render_inline(&t, "html")),
         abstract_text: result.metadata.abstract_text,
         ref_data: result.ref_data,
     })

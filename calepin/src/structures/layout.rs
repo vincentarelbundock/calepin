@@ -66,7 +66,7 @@ pub fn render(
     vars.insert("engine".to_string(), format.to_string());
     vars.insert("id".to_string(), id_str.to_string());
     vars.insert("caption".to_string(), if !caption.is_empty() {
-        crate::render::markdown::render_inline(&caption, format)
+        crate::render::convert::render_inline(&caption, format)
     } else {
         String::new()
     });

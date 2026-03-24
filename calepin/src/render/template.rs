@@ -283,14 +283,14 @@ pub fn build_template_vars_with_headings(
     vars.insert("plain_title".to_string(), plain_title);
     vars.insert("title".to_string(),
         meta.title.as_deref()
-            .map(|t| crate::render::markdown::render_inline(t, ext))
+            .map(|t| crate::render::convert::render_inline(t, ext))
             .unwrap_or_default(),
     );
     vars.insert(
         "author".to_string(),
         meta.author.as_ref()
             .map(|a| a.iter()
-                .map(|name| crate::render::markdown::render_inline(name, ext))
+                .map(|name| crate::render::convert::render_inline(name, ext))
                 .collect::<Vec<_>>()
                 .join(", "))
             .unwrap_or_default(),
@@ -300,7 +300,7 @@ pub fn build_template_vars_with_headings(
 
     // Subtitle (already available as {{subtitle}} via vars set above)
     if let Some(ref subtitle) = meta.subtitle {
-        vars.insert("subtitle".to_string(), crate::render::markdown::render_inline(subtitle, ext));
+        vars.insert("subtitle".to_string(), crate::render::convert::render_inline(subtitle, ext));
     }
 
     // Author block
@@ -309,7 +309,7 @@ pub fn build_template_vars_with_headings(
 
     // Abstract block
     if let Some(ref abs) = meta.abstract_text {
-        vars.insert("abstract".to_string(), crate::render::markdown::render_inline(abs, ext));
+        vars.insert("abstract".to_string(), crate::render::convert::render_inline(abs, ext));
     } else {
         vars.insert("abstract".to_string(), String::new());
     }

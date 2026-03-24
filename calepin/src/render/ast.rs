@@ -11,7 +11,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use crate::render::markdown::{build_comrak_options, ImageAttrs};
+use crate::render::convert::{build_comrak_options, ImageAttrs};
 use crate::render::markers;
 use crate::util::slugify;
 
@@ -138,7 +138,7 @@ pub trait FormatEmitter {
 
     // -- Links & images --
     fn link_open(&self, url: &str) -> String;
-    fn link_close(&self) -> &str;
+    fn link_close(&self, url: &str) -> String;
     fn image(&self, url: &str, alt: &str, attrs: &ImageAttrs) -> String;
 
     // -- Table --
@@ -701,7 +701,7 @@ fn emit_leaving(
         NodeValue::Subscript => buf.push_str(e.subscript_close()),
         NodeValue::Underline => buf.push_str(e.underline_close()),
         NodeValue::Highlight => buf.push_str(e.highlight_close()),
-        NodeValue::Link(_) => buf.push_str(e.link_close()),
+        NodeValue::Link(link) => buf.push_str(&e.link_close(&link.url)),
         NodeValue::Image(link) => {
             s.skip_image_text = false;
             let alt = s.image_alt.clone();

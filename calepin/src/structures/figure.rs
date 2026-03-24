@@ -27,7 +27,7 @@ pub fn render_div(
         .join("\n\n");
 
     let cap_rendered = if !caption.is_empty() {
-        crate::render::markdown::render_inline(&caption, format)
+        crate::render::convert::render_inline(&caption, format)
     } else {
         String::new()
     };
