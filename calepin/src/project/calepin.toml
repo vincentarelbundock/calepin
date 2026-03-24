@@ -59,7 +59,6 @@ valign = "top"
 columns = 1
 rows = 1
 
-[meta]
 title = "Calepin"
 subtitle = "A document and site generator"
 author = "Vincent Arel-Bundock"

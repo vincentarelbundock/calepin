@@ -291,7 +291,7 @@ fn load_csl_style_uncached(csl_path: Option<&str>) -> Result<IndependentStyle> {
     // 2. Default from calepin.toml
     let defs = crate::project::get_defaults();
     let default_name = defs.csl.as_deref()
-        .or_else(|| crate::project::builtin_config().meta.as_ref().and_then(|m| m.csl.as_deref()))
+        .or_else(|| crate::project::builtin_config().csl.as_deref())
         .unwrap_or("chicago-author-date");
     if let Some(archived) = ArchivedStyle::by_name(default_name) {
         match archived.get() {

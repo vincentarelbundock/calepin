@@ -18,14 +18,40 @@ pub struct ProjectConfig {
     #[serde(default)]
     pub output: Option<String>,
 
-    /// Project metadata: title, subtitle, author, url, csl, highlight.
-    /// Available in templates as `{{ meta.title }}`, etc.
-    #[serde(default)]
-    pub meta: Option<MetaSection>,
+    // -- Metadata (formerly [meta]) --
 
-    /// Site-specific configuration (pages, logo, favicon).
     #[serde(default)]
-    pub site: Option<SiteSection>,
+    pub title: Option<String>,
+    #[serde(default)]
+    pub subtitle: Option<String>,
+    #[serde(default)]
+    pub author: Option<toml::Value>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub csl: Option<String>,
+    #[serde(default)]
+    pub highlight: Option<HighlightDefaults>,
+
+    // -- Collection fields (formerly [site]) --
+
+    /// Which `[targets.*]` to use for collection rendering.
+    /// Defaults to "html" if absent.
+    #[serde(default)]
+    pub target: Option<String>,
+    #[serde(default)]
+    pub favicon: Option<String>,
+    #[serde(default)]
+    pub logo: Option<String>,
+    #[serde(default, rename = "logo-dark")]
+    pub logo_dark: Option<String>,
+    /// Path to the master template that assembles rendered page fragments.
+    #[serde(default)]
+    pub orchestrator: Option<String>,
+
+    /// Table of contents: ordered list of sections and pages.
+    #[serde(default)]
+    pub contents: Vec<ContentSection>,
 
     /// Arbitrary variables passed to all templates as `{{ var.key }}`.
     #[serde(default)]
@@ -40,79 +66,127 @@ pub struct ProjectConfig {
     pub targets: HashMap<String, Target>,
 }
 
-/// Project metadata, available in templates and body as `{{ meta.* }}`.
+impl ProjectConfig {
+    /// Whether this config describes a collection (has [[contents]]).
+    #[allow(dead_code)]
+    pub fn is_collection(&self) -> bool {
+        !self.contents.is_empty()
+    }
+}
+
+/// A section in the `[[contents]]` array of tables.
 #[derive(Debug, Clone, Default, Deserialize)]
-#[allow(dead_code)]
-pub struct MetaSection {
+pub struct ContentSection {
+    /// Section title (displayed in nav). None for top-level ungrouped pages.
+    #[serde(default)]
     pub title: Option<String>,
-    pub subtitle: Option<String>,
-    pub author: Option<toml::Value>,
-    pub url: Option<String>,
-    pub csl: Option<String>,
-    pub highlight: Option<HighlightDefaults>,
+    /// Pages in this section: bare path strings or `{title, page}` tables.
+    #[serde(default)]
+    pub pages: Vec<PageEntry>,
+    /// If true, pages are rendered but excluded from navigation.
+    #[serde(default)]
+    pub standalone: bool,
+    /// The section's own page (clickable section header in nav).
+    #[serde(default)]
+    pub index: Option<String>,
 }
 
-/// Site-specific configuration: structure and identity for website builds.
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct SiteSection {
-    pub favicon: Option<String>,
-    pub logo: Option<String>,
-    #[serde(rename = "logo-dark")]
-    pub logo_dark: Option<String>,
-    /// Which `[targets.*]` to use for rendering. Determines format and extension.
-    /// Defaults to "html" if absent.
-    pub target: Option<String>,
-    /// Path to the master template that assembles rendered page fragments.
-    /// The template receives the page tree with file paths and can use
-    /// `\include{}` or equivalent to pull in fragments.
-    pub orchestrator: Option<String>,
-    /// Content tree. Each entry is a string (file or glob) or an array
-    /// where the first element is a section title and the rest are files/globs.
-    #[serde(default)]
-    pub content: Vec<toml::Value>,
-    /// Standalone pages: rendered with site templates but excluded from the
-    /// navigation tree. Useful for 404 pages, landing pages, etc.
-    #[serde(default)]
-    pub content_standalone: Vec<String>,
+/// A single page entry: either a bare path string or a `{title, page}` table.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum PageEntry {
+    /// Bare string path (possibly a glob).
+    Path(String),
+    /// Explicit title override + path.
+    Named { title: String, page: String },
 }
 
-impl SiteSection {
-    /// Expand the pages tree, resolving glob patterns relative to `base_dir`.
-    /// Returns a flat list of (section_title, file_path) pairs.
-    /// Top-level pages have section_title = None.
-    pub fn expand_pages(&self, base_dir: &std::path::Path) -> Vec<PageNode> {
-        let mut result = Vec::new();
-        for entry in &self.content {
-            match entry {
-                toml::Value::String(s) => {
-                    for path in expand_glob(s, base_dir) {
-                        result.push(PageNode::Page(path));
-                    }
+impl PageEntry {
+    /// The file path, regardless of variant.
+    pub fn path(&self) -> &str {
+        match self {
+            PageEntry::Path(p) => p,
+            PageEntry::Named { page, .. } => page,
+        }
+    }
+
+    /// The explicit title override, if any.
+    #[allow(dead_code)]
+    pub fn title(&self) -> Option<&str> {
+        match self {
+            PageEntry::Path(_) => None,
+            PageEntry::Named { title, .. } => Some(title),
+        }
+    }
+}
+
+/// Expand `[[contents]]` into a flat `PageNode` tree, resolving globs.
+/// Standalone sections are excluded (they are not part of navigation).
+pub fn expand_contents(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<PageNode> {
+    let mut result = Vec::new();
+    for section in contents {
+        if section.standalone {
+            continue;
+        }
+        let expanded = expand_section_pages(&section.pages, base_dir);
+        if let Some(ref title) = section.title {
+            result.push(PageNode::Section {
+                title: title.clone(),
+                index: section.index.clone(),
+                pages: expanded,
+            });
+        } else {
+            // Untitled section: pages appear at the top level
+            result.extend(expanded);
+        }
+    }
+    result
+}
+
+/// Expand page entries within a single section, resolving globs.
+fn expand_section_pages(entries: &[PageEntry], base_dir: &std::path::Path) -> Vec<PageNode> {
+    let mut result = Vec::new();
+    for entry in entries {
+        match entry {
+            PageEntry::Path(pattern) => {
+                for path in expand_glob(pattern, base_dir) {
+                    result.push(PageNode::Page { path, title: None });
                 }
-                toml::Value::Array(arr) if !arr.is_empty() => {
-                    let title = arr[0].as_str().unwrap_or("").to_string();
-                    let mut children = Vec::new();
-                    for item in &arr[1..] {
-                        if let Some(s) = item.as_str() {
-                            for path in expand_glob(s, base_dir) {
-                                children.push(path);
-                            }
-                        }
-                    }
-                    result.push(PageNode::Section { title, pages: children });
+            }
+            PageEntry::Named { title, page } => {
+                for path in expand_glob(page, base_dir) {
+                    result.push(PageNode::Page { path, title: Some(title.clone()) });
                 }
-                _ => {}
             }
         }
-        result
     }
+    result
+}
+
+/// Collect all page paths from [[contents]], including standalone.
+#[allow(dead_code)]
+pub fn collect_all_page_paths(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<String> {
+    let mut paths = Vec::new();
+    for section in contents {
+        if let Some(ref idx) = section.index {
+            paths.push(idx.clone());
+        }
+        for entry in &section.pages {
+            for path in expand_glob(entry.path(), base_dir) {
+                if path.ends_with(".qmd") {
+                    paths.push(path);
+                }
+            }
+        }
+    }
+    paths
 }
 
 /// A node in the expanded page tree.
 #[derive(Debug, Clone)]
 pub enum PageNode {
-    Page(String),
-    Section { title: String, pages: Vec<String> },
+    Page { path: String, title: Option<String> },
+    Section { title: String, index: Option<String>, pages: Vec<PageNode> },
 }
 
 /// Public wrapper for glob expansion, used by site config.
@@ -557,11 +631,9 @@ pub fn load_project_config(path: &Path) -> Result<ProjectConfig> {
     }
 
     // Validate CSL
-    if let Some(ref meta) = config.meta {
-        if let Some(ref csl) = meta.csl {
-            validate_csl(csl, project_root)
-                .map_err(|e| anyhow::anyhow!("Invalid csl in {}: {}", path.display(), e))?;
-        }
+    if let Some(ref csl) = config.csl {
+        validate_csl(csl, project_root)
+            .map_err(|e| anyhow::anyhow!("Invalid csl in {}: {}", path.display(), e))?;
     }
 
     Ok(config)
@@ -920,16 +992,50 @@ base = "html"
     }
 
     #[test]
-    fn test_site_target_fallback() {
+    fn test_collection_target() {
         let toml = r#"
-[site]
 target = "website"
 
 [targets.website]
 base = "html"
 "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
-        let site_target = config.site.as_ref().and_then(|s| s.target.as_deref());
-        assert_eq!(site_target, Some("website"));
+        assert_eq!(config.target.as_deref(), Some("website"));
+    }
+
+    #[test]
+    fn test_contents_parsing() {
+        let toml = r#"
+[[contents]]
+pages = ["install.qmd", "cli.qmd"]
+
+[[contents]]
+title = "Guide"
+index = "guide/index.qmd"
+pages = [
+  "guide/basics.qmd",
+  {title = "Figures & Images", page = "guide/figures.qmd"},
+]
+
+[[contents]]
+standalone = true
+pages = ["index.qmd", "404.qmd"]
+"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        assert_eq!(config.contents.len(), 3);
+
+        // First section: untitled
+        assert!(config.contents[0].title.is_none());
+        assert_eq!(config.contents[0].pages.len(), 2);
+
+        // Second section: titled with index and named page
+        assert_eq!(config.contents[1].title.as_deref(), Some("Guide"));
+        assert_eq!(config.contents[1].index.as_deref(), Some("guide/index.qmd"));
+        assert_eq!(config.contents[1].pages.len(), 2);
+        assert_eq!(config.contents[1].pages[1].title(), Some("Figures & Images"));
+        assert_eq!(config.contents[1].pages[1].path(), "guide/figures.qmd");
+
+        // Third section: standalone
+        assert!(config.contents[2].standalone);
     }
 }

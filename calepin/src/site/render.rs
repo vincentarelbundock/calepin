@@ -156,15 +156,13 @@ fn render_one_page(
 fn build_overrides(config: &ProjectConfig) -> Vec<String> {
     let mut overrides = Vec::new();
 
-    // Highlight style from [meta]
-    if let Some(ref meta) = config.meta {
-        if let Some(ref hl) = meta.highlight {
-            if let Some(ref light) = hl.light {
-                overrides.push(format!("highlight-style.light={}", light));
-            }
-            if let Some(ref dark) = hl.dark {
-                overrides.push(format!("highlight-style.dark={}", dark));
-            }
+    // Highlight style from top-level config
+    if let Some(ref hl) = config.highlight {
+        if let Some(ref light) = hl.light {
+            overrides.push(format!("highlight-style.light={}", light));
+        }
+        if let Some(ref dark) = hl.dark {
+            overrides.push(format!("highlight-style.dark={}", dark));
         }
     }
 

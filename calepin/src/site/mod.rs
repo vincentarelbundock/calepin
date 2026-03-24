@@ -14,7 +14,7 @@ use anyhow::{Context, Result};
 
 use context::{build_page_context, build_site_context, mark_active, ListingItem};
 use discover::{discover_listing_pages, discover_pages, discover_standalone_pages, PageInfo};
-use crate::project::PageNode;
+use crate::project::{PageNode, expand_contents};
 
 /// Build a static site from .qmd files.
 /// `cli_target` overrides `[site].target` when provided via `-t` on the command line.
@@ -38,7 +38,7 @@ pub fn build_site(
     // 2. Resolve site target (format and extension)
     //    CLI -t flag takes precedence over [site].target, which defaults to "html".
     let site_target_name = cli_target.map(|s| s.to_string())
-        .or_else(|| config.site.as_ref().and_then(|s| s.target.clone()))
+        .or_else(|| config.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let site_target = crate::project::resolve_target(&site_target_name, Some(&config))?;
     let format = &site_target.base;
@@ -52,8 +52,7 @@ pub fn build_site(
     // Falls back to built-in templates if not found on filesystem.
     let ext = crate::paths::base_to_ext(format);
     let orchestrator_filename = format!("orchestrator.{}", ext);
-    let orchestrator = config.site.as_ref()
-        .and_then(|s| s.orchestrator.clone())
+    let orchestrator = config.orchestrator.clone()
         .or_else(|| {
             let p = base_dir.join("_calepin").join("templates").join(&site_target_name)
                 .join(&orchestrator_filename);
@@ -167,7 +166,7 @@ pub fn rebuild_pages(
     let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
 
     let site_target_name = cli_target.map(|s| s.to_string())
-        .or_else(|| config.site.as_ref().and_then(|s| s.target.clone()))
+        .or_else(|| config.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let site_target = crate::project::resolve_target(&site_target_name, Some(&config))?;
     let format = &site_target.base;
@@ -468,9 +467,7 @@ fn render_orchestrator(
     quiet: bool,
 ) -> Result<()> {
     // Build the page tree with titles and paths
-    let page_tree = config.site.as_ref()
-        .map(|s| s.expand_pages(base_dir))
-        .unwrap_or_default();
+    let page_tree = expand_contents(&config.contents, base_dir);
 
     let page_map: HashMap<String, &PageInfo> = pages.iter()
         .map(|p| (p.source.display().to_string(), p))
@@ -479,12 +476,11 @@ fn render_orchestrator(
     let nav_nodes = build_orchestrator_tree(&page_tree, &page_map, results, format);
 
     // Build template context
-    let meta = config.meta.as_ref();
     let meta_ctx = minijinja::context! {
-        title => meta.and_then(|m| m.title.clone()),
-        subtitle => meta.and_then(|m| m.subtitle.clone()),
-        author => meta.and_then(|m| m.author.as_ref().map(|a| format_author(a))),
-        url => meta.and_then(|m| m.url.clone()),
+        title => config.title.clone(),
+        subtitle => config.subtitle.clone(),
+        author => config.author.as_ref().map(|a| format_author(a)),
+        url => config.url.clone(),
     };
 
     let var_ctx = config.var.as_ref()
@@ -652,10 +648,10 @@ fn build_orchestrator_tree(
     format: &str,
 ) -> Vec<OrchestratorNode> {
     nodes.iter().map(|node| match node {
-        PageNode::Page(source) => {
+        PageNode::Page { path: source, title: override_title } => {
             let info = page_map.get(source.as_str());
-            let title = results.get(source.as_str())
-                .and_then(|r| r.title.clone())
+            let title = override_title.clone()
+                .or_else(|| results.get(source.as_str()).and_then(|r| r.title.clone()))
                 .or_else(|| info.and_then(|p| p.meta.title.clone()))
                 .unwrap_or_else(|| source.clone());
             let file = info.map(|p| p.output.display().to_string());
@@ -669,15 +665,12 @@ fn build_orchestrator_tree(
             });
             OrchestratorNode { title, path, file, children: vec![] }
         }
-        PageNode::Section { title, pages } => {
-            let child_nodes: Vec<PageNode> = pages.iter()
-                .map(|p| PageNode::Page(p.clone()))
-                .collect();
+        PageNode::Section { title, pages, .. } => {
             OrchestratorNode {
                 title: title.clone(),
                 path: None,
                 file: None,
-                children: build_orchestrator_tree(&child_nodes, page_map, results, format),
+                children: build_orchestrator_tree(pages, page_map, results, format),
             }
         }
     }).collect()

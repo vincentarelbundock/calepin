@@ -1,53 +1,63 @@
 output = "output"
-
-[meta]
+target = "website"
 title = "Calepin"
 subtitle = "A notebook and website generator written in Rust"
 url = "https://vincentarelbundock.github.io/calepin"
 csl = "chicago-author-date"
 highlight = {light = "github", dark = "nord"}
-
-[site]
-target = "website"
 favicon = "assets/Calepin.svg"
 logo = "assets/Calepin.svg"
 logo-dark = "assets/Calepin_dark.svg"
-content = [
-  "installation.qmd",
-  "cli.qmd",
-  ["Authoring",
-    "authoring/basics.qmd",
-    "authoring/figures.qmd",
-    "authoring/tables.qmd",
-    "authoring/math.qmd",
-    "authoring/bibliography.qmd",
-    "authoring/paths.qmd",
-  ],
-  ["Code Execution",
-    "code/chunks.qmd",
-    "code/inline.qmd",
-    "code/r.qmd",
-    "code/python.qmd",
-    "code/sh.qmd",
-    "code/cache.qmd",
-  ],
-  ["Websites", "websites/*.qmd"],
-  ["Templates",
-    "templates/templates.qmd",
-    "templates/jinja.qmd",
-    "templates/shortcuts.qmd",
-    "templates/snippets.qmd",
-    "templates/elements.qmd",
-    "templates/pages.qmd",
-    "templates/sites.qmd",
-    "templates/yaml.qmd",
-  ],
-  ["Misc", "misc/*.qmd"],
+
+[[contents]]
+pages = ["installation.qmd", "cli.qmd"]
+
+[[contents]]
+title = "Authoring"
+pages = [
+  "authoring/basics.qmd",
+  "authoring/figures.qmd",
+  "authoring/tables.qmd",
+  "authoring/math.qmd",
+  "authoring/bibliography.qmd",
+  "authoring/paths.qmd",
 ]
-content_standalone = [
-  "index.qmd",
-  "404.qmd",
+
+[[contents]]
+title = "Code Execution"
+pages = [
+  "code/chunks.qmd",
+  "code/inline.qmd",
+  "code/r.qmd",
+  "code/python.qmd",
+  "code/sh.qmd",
+  "code/cache.qmd",
 ]
+
+[[contents]]
+title = "Websites"
+pages = ["websites/*.qmd"]
+
+[[contents]]
+title = "Templates"
+pages = [
+  "templates/templates.qmd",
+  "templates/jinja.qmd",
+  "templates/shortcuts.qmd",
+  "templates/snippets.qmd",
+  "templates/elements.qmd",
+  "templates/pages.qmd",
+  "templates/sites.qmd",
+  "templates/yaml.qmd",
+]
+
+[[contents]]
+title = "Misc"
+pages = ["misc/*.qmd"]
+
+[[contents]]
+standalone = true
+pages = ["index.qmd", "404.qmd"]
 
 [var]
 primary = "#0066cc"
@@ -91,4 +101,3 @@ template = "calepin"
 extension = "md"
 fig-extension = "png"
 preview = "none"
-

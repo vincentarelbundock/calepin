@@ -1043,7 +1043,7 @@ macro_rules! timed {
             let defs = project::get_defaults();
             let hl = defs.highlight.as_ref();
             let cfg = project::builtin_config();
-            let meta_hl = cfg.meta.as_ref().and_then(|m| m.highlight.as_ref());
+            let meta_hl = cfg.highlight.as_ref();
             filters::highlighting::HighlightConfig::LightDark {
                 light: hl.and_then(|h| h.light.clone())
                     .or_else(|| meta_hl.and_then(|h| h.light.clone()))

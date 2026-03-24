@@ -1,7 +1,7 @@
 //! Site configuration: reads from `_calepin.toml` using the project config schema.
 //!
 //! The site builder reads its config from `crate::project::ProjectConfig`.
-//! Site-specific fields come from `[meta]`, `[site]`, and `[var]`.
+//! Collection fields (`contents`, `target`, `logo`, etc.) live at the top level.
 
 use std::path::{Path, PathBuf};
 
@@ -29,26 +29,22 @@ pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(Proje
     )
 }
 
-/// Collect all .qmd page paths from the [site].pages tree, expanding globs.
+/// Collect all .qmd page paths from [[contents]] (excluding standalone), expanding globs.
 pub fn collect_page_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String> {
-    let site = match &config.site {
-        Some(s) => s,
-        None => return Vec::new(),
-    };
-    let nodes = site.expand_pages(base_dir);
     let mut paths = Vec::new();
-    for node in &nodes {
-        match node {
-            crate::project::PageNode::Page(p) => {
-                if p.ends_with(".qmd") {
-                    paths.push(p.clone());
-                }
+    for section in &config.contents {
+        if section.standalone {
+            continue;
+        }
+        if let Some(ref idx) = section.index {
+            if idx.ends_with(".qmd") {
+                paths.push(idx.clone());
             }
-            crate::project::PageNode::Section { pages, .. } => {
-                for p in pages {
-                    if p.ends_with(".qmd") {
-                        paths.push(p.clone());
-                    }
+        }
+        for entry in &section.pages {
+            for path in crate::project::expand_glob_pub(entry.path(), base_dir) {
+                if path.ends_with(".qmd") {
+                    paths.push(path);
                 }
             }
         }
@@ -58,15 +54,16 @@ pub fn collect_page_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String
 
 /// Collect standalone page paths (rendered but not in nav).
 pub fn collect_standalone_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String> {
-    let site = match &config.site {
-        Some(s) => s,
-        None => return Vec::new(),
-    };
     let mut paths = Vec::new();
-    for pattern in &site.content_standalone {
-        for path in crate::project::expand_glob_pub(pattern, base_dir) {
-            if path.ends_with(".qmd") {
-                paths.push(path);
+    for section in &config.contents {
+        if !section.standalone {
+            continue;
+        }
+        for entry in &section.pages {
+            for path in crate::project::expand_glob_pub(entry.path(), base_dir) {
+                if path.ends_with(".qmd") {
+                    paths.push(path);
+                }
             }
         }
     }

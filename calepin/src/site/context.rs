@@ -1,7 +1,7 @@
 //! Site and page context for template rendering.
 //!
 //! The site builder passes structured context to Jinja templates.
-//! `[meta]` and `[site]` provide the site context. `[var]` is passed
+//! Top-level config fields provide the site context. `[var]` is passed
 //! through as arbitrary template variables.
 
 use std::collections::HashMap;
@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use serde::Serialize;
 use super::discover::PageInfo;
 use super::render::SiteRenderResult;
-use crate::project::{ProjectConfig, PageNode};
+use crate::project::{ProjectConfig, PageNode, expand_contents};
 
 /// Site-level context available to all templates as `{{ site.* }}`.
 #[derive(Debug, Serialize)]
@@ -78,11 +78,8 @@ pub fn build_site_context(
     pages: &[PageInfo],
     base_dir: &std::path::Path,
 ) -> SiteContext {
-    let meta = config.meta.as_ref();
-    let site = config.site.as_ref();
-
-    // Build nav tree from [site].pages
-    let page_nodes = site.map(|s| s.expand_pages(base_dir)).unwrap_or_default();
+    // Build nav tree from [[contents]]
+    let page_nodes = expand_contents(&config.contents, base_dir);
     let nav_tree = build_nav_tree(&page_nodes, pages);
 
     // Math block
@@ -95,12 +92,12 @@ pub fn build_site_context(
     };
 
     SiteContext {
-        title: meta.and_then(|m| m.title.clone()),
-        subtitle: meta.and_then(|m| m.subtitle.clone()),
-        url: meta.and_then(|m| m.url.clone()),
-        favicon: site.and_then(|s| s.favicon.clone()),
-        logo: site.and_then(|s| s.logo.clone()),
-        logo_dark: site.and_then(|s| s.logo_dark.clone()),
+        title: config.title.clone(),
+        subtitle: config.subtitle.clone(),
+        url: config.url.clone(),
+        favicon: config.favicon.clone(),
+        logo: config.logo.clone(),
+        logo_dark: config.logo_dark.clone(),
         pages: nav_tree,
         dark_mode: true,
         math_block,
@@ -115,10 +112,10 @@ fn build_nav_tree(nodes: &[PageNode], pages: &[PageInfo]) -> Vec<NavNode> {
         .collect();
 
     nodes.iter().map(|node| match node {
-        PageNode::Page(path) => {
+        PageNode::Page { path, title } => {
             let info = page_map.get(path.as_str());
-            let text = info
-                .and_then(|p| p.meta.title.clone())
+            let text = title.clone()
+                .or_else(|| info.and_then(|p| p.meta.title.clone()))
                 .unwrap_or_else(|| path.clone());
             let href = info.map(|p| p.url.clone());
             NavNode {
@@ -128,15 +125,16 @@ fn build_nav_tree(nodes: &[PageNode], pages: &[PageInfo]) -> Vec<NavNode> {
                 children: vec![],
             }
         }
-        PageNode::Section { title, pages: children } => {
-            let child_nodes: Vec<PageNode> = children.iter()
-                .map(|p| PageNode::Page(p.clone()))
-                .collect();
+        PageNode::Section { title, index, pages: children } => {
+            // Section header can be a link if it has an index page
+            let href = index.as_ref().and_then(|idx| {
+                page_map.get(idx.as_str()).map(|p| p.url.clone())
+            });
             NavNode {
                 text: title.clone(),
-                href: None,
+                href,
                 active: false,
-                children: build_nav_tree(&child_nodes, pages),
+                children: build_nav_tree(children, pages),
             }
         }
     }).collect()
