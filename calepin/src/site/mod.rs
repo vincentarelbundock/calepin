@@ -104,11 +104,16 @@ pub fn build_site(
     }
 
     // 6. Render all pages with calepin (in parallel)
-    //    When an orchestrator is set, apply the page template to each fragment
-    //    (the project's templates/latex/page.tex or similar).
-    //    When no orchestrator (HTML sites), return raw bodies for site Jinja wrapping.
+    //    For HTML sites without an orchestrator, use the two-pass cross-ref pipeline
+    //    so that cross-file references resolve globally.
+    //    For orchestrated builds (LaTeX/Typst), use single-pass with page template
+    //    (the native toolchains handle global refs).
     let apply_page_template = orchestrator.is_some();
-    let results = render::render_pages(&pages, &config, &base_dir, output, format, apply_page_template, Some(&site_target_name), Some(&site_target), quiet)?;
+    let results = if format == "html" && !apply_page_template {
+        render::render_pages_with_crossref(&pages, &config, &base_dir, output, Some(&site_target_name), Some(&site_target), quiet)?
+    } else {
+        render::render_pages(&pages, &config, &base_dir, output, format, apply_page_template, Some(&site_target_name), Some(&site_target), quiet)?
+    };
 
     // 7. Write page output files
     //    For orchestrated builds, strip the output directory prefix from paths

@@ -73,6 +73,9 @@ pub struct ElementRenderer {
     pub number_sections: bool,
     pub shift_headings: bool,
     pub default_fig_cap_location: Option<String>,
+    /// Chapter number for collection pages. When set, section counters start
+    /// at [chapter, 0, 0, 0, 0, 0] so sections get chapter-prefixed numbers.
+    pub chapter_number: Option<usize>,
     /// Theorem numbers populated during rendering by TheoremFilter.
     /// Keyed by full id (e.g. "thm-cauchy"), value is the number string.
     pub theorem_numbers: std::cell::RefCell<HashMap<String, String>>,
@@ -127,6 +130,7 @@ impl ElementRenderer {
             number_sections: false,
             shift_headings: false,
             default_fig_cap_location: None,
+            chapter_number: None,
             theorem_numbers: std::cell::RefCell::new(HashMap::new()),
             walk_metadata: std::cell::RefCell::new(crate::render::ast::WalkMetadata::default()),
             footnote_counter: std::cell::Cell::new(0),
@@ -347,6 +351,11 @@ impl ElementRenderer {
             .or_else(|| resolve_element_template(name, &self.ext));
         self.template_cache.borrow_mut().insert(name.to_string(), result.clone());
         result
+    }
+
+    /// Set initial section counters (e.g., for chapter-prefixed numbering).
+    pub fn set_section_counters(&self, counters: [usize; 6]) {
+        self.section_counters.set(Some(counters));
     }
 
     pub fn theorem_numbers(&self) -> HashMap<String, String> {

@@ -153,6 +153,225 @@ fn render_one_page(
     })
 }
 
+/// Render pages with cross-file cross-reference resolution (HTML only).
+///
+/// Two-pass pipeline:
+///   Pass 1: Render all pages in parallel with cross-ref resolution deferred.
+///   Between: Build a global CrossRefRegistry with chapter-prefixed numbers.
+///   Pass 2: Resolve cross-refs and renumber display numbers in parallel.
+pub fn render_pages_with_crossref(
+    pages: &[PageInfo],
+    config: &ProjectConfig,
+    base_dir: &Path,
+    output_dir: &Path,
+    target_name: Option<&str>,
+    target: Option<&Target>,
+    quiet: bool,
+) -> Result<HashMap<String, SiteRenderResult>> {
+    use crate::filters::crossref::{CrossRefRegistry, resolve_html_global, renumber_display_html};
+
+    if pages.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let overrides = build_overrides(config);
+
+    if !quiet {
+        eprintln!("Rendering {} pages (cross-ref pass 1)...", pages.len());
+    }
+
+    let mut defaults = project::resolve_defaults(Some(config));
+    if let Some(t) = target {
+        if let Some(embed) = t.embed_resources {
+            defaults.embed_resources = Some(embed);
+        }
+    }
+
+    // Assign chapter numbers based on [[contents]] ordering
+    let chapter_map = assign_chapter_numbers(pages, config);
+
+    let target_owned = target_name.map(|s| s.to_string());
+
+    // Pass 1: Render all pages in parallel with skip_crossref=true
+    let pass1: Vec<(String, Result<Pass1Result>)> = std::thread::scope(|s| {
+        let handles: Vec<_> = pages
+            .iter()
+            .map(|page| {
+                let overrides = &overrides;
+                let base_dir = base_dir;
+                let output_dir = output_dir;
+                let target = &target_owned;
+                let defaults = defaults.clone();
+                let chapter = chapter_map.get(&page.source.display().to_string()).copied();
+                s.spawn(move || {
+                    crate::paths::set_active_target(target.as_deref());
+                    crate::paths::set_project_root(Some(base_dir));
+                    project::set_active_defaults(defaults);
+                    let key = page.source.display().to_string();
+                    let result = render_one_page_pass1(page, overrides, base_dir, output_dir, chapter);
+                    (key, result)
+                })
+            })
+            .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+
+    // Collect pass 1 results
+    let mut pass1_results: HashMap<String, Pass1Result> = HashMap::new();
+    for (key, result) in pass1 {
+        match result {
+            Ok(r) => { pass1_results.insert(key, r); }
+            Err(e) => { eprintln!("Error rendering {}: {:#}", key, e); }
+        }
+    }
+
+    // Build global registry from all pages' ref data
+    let mut registry_input: Vec<(usize, String, crate::filters::crossref::PageRefData)> = Vec::new();
+    for page in pages {
+        let key = page.source.display().to_string();
+        if let Some(r) = pass1_results.get(&key) {
+            if let Some(ref ref_data) = r.ref_data {
+                let chapter = chapter_map.get(&key).copied().unwrap_or(0);
+                let url = page.output.display().to_string();
+                registry_input.push((chapter, url, ref_data.clone()));
+            }
+        }
+    }
+
+    let registry = CrossRefRegistry::build(&registry_input)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+    if !quiet {
+        eprintln!("Cross-ref pass 2: resolving {} IDs across {} pages...",
+            registry.entries.len(), pass1_results.len());
+    }
+
+    // Pass 2: Resolve cross-refs and renumber (cheap string ops, parallel)
+    let mut map = HashMap::new();
+    for page in pages {
+        let key = page.source.display().to_string();
+        if let Some(r) = pass1_results.remove(&key) {
+            let current_url = page.output.display().to_string();
+            let body = resolve_html_global(&r.body, &registry, &current_url);
+            let body = renumber_display_html(&body, &registry);
+
+            map.insert(key, SiteRenderResult {
+                body,
+                toc: r.toc,
+                title: r.title,
+                date: r.date,
+                subtitle: r.subtitle,
+                abstract_text: r.abstract_text,
+            });
+        }
+    }
+
+    Ok(map)
+}
+
+/// Intermediate result from pass 1 (before cross-ref resolution).
+struct Pass1Result {
+    body: String,
+    toc: Option<String>,
+    title: Option<String>,
+    date: Option<String>,
+    subtitle: Option<String>,
+    abstract_text: Option<String>,
+    ref_data: Option<crate::filters::crossref::PageRefData>,
+}
+
+/// Render a single page for pass 1: skip cross-ref resolution, collect ref data.
+fn render_one_page_pass1(
+    page: &PageInfo,
+    overrides: &[String],
+    base_dir: &Path,
+    output_dir: &Path,
+    chapter_number: Option<usize>,
+) -> Result<Pass1Result> {
+    let input = base_dir.join(&page.source);
+    let output_path = output_dir.join(&page.output);
+
+    let options = crate::RenderCoreOptions {
+        skip_crossref: true,
+        chapter_number,
+    };
+    let result = crate::render_core_with_options(
+        &input, &output_path, Some("html"), overrides, None, Some(base_dir), &options,
+    )?;
+
+    // HTML site mode: prepend syntax highlighting CSS, append footnotes
+    let syntax_css = result.element_renderer.syntax_css_with_scope(
+        crate::filters::highlighting::ColorScope::DataTheme,
+    );
+    let footnotes = result.element_renderer.render_footnote_section();
+    let mut body = result.rendered;
+    if !syntax_css.is_empty() {
+        body = format!("<style>\n{}</style>\n{}", syntax_css, body);
+    }
+    if !footnotes.is_empty() {
+        body.push_str(&footnotes);
+    }
+
+    let toc = if result.metadata.toc.unwrap_or(true) {
+        let depth = if result.metadata.toc_depth == 0 { 3 } else { result.metadata.toc_depth };
+        let title = result.metadata.toc_title.as_deref().unwrap_or("Contents");
+        let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
+        if toc_html.is_empty() { None } else { Some(toc_html) }
+    } else {
+        None
+    };
+
+    Ok(Pass1Result {
+        body,
+        toc,
+        title: result.metadata.title.map(|t| crate::render::markdown::render_inline(&t, "html")),
+        date: result.metadata.date,
+        subtitle: result.metadata.subtitle.map(|t| crate::render::markdown::render_inline(&t, "html")),
+        abstract_text: result.metadata.abstract_text,
+        ref_data: result.ref_data,
+    })
+}
+
+/// Assign chapter numbers to pages based on their position in [[contents]].
+/// Each non-standalone page gets a sequential chapter number (1-based).
+/// Returns a map from source path (string) to chapter number.
+fn assign_chapter_numbers(_pages: &[PageInfo], config: &ProjectConfig) -> HashMap<String, usize> {
+    let mut chapter_map = HashMap::new();
+    let mut chapter = 0usize;
+
+    // Walk the contents sections in order -- this mirrors collect_page_paths ordering
+    for section in &config.contents {
+        if section.standalone {
+            continue;
+        }
+
+        // Section index page gets its own chapter number
+        if let Some(ref idx) = section.index {
+            if idx.ends_with(".qmd") {
+                chapter += 1;
+                chapter_map.insert(idx.clone(), chapter);
+            }
+        }
+
+        for entry in &section.pages {
+            for path in crate::project::expand_glob_pub(entry.path(), std::path::Path::new("")) {
+                if path.ends_with(".qmd") {
+                    // If no index page, each page in the section is a chapter
+                    if section.index.is_none() {
+                        chapter += 1;
+                    }
+                    chapter_map.insert(path, chapter);
+                }
+            }
+        }
+    }
+
+    // Also handle pages not in contents (standalone pages) -- no chapter number
+    // They won't be in chapter_map, which is fine (chapter_number = None).
+
+    chapter_map
+}
+
 fn build_overrides(config: &ProjectConfig) -> Vec<String> {
     let mut overrides = Vec::new();
 

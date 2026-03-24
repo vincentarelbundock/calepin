@@ -972,6 +972,19 @@ pub struct RenderResult {
     pub rendered: String,
     pub metadata: types::Metadata,
     pub element_renderer: ElementRenderer,
+    /// Cross-reference data collected from this page (populated when skip_crossref is true).
+    pub ref_data: Option<filters::crossref::PageRefData>,
+}
+
+/// Options for the core render pipeline that control collection-specific behavior.
+#[derive(Default)]
+pub struct RenderCoreOptions {
+    /// When true, skip cross-reference resolution (pass 1 of two-pass pipeline).
+    /// The caller is responsible for resolving refs globally in pass 2.
+    pub skip_crossref: bool,
+    /// Chapter number for this page in a collection. When set, section numbering
+    /// uses this as the top-level counter (e.g., chapter 2 -> sections 2.1, 2.2).
+    pub chapter_number: Option<usize>,
 }
 
 /// Core render pipeline: parse, evaluate, render. Does NOT apply the page template.
@@ -983,6 +996,19 @@ pub fn render_core(
     overrides: &[String],
     project_var: Option<&toml::Value>,
     project_root_override: Option<&Path>,
+) -> Result<RenderResult> {
+    render_core_with_options(input, output_path, format, overrides, project_var, project_root_override, &RenderCoreOptions::default())
+}
+
+/// Core render pipeline with collection options (chapter numbering, skip_crossref).
+pub fn render_core_with_options(
+    input: &Path,
+    output_path: &Path,
+    format: Option<&str>,
+    overrides: &[String],
+    project_var: Option<&toml::Value>,
+    project_root_override: Option<&Path>,
+    options: &RenderCoreOptions,
 ) -> Result<RenderResult> {
 
 /// Whether `CALEPIN_TIMING=1` is set (checked once at startup).
@@ -1113,6 +1139,13 @@ macro_rules! timed {
     let mut element_renderer = ElementRenderer::new(renderer.base_format(), highlight_config);
     element_renderer.number_sections = metadata.number_sections;
     element_renderer.shift_headings = metadata.title.is_some();
+    element_renderer.chapter_number = options.chapter_number;
+    // Initialize section counters with chapter number as top-level counter
+    if let Some(ch) = options.chapter_number {
+        let mut counters = [0usize; 6];
+        counters[0] = ch;
+        element_renderer.set_section_counters(counters);
+    }
     element_renderer.default_fig_cap_location = metadata.var.get("fig-cap-location")
         .and_then(|v| v.as_str()).map(|s| s.to_string());
 
@@ -1147,11 +1180,23 @@ macro_rules! timed {
     // 13. Cross-ref resolution (section IDs pre-collected from AST walk)
     let thm_nums = element_renderer.theorem_numbers();
     let walk_meta = element_renderer.walk_metadata();
-    let rendered = timed!("crossref", match renderer.base_format() {
-        "html" => filters::crossref::resolve_html_with_ids(&rendered, &thm_nums, &walk_meta.ids),
-        "latex" => filters::crossref::resolve_latex(&rendered, &thm_nums),
-        _ => filters::crossref::resolve_plain(&rendered, &thm_nums),
-    });
+    let (rendered, ref_data) = if options.skip_crossref {
+        // Collection mode pass 1: collect IDs but don't resolve refs yet
+        let ref_data = if renderer.base_format() == "html" {
+            Some(filters::crossref::collect_ids_html(&rendered, &thm_nums, &walk_meta.ids))
+        } else {
+            None
+        };
+        (rendered, ref_data)
+    } else {
+        // Single-file mode: resolve refs immediately
+        let rendered = timed!("crossref", match renderer.base_format() {
+            "html" => filters::crossref::resolve_html_with_ids(&rendered, &thm_nums, &walk_meta.ids),
+            "latex" => filters::crossref::resolve_latex(&rendered, &thm_nums),
+            _ => filters::crossref::resolve_plain(&rendered, &thm_nums),
+        });
+        (rendered, None)
+    };
 
     // 14. Number sections (HTML only) — now handled in the AST walker
     //     (render/html_ast.rs) via ElementRenderer.number_sections
@@ -1165,7 +1210,7 @@ macro_rules! timed {
         eprintln!("[timing] {:=<30} {:>8.3}ms", "TOTAL ", t.elapsed().as_secs_f64() * 1000.0);
     }
 
-    Ok(RenderResult { rendered, metadata, element_renderer })
+    Ok(RenderResult { rendered, metadata, element_renderer, ref_data })
 }
 
 /// Full render pipeline. Returns (output_path, rendered_content, renderer).
