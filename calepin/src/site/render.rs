@@ -225,35 +225,49 @@ pub fn render_pages_with_crossref(
         }
     }
 
-    // Build global registry from all pages' ref data
-    let mut registry_input: Vec<(usize, String, crate::filters::crossref::PageRefData)> = Vec::new();
+    // Build per-language registries from all pages' ref data.
+    // Multilingual sites can have duplicate IDs across languages (e.g., sec-code
+    // in both English and French pages), so each language gets its own registry.
+    let has_languages = !config.languages.is_empty();
+    let mut lang_registry_input: HashMap<Option<String>, Vec<(usize, String, crate::filters::crossref::PageRefData)>> = HashMap::new();
     for page in pages {
         let key = page.source.display().to_string();
         if let Some(r) = pass1_results.get(&key) {
             if let Some(ref ref_data) = r.ref_data {
                 let chapter = chapter_map.get(&key).copied().unwrap_or(0);
                 let url = page.output.display().to_string();
-                registry_input.push((chapter, url, ref_data.clone()));
+                let lang_key = if has_languages { page.lang.clone() } else { None };
+                lang_registry_input.entry(lang_key)
+                    .or_default()
+                    .push((chapter, url, ref_data.clone()));
             }
         }
     }
 
-    let registry = CrossRefRegistry::build(&registry_input)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let mut lang_registries: HashMap<Option<String>, CrossRefRegistry> = HashMap::new();
+    for (lang, input) in &lang_registry_input {
+        let registry = CrossRefRegistry::build(input)
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
+        lang_registries.insert(lang.clone(), registry);
+    }
 
+    let total_ids: usize = lang_registries.values().map(|r| r.entries.len()).sum();
     if !quiet {
         eprintln!("Cross-ref pass 2: resolving {} IDs across {} pages...",
-            registry.entries.len(), pass1_results.len());
+            total_ids, pass1_results.len());
     }
 
     // Pass 2: Resolve cross-refs and renumber (cheap string ops, parallel)
+    let empty_registry = CrossRefRegistry::default();
     let mut map = HashMap::new();
     for page in pages {
         let key = page.source.display().to_string();
         if let Some(r) = pass1_results.remove(&key) {
+            let lang_key = if has_languages { page.lang.clone() } else { None };
+            let registry = lang_registries.get(&lang_key).unwrap_or(&empty_registry);
             let current_url = page.output.display().to_string();
-            let body = resolve_html_global(&r.body, &registry, &current_url);
-            let body = renumber_display_html(&body, &registry);
+            let body = resolve_html_global(&r.body, registry, &current_url);
+            let body = renumber_display_html(&body, registry);
 
             map.insert(key, SiteRenderResult {
                 body,
