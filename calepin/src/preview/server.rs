@@ -70,6 +70,12 @@ pub fn start_collection(
                 file_path = file_path.join("index.html");
             }
 
+            // Prevent path traversal
+            if !file_path.starts_with(&serve_dir) {
+                let _ = request.respond(Response::from_string("Forbidden").with_status_code(StatusCode(403)));
+                continue;
+            }
+
             let data = if file_path.is_file() {
                 std::fs::read(&file_path).ok()
             } else {
@@ -109,13 +115,13 @@ pub fn start_collection(
 /// Try the requested port, then fall back to nearby ports.
 pub(crate) fn try_bind(port: u16) -> Result<(Server, u16)> {
     // Try the requested port first
-    if let Ok(server) = Server::http(format!("0.0.0.0:{}", port)) {
+    if let Ok(server) = Server::http(format!("127.0.0.1:{}",port)) {
         return Ok((server, port));
     }
 
     // Try the next 10 ports
     for p in (port + 1)..=(port + 10) {
-        if let Ok(server) = Server::http(format!("0.0.0.0:{}", p)) {
+        if let Ok(server) = Server::http(format!("127.0.0.1:{}",p)) {
             eprintln!(
                 "\x1b[33mWarning:\x1b[0m port {} in use, using {} instead",
                 port, p
@@ -130,6 +136,11 @@ pub(crate) fn try_bind(port: u16) -> Result<(Server, u16)> {
 fn serve_static(request: tiny_http::Request, url: &str, serve_dir: &PathBuf) {
     let rel_path = url.split('?').next().unwrap_or(url).trim_start_matches('/');
     let file_path = serve_dir.join(rel_path);
+    // Prevent path traversal (e.g., /../../../etc/passwd)
+    if !file_path.starts_with(serve_dir) {
+        let _ = request.respond(Response::from_string("Forbidden").with_status_code(StatusCode(403)));
+        return;
+    }
     if file_path.is_file() {
         match std::fs::read(&file_path) {
             Ok(data) => {

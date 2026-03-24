@@ -87,9 +87,11 @@ fn parse_value(s: &str) -> OptionValue {
         "FALSE" | "false" | "no" => OptionValue::Bool(false),
         "NULL" | "null" | "~" => OptionValue::Null,
         _ => {
-            // Try number
+            // Try number (reject non-finite values like NaN, inf)
             if let Ok(n) = s.parse::<f64>() {
-                return OptionValue::Number(n);
+                if n.is_finite() {
+                    return OptionValue::Number(n);
+                }
             }
             // Strip quotes if present
             let unquoted = if (s.starts_with('"') && s.ends_with('"'))

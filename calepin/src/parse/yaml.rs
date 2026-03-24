@@ -146,6 +146,8 @@ fn parse_authors(
 }
 
 /// Parse a single author name string into given/family/literal components.
+/// "Last, First" -> given=First, family=Last, literal="First Last"
+/// "First Last"  -> given=First, family=Last, literal="First Last"
 fn parse_author_name_str(s: &str) -> AuthorName {
     let s = s.trim();
     if s.contains(',') {
@@ -157,9 +159,22 @@ fn parse_author_name_str(s: &str) -> AuthorName {
         } else {
             format!("{} {}", given, family)
         };
-        AuthorName { literal }
+        AuthorName {
+            literal,
+            given: if given.is_empty() { None } else { Some(given) },
+            family: Some(family),
+        }
     } else {
-        AuthorName { literal: s.to_string() }
+        // "First Middle Last" -> given = everything before last word, family = last word
+        let words: Vec<&str> = s.split_whitespace().collect();
+        let (given, family) = if words.len() >= 2 {
+            let family = words.last().unwrap().to_string();
+            let given = words[..words.len() - 1].join(" ");
+            (Some(given), Some(family))
+        } else {
+            (None, None)
+        };
+        AuthorName { literal: s.to_string(), given, family }
     }
 }
 
@@ -186,7 +201,7 @@ fn parse_author_mapping(
                     (None, None) => String::new(),
                 }
             });
-            author.name = AuthorName { literal };
+            author.name = AuthorName { literal, given, family };
         }
     }
 
@@ -309,14 +324,15 @@ fn resolve_affiliation(
 // ---------------------------------------------------------------------------
 
 fn expand_cc_license(s: &str) -> Option<(&'static str, &'static str)> {
-    match s.to_uppercase().replace('-', " ").trim() {
-        s if s == "CC0" => Some(("CC0 1.0 Universal", "https://creativecommons.org/publicdomain/zero/1.0/")),
-        s if s == "CC BY" => Some(("Creative Commons Attribution 4.0", "https://creativecommons.org/licenses/by/4.0/")),
-        s if s == "CC BY SA" => Some(("Creative Commons Attribution ShareAlike 4.0", "https://creativecommons.org/licenses/by-sa/4.0/")),
-        s if s == "CC BY ND" => Some(("Creative Commons Attribution NoDerivatives 4.0", "https://creativecommons.org/licenses/by-nd/4.0/")),
-        s if s == "CC BY NC" => Some(("Creative Commons Attribution NonCommercial 4.0", "https://creativecommons.org/licenses/by-nc/4.0/")),
-        s if s == "CC BY NC SA" => Some(("Creative Commons Attribution NonCommercial ShareAlike 4.0", "https://creativecommons.org/licenses/by-nc-sa/4.0/")),
-        s if s == "CC BY NC ND" => Some(("Creative Commons Attribution NonCommercial NoDerivatives 4.0", "https://creativecommons.org/licenses/by-nc-nd/4.0/")),
+    let normalized = s.to_uppercase().replace('-', " ");
+    match normalized.trim() {
+        "CC0" => Some(("CC0 1.0 Universal", "https://creativecommons.org/publicdomain/zero/1.0/")),
+        "CC BY" => Some(("Creative Commons Attribution 4.0", "https://creativecommons.org/licenses/by/4.0/")),
+        "CC BY SA" => Some(("Creative Commons Attribution ShareAlike 4.0", "https://creativecommons.org/licenses/by-sa/4.0/")),
+        "CC BY ND" => Some(("Creative Commons Attribution NoDerivatives 4.0", "https://creativecommons.org/licenses/by-nd/4.0/")),
+        "CC BY NC" => Some(("Creative Commons Attribution NonCommercial 4.0", "https://creativecommons.org/licenses/by-nc/4.0/")),
+        "CC BY NC SA" => Some(("Creative Commons Attribution NonCommercial ShareAlike 4.0", "https://creativecommons.org/licenses/by-nc-sa/4.0/")),
+        "CC BY NC ND" => Some(("Creative Commons Attribution NonCommercial NoDerivatives 4.0", "https://creativecommons.org/licenses/by-nc-nd/4.0/")),
         _ => None,
     }
 }

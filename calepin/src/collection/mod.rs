@@ -806,6 +806,12 @@ pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
             file_path = file_path.join("index.html");
         }
 
+        // Prevent path traversal
+        if !file_path.starts_with(&output) {
+            let _ = request.respond(Response::from_string("Forbidden").with_status_code(StatusCode(403)));
+            continue;
+        }
+
         if file_path.is_file() {
             match fs::read(&file_path) {
                 Ok(data) => {

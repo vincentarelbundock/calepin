@@ -20,7 +20,11 @@ pub fn run_collection(
     let config_abs = config_path.canonicalize()
         .with_context(|| format!("Config file not found: {}", config_path.display()))?;
     let base_dir = config_abs.parent().unwrap().to_path_buf();
-    let output = base_dir.join("output");
+
+    // Read output dir from config (defaults to "output")
+    let config = crate::project::load_project_config(&config_abs)?;
+    let output_name = config.output.as_deref().unwrap_or("output");
+    let output = base_dir.join(output_name);
 
     let version = Arc::new(AtomicU64::new(1));
 
@@ -40,7 +44,7 @@ pub fn run_collection(
     spinner.finish_and_clear();
     crate::collection::build_collection(
         Some(config_path),
-        &std::path::PathBuf::from("output"),
+        &std::path::PathBuf::from(output_name),
         true,
         false,
         args.target.as_deref(),

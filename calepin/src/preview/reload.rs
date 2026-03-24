@@ -5,7 +5,7 @@ const RELOAD_SCRIPT: &str = r#"<script>
     fetch('/__version').then(function(r) { return r.text(); }).then(function(v) {
       if (v !== lastVersion) { location.reload(); }
     }).catch(function() {});
-  }, 100);
+  }, 500);
 })();
 </script>"#;
 

@@ -6,12 +6,12 @@
 //! - **Code chunks**: ```` ```{r} ```` / ```` ```{python} ```` — executable blocks with
 //!   pipe-comment options (`#| key: value`) and optional header labels.
 //! - **Raw blocks**: ```` ```{=html} ```` / ```` ```{=latex} ```` — format-specific passthrough.
-//! - **Unnamed fences**: ```` ``` ```` / `~~~ python` — display-only code blocks.
+//! - **Unnamed fences**: ```` ``` ```` / ```` ``` python ```` — display-only code blocks.
 //! - **Fenced divs**: `::: {.class #id key="val"}` — Pandoc-style containers, arbitrarily
 //!   nested by increasing colon count. Includes `.verbatim` divs that skip recursive parsing.
 //! - **Text blocks**: everything between structural elements.
 //!
-//! A closing backtick fence must use at least as many repetitions as the opener.
+//! A closing backtick fence must use at least as many backticks as the opener.
 //! Div nesting is tracked by colon count so `:::` cannot close a `::::` opener.
 
 use std::collections::HashMap;
@@ -53,18 +53,20 @@ static RE_INLINE_CODE: LazyLock<Regex> = LazyLock::new(|| {
 #[inline(never)]
 pub fn parse_body(body: &str) -> Result<Vec<Block>> {
     let lines: Vec<&str> = body.lines().collect();
-    parse_blocks(&lines, 0, &mut 0, 0)
+    let (blocks, _end) = parse_blocks(&lines, 0, &mut 0, 0)?;
+    Ok(blocks)
 }
 
 /// Recursive block parser. Parses lines[start..] into blocks.
 /// `chunk_counter` is shared across recursion for unique chunk labels.
 /// `closer_min` is the minimum colon count for a closing div fence (0 = top level).
+/// Returns (blocks, end_position) where end_position is the line after the last consumed line.
 fn parse_blocks(
     lines: &[&str],
     start: usize,
     chunk_counter: &mut usize,
     closer_min: usize,
-) -> Result<Vec<Block>> {
+) -> Result<(Vec<Block>, usize)> {
     let mut blocks: Vec<Block> = Vec::new();
     let mut i = start;
 
@@ -89,9 +91,13 @@ fn parse_blocks(
                     content: raw,
                 })]
             } else {
-                let children = parse_blocks(lines, i, chunk_counter, opener_colons)?;
-                let (_, end) = collect_div_body(lines, i, opener_colons, false);
-                i = end;
+                let (children, end) = parse_blocks(lines, i, chunk_counter, opener_colons)?;
+                // Skip past the closing ::: fence
+                i = if end < lines.len() && is_div_close(lines[end], opener_colons) {
+                    end + 1
+                } else {
+                    end
+                };
                 children
             };
 
@@ -104,14 +110,14 @@ fn parse_blocks(
             continue;
         }
 
-        // Try unnamed fenced code block: ``` or ~~~ (no {language})
+        // Try unnamed fenced code block: ``` (no {language})
         if let Some((block, end)) = parse_unnamed_fence(lines, i) {
             blocks.push(block);
             i = end;
             continue;
         }
 
-        // Try raw block opening fence: ```{=format} or ~~~{=format}
+        // Try raw block opening fence: ```{=format}
         if let Some((block, end)) = parse_raw_block(lines, i)? {
             blocks.push(block);
             i = end;
@@ -160,7 +166,7 @@ fn parse_blocks(
         }
     }
 
-    Ok(blocks)
+    Ok((blocks, i))
 }
 
 // --- Block parsers ---
@@ -258,7 +264,7 @@ fn parse_fence_marker(line: &str) -> Option<(usize, char)> {
     }
 }
 
-/// Try to parse an unnamed fenced code block (``` or ~~~, no {language}).
+/// Try to parse an unnamed fenced code block (```, no {language}).
 /// Also handles `{.lang attr="val"}` syntax for display-only blocks with attributes.
 /// Returns the block and the position after the closing fence.
 fn parse_unnamed_fence(lines: &[&str], i: usize) -> Option<(Block, usize)> {
@@ -336,7 +342,7 @@ fn parse_code_block_info(info: &str) -> Option<(String, String)> {
 
 // Uses tokenize_attrs() defined below for attribute parsing.
 
-/// Try to parse a raw block (```{=format} or ~~~{=format}).
+/// Try to parse a raw block (```{=format}).
 /// Returns the block and position after the closing fence, or None.
 fn parse_raw_block(lines: &[&str], i: usize) -> Result<Option<(Block, usize)>> {
     let caps = match RE_RAW_OPEN.captures(lines[i]) {

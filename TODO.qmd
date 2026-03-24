@@ -2,6 +2,9 @@
 
 PATH CHECKFOR SINGLE typst file
 
+## YAML
+
+There's lots of leftover there. Figure out what to extract and how to make a robust conversion layer.
 
 ## Blog listings
 

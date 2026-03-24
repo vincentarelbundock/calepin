@@ -261,6 +261,8 @@ pub enum ChunkResult {
 #[derive(Debug, Clone, Default)]
 pub struct AuthorName {
     pub literal: String,
+    pub given: Option<String>,
+    pub family: Option<String>,
 }
 
 /// A rich author record (Quarto-compatible schema).
