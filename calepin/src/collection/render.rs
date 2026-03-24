@@ -234,7 +234,7 @@ pub fn render_documents_with_crossref(
     }
 
     // Assign chapter numbers based on [[contents]] ordering
-    let chapter_map = assign_chapter_numbers(pages, config);
+    let chapter_map = assign_chapter_numbers(config);
 
     let target_owned = target_name.map(|s| s.to_string());
     let total = pages.len();
@@ -311,7 +311,7 @@ pub fn render_documents_with_crossref(
             total_ids, pass1_results.len());
     }
 
-    // Pass 2: Resolve cross-refs and renumber (cheap string ops, parallel)
+    // Pass 2: Resolve cross-refs and renumber (cheap string ops, sequential)
     let empty_registry = CrossRefRegistry::default();
     let mut map = HashMap::new();
     for page in pages {
@@ -407,7 +407,7 @@ fn render_one_document_pass1(
 /// Assign chapter numbers to pages based on their position in [[contents]].
 /// Each non-standalone page gets a sequential chapter number (1-based).
 /// Returns a map from source path (string) to chapter number.
-fn assign_chapter_numbers(_pages: &[DocumentInfo], config: &ProjectConfig) -> HashMap<String, usize> {
+fn assign_chapter_numbers(config: &ProjectConfig) -> HashMap<String, usize> {
     let mut chapter_map = HashMap::new();
     let mut chapter = 0usize;
 

@@ -139,11 +139,10 @@ pub fn discover_standalone_documents(config: &ProjectConfig, base_dir: &Path, ou
 pub fn discover_listing_documents(
     listing: &ListingConfig,
     base_dir: &Path,
-    existing: &[DocumentInfo],
+    _existing: &[DocumentInfo],
     output_ext: &str,
 ) -> Result<Vec<DocumentInfo>> {
     let pattern = base_dir.join(&listing.contents).display().to_string();
-    let existing_sources: Vec<_> = existing.iter().map(|p| &p.source).collect();
     let mut pages = Vec::new();
 
     for entry in glob::glob(&pattern)? {
@@ -152,10 +151,6 @@ pub fn discover_listing_documents(
             .strip_prefix(base_dir)
             .unwrap_or(&abs_path)
             .to_path_buf();
-
-        if existing_sources.iter().any(|s| **s == rel_path) {
-            // Already in the main page list; still include in listing data
-        }
 
         let meta = extract_frontmatter(&abs_path)?;
         let lang = meta.lang.clone();

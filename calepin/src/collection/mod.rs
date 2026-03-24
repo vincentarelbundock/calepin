@@ -120,12 +120,11 @@ pub fn build_collection(
             all_listing_documents.insert(page.source.display().to_string(), listing_documents);
         }
     }
-    let mut existing_sources: Vec<String> = pages.iter().map(|p| p.source.display().to_string()).collect();
+    let mut existing_sources: std::collections::HashSet<String> = pages.iter().map(|p| p.source.display().to_string()).collect();
     for listing_documents in all_listing_documents.values() {
         for lp in listing_documents {
             let key = lp.source.display().to_string();
-            if !existing_sources.contains(&key) {
-                existing_sources.push(key);
+            if existing_sources.insert(key) {
                 pages.push(lp.clone());
             }
         }
@@ -208,7 +207,7 @@ pub fn rebuild_documents(
     crate::paths::set_active_target(Some(&collection_target_name));
     crate::paths::set_project_root(Some(&base_dir));
 
-    let output_dir = base_dir.join("output");
+    let output_dir = base_dir.join(config.output.as_deref().unwrap_or("output"));
 
     // Discover all pages (needed for nav context), including standalone
     let mut pages = discover_documents(&config, &base_dir, output_ext)?;
@@ -788,6 +787,16 @@ pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
     eprintln!("Serving at http://localhost:{}", actual_port);
     let _ = open::that(format!("http://localhost:{}", actual_port));
 
+    let respond_404 = |request: tiny_http::Request, output: &std::path::Path| {
+        let page_404 = output.join("404.html");
+        if let Ok(body) = fs::read(&page_404) {
+            let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
+            let _ = request.respond(Response::from_data(body).with_header(header).with_status_code(StatusCode(404)));
+        } else {
+            let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+        }
+    };
+
     for request in server.incoming_requests() {
         let url = request.url().to_string();
         let rel = url.split('?').next().unwrap_or(&url).trim_start_matches('/');
@@ -804,24 +813,10 @@ pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
                     let header = Header::from_bytes("Content-Type", mime).unwrap();
                     let _ = request.respond(Response::from_data(data).with_header(header));
                 }
-                Err(_) => {
-                    let page_404 = output.join("404.html");
-                    if let Ok(body) = fs::read(&page_404) {
-                        let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
-                        let _ = request.respond(Response::from_data(body).with_header(header).with_status_code(StatusCode(404)));
-                    } else {
-                        let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
-                    }
-                }
+                Err(_) => respond_404(request, &output),
             }
         } else {
-            let page_404 = output.join("404.html");
-            if let Ok(body) = fs::read(&page_404) {
-                let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
-                let _ = request.respond(Response::from_data(body).with_header(header).with_status_code(StatusCode(404)));
-            } else {
-                let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
-            }
+            respond_404(request, &output);
         }
     }
 
