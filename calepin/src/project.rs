@@ -178,6 +178,11 @@ pub struct Target {
     /// Optional compilation step.
     pub compile: Option<CompileConfig>,
 
+    /// Whether to embed images as base64 data URIs (HTML only).
+    /// Overrides the global `embed-resources` default when set.
+    #[serde(rename = "embed-resources")]
+    pub embed_resources: Option<bool>,
+
     /// Arbitrary key-value pairs passed to templates as target_vars.
     pub vars: Option<toml::Value>,
 }
@@ -488,6 +493,7 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
         fig_extension: child.fig_extension.clone().or_else(|| parent.fig_extension.clone()),
         preview: child.preview.clone().or_else(|| parent.preview.clone()),
         compile: child.compile.clone().or_else(|| parent.compile.clone()),
+        embed_resources: child.embed_resources.or(parent.embed_resources),
         vars: child.vars.clone().or_else(|| parent.vars.clone()),
     }
 }
@@ -701,6 +707,7 @@ fn merge_with_builtin(user: &Target) -> Target {
         fig_extension: user.fig_extension.clone().or_else(|| builtin.and_then(|b| b.fig_extension.clone())),
         preview: user.preview.clone().or_else(|| builtin.and_then(|b| b.preview.clone())),
         compile: user.compile.clone(),
+        embed_resources: user.embed_resources.or(builtin.and_then(|b| b.embed_resources)),
         vars: user.vars.clone(),
     }
 }

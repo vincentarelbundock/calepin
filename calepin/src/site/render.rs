@@ -3,7 +3,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use crate::project::ProjectConfig;
+use crate::project::{self, ProjectConfig, Target};
 use super::discover::PageInfo;
 
 /// Result of rendering a single page for the site.
@@ -32,6 +32,7 @@ pub fn render_pages(
     format: &str,
     apply_page_template: bool,
     target_name: Option<&str>,
+    target: Option<&Target>,
     quiet: bool,
 ) -> Result<HashMap<String, SiteRenderResult>> {
     if pages.is_empty() {
@@ -43,6 +44,14 @@ pub fn render_pages(
 
     if !quiet {
         eprintln!("Rendering {} pages...", pages.len());
+    }
+
+    // Resolve defaults, letting target override global settings (e.g., embed-resources)
+    let mut defaults = project::resolve_defaults(Some(config));
+    if let Some(t) = target {
+        if let Some(embed) = t.embed_resources {
+            defaults.embed_resources = Some(embed);
+        }
     }
 
     let format_owned = format.to_string();
@@ -58,10 +67,12 @@ pub fn render_pages(
                 let output_dir = output_dir;
                 let format = &format_owned;
                 let target = &target_owned;
+                let defaults = defaults.clone();
                 s.spawn(move || {
-                    // Set active target and project root in this thread for template resolution
+                    // Set active target, project root, and defaults in this thread
                     crate::paths::set_active_target(target.as_deref());
                     crate::paths::set_project_root(Some(base_dir));
+                    project::set_active_defaults(defaults);
                     let key = page.source.display().to_string();
                     let result = render_one_page(page, overrides, base_dir, output_dir, format, apply_page_template);
                     (key, result)

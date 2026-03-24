@@ -97,6 +97,7 @@ base = "html"
 template = "page"
 extension = "html"
 fig-extension = "svg"
+embed-resources = false
 preview = "serve"
 
 [targets.book]

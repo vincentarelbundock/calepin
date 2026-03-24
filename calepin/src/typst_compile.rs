@@ -20,9 +20,9 @@ use typst_kit::fonts::{FontSearcher, Fonts};
 
 /// Compile a `.typ` file to PDF and write the result to `output`.
 pub fn compile_typst_to_pdf(input: &Path, output: &Path) -> Result<()> {
-    let root = input
-        .parent()
-        .unwrap_or(Path::new("."))
+    let parent = input.parent().unwrap_or(Path::new("."));
+    let parent = if parent.as_os_str().is_empty() { Path::new(".") } else { parent };
+    let root = parent
         .canonicalize()
         .with_context(|| format!("Failed to resolve root directory for {}", input.display()))?;
 

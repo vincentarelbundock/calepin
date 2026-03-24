@@ -109,7 +109,7 @@ pub fn build_site(
     //    (the project's templates/latex/page.tex or similar).
     //    When no orchestrator (HTML sites), return raw bodies for site Jinja wrapping.
     let apply_page_template = orchestrator.is_some();
-    let results = render::render_pages(&pages, &config, &base_dir, output, format, apply_page_template, Some(&site_target_name), quiet)?;
+    let results = render::render_pages(&pages, &config, &base_dir, output, format, apply_page_template, Some(&site_target_name), Some(&site_target), quiet)?;
 
     // 7. Write page output files
     //    For orchestrated builds, strip the output directory prefix from paths
@@ -203,7 +203,7 @@ pub fn rebuild_pages(
     let pages_to_render: Vec<PageInfo> = changed_pages.iter().map(|p| (*p).clone()).collect();
     let results = render::render_pages(
         &pages_to_render, &config, &base_dir, &output_dir, format,
-        false, Some(&site_target_name), true,
+        false, Some(&site_target_name), Some(&site_target), true,
     )?;
 
     // Write raw body files
