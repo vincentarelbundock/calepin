@@ -4,17 +4,21 @@ PATH CHECKFOR SINGLE typst file
 
 ## Rendering
 
-- [ ] Split CSS into core and style
 - [ ] Better CSS
 - [ ] Accessibility
-    - [ ] html + css
+    - [x] html + css
     - [ ] typst
     - [ ] latex
     - [ ] pdf
+- [ ] PDF metadata should be optional (author, title, etc.)
 - [ ] *Calepin* always in italics with capital letter in website/
-- [ ] Language / localization (`lang:` option, custom translation strings)
 - [ ] Allow users to supply `postprocess.latex` or `postprocess.html` in `_calepin/`
 - [ ] How do lettered appendices work?
+
+
+## Language
+
+- [ ] Language / localization (`lang:` option, custom translation strings)
 
 
 ## Code execution
@@ -57,7 +61,6 @@ PATH CHECKFOR SINGLE typst file
 
 ## Typst
 
-- [ ] ship with typst-lib in rust since this is our default -t pdf engine
 - [ ] book template
 
 
@@ -138,6 +141,7 @@ PATH CHECKFOR SINGLE typst file
 
 ## File paths
 
+- [ ] Path resolution rule for csl bibliography and other assets in the preambles of collections? Should these be ignored and we only consider the basic one?
 - [ ] Strict, consistent, simple, cross-platform
 - [ ] Clear separation of output and input locations
 - [ ] Format-specific path handling (Typst, LaTeX, HTML, Markdown)
