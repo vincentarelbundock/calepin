@@ -140,11 +140,14 @@ pub fn build_site(
         render_orchestrator(&config, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &site_target_name, quiet)?;
     } else {
         // HTML site path: re-wrap pages through Jinja site templates
-        apply_site_templates(&config, &pages, &results, &all_listing_pages, &base_dir, output, format, &site_target_name, quiet)?;
+        apply_site_templates(&config, &pages, &results, &all_listing_pages, &base_dir, output, format, &site_target_name)?;
     }
 
     // 9. Copy assets/ to output
     assets::copy_assets(&base_dir, output)?;
+
+    // 10. Run user-configured post-processing commands
+    run_post_commands(&config, &site_target_name, &base_dir, output, quiet)?;
 
     if !quiet {
         eprintln!("Site built: {}", output.display());
@@ -321,7 +324,6 @@ fn apply_site_templates(
     output: &Path,
     format: &str,
     target_name: &str,
-    quiet: bool,
 ) -> Result<()> {
     // Initialize MiniJinja from templates/{target}/
     let env = templates::init_jinja(base_dir, target_name)?
@@ -400,16 +402,7 @@ fn apply_site_templates(
         fs::write(&output_path, &rendered)?;
     }
 
-    // Run pagefind for search indexing (HTML only)
     if format == "html" {
-        let search_enabled = config.var.as_ref()
-            .and_then(|v| v.get("navbar_search"))
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
-        if search_enabled {
-            run_pagefind(output, quiet)?;
-        }
-
         // Copy .qmd source files to _source/ for the source viewer
         for page in pages {
             let source_dest = output.join("_source").join(&page.source);
@@ -426,27 +419,51 @@ fn apply_site_templates(
     Ok(())
 }
 
-/// Run pagefind to generate the search index for the site.
-fn run_pagefind(output: &Path, quiet: bool) -> Result<()> {
-    let tool = &crate::tools::PAGEFIND;
-    let result = std::process::Command::new(tool.cmd)
-        .arg("--site")
-        .arg(output)
-        .output();
+/// Run user-configured post-processing commands from `[[post]]` in calepin.toml.
+///
+/// Each command is executed from the project root. `{output}` and `{root}` in the
+/// command string are replaced with the output directory and project root paths.
+/// Commands with a `targets` restriction are skipped if the active target doesn't match.
+fn run_post_commands(
+    config: &crate::project::ProjectConfig,
+    target: &str,
+    project_root: &Path,
+    output: &Path,
+    quiet: bool,
+) -> Result<()> {
+    for post in &config.post {
+        if !post.targets.is_empty() && !post.targets.iter().any(|t| t == target) {
+            continue;
+        }
 
-    match result {
-        Ok(out) => {
-            if !out.status.success() {
-                let stderr = String::from_utf8_lossy(&out.stderr);
-                eprintln!("Warning: pagefind failed: {}", stderr.trim());
-            } else if !quiet {
-                eprintln!("  Generated search index (pagefind)");
+        let cmd = post.command
+            .replace("{output}", &output.display().to_string())
+            .replace("{root}", &project_root.display().to_string());
+
+        if !quiet {
+            eprintln!("  post: {}", cmd);
+        }
+
+        let result = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&cmd)
+            .current_dir(project_root)
+            .output();
+
+        match result {
+            Ok(out) => {
+                if !out.status.success() {
+                    let stderr = String::from_utf8_lossy(&out.stderr);
+                    cwarn!("post command failed: {}", cmd);
+                    if !stderr.trim().is_empty() {
+                        eprintln!("  {}", stderr.trim());
+                    }
+                }
+            }
+            Err(e) => {
+                cwarn!("failed to run post command: {}: {}", cmd, e);
             }
         }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            eprintln!("Warning: {}. Search will not be available.", crate::tools::not_found_message(tool));
-        }
-        Err(e) => return Err(e.into()),
     }
     Ok(())
 }

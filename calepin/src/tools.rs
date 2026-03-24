@@ -73,12 +73,6 @@ pub const D2: Tool = Tool {
     install_hint: "install from https://d2lang.com/",
 };
 
-pub const PAGEFIND: Tool = Tool {
-    cmd: "pagefind",
-    name: "Pagefind",
-    install_hint: "install with: npm install -g pagefind",
-};
-
 // ---------------------------------------------------------------------------
 // Checks
 // ---------------------------------------------------------------------------

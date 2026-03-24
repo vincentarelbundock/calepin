@@ -188,7 +188,7 @@ PATH CHECKFOR SINGLE typst file
 - [ ] Architecture refactor / DRY / simplification
 - [ ] Singular vs Plural file names
 - [ ] User input validation. Brainstorm with AI to be super strict and informative. Paths, formats, front matter options, etc.
-- [ ] run_pagefind() should be specified as a more generic post-processing step that can be specified by the user.
+- [x] run_pagefind() should be specified as a more generic post-processing step that can be specified by the user.
 - [ ] cargo-dist
     - [ ] homebrew
     - [ ] linux

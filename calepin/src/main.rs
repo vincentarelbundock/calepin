@@ -414,6 +414,13 @@ fn render_one_with_context(
         run_compile_step(&output_path, compile_cfg, quiet)?;
     }
 
+    // Run target-level post-processing commands
+    if !ctx.target.post.is_empty() {
+        let root = ctx.project_root.as_deref()
+            .unwrap_or_else(|| output_path.parent().unwrap_or(Path::new(".")));
+        run_target_post_commands(&ctx.target.post, &output_path, root, quiet)?;
+    }
+
     Ok(())
 }
 
@@ -470,6 +477,48 @@ pub fn run_compile_step(
         eprintln!("→ {}", output_path.display());
     }
 
+    Ok(())
+}
+
+/// Run target-level post-processing commands.
+///
+/// Each command supports `{output}` (rendered file path) and `{root}` (project root).
+fn run_target_post_commands(
+    commands: &[String],
+    output: &Path,
+    project_root: &Path,
+    quiet: bool,
+) -> Result<()> {
+    for command in commands {
+        let cmd = command
+            .replace("{output}", &output.display().to_string())
+            .replace("{root}", &project_root.display().to_string());
+
+        if !quiet {
+            eprintln!("  post: {}", cmd);
+        }
+
+        let result = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&cmd)
+            .current_dir(project_root)
+            .output();
+
+        match result {
+            Ok(out) => {
+                if !out.status.success() {
+                    let stderr = String::from_utf8_lossy(&out.stderr);
+                    cwarn!("post command failed: {}", cmd);
+                    if !stderr.trim().is_empty() {
+                        eprintln!("  {}", stderr.trim());
+                    }
+                }
+            }
+            Err(e) => {
+                cwarn!("failed to run post command: {}: {}", cmd, e);
+            }
+        }
+    }
     Ok(())
 }
 

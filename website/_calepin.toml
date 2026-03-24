@@ -59,6 +59,9 @@ pages = ["misc/*.qmd"]
 standalone = true
 pages = ["index.qmd", "404.qmd"]
 
+[[post]]
+command = "pagefind --site {output}"
+
 [var]
 primary = "#0066cc"
 background = "#ffffff"

@@ -64,6 +64,11 @@ pub struct ProjectConfig {
     /// Named output profiles.
     #[serde(default)]
     pub targets: HashMap<String, Target>,
+
+    /// Post-processing commands run after site build.
+    /// Each entry specifies a shell command with optional target restrictions.
+    #[serde(default)]
+    pub post: Vec<PostCommand>,
 }
 
 impl ProjectConfig {
@@ -259,6 +264,11 @@ pub struct Target {
 
     /// Arbitrary key-value pairs passed to templates as target_vars.
     pub vars: Option<toml::Value>,
+
+    /// Post-processing commands run after rendering a document with this target.
+    /// Each command supports `{output}` (rendered file path) and `{root}` (project root).
+    #[serde(default)]
+    pub post: Vec<String>,
 }
 
 /// Compilation configuration (e.g., .tex to .pdf).
@@ -271,6 +281,31 @@ pub struct CompileConfig {
 
     /// Extension of the compiled artifact.
     pub extension: Option<String>,
+}
+
+/// A post-processing command run after the site build completes.
+///
+/// Commands are executed in order from the project root directory.
+/// The placeholders `{output}` and `{root}` in the command string are
+/// replaced with the output directory and project root, respectively.
+///
+/// ```toml
+/// [[post]]
+/// command = "pagefind --site {output}"
+///
+/// [[post]]
+/// command = "my-script.sh {root}"
+/// targets = ["html"]
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+pub struct PostCommand {
+    /// Shell command to run. Supports `{output}` and `{root}` placeholders.
+    pub command: String,
+
+    /// Restrict this command to specific target names (e.g. `["html"]`).
+    /// When empty, the command runs for all targets.
+    #[serde(default)]
+    pub targets: Vec<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -569,6 +604,7 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
         compile: child.compile.clone().or_else(|| parent.compile.clone()),
         embed_resources: child.embed_resources.or(parent.embed_resources),
         vars: child.vars.clone().or_else(|| parent.vars.clone()),
+        post: if child.post.is_empty() { parent.post.clone() } else { child.post.clone() },
     }
 }
 
@@ -761,6 +797,7 @@ fn merge_with_builtin(user: &Target) -> Target {
         compile: user.compile.clone(),
         embed_resources: user.embed_resources.or(builtin.and_then(|b| b.embed_resources)),
         vars: user.vars.clone(),
+        post: user.post.clone(),
     }
 }
 
