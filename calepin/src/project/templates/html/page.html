@@ -13,9 +13,11 @@
 </script>
 
 {% include "preamble.jinja" %}
-{{preamble}}
+{% if keywords %}<meta name="keywords" content="{{keywords}}">{% endif %}
 
+{% if css %}<style>
 {{css}}
+</style>{% endif %}
 
 {% include "math.jinja" %}
 </head>

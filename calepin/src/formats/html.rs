@@ -41,7 +41,10 @@ impl OutputRenderer for HtmlRenderer {
             crate::filters::highlighting::ColorScope::Both,
         );
         let css = vars.entry("css".to_string()).or_default();
-        css.push_str(&format!("\n<style>\n{}</style>", syntax_css));
+        if !syntax_css.is_empty() {
+            css.push('\n');
+            css.push_str(&syntax_css);
+        }
         let tpl = template::load_page_template("page", "html");
         let html = template::render_page_template(&tpl, &vars, "html");
         Some(embed_images_base64(&html))

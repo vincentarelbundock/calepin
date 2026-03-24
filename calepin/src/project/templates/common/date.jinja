@@ -1,5 +1,5 @@
 {%- if base == "html" %}
 <h3>{{date}}</h3>
 {%- elif base == "latex" %}
-{{date_cmd}}
+{% if date %}\date{ {{-date-}} }{% endif %}
 {%- endif %}

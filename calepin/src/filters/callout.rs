@@ -77,14 +77,6 @@ impl Filter for CalloutFilter {
         vars.insert("title".to_string(), title.clone());
         vars.insert("icon".to_string(), icon.to_string());
 
-        // Include number in header if present
-        let header = if let Some(num) = vars.get("number") {
-            format!("{} {} {}", icon, title, num)
-        } else {
-            format!("{} {}", icon, title)
-        };
-        vars.insert("header".to_string(), header);
-
         let collapse = vars.get("collapse").map(|v| v == "true").unwrap_or(false);
         vars.insert("collapse".to_string(), collapse.to_string());
 
@@ -117,7 +109,6 @@ mod tests {
         let mut vars = HashMap::new();
         filter.apply(&element, "html", &mut vars);
         assert!(!vars.contains_key("number"));
-        assert_eq!(vars["header"], "\u{1f4a1} Tip");
     }
 
     #[test]
@@ -127,7 +118,6 @@ mod tests {
         let mut vars = HashMap::new();
         filter.apply(&element, "html", &mut vars);
         assert_eq!(vars["number"], "1");
-        assert_eq!(vars["header"], "\u{1f4a1} Tip 1");
     }
 
     #[test]

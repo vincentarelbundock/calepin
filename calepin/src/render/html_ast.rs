@@ -201,7 +201,8 @@ impl FormatEmitter for HtmlEmitter {
     }
 
     fn footnote_section(&self, defs: &[(usize, String)]) -> String {
-        let mut out = String::from("\n<section class=\"footnotes\" data-footnotes>\n<ol>\n");
+        // Build individual footnote items in Rust (backref injection is complex)
+        let mut footnote_items = String::new();
         for (id, content) in defs {
             let backref = format!(
                 " <a href=\"#fnref-{}\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"{}\" aria-label=\"Back to reference {}\">↩</a>",
@@ -213,10 +214,16 @@ impl FormatEmitter for HtmlEmitter {
             } else {
                 format!("{}{}", content, backref)
             };
-            out.push_str(&format!("<li id=\"fn-{}\">\n{}\n</li>\n", id, body));
+            footnote_items.push_str(&format!("<li id=\"fn-{}\">\n{}\n</li>\n", id, body));
         }
-        out.push_str("</ol>\n</section>\n");
-        out
+
+        // Use the footnotes template for the wrapper
+        let mut vars = std::collections::HashMap::new();
+        vars.insert("base".to_string(), "html".to_string());
+        vars.insert("footnotes".to_string(), "true".to_string());
+        vars.insert("footnote_items".to_string(), footnote_items);
+        let tpl = include_str!("../project/templates/common/footnotes.jinja");
+        crate::render::template::apply_template(tpl, &vars)
     }
 
     fn html_block(&self, literal: &str) -> String { literal.to_string() }

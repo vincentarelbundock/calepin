@@ -52,20 +52,39 @@ pub fn render(
 
     let id_str = id.as_deref().unwrap_or("");
 
-    match format {
-        "html" => render_html(&rows_rendered, id_str, &caption, valign, is_figure, raw_fragments),
-        "latex" => render_latex(&rows_rendered, id_str, &caption, valign, is_figure, attrs),
-        "typst" => render_typst(&rows_rendered, id_str, &caption, valign, is_figure),
-        _ => render_plain(&rows_rendered, &caption),
-    }
+    // Render the inner rows for the current format
+    let rows_content = match format {
+        "html" => render_rows_html(&rows_rendered, valign, raw_fragments),
+        "latex" => render_rows_latex(&rows_rendered, valign),
+        "typst" => render_rows_typst(&rows_rendered),
+        _ => render_rows_plain(&rows_rendered),
+    };
+
+    // Build template variables for the figure wrapper
+    let mut vars = HashMap::new();
+    vars.insert("base".to_string(), format.to_string());
+    vars.insert("id".to_string(), id_str.to_string());
+    vars.insert("caption".to_string(), if !caption.is_empty() {
+        crate::render::markdown::render_inline(&caption, format)
+    } else {
+        String::new()
+    });
+    vars.insert("is_figure".to_string(), if is_figure { "true" } else { "" }.to_string());
+    vars.insert("rows".to_string(), rows_content);
+
+    // LaTeX-specific attrs
+    let fig_env = attrs.get("fig-env").map(|s| s.as_str()).unwrap_or("figure");
+    let fig_pos = attrs.get("fig-pos").map(|s| format!("[{}]", s)).unwrap_or_default();
+    vars.insert("fig_env".to_string(), fig_env.to_string());
+    vars.insert("fig_pos".to_string(), fig_pos);
+
+    let tpl = include_str!("../project/templates/common/layout.jinja");
+    crate::render::template::apply_template(tpl, &vars)
 }
 
-fn render_html(
+fn render_rows_html(
     rows: &[Vec<(String, f64)>],
-    id: &str,
-    caption: &str,
     valign: &str,
-    is_figure: bool,
     _raw_fragments: &std::cell::RefCell<Vec<String>>,
 ) -> String {
     let align_items = match valign {
@@ -75,10 +94,6 @@ fn render_html(
     };
 
     let mut html = String::new();
-    if is_figure && !id.is_empty() {
-        html.push_str(&format!("<div class=\"figure\" id=\"{}\">\n", id));
-    }
-
     for row in rows {
         let cols: Vec<String> = row.iter()
             .filter(|(_, w)| *w > 0.0)
@@ -97,25 +112,12 @@ fn render_html(
         html.push_str("</div>\n");
     }
 
-    if is_figure && !caption.is_empty() {
-        let cap_clean = crate::render::markdown::render_inline(caption, "html");
-        html.push_str(&format!("<p class=\"caption\">{}</p>\n", cap_clean));
-    }
-
-    if is_figure && !id.is_empty() {
-        html.push_str("</div>");
-    }
-
     html
 }
 
-fn render_latex(
+fn render_rows_latex(
     rows: &[Vec<(String, f64)>],
-    id: &str,
-    caption: &str,
     valign: &str,
-    is_figure: bool,
-    attrs: &HashMap<String, String>,
 ) -> String {
     let valign_char = match valign {
         "center" => "c",
@@ -124,12 +126,6 @@ fn render_latex(
     };
 
     let mut latex = String::new();
-    if is_figure {
-        let env = attrs.get("fig-env").map(|s| s.as_str()).unwrap_or("figure");
-        let pos = attrs.get("fig-pos").map(|s| format!("[{}]", s)).unwrap_or_default();
-        latex.push_str(&format!("\\begin{{{}}}{}\n\\centering\n", env, pos));
-    }
-
     for row in rows {
         let positive_cells: Vec<&(String, f64)> = row.iter().filter(|(_, w)| *w > 0.0).collect();
         let total: f64 = positive_cells.iter().map(|(_, w)| w).sum();
@@ -152,17 +148,6 @@ fn render_latex(
             }
         }
         latex.push('\n');
-    }
-
-    if is_figure {
-        if !caption.is_empty() {
-            latex.push_str(&format!("\\caption{{{}}}\n", caption));
-        }
-        if !id.is_empty() {
-            latex.push_str(&format!("\\label{{{}}}\n", id));
-        }
-        let env = attrs.get("fig-env").map(|s| s.as_str()).unwrap_or("figure");
-        latex.push_str(&format!("\\end{{{}}}", env));
     }
 
     latex
@@ -192,19 +177,10 @@ fn unwrap_latex_figure(content: &str) -> &str {
     content
 }
 
-fn render_typst(
+fn render_rows_typst(
     rows: &[Vec<(String, f64)>],
-    id: &str,
-    caption: &str,
-    _valign: &str,
-    is_figure: bool,
 ) -> String {
     let mut typ = String::new();
-
-    if is_figure {
-        typ.push_str("#figure([\n");
-    }
-
     for row in rows {
         let positive_cells: Vec<&(String, f64)> = row.iter().filter(|(_, w)| *w > 0.0).collect();
         let total: f64 = positive_cells.iter().map(|(_, w)| w).sum();
@@ -221,21 +197,10 @@ fn render_typst(
         typ.push_str(")\n");
     }
 
-    if is_figure {
-        if !caption.is_empty() {
-            typ.push_str(&format!("], caption: [{}])", caption));
-        } else {
-            typ.push_str("])");
-        }
-        if !id.is_empty() {
-            typ.push_str(&format!(" <{}>", id));
-        }
-    }
-
     typ
 }
 
-fn render_plain(rows: &[Vec<(String, f64)>], caption: &str) -> String {
+fn render_rows_plain(rows: &[Vec<(String, f64)>]) -> String {
     let mut parts: Vec<String> = Vec::new();
     for row in rows {
         for (content, w) in row {
@@ -243,9 +208,6 @@ fn render_plain(rows: &[Vec<(String, f64)>], caption: &str) -> String {
                 parts.push(content.clone());
             }
         }
-    }
-    if !caption.is_empty() {
-        parts.push(format!("*{}*", caption));
     }
     parts.join("\n\n")
 }

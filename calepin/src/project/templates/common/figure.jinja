@@ -1,30 +1,39 @@
-{%- set env = fig_env | default("figure") -%}
-{%- set loc = cap_location | default("bottom") -%}
+{%- set loc = cap_location | default(value="bottom") %}
 {%- if base == "html" %}
-<div class="figure" id="fig-{{label}}" style="{{align_style}}">
-{%- if loc == "top" and caption %}
-<p class="caption">{{caption}}</p>
-{%- endif %}
-{{image}}
-{%- if loc != "top" and caption %}
-<p class="caption">{{caption}}</p>
-{%- endif %}
-</div>
+<figure{% if label %} id="{{label}}"{% endif %}{% if align_style %} style="{{align_style}}"{% endif %}>
+{%- if loc == "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
+{%- if link %}<a href="{{link}}">{%- endif %}
+<img src="{{src}}" alt="{{alt}}"{% if width_attr %} style="width:{{width_attr}};max-width:{{width_attr}}"{% endif %}{% if height_attr %} style="height:{{height_attr}}"{% endif %}/>
+{%- if link %}</a>{%- endif %}
+{%- if loc != "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
+</figure>
 {%- elif base == "latex" %}
-\begin{{_lb}}{{env}}{{_rb}}{{fig_pos}}
+\begin{ {{-fig_env | default(value="figure")-}} }{{fig_pos}}
 {{align_style}}
-{%- if loc == "top" %}
-{{caption_cmd}}
-\label{{_lb}}fig-{{label}}{{_rb}}
+{%- if loc == "top" and caption %}
+\caption{{short_caption}}{ {{-caption-}} }
 {%- endif %}
-{{image}}
-{%- if loc != "top" %}
-{{caption_cmd}}
-\label{{_lb}}fig-{{label}}{{_rb}}
+{%- if link %}\href{ {{-link-}} }{ {%- endif %}
+\includegraphics[{{width_attr | default(value="width=0.70\\textwidth")}}]{ {{-src-}} }
+{%- if link %}}{% endif %}
+{%- if loc != "top" and caption %}
+\caption{{short_caption}}{ {{-caption-}} }
 {%- endif %}
-\end{{_lb}}{{env}}{{_rb}}
+{%- if label %}\label{ {{-label-}} }{%- endif %}
+\end{ {{-fig_env | default(value="figure")-}} }
 {%- elif base == "typst" %}
-#figure({{image}}, caption: [{{caption}}], placement: none) <fig-{{label}}>
+#figure(
+{%- if link %}#link("{{link}}")[{%- endif %}
+  image("{{src}}", width: {{width_attr | default(value="70%")}}{% if height_attr %}, height: {{height_attr}}{% endif %})
+{%- if link %}]{%- endif %}
+{%- if caption %}, caption: [{{caption}}]{%- endif %}
+){% if label %} <{{label}}>{% endif %}
 {%- else %}
-![{{alt}}]({{path}})
+{%- if link %}[{%- endif %}
+![{{alt}}]({{src}})
+{%- if link %}]({{link}}){%- endif %}
+{%- if caption %}
+
+*{{caption}}*
+{%- endif %}
 {%- endif %}

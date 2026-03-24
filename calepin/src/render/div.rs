@@ -58,22 +58,10 @@ pub fn render(
         v.insert("classes".to_string(), classes.join(" "));
 
         if let Some(ref id_val) = id {
-            v.insert("id_attr".to_string(), format!(" id=\"{}\"", id_val));
             v.insert("id".to_string(), id_val.clone());
         } else {
-            v.insert("id_attr".to_string(), String::new());
             v.insert("id".to_string(), String::new());
         }
-
-        let label_str = match id {
-            Some(ref id_val) if !id_val.is_empty() => match format {
-                "latex" => format!(" \\label{{{}}}", id_val),
-                "typst" => format!(" <{}>", id_val),
-                _ => String::new(),
-            },
-            _ => String::new(),
-        };
-        v.insert("label".to_string(), label_str);
         *vars = Some(v);
     };
 

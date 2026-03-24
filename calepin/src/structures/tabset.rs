@@ -50,38 +50,32 @@ pub fn render(
     }
 
     let group = attrs.get("group").map(|s| s.as_str()).unwrap_or("");
-    let group_attr = if group.is_empty() {
-        String::new()
-    } else {
-        format!(" data-group=\"{}\"", group)
-    };
 
-    let mut html = format!(
-        "<div class=\"panel-tabset\"{}>\n<ul class=\"nav nav-tabs\" role=\"tablist\">\n",
-        group_attr
-    );
+    // Build template variables
+    let mut vars = HashMap::new();
+    vars.insert("base".to_string(), format.to_string());
+    vars.insert("group".to_string(), group.to_string());
 
-    for (i, (title, _)) in tabs.iter().enumerate() {
+    // Pre-render nav items and tab panes as HTML strings
+    let mut nav_items = String::new();
+    let mut tab_panes = String::new();
+    for (i, (title, content)) in tabs.iter().enumerate() {
         let active = if i == 0 { " active" } else { "" };
         let selected = if i == 0 { "true" } else { "false" };
+        let hidden = if i == 0 { "" } else { " aria-hidden=\"true\"" };
         let id = crate::util::slugify(title);
-        html.push_str(&format!(
+        nav_items.push_str(&format!(
             "  <li class=\"nav-item\" role=\"presentation\"><button class=\"nav-link{}\" data-tab=\"{}\" role=\"tab\" aria-selected=\"{}\" aria-controls=\"tabpanel-{}\">{}</button></li>\n",
             active, id, selected, id, title
         ));
-    }
-    html.push_str("</ul>\n<div class=\"tab-content\">\n");
-
-    for (i, (title, content)) in tabs.iter().enumerate() {
-        let active = if i == 0 { " active" } else { "" };
-        let hidden = if i == 0 { "" } else { " aria-hidden=\"true\"" };
-        let id = crate::util::slugify(title);
-        html.push_str(&format!(
+        tab_panes.push_str(&format!(
             "<div class=\"tab-pane{}\" id=\"tabpanel-{}\" data-tab=\"{}\" role=\"tabpanel\"{}>\n{}\n</div>\n",
             active, id, id, hidden, content
         ));
     }
-    html.push_str("</div>\n</div>");
+    vars.insert("nav_items".to_string(), nav_items);
+    vars.insert("tab_panes".to_string(), tab_panes);
 
-    html
+    let tpl = include_str!("../project/templates/common/tabset.jinja");
+    crate::render::template::apply_template(tpl, &vars)
 }

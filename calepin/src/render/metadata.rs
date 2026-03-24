@@ -97,11 +97,13 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     // License
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
-            let content = format_link(text, lic.url.as_deref(), ext);
             if let Some(tpl) = resolve_element_template("license", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
-                vars.insert("content".to_string(), content);
+                vars.insert("text".to_string(), text.clone());
+                vars.insert("url".to_string(), lic.url.as_deref().unwrap_or("").to_string());
+                // Keep content for backward compatibility with overridden templates
+                vars.insert("content".to_string(), format_link(text, lic.url.as_deref(), ext));
                 sections.push(apply_template(&tpl, &vars));
             }
         }
@@ -269,20 +271,8 @@ pub fn build_author_block(meta: &Metadata, ext: &str) -> String {
                 String::new()
             };
 
-            let orcid_link = if let Some(ref orcid) = author.orcid {
-                let url = if orcid.starts_with("http") { orcid.clone() } else { format!("https://orcid.org/{}", orcid) };
-                match ext {
-                    "html" => format!(
-                        " <a href=\"{}\" class=\"author-orcid\" title=\"ORCID\">\
-                         <svg width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"#A6CE39\">\
-                         <path d=\"M256,128c0,70.7-57.3,128-128,128S0,198.7,0,128,57.3,0,128,0s128,57.3,128,128Z\"/>\
-                         <path fill=\"#fff\" d=\"M86.3,186.2H70.9V79.1h15.4v107.1ZM78.6,56.8c-5.5,0-10,4.5-10,10s4.5,10,10,10,10-4.5,10-10-4.5-10-10-10Z\
-                         M162.2,79.1c-24.4,0-37.2,12.8-43.6,23.6V79.1H103.2V186.2h15.4V120.8c0-12.4,14.3-27.3,33.5-27.3,20.3,0,28.3,14.5,28.3,34v58.7h15.4V125.3C195.8,99.6,184.3,79.1,162.2,79.1Z\"/>\
-                         </svg></a>",
-                        url
-                    ),
-                    _ => String::new(),
-                }
+            let orcid_url = if let Some(ref orcid) = author.orcid {
+                if orcid.starts_with("http") { orcid.clone() } else { format!("https://orcid.org/{}", orcid) }
             } else {
                 String::new()
             };
@@ -293,10 +283,10 @@ pub fn build_author_block(meta: &Metadata, ext: &str) -> String {
                 vars.insert("name".to_string(), author.name.literal.clone());
                 vars.insert("superscripts".to_string(), superscripts);
                 vars.insert("corresponding".to_string(), corresponding);
-                vars.insert("orcid_link".to_string(), orcid_link);
+                vars.insert("orcid_url".to_string(), orcid_url);
                 apply_template(tpl, &vars)
             } else {
-                format!("{}{}{}{}", author.name.literal, superscripts, corresponding, orcid_link)
+                format!("{}{}{}", author.name.literal, superscripts, corresponding)
             }
         }).collect();
 

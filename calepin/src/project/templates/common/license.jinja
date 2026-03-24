@@ -1,16 +1,16 @@
 {%- if base == "html" %}
 <section class="appendix-section">
 <h2>Reuse</h2>
-<p>{{content}}</p>
+<p>{% if url %}<a href="{{url}}">{{text}}</a>{% else %}{{text}}{% endif %}</p>
 </section>
 {%- elif base == "latex" %}
 \subsection*{Reuse}
-{{content}}
+{% if url %}{{text}} (\url{ {{-url-}} }){% else %}{{text}}{% endif %}
 {%- elif base == "typst" %}
 == Reuse
-{{content}}
+{% if url %}#link("{{url}}")[{{text}}]{% else %}{{text}}{% endif %}
 {%- else %}
 ## Reuse
 
-{{content}}
+{% if url %}[{{text}}]({{url}}){% else %}{{text}}{% endif %}
 {%- endif %}

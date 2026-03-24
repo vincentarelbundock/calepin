@@ -285,28 +285,17 @@ impl ElementRenderer {
                         meta.ids.insert(label.clone(), (count + 1).to_string());
                         let num = count + 1;
 
-                        let cap_text = lst_cap.as_deref().unwrap_or("");
-
-                        return match self.ext.as_str() {
-                            "html" => {
-                                let caption = if cap_text.is_empty() {
-                                    format!("<p class=\"listing-caption\">Listing {}</p>", num)
-                                } else {
-                                    format!("<p class=\"listing-caption\">Listing {}: {}</p>", num, cap_text)
-                                };
-                                format!(
-                                    "<div class=\"code-listing\" id=\"{}\">\n{}\n{}\n</div>",
-                                    label, caption, rendered
-                                )
-                            }
-                            "latex" => format!(
-                                "{}\n\\label{{{}}}", rendered, label
-                            ),
-                            "typst" => format!(
-                                "{} <{}>", rendered, label
-                            ),
-                            _ => rendered,
-                        };
+                        let mut listing_vars = HashMap::new();
+                        listing_vars.insert("base".to_string(), self.ext.clone());
+                        listing_vars.insert("label".to_string(), label.clone());
+                        listing_vars.insert("number".to_string(), num.to_string());
+                        listing_vars.insert("content".to_string(), rendered);
+                        if let Some(cap) = lst_cap {
+                            listing_vars.insert("lst_cap".to_string(), cap.clone());
+                        }
+                        let tpl = self.resolve_element_template("code_listing")
+                            .unwrap_or_else(|| include_str!("../project/templates/common/code_listing.jinja").to_string());
+                        return crate::render::template::apply_template(&tpl, &listing_vars);
                     }
                 }
 

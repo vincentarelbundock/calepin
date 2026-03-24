@@ -46,10 +46,8 @@ pub fn render(
         vars.insert("classes".to_string(), classes.join(" "));
         if let Some(ref id_val) = id {
             vars.insert("id".to_string(), id_val.clone());
-            vars.insert("id_attr".to_string(), format!(" id=\"{}\"", id_val));
         } else {
             vars.insert("id".to_string(), String::new());
-            vars.insert("id_attr".to_string(), String::new());
         }
 
         // Plugin dispatch via registry
@@ -93,30 +91,10 @@ pub fn render(
             }
         }
 
-        // Default fallback
-        let class_attr = if classes.is_empty() {
-            String::new()
-        } else {
-            format!(" class=\"{}\"", classes.join(" "))
-        };
-        let id_attr = id
-            .as_ref()
-            .map_or(String::new(), |v| format!(" id=\"{}\"", v));
-        let output = if first_class == "aside" {
-            match format {
-                "html" => format!("<span{}{}>{}</span>", id_attr, class_attr, rendered_content),
-                "latex" => format!("\\marginpar{{\\footnotesize {}}}", rendered_content),
-                "typst" => format!("#place(right, dx: 1em)[#text(size: 0.8em)[{}]]", rendered_content),
-                _ => rendered_content.to_string(),
-            }
-        } else {
-            match format {
-                "html" => format!("<span{}{}>{}</span>", id_attr, class_attr, rendered_content),
-                "latex" => format!("\\text{{{}}}", rendered_content),
-                "typst" => format!("[{}]", rendered_content),
-                _ => rendered_content.to_string(),
-            }
-        };
+        // Default fallback: use span template
+        let tpl = resolve_template("span")
+            .unwrap_or_else(|| include_str!("../project/templates/common/span.jinja").to_string());
+        let output = crate::render::template::apply_template(&tpl, &vars);
         wrap_output(format, raw_fragments, output)
     })
     .to_string()

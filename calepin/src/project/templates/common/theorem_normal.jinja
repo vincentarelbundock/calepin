@@ -1,14 +1,14 @@
 {%- if base == "html" %}
-<div class="theorem-env {{type_class}}"{{id_attr}}>
-<p class="thm-heading"><strong>{{type_name}} {{number}}.</strong></p>
+<div class="theorem-env {{type_class}}"{% if id %} id="{{id}}"{% endif %}>
+<p class="thm-heading"><strong>{{type_class | title}} {{number}}.</strong></p>
 <div class="thm-body">
 {{children}}
 </div>
 </div>
 {%- elif base == "latex" %}
-\par\medskip\noindent\textbf{{_lb}}{{type_name}} {{number}}.{{_rb}}{{label}} {{children}}\medskip
+\par\medskip\noindent\textbf{{_lb}}{{type_class | title}} {{number}}.{{_rb}}{% if id %}\label{ {{-id-}} }{% endif %} {{children}}\medskip
 {%- elif base == "typst" %}
-#block(width: 100%, above: 1em, below: 1em)[*{{type_name}} {{number}}.* {{children}}]{{label}}
+#block(width: 100%, above: 1em, below: 1em)[*{{type_class | title}} {{number}}.* {{children}}]{% if id %} <{{id}}>{% endif %}
 {%- else %}
-**{{type_name}} {{number}}.** {{children}}
+**{{type_class | title}} {{number}}.** {{children}}
 {%- endif %}

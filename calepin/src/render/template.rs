@@ -43,28 +43,26 @@ pub fn build_toc_html_from_body(body: &str, depth: u8, title: &str) -> String {
     build_toc_html_from_items(&items, title)
 }
 
-fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String {
+/// Build just the `<ul>...</ul>` nested list for the TOC (no nav wrapper).
+fn build_toc_list_html(items: &[(u8, &str, &str)]) -> String {
     // Only show TOC when there are at least 2 entries
     if items.len() < 2 { return String::new(); }
 
     let min_level = items.iter().map(|(l, _, _)| *l).min().unwrap_or(1);
-    let mut html = format!("<nav class=\"toc\" aria-label=\"{}\">\n<p class=\"toc-title\">{}</p>\n<ul>\n", title, title);
+    let mut html = String::from("<ul>\n");
     let mut current_level = min_level;
     let mut first = true;
 
     for (level, id, text) in items {
         if *level > current_level {
-            // Going deeper: nest inside the current <li> (which was left open)
             while current_level < *level {
                 html.push_str("\n<ul>\n");
                 current_level += 1;
             }
         } else {
-            // Close the previous <li> before siblings or shallower items
             if !first {
                 html.push_str("</li>\n");
             }
-            // Going shallower: close nested lists
             while current_level > *level {
                 html.push_str("</ul>\n</li>\n");
                 current_level -= 1;
@@ -74,7 +72,6 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
         first = false;
     }
 
-    // Close all remaining open tags
     if !first {
         html.push_str("</li>\n");
     }
@@ -83,8 +80,20 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
         current_level -= 1;
     }
 
-    html.push_str("</ul>\n</nav>");
+    html.push_str("</ul>");
     html
+}
+
+fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String {
+    let toc_list = build_toc_list_html(items);
+    if toc_list.is_empty() { return String::new(); }
+    let mut vars = HashMap::new();
+    vars.insert("base".to_string(), "html".to_string());
+    vars.insert("title".to_string(), title.to_string());
+    vars.insert("toc_list".to_string(), toc_list);
+    vars.insert("depth".to_string(), String::new());
+    let tpl = include_str!("../project/templates/common/toc.jinja");
+    apply_template(tpl, &vars)
 }
 
 use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_author_block};
@@ -292,11 +301,6 @@ pub fn build_template_vars_with_headings(
     );
     vars.insert("date".to_string(), meta.date.clone().unwrap_or_default());
 
-    // Title command (LaTeX preamble)
-    if let Some(ref title) = meta.title {
-        let rendered_title = crate::render::markdown::render_inline(title, ext);
-        vars.insert("title_cmd".to_string(), format!("\\title{{{}}}", rendered_title));
-    }
 
     // Subtitle (already available as {{subtitle}} via vars set above)
     if let Some(ref subtitle) = meta.subtitle {
@@ -306,10 +310,6 @@ pub fn build_template_vars_with_headings(
     // Author block
     vars.insert("author_block".to_string(), build_author_block(meta, ext));
 
-    // Date command (LaTeX preamble)
-    if let Some(ref date) = meta.date {
-        vars.insert("date_cmd".to_string(), format!("\\date{{{}}}", date));
-    }
 
     // Abstract block
     if let Some(ref abs) = meta.abstract_text {
@@ -321,19 +321,7 @@ pub fn build_template_vars_with_headings(
     // Keywords
     if !meta.keywords.is_empty() {
         let joined = meta.keywords.join(", ");
-        vars.insert("keywords".to_string(), joined.clone());
-
-        // HTML meta tag for keywords
-        if ext == "html" {
-            vars.insert(
-                "preamble".to_string(),
-                format!(
-                    "{}<meta name=\"keywords\" content=\"{}\">",
-                    vars.get("preamble").cloned().unwrap_or_default(),
-                    joined
-                ),
-            );
-        }
+        vars.insert("keywords".to_string(), joined);
     }
 
     // Appendix
@@ -341,7 +329,7 @@ pub fn build_template_vars_with_headings(
 
     // CSS (HTML only)
     if ext == "html" {
-        vars.insert("css".to_string(), format!("<style>\n{}\n</style>", load_default_css()));
+        vars.insert("css".to_string(), load_default_css());
         vars.insert("js".to_string(), String::new());
         let mut math_vars = HashMap::new();
         let defs = crate::project::get_defaults();
@@ -376,11 +364,18 @@ pub fn build_template_vars_with_headings(
     if toc_enabled {
         let toc_depth = if meta.toc_depth == 0 { toc_defs.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8 } else { meta.toc_depth };
         let toc_title = meta.toc_title.as_deref().unwrap_or_else(|| toc_defs.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents"));
-        let toc = match ext {
-            "html" => build_toc_html(headings, toc_depth, toc_title),
-            "latex" => format!("\\setcounter{{tocdepth}}{{{}}}\n\\tableofcontents", toc_depth),
-            "typst" => format!("#outline(depth: {})", toc_depth),
-            _ => String::new(),
+        let toc = if ext == "html" {
+            // HTML: build nested list in Rust, wrap with template
+            build_toc_html(headings, toc_depth, toc_title)
+        } else {
+            // LaTeX, Typst, others: use the toc template directly
+            let mut toc_vars = HashMap::new();
+            toc_vars.insert("base".to_string(), ext.to_string());
+            toc_vars.insert("title".to_string(), toc_title.to_string());
+            toc_vars.insert("depth".to_string(), toc_depth.to_string());
+            toc_vars.insert("toc_list".to_string(), String::new());
+            let tpl = include_str!("../project/templates/common/toc.jinja");
+            apply_template(tpl, &toc_vars)
         };
         vars.insert("toc".to_string(), toc);
     } else {

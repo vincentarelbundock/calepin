@@ -1,5 +1,5 @@
 {%- if base == "html" %}
-<div class="landscape"{{id_attr}}>
+<div class="landscape"{% if id %} id="{{id}}"{% endif %}>
 {{children}}
 </div>
 {%- elif base == "latex" %}

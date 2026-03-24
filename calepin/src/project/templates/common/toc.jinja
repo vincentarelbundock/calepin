@@ -1,0 +1,11 @@
+{%- if base == "html" %}
+<nav class="toc" aria-label="{{title}}">
+<p class="toc-title">{{title}}</p>
+{{toc_list}}
+</nav>
+{%- elif base == "latex" %}
+\setcounter{tocdepth}{ {{-depth-}} }
+\tableofcontents
+{%- elif base == "typst" %}
+#outline(depth: {{depth}})
+{%- endif %}

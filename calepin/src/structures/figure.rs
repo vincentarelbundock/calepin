@@ -50,17 +50,9 @@ pub fn render_div(
     if let Some(pos) = attrs.get("fig-pos") {
         vars.insert("fig_pos".to_string(), format!("[{}]", pos));
     }
-    vars.insert("caption_cmd".to_string(), if cap_rendered.is_empty() {
-        String::new()
-    } else {
-        format!("\\caption{{{}}}", &cap_rendered)
-    });
     vars.insert("caption".to_string(), cap_rendered);
-    vars.insert("label".to_string(), match format {
-        "latex" => format!("\\label{{{}}}", id),
-        "typst" => format!("<{}>", id),
-        _ => String::new(),
-    });
+    // label is the raw id -- template constructs format-specific syntax
+    vars.insert("label".to_string(), id.to_string());
 
     let tpl = resolve_template("figure_div")
         .unwrap_or_else(|| include_str!("../project/templates/common/figure_div.jinja").to_string());

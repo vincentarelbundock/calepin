@@ -1,0 +1,17 @@
+{%- if base == "html" %}
+<div class="code-listing" id="{{label}}">
+{%- if lst_cap %}
+<p class="listing-caption">Listing {{number}}: {{lst_cap}}</p>
+{%- else %}
+<p class="listing-caption">Listing {{number}}</p>
+{%- endif %}
+{{content}}
+</div>
+{%- elif base == "latex" %}
+{{content}}
+\label{ {{-label-}} }
+{%- elif base == "typst" %}
+{{content}} <{{label}}>
+{%- else %}
+{{content}}
+{%- endif %}

@@ -1,5 +1,5 @@
 {%- if base == "html" %}
-<div class="theorem-env proof"{{id_attr}}>
+<div class="theorem-env proof"{% if id %} id="{{id}}"{% endif %}>
 <p class="thm-heading"><em>Proof.</em></p>
 <div class="thm-body-italic">
 {{children}}
@@ -7,9 +7,9 @@
 <p class="qed">□</p>
 </div>
 {%- elif base == "latex" %}
-\par\medskip\noindent\textit{Proof.}{{label}} {{children}} \hfill$\square$\medskip
+\par\medskip\noindent\textit{Proof.}{% if id %}\label{ {{-id-}} }{% endif %} {{children}} \hfill$\square$\medskip
 {%- elif base == "typst" %}
-#block(width: 100%, above: 1em, below: 1em)[_Proof._ {{children}} #h(1fr) □]{{label}}
+#block(width: 100%, above: 1em, below: 1em)[_Proof._ {{children}} #h(1fr) □]{% if id %} <{{id}}>{% endif %}
 {%- else %}
 *Proof.* {{children}} □
 {%- endif %}

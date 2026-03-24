@@ -3,8 +3,8 @@
 // - FigureFilter::apply()  — Dispatch to build_figure_vars for Figure elements.
 // - build_figure_vars()    — Populate all figure template vars (image tag, dimensions,
 //                            alignment, caption location, link wrapping).
-// - render_image()         — Format-specific image tag (base64 HTML, \includegraphics,
-//                            image(), ![alt](path)).
+// - build_figure_vars()    — Populate figure template vars (path, dimensions,
+//                            alignment, caption, link) for template construction.
 // - resolve_path()         — Find preferred image format variant for the output format.
 // - format_width/height/align() — Dimension and alignment formatting per format.
 
@@ -59,8 +59,21 @@ fn build_figure_vars(
     let display_path = resolved_path.to_string_lossy().to_string();
     vars.insert("path".to_string(), display_path.clone());
 
-    let image_tag = render_image(&resolved_path, alt, attrs, format);
-    vars.insert("image".to_string(), image_tag);
+    // Image components for template
+    let embed = crate::project::get_defaults().embed_resources.unwrap_or(true);
+    if format == "html" && embed {
+        if let Ok((mime, data)) = crate::util::base64_encode_image(&resolved_path) {
+            vars.insert("src".to_string(), format!("data:{};base64,{}", mime, data));
+        } else {
+            vars.insert("src".to_string(), crate::util::escape_html(&display_path));
+        }
+    } else if format == "html" {
+        vars.insert("src".to_string(), crate::util::escape_html(&display_path));
+    } else {
+        // For LaTeX/Typst, use relative figure path
+        let rel = relative_figure_path(&resolved_path);
+        vars.insert("src".to_string(), rel);
+    }
 
     vars.insert("width_attr".to_string(), format_width(attrs, format));
     vars.insert("height_attr".to_string(), format_height(attrs));
@@ -83,27 +96,13 @@ fn build_figure_vars(
         None => String::new(),
     };
     vars.insert("short_caption".to_string(), short_caption.clone());
-    let caption_text = caption.unwrap_or("");
-    vars.insert("caption_cmd".to_string(),
-        if caption_text.is_empty() {
-            String::new()
-        } else {
-            format!("\\caption{}{{{}}}", short_caption, caption_text)
-        }
-    );
 
     if let Some(loc) = attrs.cap_location.as_deref().or(default_cap_location) {
         vars.insert("cap_location".to_string(), loc.to_string());
     }
 
     if let Some(ref link) = attrs.link {
-        let img = vars.get("image").cloned().unwrap_or_default();
-        match format {
-            "html" => vars.insert("image".to_string(), format!("<a href=\"{}\">{}</a>", crate::util::escape_html(link), img)),
-            "latex" => vars.insert("image".to_string(), format!("\\href{{{}}}{{{}}}", link, img)),
-            "typst" => vars.insert("image".to_string(), format!("#link(\"{}\")[{}]", link, img)),
-            _ => vars.insert("image".to_string(), format!("[{}]({})", img, link)),
-        };
+        vars.insert("link".to_string(), link.clone());
     }
 }
 
@@ -119,64 +118,6 @@ fn relative_figure_path(path: &Path) -> String {
         s[idx..].to_string()
     } else {
         s
-    }
-}
-
-fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, format: &str) -> String {
-    let safe_alt = crate::util::escape_html(alt);
-    match format {
-        "html" => {
-            let mut html_attrs = String::new();
-            let mut styles: Vec<String> = Vec::new();
-            if let Some(ref w) = attrs.width {
-                if w.parse::<u32>().is_ok() {
-                    html_attrs.push_str(&format!(" width=\"{}\"", crate::util::escape_html(w)));
-                } else {
-                    let dim = if w.parse::<f64>().is_ok() { format!("{}px", w) } else { w.clone() };
-                    styles.push(format!("width:{}", dim));
-                    styles.push(format!("max-width:{}", dim));
-                }
-            }
-            if let Some(ref h) = attrs.height {
-                styles.push(format!("height:{}", h));
-            }
-            if !styles.is_empty() {
-                html_attrs.push_str(&format!(" style=\"{}\"", styles.join(";")));
-            }
-            let embed = crate::project::get_defaults().embed_resources.unwrap_or(true);
-            let src = if embed {
-                crate::util::base64_encode_image(path)
-                    .map(|(mime, data)| format!("data:{};base64,{}", mime, data))
-                    .ok()
-            } else {
-                None
-            };
-            let src = src.unwrap_or_else(|| crate::util::escape_html(&path.display().to_string()));
-            format!("<img src=\"{}\" alt=\"{}\"{}/>", src, safe_alt, html_attrs)
-        }
-        "latex" => {
-            let width_opt = if attrs.width.is_some() {
-                format_width(attrs, format)
-            } else {
-                "width=0.70\\textwidth".to_string()
-            };
-            let rel_path = relative_figure_path(path);
-            format!("\\includegraphics[{}]{{{}}}", width_opt, rel_path)
-        }
-        "typst" => {
-            let rel_path = relative_figure_path(path);
-            let mut args = vec![format!("\"{}\"", rel_path)];
-            args.push(format!("width: {}", match &attrs.width {
-                Some(w) => typst_length(w),
-                None => "70%".to_string(),
-            }));
-            if let Some(ref h) = attrs.height {
-                args.push(format!("height: {}", typst_length(h)));
-            }
-            format!("image({})", args.join(", "))
-        }
-        "markdown" => format!("![{}]({})", alt, path.display()),
-        _ => String::new(),
     }
 }
 
@@ -217,18 +158,6 @@ pub fn format_align(align: &str, format: &str) -> String {
             _ => "center".to_string(),
         },
         _ => String::new(),
-    }
-}
-
-pub fn typst_length(s: &str) -> String {
-    if s.ends_with('%') || s.ends_with("pt") || s.ends_with("in")
-        || s.ends_with("cm") || s.ends_with("mm") || s.ends_with("em")
-    {
-        s.to_string()
-    } else if s.parse::<f64>().is_ok() {
-        format!("{}pt", s)
-    } else {
-        s.to_string()
     }
 }
 
@@ -277,15 +206,3 @@ pub fn resolve_path(path: &Path, format: &str) -> PathBuf {
     path.to_path_buf()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_typst_length() {
-        assert_eq!(typst_length("80%"), "80%");
-        assert_eq!(typst_length("300"), "300pt");
-        assert_eq!(typst_length("4in"), "4in");
-        assert_eq!(typst_length("2cm"), "2cm");
-    }
-}
