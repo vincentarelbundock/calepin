@@ -62,16 +62,16 @@ pub fn evaluate(
     for block in blocks {
         match block {
             Block::Text(text) => {
-                let tera_result = crate::jinja::process_body(
+                let jinja_result = crate::jinja::process_body(
                     &text.content, output_ext, metadata, registry,
                 );
                 // Only hash inline code expressions into the upstream digest,
                 // not the full text. This way prose edits don't invalidate chunk caches.
-                for (_start, _end, ic) in crate::parse::blocks::collect_inline_code(&tera_result.text) {
+                for (_start, _end, ic) in crate::parse::blocks::collect_inline_code(&jinja_result.text) {
                     cache.advance_digest_inline(&format!("{}:{}", ic.engine, ic.expr));
                 }
-                let processed = inline::evaluate_inline(&tera_result.text, ctx)?;
-                sc_fragments.extend(tera_result.sc_fragments);
+                let processed = inline::evaluate_inline(&jinja_result.text, ctx)?;
+                sc_fragments.extend(jinja_result.sc_fragments);
                 elements.push(Element::Text { content: processed });
             }
             Block::Code(chunk) => {
@@ -100,20 +100,20 @@ pub fn evaluate(
                 }
 
                 // If #| jinja: true, process chunk source through Jinja before execution
-                let tera_chunk;
+                let jinja_chunk;
                 let chunk_ref = if merged_chunk.options.get_bool("jinja", false)
                     || merged_chunk.options.get_bool("tera", false)
                 {
                     let joined = merged_chunk.source.join("\n");
-                    let tera_result = crate::jinja::process_body(
+                    let jinja_result = crate::jinja::process_body(
                         &joined, output_ext, metadata, registry,
                     );
-                    sc_fragments.extend(tera_result.sc_fragments);
-                    tera_chunk = CodeChunk {
-                        source: tera_result.text.lines().map(|l| l.to_string()).collect(),
+                    sc_fragments.extend(jinja_result.sc_fragments);
+                    jinja_chunk = CodeChunk {
+                        source: jinja_result.text.lines().map(|l| l.to_string()).collect(),
                         ..merged_chunk.clone()
                     };
-                    &tera_chunk
+                    &jinja_chunk
                 } else {
                     &merged_chunk
                 };

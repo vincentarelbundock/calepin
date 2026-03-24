@@ -69,36 +69,37 @@ pub(crate) fn protect_code_blocks(text: &str) -> (String, Vec<String>) {
 
 /// Replace inline code spans (`` `...` ``) with placeholders.
 /// Only protects spans that contain Jinja-like syntax.
+/// Works on bytes directly since backticks are ASCII.
 pub(crate) fn protect_inline_code(text: &str, blocks: &mut Vec<String>) -> String {
-    let mut result = String::new();
-    let chars: Vec<char> = text.chars().collect();
-    let len = chars.len();
+    let bytes = text.as_bytes();
+    let len = bytes.len();
+    let mut result = String::with_capacity(len);
     let mut i = 0;
 
     while i < len {
-        if chars[i] == '`' {
+        if bytes[i] == b'`' {
             let start = i;
             let mut tick_count = 0;
-            while i < len && chars[i] == '`' {
+            while i < len && bytes[i] == b'`' {
                 tick_count += 1;
                 i += 1;
             }
             let mut found_end = false;
-            while i <= len - tick_count {
-                if chars[i] == '`' {
+            while i + tick_count <= len {
+                if bytes[i] == b'`' {
                     let mut closing = 0;
-                    while i < len && chars[i] == '`' {
+                    while i < len && bytes[i] == b'`' {
                         closing += 1;
                         i += 1;
                     }
                     if closing == tick_count {
-                        let full: String = chars[start..i].iter().collect();
+                        let full = &text[start..i];
                         if full.contains("{{") || full.contains("{%") || full.contains("{#") {
                             let idx = blocks.len();
-                            blocks.push(full);
+                            blocks.push(full.to_string());
                             result.push_str(&format!("{}{}{}", CODE_PLACEHOLDER_PREFIX, idx, CODE_PLACEHOLDER_SUFFIX));
                         } else {
-                            result.push_str(&full);
+                            result.push_str(full);
                         }
                         found_end = true;
                         break;
@@ -108,12 +109,15 @@ pub(crate) fn protect_inline_code(text: &str, blocks: &mut Vec<String>) -> Strin
                 }
             }
             if !found_end {
-                let unmatched: String = chars[start..i].iter().collect();
-                result.push_str(&unmatched);
+                result.push_str(&text[start..i]);
             }
         } else {
-            result.push(chars[i]);
-            i += 1;
+            // Advance past non-backtick bytes (batch for efficiency)
+            let start = i;
+            while i < len && bytes[i] != b'`' {
+                i += 1;
+            }
+            result.push_str(&text[start..i]);
         }
     }
     result

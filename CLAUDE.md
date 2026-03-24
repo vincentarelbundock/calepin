@@ -87,7 +87,7 @@ The engines module owns all code evaluation — block-level, inline-level, the e
 - `plugin_manifest.rs` — Plugin manifest (`plugin.yml`) parsing: `PluginManifest`, `FilterMatch`, `FilterSpec`, etc.
 - `registry.rs` — Plugin registry: `PluginRegistry` loads user + built-in plugins, dispatches filters/shortcodes/postprocessors, resolves templates. `StructuralHandler` trait for built-in structural plugins.
 - `cli.rs` — CLI argument parsing (clap) + `cwarn!` macro + `is_collection_config()` + `plugin init`/`plugin list` subcommands
-- `jinja_engine.rs` — Jinja body processing: `process_body()` replaces shortcodes with Jinja functions, code block protection, custom function implementations (pagebreak, video, brand, kbd, lipsum, placeholder), plugin shortcode bridge
+- `jinja_engine.rs` — Jinja body processing: `process_body()` replaces shortcodes with Jinja functions, code block protection, custom function implementations (pagebreak, video, kbd, lipsum, placeholder), plugin shortcode bridge
 - `util.rs` — `slugify()`, `escape_html()`, `resolve_path()`, `run_json_process()`
 
 ### `calepin/src/filters/` — Transforms
@@ -248,7 +248,6 @@ Built-in Jinja functions (replace old `{{< shortcode >}}` syntax):
 
 - `{{ pagebreak() }}` — format-specific page break
 - `{{ video(url="...", width="...", height="...", title="...") }}` — video embed
-- `{{ brand(type="color", name="primary") }}` — brand assets
 - `{{ kbd(keys=["Ctrl", "C"]) }}` — keyboard shortcuts
 - `{{ lipsum(paragraphs=2) }}` — placeholder lorem ipsum text (also `sentences`, `words`)
 - `{{ placeholder(width=600, height=400) }}` — placeholder image (also `text`, `color`)

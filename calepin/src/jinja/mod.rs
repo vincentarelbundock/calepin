@@ -37,7 +37,7 @@ use crate::types::Metadata;
 use protection::{protect_code_blocks, protect_inline_code, restore_code_blocks};
 
 /// Result of Jinja body processing.
-pub struct BodyTeraResult {
+pub struct BodyResult {
     pub text: String,
     pub sc_fragments: Vec<String>,
 }
@@ -49,7 +49,7 @@ pub fn process_body(
     format: &str,
     metadata: &Metadata,
     registry: &PluginRegistry,
-) -> BodyTeraResult {
+) -> BodyResult {
     let fragments = Arc::new(Mutex::new(Vec::new()));
 
     // 1. Protect fenced code blocks and inline code from Jinja
@@ -65,7 +65,7 @@ pub fn process_body(
 
     // Quick exit: if no Jinja syntax found, skip processing
     if !protected.contains("{{") && !protected.contains("{%") {
-        return BodyTeraResult {
+        return BodyResult {
             text: text.to_string(),
             sc_fragments: Vec::new(),
         };
@@ -254,11 +254,15 @@ pub fn process_body(
         let fmt = format.to_string();
         let frags = Arc::clone(&fragments);
         let sc_name = name.clone();
-        // Safety: registry_addr is valid for the duration of process_body()
-        // where the registry reference is valid. Cast to usize for Send+Sync.
+        // SAFETY: The registry reference is valid for the entire duration of
+        // process_body(). The closures registered here only execute during
+        // env.render_str() below (line ~306), which is synchronous and single-
+        // threaded. The usize cast bypasses Send+Sync bounds that MiniJinja
+        // requires but that are irrelevant here (no cross-thread sharing).
+        // If process_body ever becomes async or multi-threaded, this must
+        // be replaced with an Arc<Mutex<PluginRegistry>> or similar.
         let registry_addr = registry as *const PluginRegistry as usize;
         env.add_function(name.clone(), move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
-            // Safety: registry_addr is valid for the duration of process_body()
             let registry = unsafe { &*(registry_addr as *const PluginRegistry) };
 
             let plugin = match registry.plugin_by_index(plugin_idx) {
@@ -290,7 +294,6 @@ pub fn process_body(
     // 3. Build context with metadata, variables, and environment
     let meta_val = build_meta_map(metadata);
     let var_val = build_variables_map(metadata);
-    let env_val: HashMap<String, String> = std::env::vars().collect();
 
     let context = minijinja::context! {
         base => format,     // deprecated alias for engine
@@ -298,7 +301,7 @@ pub fn process_body(
         target => format,   // target name (defaults to engine when no target specified)
         meta => meta_val,
         var => var_val,
-        env => env_val,
+        env => Value::from_object(LazyEnv),
     };
 
     // 4. Render through MiniJinja (on error, fall back to protected text so that
@@ -320,7 +323,27 @@ pub fn process_body(
         Err(arc) => arc.lock().unwrap().clone(),
     };
 
-    BodyTeraResult { text, sc_fragments }
+    BodyResult { text, sc_fragments }
+}
+
+// ---------------------------------------------------------------------------
+// Lazy environment variable access
+// ---------------------------------------------------------------------------
+
+/// MiniJinja object that resolves `{{ env.VAR }}` on demand via std::env::var().
+/// Avoids collecting the entire process environment on every process_body() call.
+#[derive(Debug)]
+struct LazyEnv;
+
+impl minijinja::value::Object for LazyEnv {
+    fn get_value(self: &std::sync::Arc<Self>, key: &Value) -> Option<Value> {
+        let key_str = key.as_str()?;
+        std::env::var(key_str).ok().map(Value::from)
+    }
+
+    fn repr(self: &std::sync::Arc<Self>) -> minijinja::value::ObjectRepr {
+        minijinja::value::ObjectRepr::Map
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -352,7 +375,7 @@ fn build_meta_map(meta: &Metadata) -> serde_json::Value {
         map.insert("subtitle".into(), serde_json::Value::String(s.clone()));
     }
     if let Some(ref authors) = meta.author {
-        map.insert("author".into(), serde_json::json!(authors.join(", ")));
+        map.insert("author".into(), serde_json::json!(authors));
     }
     if let Some(ref d) = meta.date {
         map.insert("date".into(), serde_json::Value::String(d.clone()));
@@ -361,7 +384,7 @@ fn build_meta_map(meta: &Metadata) -> serde_json::Value {
         map.insert("abstract".into(), serde_json::Value::String(abs.clone()));
     }
     if !meta.keywords.is_empty() {
-        map.insert("keywords".into(), serde_json::Value::String(meta.keywords.join(", ")));
+        map.insert("keywords".into(), serde_json::json!(meta.keywords));
     }
     serde_json::Value::Object(map)
 }
