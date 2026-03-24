@@ -110,7 +110,7 @@ impl FormatEmitter for TypstEmitter {
     fn link_close(&self) -> &str { "]" }
 
     fn image(&self, url: &str, _alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::filters::figure::resolve_path(
+        let resolved = crate::filters::figure::select_image_variant(
             std::path::Path::new(url), "typst",
         );
         let params = attrs.to_typst_params();

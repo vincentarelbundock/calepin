@@ -243,7 +243,7 @@ enum RebuildState {
 // ---------------------------------------------------------------------------
 
 fn render_file_html(input: &Path, overrides: &[String]) -> Result<String> {
-    let (_path, html, _renderer) = crate::render_file(input, None, Some("html"), overrides, None, None, None, None)?;
+    let (_path, html, _renderer) = crate::pipeline::render_file(input, None, Some("html"), overrides, None, None, None, None)?;
     Ok(html)
 }
 
@@ -251,13 +251,13 @@ fn render_file_html(input: &Path, overrides: &[String]) -> Result<String> {
 /// Returns the final output path (PDF if compiled, rendered file otherwise).
 fn render_and_compile(input: &Path, target_name: &str, overrides: &[String]) -> Result<std::path::PathBuf> {
     let target = crate::project::resolve_target(target_name, None)?;
-    let (output_path, content, renderer) = crate::render_file(
+    let (output_path, content, renderer) = crate::pipeline::render_file(
         input, None, Some(target_name), overrides, Some(&target), None, None, None,
     )?;
     renderer.write_output(&content, &output_path)?;
 
     if let Some(ref compile_cfg) = target.compile {
-        crate::run_compile_step(&output_path, compile_cfg, true)?;
+        crate::commands::render::run_compile_step(&output_path, compile_cfg, true)?;
         let ext = compile_cfg.extension.as_deref().unwrap_or("pdf");
         Ok(output_path.with_extension(ext))
     } else {

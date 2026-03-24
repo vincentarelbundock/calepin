@@ -139,7 +139,7 @@ impl FormatEmitter for HtmlEmitter {
     fn link_close(&self) -> &str { "</a>" }
 
     fn image(&self, url: &str, alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::filters::figure::resolve_path(
+        let resolved = crate::filters::figure::select_image_variant(
             std::path::Path::new(url), "html",
         );
         let embed = crate::project::get_defaults().embed_resources.unwrap_or(true);

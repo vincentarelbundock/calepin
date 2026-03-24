@@ -62,7 +62,7 @@ pub fn evaluate(
     for block in blocks {
         match block {
             Block::Text(text) => {
-                let tera_result = crate::jinja_engine::process_body(
+                let tera_result = crate::jinja::process_body(
                     &text.content, output_ext, metadata, registry,
                 );
                 // Only hash inline code expressions into the upstream digest,
@@ -105,7 +105,7 @@ pub fn evaluate(
                     || merged_chunk.options.get_bool("tera", false)
                 {
                     let joined = merged_chunk.source.join("\n");
-                    let tera_result = crate::jinja_engine::process_body(
+                    let tera_result = crate::jinja::process_body(
                         &joined, output_ext, metadata, registry,
                     );
                     sc_fragments.extend(tera_result.sc_fragments);

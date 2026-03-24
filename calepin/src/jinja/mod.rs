@@ -1,21 +1,28 @@
 // MiniJinja-based body processing.
 //
-// - expand_includes()      — Pre-parse `{% include "file" %}` expansion.
-// - process_body()         — Main entry: Jinja-render a text block (code-block-safe).
-// - protect_code_blocks()  — Extract fenced code blocks before Jinja evaluation.
-// - restore_code_blocks()  — Re-insert protected code after Jinja evaluation.
+// - expand_includes()      -- Pre-parse `{% include "file" %}` expansion.
+// - process_body()         -- Main entry: Jinja-render a text block (code-block-safe).
+// - protect_code_blocks()  -- Extract fenced code blocks before Jinja evaluation.
+// - restore_code_blocks()  -- Re-insert protected code after Jinja evaluation.
 //
 // Built-in Jinja functions:
 //   pagebreak(), video(url, ...), kbd(keys),
 //   lipsum(paragraphs|sentences|words), placeholder(width, height, text, color)
 //
 // Context variables:
-//   meta.title, meta.author, meta.date, ...  — from Metadata
-//   var.key.subkey                            — from front matter `variables:` block
-//   env.HOME, env.USER, ...                   — system environment variables
-//   base, target                              — current output format
-//   snip.snippet_name                          — lazy snippet inclusion from snippets/
-//
+//   meta.title, meta.author, meta.date, ...  -- from Metadata
+//   var.key.subkey                            -- from front matter `variables:` block
+//   env.HOME, env.USER, ...                   -- system environment variables
+//   base, target                              -- current output format
+//   snip.snippet_name                          -- lazy snippet inclusion from snippets/
+
+mod includes;
+pub mod lipsum;
+mod protection;
+
+pub use includes::expand_includes;
+pub(crate) use lipsum::{lipsum_words, lipsum_sentence, lipsum_paragraphs};
+
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
@@ -27,104 +34,7 @@ use crate::registry::PluginRegistry;
 use crate::render::markers;
 use crate::types::Metadata;
 
-
-
-
-// ---------------------------------------------------------------------------
-// Pre-parse include expansion
-// ---------------------------------------------------------------------------
-
-/// Expand `{% include "file" %}` directives before block parsing.
-/// This must run on the raw body text so that included content gets
-/// parsed as blocks (code chunks, divs, etc.) rather than inline text.
-/// Paths are resolved relative to `project_root`.
-#[inline(never)]
-pub fn expand_includes(text: &str, project_root: &std::path::Path, format: &str) -> String {
-    // {% include "file" %} or {% include 'file' %}
-    static INCLUDE_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r#"\{%[-\s]\s*include\s+["'](.+?)["']\s*[-\s]?%\}"#).unwrap()
-    });
-    // {% raw %} ... {% endraw %} blocks (protect from include expansion)
-    static RAW_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"\{%-?\s*raw\s*-?%\}[\s\S]*?\{%-?\s*endraw\s*-?%\}").unwrap()
-    });
-
-    // Protect fenced code blocks from include expansion
-    let (text, code_blocks) = protect_code_blocks(text);
-
-    // Protect {% raw %} blocks from include expansion
-    let mut raw_blocks = Vec::new();
-    let text = RAW_RE.replace_all(&text, |caps: &regex::Captures| {
-        let idx = raw_blocks.len();
-        raw_blocks.push(caps[0].to_string());
-        format!("\u{FDD2}RAW{}\u{FDD3}", idx)
-    }).to_string();
-
-    // Expand includes (resolve relative to project root)
-    let text = INCLUDE_RE.replace_all(&text, |caps: &regex::Captures| {
-        let path = caps[1].trim();
-        let resolved = project_root.join(path);
-        include_file(&resolved.to_string_lossy())
-    }).to_string();
-
-    // Expand {{ snip.name }} references (pre-parse, so div syntax works)
-    static SNIP_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"\{\{\s*snip\.(\w+)\s*\}\}").unwrap()
-    });
-    let text = SNIP_RE.replace_all(&text, |caps: &regex::Captures| {
-        let name = &caps[1];
-        match crate::paths::resolve_snippet(name, format) {
-            Some(path) => match std::fs::read_to_string(&path) {
-                Ok(content) => content,
-                Err(e) => {
-                    cwarn!("snippet '{}': {}", name, e);
-                    String::new()
-                }
-            },
-            None => {
-                cwarn!("snippet '{}' not found", name);
-                String::new()
-            }
-        }
-    }).to_string();
-
-    // Restore {% raw %} blocks
-    let mut result = text;
-    for (idx, block) in raw_blocks.iter().enumerate() {
-        result = result.replace(&format!("\u{FDD2}RAW{}\u{FDD3}", idx), block);
-    }
-
-    // Restore fenced code blocks
-    restore_code_blocks(&result, &code_blocks)
-}
-
-/// Read and include a file, stripping YAML front matter if present.
-fn include_file(path: &str) -> String {
-    if path.is_empty() {
-        // Return error marker that will surface later
-        return "\n\n**Error: `{% include %}` requires a file path**\n\n".to_string();
-    }
-    match std::fs::read_to_string(path) {
-        Ok(content) => {
-            // Strip YAML front matter if present
-            if content.starts_with("---") {
-                if let Some(end) = content[3..].find("\n---") {
-                    let after = end + 3 + 4; // skip past closing ---
-                    return content[after..].to_string();
-                }
-            }
-            content
-        }
-        Err(e) => {
-            // Surface as visible error in the rendered output
-            format!("\n\n**Error: `{{%% include \"{}\" %}}`: {}**\n\n", path, e)
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Jinja body processing
-// ---------------------------------------------------------------------------
+use protection::{protect_code_blocks, protect_inline_code, restore_code_blocks};
 
 /// Result of Jinja body processing.
 pub struct BodyTeraResult {
@@ -276,16 +186,16 @@ pub fn process_body(
     env.add_function("lipsum", |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
         if let Ok(n) = kwargs.get::<u64>("words") {
             kwargs.assert_all_used()?;
-            return Ok(Value::from(lipsum_words(n as usize)));
+            return Ok(Value::from(lipsum::lipsum_words(n as usize)));
         }
         if let Ok(n) = kwargs.get::<u64>("sentences") {
             kwargs.assert_all_used()?;
-            return Ok(Value::from(lipsum_sentences(n as usize)));
+            return Ok(Value::from(lipsum::lipsum_sentences(n as usize)));
         }
         let default_paragraphs = crate::project::get_defaults().lipsum.as_ref().and_then(|l| l.paragraphs).unwrap_or(1);
         let n: u64 = kwargs.get("paragraphs").unwrap_or(default_paragraphs);
         kwargs.assert_all_used()?;
-        Ok(Value::from(lipsum_paragraphs(n as usize)))
+        Ok(Value::from(lipsum::lipsum_paragraphs(n as usize)))
     });
 
     {
@@ -301,7 +211,7 @@ pub fn process_body(
             let color: &str = kwargs.get("color").unwrap_or(&default_color);
             let text: Option<&str> = kwargs.get("text").ok();
             let text = text.map(|s| s.to_string())
-                .unwrap_or_else(|| format!("{}×{}", width, height));
+                .unwrap_or_else(|| format!("{}\u{00d7}{}", width, height));
             kwargs.assert_all_used()?;
 
             let output = match fmt.as_str() {
@@ -328,7 +238,7 @@ pub fn process_body(
                         width, height, text
                     )
                 }
-                _ => format!("[{} ({}×{})]", text, width, height),
+                _ => format!("[{} ({}x{})]", text, width, height),
             };
             Ok(Value::from_safe_string(wrap_if_needed(&output, &fmt, &frags)))
         });
@@ -414,154 +324,6 @@ pub fn process_body(
 }
 
 // ---------------------------------------------------------------------------
-// Code block protection
-// ---------------------------------------------------------------------------
-
-/// Placeholder prefix for protected code blocks (uses Unicode noncharacters).
-const CODE_PLACEHOLDER_PREFIX: &str = "\u{FDD0}CODE";
-const CODE_PLACEHOLDER_SUFFIX: &str = "\u{FDD1}";
-
-/// Extract fenced code blocks and inline code spans, replacing them with
-/// placeholders that Jinja won't try to evaluate.
-fn protect_code_blocks(text: &str) -> (String, Vec<String>) {
-    let mut blocks: Vec<String> = Vec::new();
-    let mut result = String::new();
-
-    // First pass: protect fenced code blocks
-    let mut in_fence = false;
-    let mut fence_marker = String::new();
-    let mut fence_content = String::new();
-
-    for line in text.split('\n') {
-        let trimmed = line.trim_start();
-        if !in_fence {
-            // Check for opening fence (3+ backticks or tildes)
-            if let Some(marker) = detect_fence_open(trimmed) {
-                in_fence = true;
-                fence_marker = marker;
-                fence_content = line.to_string();
-                fence_content.push('\n');
-                continue;
-            }
-            result.push_str(line);
-            result.push('\n');
-        } else {
-            fence_content.push_str(line);
-            fence_content.push('\n');
-            // Check for closing fence (same marker)
-            if trimmed.starts_with(&fence_marker) && trimmed.trim_end().len() <= fence_marker.len() + 1 {
-                // Fence closed — store and emit placeholder
-                let idx = blocks.len();
-                // Remove trailing newline from content
-                if fence_content.ends_with('\n') {
-                    fence_content.pop();
-                }
-                blocks.push(fence_content.clone());
-                result.push_str(&format!("{}{}{}", CODE_PLACEHOLDER_PREFIX, idx, CODE_PLACEHOLDER_SUFFIX));
-                result.push('\n');
-                fence_content.clear();
-                in_fence = false;
-            }
-        }
-    }
-    // Handle unclosed fence (shouldn't happen in valid qmd)
-    if in_fence {
-        result.push_str(&fence_content);
-    }
-
-    // Remove trailing newline added by split/join
-    if result.ends_with('\n') && !text.ends_with('\n') {
-        result.pop();
-    }
-
-    (result, blocks)
-}
-
-/// Replace inline code spans (`` `...` ``) with placeholders.
-/// Only protects spans that contain Jinja-like syntax.
-fn protect_inline_code(text: &str, blocks: &mut Vec<String>) -> String {
-    let mut result = String::new();
-    let chars: Vec<char> = text.chars().collect();
-    let len = chars.len();
-    let mut i = 0;
-
-    while i < len {
-        if chars[i] == '`' {
-            let start = i;
-            let mut tick_count = 0;
-            while i < len && chars[i] == '`' {
-                tick_count += 1;
-                i += 1;
-            }
-            let mut found_end = false;
-            while i <= len - tick_count {
-                if chars[i] == '`' {
-                    let mut closing = 0;
-                    while i < len && chars[i] == '`' {
-                        closing += 1;
-                        i += 1;
-                    }
-                    if closing == tick_count {
-                        let full: String = chars[start..i].iter().collect();
-                        if full.contains("{{") || full.contains("{%") || full.contains("{#") {
-                            let idx = blocks.len();
-                            blocks.push(full);
-                            result.push_str(&format!("{}{}{}", CODE_PLACEHOLDER_PREFIX, idx, CODE_PLACEHOLDER_SUFFIX));
-                        } else {
-                            result.push_str(&full);
-                        }
-                        found_end = true;
-                        break;
-                    }
-                } else {
-                    i += 1;
-                }
-            }
-            if !found_end {
-                let unmatched: String = chars[start..i].iter().collect();
-                result.push_str(&unmatched);
-            }
-        } else {
-            result.push(chars[i]);
-            i += 1;
-        }
-    }
-    result
-}
-
-/// Detect a fenced code block opening (3+ backticks or tildes).
-fn detect_fence_open(trimmed: &str) -> Option<String> {
-    let ch = trimmed.chars().next()?;
-    if ch != '`' && ch != '~' {
-        return None;
-    }
-    let count = trimmed.chars().take_while(|&c| c == ch).count();
-    if count >= 3 {
-        Some(std::iter::repeat(ch).take(count).collect())
-    } else {
-        None
-    }
-}
-
-/// Restore protected code blocks from placeholders.
-fn restore_code_blocks(text: &str, blocks: &[String]) -> String {
-    if blocks.is_empty() || !text.contains(CODE_PLACEHOLDER_PREFIX) {
-        return text.to_string();
-    }
-    static RE_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(&format!(
-            "{}(\\d+){}",
-            regex::escape(CODE_PLACEHOLDER_PREFIX),
-            regex::escape(CODE_PLACEHOLDER_SUFFIX)
-        )).unwrap()
-    });
-    RE_PLACEHOLDER.replace_all(text, |caps: &regex::Captures| {
-        let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
-        blocks.get(idx).cloned().unwrap_or_default()
-    }).to_string()
-}
-
-// ---------------------------------------------------------------------------
 // Marker wrapping for format-specific output
 // ---------------------------------------------------------------------------
 
@@ -577,7 +339,7 @@ fn wrap_if_needed(output: &str, format: &str, fragments: &Arc<Mutex<Vec<String>>
 }
 
 // ---------------------------------------------------------------------------
-// Metadata → Jinja context helpers
+// Metadata -> Jinja context helpers
 // ---------------------------------------------------------------------------
 
 /// Build a serde_json::Value map from Metadata for the `meta` context variable.
@@ -611,82 +373,6 @@ fn build_variables_map(metadata: &Metadata) -> serde_json::Value {
         map.insert(key.clone(), crate::value::to_json(value));
     }
     serde_json::Value::Object(map)
-}
-
-// ---------------------------------------------------------------------------
-// Lorem ipsum
-// ---------------------------------------------------------------------------
-
-const LIPSUM_WORDS: &[&str] = &[
-    "lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing",
-    "elit", "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore",
-    "et", "dolore", "magna", "aliqua", "enim", "ad", "minim", "veniam",
-    "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
-    "aliquip", "ex", "ea", "commodo", "consequat", "duis", "aute", "irure",
-    "in", "reprehenderit", "voluptate", "velit", "esse", "cillum",
-    "fugiat", "nulla", "pariatur", "excepteur", "sint", "occaecat",
-    "cupidatat", "non", "proident", "sunt", "culpa", "qui", "officia",
-    "deserunt", "mollit", "anim", "id", "est", "laborum", "at", "vero",
-    "eos", "accusamus", "iusto", "odio", "dignissimos", "ducimus",
-    "blanditiis", "praesentium", "voluptatum", "deleniti", "atque",
-    "corrupti", "quos", "dolores", "quas", "molestias", "excepturi",
-    "obcaecati", "cupiditate", "provident", "similique", "optio",
-    "cumque", "nihil", "impedit", "quo", "minus", "quod", "maxime",
-    "placeat", "facere", "possimus", "omnis", "voluptas", "assumenda",
-    "repellendus", "temporibus", "autem", "quibusdam", "officiis",
-    "debitis", "aut", "rerum", "necessitatibus", "saepe", "eveniet",
-    "voluptates", "repudiandae", "recusandae", "itaque", "earum",
-    "hic", "tenetur", "sapiente", "delectus", "reiciendis", "voluptatibus",
-    "maiores", "alias", "perferendis", "doloribus", "asperiores",
-    "repellat",
-];
-
-pub(crate) fn lipsum_words(n: usize) -> String {
-    let mut out = Vec::with_capacity(n);
-    for i in 0..n {
-        out.push(LIPSUM_WORDS[i % LIPSUM_WORDS.len()]);
-    }
-    let mut s = out.join(" ");
-    if let Some(first) = s.get_mut(..1) {
-        first.make_ascii_uppercase();
-    }
-    s
-}
-
-pub(crate) fn lipsum_sentence(word_count: usize, offset: usize) -> String {
-    let mut out = Vec::with_capacity(word_count);
-    for i in 0..word_count {
-        out.push(LIPSUM_WORDS[(i + offset) % LIPSUM_WORDS.len()]);
-    }
-    let mut s = out.join(" ");
-    if let Some(first) = s.get_mut(..1) {
-        first.make_ascii_uppercase();
-    }
-    s.push('.');
-    s
-}
-
-fn lipsum_sentences(n: usize) -> String {
-    let mut sentences = Vec::with_capacity(n);
-    for i in 0..n {
-        let len = 8 + (i * 3) % 8;
-        sentences.push(lipsum_sentence(len, i * 7));
-    }
-    sentences.join(" ")
-}
-
-pub(crate) fn lipsum_paragraphs(n: usize) -> String {
-    let mut paragraphs = Vec::with_capacity(n);
-    for i in 0..n {
-        let count = 3 + (i * 2) % 3;
-        let mut sentences = Vec::with_capacity(count);
-        for j in 0..count {
-            let len = 8 + ((i * 5 + j * 3) % 8);
-            sentences.push(lipsum_sentence(len, i * 17 + j * 11));
-        }
-        paragraphs.push(sentences.join(" "));
-    }
-    paragraphs.join("\n\n")
 }
 
 // ---------------------------------------------------------------------------

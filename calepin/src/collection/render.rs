@@ -154,7 +154,7 @@ fn render_one_document(
         std::fs::create_dir_all(parent).ok();
     }
 
-    let result = crate::render_core(&input, &output_path, Some(format), overrides, None, Some(base_dir))?;
+    let result = crate::pipeline::render_core(&input, &output_path, Some(format), overrides, None, Some(base_dir))?;
 
     let body = if apply_page_template {
         // Apply the project's page template (e.g., book's minimal page.tex)
@@ -363,11 +363,11 @@ fn render_one_document_pass1(
         std::fs::create_dir_all(parent).ok();
     }
 
-    let options = crate::RenderCoreOptions {
+    let options = crate::pipeline::RenderCoreOptions {
         skip_crossref: true,
         chapter_number,
     };
-    let result = crate::render_core_with_options(
+    let result = crate::pipeline::render_core_with_options(
         &input, &output_path, Some("html"), overrides, None, Some(base_dir), &options,
     )?;
 

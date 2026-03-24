@@ -1,0 +1,329 @@
+//! Core render pipeline: parse, evaluate, render.
+//!
+//! This module contains the main rendering pipeline that transforms a .qmd file
+//! into output (HTML, LaTeX, Typst, Markdown). It orchestrates parsing, code
+//! execution, bibliography processing, and format conversion.
+
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
+use std::time::Instant;
+
+use anyhow::{Context, Result};
+
+use crate::engines;
+use crate::engines::r::RSession;
+use crate::engines::python::PythonSession;
+use crate::engines::EngineContext;
+use crate::engines::cache::CacheState;
+use crate::filters;
+use crate::formats;
+use crate::jinja;
+use crate::parse;
+use crate::paths;
+use crate::project;
+use crate::registry;
+use crate::render;
+use crate::render::elements::ElementRenderer;
+use crate::types;
+use crate::value;
+
+/// Result of the core render pipeline (before page template wrapping).
+pub struct RenderResult {
+    pub rendered: String,
+    pub metadata: types::Metadata,
+    pub element_renderer: ElementRenderer,
+    /// Cross-reference data collected from this page (populated when skip_crossref is true).
+    pub ref_data: Option<filters::crossref::PageRefData>,
+}
+
+/// Options for the core render pipeline that control collection-specific behavior.
+#[derive(Default)]
+pub struct RenderCoreOptions {
+    /// When true, skip cross-reference resolution (pass 1 of two-pass pipeline).
+    /// The caller is responsible for resolving refs globally in pass 2.
+    pub skip_crossref: bool,
+    /// Chapter number for this page in a collection. When set, section numbering
+    /// uses this as the top-level counter (e.g., chapter 2 -> sections 2.1, 2.2).
+    pub chapter_number: Option<usize>,
+}
+
+/// Whether `CALEPIN_TIMING=1` is set (checked once at startup).
+static TIMING: LazyLock<bool> = LazyLock::new(|| std::env::var("CALEPIN_TIMING").is_ok());
+
+/// Print a timing line to stderr if `CALEPIN_TIMING` is set.
+macro_rules! timed {
+    ($label:expr, $block:expr) => {{
+        if *TIMING {
+            let _t = Instant::now();
+            let _r = $block;
+            eprintln!("[timing] {:.<30} {:>8.3}ms", $label, _t.elapsed().as_secs_f64() * 1000.0);
+            _r
+        } else {
+            $block
+        }
+    }};
+}
+
+/// Core render pipeline: parse, evaluate, render. Does NOT apply the page template.
+/// If `format` is None, falls back to the format declared in YAML front matter, then "html".
+pub fn render_core(
+    input: &Path,
+    output_path: &Path,
+    format: Option<&str>,
+    overrides: &[String],
+    project_var: Option<&toml::Value>,
+    project_root_override: Option<&Path>,
+) -> Result<RenderResult> {
+    render_core_with_options(input, output_path, format, overrides, project_var, project_root_override, &RenderCoreOptions::default())
+}
+
+/// Core render pipeline with collection options (chapter numbering, skip_crossref).
+pub fn render_core_with_options(
+    input: &Path,
+    output_path: &Path,
+    format: Option<&str>,
+    overrides: &[String],
+    project_var: Option<&toml::Value>,
+    project_root_override: Option<&Path>,
+    options: &RenderCoreOptions,
+) -> Result<RenderResult> {
+
+    let t_total = if *TIMING { Some(Instant::now()) } else { None };
+
+    // 1. Read input file
+    let input_text = fs::read_to_string(input)
+        .with_context(|| format!("Failed to read input file: {}", input.display()))?;
+
+    // 2. Parse YAML front matter, then apply CLI overrides
+    let (mut metadata, body) = timed!("parse_yaml", parse::yaml::split_yaml(&input_text)?);
+    let body = render::markers::sanitize(&body);
+    metadata.apply_overrides(overrides);
+    metadata.resolve_date(Some(input));
+
+    // Merge project-level var as defaults (front matter wins)
+    if let Some(pv) = project_var {
+        if let Some(table) = pv.as_table() {
+            for (key, val) in table {
+                if !metadata.var.contains_key(key) {
+                    metadata.var.insert(key.clone(), value::from_toml(val.clone()));
+                }
+            }
+        }
+    }
+
+    // 2b. Construct path context and validate paths
+    let path_ctx = if let Some(root) = project_root_override {
+        paths::PathContext {
+            project_root: root.to_path_buf(),
+            output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+        }
+    } else {
+        paths::PathContext::for_document(input, output_path)
+    };
+    let input_name = input.file_name()
+        .unwrap_or_default()
+        .to_string_lossy();
+    paths::validate_paths(&metadata, &path_ctx, &input_name)?;
+
+    // 3. Create renderer for this format
+    let format_str = format
+        .map(|s| s.to_string())
+        .or_else(|| metadata.target.clone())
+        .unwrap_or_else(|| "html".to_string());
+    let renderer = formats::create_renderer(&format_str)?;
+
+    // 4. Expand includes before block parsing (so included code chunks are parsed)
+    let body = timed!("expand_includes", jinja::expand_includes(&body, &path_ctx.project_root, &format_str));
+
+    // 4a. Preprocess hook: pipe body through script if custom format defines one
+    let body = if let Some(script) = renderer.preprocess() {
+        let input = serde_json::json!({
+            "body": body,
+            "format": format_str,
+        });
+        formats::run_script(script, &input.to_string(), &[])?
+    } else {
+        body
+    };
+
+    // 4b. Parse body into blocks
+    let blocks = timed!("parse_blocks", parse::blocks::parse_body(&body)?);
+
+    // 5. Initialize engine subprocesses only if needed
+    //    Working directory is set to the input file's parent so that relative
+    //    paths in code chunks (e.g., read.csv("data.csv")) resolve correctly.
+    let input_dir = input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) });
+    let mut r_session = if engines::util::needs_engine(&blocks, &body, &metadata, "r") {
+        Some(timed!("init_r", RSession::init(renderer.base_format(), input_dir)?))
+    } else {
+        None
+    };
+    let mut py_session = if engines::util::needs_engine(&blocks, &body, &metadata, "python") {
+        Some(timed!("init_python", PythonSession::init(input_dir)?))
+    } else {
+        None
+    };
+    let mut sh_session = if engines::util::needs_engine(&blocks, &body, &metadata, "sh") {
+        Some(engines::sh::ShSession::init(input_dir)?)
+    } else {
+        None
+    };
+    let mut ctx = EngineContext {
+        r: r_session.as_mut(),
+        python: py_session.as_mut(),
+        sh: sh_session.as_mut(),
+    };
+
+    // 5b. Evaluate inline code in metadata fields (title, date, etc.)
+    metadata.evaluate_inline(&mut ctx);
+
+    // 6. Load plugin registry
+    let registry = timed!("load_plugins", std::rc::Rc::new(
+        registry::PluginRegistry::load(&metadata.plugins, &path_ctx.project_root)
+    ));
+
+    // 7. Create element renderer
+    let highlight_config = metadata.var.get("highlight-style")
+        .map(|v| filters::highlighting::parse_highlight_config(v))
+        .unwrap_or_else(|| {
+            let defs = project::get_defaults();
+            let hl = defs.highlight.as_ref();
+            let cfg = project::builtin_config();
+            let meta_hl = cfg.highlight.as_ref();
+            filters::highlighting::HighlightConfig::LightDark {
+                light: hl.and_then(|h| h.light.clone())
+                    .or_else(|| meta_hl.and_then(|h| h.light.clone()))
+                    .unwrap_or_else(|| "github".to_string()),
+                dark: hl.and_then(|h| h.dark.clone())
+                    .or_else(|| meta_hl.and_then(|h| h.dark.clone()))
+                    .unwrap_or_else(|| "nord".to_string()),
+            }
+        });
+    let mut element_renderer = ElementRenderer::new(renderer.base_format(), highlight_config);
+    element_renderer.number_sections = metadata.number_sections;
+    element_renderer.shift_headings = metadata.title.is_some();
+    element_renderer.chapter_number = options.chapter_number;
+    // Initialize section counters with chapter number as top-level counter
+    if let Some(ch) = options.chapter_number {
+        let mut counters = [0usize; 6];
+        counters[0] = ch;
+        element_renderer.set_section_counters(counters);
+    }
+    element_renderer.default_fig_cap_location = metadata.var.get("fig-cap-location")
+        .and_then(|v| v.as_str()).map(|s| s.to_string());
+
+    // 8. Evaluate: execute code chunks and produce elements
+    //    Use relative path from project root (without extension) as the cache/figure
+    //    key, so site builds with nested pages (e.g., posts/foo/index.qmd) don't collide.
+    let rel_stem = input.strip_prefix(&path_ctx.project_root)
+        .unwrap_or(input)
+        .with_extension("")
+        .to_string_lossy()
+        .replace('\\', "/");
+    let fig_dir = path_ctx.figures_dir(&rel_stem);
+    let fig_ext = renderer.default_fig_ext();
+    let cache_enabled = metadata.var.get("execute")
+        .and_then(|v| v.get("cache"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let cache_dir = path_ctx.cache_root(&rel_stem);
+    let mut cache = CacheState::new(input, &cache_dir, cache_enabled);
+    let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &registry, &mut ctx, &mut cache)?);
+    let mut elements = eval_result.elements;
+
+    // 9. Bibliography
+    timed!("bibliography", filters::bibliography::process_citations(&mut elements, &metadata, &path_ctx.project_root)?);
+
+    // 10. Set registry on element renderer
+    element_renderer.set_registry(registry);
+    element_renderer.set_sc_fragments(eval_result.sc_fragments);
+    element_renderer.set_preamble(eval_result.preamble);
+
+    // 12. Render elements to final format
+    let rendered = timed!("render", renderer.render(&elements, &element_renderer)?);
+
+    // 13. Cross-ref resolution (section IDs pre-collected from AST walk)
+    let thm_nums = element_renderer.theorem_numbers();
+    let walk_meta = element_renderer.walk_metadata();
+    let (rendered, ref_data) = if options.skip_crossref {
+        // Collection mode pass 1: collect IDs but don't resolve refs yet
+        let ref_data = if renderer.base_format() == "html" {
+            Some(filters::crossref::collect_ids_html(&rendered, &thm_nums, &walk_meta.ids))
+        } else {
+            None
+        };
+        (rendered, ref_data)
+    } else {
+        // Single-file mode: resolve refs immediately
+        let rendered = timed!("crossref", match renderer.base_format() {
+            "html" => filters::crossref::resolve_html_with_ids(&rendered, &thm_nums, &walk_meta.ids),
+            "latex" => filters::crossref::resolve_latex(&rendered, &thm_nums),
+            _ => filters::crossref::resolve_plain(&rendered, &thm_nums),
+        });
+        (rendered, None)
+    };
+
+    // 14. Number sections (HTML only) -- now handled in the AST walker
+    //     (render/html_ast.rs) via ElementRenderer.number_sections
+
+    // Clean up empty fig_dir
+    if fig_dir.is_dir() && std::fs::read_dir(&fig_dir).map_or(false, |mut d| d.next().is_none()) {
+        std::fs::remove_dir(&fig_dir).ok();
+    }
+
+    if let Some(t) = t_total {
+        eprintln!("[timing] {:=<30} {:>8.3}ms", "TOTAL ", t.elapsed().as_secs_f64() * 1000.0);
+    }
+
+    Ok(RenderResult { rendered, metadata, element_renderer, ref_data })
+}
+
+/// Full render pipeline. Returns (output_path, rendered_content, renderer).
+pub fn render_file(
+    input: &Path,
+    output: Option<&Path>,
+    format: Option<&str>,
+    overrides: &[String],
+    target: Option<&project::Target>,
+    project_root: Option<&Path>,
+    project_var: Option<&toml::Value>,
+    output_dir: Option<&str>,
+) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
+    // If we have a target, use its base as the format
+    let resolved_format = if let Some(t) = target {
+        Some(t.base.clone())
+    } else {
+        format
+            .map(|s| s.to_string())
+            .or_else(|| {
+                output
+                    .and_then(|p| p.extension())
+                    .and_then(|e| e.to_str())
+                    .map(|ext| formats::resolve_format_from_extension(ext).to_string())
+            })
+    };
+
+    // Determine output extension (target override or renderer default)
+    let preliminary_format = resolved_format.as_deref().unwrap_or("html");
+    let renderer = formats::create_renderer(preliminary_format)?;
+    let ext = target.map(|t| t.output_extension()).unwrap_or(renderer.extension());
+
+    // Resolve output path
+    let output_path = if let Some(o) = output {
+        o.to_path_buf()
+    } else if let (Some(_), Some(fmt)) = (target, format) {
+        // Use target-aware output path when a target is specified
+        project::resolve_target_output_path(input, fmt, ext, project_root, output_dir)
+    } else {
+        input.with_extension(ext)
+    };
+
+    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, project_var, None)?;
+
+    let final_output = renderer
+        .apply_template(&result.rendered, &result.metadata, &result.element_renderer)
+        .unwrap_or(result.rendered);
+
+    Ok((output_path, final_output, renderer))
+}

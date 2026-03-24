@@ -12,47 +12,54 @@ use crate::types::Metadata;
 use crate::render::elements::resolve_element_template;
 use crate::render::template::apply_template;
 
-/// Format a text+url as a link in the appropriate output format.
-pub fn format_link(text: &str, url: Option<&str>, ext: &str) -> String {
-    match url {
-        Some(url) => match ext {
+/// Format primitives that dispatch on output format.
+/// Each method produces the appropriate markup for html/latex/typst/markdown.
+struct Fmt;
+
+impl Fmt {
+    fn link(text: &str, url: &str, ext: &str) -> String {
+        match ext {
             "html" => format!("<a href=\"{}\">{}</a>", url, text),
             "latex" => format!("{} (\\url{{{}}})", text, url),
             "typst" => format!("#link(\"{}\")[{}]", url, text),
             _ => format!("[{}]({})", text, url),
-        },
+        }
+    }
+
+    fn superscript(text: &str, ext: &str) -> String {
+        match ext {
+            "html" => format!("<sup>{}</sup>", text),
+            "latex" => format!("\\textsuperscript{{{}}}", text),
+            "typst" => format!("#super[{}]", text),
+            _ => String::new(),
+        }
+    }
+
+    fn emphasis(text: &str, ext: &str) -> String {
+        match ext {
+            "html" => format!("<em>{}</em>", text),
+            "latex" => format!("\\emph{{{}}}", text),
+            "typst" => format!("#emph[{}]", text),
+            _ => format!("*{}*", text),
+        }
+    }
+
+    fn url(url: &str, label: Option<&str>, ext: &str) -> String {
+        let label = label.unwrap_or(url);
+        match ext {
+            "html" => format!("<a href=\"{}\">{}</a>", url, label),
+            "latex" => format!("\\url{{{}}}", url),
+            "typst" => format!("#link(\"{}\")[{}]", url, label),
+            _ => format!("[{}]({})", label, url),
+        }
+    }
+}
+
+/// Format a text+url as a link in the appropriate output format.
+pub fn format_link(text: &str, url: Option<&str>, ext: &str) -> String {
+    match url {
+        Some(url) => Fmt::link(text, url, ext),
         None => text.to_string(),
-    }
-}
-
-/// Format superscript text for the given output format.
-fn format_superscript(text: &str, ext: &str) -> String {
-    match ext {
-        "html" => format!("<sup>{}</sup>", text),
-        "latex" => format!("\\textsuperscript{{{}}}", text),
-        "typst" => format!("#super[{}]", text),
-        _ => String::new(),
-    }
-}
-
-/// Format emphasis text for the given output format.
-fn format_emphasis(text: &str, ext: &str) -> String {
-    match ext {
-        "html" => format!("<em>{}</em>", text),
-        "latex" => format!("\\emph{{{}}}", text),
-        "typst" => format!("#emph[{}]", text),
-        _ => format!("*{}*", text),
-    }
-}
-
-/// Format a URL for the given output format.
-fn format_url(url: &str, label: Option<&str>, ext: &str) -> String {
-    let label = label.unwrap_or(url);
-    match ext {
-        "html" => format!("<a href=\"{}\">{}</a>", url, label),
-        "latex" => format!("\\url{{{}}}", url),
-        "typst" => format!("#link(\"{}\")[{}]", url, label),
-        _ => format!("[{}]({})", label, url),
     }
 }
 
@@ -184,7 +191,7 @@ fn build_citation_text(meta: &Metadata, cite: &crate::types::CitationMeta, ext: 
         parts.push(format!("\"{}\"", t));
     }
     if let Some(ref ct) = cite.container_title {
-        parts.push(format_emphasis(ct, ext));
+        parts.push(Fmt::emphasis(ct, ext));
     }
     if let Some(ref vol) = cite.volume {
         let vol_str = if let Some(ref iss) = cite.issue {
@@ -206,10 +213,10 @@ fn build_citation_text(meta: &Metadata, cite: &crate::types::CitationMeta, ext: 
     }
     if let Some(ref doi) = cite.doi {
         let doi_url = if doi.starts_with("http") { doi.clone() } else { format!("https://doi.org/{}", doi) };
-        citation.push_str(&format!(" DOI: {}", format_url(&doi_url, Some(doi), ext)));
+        citation.push_str(&format!(" DOI: {}", Fmt::url(&doi_url, Some(doi), ext)));
     }
     if let Some(ref url) = cite.url {
-        citation.push_str(&format!(" URL: {}", format_url(url, None, ext)));
+        citation.push_str(&format!(" URL: {}", Fmt::url(url, None, ext)));
     }
     citation
 }
@@ -260,13 +267,13 @@ pub fn build_author_block(meta: &Metadata, ext: &str) -> String {
                 let sups: Vec<String> = author.affiliation_ids.iter()
                     .filter_map(|&i| meta.affiliations.get(i).map(|a| a.number.to_string()))
                     .collect();
-                format_superscript(&sups.join(","), ext)
+                Fmt::superscript(&sups.join(","), ext)
             } else {
                 String::new()
             };
 
             let corresponding = if author.corresponding {
-                format_superscript("*", ext)
+                Fmt::superscript("*", ext)
             } else {
                 String::new()
             };
@@ -298,7 +305,7 @@ pub fn build_author_block(meta: &Metadata, ext: &str) -> String {
                 return None;
             }
             let number = if meta.affiliations.len() > 1 {
-                format!("{} ", format_superscript(&aff.number.to_string(), ext))
+                format!("{} ", Fmt::superscript(&aff.number.to_string(), ext))
             } else {
                 String::new()
             };

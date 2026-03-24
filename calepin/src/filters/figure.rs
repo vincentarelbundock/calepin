@@ -5,7 +5,7 @@
 //                            alignment, caption location, link wrapping).
 // - build_figure_vars()    — Populate figure template vars (path, dimensions,
 //                            alignment, caption, link) for template construction.
-// - resolve_path()         — Find preferred image format variant for the output format.
+// - select_image_variant() — Find preferred image format variant for the output format.
 // - format_width/height/align() — Dimension and alignment formatting per format.
 
 use std::collections::HashMap;
@@ -55,7 +55,7 @@ fn build_figure_vars(
     vars.insert("label".to_string(), label.to_string());
     vars.insert("number".to_string(), number.unwrap_or("").to_string());
 
-    let resolved_path = resolve_path(path, format);
+    let resolved_path = select_image_variant(path, format);
     let display_path = resolved_path.to_string_lossy().to_string();
     vars.insert("path".to_string(), display_path.clone());
 
@@ -161,7 +161,9 @@ pub fn format_align(align: &str, format: &str) -> String {
     }
 }
 
-pub fn resolve_path(path: &Path, format: &str) -> PathBuf {
+/// Find the preferred image format variant for the output format.
+/// For example, prefers PDF/EPS for LaTeX, SVG/PNG for HTML.
+pub fn select_image_variant(path: &Path, format: &str) -> PathBuf {
     let preferred: &[&str] = match format {
         "latex" => &["pdf", "eps", "svg", "png", "jpg"],
         "typst" => &["svg", "png", "jpg"],
