@@ -107,7 +107,10 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
 
     let target = project::resolve_target(&target_name, project_config.as_ref())?;
 
-    let defaults = project::resolve_defaults(project_config.as_ref());
+    let mut defaults = project::resolve_defaults(project_config.as_ref());
+    if let Some(embed) = target.embed_resources {
+        defaults.embed_resources = Some(embed);
+    }
     project::set_active_defaults(defaults);
 
     // In single-file mode (no _calepin.toml), the project root is the
