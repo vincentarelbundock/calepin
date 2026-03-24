@@ -279,7 +279,7 @@ base = "html"
         let config: ProjectConfig = toml::from_str(toml).unwrap();
         assert_eq!(config.targets.len(), 1);
         let web = &config.targets["web"];
-        assert_eq!(web.base, "html");
+        assert_eq!(web.engine, "html");
         assert_eq!(web.template_name(), "page");
         assert_eq!(web.output_extension(), "html");
     }
@@ -304,7 +304,7 @@ toc = false
 "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
         let article = &config.targets["article"];
-        assert_eq!(article.base, "latex");
+        assert_eq!(article.engine, "latex");
         assert_eq!(article.template_name(), "article");
         assert_eq!(article.output_extension(), "tex");
         assert_eq!(article.fig_ext(), "pdf");
@@ -337,11 +337,11 @@ unknown_field = "oops"
     #[test]
     fn test_implicit_target_resolution() {
         let target = resolve_target("html", None).unwrap();
-        assert_eq!(target.base, "html");
+        assert_eq!(target.engine, "html");
         assert_eq!(target.template_name(), "page");
 
         let target = resolve_target("tex", None).unwrap();
-        assert_eq!(target.base, "latex");
+        assert_eq!(target.engine, "latex");
 
         assert!(resolve_target("unknown", None).is_err());
     }

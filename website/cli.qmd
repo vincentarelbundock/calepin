@@ -15,19 +15,19 @@ This produces `document.html` in the same directory.
 
 # Output formats
 
-*Calepin* supports four output formats: `html`, `latex`, `typst`, and `markdown`.
+*Calepin* supports four rendering engines: `html`, `latex`, `typst`, and `markdown`. Select one with `-t`:
 
 ```bash
-calepin document.qmd --format latex    # → document.tex
-calepin document.qmd --format typst    # → document.typ
-calepin document.qmd --format markdown # → document.md
+calepin document.qmd -t latex    # → document.tex
+calepin document.qmd -t typst    # → document.typ
+calepin document.qmd -t markdown # → document.md
 ```
 
-You can also set the format in the YAML front matter:
+You can also set the target in the YAML front matter:
 
 ```yaml
 ---
-format: latex
+target: latex
 ---
 ```
 
@@ -51,14 +51,31 @@ Each target produces its own output file. Code chunks execute once per unique fi
 
 # PDF compilation
 
-Add `--compile` to run the target's compile step after rendering:
+The `pdf` target renders to LaTeX and compiles to PDF:
 
 ```bash
-calepin render document.qmd -t latex --compile   # → .tex then tectonic → .pdf
-calepin render document.qmd -t typst --compile   # → .typ then typst → .pdf
+calepin render document.qmd -t pdf
 ```
 
-The shorthand `-t pdf` is equivalent to `-t latex --compile`.
+To compile via Typst instead, override the engine:
+
+```bash
+calepin render document.qmd -t pdf --engine typst
+```
+
+The `--engine` flag (previously `--base`) selects which rendering engine a compound target uses. It is only valid for `pdf` and `book` targets.
+
+
+# Themes
+
+Apply a theme on top of the target to change the look of your output:
+
+```bash
+calepin document.qmd --theme blog
+calepin document.qmd -t website --theme blog
+```
+
+Themes are directories under `_calepin/themes/` that bundle templates, snippets, and assets. See [Themes](templates/themes.html) for details.
 
 
 # Live preview
@@ -111,8 +128,11 @@ calepin document.qmd -q
 # Render to HTML with table of contents
 calepin paper.qmd --set toc=true
 
-# Render to PDF via Typst, overriding the title
-calepin paper.qmd --format typst --compile --set title="Final Version"
+# Render to PDF via Typst
+calepin paper.qmd -t pdf --engine typst
+
+# Render with a theme
+calepin paper.qmd -t website --theme blog
 
 # Live preview while writing
 calepin paper.qmd --preview

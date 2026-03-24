@@ -76,7 +76,7 @@ affiliations:
     country: Examplia
 ```
 
-Rich author data is rendered through the `author_block`, `author_item`, and `affiliation_item` element templates, which you can override. See [Elements](elements.html).
+Rich author data is rendered through the `authors`, `author_item`, and `affiliation_item` element templates, which you can override. See [Elements](elements.html).
 
 
 # Custom fields

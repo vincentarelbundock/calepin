@@ -30,9 +30,9 @@ Resolution order:
 
 1. Plugin `elements/` directory (in plugin order)
 2. `templates/{target}/{name}.{ext}` (target-specific, e.g., `templates/website/callout.html`)
-3. `templates/{base}/{name}.{ext}` (base-specific, e.g., `templates/html/callout.html`)
+3. `templates/{engine}/{name}.{ext}` (engine-specific, e.g., `templates/html/callout.html`)
 4. `templates/common/{name}.jinja` (format-agnostic)
-5. Legacy: `_calepin/elements/{name}.{ext}`
+5. Theme `templates/` directory (same three-layer resolution)
 6. Built-in (compiled into the binary)
 
 ::: {.callout-tip}
@@ -197,14 +197,14 @@ Each instance can pass different key-value attributes. Here `color` is yellow in
 | `theorem_normal` | definition, example, exercise, solution, remark, algorithm |
 | `proof` | Proof environments |
 | `landscape` | Landscape-oriented sections |
-| `title_block` | Document title |
-| `subtitle_block` | Document subtitle |
-| `author_block` | Author metadata |
-| `date_block` | Document date |
-| `abstract_block` | Abstract text |
-| `keywords_block` | Keywords list |
-| `bibliography_block` | Bibliography section |
+| `title` | Document title |
+| `subtitle` | Document subtitle |
+| `authors` | Author metadata |
+| `date` | Document date |
+| `abstract` | Abstract text |
+| `keywords` | Keywords list |
+| `bibliography` | Bibliography section |
 | `appendix` | Appendix wrapper |
 | `preamble` | Format-specific preamble |
 
-Override any of these by placing a file in `templates/{base}/` (e.g., `templates/html/callout.html`) or `templates/common/` (e.g., `templates/common/callout.jinja`). The legacy path `_calepin/elements/` is also supported.
+Override any of these by placing a file in `templates/{engine}/` (e.g., `templates/html/callout.html`) or `templates/common/` (e.g., `templates/common/callout.jinja`).

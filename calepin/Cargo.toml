@@ -69,6 +69,7 @@ usvg = "0.45"
 typst = "0.14"
 typst-pdf = "0.14"
 typst-kit = { version = "0.14", features = ["fonts", "embed-fonts"] }
+indexmap = "2.13.0"
 
 [[bench]]
 name = "template_bench"

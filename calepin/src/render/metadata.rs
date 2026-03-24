@@ -107,6 +107,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
             if let Some(tpl) = resolve_element_template("license", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
+                vars.insert("engine".to_string(), fmt.clone());
                 vars.insert("text".to_string(), text.clone());
                 vars.insert("url".to_string(), lic.url.as_deref().unwrap_or("").to_string());
                 // Keep content for backward compatibility with overridden templates
@@ -122,6 +123,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         if let Some(tpl) = resolve_element_template("citation", ext) {
             let mut vars = HashMap::new();
             vars.insert("base".to_string(), fmt.clone());
+            vars.insert("engine".to_string(), fmt.clone());
             vars.insert("content".to_string(), content);
             sections.push(apply_template(&tpl, &vars));
         }
@@ -134,6 +136,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
             if let Some(tpl) = resolve_element_template("copyright", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
+                vars.insert("engine".to_string(), fmt.clone());
                 vars.insert("content".to_string(), text);
                 sections.push(apply_template(&tpl, &vars));
             }
@@ -147,6 +150,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
             if let Some(tpl) = resolve_element_template("funding", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
+                vars.insert("engine".to_string(), fmt.clone());
                 vars.insert("items".to_string(), items);
                 sections.push(apply_template(&tpl, &vars));
             }
@@ -157,7 +161,8 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         String::new()
     } else if let Some(tpl) = resolve_element_template("appendix", ext) {
         let mut vars = HashMap::new();
-        vars.insert("base".to_string(), fmt);
+        vars.insert("base".to_string(), fmt.clone());
+        vars.insert("engine".to_string(), fmt);
         vars.insert("sections".to_string(), sections.join("\n"));
         apply_template(&tpl, &vars)
     } else {
@@ -250,7 +255,7 @@ fn build_funding_items(funding: &[crate::types::Funding], ext: &str) -> String {
 /// Build the author block for any format using element templates.
 /// Rich metadata (affiliations, ORCID, etc.) renders through author-item and
 /// affiliation-item sub-templates; simple author lists use a plain fallback.
-pub fn build_author_block(meta: &Metadata, ext: &str) -> String {
+pub fn build_authors(meta: &Metadata, ext: &str) -> String {
     let has_rich = !meta.authors.is_empty()
         && meta.authors.iter().any(|a| {
             !a.affiliation_ids.is_empty()
@@ -287,6 +292,7 @@ pub fn build_author_block(meta: &Metadata, ext: &str) -> String {
             if let Some(ref tpl) = author_tpl {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), ext.to_string());
+                vars.insert("engine".to_string(), ext.to_string());
                 vars.insert("name".to_string(), author.name.literal.clone());
                 vars.insert("superscripts".to_string(), superscripts);
                 vars.insert("corresponding".to_string(), corresponding);
@@ -312,6 +318,7 @@ pub fn build_author_block(meta: &Metadata, ext: &str) -> String {
             if let Some(ref tpl) = aff_tpl {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), ext.to_string());
+                vars.insert("engine".to_string(), ext.to_string());
                 vars.insert("number".to_string(), number);
                 vars.insert("display".to_string(), display);
                 Some(apply_template(tpl, &vars))
@@ -380,9 +387,10 @@ pub fn build_author_block(meta: &Metadata, ext: &str) -> String {
             _ => affs_rendered.join(", "),
         };
 
-        if let Some(tpl) = resolve_element_template("author_block", ext) {
+        if let Some(tpl) = resolve_element_template("authors", ext) {
             let mut vars = HashMap::new();
             vars.insert("base".to_string(), ext.to_string());
+            vars.insert("engine".to_string(), ext.to_string());
             vars.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
             vars.insert("authors".to_string(), authors_joined);
             vars.insert("affiliations".to_string(), affiliations_joined);

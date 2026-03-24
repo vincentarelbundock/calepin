@@ -23,7 +23,7 @@ pub struct CollectionContext {
     pub pages: Vec<NavNode>,
     pub languages: Vec<Language>,
     pub dark_mode: bool,
-    pub math_block: String,
+    pub math: String,
 }
 
 /// A node in the navigation tree (for sidebar rendering).
@@ -155,11 +155,12 @@ pub fn build_collection_context(
 
     // Math block
     let html_math_method = "katex".to_string();
-    let math_block = {
+    let math = {
         let mut vars = HashMap::new();
         vars.insert("html_math_method".to_string(), html_math_method);
         vars.insert("base".to_string(), "html".to_string());
-        crate::render::template::render_element_block("math", "html", &vars)
+        vars.insert("engine".to_string(), "html".to_string());
+        crate::render::template::render_element("math", "html", &vars)
     };
 
     CollectionContext {
@@ -172,7 +173,7 @@ pub fn build_collection_context(
         pages: nav_tree,
         languages: config.languages.clone(),
         dark_mode: true,
-        math_block,
+        math,
     }
 }
 

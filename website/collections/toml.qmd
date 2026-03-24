@@ -103,7 +103,7 @@ Define named output profiles. The `target` top-level field selects which one to 
 
 ```toml
 [targets.latex]
-base = "latex"
+engine = "latex"
 template = "calepin"
 extension = "tex"
 fig-extension = "pdf"
@@ -120,7 +120,7 @@ documentclass = "article"
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `base` | string | Rendering engine: `html`, `latex`, `typst`, `markdown` |
+| `engine` | string | Rendering engine: `html`, `latex`, `typst`, `markdown` |
 | `inherits` | string | Inherit settings from another target |
 | `template` | string | Document template name |
 | `extension` | string | Output file extension |
@@ -128,6 +128,10 @@ documentclass = "article"
 | `preview` | string | Preview mode: `serve`, `open`, or `none` |
 | `embed-resources` | boolean | Embed images as base64 (HTML only) |
 | `vars` | table | Format-specific template variables |
+
+::: {.callout-note}
+The field was previously called `base`. That name still works as an alias but `engine` is preferred in new configurations.
+:::
 
 The `[targets.NAME.compile]` sub-table triggers a compilation step (e.g., TeX to PDF):
 
@@ -251,7 +255,7 @@ icon = "github"
 href = "https://github.com/vincentarelbundock/calepin"
 
 [targets.latex]
-base = "latex"
+engine = "latex"
 template = "calepin"
 extension = "tex"
 fig-extension = "pdf"

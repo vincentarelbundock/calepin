@@ -25,12 +25,12 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
             if target_str.contains(',') {
                 let targets: Vec<&str> = target_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
                 for t in &targets {
-                    render_one(&args.input[0], None, Some(t), &overrides, args.quiet, args.base.as_deref())?;
+                    render_one(&args.input[0], None, Some(t), &overrides, args.quiet, args.engine.as_deref())?;
                 }
                 return Ok(());
             }
         }
-        return render_one(&args.input[0], args.output.as_deref(), args.target.as_deref(), &overrides, args.quiet, args.base.as_deref());
+        return render_one(&args.input[0], args.output.as_deref(), args.target.as_deref(), &overrides, args.quiet, args.engine.as_deref());
     }
 
     // Multiple files: render in parallel.
@@ -42,7 +42,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
 
     // Resolve project context once and share it across all files.
     let mut ctx = crate::resolve_context(&args.input[0], args.target.as_deref())?;
-    crate::apply_base_override(&mut ctx, args.base.as_deref())?;
+    crate::apply_engine_override(&mut ctx, args.engine.as_deref())?;
 
     let output_ext = args.output.as_ref().map(|dir| {
         (dir.clone(), ctx.target.output_extension().to_string())
@@ -81,10 +81,10 @@ fn render_one(
     target: Option<&str>,
     overrides: &[String],
     quiet: bool,
-    base_override: Option<&str>,
+    engine_override: Option<&str>,
 ) -> Result<()> {
     let mut ctx = crate::resolve_context(input, target)?;
-    crate::apply_base_override(&mut ctx, base_override)?;
+    crate::apply_engine_override(&mut ctx, engine_override)?;
     render_one_with_context(input, output, &ctx, overrides, quiet)
 }
 

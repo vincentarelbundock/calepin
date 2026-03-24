@@ -20,6 +20,7 @@ use crate::types::Metadata;
 thread_local! {
     static ACTIVE_TARGET: RefCell<Option<String>> = RefCell::new(None);
     static PROJECT_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
+    static THEME_DIR: RefCell<Option<PathBuf>> = RefCell::new(None);
 }
 
 /// Set the active target name for template resolution.
@@ -46,6 +47,17 @@ pub fn get_project_root() -> PathBuf {
     PROJECT_ROOT.with(|r| {
         r.borrow().clone().unwrap_or_else(|| PathBuf::from("."))
     })
+}
+
+/// Set the active theme directory for template resolution.
+pub fn set_theme_dir(dir: Option<&Path>) {
+    THEME_DIR.with(|t| {
+        *t.borrow_mut() = dir.map(|p| p.to_path_buf());
+    });
+}
+
+pub fn get_theme_dir() -> Option<PathBuf> {
+    THEME_DIR.with(|t| t.borrow().clone())
 }
 
 // ---------------------------------------------------------------------------
@@ -116,7 +128,7 @@ pub fn resolve_path_cwd(dir: &str, filename: &str) -> Option<PathBuf> {
 
 /// Map a base name to its file extension for template/component lookup.
 /// Derives the mapping from the built-in _calepin.toml.
-pub fn base_to_ext(base: &str) -> &str {
+pub fn engine_to_ext(base: &str) -> &str {
     let target = crate::project::builtin_config().targets.get(base);
     target
         .and_then(|t| t.extension.as_deref())
@@ -131,7 +143,7 @@ pub fn base_to_ext(base: &str) -> &str {
 ///   3. `_calepin/templates/common/{name}.jinja` (format-agnostic)
 ///   4. (caller falls back to built-in)
 pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
-    let ext = base_to_ext(base);
+    let ext = engine_to_ext(base);
     let base_specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
 
@@ -139,7 +151,7 @@ pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
     let tpl = root.join("_calepin").join("templates");
     let active_target = get_active_target();
 
-    // Target-specific (e.g., _calepin/templates/book_latex/)
+    // 1. User target-specific (e.g., _calepin/templates/book/)
     if let Some(ref target) = active_target {
         if target != base {
             let p = tpl.join(target).join(&base_specific);
@@ -147,13 +159,28 @@ pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
         }
     }
 
-    // Base-specific (e.g., _calepin/templates/latex/)
+    // 2. User engine-specific (e.g., _calepin/templates/latex/)
     let p = tpl.join(base).join(&base_specific);
     if p.exists() { return Some(p); }
 
-    // Format-agnostic (e.g., _calepin/templates/common/)
+    // 3. User format-agnostic (e.g., _calepin/templates/common/)
     let p = tpl.join("common").join(&generic);
     if p.exists() { return Some(p); }
+
+    // 4. Theme templates (same three-layer resolution)
+    if let Some(theme_dir) = get_theme_dir() {
+        let theme_tpl = theme_dir.join("templates");
+        if let Some(ref target) = active_target {
+            if target != base {
+                let p = theme_tpl.join(target).join(&base_specific);
+                if p.exists() { return Some(p); }
+            }
+        }
+        let p = theme_tpl.join(base).join(&base_specific);
+        if p.exists() { return Some(p); }
+        let p = theme_tpl.join("common").join(&generic);
+        if p.exists() { return Some(p); }
+    }
 
     None
 }
@@ -165,7 +192,7 @@ pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
 ///   2. `_calepin/snippets/{base}/{name}.{ext}` (base-specific, when target != base)
 ///   3. `_calepin/snippets/common/{name}.jinja` (format-agnostic)
 pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
-    let ext = base_to_ext(base);
+    let ext = engine_to_ext(base);
     let specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
 
@@ -173,7 +200,7 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
     let snip = root.join("_calepin").join("snippets");
     let active_target = get_active_target();
 
-    // Target-specific
+    // 1. User target-specific
     if let Some(ref target) = active_target {
         if target != base {
             let p = snip.join(target).join(&specific);
@@ -181,13 +208,28 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
         }
     }
 
-    // Base-specific
+    // 2. User engine-specific
     let p = snip.join(base).join(&specific);
     if p.exists() { return Some(p); }
 
-    // Format-agnostic
+    // 3. User format-agnostic
     let p = snip.join("common").join(&generic);
     if p.exists() { return Some(p); }
+
+    // 4. Theme snippets (same three-layer resolution)
+    if let Some(theme_dir) = get_theme_dir() {
+        let theme_snip = theme_dir.join("snippets");
+        if let Some(ref target) = active_target {
+            if target != base {
+                let p = theme_snip.join(target).join(&specific);
+                if p.exists() { return Some(p); }
+            }
+        }
+        let p = theme_snip.join(base).join(&specific);
+        if p.exists() { return Some(p); }
+        let p = theme_snip.join("common").join(&generic);
+        if p.exists() { return Some(p); }
+    }
 
     None
 }

@@ -65,7 +65,7 @@ docs:  build ## Render all .qmd files in website/ to all formats
 				typst)    ext=typ  ;; \
 				markdown) ext=md   ;; \
 			esac; \
-			../calepin/target/debug/calepin "$$f" --format $$fmt -o "$${base}.$${ext}"; \
+			../calepin/target/debug/calepin "$$f" -t $$fmt -o "$${base}.$${ext}"; \
 		done; \
 	done
 

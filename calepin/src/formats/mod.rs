@@ -31,14 +31,14 @@ pub trait OutputRenderer {
     /// Base format name for element template lookup.
     /// For built-in formats, same as `format()`. For custom formats,
     /// returns the base format (e.g., "html" for a "blog" format).
-    fn base_format(&self) -> &str {
+    fn engine(&self) -> &str {
         self.format()
     }
 
     /// Default figure file extension, derived from the built-in config.
     fn default_fig_ext(&self) -> &str {
         crate::project::builtin_config()
-            .targets.get(self.base_format())
+            .targets.get(self.engine())
             .and_then(|t| t.fig_extension.as_deref())
             .unwrap_or("png")
     }
@@ -168,7 +168,7 @@ impl OutputRenderer for CustomRenderer {
         &self.name
     }
 
-    fn base_format(&self) -> &str {
+    fn engine(&self) -> &str {
         self.base.format()
     }
 

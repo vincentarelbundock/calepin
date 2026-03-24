@@ -11,7 +11,7 @@ pub struct WordRenderer;
 impl OutputRenderer for WordRenderer {
     fn format(&self) -> &str { "word" }
     fn extension(&self) -> &str { "docx" }
-    fn base_format(&self) -> &str { "markdown" }
+    fn engine(&self) -> &str { "markdown" }
 
     fn apply_template(
         &self,

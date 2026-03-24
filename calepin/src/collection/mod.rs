@@ -67,7 +67,7 @@ pub fn build_collection(
         .or_else(|| config.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let collection_target = crate::project::resolve_target(&collection_target_name, Some(&config))?;
-    let format = &collection_target.base;
+    let format = &collection_target.engine;
     let output_ext = collection_target.output_extension();
 
     // Set active target and project root for template/component resolution
@@ -76,7 +76,7 @@ pub fn build_collection(
 
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
     // Falls back to built-in templates if not found on filesystem.
-    let ext = crate::paths::base_to_ext(format);
+    let ext = crate::paths::engine_to_ext(format);
     let orchestrator_filename = format!("orchestrator.{}", ext);
     let orchestrator = config.orchestrator.clone()
         .or_else(|| {
@@ -202,7 +202,7 @@ pub fn rebuild_documents(
         .or_else(|| config.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let collection_target = crate::project::resolve_target(&collection_target_name, Some(&config))?;
-    let format = &collection_target.base;
+    let format = &collection_target.engine;
     let output_ext = collection_target.output_extension();
 
     crate::paths::set_active_target(Some(&collection_target_name));
@@ -308,7 +308,7 @@ pub fn rebuild_documents(
                     pages: nav_tree,
                     languages: collection_ctx.languages.clone(),
                     dark_mode: collection_ctx.dark_mode,
-                    math_block: collection_ctx.math_block.clone(),
+                    math: collection_ctx.math.clone(),
                 },
                 document => doc_ctx,
                 var => var_ctx.clone(),
@@ -452,7 +452,7 @@ fn apply_collection_templates(
                     pages: nav_tree.clone(),
                     languages: collection_ctx.languages.clone(),
                     dark_mode: collection_ctx.dark_mode,
-                    math_block: collection_ctx.math_block.clone(),
+                    math: collection_ctx.math.clone(),
                 },
                 document => doc_ctx,
                 var => var_ctx.clone(),
@@ -586,10 +586,8 @@ fn render_orchestrator(
         base => format,
     };
 
-    // Build a Jinja environment with all templates from the target and common dirs.
-    // This lets the orchestrator use {% include "preamble.jinja" %} etc.
-    let mut env = minijinja::Environment::new();
-    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
+    // Collect all template sources into an owned map for the loader.
+    let mut templates = std::collections::HashMap::new();
 
     // Load templates from templates/{target}/ and templates/common/
     let dirs = [
@@ -598,7 +596,6 @@ fn render_orchestrator(
     ];
     for dir in &dirs {
         if !dir.is_dir() { continue; }
-        // Load all files (any extension) so .jinja, .tex, .typ all work
         let pattern = dir.join("**").join("*.*");
         let pattern_str = pattern.display().to_string();
         for entry in glob::glob(&pattern_str).unwrap_or_else(|_| glob::glob("").unwrap()) {
@@ -607,12 +604,8 @@ fn render_orchestrator(
                 if let Ok(content) = std::fs::read_to_string(&path) {
                     let rel = path.strip_prefix(dir).unwrap_or(&path);
                     let name = rel.display().to_string();
-                    let content: &'static str = Box::leak(content.into_boxed_str());
-                    let name: &'static str = Box::leak(name.into_boxed_str());
                     // Don't overwrite target-specific with common (target loaded first)
-                    if env.get_template(name).is_err() {
-                        let _ = env.add_template(name, content);
-                    }
+                    templates.entry(name).or_insert(content);
                 }
             }
         }
@@ -625,10 +618,8 @@ fn render_orchestrator(
                 let name = entry.path().file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("");
-                if !name.is_empty() && env.get_template(name).is_err() {
-                    let content: &'static str = Box::leak(content.to_string().into_boxed_str());
-                    let name: &'static str = Box::leak(name.to_string().into_boxed_str());
-                    let _ = env.add_template(name, content);
+                if !name.is_empty() {
+                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
                 }
             }
         }
@@ -636,7 +627,6 @@ fn render_orchestrator(
 
     // Load the orchestrator template itself
     let tpl_source = if let Some(builtin_path) = orchestrator_path.strip_prefix("__builtin__:") {
-        // Load from embedded built-in templates
         crate::render::elements::BUILTIN_PROJECT.get_file(builtin_path)
             .and_then(|f| f.contents_utf8())
             .map(|s| s.to_string())
@@ -646,8 +636,14 @@ fn render_orchestrator(
         fs::read_to_string(&tpl_path)
             .with_context(|| format!("Failed to read orchestrator template: {}", tpl_path.display()))?
     };
-    env.add_template("orchestrator", &tpl_source)
-        .with_context(|| format!("Failed to parse orchestrator template: {}", orchestrator_path))?;
+    templates.insert("orchestrator".to_string(), tpl_source);
+
+    let mut env = minijinja::Environment::new();
+    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
+    let sources = std::sync::Arc::new(templates);
+    env.set_loader(move |name: &str| {
+        Ok(sources.get(name).cloned())
+    });
 
     let tpl = env.get_template("orchestrator")?;
     let rendered = tpl.render(&ctx)

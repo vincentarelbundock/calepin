@@ -17,8 +17,8 @@ pub struct Target {
     /// Inherit all fields from another target.
     pub inherits: Option<String>,
     /// Rendering engine: html, latex, typst, or markdown.
-    #[serde(default)]
-    pub base: String,
+    #[serde(default, alias = "base")]
+    pub engine: String,
     /// Document template name (default: "page").
     pub template: Option<String>,
     /// Output file extension (no dot).
@@ -58,7 +58,7 @@ impl Target {
 
     /// Output file extension. Always set after resolution against the built-in config.
     pub fn output_extension(&self) -> &str {
-        self.extension.as_deref().unwrap_or(&self.base)
+        self.extension.as_deref().unwrap_or(&self.engine)
     }
 
     /// Default figure extension. Always set after resolution against the built-in config.
@@ -79,9 +79,9 @@ impl Target {
 impl Target {
     /// Validate a target's fields. Returns a descriptive error on failure.
     pub fn validate(&self) -> Result<()> {
-        match self.base.as_str() {
+        match self.engine.as_str() {
             "html" | "latex" | "typst" | "markdown" => {}
-            other => bail!("base must be one of: html, latex, typst, markdown (got '{}')", other),
+            other => bail!("engine must be one of: html, latex, typst, markdown (got '{}')", other),
         }
         if let Some(ref ext) = self.extension {
             validate_extension(ext, "extension")?;
@@ -164,7 +164,7 @@ fn resolve_one(
 fn merge_targets(parent: &Target, child: &Target) -> Target {
     Target {
         inherits: None,
-        base: if child.base.is_empty() { parent.base.clone() } else { child.base.clone() },
+        engine: if child.engine.is_empty() { parent.engine.clone() } else { child.engine.clone() },
         template: child.template.clone().or_else(|| parent.template.clone()),
         extension: child.extension.clone().or_else(|| parent.extension.clone()),
         fig_extension: child.fig_extension.clone().or_else(|| parent.fig_extension.clone()),
@@ -217,10 +217,10 @@ pub fn resolve_target(name: &str, config: Option<&super::ProjectConfig>) -> Resu
 
 /// Fill unset fields in a user target from the built-in target for the same base.
 fn merge_with_builtin(user: &Target) -> Target {
-    let builtin = super::builtin_config().targets.get(&user.base);
+    let builtin = super::builtin_config().targets.get(&user.engine);
     Target {
         inherits: None,
-        base: user.base.clone(),
+        engine: user.engine.clone(),
         template: user.template.clone().or_else(|| builtin.and_then(|b| b.template.clone())),
         extension: user.extension.clone().or_else(|| builtin.and_then(|b| b.extension.clone())),
         fig_extension: user.fig_extension.clone().or_else(|| builtin.and_then(|b| b.fig_extension.clone())),

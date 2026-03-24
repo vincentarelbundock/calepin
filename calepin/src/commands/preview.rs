@@ -16,7 +16,7 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
             let target_name = args.target.as_deref().unwrap_or("html");
             let config = crate::project::load_project_config(&args.input)?;
             let target = crate::project::resolve_target(target_name, Some(&config))?;
-            target.base == "html"
+            target.engine == "html"
         };
         if !is_html {
             let output = PathBuf::from("output");

@@ -89,6 +89,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     if toc_list.is_empty() { return String::new(); }
     let mut vars = HashMap::new();
     vars.insert("base".to_string(), "html".to_string());
+    vars.insert("engine".to_string(), "html".to_string());
     vars.insert("title".to_string(), title.to_string());
     vars.insert("toc_list".to_string(), toc_list);
     vars.insert("depth".to_string(), String::new());
@@ -96,7 +97,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     apply_template(tpl, &vars)
 }
 
-use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_author_block};
+use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_authors};
 
 /// Load a page template by name and base.
 ///
@@ -194,32 +195,25 @@ pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String 
 
 pub struct TemplateEnv {
     env: minijinja::Environment<'static>,
-    /// Template sources must outlive the environment. We keep owned copies
-    /// here so the `'static` lifetime bound on Environment is satisfied
-    /// (sources are leaked into &'static str on insertion).
-    _sources: Vec<String>,
+    sources: std::sync::Arc<std::sync::Mutex<HashMap<String, String>>>,
 }
 
 impl TemplateEnv {
     pub fn new() -> Self {
+        let sources = std::sync::Arc::new(std::sync::Mutex::new(HashMap::new()));
         let mut env = minijinja::Environment::new();
         env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
-        Self { env, _sources: Vec::new() }
+        let src = std::sync::Arc::clone(&sources);
+        env.set_loader(move |name: &str| {
+            Ok(src.lock().unwrap().get(name).cloned())
+        });
+        Self { env, sources }
     }
 
-    /// Add a named template. The source string is leaked to satisfy
-    /// minijinja's `'static` lifetime requirement on template sources.
-    /// This is fine because TemplateEnv lives for the duration of a
-    /// single document render.
-    pub fn add(&mut self, name: &'static str, source: String) {
-        // Leak the source string so it lives as long as the environment.
-        let leaked: &'static str = Box::leak(source.into_boxed_str());
-        // We don't reclaim these -- the allocations are small (a few KB
-        // total across all element templates) and freed when the process
-        // exits or the document render completes.
-        if let Err(e) = self.env.add_template(name, leaked) {
-            cwarn!("template compile error for '{}': {}", name, e);
-        }
+    /// Add a named template. Sources are owned by the loader and compiled
+    /// on first access by minijinja (which caches the result internally).
+    pub fn add(&mut self, name: &str, source: String) {
+        self.sources.lock().unwrap().insert(name.to_string(), source);
     }
 
     /// Render a pre-compiled template by name. Returns empty string if
@@ -242,11 +236,12 @@ impl TemplateEnv {
 
 /// Render a metadata field through an element template if available.
 /// Returns empty string if no template is found.
-pub fn render_element_block(name: &str, ext: &str, vars: &HashMap<String, String>) -> String {
+pub fn render_element(name: &str, ext: &str, vars: &HashMap<String, String>) -> String {
     use crate::render::elements::resolve_element_template;
     if let Some(tpl) = resolve_element_template(name, ext) {
         let mut vars = vars.clone();
         vars.insert("base".to_string(), ext.to_string());
+        vars.insert("engine".to_string(), ext.to_string());
         apply_template(&tpl, &vars)
     } else {
         String::new()
@@ -279,6 +274,7 @@ pub fn build_template_vars_with_headings(
     // `base` = rendering engine (html, latex, typst, markdown)
     // `target` = named output profile (defaults to base when no target specified)
     vars.insert("base".to_string(), ext.to_string());
+    vars.insert("engine".to_string(), ext.to_string());
     vars.insert("target".to_string(), ext.to_string());
 
     // Plain title (used in <title> etc.) — strip markdown image/link syntax
@@ -308,7 +304,7 @@ pub fn build_template_vars_with_headings(
     }
 
     // Author block
-    vars.insert("author_block".to_string(), build_author_block(meta, ext));
+    vars.insert("authors".to_string(), build_authors(meta, ext));
 
 
     // Abstract block
@@ -325,7 +321,7 @@ pub fn build_template_vars_with_headings(
     }
 
     // Appendix
-    vars.insert("appendix_block".to_string(), build_appendix(meta, ext));
+    vars.insert("appendix".to_string(), build_appendix(meta, ext));
 
     // CSS (HTML only)
     if ext == "html" {
@@ -336,8 +332,8 @@ pub fn build_template_vars_with_headings(
         math_vars.insert("html_math_method".to_string(),
             meta.html_math_method.as_deref()
                 .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
-        vars.insert("math_block".to_string(),
-            render_element_block("math", ext, &math_vars));
+        vars.insert("math".to_string(),
+            render_element("math", ext, &math_vars));
     }
 
     // LaTeX-specific defaults
@@ -352,7 +348,7 @@ pub fn build_template_vars_with_headings(
         let mut bvars = HashMap::new();
         bvars.insert("path".to_string(), bib_path.clone());
         vars.insert("bibliography".to_string(),
-            render_element_block("bibliography", ext, &bvars));
+            render_element("bibliography", ext, &bvars));
     }
 
     // Table of contents
@@ -371,6 +367,7 @@ pub fn build_template_vars_with_headings(
             // LaTeX, Typst, others: use the toc template directly
             let mut toc_vars = HashMap::new();
             toc_vars.insert("base".to_string(), ext.to_string());
+            toc_vars.insert("engine".to_string(), ext.to_string());
             toc_vars.insert("title".to_string(), toc_title.to_string());
             toc_vars.insert("depth".to_string(), toc_depth.to_string());
             toc_vars.insert("toc_list".to_string(), String::new());
@@ -477,23 +474,23 @@ pub fn render_page_template(
     vars: &HashMap<String, String>,
     base: &str,
 ) -> String {
-    let mut env = minijinja::Environment::new();
-    env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
-    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
+    // Collect all template sources into an owned map, then use set_loader
+    // so minijinja takes ownership -- no Box::leak needed.
+    let mut templates = HashMap::new();
 
     let root = crate::paths::get_project_root();
     let active_target = crate::paths::get_active_target();
-    let tpl = root.join("_calepin").join("templates");
+    let tpl_dir = root.join("_calepin").join("templates");
 
     // Load templates from filesystem directories
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();
     if let Some(ref target) = active_target {
         if target != base {
-            dirs.push(tpl.join(target));
+            dirs.push(tpl_dir.join(target));
         }
     }
-    dirs.push(tpl.join(base));
-    dirs.push(tpl.join("common"));
+    dirs.push(tpl_dir.join(base));
+    dirs.push(tpl_dir.join("common"));
 
     for dir in &dirs {
         if !dir.is_dir() { continue; }
@@ -505,11 +502,7 @@ pub fn render_page_template(
                 if let Ok(content) = std::fs::read_to_string(&path) {
                     let rel = path.strip_prefix(dir).unwrap_or(&path);
                     let name = rel.display().to_string();
-                    let content: &'static str = Box::leak(content.into_boxed_str());
-                    let name: &'static str = Box::leak(name.into_boxed_str());
-                    if env.get_template(name).is_err() {
-                        let _ = env.add_template(name, content);
-                    }
+                    templates.entry(name).or_insert(content);
                 }
             }
         }
@@ -522,23 +515,32 @@ pub fn render_page_template(
                 let name = entry.path().file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("");
-                if !name.is_empty() && env.get_template(name).is_err() {
-                    let content: &'static str = Box::leak(content.to_string().into_boxed_str());
-                    let name: &'static str = Box::leak(name.to_string().into_boxed_str());
-                    let _ = env.add_template(name, content);
+                if !name.is_empty() {
+                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
                 }
             }
         }
     }
 
     // Add the page template itself
-    if let Err(e) = env.add_template("__page__", page_template) {
-        cwarn!("page template parse error: {}", e);
-        return page_template.to_string();
-    }
+    templates.insert("__page__".to_string(), page_template.to_string());
+
+    let mut env = minijinja::Environment::new();
+    env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
+    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
+    let sources = std::sync::Arc::new(templates);
+    env.set_loader(move |name: &str| {
+        Ok(sources.get(name).cloned())
+    });
 
     let ctx = build_jinja_context(vars);
-    let tpl = env.get_template("__page__").unwrap();
+    let tpl = match env.get_template("__page__") {
+        Ok(t) => t,
+        Err(e) => {
+            cwarn!("page template parse error: {}", e);
+            return page_template.to_string();
+        }
+    };
     match tpl.render(minijinja::Value::from_serialize(&ctx)) {
         Ok(rendered) => rendered,
         Err(e) => {

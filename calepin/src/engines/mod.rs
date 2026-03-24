@@ -551,9 +551,9 @@ mod tests {
         let mut attrs = HashMap::new();
         attrs.insert("when-meta".to_string(), "options.show-code".to_string());
         let mut extra = HashMap::new();
-        extra.insert("options".to_string(), Value::Table(vec![
-            ("show-code".to_string(), Value::Bool(true)),
-        ]));
+        let mut opts = crate::value::Table::new();
+        opts.insert("show-code".to_string(), Value::Bool(true));
+        extra.insert("options".to_string(), Value::Table(opts));
         assert!(content_is_visible(&classes, &attrs, "html", Some(&extra)));
     }
 }

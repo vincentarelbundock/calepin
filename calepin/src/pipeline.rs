@@ -155,7 +155,7 @@ pub fn render_core_with_options(
     //    paths in code chunks (e.g., read.csv("data.csv")) resolve correctly.
     let input_dir = input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) });
     let mut r_session = if engines::util::needs_engine(&blocks, &body, &metadata, "r") {
-        Some(timed!("init_r", RSession::init(renderer.base_format(), input_dir)?))
+        Some(timed!("init_r", RSession::init(renderer.engine(), input_dir)?))
     } else {
         None
     };
@@ -200,7 +200,7 @@ pub fn render_core_with_options(
                     .unwrap_or_else(|| "nord".to_string()),
             }
         });
-    let mut element_renderer = ElementRenderer::new(renderer.base_format(), highlight_config);
+    let mut element_renderer = ElementRenderer::new(renderer.engine(), highlight_config);
     element_renderer.number_sections = metadata.number_sections;
     element_renderer.shift_headings = metadata.title.is_some();
     element_renderer.chapter_number = options.chapter_number;
@@ -229,7 +229,7 @@ pub fn render_core_with_options(
         .unwrap_or(true);
     let cache_dir = path_ctx.cache_root(&rel_stem);
     let mut cache = CacheState::new(input, &cache_dir, cache_enabled);
-    let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &registry, &mut ctx, &mut cache)?);
+    let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.engine(), &metadata, &registry, &mut ctx, &mut cache)?);
     let mut elements = eval_result.elements;
 
     // 9. Bibliography
@@ -248,7 +248,7 @@ pub fn render_core_with_options(
     let walk_meta = element_renderer.walk_metadata();
     let (rendered, ref_data) = if options.skip_crossref {
         // Collection mode pass 1: collect IDs but don't resolve refs yet
-        let ref_data = if renderer.base_format() == "html" {
+        let ref_data = if renderer.engine() == "html" {
             Some(filters::crossref::collect_ids_html(&rendered, &thm_nums, &walk_meta.ids))
         } else {
             None
@@ -256,7 +256,7 @@ pub fn render_core_with_options(
         (rendered, ref_data)
     } else {
         // Single-file mode: resolve refs immediately
-        let rendered = timed!("crossref", match renderer.base_format() {
+        let rendered = timed!("crossref", match renderer.engine() {
             "html" => filters::crossref::resolve_html_with_ids(&rendered, &thm_nums, &walk_meta.ids),
             "latex" => filters::crossref::resolve_latex(&rendered, &thm_nums),
             _ => filters::crossref::resolve_plain(&rendered, &thm_nums),
@@ -290,9 +290,9 @@ pub fn render_file(
     project_var: Option<&toml::Value>,
     output_dir: Option<&str>,
 ) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
-    // If we have a target, use its base as the format
+    // If we have a target, use its engine as the format
     let resolved_format = if let Some(t) = target {
-        Some(t.base.clone())
+        Some(t.engine.clone())
     } else {
         format
             .map(|s| s.to_string())

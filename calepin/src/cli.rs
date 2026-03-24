@@ -108,11 +108,15 @@ pub struct RenderArgs {
     #[arg(long)]
     pub no_highlight: bool,
 
-    /// Override the base format for compound targets (pdf, book).
+    /// Override the engine for compound targets (pdf, book).
     /// Allowed values depend on the target: pdf accepts html/latex/typst/markdown,
     /// book accepts latex/typst.
-    #[arg(long, value_parser = ["html", "latex", "typst", "markdown"])]
-    pub base: Option<String>,
+    #[arg(long, alias = "base", value_parser = ["html", "latex", "typst", "markdown"])]
+    pub engine: Option<String>,
+
+    /// Theme to apply on top of the target.
+    #[arg(long)]
+    pub theme: Option<String>,
 
     /// Remove output directory before building (project manifests only)
     #[arg(long)]
@@ -170,6 +174,8 @@ pub enum InfoAction {
     Csl,
     /// List available syntax highlighting themes
     Themes,
+    /// List available document themes
+    ThemeList,
     /// Print shell completions (bash, zsh, fish, elvish, powershell)
     Completions {
         /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)

@@ -65,6 +65,7 @@ pub fn render_div(
 
     let mut vars = HashMap::new();
     vars.insert("base".to_string(), format.to_string());
+    vars.insert("engine".to_string(), format.to_string());
     vars.insert("children".to_string(), content_rendered);
     vars.insert("id".to_string(), id.to_string());
     vars.insert("cap_location".to_string(), cap_location.to_string());

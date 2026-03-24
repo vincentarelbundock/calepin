@@ -64,6 +64,23 @@ pub fn handle_info(action: InfoAction) -> Result<()> {
             println!("Custom themes: place a .tmTheme file in _calepin/assets/highlighting/");
             Ok(())
         }
+        InfoAction::ThemeList => {
+            let root = crate::paths::get_project_root();
+            let themes = crate::theme_manifest::list_themes(&root);
+            if themes.is_empty() {
+                println!("No themes found in _calepin/themes/.");
+                println!("Create one with: mkdir -p _calepin/themes/<name> && touch _calepin/themes/<name>/theme.toml");
+            } else {
+                for theme in &themes {
+                    println!("{:<14} {:<10} {}",
+                        theme.name,
+                        theme.target,
+                        theme.description.as_deref().unwrap_or(""),
+                    );
+                }
+            }
+            Ok(())
+        }
         InfoAction::Completions { shell } => {
             use clap::CommandFactory;
             let mut cmd = <Cli as CommandFactory>::command();

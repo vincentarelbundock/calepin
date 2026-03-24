@@ -19,9 +19,9 @@ Resolution order:
 
 1. Plugin `templates/` directory (in plugin order)
 2. `templates/{target}/page.{ext}` (target-specific)
-3. `templates/{base}/page.{ext}` (base-specific)
+3. `templates/{engine}/page.{ext}` (engine-specific)
 4. `templates/common/page.jinja` (format-agnostic)
-5. Legacy: `_calepin/templates/calepin.{format}`
+5. Theme `templates/` directory (same three-layer resolution)
 6. Built-in (compiled into the binary)
 
 
@@ -53,14 +53,14 @@ These variables contain already-rendered markup, produced through overridable el
 
 | Variable | Description |
 |----------|-------------|
-| {% raw %}`{{title_block}}`{% endraw %} | Title markup |
-| {% raw %}`{{subtitle_block}}`{% endraw %} | Subtitle markup |
-| {% raw %}`{{author_block}}`{% endraw %} | Author metadata (names, affiliations, ORCID) |
-| {% raw %}`{{date_block}}`{% endraw %} | Date markup |
-| {% raw %}`{{abstract_block}}`{% endraw %} | Abstract text |
-| {% raw %}`{{keywords_block}}`{% endraw %} | Keywords list |
-| {% raw %}`{{appendix_block}}`{% endraw %} | License, citation, copyright, funding |
-| {% raw %}`{{bibliography_block}}`{% endraw %} | Bibliography section |
+| {% raw %}`{{title}}`{% endraw %} | Title markup |
+| {% raw %}`{{subtitle}}`{% endraw %} | Subtitle markup |
+| {% raw %}`{{authors}}`{% endraw %} | Author metadata (names, affiliations, ORCID) |
+| {% raw %}`{{date}}`{% endraw %} | Date markup |
+| {% raw %}`{{abstract}}`{% endraw %} | Abstract text |
+| {% raw %}`{{keywords}}`{% endraw %} | Keywords list |
+| {% raw %}`{{appendix}}`{% endraw %} | License, citation, copyright, funding |
+| {% raw %}`{{bibliography}}`{% endraw %} | Bibliography section |
 
 ## HTML-specific
 
@@ -68,7 +68,7 @@ These variables contain already-rendered markup, produced through overridable el
 |----------|-------------|
 | {% raw %}`{{css}}`{% endraw %} | `<style>` tag with default CSS |
 | {% raw %}`{{js}}`{% endraw %} | JavaScript block |
-| {% raw %}`{{math_block}}`{% endraw %} | KaTeX/MathJax script tags |
+| {% raw %}`{{math}}`{% endraw %} | KaTeX/MathJax script tags |
 
 ## LaTeX-specific
 
@@ -119,11 +119,11 @@ renders as `\label{my-id}`.
 {{header_includes}}
 </head>
 <body>
-{{title_block}}
-{{author_block}}
+{{title}}
+{{authors}}
 {{toc}}
 {{body}}
-{{appendix_block}}
+{{appendix}}
 </body>
 </html>
 ```
@@ -148,7 +148,7 @@ Save as `templates/html/page.html` and all HTML output in your project will use 
     <p class="author">{{author}}</p>
   </header>
   {{body}}
-  {{appendix_block}}
+  {{appendix}}
 </article>
 </body>
 </html>

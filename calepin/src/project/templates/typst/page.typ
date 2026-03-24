@@ -6,7 +6,7 @@
   #v(0.5em)
   {% include "subtitle.jinja" %}
   #v(0.5em)
-  {% include "author_block.jinja" %}
+  {% include "authors.jinja" %}
   #v(0.3em)
   #text(size: 10pt)[{{date}}]
 ]
@@ -17,5 +17,5 @@
 
 {{body}}
 
-{{bibliography_block}}
-{{appendix_block}}
+{{bibliography}}
+{{appendix}}

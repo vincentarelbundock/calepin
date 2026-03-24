@@ -117,7 +117,7 @@ pub fn run(
     let input_abs = input.canonicalize()
         .with_context(|| format!("Input file not found: {}", input.display()))?;
 
-    match target.base.as_str() {
+    match target.engine.as_str() {
         "latex" | "typst" => run_preview(input, &input_abs, args, PreviewMode::Pdf(target_name)),
         _ => run_preview(input, &input_abs, args, PreviewMode::Html),
     }

@@ -65,14 +65,14 @@ csl = "chicago-author-date"
 highlight = {light = "github", dark = "nord"}
 
 [targets.html]
-base = "html"
+engine = "html"
 template = "page"
 extension = "html"
 fig-extension = "svg"
 preview = "serve"
 
 [targets.latex]
-base = "latex"
+engine = "latex"
 template = "page"
 extension = "tex"
 fig-extension = "pdf"
@@ -82,7 +82,7 @@ command = "tectonic {input}"
 extension = "pdf"
 
 [targets.typst]
-base = "typst"
+engine = "typst"
 template = "page"
 extension = "typ"
 fig-extension = "svg"
@@ -91,7 +91,7 @@ preview = "serve"
 extension = "pdf"
 
 [targets.website]
-base = "html"
+engine = "html"
 template = "page"
 extension = "html"
 fig-extension = "svg"
@@ -99,7 +99,7 @@ embed-resources = false
 preview = "serve"
 
 [targets.book]
-base = "latex"
+engine = "latex"
 template = "page"
 extension = "tex"
 fig-extension = "pdf"
@@ -108,7 +108,7 @@ command = "tectonic {input}"
 extension = "pdf"
 
 [targets.pdf]
-base = "latex"
+engine = "latex"
 template = "page"
 extension = "tex"
 fig-extension = "pdf"
@@ -117,7 +117,7 @@ command = "tectonic {input}"
 extension = "pdf"
 
 [targets.markdown]
-base = "markdown"
+engine = "markdown"
 template = "page"
 extension = "md"
 fig-extension = "png"

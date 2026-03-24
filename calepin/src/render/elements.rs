@@ -41,7 +41,7 @@ fn resolve_template_alias(name: &str) -> &str {
 /// Checks `templates/{base}/{name}.{ext}` then `templates/common/{name}.jinja`.
 pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> {
     let resolved = resolve_template_alias(name);
-    let ext = crate::paths::base_to_ext(base);
+    let ext = crate::paths::engine_to_ext(base);
 
     // Base-specific
     let base_path = format!("templates/{}/{}.{}", base, resolved, ext);
@@ -172,6 +172,7 @@ impl ElementRenderer {
     pub fn render_template(&self, name: &str) -> String {
         let mut vars = HashMap::new();
         vars.insert("base".to_string(), self.ext.clone());
+        vars.insert("engine".to_string(), self.ext.clone());
         self.template_env.render(name, &vars)
     }
 
@@ -287,6 +288,7 @@ impl ElementRenderer {
 
                         let mut listing_vars = HashMap::new();
                         listing_vars.insert("base".to_string(), self.ext.clone());
+                        listing_vars.insert("engine".to_string(), self.ext.clone());
                         listing_vars.insert("label".to_string(), label.clone());
                         listing_vars.insert("number".to_string(), num.to_string());
                         listing_vars.insert("content".to_string(), rendered);
@@ -314,6 +316,7 @@ impl ElementRenderer {
     fn build_template_output(&self, template_name: &str, element: &Element) -> String {
         let mut vars = HashMap::new();
         vars.insert("base".to_string(), self.ext.clone());
+        vars.insert("engine".to_string(), self.ext.clone());
 
         // Run element through pipeline filters
         let code_filter = crate::filters::code::CodeFilter::new(&self.highlighter);

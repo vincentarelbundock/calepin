@@ -220,6 +220,7 @@ impl FormatEmitter for HtmlEmitter {
         // Use the footnotes template for the wrapper
         let mut vars = std::collections::HashMap::new();
         vars.insert("base".to_string(), "html".to_string());
+        vars.insert("engine".to_string(), "html".to_string());
         vars.insert("footnotes".to_string(), "true".to_string());
         vars.insert("footnote_items".to_string(), footnote_items);
         let tpl = include_str!("../project/templates/common/footnotes.jinja");

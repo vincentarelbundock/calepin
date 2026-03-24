@@ -10,6 +10,7 @@ mod pipeline;
 mod plugin_manifest;
 mod preview;
 mod registry;
+mod theme_manifest;
 mod render;
 mod collection;
 mod structures;
@@ -38,6 +39,8 @@ pub(crate) struct ProjectContext {
     /// True when the target was explicitly set (CLI flag or front matter),
     /// false when it fell back to the default "html".
     explicit_target: bool,
+    /// Active theme name, if any.
+    theme_name: Option<String>,
 }
 
 impl ProjectContext {
@@ -52,9 +55,14 @@ impl ProjectContext {
     }
 }
 
-/// Resolve project config and target from an input file and optional CLI target flag.
+/// Resolve project config and target from an input file and optional CLI flags.
 /// Falls back to front matter `target:`, then "html".
 pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectContext> {
+    resolve_context_with_theme(input, cli_target, None)
+}
+
+/// Resolve project config, target, and theme from an input file and optional CLI flags.
+pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>, cli_theme: Option<&str>) -> Result<ProjectContext> {
     let input_dir = input.parent().unwrap_or(Path::new("."));
     let abs_input_dir = if input_dir.is_relative() {
         std::env::current_dir().unwrap_or_default().join(input_dir)
@@ -111,44 +119,63 @@ pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<
     let effective_root = project_root.clone().unwrap_or_else(|| abs_input_dir.clone());
     paths::set_project_root(Some(&effective_root));
 
+    // Resolve theme: CLI flag -> front matter -> project config
+    let theme_name = cli_theme.map(|s| s.to_string())
+        .or_else(|| {
+            // Read front matter theme
+            if let Ok(text) = fs::read_to_string(input) {
+                if let Ok((meta, _)) = parse::yaml::split_yaml(&text) {
+                    return meta.theme;
+                }
+            }
+            None
+        });
+
+    // If theme is active, set theme dir for template resolution
+    if let Some(ref theme) = theme_name {
+        if let Some(theme_dir) = theme_manifest::resolve_theme_dir(theme, &effective_root) {
+            paths::set_theme_dir(Some(&theme_dir));
+        }
+    }
+
     Ok(ProjectContext {
         project_root: Some(effective_root),
         project_config,
         target_name,
         target,
         explicit_target,
+        theme_name,
     })
 }
 
-/// Apply `--base` override to a resolved project context.
+/// Apply `--engine` override to a resolved project context.
 ///
-/// Validates that the base is allowed for the target:
+/// Validates that the engine is allowed for the target:
 ///   - `pdf`: html, latex, typst, markdown
 ///   - `book`: latex, typst
-///   - `website`: html
-///   - others: no override allowed (base is fixed)
-pub(crate) fn apply_base_override(ctx: &mut ProjectContext, base: Option<&str>) -> Result<()> {
-    let Some(base) = base else { return Ok(()) };
+///   - others: no override allowed (engine is fixed)
+pub(crate) fn apply_engine_override(ctx: &mut ProjectContext, engine: Option<&str>) -> Result<()> {
+    let Some(engine) = engine else { return Ok(()) };
 
     let allowed: &[&str] = match ctx.target_name.as_str() {
         "pdf" => &["html", "latex", "typst", "markdown"],
         "book" => &["latex", "typst"],
         other => anyhow::bail!(
-            "--base is only valid for pdf or book targets (got '{}')", other
+            "--engine is only valid for pdf or book targets (got '{}')", other
         ),
     };
 
-    if !allowed.contains(&base) {
+    if !allowed.contains(&engine) {
         anyhow::bail!(
-            "--base '{}' is not valid for target '{}'. Allowed: {}",
-            base, ctx.target_name, allowed.join(", ")
+            "--engine '{}' is not valid for target '{}'. Allowed: {}",
+            engine, ctx.target_name, allowed.join(", ")
         );
     }
 
-    ctx.target.base = base.to_string();
+    ctx.target.engine = engine.to_string();
 
-    // Update extension and fig-extension to match the new base
-    let builtin = project::builtin_config().targets.get(base);
+    // Update extension and fig-extension to match the new engine
+    let builtin = project::builtin_config().targets.get(engine);
     if let Some(b) = builtin {
         ctx.target.extension = b.extension.clone();
         ctx.target.fig_extension = b.fig_extension.clone();

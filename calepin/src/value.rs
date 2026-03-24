@@ -5,9 +5,10 @@
 //! Both TOML and minimal YAML parse into this type.
 
 use std::collections::HashMap;
+use indexmap::IndexMap;
 
 /// An ordered map of string keys to values.
-pub type Table = Vec<(String, Value)>;
+pub type Table = IndexMap<String, Value>;
 
 /// A generic configuration/metadata value.
 #[derive(Debug, Clone)]
@@ -81,7 +82,7 @@ impl Value {
 
 /// Look up a key in a table.
 pub fn table_get<'a>(table: &'a Table, key: &str) -> Option<&'a Value> {
-    table.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+    table.get(key)
 }
 
 /// Get an optional string from a table.
@@ -121,8 +122,7 @@ pub fn from_toml(tv: toml::Value) -> Value {
         toml::Value::Datetime(dt) => Value::String(dt.to_string()),
         toml::Value::Array(arr) => Value::Array(arr.into_iter().map(from_toml).collect()),
         toml::Value::Table(map) => {
-            let table: Table = map.into_iter().map(|(k, v)| (k, from_toml(v))).collect();
-            Value::Table(table)
+            Value::Table(map.into_iter().map(|(k, v)| (k, from_toml(v))).collect())
         }
     }
 }
@@ -184,7 +184,9 @@ pub fn coerce_value(s: &str) -> Value {
 pub fn build_nested_value(parts: &[&str], leaf: Value) -> Value {
     let mut val = leaf;
     for &part in parts[1..].iter().rev() {
-        val = Value::Table(vec![(part.to_string(), val)]);
+        let mut t = Table::new();
+        t.insert(part.to_string(), val);
+        val = Value::Table(t);
     }
     val
 }
@@ -213,17 +215,17 @@ pub fn merge_value(
 /// Recursively merge two tables. Values in `source` override `target`.
 fn merge_tables(target: &mut Table, source: Table) {
     for (k, v) in source {
-        if let Some(pos) = target.iter().position(|(tk, _)| *tk == k) {
-            match (&mut target[pos].1, &v) {
+        if let Some(existing) = target.get_mut(&k) {
+            match (existing, &v) {
                 (Value::Table(t), Value::Table(s)) => {
                     merge_tables(t, s.clone());
                 }
-                _ => {
-                    target[pos].1 = v;
+                (existing, _) => {
+                    *existing = v;
                 }
             }
         } else {
-            target.push((k, v));
+            target.insert(k, v);
         }
     }
 }
@@ -261,25 +263,25 @@ pub fn parse_minimal_yaml(text: &str) -> Table {
                 let indent = next_indent(&lines, i);
                 if indent == 0 {
                     // Empty value
-                    result.push((key, Value::Null));
+                    result.insert(key, Value::Null);
                     continue;
                 }
 
                 // Check if first indented line starts with "- "
                 if i < lines.len() && lines[i].trim().starts_with("- ") {
                     let list = parse_yaml_list(&lines, &mut i, indent);
-                    result.push((key, list));
+                    result.insert(key, list);
                 } else if i < lines.len() && lines[i].trim().starts_with('|') {
                     // Block scalar
                     i += 1; // skip the | line... wait, | should be on the key line
                     // Actually in YAML: `abstract: |` then indented lines
                     // But we already consumed the line. Let's collect indented lines.
                     let block = collect_indented_block(&lines, &mut i, indent);
-                    result.push((key, Value::String(block)));
+                    result.insert(key, Value::String(block));
                 } else {
                     // Nested mapping
                     let sub = parse_yaml_submapping(&lines, &mut i, indent);
-                    result.push((key, Value::Table(sub)));
+                    result.insert(key, Value::Table(sub));
                 }
             } else if rest == "|" || rest == "|-" || rest == "|+" || rest == ">" || rest == ">-" {
                 // Block scalar
@@ -292,10 +294,10 @@ pub fn parse_minimal_yaml(text: &str) -> Table {
                 } else {
                     block
                 };
-                result.push((key, Value::String(block)));
+                result.insert(key, Value::String(block));
             } else {
                 // Inline value
-                result.push((key, parse_yaml_scalar(rest)));
+                result.insert(key, parse_yaml_scalar(rest));
                 i += 1;
             }
         } else {
@@ -339,16 +341,16 @@ fn parse_yaml_list(lines: &[&str], i: &mut usize, min_indent: usize) -> Value {
                         if sub_indent > cur_indent {
                             if lines.get(*i).map_or(false, |l| l.trim().starts_with("- ")) {
                                 let list = parse_yaml_list(lines, i, sub_indent);
-                                sub.push((k, list));
+                                sub.insert(k, list);
                             } else {
                                 let submap = parse_yaml_submapping(lines, i, sub_indent);
-                                sub.push((k, Value::Table(submap)));
+                                sub.insert(k, Value::Table(submap));
                             }
                         } else {
-                            sub.push((k, Value::Null));
+                            sub.insert(k, Value::Null);
                         }
                     } else {
-                        sub.push((k, parse_yaml_scalar(v)));
+                        sub.insert(k, parse_yaml_scalar(v));
                         *i += 1;
                     }
                 }
@@ -374,16 +376,16 @@ fn parse_yaml_list(lines: &[&str], i: &mut usize, min_indent: usize) -> Value {
                             if sub_indent > line_indent {
                                 if lines.get(*i).map_or(false, |l| l.trim().starts_with("- ")) {
                                     let list = parse_yaml_list(lines, i, sub_indent);
-                                    sub.push((k, list));
+                                    sub.insert(k, list);
                                 } else {
                                     let submap = parse_yaml_submapping(lines, i, sub_indent);
-                                    sub.push((k, Value::Table(submap)));
+                                    sub.insert(k, Value::Table(submap));
                                 }
                             } else {
-                                sub.push((k, Value::Null));
+                                sub.insert(k, Value::Null);
                             }
                         } else {
-                            sub.push((k, parse_yaml_scalar(v)));
+                            sub.insert(k, parse_yaml_scalar(v));
                             *i += 1;
                         }
                     } else {
@@ -431,13 +433,13 @@ fn parse_yaml_submapping(lines: &[&str], i: &mut usize, min_indent: usize) -> Ta
                 if sub_indent > cur_indent {
                     if lines.get(*i).map_or(false, |l| l.trim().starts_with("- ")) {
                         let list = parse_yaml_list(lines, i, sub_indent);
-                        result.push((key, list));
+                        result.insert(key, list);
                     } else {
                         let sub = parse_yaml_submapping(lines, i, sub_indent);
-                        result.push((key, Value::Table(sub)));
+                        result.insert(key, Value::Table(sub));
                     }
                 } else {
-                    result.push((key, Value::Null));
+                    result.insert(key, Value::Null);
                 }
             } else if rest == "|" || rest == "|-" || rest == "|+" || rest == ">" || rest == ">-" {
                 *i += 1;
@@ -448,9 +450,9 @@ fn parse_yaml_submapping(lines: &[&str], i: &mut usize, min_indent: usize) -> Ta
                 } else {
                     block
                 };
-                result.push((key, Value::String(block)));
+                result.insert(key, Value::String(block));
             } else {
-                result.push((key, parse_yaml_scalar(rest)));
+                result.insert(key, parse_yaml_scalar(rest));
                 *i += 1;
             }
         } else {
@@ -524,7 +526,7 @@ fn parse_yaml_scalar(s: &str) -> Value {
         let mut table = Table::new();
         for pair in inner.split(',') {
             if let Some((k, v)) = pair.split_once(':') {
-                table.push((k.trim().to_string(), parse_yaml_scalar(v.trim())));
+                table.insert(k.trim().to_string(), parse_yaml_scalar(v.trim()));
             }
         }
         return Value::Table(table);
@@ -681,7 +683,7 @@ mod tests {
         let table = parse_minimal_yaml("format:\n  html: default");
         let fmt = table_get(&table, "format").unwrap();
         let fmt_table = fmt.as_table().unwrap();
-        assert_eq!(fmt_table[0].0, "html");
+        assert_eq!(fmt_table.keys().next().unwrap(), "html");
     }
 
     #[test]

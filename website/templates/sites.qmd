@@ -182,7 +182,7 @@ Collection templates receive two main context objects:
 | {% raw %}`{{ collection.logo_dark }}`{% endraw %} | Dark mode logo path |
 | {% raw %}`{{ collection.pages }}`{% endraw %} | Navigation tree (with active document marked) |
 | {% raw %}`{{ collection.dark_mode }}`{% endraw %} | Whether dark mode is enabled |
-| {% raw %}`{{ collection.math_block }}`{% endraw %} | Math library script tags |
+| {% raw %}`{{ collection.math }}`{% endraw %} | Math library script tags |
 
 ### document
 

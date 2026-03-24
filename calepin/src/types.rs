@@ -360,6 +360,7 @@ pub struct Metadata {
     pub funding: Vec<Funding>,
     pub appendix_style: Option<String>,
     pub target: Option<String>,
+    pub theme: Option<String>,
     pub number_sections: bool,
     pub toc: Option<bool>,
     pub toc_depth: u8,

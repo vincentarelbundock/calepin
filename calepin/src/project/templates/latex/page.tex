@@ -7,7 +7,7 @@
 {{preamble}}
 {% if title %}{% include "title.jinja" %}
 {% include "subtitle.jinja" %}
-{% include "author_block.jinja" %}
+{% include "authors.jinja" %}
 {% include "date.jinja" %}{% else %}\date{}{% endif %}
 \begin{document}
 {% if title %}\maketitle
@@ -19,7 +19,7 @@
 
 {{body}}
 
-{{appendix_block}}
-{{bibliography_block}}
+{{appendix}}
+{{bibliography}}
 {{bib_end}}
 \end{document}

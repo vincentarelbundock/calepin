@@ -32,7 +32,7 @@
 <header class="frontmatter">
 {% include "title.jinja" %}
 {% include "subtitle.jinja" %}
-{% include "author_block.jinja" %}
+{% include "authors.jinja" %}
 {% include "date.jinja" %}
 </header>
 
@@ -43,7 +43,7 @@
 {{body}}
 </article>
 
-{{appendix_block}}
+{{appendix}}
 </main>
 {% if toc %}<aside class="toc-sidebar" role="complementary" aria-label="Table of contents">{{toc}}</aside>{% endif %}
 </div>

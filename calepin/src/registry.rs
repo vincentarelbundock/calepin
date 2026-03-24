@@ -210,32 +210,10 @@ impl PluginRegistry {
         attrs: &HashMap<String, String>,
     ) -> Option<String> {
         let input = build_filter_json(context, content, classes, id, format, attrs);
-
-        match &plugin.kind {
-            PluginKind::Subprocess { path: _ } => {
-                let run_path = filter_spec.run.as_ref()?;
-                crate::util::run_json_process(run_path, &input)
-            }
-            PluginKind::PersistentSubprocess { path, process } => {
-                let mut proc = process.borrow_mut();
-                if proc.is_none() {
-                    *proc = PersistentProcess::spawn(path);
-                }
-                let proc = proc.as_mut()?;
-
-                let mut request = serde_json::json!({ "type": "filter" });
-                if let serde_json::Value::Object(ref mut map) = request {
-                    if let serde_json::Value::Object(input_map) = input {
-                        map.extend(input_map);
-                    }
-                }
-
-                let response = proc.call(&request)?;
-                match response["result"].as_str()? {
-                    "rendered" => response["output"].as_str().map(|s| s.to_string()),
-                    _ => None,
-                }
-            }
+        let run_path = filter_spec.run.as_ref();
+        let response = call_subprocess(plugin, run_path, "filter", input)?;
+        match response["result"].as_str()? {
+            "rendered" => response["output"].as_str().map(|s| s.to_string()),
             _ => None,
         }
     }
@@ -287,31 +265,9 @@ impl PluginRegistry {
             "format": format,
             "meta": meta,
         });
-
-        match &plugin.kind {
-            PluginKind::Subprocess { path: _ } => {
-                let run_path = plugin.manifest.provides.shortcode.as_ref()?.run.as_ref()?;
-                crate::util::run_json_process(run_path, &input)
-            }
-            PluginKind::PersistentSubprocess { path, process } => {
-                let mut proc = process.borrow_mut();
-                if proc.is_none() {
-                    *proc = PersistentProcess::spawn(path);
-                }
-                let proc = proc.as_mut()?;
-
-                let mut request = serde_json::json!({ "type": "shortcode" });
-                if let serde_json::Value::Object(ref mut map) = request {
-                    if let serde_json::Value::Object(input_map) = input {
-                        map.extend(input_map);
-                    }
-                }
-
-                let response = proc.call(&request)?;
-                response["output"].as_str().map(|s| s.to_string())
-            }
-            _ => None,
-        }
+        let run_path = plugin.manifest.provides.shortcode.as_ref()?.run.as_ref();
+        let response = call_subprocess(plugin, run_path, "shortcode", input)?;
+        response["output"].as_str().map(|s| s.to_string())
     }
 
     // -----------------------------------------------------------------------
@@ -342,31 +298,9 @@ impl PluginRegistry {
             "title": title,
             "css": css,
         });
-
-        match &plugin.kind {
-            PluginKind::Subprocess { path: _ } => {
-                let run_path = plugin.manifest.provides.postprocess.as_ref()?.run.as_ref()?;
-                crate::util::run_json_process(run_path, &input)
-            }
-            PluginKind::PersistentSubprocess { path, process } => {
-                let mut proc = process.borrow_mut();
-                if proc.is_none() {
-                    *proc = PersistentProcess::spawn(path);
-                }
-                let proc = proc.as_mut()?;
-
-                let mut request = serde_json::json!({ "type": "postprocess" });
-                if let serde_json::Value::Object(ref mut map) = request {
-                    if let serde_json::Value::Object(input_map) = input {
-                        map.extend(input_map);
-                    }
-                }
-
-                let response = proc.call(&request)?;
-                response["output"].as_str().map(|s| s.to_string())
-            }
-            _ => None,
-        }
+        let run_path = plugin.manifest.provides.postprocess.as_ref()?.run.as_ref();
+        let response = call_subprocess(plugin, run_path, "postprocess", input)?;
+        response["output"].as_str().map(|s| s.to_string())
     }
 
     // -----------------------------------------------------------------------
@@ -698,6 +632,46 @@ fn builtin_filter(
 // Helpers
 // ---------------------------------------------------------------------------
 
+
+/// Dispatch a subprocess call (one-shot or persistent).
+///
+/// For one-shot plugins, runs `run_path` with `input` on stdin.
+/// For persistent plugins, spawns the process if needed, sends a typed
+/// JSON-lines request, and returns the parsed response.
+///
+/// Returns `Some(response)` on success. For one-shot plugins, the response
+/// is `{"output": "..."}` to match the persistent protocol.
+fn call_subprocess(
+    plugin: &LoadedPlugin,
+    run_path: Option<&PathBuf>,
+    request_type: &str,
+    input: serde_json::Value,
+) -> Option<serde_json::Value> {
+    match &plugin.kind {
+        PluginKind::Subprocess { path: _ } => {
+            let run_path = run_path?;
+            let output = crate::util::run_json_process(run_path, &input)?;
+            Some(serde_json::json!({ "result": "rendered", "output": output }))
+        }
+        PluginKind::PersistentSubprocess { path, process } => {
+            let mut proc = process.borrow_mut();
+            if proc.is_none() {
+                *proc = PersistentProcess::spawn(path);
+            }
+            let proc = proc.as_mut()?;
+
+            let mut request = serde_json::json!({ "type": request_type });
+            if let serde_json::Value::Object(ref mut map) = request {
+                if let serde_json::Value::Object(input_map) = input {
+                    map.extend(input_map);
+                }
+            }
+
+            proc.call(&request)
+        }
+        _ => None,
+    }
+}
 
 /// Build the JSON payload for a filter subprocess call.
 fn build_filter_json(

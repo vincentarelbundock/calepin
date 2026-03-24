@@ -257,8 +257,7 @@ pub fn process_body(
         // Safety: registry_addr is valid for the duration of process_body()
         // where the registry reference is valid. Cast to usize for Send+Sync.
         let registry_addr = registry as *const PluginRegistry as usize;
-        let func_name: &'static str = Box::leak(name.clone().into_boxed_str());
-        env.add_function(func_name, move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
+        env.add_function(name.clone(), move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
             // Safety: registry_addr is valid for the duration of process_body()
             let registry = unsafe { &*(registry_addr as *const PluginRegistry) };
 
@@ -294,8 +293,9 @@ pub fn process_body(
     let env_val: HashMap<String, String> = std::env::vars().collect();
 
     let context = minijinja::context! {
-        base => format,     // rendering engine (html, latex, typst, markdown)
-        target => format,   // target name (defaults to base when no target specified)
+        base => format,     // deprecated alias for engine
+        engine => format,   // rendering engine (html, latex, typst, markdown)
+        target => format,   // target name (defaults to engine when no target specified)
         meta => meta_val,
         var => var_val,
         env => env_val,
