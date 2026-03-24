@@ -67,12 +67,15 @@ calepin.preamble <- function(text) {
     sentinel <- sub("_BEGIN$", "", header)
     end_marker <- paste0(sentinel, "_END")
 
-    lines <- character(0)
+    lines <- list()
+    .i <- 0L
     repeat {
       line <- readLines(con, n = 1, warn = FALSE)
       if (length(line) == 0 || line == end_marker) break
-      lines <- c(lines, line)
+      .i <- .i + 1L
+      lines[[.i]] <- line
     }
+    lines <- unlist(lines)
 
     # First line is metadata: MODE:..., rest is code
     meta_line <- lines[1]

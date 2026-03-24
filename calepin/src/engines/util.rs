@@ -20,12 +20,7 @@ fn check_blocks_for_engine(blocks: &[Block], body: &str, engine_name: &str) -> b
                 if !chunk.options.eval() {
                     continue;
                 }
-                let chunk_engine = chunk.options.engine();
-                if chunk_engine == engine_name {
-                    return true;
-                }
-                // R is the default engine for chunks without an explicit engine
-                if engine_name == "r" && chunk_engine == "r" {
+                if chunk.options.engine() == engine_name {
                     return true;
                 }
             }

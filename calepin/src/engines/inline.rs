@@ -23,10 +23,11 @@ pub fn evaluate_inline(text: &str, ctx: &mut EngineContext) -> Result<String> {
     for (start, end, inline) in &inlines {
         result.push_str(&text[last_end..*start]);
 
+        let known = matches!(inline.engine.as_str(), "r" | "python" | "sh");
         match engines::evaluate_inline(&inline.engine, &inline.expr, ctx) {
             Ok(value) => result.push_str(&value),
             Err(e) => {
-                if inline.engine == "r" || inline.engine == "python" {
+                if known {
                     cwarn!(
                         "Warning: inline {} expression `{}` failed: {}",
                         inline.engine, inline.expr, e
@@ -34,7 +35,7 @@ pub fn evaluate_inline(text: &str, ctx: &mut EngineContext) -> Result<String> {
                     result.push_str(&format!("`{{{}}} {}`", inline.engine, inline.expr));
                 } else {
                     return Err(anyhow::anyhow!(
-                        "Unknown inline engine `{}`. Supported engines: r, python",
+                        "Unknown inline engine `{}`. Supported engines: r, python, sh",
                         inline.engine
                     ));
                 }

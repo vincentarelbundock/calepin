@@ -294,13 +294,10 @@ pub fn evaluate_inline(engine: &str, expr: &str, ctx: &mut EngineContext) -> Res
 
 /// Generate a unique sentinel that cannot appear in user output.
 pub fn make_sentinel() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    let pid = std::process::id();
-    format!("__CALEPIN_{:x}_{:x}__", pid, nanos)
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("__CALEPIN_{:x}_{:x}__", std::process::id(), seq)
 }
 
 /// Parse sentinel-delimited capture output into ChunkResults.
