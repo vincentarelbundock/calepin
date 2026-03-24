@@ -529,26 +529,6 @@ impl Target {
 // Project root detection and config loading
 // ---------------------------------------------------------------------------
 
-/// Walk up from `start_dir` looking for `_calepin.toml`.
-/// Returns the directory containing it (the project root).
-pub fn find_project_root(start_dir: &Path) -> Option<PathBuf> {
-    let mut dir = start_dir.to_path_buf();
-    loop {
-        if dir.join("_calepin.toml").exists() {
-            return Some(dir);
-        }
-        if !dir.pop() {
-            return None;
-        }
-    }
-}
-
-/// Find the config file in a project root directory.
-pub fn config_path(project_root: &Path) -> Option<PathBuf> {
-    let p = project_root.join("_calepin.toml");
-    if p.exists() { return Some(p); }
-    None
-}
 
 /// Load and validate a project config from a calepin.toml file.
 pub fn load_project_config(path: &Path) -> Result<ProjectConfig> {

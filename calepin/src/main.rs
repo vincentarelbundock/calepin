@@ -67,17 +67,23 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
         input_dir.to_path_buf()
     };
 
-    let project_root = project::find_project_root(&abs_input_dir);
-    let project_config = project_root.as_ref().and_then(|root| {
-        let cfg_path = project::config_path(root)?;
-        match project::load_project_config(&cfg_path) {
-            Ok(config) => Some(config),
-            Err(e) => {
-                eprintln!("Warning: failed to load {}: {}", cfg_path.display(), e);
-                None
+    // Project root is the directory containing the input file.
+    // For .qmd files, that's the file's parent directory.
+    // For _calepin.toml, site::build_site handles it separately.
+    let (project_root, project_config) = {
+        let cfg_path = abs_input_dir.join("_calepin.toml");
+        if cfg_path.exists() {
+            match project::load_project_config(&cfg_path) {
+                Ok(config) => (Some(abs_input_dir.clone()), Some(config)),
+                Err(e) => {
+                    eprintln!("Warning: failed to load {}: {}", cfg_path.display(), e);
+                    (Some(abs_input_dir.clone()), None)
+                }
             }
+        } else {
+            (None, None)
         }
-    });
+    };
 
     // Target name: CLI flag -> front matter -> default from config
     let default_format = project::get_defaults().format.clone().unwrap_or_else(|| "html".to_string());
@@ -104,10 +110,13 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
     let defaults = project::resolve_defaults(project_config.as_ref());
     project::set_active_defaults(defaults);
 
-    paths::set_project_root(project_root.as_deref());
+    // In single-file mode (no _calepin.toml), the project root is the
+    // input file's parent directory so that all paths resolve relative to it.
+    let effective_root = project_root.clone().unwrap_or_else(|| abs_input_dir.clone());
+    paths::set_project_root(Some(&effective_root));
 
     Ok(ProjectContext {
-        project_root,
+        project_root: Some(effective_root),
         project_config,
         target_name,
         target,
