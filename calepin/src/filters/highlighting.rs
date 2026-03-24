@@ -68,9 +68,9 @@ fn resolve_theme_name(name: &str) -> Option<&'static str> {
         _ => {}
     }
 
-    // Check if a .tmTheme file exists in the built-in project tree
-    let path = format!("assets/highlighting/{}.tmTheme", name);
-    if crate::render::elements::BUILTIN_PROJECT.get_file(&path).is_some() {
+    // Check if a .tmTheme file exists in the built-in highlighting themes
+    let path = format!("{}.tmTheme", name);
+    if crate::render::elements::BUILTIN_HIGHLIGHTING.get_file(&path).is_some() {
         // Leak a &'static str for the name (small, bounded set)
         return Some(Box::leak(name.to_string().into_boxed_str()));
     }
@@ -131,9 +131,8 @@ fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
         }
     }
 
-    // 3. Built-in: embedded project tree
-    let builtin_path = format!("assets/highlighting/{}", filename);
-    if let Some(file) = crate::render::elements::BUILTIN_PROJECT.get_file(&builtin_path) {
+    // 3. Built-in: embedded highlighting themes
+    if let Some(file) = crate::render::elements::BUILTIN_HIGHLIGHTING.get_file(&filename) {
         return ThemeSet::load_from_reader(&mut Cursor::new(file.contents())).ok();
     }
 

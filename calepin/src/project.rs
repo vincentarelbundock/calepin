@@ -77,29 +77,15 @@ pub struct SiteSection {
 }
 
 impl SiteSection {
-    /// Content directory prefix: if `content/` exists in `base_dir`, paths in
-    /// `content` and `content_standalone` are automatically prefixed with it.
-    pub fn content_prefix(base_dir: &std::path::Path) -> &'static str {
-        if base_dir.join("content").is_dir() { "content/" } else { "" }
-    }
-
-    /// Prepend the content prefix to a path if it doesn't already have it.
-    pub fn prefixed(s: &str, prefix: &str) -> String {
-        if prefix.is_empty() || s.starts_with(prefix) { s.to_string() }
-        else { format!("{}{}", prefix, s) }
-    }
-
     /// Expand the pages tree, resolving glob patterns relative to `base_dir`.
     /// Returns a flat list of (section_title, file_path) pairs.
     /// Top-level pages have section_title = None.
     pub fn expand_pages(&self, base_dir: &std::path::Path) -> Vec<PageNode> {
-        let prefix = Self::content_prefix(base_dir);
         let mut result = Vec::new();
         for entry in &self.content {
             match entry {
                 toml::Value::String(s) => {
-                    let s = Self::prefixed(s, prefix);
-                    for path in expand_glob(&s, base_dir) {
+                    for path in expand_glob(s, base_dir) {
                         result.push(PageNode::Page(path));
                     }
                 }
@@ -108,8 +94,7 @@ impl SiteSection {
                     let mut children = Vec::new();
                     for item in &arr[1..] {
                         if let Some(s) = item.as_str() {
-                            let s = Self::prefixed(s, prefix);
-                            for path in expand_glob(&s, base_dir) {
+                            for path in expand_glob(s, base_dir) {
                                 children.push(path);
                             }
                         }
@@ -775,10 +760,7 @@ pub fn resolve_target_output_path(
         } else {
             input.to_path_buf()
         };
-        // Try stripping content/ prefix first, then project root
-        let content_dir = root.join("content");
-        let relative = abs_input.strip_prefix(&content_dir)
-            .or_else(|_| abs_input.strip_prefix(root))
+        let relative = abs_input.strip_prefix(root)
             .unwrap_or(&abs_input);
         root.join(out).join(target_name).join(relative).with_extension(ext)
     } else {
@@ -869,7 +851,7 @@ unknown_field = "oops"
     #[test]
     fn test_output_path_with_project_root() {
         let path = resolve_target_output_path(
-            Path::new("/project/content/book/ch1.qmd"),
+            Path::new("/project/book/ch1.qmd"),
             "web",
             "html",
             Some(Path::new("/project")),
@@ -894,19 +876,19 @@ unknown_field = "oops"
     fn test_output_path_no_output_dir() {
         // With project root but no output dir configured: same dir as input
         let path = resolve_target_output_path(
-            Path::new("/project/content/ch1.qmd"),
+            Path::new("/project/ch1.qmd"),
             "web",
             "html",
             Some(Path::new("/project")),
             None,
         );
-        assert_eq!(path, PathBuf::from("/project/content/ch1.html"));
+        assert_eq!(path, PathBuf::from("/project/ch1.html"));
     }
 
     #[test]
     fn test_output_path_custom_output_dir() {
         let path = resolve_target_output_path(
-            Path::new("/project/content/ch1.qmd"),
+            Path::new("/project/ch1.qmd"),
             "web",
             "html",
             Some(Path::new("/project")),
@@ -917,9 +899,9 @@ unknown_field = "oops"
 
     #[test]
     fn test_output_path_subdirectory_preserved() {
-        // Files in content subdirectories keep their relative path
+        // Files in subdirectories keep their relative path
         let path = resolve_target_output_path(
-            Path::new("/project/content/code/diagrams.qmd"),
+            Path::new("/project/code/diagrams.qmd"),
             "website",
             "html",
             Some(Path::new("/project")),

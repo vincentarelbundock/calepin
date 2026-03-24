@@ -18,6 +18,9 @@ use crate::filters::highlighting::{Highlighter, HighlightConfig, ColorScope};
 /// Files are discovered by path at runtime -- no hardcoded file list.
 pub static BUILTIN_PROJECT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/project");
 
+/// Built-in syntax highlighting themes (`.tmTheme` files), embedded at compile time.
+pub static BUILTIN_HIGHLIGHTING: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/assets/highlighting");
+
 /// Template name aliases: multiple names can map to the same template file.
 fn resolve_template_alias(name: &str) -> &str {
     match name {

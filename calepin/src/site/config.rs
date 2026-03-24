@@ -58,16 +58,13 @@ pub fn collect_page_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String
 
 /// Collect standalone page paths (rendered but not in nav).
 pub fn collect_standalone_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String> {
-    use crate::project::SiteSection;
     let site = match &config.site {
         Some(s) => s,
         None => return Vec::new(),
     };
-    let prefix = SiteSection::content_prefix(base_dir);
     let mut paths = Vec::new();
     for pattern in &site.content_standalone {
-        let pattern = SiteSection::prefixed(pattern, prefix);
-        for path in crate::project::expand_glob_pub(&pattern, base_dir) {
+        for path in crate::project::expand_glob_pub(pattern, base_dir) {
             if path.ends_with(".qmd") {
                 paths.push(path);
             }

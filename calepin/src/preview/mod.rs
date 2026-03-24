@@ -69,11 +69,7 @@ pub fn run_site(
     status.set_message(format!("built at {}", format_local_time()));
     spinner.set_message("watching for changes... (Ctrl+C to stop)");
 
-    // Watch content directory (and fall back to base_dir if content/ doesn't exist)
-    let watch_dir = {
-        let content = base_dir.join("content");
-        if content.is_dir() { content } else { base_dir.clone() }
-    };
+    let watch_dir = base_dir.clone();
 
     let config_path = config_path.to_path_buf();
     let target = args.target.clone();

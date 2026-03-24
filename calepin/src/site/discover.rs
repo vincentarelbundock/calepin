@@ -67,8 +67,7 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str)
         let meta = extract_frontmatter(&abs_path)
             .with_context(|| format!("Failed to read frontmatter: {}", rel_path))?;
 
-        // Strip content/ prefix for output paths so content/index.qmd -> index.html
-        let output_rel = source.strip_prefix("content").unwrap_or(&source);
+        let output_rel = &source;
         let output = output_rel.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
@@ -101,8 +100,7 @@ pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output
         let meta = extract_frontmatter(&abs_path)
             .with_context(|| format!("Failed to read frontmatter: {}", rel_path))?;
 
-        let output_rel = source.strip_prefix("content").unwrap_or(&source);
-        let output = output_rel.with_extension(output_ext);
+        let output = source.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
         pages.push(PageInfo {

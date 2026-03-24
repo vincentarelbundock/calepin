@@ -879,7 +879,7 @@ fn handle_info(action: InfoAction) -> Result<()> {
         }
         InfoAction::Themes => {
             println!("Built-in syntax highlighting themes:\n");
-            if let Some(dir) = render::elements::BUILTIN_PROJECT.get_dir("assets/highlighting") {
+            if let Some(dir) = Some(&render::elements::BUILTIN_HIGHLIGHTING) {
                 let mut names: Vec<&str> = dir.files()
                     .filter_map(|f| {
                         if f.path().extension()?.to_str()? == "tmTheme" {
