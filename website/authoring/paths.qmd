@@ -2,24 +2,44 @@
 title: Paths
 ---
 
-*Calepin* uses one rule for path resolution: **all input paths resolve relative to the document directory** (the parent of the `.qmd` file). There is no concept of "project root."
+*Calepin* has two modes, each with a clear root directory for path resolution:
+
+- **Document mode** (`calepin render file.qmd`): the root is the directory containing the `.qmd` file.
+- **Collection mode** (`calepin render _calepin.toml`): the root is the directory containing `_calepin.toml`.
+
+All input paths resolve relative to this root.
 
 # Input paths
 
-All path-bearing front matter fields -- `bibliography`, `csl`, `css`, and `{% include %}` directives -- resolve relative to the document directory. Markdown image paths and code chunk file I/O follow the same rule.
+Path-bearing front matter fields -- `bibliography`, `csl`, `css`, and `{% include %}` directives -- resolve relative to the root. Markdown image paths and code chunk file I/O follow the same rule.
+
+In document mode, this means paths are relative to the `.qmd` file's directory:
+
+```yaml
+bibliography: refs.bib          # same directory as the .qmd
+csl: styles/apa.csl             # subdirectory
+```
+
+In collection mode, paths are relative to `_calepin.toml`, regardless of where the `.qmd` file sits in the project tree:
+
+```yaml
+bibliography: assets/library.bib   # from the project root, not the file's directory
+```
+
+This means every page in a collection uses the same path for shared resources, no matter how deeply nested.
 
 # Output paths
 
-By default, output is written alongside the input file with the appropriate extension. The `-o` flag overrides this. Generated figures go in `_calepin_files/{stem}/` inside the output directory. The execution cache goes in `_calepin_cache/{stem}/` inside the document directory. Both are customizable via `calepin.files-dir` and `calepin.cache-dir` in front matter.
+By default, output is written alongside the input file with the appropriate extension. The `-o` flag overrides this. Generated figures go in `_calepin/files/{stem}/` inside the output directory. The execution cache goes in `_calepin/cache/{stem}/` inside the root directory.
 
 # Override resolution
 
 Templates, element overrides, CSL files, and plugins follow a two-level fallback:
 
-1. `_calepin/` in the document directory
+1. `_calepin/` in the root directory
 2. Built-in defaults
 
-Plugins resolve from `_calepin/plugins/{name}/plugin.yml`. Built-in plugins (tabset, layout, callout, theorem, figure-div, table-div) need no files on disk.
+Plugins resolve from `_calepin/plugins/{name}/plugin.toml`. Built-in plugins (tabset, layout, callout, theorem, figure-div, table-div) need no files on disk.
 
 # Validation
 
@@ -29,11 +49,11 @@ Plugins resolve from `_calepin/plugins/{name}/plugin.yml`. Built-in plugins (tab
 
 | Path | Resolves from | On missing |
 |------|--------------|------------|
-| `bibliography`, `csl`, `css` | Document directory | Hard error |
-| `{% include %}` | Document directory | Error in output |
-| Images, code chunk I/O | Document directory | -- |
+| `bibliography`, `csl`, `css` | Root directory | Hard error |
+| `{% include %}` | Root directory | Error in output |
+| Images, code chunk I/O | Root directory | -- |
 | Plugins | `_calepin/plugins/` | Hard error |
 | Templates, elements | `_calepin/` | Falls back to built-in |
-| Output file | Document directory or `-o` | Created |
-| `_calepin_files/` | Output directory | Created |
-| `_calepin_cache/` | Document directory | Created |
+| Output file | Root directory or `-o` | Created |
+| `_calepin/files/` | Output directory | Created |
+| `_calepin/cache/` | Root directory | Created |

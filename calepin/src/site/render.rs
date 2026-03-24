@@ -108,7 +108,7 @@ fn render_one_page(
     let input = base_dir.join(&page.source);
     let output_path = output_dir.join(&page.output);
 
-    let result = crate::render_core(&input, &output_path, Some(format), overrides, None)?;
+    let result = crate::render_core(&input, &output_path, Some(format), overrides, None, Some(base_dir))?;
 
     let body = if apply_page_template {
         // Apply the project's page template (e.g., book's minimal page.tex)

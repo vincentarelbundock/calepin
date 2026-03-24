@@ -42,7 +42,7 @@ funding:
     award: "Grant #123456"
     recipient: Vincent Arel-Bundock
 format: latex
-bibliography: ../library.bib
+bibliography: assets/library.bib
 ---
 
 {% include "../basics.qmd" %}

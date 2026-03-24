@@ -982,6 +982,7 @@ pub fn render_core(
     format: Option<&str>,
     overrides: &[String],
     project_var: Option<&toml::Value>,
+    project_root_override: Option<&Path>,
 ) -> Result<RenderResult> {
 
 /// Whether `CALEPIN_TIMING=1` is set (checked once at startup).
@@ -1025,7 +1026,14 @@ macro_rules! timed {
     }
 
     // 2b. Construct path context and validate paths
-    let path_ctx = paths::PathContext::for_single_file(input, output_path);
+    let path_ctx = if let Some(root) = project_root_override {
+        paths::PathContext {
+            project_root: root.to_path_buf(),
+            output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+        }
+    } else {
+        paths::PathContext::for_single_file(input, output_path)
+    };
     let input_name = input.file_name()
         .unwrap_or_default()
         .to_string_lossy();
@@ -1199,7 +1207,7 @@ pub fn render_file(
         input.with_extension(ext)
     };
 
-    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, project_var)?;
+    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, project_var, None)?;
 
     let final_output = renderer
         .apply_template(&result.rendered, &result.metadata, &result.element_renderer)

@@ -49,6 +49,10 @@ pub struct ProjectConfig {
     #[serde(default)]
     pub orchestrator: Option<String>,
 
+    /// Languages supported by this collection.
+    #[serde(default)]
+    pub languages: Vec<Language>,
+
     /// Table of contents: ordered list of sections and pages.
     #[serde(default)]
     pub contents: Vec<ContentSection>,
@@ -77,6 +81,29 @@ impl ProjectConfig {
     pub fn is_collection(&self) -> bool {
         !self.contents.is_empty()
     }
+
+    /// The default language code, or None if no languages are configured.
+    pub fn default_language(&self) -> Option<&str> {
+        if self.languages.is_empty() {
+            return None;
+        }
+        self.languages.iter()
+            .find(|l| l.default)
+            .or(self.languages.first())
+            .map(|l| l.code.as_str())
+    }
+}
+
+/// A language declaration in `[[languages]]`.
+#[derive(Debug, Clone, Deserialize, serde::Serialize)]
+pub struct Language {
+    /// Language code (e.g., "en", "fr").
+    pub code: String,
+    /// Display name (e.g., "English", "Fran\u{00e7}ais").
+    pub name: String,
+    /// Whether this is the default language. Pages without `lang` use this.
+    #[serde(default)]
+    pub default: bool,
 }
 
 /// A section in the `[[contents]]` array of tables.
@@ -94,6 +121,9 @@ pub struct ContentSection {
     /// The section's own page (clickable section header in nav).
     #[serde(default)]
     pub index: Option<String>,
+    /// Language code for this section. Defaults to the default language.
+    #[serde(default)]
+    pub lang: Option<String>,
 }
 
 /// A single page entry: either a bare path string or a `{title, page}` table.
@@ -127,11 +157,30 @@ impl PageEntry {
 
 /// Expand `[[contents]]` into a flat `PageNode` tree, resolving globs.
 /// Standalone sections are excluded (they are not part of navigation).
+/// When `lang` is Some, only sections matching that language (or with no lang) are included.
 pub fn expand_contents(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<PageNode> {
+    expand_contents_for_lang(contents, base_dir, None)
+}
+
+/// Expand `[[contents]]` filtered by language.
+pub fn expand_contents_for_lang(
+    contents: &[ContentSection],
+    base_dir: &std::path::Path,
+    lang: Option<&str>,
+) -> Vec<PageNode> {
     let mut result = Vec::new();
     for section in contents {
         if section.standalone {
             continue;
+        }
+        // Language filter: if lang is requested, skip sections that don't match
+        if let Some(filter_lang) = lang {
+            if let Some(ref section_lang) = section.lang {
+                if section_lang != filter_lang {
+                    continue;
+                }
+            }
+            // Sections without lang are included for all languages
         }
         let expanded = expand_section_pages(&section.pages, base_dir);
         if let Some(ref title) = section.title {

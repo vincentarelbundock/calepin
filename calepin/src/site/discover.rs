@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -17,6 +18,12 @@ pub struct PageMeta {
     pub r#abstract: Option<String>,
     #[serde(default)]
     pub listing: Option<ListingConfig>,
+    /// Language code for this page (e.g., "en", "fr").
+    #[serde(default)]
+    pub lang: Option<String>,
+    /// Translation links: language code -> relative path to translated page.
+    #[serde(default)]
+    pub translations: Option<HashMap<String, String>>,
 }
 
 /// Listing configuration in page frontmatter.
@@ -48,10 +55,13 @@ pub struct PageInfo {
     pub meta: PageMeta,
     /// Standalone pages are rendered but excluded from navigation.
     pub standalone: bool,
+    /// Language code (from frontmatter `lang:`, or the default language).
+    pub lang: Option<String>,
 }
 
 /// Discover all pages referenced in the site config.
 pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<PageInfo>> {
+    let default_lang = config.default_language().map(|s| s.to_string());
     let page_paths = super::config::collect_page_paths(config, base_dir);
     let mut pages = Vec::new();
 
@@ -67,6 +77,8 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str)
         let meta = extract_frontmatter(&abs_path)
             .with_context(|| format!("Failed to read frontmatter: {}", rel_path))?;
 
+        let lang = meta.lang.clone().or_else(|| default_lang.clone());
+
         let output_rel = &source;
         let output = output_rel.with_extension(output_ext);
         let url = format!("/{}", output.display());
@@ -77,6 +89,7 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str)
             url,
             meta,
             standalone: false,
+            lang,
         });
     }
 
@@ -85,6 +98,7 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str)
 
 /// Discover standalone pages (rendered but not in nav).
 pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<PageInfo>> {
+    let default_lang = config.default_language().map(|s| s.to_string());
     let paths = super::config::collect_standalone_paths(config, base_dir);
     let mut pages = Vec::new();
 
@@ -100,6 +114,8 @@ pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output
         let meta = extract_frontmatter(&abs_path)
             .with_context(|| format!("Failed to read frontmatter: {}", rel_path))?;
 
+        let lang = meta.lang.clone().or_else(|| default_lang.clone());
+
         let output = source.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
@@ -109,6 +125,7 @@ pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output
             url,
             meta,
             standalone: true,
+            lang,
         });
     }
 
@@ -138,6 +155,7 @@ pub fn discover_listing_pages(
         }
 
         let meta = extract_frontmatter(&abs_path)?;
+        let lang = meta.lang.clone();
         let output = rel_path.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
@@ -147,6 +165,7 @@ pub fn discover_listing_pages(
             url,
             meta,
             standalone: false,
+            lang,
         });
     }
 

@@ -12,7 +12,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 
-use context::{build_page_context, build_site_context, mark_active, ListingItem};
+use context::{build_page_context, build_site_context, build_nav_tree_for_lang, mark_active, ListingItem};
 use discover::{discover_listing_pages, discover_pages, discover_standalone_pages, PageInfo};
 use crate::project::{PageNode, expand_contents};
 
@@ -260,9 +260,17 @@ pub fn rebuild_pages(
                 }).collect()
             });
 
-            let page_ctx = build_page_context(page, result, &pages, listing_items);
+            let page_ctx = build_page_context(page, result, &pages, listing_items, &config.languages);
 
-            let mut nav_tree = site_ctx.pages.clone();
+            let mut nav_tree = if !config.languages.is_empty() {
+                if let Some(ref lang) = page.lang {
+                    build_nav_tree_for_lang(&config, &pages, &base_dir, lang)
+                } else {
+                    site_ctx.pages.clone()
+                }
+            } else {
+                site_ctx.pages.clone()
+            };
             mark_active(&mut nav_tree, &page.url);
 
             let site_with_active = minijinja::context! {
@@ -274,6 +282,7 @@ pub fn rebuild_pages(
                     logo: site_ctx.logo.clone(),
                     logo_dark: site_ctx.logo_dark.clone(),
                     pages: nav_tree,
+                    languages: site_ctx.languages.clone(),
                     dark_mode: site_ctx.dark_mode,
                     math_block: site_ctx.math_block.clone(),
                 },
@@ -364,10 +373,18 @@ fn apply_site_templates(
             }).collect()
         });
 
-        let page_ctx = build_page_context(page, result, pages, listing_items);
+        let page_ctx = build_page_context(page, result, pages, listing_items, &config.languages);
 
-        // Mark active page in nav tree
-        let mut nav_tree = site_ctx.pages.clone();
+        // Build language-specific nav tree if this page has a language
+        let mut nav_tree = if !config.languages.is_empty() {
+            if let Some(ref lang) = page.lang {
+                build_nav_tree_for_lang(config, pages, base_dir, lang)
+            } else {
+                site_ctx.pages.clone()
+            }
+        } else {
+            site_ctx.pages.clone()
+        };
         mark_active(&mut nav_tree, &page.url);
 
         let site_with_active = minijinja::context! {
@@ -379,6 +396,7 @@ fn apply_site_templates(
                 logo: site_ctx.logo.clone(),
                 logo_dark: site_ctx.logo_dark.clone(),
                 pages: nav_tree,
+                languages: site_ctx.languages.clone(),
                 dark_mode: site_ctx.dark_mode,
                 math_block: site_ctx.math_block.clone(),
             },
