@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"{% if site.dark_mode %} data-theme="light"{% endif %}>
+<html lang="{% if page.lang %}{{ page.lang }}{% elif site.languages %}{{ site.languages[0].code }}{% else %}en{% endif %}"{% if site.dark_mode %} data-theme="light"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,8 +15,8 @@
   <a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
   {% include "navbar.html" %}
 
-  <div class="site-container">
-    {% include "sidebar_left.html" %}
+  <div class="site-container{% if var.sidebar is defined and not var.sidebar %} no-sidebar{% endif %}">
+    {% if var.sidebar is not defined or var.sidebar %}{% include "sidebar_left.html" %}{% endif %}
 
     <main id="main-content" class="content-main">
       <article>

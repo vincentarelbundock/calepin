@@ -33,13 +33,14 @@ use std::process::{Child, Command, Stdio};
 use std::sync::LazyLock;
 use std::time::Duration;
 
-/// Default chunk execution timeout in seconds. Override with CALEPIN_TIMEOUT env var.
-static CHUNK_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
-    let secs: u64 = std::env::var("CALEPIN_TIMEOUT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or_else(|| crate::project::get_defaults().timeout.unwrap_or(30));
-    Duration::from_secs(secs)
+/// Chunk execution timeout. None means no timeout (wait forever).
+/// Override with CALEPIN_TIMEOUT env var or `timeout` in _calepin.toml [defaults].
+/// Absent/null in TOML means infinite; a numeric value sets the timeout in seconds.
+static CHUNK_TIMEOUT: LazyLock<Option<Duration>> = LazyLock::new(|| {
+    if let Some(secs) = std::env::var("CALEPIN_TIMEOUT").ok().and_then(|s| s.parse::<u64>().ok()) {
+        return Some(Duration::from_secs(secs));
+    }
+    crate::project::get_defaults().timeout.map(|s| Duration::from_secs(s))
 });
 
 /// A persistent subprocess that communicates via stdin/stdout.
@@ -60,15 +61,10 @@ enum ReaderMsg {
 }
 
 impl SubprocessSession {
-    /// Spawn a subprocess with the given command and arguments.
-    /// stdin/stdout are piped; stderr is inherited (warnings go to terminal).
+    /// Spawn a subprocess with piped stdin/stdout, optional env vars and working directory.
+    /// stderr is inherited (warnings go to terminal).
     /// A reader thread is spawned to enable timeout-based reads.
-    pub fn spawn(program: &str, args: &[&str]) -> Result<Self> {
-        Self::spawn_with_env(program, args, &[])
-    }
-
-    /// Spawn a subprocess with extra environment variables.
-    pub fn spawn_with_env(program: &str, args: &[&str], env: &[(&str, &str)]) -> Result<Self> {
+    pub fn spawn(program: &str, args: &[&str], env: &[(&str, &str)], cwd: Option<&std::path::Path>) -> Result<Self> {
         let mut cmd = Command::new(program);
         cmd.args(args)
             .stdin(Stdio::piped())
@@ -76,6 +72,9 @@ impl SubprocessSession {
             .stderr(Stdio::inherit());
         for (k, v) in env {
             cmd.env(k, v);
+        }
+        if let Some(dir) = cwd {
+            cmd.current_dir(dir);
         }
         let mut child = cmd
             .spawn()
@@ -115,8 +114,8 @@ impl SubprocessSession {
 
 
     /// Send code to the subprocess and read back the sentinel-delimited result.
-    /// Times out after CALEPIN_TIMEOUT seconds (default 30). On timeout, the
-    /// subprocess is killed.
+    /// Times out after the configured timeout (default: no timeout). On timeout,
+    /// the subprocess is killed.
     pub fn execute(&mut self, sentinel: &str, payload: &str) -> Result<String> {
         let stdin = self.stdin.as_mut().context("Subprocess stdin closed")?;
 
@@ -125,14 +124,18 @@ impl SubprocessSession {
             .context("Failed to send code to subprocess")?;
         stdin.flush().context("Failed to flush stdin")?;
 
-        // Read lines until {sentinel}_DONE, with timeout
+        // Read lines until {sentinel}_DONE, with optional timeout
         let done_marker = format!("{}_DONE", sentinel);
         let mut output = String::new();
-        let timeout = *CHUNK_TIMEOUT;
+        let timeout = &*CHUNK_TIMEOUT;
         let rx = self.reader_rx.as_ref().context("Reader channel closed")?;
 
         loop {
-            match rx.recv_timeout(timeout) {
+            let recv_result = match timeout {
+                Some(dur) => rx.recv_timeout(*dur),
+                None => rx.recv().map_err(|_| std::sync::mpsc::RecvTimeoutError::Disconnected),
+            };
+            match recv_result {
                 Ok(ReaderMsg::Line(line)) => {
                     let trimmed = line.trim_end_matches('\n').trim_end_matches('\r');
                     if trimmed == done_marker {
@@ -150,8 +153,8 @@ impl SubprocessSession {
                     // Kill the hung subprocess
                     let _ = self.child.kill();
                     anyhow::bail!(
-                        "Code chunk timed out after {}s (set CALEPIN_TIMEOUT to increase)",
-                        timeout.as_secs()
+                        "Code chunk timed out after {}s (set timeout in _calepin.toml or CALEPIN_TIMEOUT env var)",
+                        timeout.unwrap().as_secs()
                     );
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {

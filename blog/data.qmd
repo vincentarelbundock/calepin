@@ -1,0 +1,10 @@
+---
+title: Data
+lang: en
+translations:
+  fr: fr/donnees.qmd
+---
+
+* [Political Risk Insurance and Finance](https://github.com/vincentarelbundock/opic): This project aims to make available firm-level information about every insurance contract issued, financing project initiated, and insurance claim settled by the US Overseas Private Investment Corporation.
+* [Central Bankers' speeches](https://osf.io/preprints/socarxiv/bms5n/): A collection of 14601 speeches given by central bankers between 1997 and 2018. Collected in preparation for the article 'Adding rooms onto a house we love: Central banking after the global financial crisis', with Juliet Johnson and Vlad Portniaguine.
+* [Rdatasets](http://vincentarelbundock.github.io/Rdatasets): A collection of 2000+ datasets that were originally distributed alongside the statistical software environment R and some of its add-on packages. The goal is to make these data more broadly accessible for teaching and statistical software development. Each dataset is distributed in comma-separated values format, with detailed html documentation.

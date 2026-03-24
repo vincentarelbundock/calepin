@@ -44,7 +44,8 @@ pub fn build_toc_html_from_body(body: &str, depth: u8, title: &str) -> String {
 }
 
 fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String {
-    if items.is_empty() { return String::new(); }
+    // Only show TOC when there are at least 2 entries
+    if items.len() < 2 { return String::new(); }
 
     let min_level = items.iter().map(|(l, _, _)| *l).min().unwrap_or(1);
     let mut html = format!("<nav class=\"toc\" aria-label=\"{}\">\n<p class=\"toc-title\">{}</p>\n<ul>\n", title, title);

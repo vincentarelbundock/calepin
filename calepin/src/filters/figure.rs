@@ -132,8 +132,9 @@ fn render_image(path: &Path, alt: &str, attrs: &crate::types::FigureAttrs, forma
                 if w.parse::<u32>().is_ok() {
                     html_attrs.push_str(&format!(" width=\"{}\"", crate::util::escape_html(w)));
                 } else {
-                    styles.push(format!("width:{}", w));
-                    styles.push(format!("max-width:{}", w));
+                    let dim = if w.parse::<f64>().is_ok() { format!("{}px", w) } else { w.clone() };
+                    styles.push(format!("width:{}", dim));
+                    styles.push(format!("max-width:{}", dim));
                 }
             }
             if let Some(ref h) = attrs.height {

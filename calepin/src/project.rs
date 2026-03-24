@@ -29,6 +29,8 @@ pub struct ProjectConfig {
     #[serde(default)]
     pub url: Option<String>,
     #[serde(default)]
+    pub bibliography: Vec<String>,
+    #[serde(default)]
     pub csl: Option<String>,
     #[serde(default)]
     pub highlight: Option<HighlightDefaults>,
@@ -73,6 +75,17 @@ pub struct ProjectConfig {
     /// Each entry specifies a shell command with optional target restrictions.
     #[serde(default)]
     pub post: Vec<PostCommand>,
+
+    /// Enable global cross-reference resolution across pages.
+    /// When true, cross-references (e.g., @fig-x) can link across pages.
+    /// Defaults to false.
+    #[serde(default, rename = "global-crossref")]
+    pub global_crossref: bool,
+
+    /// Extra directories to copy into the output directory as-is.
+    /// Paths are relative to the project root.
+    #[serde(default, rename = "static")]
+    pub static_dirs: Vec<String>,
 }
 
 impl ProjectConfig {

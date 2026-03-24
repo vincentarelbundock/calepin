@@ -1,0 +1,132 @@
+---
+title: "Nesting with data.table and tidyverse"
+author: "Vincent Arel-Bundock"
+date: "2020-08-17"
+---
+
+The `nest`/`unnest` programming pattern can be a useful way to organize your data analyses in `R`. The idea is to store a series of objects (e.g., datasets, models, summaries) in a "list-column." A list-column is simply a column in your data frame where each entry is a list. Each of the lists in your list-column can itself contain any object you want, including other datasets or statistical model objects. The benefit of a list columns is that analysts can operate on them using standard tools such as `lapply` or `purrr::map`. 
+
+One common use-case is to split a dataset into subgroups, and to "nest" those subgroups of the data into a list-column. Then, we can estimate models and summarize the data easily by operating on that list column.
+
+I could not find an easy introductory tutorial for nesting list-columns in `data.table`, so I decided to write this notebook. In it, I compare how list-columns can be created in both `data.table` and `tidyverse`. 
+
+To begin, we load libraries and download the Guerry data from [Rdatasets](vincentarelbundock.github.io/Rdatasets/):
+
+```{r}
+#| message: false
+library(data.table)
+library(tidyverse)
+library(broom)
+library(modelsummary)
+library(microbenchmark)
+
+url <- "https://vincentarelbundock.github.io/Rdatasets/csv/HistData/Guerry.csv"
+dat <- fread(url)
+dat <- na.omit(dat)
+```
+
+## `data.table`
+
+In `data.table`, we can split our dataset using the `by` argument, and return any summary of the data we want inside a list object. For instance, we calculate the standard deviation of the "Clergy" variable for each region by typing:
+
+```{r}
+dat[, list(clergy_sd=sd(Clergy)), by=Region]
+```
+
+To create a list-column, we use the same syntax, but instead of returning a single numeric value (`sd(Clergy)`), we return a list with the ["Subset of Data"](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-sd-usage.html) special object (`.SD`) inside:
+
+```{r}
+dat = dat[, list(data=list(.SD)), by=Region]
+```
+
+The result is a data table with a new list-column called `data`.  Each element of the `data` column is now a list, with a data table inside, and each of those data tables has 17 rows and 23 columns:
+
+```{r}
+dat
+```
+
+This is a convenient data structure, because it allows us to operate on the data subsets with standard commands like `lapply` or `purrr::map`. For instance, this estimates a separate linear regression model in each subset of the data:
+
+```{r}
+dat[, model := lapply(data, function(x) lm(Donations ~ Clergy, x))]
+dat
+```
+
+Above, we see that the dataset now includes a new list-column called "model". Each element of that column is a list, with a `lm` object inside.  We can do cool things with this list-column. For example, we can pass it directly to `modelsummary`: 
+
+```{r}
+modelsummary(dat$model)
+```
+
+We could also use the `broom::tidy` function to extract model estimates in a tidy format:
+
+```{r}
+dat[, result := lapply(model, tidy)]
+dat
+```
+
+In this new "result" list-column, each entry is a list with a data frame-like object inside (a `tibble`). This data frame includes information about coefficient estimates, standard errors, etc. To extract that information from the list-column we move to the final step of today's demonstration: unnesting.
+
+Since each element of the `result` column is a list with a single data frame inside, we simply extract that single element with brackets `[[1]]`:
+
+```{r}
+dat[, result[[1]], by=Region]
+```
+
+Putting everything together, we have:
+
+```{r}
+#| eval: false
+# Nest
+dat = dat[, list(data=list(.SD)), by=Region]
+
+# Operations
+dat[, model := lapply(data, function(x) lm(Donations ~ Clergy, x))]
+dat[, result := lapply(model, tidy)]
+
+# Unnest
+dat[, result[[1]], by=Region]
+```
+
+## `tidyverse`
+
+The same result can be achieved in a `tidyverse` style:
+
+```{r}
+#| message: false
+#| warning: false
+dat <- "https://vincentarelbundock.github.io/Rdatasets/csv/HistData/Guerry.csv" %>%
+       read_csv %>%
+       drop_na %>%
+       nest_by(Region) %>%
+       mutate(model = list(lm(Donations ~ Clergy, data)),
+              result = list(tidy(model))) %>%
+       unnest(result)
+dat
+```
+
+## Benchmarking
+
+Admittedly, benchmarks are pretty useless in this context, because unnesting is unlikely to be your major bottleneck unless you are dealing with a ton of subgroups. Still, it is interesting to note that unnesting `data.table` is about 8x faster than `tidyverse` in my naive tests:
+
+```{r}
+fit = function(k) lm(y ~ x, k)
+dat_dt = data.table(group=sample(1:5000, 1e4, replace=TRUE),
+                    y=rnorm(1e4), 
+                    x=rnorm(1e4))
+dat_dt = dat_dt[, .(data=.(.SD)), by=group][
+                , model := lapply(data, fit)][
+                , result := lapply(model, tidy)]
+dat_tb = tibble(dat_dt)
+
+unnest_dt = function() {
+  dat_dt[, result[[1L]], by=group][dat_dt, on='group']
+}
+unnest_tb = function() {
+  dat_dt %>% unnest(result)
+}
+
+microbenchmark(unnest_dt(), unnest_tb(), times=5)
+```
+
+Note that in the code above, I merged the original dataset back into data.table for a fairer comparison (`tidyr::unnest` returns all the original data).

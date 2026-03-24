@@ -1,0 +1,169 @@
+# Filter
+
+## Integer index
+
+Positive indices keep the specified rows.
+
+:::: {.panel-tabset group='idiom' collapse='true'}
+## `data.table`
+```{r}
+DT[3:4,]
+```
+## `base`
+```{r}
+DF[3:4,]
+```
+## `dplyr`
+```{r}
+TB |> slice(3:4)
+```
+::::
+
+Negative indices exclude the specified rows.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[-(3:7),]
+```
+## `base`
+```{r}
+DF[-(3:7),]
+```
+## `dplyr`
+```{r}
+TB |> slice(-(3:7))
+```
+::::
+
+## Logical index
+
+Filter rows using a logical vector. Keep the rows where the condition is TRUE. `%chin%` is a fast version of `%in%`, optimized for strings. `%like%` is a convenient operator for regular expression matches. 
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[V2 > 5]
+DT[V4 %chin% c("A", "C")] # faster than %in% for strings
+DT[V4 %like% c("A|C")]    # regular expressions
+```
+## `base`
+```{r}
+subset(DF, V2 > 5)
+subset(DF, V4 %in% c("A", "C"))
+subset(DF, grepl("A|C", V4))
+```
+## `dplyr`
+```{r}
+TB |> filter(V2 > 5)
+TB |> filter(V4 %in% c("A", "C"))
+TB |> filter(grepl("A|C", V4))
+```
+::::
+
+Filter rows based on multiple conditions.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[V1 == 1 & V4 == "A"]
+```
+## `base`
+```{r}
+subset(DF, V1 == 1 & V4 == "A")
+```
+## `dplyr`
+```{r}
+TB |> filter(V1 == 1, V4 == "A")
+```
+::::
+
+## Unique
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+unique(DT)
+unique(DT, by = c("V1", "V4"))
+```
+## `base`
+```{r}
+DF[!duplicated(DF), ]
+DF[!duplicated(DF[c("V1", "V4")]), ]
+```
+## `dplyr`
+```{r}
+TB |> distinct()
+TB |> distinct(V1, V4, .keep_all = TRUE)
+```
+::::
+
+## Missing values
+
+Drop rows with missing values in specified columns.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+na.omit(DT, cols = 1:4)
+```
+## `base`
+```{r}
+DF[complete.cases(DF[, 1:4]), ]
+```
+## `dplyr`
+```{r}
+TB |> tidyr::drop_na(1:4)
+```
+::::
+
+## Random sample
+
+Draw a random sample of rows.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[sample(.N, 3)]
+DT[sample(.N, .N / 2)]
+```
+## `base`
+```{r}
+DF[sample(nrow(DF), 3), ]
+DF[sample(nrow(DF), nrow(DF) / 2), ]
+```
+## `dplyr`
+```{r}
+TB |> slice_sample(n = 3)
+TB |> slice_sample(prop = 0.5)
+```
+::::
+
+## Other
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+#| eval: false
+DT[V2 %between% c(3, 5)]
+DT[data.table::between(V2, 3, 5, incbounds = FALSE)]
+DT[V2 %inrange% list(-1:1, 1:3)]
+```
+## `base`
+```{r}
+#| eval: false
+subset(DF, grepl("^B", V4))
+subset(DF, V2 >= 3 & V2 <= 5)
+subset(DF, V2 > 3 & V2 < 5)
+subset(DF, V2 %in% c(-1:1, 1:3))
+```
+## `dplyr`
+```{r}
+#| eval: false
+TB |> filter(grepl("^B", V4))
+TB |> filter(dplyr::between(V2, 3, 5))
+TB |> filter(V2 > 3 & V2 < 5)
+TB |> filter(V2 >= -1:1 & V2 <= 1:3)
+```
+::::
+

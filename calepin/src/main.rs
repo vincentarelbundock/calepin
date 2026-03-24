@@ -204,14 +204,23 @@ fn main() -> Result<()> {
             } else {
                 (cache, files, compilation)
             };
-            handle_flush(&path, yes, do_cache, do_files, do_compilation)
+            // If path is not a directory, search for it as a name within
+            // the cache/files structure (e.g., "calepin flush acmq_en_06_dag"
+            // matches _calepin/cache/posts/acmq_en_06_dag/)
+            let (root, stem) = if path.is_dir() {
+                (path, None)
+            } else {
+                let name = path.to_string_lossy().to_string();
+                (PathBuf::from("."), Some(name))
+            };
+            handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
         }
         Command::New { action } => handle_new(action),
         Command::Info { action } => handle_info(action),
     }
 }
 
-fn handle_flush(path: &Path, skip_confirm: bool, do_cache: bool, do_files: bool, do_compilation: bool) -> Result<()> {
+fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cache: bool, do_files: bool, do_compilation: bool) -> Result<()> {
     use std::io::Write;
 
     let root = if path.is_relative() {
@@ -224,9 +233,28 @@ fn handle_flush(path: &Path, skip_confirm: bool, do_cache: bool, do_files: bool,
     let mut targets: Vec<PathBuf> = Vec::new();
     let latex_exts = ["aux", "log", "out", "toc", "fls", "fdb_latexmk", "synctex.gz", "xdv"];
 
+    // Search recursively for directories whose name matches the stem filter.
+    fn find_matching_dirs(dir: &Path, name: &str, targets: &mut Vec<PathBuf>) {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                if entry.file_name().to_string_lossy() == name {
+                    targets.push(p);
+                } else {
+                    find_matching_dirs(&p, name, targets);
+                }
+            }
+        }
+    }
+
     // Walk recursively to find matching artefacts
     fn find_targets(dir: &Path, targets: &mut Vec<PathBuf>, latex_exts: &[&str],
-                    do_cache: bool, do_files: bool, do_compilation: bool) {
+                    do_cache: bool, do_files: bool, do_compilation: bool,
+                    stem_filter: Option<&str>) {
         let entries = match std::fs::read_dir(dir) {
             Ok(e) => e,
             Err(_) => return,
@@ -239,16 +267,28 @@ fn handle_flush(path: &Path, skip_confirm: bool, do_cache: bool, do_files: bool,
                     // Check for cache/ and files/ inside _calepin/
                     if do_cache {
                         let cache = p.join("cache");
-                        if cache.is_dir() { targets.push(cache); }
+                        if cache.is_dir() {
+                            if let Some(stem) = stem_filter {
+                                find_matching_dirs(&cache, stem, targets);
+                            } else {
+                                targets.push(cache);
+                            }
+                        }
                     }
                     if do_files {
                         let files = p.join("files");
-                        if files.is_dir() { targets.push(files); }
+                        if files.is_dir() {
+                            if let Some(stem) = stem_filter {
+                                find_matching_dirs(&files, stem, targets);
+                            } else {
+                                targets.push(files);
+                            }
+                        }
                     }
                 } else if name != "." && name != ".." && name != ".git" && name != "node_modules" {
-                    find_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation);
+                    find_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation, stem_filter);
                 }
-            } else if do_compilation && p.is_file() {
+            } else if do_compilation && p.is_file() && stem_filter.is_none() {
                 if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
                     if latex_exts.contains(&ext) {
                         targets.push(p);
@@ -257,7 +297,7 @@ fn handle_flush(path: &Path, skip_confirm: bool, do_cache: bool, do_files: bool,
             }
         }
     }
-    find_targets(&root, &mut targets, &latex_exts, do_cache, do_files, do_compilation);
+    find_targets(&root, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
 
     if targets.is_empty() {
         eprintln!("Nothing to clean.");
@@ -1090,18 +1130,21 @@ macro_rules! timed {
     let blocks = timed!("parse_blocks", parse::blocks::parse_body(&body)?);
 
     // 5. Initialize engine subprocesses only if needed
+    //    Working directory is set to the input file's parent so that relative
+    //    paths in code chunks (e.g., read.csv("data.csv")) resolve correctly.
+    let input_dir = input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) });
     let mut r_session = if engines::util::needs_engine(&blocks, &body, &metadata, "r") {
-        Some(timed!("init_r", RSession::init(renderer.base_format())?))
+        Some(timed!("init_r", RSession::init(renderer.base_format(), input_dir)?))
     } else {
         None
     };
     let mut py_session = if engines::util::needs_engine(&blocks, &body, &metadata, "python") {
-        Some(timed!("init_python", PythonSession::init()?))
+        Some(timed!("init_python", PythonSession::init(input_dir)?))
     } else {
         None
     };
     let mut sh_session = if engines::util::needs_engine(&blocks, &body, &metadata, "sh") {
-        Some(engines::sh::ShSession::init()?)
+        Some(engines::sh::ShSession::init(input_dir)?)
     } else {
         None
     };
@@ -1150,18 +1193,20 @@ macro_rules! timed {
         .and_then(|v| v.as_str()).map(|s| s.to_string());
 
     // 8. Evaluate: execute code chunks and produce elements
-    let stem = output_path
-        .file_stem()
-        .unwrap_or_default()
+    //    Use relative path from project root (without extension) as the cache/figure
+    //    key, so site builds with nested pages (e.g., posts/foo/index.qmd) don't collide.
+    let rel_stem = input.strip_prefix(&path_ctx.project_root)
+        .unwrap_or(input)
+        .with_extension("")
         .to_string_lossy()
-        .to_string();
-    let fig_dir = path_ctx.figures_dir(&stem);
+        .replace('\\', "/");
+    let fig_dir = path_ctx.figures_dir(&rel_stem);
     let fig_ext = renderer.default_fig_ext();
     let cache_enabled = metadata.var.get("execute")
         .and_then(|v| v.get("cache"))
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
-    let cache_dir = path_ctx.cache_root(&stem);
+    let cache_dir = path_ctx.cache_root(&rel_stem);
     let mut cache = CacheState::new(input, &cache_dir, cache_enabled);
     let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.base_format(), &metadata, &registry, &mut ctx, &mut cache)?);
     let mut elements = eval_result.elements;

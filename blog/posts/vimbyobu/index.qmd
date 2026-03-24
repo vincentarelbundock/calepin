@@ -1,0 +1,101 @@
+---
+title: "Analyzing data in the terminal with vim and byobu"
+author: "Vincent Arel-Bundock"
+date: "2021-09-05"
+---
+
+This post describes how I conduct interactive data analysis from the terminal using `vim` and `byobu`. Check out this YouTube video to see the setup in action:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/sfaEdAT_6Gw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+My setup was designed to meet 5 objectives. First, I want to use the `vim` editor with all my usual plugins, shortcuts, snippets, etc. Second, I need access to standard IDE features like code completion, inline documentation, auto-indentation, etc. Third, I'd like the ability to split my terminal in side-by-side "panes," where I can display code and/or run programs like `R`, `Stata`, `python` or `Julia`.  Fourth, I need to quickly send code from pane to pane, in order to conduct interactive statistical analyses. Fifth, I want my setup to work on all (modern) operating systems and with any statistical language that allows interactive analysis (e.g., `R`, `python`, `Stata`, `Julia`).
+
+I use two principal tools to achieve these objvectives:
+
+1. [`neovim`](https://neovim.io/) (but the same setup would work with standard `vim`).
+2. [`byobu`](https://www.byobu.org/): A terminal multiplexer  which allows me to split a single terminal into several "panes" where I can run different programs side-by-side. `byobu` is a simple but convenient configuration layer built around [`tmux`.](https://github.com/tmux/tmux/wiki)
+
+After 15+ years of Linux and OSX, I (half-willingly) switched to a Windows 10 machine. For all of my "serious" work on this new computer, I use the [Windows Subsystem Linux](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux) to run a full linux distribution (Ubuntu) inside my Windows OS. There are a ton of tutorials on the web on setting up WSL2. Here, I assume that Windows users have installed a WSL2 distribution, opened a terminal emulator like [Windows Terminal](https://github.com/microsoft/terminal) or [`alacritty`](https://github.com/alacritty/alacritty), and executed  `wsl.exe`.
+
+To begin configuration, let's install the programs we need:
+
+```{sh}
+#| eval: false
+sudo apt install nvim byobu
+```
+
+Then, we install a few `vim` plugins. To do this, I use [`vim-plug`](https://github.com/junegunn/vim-plug), which requires me to call `:PlugInstall` from inside `vim`, after placing the following instructions in my configuration file:
+
+```{sh}
+#| eval: false
+call plug#begin('$HOME/.config/nvim/plugged')
+Plug 'neovim/nvim-lspconfig'     " neovim-specific
+Plug 'nvim-lua/completion-nvim'
+Plug 'tpope/vim-tbone'           " tmux interaction
+Plug 'jpalardy/vim-slime'
+call plug#end()
+```
+
+The `nvim-lspconfig` and `completion-nvim` plugins are optional, and only needed if you want code completition, linting, and other IDE features. These plugins only work for `neovim`, but strong alternatives like `coc` are available for `vim`. To activate code completition, I insert this code in my `vim` configuration file:
+
+```{sh}
+#| eval: false
+lua << EOF
+require'lspconfig'.r_language_server.setup{
+  on_attach=require'completion'.on_attach
+}
+EOF
+```
+
+I also need to install the `lspserver` package for `R`. In an `R` session, type:
+
+```{r}
+#| eval: false
+install.packages("languageserver")
+```
+
+The [`vim-tbone`](https://github.com/tpope/vim-tbone) plugin allows us to send commands to `byobu` (via `tmux`), such as split a window into several panes, open an `R` session, close panes, etc. This plugin also allows us to send text to different panes, but as far as I can tell, it can only do so line-by-line, and not based on a visual selection. For this reason, I use [`vim-slime`](https://github.com/jpalardy/vim-slime) to send code from my `R` script to the `R` instance which runs the code. 
+
+Since `byobu` is a thin configuration wrapper around `tmux`, we need to tell `vim-slime` that it will interact with a `tmux` multiplexer. The second line of the code below saves me a few keystrokes the first time I execute a command with `vim-slime`:
+
+```{sh}
+#| eval: false
+let g:slime_target = "tmux"
+let g:slime_default_config = {"socket_name": "default", "target_pane": ":.1"}
+```
+
+Then, I define "comma" as my `vim` mapleader, I disable the default `vim-slime` keybindings, and I set my own. Typing `C-k` will send the paragraph under the cursor or the visual selection to the other pane. `Space` will send the current line to the other pane. Key sequences like `,t2` tell `vim-slime` which of the window panes my code should be sent to. The sequence `,tr` will create ask `byobu` (via `tmux`) to open new terminal in a vertical split, and to launch a new instance of `R` in that terminal.
+
+```{sh}
+#| eval: false
+let mapleader = ","     
+
+" vim-slime
+let g:slime_no_mappings = 1
+xmap <C-k> <Plug>SlimeRegionSend
+nmap <C-k> <Plug>SlimeParagraphSend
+nmap <Space> <Plug>SlimeLineSend<CR>
+nmap ,t1 :let b:slime_config["target_pane"] = ":.1"<CR>
+nmap ,t2 :let b:slime_config["target_pane"] = ":.2"<CR>
+nmap ,t3 :let b:slime_config["target_pane"] = ":.3"<CR>
+nmap ,t4 :let b:slime_config["target_pane"] = ":.4"<CR>
+nmap ,t5 :let b:slime_config["target_pane"] = ":.5"<CR>
+
+" vim-tbone
+nmap ,tr :Tmux split-window -dh 'R'<CR>
+```
+
+Finally, to start the actual data analysis I launch `byobu`, open an `.R` script, and launch an `R` instance in a split window:
+
+```{sh}
+#| eval: false
+byobu
+vim tmp.R
+,tr
+```
+
+To take a line of `R` code from my script and execute it in the `R` instance, I press space bar (in `vim` normal mode). To send a paragraph or a selected region, I type `Ctrl-k`. 
+
+The first time I try to send `R` code from my script to the terminal, `byobu` will ask me to confirm which pane I want to use. The default is usually "correct", so I just type `Enter`. 
+
+That's it, we're done!

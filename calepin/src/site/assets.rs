@@ -26,7 +26,8 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
 /// Copy `assets/` directory to `assets/` in the output directory.
 /// Also copies built-in target-scoped assets as fallback for files not
 /// present in the project's assets/ directory.
-pub fn copy_assets(base_dir: &Path, output_dir: &Path) -> Result<()> {
+/// If `static_dirs` is non-empty, also copies those directories into output.
+pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -> Result<()> {
     let assets_dst = output_dir.join("assets");
 
     // Copy project assets first (user files take priority)
@@ -57,6 +58,22 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path) -> Result<()> {
                     }
                 }
             }
+        }
+    }
+
+    // Copy user-specified static paths (files or directories) into output
+    for entry in static_dirs {
+        let src = base_dir.join(entry);
+        let dst = output_dir.join(entry);
+        if src.is_dir() {
+            copy_dir_recursive(&src, &dst)
+                .with_context(|| format!("Failed to copy static directory '{}' to output", entry))?;
+        } else if src.is_file() {
+            if let Some(parent) = dst.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(&src, &dst)
+                .with_context(|| format!("Failed to copy static file '{}' to output", entry))?;
         }
     }
 

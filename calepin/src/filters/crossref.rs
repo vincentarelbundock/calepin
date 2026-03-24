@@ -63,8 +63,9 @@ impl CrossRefRegistry {
     /// Build a global registry from per-page ref data with chapter-prefixed numbering.
     ///
     /// `pages` is ordered by chapter: `(chapter_number, output_url, page_ref_data)`.
-    /// Chapter numbers are 1-based. Returns an error message if duplicate IDs are found.
-    pub fn build(pages: &[(usize, String, PageRefData)]) -> Result<Self, String> {
+    /// Chapter numbers are 1-based. Duplicate IDs are warned about and the first
+    /// definition wins.
+    pub fn build(pages: &[(usize, String, PageRefData)]) -> Self {
         let mut entries = HashMap::new();
         for (chapter, url, ref_data) in pages {
             for (id, local_num) in &ref_data.ids {
@@ -72,10 +73,11 @@ impl CrossRefRegistry {
                 let number = renumber_with_chapter(local_num, *chapter);
                 if let Some(existing) = entries.get(id) {
                     let existing: &CrossRefEntry = existing;
-                    return Err(format!(
-                        "duplicate cross-reference ID '{}': defined in both '{}' and '{}'",
+                    eprintln!(
+                        "Warning: duplicate cross-reference ID '{}': defined in both '{}' and '{}' (keeping first)",
                         id, existing.source_url, url
-                    ));
+                    );
+                    continue;
                 }
                 entries.insert(id.clone(), CrossRefEntry {
                     number,
@@ -84,7 +86,7 @@ impl CrossRefRegistry {
                 });
             }
         }
-        Ok(Self { entries })
+        Self { entries }
     }
 }
 
@@ -1120,7 +1122,7 @@ mod tests {
             (1, "chapter1.html".to_string(), page1),
             (2, "chapter2.html".to_string(), page2),
         ];
-        let registry = CrossRefRegistry::build(&input).unwrap();
+        let registry = CrossRefRegistry::build(&input);
         assert_eq!(registry.entries.get("fig-a").unwrap().number, "1.1");
         assert_eq!(registry.entries.get("fig-a").unwrap().source_url, "chapter1.html");
         assert_eq!(registry.entries.get("fig-b").unwrap().number, "2.1");
@@ -1128,7 +1130,7 @@ mod tests {
     }
 
     #[test]
-    fn test_registry_build_duplicate_ids() {
+    fn test_registry_build_duplicate_ids_warns_keeps_first() {
         let page1 = PageRefData {
             ids: [("fig-a".to_string(), "1".to_string())].into(),
             ..Default::default()
@@ -1141,9 +1143,9 @@ mod tests {
             (1, "ch1.html".to_string(), page1),
             (2, "ch2.html".to_string(), page2),
         ];
-        let result = CrossRefRegistry::build(&input);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("duplicate"));
+        let registry = CrossRefRegistry::build(&input);
+        // First definition wins
+        assert_eq!(registry.entries.get("fig-a").unwrap().source_url, "ch1.html");
     }
 
     #[test]

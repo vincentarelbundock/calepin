@@ -1,0 +1,75 @@
+---
+title: "Consistent figures in Quarto"
+author: "Vincent Arel-Bundock"
+date: "2024-07-23"
+---
+
+I've been struggling to correctly size my `ggplot2` or `base` plots in Quarto documents. The main problem I encounter is that when I change the width or size of a figure, the text in figures also changes in size, which makes the document look very inconsistent.
+
+This post documents [the (awesome) solution](https://r4ds.had.co.nz/graphics-for-communication.html#figure-sizing) I stumbled upon and settled on. There is no explanation, just a series of steps. For discussion, see the links at the bottom of the post.
+
+# Step 1: Defaults
+
+Set reasonable document-wide defaults:
+
+```{r}
+#| eval: false
+knitr::opts_chunk$set(
+    out.width = "70%", # enough room to breath
+    fig.width = 6,     # reasonable size
+    fig.asp = 0.618,   # golden ratio
+    fig.align = "center" # mostly what I want
+)
+```
+
+# Step 2: Aspect ratio
+
+For each figure, adjust the `fig-asp` code chunk as appropriate. For example:
+
+````{verbatim}
+```{r}
+#| fig-asp: .7
+plot(hp ~ mpg, data = mtcars)
+```
+````
+
+`fig-asp` is a "free" parameter. You can adjust it as you please without a second thought.
+
+# Step 3: Width
+
+Finally, set the width of your figure. This is a two step process: 
+
+1. Set `out-width`
+1. Set `fig-width` based on the value of `out-width`
+
+First, you decide what percentage of the horizontal space you want the figure to take. This is defined in terms of percentage by the `out-width` chunk option. 
+
+Second, use the `out2fig()` calculator to figure out what value of `fig-width` to select:
+
+```{r}
+out2fig = function(out.width, out.width.default = 0.7, fig.width.default = 6) {
+    fig.width.default * out.width / out.width.default 
+}
+```
+
+For example, if you use the same defaults as me and want a figure to take up 95% of horizontal space in your document, set the `fig-width` chunk option to:
+
+```{r}
+out2fig(0.95)
+```
+
+````{verbatim}
+```{r}
+#| fig-asp: .7
+#| out-width: 95%
+#| fig-width: 8.142857
+plot(hp ~ mpg, data = mtcars)
+```
+````
+
+# References
+
+* [Figure sizing in R for Data Science](https://r4ds.had.co.nz/graphics-for-communication.html#figure-sizing)
+* [Taking control of plot scaling](https://www.tidyverse.org/blog/2020/08/taking-control-of-plot-scaling/)
+
+

@@ -1,0 +1,389 @@
+---
+title: "Simulation-based power calculations and model assessment with R and DeclareDesign"
+author: "Vincent Arel-Bundock"
+date: "2021-02-04"
+---
+
+```{r setup}
+#|include: False
+library(future.apply)
+plan(multicore, workers = 7)
+```
+
+The `DeclareDesign` package for `R` is a flexible tool to *describe* the elements of a research design, and to *assess* the properties of that design  using simulations (power, coverage, etc.). 
+
+The authors of this package clearly put in a lot of effort to document their work. Make sure you [visit their website](https://declaredesign.org/) and the [examples library](https://declaredesign.org/r/designlibrary/) for an in-depth treatment. Also, check out @BlaCooCopHum2019 for a more conceptual treatment of the `DeclareDesign` approach.
+
+The present notebook has four goals:
+
+1. Explain how to use the `DeclareDesign` package for `R` to conduct simulation-based power analyses and model assessments.
+2. Show how to easily compare the performance of several estimators and sampling strategies.
+3. Work through 3 detailed examples: Two-Arm Trial, Blocking vs. Adjusting, and Cluster Sampling.
+4. Illustrate how users can use "custom" estimators and estimands.
+
+# A modular approach
+
+`DeclareDesign` offers a modular "grammar" to encode the core features of a research design: data generating process, treatment assignment, sampling scheme, estimands, and estimators. Each of these features is specified using a distinct function from the `declare_*` family. This modular design is powerful, because it allows us to swap out parts of a research design to, for example, compare the power of different sampling schemes while keeping everything else constant.
+
+In this notebook, we will use several `declare_*` functions. Their names are self-explanatory:
+
+* `declare_population`
+* `declare_potential_outcomes`
+* `declare_inquiry`
+* `declare_assignment`
+* `declare_sampling`
+* `declare_estimator`
+
+<aside>
+Technical note: the `declare_*` functions are in fact "function factories." They do not simulate data themselves, but rather produce subsidiary functions that we can call repeatedly to simulate data. This sounds a bit weird, but the examples below should clarify things.
+</aside>
+
+# Two-arm design
+
+This section illustrates how `DeclareDesign` works in a simple two-arm experimental design with outcome $Y$, treatment $Z$, covariate $W$, and noise $e$.
+
+To begin, we use the `declare_population` function to define the basic structure of the dataset, and to generate exogenous variables. The `declare_population` function can create hierarchical data (e.g., cities in counties, or time in unit), but here we build a flat dataset with 100 observations:
+
+```{r}
+#| message: False
+library(DeclareDesign)
+library(tidyverse)
+set.seed(924033)
+
+population = declare_population(
+  N = 100, 
+  e = rnorm(N),
+  W = rnorm(N))
+```
+
+The code above called the `declare_population` function and assigned the result to a new object called `population`. This new object is itself a function that can be used to simulate data. Every time we call `population()`, we get a new simulated dataset of 100 observations with different numerical values for $e$ and $W$:
+
+```{r}
+population() %>% 
+  head()
+```
+
+The next step is to assign units to different treatment conditions using `declare_assignment`. This function can randomize treatment in a variety of ways, with blocks, clusters, factorial, or multi-arm designs. Here, we use simple random assignment with a 45% probability of receiving treatment $Z=1$:
+
+```{r}
+assignment = declare_assignment(Z = conduct_ra(N = N, prob = 0.45))
+```
+
+We have now defined a new function called `assignment`. Every time we call it, we obtain a new simulated dataset with randomly assigned $Z$ treatment:
+
+```{r}
+population() %>% 
+  assignment() %>%
+  head()
+```
+
+To define the potential outcomes, we use `declare_potential_outcomes`. This function takes two main arguments: (1) a formula to link treatment, exogenous variables, and potential outcomes; and (2) the list of conditions that we want to consider. In principle, we could consider several conditions (and their interactions) in some kind of factorial design. Here we only consider treatment $Z\in\{0,1\}$ in a linear data generating process:
+
+$$Y = 0.31416 \cdot X + W + e,$$
+
+```{r}
+potential_outcomes = declare_potential_outcomes(
+  Y ~ 0.31416 * Z + W + e,
+  conditions = list(Z = 0:1)
+)
+
+population() %>% 
+  assignment() %>%
+  potential_outcomes() %>%
+  reveal_outcomes(Y ~ Z)
+
+```
+
+Our data generation process is now fully specified. Now, we need to declare the estimand, that is, the quantity that we are trying to estimate. To do this, we use the `declare_inquiry` function. 
+
+<aside>
+Technical note: `declare_inquiry` evaluates in the scope of an input data frame called `data`, so we can take the average difference without having to use `$`.
+</aside>
+
+
+```{r}
+inquiry = declare_inquiry(
+  mean(Y_Z_1 - Y_Z_0)) 
+
+population() %>% 
+  assignment() %>%
+  potential_outcomes() %>% 
+
+  inquiry() %>%
+```
+
+The last thing we need to define is the estimation strategy using `declare_estimator`. This function is flexible enough to accomodate pretty much any estimator (see the last section of this notebook). Here, we will use the `lm` model from Base `R`:
+
+```{r}
+estimator = declare_estimator(
+  formula = Y ~ Z, 
+  model = lm)
+```
+
+It's now time for the big payoff! We can chain all our functions to run a simulation, power analysis, and model assessment automatically:
+
+```{r}
+design = population +
+         assignment +
+         potential_outcomes +
+         inquiry +
+         estimator
+
+diagnose_design(design)
+```
+
+Our simulation suggests power and coverage of about 0.20 and 0.95 (for $\alpha=0.05$).
+
+Here's a compact version of what we have done so far:
+
+```{r, eval=FALSE}
+design = 
+  declare_population(N = 100, e = rnorm(N), W = rnorm(N)) +
+  declare_assignment(assignment_variable = "Z", prob = 0.45) +
+  declare_potential_outcomes(Y ~ 0.31416 * Z + W + e) +
+  declare_inquiry(mean(Y_Z_1 - Y_Z_0)) +
+  declare_estimator(formula = Y ~ Z, model = lm)
+
+diagnose_design(design)
+```
+
+# Comparing estimators
+
+One benefit of the modular `DeclareDesign` approach is that we can easily compare different estimators. For instance, to see what happens when I adjust for $W$ (a cause of outcome $Y$), I define a new estimator and simply add it to the chain:
+
+```{r}
+estimator = declare_estimator(
+  formula = Y ~ Z, 
+  model = lm, 
+  label = "LM")
+
+estimator_w = declare_estimator(
+  formula = Y ~ Z + W, 
+  model = lm, 
+  label = "LM w/ W")
+
+design = population +
+         assignment +
+         potential_outcomes +
+         estimand +
+         estimator +
+         estimator_w
+
+diagnose_design(design)
+```
+
+Controlling for $W$ increases power and decreases RMSE.
+
+# Blocking vs. adjusting
+
+In experimental settings, researchers often try to improve the precision of their estimates by using "block" randomization or by adjusting for pre-treatment covariates in a regression framework. We can use `DeclareDesign` to compare those two strategies in a two-arm design with outcome $Y$, treatment $Z\in\{0,1\}$, blocking covariate $W\in\{0,1\}$ and noise $e$.
+
+First, we declare the data generation mechanism and estimand:
+
+```{r}
+population = declare_population(
+  N = 1000,
+  W = rbinom(N, 1, .5),
+  e = rnorm(N))
+
+
+potential_outcomes = declare_potential_outcomes(
+  Y ~ 0.31416 * Z + 2 * W + e)
+
+estimand = declare_inquiry(
+  mean(Y_Z_1 - Y_Z_0))
+```
+
+Second, we declare two alternative assignment mechanisms: blocking vs. no blocking.
+
+```{r}
+assignment = declare_assignment(
+  prob = .5, 
+  assignment_variable = "Z")
+
+assignment_block = declare_assignment(
+  prob = .5, 
+  blocks = W,
+  assignment_variable = "Z")
+```
+
+Third, we declare two alternative estimators: linear regression models with or without control for $W$.
+
+```{r}
+estimator = declare_estimator(
+  formula = Y ~ Z, 
+  model = lm, 
+  label = "LM")
+
+estimator_control = declare_estimator(
+  formula = Y ~ Z + W, 
+  model = lm, 
+  term = "Z", 
+  label = "LM + control")
+```
+
+Finally, we combine all the steps to create two distinct designs: `design` and `design_block`. Since the two designs are identical except for one "step," we use the `replace_step` function to avoid code duplication:
+
+```{r}
+design = population +
+         assignment + 
+         potential_outcomes +
+         estimand +
+         estimator +
+         estimator_control
+
+design_block = replace_step(
+  design, assignment, assignment_block)
+```
+
+At this stage, we could use the `diagnose_design` function to compare power, coverage and other diagnostics. A useful alternative is to run the simulations with `simulate_design`, and to plot the results with `ggplot2`:
+
+```{r, message=FALSE, out.width="100%", fig.asp=.3}
+sims = simulate_design(design, design_block) 
+
+ggplot(sims, aes(estimate)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0.31416, color = "red") +
+  facet_grid(~design_label + estimator_label) +
+  theme_minimal()
+```
+
+The histograms show that simulations are more spread-out (i.e., less precise) in the left-most panel, which is the design with linear regression, no blocking, and no adjustement. In this context, it seems useful to block or adjust.
+
+# Cluster sampling design
+
+This example is copied almost line-for-line from the [DeclareDesign library.](https://declaredesign.org/r/designlibrary/) I think it is useful to describe it here as a contrast to the other examples.
+
+We want to estimate the mean of an outcome $Y$ in some large population (e.g., the population of Canada). For practical reasons, we cannot take a simple random sample. Instead, we draw a sample of 600 subjects in two steps:
+
+1. Sample 30 clusters from the larger populations (e.g., 30 districts).
+2. Sample 20 subjects within each cluster.
+
+One problem with this strategy is that observations on $Y$ might be correlated within clusters. To simulate this, we use `draw_normal_icc` to create a latent outcome variable with intra-cluster correlation, and `draw_ordered` to convert the latent into an ordinal variable. We also use the `add_level` function to create a nested data structure.
+ 
+```{r}
+population_total = declare_population(
+  block = add_level(N = 1),
+  cluster = add_level(N = 1000),
+  subject = add_level(
+    N = 50,
+    latent = draw_normal_icc(mean = 0, N = N, clusters = cluster, ICC = 0.5),
+    Y = draw_ordered(x = latent, breaks = qnorm(seq(0, 1, length.out = 10)))))
+
+population_total() %>% 
+  head
+
+population_total() %>%
+  nrow
+```
+
+Our total population has 50000 observations: 1000 clusters of 50 individuals. 
+
+In this application, we want to treat the total population as *fixed*, and to simulate what happens when different clusters are sampled. To do this, we create a single data.frame to hold population-level information. Then, we tell the `declare_population` function to draw from that fixed population:
+
+```{r}
+population_fixed = population_total()
+
+population = declare_population(
+  data = population_fixed)
+```
+
+We declare the two stages of our sampling strategy using the `declare_sampling` function. When we apply those two stages to a simulated data, we obtain a dataset with 600 observations (30 clusters and 20 subjects per cluster):
+
+```{r}
+sampling_stage1 <- declare_sampling(
+  strata = block, 
+  clusters = cluster, 
+  n = 30, 
+  sampling_variable = "Population")
+
+sampling_stage2 <- declare_sampling(
+  strata = cluster, 
+  n = 20,
+  sampling_variable = "Cluster")
+
+population() %>%
+  sampling_stage1 %>%
+  sampling_stage2 %>%
+  nrow
+```
+
+We wish to estimate the mean of outcome $Y$:
+
+```{r}
+estimand = declare_inquiry(
+  mean(Y), label = "Ybar")
+```
+
+Finally, we check the coverage of confidence intervals computed using classical or clustered standard errors.
+
+```{r, out.width = "100%", fig.asp = .5}
+estimator_cluster = declare_estimator(
+  formula = Y ~ 1, 
+  model = lm_robust, 
+  clusters = cluster,
+  label = "Clustered")
+
+estimator_classical = declare_estimator(
+  formula = Y ~ 1, 
+  model = lm,
+  label = "Classical")
+
+design = 
+  population + 
+  sampling_stage1 + 
+  sampling_stage2 + 
+  estimand + 
+  estimator_classical + 
+  estimator_cluster
+
+sim = simulate_design(design)
+
+sim %>%
+  mutate(Covered = conf.low < 5 & conf.high > 5) %>%
+  arrange(estimator_label, conf.low) %>%
+  mutate(sim_ID = factor(sim_ID, unique(sim_ID))) %>%
+  ggplot(aes(x = sim_ID, ymin = conf.low, ymax = conf.high, color = Covered)) +
+    geom_linerange() +
+    geom_hline(yintercept = 5, color = "red") +
+    facet_wrap(~estimator_label) +
+    theme_minimal() +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          panel.grid = element_blank()) +
+    scale_colour_grey() +
+    xlab("500 Simulations")
+```
+
+# Custom estimands and estimators
+
+Above, we saw how to use built-in estimation and estimand functions from the `DeclareDesign` package. Now, we'll see how to easily define custom estimands and estimators.
+
+This function has a nice shortcut syntax, but to properly understand what it does, I think it is useful to use the more flexible (and verbose) `handler` argument.
+
+The `handler` argument accepts a function that takes our simulated dataset as a `data.frame`, and returns a `data.frame` with two entries. Here, the "handler" takes `data` and calcualtes the average of the difference between potential outcomes. This is the average treatment effect that we ultimately want to estimate:
+
+```{r, eval=FALSE}
+estimand = declare_inquiry(
+  handler = function(data) {
+    data.frame(
+      estimand_label = "ATE",
+      estimand = mean(data$Y_Z_1 - data$Y_Z_0)
+    )
+  },
+  label = "ATE")
+```
+
+The "handler" argument of the `declare_estimator` function accepts a simulated dataset, and returns a `data.frame` that conforms to the [tidy `broom` package format.](https://broom.tidymodels.org/) This is nice, because it means that `DeclareDesign` can easily accomodate pretty much any estimation strategy.
+
+```{r, eval=FALSE}
+estimator = declare_estimator(
+  handler = label_estimator(function(data) {
+    mod = lm(Y ~ Z, data)
+    out = broom::tidy(mod, conf.int = TRUE)
+    out[out$term == "Z",]
+  }),
+  label = "LM")
+```
+
+These functions can be plugged in to any of the workflows described above and should work immediately. I hope these examples make clear that `DeclareDesign` can accept pretty much any estimator or quantity of interest.

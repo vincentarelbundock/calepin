@@ -1,0 +1,35 @@
+---
+title: About
+lang: en
+translations:
+  fr: fr/index.qmd
+---
+
+I am a Professor at the Universite de Montreal, where I read on comparative and international political economy. I am particularly interested in the politics of international taxation and foreign direct investment, but I have also worked on monetary policy, foreign aid, economic voting, and research methods.
+
+Here's an official university-approved headshot in case you need to spot me in the hotel lobby at some conference: [vincent.jpg](/files/vincent.jpg). And here's how I pronounce my weird hyphenated last name: [arel-bundock.mp3](/files/arel-bundock.mp3) ("Arel" as in "barrel"; "Bundock" as in "bun" + "duck").
+
+## Code
+
+I write [a lot of code,](code.html) am a fan of Open Source Software, and believe that researchers should [cite the software they use.](https://doi.org/10.1017/S1049096523000239)
+
+## Podcasts
+
+Ryan and I recently appeared on a podcast to [talk about statistical power](https://www.youtube.com/watch?v=ayjjiGXkpCo), and I also spoke with Ellie and Lucy [about the interpretation of statistical models with `marginaleffects`](https://casualinfer.libsyn.com/from-model-to-meaning-with-vincent-arel-bundock-season-6-episode-4)
+
+## Research highlights
+
+My academic articles and books can be downloaded from [the research page](research.html) and are listed on [my CV.](/files/arel-bundock_cv.pdf) Recent highlights include:
+
+- Arel-Bundock, Briggs, Doucouliagos, Avina Mendoza, and Stanley. 2026. [Quantitative political science research is greatly underpowered.](/research/arel-bundock_briggs_doucouliagos_avina_stanley_2025_quantitative_political_science_research_is_greatly_underpowered.pdf) *Journal of Politics*
+- Arel-Bundock, Pelc. 2026. [Buy-in for buyouts: attitudes toward compensation for reforms.](/research/arel-bundock_pelc_2025_buy_in_for_buyouts_attitudes_toward_compensation_for_reforms.pdf) *Journal of Politics.*
+- Arel-Bundock, Blais. 2023. [Where Should Multinationals Pay Taxes?](/research/arel-bundock_blais_2023_where_should_multinationals_pay_taxes.pdf) *International Studies Quarterly.*
+- Arel-Bundock, Greifer, Heiss. 2024. [How to interpret statistical models using marginal effects in R and Python.](/research/arel-bundock_greifer_heiss_2024_how_to_interpret_statistical_models_using_marginaleffects_in_r_and_python.pdf) *Journal of Statistical Software.*
+
+Some older papers I still find useful:
+
+* Arel-Bundock. 2017. [The Unintended Consequences of Bilateralism: Treaty Shopping and International Tax Policy.](/research/arel-bundock_2017_the_unintended_consequences_of_bilateralism_treaty_shopping_and_international_tax_policy.pdf) *International Organization.*
+* Arel-Bundock, Pelc. 2019. [When Can Multiple Imputation Improve Regression Estimates?](/research/arel-bundock_pelc_2018_when_can_multiple_imputation_improve_regression_estimates.pdf) *Political Analysis.*
+- Arel-Bundock, Peinhardt, Pond. 2020. [Political risk insurance: a new firm-level dataset.](/research/arel-bundock_peinhardt_pond_2020_political_risk_insurance_a_new_firm_level_dataset.pdf) *Journal of Conflict Resolution.*
+
+Go blue!

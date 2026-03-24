@@ -1,4 +1,4 @@
-<a class="navbar-brand" href="/">
+<a class="navbar-brand" href="{% if site.pages and site.pages[0].href %}{{ site.pages[0].href }}{% else %}/{% endif %}">
   {% if site.logo %}
   <img class="logo-light" src="/{{ site.logo }}" alt="{{ site.title | default(value='Logo') }}">
   {% if site.logo_dark %}

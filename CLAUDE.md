@@ -238,7 +238,7 @@ Resolution order: plugin-provided dirs (in plugin order) → `_calepin/{elements
 
 ## Chunk Options
 
-Only pipe syntax (`#| key: value`) is accepted. The header accepts only language and optional label: `{r}` or `{r, label}` (also `{python}` or `{python, label}`). Key=value in headers produces an informative error with the corrected pipe syntax. Option names use dashes (`fig-width`), normalized to dots internally. `label` is rejected in pipe comments — it must be in the header.
+Both pipe syntax (`#| key: value`) and header key-value pairs (`{r, echo=FALSE}`) are accepted. Header options are converted internally to pipe-equivalent options; when both are present, pipe comments take precedence. Option names use dashes (`fig-width`), normalized to dots internally. `label` is rejected in pipe comments -- it must be in the header.
 
 ## Jinja Body Processing
 

@@ -1,0 +1,23 @@
+\usepackage{pgf,tikz}    
+\usetikzlibrary{graphs,arrows,positioning}    
+\tikzset{main node/.style={circle,draw,minimum size=1cm,inner sep=0pt}}    
+\tikzset{    
+    %Define standard arrow tip    
+    >=stealth',    
+    %Define style for boxes    
+    punkt/.style={    
+           rectangle,    
+           rounded corners,    
+           draw=black, very thick,    
+           text width=6.5em,    
+           minimum height=2em,    
+           text centered},    
+    pil/.style={    
+           ->,    
+           thick,    
+           shorten <=2pt,    
+           shorten >=2pt,    
+           sloped,    
+           anchor=south,     
+           auto=false}    
+}    

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::Result;
 
@@ -7,6 +8,7 @@ use crate::project::{self, ProjectConfig, Target};
 use super::discover::PageInfo;
 
 /// Result of rendering a single page for the site.
+#[derive(Clone)]
 pub struct SiteRenderResult {
     pub body: String,
     pub toc: Option<String>,
@@ -56,6 +58,8 @@ pub fn render_pages(
 
     let format_owned = format.to_string();
     let target_owned = target_name.map(|s| s.to_string());
+    let total = pages.len();
+    let done = AtomicUsize::new(0);
 
     // Render all pages in parallel using thread::scope
     let results: Vec<(String, Result<SiteRenderResult>)> = std::thread::scope(|s| {
@@ -68,6 +72,8 @@ pub fn render_pages(
                 let format = &format_owned;
                 let target = &target_owned;
                 let defaults = defaults.clone();
+                let done = &done;
+                let quiet = quiet;
                 s.spawn(move || {
                     // Set active target, project root, and defaults in this thread
                     crate::paths::set_active_target(target.as_deref());
@@ -75,6 +81,11 @@ pub fn render_pages(
                     project::set_active_defaults(defaults);
                     let key = page.source.display().to_string();
                     let result = render_one_page(page, overrides, base_dir, output_dir, format, apply_page_template);
+                    let n = done.fetch_add(1, Ordering::Relaxed) + 1;
+                    if !quiet {
+                        let out = output_dir.join(&page.output);
+                        eprintln!("  [{}/{}] {}", n, total, out.display());
+                    }
                     (key, result)
                 })
             })
@@ -83,13 +94,42 @@ pub fn render_pages(
     });
 
     let mut map = HashMap::new();
-    for (key, result) in results {
+    let mut failed: Vec<&PageInfo> = Vec::new();
+    for (key, result) in &results {
         match result {
             Ok(render_result) => {
-                map.insert(key, render_result);
+                map.insert(key.clone(), render_result.clone());
             }
             Err(e) => {
                 eprintln!("Error rendering {}: {:#}", key, e);
+                // Collect failed pages for retry
+                if let Some(page) = pages.iter().find(|p| p.source.display().to_string() == *key) {
+                    failed.push(page);
+                }
+            }
+        }
+    }
+
+    // Retry failed pages sequentially (avoids concurrent cairo crashes)
+    if !failed.is_empty() {
+        if !quiet {
+            eprintln!("Retrying {} failed page(s) sequentially...", failed.len());
+        }
+        for page in &failed {
+            crate::paths::set_active_target(target_name.map(|s| s));
+            crate::paths::set_project_root(Some(base_dir));
+            project::set_active_defaults(defaults.clone());
+            let key = page.source.display().to_string();
+            match render_one_page(page, &overrides, base_dir, output_dir, format, apply_page_template) {
+                Ok(render_result) => {
+                    if !quiet {
+                        eprintln!("  [ok] {}", key);
+                    }
+                    map.insert(key, render_result);
+                }
+                Err(e) => {
+                    eprintln!("Error rendering {} (retry failed): {:#}", key, e);
+                }
             }
         }
     }
@@ -107,6 +147,12 @@ fn render_one_page(
 ) -> Result<SiteRenderResult> {
     let input = base_dir.join(&page.source);
     let output_path = output_dir.join(&page.output);
+
+    // Ensure the output parent directory exists before rendering,
+    // so figure files can be written alongside the output.
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
 
     let result = crate::render_core(&input, &output_path, Some(format), overrides, None, Some(base_dir))?;
 
@@ -191,6 +237,8 @@ pub fn render_pages_with_crossref(
     let chapter_map = assign_chapter_numbers(pages, config);
 
     let target_owned = target_name.map(|s| s.to_string());
+    let total = pages.len();
+    let done = AtomicUsize::new(0);
 
     // Pass 1: Render all pages in parallel with skip_crossref=true
     let pass1: Vec<(String, Result<Pass1Result>)> = std::thread::scope(|s| {
@@ -203,12 +251,19 @@ pub fn render_pages_with_crossref(
                 let target = &target_owned;
                 let defaults = defaults.clone();
                 let chapter = chapter_map.get(&page.source.display().to_string()).copied();
+                let done = &done;
+                let quiet = quiet;
                 s.spawn(move || {
                     crate::paths::set_active_target(target.as_deref());
                     crate::paths::set_project_root(Some(base_dir));
                     project::set_active_defaults(defaults);
                     let key = page.source.display().to_string();
                     let result = render_one_page_pass1(page, overrides, base_dir, output_dir, chapter);
+                    let n = done.fetch_add(1, Ordering::Relaxed) + 1;
+                    if !quiet {
+                        let out = output_dir.join(&page.output);
+                        eprintln!("  [{}/{}] {}", n, total, out.display());
+                    }
                     (key, result)
                 })
             })
@@ -246,8 +301,7 @@ pub fn render_pages_with_crossref(
 
     let mut lang_registries: HashMap<Option<String>, CrossRefRegistry> = HashMap::new();
     for (lang, input) in &lang_registry_input {
-        let registry = CrossRefRegistry::build(input)
-            .map_err(|e| anyhow::anyhow!("{}", e))?;
+        let registry = CrossRefRegistry::build(input);
         lang_registries.insert(lang.clone(), registry);
     }
 
@@ -304,6 +358,10 @@ fn render_one_page_pass1(
 ) -> Result<Pass1Result> {
     let input = base_dir.join(&page.source);
     let output_path = output_dir.join(&page.output);
+
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
 
     let options = crate::RenderCoreOptions {
         skip_crossref: true,
@@ -388,6 +446,11 @@ fn assign_chapter_numbers(_pages: &[PageInfo], config: &ProjectConfig) -> HashMa
 
 fn build_overrides(config: &ProjectConfig) -> Vec<String> {
     let mut overrides = Vec::new();
+
+    // Bibliography from top-level config
+    for bib in &config.bibliography {
+        overrides.push(format!("bibliography+={}", bib));
+    }
 
     // Highlight style from top-level config
     if let Some(ref hl) = config.highlight {

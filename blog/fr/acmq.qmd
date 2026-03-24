@@ -1,0 +1,66 @@
+---
+title: Analyse Causale et Méthodes Quantitatives
+subtitle: Une introduction avec R, Stata et SPSS
+lang: fr
+---
+
+### J'ai écrit un livre!
+
+* [Version électronique *gratuite* en libre accès](https://www.pum.umontreal.ca/catalogue/analyse_causale_et_methodes_quantitatives)
+* [Version papier à prix raisonnable](https://www.leslibraires.ca/livres/analyse-causale-et-methodes-quantitatives-une-vincent-arel-bundock-9782760643215.html) (redevances versées à une [OSBL](http://www.nwsm.info/))
+* [Table des matières](#table-des-matieres)
+* [Chapitre 1 en format PDF](/files/acmq_ch1.pdf)
+* [Capsules vidéo sur Youtube (13 heures)](https://youtube.com/playlist?list=PLwV5Cyu4EJ1BviLt-nWJFSTjW30Tawv2R)
+* [Diapositives sous licence "Creative Commons"](https://github.com/vincentarelbundock/ACMQ)
+* [Exercices](https://github.com/vincentarelbundock/ACMQ)
+* [Tutoriel R interactif](https://github.com/vincentarelbundock/ACMQ)
+* [Errata](#errata)
+
+### Les Presses de l'Université de Montréal écrivent:
+
+> Ce livre offre une introduction intégrée à la théorie de l'analyse causale et aux méthodes quantitatives qui permettent d'évaluer les relations de cause à effet en sciences sociales. Il présente les outils classiques de l'analyse descriptive (visualisation, probabilités, statistiques descriptives, inférence statistique et régression linéaire), les cadres théoriques qui facilitent le saut entre description et causalité (modèle Neyman-Rubin et graphes orientés acycliques), les défis de l'inférence causale (biais par variable omise, de sélection, de mesure et de simultanéité) ainsi que les stratégies pour les déjouer. Les exemples tirés de plusieurs disciplines en sciences sociales sont accompagnés de syntaxes informatiques complètes pour R, Stata et SPSS, et des annexes de mathématiques et de statistiques viennent ici soutenir les explications données.
+
+# Table des matières
+
+### Partie I: Analyse descriptive
+
+1. Visualisation
+2. Probabilités
+3. Statistiques descriptives
+4. Inférence statistique
+5. Régression linéaire
+
+### Partie II: Analyse causale
+
+6. Graphes orientés acycliques
+7. Problème fondamental de l'inférence causale (modèle Neyman-Rubin)
+
+### Partie III: Problèmes
+
+8. Biais par variable omise
+9. Biais de sélection
+10. Biais de mesure
+11. Biais de simultanéité
+
+### Partie IV: Solutions
+
+12. Expériences
+13. Expériences naturelles
+14. Variables instrumentales
+15. Observations répétées ou hiérarchiques
+16. Modèle linéaire généralisé
+17. Modération: effets hétérogènes
+18. Médiation: mécanisme causal
+
+### Partie V: Annexes
+
+19. Mathématiques
+20. Statistiques
+21. R
+22. Stata
+23. SPSS
+
+# Errata
+
+* p.65 Tableau 4.1: La variance entre échantillon devrait être égale à 6.68. Dans `R` nous avons: `var(c(96.6, 98.4, 102.6, 98))` Par défaut, `R` applique [la correction de Bessel](https://en.wikipedia.org/wiki/Bessel%27s_correction) au calcul de la variance. Sans cette correction, l'estimé de la variance échantillonale serait 5.
+* Dans la version papier je recommande un livre de Monogan. L'auteur a depuis plaidé coupable d'un crime grave. Je ne recommande *pas* d'acheter ou de consulter son livre.

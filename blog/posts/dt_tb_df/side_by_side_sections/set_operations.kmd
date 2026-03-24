@@ -1,0 +1,66 @@
+# Set Operations
+
+Set operations treat datasets as sets and perform mathematical set operations on them.
+
+```{r}
+x <- data.table(c(1, 2, 2, 3, 3))
+y <- data.table(c(2, 2, 3, 4, 4))
+```
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# Intersection (rows present in both x and y)
+fintersect(x, y)
+
+# Set difference (rows in x but not in y)
+fsetdiff(x, y)
+# Include duplicates
+fsetdiff(x, y, all = TRUE)
+
+# Union (combine unique rows)
+funion(x, y)
+# Include duplicates
+funion(x, y, all = TRUE)
+
+# Test for equality
+fsetequal(x, x[order(-V1),])
+all.equal(x, x)
+```
+
+## `base`
+```{r}
+# Intersection
+intersect(x, y)
+
+# Set difference
+setdiff(x, y)
+
+# Union (unique rows)
+union(x, y)
+# With duplicates
+unlist(c(x, y))
+
+# Test for equality
+identical(x, x)
+all.equal(x, x)
+```
+
+## `dplyr`
+```{r}
+# Intersection
+dplyr::intersect(x, y)
+
+# Set difference
+dplyr::setdiff(x, y)
+
+# Union (unique rows)
+dplyr::union(x, y)
+# With duplicates
+union_all(x, y)
+
+# Test for equality
+setequal(x, x[order(-V1),])
+all.equal(x, x)
+```
+::::

@@ -1,0 +1,102 @@
+---
+title: "Prior Predictive Checks with `marginaleffects` and `brms`"
+author: "Vincent Arel-Bundock"
+date: "2023-05-01"
+---
+
+Bayesians often advocate for the use of prior predictive checks [@gelman2020bayesian]. The idea is to simulate from the model, without using the data, in order to refine the model before fitting. For example, we could draw parameter values from the priors, and use the model to simulate values of the outcome. Then, could inspect those to determine if the simulated outcomes (and thus the priors) make sense substantively. Prior predictive checks allow us to iterate on the model without looking at the data multiple times.
+
+One major challenge lies in interpretation: When the parameters of a model are hard to interpret, the analyst will often need to transform before they can assess if the generated quantities make sense, and if the priors are an appropriate representation of available information.
+
+In this post I show how to use the `marginaleffects` and `brms` packages for `R` to facilitate this process. The benefit of the approach described below is that it allows us to conduct prior predictive checks *on the actual quantities of interest.* For example, if the ultimate quantity that we want to estimate is a contrast or an Average Treatment Effect, then we can use `marginaleffects` to simulate the specific quantity of interest using just the priors and the model.
+
+In this example, we create two model objects with `brms`. In one of them, we set `sample_prior="only"` to indicate that we do not want to use the dataset at all, and that we only want to use the priors and model for simulation:
+
+```{r}
+#| results: hide
+#| warning: false
+#| message: false
+library(brms)
+library(ggplot2)
+library(marginaleffects)
+library(modelsummary)
+theme_set(theme_minimal())
+
+titanic <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/Stat2Data/Titanic.csv")
+titanic <- subset(titanic, PClass != "*")
+
+f <- Survived ~ SexCode + Age + PClass
+
+mod_prior <- brm(f,
+    data = titanic,
+    prior = c(prior(normal(0, .2), class = b)),
+    cores = 4,
+    sample_prior = "only")
+
+mod_posterior <- brm(f,
+    data = titanic,
+    cores = 4,
+    prior = c(prior(normal(0, .2), class = b)))
+```
+
+Now, we use the `avg_comparisons()` function from the `marginaleffects` package to compute contrasts of interest:
+
+```{r}
+cmp <- list(
+    "Prior" = avg_comparisons(mod_prior),
+    "Posterior" = avg_comparisons(mod_posterior))
+```
+
+Finally, we compare the results with and without the data in tables and plots:
+
+```{r}
+modelsummary(
+    cmp,
+    output = "markdown",
+    statistic = "conf.int",
+    fmt = fmt_significant(2),
+    gof_map = NA,
+    shape = term : contrast ~ model)
+
+draws <- lapply(names(cmp), \(x) transform(get_draws(cmp[[x]]), Label = x))
+draws <- do.call("rbind", draws)
+
+ggplot(draws, aes(x = draw, color = Label)) +
+    xlim(c(-1, 1)) +
+    geom_density() +
+    facet_wrap(~term + contrast, scales = "free")
+```
+
+This kind of approach is particularly useful with more complicated models, such as this one with categorical outcomes. In such models, it would be hard to know if a normal prior is appropriate for the different parameters:
+
+```{r}
+#| results: hide
+#| warning: false
+#| message: false
+modcat_posterior <- brm(
+    PClass ~ SexCode + Age,
+    prior = c(
+        prior(normal(0, 3), class = b, dpar = "mu2nd"),
+        prior(normal(0, 3), class = b, dpar = "mu3rd")),
+    family = categorical(link = logit),
+    cores = 4,
+    data = titanic)
+
+modcat_prior <- brm(
+    PClass ~ SexCode + Age,
+    prior = c(
+        prior(normal(0, 3), class = b, dpar = "mu2nd"),
+        prior(normal(0, 3), class = b, dpar = "mu3rd")),
+    family = categorical(link = logit),
+    sample_prior = "only",
+    cores = 4,
+    data = titanic)
+```
+
+```{r}
+pd <- get_draws(comparisons(modcat_prior))
+
+comparisons(modcat_prior) |> summary()
+
+comparisons(modcat_posterior) |> summary()
+```

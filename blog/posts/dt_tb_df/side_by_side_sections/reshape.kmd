@@ -1,0 +1,206 @@
+# Reshape
+
+## Wide to long
+
+Converting data from wide format (where variables are in columns) to long format (where variables become rows).
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+melt(DT,
+  id.vars       = "V4",
+  variable.name = "Variable",
+  value.name    = "Value")
+```
+
+## `base`
+```{r}
+reshape(DF,
+  varying = setdiff(names(DF), "V4"),
+  v.names = "value",
+  timevar = "variable",
+  times = setdiff(names(DF), "V4"),
+  direction = "long")
+```
+
+## `dplyr`
+```{r}
+TB |> tidyr::pivot_longer(
+  cols = c("V1", "V2", "V3"),
+  names_to = "Variable",
+  values_to = "Value")
+```
+::::
+
+## Long to wide
+
+Converting data from long format back to wide format.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# Create example long data
+long = CJ(a = 1:2, b = 1:2, c = c("x", "y"))
+long[, let(d = rnorm(8))]
+
+dcast(long, a + b ~ c)
+```
+
+## `base`
+```{r}
+# Create example long data
+long = expand.grid(a = 1:2, b = 1:2, c = c("x", "y"))
+long$d = rnorm(8)
+
+reshape(long, 
+  idvar = c("a", "b"),
+  timevar = "c",
+  direction = "wide")
+```
+
+## `dplyr`
+```{r}
+# Create example long data
+long = tidyr::expand_grid(a = 1:2, b = 1:2, c = c("x", "y"))
+long$d = rnorm(8)
+
+tidyr::pivot_wider(long,
+  id_cols = c("a", "b"),
+  names_from = "c",
+  values_from = "d")
+```
+::::
+
+## Split rows
+
+Separating data into groups based on a factor.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+split(DT, by = "V4")
+```
+
+## `base`
+```{r}
+split(DF, DF$V4)
+```
+
+## `dplyr`
+```{r}
+TB |> group_split(V4)
+```
+::::
+
+## Split columns
+
+Separating a single column into multiple columns based on a delimiter.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# Create example data
+tmp = data.table(a = c("A:a", "B:b", "C:c"))
+
+tmp[, c("w", "z") := tstrsplit(a, split = ":")]
+tmp
+```
+
+## `base`
+```{r}
+# Create example data
+tmp = data.frame(a = c("A:a", "B:b", "C:c"))
+
+tmp$w = sapply(strsplit(as.character(tmp$a), ":"), `[`, 1)
+tmp$z = sapply(strsplit(as.character(tmp$a), ":"), `[`, 2)
+tmp
+```
+
+## `dplyr`
+```{r}
+# Create example data
+tmp = tibble(a = c("A:a", "B:b", "C:c"))
+
+tmp = tidyr::separate(tmp, a, c("w", "z"), remove = FALSE)
+tmp
+```
+:::: 
+
+## Bind rows
+
+Combining multiple datasets by rows. To begin, we create example data.
+
+```{r}
+x = data.table(1:3)
+y = data.table(4:6)
+z = data.table(7:9, 0L)
+```
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# Simple row bind
+rbind(x, y)
+
+# Simple row bind
+rbindlist(list(x, y, x))
+
+# Row bind with different columns
+rbind(x, z, fill = TRUE)
+
+# Bind list of data.tables with ID column
+rbindlist(list(x, y), idcol = TRUE)
+```
+
+## `base`
+```{r}
+# Simple row bind
+rbind(x, y)
+
+# Simple row bind
+do.call(rbind, list(x, y, x))
+
+# Bind with ID column
+rbind(
+  cbind(x, id = 1),
+  cbind(y, id = 2)
+)
+```
+
+## `dplyr`
+```{r}
+# Simple row bind
+bind_rows(x, y)
+
+# Simple row bind
+bind_rows(list(x, y, x))
+
+# Row bind with different columns
+bind_rows(x, z)
+
+# Bind list with ID column
+bind_rows(list(x, y), .id = "id")
+```
+::::
+
+### Bind columns
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# Column bind
+base::cbind(x, y)
+```
+
+## `base`
+```{r}
+# Column bind
+cbind(x, y)
+```
+
+## `dplyr`
+```{r}
+# Column bind
+bind_cols(x, y)
+```
+::::

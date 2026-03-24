@@ -36,15 +36,17 @@ pub fn run_site(
     spinner.set_style(style);
     spinner.enable_steady_tick(Duration::from_millis(80));
 
-    // Initial build
-    spinner.set_message("building site...");
+    // Initial build — pause spinner so per-file progress prints cleanly
+    spinner.finish_and_clear();
     crate::site::build_site(
         Some(config_path),
         &std::path::PathBuf::from("output"),
         true,
-        true, // quiet -- we show our own status
+        false,
         args.target.as_deref(),
     )?;
+    spinner.reset();
+    spinner.enable_steady_tick(Duration::from_millis(80));
 
     // Start site server (serves from disk with live-reload)
     let (_server, actual_port) = server::start_site(

@@ -1,0 +1,106 @@
+# Sort
+
+## Rows
+
+Sort rows in ascending order.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[order(V3)]
+```
+## `base`
+```{r}
+sort_by(DF, ~V3)
+```
+## `dplyr`
+```{r}
+TB |> arrange(V3)
+```
+::::
+
+Sort rows in decreasing order.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[order(-V3)]
+```
+## `base`
+```{r}
+sort_by(DF, ~list(-V3))
+```
+## `dplyr`
+```{r}
+TB |> arrange(desc(V3))
+```
+::::
+
+Sort rows by multiple columns.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[order(V1, -V2)]
+```
+## `base`
+```{r}
+sort_by(DF, ~list(V1, -V2))
+```
+## `dplyr`
+```{r}
+TB |> arrange(V1, desc(V2))
+```
+::::
+
+Sort dataset and the column passed in argument becomes key. Output is an object the same type as the object indexed. This code is not executed to avoid sorting the original data set in place.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+#| eval: false
+setorder(DT, V4, -V1)
+setorderv(DT, c("V4", "V1"), c(1, -1))
+```
+## `base`
+```{r}
+#| eval: false
+DF = DF[order(DF$V4, -DF$V1), ]
+```
+## `dplyr`
+```{r}
+#| eval: false
+TB = TB |> arrange(V4, desc(V1))
+```
+::::
+
+```{r}
+refresh_data()
+```
+
+## Columns
+
+Reorders the columns of a dataset. This code is not executed to avoid reordering columns in the original data set.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+setcolorder(DT, c("V4", "V1", "V2"))
+DT
+```
+## `base`
+```{r}
+DF = DF[, c("V4", "V1", "V2")]
+DF
+```
+## `dplyr`
+```{r}
+TB = TB |> select(V4, V1, V2)
+TB
+```
+:::: 
+
+
+```{r}
+refresh_data()
+```

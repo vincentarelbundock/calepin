@@ -1,0 +1,190 @@
+# Summarize
+
+## Single columns
+
+Create a new data frame with a single row and a single column, summarizing the information of one column. Named or unnamed results.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, sum(V1)]
+DT[, .(sumV1 = sum(V1))]
+```
+## `base`
+```{r}
+sum(DF$V1)
+data.frame(sumV1 = sum(DF$V1))
+```
+## `dplyr`
+```{r}
+TB |> pull(V1) |> sum()
+TB |> summarise(sumV1 = sum(V1))
+```
+::::
+
+Create a new data frame with a single row and two columns, summarizing the information of two manually specified columns.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, .(sumV1 = sum(V1), sdV3 = sd(V3))]
+```
+## `base`
+```{r}
+data.frame(sumV1 = sum(DF$V1), sdV3 = sd(DF$V3))
+```
+## `dplyr`
+```{r}
+TB |> summarise(sumV1 = sum(V1), sdV3 = sd(V3))
+```
+::::
+
+## Multiple columns
+
+Apply a function to each column.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, lapply(.SD, head, 1)]
+```
+## `base`
+```{r}
+data.frame(lapply(DF, head, 1))
+```
+## `dplyr`
+```{r}
+TB |> summarize(across(everything(), \(x) head(x, 1)))
+```
+::::
+
+Apply a function to each column that matches a specific type.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, lapply(.SD, mean), .SDcols = is.numeric]
+```
+## `base`
+```{r}
+data.frame(lapply(DF[sapply(DF, is.numeric)], mean))
+```
+## `dplyr`
+```{r}
+TB |> summarize(across(where(is.numeric), mean))
+```
+::::
+
+## By group
+
+Count the number of observation by group.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, .N, by = V4]
+```
+## `base`
+```{r}
+as.data.frame(table(DF$V4))
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  tally()
+```
+::::
+
+Multiple named summaries
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, .(nobs = .N, meanV1 = mean(V1)), by = V4]
+```
+## `base`
+```{r}
+do.call(rbind, by(DF, ~V4, \(x) {
+  data.frame(nobs = nrow(x), meanV1 = mean(x$V1))
+  }
+))
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  summarize(nobs = n(), meanV1 = mean(V1)) |>
+  ungroup()
+```
+::::
+
+Apply a function to the full data frame in each group. Here, we return the first row in each group using the `head()` function.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, head(.SD, 1), by = V4]
+```
+## `base`
+```{r}
+do.call(rbind, by(DF, DF$V4, \(x) head(x, 1)))
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  summarize(across(everything(), head, 1))
+```
+::::
+
+Get the row number of first (and last) observation by group. In `data.table`, we use the `.I` operator, which reports the row number.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, .I[1], by = V4]
+DT[, range(.I), by = V4]
+```
+## `base`
+```{r}
+do.call(rbind, by(DF, ~V4, \(x) x[1,]))
+do.call(rbind, by(DF, ~V4, \(x) x[c(1, nrow(x)),]))
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  summarize(cur_group_rows()[1]) |>
+  ungroup()
+TB |>
+  group_by(V4) |>
+  reframe(cur_group_rows()[c(1, n())]) |>
+  ungroup()
+```
+::::
+
+List-columns are columns where each element is a vector, data frame, or other object.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, .(.(V1)),  by = V4]
+DT[, .(.(.SD)), by = V4]
+```
+## `base`
+```{r}
+tapply(DF$V1, DF$V4,
+  function(x) list(x))
+split(DF, DF$V4)
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  summarise(list(V1))
+TB |>
+  group_by(V4) |>
+  group_nest()
+```
+:::: 

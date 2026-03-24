@@ -1,0 +1,70 @@
+---
+title: Which `R` packages do scientists use? 
+subtitle: An analysis of 19,000 `R` scripts hosted by The Dataverse Project
+author: "Vincent Arel-Bundock"
+date: "2023-01-13"
+---
+
+
+```{r}
+#| include: False 
+pkgs = c(
+    "renv",
+    "ggplot2",
+    "anytime",
+    "DT",
+    "here",
+    "parallel",
+    "patchwork",
+    "data.table"
+)
+sapply(pkgs, require, character.only = TRUE)
+theme_set(theme_minimal())
+dat = readRDS("usage.rds")
+n_projects = 4539
+n_scripts = 19162
+# n_projects = length(Sys.glob("~/Dropbox/research/dataverse/archive/*"))
+# n_scripts = length(Sys.glob("~/Dropbox/research/dataverse/archive/**/*R"))
+```
+
+I downloaded `r n_scripts` `R` scripts from `r n_projects` projects hosted by the [The Dataverse Project.](https://dataverse.org/) This notebook reports usage statistics for `R` packages in this large sample of real-life scientific applications.
+
+To download data from Dataverse, I adapted a script from Trisovic et al. (2022) and wrote original Python code. Then, I used the [`renv::dependencies()` function](https://rstudio.github.io/renv/reference/dependencies.html) from the `renv` package for `R` (Ushey, 2022) to extract the names of `R` packages used in each script.^[`renv` was not able to parse every script.]
+
+WARNING: This was a very quick job and I did very little quality control on the data. Please take all this with a grain of salt.
+
+> Trisovic, A., Lau, M.K., Pasquier, T. et al. A large-scale study on research code quality and execution. Sci Data 9, 60 (2022). https://doi.org/10.1038/s41597-022-01143-6
+
+>  Ushey K (2022). _renv: Project Environments_. R package version 0.16.0, <https://rstudio.github.io/renv/>.
+
+# Number of projects and packages over time
+
+```{r}
+#| fig-cap: "Number of projects uploaded to Dataverse and number of packages used in those projects, by month."
+dat = dat[date > anytime("2013-12-31 UTC")]
+dat[, month := anytime(format(date, "%Y-%m-15"))]
+
+projects = dat[, .(N = length(unique(dataset_id))), by = "month"]
+packages = dat[, .N, by = "month"]
+
+p1 = ggplot(projects, aes(month, N)) + 
+    geom_line() +
+    labs(x = "", y = "", title = "Projects")
+p2 = ggplot(packages, aes(month, N)) + 
+    geom_line() +
+    labs(x = "", y = "", title = "Packages")
+p1 + p2
+```
+
+# Usage statistics for `R` packages loaded at least twice
+
+```{r}
+# count only one use per project
+dat_count = dat[, .(date = min(date)), by = c("dataset_id", "Package")]
+
+dat_count = dat_count[, .(`Number of times loaded` = .N), by = "Package"]
+dat_count = dat_count[order(-`Number of times loaded`)]
+dat_count = dat_count[`Number of times loaded` > 1]
+
+DT::datatable(dat_count, options = list(pageLength = 50), rownames = FALSE, width = 300)
+```

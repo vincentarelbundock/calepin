@@ -1,0 +1,205 @@
+---
+title: "Distribution regression in R"
+author: Vincent Arel-Bundock
+date: "2023-03-04"
+---
+
+```{r setup}
+#| include: false
+okabeito <- c('#E69F00', '#56B4E9', '#009E73', '#F0E442', '#0072B2', '#D55E00', '#CC79A7', '#999999', '#000000')
+options(ggplot2.discrete.fill = okabeito)
+options(ggplot2.discrete.colour = okabeito)
+# hrbrthemes::import_roboto_condensed()
+library(ggplot2)
+ggplot2::theme_set(ggplot2::theme_bw())
+```
+```{=html}
+<style>
+.table { font-size: smaller; line-height: .2em; }
+.table th { padding: 0.1; }
+.table td { padding: 0.1; }
+</style>
+```
+
+This notebook introduces "Distribution Regression", an alternative to quantile regression which can be used to explore treatment effect heterogeneity.
+
+Warning: This notebook is *not* authoritative. These are essentially reading/coding notes, written as I was trying to figure this stuff out for myself. Please report mistakes and send me your comments.
+
+# Case study: restaurant inspections
+
+To illustrate, we will use the restaurant inspections data used in @Hun2022. These data are available in the `causaldata` package for `R`, or in the [`Rdatasets` archive](https://vincentarelbundock.github.io/Rdatasets/).
+
+```{r}
+#| message: false
+library(ggplot2)
+library(marginaleffects)
+library(modelsummary)
+
+dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/causaldata/restaurant_inspections.csv")
+head(dat)
+```
+
+Our goal is to check if there is a difference in the inspection scores when the inspection is conducted on a weekday or during the weekend, controlling for the year of inspection and the number of locations in the restaurant chain. 
+
+A first step can be to plot the empirical cumulative distribution function for those two groups:
+
+```{r}
+ggplot(dat, aes(inspection_score, color = Weekend)) + stat_ecdf()
+```
+
+The graph above suggests that restaurants inspected during the weekend tend to obtain higher scores than restaurants inspected during the week.
+
+To see if this holds after controlling for observables we estimate a linear regression model with an interaction term to allow the coefficients on year and number of locations to vary between weekdays and weekends:
+
+```{r}
+mod <- lm(inspection_score ~ Weekend * (Year + NumberofLocations), data = dat)
+modelsummary(mod)
+```
+
+# Average predictions and contrasts
+
+The interactions make this model a bit difficult to interpret. Using the `marginaleffects` package, we can easily compute more meaningful quantities. 
+
+To begin, we estimate average predicted scores for restaurants inspected, by subgroups of our variable of interest:
+
+```{r}
+avg_predictions(mod, by = "Weekend")
+```
+
+Under the hood, `avg_predictions()` computed the predicted value for each of the observations in the original dataset, and took the average by subgroup. The difference between the predictions in the two rows above represents the combination of two phenomena: the conditional association between `Weekend` and `inspection_score`, but also the fact that the distribution of covariates is different for restaurants inspected during weekdays or weekends. This is analogous to what @Che2013 call the "structural" and the "compositional" effects.
+
+An alternative approach is to compute average *counterfactual* predictions. We proceed in 3 steps:
+
+1. Replicate the full dataset twice, setting `Weekend=0` in the first dataset and `Weekend=1` in the second, while holding all other covariates at their original values.
+1. Estimate predicted outcomes in both datasets.
+1. Report the means in each dataset.
+
+To do this, we can simply add a `variables` argument to the previous call:
+
+```{r}
+avg_predictions(mod, variables = "Weekend", by = "Weekend")
+```
+
+Notice that the average counterfactual predictions are slightly different from our initial estimates. This is because we have now marginalized over exactly the same distribution of covariates in the weekday and weekend counterfactual groups.
+
+We can compute these average predictions:
+
+```{r}
+avg_predictions(mod,
+  variables = "Weekend",
+  by = "Weekend",
+  hypothesis = ~revpairwise)
+```
+
+Equivalently,
+
+```{r}
+avg_comparisons(mod, variables = "Weekend")
+```
+
+# Regression on a quantile of the outcome
+
+Above, we provided one-number summaries with a single focus on the mean. But instead of modelling the outcome on its natural scale, we could model the probability that the outcome for a given observation lies below some quantile threshold. For example, the 30th percentile of `inspection_score` is:
+
+```{r}
+qtile <- quantile(dat$inspection_score, prob = .30)
+qtile
+```
+
+We can predict the probability that any given observation will fall below that threshold using a logit model:
+
+```{r}
+mod <- glm(inspection_score < qtile ~ Weekend * (Year + NumberofLocations), data = dat, family = binomial)
+modelsummary(mod)
+
+predictions(mod)
+```
+
+And we can estimate the average probability that inspection scores fall below `r qtile`:
+
+```{r}
+avg_predictions(mod, by = "Weekend", type = "response")
+```
+
+The average effect of `Weekend` on the probability that `inspection_score` falls below its 30th percentile value is:
+
+```{r}
+avg_comparisons(mod, variables = "Weekend")
+```
+
+Notice that this is very different from the contrast that we computed in the previous section.
+
+# Distribution regression
+
+The "distribution regression" approach is just a repeated application of the strategy in the previous section. It allows us to measure the association between the predictor of interest and the outcome at different quantiles of the outcome. This approach is a simple and convenient alternative to quantile regression.
+
+What makes distribution regression especially attractive is that since we can apply it by repeated application of simple regression models, it is easy to customize for specific quantities of interest or identification assumptions.
+
+For example, we could define 4 distinct quantities of interest using `marginaleffects` function:
+
+```{r}
+# Average predictions for Weekend=TRUE and Weekend=FALSE
+# Covariates held at their subgroup-specific observed values
+FUN_pred_observed <- function(x) avg_predictions(x, by = "Weekend")
+
+# Average predictions for Weekend=TRUE and Weekend=FALSE
+# Covariates held at counterfactual values, identical in both subgroups
+FUN_pred_counterfactual <- function(x) avg_predictions(x, variables = "Weekend", by = "Weekend")
+
+# Average predictions for Weekend=TRUE and Weekend=FALSE
+# Covariates held at Year=2010 and NumberofLocations=30
+FUN_pred_fixed <- function(x) avg_predictions(x,
+  by = "Weekend",
+  newdata = datagrid(Weekend = c(TRUE, FALSE), NumberofLocations = 30, Year = 2010))
+
+# Average contrast between Weekend=TRUE and Weekend=FALSE
+FUN_comp <- function(x) avg_comparisons(x, variables = "Weekend")
+```
+
+Now we can apply these functions to a series of regression models with quantiles of `inspection_score` and plot the results:
+
+```{r, warning = FALSE}
+distreg <- function(FUN) {
+  out <- NULL
+  for (qtile in 1:9 / 10) {
+    # find quantile value
+    threshold <- quantile(dat$inspection_score, prob = qtile, na.rm = TRUE)
+    # model with binary dependent variable
+    f <- inspection_score < threshold ~ Weekend * (Year + NumberofLocations)
+    model <- glm(f, data = dat, family = binomial)
+    # quantity of interest
+    tmp <- FUN(model) 
+    # save quantile for plotting
+    tmp$quantiles <- qtile
+    out <- rbind(out, tmp)
+  }
+  if (!"Weekend" %in% colnames(out)) out[["Weekend"]] <- "Difference"
+  ggplot(out, aes(x = quantiles, y = estimate, ymin = conf.low, ymax = conf.high, fill = Weekend)) +
+    geom_ribbon(alpha = .3) +
+    geom_line()
+}
+```
+
+```{r}
+#| warning: false
+distreg(FUN_pred_observed)
+```
+
+The curves above can be interpreted as CDFs. They suggest that when we hold covariates at subgroup-specific observed values, the probability of obtaining higher scores are greater on a weekend than on a weekday. This observation holds at all nearly all quantiles of the outcome variable, except at the very top of the evaluation scale, where the day of inspection does not appear to make a difference.
+
+Note that the CDFs do vary quite a bit depending on the quantity of interest:
+
+```{r}
+#| warning: false
+distreg(FUN_pred_counterfactual)
+
+distreg(FUN_pred_fixed)
+
+distreg(FUN_comp)
+```
+
+# Going further
+
+@Che2013 discuss inference for distribution regression, describe a bootstrap strategy, and explain how to construct simultaneous confidence sets.
+
+@Che2007 explain how one can rearrange estimates to ensure that the CDF is weakly increasing. (h/t Apoorva Lal.)

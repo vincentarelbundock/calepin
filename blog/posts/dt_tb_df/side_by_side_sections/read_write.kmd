@@ -1,0 +1,67 @@
+# Read and write
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# Write to CSV
+fwrite(DT, "DT.csv")
+
+# Write tab-delimited
+fwrite(DT, "DT.txt", sep = "\t")
+
+# Read CSV or tab-delimited
+DT1 = fread("DT.csv")
+DT2 = fread("DT.txt", sep = "\t")
+
+# Read specific columns
+DT3 = fread("DT.csv", select = c("V1", "V4"))
+DT4 = fread("DT.csv", drop = "V4")
+
+# Combine multiple files
+rbindlist(lapply(c("DT.csv", "DT.csv"), fread))
+```
+
+## `base`
+```{r}
+# Write to CSV
+write.csv(DF, "DF.csv", row.names = FALSE)
+
+# Write tab-delimited
+write.table(DF, "DF.txt", sep = "\t", 
+  row.names = FALSE, col.names = TRUE)
+
+# Read CSV or tab-delimited
+DF1 = read.csv("DF.csv")
+DF2 = read.table("DF.txt", sep = "\t", header = TRUE)
+
+# Read specific columns
+DF3 = read.csv("DF.csv")[, c("V1", "V4")]
+DF4 = read.csv("DF.csv")[, !(names(read.csv("DF.csv")) %in% "V4")]
+
+# Combine multiple files
+do.call(rbind, lapply(c("DF.csv", "DF.csv"), read.csv))
+```
+
+## `dplyr`
+```{r}
+# Write to CSV
+TB |> readr::write_csv("TB.csv")
+
+# Write tab-delimited
+TB |> readr::write_delim("TB.txt", delim = "\t")
+
+# Read CSV or tab-delimited
+TB1 = readr::read_csv("TB.csv")
+TB2 = readr::read_delim("TB.txt", delim = "\t")
+
+# Combine multiple files
+c("TB.csv", "TB.csv") |>
+  purrr::map_dfr(readr::read_csv)
+```
+::::
+
+Clean up local files.
+
+```{r}
+file.remove(c("DT.csv", "TB.csv", "DF.csv", "DT.txt", "TB.txt", "DF.txt"))
+```

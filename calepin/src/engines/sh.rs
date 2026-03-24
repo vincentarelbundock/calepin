@@ -57,13 +57,13 @@ pub struct ShSession {
 }
 
 impl ShSession {
-    pub fn init() -> Result<Self> {
+    pub fn init(cwd: Option<&std::path::Path>) -> Result<Self> {
         let bootstrap_file = tempfile::NamedTempFile::new()
             .context("Failed to create temp file for sh bootstrap")?;
         std::fs::write(bootstrap_file.path(), SH_BOOTSTRAP)
             .context("Failed to write sh bootstrap")?;
         let path_str = bootstrap_file.path().to_string_lossy().to_string();
-        let session = SubprocessSession::spawn("/bin/sh", &[&path_str])
+        let session = SubprocessSession::spawn("/bin/sh", &[&path_str], &[], cwd)
             .context("Failed to start /bin/sh")?;
         Ok(ShSession { session, _bootstrap_file: bootstrap_file })
     }

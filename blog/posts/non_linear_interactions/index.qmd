@@ -1,0 +1,168 @@
+---
+title: "Notes on Hainmueller, Mummolo & Xu: How Much Should we Trust Estimates from Multiplicative Interaction Models?"
+subtitle: "Part of my ongoing quest to replicate everything I see using the `marginaleffects` package."
+author: Vincent Arel-Bundock
+date: "2023-01-24"
+---
+
+```{r setup}
+#| include: false
+okabeito <- c('#E69F00', '#56B4E9', '#009E73', '#F0E442', '#0072B2', '#D55E00', '#CC79A7', '#999999', '#000000')
+options(ggplot2.discrete.fill = okabeito)
+options(ggplot2.discrete.colour = okabeito)
+options(width = 120)
+library(ggplot2)
+ggplot2::theme_set(theme_bw())
+```
+
+Political Scientists absolutely looove regression models with multiplicative interactions [@brambor2006;@Bra2004]. In "How Much Should we Trust Estimates from Multiplicative Interaction Models?" Hainmueller, Mummolo, and Xu (HMX) criticize the standard practice of entering these interactions linearly, and they propose two alternative strategies, using binning or kernel estimation [@hmx2019].
+
+These two approaches are pretty straightforward to implement, but the specifications can be a little finicky to code up. And while [the authors generously published an `R` package to implement their recommendations,](https://cran.r-project.org/web/packages/interflex/index.html) the objects produced by this package are a little "non standard", which makes them hard to use with packages to draw regression tables, etc.
+
+These are my reading notes on HMX, showing how to estimate and interpret the recommended interaction models with standard `R` commands and the `marginaleffects` package. Very similar code could be used in `Stata` using the `margins` command.
+
+To start, we load a few libraries:
+
+```{r}
+#| message: false
+#| warning: false
+library(mgcv)
+library(ggplot2)
+library(data.table)
+library(marginaleffects)
+set.seed(1024)
+```
+
+# Simulated data
+
+Consider this data generating process:
+
+$$Y = 2.5 + -X^2 - 5 \cdot D + 2 \cdot D \cdot X^2 + \zeta,$$
+
+with 1000 observations, $X\sim U(-3,3)$, $D\sim Bernoulli(.5)$, and $\zeta\sim N(0, 2)$.
+
+We can simulate a dataset which conforms to this process as follows:
+
+```{r}
+#| message: false
+N <- 1e3
+FUN <- function(D, X) 2.5 - X^2 - 5 * D + 2 * D * X^2
+
+dat <- data.table(
+    X = runif(N, min = -3, max = 3),
+    D = rbinom(N, size = 1, prob = .5),
+    z = rnorm(N, mean = 0, sd = 2))[
+    , truth := FUN(D, X)           ][
+    , Y := truth + z               ]
+
+head(dat)
+```
+
+The effect of $D$ on $Y$ depends on $X$, and the moderating effect of $X$ is non-linear. As such, fitting a simple model like this would probably generate less than useful results:
+
+$$Y = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 X\cdot D + \varepsilon$$
+
+
+Indeed, a simple plot (HMX call this a "Linear Interaction Diagnostic Plot") shows that the slope estimated by linear regression is essentially the same in the $D=0$ and $D=1$, even if the relationship is completely different:
+
+```{r}
+#| message: false
+ggplot(dat, aes(X, Y)) +
+    geom_point(alpha = .2) +
+    geom_smooth(se = FALSE, method = "lm", color = "#E69F00") +
+    geom_smooth(se = FALSE, color = "#56B4E9") +
+    facet_wrap(~ D)
+```
+
+# Bins
+
+The first estimation strategy that HMX propose is reasonably simple: Split the moderator into bins, and estimate a model with carefully selected interactions and de-meaned (de-binned?) versions of the moderator. Say we decide to use 3 equal-sized bins. We then estimate:
+
+$$Y = \sum_{j=1}^3 \{\mu_j + \alpha_j D + \eta_j (X-x_j) + \beta_j(X-x_j)D\}G_j + \varepsilon,$$
+
+where $x_j$ are the midpoints of each bin. 
+
+The clever thing about this specification is that the $\alpha_j$ coefficients can immediately be interpreted as the marginal effects (partial derivatives) of $D$ on $Y$, when the moderator $X$ is equal to $x_1$, $x_2$, or $x_3$.
+
+How would we do this in `R`? First, we create three bins on the moderator $X$, and we calculate the midpoint value for each bin:
+
+```{r}
+# create equal-sized bins 
+bin <- seq(0, 1, length.out = 4)
+dat[, bin := cut(X, quantile(X, prob = bin), include.lowest = TRUE)]
+
+# midpoints of each bin
+mid <- dat[, .(X = median(X), D = 0), by = "bin"]
+dat <- merge(dat, mid[, .(mid = X, bin)])
+```
+
+Then, we estimate the model in the equation above using `lm()` and lots of parentheses and interaction terms:
+
+```{r}
+lm(Y ~ (1 + D + I(X - mid) + D:I(X - mid)) : bin + bin,
+   data = dat)
+```
+
+Success! Three of the coefficients above correspond to the marginal effects (or slopes, or partial derivatives) we are looking for. But which ones, specifically? And did we include all the correct interaction terms? ¯\\\_(ツ)\_/¯️ 
+
+Here's an alternative that I personally (100% subjective) find simpler:
+
+1. Interact everything.
+2. Call the the `slopes()` function (or `margins, dydx at()` in Stata) to compute marginal effects at the midpoints of each bin:
+
+```{r}
+mod <- lm(Y ~ D * X * bin, data = dat)
+
+slopes(mod,             # model with interactions
+       variables = "D", # slope of Y with respect to D: dY/dD
+       newdata = mid)   # values of the bin midpoints where we want to evaluate dY/dD
+```
+
+These are these are exactly the same results that we obtain with `interflex`, the package written by HMX:
+
+```{r}
+#| message: false
+#| warning: false
+library(interflex)
+int <- interflex(
+    Y = "Y",
+    D = "D",
+    X = "X",
+    data = data.frame(dat),
+    estimator = "binning",
+    X.eval = mid$X)
+int$est.bin[[1]]
+```
+
+# Kernel estimator
+
+In the next part of their paper, HMX recommend using a kernel estimator to more flexibly estimate the non-linear relationship between $D$, $X$, and $Y$. Frankly, I did not read that section very attentively, and I don't know exactly what kernel and cross-validation magic `interflex` does under the hood.
+
+That said, it seems useful to know that there are tons of off-the-shelf software to estimate very flexible models with interactions and smooths. For example, a very simple GAM model can easily match the true data generating process simulated by HMX very closely. And since GAM-fitting packages like `mgcv`, are supported by `marginaleffects`, analysts can easily report useful quantities and plots.
+
+First, estimate a GAM model with a smooth term of interaction between $X$ and $D$:
+
+```{r}
+dat$D <- factor(dat$D)
+mod <- gam(Y ~ s(X, by = D) + D, data = dat)
+```
+
+Estimate the average marginal effects for different values of $X$ (the midpoints of the bins we used above):
+
+```{r}
+avg_slopes(mod, by = "mid", variables = "D")
+```
+
+Use the `plot_predictions()` function to plot the predictions of our GAM model against the true data generating process. Note that GAM (colors) predictions match the true curves (black dots) very closely:
+
+```{r}
+#| warning: false
+plot_predictions(mod, condition = c("X", "D")) +
+    geom_line(data = dat, aes(x = X, y = truth, group = D), linetype = 3)
+```
+
+We can also use the `plot_slopes()` function to plot the marginal effects ($\partial Y / \partial D$) at different values of $X$:
+
+```{r}
+plot_slopes(mod, variables = "D", condition = "X")
+```

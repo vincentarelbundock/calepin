@@ -11,9 +11,8 @@
 //!   nested by increasing colon count. Includes `.verbatim` divs that skip recursive parsing.
 //! - **Text blocks**: everything between structural elements.
 //!
-//! Both backtick and tilde fence markers are supported; a closing fence must use the same
-//! marker character and at least as many repetitions as the opener. Div nesting is tracked
-//! by colon count so `:::` cannot close a `::::` opener.
+//! A closing backtick fence must use at least as many repetitions as the opener.
+//! Div nesting is tracked by colon count so `:::` cannot close a `::::` opener.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -27,11 +26,11 @@ use crate::types::{Block, CodeChunk, DivBlock, InlineCode, OptionValue, RawBlock
 // --- Static regexes (compiled once) ---
 
 static RE_RAW_OPEN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^([\t >]*)(`{3,}|~{3,})\s*\{+=([a-zA-Z0-9_]+)\}+\s*$").unwrap()
+    Regex::new(r"^([\t >]*)(`{3,})\s*\{+=([a-zA-Z0-9_]+)\}+\s*$").unwrap()
 });
 
 static RE_CODE_OPEN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^([\t >]*)(`{3,}|~{3,})\s*\{+([a-zA-Z0-9_]+)(.*?)\}+\s*$").unwrap()
+    Regex::new(r"^([\t >]*)(`{3,})\s*\{+([a-zA-Z0-9_]+)(.*?)\}+\s*$").unwrap()
 });
 
 static RE_DIV_OPEN: LazyLock<Regex> = LazyLock::new(|| {
@@ -119,6 +118,12 @@ fn parse_blocks(
             continue;
         }
 
+        // Skip comment block: ```{comment} or ````{comment} etc.
+        if let Some(end) = skip_comment_block(lines, i) {
+            i = end;
+            continue;
+        }
+
         // Try code chunk opening fence: ```{r} or ```{r, label}
         if let Some((block, end)) = parse_code_chunk(lines, i, chunk_counter)? {
             blocks.push(block);
@@ -136,6 +141,11 @@ fn parse_blocks(
             && !RE_DIV_OPEN.is_match(lines[i])
             && !is_div_close(lines[i], 3)
         {
+            // Skip HTML comments (<!-- ... -->), single-line or multi-line
+            if let Some(end) = skip_html_comment(lines, i) {
+                i = end;
+                continue;
+            }
             if !text.is_empty() {
                 text.push('\n');
             }
@@ -185,17 +195,64 @@ fn collect_div_body(lines: &[&str], start: usize, min_colons: usize, collect: bo
     (content, i)
 }
 
-/// Count the length of a fence marker (backticks or tildes) at the start of a line.
-/// Returns (count, marker_char) or None if not a fence.
-fn parse_fence_marker(line: &str) -> Option<(usize, char)> {
-    let trimmed = line.trim_start();
-    let first = trimmed.chars().next()?;
-    if first != '`' && first != '~' {
+static RE_COMMENT_OPEN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^([\t >]*)(`{3,})\s*\{+comment\}+\s*$").unwrap()
+});
+
+/// Skip a ```` ```{comment} ```` block. Returns the position after the closing fence, or None.
+fn skip_comment_block(lines: &[&str], i: usize) -> Option<usize> {
+    let caps = RE_COMMENT_OPEN.captures(lines[i])?;
+    let prefix = caps.get(1).map_or("", |m| m.as_str());
+    let fence_marker = caps.get(2).map_or("```", |m| m.as_str());
+    let mut j = i + 1;
+    while j < lines.len() {
+        if is_closing_fence(lines[j], prefix, fence_marker) {
+            return Some(j + 1);
+        }
+        j += 1;
+    }
+    // Unclosed comment block: skip everything to end
+    Some(j)
+}
+
+/// Skip an HTML comment (`<!-- ... -->`). Handles both single-line and multi-line comments.
+/// Returns the position after the closing `-->`, or None if the line doesn't start a comment.
+fn skip_html_comment(lines: &[&str], i: usize) -> Option<usize> {
+    let trimmed = lines[i].trim_start();
+    if !trimmed.starts_with("<!--") {
         return None;
     }
-    let count = trimmed.chars().take_while(|&c| c == first).count();
+    // Check if the comment closes on the same line
+    if let Some(pos) = trimmed[4..].find("-->") {
+        // Single-line comment: only skip if nothing meaningful after the close
+        let after = trimmed[4 + pos + 3..].trim();
+        if after.is_empty() {
+            return Some(i + 1);
+        }
+        return None; // Inline comment embedded in text; let markdown handle it
+    }
+    // Multi-line: scan forward for -->
+    let mut j = i + 1;
+    while j < lines.len() {
+        if lines[j].contains("-->") {
+            return Some(j + 1);
+        }
+        j += 1;
+    }
+    // Unclosed comment: skip to end
+    Some(j)
+}
+
+/// Count the length of a backtick fence marker at the start of a line.
+/// Returns (count, '`') or None if not a fence.
+fn parse_fence_marker(line: &str) -> Option<(usize, char)> {
+    let trimmed = line.trim_start();
+    if !trimmed.starts_with('`') {
+        return None;
+    }
+    let count = trimmed.chars().take_while(|&c| c == '`').count();
     if count >= 3 {
-        Some((count, first))
+        Some((count, '`'))
     } else {
         None
     }
@@ -319,12 +376,8 @@ fn parse_code_chunk(
     let engine = caps[3].to_string();
     let header_str = caps.get(4).map_or("", |m| m.as_str());
 
-    // Parse header: only label allowed, key=value options are an error
-    let (header_label, header_err) = parse_header_label(header_str);
-    if let Some(err_msg) = header_err {
-        cwarn!("{}  (line {})", err_msg, i + 1);
-        return Err(anyhow::anyhow!("Invalid chunk header at line {}", i + 1));
-    }
+    // Parse header: extract label and any inline key=value options
+    let (header_label, header_opts) = parse_header_label(header_str);
 
     let (body_lines, _, j) = collect_fenced_body(lines, i + 1, &prefix, fence_marker);
     let code_lines: Vec<String> = body_lines.iter().map(|l| l.to_string()).collect();
@@ -332,6 +385,12 @@ fn parse_code_chunk(
     let (pipe_lines, actual_code) = collect_pipe_comments(&code_lines);
     let pipe_comments: Vec<String> = pipe_lines.iter().map(|s| s.to_string()).collect();
     let mut options = parse_pipe_options(&pipe_lines);
+    // Merge header options as defaults (pipe options take precedence)
+    for (key, value) in header_opts.inner {
+        if !options.inner.contains_key(&key) {
+            options.inner.insert(key, value);
+        }
+    }
     options
         .inner
         .insert("engine".to_string(), OptionValue::String(engine));
@@ -555,12 +614,15 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_chunk_header_options_rejected() {
+    fn test_parse_chunk_header_options_converted() {
         let body = "```{r, echo=FALSE, fig.width=10}\nplot(1:10)\n```";
-        let result = parse_body(body);
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("line 1"));
+        let blocks = parse_body(body).unwrap();
+        assert_eq!(blocks.len(), 1);
+        if let Block::Code(chunk) = &blocks[0] {
+            assert!(!chunk.options.echo());
+            assert!((chunk.options.fig_width() - 10.0).abs() < f64::EPSILON);
+            assert_eq!(chunk.source, vec!["plot(1:10)"]);
+        }
     }
 
     #[test]
@@ -694,55 +756,6 @@ mod tests {
         }
     }
 
-    // --- New tests for tilde fences ---
-
-    #[test]
-    fn test_tilde_unnamed_fence() {
-        let body = "~~~python\nprint('hello')\n~~~";
-        let blocks = parse_body(body).unwrap();
-        assert_eq!(blocks.len(), 1);
-        if let Block::CodeBlock(cb) = &blocks[0] {
-            assert_eq!(cb.lang, "python");
-            assert_eq!(cb.code, "print('hello')");
-        } else {
-            panic!("expected CodeBlock, got {:?}", blocks[0]);
-        }
-    }
-
-    #[test]
-    fn test_tilde_raw_block() {
-        let body = "~~~{=html}\n<p>raw</p>\n~~~";
-        let blocks = parse_body(body).unwrap();
-        assert_eq!(blocks.len(), 1);
-        if let Block::Raw(raw) = &blocks[0] {
-            assert_eq!(raw.format, "html");
-            assert_eq!(raw.content, "<p>raw</p>");
-        } else {
-            panic!("expected Raw block, got {:?}", blocks[0]);
-        }
-    }
-
-    #[test]
-    fn test_tilde_code_chunk() {
-        let body = "~~~{r}\n1 + 1\n~~~";
-        let blocks = parse_body(body).unwrap();
-        assert_eq!(blocks.len(), 1);
-        assert!(matches!(&blocks[0], Block::Code(_)));
-    }
-
-    #[test]
-    fn test_tilde_fence_must_match_marker() {
-        // Opening with ~~~ should not close with ```
-        let body = "~~~python\nline1\n```\nline2\n~~~";
-        let blocks = parse_body(body).unwrap();
-        assert_eq!(blocks.len(), 1);
-        if let Block::CodeBlock(cb) = &blocks[0] {
-            assert_eq!(cb.code, "line1\n```\nline2");
-        } else {
-            panic!("expected CodeBlock");
-        }
-    }
-
     #[test]
     fn test_unnamed_fence_empty() {
         let body = "```\nplain code\n```";
@@ -775,5 +788,61 @@ mod tests {
         } else {
             panic!("expected Div block");
         }
+    }
+
+    // --- Comment block tests ---
+
+    #[test]
+    fn test_comment_block_skipped() {
+        let body = "Before\n\n```{comment}\nThis is a comment.\nIt should be skipped.\n```\n\nAfter";
+        let blocks = parse_body(body).unwrap();
+        assert_eq!(blocks.len(), 2);
+        if let Block::Text(t) = &blocks[0] {
+            assert_eq!(t.content, "Before\n");
+        }
+        if let Block::Text(t) = &blocks[1] {
+            assert_eq!(t.content, "After");
+        }
+    }
+
+    #[test]
+    fn test_comment_block_four_backticks() {
+        let body = "Before\n\n````{comment}\n```{r}\nx <- 1\n```\nNested fences inside comment.\n````\n\nAfter";
+        let blocks = parse_body(body).unwrap();
+        assert_eq!(blocks.len(), 2);
+        if let Block::Text(t) = &blocks[1] {
+            assert_eq!(t.content, "After");
+        }
+    }
+
+    // --- HTML comment tests ---
+
+    #[test]
+    fn test_html_comment_single_line() {
+        let body = "Before\n<!-- This is a comment -->\nAfter";
+        let blocks = parse_body(body).unwrap();
+        assert_eq!(blocks.len(), 1);
+        if let Block::Text(t) = &blocks[0] {
+            assert_eq!(t.content, "Before\nAfter");
+        }
+    }
+
+    #[test]
+    fn test_html_comment_multi_line() {
+        let body = "Before\n<!--\nThis is a\nmulti-line comment\n-->\nAfter";
+        let blocks = parse_body(body).unwrap();
+        assert_eq!(blocks.len(), 1);
+        if let Block::Text(t) = &blocks[0] {
+            assert_eq!(t.content, "Before\nAfter");
+        }
+    }
+
+    #[test]
+    fn test_html_comment_between_blocks() {
+        let body = "Text\n\n<!-- comment -->\n\n```{r}\n1 + 1\n```";
+        let blocks = parse_body(body).unwrap();
+        assert_eq!(blocks.len(), 2);
+        assert!(matches!(&blocks[0], Block::Text(_)));
+        assert!(matches!(&blocks[1], Block::Code(_)));
     }
 }

@@ -35,9 +35,10 @@ pub enum Command {
     /// Preview a file, project, or directory with live-reload
     Preview(PreviewArgs),
 
-    /// Delete generated files (_calepin/cache/, _calepin/files/, and LaTeX artefacts)
+    /// Delete generated files (_calepin/cache/, _calepin/files/, and LaTeX artefacts).
+    /// Pass a stem name (e.g., "index") to flush only that page's cache/files.
     Flush {
-        /// Directory to clean (default: current directory)
+        /// Directory to clean, or a stem name to flush selectively
         #[arg(default_value = ".")]
         path: PathBuf,
 

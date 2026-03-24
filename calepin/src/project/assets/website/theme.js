@@ -51,6 +51,44 @@
       });
     }
 
+    // Navbar menu toggle (no-sidebar mode)
+    var navMenuBtn = document.getElementById('navbar-menu-toggle');
+    var navMenu = document.getElementById('navbar-menu');
+    if (navMenuBtn && navMenu) {
+      navMenuBtn.addEventListener('click', function() {
+        navMenu.classList.toggle('open');
+        var isOpen = navMenu.classList.contains('open');
+        navMenuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+    }
+
+    // Tabset: click to switch tabs
+    document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var tabset = btn.closest('.panel-tabset');
+        var tab = btn.getAttribute('data-tab');
+        var group = tabset.getAttribute('data-group');
+
+        // Determine which tabsets to update: all in the same group, or just this one
+        var targets = group
+          ? document.querySelectorAll('.panel-tabset[data-group="' + group + '"]')
+          : [tabset];
+
+        targets.forEach(function(ts) {
+          ts.querySelectorAll('.nav-link').forEach(function(b) {
+            var isActive = b.getAttribute('data-tab') === tab;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          });
+          ts.querySelectorAll('.tab-pane').forEach(function(p) {
+            var isActive = p.getAttribute('data-tab') === tab;
+            p.classList.toggle('active', isActive);
+            p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+          });
+        });
+      });
+    });
+
     // Navbar auto-hide: disappears on scroll down, reappears on mouse move
     var navbar = document.querySelector('.navbar');
     if (navbar) {

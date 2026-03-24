@@ -24,7 +24,7 @@ use std::path::Path;
 
 use std::collections::HashMap;
 
-use crate::types::{Block, ChunkOptions, ChunkResult, CodeChunk, Element, Metadata};
+use crate::types::{Block, ChunkOptions, ChunkResult, CodeChunk, Element, Metadata, OptionValue};
 
 /// Holds mutable references to the active engine sessions.
 /// Threaded through the evaluate pipeline so block/inline code can dispatch.
@@ -75,23 +75,47 @@ pub fn evaluate(
                 elements.push(Element::Text { content: processed });
             }
             Block::Code(chunk) => {
+                // Merge document-level defaults from front matter var into chunk options.
+                // Resolution order: chunk #| options > front matter var > _calepin.toml defaults.
+                // Only merge keys that look like chunk options (contain a dot or match known names).
+                static CHUNK_OPT_PREFIXES: &[&str] = &[
+                    "echo", "eval", "include", "warning", "message", "results", "cache",
+                    "fig.", "out.", "comment", "dev", "dpi", "label",
+                ];
+                let mut merged_chunk = chunk.clone();
+                for (key, val) in &metadata.var {
+                    let opt_key = key.replace('-', ".");
+                    let is_chunk_opt = CHUNK_OPT_PREFIXES.iter().any(|p| opt_key.starts_with(p));
+                    if is_chunk_opt && !merged_chunk.options.inner.contains_key(&opt_key) {
+                        if let Some(s) = val.as_str() {
+                            merged_chunk.options.inner.insert(opt_key, OptionValue::String(s.to_string()));
+                        } else if let Some(b) = val.as_bool() {
+                            merged_chunk.options.inner.insert(opt_key, OptionValue::Bool(b));
+                        } else if let Some(n) = val.as_floating_point() {
+                            merged_chunk.options.inner.insert(opt_key, OptionValue::String(n.to_string()));
+                        } else if let Some(n) = val.as_integer() {
+                            merged_chunk.options.inner.insert(opt_key, OptionValue::String(n.to_string()));
+                        }
+                    }
+                }
+
                 // If #| jinja: true, process chunk source through Jinja before execution
                 let tera_chunk;
-                let chunk_ref = if chunk.options.get_bool("jinja", false)
-                    || chunk.options.get_bool("tera", false)
+                let chunk_ref = if merged_chunk.options.get_bool("jinja", false)
+                    || merged_chunk.options.get_bool("tera", false)
                 {
-                    let joined = chunk.source.join("\n");
+                    let joined = merged_chunk.source.join("\n");
                     let tera_result = crate::jinja_engine::process_body(
                         &joined, output_ext, metadata, registry,
                     );
                     sc_fragments.extend(tera_result.sc_fragments);
                     tera_chunk = CodeChunk {
                         source: tera_result.text.lines().map(|l| l.to_string()).collect(),
-                        ..chunk.clone()
+                        ..merged_chunk.clone()
                     };
                     &tera_chunk
                 } else {
-                    chunk
+                    &merged_chunk
                 };
                 let (mut chunk_elements, chunk_preamble) = block::evaluate_block(chunk_ref, fig_dir, fig_ext, ctx, cache)?;
                 elements.append(&mut chunk_elements);
@@ -179,14 +203,22 @@ pub fn execute_chunk(
 
     // Set up figure paths (skip for tbl- chunks which don't produce plots)
     let is_table_chunk = label.starts_with("tbl-");
-    std::fs::create_dir_all(fig_dir).ok();
+    if let Err(e) = std::fs::create_dir_all(fig_dir) {
+        eprintln!("Warning: failed to create figure directory {}: {}", fig_dir.display(), e);
+    }
     let fig_width = options.fig_width();
     let fig_height = options.fig_height();
     let fig_full_path = fig_dir.join(format!("{}-1.{}", label, fig_ext));
+    // Use absolute path so the subprocess can write figures regardless of its cwd
+    let fig_abs = if fig_full_path.is_relative() {
+        std::env::current_dir().unwrap_or_default().join(&fig_full_path)
+    } else {
+        fig_full_path.clone()
+    };
     let fig_full_str = if is_table_chunk {
         String::new()
     } else {
-        fig_full_path.to_string_lossy().replace('\\', "/")
+        fig_abs.to_string_lossy().replace('\\', "/")
     };
 
     results.push(ChunkResult::Source(source.to_vec()));

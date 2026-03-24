@@ -47,10 +47,13 @@ pub struct PageContext {
     pub source_url: String,
     pub toc: Option<String>,
     pub listing: Option<Vec<ListingItem>>,
+    pub listing_type: Option<String>,
+    pub pagination: Option<Pagination>,
     pub breadcrumbs: Vec<Breadcrumb>,
     pub prev: Option<NavLink>,
     pub next: Option<NavLink>,
     pub lang: Option<String>,
+    pub flag: String,
     pub translations: Vec<Translation>,
 }
 
@@ -61,8 +64,59 @@ pub struct Translation {
     pub lang: String,
     /// Display name (e.g., "Fran\u{00e7}ais"). Empty if no [[languages]] config.
     pub name: String,
+    /// Unicode flag emoji (e.g., "\u{1f1eb}\u{1f1f7}" for fr).
+    pub flag: String,
     /// URL of the translated page.
     pub url: String,
+}
+
+/// Convert a language code to a Unicode regional indicator flag emoji.
+/// Maps language codes to country codes where they differ (e.g., "en" -> "gb"),
+/// then converts each letter to the corresponding regional indicator symbol.
+fn lang_to_flag(lang: &str) -> String {
+    let country = match lang {
+        "en" => "gb",
+        "ja" => "jp",
+        "ko" => "kr",
+        "zh" => "cn",
+        "ar" => "sa",
+        "hi" => "in",
+        "uk" => "ua",
+        "cs" => "cz",
+        "da" => "dk",
+        "el" => "gr",
+        "he" => "il",
+        "sv" => "se",
+        "nb" | "nn" => "no",
+        "ca" => "es",
+        "eu" => "es",
+        "gl" => "es",
+        "ms" => "my",
+        "fa" => "ir",
+        "vi" => "vn",
+        "sq" => "al",
+        "hy" => "am",
+        "ka" => "ge",
+        "et" => "ee",
+        "sl" => "si",
+        "sr" => "rs",
+        "bs" => "ba",
+        "mk" => "mk",
+        other => other,
+    };
+    // Regional indicator symbols: U+1F1E6 ('A') through U+1F1FF ('Z')
+    let bytes: Vec<char> = country.to_uppercase().chars().map(|c| {
+        char::from_u32(0x1F1E6 + (c as u32 - 'A' as u32)).unwrap_or(c)
+    }).collect();
+    bytes.into_iter().collect()
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Pagination {
+    pub current: usize,
+    pub total: usize,
+    pub prev_url: Option<String>,
+    pub next_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -198,12 +252,15 @@ pub fn build_page_context(
     let body = result.map(|r| r.body.clone()).unwrap_or_default();
 
     let title = result.and_then(|r| r.title.clone()).or_else(|| page.meta.title.clone());
-    let date = result.and_then(|r| r.date.clone()).or_else(|| page.meta.date.clone());
+    let date = result.and_then(|r| r.date.clone()).or_else(|| page.meta.date.clone())
+        .map(|d| format_date(&d));
     let subtitle = result.and_then(|r| r.subtitle.clone()).or_else(|| page.meta.subtitle.clone());
     let abstract_text = result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone());
 
-    // Prev/next navigation excludes standalone pages
-    let nav_pages: Vec<&PageInfo> = pages.iter().filter(|p| !p.standalone).collect();
+    // Prev/next navigation excludes standalone pages and pages in other languages
+    let nav_pages: Vec<&PageInfo> = pages.iter().filter(|p| {
+        !p.standalone && p.lang == page.lang
+    }).collect();
     let idx = nav_pages.iter().position(|p| p.source == page.source);
     let prev = idx.and_then(|i| {
         if i > 0 {
@@ -227,7 +284,7 @@ pub fn build_page_context(
     // Resolve translations: look up each path in the page list
     let translations = resolve_translations(page, pages, languages);
 
-    let breadcrumbs = build_breadcrumbs(page);
+    let breadcrumbs = build_breadcrumbs(page, pages);
 
     PageContext {
         title, subtitle, date,
@@ -237,7 +294,10 @@ pub fn build_page_context(
         source_url: format!("/_source/{}", page.source.display()),
         toc: result.and_then(|r| r.toc.clone()),
         listing: listing_items,
+        listing_type: page.meta.listing.as_ref().map(|l| l.r#type.clone()),
+        pagination: None,
         breadcrumbs, prev, next,
+        flag: page.lang.as_deref().map(lang_to_flag).unwrap_or_default(),
         lang: page.lang.clone(),
         translations,
     }
@@ -266,6 +326,7 @@ fn resolve_translations(
     for (lang_code, path) in translations {
         if let Some(info) = page_map.get(path.as_str()) {
             result.push(Translation {
+                flag: lang_to_flag(lang_code),
                 lang: lang_code.clone(),
                 name: lang_names.get(lang_code.as_str())
                     .map(|s| s.to_string())
@@ -282,20 +343,58 @@ fn resolve_translations(
     result
 }
 
-fn build_breadcrumbs(page: &PageInfo) -> Vec<Breadcrumb> {
+/// Default date display format (strftime-style).
+const DEFAULT_DATE_FORMAT: &str = "%B %e, %Y";
+
+/// Format a YYYY-MM-DD date string for display.
+pub fn format_date(date: &str) -> String {
+    crate::types::format_date_str(date, DEFAULT_DATE_FORMAT)
+}
+
+fn build_breadcrumbs(page: &PageInfo, pages: &[PageInfo]) -> Vec<Breadcrumb> {
+    // Collect all page URLs for checking if a path leads to a real page
+    let page_urls: Vec<String> = pages.iter().map(|p| p.url.clone()).collect();
+
     let mut crumbs = vec![Breadcrumb {
         text: "Home".to_string(),
         href: Some("/".to_string()),
     }];
     let components: Vec<_> = page.output.components().collect();
+    // Build intermediate path segments (skip the filename)
     if components.len() > 1 {
+        let mut href_path = String::from("/");
         for comp in components[..components.len() - 1].iter() {
+            let name = comp.as_os_str().to_string_lossy();
+            href_path.push_str(&name);
+            href_path.push('/');
+            // Prettify: replace - and _ with spaces, title case
+            let pretty = name
+                .replace('-', " ")
+                .replace('_', " ");
+            let pretty: String = pretty.split_whitespace()
+                .map(|w| {
+                    let mut c = w.chars();
+                    match c.next() {
+                        None => String::new(),
+                        Some(f) => f.to_uppercase().to_string() + c.as_str(),
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+            // Only link if there's a page at this path (index.html)
+            let index_url = format!("{}index.html", href_path);
+            let href = if page_urls.iter().any(|u| *u == index_url) {
+                Some(href_path.clone())
+            } else {
+                None
+            };
             crumbs.push(Breadcrumb {
-                text: comp.as_os_str().to_string_lossy().to_string(),
-                href: None,
+                text: pretty,
+                href,
             });
         }
     }
+    // Final crumb: page title (not clickable, it's the current page)
     if let Some(title) = &page.meta.title {
         crumbs.push(Breadcrumb { text: title.clone(), href: None });
     }

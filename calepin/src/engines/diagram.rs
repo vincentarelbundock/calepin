@@ -90,11 +90,28 @@ pub fn execute_diagram(
     let tmp_dir = std::env::temp_dir();
     let input_path = tmp_dir.join(format!("calepin_diagram.{}", spec.input_ext));
 
-    // TikZ needs a complete LaTeX document wrapper
+    // TikZ needs a complete LaTeX document wrapper.
+    // Extract preamble commands (\usetikzlibrary, \tikzset, \usepackage)
+    // from the chunk body and place them before \begin{document}.
     let full_code = if engine_name == "tikz" {
+        let mut preamble = Vec::new();
+        let mut body = Vec::new();
+        for line in code.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("\\usetikzlibrary")
+                || trimmed.starts_with("\\tikzset")
+                || trimmed.starts_with("\\usepackage")
+                || trimmed.starts_with("\\tikzstyle")
+            {
+                preamble.push(line);
+            } else {
+                body.push(line);
+            }
+        }
         format!(
-            "\\documentclass{{standalone}}\n\\usepackage{{tikz}}\n\\begin{{document}}\n{}\n\\end{{document}}",
-            code
+            "\\documentclass{{standalone}}\n\\usepackage{{tikz}}\n\\usepackage{{amsmath}}\n{}\n\\begin{{document}}\n{}\n\\end{{document}}",
+            preamble.join("\n"),
+            body.join("\n")
         )
     } else {
         code.to_string()

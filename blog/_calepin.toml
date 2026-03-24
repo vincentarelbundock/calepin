@@ -1,0 +1,77 @@
+output = "output"
+target = "website"
+static = ["files", "research"]
+title = "Vincent Arel-Bundock"
+url = "http://arelbundock.com"
+bibliography = [
+  "posts/dunning_kruger/bibliography.bib",
+  "posts/marginaleffects_priors/reference.bib",
+  "posts/frontdoor/bibliography.bib",
+  "posts/regression_adjustment/bibliography.bib",
+  "posts/age_linear_discrete/bibliography.bib",
+  "posts/acmq_en_06_dag/bibliographie.bib",
+  "posts/non_linear_interactions/references.bib",
+  "posts/extendedtwfe/bibliography.bib",
+  "posts/marginal_structural_models/bibliography.bib",
+  "posts/declare_design/bibliography.bib",
+  "posts/panel_heterogeneous_effects/bibliography.bib",
+  "posts/distribution_regression/bibliography.bib",
+  "posts/robustness_values/bibliography.bib",
+  "files/arel-bundock.bib",
+]
+
+[[languages]]
+code = "en"
+name = "English"
+default = true
+
+[[languages]]
+code = "fr"
+name = "Français"
+
+# -- English --
+
+[[contents]]
+lang = "en"
+pages = [
+  "index.qmd",
+  "research.qmd",
+  "books.qmd",
+  "code.qmd",
+  "data.qmd",
+  "blog.qmd",
+]
+
+# -- French --
+
+[[contents]]
+lang = "fr"
+pages = [
+  "fr/index.qmd",
+  "fr/recherche.qmd",
+  "fr/livres.qmd",
+  "fr/code.qmd",
+  "fr/donnees.qmd",
+  "fr/blogue.qmd",
+]
+
+# -- Standalone (no nav) --
+
+[[contents]]
+standalone = true
+pages = ["404.qmd"]
+
+[var]
+navbar_search = false
+sidebar = false
+
+[[var.navbar_right]]
+icon = "github"
+href = "https://github.com/vincentarelbundock"
+
+[[var.navbar_right]]
+icon = "envelope"
+href = "mailto:vincent.arel-bundock@umontreal.ca"
+
+[targets.website]
+base = "html"

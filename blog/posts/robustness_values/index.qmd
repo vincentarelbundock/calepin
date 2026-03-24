@@ -1,0 +1,118 @@
+---
+title: "Making Sense of Sensitivity: Extending Omitted Variable Bias"
+author: "Vincent Arel-Bundock"
+date: "2021-01-22"
+---
+
+@CinHaz2020 ask: How strong do omitted confounders have to be in order to change our coefficient estimate by q%? To answer this question, we start with a familiar setup, where we want to estimate the effect of treatment $D$ on outcome $Y$ in the presence of confounder $Z$. The true model is:
+
+$$
+Y = \tau D + X\beta + \gamma Z + \varepsilon
+$$
+
+The omitted variable bias formula is well-known in the ordinary least squares context:
+
+$$
+\hat{\tau}_{res} = \hat{\tau} + \hat{\gamma}\hat{\delta},
+$$
+
+where $\hat{\tau}_{res}$ is the observed estimate; $\hat{\tau}$ is the desired estimate; $\hat{\gamma}$ is a measure of the association between the omitted $Z$ and $Y$ ("impact"); and $\hat{\delta}$ is a measure of the association between the omitted $Z$ and the treatment $D$ ("imbalance").
+
+The equivalence above can be seen in a simple simulation:
+
+```{r}
+library(modelsummary)
+
+N = 10000
+Z = rbinom(N, 1, prob = .5)
+D = rbinom(N, 1, prob = .8 - .6 * Z)
+Y = 1 * D + 3 * Z + rnorm(N)
+
+mod = list(
+  "Correct" = lm(Y ~ D + Z),
+  "Confounded" = lm(Y ~ D),
+  "Auxiliary" = lm(Z ~ D))
+
+coef(mod$Confounded)["D"] 
+
+coef(mod$Correct)["D"] + coef(mod$Correct)["Z"] * coef(mod$Auxiliary)["D"]
+
+modelsummary(mod, gof_omit = ".*")
+```
+
+Knowing the signs of the bias components can be useful, but the *magnitudes* of $\gamma$ and $\delta$ obviously matter as well. Moreover, the omitted variable bias formula with one confounder is of limited use when several confounders act together, possibly in non-linear fashion.
+
+To assess how strong *all* omitted confounders need to be to overturn our conclusions, @CinHaz2020 recommend reparameterizing the bias in terms of partial $R^2$. They show that our simple expression of the bias can be generalized and expressed as:
+
+$$
+|\widehat{bias}|= \sqrt{ \left ( \frac{R^2_{Y\sim Z|D,X} R^2_{D\sim ~Z|X}}{1 - R^2_{D\sim Z|X}} \right )} \frac{sd(Y^{\perp X,D})}{sd(D^{\perp X})}
+$$
+
+where $R^2_{Y\sim Z|D,X}$ et al. represent partial $R^2$ values.
+
+The above equation would be sufficient to conduct a full sensitivity analysis, but it is often convenient to report a single "Robustness Value". To simplify the interpretation, the authors consider a critical case where the strength of the impact (effect of Z on Y) and the strength of the imbalance (effect of Z on D) are equal. This allows them to define a simple Robustness Value:
+
+$$
+RV_q = \frac{1}{2} \left \{ \sqrt{(f_q^4 + 4f_q^2)} - f_q^2 \right \}
+$$
+
+In this equation, $f_q:=q|f_{Y\sim D|X}|$, where $f_{Y\sim D|X}$ represents the partial Cohen's $f$ of the treatment with the outcome,^[This can be computed by dividing coefficient t-value by $\sqrt{df}$] and $q$ is "the proportion of reduction q on the treatment coefficient which would be deemed problematic."
+
+The interpretation is quite straightforward:
+
+> "Confounders that explain $RV_q$\% both of the treatment and of the outcome are sufﬁciently strong to change the point estimate in problematic ways, whereas confounders with neither association greater than $RV_q$\% are not."
+
+If $RV_q$ is close to 1, the estimate can sustain confounding: the counfounders would need to explain nearly 100% of both the treatment and the outcome to be problematic. In contrast, if $RV_q$ is close to 0, then our estimate cannot sustain confounding.
+
+In `R`, we can calculate $RV_q$ like this:
+
+```{r}
+library(broom)
+
+get_RV = function(mod, treatment = "D", q = 1) {
+  ti = tidy(mod)
+  gl = glance(mod)
+  tvalue = ti$statistic[ti$term == treatment]
+  df = gl$df.residual
+  fq = abs(tvalue / sqrt(df)) * q
+  RV = 1/2 * (sqrt(fq^4 + 4 * fq^2) - fq^2)
+  RV
+}
+```
+
+```{r, include=FALSE}
+RV100 = get_RV(mod$Confounded, treatment = "D", q = 1) * 100
+RV25 = get_RV(mod$Confounded, treatment = "D", q = .25) * 100
+```
+
+For example, the $RV_1$ for the confounded model that we estimated at the top of this notebook is:
+
+```{r}
+get_RV(mod$Confounded, treatment = "D", q = 1)
+```
+
+Confounders which explain `r sprintf("%.0f%%", RV100)` of both $X$ and $Z$ are sufficiently strong to change the estimated treatment effect by 100%. 
+
+The $RV_{1/4}$ is:
+
+```{r}
+get_RV(mod$Confounded, treatment = "D", q = .25)
+```
+
+Confounders which explain `r sprintf("%.0f%%", RV25)` of both $X$ and $Z$ are sufficiently strong to change the estimated treatment effect by 25%.
+
+The `sensemakr` package allows us to compute $RV_q$ easily, without having to cook up our own functions:
+
+```{r, message=FALSE}
+library(sensemakr)
+
+s = sensemakr(mod$Confounded, treatment = "D", q = .25)
+
+s
+```
+
+As stated above, $RV_q$ characterizes the special, critical case where the impact and imbalance are equal. To see what happens for different combinations of impact and imbalance, the `sensemakr` package allows us to draw nice contour plots. The red line shows us the combinations of confounding magnitude that would allow a change of 25% in the estimate (as determined by the `q` argument in the `sensemakr` call above).
+
+```{r}
+plot(s)
+```

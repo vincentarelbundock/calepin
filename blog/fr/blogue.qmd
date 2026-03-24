@@ -1,0 +1,9 @@
+---
+title: Blogue
+lang: fr
+translations:
+  en: blog.qmd
+listing:
+  contents: posts/*/index.qmd
+  sort: date desc
+---

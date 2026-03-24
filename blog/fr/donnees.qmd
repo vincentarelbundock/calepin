@@ -1,0 +1,10 @@
+---
+title: Données
+lang: fr
+translations:
+  en: data.qmd
+---
+
+* [Political Risk Insurance and Finance](https://github.com/vincentarelbundock/opic): Ce projet vise à rendre accessible l'information au niveau de l'entreprise sur chaque contrat d'assurance émis, chaque projet de financement initié et chaque réclamation réglée par l'Overseas Private Investment Corporation des États-Unis.
+* [Central Bankers' speeches](https://osf.io/preprints/socarxiv/bms5n/): Une collection de 14 601 discours prononcés par des banquiers centraux entre 1997 et 2018. Collectés en préparation de l'article "Adding rooms onto a house we love: Central banking after the global financial crisis", avec Juliet Johnson et Vlad Portniaguine.
+* [Rdatasets](http://vincentarelbundock.github.io/Rdatasets): Une collection de plus de 2000 jeux de données distribués à l'origine avec l'environnement statistique R et certaines de ses extensions. L'objectif est de rendre ces données plus largement accessibles pour l'enseignement et le développement de logiciels statistiques. Chaque jeu de données est distribué en format CSV, avec une documentation détaillée en HTML.

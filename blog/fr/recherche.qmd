@@ -1,0 +1,52 @@
+---
+title: Recherche
+lang: fr
+translations:
+  en: research.qmd
+---
+
+Les données et le code utilisés dans mes recherches sont généralement archivés par l'[Open Science Foundation.](https://osf.io/w3kf4/)
+
+## Livres
+
+- Arel-Bundock, Vincent. 2026. *Model to Meaning: How to Interpret Statistical Models with `marginaleffects` for R and Python. CRC Press.*
+    - [Version en ligne gratuite](https://marginaleffects.com)
+    - [Version papier](https://routledge.com/9781032908724) disponible chez Routledge.
+    - [Compte rendu](https://doi.org/10.1080/01621459.2026.2626478) du professeur Betancourt dans le *Journal of the American Statistical Association.*
+- Arel-Bundock. 2021. [Analyse Causale et Méthodes Quantitatives.](/research/arel-bundock_2021_analyse_causale_et_methodes_quantitatives.pdf) Presses de l'Université de Montréal.
+
+## Articles
+
+- Arel-Bundock, Briggs, Doucouliagos, Avina Mendoza, and Stanley. 2026 [Quantitative political science research is greatly underpowered.](/research/arel-bundock_briggs_doucouliagos_avina_stanley_2025_quantitative_political_science_research_is_greatly_underpowered.pdf) *Journal of Politics*
+- Arel-Bundock, Pelc. 2026 [Buy-in for buyouts: attitudes toward compensation for reforms.](/research/arel-bundock_pelc_2025_buy_in_for_buyouts_attitudes_toward_compensation_for_reforms.pdf) *Journal of Politics.*
+- Rohrer, Arel-Bundock. 2026. [Models as prediction machines: How to convert confusing coefficients into clear quantities](/research/rohrer_arel-bundock_2025_models_as_prediction_machines_how_to_convert_confusing_coefficients_into_clear_quantities.pdf). *Advances in Methods and Practices in Psychological Science.*
+- Fraccaroli, Arel-Bundock, Blyth. 2026. [What do central bankers talk about when they talk about inflation? The rise and fall of inflation narratives.](https://doi.org/10.1080/13563467.2025.2504392) *New Political Economy.*
+- Roland, Arel-Bundock, Crasnic, Romgens. 2025. [What do citizens in tax havens think? The EU blacklist and public opinion in Switzerland](/research/roland_arel-bundock_crasnic_romgens_2025_what_do_citizens_in_tax_havens_think.pdf). *Journal of European Integration.*
+- Arel-Bundock, Greifer, Heiss. 2024. [How to interpret statistical models using marginaleffects in R and Python.](/research/arel-bundock_greifer_heiss_2024_how_to_interpret_statistical_models_using_marginaleffects_in_r_and_python.pdf) *Journal of Statistical Software.*
+- Arel-Bundock, McCrain. 2024. [Software citations in political science.](/research/arel-bundock_mccrain_2023_software_citations_in_political_science.pdf) *PS: Political Science.*
+- Arel-Bundock, Lechner. 2024. [The power of boilerplate: bilateralism, plurilateralism, and the international tax system.](/research/arel-bundock_lechner_2024_the_power_of_boilerplate_bilateralism_plurilateralism_and_the_international_tax_system.pdf) *International Interactions.*
+- Avina, Arel-Bundock, Blais, De la Feria, Harell. 2023. [Outgroup bias and the unacceptability of tax fraud.](/research/avina_arel-bundock_blais_de_la_feria_harell_2023_outgroup_bias_and_the_unacceptability_of_tax_fraud.pdf) *Political Studies Review.*
+- Arel-Bundock, Blais. 2023. [Where Should Multinationals Pay Taxes?](/research/arel-bundock_blais_2023_where_should_multinationals_pay_taxes.pdf) *International Studies Quarterly.*
+- St-Georges, Arel-Bundock, Blais, Avina. 2023. [Jobs and punishment: public opinion on leniency for white-collar crime.](/research/st_georges_arel-bundock_blais_avina_2023_jobs_and_punishment_public_opinion_on_leniency_for_white_collar_crime.pdf) *Political Research Quarterly.*
+- Arel-Bundock. 2022. [The double bind of qualitative comparative analysis.](/research/arel-bundock_2022_the_double_bind_of_qualitative_comparative_analysis.pdf) *Sociological Methods and Research.*
+- Arel-Bundock. 2022. [modelsummary: data and model summaries in R.](/research/arel-bundock_2022_modelsummary_data_and_model_summaries_in_r.pdf) *Journal of Statistical Software.*
+- Blais, Guntermann, Arel-Bundock, Dassonneville, Laslier, Peloquin-Skulski. 2022. [Party preference representation.](/research/blais_guntermann_arel-bundock_dassonneville_laslier_péloquin_skulski_2022_party_preference_representation.pdf) *Party Politics.*
+- Nadeau, Daoust, Arel-Bundock. 2020. [The market, the state, and satisfaction with democracy.](/research/nadeau_daoust_arel-bundock_2020_the_market_the_state_and_satisfaction_with_democracy.pdf) *West European Politics.*
+- Arel-Bundock, Peinhardt, Pond. 2020. [Political risk insurance: a new firm-level dataset.](/research/arel-bundock_peinhardt_pond_2020_political_risk_insurance_a_new_firm_level_dataset.pdf) *Journal of Conflict Resolution.*
+- Sevi, Avina, Peloquin-Skulski, Heisbourg, Vegas, Coulombe, Arel-Bundock, Loewen, Blais. 2020. [Logarithmic vs. linear visualizations of COVID-19 cases do not affect citizens' support for confinement.](/research/sevi_avina_peloquin-skulski_heisbourg_vegas_coulombe_arel-bundock_loewen_blais_2020_logarithmic_vs_linear_visualizations_of_covid_19_cases_do_not_affect_citizens_support_for_confinement.pdf) *Canadian Journal of Political Science.*
+- Arel-Bundock, Pelc. 2019. [When Can Multiple Imputation Improve Regression Estimates?](/research/arel-bundock_pelc_2018_when_can_multiple_imputation_improve_regression_estimates.pdf) *Political Analysis.*
+- Johnson, Arel-Bundock, Portniaguine. 2019. [Adding rooms onto a house we love: central banking after the global financial crisis.](/research/johnson_arel-bundock_portniaguine_2019_adding_rooms_onto_a_house_we_love_central_banking_after_the_global_financial_crisis.pdf) *Public Administration.*
+- Nadeau, Arel-Bundock, Daoust. 2019. [Satisfaction with democracy and the American dream.](/research/nadeau_arel-bundock_daoust_2019_satisfaction_with_democracy_and_the_american_dream.pdf) *Journal of Politics.*
+- Arel-Bundock, Blais, Dassonneville. 2019. [Do voters benchmark economic performance?](/research/arel-bundock_blais_dassonneville_2019_do_voters_benchmark_economic_performance.pdf) *British Journal of Political Science*
+- Sevi, Arel-Bundock, Blais. 2018. [Do women get fewer votes? No.](/research/sevi_arel-bundock_blais_2018_do_women_get_fewer_votes_no.pdf) *Canadian Journal of Political Science.*
+- Arel-Bundock, Parinandi. 2018. [Conditional tax competition in the American States.](/research/arel-bundock_parinandi_2018_conditional_tax_competition_in_the_american_states.pdf) *Journal of Public Policy.*
+- Arel-Bundock, Enevoldsen, Yetman. 2018. [Countrycode: an R package to convert country names and country codes.](/research/arel-bundock_enevoldsen_yetman_2018_countrycode_an_r_package_to_convert_country_names_and_country_codes.pdf) *The Journal of Open Source Software.*
+- Arel-Bundock. 2017. [The Unintended Consequences of Bilateralism: Treaty Shopping and International Tax Policy.](/research/arel-bundock_2017_the_unintended_consequences_of_bilateralism_treaty_shopping_and_international_tax_policy.pdf) *International Organization.*
+- Arel-Bundock. 2017. [The political determinants of foreign direct investment: a firm-level analysis.](/research/arel-bundock_2017_the_political_determinants_of_foreign_direct_investment_a_firm_level_analysis.pdf) *International Interactions.*
+- Arel-Bundock, Atkinson, Potter. 2015. [The limits of foreign aid diplomacy: how bureaucratic design shapes aid distribution.](/research/arel-bundock_atkinson_potter_2015_the_limits_of_foreign_aid_diplomacy_how_bureaucratic_design_shapes_aid_distribution.pdf) *International Studies Quarterly.*
+- Clark, Arel-Bundock. 2013. [Independent but not indifferent: partisan bias in monetary policy at the Fed.](/research/clark_arel-bundock_2013_independent_but_not_indifferent_partisan_bias_in_monetary_policy_at_the_fed.pdf) *Economics & Politics.*
+
+## Chapitres et comptes rendus
+
+- Heitmüller, Hearson, Arel-Bundock. 2023. [Tax treaty norms among lower-income countries and the role of the UN model: past, present and potential.](/research/heitmuller_hearson_arel-bundock_2023_tax_treaty_norms_among_lower-income_countries_and_the_role_of_the_un_model_past_present_and_potential.pdf) *International Center for Tax & Development.*
+- Arel-Bundock, Worthington. 2020. [(Book Review) Merging interests: When domestic firms shape FDI policy.](/research/arel-bundock_worthington_2020_merging_interests_when_domestic_firms_shapes_FDI_policy.pdf) *Perspectives on Politics.*

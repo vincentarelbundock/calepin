@@ -79,6 +79,15 @@ static ATTR_PAIR_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"([\w.-]+)\s*=\s*"?([^"\s}]+)"?"#).unwrap()
 });
 
+/// Ensure a CSS dimension value has a unit. Bare numbers get "px" appended.
+fn css_dimension(val: &str) -> String {
+    if val.parse::<f64>().is_ok() {
+        format!("{}px", val)
+    } else {
+        val.to_string()
+    }
+}
+
 impl ImageAttrs {
     /// Empty attributes (no width, height, etc.).
     pub fn empty() -> Self {
@@ -107,10 +116,10 @@ impl ImageAttrs {
         let mut html_attrs: Vec<String> = Vec::new();
 
         if let Some(ref w) = self.width {
-            style_parts.push(format!("width:{}", w));
+            style_parts.push(format!("width:{}", css_dimension(w)));
         }
         if let Some(ref h) = self.height {
-            style_parts.push(format!("height:{}", h));
+            style_parts.push(format!("height:{}", css_dimension(h)));
         }
         if let Some(ref align) = self.fig_align {
             match align.as_str() {

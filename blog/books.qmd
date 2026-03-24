@@ -1,0 +1,45 @@
+---
+title: Books
+lang: en
+translations:
+  fr: fr/livres.qmd
+---
+
+## Model to Meaning
+
+```{=html}
+<img src="/files/model_to_meaning_cover.png" alt="Model to Meaning cover" style="float:right;width:200px;margin:0 0 1rem 1.5rem;">
+```
+
+*How to Interpret Statistical Models in R and Python*
+
+Arel-Bundock, Vincent. 2026. CRC Press. [Available in print from Routledge.](https://www.routledge.com/9781032908724)
+
+[Free HTML version at marginaleffects.com](https://marginaleffects.com)
+
+Our world is complex. To make sense of it, data analysts routinely fit sophisticated statistical or machine learning models. Interpreting the results produced by such models can be challenging, and researchers often struggle to communicate their findings to colleagues and stakeholders.
+
+This book presents a simple but powerful conceptual framework to help analysts make sense of complex models. It offers detailed tutorials on `marginaleffects`, a free software library for R and Python that can compute and plot predictions, comparisons (contrasts, risk ratios, etc.), slopes, and conduct hypothesis and equivalence tests for [over 100 different types of models](https://marginaleffects.com/bonus/supported_models.html).
+
+* [Full R scripts for the book](https://marginaleffects.com/data/model_to_meaning_r_scripts.zip)
+* [Python code](https://marginaleffects.com/chapters/python.html)
+* [Quick Start vignette](https://marginaleffects.com/bonus/get_started.html)
+* [Journal of Statistical Software article (open access)](https://www.jstatsoft.org/article/view/v111i09)
+* [LLM-friendly documentation](https://github.com/vincentarelbundock/marginaleffects-SKILL)
+
+Author royalties are donated to the [Native Women's Shelter of Montreal](https://www.nwsm.info/) and the [Against Malaria Foundation](https://www.againstmalaria.com/).
+
+## Analyse Causale et Methodes Quantitatives
+
+```{=html}
+<img src="/files/acmq_couverture.png" alt="ACMQ cover" style="float:right;width:200px;margin:0 0 1rem 1.5rem;">
+```
+
+*Une introduction avec R, Stata et SPSS*
+
+This French-language textbook introduces causal analysis and quantitative methods for social science. It covers descriptive statistics, causal inference (Neyman-Rubin framework, DAGs), common biases, and strategies to address them, with complete code examples in R, Stata, and SPSS.
+
+* [Free electronic version](https://www.pum.umontreal.ca/catalogue/analyse_causale_et_methodes_quantitatives)
+* [Paper version](https://www.leslibraires.ca/livres/analyse-causale-et-methodes-quantitatives-une-vincent-arel-bundock-9782760643215.html)
+* [Video lectures on Youtube (13 hours)](https://youtube.com/playlist?list=PLwV5Cyu4EJ1BviLt-nWJFSTjW30Tawv2R)
+* [Slides and exercises](https://github.com/vincentarelbundock/ACMQ)

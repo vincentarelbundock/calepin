@@ -1,10 +1,25 @@
 <nav class="navbar" role="navigation" aria-label="Main navigation">
-  {% include "sidebar_toggle.html" %}
+  {% if var.sidebar is defined and not var.sidebar %}
+  <button class="navbar-btn navbar-toggle navbar-menu-toggle" id="navbar-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+  </button>
+  {% else %}{% include "sidebar_toggle.html" %}{% endif %}
   {% include "navbar_brand.html" %}
+  {% if var.sidebar is defined and not var.sidebar %}
+  <ul class="navbar-nav center" id="navbar-menu">
+    {% for node in site.pages %}
+    <li><a href="{{ node.href | default(value='#') }}"{% if node.active %} class="active"{% endif %}>{{ node.text }}</a></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
 
   <ul class="navbar-nav right">
     {% include "navbar_links.html" %}
-    {% include "source_viewer.html" %}
+    {% if page.translations %}
+    {% for t in page.translations %}
+    <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
+    {% endfor %}
+    {% endif %}
     {% if var.navbar_search %}{% include "search.html" %}{% endif %}
     {% if site.dark_mode %}{% include "theme_toggle.html" %}{% endif %}
   </ul>

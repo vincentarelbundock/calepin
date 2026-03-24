@@ -1,0 +1,99 @@
+---
+title: "`data.table` vs. `base` vs. `dplyr`"
+author: "Vincent Arel-Bundock"
+date: "2025-05-23"
+toc: true
+---
+
+```{r, setup}
+#| include: false
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(tinytable)
+code = knitr::read_chunk("dt_df_tb.R")
+# for some reason, knitr seems to require a second read, sometimes
+if (is.null(code[[1]])) {
+  code = knitr::read_chunk("dt_df_tb.R")
+}
+
+get_table = function(label) {
+  ca = code[[paste0(label, ".caption")]]
+  dt = paste(code[[paste0(label, ".datatable")]], collapse = "\n")
+  ba = paste(code[[paste0(label, ".base")]], collapse = "\n")
+  dp = paste(code[[paste0(label, ".dplyr")]], collapse = "\n")
+  out = sprintf("
+%s
+
+:::: {.panel-tabset group='idiom'}
+
+## `data.table`
+
+\`\`\`r
+%s
+\`\`\`
+## `base`
+\`\`\`r
+%s
+\`\`\`
+## `dplyr`
+\`\`\`r
+%s
+\`\`\`
+::::
+", ca, dt, ba, dp)
+  return(knitr::asis_output(out))
+}
+```
+
+This page presents a side-by-side comparison of common data manipulation operations in R in three idioms: `data.table`, `base`, and `dplyr`. This allows you to compare syntax and understand how to accomplish tasks across these popular frameworks.
+
+This reference guide covers everything from basic filtering and sorting to advanced operations like joins and reshaping data. Many of these examples were originally [crafted by Atrebas](https://atrebas.github.io/post/2019-03-03-datatable-dplyr/). They were then reorganized and augmented with `base` examples by a team of contributors.
+
+To begin, we create example data. The base `R` data frame is called `DF`, the `data.table` table is called `DT`, and the `dplyr` tibble is called `TB`. Data creation is wrapped in a `refresh_data()` function, which is called periodically throughout the document to ensure that the data is reset after modifications.
+
+```{r}
+#| warning: false
+#| message: false
+library(data.table)
+library(dplyr)
+
+refresh_data = function() {
+    DT <<- data.table(
+        V1 = rep(1:2, 5)[-10],
+        V2 = 1:9,
+        V3 = c(0.5, 1.0, 1.5),
+        V4 = rep(LETTERS[1:3], 3)
+    )
+
+    DF <<- data.frame(
+        V1 = rep(1:2, 5)[-10],
+        V2 = 1:9,
+        V3 = c(0.5, 1.0, 1.5),
+        V4 = rep(LETTERS[1:3], 3)
+    )
+
+    TB <<- tibble(
+        V1 = rep(1:2, 5)[-10],
+        V2 = 1:9,
+        V3 = rep(c(0.5, 1.0, 1.5), 3),
+        V4 = rep(LETTERS[1:3], 3)
+    )
+}
+
+refresh_data()
+```
+
+::: {.callout-tip}
+When using the `let()` and `set*()` functions or `:=` operator modifies a `data.table` "in place," which means that it does not copy the object at all. This is more efficient than re-assigning the entire data set. However, when modified in place, the data table will not be printed immediately to the console after modification. You must call the object again to see the changes.
+:::
+
+{% include "posts/dt_tb_df/side_by_side_sections/filter.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/sort.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/select.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/summarize.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/modify.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/chain.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/join.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/reshape.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/set_operations.kmd" %}
+{% include "posts/dt_tb_df/side_by_side_sections/read_write.kmd" %}

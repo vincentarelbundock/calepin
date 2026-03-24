@@ -113,6 +113,7 @@ calepin.preamble <- function(text) {
     # Open graphics device
     has_plot <- FALSE
     if (isTRUE(nzchar(fig_path)) && isTRUE(nzchar(dev_name))) {
+      dir.create(dirname(fig_path), recursive = TRUE, showWarnings = FALSE)
       dev_fun <- match.fun(dev_name)
       # Raster devices (png, jpeg, etc.) need units and resolution
       if (dev_name %in% c("png", "jpeg", "bmp", "tiff")) {
@@ -181,7 +182,7 @@ calepin.preamble <- function(text) {
       # Check file size: empty SVGs are tiny (~200 bytes), real plots are larger.
       sz <- file.info(fig_path)$size
       has_plot <- sz > 300
-      if (!has_plot) file.remove(fig_path)
+      if (!has_plot) suppressWarnings(file.remove(fig_path))
     }
 
     # Collect knitr::knit_meta (used by tinytable, gt, etc. for LaTeX dependencies)
@@ -253,15 +254,17 @@ impl RSession {
     /// Spawn an Rscript subprocess running the bootstrap script.
     /// `format` is the output format name (html, latex, typst, markdown) so that
     /// knitr-aware packages (tinytable, gt, …) can auto-detect it.
-    pub fn init(format: &str) -> Result<Self> {
+    /// `cwd` sets the working directory for the R process (typically the input file's directory).
+    pub fn init(format: &str, cwd: Option<&std::path::Path>) -> Result<Self> {
         let bootstrap = R_BOOTSTRAP.replace(FORMAT_PLACEHOLDER, format);
         let bootstrap_file = tempfile::NamedTempFile::new()
             .context("Failed to create temp file for R bootstrap")?;
         std::fs::write(bootstrap_file.path(), &bootstrap)
             .context("Failed to write R bootstrap")?;
         let path_str = bootstrap_file.path().to_string_lossy().to_string();
-        let proc = SubprocessSession::spawn("Rscript", &["--no-save", "--no-restore", &path_str])
-            .context("Failed to start R")?;
+        let proc = SubprocessSession::spawn(
+            "Rscript", &["--no-save", "--no-restore", &path_str], &[], cwd,
+        ).context("Failed to start R")?;
         Ok(RSession { proc, _bootstrap_file: bootstrap_file })
     }
 

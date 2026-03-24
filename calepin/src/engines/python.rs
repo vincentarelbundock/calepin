@@ -164,12 +164,13 @@ impl PythonSession {
     /// Spawn a python3 subprocess running the bootstrap script.
     /// Uses -s (no user site), -u (unbuffered stdio),
     /// and passes the bootstrap as a -c argument (no temp file needed).
-    pub fn init() -> Result<Self> {
-        let proc = SubprocessSession::spawn_with_env(
+    /// `cwd` sets the working directory for the Python process.
+    pub fn init(cwd: Option<&std::path::Path>) -> Result<Self> {
+        let proc = SubprocessSession::spawn(
             "python3",
-            // No -S here: site-packages must be importable for `uv run calepin` to work.
             &["-s", "-u", "-c", PYTHON_BOOTSTRAP],
             &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
+            cwd,
         )
         .context("Failed to start Python")?;
         Ok(PythonSession { proc })

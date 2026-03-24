@@ -376,6 +376,20 @@ impl Metadata {
     /// Apply command-line overrides in "key=value" format.
     pub fn apply_overrides(&mut self, overrides: &[String]) {
         for item in overrides {
+            // Support append syntax: "key+=value" appends to list fields
+            if let Some((key, value)) = item.split_once("+=") {
+                let key = key.trim();
+                let value = value.trim();
+                match key {
+                    "bibliography" => {
+                        if self.bibliography.is_empty() {
+                            self.bibliography.push(value.to_string());
+                        }
+                    }
+                    _ => {}
+                }
+                continue;
+            }
             let (key, value) = match item.split_once('=') {
                 Some((k, v)) => (k.trim(), v.trim()),
                 None => continue,
@@ -597,6 +611,19 @@ fn is_leap(y: i64) -> bool {
 /// Format a Unix timestamp according to a format string.
 /// Supports: `%Y` (year), `%m` (month 01-12), `%d` (day 01-31), `%e` (day 1-31),
 /// `%B` (month name), `%b` (month abbrev), `%A` (weekday name), `%a` (weekday abbrev).
+/// Format a YYYY-MM-DD date string with a strftime-style format string.
+/// Supports: `%Y`, `%m`, `%d`, `%e`, `%B`, `%b`, `%A`, `%a`.
+/// Returns the original string unchanged if parsing fails.
+pub fn format_date_str(date: &str, fmt: &str) -> String {
+    let parts: Vec<&str> = date.trim().split('-').collect();
+    if parts.len() != 3 { return date.to_string(); }
+    let (y, m, d) = match (parts[0].parse::<i64>(), parts[1].parse::<usize>(), parts[2].parse::<usize>()) {
+        (Ok(y), Ok(m), Ok(d)) if m >= 1 && m <= 12 && d >= 1 && d <= 31 => (y, m, d),
+        _ => return date.to_string(),
+    };
+    format_ymd(y, m, d, fmt)
+}
+
 fn format_date(secs: u64, fmt: &str) -> String {
     let days = secs / 86400;
     let ymd = epoch_days_to_date(days);
@@ -606,7 +633,10 @@ fn format_date(secs: u64, fmt: &str) -> String {
         parts[1].parse::<usize>().unwrap_or(1),
         parts[2].parse::<usize>().unwrap_or(1),
     );
+    format_ymd(y, m, d, fmt)
+}
 
+fn format_ymd(y: i64, m: usize, d: usize, fmt: &str) -> String {
     static MONTHS: [&str; 12] = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December",
@@ -620,8 +650,10 @@ fn format_date(secs: u64, fmt: &str) -> String {
     ];
     static DAYS_SHORT: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-    // Zeller-like day of week from days since epoch (1970-01-01 was Thursday = 4)
-    let dow = ((days + 4) % 7) as usize;
+    // Day of week: Tomohiko Sakamoto's algorithm
+    static T: [usize; 12] = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+    let yy = if m < 3 { y - 1 } else { y } as usize;
+    let dow = (yy + yy / 4 - yy / 100 + yy / 400 + T[m - 1] + d) % 7;
 
     fmt.replace("%Y", &format!("{:04}", y))
         .replace("%m", &format!("{:02}", m))

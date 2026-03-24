@@ -36,6 +36,9 @@ pub struct ListingConfig {
     pub sort: Option<String>,
     #[serde(default)]
     pub fields: Vec<String>,
+    /// Number of items per page (0 or absent = no pagination).
+    #[serde(default, rename = "page-size")]
+    pub page_size: usize,
 }
 
 fn default_listing_type() -> String {

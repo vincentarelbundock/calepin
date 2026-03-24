@@ -1,0 +1,17 @@
+---
+title: Code
+lang: fr
+translations:
+  en: code.qmd
+---
+
+* [marginaleffects](https://marginaleffects.com): Extension R pour calculer et visualiser des prédictions, des pentes, des moyennes marginales et des comparaisons (contrastes, rapports de risque, rapports de cotes, etc.) pour plus de 70 classes de modèles statistiques en R. Permet de réaliser des tests d'hypothèses linéaires et non linéaires, ainsi que des tests d'équivalence par la méthode delta.
+* [modelsummary](https://modelsummary.com): Résumés de données et de modèles élégants, personnalisables et prêts à publier en R.
+* [tinytable](https://vincentarelbundock.github.io/tinytable/): Une petite mais puissante extension R pour créer de beaux tableaux dans plusieurs formats: HTML, LaTeX, Word, PDF, PNG, Markdown et Typst. L'interface est minimaliste et facile à apprendre, tout en donnant accès à des outils puissants pour créer des tableaux infiniment personnalisables.
+* [countrycode](http://vincentarelbundock.github.io/countrycode): Extension R pour convertir les codes et les noms de pays.
+* [softbib](https://cran.r-project.org/package=softbib): Bibliographies logicielles pour les projets R. Détection automatique des bibliothèques utilisées dans un projet et création de bibliographies logicielles en PDF, Word, Rmarkdown et BibTeX.
+* [altdoc](https://altdoc.etiennebacher.com): Une extension simple et puissante pour créer des sites web de documentation pour les extensions R.
+* [WDI](http://vincentarelbundock.github.io/vincentarelbundock/WDI): Extension R pour rechercher et télécharger des milliers de séries de données de panel à partir des Indicateurs du développement dans le monde de la Banque mondiale.
+* [tinysnapshot](https://github.com/vincentarelbundock/tinysnapshot): Instantanés pour les tests unitaires utilisant le cadre tinytest pour R.
+* [regrets](https://github.com/vincentarelbundock/regrets): Extension R pour afficher des faits et des photos d'aigrettes (h/t Jane Sumner)
+* [violets](https://github.com/vincentarelbundock/violets): Les violettes sont BLEUES. Les MCO aussi. Une extension R qui ré-estime des modèles statistiques sophistiqués avec de simples MCO. (h/t Alton BH Worthington)

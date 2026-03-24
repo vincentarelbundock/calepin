@@ -7,27 +7,25 @@ title: Differences with Quarto
 
 # Chunk headers
 
-In Quarto, the chunk header can contain key-value options:
+*Calepin* accepts both Quarto's header syntax and `#|` pipe comments for chunk options. Header key-value pairs are converted internally to pipe-equivalent options:
 
 ````
-```{r, label, echo=FALSE, fig.width=5}
+```{r, scatter, echo=FALSE, fig.width=5}
+plot(1:10)
 ````
 
-In *Calepin*, the header accepts **only** the language and an optional label:
-
-````
-```{r, label}
-````
-
-All options must go inside the chunk as `#|` pipe comments:
+is equivalent to:
 
 ````
 ```{r, scatter}
 #| echo: false
 #| fig-width: 5
+plot(1:10)
 ````
 
-If you accidentally put key-value pairs in the header, *Calepin* prints an error with the corrected pipe syntax.
+When both are present, pipe comments take precedence over header options. The recommended style is `#|` pipe comments, since they are easier to read and support the full YAML value syntax.
+
+Option names with dots (e.g., `fig.width`) are normalized to dashes (`fig-width`) internally. Boolean values like `TRUE`/`FALSE` are normalized to `true`/`false`.
 
 
 # Heading levels

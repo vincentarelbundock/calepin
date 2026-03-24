@@ -1,0 +1,172 @@
+---
+title: "Rowwise operations with data.table"
+author: "Vincent Arel-Bundock"
+date: "2020-08-23"
+---
+
+This notebook illustrates how one can apply a function to every *row* of a dataset using the `data.table` package. I begin with a trivial example, and continue with a slightly less trivial one.
+
+# Trivial example
+
+Say you want to apply this function:
+
+```{r}
+f <- function(x, y) {
+  if (x > y) {
+    return(x)
+  } else {
+    return(y)
+  }
+}
+```
+
+to every row of this dataset:
+
+```{r}
+library(data.table)
+set.seed(6913)
+
+dat <- data.table(x = sample(1:10, 4), 
+                  y = sample(1:10, 4))
+dat
+```
+
+Since `f()` is not *vectorized*, you can't simply pass the `x` and `y` vectors to `f()`. This would produce a warning and the *wrong* answer:
+
+```{r}
+#dat[, z := f(x, y)][]
+```
+
+Instead, we will explore 2 alternatives for *rowwise* operations in *data.table*, using the `by` argument or `Map` function. In the end, our code will look like this:
+
+```{r}
+dat[, z1 := f(x, y), by=1:nrow(dat)]
+dat[, z2 := Map(f, x, y)]
+dat
+```
+
+In the code above, `by=1:nrow(dat)` tells *data.table* that it should treat every row as a distinct group, and that it should apply the `f` function to each of those groups separately. The `Map` function (from base `R`) applies an element-wise operation to the "x" and "y" vectors, and returns a list.
+
+To understand how these two strategies work, we will now consider a slightly more complicated (but still rather trivial) example.
+
+# Task description
+
+Consider this data generating process:
+
+$$y = 1 \cdot x + \varepsilon$$
+$$z = \beta_{xz}\cdot x + \beta_{yz}\cdot y + \nu,$$
+
+where $\varepsilon, \nu, x \sim \mbox{Normal}(0, 1)$. To assess the effect of $x$ on $y$, we can estimate a linear regression model with $y$ as dependent variable and $x$ as regressor. In `R`, we could type `lm(y~x)`. However, if we estimate a more complex model with *z* as control variable, `lm(y ~ x + z)`, our estimates are likely to be biased, because *z* is "post-treatment" with respect to *x*. In DAG-world, they call this "collider bias".
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| out-width: "50%"
+library(ggdag)
+dag<- dagify(y ~ x,
+             z ~ x + y,
+             exposure = "x",
+             outcome = "y")
+ggdag(dag)+theme_dag()
+```
+
+Our task will be to estimate the magnitude of this collider bias for different values of $\beta_{yz}$ and $\beta_{xz}$ using rowwise operations in `data.table`.
+
+# A partial solution
+
+First, we define a function to simulate datasets which conform to the data generating process described above:
+
+```{r}
+simulation <- function(b_zx, b_zy) {
+  N <- 100                                   # 100 observations
+  x <- rnorm(N)                              # x has no ancestors
+  y <- 1 * x + rnorm(N)                      # x causes y
+  z <- b_zx * x + b_zy * y + rnorm(N)        # x and y cause z
+  out <- list("Biased"=coef(lm(y~x+z))["x"], # collider bias
+              "Unbiased"=coef(lm(y~x))["x"]) # unbiased model
+  out
+}
+```
+
+Note that this function returns two "x" coefficients in a *list*. This is important because `data.table` treats elements of lists as distinct *columns*. This ensures that our final output will a dataset with a column called "Biased" and a column called "Unbiased".
+
+We want to assess the performance of both models for every combination of `b_xz` and `b_yz` in {-1, 0, 1}, and we want to replicate our experiment 100 times. To achieve this, we use the `CJ` function to create a dataset with every combination of `b_xz`, `b_yz`, and a `replication` index:
+
+```{r}
+params <- CJ(replication = 1:100,
+             b_xz = -1:1,
+             b_yz = -1:1)
+dim(params)
+tail(params)
+```
+
+The `simulation` function is not *vectorized*, which means that it only accepts 2 numerical values as arguments; we can't simply give it the full vectors of parameters in `params`. We need to apply the `simulation` function *rowwise*, that is, to every row of the dataset. To achieve this, we use `data.table`'s `by` argument. Typically, `by` is used to apply an operation to a "group" or "subset" of the data. Here, we assign each row to its own group:
+
+```{r}
+results <- params[, simulation(b_xz, b_yz), by=1:nrow(params)]
+head(results)
+```
+
+Great! Now we know that the unbiased estimate for row 1 is equal to `r results$Biased[1]`, and that the unbiased estimate for row 1 is equal to `r results$Unbiased[1]`. The problem, of course, is that "row 1" is not very informative. We lost relevant information about the values of `b_yz` and `b_xz` on every row. 
+
+# A better solution
+
+A better way to leverage the `by` argument would be:
+
+```{r}
+results <- params[, simulation(b_xz, b_yz), by=list(replication, b_xz, b_yz)]
+head(results)
+```
+
+Now we can find the mean biased and unbiased estimates using normal *data.table* operations:
+
+```{r}
+results[, list(Biased=mean(Biased), Unbiased=mean(Unbiased)), by=list(b_xz, b_yz)][]
+```
+
+Recall that the true value of the coefficient is 1. There appears to be no collider bias (a) x does not cause z, (b) y does not cause z, or (b) the effects of x and y on z exactly offset each other (-1 and 1). 
+
+(These are weird edge cases. Don't condition on colliders!)
+
+# A useful alternative
+
+An alternative approach is to use the `Map` function from base `R`. The `Map(simulate, x, y)` call produces a list where element 1 is `simulate(x[1], y[1])`, element 2 is `simulate(x[2], y[2])`, etc. This list can be used as [a list-column in a "nesting" / "unnesting" programming pattern](http://arelbundock.com/blog/2020-08-17-nesting-datatable.html):
+
+```{r}
+params[, coefs := Map(simulation, b_xz, b_yz)]
+head(params)
+```
+
+Notice that each entry in the `coefs` column is itself a list of coefficients. We can "unnest" that list: 
+
+```{r}
+params[, coefs[[1]], by=list(replication, b_xz, b_yz)]
+```
+
+# Benchmarking
+
+To optimize efficiency, the first thing to consider is whether you *actually* need to apply a function to every row. In general, this is a very expensive operation, and you are better off using a vectorized approach.
+
+In most rowwise applications, the computational difference between the two approaches outlined above is likely to dwarfed by the cost of computation *inside* the function you apply rowwise. My advice is to just use the approach you think is easier to read and understand.
+
+```{r}
+library(microbenchmark)
+
+params <- CJ(replication = 1:100,
+						 b_xz = -1:1,
+						 b_yz = -1:1)
+
+f_map <- function() {
+  out <- params[, coefs := Map(simulation, b_xz, b_yz)]
+  out <- out[, coefs[[1]], by=list(b_xz, b_yz)]
+  out
+}
+
+f_by <- function() {
+  out <- params[, simulation(b_xz, b_yz), by=list(replication, b_xz, b_yz)]
+  out
+}
+
+microbenchmark(f_map(), f_by(), times=3)
+```

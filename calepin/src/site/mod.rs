@@ -16,6 +16,32 @@ use context::{build_page_context, build_site_context, build_nav_tree_for_lang, m
 use discover::{discover_listing_pages, discover_pages, discover_standalone_pages, PageInfo};
 use crate::project::{PageNode, expand_contents};
 
+/// Extract the first <img> src from rendered HTML.
+fn extract_first_image(html: &str) -> Option<String> {
+    static RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r#"<img[^>]+src="([^"]+)""#).unwrap()
+    });
+    RE.captures(html).map(|c| c[1].to_string())
+}
+
+/// Build a ListingItem from a page info and optional rendered result.
+fn build_listing_item(
+    lp: &PageInfo,
+    results: &HashMap<String, render::SiteRenderResult>,
+) -> ListingItem {
+    let image = lp.meta.image.clone().or_else(|| {
+        let key = lp.source.display().to_string();
+        results.get(&key).and_then(|r| extract_first_image(&r.body))
+    });
+    ListingItem {
+        title: lp.meta.title.as_ref().map(|t| crate::render::markdown::render_inline(t, "html")),
+        date: lp.meta.date.as_ref().map(|d| crate::site::context::format_date(d)),
+        description: lp.meta.description.clone(),
+        image,
+        url: lp.url.clone(),
+    }
+}
+
 /// Build a static site from .qmd files.
 /// `cli_target` overrides `[site].target` when provided via `-t` on the command line.
 pub fn build_site(
@@ -94,10 +120,12 @@ pub fn build_site(
             all_listing_pages.insert(page.source.display().to_string(), listing_pages);
         }
     }
-    let existing_sources: Vec<String> = pages.iter().map(|p| p.source.display().to_string()).collect();
+    let mut existing_sources: Vec<String> = pages.iter().map(|p| p.source.display().to_string()).collect();
     for listing_pages in all_listing_pages.values() {
         for lp in listing_pages {
-            if !existing_sources.contains(&lp.source.display().to_string()) {
+            let key = lp.source.display().to_string();
+            if !existing_sources.contains(&key) {
+                existing_sources.push(key);
                 pages.push(lp.clone());
             }
         }
@@ -109,7 +137,7 @@ pub fn build_site(
     //    For orchestrated builds (LaTeX/Typst), use single-pass with page template
     //    (the native toolchains handle global refs).
     let apply_page_template = orchestrator.is_some();
-    let results = if format == "html" && !apply_page_template {
+    let results = if format == "html" && !apply_page_template && config.global_crossref {
         render::render_pages_with_crossref(&pages, &config, &base_dir, output, Some(&site_target_name), Some(&site_target), quiet)?
     } else {
         render::render_pages(&pages, &config, &base_dir, output, format, apply_page_template, Some(&site_target_name), Some(&site_target), quiet)?
@@ -133,9 +161,6 @@ pub fn build_site(
                 result.body.clone()
             };
             fs::write(&output_path, &body)?;
-            if !quiet {
-                eprintln!("  {} -> {}", source_key, output_path.display());
-            }
         }
     }
 
@@ -148,8 +173,8 @@ pub fn build_site(
         apply_site_templates(&config, &pages, &results, &all_listing_pages, &base_dir, output, format, &site_target_name)?;
     }
 
-    // 9. Copy assets/ to output
-    assets::copy_assets(&base_dir, output)?;
+    // 9. Copy assets/ and static directories to output
+    assets::copy_assets(&base_dir, output, &config.static_dirs)?;
 
     // 10. Run user-configured post-processing commands
     run_post_commands(&config, &site_target_name, &base_dir, output, quiet)?;
@@ -256,13 +281,7 @@ pub fn rebuild_pages(
             let result = results.get(&source_key);
 
             let listing_items = all_listing_pages.get(&source_key).map(|listing_pages| {
-                listing_pages.iter().map(|lp| ListingItem {
-                    title: lp.meta.title.clone(),
-                    date: lp.meta.date.clone(),
-                    description: lp.meta.description.clone(),
-                    image: lp.meta.image.clone(),
-                    url: lp.url.clone(),
-                }).collect()
+                listing_pages.iter().map(|lp| build_listing_item(lp, &results)).collect()
             });
 
             let page_ctx = build_page_context(page, result, &pages, listing_items, &config.languages);
@@ -368,19 +387,36 @@ fn apply_site_templates(
         let source_key = page.source.display().to_string();
         let result = results.get(&source_key);
 
-        let listing_items = all_listing_pages.get(&source_key).map(|listing_pages| {
-            listing_pages.iter().map(|lp| ListingItem {
-                title: lp.meta.title.clone(),
-                date: lp.meta.date.clone(),
-                description: lp.meta.description.clone(),
-                image: lp.meta.image.clone(),
-                url: lp.url.clone(),
-            }).collect()
+        let all_listing_items: Option<Vec<ListingItem>> = all_listing_pages.get(&source_key).map(|listing_pages| {
+            listing_pages.iter().map(|lp| build_listing_item(lp, results)).collect()
         });
 
-        let page_ctx = build_page_context(page, result, pages, listing_items, &config.languages);
+        // Determine pagination: split listing items into pages if page-size is set
+        let page_size = page.meta.listing.as_ref().map(|l| l.page_size).unwrap_or(0);
+        let paginated: Vec<(Vec<ListingItem>, Option<context::Pagination>)> = if page_size > 0 {
+            if let Some(ref items) = all_listing_items {
+                let chunks: Vec<Vec<ListingItem>> = items.chunks(page_size).map(|c| c.to_vec()).collect();
+                let total = chunks.len();
+                let base_url = page.url.trim_end_matches(".html");
+                chunks.into_iter().enumerate().map(|(i, chunk)| {
+                    let current = i + 1;
+                    let prev_url = if current > 1 {
+                        if current == 2 { Some(format!("{}.html", base_url)) }
+                        else { Some(format!("{}/page/{}.html", base_url, current - 1)) }
+                    } else { None };
+                    let next_url = if current < total {
+                        Some(format!("{}/page/{}.html", base_url, current + 1))
+                    } else { None };
+                    (chunk, Some(context::Pagination { current, total, prev_url, next_url }))
+                }).collect()
+            } else {
+                vec![(vec![], None)]
+            }
+        } else {
+            vec![(all_listing_items.unwrap_or_default(), None)]
+        };
 
-        // Build language-specific nav tree if this page has a language
+        // Build language-specific nav tree
         let mut nav_tree = if !config.languages.is_empty() {
             if let Some(ref lang) = page.lang {
                 build_nav_tree_for_lang(config, pages, base_dir, lang)
@@ -392,37 +428,52 @@ fn apply_site_templates(
         };
         mark_active(&mut nav_tree, &page.url);
 
-        let site_with_active = minijinja::context! {
-            site => context::SiteContext {
-                title: site_ctx.title.clone(),
-                subtitle: site_ctx.subtitle.clone(),
-                url: site_ctx.url.clone(),
-                favicon: site_ctx.favicon.clone(),
-                logo: site_ctx.logo.clone(),
-                logo_dark: site_ctx.logo_dark.clone(),
-                pages: nav_tree,
-                languages: site_ctx.languages.clone(),
-                dark_mode: site_ctx.dark_mode,
-                math_block: site_ctx.math_block.clone(),
-            },
-            page => page_ctx,
-            var => var_ctx.clone(),
-        };
-
         let template_name = if page.meta.listing.is_some() {
             format!("listing.{}", tpl_ext)
         } else {
             format!("page.{}", tpl_ext)
         };
-
         let tpl = env.get_template(&template_name)
             .with_context(|| format!("Failed to get template {} for {}", template_name, source_key))?;
-        let rendered = tpl.render(&site_with_active)
-            .with_context(|| format!("Failed to render template for {}", source_key))?;
 
-        // Overwrite the raw body file with fully templated output
-        let output_path = output.join(&page.output);
-        fs::write(&output_path, &rendered)?;
+        for (page_idx, (items, pagination)) in paginated.iter().enumerate() {
+            let listing = if items.is_empty() { None } else { Some(items.clone()) };
+            let mut page_ctx = build_page_context(page, result, pages, listing, &config.languages);
+            page_ctx.pagination = pagination.clone();
+
+            let site_with_active = minijinja::context! {
+                site => context::SiteContext {
+                    title: site_ctx.title.clone(),
+                    subtitle: site_ctx.subtitle.clone(),
+                    url: site_ctx.url.clone(),
+                    favicon: site_ctx.favicon.clone(),
+                    logo: site_ctx.logo.clone(),
+                    logo_dark: site_ctx.logo_dark.clone(),
+                    pages: nav_tree.clone(),
+                    languages: site_ctx.languages.clone(),
+                    dark_mode: site_ctx.dark_mode,
+                    math_block: site_ctx.math_block.clone(),
+                },
+                page => page_ctx,
+                var => var_ctx.clone(),
+            };
+
+            let rendered = tpl.render(&site_with_active)
+                .with_context(|| format!("Failed to render template for {}", source_key))?;
+
+            let output_path = if page_idx == 0 {
+                output.join(&page.output)
+            } else {
+                let base = page.output.with_extension("");
+                let paginated_path = base.join("page").join(format!("{}.html", page_idx + 1));
+                let full = output.join(&paginated_path);
+                if let Some(parent) = full.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                full
+            };
+            fs::write(&output_path, &rendered)?;
+        }
     }
 
     if format == "html" {

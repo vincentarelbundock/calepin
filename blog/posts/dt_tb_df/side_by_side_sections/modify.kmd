@@ -1,0 +1,522 @@
+# Modify
+
+## Single columns
+
+Create or modify a column.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, let(V5 = V1^2)]
+DT
+```
+## `base`
+```{r}
+DF$V5 = DF$V1^2
+DF
+```
+## `dplyr`
+```{r}
+TB = TB |> mutate(V5 = V1^2)
+TB
+```
+::::
+
+Create several new columns, each named explicitly.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, let(
+  V5 = sqrt(V1),
+  V6 = "X")]
+DT
+```
+## `base`
+```{r}
+DF$V5 = sqrt(DF$V1)
+DF$V6 = "X"
+DF
+```
+## `dplyr`
+```{r}
+TB = TB |> mutate(
+  V5 = sqrt(V1),
+  V6 = "X")
+TB
+```
+::::
+
+## Multiple columns
+
+Take the square of every numeric column.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, names(.SD) := lapply(.SD, \(x) x^2), .SDcols = is.numeric]
+DT
+```
+## `base`
+TODO
+## `dplyr`
+```{r}
+TB = TB |> 
+  mutate(across(where(is.numeric), \(x) x^2))
+TB
+```
+::::
+
+```{r}
+refresh_data()
+```
+
+## Replace
+
+Replace values in rows that match a condition applied to a column.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[V2 <= 4, let(V2 = 0)]
+DT
+```
+## `base`
+```{r}
+DF$V2 = replace(DF$V2, DF$V2 < 4, 0)
+DF
+```
+## `dplyr`
+```{r}
+TB = DF |> 
+  mutate(V2 = base::replace(V2, V2 < 4, 0))
+TB
+```
+::::
+
+```{r}
+refresh_data()
+```
+
+## If, else, case
+
+Fast version of `ifelse()`. Return a vector the same length as the vector tested, with specific value for in case where the condition is `TRUE`, where it is `FALSE`, and where it is `NA`.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+x = c(-3:3, NA)
+fifelse(test = x < 0,
+  yes  = "neg",
+  no   = "pos",
+  na   = "NA")
+```
+## `base`
+```{r}
+x = c(-3:3, NA)
+result = ifelse(is.na(x),
+  "NA",
+  ifelse(x < 0, "neg", "pos"))
+result
+```
+## `dplyr`
+```{r}
+x = c(-3:3, NA)
+if_else(condition = x < 0,
+  true      = "neg",
+  false     = "pos",
+  missing   = "NA")
+```
+::::
+
+Recode several cases at once, based on a vector of conditions.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+x = 1:10
+fcase(
+  x %% 6 == 0, "fizz buzz",
+  x %% 2 == 0, "fizz",
+  x %% 3 == 0, "buzz",
+  default = as.character(x)
+)
+```
+## `base`
+```{r}
+x = 1:10
+result = ifelse(x %% 6 == 0, "fizz buzz",
+  ifelse(x %% 2 == 0, "fizz",
+  ifelse(x %% 3 == 0, "buzz", as.character(x))))
+result
+```
+## `dplyr`
+```{r}
+x = 1:10
+case_when(
+  x %% 6 == 0 ~ "fizz buzz",
+  x %% 2 == 0 ~ "fizz",
+  x %% 3 == 0 ~ "buzz",
+  TRUE ~ as.character(x)
+)
+```
+::::
+
+## Modify by group
+
+Group summaries of a column in categories.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, by = "V4", .(sumV2 = sum(V2))]
+```
+## `base`
+```{r}
+aggregate(V2 ~ V4, data = DF, FUN = sum)
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  summarise(sumV2 = sum(V2)) |>
+  ungroup()
+```
+::::
+
+Group values of a column in groups while applying a function to each category.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[,
+  by = tolower(V4),
+  .(sumV1 = sum(V1))]
+```
+## `base`
+```{r}
+aggregate(
+  V1 ~ tolower(V4),
+  data = DF,
+  FUN = sum)
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(tolower(V4)) |>
+  summarise(sumV1 = sum(V1))
+```
+::::
+
+Group values of a column in two categories, TRUE (for rows matching the condition) and FALSE (For rows not matching the condition).
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[,
+  keyby = V4 == "A",
+  sum(V1)]
+```
+## `base`
+```{r}
+aggregate(V1 ~ groupA,
+  data = transform(DF, groupA = V4 == "A"),
+  FUN = sum)
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4 == "A") |>
+  summarise(sum(V1))
+```
+::::
+
+Group values of a column in several categories with some of the rows of the initial dataset removed.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[1:5,
+  by = V4,
+  .(sumV1 = sum(V1))]
+```
+## `base`
+```{r}
+aggregate(V1 ~ V4,
+  data = DF[1:5,],
+  FUN = sum)
+```
+## `dplyr`
+```{r}
+TB |>
+  slice(1:5) |>
+  group_by(V4) |>
+  summarise(sumV1 = sum(V1))
+```
+::::
+
+Add a new column with the number of observations per group.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, let(n = .N), by = V1]
+DT
+```
+## `base`
+```{r}
+DF$n <-
+  ave(DF$V1,
+  DF$V1,
+  FUN = length)
+DF
+```
+## `dplyr`
+```{r}
+TB = TB |>
+  group_by(V1) |>
+  add_tally()
+TB
+```
+::::
+
+```{r}
+refresh_data()
+```
+
+## Advanced
+
+Summarise all the columns, typically using an aggregation function.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, lapply(.SD, max)]
+```
+## `base`
+```{r}
+apply(DF, 2, max)
+```
+## `dplyr`
+```{r}
+TB |> summarise(across(everything(), max))
+```
+::::
+
+Summarise several columns, typically using an aggregation function.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, lapply(.SD, mean),
+  .SDcols = c("V1", "V2")]
+```
+## `base`
+```{r}
+data.frame(
+  mean_V1 = mean(DF$V1),
+  mean_V2 = mean(DF$V2))
+```
+## `dplyr`
+TODO
+::::
+
+Summarise several columns by groups, typically using an aggregation function.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, by = V4,
+  lapply(.SD, mean),
+  .SDcols = c("V1", "V2")]
+DT[, by = V4,
+  lapply(.SD, mean),
+  .SDcols = patterns("V1|V2|Z0")]
+```
+## `base`
+```{r}
+cols = intersect(c("V1", "V2", "Z0"), names(DF))
+aggregate(DF[cols], by = list(DF$V4), FUN = mean, na.rm = TRUE)
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  summarise(across(c(V1, V2), mean)) |>
+  ungroup()
+```
+::::
+
+Summarise several columns by group using multiple aggregation functions, grouping by one or more variables.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, by = V4,
+  c(lapply(.SD, sum),
+  lapply(.SD, mean))]
+```
+## `base`
+```{r}
+aggregate(cbind(DF$V1, DF$V2, DF$V3) ~ V4,
+  data = DF,
+  FUN = function(x) c(sum = sum(x), mean = mean(x)))
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  summarise(across(everything(),
+  list(sum = sum, mean = mean)))
+```
+::::
+
+Summarise a subset of columns by column type or condition.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, lapply(.SD, mean), .SDcols = is.numeric]
+foo = function(x) {is.numeric(x) && mean(x) > 3}
+DT[, lapply(.SD, mean), .SDcols = foo]
+```
+## `base`
+```{r}
+sapply(DF[sapply(DF, is.numeric)],
+  mean)
+sapply(DF[sapply(DF, \(x) {
+   is.numeric(x) && mean(x) > 3
+})], mean)
+```
+## `dplyr`
+```{r}
+TB |>
+  summarise(across(where(is.numeric),
+  mean))
+TB |> summarise(across(
+  where(~ is.numeric(.x) && mean(.x) > 3), mean))
+```
+::::
+
+Modify all the columns using the same function.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, lapply(.SD, rev)]
+```
+## `base`
+```{r}
+data.frame(lapply(DF, rev))
+```
+## `dplyr`
+```{r}
+TB |> mutate(across(everything(), rev))
+```
+::::
+
+Apply a transformation to each element of the variables selected.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, lapply(.SD, sqrt), .SDcols = V1:V2]
+```
+## `base`
+
+TODO
+
+## `dplyr`
+
+TODO
+::::
+
+Apply a transformation for each element of the variables selected.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, names(.SD) := lapply(.SD, sqrt), .SDcols = V1:V3]
+DT
+```
+## `base`
+TODO
+## `dplyr`
+TODO
+::::
+
+Apply a transformation to each element of the variables selected by condition.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, .SD - 1, .SDcols = is.numeric]
+```
+## `base`
+```{r}
+data.frame(lapply(DF,
+  \(x) if (is.numeric(x)) x - 1 else x))
+```
+## `dplyr`
+```{r}
+TB |>
+  transmute(across(where(is.numeric),
+  ~ '-'(., 1L)))
+```
+::::
+
+Apply a transformation to each element of the variables selected by condition.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, names(.SD) := lapply(.SD, as.integer),
+  .SDcols = is.numeric]
+DT
+```
+## `base`
+```{r}
+DF[sapply(DF, is.numeric)] <-
+  lapply(DF[sapply(DF, is.numeric)],
+  as.integer)
+DF
+```
+## `dplyr`
+```{r}
+TB = TB |>
+  mutate(across(where(is.numeric),
+  as.integer))
+TB
+```
+::::
+
+Combine multiple functions in a single statement.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, by = V4,
+  .(V1[1:2], "X")]
+```
+## `base`
+```{r}
+DF = do.call(rbind,
+  by(DF, DF$V4, function(sub) {
+  head(data.frame(V1 = sub$V1,
+  V2 = "X"), 2)
+}))
+```
+## `dplyr`
+```{r}
+TB |>
+  group_by(V4) |>
+  slice(1:2) |>
+  transmute(V1 = V1,
+  V2 = "X")
+```
+::::
+
+
+```{r}
+refresh_data()
+```

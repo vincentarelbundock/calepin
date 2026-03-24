@@ -1,0 +1,17 @@
+---
+title: Code
+lang: en
+translations:
+  fr: fr/code.qmd
+---
+
+* [marginaleffects](https://marginaleffects.com): R package to compute and plot predictions, slopes, marginal means, and comparisons (contrasts, risk ratios, odds ratios, etc.) for over 70 classes of statistical models in R. Conduct linear and non-linear hypothesis tests, as well as equivalence tests using the delta method.
+* [modelsummary](https://modelsummary.com): Beautiful, customizable, publication-ready data and model summaries in R.
+* [tinytable](https://vincentarelbundock.github.io/tinytable/): A small but powerful R package to draw beautiful tables in a variety of formats: HTML, LaTeX, Word, PDF, PNG, Markdown, and Typst. The user interface is minimalist and easy to learn, while giving users access to powerful frameworks to create endlessly customizable tables.
+* [countrycode](http://vincentarelbundock.github.io/countrycode): R package to convert country codes and country names.
+* [softbib](https://cran.r-project.org/package=softbib): Software Bibliographies for R Projects. Automatically detect libraries used in a project and create software bibliographies in PDF, Word, Rmarkdown, and BibTeX.
+* [altdoc](https://altdoc.etiennebacher.com): A simple and powerful package to create documentation websites for R packages.
+* [WDI](http://vincentarelbundock.github.io/vincentarelbundock/WDI): R package to search and download thousands of panel data series from the World Bank's World Development Indicators.
+* [tinysnapshot](https://github.com/vincentarelbundock/tinysnapshot): Snapshots for unit tests using the tinytest framework for R.
+* [regrets](https://github.com/vincentarelbundock/regrets): R package to print facts and pictures of egrets (h/t Jane Sumner)
+* [violets](https://github.com/vincentarelbundock/violets): Violets are BLUE. OLS is too. An R package which re-estimates fancy statistical models using simple OLS. (h/t Alton BH Worthington)

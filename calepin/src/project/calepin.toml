@@ -3,7 +3,6 @@ format = "html"
 preview-port = 3456
 csl = "chicago-author-date"
 dpi = 150.0
-timeout = 30
 math = "katex"
 embed-resources = true
 

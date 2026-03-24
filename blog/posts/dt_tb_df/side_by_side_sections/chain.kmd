@@ -1,0 +1,46 @@
+# Chain (pipe)
+
+Expression chaining allows you to perform multiple operations in sequence without creating intermediate objects.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# Chain operations using [][]
+DT[, by = V4, .(V1sum = sum(V1))][
+  V1sum > 4]
+
+# Sort results in descending order
+DT[, by = V4, .(V1sum = sum(V1))][
+  order(-V1sum)]
+```
+
+## `base`
+```{r}
+# Chain using intermediate assignment
+subset(aggregate(V1 ~ V4,
+  data = DF,
+  FUN = sum), V1 > 4)
+
+# Sort results
+# TODO
+```
+
+## `dplyr`
+```{r}
+# Chain using pipe operator
+TB |>
+  group_by(V4) |>
+  summarise(V1sum = sum(V1)) |>
+  filter(V1sum > 4)
+
+# Sort results
+TB |>
+  group_by(V4) |>
+  summarise(V1sum = sum(V1)) |>
+  arrange(desc(V1sum))
+```
+:::: 
+
+```{r}
+refresh_data()
+```

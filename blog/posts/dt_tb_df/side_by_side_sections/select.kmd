@@ -1,0 +1,230 @@
+# Select
+
+## Keep
+
+Extract one column as a vector.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# DT[["V3"]]
+# DT[, V3]
+DT[[3]]
+```
+## `base`
+```{r}
+# DF[["V3"]]
+# DF[, 3, drop = TRUE]
+DF[[3]]
+```
+## `dplyr`
+```{r}
+# TB[["V3"]]
+# TB |> pull(V3)
+TB[[3]]
+```
+::::
+
+Extract one column as a data frame.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# DT[, .SD, .SDcols = "V3"]
+DT[, "V3"]
+```
+## `base`
+```{r}
+# DF[, "V3", drop = FALSE]
+DF[, 3, drop = FALSE]
+```
+## `dplyr`
+```{r}
+# TB |> select(V3)
+TB[, "V3"]
+```
+::::
+
+Select several columns by column names.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+#| eval: false
+DT[, .(V2, V3, V4)]
+DT[, V2:V4]
+DT[, .SD, .SDcols = V2:V4]
+DT[, .SD, .SDcols = c("V2", "V3", "V4")]
+cols = c("V2", "V3")
+DT[, ..cols]
+```
+## `base`
+```{r}
+#| eval: false
+DF[, c("V2", "V3", "V4")]
+subset(DF, select = c("V2", "V3", "V4"))
+cols = c("V2", "V3")
+DF[, cols]
+DF[ , names(DF) %in% cols]
+```
+## `dplyr`
+```{r}
+#| eval: false
+TB |> select(V2, V3, V4)
+TB |> select(V2:V4)
+TB |> select(any_of(c("V2", "V3", "V4")))
+cols = c("V2", "V3")
+DF |> select(!!cols)
+```
+::::
+
+## Drop
+
+Exclude several columns by column name.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# DT[, .SD, .SDcols = !c("V2", "V3")]
+DT[, !c("V2", "V3")]
+```
+## `base`
+```{r}
+DF[ , !(names(DF) %in% c("V2", "V3"))]
+```
+## `dplyr`
+```{r}
+TB |> select(-V2, -V3)
+```
+::::
+
+Remove a column from the data set. Using `let()` is efficient because it modifies the data set in place.  This code is not executed because the `V5` column is not present in the data set.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, let(V1 = NULL)]
+DT
+```
+## `base`
+```{r}
+DF = DF[, !names(DF) %in% "V1"]
+DF
+```
+## `dplyr`
+```{r}
+TB = TB |> select(-V1)
+TB
+```
+::::
+
+Remove several columns from the data set. Using `:=` is efficient because it modifies the data set in place.  This code is not executed because the `V6` and `V7` columns are not present in the data set.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+cols = c("V2", "V3")
+DT[, (cols) := NULL]
+DT
+```
+## `base`
+```{r}
+DF = DF[, !(names(DF) %in% c("V2", "V3"))]
+DF
+```
+## `dplyr`
+```{r}
+TB = TB |> select(-V2, -V3)
+TB
+```
+::::
+
+```{r}
+refresh_data()
+```
+
+## Rename
+
+Select and rename.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+DT[, .(X1 = V1, X2 = V2)]
+```
+## `base`
+```{r}
+setNames(
+  DF[, c("V1", "V2")],
+  c("X1", "X2"))
+```
+## `dplyr`
+```{r}
+TB |> select(X1 = V1, X2 = V2)
+```
+::::
+
+Using the `data.table::setnames()` to rename columns is efficient because it renames column in place. This code is not executed to avoid renaming columns in the original data set.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+setnames(DT, old = c("V1", "V2"), new = c("X1", "X2"))
+DT
+```
+## `base`
+```{r}
+colnames(DF)[match(c("V1", "V2"), colnames(DF))] = c("X1", "X2")
+DF
+```
+## `dplyr`
+```{r}
+TB = TB |> rename(X1 = V1, X2 = V2)
+TB
+```
+::::
+
+```{r}
+refresh_data()
+```
+
+## Advanced selections
+
+Complex selections using regular expressions or dedicated functions.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+#| eval: false
+DT[, .SD, .SDcols = c("V1", "V2")]
+DT[, .SD, .SDcols = patterns("^V[1-2]$")]
+DT[, .SD, .SDcols = patterns("V")]
+DT[, .SD, .SDcols = patterns("3$")]
+DT[, .SD, .SDcols = patterns(".2")]
+DT[, .SD, .SDcols = patterns("^V1$|^X$")]
+DT[, .SD, .SDcols = patterns("^(?!V2)", perl = TRUE)]
+```
+## `base`
+```{r}
+#| eval: false
+DF[, c("V1", "V2")]
+DF[ , grep("^V[1-2]$", names(DF))]
+DF[ , c("V4", setdiff(names(DF), "V4"))]
+DF[ , grep("V", names(DF))]
+DF[ , grep("3$", names(DF))]
+DF[ , grep(".2", names(DF))]
+DF[ , c("V1", "X")]
+DF[ , !grepl("^V2", names(DF))]
+```
+## `dplyr`
+```{r}
+#| eval: false
+TB |> select(V1, V2)
+TB |> select(num_range("V", 1:2))
+TB |> select(contains("V"))
+TB |> select(ends_with("3"))
+TB |> select(matches(".2"))
+TB |> select(one_of(c("V1", "X")))
+TB |> select(-starts_with("V2"))
+```
+:::: 

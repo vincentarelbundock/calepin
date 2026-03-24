@@ -26,7 +26,7 @@
   <tbody>
     {% for item in page.listing %}
     <tr>
-      <td><a href="{{ item.url }}">{{ item.title | default(value="Untitled") }}</a></td>
+      <td><a href="{{ item.url }}">{{ item.title | default(value="Untitled") | safe }}</a></td>
       <td>{{ item.date | default(value="") }}</td>
       <td>{{ item.description | default(value="") }}</td>
     </tr>
@@ -38,9 +38,9 @@
 <div class="listing-grid">
   {% for item in page.listing %}
   <a href="{{ item.url }}" class="listing-item">
-    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="{{ item.title | default(value='') }}">{% endif %}
+    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="">{% endif %}
     <div class="listing-item-content">
-      <h3>{{ item.title | default(value="Untitled") }}</h3>
+      <h3>{{ item.title | default(value="Untitled") | safe }}</h3>
       {% if item.date %}<div class="date">{{ item.date }}</div>{% endif %}
       {% if item.description %}<div class="description">{{ item.description }}</div>{% endif %}
     </div>
@@ -52,15 +52,30 @@
 <div class="listing-default">
   {% for item in page.listing %}
   <a href="{{ item.url }}" class="listing-item">
-    {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="{{ item.title | default(value='') }}">{% endif %}
     <div class="listing-item-content">
-      <h3>{{ item.title | default(value="Untitled") }}</h3>
+      <h3>{{ item.title | default(value="Untitled") | safe }}</h3>
       {% if item.date %}<div class="date">{{ item.date }}</div>{% endif %}
       {% if item.description %}<div class="description">{{ item.description }}</div>{% endif %}
     </div>
   </a>
   {% endfor %}
 </div>
+{% endif %}
+
+{% if page.pagination %}
+<nav class="pagination" aria-label="Pagination">
+  {% if page.pagination.prev_url %}
+    <a href="{{ page.pagination.prev_url }}" class="pagination-prev">&larr; Previous</a>
+  {% else %}
+    <span class="pagination-prev disabled">&larr; Previous</span>
+  {% endif %}
+  <span class="pagination-info">Page {{ page.pagination.current }} of {{ page.pagination.total }}</span>
+  {% if page.pagination.next_url %}
+    <a href="{{ page.pagination.next_url }}" class="pagination-next">Next &rarr;</a>
+  {% else %}
+    <span class="pagination-next disabled">Next &rarr;</span>
+  {% endif %}
+</nav>
 {% endif %}
 
 {% endif %}

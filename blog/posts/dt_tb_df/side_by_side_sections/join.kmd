@@ -1,0 +1,83 @@
+# Join
+
+First, let's create example datasets for demonstrating joins.
+
+```{r}
+x = data.table(
+  Id  = c("A", "B", "C", "C"),
+  X1  = c(1L, 3L, 5L, 7L),
+  XY  = c("x2", "x4", "x6", "x8")
+)
+y = data.table(
+  Id  = c("A", "B", "B", "D"),
+  Y1  = c(1L, 3L, 5L, 7L),
+  XY  = c("y1", "y3", "y5", "y7")
+)
+```
+
+## Basic Joins
+
+There are two basic ways to perform joins in `data.table`. First, we can use the standard `merge()` function that should be familiar to most R users. 
+
+Second, we can use the square bracket notation with the `on` argument. Here, the logic is that we select every row from the table *outside* that match rows from the table *inside* the bracket. The table inside the brackets is used as an "index", so `x[y]` essentially means that we are merging `x` into `y`. The benefit of this syntax is that we can efficiently combine it with other operations like summaries, sorts, etc.
+
+Note that, in `data.table`, the `on` argument specifies the joining columns, and the `i.` prefix refers to columns from the right table, while the `x.` prefix refers to columns from the left table.
+
+:::: {.panel-tabset group='idiom'}
+## `data.table`
+```{r}
+# Left join (keep all rows from x)
+# merge(x, y, all.x = TRUE, by = "Id")
+y[x, on = "Id"]
+
+# Right join (keep all rows from y)
+# merge(x, y, all.y = TRUE, by = "Id")
+x[y, on = "Id"]
+
+# Inner join (keep only matching rows)
+# merge(x, y, by = "Id"
+x[y, on = "Id", nomatch = NULL]
+
+# Anti join (keep rows from x with no match in y)
+x[!y, on = "Id"]
+
+# Full join (keep all rows)
+merge(x, y, by = "Id", all = TRUE)
+```
+
+## `base`
+```{r}
+# Left join (keep all rows from x)
+merge(x, y, by = "Id", all.x = TRUE)
+
+# Right join (keep all rows from y)
+merge(x, y, by = "Id", all.y = TRUE)
+
+# Inner join (keep only matching rows)
+merge(x, y, by = "Id")
+
+# Full join (keep all rows)
+merge(x, y, by = "Id", all = TRUE)
+
+# Anti join (more complex in base R)
+x[!(x$Id %in% y$Id), ]
+```
+
+## `dplyr`
+```{r}
+# Left join (keep all rows from x)
+left_join(x, y, by = "Id")
+
+# Right join (keep all rows from y)
+right_join(x, y, by = "Id")
+
+# Inner join (keep only matching rows)
+inner_join(x, y, by = "Id")
+
+# Full join (keep all rows)
+full_join(x, y, by = "Id")
+
+# Anti join
+anti_join(x, y, by = "Id")
+```
+::::

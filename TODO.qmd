@@ -2,6 +2,25 @@
 
 PATH CHECKFOR SINGLE typst file
 
+
+## Blog listings
+
+- [ ] User interface
+- [ ] Images (first image of the post or custom image in the front matter)
+- [ ] Date formatting
+- [ ] Sorting (by date, by title, etc.)
+- [ ] Pagination
+- [ ] Breadcrumps are not clickable and show the full path rather /posts/datatable_nesting/
+- [ ] backticks in listings titles still not rendered as markdown monospace `data.table` vs. `base` vs. `dplyr`
+- [ ] vab: panel_heterogeneous_effects: pre-existing problem with dependency. Delete post?
+- [ ] vab: update declare_design with new syntax
+- [ ] inspect each pages
+
+
+## arelbundockcom
+
+- [ ] review all blog posts
+
 ## Rendering
 
 - [ ] Better CSS
@@ -88,6 +107,7 @@ PATH CHECKFOR SINGLE typst file
 
 ## Cross-references
 
+- [ ] Collections: Not global by default, but with an option
 - [ ] Custom cross-reference types.
 - [ ] Custom numbered float types.
 - [ ] Cross-references across pages in website and book collections.
@@ -177,7 +197,9 @@ PATH CHECKFOR SINGLE typst file
 
 ## Docs
 
+- [ ] Calepin Terminology intro
 - [ ] HTML sales pitch: classless CSS, standalone files by default
+- [ ] LLM-friendly
 - [ ] Performance page with `bench/rubbish.sh`
 - [ ] Accessibility: 
     - [x] HTML: aria codes, skip to content, etc.
@@ -198,6 +220,7 @@ PATH CHECKFOR SINGLE typst file
     - [ ] linux
     - [ ] windows
 - [ ] all variables should be underscore, never dash
+- [ ] Delegate to templates as much as possible (again and again, don't check as done until the very end)
 
 
 ## Preview

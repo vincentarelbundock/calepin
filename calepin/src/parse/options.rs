@@ -1,24 +1,25 @@
 use crate::types::{ChunkOptions, OptionValue};
 
-/// Parse the chunk header to extract only a label.
-/// The header should be empty or contain only a label: `{r}` or `{r, label}`.
-/// Key=value options in the header are an error; use `#|` pipe syntax instead.
+/// Parse the chunk header to extract a label and any inline options.
+/// Accepts `{r}`, `{r, label}`, and `{r, label, key=value, ...}`.
+/// Key=value options in the header are converted to pipe-equivalent options
+/// (dots in keys become dashes, values are normalized).
 ///
-/// Returns `(label_or_none, error_message_or_none)`.
-pub fn parse_header_label(s: &str) -> (Option<String>, Option<String>) {
+/// Returns `(label_or_none, converted_options)`.
+pub fn parse_header_label(s: &str) -> (Option<String>, ChunkOptions) {
     let trimmed = s.trim();
     if trimmed.is_empty() {
-        return (None, None);
+        return (None, ChunkOptions::default());
     }
     // Strip leading comma
     let trimmed = trimmed.strip_prefix(',').unwrap_or(trimmed).trim();
     if trimmed.is_empty() {
-        return (None, None);
+        return (None, ChunkOptions::default());
     }
 
     let parts: Vec<String> = split_csv(trimmed);
     let mut label: Option<String> = None;
-    let mut bad_opts: Vec<String> = Vec::new();
+    let mut header_opts: Vec<String> = Vec::new();
 
     for part in &parts {
         let part = part.trim();
@@ -26,37 +27,26 @@ pub fn parse_header_label(s: &str) -> (Option<String>, Option<String>) {
             continue;
         }
         if part.contains('=') {
-            bad_opts.push(part.to_string());
+            // Convert key=value to pipe-style "key: value"
+            if let Some((key, value)) = part.split_once('=') {
+                let key = key.trim().replace('.', "-");
+                let value = value.trim();
+                let value = value.trim_matches('"').trim_matches('\'');
+                header_opts.push(format!("{}: {}", key, value));
+            }
         } else if label.is_none() {
-            // First non-kv part is the label
             label = Some(part.to_string());
-        } else {
-            bad_opts.push(part.to_string());
         }
     }
 
-    let error = if bad_opts.is_empty() {
-        None
+    let opts = if header_opts.is_empty() {
+        ChunkOptions::default()
     } else {
-        let hints: Vec<String> = bad_opts.iter().map(|opt| {
-            if let Some((key, value)) = opt.split_once('=') {
-                let key = key.trim().replace('.', "-");
-                let value = value.trim();
-                // Strip quotes for the hint
-                let value = value.trim_matches('"').trim_matches('\'');
-                format!("#| {}: {}", key, value)
-            } else {
-                format!("#| {}", opt)
-            }
-        }).collect();
-        Some(format!(
-            "Error: chunk options must use #| pipe syntax, not header options.\n\
-             Move these to pipe comments inside the chunk:\n  {}",
-            hints.join("\n  ")
-        ))
+        let lines: Vec<&str> = header_opts.iter().map(|s| s.as_str()).collect();
+        parse_pipe_options(&lines)
     };
 
-    (label, error)
+    (label, opts)
 }
 
 /// Parse pipe comment options (`#|` lines) in YAML format: `#| key: value`.
@@ -168,33 +158,30 @@ mod tests {
 
     #[test]
     fn test_header_label_only() {
-        let (label, err) = parse_header_label(", setup");
+        let (label, opts) = parse_header_label(", setup");
         assert_eq!(label, Some("setup".to_string()));
-        assert!(err.is_none());
+        assert!(opts.inner.is_empty());
     }
 
     #[test]
     fn test_header_empty() {
-        let (label, err) = parse_header_label("");
+        let (label, opts) = parse_header_label("");
         assert!(label.is_none());
-        assert!(err.is_none());
+        assert!(opts.inner.is_empty());
     }
 
     #[test]
-    fn test_header_rejects_kv_options() {
-        let (label, err) = parse_header_label(", echo=FALSE, fig.width=8");
+    fn test_header_kv_options_converted() {
+        let (label, opts) = parse_header_label(", echo=FALSE, fig.width=8");
         assert!(label.is_none());
-        assert!(err.is_some());
-        let msg = err.unwrap();
-        assert!(msg.contains("#| echo: FALSE"));
-        assert!(msg.contains("#| fig-width: 8")); // dots converted to dashes in hint
+        assert!(!opts.echo());
+        assert!(opts.inner.contains_key("fig.width"));
     }
 
     #[test]
-    fn test_header_label_with_kv_rejected() {
-        let (label, err) = parse_header_label(", setup, echo=FALSE");
+    fn test_header_label_with_kv_converted() {
+        let (label, opts) = parse_header_label(", setup, echo=FALSE");
         assert_eq!(label, Some("setup".to_string()));
-        assert!(err.is_some());
-        assert!(err.unwrap().contains("#| echo: FALSE"));
+        assert!(!opts.echo());
     }
 }
