@@ -14,7 +14,7 @@
     btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
     var code = document.getElementById('source-code');
     if (code && code.textContent === 'Loading source...') {
-      fetch('{{ page.source_url }}')
+      fetch('{{ document.source_url }}')
         .then(function(r) { return r.text(); })
         .then(function(t) { code.textContent = t; })
         .catch(function() { code.textContent = 'Failed to load source.'; });

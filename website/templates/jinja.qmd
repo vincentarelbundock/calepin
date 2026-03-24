@@ -2,7 +2,7 @@
 title: Jinja2
 ---
 
-*Calepin* uses [MiniJinja](https://github.com/mitsuhiko/minijinja), a Jinja2 template engine for Rust. The same syntax is used everywhere: in document bodies ([shortcuts](shortcuts.html)), in element templates ([elements](elements.html)), in page templates ([pages](pages.html)), and in site templates ([sites](sites.html)).
+*Calepin* uses [MiniJinja](https://github.com/mitsuhiko/minijinja), a Jinja2 template engine for Rust. The same syntax is used everywhere: in document bodies ([shortcuts](shortcuts.html)), in element templates ([elements](elements.html)), in page templates ([pages](pages.html)), and in collection templates ([collections](sites.html)).
 
 This page covers the syntax basics. If you know Jinja2 or Python's Django templates, you already know this.
 
@@ -125,6 +125,6 @@ In document bodies, {% raw %}`{% include %}`{% endraw %} is a pre-parse directiv
 | Document body | {% raw %}`{{ meta.title }}`{% endraw %} in your `.qmd` | [Shortcuts](shortcuts.html) |
 | Element templates | {% raw %}`{{children}}`{% endraw %} in `_calepin/elements/div.html` | [Elements](elements.html) |
 | Page templates | {% raw %}`{{body}}`{% endraw %} in `_calepin/templates/calepin.html` | [Pages](pages.html) |
-| Site templates | {% raw %}`{{ page.title }}`{% endraw %} in `_templates/page.html` | [Sites](sites.html) |
+| Collection templates | {% raw %}`{{ document.title }}`{% endraw %} in `_templates/page.html` | [Collections](sites.html) |
 
 The syntax is identical everywhere. The only difference is which variables and functions are available in each context.

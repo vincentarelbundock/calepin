@@ -1,19 +1,19 @@
-//! Site and page context for template rendering.
+//! Collection and document context for template rendering.
 //!
-//! The site builder passes structured context to Jinja templates.
-//! Top-level config fields provide the site context. `[var]` is passed
+//! The collection builder passes structured context to Jinja templates.
+//! Top-level config fields provide the collection context. `[var]` is passed
 //! through as arbitrary template variables.
 
 use std::collections::HashMap;
 
 use serde::Serialize;
-use super::discover::PageInfo;
-use super::render::SiteRenderResult;
-use crate::project::{ProjectConfig, PageNode, expand_contents_for_lang, Language};
+use super::discover::DocumentInfo;
+use super::render::CollectionRenderResult;
+use crate::project::{ProjectConfig, DocumentNode, expand_contents_for_lang, Language};
 
-/// Site-level context available to all templates as `{{ site.* }}`.
+/// Collection-level context available to all templates as `{{ collection.* }}`.
 #[derive(Debug, Serialize)]
-pub struct SiteContext {
+pub struct CollectionContext {
     pub title: Option<String>,
     pub subtitle: Option<String>,
     pub url: Option<String>,
@@ -35,9 +35,9 @@ pub struct NavNode {
     pub children: Vec<NavNode>,
 }
 
-/// Per-page context available to templates as `{{ page.* }}`.
+/// Per-document context available to templates as `{{ document.* }}`.
 #[derive(Debug, Serialize)]
-pub struct PageContext {
+pub struct DocumentContext {
     pub title: Option<String>,
     pub subtitle: Option<String>,
     pub date: Option<String>,
@@ -140,18 +140,18 @@ pub struct NavLink {
     pub href: String,
 }
 
-/// Build the site-level context from project config.
+/// Build the collection-level context from project config.
 /// The `pages` field contains the nav tree for the default language.
 /// Use `build_nav_tree_for_lang` to get a language-specific nav tree.
-pub fn build_site_context(
+pub fn build_collection_context(
     config: &ProjectConfig,
-    pages: &[PageInfo],
+    pages: &[DocumentInfo],
     base_dir: &std::path::Path,
-) -> SiteContext {
+) -> CollectionContext {
     // Build nav tree for the default language (or all content if no languages configured)
     let default_lang = config.default_language();
-    let page_nodes = expand_contents_for_lang(&config.contents, base_dir, default_lang);
-    let nav_tree = build_nav_tree(&page_nodes, pages);
+    let document_nodes = expand_contents_for_lang(&config.contents, base_dir, default_lang);
+    let nav_tree = build_nav_tree(&document_nodes, pages);
 
     // Math block
     let html_math_method = "katex".to_string();
@@ -162,7 +162,7 @@ pub fn build_site_context(
         crate::render::template::render_element_block("math", "html", &vars)
     };
 
-    SiteContext {
+    CollectionContext {
         title: config.title.clone(),
         subtitle: config.subtitle.clone(),
         url: config.url.clone(),
@@ -179,24 +179,24 @@ pub fn build_site_context(
 /// Build the nav tree for a specific language.
 pub fn build_nav_tree_for_lang(
     config: &ProjectConfig,
-    pages: &[PageInfo],
+    pages: &[DocumentInfo],
     base_dir: &std::path::Path,
     lang: &str,
 ) -> Vec<NavNode> {
-    let page_nodes = expand_contents_for_lang(&config.contents, base_dir, Some(lang));
-    build_nav_tree(&page_nodes, pages)
+    let document_nodes = expand_contents_for_lang(&config.contents, base_dir, Some(lang));
+    build_nav_tree(&document_nodes, pages)
 }
 
-/// Build the navigation tree from expanded PageNodes, resolving titles from page metadata.
-fn build_nav_tree(nodes: &[PageNode], pages: &[PageInfo]) -> Vec<NavNode> {
-    let page_map: HashMap<String, &PageInfo> = pages
+/// Build the navigation tree from expanded DocumentNodes, resolving titles from page metadata.
+fn build_nav_tree(nodes: &[DocumentNode], pages: &[DocumentInfo]) -> Vec<NavNode> {
+    let document_map: HashMap<String, &DocumentInfo> = pages
         .iter()
         .map(|p| (p.source.display().to_string(), p))
         .collect();
 
     nodes.iter().map(|node| match node {
-        PageNode::Page { path, title } => {
-            let info = page_map.get(path.as_str());
+        DocumentNode::Document { path, title } => {
+            let info = document_map.get(path.as_str());
             let text = title.clone()
                 .or_else(|| info.and_then(|p| p.meta.title.clone()))
                 .unwrap_or_else(|| path.clone());
@@ -208,10 +208,10 @@ fn build_nav_tree(nodes: &[PageNode], pages: &[PageInfo]) -> Vec<NavNode> {
                 children: vec![],
             }
         }
-        PageNode::Section { title, index, pages: children } => {
+        DocumentNode::Section { title, index, documents: children } => {
             // Section header can be a link if it has an index page
             let href = index.as_ref().and_then(|idx| {
-                page_map.get(idx.as_str()).map(|p| p.url.clone())
+                document_map.get(idx.as_str()).map(|p| p.url.clone())
             });
             NavNode {
                 text: title.clone(),
@@ -241,14 +241,14 @@ pub fn mark_active(nodes: &mut [NavNode], current_url: &str) -> bool {
     false
 }
 
-/// Build the per-page context.
-pub fn build_page_context(
-    page: &PageInfo,
-    result: Option<&SiteRenderResult>,
-    pages: &[PageInfo],
+/// Build the per-document context.
+pub fn build_document_context(
+    page: &DocumentInfo,
+    result: Option<&CollectionRenderResult>,
+    pages: &[DocumentInfo],
     listing_items: Option<Vec<ListingItem>>,
     languages: &[Language],
-) -> PageContext {
+) -> DocumentContext {
     let body = result.map(|r| r.body.clone()).unwrap_or_default();
 
     let title = result.and_then(|r| r.title.clone()).or_else(|| page.meta.title.clone());
@@ -258,13 +258,13 @@ pub fn build_page_context(
     let abstract_text = result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone());
 
     // Prev/next navigation excludes standalone pages and pages in other languages
-    let nav_pages: Vec<&PageInfo> = pages.iter().filter(|p| {
+    let nav_documents: Vec<&DocumentInfo> = pages.iter().filter(|p| {
         !p.standalone && p.lang == page.lang
     }).collect();
-    let idx = nav_pages.iter().position(|p| p.source == page.source);
+    let idx = nav_documents.iter().position(|p| p.source == page.source);
     let prev = idx.and_then(|i| {
         if i > 0 {
-            let p = nav_pages[i - 1];
+            let p = nav_documents[i - 1];
             Some(NavLink {
                 text: p.meta.title.clone().unwrap_or_else(|| p.source.display().to_string()),
                 href: p.url.clone(),
@@ -272,8 +272,8 @@ pub fn build_page_context(
         } else { None }
     });
     let next = idx.and_then(|i| {
-        if i + 1 < nav_pages.len() {
-            let p = nav_pages[i + 1];
+        if i + 1 < nav_documents.len() {
+            let p = nav_documents[i + 1];
             Some(NavLink {
                 text: p.meta.title.clone().unwrap_or_else(|| p.source.display().to_string()),
                 href: p.url.clone(),
@@ -286,7 +286,7 @@ pub fn build_page_context(
 
     let breadcrumbs = build_breadcrumbs(page, pages);
 
-    PageContext {
+    DocumentContext {
         title, subtitle, date,
         r#abstract: abstract_text,
         body,
@@ -305,8 +305,8 @@ pub fn build_page_context(
 
 /// Resolve translation paths from frontmatter to URLs.
 fn resolve_translations(
-    page: &PageInfo,
-    pages: &[PageInfo],
+    page: &DocumentInfo,
+    pages: &[DocumentInfo],
     languages: &[Language],
 ) -> Vec<Translation> {
     let translations = match &page.meta.translations {
@@ -314,7 +314,7 @@ fn resolve_translations(
         _ => return Vec::new(),
     };
 
-    let page_map: HashMap<String, &PageInfo> = pages.iter()
+    let document_map: HashMap<String, &DocumentInfo> = pages.iter()
         .map(|p| (p.source.display().to_string(), p))
         .collect();
 
@@ -324,7 +324,7 @@ fn resolve_translations(
 
     let mut result = Vec::new();
     for (lang_code, path) in translations {
-        if let Some(info) = page_map.get(path.as_str()) {
+        if let Some(info) = document_map.get(path.as_str()) {
             result.push(Translation {
                 flag: lang_to_flag(lang_code),
                 lang: lang_code.clone(),
@@ -351,9 +351,9 @@ pub fn format_date(date: &str) -> String {
     crate::types::format_date_str(date, DEFAULT_DATE_FORMAT)
 }
 
-fn build_breadcrumbs(page: &PageInfo, pages: &[PageInfo]) -> Vec<Breadcrumb> {
+fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcrumb> {
     // Collect all page URLs for checking if a path leads to a real page
-    let page_urls: Vec<String> = pages.iter().map(|p| p.url.clone()).collect();
+    let document_urls: Vec<String> = pages.iter().map(|p| p.url.clone()).collect();
 
     let mut crumbs = vec![Breadcrumb {
         text: "Home".to_string(),
@@ -383,7 +383,7 @@ fn build_breadcrumbs(page: &PageInfo, pages: &[PageInfo]) -> Vec<Breadcrumb> {
                 .join(" ");
             // Only link if there's a page at this path (index.html)
             let index_url = format!("{}index.html", href_path);
-            let href = if page_urls.iter().any(|u| *u == index_url) {
+            let href = if document_urls.iter().any(|u| *u == index_url) {
                 Some(href_path.clone())
             } else {
                 None

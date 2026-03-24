@@ -12,9 +12,9 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 
-use context::{build_page_context, build_site_context, build_nav_tree_for_lang, mark_active, ListingItem};
-use discover::{discover_listing_pages, discover_pages, discover_standalone_pages, PageInfo};
-use crate::project::{PageNode, expand_contents};
+use context::{build_document_context, build_collection_context, build_nav_tree_for_lang, mark_active, ListingItem};
+use discover::{discover_listing_documents, discover_documents, discover_standalone_documents, DocumentInfo};
+use crate::project::{DocumentNode, expand_contents};
 
 /// Extract the first <img> src from rendered HTML.
 fn extract_first_image(html: &str) -> Option<String> {
@@ -26,8 +26,8 @@ fn extract_first_image(html: &str) -> Option<String> {
 
 /// Build a ListingItem from a page info and optional rendered result.
 fn build_listing_item(
-    lp: &PageInfo,
-    results: &HashMap<String, render::SiteRenderResult>,
+    lp: &DocumentInfo,
+    results: &HashMap<String, render::CollectionRenderResult>,
 ) -> ListingItem {
     let image = lp.meta.image.clone().or_else(|| {
         let key = lp.source.display().to_string();
@@ -35,16 +35,16 @@ fn build_listing_item(
     });
     ListingItem {
         title: lp.meta.title.as_ref().map(|t| crate::render::markdown::render_inline(t, "html")),
-        date: lp.meta.date.as_ref().map(|d| crate::site::context::format_date(d)),
+        date: lp.meta.date.as_ref().map(|d| crate::collection::context::format_date(d)),
         description: lp.meta.description.clone(),
         image,
         url: lp.url.clone(),
     }
 }
 
-/// Build a static site from .qmd files.
+/// Build a collection from .qmd files.
 /// `cli_target` overrides `[site].target` when provided via `-t` on the command line.
-pub fn build_site(
+pub fn build_collection(
     config_path: Option<&Path>,
     output: &Path,
     clean: bool,
@@ -61,17 +61,17 @@ pub fn build_site(
         eprintln!("Config: {}", found_path.display());
     }
 
-    // 2. Resolve site target (format and extension)
+    // 2. Resolve collection target (format and extension)
     //    CLI -t flag takes precedence over [site].target, which defaults to "html".
-    let site_target_name = cli_target.map(|s| s.to_string())
+    let collection_target_name = cli_target.map(|s| s.to_string())
         .or_else(|| config.target.clone())
         .unwrap_or_else(|| "html".to_string());
-    let site_target = crate::project::resolve_target(&site_target_name, Some(&config))?;
-    let format = &site_target.base;
-    let output_ext = site_target.output_extension();
+    let collection_target = crate::project::resolve_target(&collection_target_name, Some(&config))?;
+    let format = &collection_target.base;
+    let output_ext = collection_target.output_extension();
 
     // Set active target and project root for template/component resolution
-    crate::paths::set_active_target(Some(&site_target_name));
+    crate::paths::set_active_target(Some(&collection_target_name));
     crate::paths::set_project_root(Some(&base_dir));
 
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
@@ -80,11 +80,11 @@ pub fn build_site(
     let orchestrator_filename = format!("orchestrator.{}", ext);
     let orchestrator = config.orchestrator.clone()
         .or_else(|| {
-            let p = base_dir.join("_calepin").join("templates").join(&site_target_name)
+            let p = base_dir.join("_calepin").join("templates").join(&collection_target_name)
                 .join(&orchestrator_filename);
             if p.exists() { return Some(p.display().to_string()); }
             // Check built-in templates
-            let builtin_path = format!("templates/{}/{}", site_target_name, orchestrator_filename);
+            let builtin_path = format!("templates/{}/{}", collection_target_name, orchestrator_filename);
             if crate::render::elements::BUILTIN_PROJECT.get_file(&builtin_path).is_some() {
                 Some(format!("__builtin__:{}", builtin_path))
             } else {
@@ -105,24 +105,24 @@ pub fn build_site(
     fs::create_dir_all(output)?;
 
     // 4. Discover pages (nav + standalone)
-    let mut pages = discover_pages(&config, &base_dir, output_ext)?;
-    let standalone = discover_standalone_pages(&config, &base_dir, output_ext)?;
+    let mut pages = discover_documents(&config, &base_dir, output_ext)?;
+    let standalone = discover_standalone_documents(&config, &base_dir, output_ext)?;
     pages.extend(standalone);
     if !quiet {
-        eprintln!("Found {} pages", pages.len());
+        eprintln!("Found {} documents", pages.len());
     }
 
     // 5. Discover listing pages and merge into the page list
-    let mut all_listing_pages: HashMap<String, Vec<PageInfo>> = HashMap::new();
+    let mut all_listing_documents: HashMap<String, Vec<DocumentInfo>> = HashMap::new();
     for page in &pages {
         if let Some(ref listing) = page.meta.listing {
-            let listing_pages = discover_listing_pages(listing, &base_dir, &pages, output_ext)?;
-            all_listing_pages.insert(page.source.display().to_string(), listing_pages);
+            let listing_documents = discover_listing_documents(listing, &base_dir, &pages, output_ext)?;
+            all_listing_documents.insert(page.source.display().to_string(), listing_documents);
         }
     }
     let mut existing_sources: Vec<String> = pages.iter().map(|p| p.source.display().to_string()).collect();
-    for listing_pages in all_listing_pages.values() {
-        for lp in listing_pages {
+    for listing_documents in all_listing_documents.values() {
+        for lp in listing_documents {
             let key = lp.source.display().to_string();
             if !existing_sources.contains(&key) {
                 existing_sources.push(key);
@@ -138,9 +138,9 @@ pub fn build_site(
     //    (the native toolchains handle global refs).
     let apply_page_template = orchestrator.is_some();
     let results = if format == "html" && !apply_page_template && config.global_crossref {
-        render::render_pages_with_crossref(&pages, &config, &base_dir, output, Some(&site_target_name), Some(&site_target), quiet)?
+        render::render_documents_with_crossref(&pages, &config, &base_dir, output, Some(&collection_target_name), Some(&collection_target), quiet)?
     } else {
-        render::render_pages(&pages, &config, &base_dir, output, format, apply_page_template, Some(&site_target_name), Some(&site_target), quiet)?
+        render::render_documents(&pages, &config, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
     };
 
     // 7. Write page output files
@@ -167,29 +167,29 @@ pub fn build_site(
     // 8. Site-specific wrapping (HTML) or orchestrator assembly
     if let Some(ref orchestrator_path) = orchestrator {
         // Render the orchestrator template with page tree
-        render_orchestrator(&config, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &site_target_name, quiet)?;
+        render_orchestrator(&config, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
     } else {
         // HTML site path: re-wrap pages through Jinja site templates
-        apply_site_templates(&config, &pages, &results, &all_listing_pages, &base_dir, output, format, &site_target_name)?;
+        apply_collection_templates(&config, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
     }
 
     // 9. Copy assets/ and static directories to output
     assets::copy_assets(&base_dir, output, &config.static_dirs)?;
 
     // 10. Run user-configured post-processing commands
-    run_post_commands(&config, &site_target_name, &base_dir, output, quiet)?;
+    run_post_commands(&config, &collection_target_name, &base_dir, output, quiet)?;
 
     if !quiet {
-        eprintln!("Site built: {}", output.display());
+        eprintln!("Collection built: {}", output.display());
     }
 
     Ok(())
 }
 
-/// Rebuild only the specified pages within an already-built site.
-/// Discovers all pages (for nav context) but only re-renders those whose
+/// Rebuild only the specified documents within an already-built site.
+/// Discovers all documents (for nav context) but only re-renders those whose
 /// source paths are in `changed_sources`. Skips the clean step and assets copy.
-pub fn rebuild_pages(
+pub fn rebuild_documents(
     config_path: Option<&Path>,
     cli_target: Option<&str>,
     changed_sources: &[std::path::PathBuf],
@@ -198,21 +198,21 @@ pub fn rebuild_pages(
     let (config, found_path) = config::load_config(config_path, &cwd)?;
     let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
 
-    let site_target_name = cli_target.map(|s| s.to_string())
+    let collection_target_name = cli_target.map(|s| s.to_string())
         .or_else(|| config.target.clone())
         .unwrap_or_else(|| "html".to_string());
-    let site_target = crate::project::resolve_target(&site_target_name, Some(&config))?;
-    let format = &site_target.base;
-    let output_ext = site_target.output_extension();
+    let collection_target = crate::project::resolve_target(&collection_target_name, Some(&config))?;
+    let format = &collection_target.base;
+    let output_ext = collection_target.output_extension();
 
-    crate::paths::set_active_target(Some(&site_target_name));
+    crate::paths::set_active_target(Some(&collection_target_name));
     crate::paths::set_project_root(Some(&base_dir));
 
     let output_dir = base_dir.join("output");
 
     // Discover all pages (needed for nav context), including standalone
-    let mut pages = discover_pages(&config, &base_dir, output_ext)?;
-    let standalone = discover_standalone_pages(&config, &base_dir, output_ext)?;
+    let mut pages = discover_documents(&config, &base_dir, output_ext)?;
+    let standalone = discover_standalone_documents(&config, &base_dir, output_ext)?;
     pages.extend(standalone);
 
     // Determine which pages to re-render by matching changed absolute paths
@@ -221,25 +221,25 @@ pub fn rebuild_pages(
     let canon_changed: Vec<std::path::PathBuf> = changed_sources.iter()
         .filter_map(|c| c.canonicalize().ok())
         .collect();
-    let changed_pages: Vec<&PageInfo> = pages.iter().filter(|p| {
+    let changed_documents: Vec<&DocumentInfo> = pages.iter().filter(|p| {
         let abs = base_dir.join(&p.source);
         let canon = abs.canonicalize().unwrap_or(abs);
         canon_changed.iter().any(|c| c == &canon)
     }).collect();
 
-    if changed_pages.is_empty() {
+    if changed_documents.is_empty() {
         return Ok(());
     }
 
     // Render only the changed pages
-    let pages_to_render: Vec<PageInfo> = changed_pages.iter().map(|p| (*p).clone()).collect();
-    let results = render::render_pages(
-        &pages_to_render, &config, &base_dir, &output_dir, format,
-        false, Some(&site_target_name), Some(&site_target), true,
+    let documents_to_render: Vec<DocumentInfo> = changed_documents.iter().map(|p| (*p).clone()).collect();
+    let results = render::render_documents(
+        &documents_to_render, &config, &base_dir, &output_dir, format,
+        false, Some(&collection_target_name), Some(&collection_target), true,
     )?;
 
     // Write raw body files
-    for page in &pages_to_render {
+    for page in &documents_to_render {
         let source_key = page.source.display().to_string();
         if let Some(result) = results.get(&source_key) {
             let output_path = output_dir.join(&page.output);
@@ -250,12 +250,12 @@ pub fn rebuild_pages(
         }
     }
 
-    // Apply site templates to the changed pages (with full nav context)
+    // Apply collection templates to the changed pages (with full nav context)
     if format == "html" {
-        let env = templates::init_jinja(&base_dir, &site_target_name)?
+        let env = templates::init_jinja(&base_dir, &collection_target_name)?
             .ok_or_else(|| anyhow::anyhow!("No template files found"))?;
 
-        let site_ctx = build_site_context(&config, &pages, &base_dir);
+        let collection_ctx = build_collection_context(&config, &pages, &base_dir);
         let var_ctx = config.var.as_ref()
             .map(|v| crate::project::target_vars_to_jinja(Some(v)))
             .unwrap_or_else(|| minijinja::Value::from(()));
@@ -268,49 +268,49 @@ pub fn rebuild_pages(
         };
 
         // Also discover listings that the changed pages might need
-        let mut all_listing_pages: HashMap<String, Vec<PageInfo>> = HashMap::new();
-        for page in &pages_to_render {
+        let mut all_listing_documents: HashMap<String, Vec<DocumentInfo>> = HashMap::new();
+        for page in &documents_to_render {
             if let Some(ref listing) = page.meta.listing {
-                let listing_pages = discover_listing_pages(listing, &base_dir, &pages, output_ext)?;
-                all_listing_pages.insert(page.source.display().to_string(), listing_pages);
+                let listing_documents = discover_listing_documents(listing, &base_dir, &pages, output_ext)?;
+                all_listing_documents.insert(page.source.display().to_string(), listing_documents);
             }
         }
 
-        for page in &pages_to_render {
+        for page in &documents_to_render {
             let source_key = page.source.display().to_string();
             let result = results.get(&source_key);
 
-            let listing_items = all_listing_pages.get(&source_key).map(|listing_pages| {
-                listing_pages.iter().map(|lp| build_listing_item(lp, &results)).collect()
+            let listing_items = all_listing_documents.get(&source_key).map(|listing_documents| {
+                listing_documents.iter().map(|lp| build_listing_item(lp, &results)).collect()
             });
 
-            let page_ctx = build_page_context(page, result, &pages, listing_items, &config.languages);
+            let doc_ctx = build_document_context(page, result, &pages, listing_items, &config.languages);
 
             let mut nav_tree = if !config.languages.is_empty() {
                 if let Some(ref lang) = page.lang {
                     build_nav_tree_for_lang(&config, &pages, &base_dir, lang)
                 } else {
-                    site_ctx.pages.clone()
+                    collection_ctx.pages.clone()
                 }
             } else {
-                site_ctx.pages.clone()
+                collection_ctx.pages.clone()
             };
             mark_active(&mut nav_tree, &page.url);
 
-            let site_with_active = minijinja::context! {
-                site => context::SiteContext {
-                    title: site_ctx.title.clone(),
-                    subtitle: site_ctx.subtitle.clone(),
-                    url: site_ctx.url.clone(),
-                    favicon: site_ctx.favicon.clone(),
-                    logo: site_ctx.logo.clone(),
-                    logo_dark: site_ctx.logo_dark.clone(),
+            let collection_with_active = minijinja::context! {
+                collection => context::CollectionContext {
+                    title: collection_ctx.title.clone(),
+                    subtitle: collection_ctx.subtitle.clone(),
+                    url: collection_ctx.url.clone(),
+                    favicon: collection_ctx.favicon.clone(),
+                    logo: collection_ctx.logo.clone(),
+                    logo_dark: collection_ctx.logo_dark.clone(),
                     pages: nav_tree,
-                    languages: site_ctx.languages.clone(),
-                    dark_mode: site_ctx.dark_mode,
-                    math_block: site_ctx.math_block.clone(),
+                    languages: collection_ctx.languages.clone(),
+                    dark_mode: collection_ctx.dark_mode,
+                    math_block: collection_ctx.math_block.clone(),
                 },
-                page => page_ctx,
+                document => doc_ctx,
                 var => var_ctx.clone(),
             };
 
@@ -322,7 +322,7 @@ pub fn rebuild_pages(
 
             let tpl = env.get_template(&template_name)
                 .with_context(|| format!("Failed to get template {} for {}", template_name, source_key))?;
-            let rendered = tpl.render(&site_with_active)
+            let rendered = tpl.render(&collection_with_active)
                 .with_context(|| format!("Failed to render template for {}", source_key))?;
 
             let output_path = output_dir.join(&page.output);
@@ -330,7 +330,7 @@ pub fn rebuild_pages(
         }
 
         // Update _source/ copies for the changed pages
-        for page in &pages_to_render {
+        for page in &documents_to_render {
             let source_dest = output_dir.join("_source").join(&page.source);
             if let Some(parent) = source_dest.parent() {
                 fs::create_dir_all(parent)?;
@@ -345,14 +345,14 @@ pub fn rebuild_pages(
     Ok(())
 }
 
-/// HTML site path: wrap each page's body through Jinja site templates
+/// HTML collection path: wrap each document's body through Jinja site templates
 /// (page.html, listing.html with extends/includes).
 /// Overwrites the raw body files written in step 7 with fully templated HTML.
-fn apply_site_templates(
+fn apply_collection_templates(
     config: &crate::project::ProjectConfig,
-    pages: &[PageInfo],
-    results: &HashMap<String, render::SiteRenderResult>,
-    all_listing_pages: &HashMap<String, Vec<PageInfo>>,
+    pages: &[DocumentInfo],
+    results: &HashMap<String, render::CollectionRenderResult>,
+    all_listing_documents: &HashMap<String, Vec<DocumentInfo>>,
     base_dir: &Path,
     output: &Path,
     format: &str,
@@ -362,12 +362,12 @@ fn apply_site_templates(
     let env = templates::init_jinja(base_dir, target_name)?
         .ok_or_else(|| anyhow::anyhow!(
             "No template files found in templates/{}/. \
-             At least base and page templates are required for multi-file site mode.",
+             At least base and page templates are required for multi-file collection mode.",
             target_name
         ))?;
 
-    // Build site context
-    let site_ctx = build_site_context(config, pages, base_dir);
+    // Build collection context
+    let collection_ctx = build_collection_context(config, pages, base_dir);
 
     // Convert [var] to minijinja Value for template access
     let var_ctx = config.var.as_ref()
@@ -387,8 +387,8 @@ fn apply_site_templates(
         let source_key = page.source.display().to_string();
         let result = results.get(&source_key);
 
-        let all_listing_items: Option<Vec<ListingItem>> = all_listing_pages.get(&source_key).map(|listing_pages| {
-            listing_pages.iter().map(|lp| build_listing_item(lp, results)).collect()
+        let all_listing_items: Option<Vec<ListingItem>> = all_listing_documents.get(&source_key).map(|listing_documents| {
+            listing_documents.iter().map(|lp| build_listing_item(lp, results)).collect()
         });
 
         // Determine pagination: split listing items into pages if page-size is set
@@ -421,10 +421,10 @@ fn apply_site_templates(
             if let Some(ref lang) = page.lang {
                 build_nav_tree_for_lang(config, pages, base_dir, lang)
             } else {
-                site_ctx.pages.clone()
+                collection_ctx.pages.clone()
             }
         } else {
-            site_ctx.pages.clone()
+            collection_ctx.pages.clone()
         };
         mark_active(&mut nav_tree, &page.url);
 
@@ -438,27 +438,27 @@ fn apply_site_templates(
 
         for (page_idx, (items, pagination)) in paginated.iter().enumerate() {
             let listing = if items.is_empty() { None } else { Some(items.clone()) };
-            let mut page_ctx = build_page_context(page, result, pages, listing, &config.languages);
-            page_ctx.pagination = pagination.clone();
+            let mut doc_ctx = build_document_context(page, result, pages, listing, &config.languages);
+            doc_ctx.pagination = pagination.clone();
 
-            let site_with_active = minijinja::context! {
-                site => context::SiteContext {
-                    title: site_ctx.title.clone(),
-                    subtitle: site_ctx.subtitle.clone(),
-                    url: site_ctx.url.clone(),
-                    favicon: site_ctx.favicon.clone(),
-                    logo: site_ctx.logo.clone(),
-                    logo_dark: site_ctx.logo_dark.clone(),
+            let collection_with_active = minijinja::context! {
+                collection => context::CollectionContext {
+                    title: collection_ctx.title.clone(),
+                    subtitle: collection_ctx.subtitle.clone(),
+                    url: collection_ctx.url.clone(),
+                    favicon: collection_ctx.favicon.clone(),
+                    logo: collection_ctx.logo.clone(),
+                    logo_dark: collection_ctx.logo_dark.clone(),
                     pages: nav_tree.clone(),
-                    languages: site_ctx.languages.clone(),
-                    dark_mode: site_ctx.dark_mode,
-                    math_block: site_ctx.math_block.clone(),
+                    languages: collection_ctx.languages.clone(),
+                    dark_mode: collection_ctx.dark_mode,
+                    math_block: collection_ctx.math_block.clone(),
                 },
-                page => page_ctx,
+                document => doc_ctx,
                 var => var_ctx.clone(),
             };
 
-            let rendered = tpl.render(&site_with_active)
+            let rendered = tpl.render(&collection_with_active)
                 .with_context(|| format!("Failed to render template for {}", source_key))?;
 
             let output_path = if page_idx == 0 {
@@ -542,13 +542,13 @@ fn run_post_commands(
     Ok(())
 }
 
-/// Render the orchestrator template with the page tree.
+/// Render the orchestrator template with the document tree.
 /// Fragment files are already written; this produces the master file
 /// that references them via \include{} or equivalent.
 fn render_orchestrator(
     config: &crate::project::ProjectConfig,
-    pages: &[PageInfo],
-    results: &HashMap<String, render::SiteRenderResult>,
+    pages: &[DocumentInfo],
+    results: &HashMap<String, render::CollectionRenderResult>,
     base_dir: &Path,
     output: &Path,
     orchestrator_path: &str,
@@ -557,14 +557,14 @@ fn render_orchestrator(
     target_name: &str,
     quiet: bool,
 ) -> Result<()> {
-    // Build the page tree with titles and paths
-    let page_tree = expand_contents(&config.contents, base_dir);
+    // Build the document tree with titles and paths
+    let document_tree = expand_contents(&config.contents, base_dir);
 
-    let page_map: HashMap<String, &PageInfo> = pages.iter()
+    let document_map: HashMap<String, &DocumentInfo> = pages.iter()
         .map(|p| (p.source.display().to_string(), p))
         .collect();
 
-    let nav_nodes = build_orchestrator_tree(&page_tree, &page_map, results, format);
+    let nav_nodes = build_orchestrator_tree(&document_tree, &document_map, results, format);
 
     // Build template context
     let meta_ctx = minijinja::context! {
@@ -728,19 +728,19 @@ struct OrchestratorNode {
     path: Option<String>,
     /// Path with extension
     file: Option<String>,
-    /// Child nodes (pages within a section)
+    /// Child nodes (documents within a section)
     children: Vec<OrchestratorNode>,
 }
 
 fn build_orchestrator_tree(
-    nodes: &[PageNode],
-    page_map: &HashMap<String, &PageInfo>,
-    results: &HashMap<String, render::SiteRenderResult>,
+    nodes: &[DocumentNode],
+    document_map: &HashMap<String, &DocumentInfo>,
+    results: &HashMap<String, render::CollectionRenderResult>,
     format: &str,
 ) -> Vec<OrchestratorNode> {
     nodes.iter().map(|node| match node {
-        PageNode::Page { path: source, title: override_title } => {
-            let info = page_map.get(source.as_str());
+        DocumentNode::Document { path: source, title: override_title } => {
+            let info = document_map.get(source.as_str());
             let title = override_title.clone()
                 .or_else(|| results.get(source.as_str()).and_then(|r| r.title.clone()))
                 .or_else(|| info.and_then(|p| p.meta.title.clone()))
@@ -756,12 +756,12 @@ fn build_orchestrator_tree(
             });
             OrchestratorNode { title, path, file, children: vec![] }
         }
-        PageNode::Section { title, pages, .. } => {
+        DocumentNode::Section { title, documents, .. } => {
             OrchestratorNode {
                 title: title.clone(),
                 path: None,
                 file: None,
-                children: build_orchestrator_tree(pages, page_map, results, format),
+                children: build_orchestrator_tree(documents, document_map, results, format),
             }
         }
     }).collect()

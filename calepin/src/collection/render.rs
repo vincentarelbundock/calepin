@@ -5,11 +5,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use anyhow::Result;
 
 use crate::project::{self, ProjectConfig, Target};
-use super::discover::PageInfo;
+use super::discover::DocumentInfo;
 
-/// Result of rendering a single page for the site.
+/// Result of rendering a single document for the collection.
 #[derive(Clone)]
-pub struct SiteRenderResult {
+pub struct CollectionRenderResult {
     pub body: String,
     pub toc: Option<String>,
     pub title: Option<String>,
@@ -18,7 +18,7 @@ pub struct SiteRenderResult {
     pub abstract_text: Option<String>,
 }
 
-/// Render all pages by calling calepin's render_core() directly.
+/// Render all documents by calling calepin's render_core() directly.
 /// Returns a map from source path to rendered result.
 ///
 /// When `apply_page_template` is true, each page's body is wrapped in the
@@ -26,8 +26,8 @@ pub struct SiteRenderResult {
 /// used for orchestrated builds where fragments need to be complete files.
 /// When false (HTML sites), the body is returned raw for wrapping by site
 /// Jinja templates.
-pub fn render_pages(
-    pages: &[PageInfo],
+pub fn render_documents(
+    pages: &[DocumentInfo],
     config: &ProjectConfig,
     base_dir: &Path,
     output_dir: &Path,
@@ -36,7 +36,7 @@ pub fn render_pages(
     target_name: Option<&str>,
     target: Option<&Target>,
     quiet: bool,
-) -> Result<HashMap<String, SiteRenderResult>> {
+) -> Result<HashMap<String, CollectionRenderResult>> {
     if pages.is_empty() {
         return Ok(HashMap::new());
     }
@@ -45,7 +45,7 @@ pub fn render_pages(
     let overrides = build_overrides(config);
 
     if !quiet {
-        eprintln!("Rendering {} pages...", pages.len());
+        eprintln!("Rendering {} documents...", pages.len());
     }
 
     // Resolve defaults, letting target override global settings (e.g., embed-resources)
@@ -62,7 +62,7 @@ pub fn render_pages(
     let done = AtomicUsize::new(0);
 
     // Render all pages in parallel using thread::scope
-    let results: Vec<(String, Result<SiteRenderResult>)> = std::thread::scope(|s| {
+    let results: Vec<(String, Result<CollectionRenderResult>)> = std::thread::scope(|s| {
         let handles: Vec<_> = pages
             .iter()
             .map(|page| {
@@ -80,7 +80,7 @@ pub fn render_pages(
                     crate::paths::set_project_root(Some(base_dir));
                     project::set_active_defaults(defaults);
                     let key = page.source.display().to_string();
-                    let result = render_one_page(page, overrides, base_dir, output_dir, format, apply_page_template);
+                    let result = render_one_document(page, overrides, base_dir, output_dir, format, apply_page_template);
                     let n = done.fetch_add(1, Ordering::Relaxed) + 1;
                     if !quiet {
                         let out = output_dir.join(&page.output);
@@ -94,7 +94,7 @@ pub fn render_pages(
     });
 
     let mut map = HashMap::new();
-    let mut failed: Vec<&PageInfo> = Vec::new();
+    let mut failed: Vec<&DocumentInfo> = Vec::new();
     for (key, result) in &results {
         match result {
             Ok(render_result) => {
@@ -113,14 +113,14 @@ pub fn render_pages(
     // Retry failed pages sequentially (avoids concurrent cairo crashes)
     if !failed.is_empty() {
         if !quiet {
-            eprintln!("Retrying {} failed page(s) sequentially...", failed.len());
+            eprintln!("Retrying {} failed document(s) sequentially...", failed.len());
         }
         for page in &failed {
             crate::paths::set_active_target(target_name.map(|s| s));
             crate::paths::set_project_root(Some(base_dir));
             project::set_active_defaults(defaults.clone());
             let key = page.source.display().to_string();
-            match render_one_page(page, &overrides, base_dir, output_dir, format, apply_page_template) {
+            match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template) {
                 Ok(render_result) => {
                     if !quiet {
                         eprintln!("  [ok] {}", key);
@@ -137,14 +137,14 @@ pub fn render_pages(
     Ok(map)
 }
 
-fn render_one_page(
-    page: &PageInfo,
+fn render_one_document(
+    page: &DocumentInfo,
     overrides: &[String],
     base_dir: &Path,
     output_dir: &Path,
     format: &str,
     apply_page_template: bool,
-) -> Result<SiteRenderResult> {
+) -> Result<CollectionRenderResult> {
     let input = base_dir.join(&page.source);
     let output_path = output_dir.join(&page.output);
 
@@ -189,7 +189,7 @@ fn render_one_page(
         None
     };
 
-    Ok(SiteRenderResult {
+    Ok(CollectionRenderResult {
         body,
         toc,
         title: result.metadata.title.map(|t| crate::render::markdown::render_inline(&t, format)),
@@ -199,21 +199,21 @@ fn render_one_page(
     })
 }
 
-/// Render pages with cross-file cross-reference resolution (HTML only).
+/// Render documents with cross-file cross-reference resolution (HTML only).
 ///
 /// Two-pass pipeline:
 ///   Pass 1: Render all pages in parallel with cross-ref resolution deferred.
 ///   Between: Build a global CrossRefRegistry with chapter-prefixed numbers.
 ///   Pass 2: Resolve cross-refs and renumber display numbers in parallel.
-pub fn render_pages_with_crossref(
-    pages: &[PageInfo],
+pub fn render_documents_with_crossref(
+    pages: &[DocumentInfo],
     config: &ProjectConfig,
     base_dir: &Path,
     output_dir: &Path,
     target_name: Option<&str>,
     target: Option<&Target>,
     quiet: bool,
-) -> Result<HashMap<String, SiteRenderResult>> {
+) -> Result<HashMap<String, CollectionRenderResult>> {
     use crate::filters::crossref::{CrossRefRegistry, resolve_html_global, renumber_display_html};
 
     if pages.is_empty() {
@@ -223,7 +223,7 @@ pub fn render_pages_with_crossref(
     let overrides = build_overrides(config);
 
     if !quiet {
-        eprintln!("Rendering {} pages (cross-ref pass 1)...", pages.len());
+        eprintln!("Rendering {} documents (cross-ref pass 1)...", pages.len());
     }
 
     let mut defaults = project::resolve_defaults(Some(config));
@@ -258,7 +258,7 @@ pub fn render_pages_with_crossref(
                     crate::paths::set_project_root(Some(base_dir));
                     project::set_active_defaults(defaults);
                     let key = page.source.display().to_string();
-                    let result = render_one_page_pass1(page, overrides, base_dir, output_dir, chapter);
+                    let result = render_one_document_pass1(page, overrides, base_dir, output_dir, chapter);
                     let n = done.fetch_add(1, Ordering::Relaxed) + 1;
                     if !quiet {
                         let out = output_dir.join(&page.output);
@@ -323,7 +323,7 @@ pub fn render_pages_with_crossref(
             let body = resolve_html_global(&r.body, registry, &current_url);
             let body = renumber_display_html(&body, registry);
 
-            map.insert(key, SiteRenderResult {
+            map.insert(key, CollectionRenderResult {
                 body,
                 toc: r.toc,
                 title: r.title,
@@ -348,9 +348,9 @@ struct Pass1Result {
     ref_data: Option<crate::filters::crossref::PageRefData>,
 }
 
-/// Render a single page for pass 1: skip cross-ref resolution, collect ref data.
-fn render_one_page_pass1(
-    page: &PageInfo,
+/// Render a single document for pass 1: skip cross-ref resolution, collect ref data.
+fn render_one_document_pass1(
+    page: &DocumentInfo,
     overrides: &[String],
     base_dir: &Path,
     output_dir: &Path,
@@ -407,11 +407,11 @@ fn render_one_page_pass1(
 /// Assign chapter numbers to pages based on their position in [[contents]].
 /// Each non-standalone page gets a sequential chapter number (1-based).
 /// Returns a map from source path (string) to chapter number.
-fn assign_chapter_numbers(_pages: &[PageInfo], config: &ProjectConfig) -> HashMap<String, usize> {
+fn assign_chapter_numbers(_pages: &[DocumentInfo], config: &ProjectConfig) -> HashMap<String, usize> {
     let mut chapter_map = HashMap::new();
     let mut chapter = 0usize;
 
-    // Walk the contents sections in order -- this mirrors collect_page_paths ordering
+    // Walk the contents sections in order -- this mirrors collect_document_paths ordering
     for section in &config.contents {
         if section.standalone {
             continue;

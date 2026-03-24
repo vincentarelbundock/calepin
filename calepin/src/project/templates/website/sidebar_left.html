@@ -1,6 +1,6 @@
 <aside id="sidebar-nav" class="sidebar-left" role="navigation" aria-label="Section navigation">
   <nav>
-    {% for node in site.pages %}
+    {% for node in collection.pages %}
       {% if node.children | length > 0 %}
         <details class="sidebar-section" name="sidebar-nav"{% if var.sidebar_collapse_level >= 1 or node.active %} open{% endif %}>
           <summary class="sidebar-section-title">{{ node.text }}</summary>

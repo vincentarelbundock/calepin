@@ -1,5 +1,5 @@
 ---
-title: Sites
+title: Collections
 ---
 
 When you render a `_calepin.toml` manifest, *Calepin* renders a collection of `.qmd` files into a structured website with navigation, sidebar, search, dark mode, and a consistent layout.
@@ -25,7 +25,7 @@ content = [
 ]
 ```
 
-2. Build the site:
+2. Build the collection:
 
 ```
 calepin render _calepin.toml
@@ -37,12 +37,12 @@ calepin render _calepin.toml
 calepin preview _calepin.toml
 ```
 
-The site is written to `_site/` by default (or the `output` field if specified).
+The collection is written to `_site/` by default (or the `output` field if specified).
 
 
 # Configuration
 
-The `_calepin.toml` file configures your site. You can also name it `calepin.toml`.
+The `_calepin.toml` file configures your collection. You can also name it `calepin.toml`.
 
 ## Output
 
@@ -50,7 +50,7 @@ The `_calepin.toml` file configures your site. You can also name it `calepin.tom
 output = "docs"    # output directory (default: inferred from target)
 ```
 
-## Site metadata
+## Collection metadata
 
 ```toml
 [meta]
@@ -61,7 +61,7 @@ csl = "chicago-author-date"
 highlight = {light = "github", dark = "nord"}
 ```
 
-## Site section
+## Collection section
 
 ```toml
 [site]
@@ -93,11 +93,11 @@ content_standalone = [         # rendered but not in navigation
 ]
 ```
 
-Page titles are extracted from YAML front matter.
+Document titles are extracted from YAML front matter.
 
 ## Variables
 
-The `[var]` section provides site-wide variables accessible in templates and document bodies:
+The `[var]` section provides collection-wide variables accessible in templates and document bodies:
 
 ```toml
 [var]
@@ -131,7 +131,7 @@ extension = "pdf"
 
 # Listings
 
-A page can display a listing of other pages (for blogs, news, etc.):
+A document can display a listing of other documents (for blogs, news, etc.):
 
 ```yaml
 ---
@@ -145,60 +145,60 @@ listing:
 
 | Option | Description |
 |--------|-------------|
-| `contents` | Glob pattern for pages to list |
+| `contents` | Glob pattern for documents to list |
 | `type` | Layout: `default` (cards), `table`, or `grid` |
 | `sort` | Sort order: `"date desc"`, `"title asc"`, etc. |
 
 
-# Customizing site templates
+# Customizing collection templates
 
-Site templates control the HTML structure of every page. To override any template, create files in `templates/website/` at your project root.
+Collection templates control the HTML structure of every document. To override any template, create files in `templates/website/` at your project root.
 
 ## Built-in templates
 
 | Template | Purpose |
 |----------|---------|
 | `base.html` | Root layout: head, scripts, overall structure |
-| `page.html` | Standard page (extends `base.html`) |
-| `listing.html` | Listing page with card/table/grid (extends `base.html`) |
+| `page.html` | Standard document (extends `base.html`) |
+| `listing.html` | Listing document with card/table/grid (extends `base.html`) |
 | `navbar.html` | Top navigation bar |
-| `sidebar_left.html` | Left sidebar with page tree |
+| `sidebar_left.html` | Left sidebar with document tree |
 | `sidebar_right.html` | Right sidebar with table of contents |
 | `search.html` | Search overlay modal |
 
 ## Template variables
 
-Site templates receive two main context objects:
+Collection templates receive two main context objects:
 
-### site
-
-| Variable | Description |
-|----------|-------------|
-| {% raw %}`{{ site.title }}`{% endraw %} | Site title |
-| {% raw %}`{{ site.subtitle }}`{% endraw %} | Site subtitle |
-| {% raw %}`{{ site.url }}`{% endraw %} | Site URL |
-| {% raw %}`{{ site.favicon }}`{% endraw %} | Favicon path |
-| {% raw %}`{{ site.logo }}`{% endraw %} | Logo path |
-| {% raw %}`{{ site.logo_dark }}`{% endraw %} | Dark mode logo path |
-| {% raw %}`{{ site.pages }}`{% endraw %} | Navigation tree (with active page marked) |
-| {% raw %}`{{ site.dark_mode }}`{% endraw %} | Whether dark mode is enabled |
-| {% raw %}`{{ site.math_block }}`{% endraw %} | Math library script tags |
-
-### page
+### collection
 
 | Variable | Description |
 |----------|-------------|
-| {% raw %}`{{ page.title }}`{% endraw %} | Page title |
-| {% raw %}`{{ page.subtitle }}`{% endraw %} | Page subtitle |
-| {% raw %}`{{ page.date }}`{% endraw %} | Page date |
-| {% raw %}`{{ page.body }}`{% endraw %} | Rendered HTML content |
-| {% raw %}`{{ page.toc }}`{% endraw %} | Table of contents HTML |
-| {% raw %}`{{ page.url }}`{% endraw %} | Page URL path |
-| {% raw %}`{{ page.source_url }}`{% endraw %} | Path to `.qmd` source file |
-| {% raw %}`{{ page.listing }}`{% endraw %} | List of listing items (for listing pages) |
-| {% raw %}`{{ page.breadcrumbs }}`{% endraw %} | Breadcrumb trail |
-| {% raw %}`{{ page.prev }}`{% endraw %} | Previous page link (`text`, `href`) |
-| {% raw %}`{{ page.next }}`{% endraw %} | Next page link (`text`, `href`) |
+| {% raw %}`{{ collection.title }}`{% endraw %} | Collection title |
+| {% raw %}`{{ collection.subtitle }}`{% endraw %} | Collection subtitle |
+| {% raw %}`{{ collection.url }}`{% endraw %} | Collection URL |
+| {% raw %}`{{ collection.favicon }}`{% endraw %} | Favicon path |
+| {% raw %}`{{ collection.logo }}`{% endraw %} | Logo path |
+| {% raw %}`{{ collection.logo_dark }}`{% endraw %} | Dark mode logo path |
+| {% raw %}`{{ collection.pages }}`{% endraw %} | Navigation tree (with active document marked) |
+| {% raw %}`{{ collection.dark_mode }}`{% endraw %} | Whether dark mode is enabled |
+| {% raw %}`{{ collection.math_block }}`{% endraw %} | Math library script tags |
+
+### document
+
+| Variable | Description |
+|----------|-------------|
+| {% raw %}`{{ document.title }}`{% endraw %} | Document title |
+| {% raw %}`{{ document.subtitle }}`{% endraw %} | Document subtitle |
+| {% raw %}`{{ document.date }}`{% endraw %} | Document date |
+| {% raw %}`{{ document.body }}`{% endraw %} | Rendered HTML content |
+| {% raw %}`{{ document.toc }}`{% endraw %} | Table of contents HTML |
+| {% raw %}`{{ document.url }}`{% endraw %} | Document URL path |
+| {% raw %}`{{ document.source_url }}`{% endraw %} | Path to `.qmd` source file |
+| {% raw %}`{{ document.listing }}`{% endraw %} | List of listing items (for listing documents) |
+| {% raw %}`{{ document.breadcrumbs }}`{% endraw %} | Breadcrumb trail |
+| {% raw %}`{{ document.prev }}`{% endraw %} | Previous document link (`text`, `href`) |
+| {% raw %}`{{ document.next }}`{% endraw %} | Next document link (`text`, `href`) |
 
 ### Functions
 
@@ -206,24 +206,24 @@ Site templates receive two main context objects:
 |----------|-------------|
 | {% raw %}`{{ icon(name="github") }}`{% endraw %} | Insert an SVG icon by name |
 
-## Example: custom page template
+## Example: custom document template
 
-Create `templates/website/page.html` to override the default page layout:
+Create `templates/website/page.html` to override the default document layout:
 
 ```html
 {% extends "base.html" %}
 {% block content %}
 <article>
-  <h1>{{ page.title }}</h1>
-  {% if page.date %}<time>{{ page.date }}</time>{% endif %}
-  {{ page.body }}
+  <h1>{{ document.title }}</h1>
+  {% if document.date %}<time>{{ document.date }}</time>{% endif %}
+  {{ document.body }}
 </article>
 {% endblock %}
 
 {% block page_nav %}
 <nav class="page-nav">
-  {% if page.prev %}<a href="{{ page.prev.href }}">Previous</a>{% endif %}
-  {% if page.next %}<a href="{{ page.next.href }}">Next</a>{% endif %}
+  {% if document.prev %}<a href="{{ document.prev.href }}">Previous</a>{% endif %}
+  {% if document.next %}<a href="{{ document.next.href }}">Next</a>{% endif %}
 </nav>
 {% endblock %}
 ```
@@ -234,7 +234,7 @@ The base template provides blocks you can override: `head_extra`, `content`, `pa
 # CLI
 
 ```
-calepin render _calepin.toml             # Build site
+calepin render _calepin.toml             # Build collection
 calepin render _calepin.toml -o docs     # Build to docs/
 calepin render _calepin.toml --clean     # Clean output before building
 calepin preview _calepin.toml            # Build and serve locally

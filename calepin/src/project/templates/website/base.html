@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="{% if page.lang %}{{ page.lang }}{% elif site.languages %}{{ site.languages[0].code }}{% else %}en{% endif %}"{% if site.dark_mode %} data-theme="light"{% endif %}>
+<html lang="{% if document.lang %}{{ document.lang }}{% elif collection.languages %}{{ collection.languages[0].code }}{% else %}en{% endif %}"{% if collection.dark_mode %} data-theme="light"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  {% if page.title %}<title>{{ page.title }}{% if site.title %} — {{ site.title }}{% endif %}</title>
-  {% elif site.title %}<title>{{ site.title }}</title>{% endif %}
-  {% if page.abstract %}<meta name="description" content="{{ page.abstract }}">{% endif %}
-  {% if site.favicon %}<link rel="icon" href="/{{ site.favicon }}">{% endif %}
+  {% if document.title %}<title>{{ document.title }}{% if collection.title %} — {{ collection.title }}{% endif %}</title>
+  {% elif collection.title %}<title>{{ collection.title }}</title>{% endif %}
+  {% if document.abstract %}<meta name="description" content="{{ document.abstract }}">{% endif %}
+  {% if collection.favicon %}<link rel="icon" href="/{{ collection.favicon }}">{% endif %}
   <link rel="stylesheet" href="/assets/calepin.css">
-  {{ site.math_block }}
+  {{ collection.math_block }}
   {% block head_extra %}{% endblock %}
 </head>
 <body>

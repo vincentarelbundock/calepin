@@ -45,7 +45,7 @@ pub fn start(
 
 /// Start an HTTP server that serves files from a directory on disk, with
 /// live-reload support via `/__version` endpoint and reload script injection.
-pub fn start_site(
+pub fn start_collection(
     port: u16,
     version: Arc<AtomicU64>,
     serve_dir: PathBuf,

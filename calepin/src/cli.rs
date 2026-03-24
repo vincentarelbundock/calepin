@@ -177,8 +177,8 @@ pub enum InfoAction {
     },
 }
 
-/// Returns true if the input is a site config file (_calepin.toml or .yaml/.yml).
-pub fn is_site_config(path: &std::path::Path) -> bool {
+/// Returns true if the input is a collection config file (_calepin.toml or .yaml/.yml).
+pub fn is_collection_config(path: &std::path::Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     match name {
         "_calepin.toml" => true,

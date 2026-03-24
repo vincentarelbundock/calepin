@@ -1,6 +1,6 @@
-{% if page.breadcrumbs | length > 2 %}
+{% if document.breadcrumbs | length > 2 %}
 <nav class="breadcrumbs" aria-label="Breadcrumbs">
-  {% for crumb in page.breadcrumbs %}
+  {% for crumb in document.breadcrumbs %}
   {% if not loop.last %}
     {% if crumb.href %}<a href="{{ crumb.href }}">{{ crumb.text }}</a>{% else %}<span>{{ crumb.text }}</span>{% endif %}
     <span class="separator">/</span>

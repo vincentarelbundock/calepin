@@ -86,7 +86,7 @@ The engines module owns all code evaluation — block-level, inline-level, the e
 - `types.rs` — Input types: `Block`, `CodeChunk`, `ChunkOptions`, `Metadata`, `FigureAttrs`
 - `plugin_manifest.rs` — Plugin manifest (`plugin.yml`) parsing: `PluginManifest`, `FilterMatch`, `FilterSpec`, etc.
 - `registry.rs` — Plugin registry: `PluginRegistry` loads user + built-in plugins, dispatches filters/shortcodes/postprocessors, resolves templates. `StructuralHandler` trait for built-in structural plugins.
-- `cli.rs` — CLI argument parsing (clap) + `cwarn!` macro + `plugin init`/`plugin list` subcommands
+- `cli.rs` — CLI argument parsing (clap) + `cwarn!` macro + `is_collection_config()` + `plugin init`/`plugin list` subcommands
 - `jinja_engine.rs` — Jinja body processing: `process_body()` replaces shortcodes with Jinja functions, code block protection, custom function implementations (pagebreak, video, brand, kbd, lipsum, placeholder), plugin shortcode bridge
 - `util.rs` — `slugify()`, `escape_html()`, `resolve_path()`, `run_json_process()`
 

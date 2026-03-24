@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::project::ProjectConfig;
 
-/// Metadata extracted from a page's YAML frontmatter.
+/// Metadata extracted from a document's YAML frontmatter.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct PageMeta {
+pub struct DocumentMeta {
     pub title: Option<String>,
     pub subtitle: Option<String>,
     pub date: Option<String>,
@@ -45,27 +45,27 @@ fn default_listing_type() -> String {
     "default".to_string()
 }
 
-/// A discovered page with its source path and extracted metadata.
+/// A discovered document with its source path and extracted metadata.
 #[derive(Debug, Clone)]
-pub struct PageInfo {
-    /// Relative path to the .qmd file (from site root)
+pub struct DocumentInfo {
+    /// Relative path to the .qmd file (from collection root)
     pub source: PathBuf,
-    /// Output path relative to site root (e.g., "guide/intro.html")
+    /// Output path relative to collection root (e.g., "guide/intro.html")
     pub output: PathBuf,
     /// URL path (e.g., "/guide/intro.html")
     pub url: String,
     /// Metadata from frontmatter
-    pub meta: PageMeta,
-    /// Standalone pages are rendered but excluded from navigation.
+    pub meta: DocumentMeta,
+    /// Standalone documents are rendered but excluded from navigation.
     pub standalone: bool,
     /// Language code (from frontmatter `lang:`, or the default language).
     pub lang: Option<String>,
 }
 
-/// Discover all pages referenced in the site config.
-pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<PageInfo>> {
+/// Discover all documents referenced in the collection config.
+pub fn discover_documents(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<DocumentInfo>> {
     let default_lang = config.default_language().map(|s| s.to_string());
-    let page_paths = super::config::collect_page_paths(config, base_dir);
+    let page_paths = super::config::collect_document_paths(config, base_dir);
     let mut pages = Vec::new();
 
     for rel_path in &page_paths {
@@ -73,7 +73,7 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str)
         let abs_path = base_dir.join(&source);
 
         if !abs_path.exists() {
-            eprintln!("Warning: page not found: {}", abs_path.display());
+            eprintln!("Warning: document not found: {}", abs_path.display());
             continue;
         }
 
@@ -86,7 +86,7 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str)
         let output = output_rel.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
-        pages.push(PageInfo {
+        pages.push(DocumentInfo {
             source,
             output,
             url,
@@ -99,8 +99,8 @@ pub fn discover_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str)
     Ok(pages)
 }
 
-/// Discover standalone pages (rendered but not in nav).
-pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<PageInfo>> {
+/// Discover standalone documents (rendered but not in nav).
+pub fn discover_standalone_documents(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<DocumentInfo>> {
     let default_lang = config.default_language().map(|s| s.to_string());
     let paths = super::config::collect_standalone_paths(config, base_dir);
     let mut pages = Vec::new();
@@ -110,7 +110,7 @@ pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output
         let abs_path = base_dir.join(&source);
 
         if !abs_path.exists() {
-            eprintln!("Warning: standalone page not found: {}", abs_path.display());
+            eprintln!("Warning: standalone document not found: {}", abs_path.display());
             continue;
         }
 
@@ -122,7 +122,7 @@ pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output
         let output = source.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
-        pages.push(PageInfo {
+        pages.push(DocumentInfo {
             source,
             output,
             url,
@@ -135,13 +135,13 @@ pub fn discover_standalone_pages(config: &ProjectConfig, base_dir: &Path, output
     Ok(pages)
 }
 
-/// Discover additional pages from listing glob patterns.
-pub fn discover_listing_pages(
+/// Discover additional documents from listing glob patterns.
+pub fn discover_listing_documents(
     listing: &ListingConfig,
     base_dir: &Path,
-    existing: &[PageInfo],
+    existing: &[DocumentInfo],
     output_ext: &str,
-) -> Result<Vec<PageInfo>> {
+) -> Result<Vec<DocumentInfo>> {
     let pattern = base_dir.join(&listing.contents).display().to_string();
     let existing_sources: Vec<_> = existing.iter().map(|p| &p.source).collect();
     let mut pages = Vec::new();
@@ -162,7 +162,7 @@ pub fn discover_listing_pages(
         let output = rel_path.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
-        pages.push(PageInfo {
+        pages.push(DocumentInfo {
             source: rel_path,
             output,
             url,
@@ -174,13 +174,13 @@ pub fn discover_listing_pages(
 
     // Sort listing pages
     if let Some(sort) = &listing.sort {
-        sort_pages(&mut pages, sort);
+        sort_documents(&mut pages, sort);
     }
 
     Ok(pages)
 }
 
-fn sort_pages(pages: &mut Vec<PageInfo>, sort_spec: &str) {
+fn sort_documents(pages: &mut Vec<DocumentInfo>, sort_spec: &str) {
     let parts: Vec<&str> = sort_spec.split_whitespace().collect();
     let field = parts.first().copied().unwrap_or("date");
     let descending = parts.get(1).copied() == Some("desc");
@@ -196,7 +196,7 @@ fn sort_pages(pages: &mut Vec<PageInfo>, sort_spec: &str) {
     });
 }
 
-fn resolve_sort_value(page: &PageInfo, field: &str) -> String {
+fn resolve_sort_value(page: &DocumentInfo, field: &str) -> String {
     match field {
         "date" => page.meta.date.clone().unwrap_or_default(),
         "title" => page.meta.title.clone().unwrap_or_default(),
@@ -205,12 +205,12 @@ fn resolve_sort_value(page: &PageInfo, field: &str) -> String {
 }
 
 /// Extract frontmatter from a .qmd file.
-fn extract_frontmatter(path: &Path) -> Result<PageMeta> {
+fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
     let text = fs::read_to_string(path)?;
     let trimmed = text.trim_start();
 
     if !trimmed.starts_with("---") {
-        return Ok(PageMeta::default());
+        return Ok(DocumentMeta::default());
     }
 
     // Find the closing ---
@@ -224,10 +224,10 @@ fn extract_frontmatter(path: &Path) -> Result<PageMeta> {
             let fm_str = &after_first[..pos];
             let table = crate::value::parse_frontmatter(fm_str).unwrap_or_default();
             let json_val = crate::value::to_json(&crate::value::Value::Table(table));
-            let meta: PageMeta = serde_json::from_value(json_val).unwrap_or_default();
+            let meta: DocumentMeta = serde_json::from_value(json_val).unwrap_or_default();
             Ok(meta)
         }
-        None => Ok(PageMeta::default()),
+        None => Ok(DocumentMeta::default()),
     }
 }
 

@@ -1,8 +1,8 @@
-<a class="navbar-brand" href="{% if site.pages and site.pages[0].href %}{{ site.pages[0].href }}{% else %}/{% endif %}">
-  {% if site.logo %}
-  <img class="logo-light" src="/{{ site.logo }}" alt="{{ site.title | default(value='Logo') }}">
-  {% if site.logo_dark %}
-  <img class="logo-dark" src="/{{ site.logo_dark }}" alt="{{ site.title | default(value='Logo') }}">
+<a class="navbar-brand" href="{% if collection.pages and collection.pages[0].href %}{{ collection.pages[0].href }}{% else %}/{% endif %}">
+  {% if collection.logo %}
+  <img class="logo-light" src="/{{ collection.logo }}" alt="{{ collection.title | default(value='Logo') }}">
+  {% if collection.logo_dark %}
+  <img class="logo-dark" src="/{{ collection.logo_dark }}" alt="{{ collection.title | default(value='Logo') }}">
   {% endif %}
-  {% elif site.title %}{{ site.title }}{% endif %}
+  {% elif collection.title %}{{ collection.title }}{% endif %}
 </a>

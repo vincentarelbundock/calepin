@@ -8,7 +8,7 @@ mod plugin_manifest;
 mod preview;
 mod registry;
 mod render;
-mod site;
+mod collection;
 mod structures;
 mod jinja_engine;
 mod paths;
@@ -69,7 +69,7 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
 
     // Project root is the directory containing the input file.
     // For .qmd files, that's the file's parent directory.
-    // For _calepin.toml, site::build_site handles it separately.
+    // For _calepin.toml, collection::build_collection handles it separately.
     let (project_root, project_config) = {
         let cfg_path = abs_input_dir.join("_calepin.toml");
         if cfg_path.exists() {
@@ -113,7 +113,7 @@ fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectCont
     }
     project::set_active_defaults(defaults);
 
-    // In single-file mode (no _calepin.toml), the project root is the
+    // In document mode (no _calepin.toml), the project root is the
     // input file's parent directory so that all paths resolve relative to it.
     let effective_root = project_root.clone().unwrap_or_else(|| abs_input_dir.clone());
     paths::set_project_root(Some(&effective_root));
@@ -346,10 +346,10 @@ fn handle_render(args: RenderArgs) -> Result<()> {
         overrides.push("highlight-style=none".to_string());
     }
 
-    // Site mode: single .toml config with [site] section, or legacy .yaml manifest
-    if args.input.len() == 1 && cli::is_site_config(&args.input[0]) {
+    // Collection mode: single .toml config with [[contents]], or legacy .yaml manifest
+    if args.input.len() == 1 && cli::is_collection_config(&args.input[0]) {
         let output = args.output.unwrap_or_else(|| PathBuf::from("output"));
-        return site::build_site(Some(args.input[0].as_path()), &output, args.clean, args.quiet, args.target.as_deref());
+        return collection::build_collection(Some(args.input[0].as_path()), &output, args.clean, args.quiet, args.target.as_deref());
     }
 
     // Single file: may use -o as output file path
@@ -565,10 +565,10 @@ fn run_target_post_commands(
 fn handle_preview(args: PreviewArgs) -> Result<()> {
     // Directory: serve it over HTTP
     if args.input.is_dir() {
-        return site::serve(&args.input, args.port);
+        return collection::serve(&args.input, args.port);
     }
     // Project manifest: build, serve with live-reload, and watch for changes
-    if cli::is_site_config(&args.input) {
+    if cli::is_collection_config(&args.input) {
         // For non-HTML targets, do a one-shot build and open the output.
         let is_html = {
             let target_name = args.target.as_deref().unwrap_or("html");
@@ -578,7 +578,7 @@ fn handle_preview(args: PreviewArgs) -> Result<()> {
         };
         if !is_html {
             let output = PathBuf::from("output");
-            site::build_site(Some(args.input.as_path()), &output, true, false, args.target.as_deref())?;
+            collection::build_collection(Some(args.input.as_path()), &output, true, false, args.target.as_deref())?;
             let pdf = output.join("book.pdf");
             if pdf.exists() {
                 eprintln!("Opening {}", pdf.display());
@@ -587,7 +587,7 @@ fn handle_preview(args: PreviewArgs) -> Result<()> {
             return Ok(());
         }
 
-        return preview::run_site(&args.input, &args);
+        return preview::run_collection(&args.input, &args);
     }
     // Resolve target using the same path as render
     let ctx = resolve_context(&args.input, args.target.as_deref())?;
@@ -1098,7 +1098,7 @@ macro_rules! timed {
             output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
         }
     } else {
-        paths::PathContext::for_single_file(input, output_path)
+        paths::PathContext::for_document(input, output_path)
     };
     let input_name = input.file_name()
         .unwrap_or_default()

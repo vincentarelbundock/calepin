@@ -44,13 +44,13 @@ The page template wraps the entire rendered body in a document shell: the HTML s
 To use a custom layout, drop a template file in your project directory with placeholders for the title, stylesheet, and body. This is how you create blog layouts, slide shells, dashboard wrappers, or branded reports without writing code. See [Pages](pages.html) for all page template variables.
 
 
-## 4. Sites
+## 4. Collections
 
-*Calepin* can render a collection of documents into a structured website with navigation, search, and a consistent layout. The site system has its own set of templates for the navbar, sidebar, page shell, and more.
+*Calepin* can render a collection of documents into a structured website with navigation, search, and a consistent layout. The collection system has its own set of templates for the navbar, sidebar, document shell, and more.
 
-To override any site template, create files in `templates/website/` at your project root. See [Sites](sites.html) for configuration and customization.
+To override any collection template, create files in `templates/website/` at your project root. See [Collections](sites.html) for configuration and customization.
 
 
 ## 5. Preamble
 
-The YAML front matter at the top of every document controls metadata, output options, and custom variables. For sites, a project-level configuration file provides defaults shared across all pages. See [YAML](yaml.html) for all supported fields.
+The YAML front matter at the top of every document controls metadata, output options, and custom variables. For collections, a project-level configuration file provides defaults shared across all documents. See [YAML](yaml.html) for all supported fields.

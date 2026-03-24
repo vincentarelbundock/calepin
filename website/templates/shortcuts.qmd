@@ -133,7 +133,7 @@ YouTube and Vimeo URLs are automatically converted to embed URLs.
 
 ## brand
 
-Access branding information from the `brand:` block in front matter (or in `_calepin.yaml` for site-wide branding):
+Access branding information from the `brand:` block in front matter (or in `_calepin.yaml` for collection-wide branding):
 
 ```
 {{ brand(type="color", name="primary") }}

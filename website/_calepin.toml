@@ -35,8 +35,8 @@ pages = [
 ]
 
 [[contents]]
-title = "Websites"
-pages = ["websites/*.qmd"]
+title = "Collections"
+pages = ["collections/*.qmd"]
 
 [[contents]]
 title = "Templates"

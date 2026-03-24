@@ -7,7 +7,7 @@
   {% include "navbar_brand.html" %}
   {% if var.sidebar is defined and not var.sidebar %}
   <ul class="navbar-nav center" id="navbar-menu">
-    {% for node in site.pages %}
+    {% for node in collection.pages %}
     <li><a href="{{ node.href | default(value='#') }}"{% if node.active %} class="active"{% endif %}>{{ node.text }}</a></li>
     {% endfor %}
   </ul>
@@ -15,12 +15,12 @@
 
   <ul class="navbar-nav right">
     {% include "navbar_links.html" %}
-    {% if page.translations %}
-    {% for t in page.translations %}
+    {% if document.translations %}
+    {% for t in document.translations %}
     <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
     {% endfor %}
     {% endif %}
     {% if var.navbar_search %}{% include "search.html" %}{% endif %}
-    {% if site.dark_mode %}{% include "theme_toggle.html" %}{% endif %}
+    {% if collection.dark_mode %}{% include "theme_toggle.html" %}{% endif %}
   </ul>
 </nav>

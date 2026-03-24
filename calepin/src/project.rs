@@ -127,7 +127,7 @@ pub struct ContentSection {
     pub title: Option<String>,
     /// Pages in this section: bare path strings or `{title, page}` tables.
     #[serde(default)]
-    pub pages: Vec<PageEntry>,
+    pub pages: Vec<DocumentEntry>,
     /// If true, pages are rendered but excluded from navigation.
     #[serde(default)]
     pub standalone: bool,
@@ -139,22 +139,22 @@ pub struct ContentSection {
     pub lang: Option<String>,
 }
 
-/// A single page entry: either a bare path string or a `{title, page}` table.
+/// A single document entry: either a bare path string or a `{title, page}` table.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
-pub enum PageEntry {
+pub enum DocumentEntry {
     /// Bare string path (possibly a glob).
     Path(String),
     /// Explicit title override + path.
     Named { title: String, page: String },
 }
 
-impl PageEntry {
+impl DocumentEntry {
     /// The file path, regardless of variant.
     pub fn path(&self) -> &str {
         match self {
-            PageEntry::Path(p) => p,
-            PageEntry::Named { page, .. } => page,
+            DocumentEntry::Path(p) => p,
+            DocumentEntry::Named { page, .. } => page,
         }
     }
 
@@ -162,16 +162,16 @@ impl PageEntry {
     #[allow(dead_code)]
     pub fn title(&self) -> Option<&str> {
         match self {
-            PageEntry::Path(_) => None,
-            PageEntry::Named { title, .. } => Some(title),
+            DocumentEntry::Path(_) => None,
+            DocumentEntry::Named { title, .. } => Some(title),
         }
     }
 }
 
-/// Expand `[[contents]]` into a flat `PageNode` tree, resolving globs.
+/// Expand `[[contents]]` into a flat `DocumentNode` tree, resolving globs.
 /// Standalone sections are excluded (they are not part of navigation).
 /// When `lang` is Some, only sections matching that language (or with no lang) are included.
-pub fn expand_contents(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<PageNode> {
+pub fn expand_contents(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<DocumentNode> {
     expand_contents_for_lang(contents, base_dir, None)
 }
 
@@ -180,7 +180,7 @@ pub fn expand_contents_for_lang(
     contents: &[ContentSection],
     base_dir: &std::path::Path,
     lang: Option<&str>,
-) -> Vec<PageNode> {
+) -> Vec<DocumentNode> {
     let mut result = Vec::new();
     for section in contents {
         if section.standalone {
@@ -195,12 +195,12 @@ pub fn expand_contents_for_lang(
             }
             // Sections without lang are included for all languages
         }
-        let expanded = expand_section_pages(&section.pages, base_dir);
+        let expanded = expand_section_documents(&section.pages, base_dir);
         if let Some(ref title) = section.title {
-            result.push(PageNode::Section {
+            result.push(DocumentNode::Section {
                 title: title.clone(),
                 index: section.index.clone(),
-                pages: expanded,
+                documents: expanded,
             });
         } else {
             // Untitled section: pages appear at the top level
@@ -210,19 +210,19 @@ pub fn expand_contents_for_lang(
     result
 }
 
-/// Expand page entries within a single section, resolving globs.
-fn expand_section_pages(entries: &[PageEntry], base_dir: &std::path::Path) -> Vec<PageNode> {
+/// Expand document entries within a single section, resolving globs.
+fn expand_section_documents(entries: &[DocumentEntry], base_dir: &std::path::Path) -> Vec<DocumentNode> {
     let mut result = Vec::new();
     for entry in entries {
         match entry {
-            PageEntry::Path(pattern) => {
+            DocumentEntry::Path(pattern) => {
                 for path in expand_glob(pattern, base_dir) {
-                    result.push(PageNode::Page { path, title: None });
+                    result.push(DocumentNode::Document { path, title: None });
                 }
             }
-            PageEntry::Named { title, page } => {
+            DocumentEntry::Named { title, page } => {
                 for path in expand_glob(page, base_dir) {
-                    result.push(PageNode::Page { path, title: Some(title.clone()) });
+                    result.push(DocumentNode::Document { path, title: Some(title.clone()) });
                 }
             }
         }
@@ -230,9 +230,9 @@ fn expand_section_pages(entries: &[PageEntry], base_dir: &std::path::Path) -> Ve
     result
 }
 
-/// Collect all page paths from [[contents]], including standalone.
+/// Collect all document paths from [[contents]], including standalone.
 #[allow(dead_code)]
-pub fn collect_all_page_paths(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<String> {
+pub fn collect_all_document_paths(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<String> {
     let mut paths = Vec::new();
     for section in contents {
         if let Some(ref idx) = section.index {
@@ -249,14 +249,14 @@ pub fn collect_all_page_paths(contents: &[ContentSection], base_dir: &std::path:
     paths
 }
 
-/// A node in the expanded page tree.
+/// A node in the expanded document tree.
 #[derive(Debug, Clone)]
-pub enum PageNode {
-    Page { path: String, title: Option<String> },
-    Section { title: String, index: Option<String>, pages: Vec<PageNode> },
+pub enum DocumentNode {
+    Document { path: String, title: Option<String> },
+    Section { title: String, index: Option<String>, documents: Vec<DocumentNode> },
 }
 
-/// Public wrapper for glob expansion, used by site config.
+/// Public wrapper for glob expansion, used by collection config.
 pub fn expand_glob_pub(pattern: &str, base_dir: &std::path::Path) -> Vec<String> {
     expand_glob(pattern, base_dir)
 }

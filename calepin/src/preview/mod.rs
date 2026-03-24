@@ -12,8 +12,8 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use crate::cli::PreviewArgs;
 
-/// Preview a site project: build, serve with live-reload, and watch for changes.
-pub fn run_site(
+/// Preview a collection project: build, serve with live-reload, and watch for changes.
+pub fn run_collection(
     config_path: &Path,
     args: &PreviewArgs,
 ) -> Result<()> {
@@ -38,7 +38,7 @@ pub fn run_site(
 
     // Initial build — pause spinner so per-file progress prints cleanly
     spinner.finish_and_clear();
-    crate::site::build_site(
+    crate::collection::build_collection(
         Some(config_path),
         &std::path::PathBuf::from("output"),
         true,
@@ -48,8 +48,8 @@ pub fn run_site(
     spinner.reset();
     spinner.enable_steady_tick(Duration::from_millis(80));
 
-    // Start site server (serves from disk with live-reload)
-    let (_server, actual_port) = server::start_site(
+    // Start collection server (serves from disk with live-reload)
+    let (_server, actual_port) = server::start_collection(
         args.port,
         Arc::clone(&version),
         output.clone(),
@@ -83,7 +83,7 @@ pub fn run_site(
             .collect();
         spinner.set_message(format!("rebuilding {}...", names.join(", ")));
         let start = std::time::Instant::now();
-        let result = crate::site::rebuild_pages(
+        let result = crate::collection::rebuild_documents(
             Some(config_path.as_path()),
             target.as_deref(),
             changed_paths,

@@ -1,8 +1,8 @@
-{% if page.title or page.subtitle or page.date or page.abstract %}
+{% if document.title or document.subtitle or document.date or document.abstract %}
 <header class="page-header">
-  {% if page.title %}<h1>{{ page.title }}</h1>{% endif %}
-  {% if page.subtitle %}<p class="subtitle">{{ page.subtitle }}</p>{% endif %}
-  {% if page.date %}<p class="date">{{ page.date }}</p>{% endif %}
-  {% if page.abstract %}<div class="abstract">{{ page.abstract }}</div>{% endif %}
+  {% if document.title %}<h1>{{ document.title }}</h1>{% endif %}
+  {% if document.subtitle %}<p class="subtitle">{{ document.subtitle }}</p>{% endif %}
+  {% if document.date %}<p class="date">{{ document.date }}</p>{% endif %}
+  {% if document.abstract %}<div class="abstract">{{ document.abstract }}</div>{% endif %}
 </header>
 {% endif %}

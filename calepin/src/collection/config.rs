@@ -1,6 +1,6 @@
-//! Site configuration: reads from `_calepin.toml` using the project config schema.
+//! Collection configuration: reads from `_calepin.toml` using the project config schema.
 //!
-//! The site builder reads its config from `crate::project::ProjectConfig`.
+//! The collection builder reads its config from `crate::project::ProjectConfig`.
 //! Collection fields (`contents`, `target`, `logo`, etc.) live at the top level.
 
 use std::path::{Path, PathBuf};
@@ -9,7 +9,7 @@ use anyhow::Result;
 
 use crate::project::ProjectConfig;
 
-/// Load the project config, which contains all site configuration.
+/// Load the project config, which contains all collection configuration.
 /// Looks for `_calepin.toml` in `base_dir`.
 pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(ProjectConfig, PathBuf)> {
     if let Some(path) = config_path {
@@ -30,7 +30,7 @@ pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(Proje
 }
 
 /// Collect all .qmd page paths from [[contents]] (excluding standalone), expanding globs.
-pub fn collect_page_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String> {
+pub fn collect_document_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String> {
     let mut paths = Vec::new();
     for section in &config.contents {
         if section.standalone {

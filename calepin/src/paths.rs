@@ -1,7 +1,7 @@
 //! Centralized path resolution, validation, and context.
 //!
 //! All input paths resolve relative to the project root (the directory
-//! containing `_calepin.toml`). For single-file renders without a project
+//! containing `_calepin.toml`). For document renders without a project
 //! config, the project root is the parent directory of the `.qmd` file.
 //! The output directory is where finished files are written; no inputs
 //! resolve from it.
@@ -55,20 +55,20 @@ pub fn get_project_root() -> PathBuf {
 /// Path context carried through the render pipeline.
 ///
 /// All input paths resolve relative to `project_root` (the directory
-/// containing `_calepin.toml`, or the `.qmd` parent in single-file mode).
+/// containing `_calepin.toml`, or the `.qmd` parent in document mode).
 /// The output directory is only for writing; no input files resolve from it.
 #[derive(Debug, Clone)]
 pub struct PathContext {
     /// Project root: directory containing `_calepin.toml`, or `.qmd` parent
-    /// in single-file mode. All input paths resolve from here.
+    /// in document mode. All input paths resolve from here.
     pub project_root: PathBuf,
     /// Where output files are written. No input files resolve from here.
     pub output_dir: PathBuf,
 }
 
 impl PathContext {
-    /// Build a PathContext for a single-file render.
-    pub fn for_single_file(input: &Path, output: &Path) -> Self {
+    /// Build a PathContext for a document render.
+    pub fn for_document(input: &Path, output: &Path) -> Self {
         let project_root = input.parent().unwrap_or(Path::new(".")).to_path_buf();
         let output_dir = output.parent().unwrap_or(Path::new(".")).to_path_buf();
         Self {
