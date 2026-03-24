@@ -1,0 +1,36 @@
+---
+title: Preamble injection test
+---
+
+## Explicit preamble
+
+```{r}
+#| echo: false
+calepin.preamble("\\usepackage{booktabs}")
+calepin.preamble("\\usepackage{longtable}")
+```
+
+## Duplicate (should appear only once)
+
+```{r}
+#| echo: false
+calepin.preamble("\\usepackage{booktabs}")
+```
+
+## Via knit_meta (like tinytable does)
+
+```{r}
+#| echo: false
+knitr::knit_meta_add(list(rmarkdown::latex_dependency("float")))
+knitr::knit_meta_add(list(rmarkdown::latex_dependency("tabularray", extra_lines = "\\UseTblrLibrary{siunitx}")))
+```
+
+## Body content
+
+Hello world. The preamble above should contain:
+
+- `\usepackage{booktabs}` (once, not twice)
+- `\usepackage{longtable}`
+- `\usepackage{float}`
+- `\usepackage{tabularray}`
+- `\UseTblrLibrary{siunitx}`
