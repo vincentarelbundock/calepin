@@ -1,0 +1,17 @@
+<ul class="navbar-nav right">
+  {% for item in collection.navbar.right %}
+  <li>
+    <a href="{{ item.href | default(value='#') }}">
+      {% if item.icon %}{{ icon(name=item.icon) }}{% endif %}
+      {% if item.text %}{{ item.text }}{% endif %}
+    </a>
+  </li>
+  {% endfor %}
+  {% if document.translations %}
+  {% for t in document.translations %}
+  <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
+  {% endfor %}
+  {% endif %}
+  {% include "search.html" %}
+  {% if collection.dark_mode %}{% include "theme_toggle.html" %}{% endif %}
+</ul>

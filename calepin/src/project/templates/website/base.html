@@ -16,7 +16,7 @@
   {% include "navbar.html" %}
 
   <div class="site-container{% if var.sidebar is defined and not var.sidebar %} no-sidebar{% endif %}">
-    {% if var.sidebar is not defined or var.sidebar %}{% include "sidebar_left.html" %}{% endif %}
+    {% if var.sidebar is not defined or var.sidebar %}{% include "sidebar.html" %}{% endif %}
 
     <main id="main-content" class="content-main">
       <article>
@@ -26,7 +26,7 @@
       {% block page_nav %}{% endblock %}
     </main>
 
-    {% include "sidebar_right.html" %}
+    {% include "toc.html" %}
   </div>
 
   {% include "footer.html" %}

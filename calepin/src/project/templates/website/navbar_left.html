@@ -1,0 +1,13 @@
+<ul class="navbar-nav left">
+  {% for item in collection.navbar.left %}
+  <li>
+    <a href="{{ item.href | default(value='/index.html') }}">
+      {% if item.image %}
+      <img class="logo-light" src="/{{ item.image }}" alt="{{ item.text | default(value='Home') }}">
+      {% if item.image_dark %}<img class="logo-dark" src="/{{ item.image_dark }}" alt="{{ item.text | default(value='Home') }}">{% endif %}
+      {% elif item.icon %}{{ icon(name=item.icon) }}
+      {% elif item.text %}{{ item.text }}{% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>

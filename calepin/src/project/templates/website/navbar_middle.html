@@ -1,0 +1,11 @@
+{% if collection.navbar.middle %}
+<ul class="navbar-nav center" id="navbar-menu">
+  {% for item in collection.navbar.middle %}
+  <li>
+    <a href="{{ item.href | default(value='#') }}">
+      {% if item.icon %}{{ icon(name=item.icon) }} {% endif %}{{ item.text }}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

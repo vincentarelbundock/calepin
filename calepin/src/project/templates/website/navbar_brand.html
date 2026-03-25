@@ -1,9 +1,0 @@
-<a class="navbar-brand" href="/index.html">
-  {% if collection.logo and collection.logo.light %}
-  <img class="logo-light" src="/{{ collection.logo.light }}" alt="{{ collection.logo.text | default(value=collection.title) | default(value='Home') }}">
-  {% if collection.logo.dark %}
-  <img class="logo-dark" src="/{{ collection.logo.dark }}" alt="{{ collection.logo.text | default(value=collection.title) | default(value='Home') }}">
-  {% endif %}
-  {% elif collection.logo and collection.logo.text %}{{ collection.logo.text }}
-  {% elif collection.title %}{{ collection.title }}{% endif %}
-</a>
