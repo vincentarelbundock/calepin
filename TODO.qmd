@@ -1,3 +1,10 @@
+## Philosophy
+
+- Content vs. Container vs. Appearance
+    - Content: .qmd files
+    - Container: .toml files
+    - Appearance: templates and themes (css, html, latex, typst)
+
 ## Blog listings
 
 - [ ] User interface
