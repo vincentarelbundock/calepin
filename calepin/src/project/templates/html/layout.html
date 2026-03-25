@@ -1,0 +1,6 @@
+{%- if is_figure and id %}<div class="figure" id="{{id}}">
+{% endif %}
+{{rows}}
+{%- if is_figure and caption %}<p class="caption">{{caption}}</p>
+{% endif %}
+{%- if is_figure and id %}</div>{% endif %}

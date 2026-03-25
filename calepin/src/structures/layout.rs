@@ -80,7 +80,7 @@ pub fn render(
     vars.insert("fig_env".to_string(), fig_env.to_string());
     vars.insert("fig_pos".to_string(), fig_pos);
 
-    let tpl = include_str!("../project/templates/common/layout.jinja");
+    let tpl = crate::render::elements::resolve_builtin_template("layout", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }
 

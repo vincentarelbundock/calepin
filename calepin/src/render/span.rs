@@ -82,7 +82,7 @@ pub fn render(
 
         // Default fallback: use span template
         let tpl = resolve_template("span")
-            .unwrap_or_else(|| include_str!("../project/templates/common/span.jinja").to_string());
+            .unwrap_or_else(|| crate::render::elements::resolve_builtin_template("span", format).unwrap_or("").to_string());
         let output = template_env.render_dynamic("span", &tpl, &vars);
         wrap_output(format, raw_fragments, output)
     })

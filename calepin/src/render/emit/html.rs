@@ -227,7 +227,7 @@ impl FormatEmitter for HtmlEmitter {
         vars.insert("engine".to_string(), "html".to_string());
         vars.insert("footnotes".to_string(), "true".to_string());
         vars.insert("footnote_items".to_string(), footnote_items);
-        let tpl = include_str!("../../project/templates/common/footnotes.jinja");
+        let tpl = include_str!("../../project/templates/html/footnotes.html");
         crate::render::template::apply_template(tpl, &vars)
     }
 

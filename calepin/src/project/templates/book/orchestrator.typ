@@ -1,4 +1,4 @@
-{% include "preamble.jinja" %}
+{% include "preamble.typ" %}
 
 #align(center + horizon)[
   #text(size: 24pt, weight: "bold")[{{meta.title}}]

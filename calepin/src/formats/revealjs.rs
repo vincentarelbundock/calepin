@@ -51,7 +51,7 @@ impl OutputRenderer for RevealJsRenderer {
                         .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
                 vars.insert("math".to_string(),
                     template::render_element("math", "html", &math_vars));
-                // Set base to html so {% include "math.jinja" %} resolves
+                // Set base to html so {% include "math.html" %} resolves
                 vars.insert("base".to_string(), "html".to_string());
             },
         );

@@ -93,7 +93,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     vars.insert("title".to_string(), title.to_string());
     vars.insert("toc_list".to_string(), toc_list);
     vars.insert("depth".to_string(), String::new());
-    let tpl = include_str!("../project/templates/common/toc.jinja");
+    let tpl = include_str!("../project/templates/html/toc.html");
     apply_template(tpl, &vars)
 }
 
@@ -406,7 +406,7 @@ pub fn build_template_vars_with_headings(
             toc_vars.insert("title".to_string(), toc_title.to_string());
             toc_vars.insert("depth".to_string(), toc_depth.to_string());
             toc_vars.insert("toc_list".to_string(), String::new());
-            let tpl = include_str!("../project/templates/common/toc.jinja");
+            let tpl = crate::render::elements::resolve_builtin_template("toc", ext).unwrap_or("");
             apply_template(tpl, &toc_vars)
         };
         vars.insert("toc".to_string(), toc);
@@ -499,11 +499,12 @@ pub fn assemble_page(
 /// Sets up a MiniJinja environment with:
 ///   1. templates/{target}/ (target-specific, from active target)
 ///   2. templates/{base}/ (base-specific)
-///   3. templates/common/ (format-agnostic .jinja)
-///   4. Built-in templates/common/ (embedded in binary)
+///   3. templates/common/ (format-agnostic fallback)
+///   4. Built-in templates/{base}/ (embedded in binary)
+///   5. Built-in templates/common/ (embedded in binary)
 ///
 /// The page template and all included component templates share the same
-/// context, so `{% include "preamble.jinja" %}` in the page template can
+/// context, so `{% include "preamble.html" %}` in the page template can
 /// access all variables (base, title, author, body, etc.).
 pub fn render_page_template(
     page_template: &str,
@@ -539,6 +540,21 @@ pub fn render_page_template(
                     let rel = path.strip_prefix(dir).unwrap_or(&path);
                     let name = rel.display().to_string();
                     templates.entry(name).or_insert(content);
+                }
+            }
+        }
+    }
+
+    // Load built-in base-specific templates as fallback
+    let builtin_base_path = format!("templates/{}", base);
+    if let Some(base_dir) = crate::render::elements::BUILTIN_PROJECT.get_dir(&builtin_base_path) {
+        for entry in base_dir.files() {
+            if let Some(content) = entry.contents_utf8() {
+                let name = entry.path().file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                if !name.is_empty() {
+                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
                 }
             }
         }

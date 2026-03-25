@@ -3,18 +3,18 @@
 \usepackage{graphicx,hyperref}
 \usepackage{titling}
 {{bib_preamble}}
-{% include "preamble.jinja" %}
+{% include "preamble.tex" %}
 {{preamble}}
-{% if title %}{% include "title.jinja" %}
-{% include "subtitle.jinja" %}
-{% include "authors.jinja" %}
-{% include "date.jinja" %}{% else %}\date{}{% endif %}
+{% if title %}{% include "title.tex" %}
+{% include "subtitle.tex" %}
+{% include "authors.tex" %}
+{% include "date.tex" %}{% else %}\date{}{% endif %}
 \begin{document}
 {% if title %}\maketitle
 \ifdefined\affiliationblock\affiliationblock\fi{% endif %}
 
-{% include "abstract.jinja" %}
-{% include "keywords.jinja" %}
+{% include "abstract.tex" %}
+{% include "keywords.tex" %}
 {{toc}}
 
 {{body}}

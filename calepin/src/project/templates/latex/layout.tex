@@ -1,0 +1,10 @@
+{%- if is_figure %}\begin{ {{-fig_env-}} }{{fig_pos}}
+\centering
+{% endif %}
+{{rows}}
+{%- if is_figure and caption %}
+\caption{ {{-caption-}} }
+{% endif %}
+{%- if is_figure and id %}\label{ {{-id-}} }
+{% endif %}
+{%- if is_figure %}\end{ {{-fig_env-}} }{% endif %}

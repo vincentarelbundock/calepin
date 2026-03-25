@@ -1,9 +1,0 @@
-{%- if keywords %}
-{%- if base == "html" %}
-<div class="keywords"><strong>{{label_keywords}}:</strong> {{keywords}}</div>
-{%- elif base == "latex" %}
-\paragraph{ {{-label_keywords-}} } {{keywords}}
-{%- elif base == "typst" %}
-#text(weight: "bold")[{{label_keywords}}:] {{keywords}}
-{%- endif %}
-{%- endif %}

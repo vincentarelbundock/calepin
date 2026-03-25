@@ -368,7 +368,7 @@ impl ElementRenderer {
                     listing_vars.insert("lst_cap".to_string(), cap.clone());
                 }
                 let tpl = self.resolve_element_template("code_listing")
-                    .unwrap_or_else(|| include_str!("../project/templates/common/code_listing.jinja").to_string());
+                    .unwrap_or_else(|| crate::render::elements::resolve_builtin_template("code_listing", &self.ext).unwrap_or("").to_string());
                 return self.template_env.render_dynamic("code_listing", &tpl, &listing_vars);
             }
         }

@@ -77,6 +77,6 @@ pub fn render(
     vars.insert("nav_items".to_string(), nav_items);
     vars.insert("tab_panes".to_string(), tab_panes);
 
-    let tpl = include_str!("../project/templates/common/tabset.jinja");
+    let tpl = crate::render::elements::resolve_builtin_template("tabset", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }

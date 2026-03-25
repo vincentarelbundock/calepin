@@ -1,0 +1,16 @@
+{%- set loc = cap_location | default("bottom") -%}
+{%- if loc == "bottom" %}
+\begin{{_lb}}table{{_rb}}{% if tbl_pos %}[{{tbl_pos}}]{% endif %}
+\centering
+{{children}}
+{% if caption %}\caption{{_lb}}{{caption}}{{_rb}}{% endif %}
+\label{{_lb}}{{id}}{{_rb}}
+\end{{_lb}}table{{_rb}}
+{%- else %}
+\begin{{_lb}}table{{_rb}}{% if tbl_pos %}[{{tbl_pos}}]{% endif %}
+\centering
+{% if caption %}\caption{{_lb}}{{caption}}{{_rb}}{% endif %}
+\label{{_lb}}{{id}}{{_rb}}
+{{children}}
+\end{{_lb}}table{{_rb}}
+{%- endif %}
