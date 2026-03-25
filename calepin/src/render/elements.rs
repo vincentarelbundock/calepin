@@ -264,6 +264,7 @@ impl ElementRenderer {
                     &|name| self.resolve_element_template(name),
                     &self.raw_fragments,
                     &self.theorem_numbers,
+                    &self.template_env,
                 )
             }
             _ => {
@@ -293,7 +294,7 @@ impl ElementRenderer {
                         }
                         let tpl = self.resolve_element_template("code_listing")
                             .unwrap_or_else(|| include_str!("../project/templates/common/code_listing.jinja").to_string());
-                        return crate::render::template::apply_template(&tpl, &listing_vars);
+                        return self.template_env.render_dynamic("code_listing", &tpl, &listing_vars);
                     }
                 }
 
@@ -306,6 +307,7 @@ impl ElementRenderer {
         crate::render::span::render(
             text, &self.ext, &self.registry, &self.raw_fragments,
             &|name| self.resolve_element_template(name),
+            &self.template_env,
         )
     }
 

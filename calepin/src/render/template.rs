@@ -216,6 +216,27 @@ impl TemplateEnv {
         self.sources.lock().unwrap().insert(name.to_string(), source);
     }
 
+    /// Add a template at render time (when only &self is available).
+    /// The loader will find it on the next `get_template` call (MiniJinja
+    /// calls the loader on cache miss, so newly-added sources are picked up).
+    pub fn add_dynamic(&self, name: &str, source: String) {
+        self.sources.lock().unwrap().insert(name.to_string(), source);
+    }
+
+    /// Render a template by name, loading it dynamically if not already present.
+    /// Falls back to `apply_template` for one-off templates not in the env.
+    pub fn render_dynamic(&self, name: &str, template_source: &str, vars: &HashMap<String, String>) -> String {
+        // Add the template if not already loaded
+        {
+            let sources = self.sources.lock().unwrap();
+            if !sources.contains_key(name) {
+                drop(sources);
+                self.add_dynamic(name, template_source.to_string());
+            }
+        }
+        self.render(name, vars)
+    }
+
     /// Render a pre-compiled template by name. Returns empty string if
     /// the template was never added.
     pub fn render(&self, name: &str, vars: &HashMap<String, String>) -> String {

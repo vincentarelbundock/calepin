@@ -57,10 +57,13 @@ pub struct CodeChunk {
     pub pipe_comments: Vec<String>,
 }
 
-/// Chunk options stored as a string-keyed map with typed access
+/// Chunk options stored as a string-keyed map with typed access.
+/// Keys in `defaults_keys` came from front matter / TOML defaults (not chunk-level `#|`).
 #[derive(Debug, Clone, Default)]
 pub struct ChunkOptions {
     pub inner: HashMap<String, OptionValue>,
+    /// Keys that were merged from document-level defaults (not set per-chunk).
+    pub defaults_keys: std::collections::HashSet<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -159,17 +162,21 @@ impl ChunkOptions {
     }
 
     /// Graphics device width in inches.
-    /// When `out-width` is set but `fig-width` is not, auto-scales to keep
-    /// text size consistent: `default_fig_width * (out_width / default_out_width)`.
+    /// When `out-width` is set but `fig-width` is not set per-chunk, auto-scales
+    /// to keep text size consistent: `default_fig_width * (out_width / default_out_width)`.
+    /// Document-level defaults (from TOML/front matter) don't suppress auto-scaling.
     pub fn fig_width(&self) -> f64 {
-        if self.get_opt_string("fig.width").is_some() {
+        let fig_width_set_per_chunk = self.get_opt_string("fig.width").is_some()
+            && !self.defaults_keys.contains("fig.width");
+        if fig_width_set_per_chunk {
             return self.get_number("fig.width", Self::default_fig_width());
         }
-        // Auto-scale from out-width if set
+        // Auto-scale from out-width if set (per-chunk out-width takes priority)
         if let Some(frac) = self.out_width_fraction() {
-            return Self::default_fig_width() * (frac / Self::default_out_width_frac());
+            let base = self.get_number("fig.width", Self::default_fig_width());
+            return base * (frac / Self::default_out_width_frac());
         }
-        Self::default_fig_width()
+        self.get_number("fig.width", Self::default_fig_width())
     }
 
     /// Graphics device height in inches.

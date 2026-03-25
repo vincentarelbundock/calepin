@@ -24,6 +24,7 @@ pub fn render(
     resolve_template: &dyn Fn(&str) -> Option<String>,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
     theorem_numbers: &std::cell::RefCell<HashMap<String, String>>,
+    template_env: &crate::render::template::TemplateEnv,
 ) -> String {
     let matching = registry.matching_filters(classes, attrs, id.as_deref(), format, "div");
 
@@ -127,20 +128,21 @@ pub fn render(
     }
 
     // Template lookup: explicit override → class-based → fallback
-    let tpl = vars.get("template")
-        .and_then(|name| resolve_template(name))
-        .or_else(|| classes.iter().find_map(|cls| resolve_template(cls)))
-        .or_else(|| resolve_template("div"));
+    let (tpl_name, tpl_source) = vars.get("template")
+        .and_then(|name| resolve_template(name).map(|t| (name.clone(), t)))
+        .or_else(|| classes.iter().find_map(|cls| resolve_template(cls).map(|t| (cls.clone(), t))))
+        .or_else(|| resolve_template("div").map(|t| ("div".to_string(), t)))
+        .unzip();
 
-    let tpl = match tpl {
-        Some(t) => t,
-        None => {
+    let (tpl_name, tpl_source) = match (tpl_name, tpl_source) {
+        (Some(n), Some(s)) => (n, s),
+        _ => {
             cwarn!("no template found for classes [{}]", classes.join(", "));
             return vars.remove("children").unwrap_or_default();
         }
     };
 
-    crate::render::template::apply_template(&tpl, vars)
+    template_env.render_dynamic(&tpl_name, &tpl_source, vars)
 }
 
 // ---------------------------------------------------------------------------

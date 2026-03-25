@@ -87,14 +87,23 @@ pub fn evaluate(
                     let opt_key = key.replace('-', ".");
                     let is_chunk_opt = CHUNK_OPT_PREFIXES.iter().any(|p| opt_key.starts_with(p));
                     if is_chunk_opt && !merged_chunk.options.inner.contains_key(&opt_key) {
-                        if let Some(s) = val.as_str() {
-                            merged_chunk.options.inner.insert(opt_key, OptionValue::String(s.to_string()));
+                        let inserted = if let Some(s) = val.as_str() {
+                            merged_chunk.options.inner.insert(opt_key.clone(), OptionValue::String(s.to_string()));
+                            true
                         } else if let Some(b) = val.as_bool() {
-                            merged_chunk.options.inner.insert(opt_key, OptionValue::Bool(b));
+                            merged_chunk.options.inner.insert(opt_key.clone(), OptionValue::Bool(b));
+                            true
                         } else if let Some(n) = val.as_floating_point() {
-                            merged_chunk.options.inner.insert(opt_key, OptionValue::String(n.to_string()));
+                            merged_chunk.options.inner.insert(opt_key.clone(), OptionValue::String(n.to_string()));
+                            true
                         } else if let Some(n) = val.as_integer() {
-                            merged_chunk.options.inner.insert(opt_key, OptionValue::String(n.to_string()));
+                            merged_chunk.options.inner.insert(opt_key.clone(), OptionValue::String(n.to_string()));
+                            true
+                        } else {
+                            false
+                        };
+                        if inserted {
+                            merged_chunk.options.defaults_keys.insert(opt_key);
                         }
                     }
                 }

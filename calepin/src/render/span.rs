@@ -19,6 +19,7 @@ pub fn render(
     registry: &PluginRegistry,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
     resolve_template: &dyn Fn(&str) -> Option<String>,
+    template_env: &crate::render::template::TemplateEnv,
 ) -> String {
     raw_fragments.borrow_mut().clear();
 
@@ -87,7 +88,7 @@ pub fn render(
         // Template lookup
         if !first_class.is_empty() {
             if let Some(tpl) = resolve_template(first_class) {
-                let rendered = crate::render::template::apply_template(&tpl, &vars);
+                let rendered = template_env.render_dynamic(first_class, &tpl, &vars);
                 return wrap_output(format, raw_fragments, rendered);
             }
         }
@@ -95,7 +96,7 @@ pub fn render(
         // Default fallback: use span template
         let tpl = resolve_template("span")
             .unwrap_or_else(|| include_str!("../project/templates/common/span.jinja").to_string());
-        let output = crate::render::template::apply_template(&tpl, &vars);
+        let output = template_env.render_dynamic("span", &tpl, &vars);
         wrap_output(format, raw_fragments, output)
     })
     .to_string()
