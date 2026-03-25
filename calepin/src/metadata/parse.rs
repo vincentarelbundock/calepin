@@ -132,7 +132,6 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             }
 
             // -- Defaults sections (populate meta.defaults) --
-            "format" => meta.defaults.format = v.as_str().map(String::from),
             "dpi" => meta.defaults.dpi = v.as_floating_point(),
             "timeout" => meta.defaults.timeout = v.as_integer().map(|n| n as u64),
             "math" => meta.defaults.math = v.as_str().map(String::from),
@@ -157,45 +156,6 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "latex" => meta.defaults.latex = deserialize_section(v),
             "typst" => meta.defaults.typst = deserialize_section(v),
             "revealjs" => meta.defaults.revealjs = deserialize_section(v),
-
-            // -- Legacy grouped sections (flatten into defaults) --
-            "shortcodes" => {
-                if let Some(t) = v.as_table() {
-                    if let Some(sv) = table_get(t, "video") { meta.defaults.video = deserialize_section(sv); }
-                    if let Some(sv) = table_get(t, "placeholder") { meta.defaults.placeholder = deserialize_section(sv); }
-                    if let Some(sv) = table_get(t, "lipsum") { meta.defaults.lipsum = deserialize_section(sv); }
-                }
-            }
-            "formats" => {
-                if let Some(t) = v.as_table() {
-                    if let Some(sv) = table_get(t, "latex") { meta.defaults.latex = deserialize_section(sv); }
-                    if let Some(sv) = table_get(t, "typst") { meta.defaults.typst = deserialize_section(sv); }
-                    if let Some(sv) = table_get(t, "revealjs") { meta.defaults.revealjs = deserialize_section(sv); }
-                }
-            }
-
-            // -- Legacy [identity] section (flatten into top-level) --
-            "identity" => {
-                if let Some(t) = v.as_table() {
-                    if meta.title.is_none() { meta.title = table_str(t, "title"); }
-                    if meta.subtitle.is_none() { meta.subtitle = table_str(t, "subtitle"); }
-                    if meta.url.is_none() { meta.url = table_str(t, "url"); }
-                    if meta.favicon.is_none() { meta.favicon = table_str(t, "favicon"); }
-                    if meta.logo.is_none() { meta.logo = table_str(t, "logo"); }
-                    if meta.logo_dark.is_none() {
-                        meta.logo_dark = table_str(t, "logo_dark")
-                            .or_else(|| table_str(t, "logo-dark"));
-                    }
-                    if meta.orchestrator.is_none() { meta.orchestrator = table_str(t, "orchestrator"); }
-                    // author from identity (simple string or array)
-                    if meta.author.is_none() {
-                        if let Some(av) = table_get(t, "author") {
-                            let top_affs = Vec::new();
-                            parse_authors(av, &mut meta, &top_affs);
-                        }
-                    }
-                }
-            }
 
             // -- Collection structure (deserialized via serde_json) --
             "targets" => {
@@ -222,7 +182,7 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
                     meta.post = p;
                 }
             }
-            "static" | "static_dirs" => {
+            "static" => {
                 meta.static_dirs = value_string_list(v);
             }
             "var" => {

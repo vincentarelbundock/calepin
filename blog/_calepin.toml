@@ -18,7 +18,6 @@ bibliography = [
   "files/arel-bundock.bib",
 ]
 
-[identity]
 title = "Vincent Arel-Bundock"
 url = "http://arelbundock.com"
 

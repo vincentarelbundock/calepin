@@ -1,8 +1,6 @@
 output = "output"
 target = "website"
 csl = "chicago-author-date"
-
-[identity]
 title = "Calepin"
 subtitle = "A notebook and website generator written in Rust"
 url = "https://vincentarelbundock.github.io/calepin"

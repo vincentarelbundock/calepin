@@ -369,27 +369,6 @@ pages = ["index.qmd", "404.qmd"]
     }
 
     #[test]
-    fn test_identity_parsing() {
-        // Legacy [identity] section should flatten into top-level fields
-        let meta = parse_toml(r#"
-[identity]
-title = "My Site"
-subtitle = "A test site"
-author = "Test Author"
-url = "https://example.com"
-favicon = "icon.svg"
-logo = "logo.svg"
-logo-dark = "logo-dark.svg"
-orchestrator = "master.html"
-"#);
-        assert_eq!(meta.title.as_deref(), Some("My Site"));
-        assert_eq!(meta.subtitle.as_deref(), Some("A test site"));
-        assert_eq!(meta.url.as_deref(), Some("https://example.com"));
-        assert_eq!(meta.logo_dark.as_deref(), Some("logo-dark.svg"));
-        assert_eq!(meta.orchestrator.as_deref(), Some("master.html"));
-    }
-
-    #[test]
     fn test_sections_parsing() {
         let meta = parse_toml(r#"
 format = "html"
@@ -456,19 +435,4 @@ abstract_title = "Summary"
         assert_eq!(meta.csl.as_deref(), Some("apa"));
     }
 
-    #[test]
-    fn test_legacy_shortcodes_formats() {
-        // Legacy [shortcodes.*] and [formats.*] should still work
-        let meta = parse_toml(r#"
-csl = "apa"
-
-[shortcodes.video]
-width = "50%"
-
-[formats.latex]
-fontsize = "12pt"
-"#);
-        assert_eq!(meta.defaults.video.as_ref().and_then(|v| v.width.as_deref()), Some("50%"));
-        assert_eq!(meta.defaults.latex.as_ref().and_then(|l| l.fontsize.as_deref()), Some("12pt"));
-    }
 }
