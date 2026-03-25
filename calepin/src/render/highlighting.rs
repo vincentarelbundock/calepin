@@ -87,6 +87,7 @@ pub enum HighlightConfig {
 /// Strategy for scoping light/dark CSS.
 pub enum ColorScope {
     /// Use `@media (prefers-color-scheme: ...)` — for standalone HTML.
+    #[allow(dead_code)]
     MediaQuery,
     /// Use `[data-theme='light']` / `[data-theme='dark']` — for Starlight/Astro.
     DataTheme,

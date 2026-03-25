@@ -15,6 +15,7 @@ use crate::value::{self, Value, value_string_list};
 // ---------------------------------------------------------------------------
 
 /// Parsed plugin manifest.
+#[allow(dead_code)]
 pub struct PluginManifest {
     pub name: String,
     pub version: Option<String>,
@@ -26,6 +27,7 @@ pub struct PluginManifest {
 
 /// All capabilities a plugin can provide (all optional).
 #[derive(Default)]
+#[allow(dead_code)]
 pub struct PluginProvides {
     /// Multiple filters, each with its own match rules and executable.
     pub filters: Vec<FilterSpec>,
@@ -36,6 +38,7 @@ pub struct PluginProvides {
 }
 
 /// Filter specification: executable path, match rules, contexts.
+#[allow(dead_code)]
 pub struct FilterSpec {
     /// Path to executable, relative to plugin dir. None for built-in plugins.
     pub run: Option<PathBuf>,
@@ -65,12 +68,14 @@ pub struct ElementsSpec {
 }
 
 /// Page template directory specification.
+#[allow(dead_code)]
 pub struct TemplatesSpec {
     /// Directory containing `calepin.{format}` and `calepin.css`, relative to plugin dir.
     pub dir: PathBuf,
 }
 
 /// Custom format specification.
+#[allow(dead_code)]
 pub struct FormatSpec {
     pub name: String,
     pub base: String,

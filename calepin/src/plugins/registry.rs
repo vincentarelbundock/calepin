@@ -164,6 +164,7 @@ impl PluginRegistry {
 
     /// Resolve a page template by checking plugin template dirs (in order),
     /// then falling back to the three-layer template resolution.
+    #[allow(dead_code)]
     pub fn resolve_page_template(&self, filename: &str) -> Option<String> {
         // Check plugin-provided template dirs
         for plugin in &self.plugins {
@@ -192,6 +193,7 @@ impl PluginRegistry {
     }
 
     /// Resolve a CSL file from plugins.
+    #[allow(dead_code)]
     pub fn resolve_csl(&self) -> Option<PathBuf> {
         for plugin in &self.plugins {
             if let Some(ref csl_file) = plugin.manifest.provides.csl {
@@ -209,6 +211,7 @@ impl PluginRegistry {
     // -----------------------------------------------------------------------
 
     /// Find a plugin that provides a custom format with the given name.
+    #[allow(dead_code)]
     pub fn resolve_format(&self, name: &str) -> Option<&FormatSpec> {
         self.plugins.iter().find_map(|p| {
             p.manifest.provides.format.as_ref()
@@ -220,6 +223,7 @@ impl PluginRegistry {
     // Accessors
     // -----------------------------------------------------------------------
 
+    #[allow(dead_code)]
     pub fn plugins(&self) -> &[LoadedPlugin] {
         &self.plugins
     }

@@ -70,6 +70,7 @@ impl DocumentEntry {
     }
 
     /// The explicit title override, if any.
+    #[allow(dead_code)]
     pub fn title(&self) -> Option<&str> {
         match self {
             DocumentEntry::Path(_) => None,

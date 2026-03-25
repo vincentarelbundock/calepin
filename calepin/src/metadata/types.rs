@@ -10,6 +10,7 @@ use crate::value::{self, Value as MetaValue};
 
 /// A parsed author name, split into components.
 #[derive(Debug, Clone, Default)]
+#[allow(dead_code)]
 pub struct AuthorName {
     pub literal: String,
     pub given: Option<String>,

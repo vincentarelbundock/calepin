@@ -72,7 +72,7 @@ impl EnginePool {
     }
 
     /// Borrow as an EngineContext for threading through evaluate.
-    pub fn context(&mut self) -> EngineContext {
+    pub fn context(&mut self) -> EngineContext<'_> {
         EngineContext {
             r: self.r.as_mut(),
             python: self.python.as_mut(),
@@ -93,7 +93,7 @@ pub struct EvalResult {
 pub fn evaluate_document(
     input: &Path,
     blocks: &[Block],
-    body: &str,
+    _body: &str,
     output_ext: &str,
     metadata: &Metadata,
     registry: &crate::registry::PluginRegistry,

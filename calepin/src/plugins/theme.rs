@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 /// Parsed theme manifest (`theme.toml`).
+#[allow(dead_code)]
 pub struct ThemeManifest {
     /// Theme name. Must match directory name.
     pub name: String,

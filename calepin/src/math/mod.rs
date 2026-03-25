@@ -29,6 +29,7 @@ pub fn latex_to_typst(input: &str) -> String {
 ///
 /// - `$content$` (inline) becomes `$typst_content$`
 /// - `$$content$$` (display) becomes `$ typst_content $`
+#[allow(dead_code)]
 pub fn convert_math_expression(expr: &str) -> String {
     if expr.starts_with("$$") && expr.ends_with("$$") && expr.len() > 4 {
         let inner = &expr[2..expr.len() - 2];

@@ -352,7 +352,6 @@ mod tests {
         use crate::render::elements::ElementRenderer;
         use crate::types::Element;
         use crate::render::highlighting::HighlightConfig;
-        use crate::formats::OutputRenderer;
 
         let elements = vec![
             Element::Text { content: "See note[^abc].".to_string() },

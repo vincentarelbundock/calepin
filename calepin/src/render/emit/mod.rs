@@ -61,6 +61,7 @@ pub struct TocEntry {
     /// Plain text content (no formatting markup).
     pub text: String,
     /// Section number string (e.g. "1.2.3"), if numbering is enabled.
+    #[allow(dead_code)]
     pub number: Option<String>,
     pub classes: Vec<String>,
 }
