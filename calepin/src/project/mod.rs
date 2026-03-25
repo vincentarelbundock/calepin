@@ -52,7 +52,7 @@ pub struct ProjectConfig {
     pub favicon: Option<String>,
     #[serde(default)]
     pub logo: Option<String>,
-    #[serde(default, rename = "logo-dark")]
+    #[serde(default, alias = "logo-dark")]
     pub logo_dark: Option<String>,
     /// Path to the master template that assembles rendered page fragments.
     #[serde(default)]
@@ -83,7 +83,7 @@ pub struct ProjectConfig {
     pub post: Vec<PostCommand>,
 
     /// Enable global cross-reference resolution across pages.
-    #[serde(default, rename = "global-crossref")]
+    #[serde(default, alias = "global-crossref")]
     pub global_crossref: bool,
 
     /// Extra directories to copy into the output directory as-is.

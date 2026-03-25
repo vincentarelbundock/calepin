@@ -12,7 +12,7 @@
 {{ document.body | safe }}
 
 {% if document.listing %}
-{% set listing_type = document.listing_type | default(value="default") %}
+{% set listing_type = document.listing_type | default("default") %}
 
 {% if listing_type == "table" %}
 <table class="listing-table">
@@ -26,9 +26,9 @@
   <tbody>
     {% for item in document.listing %}
     <tr>
-      <td><a href="{{ item.url }}">{{ item.title | default(value="Untitled") | safe }}</a></td>
-      <td>{{ item.date | default(value="") }}</td>
-      <td>{{ item.description | default(value="") }}</td>
+      <td><a href="{{ item.url }}">{{ item.title | default("Untitled") | safe }}</a></td>
+      <td>{{ item.date | default("") }}</td>
+      <td>{{ item.description | default("") }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -40,7 +40,7 @@
   <a href="{{ item.url }}" class="listing-item">
     {% if item.image %}<img class="listing-item-image" src="{{ item.image }}" alt="">{% endif %}
     <div class="listing-item-content">
-      <h3>{{ item.title | default(value="Untitled") | safe }}</h3>
+      <h3>{{ item.title | default("Untitled") | safe }}</h3>
       {% if item.date %}<div class="date">{{ item.date }}</div>{% endif %}
       {% if item.description %}<div class="description">{{ item.description }}</div>{% endif %}
     </div>
@@ -53,7 +53,7 @@
   {% for item in document.listing %}
   <a href="{{ item.url }}" class="listing-item">
     <div class="listing-item-content">
-      <h3>{{ item.title | default(value="Untitled") | safe }}</h3>
+      <h3>{{ item.title | default("Untitled") | safe }}</h3>
       {% if item.date %}<div class="date">{{ item.date }}</div>{% endif %}
       {% if item.description %}<div class="description">{{ item.description }}</div>{% endif %}
     </div>

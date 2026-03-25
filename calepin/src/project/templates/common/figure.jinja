@@ -1,4 +1,4 @@
-{%- set loc = cap_location | default(value="bottom") %}
+{%- set loc = cap_location | default("bottom") %}
 {%- if base == "html" %}
 <figure{% if label %} id="{{label}}"{% endif %}{% if align_style %} style="{{align_style}}"{% endif %}>
 {%- if loc == "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
@@ -8,23 +8,23 @@
 {%- if loc != "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
 </figure>
 {%- elif base == "latex" %}
-\begin{ {{-fig_env | default(value="figure")-}} }{{fig_pos}}
+\begin{ {{-fig_env | default("figure")-}} }{{fig_pos}}
 {{align_style}}
 {%- if loc == "top" and caption %}
 \caption{{short_caption}}{ {{-caption-}} }
 {%- endif %}
 {%- if link %}\href{ {{-link-}} }{ {%- endif %}
-\includegraphics[{{width_attr | default(value="width=0.70\\textwidth")}}]{ {{-src-}} }
+\includegraphics[{{width_attr | default("width=0.70\\textwidth")-}} ]{ {{-src-}} }
 {%- if link %}}{% endif %}
 {%- if loc != "top" and caption %}
 \caption{{short_caption}}{ {{-caption-}} }
 {%- endif %}
 {%- if label %}\label{ {{-label-}} }{%- endif %}
-\end{ {{-fig_env | default(value="figure")-}} }
+\end{ {{-fig_env | default("figure")-}} }
 {%- elif base == "typst" %}
 #figure(
 {%- if link %}#link("{{link}}")[{%- endif %}
-  image("{{src}}", width: {{width_attr | default(value="70%")}}{% if height_attr %}, height: {{height_attr}}{% endif %})
+  image("{{src}}", width: {{width_attr | default("70%")}}{% if height_attr %}, height: {{height_attr}}{% endif %})
 {%- if link %}]{%- endif %}
 {%- if caption %}, caption: [{{caption}}]{%- endif %}
 ){% if label %} <{{label}}>{% endif %}

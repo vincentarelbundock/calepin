@@ -13,7 +13,7 @@ use super::HighlightDefaults;
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Defaults {
     pub format: Option<String>,
-    #[serde(rename = "preview-port")]
+    #[serde(alias = "preview-port")]
     pub preview_port: Option<u16>,
     pub csl: Option<String>,
     pub dpi: Option<f64>,
@@ -28,16 +28,16 @@ pub struct Defaults {
     pub placeholder: Option<PlaceholderDefaults>,
     pub lipsum: Option<LipsumDefaults>,
     pub layout: Option<LayoutDefaults>,
-    #[serde(rename = "embed-resources")]
+    #[serde(alias = "embed-resources")]
     pub embed_resources: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct FigureDefaults {
     pub width: Option<f64>,
-    #[serde(rename = "out-width")]
+    #[serde(alias = "out-width")]
     pub out_width: Option<f64>,
-    #[serde(rename = "aspect-ratio")]
+    #[serde(alias = "aspect-ratio")]
     pub aspect_ratio: Option<f64>,
     pub device: Option<String>,
     pub alignment: Option<String>,

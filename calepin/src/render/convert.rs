@@ -103,7 +103,7 @@ impl ImageAttrs {
             match key {
                 "width" => attrs.width = Some(value),
                 "height" => attrs.height = Some(value),
-                "fig-align" => attrs.fig_align = Some(value),
+                "fig-align" | "fig_align" => attrs.fig_align = Some(value),
                 _ => attrs.extra.push((key.to_string(), value)),
             }
         }

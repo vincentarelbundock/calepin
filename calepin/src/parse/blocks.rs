@@ -468,7 +468,7 @@ pub fn parse_attributes(attrs: &str) -> (Vec<String>, Option<String>, HashMap<St
                 .trim_matches('"')
                 .trim_matches('\'');
             if !key.is_empty() {
-                kv.insert(key.to_string(), val.to_string());
+                kv.insert(crate::util::normalize_key(key), val.to_string());
             }
         }
     }

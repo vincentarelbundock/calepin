@@ -3,7 +3,7 @@ use crate::types::{ChunkOptions, OptionValue};
 /// Parse the chunk header to extract a label and any inline options.
 /// Accepts `{r}`, `{r, label}`, and `{r, label, key=value, ...}`.
 /// Key=value options in the header are converted to pipe-equivalent options
-/// (dots in keys become dashes, values are normalized).
+/// (keys are normalized to underscored lowercase, values are normalized).
 ///
 /// Returns `(label_or_none, converted_options)`.
 pub fn parse_header_label(s: &str) -> (Option<String>, ChunkOptions) {
@@ -29,7 +29,7 @@ pub fn parse_header_label(s: &str) -> (Option<String>, ChunkOptions) {
         if part.contains('=') {
             // Convert key=value to pipe-style "key: value"
             if let Some((key, value)) = part.split_once('=') {
-                let key = key.trim().replace('.', "-");
+                let key = crate::util::normalize_key(key.trim());
                 let value = value.trim();
                 let value = value.trim_matches('"').trim_matches('\'');
                 header_opts.push(format!("{}: {}", key, value));
@@ -50,8 +50,7 @@ pub fn parse_header_label(s: &str) -> (Option<String>, ChunkOptions) {
 }
 
 /// Parse pipe comment options (`#|` lines) in YAML format: `#| key: value`.
-/// Dashes in keys are normalized to dots internally (e.g., `fig-width` → `fig.width`).
-/// Dots in option names are not accepted — use dashes instead.
+/// Keys are normalized to underscored lowercase internally (e.g., `fig-width` → `fig_width`).
 /// The `label` key is rejected here — labels belong in the chunk header.
 pub fn parse_pipe_options(lines: &[&str]) -> ChunkOptions {
     let mut opts = ChunkOptions::default();
@@ -61,10 +60,10 @@ pub fn parse_pipe_options(lines: &[&str]) -> ChunkOptions {
             let raw_key = key.trim();
             let value = value.trim();
             if raw_key.contains('.') {
-                let dashed = raw_key.replace('.', "-");
-                cwarn!("use dashes in option names: #| {}: {}", dashed, value);
+                let underscored = raw_key.replace('.', "-");
+                cwarn!("use underscores or dashes in option names: #| {}: {}", underscored, value);
             }
-            let key = raw_key.replace('-', ".");
+            let key = crate::util::normalize_key(raw_key);
             if key == "label" {
                 cwarn!(
                     "Warning: 'label' cannot be set with #| pipe syntax. \
@@ -177,7 +176,7 @@ mod tests {
         let (label, opts) = parse_header_label(", echo=FALSE, fig.width=8");
         assert!(label.is_none());
         assert!(!opts.echo());
-        assert!(opts.inner.contains_key("fig.width"));
+        assert!(opts.inner.contains_key("fig_width"));
     }
 
     #[test]

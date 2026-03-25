@@ -85,7 +85,7 @@ impl CacheState {
 /// cache lookup in `evaluate_block`, so changing them should not invalidate.
 const DISPLAY_ONLY_OPTIONS: &[&str] = &[
     "echo", "include", "warning", "message", "comment", "results",
-    "fig.cap", "fig.alt", "fig.cap.location", "tbl.cap", "cache",
+    "fig_cap", "fig_alt", "fig_cap_location", "tbl_cap", "cache",
 ];
 
 /// Compute the cache key hash for a chunk.

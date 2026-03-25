@@ -498,8 +498,8 @@ fn register_builtins(plugins: &mut Vec<LoadedPlugin>) {
         "Layout grid rendering (ncol/nrow/custom)",
         FilterMatch {
             attrs: vec![
-                "layout-ncol".to_string(),
-                "layout-nrow".to_string(),
+                "layout_ncol".to_string(),
+                "layout_nrow".to_string(),
                 "layout".to_string(),
             ],
             ..Default::default()

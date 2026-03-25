@@ -16,12 +16,12 @@ pub fn render(
 ) -> String {
     let defs = crate::project::get_defaults();
     let default_valign = defs.layout.as_ref().and_then(|l| l.valign.clone()).unwrap_or_else(|| "top".to_string());
-    let valign = attrs.get("layout-valign").map(|s| s.as_str()).unwrap_or(&default_valign);
+    let valign = attrs.get("layout_valign").map(|s| s.as_str()).unwrap_or(&default_valign);
 
     let is_figure = id.as_ref().map_or(false, |id| id.starts_with("fig-"));
 
     let (content_children, caption) = if is_figure {
-        if let Some(cap) = attrs.get("fig-cap") {
+        if let Some(cap) = attrs.get("fig_cap") {
             (children.to_vec(), cap.clone())
         } else {
             figure::separate_figure_caption(children)
@@ -74,8 +74,8 @@ pub fn render(
     vars.insert("rows".to_string(), rows_content);
 
     // LaTeX-specific attrs
-    let fig_env = attrs.get("fig-env").map(|s| s.as_str()).unwrap_or("figure");
-    let fig_pos = attrs.get("fig-pos").map(|s| format!("[{}]", s)).unwrap_or_default();
+    let fig_env = attrs.get("fig_env").map(|s| s.as_str()).unwrap_or("figure");
+    let fig_pos = attrs.get("fig_pos").map(|s| format!("[{}]", s)).unwrap_or_default();
     vars.insert("fig_env".to_string(), fig_env.to_string());
     vars.insert("fig_pos".to_string(), fig_pos);
 
@@ -223,7 +223,7 @@ pub fn parse_spec(attrs: &HashMap<String, String>, num_children: usize) -> Vec<V
         return parse_custom(layout_str);
     }
 
-    if let Some(ncol_str) = attrs.get("layout-ncol") {
+    if let Some(ncol_str) = attrs.get("layout_ncol") {
         let ncol: usize = ncol_str.parse().unwrap_or(1).max(1);
         let width = 1.0 / ncol as f64;
         let mut rows = Vec::new();
@@ -238,7 +238,7 @@ pub fn parse_spec(attrs: &HashMap<String, String>, num_children: usize) -> Vec<V
         return rows;
     }
 
-    if let Some(nrow_str) = attrs.get("layout-nrow") {
+    if let Some(nrow_str) = attrs.get("layout_nrow") {
         let nrow: usize = nrow_str.parse().unwrap_or(1).max(1);
         let ncol = (num_children + nrow - 1) / nrow;
         let width = 1.0 / ncol as f64;
@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_parse_layout_ncol() {
         let mut attrs = HashMap::new();
-        attrs.insert("layout-ncol".to_string(), "2".to_string());
+        attrs.insert("layout_ncol".to_string(), "2".to_string());
         let spec = parse_spec(&attrs, 4);
         assert_eq!(spec.len(), 2);
         assert_eq!(spec[0].len(), 2);
@@ -313,7 +313,7 @@ mod tests {
     #[test]
     fn test_parse_layout_nrow() {
         let mut attrs = HashMap::new();
-        attrs.insert("layout-nrow".to_string(), "2".to_string());
+        attrs.insert("layout_nrow".to_string(), "2".to_string());
         let spec = parse_spec(&attrs, 4);
         assert_eq!(spec.len(), 2);
         assert_eq!(spec[0].len(), 2);

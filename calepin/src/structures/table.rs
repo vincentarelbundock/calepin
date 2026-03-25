@@ -71,7 +71,7 @@ pub fn render_div(
     vars.insert("cap_location".to_string(), cap_location.to_string());
 
     // Pre-built format-specific strings (avoids triple-brace issues in Jinja)
-    let tbl_pos = attrs.get("tbl-pos").map(|s| format!("[{}]", s)).unwrap_or_default();
+    let tbl_pos = attrs.get("tbl_pos").map(|s| format!("[{}]", s)).unwrap_or_default();
     vars.insert("tbl_begin".to_string(), format!("\\begin{{table}}{}", tbl_pos));
     vars.insert("caption_cmd".to_string(), if cap_rendered.is_empty() {
         String::new()

@@ -15,7 +15,7 @@ pub fn render_div(
     resolve_template: &dyn Fn(&str) -> Option<String>,
 ) -> String {
     // Caption: fig-cap attribute takes priority, then last text element in div
-    let (content_children, caption) = if let Some(cap) = attrs.get("fig-cap") {
+    let (content_children, caption) = if let Some(cap) = attrs.get("fig_cap") {
         (children.to_vec(), cap.clone())
     } else {
         separate_figure_caption(children)
@@ -34,7 +34,7 @@ pub fn render_div(
 
     let defs = crate::project::get_defaults();
     let default_align = defs.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
-    let align = attrs.get("fig-align").map(|s| s.as_str()).unwrap_or(default_align);
+    let align = attrs.get("fig_align").map(|s| s.as_str()).unwrap_or(default_align);
     let align_style = format_align(align, format);
 
     let mut vars = HashMap::new();
@@ -45,10 +45,10 @@ pub fn render_div(
     vars.insert("align".to_string(), align.to_string());
     vars.insert("align_style".to_string(), align_style);
 
-    if let Some(env) = attrs.get("fig-env") {
+    if let Some(env) = attrs.get("fig_env") {
         vars.insert("fig_env".to_string(), env.clone());
     }
-    if let Some(pos) = attrs.get("fig-pos") {
+    if let Some(pos) = attrs.get("fig_pos") {
         vars.insert("fig_pos".to_string(), format!("[{}]", pos));
     }
     vars.insert("caption".to_string(), cap_rendered);

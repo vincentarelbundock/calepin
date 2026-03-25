@@ -48,6 +48,7 @@ fn parse_metadata(table: &Table) -> Result<Metadata> {
         .unwrap_or_default();
 
     for (key, v) in table {
+        let key = crate::util::normalize_key(key);
         match key.as_str() {
             "title" => meta.title = v.as_str().map(String::from),
             "subtitle" => meta.subtitle = v.as_str().map(String::from),
@@ -64,7 +65,7 @@ fn parse_metadata(table: &Table) -> Result<Metadata> {
             "license" => meta.license = Some(parse_license(v)),
             "citation" => meta.citation = parse_citation(v),
             "funding" => meta.funding = parse_funding(v),
-            "appendix-style" => meta.appendix_style = v.as_str().map(String::from),
+            "appendix_style" => meta.appendix_style = v.as_str().map(String::from),
             "target" | "format" => {
                 meta.target = v.as_str().map(String::from).or_else(|| {
                     // Support `target: { html: default }` or [target]\n html = "default"
@@ -74,16 +75,17 @@ fn parse_metadata(table: &Table) -> Result<Metadata> {
                 });
             }
             "theme" => meta.theme = v.as_str().map(String::from),
-            "number-sections" => meta.number_sections = v.as_bool().unwrap_or(false),
+            "number_sections" => meta.number_sections = v.as_bool().unwrap_or(false),
             "toc" => meta.toc = Some(v.as_bool().unwrap_or(false)),
-            "toc-depth" => meta.toc_depth = v.as_integer().unwrap_or(3) as u8,
-            "toc-title" => meta.toc_title = v.as_str().map(String::from),
-            "date-format" => meta.date_format = v.as_str().map(String::from),
+            "toc_depth" => meta.toc_depth = v.as_integer().unwrap_or(3) as u8,
+            "toc_title" => meta.toc_title = v.as_str().map(String::from),
+            "date_format" => meta.date_format = v.as_str().map(String::from),
             "bibliography" => {
                 meta.bibliography = value_string_list(v);
             }
             "csl" => meta.csl = v.as_str().map(String::from),
-            "html-math-method" => meta.html_math_method = v.as_str().map(String::from),
+            "html_math_method" => meta.html_math_method = v.as_str().map(String::from),
+            "number_offset" => {} // accepted but handled elsewhere
             "calepin" => {
                 if let Some(cmap) = v.as_table() {
                     if let Some(pv) = table_get(cmap, "plugins") {

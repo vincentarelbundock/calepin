@@ -166,37 +166,37 @@ impl ChunkOptions {
     /// to keep text size consistent: `default_fig_width * (out_width / default_out_width)`.
     /// Document-level defaults (from TOML/front matter) don't suppress auto-scaling.
     pub fn fig_width(&self) -> f64 {
-        let fig_width_set_per_chunk = self.get_opt_string("fig.width").is_some()
-            && !self.defaults_keys.contains("fig.width");
+        let fig_width_set_per_chunk = self.get_opt_string("fig_width").is_some()
+            && !self.defaults_keys.contains("fig_width");
         if fig_width_set_per_chunk {
-            return self.get_number("fig.width", Self::default_fig_width());
+            return self.get_number("fig_width", Self::default_fig_width());
         }
         // Auto-scale from out-width if set (per-chunk out-width takes priority)
         if let Some(frac) = self.out_width_fraction() {
-            let base = self.get_number("fig.width", Self::default_fig_width());
+            let base = self.get_number("fig_width", Self::default_fig_width());
             return base * (frac / Self::default_out_width_frac());
         }
-        self.get_number("fig.width", Self::default_fig_width())
+        self.get_number("fig_width", Self::default_fig_width())
     }
 
     /// Graphics device height in inches.
     /// Derived from `fig-width * fig-asp` unless explicitly set.
     pub fn fig_height(&self) -> f64 {
-        if self.get_opt_string("fig.height").is_some() {
-            return self.get_number("fig.height", Self::default_fig_width() * Self::default_fig_asp());
+        if self.get_opt_string("fig_height").is_some() {
+            return self.get_number("fig_height", Self::default_fig_width() * Self::default_fig_asp());
         }
         self.fig_width() * self.fig_asp()
     }
 
     /// Aspect ratio (height / width). Defaults to golden ratio.
     pub fn fig_asp(&self) -> f64 {
-        self.get_number("fig.asp", Self::default_fig_asp())
+        self.get_number("fig_asp", Self::default_fig_asp())
     }
 
     /// Parse out-width as a fraction (e.g., "70%" -> 0.70, "0.5" -> 0.5).
     /// Returns None if out-width is not set or not a percentage/fraction.
     fn out_width_fraction(&self) -> Option<f64> {
-        let s = self.get_opt_string("out.width")?;
+        let s = self.get_opt_string("out_width")?;
         if let Some(pct) = s.strip_suffix('%') {
             pct.trim().parse::<f64>().ok().map(|v| v / 100.0)
         } else {
@@ -204,22 +204,22 @@ impl ChunkOptions {
             if v > 0.0 && v <= 1.0 { Some(v) } else { None }
         }
     }
-    pub fn fig_cap(&self) -> Option<String> { self.get_opt_string("fig.cap") }
-    pub fn tbl_cap(&self) -> Option<String> { self.get_opt_string("tbl.cap") }
-    pub fn lst_cap(&self) -> Option<String> { self.get_opt_string("lst.cap") }
-    pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig.alt") }
+    pub fn fig_cap(&self) -> Option<String> { self.get_opt_string("fig_cap") }
+    pub fn tbl_cap(&self) -> Option<String> { self.get_opt_string("tbl_cap") }
+    pub fn lst_cap(&self) -> Option<String> { self.get_opt_string("lst_cap") }
+    pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig_alt") }
     pub fn dev(&self) -> String {
         let default = crate::project::get_defaults().figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
         self.get_string("dev", &default)
     }
-    pub fn fig_align(&self) -> Option<String> { self.get_opt_string("fig.align") }
-    pub fn fig_scap(&self) -> Option<String> { self.get_opt_string("fig.scap") }
-    pub fn fig_env(&self) -> Option<String> { self.get_opt_string("fig.env") }
-    pub fn fig_pos(&self) -> Option<String> { self.get_opt_string("fig.pos") }
-    pub fn fig_cap_location(&self) -> Option<String> { self.get_opt_string("fig.cap.location") }
-    pub fn out_width(&self) -> Option<String> { self.get_opt_string("out.width") }
-    pub fn out_height(&self) -> Option<String> { self.get_opt_string("out.height") }
-    pub fn fig_link(&self) -> Option<String> { self.get_opt_string("fig.link") }
+    pub fn fig_align(&self) -> Option<String> { self.get_opt_string("fig_align") }
+    pub fn fig_scap(&self) -> Option<String> { self.get_opt_string("fig_scap") }
+    pub fn fig_env(&self) -> Option<String> { self.get_opt_string("fig_env") }
+    pub fn fig_pos(&self) -> Option<String> { self.get_opt_string("fig_pos") }
+    pub fn fig_cap_location(&self) -> Option<String> { self.get_opt_string("fig_cap_location") }
+    pub fn out_width(&self) -> Option<String> { self.get_opt_string("out_width") }
+    pub fn out_height(&self) -> Option<String> { self.get_opt_string("out_height") }
+    pub fn fig_link(&self) -> Option<String> { self.get_opt_string("fig_link") }
 
     /// Build figure rendering attributes from chunk options.
     pub fn to_figure_attrs(&self) -> FigureAttrs {
@@ -397,18 +397,19 @@ impl Metadata {
                 }
                 continue;
             }
-            let (key, value) = match item.split_once('=') {
+            let (raw_key, value) = match item.split_once('=') {
                 Some((k, v)) => (k.trim(), v.trim()),
                 None => continue,
             };
-            match key {
+            let key = crate::util::normalize_key(raw_key);
+            match key.as_str() {
                 "title" => self.title = Some(value.to_string()),
                 "subtitle" => self.subtitle = Some(value.to_string()),
                 "author" => self.author = Some(vec![value.to_string()]),
                 "date" => self.date = Some(value.to_string()),
                 "abstract" => self.abstract_text = Some(value.to_string()),
                 "target" | "format" => self.target = Some(value.to_string()),
-                "number-sections" => self.number_sections = value::coerce_value(value).as_bool() == Some(true),
+                "number_sections" => self.number_sections = value::coerce_value(value).as_bool() == Some(true),
                 "toc" => self.toc = Some(value::coerce_value(value).as_bool() == Some(true)),
                 "bibliography" => self.bibliography = vec![value.to_string()],
                 "csl" => self.csl = Some(value.to_string()),

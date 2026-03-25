@@ -216,7 +216,7 @@ fn parse_one_filter_spec(node: &Value, plugin_dir: &Path) -> Option<FilterSpec> 
     let match_rule = match node.get("match") {
         Some(match_node) => FilterMatch {
             classes: val_str_vec(match_node, "classes"),
-            attrs: val_str_vec(match_node, "attrs"),
+            attrs: val_str_vec(match_node, "attrs").into_iter().map(|a| crate::util::normalize_key(&a)).collect(),
             id_prefix: match_node.get("id_prefix").and_then(|v| v.as_str()).map(String::from),
             formats: val_str_vec(match_node, "formats"),
         },

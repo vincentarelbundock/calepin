@@ -14,6 +14,12 @@ pub fn escape_html(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
+/// Normalize a user-facing key to the internal canonical form.
+/// Converts dashes and dots to underscores, lowercases the result.
+pub fn normalize_key(s: &str) -> String {
+    s.replace('-', "_").replace('.', "_").to_lowercase()
+}
+
 /// Convert heading text to a URL-friendly slug.
 pub fn slugify(text: &str) -> String {
     let mut slug = String::new();

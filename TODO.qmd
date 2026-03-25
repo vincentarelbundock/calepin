@@ -14,6 +14,11 @@ PATH CHECK FOR SINGLE typst file
 - [ ] inspect each pages
 
 
+## Tests
+
+- [ ] Create a single file with ALL the supported features and make sure it renders correctly in all formats.
+
+
 ## arelbundockcom
 
 - [ ] review all blog posts
@@ -42,11 +47,6 @@ PATH CHECK FOR SINGLE typst file
 - [ ] LaTeX to Typst math plugin
 
 
-## Typst
-
-- [ ] book template
-
-
 ## Figures
 
 - [ ] Figure templates in latex are pre-computed. Templates need to handle \begin{ {{variables}} }
@@ -72,9 +72,7 @@ PATH CHECK FOR SINGLE typst file
 
 ## Cross-references
 
-- [ ] Collections: Not global by default, but with an option
 - [ ] Custom cross-reference types.
-- [ ] Custom numbered float types.
 - [ ] Cross-references across pages in website and book collections.
 
 
@@ -177,7 +175,6 @@ PATH CHECK FOR SINGLE typst file
     - [ ] homebrew
     - [ ] linux
     - [ ] windows
-- [ ] all variables should be underscore, never dash
 - [ ] Delegate to templates as much as possible (again and again, don't check as done until the very end)
 
 
@@ -192,6 +189,11 @@ PATH CHECK FOR SINGLE typst file
 
 
 # Docs
+
+
+## Technical
+
+- [ ] Table with a list of all variables supported in the different .toml blocks
 
 
 ## Aesthetics

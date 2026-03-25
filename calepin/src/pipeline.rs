@@ -210,7 +210,7 @@ pub fn render_core_with_options(
         counters[0] = ch;
         element_renderer.set_section_counters(counters);
     }
-    element_renderer.default_fig_cap_location = metadata.var.get("fig-cap-location")
+    element_renderer.default_fig_cap_location = metadata.var.get("fig_cap_location")
         .and_then(|v| v.as_str()).map(|s| s.to_string());
 
     // 8. Evaluate: execute code chunks and produce elements
