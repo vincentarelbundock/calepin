@@ -6,8 +6,6 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
-use std::time::Instant;
 
 use anyhow::{Context, Result};
 
@@ -47,23 +45,6 @@ pub struct RenderCoreOptions {
     pub chapter_number: Option<usize>,
 }
 
-/// Whether `CALEPIN_TIMING=1` is set (checked once at startup).
-static TIMING: LazyLock<bool> = LazyLock::new(|| std::env::var("CALEPIN_TIMING").is_ok());
-
-/// Print a timing line to stderr if `CALEPIN_TIMING` is set.
-macro_rules! timed {
-    ($label:expr, $block:expr) => {{
-        if *TIMING {
-            let _t = Instant::now();
-            let _r = $block;
-            eprintln!("[timing] {:.<30} {:>8.3}ms", $label, _t.elapsed().as_secs_f64() * 1000.0);
-            _r
-        } else {
-            $block
-        }
-    }};
-}
-
 /// Core render pipeline: parse, evaluate, render. Does NOT apply the page template.
 /// If `format` is None, falls back to the format declared in YAML front matter, then "html".
 pub fn render_core(
@@ -88,14 +69,12 @@ pub fn render_core_with_options(
     options: &RenderCoreOptions,
 ) -> Result<RenderResult> {
 
-    let t_total = if *TIMING { Some(Instant::now()) } else { None };
-
     // 1. Read input file
     let input_text = fs::read_to_string(input)
         .with_context(|| format!("Failed to read input file: {}", input.display()))?;
 
     // 2. Parse YAML front matter, then apply CLI overrides
-    let (mut metadata, body) = timed!("parse_yaml", parse::yaml::split_yaml(&input_text)?);
+    let (mut metadata, body) = parse::yaml::split_yaml(&input_text)?;
     let body = render::markers::sanitize(&body);
     metadata.apply_overrides(overrides);
     metadata.resolve_date(Some(input));
@@ -149,25 +128,25 @@ pub fn render_core_with_options(
     let renderer = formats::create_renderer(&format_str)?;
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
-    let body = timed!("expand_includes", jinja::expand_includes(&body, &path_ctx.project_root, &format_str));
+    let body = jinja::expand_includes(&body, &path_ctx.project_root, &format_str);
 
     // 4a. Preprocess body (custom format hook)
     let body = renderer.preprocess_body(&body)?;
 
     // 4b. Parse body into blocks
-    let blocks = timed!("parse_blocks", parse::blocks::parse_body(&body)?);
+    let blocks = parse::blocks::parse_body(&body)?;
 
     // 5. Initialize engine subprocesses only if needed
     //    Working directory is set to the input file's parent so that relative
     //    paths in code chunks (e.g., read.csv("data.csv")) resolve correctly.
     let input_dir = input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) });
     let mut r_session = if engines::util::needs_engine(&blocks, &body, &metadata, "r") {
-        Some(timed!("init_r", RSession::init(renderer.engine(), input_dir)?))
+        Some(RSession::init(renderer.engine(), input_dir)?)
     } else {
         None
     };
     let mut py_session = if engines::util::needs_engine(&blocks, &body, &metadata, "python") {
-        Some(timed!("init_python", PythonSession::init(input_dir)?))
+        Some(PythonSession::init(input_dir)?)
     } else {
         None
     };
@@ -186,9 +165,9 @@ pub fn render_core_with_options(
     metadata.evaluate_inline(&mut ctx);
 
     // 6. Load plugin registry
-    let registry = timed!("load_plugins", std::rc::Rc::new(
+    let registry = std::rc::Rc::new(
         registry::PluginRegistry::load(&metadata.plugins, &path_ctx.project_root)
-    ));
+    );
 
     // 7. Create element renderer
     let highlight_config = metadata.var.get("highlight-style")
@@ -237,11 +216,11 @@ pub fn render_core_with_options(
         .unwrap_or(true);
     let cache_dir = path_ctx.cache_root(&rel_stem);
     let mut cache = CacheState::new(input, &cache_dir, cache_enabled);
-    let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.engine(), &metadata, &registry, &mut ctx, &mut cache)?);
+    let eval_result = engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.engine(), &metadata, &registry, &mut ctx, &mut cache)?;
     let mut elements = eval_result.elements;
 
     // 9. Resolve bibliography
-    timed!("bibliography", renderer.resolve_bibliography(&mut elements, &metadata, &path_ctx.project_root)?);
+    renderer.resolve_bibliography(&mut elements, &metadata, &path_ctx.project_root)?;
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);
@@ -249,7 +228,7 @@ pub fn render_core_with_options(
     element_renderer.set_preamble(eval_result.preamble);
 
     // 11. Render elements to body string
-    let rendered = timed!("render", renderer.render(&elements, &element_renderer)?);
+    let rendered = renderer.render(&elements, &element_renderer)?;
 
     // 12. Transform body (format-specific: slide splitting, color defs)
     let rendered = renderer.transform_body(&rendered, &element_renderer);
@@ -261,7 +240,7 @@ pub fn render_core_with_options(
         (rendered, ref_data)
     } else {
         // Single-file mode: resolve refs immediately
-        let rendered = timed!("crossref", renderer.resolve_crossrefs(&rendered, &element_renderer));
+        let rendered = renderer.resolve_crossrefs(&rendered, &element_renderer);
         (rendered, None)
     };
 
@@ -271,10 +250,6 @@ pub fn render_core_with_options(
     // Clean up empty fig_dir
     if fig_dir.is_dir() && std::fs::read_dir(&fig_dir).map_or(false, |mut d| d.next().is_none()) {
         std::fs::remove_dir(&fig_dir).ok();
-    }
-
-    if let Some(t) = t_total {
-        eprintln!("[timing] {:=<30} {:>8.3}ms", "TOTAL ", t.elapsed().as_secs_f64() * 1000.0);
     }
 
     Ok(RenderResult { rendered, metadata, element_renderer, ref_data })
