@@ -10,10 +10,6 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use crate::engines;
-use crate::engines::r::RSession;
-use crate::engines::python::PythonSession;
-use crate::engines::EngineContext;
-use crate::engines::cache::CacheState;
 use crate::formats;
 use crate::jinja;
 use crate::parse;
@@ -30,19 +26,16 @@ pub struct RenderResult {
     pub rendered: String,
     pub metadata: types::Metadata,
     pub element_renderer: ElementRenderer,
-    /// Cross-reference data collected from this page (populated when skip_crossref is true).
-    pub ref_data: Option<crate::crossref::PageRefData>,
 }
 
-/// Options for the core render pipeline that control collection-specific behavior.
+/// Options for the core render pipeline.
 #[derive(Default)]
 pub struct RenderCoreOptions {
-    /// When true, skip cross-reference resolution (pass 1 of two-pass pipeline).
-    /// The caller is responsible for resolving refs globally in pass 2.
-    pub skip_crossref: bool,
     /// Chapter number for this page in a collection. When set, section numbering
     /// uses this as the top-level counter (e.g., chapter 2 -> sections 2.1, 2.2).
     pub chapter_number: Option<usize>,
+    /// When true, skip cross-reference resolution (collection mode collects ref_data separately).
+    pub skip_crossref: bool,
 }
 
 /// Core render pipeline: parse, evaluate, render. Does NOT apply the page template.
@@ -121,30 +114,10 @@ pub fn render_core(
     // 4a. Parse body into blocks
     let blocks = parse::blocks::parse_body(&body)?;
 
-    // 5. Initialize engine subprocesses only if needed
-    //    Working directory is set to the input file's parent so that relative
-    //    paths in code chunks (e.g., read.csv("data.csv")) resolve correctly.
+    // 5. Initialize code engines (R, Python, sh) -- only starts what's needed
     let input_dir = input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) });
-    let mut r_session = if engines::util::needs_engine(&blocks, &body, &metadata, "r") {
-        Some(RSession::init(renderer.engine(), input_dir)?)
-    } else {
-        None
-    };
-    let mut py_session = if engines::util::needs_engine(&blocks, &body, &metadata, "python") {
-        Some(PythonSession::init(input_dir)?)
-    } else {
-        None
-    };
-    let mut sh_session = if engines::util::needs_engine(&blocks, &body, &metadata, "sh") {
-        Some(engines::sh::ShSession::init(input_dir)?)
-    } else {
-        None
-    };
-    let mut ctx = EngineContext {
-        r: r_session.as_mut(),
-        python: py_session.as_mut(),
-        sh: sh_session.as_mut(),
-    };
+    let mut engines = engines::EnginePool::init(&blocks, &body, &metadata, renderer.engine(), input_dir)?;
+    let mut ctx = engines.context();
 
     // 5b. Evaluate inline code in metadata fields (title, date, etc.)
     metadata.evaluate_inline(&mut ctx);
@@ -158,16 +131,10 @@ pub fn render_core(
     let mut element_renderer = ElementRenderer::from_metadata(renderer.engine(), &metadata, options);
 
     // 8. Evaluate: execute code chunks and produce elements
-    let rel_stem = relative_stem(input, &path_ctx.project_root);
-    let fig_dir = path_ctx.figures_dir(&rel_stem);
-    let fig_ext = renderer.default_fig_ext();
-    let cache_dir = path_ctx.cache_root(&rel_stem);
-    let cache_enabled = metadata.var.get("execute")
-        .and_then(|v| v.get("cache"))
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
-    let mut cache = CacheState::new(input, &cache_dir, cache_enabled);
-    let eval_result = engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.engine(), &metadata, &registry, &mut ctx, &mut cache)?;
+    let eval_result = engines::evaluate_document(
+        input, &blocks, &body, renderer.engine(), &metadata, &registry,
+        &mut ctx, &path_ctx, renderer.default_fig_ext(),
+    )?;
     let mut elements = eval_result.elements;
 
     // 9. Resolve bibliography
@@ -184,23 +151,14 @@ pub fn render_core(
     // 12. Transform body (format-specific: slide splitting, color defs)
     let rendered = renderer.transform_body(&rendered, &element_renderer);
 
-    // 13. Cross-ref resolution
-    let (rendered, ref_data) = if options.skip_crossref {
-        // Collection mode pass 1: collect IDs but don't resolve refs yet
-        let ref_data = renderer.collect_crossref_data(&rendered, &element_renderer);
-        (rendered, ref_data)
+    // 13. Cross-ref resolution (skipped in collection mode pass 1)
+    let rendered = if options.skip_crossref {
+        rendered
     } else {
-        // Single-file mode: resolve refs immediately
-        let rendered = renderer.resolve_crossrefs(&rendered, &element_renderer);
-        (rendered, None)
+        renderer.resolve_crossrefs(&rendered, &element_renderer)
     };
 
-    // Clean up empty fig_dir
-    if fig_dir.is_dir() && std::fs::read_dir(&fig_dir).map_or(false, |mut d| d.next().is_none()) {
-        std::fs::remove_dir(&fig_dir).ok();
-    }
-
-    Ok(RenderResult { rendered, metadata, element_renderer, ref_data })
+    Ok(RenderResult { rendered, metadata, element_renderer })
 }
 
 /// Full render pipeline. Returns (output_path, rendered_content, renderer).
@@ -254,14 +212,4 @@ pub fn render_file(
     let final_output = renderer.transform_document(&final_output, &result.element_renderer);
 
     Ok((output_path, final_output, renderer))
-}
-
-/// Compute a relative stem from input path and project root.
-/// Used as the cache/figure key so nested pages don't collide.
-fn relative_stem(input: &Path, project_root: &Path) -> String {
-    input.strip_prefix(project_root)
-        .unwrap_or(input)
-        .with_extension("")
-        .to_string_lossy()
-        .replace('\\', "/")
 }

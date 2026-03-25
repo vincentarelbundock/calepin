@@ -371,6 +371,10 @@ fn render_one_document_pass1(
         &input, &output_path, Some("html"), overrides, None, Some(base_dir), &options,
     )?;
 
+    // Collect cross-ref data for global resolution in pass 2 (before moving body)
+    let html_renderer = crate::formats::create_renderer("html")?;
+    let ref_data = html_renderer.collect_crossref_data(&result.rendered, &result.element_renderer);
+
     // HTML site mode: prepend syntax highlighting CSS, append footnotes
     let syntax_css = result.element_renderer.syntax_css_with_scope(
         crate::render::highlighting::ColorScope::DataTheme,
@@ -400,7 +404,7 @@ fn render_one_document_pass1(
         date: result.metadata.date,
         subtitle: result.metadata.subtitle.map(|t| crate::render::convert::render_inline(&t, "html")),
         abstract_text: result.metadata.abstract_text,
-        ref_data: result.ref_data,
+        ref_data,
     })
 }
 

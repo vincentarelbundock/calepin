@@ -34,12 +34,92 @@ pub struct EngineContext<'a> {
     pub sh: Option<&'a mut sh::ShSession>,
 }
 
+/// Owns engine sessions. Initialized lazily based on what the document needs.
+pub struct EnginePool {
+    pub r: Option<r::RSession>,
+    pub python: Option<python::PythonSession>,
+    pub sh: Option<sh::ShSession>,
+}
+
+impl EnginePool {
+    /// Initialize engine sessions needed by the document.
+    /// Only starts interpreters for languages actually used in code chunks.
+    pub fn init(
+        blocks: &[Block],
+        body: &str,
+        metadata: &Metadata,
+        engine: &str,
+        working_dir: Option<&Path>,
+    ) -> anyhow::Result<Self> {
+        let r = if util::needs_engine(blocks, body, metadata, "r") {
+            Some(r::RSession::init(engine, working_dir)?)
+        } else {
+            None
+        };
+        let python = if util::needs_engine(blocks, body, metadata, "python") {
+            Some(python::PythonSession::init(working_dir)?)
+        } else {
+            None
+        };
+        let sh = if util::needs_engine(blocks, body, metadata, "sh") {
+            Some(sh::ShSession::init(working_dir)?)
+        } else {
+            None
+        };
+        Ok(Self { r, python, sh })
+    }
+
+    /// Borrow as an EngineContext for threading through evaluate.
+    pub fn context(&mut self) -> EngineContext {
+        EngineContext {
+            r: self.r.as_mut(),
+            python: self.python.as_mut(),
+            sh: self.sh.as_mut(),
+        }
+    }
+}
+
 /// Result of evaluating all blocks.
 pub struct EvalResult {
     pub elements: Vec<Element>,
     pub sc_fragments: Vec<String>,
     /// Preamble content collected from code chunks (e.g. \usepackage lines).
     pub preamble: Vec<String>,
+}
+
+/// Evaluate a document: set up cache and figure paths, then evaluate all blocks.
+pub fn evaluate_document(
+    input: &Path,
+    blocks: &[Block],
+    body: &str,
+    output_ext: &str,
+    metadata: &Metadata,
+    registry: &crate::registry::PluginRegistry,
+    ctx: &mut EngineContext,
+    path_ctx: &crate::paths::PathContext,
+    default_fig_ext: &str,
+) -> Result<EvalResult> {
+    let rel_stem = input.strip_prefix(&path_ctx.project_root)
+        .unwrap_or(input)
+        .with_extension("")
+        .to_string_lossy()
+        .replace('\\', "/");
+    let fig_dir = path_ctx.figures_dir(&rel_stem);
+    let cache_dir = path_ctx.cache_root(&rel_stem);
+    let cache_enabled = metadata.var.get("execute")
+        .and_then(|v| v.get("cache"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let mut cache = cache::CacheState::new(input, &cache_dir, cache_enabled);
+
+    let result = evaluate(blocks, &fig_dir, default_fig_ext, output_ext, metadata, registry, ctx, &mut cache)?;
+
+    // Clean up empty fig_dir
+    if fig_dir.is_dir() && std::fs::read_dir(&fig_dir).map_or(false, |mut d| d.next().is_none()) {
+        std::fs::remove_dir(&fig_dir).ok();
+    }
+
+    Ok(result)
 }
 
 /// Evaluate all blocks and produce a flat list of Elements.
