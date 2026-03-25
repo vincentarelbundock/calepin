@@ -170,51 +170,17 @@ pub fn render_core_with_options(
     );
 
     // 7. Create element renderer
-    let highlight_config = metadata.var.get("highlight-style")
-        .map(|v| crate::render::highlighting::parse_highlight_config(v))
-        .unwrap_or_else(|| {
-            let defs = project::get_defaults();
-            let hl = defs.highlight.as_ref();
-            let cfg = project::builtin_config();
-            let meta_hl = cfg.highlight.as_ref();
-            crate::render::highlighting::HighlightConfig::LightDark {
-                light: hl.and_then(|h| h.light.clone())
-                    .or_else(|| meta_hl.and_then(|h| h.light.clone()))
-                    .unwrap_or_else(|| "github".to_string()),
-                dark: hl.and_then(|h| h.dark.clone())
-                    .or_else(|| meta_hl.and_then(|h| h.dark.clone()))
-                    .unwrap_or_else(|| "nord".to_string()),
-            }
-        });
-    let mut element_renderer = ElementRenderer::new(renderer.engine(), highlight_config);
-    element_renderer.number_sections = metadata.number_sections;
-    element_renderer.convert_math = metadata.convert_math;
-    element_renderer.shift_headings = metadata.title.is_some();
-    element_renderer.chapter_number = options.chapter_number;
-    // Initialize section counters with chapter number as top-level counter
-    if let Some(ch) = options.chapter_number {
-        let mut counters = [0usize; 6];
-        counters[0] = ch;
-        element_renderer.set_section_counters(counters);
-    }
-    element_renderer.default_fig_cap_location = metadata.var.get("fig_cap_location")
-        .and_then(|v| v.as_str()).map(|s| s.to_string());
+    let mut element_renderer = ElementRenderer::from_metadata(renderer.engine(), &metadata, options);
 
     // 8. Evaluate: execute code chunks and produce elements
-    //    Use relative path from project root (without extension) as the cache/figure
-    //    key, so site builds with nested pages (e.g., posts/foo/index.qmd) don't collide.
-    let rel_stem = input.strip_prefix(&path_ctx.project_root)
-        .unwrap_or(input)
-        .with_extension("")
-        .to_string_lossy()
-        .replace('\\', "/");
+    let rel_stem = relative_stem(input, &path_ctx.project_root);
     let fig_dir = path_ctx.figures_dir(&rel_stem);
     let fig_ext = renderer.default_fig_ext();
+    let cache_dir = path_ctx.cache_root(&rel_stem);
     let cache_enabled = metadata.var.get("execute")
         .and_then(|v| v.get("cache"))
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
-    let cache_dir = path_ctx.cache_root(&rel_stem);
     let mut cache = CacheState::new(input, &cache_dir, cache_enabled);
     let eval_result = engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.engine(), &metadata, &registry, &mut ctx, &mut cache)?;
     let mut elements = eval_result.elements;
@@ -243,9 +209,6 @@ pub fn render_core_with_options(
         let rendered = renderer.resolve_crossrefs(&rendered, &element_renderer);
         (rendered, None)
     };
-
-    // 14. Number sections (HTML only) -- now handled in the AST walker
-    //     (render/html_emit.rs) via ElementRenderer.number_sections
 
     // Clean up empty fig_dir
     if fig_dir.is_dir() && std::fs::read_dir(&fig_dir).map_or(false, |mut d| d.next().is_none()) {
@@ -306,4 +269,14 @@ pub fn render_file(
     let final_output = renderer.transform_document(&final_output, &result.element_renderer);
 
     Ok((output_path, final_output, renderer))
+}
+
+/// Compute a relative stem from input path and project root.
+/// Used as the cache/figure key so nested pages don't collide.
+fn relative_stem(input: &Path, project_root: &Path) -> String {
+    input.strip_prefix(project_root)
+        .unwrap_or(input)
+        .with_extension("")
+        .to_string_lossy()
+        .replace('\\', "/")
 }

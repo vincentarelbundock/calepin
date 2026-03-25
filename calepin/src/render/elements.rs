@@ -156,6 +156,43 @@ impl ElementRenderer {
         }
     }
 
+    /// Create an ElementRenderer from document metadata and pipeline options.
+    pub fn from_metadata(
+        engine: &str,
+        metadata: &crate::types::Metadata,
+        options: &crate::pipeline::RenderCoreOptions,
+    ) -> Self {
+        let highlight_config = metadata.var.get("highlight-style")
+            .map(|v| crate::render::highlighting::parse_highlight_config(v))
+            .unwrap_or_else(|| {
+                let defs = crate::project::get_defaults();
+                let hl = defs.highlight.as_ref();
+                let cfg = crate::project::builtin_config();
+                let meta_hl = cfg.highlight.as_ref();
+                crate::render::highlighting::HighlightConfig::LightDark {
+                    light: hl.and_then(|h| h.light.clone())
+                        .or_else(|| meta_hl.and_then(|h| h.light.clone()))
+                        .unwrap_or_else(|| "github".to_string()),
+                    dark: hl.and_then(|h| h.dark.clone())
+                        .or_else(|| meta_hl.and_then(|h| h.dark.clone()))
+                        .unwrap_or_else(|| "nord".to_string()),
+                }
+            });
+        let mut er = Self::new(engine, highlight_config);
+        er.number_sections = metadata.number_sections;
+        er.convert_math = metadata.convert_math;
+        er.shift_headings = metadata.title.is_some();
+        er.chapter_number = options.chapter_number;
+        if let Some(ch) = options.chapter_number {
+            let mut counters = [0usize; 6];
+            counters[0] = ch;
+            er.set_section_counters(counters);
+        }
+        er.default_fig_cap_location = metadata.var.get("fig_cap_location")
+            .and_then(|v| v.as_str()).map(|s| s.to_string());
+        er
+    }
+
     pub fn set_registry(&mut self, registry: Rc<PluginRegistry>) {
         self.registry = registry;
     }
