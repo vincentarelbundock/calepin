@@ -13,12 +13,13 @@ pub(crate) fn register(
     env: &mut minijinja::Environment<'_>,
     format: &str,
     fragments: &Arc<Mutex<Vec<String>>>,
+    defaults: &crate::project::Defaults,
 ) {
     register_pagebreak(env, format, fragments);
-    register_video(env, format, fragments);
+    register_video(env, format, fragments, defaults);
     register_kbd(env, format, fragments);
-    register_lipsum(env);
-    register_placeholder(env, format, fragments);
+    register_lipsum(env, defaults);
+    register_placeholder(env, format, fragments, defaults);
 }
 
 fn register_pagebreak(
@@ -44,13 +45,15 @@ fn register_video(
     env: &mut minijinja::Environment<'_>,
     format: &str,
     fragments: &Arc<Mutex<Vec<String>>>,
+    defaults: &crate::project::Defaults,
 ) {
     let fmt = format.to_string();
     let frags = Arc::clone(fragments);
+    let video_defs = defaults.video.clone();
     env.add_function("video", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
         let url: &str = kwargs.get("url")
             .map_err(|_| Error::new(ErrorKind::MissingArgument, "video() requires a `url` argument"))?;
-        let vdefs = crate::project::get_defaults().video;
+        let vdefs = video_defs.clone();
         let default_width = vdefs.as_ref().and_then(|v| v.width.clone()).unwrap_or_else(|| "100%".to_string());
         let default_height = vdefs.as_ref().and_then(|v| v.height.clone()).unwrap_or_else(|| "400".to_string());
         let default_title = vdefs.as_ref().and_then(|v| v.title.clone()).unwrap_or_else(|| "Video".to_string());
@@ -138,8 +141,9 @@ fn register_kbd(
     });
 }
 
-fn register_lipsum(env: &mut minijinja::Environment<'_>) {
-    env.add_function("lipsum", |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
+fn register_lipsum(env: &mut minijinja::Environment<'_>, defaults: &crate::project::Defaults) {
+    let lipsum_default_paragraphs = defaults.lipsum.as_ref().and_then(|l| l.paragraphs).unwrap_or(1);
+    env.add_function("lipsum", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
         if let Ok(n) = kwargs.get::<u64>("words") {
             kwargs.assert_all_used()?;
             return Ok(Value::from(lipsum::lipsum_words(n as usize)));
@@ -148,8 +152,7 @@ fn register_lipsum(env: &mut minijinja::Environment<'_>) {
             kwargs.assert_all_used()?;
             return Ok(Value::from(lipsum::lipsum_sentences(n as usize)));
         }
-        let default_paragraphs = crate::project::get_defaults().lipsum.as_ref().and_then(|l| l.paragraphs).unwrap_or(1);
-        let n: u64 = kwargs.get("paragraphs").unwrap_or(default_paragraphs);
+        let n: u64 = kwargs.get("paragraphs").unwrap_or(lipsum_default_paragraphs);
         kwargs.assert_all_used()?;
         Ok(Value::from(lipsum::lipsum_paragraphs(n as usize)))
     });
@@ -159,11 +162,13 @@ fn register_placeholder(
     env: &mut minijinja::Environment<'_>,
     format: &str,
     fragments: &Arc<Mutex<Vec<String>>>,
+    defaults: &crate::project::Defaults,
 ) {
     let fmt = format.to_string();
     let frags = Arc::clone(fragments);
+    let placeholder_defs = defaults.placeholder.clone();
     env.add_function("placeholder", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
-        let pdefs = crate::project::get_defaults().placeholder;
+        let pdefs = placeholder_defs.clone();
         let default_pw = pdefs.as_ref().and_then(|p| p.width).unwrap_or(600);
         let default_ph = pdefs.as_ref().and_then(|p| p.height).unwrap_or(400);
         let default_color = pdefs.as_ref().and_then(|p| p.color.clone()).unwrap_or_else(|| "#cccccc".to_string());

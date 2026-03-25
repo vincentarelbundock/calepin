@@ -100,7 +100,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
         return Ok(());
     }
 
-    let style = load_csl_style(metadata.csl.as_deref())?;
+    let style = load_csl_style(metadata.csl.as_deref(), &metadata.defaults)?;
     let locales: Vec<citationberg::Locale> = Vec::new();
 
     // Single driver call with all citations
@@ -218,7 +218,7 @@ fn extract_year(cite: &str) -> String {
         .unwrap_or_else(|| cite.to_string())
 }
 
-fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
+fn load_csl_style(csl_path: Option<&str>, defaults: &crate::project::Defaults) -> Result<IndependentStyle> {
     // Build the cache key from the CSL path (or "default" for fallback)
     let cache_key = csl_path.unwrap_or("__default__").to_string();
 
@@ -229,7 +229,7 @@ fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
         }
     }
 
-    let style = load_csl_style_uncached(csl_path)?;
+    let style = load_csl_style_uncached(csl_path, defaults)?;
 
     // Store in cache
     if let Ok(mut cache) = CSL_CACHE.lock() {
@@ -239,7 +239,7 @@ fn load_csl_style(csl_path: Option<&str>) -> Result<IndependentStyle> {
     Ok(style)
 }
 
-fn load_csl_style_uncached(csl_path: Option<&str>) -> Result<IndependentStyle> {
+fn load_csl_style_uncached(csl_path: Option<&str>, defaults: &crate::project::Defaults) -> Result<IndependentStyle> {
     use hayagriva::archive::ArchivedStyle;
 
     // 1. Explicit CSL from front matter: file path or archive name
@@ -274,8 +274,7 @@ fn load_csl_style_uncached(csl_path: Option<&str>) -> Result<IndependentStyle> {
     }
 
     // 2. Default from calepin.toml
-    let defs = crate::project::get_defaults();
-    let default_name = defs.csl.as_deref()
+    let default_name = defaults.csl.as_deref()
         .or_else(|| crate::project::builtin_metadata().csl.as_deref())
         .unwrap_or("chicago-author-date");
     if let Some(archived) = ArchivedStyle::by_name(default_name) {

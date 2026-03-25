@@ -25,6 +25,7 @@ pub fn render(
     raw_fragments: &std::cell::RefCell<Vec<String>>,
     theorem_numbers: &std::cell::RefCell<HashMap<String, String>>,
     template_env: &crate::render::template::TemplateEnv,
+    defaults: &crate::project::Defaults,
 ) -> String {
     let matching = registry.matching_filters(classes, attrs, id.as_deref(), format, "div");
 
@@ -65,7 +66,7 @@ pub fn render(
         }
 
         // Labels for localisable strings in div templates (proof, etc.)
-        let label_defs = crate::project::get_defaults().labels;
+        let label_defs = defaults.labels.clone();
         v.insert("label_proof".to_string(), label_defs.as_ref().and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
 
         // Render caption from raw markdown for fig-/tbl- divs
@@ -117,7 +118,7 @@ pub fn render(
         match &plugin.kind {
             PluginKind::BuiltinStructural(handler) => {
                 if let Some(output) = handler.render_div(
-                    classes, id, attrs, children, format, render_element, resolve_template, raw_fragments,
+                    classes, id, attrs, children, format, render_element, resolve_template, raw_fragments, defaults,
                 ) {
                     return output;
                 }
@@ -131,7 +132,7 @@ pub fn render(
                     attrs: attrs.clone(),
                     children: vec![],
                 };
-                match filter.apply(&div_element, format, vars.as_mut().unwrap()) {
+                match filter.apply(&div_element, format, vars.as_mut().unwrap(), defaults) {
                     FilterResult::Rendered(output) => return output,
                     FilterResult::Continue | FilterResult::Pass => {}
                 }

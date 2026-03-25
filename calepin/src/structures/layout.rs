@@ -13,8 +13,9 @@ pub fn render(
     format: &str,
     render_element: &dyn Fn(&Element) -> String,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
+    defaults: &crate::project::Defaults,
 ) -> String {
-    let defs = crate::project::get_defaults();
+    let defs = defaults;
     let default_valign = defs.layout.as_ref().and_then(|l| l.valign.clone()).unwrap_or_else(|| "top".to_string());
     let valign = attrs.get("layout_valign").map(|s| s.as_str()).unwrap_or(&default_valign);
 

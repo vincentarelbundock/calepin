@@ -25,12 +25,13 @@ impl FigureFilter {
 }
 
 impl Filter for FigureFilter {
-    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>) -> FilterResult {
+    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, defaults: &crate::project::Defaults) -> FilterResult {
         if let Element::Figure { path, alt, caption, label, number, attrs } = element {
             build_figure_vars(
                 vars, path, alt, caption.as_deref(), label,
                 number.as_deref(), attrs, format,
                 self.default_cap_location.as_deref(),
+                defaults,
             );
             FilterResult::Continue
         } else {
@@ -49,6 +50,7 @@ fn build_figure_vars(
     attrs: &crate::types::FigureAttrs,
     format: &str,
     default_cap_location: Option<&str>,
+    defaults: &crate::project::Defaults,
 ) {
     vars.insert("alt".to_string(), alt.to_string());
     vars.insert("caption".to_string(), caption.unwrap_or("").to_string());
@@ -60,7 +62,7 @@ fn build_figure_vars(
     vars.insert("path".to_string(), display_path.clone());
 
     // Image components for template
-    let embed = crate::project::get_defaults().embed_resources.unwrap_or(true);
+    let embed = defaults.embed_resources.unwrap_or(true);
     if format == "html" && embed {
         if let Ok((mime, data)) = crate::util::base64_encode_image(&resolved_path) {
             vars.insert("src".to_string(), format!("data:{};base64,{}", mime, data));
@@ -78,7 +80,7 @@ fn build_figure_vars(
     vars.insert("width_attr".to_string(), format_width(attrs, format));
     vars.insert("height_attr".to_string(), format_height(attrs));
 
-    let defs = crate::project::get_defaults();
+    let defs = defaults;
     let default_align = defs.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
     let align = attrs.fig_align.as_deref().unwrap_or(default_align);
     vars.insert("align_style".to_string(), format_align(align, format));

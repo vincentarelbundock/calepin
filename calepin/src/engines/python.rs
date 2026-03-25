@@ -195,12 +195,13 @@ impl PythonSession {
     /// Uses -s (no user site), -u (unbuffered stdio),
     /// and passes the bootstrap as a -c argument (no temp file needed).
     /// `cwd` sets the working directory for the Python process.
-    pub fn init(cwd: Option<&std::path::Path>) -> Result<Self> {
+    pub fn init(cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
         let proc = SubprocessSession::spawn(
             "python3",
             &["-s", "-u", "-c", PYTHON_BOOTSTRAP],
             &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
             cwd,
+            timeout,
         )
         .context("Failed to start Python")?;
         Ok(PythonSession { proc })

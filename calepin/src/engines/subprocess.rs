@@ -35,13 +35,13 @@ use std::time::Duration;
 
 /// Chunk execution timeout. None means no timeout (wait forever).
 /// Override with CALEPIN_TIMEOUT env var or `timeout` in _calepin.toml [defaults].
-/// Absent/null in TOML means infinite; a numeric value sets the timeout in seconds.
-static CHUNK_TIMEOUT: LazyLock<Option<Duration>> = LazyLock::new(|| {
+/// Resolve chunk timeout from env var or defaults.
+pub fn resolve_timeout(defaults: &crate::project::Defaults) -> Option<Duration> {
     if let Some(secs) = std::env::var("CALEPIN_TIMEOUT").ok().and_then(|s| s.parse::<u64>().ok()) {
         return Some(Duration::from_secs(secs));
     }
-    crate::project::get_defaults().timeout.map(|s| Duration::from_secs(s))
-});
+    defaults.timeout.map(|s| Duration::from_secs(s))
+}
 
 /// A persistent subprocess that communicates via stdin/stdout.
 /// Used by both R and Python engines.
@@ -52,6 +52,8 @@ pub struct SubprocessSession {
     reader_rx: Option<std::sync::mpsc::Receiver<ReaderMsg>>,
     /// Handle for the reader thread (joined on drop).
     _reader_handle: Option<std::thread::JoinHandle<()>>,
+    /// Chunk execution timeout.
+    timeout: Option<Duration>,
 }
 
 enum ReaderMsg {
@@ -64,7 +66,7 @@ impl SubprocessSession {
     /// Spawn a subprocess with piped stdin/stdout, optional env vars and working directory.
     /// stderr is inherited (warnings go to terminal).
     /// A reader thread is spawned to enable timeout-based reads.
-    pub fn spawn(program: &str, args: &[&str], env: &[(&str, &str)], cwd: Option<&std::path::Path>) -> Result<Self> {
+    pub fn spawn(program: &str, args: &[&str], env: &[(&str, &str)], cwd: Option<&std::path::Path>, timeout: Option<Duration>) -> Result<Self> {
         let mut cmd = Command::new(program);
         cmd.args(args)
             .stdin(Stdio::piped())
@@ -109,6 +111,7 @@ impl SubprocessSession {
             stdin: Some(stdin),
             reader_rx: Some(rx),
             _reader_handle: Some(handle),
+            timeout,
         })
     }
 
@@ -127,7 +130,7 @@ impl SubprocessSession {
         // Read lines until {sentinel}_DONE, with optional timeout
         let done_marker = format!("{}_DONE", sentinel);
         let mut output = String::new();
-        let timeout = &*CHUNK_TIMEOUT;
+        let timeout = &self.timeout;
         let rx = self.reader_rx.as_ref().context("Reader channel closed")?;
 
         loop {

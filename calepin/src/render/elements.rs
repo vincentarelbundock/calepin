@@ -81,6 +81,8 @@ pub struct ElementRenderer {
     raw_fragments: std::cell::RefCell<Vec<String>>,
     sc_fragments: Vec<String>,
     preamble: Vec<String>,
+    /// Resolved rendering defaults (highlight, figure, callout, labels, etc.).
+    pub defaults: crate::project::Defaults,
     pub number_sections: bool,
     pub shift_headings: bool,
     pub convert_math: bool,
@@ -139,6 +141,7 @@ impl ElementRenderer {
             raw_fragments: std::cell::RefCell::new(Vec::new()),
             sc_fragments: Vec::new(),
             preamble: Vec::new(),
+            defaults: crate::project::get_defaults(),
             number_sections: false,
             shift_headings: false,
             convert_math: false,
@@ -162,23 +165,22 @@ impl ElementRenderer {
         metadata: &crate::metadata::Metadata,
         options: &crate::pipeline::RenderCoreOptions,
     ) -> Self {
+        let hl = metadata.defaults.highlight.as_ref();
+        let builtin_hl = crate::project::builtin_metadata().defaults.highlight.as_ref();
         let highlight_config = metadata.var.get("highlight-style")
             .map(|v| crate::render::highlighting::parse_highlight_config(v))
             .unwrap_or_else(|| {
-                let defs = crate::project::get_defaults();
-                let hl = defs.highlight.as_ref();
-                let builtin = crate::project::builtin_metadata();
-                let meta_hl = builtin.defaults.highlight.as_ref();
                 crate::render::highlighting::HighlightConfig::LightDark {
                     light: hl.and_then(|h| h.light.clone())
-                        .or_else(|| meta_hl.and_then(|h| h.light.clone()))
+                        .or_else(|| builtin_hl.and_then(|h| h.light.clone()))
                         .unwrap_or_else(|| "github".to_string()),
                     dark: hl.and_then(|h| h.dark.clone())
-                        .or_else(|| meta_hl.and_then(|h| h.dark.clone()))
+                        .or_else(|| builtin_hl.and_then(|h| h.dark.clone()))
                         .unwrap_or_else(|| "nord".to_string()),
                 }
             });
         let mut er = Self::new(engine, highlight_config);
+        er.defaults = metadata.defaults.clone();
         er.number_sections = metadata.number_sections;
         er.convert_math = metadata.convert_math;
         er.shift_headings = metadata.title.is_some();
@@ -260,8 +262,9 @@ impl ElementRenderer {
                 min_heading_level: self.min_heading_level.get(),
                 suppress_footnote_section: true,
             };
+            let embed = self.defaults.embed_resources.unwrap_or(true);
             let result = crate::render::convert::render_html_with_metadata(
-                &processed, &fragments, &options,
+                &processed, &fragments, &options, embed,
             );
             self.footnote_counter.set(result.metadata.footnote_counter_end);
             self.section_counters.set(Some(result.metadata.section_counters_end));
@@ -331,6 +334,7 @@ impl ElementRenderer {
             &self.raw_fragments,
             &self.theorem_numbers,
             &self.template_env,
+            &self.defaults,
         )
     }
 
@@ -352,7 +356,7 @@ impl ElementRenderer {
                 meta.ids.insert(label.clone(), (count + 1).to_string());
                 let num = count + 1;
 
-                let label_defs = crate::project::get_defaults().labels;
+                let label_defs = self.defaults.labels.clone();
                 let mut listing_vars = HashMap::new();
                 listing_vars.insert("base".to_string(), self.ext.clone());
                 listing_vars.insert("engine".to_string(), self.ext.clone());
@@ -375,6 +379,7 @@ impl ElementRenderer {
     fn render_bracketed_spans(&self, text: &str) -> String {
         crate::render::span::render(
             text, &self.ext, &self.registry, &self.raw_fragments,
+            &self.defaults,
             &|name| self.resolve_element_template(name),
             &self.template_env,
         )
@@ -392,7 +397,7 @@ impl ElementRenderer {
         );
 
         for filter in [&code_filter as &dyn Filter, &figure_filter as &dyn Filter] {
-            match filter.apply(element, &self.ext, &mut vars) {
+            match filter.apply(element, &self.ext, &mut vars, &self.defaults) {
                 FilterResult::Rendered(output) => return output,
                 FilterResult::Continue | FilterResult::Pass => {}
             }

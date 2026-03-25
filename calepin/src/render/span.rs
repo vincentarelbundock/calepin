@@ -18,6 +18,7 @@ pub fn render(
     format: &str,
     registry: &PluginRegistry,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
+    defaults: &crate::project::Defaults,
     resolve_template: &dyn Fn(&str) -> Option<String>,
     template_env: &crate::render::template::TemplateEnv,
 ) -> String {
@@ -60,7 +61,7 @@ pub fn render(
             match &plugin.kind {
                 PluginKind::BuiltinFilter(filter) => {
                     let span_element = crate::types::Element::Text { content: content.to_string() };
-                    match filter.apply(&span_element, format, &mut vars) {
+                    match filter.apply(&span_element, format, &mut vars, defaults) {
                         crate::render::transform_element::FilterResult::Rendered(output) => {
                             return wrap_output(format, raw_fragments, output);
                         }

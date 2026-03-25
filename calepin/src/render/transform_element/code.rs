@@ -21,7 +21,7 @@ impl<'a> CodeFilter<'a> {
 }
 
 impl<'a> Filter for CodeFilter<'a> {
-    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>) -> FilterResult {
+    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, _defaults: &crate::project::Defaults) -> FilterResult {
         match element {
             Element::CodeSource { code, lang, label, filename, .. } => {
                 let escaped = escape_code_for_format(code, format);

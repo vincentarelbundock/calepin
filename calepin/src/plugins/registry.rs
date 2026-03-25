@@ -32,6 +32,7 @@ pub trait StructuralHandler {
         render_element: &dyn Fn(&Element) -> String,
         resolve_template: &dyn Fn(&str) -> Option<String>,
         raw_fragments: &RefCell<Vec<String>>,
+        defaults: &crate::project::Defaults,
     ) -> Option<String>;
 }
 
@@ -232,15 +233,12 @@ struct TabsetHandler;
 
 impl StructuralHandler for TabsetHandler {
     fn render_div(
-        &self,
-        _classes: &[String],
-        _id: &Option<String>,
-        attrs: &HashMap<String, String>,
-        children: &[Element],
-        format: &str,
+        &self, _classes: &[String], _id: &Option<String>,
+        attrs: &HashMap<String, String>, children: &[Element], format: &str,
         render_element: &dyn Fn(&Element) -> String,
         _resolve_template: &dyn Fn(&str) -> Option<String>,
         _raw_fragments: &RefCell<Vec<String>>,
+        _defaults: &crate::project::Defaults,
     ) -> Option<String> {
         Some(crate::structures::tabset::render(format, attrs, children, render_element))
     }
@@ -250,17 +248,14 @@ struct LayoutHandler;
 
 impl StructuralHandler for LayoutHandler {
     fn render_div(
-        &self,
-        _classes: &[String],
-        id: &Option<String>,
-        attrs: &HashMap<String, String>,
-        children: &[Element],
-        format: &str,
+        &self, _classes: &[String], id: &Option<String>,
+        attrs: &HashMap<String, String>, children: &[Element], format: &str,
         render_element: &dyn Fn(&Element) -> String,
         _resolve_template: &dyn Fn(&str) -> Option<String>,
         raw_fragments: &RefCell<Vec<String>>,
+        defaults: &crate::project::Defaults,
     ) -> Option<String> {
-        Some(crate::structures::layout::render(id, attrs, children, format, render_element, raw_fragments))
+        Some(crate::structures::layout::render(id, attrs, children, format, render_element, raw_fragments, defaults))
     }
 }
 
@@ -380,6 +375,7 @@ impl Filter for NoopFilter {
         _element: &Element,
         _format: &str,
         _vars: &mut HashMap<String, String>,
+        _defaults: &crate::project::Defaults,
     ) -> crate::render::transform_element::FilterResult {
         crate::render::transform_element::FilterResult::Pass
     }

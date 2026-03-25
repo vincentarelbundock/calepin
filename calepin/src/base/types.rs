@@ -62,6 +62,8 @@ pub struct ChunkOptions {
     pub inner: HashMap<String, OptionValue>,
     /// Keys that were merged from document-level defaults (not set per-chunk).
     pub defaults_keys: std::collections::HashSet<String>,
+    /// Resolved rendering defaults for fallback values.
+    pub defaults: crate::project::Defaults,
 }
 
 #[derive(Debug, Clone)]
@@ -109,35 +111,35 @@ impl ChunkOptions {
 
     // Convenience accessors mirroring calepin's reactor defaults
     pub fn cache(&self) -> bool {
-        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.cache).unwrap_or(true);
+        let d = self.defaults.execute.as_ref().and_then(|c| c.cache).unwrap_or(true);
         self.get_bool("cache", d)
     }
     pub fn eval(&self) -> bool {
-        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.eval).unwrap_or(true);
+        let d = self.defaults.execute.as_ref().and_then(|c| c.eval).unwrap_or(true);
         self.get_bool("eval", d)
     }
     pub fn echo(&self) -> bool {
-        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.echo).unwrap_or(true);
+        let d = self.defaults.execute.as_ref().and_then(|c| c.echo).unwrap_or(true);
         self.get_bool("echo", d)
     }
     pub fn include(&self) -> bool {
-        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.include).unwrap_or(true);
+        let d = self.defaults.execute.as_ref().and_then(|c| c.include).unwrap_or(true);
         self.get_bool("include", d)
     }
     pub fn warning(&self) -> bool {
-        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.warning).unwrap_or(true);
+        let d = self.defaults.execute.as_ref().and_then(|c| c.warning).unwrap_or(true);
         self.get_bool("warning", d)
     }
     pub fn message(&self) -> bool {
-        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.message).unwrap_or(true);
+        let d = self.defaults.execute.as_ref().and_then(|c| c.message).unwrap_or(true);
         self.get_bool("message", d)
     }
     pub fn comment(&self) -> String {
-        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.comment.clone()).unwrap_or_else(|| "> ".to_string());
+        let d = self.defaults.execute.as_ref().and_then(|c| c.comment.clone()).unwrap_or_else(|| "> ".to_string());
         self.get_string("comment", &d)
     }
     pub fn results(&self) -> ResultsMode {
-        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.results.clone()).unwrap_or_else(|| "markup".to_string());
+        let d = self.defaults.execute.as_ref().and_then(|c| c.results.clone()).unwrap_or_else(|| "markup".to_string());
         match self.get_string("results", &d).as_str() {
             "asis" => ResultsMode::Asis,
             "hide" => ResultsMode::Hide,
@@ -149,14 +151,14 @@ impl ChunkOptions {
             .expect("engine must be set by the parser (e.g., {r} or {python})")
     }
 
-    fn default_fig_width() -> f64 {
-        crate::project::get_defaults().figure.as_ref().and_then(|f| f.width).unwrap_or(6.0)
+    fn default_fig_width(&self) -> f64 {
+        self.defaults.figure.as_ref().and_then(|f| f.width).unwrap_or(6.0)
     }
-    fn default_out_width_frac() -> f64 {
-        crate::project::get_defaults().figure.as_ref().and_then(|f| f.out_width).unwrap_or(0.70)
+    fn default_out_width_frac(&self) -> f64 {
+        self.defaults.figure.as_ref().and_then(|f| f.out_width).unwrap_or(0.70)
     }
-    fn default_fig_asp() -> f64 {
-        crate::project::get_defaults().figure.as_ref().and_then(|f| f.aspect_ratio).unwrap_or(0.618)
+    fn default_fig_asp(&self) -> f64 {
+        self.defaults.figure.as_ref().and_then(|f| f.aspect_ratio).unwrap_or(0.618)
     }
 
     /// Graphics device width in inches.
@@ -167,28 +169,28 @@ impl ChunkOptions {
         let fig_width_set_per_chunk = self.get_opt_string("fig_width").is_some()
             && !self.defaults_keys.contains("fig_width");
         if fig_width_set_per_chunk {
-            return self.get_number("fig_width", Self::default_fig_width());
+            return self.get_number("fig_width", self.default_fig_width());
         }
         // Auto-scale from out-width if set (per-chunk out-width takes priority)
         if let Some(frac) = self.out_width_fraction() {
-            let base = self.get_number("fig_width", Self::default_fig_width());
-            return base * (frac / Self::default_out_width_frac());
+            let base = self.get_number("fig_width", self.default_fig_width());
+            return base * (frac / self.default_out_width_frac());
         }
-        self.get_number("fig_width", Self::default_fig_width())
+        self.get_number("fig_width", self.default_fig_width())
     }
 
     /// Graphics device height in inches.
     /// Derived from `fig-width * fig-asp` unless explicitly set.
     pub fn fig_height(&self) -> f64 {
         if self.get_opt_string("fig_height").is_some() {
-            return self.get_number("fig_height", Self::default_fig_width() * Self::default_fig_asp());
+            return self.get_number("fig_height", self.default_fig_width() * self.default_fig_asp());
         }
         self.fig_width() * self.fig_asp()
     }
 
     /// Aspect ratio (height / width). Defaults to golden ratio.
     pub fn fig_asp(&self) -> f64 {
-        self.get_number("fig_asp", Self::default_fig_asp())
+        self.get_number("fig_asp", self.default_fig_asp())
     }
 
     /// Parse out-width as a fraction (e.g., "70%" -> 0.70, "0.5" -> 0.5).
@@ -207,7 +209,7 @@ impl ChunkOptions {
     pub fn lst_cap(&self) -> Option<String> { self.get_opt_string("lst_cap") }
     pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig_alt") }
     pub fn dev(&self) -> String {
-        let default = crate::project::get_defaults().figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
+        let default = self.defaults.figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
         self.get_string("dev", &default)
     }
     pub fn fig_align(&self) -> Option<String> { self.get_opt_string("fig_align") }
@@ -221,7 +223,7 @@ impl ChunkOptions {
 
     /// Build figure rendering attributes from chunk options.
     pub fn to_figure_attrs(&self) -> FigureAttrs {
-        let default_out_width = format!("{}%", (Self::default_out_width_frac() * 100.0) as u32);
+        let default_out_width = format!("{}%", (self.default_out_width_frac() * 100.0) as u32);
         FigureAttrs {
             width: self.out_width().or_else(|| Some(default_out_width)),
             height: self.out_height(),

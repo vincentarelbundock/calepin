@@ -277,7 +277,7 @@ impl RSession {
     /// `format` is the output format name (html, latex, typst, markdown) so that
     /// knitr-aware packages (tinytable, gt, …) can auto-detect it.
     /// `cwd` sets the working directory for the R process (typically the input file's directory).
-    pub fn init(format: &str, cwd: Option<&std::path::Path>) -> Result<Self> {
+    pub fn init(format: &str, cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
         let bootstrap = R_BOOTSTRAP.replace(FORMAT_PLACEHOLDER, format);
         let bootstrap_file = tempfile::NamedTempFile::new()
             .context("Failed to create temp file for R bootstrap")?;
@@ -285,7 +285,7 @@ impl RSession {
             .context("Failed to write R bootstrap")?;
         let path_str = bootstrap_file.path().to_string_lossy().to_string();
         let proc = SubprocessSession::spawn(
-            "Rscript", &["--no-save", "--no-restore", &path_str], &[], cwd,
+            "Rscript", &["--no-save", "--no-restore", &path_str], &[], cwd, timeout,
         ).context("Failed to start R")?;
         Ok(RSession { proc, _bootstrap_file: bootstrap_file })
     }

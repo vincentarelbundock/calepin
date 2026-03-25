@@ -59,7 +59,7 @@ pub fn process_body(
     // 2. Build MiniJinja environment with built-in functions
     let mut env = minijinja::Environment::new();
     env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
-    functions::register(&mut env, format, &fragments);
+    functions::register(&mut env, format, &fragments, &metadata.defaults);
 
     // 3. Build context with metadata, variables, and environment
     let context = variables::build_context(metadata, format);

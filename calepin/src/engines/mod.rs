@@ -52,18 +52,19 @@ impl EnginePool {
         engine: &str,
         working_dir: Option<&Path>,
     ) -> anyhow::Result<Self> {
+        let timeout = subprocess::resolve_timeout(&metadata.defaults);
         let r = if util::needs_engine(blocks, body, metadata, "r") {
-            Some(r::RSession::init(engine, working_dir)?)
+            Some(r::RSession::init(engine, working_dir, timeout)?)
         } else {
             None
         };
         let python = if util::needs_engine(blocks, body, metadata, "python") {
-            Some(python::PythonSession::init(working_dir)?)
+            Some(python::PythonSession::init(working_dir, timeout)?)
         } else {
             None
         };
         let sh = if util::needs_engine(blocks, body, metadata, "sh") {
-            Some(sh::ShSession::init(working_dir)?)
+            Some(sh::ShSession::init(working_dir, timeout)?)
         } else {
             None
         };
@@ -160,6 +161,7 @@ pub fn evaluate(
                     "fig_", "out_", "comment", "dev", "dpi", "label",
                 ];
                 let mut merged_chunk = chunk.clone();
+                merged_chunk.options.defaults = metadata.defaults.clone();
                 for (key, val) in &metadata.var {
                     let opt_key = crate::util::normalize_key(key);
                     let is_chunk_opt = CHUNK_OPT_PREFIXES.iter().any(|p| opt_key.starts_with(p));
@@ -356,7 +358,7 @@ pub fn execute_chunk(
             let dpi: f64 = options
                 .get_opt_string("dpi")
                 .and_then(|s| s.parse().ok())
-                .unwrap_or_else(|| crate::project::get_defaults().dpi.unwrap_or(150.0));
+                .unwrap_or_else(|| options.defaults.dpi.unwrap_or(150.0));
             session.capture(&code, &fig_full_str, fig_width, fig_height, dpi)?
         }
         _ => {
