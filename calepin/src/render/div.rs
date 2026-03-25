@@ -63,6 +63,11 @@ pub fn render(
         } else {
             v.insert("id".to_string(), String::new());
         }
+
+        // Labels for localisable strings in div templates (proof, etc.)
+        let label_defs = crate::project::get_defaults().labels;
+        v.insert("label_proof".to_string(), label_defs.as_ref().and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
+
         *vars = Some(v);
     };
 

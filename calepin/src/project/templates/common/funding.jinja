@@ -1,20 +1,20 @@
 {%- if base == "html" %}
 <section class="appendix-section">
-<h2>Funding</h2>
+<h2>{{label_funding}}</h2>
 <ul>
 {{items}}
 </ul>
 </section>
 {%- elif base == "latex" %}
-\subsection*{Funding}
+\subsection*{ {{-label_funding-}} }
 \begin{itemize}
 {{items}}
 \end{itemize}
 {%- elif base == "typst" %}
-== Funding
+== {{label_funding}}
 {{items}}
 {%- else %}
-## Funding
+## {{label_funding}}
 
 {{items}}
 {%- endif %}

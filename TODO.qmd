@@ -50,37 +50,7 @@ PATH CHECK FOR SINGLE typst file
 ## Figures
 
 - [ ] Figure templates in latex are pre-computed. Templates need to handle \begin{ {{variables}} }
-- [ ] Check insertion of static images
-- [ ] Match default DPI in python and R. Or does it matter for .svg files? Are we doing svg in python?
-- [ ] Can we convert svg2pdf without calling an external tool?
-- [ ] Auto-scaling of figures should not be disabled when fig-width is set in the .toml file. Only when set on a per-figure basis.
-- [ ] Check if #| fig-align works in all base formats.
-
-
-## Layout
-
-- [ ] Column classes (`.column-body`, `.column-page`, `.column-screen`, `.column-margin`)
-- [ ] Outset variants (`.column-body-outset`, `.column-page-inset`)
-- [ ] Left/right overflow (`.column-screen-left`, `.column-page-right`, etc.)
-- [ ] Margin content (`.column-margin` for text, figures, tables)
-- [ ] Margin references (`reference-location: margin`)
-- [ ] Margin citations (`citation-location: margin`)
-- [ ] Margin captions (`cap-location: margin`, `fig-cap-location: margin`)
-- [ ] PDF page geometry options (`geometry:` front matter)
-- [ ] Screen inset shaded (`column: screen-inset-shaded`)
-
-
-## Cross-references
-
-- [ ] Custom cross-reference types.
-- [ ] Cross-references across pages in website and book collections.
-
-
-## HTML
-
-- [ ] Do not base64 in website/ but always do it in html/
-- [ ] Embed resources
-- [ ] responsive html: Previous / Next buttons at the bottom of the page get a line return when the page narrows isntead of getting closer to each other.
+- [ ] Can more code be shared between figures and code-generated figures?
 
 
 ## calepin new
@@ -224,6 +194,7 @@ PATH CHECK FOR SINGLE typst file
 
 # Later
 
+- [ ] Lightning CSS
 - [ ] Code annotations
 - [ ] Code numbering
 - [ ] Tables: Caption location in different output formats.
@@ -238,4 +209,18 @@ PATH CHECK FOR SINGLE typst file
 - [ ] `fig-subcap`: Multiple figures from a single code chunk.
 - [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
 - [ ] Chunk labels should not add a fig- or a tbl- automatically if that is already in the label specified in ```{lang, fig-blahblah}. Otherwise we get duplicated fig-fig-blahblah.
+- [ ] Custom cross-reference types.
+
+
+## Layout
+
+- [ ] Column classes (`.column-body`, `.column-page`, `.column-screen`, `.column-margin`)
+- [ ] Outset variants (`.column-body-outset`, `.column-page-inset`)
+- [ ] Left/right overflow (`.column-screen-left`, `.column-page-right`, etc.)
+- [ ] Margin content (`.column-margin` for text, figures, tables)
+- [ ] Margin references (`reference-location: margin`)
+- [ ] Margin citations (`citation-location: margin`)
+- [ ] Margin captions (`cap-location: margin`, `fig-cap-location: margin`)
+- [ ] PDF page geometry options (`geometry:` front matter)
+- [ ] Screen inset shaded (`column: screen-inset-shaded`)
 

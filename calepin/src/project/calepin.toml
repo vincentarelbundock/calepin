@@ -1,5 +1,6 @@
 [defaults]
 format = "html"
+lang = "en"
 preview_port = 3456
 csl = "chicago-author-date"
 dpi = 150.0
@@ -28,6 +29,7 @@ comment = "> "
 results = "markup"
 
 [defaults.toc]
+enabled = false
 depth = 3
 title = "Contents"
 
@@ -38,6 +40,11 @@ tip = "Tip"
 warning = "Warning"
 important = "Important"
 caution = "Caution"
+icon_note = "\u2139\uFE0F"
+icon_tip = "\U0001F4A1"
+icon_warning = "\u26A0\uFE0F"
+icon_important = "\u2757"
+icon_caution = "\U0001F525"
 
 [defaults.video]
 width = "100%"
@@ -56,6 +63,37 @@ paragraphs = 1
 valign = "top"
 columns = 1
 rows = 1
+
+[defaults.latex]
+documentclass = "article"
+fontsize = "11pt"
+linkcolor = "black"
+urlcolor = "blue!60!black"
+citecolor = "blue!60!black"
+
+[defaults.typst]
+fontsize = "11pt"
+leading = "0.65em"
+justify = true
+heading_numbering = "1.1"
+
+[defaults.revealjs]
+theme = "white"
+code_theme = "monokai"
+transition = "slide"
+slide_number = true
+
+[defaults.labels]
+abstract_title = "Abstract"
+keywords = "Keywords"
+appendix = "Appendix"
+citation = "Citation"
+reuse = "Reuse"
+funding = "Funding"
+copyright = "Copyright"
+listing = "Listing"
+proof = "Proof"
+contents = "Contents"
 
 global_crossref = false
 

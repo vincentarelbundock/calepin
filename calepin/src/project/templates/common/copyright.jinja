@@ -1,12 +1,12 @@
 {%- if base == "html" %}
 <section class="appendix-section">
-<h2>Copyright</h2>
+<h2>{{label_copyright}}</h2>
 <p>{{content}}</p>
 </section>
 {%- elif base == "latex" %}
-\subsection*{Copyright}
+\subsection*{ {{-label_copyright-}} }
 {{content}}
 {%- elif base == "typst" %}
-== Copyright
+== {{label_copyright}}
 {{content}}
 {%- endif %}

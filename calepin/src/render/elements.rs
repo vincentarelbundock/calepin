@@ -294,12 +294,14 @@ impl ElementRenderer {
                         meta.ids.insert(label.clone(), (count + 1).to_string());
                         let num = count + 1;
 
+                        let label_defs = crate::project::get_defaults().labels;
                         let mut listing_vars = HashMap::new();
                         listing_vars.insert("base".to_string(), self.ext.clone());
                         listing_vars.insert("engine".to_string(), self.ext.clone());
                         listing_vars.insert("label".to_string(), label.clone());
                         listing_vars.insert("number".to_string(), num.to_string());
                         listing_vars.insert("content".to_string(), rendered);
+                        listing_vars.insert("label_listing".to_string(), label_defs.as_ref().and_then(|l| l.listing.clone()).unwrap_or_else(|| "Listing".to_string()));
                         if let Some(cap) = lst_cap {
                             listing_vars.insert("lst_cap".to_string(), cap.clone());
                         }

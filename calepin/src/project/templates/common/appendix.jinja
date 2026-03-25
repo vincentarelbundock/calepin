@@ -4,14 +4,14 @@
 </aside>
 {%- elif base == "latex" %}
 \appendix
-\section*{Appendix}
+\section*{ {{-label_appendix-}} }
 {{sections}}
 {%- elif base == "typst" %}
 #pagebreak()
-= Appendix
+= {{label_appendix}}
 {{sections}}
 {%- else %}
-# Appendix
+# {{label_appendix}}
 
 {{sections}}
 {%- endif %}

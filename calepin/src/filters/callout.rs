@@ -48,11 +48,26 @@ impl Filter for CalloutFilter {
 
         let callout_defs = crate::project::get_defaults().callout;
         let (default_title, icon) = match callout_class.as_str() {
-            "callout-note" => (callout_defs.as_ref().and_then(|c| c.note.clone()).unwrap_or_else(|| "Note".to_string()), "\u{2139}\u{fe0f}"),
-            "callout-tip" => (callout_defs.as_ref().and_then(|c| c.tip.clone()).unwrap_or_else(|| "Tip".to_string()), "\u{1f4a1}"),
-            "callout-warning" => (callout_defs.as_ref().and_then(|c| c.warning.clone()).unwrap_or_else(|| "Warning".to_string()), "\u{26a0}\u{fe0f}"),
-            "callout-important" => (callout_defs.as_ref().and_then(|c| c.important.clone()).unwrap_or_else(|| "Important".to_string()), "\u{2757}"),
-            "callout-caution" => (callout_defs.as_ref().and_then(|c| c.caution.clone()).unwrap_or_else(|| "Caution".to_string()), "\u{1f525}"),
+            "callout-note" => (
+                callout_defs.as_ref().and_then(|c| c.note.clone()).unwrap_or_else(|| "Note".to_string()),
+                callout_defs.as_ref().and_then(|c| c.icon_note.clone()).unwrap_or_else(|| "\u{2139}\u{fe0f}".to_string()),
+            ),
+            "callout-tip" => (
+                callout_defs.as_ref().and_then(|c| c.tip.clone()).unwrap_or_else(|| "Tip".to_string()),
+                callout_defs.as_ref().and_then(|c| c.icon_tip.clone()).unwrap_or_else(|| "\u{1f4a1}".to_string()),
+            ),
+            "callout-warning" => (
+                callout_defs.as_ref().and_then(|c| c.warning.clone()).unwrap_or_else(|| "Warning".to_string()),
+                callout_defs.as_ref().and_then(|c| c.icon_warning.clone()).unwrap_or_else(|| "\u{26a0}\u{fe0f}".to_string()),
+            ),
+            "callout-important" => (
+                callout_defs.as_ref().and_then(|c| c.important.clone()).unwrap_or_else(|| "Important".to_string()),
+                callout_defs.as_ref().and_then(|c| c.icon_important.clone()).unwrap_or_else(|| "\u{2757}".to_string()),
+            ),
+            "callout-caution" => (
+                callout_defs.as_ref().and_then(|c| c.caution.clone()).unwrap_or_else(|| "Caution".to_string()),
+                callout_defs.as_ref().and_then(|c| c.icon_caution.clone()).unwrap_or_else(|| "\u{1f525}".to_string()),
+            ),
             other => {
                 let fallback_title = other.strip_prefix("callout-")
                     .map(|s| {
@@ -63,7 +78,8 @@ impl Filter for CalloutFilter {
                         }
                     })
                     .unwrap_or_else(|| "Note".to_string());
-                (fallback_title, "\u{2139}\u{fe0f}")
+                let fallback_icon = callout_defs.as_ref().and_then(|c| c.icon_note.clone()).unwrap_or_else(|| "\u{2139}\u{fe0f}".to_string());
+                (fallback_title, fallback_icon)
             }
         };
 

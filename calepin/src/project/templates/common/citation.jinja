@@ -1,16 +1,16 @@
 {%- if base == "html" %}
 <section class="appendix-section">
-<h2>Citation</h2>
+<h2>{{label_citation}}</h2>
 <p>{{content}}</p>
 </section>
 {%- elif base == "latex" %}
-\subsection*{Citation}
+\subsection*{ {{-label_citation-}} }
 {{content}}
 {%- elif base == "typst" %}
-== Citation
+== {{label_citation}}
 {{content}}
 {%- else %}
-## Citation
+## {{label_citation}}
 
 {{content}}
 {%- endif %}

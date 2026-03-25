@@ -92,15 +92,18 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
 
     let mut sections: Vec<String> = Vec::new();
     let fmt = ext.to_string();
+    let label_defs = crate::project::get_defaults().labels;
 
     // License
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
             if let Some(tpl) = resolve_element_template("license", ext) {
                 let mut vars = HashMap::new();
+                vars.insert("base".to_string(), fmt.clone());
                 vars.insert("engine".to_string(), fmt.clone());
                 vars.insert("text".to_string(), text.clone());
                 vars.insert("url".to_string(), lic.url.as_deref().unwrap_or("").to_string());
+                vars.insert("label_reuse".to_string(), label_defs.as_ref().and_then(|l| l.reuse.clone()).unwrap_or_else(|| "Reuse".to_string()));
                 sections.push(apply_template(&tpl, &vars));
             }
         }
@@ -114,6 +117,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
             vars.insert("base".to_string(), fmt.clone());
             vars.insert("engine".to_string(), fmt.clone());
             vars.insert("content".to_string(), content);
+            vars.insert("label_citation".to_string(), label_defs.as_ref().and_then(|l| l.citation.clone()).unwrap_or_else(|| "Citation".to_string()));
             sections.push(apply_template(&tpl, &vars));
         }
     }
@@ -127,6 +131,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
                 vars.insert("base".to_string(), fmt.clone());
                 vars.insert("engine".to_string(), fmt.clone());
                 vars.insert("content".to_string(), text);
+                vars.insert("label_copyright".to_string(), label_defs.as_ref().and_then(|l| l.copyright.clone()).unwrap_or_else(|| "Copyright".to_string()));
                 sections.push(apply_template(&tpl, &vars));
             }
         }
@@ -141,6 +146,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
                 vars.insert("base".to_string(), fmt.clone());
                 vars.insert("engine".to_string(), fmt.clone());
                 vars.insert("items".to_string(), items);
+                vars.insert("label_funding".to_string(), label_defs.as_ref().and_then(|l| l.funding.clone()).unwrap_or_else(|| "Funding".to_string()));
                 sections.push(apply_template(&tpl, &vars));
             }
         }
@@ -153,6 +159,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         vars.insert("base".to_string(), fmt.clone());
         vars.insert("engine".to_string(), fmt);
         vars.insert("sections".to_string(), sections.join("\n"));
+        vars.insert("label_appendix".to_string(), label_defs.as_ref().and_then(|l| l.appendix.clone()).unwrap_or_else(|| "Appendix".to_string()));
         apply_template(&tpl, &vars)
     } else {
         sections.join("\n\n")

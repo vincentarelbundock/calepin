@@ -13,6 +13,7 @@ use super::HighlightDefaults;
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Defaults {
     pub format: Option<String>,
+    pub lang: Option<String>,
     #[serde(alias = "preview-port")]
     pub preview_port: Option<u16>,
     pub csl: Option<String>,
@@ -28,6 +29,10 @@ pub struct Defaults {
     pub placeholder: Option<PlaceholderDefaults>,
     pub lipsum: Option<LipsumDefaults>,
     pub layout: Option<LayoutDefaults>,
+    pub latex: Option<LatexDefaults>,
+    pub typst: Option<TypstDefaults>,
+    pub revealjs: Option<RevealJsDefaults>,
+    pub labels: Option<LabelsDefaults>,
     #[serde(alias = "embed-resources")]
     pub embed_resources: Option<bool>,
 }
@@ -70,6 +75,11 @@ pub struct CalloutDefaults {
     pub warning: Option<String>,
     pub important: Option<String>,
     pub caution: Option<String>,
+    pub icon_note: Option<String>,
+    pub icon_tip: Option<String>,
+    pub icon_warning: Option<String>,
+    pub icon_important: Option<String>,
+    pub icon_caution: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -96,6 +106,48 @@ pub struct LayoutDefaults {
     pub valign: Option<String>,
     pub columns: Option<usize>,
     pub rows: Option<usize>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LatexDefaults {
+    pub documentclass: Option<String>,
+    pub fontsize: Option<String>,
+    pub linkcolor: Option<String>,
+    pub urlcolor: Option<String>,
+    pub citecolor: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct TypstDefaults {
+    pub fontsize: Option<String>,
+    pub leading: Option<String>,
+    pub justify: Option<bool>,
+    #[serde(alias = "heading-numbering")]
+    pub heading_numbering: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct RevealJsDefaults {
+    pub theme: Option<String>,
+    #[serde(alias = "code-theme")]
+    pub code_theme: Option<String>,
+    pub transition: Option<String>,
+    #[serde(alias = "slide-number")]
+    pub slide_number: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LabelsDefaults {
+    pub abstract_title: Option<String>,
+    pub keywords: Option<String>,
+    pub appendix: Option<String>,
+    pub citation: Option<String>,
+    pub reuse: Option<String>,
+    pub funding: Option<String>,
+    pub copyright: Option<String>,
+    pub listing: Option<String>,
+    pub proof: Option<String>,
+    pub contents: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -130,6 +182,7 @@ impl Defaults {
         }
         Defaults {
             format: or!(user.format, builtin.format),
+            lang: or!(user.lang, builtin.lang),
             preview_port: user.preview_port.or(builtin.preview_port),
             csl: or!(user.csl, builtin.csl),
             dpi: user.dpi.or(builtin.dpi),
@@ -140,11 +193,15 @@ impl Defaults {
             figure: merge_option_struct!(user.figure, builtin.figure, { width, out_width, aspect_ratio, device, alignment }),
             chunk: merge_option_struct!(user.chunk, builtin.chunk, { cache, eval, echo, include, warning, message, comment, results }),
             toc: merge_option_struct!(user.toc, builtin.toc, { enabled, depth, title }),
-            callout: merge_option_struct!(user.callout, builtin.callout, { appearance, note, tip, warning, important, caution }),
+            callout: merge_option_struct!(user.callout, builtin.callout, { appearance, note, tip, warning, important, caution, icon_note, icon_tip, icon_warning, icon_important, icon_caution }),
             video: merge_option_struct!(user.video, builtin.video, { width, height, title }),
             placeholder: merge_option_struct!(user.placeholder, builtin.placeholder, { width, height, color }),
             lipsum: merge_option_struct!(user.lipsum, builtin.lipsum, { paragraphs }),
             layout: merge_option_struct!(user.layout, builtin.layout, { valign, columns, rows }),
+            latex: merge_option_struct!(user.latex, builtin.latex, { documentclass, fontsize, linkcolor, urlcolor, citecolor }),
+            typst: merge_option_struct!(user.typst, builtin.typst, { fontsize, leading, justify, heading_numbering }),
+            revealjs: merge_option_struct!(user.revealjs, builtin.revealjs, { theme, code_theme, transition, slide_number }),
+            labels: merge_option_struct!(user.labels, builtin.labels, { abstract_title, keywords, appendix, citation, reuse, funding, copyright, listing, proof, contents }),
         }
     }
 }

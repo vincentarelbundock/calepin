@@ -9,7 +9,7 @@
 ]
 #pagebreak()
 
-#outline(title: "Contents", indent: auto, depth: 2)
+#outline(title: "{{label_contents}}", indent: auto, depth: 2)
 
 #set page(numbering: "1")
 #counter(page).update(1)

@@ -285,6 +285,8 @@ pub fn build_template_vars_with_headings(
 ) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
+    let defs = crate::project::get_defaults();
+
     vars.insert("body".to_string(), body.to_string());
     vars.insert(
         "generator".to_string(),
@@ -297,6 +299,22 @@ pub fn build_template_vars_with_headings(
     vars.insert("base".to_string(), ext.to_string());
     vars.insert("engine".to_string(), ext.to_string());
     vars.insert("target".to_string(), ext.to_string());
+
+    // Language
+    vars.insert("lang".to_string(), defs.lang.as_deref().unwrap_or("en").to_string());
+
+    // Labels (localisable strings)
+    let labels = defs.labels.as_ref();
+    vars.insert("label_abstract".to_string(), labels.and_then(|l| l.abstract_title.clone()).unwrap_or_else(|| "Abstract".to_string()));
+    vars.insert("label_keywords".to_string(), labels.and_then(|l| l.keywords.clone()).unwrap_or_else(|| "Keywords".to_string()));
+    vars.insert("label_appendix".to_string(), labels.and_then(|l| l.appendix.clone()).unwrap_or_else(|| "Appendix".to_string()));
+    vars.insert("label_citation".to_string(), labels.and_then(|l| l.citation.clone()).unwrap_or_else(|| "Citation".to_string()));
+    vars.insert("label_reuse".to_string(), labels.and_then(|l| l.reuse.clone()).unwrap_or_else(|| "Reuse".to_string()));
+    vars.insert("label_funding".to_string(), labels.and_then(|l| l.funding.clone()).unwrap_or_else(|| "Funding".to_string()));
+    vars.insert("label_copyright".to_string(), labels.and_then(|l| l.copyright.clone()).unwrap_or_else(|| "Copyright".to_string()));
+    vars.insert("label_listing".to_string(), labels.and_then(|l| l.listing.clone()).unwrap_or_else(|| "Listing".to_string()));
+    vars.insert("label_proof".to_string(), labels.and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
+    vars.insert("label_contents".to_string(), labels.and_then(|l| l.contents.clone()).unwrap_or_else(|| "Contents".to_string()));
 
     // Plain title (used in <title> etc.) — strip markdown image/link syntax
     let plain_title = meta.title.as_deref().unwrap_or("Untitled");
@@ -349,7 +367,6 @@ pub fn build_template_vars_with_headings(
         vars.insert("css".to_string(), load_default_css());
         vars.insert("js".to_string(), String::new());
         let mut math_vars = HashMap::new();
-        let defs = crate::project::get_defaults();
         math_vars.insert("html_math_method".to_string(),
             meta.html_math_method.as_deref()
                 .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
@@ -361,6 +378,30 @@ pub fn build_template_vars_with_headings(
     if ext == "latex" {
         vars.insert("bib_preamble".to_string(), String::new());
         vars.insert("bib_end".to_string(), String::new());
+        let latex_defs = defs.latex.as_ref();
+        vars.insert("latex_documentclass".to_string(), latex_defs.and_then(|l| l.documentclass.clone()).unwrap_or_else(|| "article".to_string()));
+        vars.insert("latex_fontsize".to_string(), latex_defs.and_then(|l| l.fontsize.clone()).unwrap_or_else(|| "11pt".to_string()));
+        vars.insert("latex_linkcolor".to_string(), latex_defs.and_then(|l| l.linkcolor.clone()).unwrap_or_else(|| "black".to_string()));
+        vars.insert("latex_urlcolor".to_string(), latex_defs.and_then(|l| l.urlcolor.clone()).unwrap_or_else(|| "blue!60!black".to_string()));
+        vars.insert("latex_citecolor".to_string(), latex_defs.and_then(|l| l.citecolor.clone()).unwrap_or_else(|| "blue!60!black".to_string()));
+    }
+
+    // Typst-specific defaults
+    if ext == "typst" {
+        let typst_defs = defs.typst.as_ref();
+        vars.insert("typst_fontsize".to_string(), typst_defs.and_then(|t| t.fontsize.clone()).unwrap_or_else(|| "11pt".to_string()));
+        vars.insert("typst_leading".to_string(), typst_defs.and_then(|t| t.leading.clone()).unwrap_or_else(|| "0.65em".to_string()));
+        vars.insert("typst_justify".to_string(), typst_defs.and_then(|t| t.justify).unwrap_or(true).to_string());
+        vars.insert("typst_heading_numbering".to_string(), typst_defs.and_then(|t| t.heading_numbering.clone()).unwrap_or_else(|| "1.1".to_string()));
+    }
+
+    // Reveal.js-specific defaults
+    if ext == "revealjs" {
+        let rjs_defs = defs.revealjs.as_ref();
+        vars.insert("revealjs_theme".to_string(), rjs_defs.and_then(|r| r.theme.clone()).unwrap_or_else(|| "white".to_string()));
+        vars.insert("revealjs_code_theme".to_string(), rjs_defs.and_then(|r| r.code_theme.clone()).unwrap_or_else(|| "monokai".to_string()));
+        vars.insert("revealjs_transition".to_string(), rjs_defs.and_then(|r| r.transition.clone()).unwrap_or_else(|| "slide".to_string()));
+        vars.insert("revealjs_slide_number".to_string(), rjs_defs.and_then(|r| r.slide_number).unwrap_or(true).to_string());
     }
 
     // Bibliography block (format-specific via element template)
@@ -373,7 +414,7 @@ pub fn build_template_vars_with_headings(
     }
 
     // Table of contents
-    let toc_defs = crate::project::get_defaults().toc;
+    let toc_defs = defs.toc;
     let toc_enabled = match meta.toc {
         Some(v) => v,
         None => toc_defs.as_ref().and_then(|t| t.enabled).unwrap_or(ext == "html"),
