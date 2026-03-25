@@ -12,6 +12,10 @@
 - [ ] inspect each pages
 
 
+## Misc
+
+- [ ] date formatting should be in dates.rs not metadata.rs
+
 ## arelbundockcom
 
 - [ ] review all blog posts
@@ -100,10 +104,8 @@
 
 ## Internal
 
-- [ ] document vs. collection (better than "site")
 - [ ] Performance profiling
 - [ ] Architecture refactor / DRY / simplification
-- [ ] Singular vs Plural file names
 - [ ] User input validation. Brainstorm with AI to be super strict and informative. Paths, formats, front matter options, etc.
 - [ ] Minimize dependencies
 - [x] run_pagefind() should be specified as a more generic post-processing step that can be specified by the user.
