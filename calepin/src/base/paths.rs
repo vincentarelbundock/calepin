@@ -314,15 +314,18 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
         }
     }
 
-    // CSL file (only if explicitly specified)
+    // CSL file (only if explicitly specified and not a built-in archive name)
     if let Some(ref csl) = meta.csl {
-        let resolved = ctx.project_root.join(csl);
-        if !resolved.exists() {
-            errors.push(format!(
-                "  csl: {}\n    -> not found: {}",
-                csl,
-                resolved.display()
-            ));
+        use hayagriva::archive::ArchivedStyle;
+        if ArchivedStyle::by_name(csl).is_none() {
+            let resolved = ctx.project_root.join(csl);
+            if !resolved.exists() {
+                errors.push(format!(
+                    "  csl: {}\n    -> not found: {}",
+                    csl,
+                    resolved.display()
+                ));
+            }
         }
     }
 
