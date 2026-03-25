@@ -108,6 +108,30 @@ pub trait OutputRenderer {
         body.to_string()
     }
 
+    /// Resolve cross-references in the rendered body.
+    /// Default dispatches to the appropriate crossref function based on engine.
+    fn resolve_crossrefs(&self, body: &str, renderer: &ElementRenderer) -> String {
+        let thm_nums = renderer.theorem_numbers();
+        let walk_meta = renderer.walk_metadata();
+        match self.engine() {
+            "html" => crate::crossref::resolve_html_with_ids(body, &thm_nums, &walk_meta.ids),
+            "latex" => crate::crossref::resolve_latex(body, &thm_nums),
+            _ => crate::crossref::resolve_plain(body, &thm_nums),
+        }
+    }
+
+    /// Collect cross-reference data without resolving (for collection mode pass 1).
+    /// Returns None for non-HTML formats.
+    fn collect_crossref_data(&self, body: &str, renderer: &ElementRenderer) -> Option<crate::crossref::PageRefData> {
+        if self.engine() == "html" {
+            let thm_nums = renderer.theorem_numbers();
+            let walk_meta = renderer.walk_metadata();
+            Some(crate::crossref::collect_ids_html(body, &thm_nums, &walk_meta.ids))
+        } else {
+            None
+        }
+    }
+
     /// Wrap the rendered body in a page template. Return None to skip.
     fn assemble_page(&self, body: &str, meta: &Metadata, renderer: &ElementRenderer)
         -> Option<String>;
@@ -117,10 +141,20 @@ pub trait OutputRenderer {
         document.to_string()
     }
 
-    /// Optional preprocess script path. If set, the raw .qmd body is piped
-    /// through this script before block parsing.
-    fn preprocess(&self) -> Option<&Path> {
-        None
+    /// Preprocess the raw .qmd body before block parsing.
+    /// Default: return body unchanged. Custom formats pipe through an external script.
+    fn preprocess_body(&self, body: &str) -> Result<String> {
+        Ok(body.to_string())
+    }
+
+    /// Resolve citations in the element list via hayagriva.
+    fn resolve_bibliography(
+        &self,
+        elements: &mut Vec<Element>,
+        meta: &Metadata,
+        project_root: &Path,
+    ) -> Result<()> {
+        crate::bibliography::process_citations(elements, meta, project_root)
     }
 
     /// Write the final rendered content to the output file.
@@ -245,14 +279,22 @@ impl OutputRenderer for CustomRenderer {
         document.to_string()
     }
 
-    fn preprocess(&self) -> Option<&Path> {
-        self.preprocess_script.as_deref()
+    fn preprocess_body(&self, body: &str) -> Result<String> {
+        if let Some(ref script) = self.preprocess_script {
+            let input = serde_json::json!({
+                "body": body,
+                "format": self.name,
+            });
+            run_script(script, &input.to_string(), &[])
+        } else {
+            Ok(body.to_string())
+        }
     }
 }
 
 /// Run a script, piping `stdin_data` to its stdin and returning stdout.
 /// Writes stdin in a separate thread to avoid deadlock when pipe buffers fill.
-pub fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<String> {
+fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<String> {
     let mut child = Command::new(script)
         .args(args)
         .stdin(Stdio::piped())

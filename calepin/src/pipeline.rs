@@ -151,16 +151,8 @@ pub fn render_core_with_options(
     // 4. Expand includes before block parsing (so included code chunks are parsed)
     let body = timed!("expand_includes", jinja::expand_includes(&body, &path_ctx.project_root, &format_str));
 
-    // 4a. Preprocess hook: pipe body through script if custom format defines one
-    let body = if let Some(script) = renderer.preprocess() {
-        let input = serde_json::json!({
-            "body": body,
-            "format": format_str,
-        });
-        formats::run_script(script, &input.to_string(), &[])?
-    } else {
-        body
-    };
+    // 4a. Preprocess body (custom format hook)
+    let body = renderer.preprocess_body(&body)?;
 
     // 4b. Parse body into blocks
     let blocks = timed!("parse_blocks", parse::blocks::parse_body(&body)?);
@@ -248,8 +240,8 @@ pub fn render_core_with_options(
     let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.engine(), &metadata, &registry, &mut ctx, &mut cache)?);
     let mut elements = eval_result.elements;
 
-    // 9. Bibliography (transform_elements stage)
-    timed!("bibliography", crate::bibliography::process_citations(&mut elements, &metadata, &path_ctx.project_root)?);
+    // 9. Resolve bibliography
+    timed!("bibliography", renderer.resolve_bibliography(&mut elements, &metadata, &path_ctx.project_root)?);
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);
@@ -262,24 +254,14 @@ pub fn render_core_with_options(
     // 12. Transform body (format-specific: slide splitting, color defs)
     let rendered = renderer.transform_body(&rendered, &element_renderer);
 
-    // 13. Cross-ref resolution (section IDs pre-collected from AST walk)
-    let thm_nums = element_renderer.theorem_numbers();
-    let walk_meta = element_renderer.walk_metadata();
+    // 13. Cross-ref resolution
     let (rendered, ref_data) = if options.skip_crossref {
         // Collection mode pass 1: collect IDs but don't resolve refs yet
-        let ref_data = if renderer.engine() == "html" {
-            Some(crate::crossref::collect_ids_html(&rendered, &thm_nums, &walk_meta.ids))
-        } else {
-            None
-        };
+        let ref_data = renderer.collect_crossref_data(&rendered, &element_renderer);
         (rendered, ref_data)
     } else {
         // Single-file mode: resolve refs immediately
-        let rendered = timed!("crossref", match renderer.engine() {
-            "html" => crate::crossref::resolve_html_with_ids(&rendered, &thm_nums, &walk_meta.ids),
-            "latex" => crate::crossref::resolve_latex(&rendered, &thm_nums),
-            _ => crate::crossref::resolve_plain(&rendered, &thm_nums),
-        });
+        let rendered = timed!("crossref", renderer.resolve_crossrefs(&rendered, &element_renderer));
         (rendered, None)
     };
 
