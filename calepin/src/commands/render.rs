@@ -27,12 +27,16 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
             if fmt_str.contains(',') {
                 let formats: Vec<&str> = fmt_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
                 for f in &formats {
-                    render_one(&args.input[0], None, Some(f), &overrides, args.quiet, args.engine.as_deref(), compile)?;
+                    let mut ctx = crate::resolve_context(&args.input[0], Some(f))?;
+                    crate::apply_engine_override(&mut ctx, args.engine.as_deref())?;
+                    render_one_with_context(&args.input[0], None, &ctx, &overrides, args.quiet, compile)?;
                 }
                 return Ok(());
             }
         }
-        return render_one(&args.input[0], args.output.as_deref(), args.format.as_deref(), &overrides, args.quiet, args.engine.as_deref(), compile);
+        let mut ctx = crate::resolve_context(&args.input[0], args.format.as_deref())?;
+        crate::apply_engine_override(&mut ctx, args.engine.as_deref())?;
+        return render_one_with_context(&args.input[0], args.output.as_deref(), &ctx, &overrides, args.quiet, compile);
     }
 
     // Multiple files: render in parallel.
@@ -74,21 +78,6 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Render a single .qmd file.
-fn render_one(
-    input: &Path,
-    output: Option<&Path>,
-    format: Option<&str>,
-    overrides: &[String],
-    quiet: bool,
-    engine_override: Option<&str>,
-    compile: bool,
-) -> Result<()> {
-    let mut ctx = crate::resolve_context(input, format)?;
-    crate::apply_engine_override(&mut ctx, engine_override)?;
-    render_one_with_context(input, output, &ctx, overrides, quiet, compile)
 }
 
 /// Render a single .qmd file with a pre-resolved project context.
