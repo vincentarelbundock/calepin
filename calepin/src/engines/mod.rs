@@ -229,10 +229,17 @@ pub fn execute_chunk(
         fig_abs.to_string_lossy().replace('\\', "/")
     };
 
-    results.push(ChunkResult::Source(source.to_vec()));
+    // R and Python engines emit per-expression _SOURCE: tags for interleaved output.
+    // Other engines get a single upfront Source entry.
+    let engine_name = options.engine();
+    let interleaved = !matches!(engine_name.as_str(), "sh")
+        && !diagram::is_diagram_engine(&engine_name);
+    if !interleaved {
+        results.push(ChunkResult::Source(source.to_vec()));
+    }
 
     // Dispatch to engine-specific capture
-    let captured = match options.engine().as_str() {
+    let captured = match engine_name.as_str() {
         eng if diagram::is_diagram_engine(eng) => {
             // Diagram engines always produce SVG
             let svg_path = fig_dir.join(format!("{}-1.svg", label));
@@ -275,6 +282,12 @@ pub fn execute_chunk(
     };
 
     process_results(&captured, &fig_full_path, options, &mut results)?;
+
+    // Fallback: if engine emitted no SOURCE tags (e.g. parse error), add upfront source.
+    if interleaved && !results.iter().any(|r| matches!(r, ChunkResult::Source(_))) {
+        results.insert(0, ChunkResult::Source(source.to_vec()));
+    }
+
     Ok(results)
 }
 
@@ -318,6 +331,7 @@ fn process_results(
     let (sentinel, rest) = raw.split_once('\n').unwrap_or(("", raw));
     let sep = format!("\n{}_SEP\n", sentinel);
 
+    let source_prefix = format!("{}_SOURCE:", sentinel);
     let output_prefix = format!("{}_OUTPUT:", sentinel);
     let asis_prefix = format!("{}_ASIS:", sentinel);
     let error_prefix = format!("{}_ERROR:", sentinel);
@@ -331,7 +345,12 @@ fn process_results(
         if part.is_empty() {
             continue;
         }
-        if let Some(text) = part.strip_prefix(&error_prefix) {
+        if let Some(text) = part.strip_prefix(&source_prefix) {
+            if !text.is_empty() {
+                let lines: Vec<String> = text.lines().map(|l| l.to_string()).collect();
+                results.push(ChunkResult::Source(lines));
+            }
+        } else if let Some(text) = part.strip_prefix(&error_prefix) {
             if !text.is_empty() {
                 results.push(ChunkResult::Error(text.to_string()));
             }

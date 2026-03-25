@@ -88,28 +88,62 @@ while True:
 
     sep = sentinel + "_SEP"
     parts = []
-
-    buf = io.StringIO()
     err = None
     warns_list = []
-
-    # Capture stdout via temporary swap (avoids importing contextlib at startup).
-    # warnings/traceback imported lazily on first use.
     old_stdout = sys.stdout
-    sys.stdout = buf
+
     try:
-        import warnings
+        import warnings, ast as _ast
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             if "matplotlib.pyplot" in sys.modules:
                 sys.modules["matplotlib.pyplot"].show = lambda *a, **k: None
-            exec(compile(code, "<chunk>", "exec"), _globals)
+
+            tree = _ast.parse(code, "<chunk>")
+            code_lines = code.split("\n")
+            prev_end = 0
+            src_buf = []
+
+            for node in tree.body:
+                # Accumulate source lines (include gap: comments, blanks)
+                end_line = node.end_lineno
+                src_buf.extend(code_lines[prev_end:end_line])
+                prev_end = end_line
+
+                # Capture stdout per-statement
+                buf = io.StringIO()
+                sys.stdout = buf
+                try:
+                    if isinstance(node, _ast.Expr):
+                        expr_code = compile(_ast.Expression(body=node.value), "<chunk>", "eval")
+                        result = eval(expr_code, _globals)
+                        if result is not None:
+                            print(repr(result))
+                    else:
+                        mod = _ast.Module(body=[node], type_ignores=[])
+                        _ast.fix_missing_locations(mod)
+                        stmt_code = compile(mod, "<chunk>", "exec")
+                        exec(stmt_code, _globals)
+                finally:
+                    sys.stdout = old_stdout
+
+                output = buf.getvalue().rstrip("\n")
+                if output:
+                    # Flush accumulated source before output
+                    parts.append(f"{sentinel}_SOURCE:" + "\n".join(src_buf))
+                    src_buf = []
+                    parts.append(f"{sentinel}_OUTPUT:{output}")
+
+            # Flush remaining source (trailing statements + comments)
+            remaining = src_buf + code_lines[prev_end:] if prev_end < len(code_lines) else src_buf
+            if remaining and "\n".join(remaining).strip():
+                parts.append(f"{sentinel}_SOURCE:" + "\n".join(remaining))
+
             warns_list = [str(x.message) for x in w]
     except Exception:
+        sys.stdout = old_stdout
         import traceback
         err = traceback.format_exc()
-    finally:
-        sys.stdout = old_stdout
 
     # Check for matplotlib figures. The import is a no-op if matplotlib is
     # already loaded (cached in sys.modules), and a cheap ImportError if not
@@ -137,12 +171,8 @@ while True:
         except ImportError:
             pass
 
-    output = buf.getvalue().rstrip("\n")
-
     if err:
         parts.append(f"{sentinel}_ERROR:{err}")
-    elif output:
-        parts.append(f"{sentinel}_OUTPUT:{output}")
 
     for ww in warns_list:
         parts.append(f"{sentinel}_WARNING:{ww}")

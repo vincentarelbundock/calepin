@@ -130,14 +130,27 @@ calepin.preamble <- function(text) {
     warns <- character(0)
     msgs <- character(0)
     .calepin_env <- environment()
-    expr_outputs <- list()  # list of list(text=..., asis=TRUE/FALSE)
+    parts <- character(0)
     err_out <- NULL
     tryCatch(
       withCallingHandlers(
         {
-          exprs <- parse(text = code)
-          for (expr in exprs) {
-            .val <- withVisible(eval(expr, envir = globalenv()))
+          exprs <- parse(text = code, keep.source = TRUE)
+          srcs <- attr(exprs, "srcref")
+          code_lines <- strsplit(code, "\n", fixed = TRUE)[[1]]
+          prev_end <- 0L
+          src_buf <- character(0)
+          for (i in seq_along(exprs)) {
+            # Determine source line range (include gap lines: comments, blanks)
+            if (!is.null(srcs) && i <= length(srcs)) {
+              last_line <- srcs[[i]][3L]
+            } else {
+              last_line <- length(code_lines)
+            }
+            src_buf <- c(src_buf, code_lines[(prev_end + 1L):last_line])
+            prev_end <- last_line
+
+            .val <- withVisible(eval(exprs[[i]], envir = globalenv()))
             if (.val$visible) {
               is_asis <- FALSE
               r <- character(0)
@@ -155,11 +168,22 @@ calepin.preamble <- function(text) {
                 r <- capture.output(print(.val$value))
               }
               if (length(r) > 0) {
-                expr_outputs[[length(expr_outputs) + 1]] <- list(
-                  text = paste(r, collapse = "\n"), asis = is_asis
-                )
+                # Flush accumulated source before output
+                parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
+                src_buf <- character(0)
+                tag <- if (is_asis) "_ASIS:" else "_OUTPUT:"
+                parts <- c(parts, paste0(sentinel, tag, paste(r, collapse = "\n")))
               }
             }
+          }
+          # Flush remaining source (trailing expressions + comments)
+          remaining <- if (prev_end < length(code_lines)) {
+            c(src_buf, code_lines[(prev_end + 1L):length(code_lines)])
+          } else {
+            src_buf
+          }
+          if (length(remaining) > 0 && nzchar(trimws(paste(remaining, collapse = "\n")))) {
+            parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(remaining, collapse = "\n")))
           }
         },
         warning = function(w) {
@@ -219,13 +243,8 @@ calepin.preamble <- function(text) {
       }
     }
 
-    parts <- character(0)
     if (!is.null(err_out)) {
       parts <- c(parts, paste0(sentinel, "_ERROR:", err_out))
-    }
-    for (eo in expr_outputs) {
-      tag <- if (isTRUE(eo$asis)) "_ASIS:" else "_OUTPUT:"
-      parts <- c(parts, paste0(sentinel, tag, eo$text))
     }
     if (length(warns) > 0) parts <- c(parts, paste0(sentinel, "_WARNING:", paste(warns, collapse = "\n")))
     if (length(msgs) > 0) parts <- c(parts, paste0(sentinel, "_MESSAGE:", paste(msgs, collapse = "\n")))

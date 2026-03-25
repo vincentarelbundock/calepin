@@ -1,10 +1,8 @@
-# TODO
+PATH CHECK FOR SINGLE typst file
 
-PATH CHECKFOR SINGLE typst file
+## Misc
 
-## YAML
-
-There's lots of leftover there. Figure out what to extract and how to make a robust conversion layer.
+- [ ] Keywords and Abstracts should be omitted when the fields are empty
 
 ## Blog listings
 
@@ -13,7 +11,7 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 - [ ] Date formatting
 - [ ] Sorting (by date, by title, etc.)
 - [ ] Pagination
-- [ ] Breadcrumps are not clickable and show the full path rather /posts/datatable_nesting/
+- [ ] Breadcrumbs are not clickable and show the full path rather /posts/datatable_nesting/
 - [ ] backticks in listings titles still not rendered as markdown monospace `data.table` vs. `base` vs. `dplyr`
 - [ ] vab: panel_heterogeneous_effects: pre-existing problem with dependency. Delete post?
 - [ ] vab: update declare_design with new syntax
@@ -24,16 +22,15 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 
 - [ ] review all blog posts
 
+
 ## Rendering
 
-- [ ] Better CSS
 - [ ] Accessibility
     - [x] html + css
     - [ ] typst
     - [ ] latex
     - [ ] pdf
 - [ ] PDF metadata should be optional (author, title, etc.)
-- [ ] *Calepin* always in italics with capital letter in website/
 - [ ] Allow users to supply `postprocess.latex` or `postprocess.html` in `_calepin/`
 - [ ] How do lettered appendices work?
 
@@ -45,34 +42,27 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 
 ## Code execution
 
+This should put the printout after each line where it is generated. Now we print the block, and then two separate outputs.
+
+````
+---
+format: html
+---
+```{r}
+2+4
+4*2
+```
+````
+
 - [ ] Code annotation (line markers `# <1>` with numbered explanations)
 - [ ] Multiple figures from a single code chunk with `fig-subcap`
 - [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
 - [ ] Chunk labels should not add a fig- or a tbl- automatically if that is already in the label specified in ```{lang, fig-blahblah}. Otherwise we get duplicated fig-fig-blahblah.
-- [ ] Render websites in parallel limit ncpu
 
 
 ## Tables
 
-- [ ] How can an R and Python chunks add content to the LaTeX preamble?
-- [ ] How can I make the full TOML available to R and PYthon?
-- [ ] Tables should use a template and filter
-- [ ] Advanced table features (Bootstrap classes, embedded markdown in cells)
-- [ ] Subtables
-- [ ] Table caption location: does this work in all formats?
-
-
-## Philosophy
-
-- [ ] High performance
-- [ ] Simplicity
-    - [ ] Classless HTML with simple CSS.
-    - [ ] Minimal preambles in LaTeX and Typst, with optional variants.
-- [ ] Everything is local. No global config.
-- [ ] Templates everywhere
-- [ ] Limited compatibility layer with Quarto
-- [ ] Robust configuration in TOML
-- [ ] Experimental stage to allow experimentation and breaking changes in the first stages of dev.
+- [ ] Caption location: does this work in all formats?
 
 
 ## Math
@@ -94,6 +84,7 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 - [ ] Can we convert svg2pdf without calling an external tool?
 - [ ] Auto-scaling of figures should not be disabled when fig-width is set in the .toml file. Only when set on a per-figure basis.
 - [ ] Check if #| fig-align works in all base formats.
+
 
 ## Layout
 
@@ -131,15 +122,6 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 - [ ] --variant
 
 
-## Evangelism
-
-- [ ] arelbundock.com
-- [ ] countrycode
-- [ ] tinytable
-- [ ] modelsummary
-- [ ] marginaleffects
-
-
 ## Plugins
 
 - [ ] Stable template API is too large: exposing too many template variables as public API locks in internal rendering details
@@ -149,10 +131,11 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 - [ ] Test lightbox
 
 
-## Quarto compatibility
+## Quarto compatibility layer
 
 - [ ] Decide on a minimal set of supported Quarto preamble features
 - [ ] YAML to TOML translation layer
+- [ ] There's lots of leftover there. Figure out what to extract and how to make a robust conversion layer.
 
 
 ## TOML
@@ -193,9 +176,9 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 - [ ] ebook?
 
 
-## Markdown
+## HTML
 
-- [ ] footnotes should have hover in HTML
+- [ ] footnotes should have hover
 
 
 ## Docs
@@ -227,11 +210,6 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 - [ ] Delegate to templates as much as possible (again and again, don't check as done until the very end)
 
 
-## Preview
-
-- [ ] website watch doesn't work in preview mode
-
-
 ## Manual code review
 
 - [ ] `src/filters/`
@@ -242,3 +220,30 @@ There's lots of leftover there. Figure out what to extract and how to make a rob
 - [ ] `src/` (root modules: main, types, plugins, cli, util, website, site_builder, preview, compile)
 
 
+# Docs
+
+
+## Aesthetics
+
+- [ ] *Calepin* always in italics with capital letter in website/
+
+
+## Philosophy
+
+- [ ] High performance
+- [ ] Simplicity
+    - [ ] Classless HTML with simple CSS.
+    - [ ] Minimal preambles in LaTeX and Typst, with optional themes
+- [ ] Templates everywhere
+- [ ] LLM-friendly
+- [ ] Robust configuration in TOML
+- [ ] Compatibility layer with Quarto (though limited)
+
+
+## Evangelism
+
+- [ ] arelbundock.com
+- [ ] countrycode
+- [ ] tinytable
+- [ ] modelsummary
+- [ ] marginaleffects

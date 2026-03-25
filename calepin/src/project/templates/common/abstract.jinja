@@ -1,3 +1,4 @@
+{%- if abstract %}
 {%- if base == "html" %}
 <div class="abstract">
 {{abstract}}
@@ -12,4 +13,5 @@
   #v(0.5em)
   #text(size: 9.5pt)[{{abstract}}]
 ]
+{%- endif %}
 {%- endif %}
