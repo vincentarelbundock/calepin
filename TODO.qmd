@@ -1,20 +1,3 @@
-
-## UI
-
-calepin test.qmd -f revealjs
-calepin test.qmd -f slidev
-calepin test.qmd -f html
-calepin test.qmd -f html --theme minimal
-calepin test.qmd -f typst --compile
-calepin test.qmd -f typst --theme book --compile
-calepin test.qmd -f latex --compile
-calepin test.qmd -f latex --theme tufte --compile
-calepin test.qmd -f latex --theme letter --compile
-calepin test.qmd -f latex --theme book --compile
-calepin test.qmd -f website
-calepin test.qmd -f website --theme blog
-
-
 ## Blog listings
 
 - [ ] User interface
