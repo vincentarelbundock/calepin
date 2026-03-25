@@ -169,11 +169,13 @@ fn register_placeholder(
     let placeholder_defs = defaults.placeholder.clone();
     env.add_function("placeholder", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
         let pdefs = placeholder_defs.clone();
-        let default_pw = pdefs.as_ref().and_then(|p| p.width).unwrap_or(600);
-        let default_ph = pdefs.as_ref().and_then(|p| p.height).unwrap_or(400);
+        let default_pw = pdefs.as_ref().and_then(|p| p.width.clone()).unwrap_or_else(|| "600".to_string());
+        let default_ph = pdefs.as_ref().and_then(|p| p.height.clone()).unwrap_or_else(|| "400".to_string());
         let default_color = pdefs.as_ref().and_then(|p| p.color.clone()).unwrap_or_else(|| "#cccccc".to_string());
-        let width: u32 = kwargs.get("width").unwrap_or(default_pw);
-        let height: u32 = kwargs.get("height").unwrap_or(default_ph);
+        let width: String = kwargs.get::<Value>("width")
+            .map(|v| v.to_string()).unwrap_or(default_pw);
+        let height: String = kwargs.get::<Value>("height")
+            .map(|v| v.to_string()).unwrap_or(default_ph);
         let color: &str = kwargs.get("color").unwrap_or(&default_color);
         let text: Option<&str> = kwargs.get("text").ok();
         let text = text.map(|s| s.to_string())

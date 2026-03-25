@@ -4,13 +4,29 @@ use std::collections::HashMap;
 use serde::de::DeserializeOwned;
 
 use crate::value::{self, Value, Table, table_get, table_str, table_bool, value_string_list};
-use super::{Affiliation, Author, AuthorName, CitationMeta, Copyright, Funding, License, Metadata};
+use super::{Affiliation, Author, AuthorName, CitationConfig, Copyright, Funding, License, Metadata, TocConfig};
 
 /// Deserialize a Value into a typed struct via serde_json roundtrip.
+/// Normalizes all keys (dashes/dots to underscores) before deserializing.
 /// Returns Some(T) on success, None on failure (silently drops parse errors).
 fn deserialize_section<T: DeserializeOwned>(v: &Value) -> Option<T> {
-    let json = crate::value::to_json(v);
+    let normalized = normalize_keys(v);
+    let json = crate::value::to_json(&normalized);
     serde_json::from_value(json).ok()
+}
+
+/// Recursively normalize all keys in a Value tree (dashes/dots to underscores).
+fn normalize_keys(v: &Value) -> Value {
+    match v {
+        Value::Table(table) => {
+            let normalized: crate::value::Table = table.iter()
+                .map(|(k, v)| (crate::util::normalize_key(k), normalize_keys(v)))
+                .collect();
+            Value::Table(normalized)
+        }
+        Value::Array(arr) => Value::Array(arr.iter().map(normalize_keys).collect()),
+        other => other.clone(),
+    }
 }
 
 /// Split front matter from the document body.
@@ -86,8 +102,18 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             }
             "theme" => meta.theme = v.as_str().map(String::from),
             "number_sections" => meta.number_sections = v.as_bool().unwrap_or(false),
-            "toc_depth" => meta.toc_depth = v.as_integer().unwrap_or(3) as u8,
-            "toc_title" => meta.toc_title = v.as_str().map(String::from),
+            "toc_depth" => {
+                let depth = v.as_integer().unwrap_or(3) as u32;
+                let toc = meta.toc.get_or_insert_with(TocConfig::default);
+                toc.depth = Some(depth);
+            }
+            "toc_title" => {
+                let title = v.as_str().map(String::from);
+                if let Some(t) = title {
+                    let toc = meta.toc.get_or_insert_with(TocConfig::default);
+                    toc.title = Some(t);
+                }
+            }
             "date_format" => meta.date_format = v.as_str().map(String::from),
             "bibliography" => {
                 meta.bibliography = value_string_list(v);
@@ -126,16 +152,16 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
 
             // -- Defaults sections --
             "dpi" => meta.dpi = v.as_floating_point(),
-            "timeout" => meta.timeout = v.as_integer().map(|n| n as u64),
             "math" => meta.math = v.as_str().map(String::from),
             "preview_port" => meta.preview_port = v.as_integer().map(|n| n as u16),
             "highlight" => meta.highlight = deserialize_section(v),
             "toc" => {
                 // "toc" can be a bool (in front matter) or a table (in config)
                 if let Some(b) = v.as_bool() {
-                    meta.toc = Some(b);
+                    let toc = meta.toc.get_or_insert_with(TocConfig::default);
+                    toc.enabled = Some(b);
                 } else {
-                    meta.toc_defaults = deserialize_section(v);
+                    meta.toc = deserialize_section(v);
                 }
             }
             "labels" => meta.labels = deserialize_section(v),
@@ -152,25 +178,25 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
 
             // -- Collection structure (deserialized via serde_json) --
             "targets" => {
-                let json = crate::value::to_json(v);
+                let json = crate::value::to_json(&normalize_keys(v));
                 if let Ok(t) = serde_json::from_value(json) {
                     meta.targets = t;
                 }
             }
             "contents" => {
-                let json = crate::value::to_json(v);
+                let json = crate::value::to_json(&normalize_keys(v));
                 if let Ok(c) = serde_json::from_value(json) {
                     meta.contents = c;
                 }
             }
             "languages" => {
-                let json = crate::value::to_json(v);
+                let json = crate::value::to_json(&normalize_keys(v));
                 if let Ok(l) = serde_json::from_value(json) {
                     meta.languages = l;
                 }
             }
             "post" => {
-                let json = crate::value::to_json(v);
+                let json = crate::value::to_json(&normalize_keys(v));
                 if let Ok(p) = serde_json::from_value(json) {
                     meta.post = p;
                 }
@@ -216,16 +242,13 @@ fn parse_authors(
 
     let mut authors: Vec<Author> = Vec::new();
     let mut affiliations: Vec<Affiliation> = Vec::new();
-    let mut simple_names: Vec<String> = Vec::new();
-
+    let mut id_map: HashMap<String, usize> = HashMap::new();
     for entry in entries {
         if let Some(s) = entry.as_str() {
             let name = parse_author_name_str(s);
-            simple_names.push(name.literal.clone());
             authors.push(Author { name, ..Default::default() });
         } else if let Some(t) = entry.as_table() {
-            let author = parse_author_mapping(t, &mut affiliations, top_level_affiliations);
-            simple_names.push(author.name.literal.clone());
+            let author = parse_author_mapping(t, &mut affiliations, &mut id_map, top_level_affiliations);
             authors.push(author);
         }
     }
@@ -235,7 +258,6 @@ fn parse_authors(
         aff.number = i + 1;
     }
 
-    meta.author = if simple_names.is_empty() { None } else { Some(simple_names) };
     meta.authors = authors;
     meta.affiliations = affiliations;
 }
@@ -277,6 +299,7 @@ fn parse_author_name_str(s: &str) -> AuthorName {
 fn parse_author_mapping(
     m: &Table,
     affiliations: &mut Vec<Affiliation>,
+    id_map: &mut HashMap<String, usize>,
     top_level_affiliations: &[Value],
 ) -> Author {
     let mut author = Author::default();
@@ -343,7 +366,7 @@ fn parse_author_mapping(
             vec![]
         };
         for entry in aff_entries {
-            let idx = resolve_affiliation(entry, affiliations, top_level_affiliations);
+            let idx = resolve_affiliation(entry, affiliations, id_map, top_level_affiliations);
             if let Some(i) = idx {
                 author.affiliation_ids.push(i);
             }
@@ -354,9 +377,11 @@ fn parse_author_mapping(
 }
 
 /// Resolve an affiliation entry to an index in the affiliations vec.
+/// `id_map` tracks id -> index for deduplication during parsing.
 fn resolve_affiliation(
     entry: &Value,
     affiliations: &mut Vec<Affiliation>,
+    id_map: &mut HashMap<String, usize>,
     top_level: &[Value],
 ) -> Option<usize> {
     if let Some(s) = entry.as_str() {
@@ -373,11 +398,11 @@ fn resolve_affiliation(
             for tl in top_level {
                 if let Some(tlm) = tl.as_table() {
                     if table_str(tlm, "id").as_deref() == Some(ref_val.as_str()) {
-                        return resolve_affiliation(tl, affiliations, &[]);
+                        return resolve_affiliation(tl, affiliations, id_map, &[]);
                     }
                 }
             }
-            if let Some(idx) = affiliations.iter().position(|a| a.id.as_deref() == Some(ref_val.as_str())) {
+            if let Some(&idx) = id_map.get(&ref_val) {
                 return Some(idx);
             }
             return None;
@@ -386,7 +411,7 @@ fn resolve_affiliation(
         let id = table_str(m, "id");
         let name = table_str(m, "name");
         if let Some(ref id_str) = id {
-            if let Some(idx) = affiliations.iter().position(|a| a.id.as_deref() == Some(id_str.as_str())) {
+            if let Some(&idx) = id_map.get(id_str) {
                 return Some(idx);
             }
         }
@@ -398,7 +423,6 @@ fn resolve_affiliation(
             }
         }
         let aff = Affiliation {
-            id,
             name,
             department: table_str(m, "department"),
             city: table_str(m, "city"),
@@ -406,8 +430,12 @@ fn resolve_affiliation(
             country: table_str(m, "country"),
             ..Default::default()
         };
+        let idx = affiliations.len();
         affiliations.push(aff);
-        return Some(affiliations.len() - 1);
+        if let Some(id_str) = id {
+            id_map.insert(id_str, idx);
+        }
+        return Some(idx);
     }
     None
 }
@@ -473,9 +501,9 @@ fn parse_license(v: &Value) -> License {
     License::default()
 }
 
-fn parse_citation(v: &Value) -> Option<CitationMeta> {
+fn parse_citation(v: &Value) -> Option<CitationConfig> {
     let m = v.as_table()?;
-    Some(CitationMeta {
+    Some(CitationConfig {
         container_title: table_str(m, "container-title"),
         volume: table_str(m, "volume")
             .or_else(|| table_get(m, "volume")
@@ -523,7 +551,7 @@ mod tests {
         let text = "---\ntitle: Hello\nauthor: World\n---\n\n# Body\n\nSome text.";
         let (meta, body) = split_frontmatter(text).unwrap();
         assert_eq!(meta.title.as_deref(), Some("Hello"));
-        assert_eq!(meta.author, Some(vec!["World".to_string()]));
+        assert_eq!(meta.author_names(), vec!["World"]);
         assert!(body.starts_with("\n# Body"));
     }
 
@@ -539,7 +567,7 @@ mod tests {
     fn test_simple_author_string() {
         let text = "---\nauthor: Norah Jones\n---\nBody";
         let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.author, Some(vec!["Norah Jones".to_string()]));
+        assert_eq!(meta.author_names(), vec!["Norah Jones"]);
         assert_eq!(meta.authors.len(), 1);
         assert_eq!(meta.authors[0].name.literal, "Norah Jones");
     }
@@ -548,7 +576,7 @@ mod tests {
     fn test_simple_author_list() {
         let text = "---\nauthor:\n  - Alice Smith\n  - Bob Lee\n---\nBody";
         let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.author, Some(vec!["Alice Smith".to_string(), "Bob Lee".to_string()]));
+        assert_eq!(meta.author_names(), vec!["Alice Smith", "Bob Lee"]);
         assert_eq!(meta.authors.len(), 2);
     }
 
@@ -629,7 +657,7 @@ mod tests {
         let text = "---\ntitle = \"Hello\"\nauthor = \"World\"\nformat = \"html\"\n---\nBody";
         let (meta, body) = split_frontmatter(text).unwrap();
         assert_eq!(meta.title.as_deref(), Some("Hello"));
-        assert_eq!(meta.author, Some(vec!["World".to_string()]));
+        assert_eq!(meta.author_names(), vec!["World"]);
         assert_eq!(meta.target.as_deref(), Some("html"));
         assert_eq!(body, "Body");
     }

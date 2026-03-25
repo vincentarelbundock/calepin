@@ -168,9 +168,9 @@ fn render_one_document(
     };
 
     // Build TOC from rendered headings (HTML only)
-    let toc = if format == "html" && result.metadata.toc.unwrap_or(true) {
-        let depth = if result.metadata.toc_depth == 0 { 3 } else { result.metadata.toc_depth };
-        let title = result.metadata.toc_title.as_deref().unwrap_or("Contents");
+    let toc = if format == "html" && result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
+        let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;
+        let title = result.metadata.toc.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents");
         let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
         if toc_html.is_empty() { None } else { Some(toc_html) }
     } else {
@@ -367,9 +367,9 @@ fn render_one_document_pass1(
         body.push_str(&footnotes);
     }
 
-    let toc = if result.metadata.toc.unwrap_or(true) {
-        let depth = if result.metadata.toc_depth == 0 { 3 } else { result.metadata.toc_depth };
-        let title = result.metadata.toc_title.as_deref().unwrap_or("Contents");
+    let toc = if result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
+        let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;
+        let title = result.metadata.toc.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents");
         let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
         if toc_html.is_empty() { None } else { Some(toc_html) }
     } else {

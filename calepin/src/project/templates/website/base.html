@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{% if document.lang %}{{ document.lang }}{% elif collection.languages %}{{ collection.languages[0].code }}{% else %}en{% endif %}"{% if collection.dark_mode %} data-theme="light"{% endif %}>
+<html lang="{% if document.lang %}{{ document.lang }}{% elif collection.languages %}{{ collection.languages[0].abbreviation }}{% else %}en{% endif %}"{% if collection.dark_mode %} data-theme="light"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

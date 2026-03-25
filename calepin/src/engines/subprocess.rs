@@ -39,7 +39,7 @@ pub fn resolve_timeout(meta: &crate::metadata::Metadata) -> Option<Duration> {
     if let Some(secs) = std::env::var("CALEPIN_TIMEOUT").ok().and_then(|s| s.parse::<u64>().ok()) {
         return Some(Duration::from_secs(secs));
     }
-    meta.timeout.map(|s| Duration::from_secs(s))
+    meta.execute.as_ref().and_then(|e| e.timeout).map(|s| Duration::from_secs(s))
 }
 
 /// A persistent subprocess that communicates via stdin/stdout.

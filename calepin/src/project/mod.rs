@@ -18,14 +18,17 @@ use serde::Deserialize;
 
 /// A language declaration in `[[languages]]`.
 #[derive(Debug, Clone, Deserialize, serde::Serialize)]
-pub struct Language {
-    /// Language code (e.g., "en", "fr").
-    pub code: String,
+pub struct LanguageConfig {
     /// Display name (e.g., "English", "Francais").
-    pub name: String,
+    pub language: String,
+    /// Language code / abbreviation (e.g., "en", "fr").
+    pub abbreviation: String,
     /// Whether this is the default language.
     #[serde(default)]
     pub default: bool,
+    /// Icon: path to an image or Unicode flag emoji.
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 /// A section in the `[[contents]]` array of tables.
@@ -407,8 +410,8 @@ abstract_title = "Summary"
         assert_eq!(meta.csl.as_deref(), Some("apa"));
         assert_eq!(meta.dpi, Some(300.0));
         assert_eq!(meta.highlight.as_ref().and_then(|h| h.light.as_deref()), Some("github"));
-        assert_eq!(meta.toc_defaults.as_ref().and_then(|t| t.enabled), Some(true));
-        assert_eq!(meta.toc_defaults.as_ref().and_then(|t| t.depth), Some(4));
+        assert_eq!(meta.toc.as_ref().and_then(|t| t.enabled), Some(true));
+        assert_eq!(meta.toc.as_ref().and_then(|t| t.depth), Some(4));
         assert_eq!(meta.execute.as_ref().and_then(|e| e.cache), Some(false));
         assert_eq!(meta.figure.as_ref().and_then(|f| f.width), Some(8.0));
         assert_eq!(meta.callout.as_ref().and_then(|c| c.appearance.as_deref()), Some("minimal"));

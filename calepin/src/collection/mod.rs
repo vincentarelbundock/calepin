@@ -565,7 +565,7 @@ fn render_orchestrator(
     let meta_ctx = minijinja::context! {
         title => meta.title.clone(),
         subtitle => meta.subtitle.clone(),
-        author => meta.author.as_ref().map(|a| a.join(", ")),
+        author => { let names = meta.author_names(); if names.is_empty() { None } else { Some(names.join(", ")) } },
         url => meta.url.clone(),
     };
 

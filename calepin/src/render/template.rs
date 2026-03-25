@@ -319,15 +319,20 @@ pub fn build_template_vars_with_headings(
             .map(|t| crate::render::convert::render_inline(t, ext))
             .unwrap_or_default(),
     );
-    vars.insert(
-        "author".to_string(),
-        meta.author.as_ref()
-            .map(|a| a.iter()
-                .map(|name| crate::render::convert::render_inline(name, ext))
-                .collect::<Vec<_>>()
-                .join(", "))
-            .unwrap_or_default(),
-    );
+    {
+        let names = meta.author_names();
+        vars.insert(
+            "author".to_string(),
+            if names.is_empty() {
+                String::new()
+            } else {
+                names.iter()
+                    .map(|name| crate::render::convert::render_inline(name, ext))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            },
+        );
+    }
     vars.insert("date".to_string(), meta.date.clone().unwrap_or_default());
 
 
@@ -408,14 +413,11 @@ pub fn build_template_vars_with_headings(
     }
 
     // Table of contents
-    let toc_defs = defs.toc_defaults.clone();
-    let toc_enabled = match meta.toc {
-        Some(v) => v,
-        None => toc_defs.as_ref().and_then(|t| t.enabled).unwrap_or(ext == "html"),
-    };
+    let toc_cfg = meta.toc.as_ref();
+    let toc_enabled = toc_cfg.and_then(|t| t.enabled).unwrap_or(ext == "html");
     if toc_enabled {
-        let toc_depth = if meta.toc_depth == 0 { toc_defs.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8 } else { meta.toc_depth };
-        let toc_title = meta.toc_title.as_deref().unwrap_or_else(|| toc_defs.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents"));
+        let toc_depth = toc_cfg.and_then(|t| t.depth).unwrap_or(3) as u8;
+        let toc_title = toc_cfg.and_then(|t| t.title.as_deref()).unwrap_or("Contents");
         let toc = if ext == "html" {
             // HTML: build nested list in Rust, wrap with template
             build_toc_html(headings, toc_depth, toc_title)

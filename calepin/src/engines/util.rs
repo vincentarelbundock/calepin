@@ -10,7 +10,15 @@ use crate::metadata::Metadata;
 /// For "r", also returns true if there are code chunks with no explicit engine
 /// (R is the default). For other engines, only matches explicit engine names.
 pub fn needs_engine(blocks: &[Block], body: &str, metadata: &Metadata, engine_name: &str) -> bool {
-    check_blocks_for_engine(blocks, body, engine_name) || metadata.has_inline_code(engine_name)
+    check_blocks_for_engine(blocks, body, engine_name) || metadata_has_inline_code(metadata, engine_name)
+}
+
+/// Check whether any metadata fields contain inline code for the given engine.
+fn metadata_has_inline_code(meta: &Metadata, engine: &str) -> bool {
+    let pattern = format!("`{{{}", engine);
+    let check = |s: &Option<String>| s.as_ref().map_or(false, |v| v.contains(&pattern));
+    check(&meta.title) || check(&meta.subtitle) || check(&meta.date) || check(&meta.abstract_text)
+        || meta.authors.iter().any(|a| a.name.literal.contains(&pattern))
 }
 
 fn check_blocks_for_engine(blocks: &[Block], body: &str, engine_name: &str) -> bool {

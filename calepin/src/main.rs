@@ -5,6 +5,7 @@ mod context;
 pub(crate) use context::{ProjectContext, resolve_context, apply_engine_override};
 mod references;
 pub(crate) use references::{bibliography, crossref};
+mod date;
 mod engines;
 mod jinja;
 mod math;

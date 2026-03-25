@@ -24,14 +24,12 @@ pub struct Target {
     /// Output file extension (no dot).
     pub extension: Option<String>,
     /// Default extension for generated figures.
-    #[serde(alias = "fig-extension")]
     pub fig_extension: Option<String>,
     /// Preview behavior: "serve", "open", or "none".
     pub preview: Option<String>,
     /// Optional compilation step.
     pub compile: Option<CompileConfig>,
     /// Whether to embed images as base64 data URIs (HTML only).
-    #[serde(alias = "embed-resources")]
     pub embed_resources: Option<bool>,
     /// Arbitrary key-value pairs passed to templates as target_vars.
     pub vars: Option<toml::Value>,

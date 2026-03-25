@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use serde::Serialize;
 use super::discover::DocumentInfo;
 use super::render::CollectionRenderResult;
-use crate::project::{DocumentNode, expand_contents_for_lang, Language};
+use crate::project::{DocumentNode, expand_contents_for_lang, LanguageConfig};
 use crate::metadata::Metadata;
 
 /// Collection-level context available to all templates as `{{ collection.* }}`.
@@ -22,7 +22,7 @@ pub struct CollectionContext {
     pub logo: Option<String>,
     pub logo_dark: Option<String>,
     pub pages: Vec<NavNode>,
-    pub languages: Vec<Language>,
+    pub languages: Vec<LanguageConfig>,
     pub dark_mode: bool,
     pub math: String,
 }
@@ -249,7 +249,7 @@ pub fn build_document_context(
     result: Option<&CollectionRenderResult>,
     pages: &[DocumentInfo],
     listing_items: Option<Vec<ListingItem>>,
-    languages: &[Language],
+    languages: &[LanguageConfig],
 ) -> DocumentContext {
     let body = result.map(|r| r.body.clone()).unwrap_or_default();
 
@@ -309,7 +309,7 @@ pub fn build_document_context(
 fn resolve_translations(
     page: &DocumentInfo,
     pages: &[DocumentInfo],
-    languages: &[Language],
+    languages: &[LanguageConfig],
 ) -> Vec<Translation> {
     let translations = match &page.meta.translations {
         Some(t) if !t.is_empty() => t,
@@ -321,7 +321,7 @@ fn resolve_translations(
         .collect();
 
     let lang_names: HashMap<&str, &str> = languages.iter()
-        .map(|l| (l.code.as_str(), l.name.as_str()))
+        .map(|l| (l.abbreviation.as_str(), l.language.as_str()))
         .collect();
 
     let mut result = Vec::new();
@@ -350,7 +350,7 @@ const DEFAULT_DATE_FORMAT: &str = "%B %e, %Y";
 
 /// Format a YYYY-MM-DD date string for display.
 pub fn format_date(date: &str) -> String {
-    crate::metadata::format_date_str(date, DEFAULT_DATE_FORMAT)
+    crate::date::format_date_str(date, DEFAULT_DATE_FORMAT)
 }
 
 fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcrumb> {

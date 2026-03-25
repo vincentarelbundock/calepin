@@ -27,8 +27,11 @@ fn build_meta_map(meta: &Metadata) -> serde_json::Value {
     if let Some(ref s) = meta.subtitle {
         map.insert("subtitle".into(), serde_json::Value::String(s.clone()));
     }
-    if let Some(ref authors) = meta.author {
-        map.insert("author".into(), serde_json::json!(authors));
+    {
+        let names = meta.author_names();
+        if !names.is_empty() {
+            map.insert("author".into(), serde_json::json!(names));
+        }
     }
     if let Some(ref d) = meta.date {
         map.insert("date".into(), serde_json::Value::String(d.clone()));

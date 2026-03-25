@@ -175,10 +175,13 @@ fn build_copyright_text(cr: &crate::metadata::Copyright) -> String {
 }
 
 /// Build the citation text from metadata and citation info.
-fn build_citation_text(meta: &Metadata, cite: &crate::metadata::CitationMeta, ext: &str) -> String {
+fn build_citation_text(meta: &Metadata, cite: &crate::metadata::CitationConfig, ext: &str) -> String {
     let mut parts: Vec<String> = Vec::new();
-    if let Some(ref a) = meta.author {
-        parts.push(a.join(", "));
+    {
+        let names = meta.author_names();
+        if !names.is_empty() {
+            parts.push(names.join(", "));
+        }
     }
     if let Some(ref t) = meta.title {
         parts.push(format!("\"{}\"", t));
@@ -387,14 +390,17 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
         } else {
             format!("{}\n{}\n{}", authors_joined, affiliations_joined, corresponding_note)
         }
-    } else if let Some(ref authors) = meta.author {
-        match ext {
-            "html" => format!("<h2>{}</h2>", authors.join(", ")),
-            "latex" => format!("\\author{{{}}}", authors.join(" \\and ")),
-            "typst" => format!("#text(size: 12pt)[{}]", authors.join(", ")),
-            _ => authors.join(", "),
-        }
     } else {
-        String::new()
+        let names = meta.author_names();
+        if !names.is_empty() {
+            match ext {
+                "html" => format!("<h2>{}</h2>", names.join(", ")),
+                "latex" => format!("\\author{{{}}}", names.join(" \\and ")),
+                "typst" => format!("#text(size: 12pt)[{}]", names.join(", ")),
+                _ => names.join(", "),
+            }
+        } else {
+            String::new()
+        }
     }
 }
