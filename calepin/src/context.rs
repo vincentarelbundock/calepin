@@ -43,11 +43,12 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
     };
 
     // Project root is the directory containing the input file.
-    let (project_root, project_config) = {
+    // Load config and convert to Metadata immediately.
+    let (project_root, project_metadata) = {
         let cfg_path = abs_input_dir.join("_calepin.toml");
         if cfg_path.exists() {
-            match project::load_project_config(&cfg_path) {
-                Ok(config) => (Some(abs_input_dir.clone()), Some(config)),
+            match project::load_project_metadata(&cfg_path) {
+                Ok(meta) => (Some(abs_input_dir.clone()), Some(meta)),
                 Err(e) => {
                     eprintln!("Warning: failed to load {}: {}", cfg_path.display(), e);
                     (Some(abs_input_dir.clone()), None)
@@ -74,12 +75,11 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
         }
     };
 
-    let user_targets = project_config.as_ref().map(|c| &c.targets);
     let empty_targets = std::collections::HashMap::new();
-    let target = project::resolve_target(&target_name, user_targets.unwrap_or(&empty_targets))?;
+    let user_targets = project_metadata.as_ref().map(|m| &m.targets).unwrap_or(&empty_targets);
+    let target = project::resolve_target(&target_name, user_targets)?;
 
-    let user_defaults = project_config.as_ref().map(|c| c.as_defaults());
-    let mut defaults = project::resolve_defaults(user_defaults.as_ref());
+    let mut defaults = project::resolve_defaults(project_metadata.as_ref().map(|m| &m.defaults));
     if let Some(embed) = target.embed_resources {
         defaults.embed_resources = Some(embed);
     }
@@ -113,8 +113,6 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
             paths::set_theme_dir(Some(&theme_dir));
         }
     }
-
-    let project_metadata = project_config.as_ref().map(|c| c.as_metadata());
 
     Ok(ProjectContext {
         project_root: Some(effective_root),

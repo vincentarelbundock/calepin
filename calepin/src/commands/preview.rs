@@ -14,8 +14,8 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
         // For non-HTML targets, do a one-shot build and open the output.
         let is_html = {
             let target_name = args.format.as_deref().unwrap_or("html");
-            let config = crate::project::load_project_config(&args.input)?;
-            let target = crate::project::resolve_target(target_name, &config.targets)?;
+            let meta = crate::project::load_project_metadata(&args.input)?;
+            let target = crate::project::resolve_target(target_name, &meta.targets)?;
             target.engine == "html"
         };
         if !is_html {

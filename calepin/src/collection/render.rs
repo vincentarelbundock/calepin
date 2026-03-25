@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::Result;
 
-use crate::project::{self, ProjectConfig, Target};
+use crate::project;
 use super::discover::DocumentInfo;
 
 /// Result of rendering a single document for the collection.
@@ -28,35 +28,32 @@ pub struct CollectionRenderResult {
 /// Jinja templates.
 pub fn render_documents(
     pages: &[DocumentInfo],
-    config: &ProjectConfig,
+    meta: &crate::metadata::Metadata,
     base_dir: &Path,
     output_dir: &Path,
     format: &str,
     apply_page_template: bool,
     target_name: Option<&str>,
-    target: Option<&Target>,
+    target: Option<&project::Target>,
     quiet: bool,
 ) -> Result<HashMap<String, CollectionRenderResult>> {
     if pages.is_empty() {
         return Ok(HashMap::new());
     }
 
-    // Build overrides from format config
-    let overrides = build_overrides(config);
-
-    if !quiet {
-        eprintln!("Rendering {} documents...", pages.len());
-    }
-
-    // Resolve defaults, letting target override global settings (e.g., embed-resources)
-    let mut defaults = project::resolve_defaults(Some(&config.as_defaults()));
+    // Resolve defaults from metadata, letting target override embed-resources
+    let mut defaults = project::resolve_defaults(Some(&meta.defaults));
     if let Some(t) = target {
         if let Some(embed) = t.embed_resources {
             defaults.embed_resources = Some(embed);
         }
     }
 
-    let project_meta = config.as_metadata();
+    let overrides = build_overrides(&defaults);
+
+    if !quiet {
+        eprintln!("Rendering {} documents...", pages.len());
+    }
     let format_owned = format.to_string();
     let target_owned = target_name.map(|s| s.to_string());
     let total = pages.len();
@@ -73,7 +70,7 @@ pub fn render_documents(
                 let format = &format_owned;
                 let target = &target_owned;
                 let defaults = defaults.clone();
-                let project_meta = &project_meta;
+                let project_meta = meta;
                 let done = &done;
                 let quiet = quiet;
                 s.spawn(move || {
@@ -122,7 +119,7 @@ pub fn render_documents(
             crate::paths::set_project_root(Some(base_dir));
             project::set_active_defaults(defaults.clone());
             let key = page.source.display().to_string();
-            match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template, Some(&project_meta)) {
+            match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template, Some(meta)) {
                 Ok(render_result) => {
                     if !quiet {
                         eprintln!("  [ok] {}", key);
@@ -210,11 +207,11 @@ fn render_one_document(
 ///   Pass 2: Resolve cross-refs and renumber display numbers in parallel.
 pub fn render_documents_with_crossref(
     pages: &[DocumentInfo],
-    config: &ProjectConfig,
+    meta: &crate::metadata::Metadata,
     base_dir: &Path,
     output_dir: &Path,
     target_name: Option<&str>,
-    target: Option<&Target>,
+    target: Option<&project::Target>,
     quiet: bool,
 ) -> Result<HashMap<String, CollectionRenderResult>> {
     use crate::crossref::{CrossRefRegistry, resolve_html_global, renumber_display_html};
@@ -223,21 +220,21 @@ pub fn render_documents_with_crossref(
         return Ok(HashMap::new());
     }
 
-    let overrides = build_overrides(config);
-
-    if !quiet {
-        eprintln!("Rendering {} documents (cross-ref pass 1)...", pages.len());
-    }
-
-    let mut defaults = project::resolve_defaults(Some(&config.as_defaults()));
+    let mut defaults = project::resolve_defaults(Some(&meta.defaults));
     if let Some(t) = target {
         if let Some(embed) = t.embed_resources {
             defaults.embed_resources = Some(embed);
         }
     }
 
+    let overrides = build_overrides(&defaults);
+
+    if !quiet {
+        eprintln!("Rendering {} documents (cross-ref pass 1)...", pages.len());
+    }
+
     // Assign chapter numbers based on [[contents]] ordering
-    let chapter_map = assign_chapter_numbers(config);
+    let chapter_map = assign_chapter_numbers(meta);
 
     let target_owned = target_name.map(|s| s.to_string());
     let total = pages.len();
@@ -286,7 +283,7 @@ pub fn render_documents_with_crossref(
     // Build per-language registries from all pages' ref data.
     // Multilingual sites can have duplicate IDs across languages (e.g., sec-code
     // in both English and French pages), so each language gets its own registry.
-    let has_languages = !config.languages.is_empty();
+    let has_languages = !meta.languages.is_empty();
     let mut lang_registry_input: HashMap<Option<String>, Vec<(usize, String, crate::crossref::PageRefData)>> = HashMap::new();
     for page in pages {
         let key = page.source.display().to_string();
@@ -414,12 +411,12 @@ fn render_one_document_pass1(
 /// Assign chapter numbers to pages based on their position in [[contents]].
 /// Each non-standalone page gets a sequential chapter number (1-based).
 /// Returns a map from source path (string) to chapter number.
-fn assign_chapter_numbers(config: &ProjectConfig) -> HashMap<String, usize> {
+fn assign_chapter_numbers(meta: &crate::metadata::Metadata) -> HashMap<String, usize> {
     let mut chapter_map = HashMap::new();
     let mut chapter = 0usize;
 
     // Walk the contents sections in order -- this mirrors collect_document_paths ordering
-    for section in &config.contents {
+    for section in &meta.contents {
         if section.standalone {
             continue;
         }
@@ -451,12 +448,11 @@ fn assign_chapter_numbers(config: &ProjectConfig) -> HashMap<String, usize> {
     chapter_map
 }
 
-fn build_overrides(config: &ProjectConfig) -> Vec<String> {
+fn build_overrides(defaults: &project::Defaults) -> Vec<String> {
     let mut overrides = Vec::new();
 
-    // Highlight style from top-level config
-    // (bibliography now flows through Metadata::merge)
-    if let Some(ref hl) = config.highlight {
+    // Highlight style from defaults
+    if let Some(ref hl) = defaults.highlight {
         if let Some(ref light) = hl.light {
             overrides.push(format!("highlight-style.light={}", light));
         }

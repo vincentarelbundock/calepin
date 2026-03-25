@@ -296,8 +296,13 @@ pub struct PostCommand {
 // Config loading
 // ---------------------------------------------------------------------------
 
+/// Load a project config and return it as `Metadata`.
+pub fn load_project_metadata(path: &Path) -> Result<crate::metadata::Metadata> {
+    load_project_config(path).map(|c| c.as_metadata())
+}
+
 /// Load and validate a project config from a calepin.toml file.
-pub fn load_project_config(path: &Path) -> Result<ProjectConfig> {
+fn load_project_config(path: &Path) -> Result<ProjectConfig> {
     let content = std::fs::read_to_string(path)
         .with_context(|| format!("Failed to read {}", path.display()))?;
     let mut config: ProjectConfig = toml::from_str(&content)

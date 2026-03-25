@@ -22,8 +22,8 @@ pub fn run_collection(
     let base_dir = config_abs.parent().unwrap().to_path_buf();
 
     // Read output dir from config (defaults to "output")
-    let config = crate::project::load_project_config(&config_abs)?;
-    let output_name = config.output.as_deref().unwrap_or("output");
+    let meta = crate::project::load_project_metadata(&config_abs)?;
+    let output_name = meta.output.as_deref().unwrap_or("output");
     let output = base_dir.join(output_name);
 
     let version = Arc::new(AtomicU64::new(1));

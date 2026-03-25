@@ -54,8 +54,7 @@ pub fn build_collection(
     let cwd = std::env::current_dir()?;
 
     // 1. Load config and convert to metadata
-    let (config, found_path) = config::load_config(config_path, &cwd)?;
-    let meta = config.as_metadata();
+    let (meta, found_path) = config::load_config(config_path, &cwd)?;
 
     let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
     if !quiet {
@@ -138,9 +137,9 @@ pub fn build_collection(
     //    (the native toolchains handle global refs).
     let apply_page_template = orchestrator.is_some();
     let results = if format == "html" && !apply_page_template && meta.global_crossref {
-        render::render_documents_with_crossref(&pages, &config, &base_dir, output, Some(&collection_target_name), Some(&collection_target), quiet)?
+        render::render_documents_with_crossref(&pages, &meta, &base_dir, output, Some(&collection_target_name), Some(&collection_target), quiet)?
     } else {
-        render::render_documents(&pages, &config, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
+        render::render_documents(&pages, &meta, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
     };
 
     // 7. Write page output files
@@ -195,8 +194,7 @@ pub fn rebuild_documents(
     changed_sources: &[std::path::PathBuf],
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
-    let (config, found_path) = config::load_config(config_path, &cwd)?;
-    let meta = config.as_metadata();
+    let (meta, found_path) = config::load_config(config_path, &cwd)?;
     let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
 
     let collection_target_name = cli_target.map(|s| s.to_string())
@@ -235,7 +233,7 @@ pub fn rebuild_documents(
     // Render only the changed pages
     let documents_to_render: Vec<DocumentInfo> = changed_documents.iter().map(|p| (*p).clone()).collect();
     let results = render::render_documents(
-        &documents_to_render, &config, &base_dir, &output_dir, format,
+        &documents_to_render, &meta, &base_dir, &output_dir, format,
         false, Some(&collection_target_name), Some(&collection_target), true,
     )?;
 
