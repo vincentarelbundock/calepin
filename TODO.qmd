@@ -12,11 +12,6 @@
 - [ ] inspect each pages
 
 
-## Tests
-
-- [ ] Create a single file with ALL the supported features and make sure it renders correctly in all formats.
-
-
 ## arelbundockcom
 
 - [ ] review all blog posts
