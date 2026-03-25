@@ -91,6 +91,11 @@ fn parse_metadata(table: &Table) -> Result<Metadata> {
                     if let Some(pv) = table_get(cmap, "plugins") {
                         meta.plugins = value_string_list(pv);
                     }
+                    if let Some(cm) = table_get(cmap, "convert_math")
+                        .or_else(|| table_get(cmap, "convert-math"))
+                    {
+                        meta.convert_math = cm.as_bool().unwrap_or(false);
+                    }
                 }
             }
             _ => {

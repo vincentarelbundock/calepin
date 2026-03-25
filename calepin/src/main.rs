@@ -5,6 +5,7 @@ mod engines;
 mod filters;
 mod formats;
 mod jinja;
+mod math;
 mod parse;
 mod pipeline;
 mod plugin_manifest;

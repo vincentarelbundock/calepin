@@ -83,6 +83,7 @@ pub struct ElementRenderer {
     preamble: Vec<String>,
     pub number_sections: bool,
     pub shift_headings: bool,
+    pub convert_math: bool,
     pub default_fig_cap_location: Option<String>,
     /// Chapter number for collection pages. When set, section counters start
     /// at [chapter, 0, 0, 0, 0, 0] so sections get chapter-prefixed numbers.
@@ -140,6 +141,7 @@ impl ElementRenderer {
             preamble: Vec::new(),
             number_sections: false,
             shift_headings: false,
+            convert_math: false,
             default_fig_cap_location: None,
             chapter_number: None,
             theorem_numbers: std::cell::RefCell::new(HashMap::new()),
@@ -234,7 +236,7 @@ impl ElementRenderer {
                     let fn_start = self.footnote_counter.get();
                     let (output, fn_end) = match self.ext.as_str() {
                         "typst" => crate::render::typst_emit::markdown_to_typst_with_counter(
-                            &processed, &fragments, fn_start,
+                            &processed, &fragments, fn_start, self.convert_math,
                         ),
                         "latex" => crate::render::latex_emit::markdown_to_latex_with_counter(
                             &processed, &fragments, self.number_sections, fn_start,

@@ -43,7 +43,12 @@ pub fn render_html_with_metadata(
 
 /// Render markdown to Typst via AST walk.
 pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
-    crate::render::typst_emit::markdown_to_typst_ast(markdown, raw_fragments)
+    crate::render::typst_emit::markdown_to_typst_ast(markdown, raw_fragments, false)
+}
+
+/// Render markdown to Typst, optionally converting LaTeX math to Typst math.
+pub fn render_typst_with_math(markdown: &str, raw_fragments: &[String], convert_math: bool) -> String {
+    crate::render::typst_emit::markdown_to_typst_ast(markdown, raw_fragments, convert_math)
 }
 
 /// Render a short inline markdown string (e.g., title) to the target format.

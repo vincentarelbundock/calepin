@@ -8,8 +8,8 @@ use crate::render::convert::ImageAttrs;
 pub struct TypstEmitter;
 
 /// Convert markdown to Typst via the shared AST walker.
-pub fn markdown_to_typst_ast(markdown: &str, raw_fragments: &[String]) -> String {
-    markdown_to_typst_with_counter(markdown, raw_fragments, 0).0
+pub fn markdown_to_typst_ast(markdown: &str, raw_fragments: &[String], convert_math: bool) -> String {
+    markdown_to_typst_with_counter(markdown, raw_fragments, 0, convert_math).0
 }
 
 /// Convert markdown to Typst, returning (output, final_footnote_counter).
@@ -17,11 +17,16 @@ pub fn markdown_to_typst_with_counter(
     markdown: &str,
     raw_fragments: &[String],
     footnote_counter_start: usize,
+    convert_math: bool,
 ) -> (String, usize) {
     let emitter = TypstEmitter;
     let options = WalkOptions { footnote_counter_start, ..WalkOptions::default() };
     let result = walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options);
-    let output = crate::filters::math::strip_math_for_typst(&result.output);
+    let output = if convert_math {
+        crate::filters::math::convert_math_for_typst(&result.output)
+    } else {
+        crate::filters::math::strip_math_for_typst(&result.output)
+    };
     (output, result.metadata.footnote_counter_end)
 }
 
@@ -171,36 +176,40 @@ impl FormatEmitter for TypstEmitter {
 mod tests {
     use super::*;
 
+    fn typst(md: &str) -> String {
+        markdown_to_typst_ast(md, &[], false)
+    }
+
     #[test]
     fn test_heading_with_label() {
-        let typst = markdown_to_typst_ast("# Introduction", &[]);
+        let typst = typst("# Introduction");
         assert!(typst.contains("= Introduction"), "typst: {}", typst);
         assert!(typst.contains("<introduction>"), "should have label: {}", typst);
     }
 
     #[test]
     fn test_heading_explicit_id() {
-        let typst = markdown_to_typst_ast("# Introduction {#sec-intro}", &[]);
+        let typst = typst("# Introduction {#sec-intro}");
         assert!(typst.contains("<sec-intro>"), "should have explicit label: {}", typst);
         assert!(!typst.contains("{#sec-intro}"), "should strip attr: {}", typst);
     }
 
     #[test]
     fn test_emphasis() {
-        let typst = markdown_to_typst_ast("*italic* and **bold**", &[]);
+        let typst = typst("*italic* and **bold**");
         assert!(typst.contains("_italic_"), "typst: {}", typst);
         assert!(typst.contains("*bold*"), "typst: {}", typst);
     }
 
     #[test]
     fn test_link() {
-        let typst = markdown_to_typst_ast("[click](https://example.com)", &[]);
+        let typst = typst("[click](https://example.com)");
         assert!(typst.contains("#link(\"https://example.com\")[click]"), "typst: {}", typst);
     }
 
     #[test]
     fn test_code_block() {
-        let typst = markdown_to_typst_ast("```python\nx = 1\n```", &[]);
+        let typst = typst("```python\nx = 1\n```");
         assert!(typst.contains("```python"), "typst: {}", typst);
         assert!(typst.contains("x = 1"), "typst: {}", typst);
     }
@@ -208,26 +217,45 @@ mod tests {
     #[test]
     fn test_table() {
         let md = "| A | B |\n|:--|--:|\n| 1 | 2 |";
-        let typst = markdown_to_typst_ast(md, &[]);
+        let typst = typst(md);
         assert!(typst.contains("#table("), "typst: {}", typst);
         assert!(typst.contains("columns: 2"), "typst: {}", typst);
     }
 
     #[test]
     fn test_strikethrough() {
-        let typst = markdown_to_typst_ast("~~deleted~~", &[]);
+        let typst = typst("~~deleted~~");
         assert!(typst.contains("#strike[deleted]"), "typst: {}", typst);
     }
 
     #[test]
     fn test_math_stripped_for_typst() {
-        let typst = markdown_to_typst_ast("The value $x^2$ is here.", &[]);
+        let typst = typst("The value $x^2$ is here.");
         assert!(!typst.contains("$x^2$"), "LaTeX math should be stripped: {}", typst);
     }
 
     #[test]
     fn test_image() {
-        let typst = markdown_to_typst_ast("![alt](image.png)", &[]);
+        let typst = typst("![alt](image.png)");
         assert!(typst.contains("image(\"image.png\")"), "typst: {}", typst);
+    }
+
+    #[test]
+    fn test_math_converted_for_typst() {
+        let result = markdown_to_typst_ast("The value $\\frac{a}{b}$ is here.", &[], true);
+        assert!(result.contains("$frac(a, b)$"), "LaTeX math should be converted: {}", result);
+        assert!(!result.contains("\\frac"), "should not contain LaTeX: {}", result);
+    }
+
+    #[test]
+    fn test_math_converted_display() {
+        let result = markdown_to_typst_ast("Before $$\\alpha + \\beta$$ after.", &[], true);
+        assert!(result.contains("$ alpha + beta $"), "display math should be converted: {}", result);
+    }
+
+    #[test]
+    fn test_math_converted_greek() {
+        let result = markdown_to_typst_ast("$\\alpha$", &[], true);
+        assert!(result.contains("$alpha$"), "Greek should be converted: {}", result);
     }
 }

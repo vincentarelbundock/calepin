@@ -202,6 +202,7 @@ pub fn render_core_with_options(
         });
     let mut element_renderer = ElementRenderer::new(renderer.engine(), highlight_config);
     element_renderer.number_sections = metadata.number_sections;
+    element_renderer.convert_math = metadata.convert_math;
     element_renderer.shift_headings = metadata.title.is_some();
     element_renderer.chapter_number = options.chapter_number;
     // Initialize section counters with chapter number as top-level counter
