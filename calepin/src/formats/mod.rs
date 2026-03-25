@@ -1,9 +1,6 @@
 //! Output format backends.
 //!
-//! Built-in formats: html, latex, typst, markdown.
-//! Custom formats: defined via `_calepin/formats/{name}.toml` with a base
-//! format, optional file extension override, and optional script
-//! for pre/post-processing.
+//! Built-in formats: html, latex, typst, markdown, revealjs, word.
 
 pub mod html;
 pub mod latex;
@@ -12,9 +9,7 @@ pub mod revealjs;
 pub mod typst;
 pub mod word;
 
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::io::Write;
+use std::path::Path;
 
 use anyhow::{Context, Result};
 
@@ -99,12 +94,6 @@ pub trait OutputRenderer {
         document.to_string()
     }
 
-    /// Preprocess the raw .qmd body before block parsing.
-    /// Default: return body unchanged. Custom formats pipe through an external script.
-    fn preprocess_body(&self, body: &str) -> Result<String> {
-        Ok(body.to_string())
-    }
-
     /// Resolve citations in the element list via hayagriva.
     fn resolve_bibliography(
         &self,
@@ -135,7 +124,7 @@ pub fn create_renderer(format: &str) -> Result<Box<dyn OutputRenderer>> {
         "typst" => Ok(Box::new(typst::TypstRenderer)),
         "word" => Ok(Box::new(word::WordRenderer)),
         "revealjs" => Ok(Box::new(revealjs::RevealJsRenderer)),
-        other => load_custom_format(other),
+        other => anyhow::bail!("Unknown format: '{}'", other),
     }
 }
 
@@ -152,177 +141,3 @@ pub fn resolve_format_from_extension(ext: &str) -> &str {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Custom format support
-// ---------------------------------------------------------------------------
-
-/// A custom format defined via `_calepin/formats/{name}.toml`.
-struct CustomRenderer {
-    name: String,
-    ext: String,
-    base: Box<dyn OutputRenderer>,
-    preprocess_script: Option<PathBuf>,
-    postprocess_script: Option<PathBuf>,
-}
-
-impl OutputRenderer for CustomRenderer {
-    fn format(&self) -> &str {
-        &self.name
-    }
-
-    fn engine(&self) -> &str {
-        self.base.format()
-    }
-
-    fn extension(&self) -> &str {
-        &self.ext
-    }
-
-    fn default_fig_ext(&self) -> &str {
-        self.base.default_fig_ext()
-    }
-
-    fn transform_body(&self, body: &str, renderer: &ElementRenderer) -> String {
-        self.base.transform_body(body, renderer)
-    }
-
-    fn assemble_page(
-        &self,
-        body: &str,
-        meta: &Metadata,
-        renderer: &ElementRenderer,
-    ) -> Option<String> {
-        // Try custom page template first: page.{name}
-        let custom_tpl = crate::render::template::load_page_template(
-            &format!("page.{}", self.name),
-            self.base.format(),
-        );
-        if !custom_tpl.is_empty() {
-            let base = self.base.format();
-            if !matches!(base, "html" | "latex" | "typst") {
-                return None;
-            }
-            let mut vars = crate::render::template::build_template_vars(meta, body, base);
-            crate::render::template::inject_preamble(&mut vars, renderer.preamble());
-            if base == "html" {
-                let syntax_css = renderer.syntax_css();
-                if !syntax_css.is_empty() {
-                    let css = vars.entry("css".to_string()).or_default();
-                    css.push_str(&format!("\n<style>\n{}</style>", &syntax_css));
-                    vars.insert("syntax_css".to_string(), syntax_css);
-                }
-                let datatheme_css = renderer.syntax_css_with_scope(
-                    crate::render::highlighting::ColorScope::DataTheme,
-                );
-                if !datatheme_css.is_empty() {
-                    vars.insert("syntax_css_datatheme".to_string(), datatheme_css);
-                }
-            }
-            Some(crate::render::template::render_page_template(&custom_tpl, &vars, base))
-        } else {
-            // No custom template: delegate to base format
-            self.base.assemble_page(body, meta, renderer)
-        }
-    }
-
-    fn transform_document(&self, document: &str, _renderer: &ElementRenderer) -> String {
-        if let Some(ref script) = self.postprocess_script {
-            match run_script(script, document, &[&self.name]) {
-                Ok(output) => return output,
-                Err(e) => {
-                    eprintln!("Warning: transform_document script failed: {}", e);
-                }
-            }
-        }
-        document.to_string()
-    }
-
-    fn preprocess_body(&self, body: &str) -> Result<String> {
-        if let Some(ref script) = self.preprocess_script {
-            let input = serde_json::json!({
-                "body": body,
-                "format": self.name,
-            });
-            run_script(script, &input.to_string(), &[])
-        } else {
-            Ok(body.to_string())
-        }
-    }
-}
-
-/// Run a script, piping `stdin_data` to its stdin and returning stdout.
-/// Writes stdin in a separate thread to avoid deadlock when pipe buffers fill.
-fn run_script(script: &Path, stdin_data: &str, args: &[&str]) -> Result<String> {
-    let mut child = Command::new(script)
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .with_context(|| format!("Failed to run script: {}", script.display()))?;
-
-    // Write stdin in a separate thread to prevent deadlock: if the child's
-    // stdout buffer fills before we finish writing, both sides block.
-    let mut stdin = child.stdin.take().unwrap();
-    let data = stdin_data.to_string();
-    let writer = std::thread::spawn(move || {
-        let _ = stdin.write_all(data.as_bytes());
-        // stdin is dropped here, closing the pipe
-    });
-
-    let output = child.wait_with_output()?;
-    let _ = writer.join();
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("Script {} failed: {}", script.display(), stderr);
-    }
-    Ok(String::from_utf8(output.stdout)?)
-}
-
-/// Load a custom format from `_calepin/formats/{name}.toml`.
-fn load_custom_format(name: &str) -> Result<Box<dyn OutputRenderer>> {
-    let path = crate::paths::resolve_path_cwd("formats", &format!("{}.toml", name))
-        .ok_or_else(|| anyhow::anyhow!(
-            "Unknown format: '{}'. No built-in format or config at _calepin/formats/{}.toml",
-            name, name
-        ))?;
-
-    let content = std::fs::read_to_string(&path)?;
-    let tv: toml::Value = toml::from_str(&content)?;
-    let config = crate::value::from_toml(tv);
-
-    let base_name = config.get("base")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Custom format '{}': missing 'base' field", name))?;
-
-    // Create the base renderer (must be a built-in)
-    let base: Box<dyn OutputRenderer> = match base_name {
-        "html" => Box::new(html::HtmlRenderer),
-        "latex" => Box::new(latex::LatexRenderer),
-        "markdown" => Box::new(markdown::MarkdownRenderer),
-        "typst" => Box::new(typst::TypstRenderer),
-        other => anyhow::bail!("Custom format '{}': unknown base format '{}'", name, other),
-    };
-
-    let ext = config.get("extension")
-        .and_then(|v| v.as_str())
-        .unwrap_or(base.extension())
-        .to_string();
-
-    let config_dir = path.parent().unwrap_or(Path::new("."));
-    let preprocess_script = config.get("preprocess")
-        .and_then(|v| v.as_str())
-        .map(|s| config_dir.join(s));
-    let postprocess_script = config.get("postprocess")
-        .and_then(|v| v.as_str())
-        .map(|s| config_dir.join(s));
-
-    Ok(Box::new(CustomRenderer {
-        name: name.to_string(),
-        ext,
-        base,
-        preprocess_script,
-        postprocess_script,
-    }))
-}

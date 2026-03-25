@@ -54,18 +54,6 @@ pub fn render_core(
     overrides: &[String],
     project_var: Option<&toml::Value>,
     project_root_override: Option<&Path>,
-) -> Result<RenderResult> {
-    render_core_with_options(input, output_path, format, overrides, project_var, project_root_override, &RenderCoreOptions::default())
-}
-
-/// Core render pipeline with collection options (chapter numbering, skip_crossref).
-pub fn render_core_with_options(
-    input: &Path,
-    output_path: &Path,
-    format: Option<&str>,
-    overrides: &[String],
-    project_var: Option<&toml::Value>,
-    project_root_override: Option<&Path>,
     options: &RenderCoreOptions,
 ) -> Result<RenderResult> {
 
@@ -130,10 +118,7 @@ pub fn render_core_with_options(
     // 4. Expand includes before block parsing (so included code chunks are parsed)
     let body = jinja::expand_includes(&body, &path_ctx.project_root, &format_str);
 
-    // 4a. Preprocess body (custom format hook)
-    let body = renderer.preprocess_body(&body)?;
-
-    // 4b. Parse body into blocks
+    // 4a. Parse body into blocks
     let blocks = parse::blocks::parse_body(&body)?;
 
     // 5. Initialize engine subprocesses only if needed
@@ -258,7 +243,7 @@ pub fn render_file(
         input.with_extension(ext)
     };
 
-    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, project_var, None)?;
+    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, project_var, None, &RenderCoreOptions::default())?;
 
     // Assemble page (page template wrapping)
     let final_output = renderer
