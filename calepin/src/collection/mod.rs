@@ -80,7 +80,7 @@ pub fn build_collection(
     let orchestrator_filename = format!("orchestrator.{}", ext);
     let orchestrator = config.orchestrator.clone()
         .or_else(|| {
-            let p = base_dir.join("_calepin").join("templates").join(&collection_target_name)
+            let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
                 .join(&orchestrator_filename);
             if p.exists() { return Some(p.display().to_string()); }
             // Check built-in templates
@@ -606,8 +606,8 @@ fn render_orchestrator(
 
     // Load templates from templates/{target}/ and templates/common/
     let dirs = [
-        base_dir.join("_calepin").join("templates").join(target_name),
-        base_dir.join("_calepin").join("templates").join("common"),
+        crate::paths::templates_dir(&base_dir).join(target_name),
+        crate::paths::templates_dir(&base_dir).join("common"),
     ];
     for dir in &dirs {
         if !dir.is_dir() { continue; }

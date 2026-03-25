@@ -99,11 +99,7 @@ pub fn evaluate_document(
     path_ctx: &crate::paths::PathContext,
     default_fig_ext: &str,
 ) -> Result<EvalResult> {
-    let rel_stem = input.strip_prefix(&path_ctx.project_root)
-        .unwrap_or(input)
-        .with_extension("")
-        .to_string_lossy()
-        .replace('\\', "/");
+    let rel_stem = path_ctx.relative_stem(input);
     let fig_dir = path_ctx.figures_dir(&rel_stem);
     let cache_dir = path_ctx.cache_root(&rel_stem);
     let cache_enabled = metadata.var.get("execute")

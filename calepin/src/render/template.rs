@@ -121,7 +121,7 @@ pub fn load_page_template(template_name: &str, base: &str) -> String {
 pub fn load_default_css() -> String {
     // Check project/user overrides for CSS
     let root = crate::paths::get_project_root();
-    let p = root.join("_calepin").join("templates").join("html").join("page.css");
+    let p = crate::paths::templates_dir(&root).join("html").join("page.css");
     if p.exists() {
         if let Ok(s) = std::fs::read_to_string(&p) {
             return s;
@@ -542,7 +542,7 @@ pub fn render_page_template(
 
     let root = crate::paths::get_project_root();
     let active_target = crate::paths::get_active_target();
-    let tpl_dir = root.join("_calepin").join("templates");
+    let tpl_dir = crate::paths::templates_dir(&root);
 
     // Load templates from filesystem directories
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();

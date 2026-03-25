@@ -72,34 +72,10 @@ pub fn render_core(
     }
 
     // 2b. Construct path context and validate paths
-    let path_ctx = if let Some(root) = project_root_override {
-        paths::PathContext {
-            project_root: root.to_path_buf(),
-            output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
-        }
-    } else {
-        paths::PathContext::for_document(input, output_path)
-    };
-    let input_name = input.file_name()
-        .unwrap_or_default()
-        .to_string_lossy();
+    let path_ctx = paths::PathContext::new(input, output_path, project_root_override);
+    let input_name = input.file_name().unwrap_or_default().to_string_lossy();
     paths::validate_paths(&metadata, &path_ctx, &input_name)?;
-
-    // 2c. Diagnostic: show effective project root (and code chunk cwd when different)
-    if !crate::cli::is_quiet() {
-        let input_dir = input.parent().unwrap_or(Path::new("."));
-        let root = if path_ctx.project_root.as_os_str().is_empty() { Path::new(".") } else { &path_ctx.project_root };
-        let idir = if input_dir.as_os_str().is_empty() { Path::new(".") } else { input_dir };
-        if idir != root {
-            eprintln!(
-                "  root: {}  (code chunks run from {})",
-                root.display(),
-                idir.display()
-            );
-        } else {
-            eprintln!("  root: {}", root.display());
-        }
-    }
+    path_ctx.print_root_diagnostic(input);
 
     // 3. Create renderer for this format
     let format_str = format
@@ -115,8 +91,10 @@ pub fn render_core(
     let blocks = parse::blocks::parse_body(&body)?;
 
     // 5. Initialize code engines (R, Python, sh) -- only starts what's needed
-    let input_dir = input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) });
-    let mut engines = engines::EnginePool::init(&blocks, &body, &metadata, renderer.engine(), input_dir)?;
+    let mut engines = engines::EnginePool::init(
+        &blocks, &body, &metadata, renderer.engine(),
+        paths::PathContext::code_working_dir(input),
+    )?;
     let mut ctx = engines.context();
 
     // 5b. Evaluate inline code in metadata fields (title, date, etc.)

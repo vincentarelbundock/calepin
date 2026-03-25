@@ -119,7 +119,7 @@ fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
 
     // 1. Project filesystem
     let root = crate::paths::get_project_root();
-    let project_path = root.join("_calepin").join("assets").join("highlighting").join(&filename);
+    let project_path = crate::paths::assets_dir(&root).join("highlighting").join(&filename);
     if project_path.exists() {
         if let Ok(theme) = ThemeSet::get_theme(&project_path) {
             return Some(theme);

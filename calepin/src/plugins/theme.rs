@@ -60,7 +60,7 @@ impl ThemeManifest {
 /// Resolve a theme directory by name.
 /// Checks `{project_root}/_calepin/themes/{name}/theme.toml`.
 pub fn resolve_theme_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
-    let dir = project_root.join("_calepin").join("themes").join(name);
+    let dir = crate::paths::themes_dir(project_root).join(name);
     if dir.join("theme.toml").exists() {
         Some(dir)
     } else {
@@ -70,7 +70,7 @@ pub fn resolve_theme_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
 
 /// List all available themes in the project.
 pub fn list_themes(project_root: &Path) -> Vec<ThemeManifest> {
-    let themes_dir = project_root.join("_calepin").join("themes");
+    let themes_dir = crate::paths::themes_dir(project_root);
     if !themes_dir.is_dir() {
         return Vec::new();
     }

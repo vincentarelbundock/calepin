@@ -79,24 +79,63 @@ pub struct PathContext {
 }
 
 impl PathContext {
-    /// Build a PathContext for a document render.
+    /// Construct a PathContext, with optional project root override.
+    /// In document mode (no override), project_root = input's parent directory.
+    pub fn new(input: &Path, output_path: &Path, project_root_override: Option<&Path>) -> Self {
+        if let Some(root) = project_root_override {
+            Self {
+                project_root: root.to_path_buf(),
+                output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+            }
+        } else {
+            Self::for_document(input, output_path)
+        }
+    }
+
+    /// Build a PathContext for a document render (no project root override).
     pub fn for_document(input: &Path, output: &Path) -> Self {
         let project_root = input.parent().unwrap_or(Path::new(".")).to_path_buf();
         let output_dir = output.parent().unwrap_or(Path::new(".")).to_path_buf();
-        Self {
-            project_root,
-            output_dir,
-        }
+        Self { project_root, output_dir }
     }
 
     /// Resolve the figure output directory for a given document stem.
     pub fn figures_dir(&self, stem: &str) -> PathBuf {
-        self.output_dir.join("_calepin").join("files").join(stem)
+        calepin_dir(&self.output_dir, &["files", stem])
     }
 
     /// Resolve the cache directory for a given document stem.
     pub fn cache_root(&self, stem: &str) -> PathBuf {
-        self.project_root.join("_calepin").join("cache").join(stem)
+        calepin_dir(&self.project_root, &["cache", stem])
+    }
+
+    /// Compute a relative stem from input path, for use as cache/figure key.
+    /// Strips the project root prefix and extension, normalizes separators.
+    pub fn relative_stem(&self, input: &Path) -> String {
+        input.strip_prefix(&self.project_root)
+            .unwrap_or(input)
+            .with_extension("")
+            .to_string_lossy()
+            .replace('\\', "/")
+    }
+
+    /// Working directory for code engines (R, Python, sh).
+    /// Returns the input file's parent directory, or None if empty.
+    pub fn code_working_dir(input: &Path) -> Option<&Path> {
+        input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) })
+    }
+
+    /// Print a diagnostic showing the effective project root.
+    pub fn print_root_diagnostic(&self, input: &Path) {
+        if crate::cli::is_quiet() { return; }
+        let input_dir = input.parent().unwrap_or(Path::new("."));
+        let root = if self.project_root.as_os_str().is_empty() { Path::new(".") } else { &self.project_root };
+        let idir = if input_dir.as_os_str().is_empty() { Path::new(".") } else { input_dir };
+        if idir != root {
+            eprintln!("  root: {}  (code chunks run from {})", root.display(), idir.display());
+        } else {
+            eprintln!("  root: {}", root.display());
+        }
     }
 }
 
@@ -104,12 +143,39 @@ impl PathContext {
 // Path resolution
 // ---------------------------------------------------------------------------
 
+/// Build a path under the project `_calepin/` directory.
+/// Does not check existence -- use `resolve_path` for that.
+///
+/// Example: `calepin_dir(root, &["templates", "html"])` -> `{root}/_calepin/templates/html`
+pub fn calepin_dir(project_root: &Path, segments: &[&str]) -> PathBuf {
+    let mut p = project_root.join("_calepin");
+    for s in segments {
+        p = p.join(s);
+    }
+    p
+}
+
+/// `{root}/_calepin/templates`
+pub fn templates_dir(project_root: &Path) -> PathBuf {
+    calepin_dir(project_root, &["templates"])
+}
+
+/// `{root}/_calepin/themes`
+pub fn themes_dir(project_root: &Path) -> PathBuf {
+    calepin_dir(project_root, &["themes"])
+}
+
+/// `{root}/_calepin/assets`
+pub fn assets_dir(project_root: &Path) -> PathBuf {
+    calepin_dir(project_root, &["assets"])
+}
+
 /// Resolve a file under the project `_calepin/` directory.
 /// Returns the first path that exists, or None.
 ///
 /// Resolution: `{project_root}/_calepin/{dir}/{filename}`
 pub fn resolve_path(project_root: &Path, dir: &str, filename: &str) -> Option<PathBuf> {
-    let local = project_root.join("_calepin").join(dir).join(filename);
+    let local = calepin_dir(project_root, &[dir, filename]);
     if local.exists() {
         return Some(local);
     }
@@ -148,7 +214,7 @@ pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
     let generic = format!("{}.jinja", name);
 
     let root = get_project_root();
-    let tpl = root.join("_calepin").join("templates");
+    let tpl = templates_dir(&root);
     let active_target = get_active_target();
 
     // 1. User target-specific (e.g., _calepin/templates/book/)
@@ -197,7 +263,7 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
     let generic = format!("{}.jinja", name);
 
     let root = get_project_root();
-    let snip = root.join("_calepin").join("snippets");
+    let snip = calepin_dir(&root, &["snippets"]); // no dedicated helper -- snippets are rare
     let active_target = get_active_target();
 
     // 1. User target-specific
@@ -237,7 +303,7 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
 /// Resolve a plugin directory by name.
 /// Checks `{project_root}/_calepin/plugins/{name}/plugin.toml`.
 pub fn resolve_plugin_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
-    let local = project_root.join("_calepin").join("plugins").join(name);
+    let local = calepin_dir(project_root, &["plugins", name]);
     if local.join("plugin.toml").exists() {
         return Some(local);
     }
