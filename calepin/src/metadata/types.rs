@@ -92,13 +92,6 @@ pub struct LayoutConfig {
     pub rows: Option<usize>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, serde::Serialize)]
-pub struct LogoConfig {
-    pub light: Option<String>,
-    pub dark: Option<String>,
-    pub text: Option<String>,
-}
-
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct LabelsConfig {
     pub abstract_title: Option<String>,
@@ -242,7 +235,7 @@ pub struct Metadata {
     pub lang: Option<String>,
     pub url: Option<String>,
     pub favicon: Option<String>,
-    pub logo: Option<LogoConfig>,
+    pub navbar: Option<crate::project::NavbarConfig>,
     pub orchestrator: Option<String>,
     pub global_crossref: bool,
     pub static_dirs: Vec<String>,

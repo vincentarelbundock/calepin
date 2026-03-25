@@ -80,6 +80,27 @@ impl DocumentEntry {
     }
 }
 
+/// A single item in a navbar position (left, middle, or right).
+#[derive(Debug, Clone, Default, Deserialize, serde::Serialize)]
+pub struct NavbarItem {
+    pub text: Option<String>,
+    pub href: Option<String>,
+    pub icon: Option<String>,
+    pub image: Option<String>,
+    pub image_dark: Option<String>,
+}
+
+/// Navbar configuration with three positional slots.
+#[derive(Debug, Clone, Default, Deserialize, serde::Serialize)]
+pub struct NavbarConfig {
+    #[serde(default)]
+    pub left: Vec<NavbarItem>,
+    #[serde(default)]
+    pub middle: Vec<NavbarItem>,
+    #[serde(default)]
+    pub right: Vec<NavbarItem>,
+}
+
 /// A post-processing command run after the site build completes.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PostCommand {

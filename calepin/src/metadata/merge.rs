@@ -69,7 +69,7 @@ impl Metadata {
         merge_opt!(lang);
         merge_opt!(url);
         merge_opt!(favicon);
-        self.logo = merge_option_struct!(overlay.logo, self.logo, { light, dark, text });
+        merge_opt!(navbar);
         merge_opt!(orchestrator);
         if overlay.global_crossref { self.global_crossref = true; }
         merge_vec!(static_dirs);

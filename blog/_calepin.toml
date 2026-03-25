@@ -34,7 +34,21 @@ default = true
 abbreviation = "fr"
 language = "Français"
 
-# -- Navigation: English --
+# -- Navbar --
+
+[[navbar.left]]
+text = "Vincent Arel-Bundock"
+href = "/index.html"
+
+[[navbar.right]]
+icon = "github"
+href = "https://github.com/vincentarelbundock"
+
+[[navbar.right]]
+icon = "envelope"
+href = "mailto:vincent.arel-bundock@umontreal.ca"
+
+# -- Sidebar: English --
 
 [[contents]]
 lang = "en"
@@ -47,7 +61,7 @@ pages = [
   "blog.qmd",
 ]
 
-# -- Navigation: French --
+# -- Sidebar: French --
 
 [[contents]]
 lang = "fr"
@@ -68,16 +82,7 @@ pages = ["404.qmd"]
 
 # -- Template variables --
 [var]
-navbar_search = false
 sidebar = false
-
-[[var.navbar_right]]
-icon = "github"
-href = "https://github.com/vincentarelbundock"
-
-[[var.navbar_right]]
-icon = "envelope"
-href = "mailto:vincent.arel-bundock@umontreal.ca"
 
 # -- Targets --
 

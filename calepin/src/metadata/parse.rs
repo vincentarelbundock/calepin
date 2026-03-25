@@ -129,7 +129,7 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             }
             "url" => meta.url = v.as_str().map(String::from),
             "favicon" => meta.favicon = v.as_str().map(String::from),
-            "logo" => meta.logo = deserialize_section(v),
+            "navbar" => meta.navbar = deserialize_section(v),
             "orchestrator" => meta.orchestrator = v.as_str().map(String::from),
             "global_crossref" => meta.global_crossref = v.as_bool().unwrap_or(false),
             "embed_resources" => {
