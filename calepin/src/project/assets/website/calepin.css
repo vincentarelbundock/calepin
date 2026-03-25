@@ -7,27 +7,28 @@
 
 :root {
   /* Surface & text */
-  --c-bg:           #fafbfc;
-  --c-bg-secondary: #f3f5f7;
-  --c-bg-tertiary:  #ebeef1;
-  --c-text:         #2e3440;
-  --c-text-muted:   #616e7c;
-  --c-text-secondary: #525d6e;
-  --c-link:         #5e81ac;
-  --c-border:       #e0e4e8;
-  --c-code-bg:      #f3f5f7;
-  --c-accent:       #5e81ac;
+  --c-bg:           #ffffff;
+  --c-bg-secondary: #f5f5f5;
+  --c-bg-tertiary:  #ebebeb;
+  --c-text:         #222222;
+  --c-text-muted:   #666666;
+  --c-text-secondary: #444444;
+  --c-link:         #0066cc;
+  --c-border:       #e0e0e0;
+  --c-code-bg:      #f5f5f5;
+  --c-accent:       #0066cc;
+  --c-navbar-bg:    #fafafa;
 
-  /* Component accents — semantic meaning */
-  --c-note:         #5e81ac;
-  --c-tip:          #a3be8c;
-  --c-warning:      #ebcb8b;
-  --c-error:        #bf616a;
-  --c-important:    #b48ead;
+  /* Component accents */
+  --c-note:         #0066cc;
+  --c-tip:          #2a9d2a;
+  --c-warning:      #d4a017;
+  --c-error:        #cc3333;
+  --c-important:    #8855aa;
 
   /* Depth */
-  --c-shadow:       rgba(46, 52, 64, 0.08);
-  --c-overlay-bg:   rgba(46, 52, 64, 0.5);
+  --c-shadow:       rgba(0, 0, 0, 0.08);
+  --c-overlay-bg:   rgba(0, 0, 0, 0.5);
 
   /* Site layout dimensions (used only when site chrome is present) */
   --c-sidebar-width: 280px;
@@ -41,32 +42,34 @@
    ================================================================= */
 
 [data-theme="dark"] {
-  --c-bg:           #2f3643;
-  --c-bg-secondary: #353d4c;
-  --c-bg-tertiary:  #3b4454;
-  --c-text:         #e5e9f0;
-  --c-text-muted:   #9aa3b0;
-  --c-text-secondary: #b8bfc9;
-  --c-link:         #88c0d0;
-  --c-border:       #4a5568;
-  --c-code-bg:      #343c4b;
-  --c-accent:       #88c0d0;
+  --c-bg:           #1a1a2e;
+  --c-bg-secondary: #222238;
+  --c-bg-tertiary:  #2a2a42;
+  --c-text:         #e0e0e0;
+  --c-text-muted:   #999999;
+  --c-text-secondary: #bbbbbb;
+  --c-link:         #66aaff;
+  --c-border:       #3a3a50;
+  --c-code-bg:      #222238;
+  --c-accent:       #66aaff;
+  --c-navbar-bg:    #16162a;
   --c-shadow:       rgba(0, 0, 0, 0.3);
   --c-overlay-bg:   rgba(0, 0, 0, 0.7);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --c-bg:           #2f3643;
-    --c-bg-secondary: #353d4c;
-    --c-bg-tertiary:  #3b4454;
-    --c-text:         #e5e9f0;
-    --c-text-muted:   #9aa3b0;
-    --c-text-secondary: #b8bfc9;
-    --c-link:         #88c0d0;
-    --c-border:       #4a5568;
-    --c-code-bg:      #343c4b;
-    --c-accent:       #88c0d0;
+    --c-bg:           #1a1a2e;
+    --c-bg-secondary: #222238;
+    --c-bg-tertiary:  #2a2a42;
+    --c-text:         #e0e0e0;
+    --c-text-muted:   #999999;
+    --c-text-secondary: #bbbbbb;
+    --c-link:         #66aaff;
+    --c-border:       #3a3a50;
+    --c-code-bg:      #222238;
+    --c-accent:       #66aaff;
+    --c-navbar-bg:    #16162a;
     --c-shadow:       rgba(0, 0, 0, 0.3);
     --c-overlay-bg:   rgba(0, 0, 0, 0.7);
   }
@@ -89,7 +92,7 @@ html { scroll-behavior: smooth; scrollbar-color: color-mix(in srgb, var(--c-text
 
 body {
   margin: 0; padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 1rem; line-height: 1.6;
   color: var(--c-text); background: var(--c-bg);
   -webkit-font-smoothing: antialiased;
@@ -122,7 +125,7 @@ h3 { font-size: 1.15rem; }
 h4 { font-size: 1rem; }
 
 code {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 0.875em; background: var(--c-code-bg); padding: 0.15em 0.35em; border-radius: 3px;
 }
 
@@ -318,7 +321,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; 
 /* --- Navbar --- */
 .navbar {
   position: fixed; top: 0; left: 0; right: 0;
-  height: var(--c-navbar-height); background: var(--c-bg);
+  height: var(--c-navbar-height); background: var(--c-navbar-bg, var(--c-bg));
   border-bottom: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
   display: flex; align-items: center; padding: 0 0.5rem; z-index: 1000; gap: 0.5rem;
   transition: transform 0.3s ease;

@@ -1,3 +1,4 @@
+# -- Site identity --
 output = "output"
 target = "website"
 csl = "chicago-author-date"
@@ -5,12 +6,19 @@ title = "Calepin"
 subtitle = "A notebook and website generator written in Rust"
 url = "https://vincentarelbundock.github.io/calepin"
 favicon = "assets/Calepin.svg"
-logo = "assets/Calepin.svg"
-logo_dark = "assets/Calepin_dark.svg"
 
+# -- Logo --
+[logo]
+light = "assets/Calepin.svg"
+dark = "assets/Calepin_dark.svg"
+text = "Calepin"
+
+# -- Syntax highlighting --
 [highlight]
 light = "github"
 dark = "nord"
+
+# -- Navigation --
 
 [[contents]]
 pages = ["installation.qmd", "cli.qmd"]
@@ -60,19 +68,12 @@ pages = ["misc/*.qmd"]
 standalone = true
 pages = ["index.qmd", "404.qmd"]
 
+# -- Post-processing --
 [[post]]
 command = "pagefind --site {output}"
 
+# -- Template variables --
 [var]
-primary = "#0066cc"
-background = "#ffffff"
-background_dark = "#1a1a2e"
-foreground = "#222222"
-foreground_dark = "#e0e0e0"
-font = "Inter"
-font_headings = "Inter"
-font_mono = "JetBrains Mono"
-navbar_background = "#fafafa"
 navbar_search = true
 sidebar_collapse_level = 0
 
@@ -80,28 +81,12 @@ sidebar_collapse_level = 0
 icon = "github"
 href = "https://github.com/vincentarelbundock/calepin"
 
-[targets.latex]
-engine ="latex"
-template = "calepin"
-extension = "tex"
-fig_extension = "pdf"
-preview = "serve"
-[targets.latex.compile]
-command = "tectonic {input}"
-extension = "pdf"
+# -- Targets --
 
-[targets.typst]
-engine ="typst"
-template = "calepin"
-extension = "typ"
+[targets.website]
+engine = "html"
+template = "page"
+extension = "html"
 fig_extension = "svg"
+embed_resources = false
 preview = "serve"
-[targets.typst.compile]
-extension = "pdf"
-
-[targets.markdown]
-engine ="markdown"
-template = "calepin"
-extension = "md"
-fig_extension = "png"
-preview = "none"

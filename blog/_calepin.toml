@@ -1,6 +1,11 @@
+# -- Site identity --
 output = "output"
 target = "website"
 static = ["files", "research"]
+title = "Vincent Arel-Bundock"
+url = "http://arelbundock.com"
+
+# -- Bibliography --
 bibliography = [
   "posts/dunning_kruger/bibliography.bib",
   "posts/marginaleffects_priors/reference.bib",
@@ -18,19 +23,18 @@ bibliography = [
   "files/arel-bundock.bib",
 ]
 
-title = "Vincent Arel-Bundock"
-url = "http://arelbundock.com"
+# -- Languages --
 
 [[languages]]
-code = "en"
-name = "English"
+abbreviation = "en"
+language = "English"
 default = true
 
 [[languages]]
-code = "fr"
-name = "Français"
+abbreviation = "fr"
+language = "Français"
 
-# -- English --
+# -- Navigation: English --
 
 [[contents]]
 lang = "en"
@@ -43,7 +47,7 @@ pages = [
   "blog.qmd",
 ]
 
-# -- French --
+# -- Navigation: French --
 
 [[contents]]
 lang = "fr"
@@ -62,6 +66,7 @@ pages = [
 standalone = true
 pages = ["404.qmd"]
 
+# -- Template variables --
 [var]
 navbar_search = false
 sidebar = false
@@ -73,6 +78,8 @@ href = "https://github.com/vincentarelbundock"
 [[var.navbar_right]]
 icon = "envelope"
 href = "mailto:vincent.arel-bundock@umontreal.ca"
+
+# -- Targets --
 
 [targets.website]
 engine = "html"
