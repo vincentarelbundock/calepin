@@ -111,35 +111,35 @@ impl ChunkOptions {
 
     // Convenience accessors mirroring calepin's reactor defaults
     pub fn cache(&self) -> bool {
-        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.cache).unwrap_or(true);
+        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.cache).unwrap_or(true);
         self.get_bool("cache", d)
     }
     pub fn eval(&self) -> bool {
-        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.eval).unwrap_or(true);
+        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.eval).unwrap_or(true);
         self.get_bool("eval", d)
     }
     pub fn echo(&self) -> bool {
-        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.echo).unwrap_or(true);
+        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.echo).unwrap_or(true);
         self.get_bool("echo", d)
     }
     pub fn include(&self) -> bool {
-        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.include).unwrap_or(true);
+        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.include).unwrap_or(true);
         self.get_bool("include", d)
     }
     pub fn warning(&self) -> bool {
-        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.warning).unwrap_or(true);
+        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.warning).unwrap_or(true);
         self.get_bool("warning", d)
     }
     pub fn message(&self) -> bool {
-        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.message).unwrap_or(true);
+        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.message).unwrap_or(true);
         self.get_bool("message", d)
     }
     pub fn comment(&self) -> String {
-        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.comment.clone()).unwrap_or_else(|| "> ".to_string());
+        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.comment.clone()).unwrap_or_else(|| "> ".to_string());
         self.get_string("comment", &d)
     }
     pub fn results(&self) -> ResultsMode {
-        let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.results.clone()).unwrap_or_else(|| "markup".to_string());
+        let d = crate::project::get_defaults().execute.as_ref().and_then(|c| c.results.clone()).unwrap_or_else(|| "markup".to_string());
         match self.get_string("results", &d).as_str() {
             "asis" => ResultsMode::Asis,
             "hide" => ResultsMode::Hide,

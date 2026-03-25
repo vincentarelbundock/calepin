@@ -163,13 +163,14 @@ pub fn build_collection_context(
         crate::render::template::render_element("math", "html", &vars)
     };
 
+    let id = config.identity.as_ref();
     CollectionContext {
-        title: config.title.clone(),
-        subtitle: config.subtitle.clone(),
-        url: config.url.clone(),
-        favicon: config.favicon.clone(),
-        logo: config.logo.clone(),
-        logo_dark: config.logo_dark.clone(),
+        title: id.and_then(|i| i.title.clone()),
+        subtitle: id.and_then(|i| i.subtitle.clone()),
+        url: id.and_then(|i| i.url.clone()),
+        favicon: id.and_then(|i| i.favicon.clone()),
+        logo: id.and_then(|i| i.logo.clone()),
+        logo_dark: id.and_then(|i| i.logo_dark.clone()),
         pages: nav_tree,
         languages: config.languages.clone(),
         dark_mode: true,

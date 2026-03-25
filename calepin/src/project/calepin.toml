@@ -1,4 +1,3 @@
-[defaults]
 format = "html"
 lang = "en"
 preview_port = 3456
@@ -7,18 +6,33 @@ dpi = 150.0
 math = "katex"
 embed_resources = true
 
-[defaults.highlight]
+[identity]
+title = "Calepin"
+subtitle = "A document and site generator"
+author = "Vincent Arel-Bundock"
+
+[highlight]
 light = "github"
 dark = "nord"
 
-[defaults.figure]
-width = 6.0
-out_width = 0.70
-aspect_ratio = 0.618
-device = "png"
-alignment = "center"
+[toc]
+enabled = false
+depth = 3
+title = "Contents"
 
-[defaults.chunk]
+[labels]
+abstract_title = "Abstract"
+keywords = "Keywords"
+appendix = "Appendix"
+citation = "Citation"
+reuse = "Reuse"
+funding = "Funding"
+copyright = "Copyright"
+listing = "Listing"
+proof = "Proof"
+contents = "Contents"
+
+[execute]
 cache = true
 eval = true
 echo = true
@@ -28,12 +42,14 @@ message = true
 comment = "> "
 results = "markup"
 
-[defaults.toc]
-enabled = false
-depth = 3
-title = "Contents"
+[figure]
+width = 6.0
+out_width = 0.70
+aspect_ratio = 0.618
+device = "png"
+alignment = "center"
 
-[defaults.callout]
+[callout]
 appearance = "default"
 note = "Note"
 tip = "Tip"
@@ -46,62 +62,44 @@ icon_warning = "\u26A0\uFE0F"
 icon_important = "\u2757"
 icon_caution = "\U0001F525"
 
-[defaults.video]
-width = "100%"
-height = "400"
-title = "Video"
-
-[defaults.placeholder]
-width = 600
-height = 400
-color = "#cccccc"
-
-[defaults.lipsum]
-paragraphs = 1
-
-[defaults.layout]
+[layout]
 valign = "top"
 columns = 1
 rows = 1
 
-[defaults.latex]
+[shortcodes.video]
+width = "100%"
+height = "400"
+title = "Video"
+
+[shortcodes.placeholder]
+width = 600
+height = 400
+color = "#cccccc"
+
+[shortcodes.lipsum]
+paragraphs = 1
+
+[formats.latex]
 documentclass = "article"
 fontsize = "11pt"
 linkcolor = "black"
 urlcolor = "blue!60!black"
 citecolor = "blue!60!black"
 
-[defaults.typst]
+[formats.typst]
 fontsize = "11pt"
 leading = "0.65em"
 justify = true
 heading_numbering = "1.1"
 
-[defaults.revealjs]
+[formats.revealjs]
 theme = "white"
 code_theme = "monokai"
 transition = "slide"
 slide_number = true
 
-[defaults.labels]
-abstract_title = "Abstract"
-keywords = "Keywords"
-appendix = "Appendix"
-citation = "Citation"
-reuse = "Reuse"
-funding = "Funding"
-copyright = "Copyright"
-listing = "Listing"
-proof = "Proof"
-contents = "Contents"
-
 global_crossref = false
-
-title = "Calepin"
-subtitle = "A document and site generator"
-author = "Vincent Arel-Bundock"
-csl = "chicago-author-date"
-highlight = {light = "github", dark = "nord"}
 
 [targets.html]
 engine = "html"

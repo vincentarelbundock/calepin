@@ -1,8 +1,6 @@
 output = "output"
 target = "website"
 static = ["files", "research"]
-title = "Vincent Arel-Bundock"
-url = "http://arelbundock.com"
 bibliography = [
   "posts/dunning_kruger/bibliography.bib",
   "posts/marginaleffects_priors/reference.bib",
@@ -19,6 +17,10 @@ bibliography = [
   "posts/robustness_values/bibliography.bib",
   "files/arel-bundock.bib",
 ]
+
+[identity]
+title = "Vincent Arel-Bundock"
+url = "http://arelbundock.com"
 
 [[languages]]
 code = "en"

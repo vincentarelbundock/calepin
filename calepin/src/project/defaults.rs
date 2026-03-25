@@ -8,8 +8,10 @@ use super::HighlightDefaults;
 // Defaults types
 // ---------------------------------------------------------------------------
 
-/// Configurable defaults, loaded from [defaults] in calepin.toml.
-/// All fields are Option so user configs can partially override the built-in defaults.
+/// Resolved defaults, stored in thread-local for the current render.
+/// Fields are kept flat (no nesting) for easy access by consumers.
+/// The TOML structure groups some of these under [shortcodes] and [formats],
+/// but `ProjectConfig::as_defaults()` flattens them back.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Defaults {
     pub format: Option<String>,
@@ -22,7 +24,7 @@ pub struct Defaults {
     pub math: Option<String>,
     pub highlight: Option<HighlightDefaults>,
     pub figure: Option<FigureDefaults>,
-    pub chunk: Option<ChunkDefaults>,
+    pub execute: Option<ExecuteDefaults>,
     pub toc: Option<TocDefaults>,
     pub callout: Option<CalloutDefaults>,
     pub video: Option<VideoDefaults>,
@@ -49,7 +51,7 @@ pub struct FigureDefaults {
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub struct ChunkDefaults {
+pub struct ExecuteDefaults {
     pub cache: Option<bool>,
     pub eval: Option<bool>,
     pub echo: Option<bool>,
@@ -150,6 +152,22 @@ pub struct LabelsDefaults {
     pub contents: Option<String>,
 }
 
+/// Wrapper for [shortcodes] TOML section. Flattened into Defaults by `as_defaults()`.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ShortcodesConfig {
+    pub video: Option<VideoDefaults>,
+    pub placeholder: Option<PlaceholderDefaults>,
+    pub lipsum: Option<LipsumDefaults>,
+}
+
+/// Wrapper for [formats] TOML section. Flattened into Defaults by `as_defaults()`.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct FormatsConfig {
+    pub latex: Option<LatexDefaults>,
+    pub typst: Option<TypstDefaults>,
+    pub revealjs: Option<RevealJsDefaults>,
+}
+
 // ---------------------------------------------------------------------------
 // Defaults merging
 // ---------------------------------------------------------------------------
@@ -191,7 +209,7 @@ impl Defaults {
             embed_resources: user.embed_resources.or(builtin.embed_resources),
             highlight: merge_option_struct!(user.highlight, builtin.highlight, { light, dark }),
             figure: merge_option_struct!(user.figure, builtin.figure, { width, out_width, aspect_ratio, device, alignment }),
-            chunk: merge_option_struct!(user.chunk, builtin.chunk, { cache, eval, echo, include, warning, message, comment, results }),
+            execute: merge_option_struct!(user.execute, builtin.execute, { cache, eval, echo, include, warning, message, comment, results }),
             toc: merge_option_struct!(user.toc, builtin.toc, { enabled, depth, title }),
             callout: merge_option_struct!(user.callout, builtin.callout, { appearance, note, tip, warning, important, caution, icon_note, icon_tip, icon_warning, icon_important, icon_caution }),
             video: merge_option_struct!(user.video, builtin.video, { width, height, title }),
@@ -210,7 +228,7 @@ impl Defaults {
 // Thread-local defaults state
 // ---------------------------------------------------------------------------
 
-/// Thread-local resolved defaults, set once per render.
+// Thread-local resolved defaults, set once per render.
 thread_local! {
     static ACTIVE_DEFAULTS: RefCell<Option<Defaults>> = RefCell::new(None);
 }
@@ -224,18 +242,16 @@ pub fn set_active_defaults(defaults: Defaults) {
 pub fn get_defaults() -> Defaults {
     ACTIVE_DEFAULTS.with(|d| {
         d.borrow().clone().unwrap_or_else(|| {
-            super::builtin_config().defaults.clone()
-                .expect("built-in calepin.toml must have [defaults]")
+            super::builtin_config().as_defaults()
         })
     })
 }
 
 /// Get resolved defaults, merging project config with built-in.
 pub fn resolve_defaults(config: Option<&super::ProjectConfig>) -> Defaults {
-    let builtin = super::builtin_config().defaults.as_ref()
-        .expect("built-in calepin.toml must have [defaults]");
-    match config.and_then(|c| c.defaults.as_ref()) {
-        Some(user) => Defaults::merge(builtin, user),
-        None => builtin.clone(),
+    let builtin = super::builtin_config().as_defaults();
+    match config {
+        Some(user) => Defaults::merge(&builtin, &user.as_defaults()),
+        None => builtin,
     }
 }

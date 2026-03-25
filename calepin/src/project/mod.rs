@@ -22,73 +22,85 @@ use serde::Deserialize;
 /// Top-level calepin.toml structure.
 #[derive(Debug, Deserialize)]
 pub struct ProjectConfig {
-    /// Output directory for rendered files, relative to the project root.
-    #[serde(default)]
-    pub output: Option<String>,
-
-    // -- Metadata (formerly [meta]) --
+    // -- Bare top-level keys (defaultable) --
 
     #[serde(default)]
-    pub title: Option<String>,
+    pub format: Option<String>,
     #[serde(default)]
-    pub subtitle: Option<String>,
-    #[serde(default)]
-    pub author: Option<toml::Value>,
-    #[serde(default)]
-    pub url: Option<String>,
-    #[serde(default)]
-    pub bibliography: Vec<String>,
+    pub lang: Option<String>,
+    #[serde(default, alias = "preview-port")]
+    pub preview_port: Option<u16>,
     #[serde(default)]
     pub csl: Option<String>,
     #[serde(default)]
+    pub dpi: Option<f64>,
+    #[serde(default)]
+    pub timeout: Option<u64>,
+    #[serde(default)]
+    pub math: Option<String>,
+    #[serde(default, alias = "embed-resources")]
+    pub embed_resources: Option<bool>,
+
+    // -- Top-level sections (defaultable) --
+
+    #[serde(default)]
     pub highlight: Option<HighlightDefaults>,
+    #[serde(default)]
+    pub toc: Option<TocDefaults>,
+    #[serde(default)]
+    pub labels: Option<LabelsDefaults>,
+    #[serde(default)]
+    pub execute: Option<ExecuteDefaults>,
+    #[serde(default)]
+    pub figure: Option<FigureDefaults>,
+    #[serde(default)]
+    pub callout: Option<CalloutDefaults>,
+    #[serde(default)]
+    pub layout: Option<LayoutDefaults>,
+    #[serde(default)]
+    pub shortcodes: Option<ShortcodesConfig>,
+    #[serde(default)]
+    pub formats: Option<FormatsConfig>,
 
-    // -- Collection fields --
+    // -- Identity --
 
+    #[serde(default)]
+    pub identity: Option<IdentityConfig>,
+
+    // -- Project / collection fields --
+
+    /// Output directory for rendered files, relative to the project root.
+    #[serde(default)]
+    pub output: Option<String>,
     /// Which `[targets.*]` to use for collection rendering.
     #[serde(default)]
     pub target: Option<String>,
     #[serde(default)]
-    pub favicon: Option<String>,
-    #[serde(default)]
-    pub logo: Option<String>,
-    #[serde(default, alias = "logo-dark")]
-    pub logo_dark: Option<String>,
-    /// Path to the master template that assembles rendered page fragments.
-    #[serde(default)]
-    pub orchestrator: Option<String>,
+    pub bibliography: Vec<String>,
+    /// Enable global cross-reference resolution across pages.
+    #[serde(default, alias = "global-crossref")]
+    pub global_crossref: bool,
+    /// Extra directories to copy into the output directory as-is.
+    #[serde(default, rename = "static")]
+    pub static_dirs: Vec<String>,
+
+    // -- Collection --
 
     /// Languages supported by this collection.
     #[serde(default)]
     pub languages: Vec<Language>,
-
     /// Table of contents: ordered list of sections and pages.
     #[serde(default)]
     pub contents: Vec<ContentSection>,
-
     /// Arbitrary variables passed to all templates as `{{ var.key }}`.
     #[serde(default)]
     pub var: Option<toml::Value>,
-
-    /// Configurable defaults for rendering, figures, chunks, etc.
-    #[serde(default)]
-    pub defaults: Option<Defaults>,
-
     /// Named output profiles.
     #[serde(default)]
     pub targets: HashMap<String, Target>,
-
     /// Post-processing commands run after site build.
     #[serde(default)]
     pub post: Vec<PostCommand>,
-
-    /// Enable global cross-reference resolution across pages.
-    #[serde(default, alias = "global-crossref")]
-    pub global_crossref: bool,
-
-    /// Extra directories to copy into the output directory as-is.
-    #[serde(default, rename = "static")]
-    pub static_dirs: Vec<String>,
 }
 
 impl ProjectConfig {
@@ -102,6 +114,58 @@ impl ProjectConfig {
             .or(self.languages.first())
             .map(|l| l.code.as_str())
     }
+
+    /// Extract a flat `Defaults` from this config's top-level fields.
+    /// Flattens [shortcodes] and [formats] sections into individual fields.
+    pub fn as_defaults(&self) -> Defaults {
+        Defaults {
+            format: self.format.clone(),
+            lang: self.lang.clone(),
+            preview_port: self.preview_port,
+            csl: self.csl.clone(),
+            dpi: self.dpi,
+            timeout: self.timeout,
+            math: self.math.clone(),
+            embed_resources: self.embed_resources,
+            highlight: self.highlight.clone(),
+            toc: self.toc.clone(),
+            labels: self.labels.clone(),
+            execute: self.execute.clone(),
+            figure: self.figure.clone(),
+            callout: self.callout.clone(),
+            layout: self.layout.clone(),
+            // Flatten [shortcodes.*]
+            video: self.shortcodes.as_ref().and_then(|s| s.video.clone()),
+            placeholder: self.shortcodes.as_ref().and_then(|s| s.placeholder.clone()),
+            lipsum: self.shortcodes.as_ref().and_then(|s| s.lipsum.clone()),
+            // Flatten [formats.*]
+            latex: self.formats.as_ref().and_then(|f| f.latex.clone()),
+            typst: self.formats.as_ref().and_then(|f| f.typst.clone()),
+            revealjs: self.formats.as_ref().and_then(|f| f.revealjs.clone()),
+        }
+    }
+}
+
+/// Project identity: title, author, URL, branding.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct IdentityConfig {
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub subtitle: Option<String>,
+    #[serde(default)]
+    pub author: Option<toml::Value>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub favicon: Option<String>,
+    #[serde(default)]
+    pub logo: Option<String>,
+    #[serde(default, alias = "logo-dark")]
+    pub logo_dark: Option<String>,
+    /// Path to the master template that assembles rendered page fragments.
+    #[serde(default)]
+    pub orchestrator: Option<String>,
 }
 
 /// A language declaration in `[[languages]]`.
@@ -464,5 +528,127 @@ pages = ["index.qmd", "404.qmd"]
         assert_eq!(config.contents[1].pages[1].path(), "guide/figures.qmd");
 
         assert!(config.contents[2].standalone);
+    }
+
+    #[test]
+    fn test_identity_parsing() {
+        let toml = r#"
+[identity]
+title = "My Site"
+subtitle = "A test site"
+author = "Test Author"
+url = "https://example.com"
+favicon = "icon.svg"
+logo = "logo.svg"
+logo-dark = "logo-dark.svg"
+orchestrator = "master.html"
+"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        let id = config.identity.unwrap();
+        assert_eq!(id.title.as_deref(), Some("My Site"));
+        assert_eq!(id.subtitle.as_deref(), Some("A test site"));
+        assert_eq!(id.url.as_deref(), Some("https://example.com"));
+        assert_eq!(id.logo_dark.as_deref(), Some("logo-dark.svg"));
+        assert_eq!(id.orchestrator.as_deref(), Some("master.html"));
+    }
+
+    #[test]
+    fn test_new_sections_parsing() {
+        let toml = r#"
+format = "html"
+lang = "en"
+csl = "apa"
+dpi = 300.0
+math = "mathjax"
+
+[highlight]
+light = "github"
+dark = "nord"
+
+[toc]
+enabled = true
+depth = 4
+
+[execute]
+cache = false
+echo = false
+
+[figure]
+width = 8.0
+device = "svg"
+
+[callout]
+appearance = "minimal"
+
+[layout]
+valign = "center"
+
+[shortcodes.video]
+width = "80%"
+
+[shortcodes.lipsum]
+paragraphs = 3
+
+[formats.latex]
+documentclass = "book"
+
+[formats.typst]
+fontsize = "12pt"
+
+[labels]
+abstract_title = "Summary"
+"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        assert_eq!(config.format.as_deref(), Some("html"));
+        assert_eq!(config.csl.as_deref(), Some("apa"));
+        assert_eq!(config.dpi, Some(300.0));
+
+        let hl = config.highlight.unwrap();
+        assert_eq!(hl.light.as_deref(), Some("github"));
+
+        let toc = config.toc.unwrap();
+        assert_eq!(toc.enabled, Some(true));
+        assert_eq!(toc.depth, Some(4));
+
+        let exec = config.execute.unwrap();
+        assert_eq!(exec.cache, Some(false));
+
+        let fig = config.figure.unwrap();
+        assert_eq!(fig.width, Some(8.0));
+
+        let callout = config.callout.unwrap();
+        assert_eq!(callout.appearance.as_deref(), Some("minimal"));
+
+        let layout = config.layout.unwrap();
+        assert_eq!(layout.valign.as_deref(), Some("center"));
+
+        let sc = config.shortcodes.unwrap();
+        assert_eq!(sc.video.unwrap().width.as_deref(), Some("80%"));
+        assert_eq!(sc.lipsum.unwrap().paragraphs, Some(3));
+
+        let fm = config.formats.unwrap();
+        assert_eq!(fm.latex.unwrap().documentclass.as_deref(), Some("book"));
+        assert_eq!(fm.typst.unwrap().fontsize.as_deref(), Some("12pt"));
+
+        let labels = config.labels.unwrap();
+        assert_eq!(labels.abstract_title.as_deref(), Some("Summary"));
+    }
+
+    #[test]
+    fn test_as_defaults_flattens() {
+        let toml = r#"
+csl = "apa"
+
+[shortcodes.video]
+width = "50%"
+
+[formats.latex]
+fontsize = "12pt"
+"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        let defs = config.as_defaults();
+        assert_eq!(defs.csl.as_deref(), Some("apa"));
+        assert_eq!(defs.video.as_ref().and_then(|v| v.width.as_deref()), Some("50%"));
+        assert_eq!(defs.latex.as_ref().and_then(|l| l.fontsize.as_deref()), Some("12pt"));
     }
 }

@@ -1,13 +1,18 @@
 output = "output"
 target = "website"
+csl = "chicago-author-date"
+
+[identity]
 title = "Calepin"
 subtitle = "A notebook and website generator written in Rust"
 url = "https://vincentarelbundock.github.io/calepin"
-csl = "chicago-author-date"
-highlight = {light = "github", dark = "nord"}
 favicon = "assets/Calepin.svg"
 logo = "assets/Calepin.svg"
 logo_dark = "assets/Calepin_dark.svg"
+
+[highlight]
+light = "github"
+dark = "nord"
 
 [[contents]]
 pages = ["installation.qmd", "cli.qmd"]

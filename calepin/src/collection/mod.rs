@@ -78,7 +78,7 @@ pub fn build_collection(
     // Falls back to built-in templates if not found on filesystem.
     let ext = crate::paths::engine_to_ext(format);
     let orchestrator_filename = format!("orchestrator.{}", ext);
-    let orchestrator = config.orchestrator.clone()
+    let orchestrator = config.identity.as_ref().and_then(|i| i.orchestrator.clone())
         .or_else(|| {
             let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
                 .join(&orchestrator_filename);
@@ -566,11 +566,12 @@ fn render_orchestrator(
     let nav_nodes = build_orchestrator_tree(&document_tree, &document_map, results, format);
 
     // Build template context
+    let id = config.identity.as_ref();
     let meta_ctx = minijinja::context! {
-        title => config.title.clone(),
-        subtitle => config.subtitle.clone(),
-        author => config.author.as_ref().map(|a| format_author(a)),
-        url => config.url.clone(),
+        title => id.and_then(|i| i.title.clone()),
+        subtitle => id.and_then(|i| i.subtitle.clone()),
+        author => id.and_then(|i| i.author.as_ref()).map(|a| format_author(a)),
+        url => id.and_then(|i| i.url.clone()),
     };
 
     let var_ctx = config.var.as_ref()
