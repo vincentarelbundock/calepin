@@ -16,8 +16,6 @@ preview = "serve"
 [targets.book]
 engine = "latex"
 template = "page"
-extension = "tex"
-fig_extension = "pdf"
-[targets.book.compile]
-command = "tectonic {input}"
 extension = "pdf"
+fig_extension = "pdf"
+compile = "tectonic {input}"

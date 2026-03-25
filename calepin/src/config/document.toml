@@ -1,10 +1,6 @@
 # Document-level defaults (single-file rendering).
 # Concatenated with shared.toml at load time.
 
-title = "Calepin"
-subtitle = "A document and site generator"
-authors = ["Vincent Arel-Bundock"]
-
 # -- Document targets --
 [targets.html]
 engine = "html"
@@ -19,9 +15,6 @@ template = "page"
 extension = "tex"
 fig_extension = "pdf"
 preview = "serve"
-[targets.latex.compile]
-command = "tectonic {input}"
-extension = "pdf"
 
 [targets.typst]
 engine = "typst"
@@ -29,17 +22,13 @@ template = "page"
 extension = "typ"
 fig_extension = "svg"
 preview = "serve"
-[targets.typst.compile]
-extension = "pdf"
 
 [targets.pdf]
 engine = "latex"
 template = "page"
-extension = "tex"
-fig_extension = "pdf"
-[targets.pdf.compile]
-command = "tectonic {input}"
 extension = "pdf"
+fig_extension = "pdf"
+compile = "tectonic {input}"
 
 [targets.revealjs]
 engine = "revealjs"

@@ -108,8 +108,8 @@ fn render_one_with_context(
 
     // Run compile step if --compile was passed and the format defines one
     if compile {
-        if let Some(ref compile_cfg) = ctx.target.compile {
-            run_compile_step(&output_path, compile_cfg, quiet)?;
+        if let Some(ref compile_cmd) = ctx.target.compile {
+            run_compile_step(&output_path, compile_cmd, ctx.target.output_extension(), quiet)?;
         }
     }
 
@@ -125,19 +125,19 @@ fn render_one_with_context(
 
 /// Run a target's compile step.
 ///
-/// If no command is specified and the input is a `.typ` file, uses the
-/// built-in Typst compiler (no external binary needed). Otherwise shells
-/// out to the configured command.
+/// `compile_command` is the shell command template (e.g., "tectonic {input}").
+/// `output_ext` is the final output extension (from target.extension).
+/// If the rendered file is `.typ` and no command is given, uses the built-in Typst compiler.
 pub fn run_compile_step(
     rendered_path: &Path,
-    compile_cfg: &crate::project::CompileConfig,
+    compile_command: &str,
+    output_ext: &str,
     quiet: bool,
 ) -> Result<()> {
-    let compile_ext = compile_cfg.extension.as_deref().unwrap_or("pdf");
-    let output_path = rendered_path.with_extension(compile_ext);
+    let output_path = rendered_path.with_extension(output_ext);
 
-    // Native Typst compilation when no command override is set.
-    if compile_cfg.command.is_none()
+    // Native Typst compilation when no explicit command is given.
+    if compile_command.is_empty()
         && rendered_path.extension().is_some_and(|e| e == "typ")
     {
         if !quiet {
@@ -150,10 +150,7 @@ pub fn run_compile_step(
         return Ok(());
     }
 
-    let command = compile_cfg.command.as_deref()
-        .ok_or_else(|| anyhow::anyhow!("Target compile section has no command"))?;
-
-    let cmd = command
+    let cmd = compile_command
         .replace("{input}", &rendered_path.to_string_lossy())
         .replace("{output}", &output_path.to_string_lossy());
 

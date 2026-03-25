@@ -5,7 +5,7 @@ mod targets;
 
 // Re-export all public types and functions so existing `crate::project::` paths keep working.
 pub use content::{DocumentNode, expand_contents, expand_contents_for_lang, expand_glob_pub};
-pub use targets::{Target, CompileConfig, resolve_target, resolve_target_output_path, target_vars_to_jinja_from_meta, resolve_inheritance};
+pub use targets::{Target, resolve_target, resolve_target_output_path, target_vars_to_jinja_from_meta, resolve_inheritance};
 
 use std::path::Path;
 
@@ -226,12 +226,9 @@ engine = "html"
 [targets.article]
 engine = "latex"
 template = "article"
-extension = "tex"
-fig-extension = "pdf"
-
-[targets.article.compile]
-command = "tectonic {input}"
 extension = "pdf"
+fig-extension = "pdf"
+compile = "tectonic {input}"
 
 [targets.article.vars]
 documentclass = "article"
@@ -241,10 +238,9 @@ toc = false
         let article = &meta.targets["article"];
         assert_eq!(article.engine, "latex");
         assert_eq!(article.template_name(), "article");
-        assert_eq!(article.output_extension(), "tex");
+        assert_eq!(article.output_extension(), "pdf");
         assert_eq!(article.fig_ext(), "pdf");
-        let compile = article.compile.as_ref().unwrap();
-        assert_eq!(compile.command.as_deref(), Some("tectonic {input}"));
+        assert_eq!(article.compile.as_deref(), Some("tectonic {input}"));
     }
 
     #[test]

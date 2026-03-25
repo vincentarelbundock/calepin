@@ -655,25 +655,25 @@ fn render_orchestrator(
     }
 
     // Run compile command if configured
-    let compile_target = meta.targets.get(target_name)
-        .and_then(|t| t.compile.as_ref());
+    let target_def = meta.targets.get(target_name);
+    let compile_cmd = target_def.and_then(|t| t.compile.as_deref());
 
-    if let Some(compile) = compile_target {
-        let compile_ext = compile.extension.as_deref().unwrap_or("pdf");
+    if let Some(cmd) = compile_cmd {
+        let compile_ext = target_def.map(|t| t.output_extension()).unwrap_or("pdf");
         let output_filename = format!("book.{}", compile_ext);
 
-        if compile.command.is_none() && master_name.ends_with(".typ") {
+        if cmd.is_empty() && master_name.ends_with(".typ") {
             // Native Typst compilation
             let input_path = output.join(&master_name);
             let output_file = output.join(&output_filename);
             if !quiet {
-                eprintln!("  Compiling: {} → {}", input_path.display(), output_file.display());
+                eprintln!("  Compiling: {} -> {}", input_path.display(), output_file.display());
             }
             crate::typst_compile::compile_typst_to_pdf(&input_path, &output_file)?;
             if !quiet {
                 eprintln!("  Output: {}", output_file.display());
             }
-        } else if let Some(ref cmd) = compile.command {
+        } else {
             let expanded = cmd
                 .replace("{input}", &master_name)
                 .replace("{output}", &output_filename);

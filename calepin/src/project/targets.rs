@@ -26,8 +26,9 @@ pub struct Target {
     pub fig_extension: Option<String>,
     /// Preview behavior: "serve", "open", or "none".
     pub preview: Option<String>,
-    /// Optional compilation step.
-    pub compile: Option<CompileConfig>,
+    /// Compile command (e.g., "tectonic {input}"). When set, the rendered file
+    /// is compiled after writing. {input} and {output} are replaced with paths.
+    pub compile: Option<String>,
     /// Whether to embed images as base64 data URIs (HTML only).
     pub embed_resources: Option<bool>,
     /// Arbitrary key-value pairs passed to templates as target_vars.
@@ -35,16 +36,6 @@ pub struct Target {
     /// Post-processing commands run after rendering.
     #[serde(default)]
     pub post: Vec<String>,
-}
-
-/// Compilation configuration (e.g., .tex to .pdf).
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct CompileConfig {
-    /// Shell command. {input} and {output} are replaced with file paths.
-    pub command: Option<String>,
-    /// Extension of the compiled artifact.
-    pub extension: Option<String>,
 }
 
 impl Target {
@@ -89,14 +80,9 @@ impl Target {
         if let Some(ref ext) = self.fig_extension {
             validate_extension(ext, "fig-extension")?;
         }
-        if let Some(ref compile) = self.compile {
-            if let Some(ref cmd) = compile.command {
-                if !cmd.contains("{input}") {
-                    bail!("compile.command must contain {{input}} placeholder");
-                }
-            }
-            if let Some(ref ext) = compile.extension {
-                validate_extension(ext, "compile.extension")?;
+        if let Some(ref cmd) = self.compile {
+            if !cmd.is_empty() && !cmd.contains("{input}") {
+                bail!("compile must contain {{input}} placeholder");
             }
         }
         if let Some(ref mode) = self.preview {
