@@ -771,19 +771,6 @@ fn build_orchestrator_tree(
     }).collect()
 }
 
-/// Format author from TOML value (string or array of strings).
-fn format_author(val: &toml::Value) -> String {
-    match val {
-        toml::Value::String(s) => s.clone(),
-        toml::Value::Array(arr) => arr.iter()
-            .filter_map(|v| v.as_str())
-            .collect::<Vec<_>>()
-            .join(", "),
-        _ => String::new(),
-    }
-}
-
-
 /// Serve a built site directory using the built-in HTTP server.
 pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
     use tiny_http::{Header, Response, StatusCode};

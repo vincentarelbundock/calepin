@@ -30,7 +30,6 @@
 use anyhow::{Context, Result};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::process::{Child, Command, Stdio};
-use std::sync::LazyLock;
 use std::time::Duration;
 
 /// Chunk execution timeout. None means no timeout (wait forever).

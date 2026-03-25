@@ -16,8 +16,6 @@ pub(crate) struct ProjectContext {
     /// True when the target was explicitly set (CLI flag or front matter),
     /// false when it fell back to the default "html".
     pub explicit_target: bool,
-    /// Active theme name, if any.
-    pub theme_name: Option<String>,
 }
 
 impl ProjectContext {
@@ -122,7 +120,6 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
         target_name,
         target,
         explicit_target,
-        theme_name,
     })
 }
 
