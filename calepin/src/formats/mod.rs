@@ -8,6 +8,7 @@
 pub mod html;
 pub mod latex;
 pub mod markdown;
+pub mod revealjs;
 pub mod typst;
 pub mod word;
 
@@ -135,6 +136,7 @@ pub fn create_renderer(format: &str) -> Result<Box<dyn OutputRenderer>> {
         "markdown" => Ok(Box::new(markdown::MarkdownRenderer)),
         "typst" => Ok(Box::new(typst::TypstRenderer)),
         "word" => Ok(Box::new(word::WordRenderer)),
+        "revealjs" => Ok(Box::new(revealjs::RevealJsRenderer)),
         other => load_custom_format(other),
     }
 }

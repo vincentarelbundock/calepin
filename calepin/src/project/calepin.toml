@@ -117,6 +117,14 @@ fig_extension = "pdf"
 command = "tectonic {input}"
 extension = "pdf"
 
+[targets.revealjs]
+engine = "revealjs"
+template = "page"
+extension = "html"
+fig_extension = "svg"
+embed_resources = false
+preview = "serve"
+
 [targets.markdown]
 engine = "markdown"
 template = "page"
