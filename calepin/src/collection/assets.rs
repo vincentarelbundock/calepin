@@ -30,11 +30,17 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
 pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -> Result<()> {
     let assets_dst = output_dir.join("assets");
 
-    // Copy project assets first (user files take priority)
-    let assets_src = crate::paths::assets_dir(&base_dir);
-    if assets_src.is_dir() {
-        copy_dir_recursive(&assets_src, &assets_dst)
+    // Copy project assets: assets/ at project root first, then _calepin/assets/
+    // overrides (so _calepin/assets/ takes priority).
+    let root_assets = base_dir.join("assets");
+    if root_assets.is_dir() {
+        copy_dir_recursive(&root_assets, &assets_dst)
             .context("Failed to copy assets/ to output directory")?;
+    }
+    let calepin_assets = crate::paths::assets_dir(&base_dir);
+    if calepin_assets.is_dir() {
+        copy_dir_recursive(&calepin_assets, &assets_dst)
+            .context("Failed to copy _calepin/assets/ to output directory")?;
     }
 
     // Copy built-in target-scoped assets as fallback.
