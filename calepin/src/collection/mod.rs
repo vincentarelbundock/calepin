@@ -62,7 +62,7 @@ pub fn build_collection(
     }
 
     // 2. Resolve collection target (format and extension)
-    //    CLI -t flag takes precedence over [site].target, which defaults to "html".
+    //    CLI -f flag takes precedence over [site].target, which defaults to "html".
     let collection_target_name = cli_target.map(|s| s.to_string())
         .or_else(|| config.target.clone())
         .unwrap_or_else(|| "html".to_string());

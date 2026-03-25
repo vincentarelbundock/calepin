@@ -12,36 +12,38 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
         overrides.push("highlight-style=none".to_string());
     }
 
+    let compile = args.compile;
+
     // Collection mode: _calepin.toml config with [[contents]]
     if args.input.len() == 1 && crate::cli::is_collection_config(&args.input[0]) {
         let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
-        return crate::collection::build_collection(Some(args.input[0].as_path()), &output, args.clean, args.quiet, args.target.as_deref());
+        return crate::collection::build_collection(Some(args.input[0].as_path()), &output, args.clean, args.quiet, args.format.as_deref());
     }
 
     // Single file: may use -o as output file path
     if args.input.len() == 1 {
-        // Multi-target: split comma-separated targets and render each
-        if let Some(ref target_str) = args.target {
-            if target_str.contains(',') {
-                let targets: Vec<&str> = target_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
-                for t in &targets {
-                    render_one(&args.input[0], None, Some(t), &overrides, args.quiet, args.engine.as_deref())?;
+        // Multi-format: split comma-separated formats and render each
+        if let Some(ref fmt_str) = args.format {
+            if fmt_str.contains(',') {
+                let formats: Vec<&str> = fmt_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+                for f in &formats {
+                    render_one(&args.input[0], None, Some(f), &overrides, args.quiet, args.engine.as_deref(), compile)?;
                 }
                 return Ok(());
             }
         }
-        return render_one(&args.input[0], args.output.as_deref(), args.target.as_deref(), &overrides, args.quiet, args.engine.as_deref());
+        return render_one(&args.input[0], args.output.as_deref(), args.format.as_deref(), &overrides, args.quiet, args.engine.as_deref(), compile);
     }
 
     // Multiple files: render in parallel.
-    // -o is an output directory (if given); target/overrides/quiet apply to all.
+    // -o is an output directory (if given); format/overrides/quiet apply to all.
     if let Some(ref out_dir) = args.output {
         std::fs::create_dir_all(out_dir)
             .with_context(|| format!("Failed to create output directory: {}", out_dir.display()))?;
     }
 
     // Resolve project context once and share it across all files.
-    let mut ctx = crate::resolve_context(&args.input[0], args.target.as_deref())?;
+    let mut ctx = crate::resolve_context(&args.input[0], args.format.as_deref())?;
     crate::apply_engine_override(&mut ctx, args.engine.as_deref())?;
 
     let output_ext = args.output.as_ref().map(|dir| {
@@ -57,7 +59,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
             let file_output = output_ext.as_ref().map(|(dir, ext)| {
                 dir.join(input.file_name().unwrap()).with_extension(ext)
             });
-            match render_one_with_context(input, file_output.as_deref(), &ctx, &overrides, args.quiet) {
+            match render_one_with_context(input, file_output.as_deref(), &ctx, &overrides, args.quiet, compile) {
                 Ok(()) => None,
                 Err(e) => Some(format!("{:#}", e)),
             }
@@ -78,14 +80,15 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
 fn render_one(
     input: &Path,
     output: Option<&Path>,
-    target: Option<&str>,
+    format: Option<&str>,
     overrides: &[String],
     quiet: bool,
     engine_override: Option<&str>,
+    compile: bool,
 ) -> Result<()> {
-    let mut ctx = crate::resolve_context(input, target)?;
+    let mut ctx = crate::resolve_context(input, format)?;
     crate::apply_engine_override(&mut ctx, engine_override)?;
-    render_one_with_context(input, output, &ctx, overrides, quiet)
+    render_one_with_context(input, output, &ctx, overrides, quiet, compile)
 }
 
 /// Render a single .qmd file with a pre-resolved project context.
@@ -95,6 +98,7 @@ fn render_one_with_context(
     ctx: &crate::ProjectContext,
     overrides: &[String],
     quiet: bool,
+    compile: bool,
 ) -> Result<()> {
     let (output_path, final_output, renderer) = pipeline::render_file(
         input,
@@ -113,9 +117,11 @@ fn render_one_with_context(
         eprintln!("-> {}", output_path.display());
     }
 
-    // Run compile step if the target defines one
-    if let Some(ref compile_cfg) = ctx.target.compile {
-        run_compile_step(&output_path, compile_cfg, quiet)?;
+    // Run compile step if --compile was passed and the format defines one
+    if compile {
+        if let Some(ref compile_cfg) = ctx.target.compile {
+            run_compile_step(&output_path, compile_cfg, quiet)?;
+        }
     }
 
     // Run target-level post-processing commands

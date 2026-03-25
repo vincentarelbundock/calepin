@@ -47,7 +47,7 @@ pub fn run_collection(
         &std::path::PathBuf::from(output_name),
         true,
         false,
-        args.target.as_deref(),
+        args.format.as_deref(),
     )?;
     spinner.reset();
     spinner.enable_steady_tick(Duration::from_millis(80));
@@ -78,7 +78,7 @@ pub fn run_collection(
     let watch_dir = base_dir.clone();
 
     let config_path = config_path.to_path_buf();
-    let target = args.target.clone();
+    let target = args.format.clone();
     let quiet = args.quiet;
     watcher::watch_dir(&watch_dir, Arc::clone(&stop), |changed_paths| {
         let names: Vec<_> = changed_paths.iter()

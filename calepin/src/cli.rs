@@ -89,11 +89,11 @@ pub struct RenderArgs {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
-    /// Output target: a target name from _calepin.toml (e.g., web, article)
-    /// or a base name (html, latex, typst, markdown).
+    /// Output format: a format name from _calepin.toml (e.g., web, article)
+    /// or a base name (html, latex, typst, revealjs, website, markdown).
     /// If omitted, auto-detected from output extension or YAML front matter.
-    #[arg(short, long)]
-    pub target: Option<String>,
+    #[arg(short = 't', long)]
+    pub format: Option<String>,
 
     /// Quiet mode (suppress progress messages)
     #[arg(short, long)]
@@ -103,6 +103,10 @@ pub struct RenderArgs {
     /// Example: --set title="My Title" bibliography=refs.bib toc=true
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
+
+    /// Compile output to PDF (for typst and latex formats)
+    #[arg(long)]
+    pub compile: bool,
 
     /// Disable syntax highlighting for code blocks
     #[arg(long)]
@@ -132,9 +136,9 @@ pub struct PreviewArgs {
     #[arg(short, long, default_value = "3456")]
     pub port: u16,
 
-    /// Output target: a target name or base name
-    #[arg(short, long)]
-    pub target: Option<String>,
+    /// Output format: a format name or base name
+    #[arg(short = 't', long)]
+    pub format: Option<String>,
 
     /// Override YAML metadata fields
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
