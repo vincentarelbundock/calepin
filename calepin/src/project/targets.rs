@@ -186,12 +186,10 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
 ///   1. Project config (`calepin.toml` found on disk)
 ///   2. Built-in config (embedded default `calepin.toml`)
 ///   3. Alias resolution (e.g., "tex" -> "latex" target)
-pub fn resolve_target(name: &str, config: Option<&super::ProjectConfig>) -> Result<Target> {
-    // 1. Project config -- merge with built-in defaults for this base
-    if let Some(cfg) = config {
-        if let Some(target) = cfg.targets.get(name) {
-            return Ok(merge_with_builtin(target));
-        }
+pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Target>) -> Result<Target> {
+    // 1. User targets -- merge with built-in defaults for this base
+    if let Some(target) = targets.get(name) {
+        return Ok(merge_with_builtin(target));
     }
 
     // 2. Built-in config (always fully specified)
@@ -249,6 +247,17 @@ fn toml_to_jinja(v: &toml::Value) -> minijinja::Value {
         }
         toml::Value::Datetime(d) => minijinja::Value::from(d.to_string()),
     }
+}
+
+/// Convert a `HashMap<String, MetaValue>` to a minijinja Value for template access.
+pub fn target_vars_to_jinja_from_meta(vars: &std::collections::HashMap<String, crate::value::Value>) -> minijinja::Value {
+    if vars.is_empty() {
+        return minijinja::Value::from(());
+    }
+    let json = crate::value::to_json(&crate::value::Value::Table(
+        vars.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+    ));
+    minijinja::Value::from_serialize(&json)
 }
 
 // ---------------------------------------------------------------------------

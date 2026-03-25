@@ -254,7 +254,7 @@ fn render_file_html(input: &Path, overrides: &[String]) -> Result<String> {
 /// Render to LaTeX/Typst, write the file, compile if the target defines it.
 /// Returns the final output path (PDF if compiled, rendered file otherwise).
 fn render_and_compile(input: &Path, target_name: &str, overrides: &[String]) -> Result<std::path::PathBuf> {
-    let target = crate::project::resolve_target(target_name, None)?;
+    let target = crate::project::resolve_target(target_name, &std::collections::HashMap::new())?;
     let (output_path, content, renderer) = crate::pipeline::render_file(
         input, None, Some(target_name), overrides, Some(&target), None, None, None,
     )?;

@@ -247,11 +247,11 @@ pub fn get_defaults() -> Defaults {
     })
 }
 
-/// Get resolved defaults, merging project config with built-in.
-pub fn resolve_defaults(config: Option<&super::ProjectConfig>) -> Defaults {
+/// Get resolved defaults, merging user defaults with built-in.
+pub fn resolve_defaults(user: Option<&Defaults>) -> Defaults {
     let builtin = super::builtin_config().as_defaults();
-    match config {
-        Some(user) => Defaults::merge(&builtin, &user.as_defaults()),
+    match user {
+        Some(user) => Defaults::merge(&builtin, user),
         None => builtin,
     }
 }

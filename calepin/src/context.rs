@@ -74,9 +74,12 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
         }
     };
 
-    let target = project::resolve_target(&target_name, project_config.as_ref())?;
+    let user_targets = project_config.as_ref().map(|c| &c.targets);
+    let empty_targets = std::collections::HashMap::new();
+    let target = project::resolve_target(&target_name, user_targets.unwrap_or(&empty_targets))?;
 
-    let mut defaults = project::resolve_defaults(project_config.as_ref());
+    let user_defaults = project_config.as_ref().map(|c| c.as_defaults());
+    let mut defaults = project::resolve_defaults(user_defaults.as_ref());
     if let Some(embed) = target.embed_resources {
         defaults.embed_resources = Some(embed);
     }

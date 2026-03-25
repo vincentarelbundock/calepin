@@ -49,7 +49,7 @@ pub fn render_documents(
     }
 
     // Resolve defaults, letting target override global settings (e.g., embed-resources)
-    let mut defaults = project::resolve_defaults(Some(config));
+    let mut defaults = project::resolve_defaults(Some(&config.as_defaults()));
     if let Some(t) = target {
         if let Some(embed) = t.embed_resources {
             defaults.embed_resources = Some(embed);
@@ -229,7 +229,7 @@ pub fn render_documents_with_crossref(
         eprintln!("Rendering {} documents (cross-ref pass 1)...", pages.len());
     }
 
-    let mut defaults = project::resolve_defaults(Some(config));
+    let mut defaults = project::resolve_defaults(Some(&config.as_defaults()));
     if let Some(t) = target {
         if let Some(embed) = t.embed_resources {
             defaults.embed_resources = Some(embed);

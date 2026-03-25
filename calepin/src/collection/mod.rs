@@ -53,8 +53,9 @@ pub fn build_collection(
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    // 1. Load config
+    // 1. Load config and convert to metadata
     let (config, found_path) = config::load_config(config_path, &cwd)?;
+    let meta = config.as_metadata();
 
     let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
     if !quiet {
@@ -64,9 +65,9 @@ pub fn build_collection(
     // 2. Resolve collection target (format and extension)
     //    CLI -f flag takes precedence over [site].target, which defaults to "html".
     let collection_target_name = cli_target.map(|s| s.to_string())
-        .or_else(|| config.target.clone())
+        .or_else(|| meta.target.clone())
         .unwrap_or_else(|| "html".to_string());
-    let collection_target = crate::project::resolve_target(&collection_target_name, Some(&config))?;
+    let collection_target = crate::project::resolve_target(&collection_target_name, &meta.targets)?;
     let format = &collection_target.engine;
     let output_ext = collection_target.output_extension();
 
@@ -78,7 +79,7 @@ pub fn build_collection(
     // Falls back to built-in templates if not found on filesystem.
     let ext = crate::paths::engine_to_ext(format);
     let orchestrator_filename = format!("orchestrator.{}", ext);
-    let orchestrator = config.identity.as_ref().and_then(|i| i.orchestrator.clone())
+    let orchestrator = meta.orchestrator.clone()
         .or_else(|| {
             let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
                 .join(&orchestrator_filename);
@@ -105,8 +106,8 @@ pub fn build_collection(
     fs::create_dir_all(output)?;
 
     // 4. Discover pages (nav + standalone)
-    let mut pages = discover_documents(&config, &base_dir, output_ext)?;
-    let standalone = discover_standalone_documents(&config, &base_dir, output_ext)?;
+    let mut pages = discover_documents(&meta, &base_dir, output_ext)?;
+    let standalone = discover_standalone_documents(&meta, &base_dir, output_ext)?;
     pages.extend(standalone);
     if !quiet {
         eprintln!("Found {} documents", pages.len());
@@ -136,7 +137,7 @@ pub fn build_collection(
     //    For orchestrated builds (LaTeX/Typst), use single-pass with page template
     //    (the native toolchains handle global refs).
     let apply_page_template = orchestrator.is_some();
-    let results = if format == "html" && !apply_page_template && config.global_crossref {
+    let results = if format == "html" && !apply_page_template && meta.global_crossref {
         render::render_documents_with_crossref(&pages, &config, &base_dir, output, Some(&collection_target_name), Some(&collection_target), quiet)?
     } else {
         render::render_documents(&pages, &config, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
@@ -166,17 +167,17 @@ pub fn build_collection(
     // 8. Site-specific wrapping (HTML) or orchestrator assembly
     if let Some(ref orchestrator_path) = orchestrator {
         // Render the orchestrator template with page tree
-        render_orchestrator(&config, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
+        render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
     } else {
         // HTML site path: re-wrap pages through Jinja site templates
-        apply_collection_templates(&config, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
+        apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
     }
 
     // 9. Copy assets/ and static directories to output
-    assets::copy_assets(&base_dir, output, &config.static_dirs)?;
+    assets::copy_assets(&base_dir, output, &meta.static_dirs)?;
 
     // 10. Run user-configured post-processing commands
-    run_post_commands(&config, &collection_target_name, &base_dir, output, quiet)?;
+    run_post_commands(&meta, &collection_target_name, &base_dir, output, quiet)?;
 
     if !quiet {
         eprintln!("Collection built: {}", output.display());
@@ -195,23 +196,24 @@ pub fn rebuild_documents(
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let (config, found_path) = config::load_config(config_path, &cwd)?;
+    let meta = config.as_metadata();
     let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
 
     let collection_target_name = cli_target.map(|s| s.to_string())
-        .or_else(|| config.target.clone())
+        .or_else(|| meta.target.clone())
         .unwrap_or_else(|| "html".to_string());
-    let collection_target = crate::project::resolve_target(&collection_target_name, Some(&config))?;
+    let collection_target = crate::project::resolve_target(&collection_target_name, &meta.targets)?;
     let format = &collection_target.engine;
     let output_ext = collection_target.output_extension();
 
     crate::paths::set_active_target(Some(&collection_target_name));
     crate::paths::set_project_root(Some(&base_dir));
 
-    let output_dir = base_dir.join(config.output.as_deref().unwrap_or("output"));
+    let output_dir = base_dir.join(meta.output.as_deref().unwrap_or("output"));
 
     // Discover all pages (needed for nav context), including standalone
-    let mut pages = discover_documents(&config, &base_dir, output_ext)?;
-    let standalone = discover_standalone_documents(&config, &base_dir, output_ext)?;
+    let mut pages = discover_documents(&meta, &base_dir, output_ext)?;
+    let standalone = discover_standalone_documents(&meta, &base_dir, output_ext)?;
     pages.extend(standalone);
 
     // Determine which pages to re-render by matching changed absolute paths
@@ -254,10 +256,8 @@ pub fn rebuild_documents(
         let env = templates::init_jinja(&base_dir, &collection_target_name)?
             .ok_or_else(|| anyhow::anyhow!("No template files found"))?;
 
-        let collection_ctx = build_collection_context(&config, &pages, &base_dir);
-        let var_ctx = config.var.as_ref()
-            .map(|v| crate::project::target_vars_to_jinja(Some(v)))
-            .unwrap_or_else(|| minijinja::Value::from(()));
+        let collection_ctx = build_collection_context(&meta, &pages, &base_dir);
+        let var_ctx = crate::project::target_vars_to_jinja_from_meta(&meta.var);
 
         let tpl_ext = match format.as_str() {
             "latex" => "tex",
@@ -283,11 +283,11 @@ pub fn rebuild_documents(
                 listing_documents.iter().map(|lp| build_listing_item(lp, &results)).collect()
             });
 
-            let doc_ctx = build_document_context(page, result, &pages, listing_items, &config.languages);
+            let doc_ctx = build_document_context(page, result, &pages, listing_items, &meta.languages);
 
-            let mut nav_tree = if !config.languages.is_empty() {
+            let mut nav_tree = if !meta.languages.is_empty() {
                 if let Some(ref lang) = page.lang {
-                    build_nav_tree_for_lang(&config, &pages, &base_dir, lang)
+                    build_nav_tree_for_lang(&meta, &pages, &base_dir, lang)
                 } else {
                     collection_ctx.pages.clone()
                 }
@@ -348,7 +348,7 @@ pub fn rebuild_documents(
 /// (page.html, listing.html with extends/includes).
 /// Overwrites the raw body files written in step 7 with fully templated HTML.
 fn apply_collection_templates(
-    config: &crate::project::ProjectConfig,
+    meta: &crate::metadata::Metadata,
     pages: &[DocumentInfo],
     results: &HashMap<String, render::CollectionRenderResult>,
     all_listing_documents: &HashMap<String, Vec<DocumentInfo>>,
@@ -366,12 +366,10 @@ fn apply_collection_templates(
         ))?;
 
     // Build collection context
-    let collection_ctx = build_collection_context(config, pages, base_dir);
+    let collection_ctx = build_collection_context(meta, pages, base_dir);
 
-    // Convert [var] to minijinja Value for template access
-    let var_ctx = config.var.as_ref()
-        .map(|v| crate::project::target_vars_to_jinja(Some(v)))
-        .unwrap_or_else(|| minijinja::Value::from(()));
+    // Convert var to minijinja Value for template access
+    let var_ctx = crate::project::target_vars_to_jinja_from_meta(&meta.var);
 
     // Determine template extension
     let tpl_ext = match format {
@@ -416,9 +414,9 @@ fn apply_collection_templates(
         };
 
         // Build language-specific nav tree
-        let mut nav_tree = if !config.languages.is_empty() {
+        let mut nav_tree = if !meta.languages.is_empty() {
             if let Some(ref lang) = page.lang {
-                build_nav_tree_for_lang(config, pages, base_dir, lang)
+                build_nav_tree_for_lang(meta, pages, base_dir, lang)
             } else {
                 collection_ctx.pages.clone()
             }
@@ -437,7 +435,7 @@ fn apply_collection_templates(
 
         for (page_idx, (items, pagination)) in paginated.iter().enumerate() {
             let listing = if items.is_empty() { None } else { Some(items.clone()) };
-            let mut doc_ctx = build_document_context(page, result, pages, listing, &config.languages);
+            let mut doc_ctx = build_document_context(page, result, pages, listing, &meta.languages);
             doc_ctx.pagination = pagination.clone();
 
             let collection_with_active = minijinja::context! {
@@ -498,13 +496,13 @@ fn apply_collection_templates(
 /// command string are replaced with the output directory and project root paths.
 /// Commands with a `targets` restriction are skipped if the active target doesn't match.
 fn run_post_commands(
-    config: &crate::project::ProjectConfig,
+    meta: &crate::metadata::Metadata,
     target: &str,
     project_root: &Path,
     output: &Path,
     quiet: bool,
 ) -> Result<()> {
-    for post in &config.post {
+    for post in &meta.post {
         if !post.targets.is_empty() && !post.targets.iter().any(|t| t == target) {
             continue;
         }
@@ -545,7 +543,7 @@ fn run_post_commands(
 /// Fragment files are already written; this produces the master file
 /// that references them via \include{} or equivalent.
 fn render_orchestrator(
-    config: &crate::project::ProjectConfig,
+    meta: &crate::metadata::Metadata,
     pages: &[DocumentInfo],
     results: &HashMap<String, render::CollectionRenderResult>,
     base_dir: &Path,
@@ -557,7 +555,7 @@ fn render_orchestrator(
     quiet: bool,
 ) -> Result<()> {
     // Build the document tree with titles and paths
-    let document_tree = expand_contents(&config.contents, base_dir);
+    let document_tree = expand_contents(&meta.contents, base_dir);
 
     let document_map: HashMap<String, &DocumentInfo> = pages.iter()
         .map(|p| (p.source.display().to_string(), p))
@@ -566,17 +564,14 @@ fn render_orchestrator(
     let nav_nodes = build_orchestrator_tree(&document_tree, &document_map, results, format);
 
     // Build template context
-    let id = config.identity.as_ref();
     let meta_ctx = minijinja::context! {
-        title => id.and_then(|i| i.title.clone()),
-        subtitle => id.and_then(|i| i.subtitle.clone()),
-        author => id.and_then(|i| i.author.as_ref()).map(|a| format_author(a)),
-        url => id.and_then(|i| i.url.clone()),
+        title => meta.title.clone(),
+        subtitle => meta.subtitle.clone(),
+        author => meta.author.as_ref().map(|a| a.join(", ")),
+        url => meta.url.clone(),
     };
 
-    let var_ctx = config.var.as_ref()
-        .map(|v| crate::project::target_vars_to_jinja(Some(v)))
-        .unwrap_or_else(|| minijinja::Value::from(()));
+    let var_ctx = crate::project::target_vars_to_jinja_from_meta(&meta.var);
 
     // Format-specific defaults for orchestrator templates
     let defs = crate::project::get_defaults();
@@ -675,7 +670,7 @@ fn render_orchestrator(
     }
 
     // Run compile command if configured
-    let compile_target = config.targets.get(target_name)
+    let compile_target = meta.targets.get(target_name)
         .and_then(|t| t.compile.as_ref());
 
     if let Some(compile) = compile_target {

@@ -144,6 +144,9 @@ pub struct Metadata {
     pub static_dirs: Vec<String>,
     pub embed_resources: Option<bool>,
 
+    // -- Defaults (rendering defaults for figures, code execution, etc.) --
+    pub defaults: crate::project::Defaults,
+
     // -- Collection structure --
     pub contents: Vec<crate::project::ContentSection>,
     pub languages: Vec<crate::project::Language>,
@@ -155,6 +158,17 @@ pub struct Metadata {
 }
 
 impl Metadata {
+    /// The default language code, or None if no languages are configured.
+    pub fn default_language(&self) -> Option<&str> {
+        if self.languages.is_empty() {
+            return None;
+        }
+        self.languages.iter()
+            .find(|l| l.default)
+            .or(self.languages.first())
+            .map(|l| l.code.as_str())
+    }
+
     /// Apply command-line overrides in "key=value" format.
     pub fn apply_overrides(&mut self, overrides: &[String]) {
         for item in overrides {
@@ -334,6 +348,9 @@ impl Metadata {
         if overlay.global_crossref { self.global_crossref = true; }
         merge_vec!(static_dirs);
         merge_opt!(embed_resources);
+
+        // Defaults: overlay on top of base
+        self.defaults = crate::project::Defaults::merge(&self.defaults, &overlay.defaults);
 
         // Collection structure
         merge_vec!(contents);

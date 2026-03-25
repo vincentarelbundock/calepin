@@ -7,7 +7,7 @@ mod targets;
 // Re-export all public types and functions so existing `crate::project::` paths keep working.
 pub use content::{DocumentNode, expand_contents, expand_contents_for_lang, expand_glob_pub};
 pub use defaults::*;
-pub use targets::{Target, CompileConfig, resolve_target, resolve_target_output_path, target_vars_to_jinja, resolve_inheritance};
+pub use targets::{Target, CompileConfig, resolve_target, resolve_target_output_path, target_vars_to_jinja_from_meta, resolve_inheritance};
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -137,6 +137,9 @@ impl ProjectConfig {
         meta.global_crossref = self.global_crossref;
         meta.static_dirs = self.static_dirs.clone();
         meta.embed_resources = self.embed_resources;
+
+        // Defaults
+        meta.defaults = self.as_defaults();
 
         // Collection structure
         meta.contents = self.contents.clone();
@@ -434,14 +437,14 @@ unknown_field = "oops"
 
     #[test]
     fn test_implicit_target_resolution() {
-        let target = resolve_target("html", None).unwrap();
+        let target = resolve_target("html", &HashMap::new()).unwrap();
         assert_eq!(target.engine, "html");
         assert_eq!(target.template_name(), "page");
 
-        let target = resolve_target("latex", None).unwrap();
+        let target = resolve_target("latex", &HashMap::new()).unwrap();
         assert_eq!(target.engine, "latex");
 
-        assert!(resolve_target("unknown", None).is_err());
+        assert!(resolve_target("unknown", &HashMap::new()).is_err());
     }
 
     #[test]

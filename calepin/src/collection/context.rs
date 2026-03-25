@@ -9,7 +9,8 @@ use std::collections::HashMap;
 use serde::Serialize;
 use super::discover::DocumentInfo;
 use super::render::CollectionRenderResult;
-use crate::project::{ProjectConfig, DocumentNode, expand_contents_for_lang, Language};
+use crate::project::{DocumentNode, expand_contents_for_lang, Language};
+use crate::metadata::Metadata;
 
 /// Collection-level context available to all templates as `{{ collection.* }}`.
 #[derive(Debug, Serialize)]
@@ -144,13 +145,13 @@ pub struct NavLink {
 /// The `pages` field contains the nav tree for the default language.
 /// Use `build_nav_tree_for_lang` to get a language-specific nav tree.
 pub fn build_collection_context(
-    config: &ProjectConfig,
+    meta: &Metadata,
     pages: &[DocumentInfo],
     base_dir: &std::path::Path,
 ) -> CollectionContext {
     // Build nav tree for the default language (or all content if no languages configured)
-    let default_lang = config.default_language();
-    let document_nodes = expand_contents_for_lang(&config.contents, base_dir, default_lang);
+    let default_lang = meta.default_language();
+    let document_nodes = expand_contents_for_lang(&meta.contents, base_dir, default_lang);
     let nav_tree = build_nav_tree(&document_nodes, pages);
 
     // Math block
@@ -163,16 +164,15 @@ pub fn build_collection_context(
         crate::render::template::render_element("math", "html", &vars)
     };
 
-    let id = config.identity.as_ref();
     CollectionContext {
-        title: id.and_then(|i| i.title.clone()),
-        subtitle: id.and_then(|i| i.subtitle.clone()),
-        url: id.and_then(|i| i.url.clone()),
-        favicon: id.and_then(|i| i.favicon.clone()),
-        logo: id.and_then(|i| i.logo.clone()),
-        logo_dark: id.and_then(|i| i.logo_dark.clone()),
+        title: meta.title.clone(),
+        subtitle: meta.subtitle.clone(),
+        url: meta.url.clone(),
+        favicon: meta.favicon.clone(),
+        logo: meta.logo.clone(),
+        logo_dark: meta.logo_dark.clone(),
         pages: nav_tree,
-        languages: config.languages.clone(),
+        languages: meta.languages.clone(),
         dark_mode: true,
         math,
     }
@@ -180,12 +180,12 @@ pub fn build_collection_context(
 
 /// Build the nav tree for a specific language.
 pub fn build_nav_tree_for_lang(
-    config: &ProjectConfig,
+    meta: &Metadata,
     pages: &[DocumentInfo],
     base_dir: &std::path::Path,
     lang: &str,
 ) -> Vec<NavNode> {
-    let document_nodes = expand_contents_for_lang(&config.contents, base_dir, Some(lang));
+    let document_nodes = expand_contents_for_lang(&meta.contents, base_dir, Some(lang));
     build_nav_tree(&document_nodes, pages)
 }
 

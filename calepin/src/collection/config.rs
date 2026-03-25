@@ -30,9 +30,9 @@ pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(Proje
 }
 
 /// Collect all .qmd page paths from [[contents]] (excluding standalone), expanding globs.
-pub fn collect_document_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String> {
+pub fn collect_document_paths(meta: &crate::metadata::Metadata, base_dir: &Path) -> Vec<String> {
     let mut paths = Vec::new();
-    for section in &config.contents {
+    for section in &meta.contents {
         if section.standalone {
             continue;
         }
@@ -53,9 +53,9 @@ pub fn collect_document_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<St
 }
 
 /// Collect standalone page paths (rendered but not in nav).
-pub fn collect_standalone_paths(config: &ProjectConfig, base_dir: &Path) -> Vec<String> {
+pub fn collect_standalone_paths(meta: &crate::metadata::Metadata, base_dir: &Path) -> Vec<String> {
     let mut paths = Vec::new();
-    for section in &config.contents {
+    for section in &meta.contents {
         if !section.standalone {
             continue;
         }

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::project::ProjectConfig;
+use crate::metadata::Metadata;
 
 /// Metadata extracted from a document's YAML frontmatter.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -63,7 +63,7 @@ pub struct DocumentInfo {
 }
 
 /// Discover all documents referenced in the collection config.
-pub fn discover_documents(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<DocumentInfo>> {
+pub fn discover_documents(config: &Metadata, base_dir: &Path, output_ext: &str) -> Result<Vec<DocumentInfo>> {
     let default_lang = config.default_language().map(|s| s.to_string());
     let page_paths = super::config::collect_document_paths(config, base_dir);
     let mut pages = Vec::new();
@@ -100,7 +100,7 @@ pub fn discover_documents(config: &ProjectConfig, base_dir: &Path, output_ext: &
 }
 
 /// Discover standalone documents (rendered but not in nav).
-pub fn discover_standalone_documents(config: &ProjectConfig, base_dir: &Path, output_ext: &str) -> Result<Vec<DocumentInfo>> {
+pub fn discover_standalone_documents(config: &Metadata, base_dir: &Path, output_ext: &str) -> Result<Vec<DocumentInfo>> {
     let default_lang = config.default_language().map(|s| s.to_string());
     let paths = super::config::collect_standalone_paths(config, base_dir);
     let mut pages = Vec::new();
