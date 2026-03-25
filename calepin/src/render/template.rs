@@ -276,6 +276,7 @@ pub fn build_template_vars_with_headings(
     body: &str,
     ext: &str,
     headings: &[crate::render::emit::TocEntry],
+    _target: Option<&crate::project::Target>,
 ) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
@@ -377,30 +378,6 @@ pub fn build_template_vars_with_headings(
     if ext == "latex" {
         vars.insert("bib_preamble".to_string(), String::new());
         vars.insert("bib_end".to_string(), String::new());
-        let latex_defs = defs.latex.as_ref();
-        vars.insert("latex_documentclass".to_string(), latex_defs.and_then(|l| l.documentclass.clone()).unwrap_or_else(|| "article".to_string()));
-        vars.insert("latex_fontsize".to_string(), latex_defs.and_then(|l| l.fontsize.clone()).unwrap_or_else(|| "11pt".to_string()));
-        vars.insert("latex_linkcolor".to_string(), latex_defs.and_then(|l| l.linkcolor.clone()).unwrap_or_else(|| "black".to_string()));
-        vars.insert("latex_urlcolor".to_string(), latex_defs.and_then(|l| l.urlcolor.clone()).unwrap_or_else(|| "blue!60!black".to_string()));
-        vars.insert("latex_citecolor".to_string(), latex_defs.and_then(|l| l.citecolor.clone()).unwrap_or_else(|| "blue!60!black".to_string()));
-    }
-
-    // Typst-specific defaults
-    if ext == "typst" {
-        let typst_defs = defs.typst.as_ref();
-        vars.insert("typst_fontsize".to_string(), typst_defs.and_then(|t| t.fontsize.clone()).unwrap_or_else(|| "11pt".to_string()));
-        vars.insert("typst_leading".to_string(), typst_defs.and_then(|t| t.leading.clone()).unwrap_or_else(|| "0.65em".to_string()));
-        vars.insert("typst_justify".to_string(), typst_defs.and_then(|t| t.justify).unwrap_or(true).to_string());
-        vars.insert("typst_heading_numbering".to_string(), typst_defs.and_then(|t| t.heading_numbering.clone()).unwrap_or_else(|| "1.1".to_string()));
-    }
-
-    // Reveal.js-specific defaults
-    if ext == "revealjs" {
-        let rjs_defs = defs.revealjs.as_ref();
-        vars.insert("revealjs_theme".to_string(), rjs_defs.and_then(|r| r.theme.clone()).unwrap_or_else(|| "white".to_string()));
-        vars.insert("revealjs_code_theme".to_string(), rjs_defs.and_then(|r| r.code_theme.clone()).unwrap_or_else(|| "monokai".to_string()));
-        vars.insert("revealjs_transition".to_string(), rjs_defs.and_then(|r| r.transition.clone()).unwrap_or_else(|| "slide".to_string()));
-        vars.insert("revealjs_slide_number".to_string(), rjs_defs.and_then(|r| r.slide_number).unwrap_or(true).to_string());
     }
 
     // Bibliography block (format-specific via element template)
@@ -507,9 +484,10 @@ pub fn assemble_page(
     format: &str,
     headings: &[crate::render::emit::TocEntry],
     preamble: &[String],
+    target: Option<&crate::project::Target>,
     customize: impl FnOnce(&mut HashMap<String, String>),
 ) -> String {
-    let mut vars = build_template_vars_with_headings(meta, body, format, headings);
+    let mut vars = build_template_vars_with_headings(meta, body, format, headings, target);
     inject_preamble(&mut vars, preamble);
     customize(&mut vars);
     let tpl = load_page_template("page", format);

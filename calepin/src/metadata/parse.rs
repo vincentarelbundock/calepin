@@ -172,10 +172,6 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "video" => meta.video = deserialize_section(v),
             "placeholder" => meta.placeholder = deserialize_section(v),
             "lipsum" => meta.lipsum = deserialize_section(v),
-            "latex" => meta.latex = deserialize_section(v),
-            "typst" => meta.typst = deserialize_section(v),
-            "revealjs" => meta.revealjs = deserialize_section(v),
-
             // -- Collection structure (deserialized via serde_json) --
             "targets" => {
                 let json = crate::value::to_json(&normalize_keys(v));

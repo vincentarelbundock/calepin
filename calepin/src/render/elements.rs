@@ -110,6 +110,8 @@ pub struct ElementRenderer {
     template_cache: std::cell::RefCell<HashMap<String, Option<String>>>,
     /// Whether any code blocks were rendered (gates syntax CSS generation).
     has_code: std::cell::Cell<bool>,
+    /// The resolved target.
+    pub target: Option<crate::project::Target>,
 }
 
 impl ElementRenderer {
@@ -156,6 +158,7 @@ impl ElementRenderer {
             global_footnote_defs: std::cell::RefCell::new(String::new()),
             template_cache: std::cell::RefCell::new(HashMap::new()),
             has_code: std::cell::Cell::new(false),
+            target: None,
         }
     }
 
@@ -193,6 +196,10 @@ impl ElementRenderer {
         er.default_fig_cap_location = metadata.var.get("fig_cap_location")
             .and_then(|v| v.as_str()).map(|s| s.to_string());
         er
+    }
+
+    pub fn set_target(&mut self, target: Option<crate::project::Target>) {
+        self.target = target;
     }
 
     pub fn set_registry(&mut self, registry: Rc<PluginRegistry>) {

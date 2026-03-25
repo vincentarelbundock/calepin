@@ -1,0 +1,23 @@
+# Collection-level defaults (multi-file site/book builds).
+# Concatenated with shared.toml at load time.
+
+global_crossref = false
+preview_port = 3456
+
+# -- Collection targets --
+[targets.website]
+engine = "html"
+template = "page"
+extension = "html"
+fig_extension = "svg"
+embed_resources = false
+preview = "serve"
+
+[targets.book]
+engine = "latex"
+template = "page"
+extension = "tex"
+fig_extension = "pdf"
+[targets.book.compile]
+command = "tectonic {input}"
+extension = "pdf"

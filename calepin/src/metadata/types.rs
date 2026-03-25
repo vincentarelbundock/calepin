@@ -21,11 +21,11 @@ pub struct Highlight {
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct FigureConfig {
-    pub width: Option<f64>,
-    pub height: Option<f64>,
+    pub fig_width: Option<f64>,
+    pub fig_height: Option<f64>,
     pub out_width: Option<f64>,
     pub out_height: Option<f64>,
-    pub aspect_ratio: Option<f64>,
+    pub fig_asp: Option<f64>,
     pub device: Option<String>,
     pub alignment: Option<String>,
 }
@@ -90,31 +90,6 @@ pub struct LayoutConfig {
     pub valign: Option<String>,
     pub columns: Option<usize>,
     pub rows: Option<usize>,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct LatexConfig {
-    pub documentclass: Option<String>,
-    pub fontsize: Option<String>,
-    pub linkcolor: Option<String>,
-    pub urlcolor: Option<String>,
-    pub citecolor: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct TypstConfig {
-    pub fontsize: Option<String>,
-    pub leading: Option<String>,
-    pub justify: Option<bool>,
-    pub heading_numbering: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct RevealJsConfig {
-    pub theme: Option<String>,
-    pub code_theme: Option<String>,
-    pub transition: Option<String>,
-    pub slide_number: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -280,9 +255,6 @@ pub struct Metadata {
     pub placeholder: Option<PlaceholderConfig>,
     pub lipsum: Option<LipsumConfig>,
     pub layout: Option<LayoutConfig>,
-    pub latex: Option<LatexConfig>,
-    pub typst: Option<TypstConfig>,
-    pub revealjs: Option<RevealJsConfig>,
     pub labels: Option<LabelsConfig>,
 
     // -- Collection structure --

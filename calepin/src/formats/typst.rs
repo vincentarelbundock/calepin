@@ -15,7 +15,7 @@ impl OutputRenderer for TypstRenderer {
         renderer: &ElementRenderer,
     ) -> Option<String> {
         Some(crate::render::template::assemble_page(
-            body, meta, "typst", &[], renderer.preamble(), |_| {},
+            body, meta, "typst", &[], renderer.preamble(), renderer.target.as_ref(), |_| {},
         ))
     }
 }

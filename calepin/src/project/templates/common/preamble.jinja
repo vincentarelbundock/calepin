@@ -28,9 +28,9 @@
 }
 {%- elif base == "typst" %}
 #set document(title: "{{plain_title}}", author: "{{author}}")
-#set text(size: {{typst_fontsize}})
-#set par(justify: {{typst_justify}}, leading: {{typst_leading}})
-#set heading(numbering: "{{typst_heading_numbering}}")
+#set text(size: 11pt)
+#set par(justify: true, leading: 0.65em)
+#set heading(numbering: "1.1")
 
 #let srcbox(body) = block(
   stroke: 0.4pt + luma(200),

@@ -26,7 +26,7 @@ impl OutputRenderer for LatexRenderer {
         // Note: transform_body() is called by the pipeline before
         // assemble_page, so color definitions are already prepended to body.
         Some(crate::render::template::assemble_page(
-            body, meta, "latex", &[], renderer.preamble(), |_| {},
+            body, meta, "latex", &[], renderer.preamble(), renderer.target.as_ref(), |_| {},
         ))
     }
 }

@@ -33,6 +33,7 @@ impl OutputRenderer for RevealJsRenderer {
         let walk_meta = renderer.walk_metadata();
         let html = template::assemble_page(
             body, meta, "revealjs", &walk_meta.headings, renderer.preamble(),
+            renderer.target.as_ref(),
             |vars| {
                 // Inject syntax highlighting CSS
                 let syntax_css = renderer.syntax_css_with_scope(

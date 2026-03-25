@@ -153,13 +153,13 @@ impl ChunkOptions {
     }
 
     fn default_fig_width(&self) -> f64 {
-        self.metadata.figure.as_ref().and_then(|f| f.width).unwrap_or(6.0)
+        self.metadata.figure.as_ref().and_then(|f| f.fig_width).unwrap_or(6.0)
     }
     fn default_out_width_frac(&self) -> f64 {
         self.metadata.figure.as_ref().and_then(|f| f.out_width).unwrap_or(0.70)
     }
     fn default_fig_asp(&self) -> f64 {
-        self.metadata.figure.as_ref().and_then(|f| f.aspect_ratio).unwrap_or(0.618)
+        self.metadata.figure.as_ref().and_then(|f| f.fig_asp).unwrap_or(0.618)
     }
 
     /// Graphics device width in inches.

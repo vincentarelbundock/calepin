@@ -46,6 +46,7 @@ pub fn render_core(
     project_root_override: Option<&Path>,
     options: &RenderCoreOptions,
     project_metadata: Option<&crate::metadata::Metadata>,
+    target: Option<&project::Target>,
 ) -> Result<RenderResult> {
 
     // 1. Read input file
@@ -99,6 +100,7 @@ pub fn render_core(
 
     // 7. Create element renderer
     let mut element_renderer = ElementRenderer::from_metadata(renderer.engine(), &metadata, options);
+    element_renderer.set_target(target.cloned());
 
     // 8. Evaluate: execute code chunks and produce elements
     let eval_result = engines::evaluate_document(
@@ -171,7 +173,7 @@ pub fn render_file(
         input.with_extension(ext)
     };
 
-    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, None, &RenderCoreOptions::default(), project_metadata)?;
+    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, None, &RenderCoreOptions::default(), project_metadata, target)?;
 
     // Assemble page (page template wrapping)
     let final_output = renderer

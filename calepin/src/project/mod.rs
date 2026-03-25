@@ -148,25 +148,41 @@ fn validate_csl(csl: &str, project_root: &Path) -> Result<()> {
     );
 }
 
-/// Get the built-in default metadata (cached).
+/// Parse a built-in TOML string (concatenation of shared + specific) into Metadata.
+fn parse_builtin(toml_str: &str) -> crate::metadata::Metadata {
+    let tv: toml::Value = toml::from_str(toml_str)
+        .expect("built-in TOML must be valid");
+    let table = match tv {
+        toml::Value::Table(map) => crate::value::table_from_toml(map),
+        _ => crate::value::Table::new(),
+    };
+    let mut meta = crate::metadata::parse_metadata(&table)
+        .expect("built-in TOML must produce valid metadata");
+    resolve_inheritance(&mut meta.targets)
+        .expect("built-in TOML inheritance must be valid");
+    meta
+}
+
+const SHARED_TOML: &str = include_str!("../config/shared.toml");
+const DOCUMENT_TOML: &str = include_str!("../config/document.toml");
+#[allow(dead_code)]
+const COLLECTION_TOML: &str = include_str!("../config/collection.toml");
+
+/// Get the built-in document defaults (shared + document).
 pub fn builtin_metadata() -> &'static crate::metadata::Metadata {
     use std::sync::LazyLock;
     static META: LazyLock<crate::metadata::Metadata> = LazyLock::new(|| {
-        let content = crate::render::elements::BUILTIN_PROJECT
-            .get_file("calepin.toml")
-            .and_then(|f| f.contents_utf8())
-            .expect("built-in calepin.toml must exist");
-        let tv: toml::Value = toml::from_str(content)
-            .expect("built-in calepin.toml must be valid TOML");
-        let table = match tv {
-            toml::Value::Table(map) => crate::value::table_from_toml(map),
-            _ => crate::value::Table::new(),
-        };
-        let mut meta = crate::metadata::parse_metadata(&table)
-            .expect("built-in calepin.toml must produce valid metadata");
-        resolve_inheritance(&mut meta.targets)
-            .expect("built-in calepin.toml inheritance must be valid");
-        meta
+        parse_builtin(&format!("{}\n{}", SHARED_TOML, DOCUMENT_TOML))
+    });
+    &META
+}
+
+/// Get the built-in collection defaults (shared + collection).
+#[allow(dead_code)]
+pub fn builtin_collection_metadata() -> &'static crate::metadata::Metadata {
+    use std::sync::LazyLock;
+    static META: LazyLock<crate::metadata::Metadata> = LazyLock::new(|| {
+        parse_builtin(&format!("{}\n{}", SHARED_TOML, COLLECTION_TOML))
     });
     &META
 }
@@ -382,7 +398,7 @@ cache = false
 echo = false
 
 [figure]
-width = 8.0
+fig_width = 8.0
 device = "svg"
 
 [callout]
@@ -397,11 +413,11 @@ width = "80%"
 [lipsum]
 paragraphs = 3
 
-[latex]
-documentclass = "book"
+[targets.test_latex]
+engine = "latex"
 
-[typst]
-fontsize = "12pt"
+[targets.test_typst]
+engine = "typst"
 
 [labels]
 abstract_title = "Summary"
@@ -413,13 +429,11 @@ abstract_title = "Summary"
         assert_eq!(meta.toc.as_ref().and_then(|t| t.enabled), Some(true));
         assert_eq!(meta.toc.as_ref().and_then(|t| t.depth), Some(4));
         assert_eq!(meta.execute.as_ref().and_then(|e| e.cache), Some(false));
-        assert_eq!(meta.figure.as_ref().and_then(|f| f.width), Some(8.0));
+        assert_eq!(meta.figure.as_ref().and_then(|f| f.fig_width), Some(8.0));
         assert_eq!(meta.callout.as_ref().and_then(|c| c.appearance.as_deref()), Some("minimal"));
         assert_eq!(meta.layout.as_ref().and_then(|l| l.valign.as_deref()), Some("center"));
         assert_eq!(meta.video.as_ref().and_then(|v| v.width.as_deref()), Some("80%"));
         assert_eq!(meta.lipsum.as_ref().and_then(|l| l.paragraphs), Some(3));
-        assert_eq!(meta.latex.as_ref().and_then(|l| l.documentclass.as_deref()), Some("book"));
-        assert_eq!(meta.typst.as_ref().and_then(|t| t.fontsize.as_deref()), Some("12pt"));
         assert_eq!(meta.labels.as_ref().and_then(|l| l.abstract_title.as_deref()), Some("Summary"));
         // lang and csl also appear on metadata directly
         assert_eq!(meta.lang.as_deref(), Some("en"));

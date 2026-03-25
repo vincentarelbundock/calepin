@@ -12,7 +12,6 @@ use serde::Deserialize;
 
 /// A named output profile.
 #[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Target {
     /// Inherit all fields from another target.
     pub inherits: Option<String>,

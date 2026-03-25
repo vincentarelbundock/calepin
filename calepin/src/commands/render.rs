@@ -133,8 +133,7 @@ pub fn run_compile_step(
     compile_cfg: &crate::project::CompileConfig,
     quiet: bool,
 ) -> Result<()> {
-    let compile_ext = compile_cfg.extension.as_deref()
-        .ok_or_else(|| anyhow::anyhow!("Target compile section has no extension"))?;
+    let compile_ext = compile_cfg.extension.as_deref().unwrap_or("pdf");
     let output_path = rendered_path.with_extension(compile_ext);
 
     // Native Typst compilation when no command override is set.

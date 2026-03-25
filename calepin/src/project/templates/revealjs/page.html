@@ -6,8 +6,8 @@
 <meta name="generator" content="{{generator}}">
 <title>{{plain_title}}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/{{revealjs_theme}}.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/{{revealjs_code_theme}}.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/monokai.css">
 {% if syntax_css %}<style>
 {{syntax_css}}
 </style>{% endif %}
@@ -39,8 +39,8 @@
 <script>
 Reveal.initialize({
   hash: true,
-  slideNumber: {{revealjs_slide_number}},
-  transition: '{{revealjs_transition}}',
+  slideNumber: true,
+  transition: 'slide',
   plugins: [RevealHighlight]
 });
 </script>

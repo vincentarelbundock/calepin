@@ -142,7 +142,7 @@ fn render_one_document(
         std::fs::create_dir_all(parent).ok();
     }
 
-    let result = crate::pipeline::render_core(&input, &output_path, Some(format), overrides, Some(base_dir), &crate::pipeline::RenderCoreOptions::default(), project_metadata)?;
+    let result = crate::pipeline::render_core(&input, &output_path, Some(format), overrides, Some(base_dir), &crate::pipeline::RenderCoreOptions::default(), project_metadata, None)?;
 
     let body = if apply_page_template {
         // Apply the project's page template (e.g., book's minimal page.tex)
@@ -347,7 +347,7 @@ fn render_one_document_pass1(
         chapter_number,
     };
     let result = crate::pipeline::render_core(
-        &input, &output_path, Some("html"), overrides, Some(base_dir), &options, None,
+        &input, &output_path, Some("html"), overrides, Some(base_dir), &options, None, None,
     )?;
 
     // Collect cross-ref data for global resolution in pass 2 (before moving body)

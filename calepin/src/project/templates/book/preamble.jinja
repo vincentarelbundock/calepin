@@ -27,15 +27,15 @@
 
 \hypersetup{
   colorlinks=true,
-  linkcolor={{latex_linkcolor}},
-  urlcolor={{latex_urlcolor}},
-  citecolor={{latex_citecolor}},
+  linkcolor=black,
+  urlcolor=blue!60!black,
+  citecolor=blue!60!black,
 }
 {%- elif base == "typst" %}
 #set document(title: "{{meta.title}}", author: "{{meta.author}}")
-#set text(size: {{typst_fontsize}})
-#set par(justify: {{typst_justify}}, leading: {{typst_leading}})
-#set heading(numbering: "{{typst_heading_numbering}}")
+#set text(size: 11pt)
+#set par(justify: true, leading: 0.65em)
+#set heading(numbering: "1.1")
 
 #show heading.where(level: 1): it => {
   pagebreak(weak: true)

@@ -81,7 +81,7 @@ impl Metadata {
         self.dpi = overlay.dpi.or(self.dpi);
         self.math = overlay.math.or(self.math);
         self.highlight = merge_option_struct!(overlay.highlight, self.highlight, { light, dark });
-        self.figure = merge_option_struct!(overlay.figure, self.figure, { width, height, out_width, out_height, aspect_ratio, device, alignment });
+        self.figure = merge_option_struct!(overlay.figure, self.figure, { fig_width, fig_height, out_width, out_height, fig_asp, device, alignment });
         self.execute = merge_option_struct!(overlay.execute, self.execute, { cache, eval, echo, include, warning, message, error, comment, results, timeout });
         self.toc = merge_option_struct!(overlay.toc, self.toc, { enabled, depth, title });
         self.callout = merge_option_struct!(overlay.callout, self.callout, { appearance, note, tip, warning, important, caution, icon_note, icon_tip, icon_warning, icon_important, icon_caution });
@@ -89,9 +89,6 @@ impl Metadata {
         self.placeholder = merge_option_struct!(overlay.placeholder, self.placeholder, { width, height, color });
         self.lipsum = merge_option_struct!(overlay.lipsum, self.lipsum, { paragraphs });
         self.layout = merge_option_struct!(overlay.layout, self.layout, { valign, columns, rows });
-        self.latex = merge_option_struct!(overlay.latex, self.latex, { documentclass, fontsize, linkcolor, urlcolor, citecolor });
-        self.typst = merge_option_struct!(overlay.typst, self.typst, { fontsize, leading, justify, heading_numbering });
-        self.revealjs = merge_option_struct!(overlay.revealjs, self.revealjs, { theme, code_theme, transition, slide_number });
         self.labels = merge_option_struct!(overlay.labels, self.labels, { abstract_title, keywords, appendix, citation, reuse, funding, copyright, listing, proof, contents });
 
         // Collection structure

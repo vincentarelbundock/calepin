@@ -30,6 +30,7 @@ impl OutputRenderer for HtmlRenderer {
         let walk_meta = renderer.walk_metadata();
         let html = template::assemble_page(
             &full_body, meta, "html", &walk_meta.headings, renderer.preamble(),
+            renderer.target.as_ref(),
             |vars| {
                 let syntax_css = renderer.syntax_css_with_scope(
                     crate::render::highlighting::ColorScope::Both,

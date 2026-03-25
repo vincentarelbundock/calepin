@@ -571,9 +571,6 @@ fn render_orchestrator(
 
     let var_ctx = crate::project::target_vars_to_jinja_from_meta(&meta.var);
 
-    // Format-specific defaults for orchestrator templates
-    let latex_defs = meta.latex.as_ref();
-    let typst_defs = meta.typst.as_ref();
     let label_defs = meta.labels.as_ref();
 
     let ctx = minijinja::context! {
@@ -582,15 +579,6 @@ fn render_orchestrator(
         pages => nav_nodes,
         format => format,
         base => format,
-        latex_documentclass => latex_defs.and_then(|l| l.documentclass.as_deref()).unwrap_or("article"),
-        latex_fontsize => latex_defs.and_then(|l| l.fontsize.as_deref()).unwrap_or("11pt"),
-        latex_linkcolor => latex_defs.and_then(|l| l.linkcolor.as_deref()).unwrap_or("black"),
-        latex_urlcolor => latex_defs.and_then(|l| l.urlcolor.as_deref()).unwrap_or("blue!60!black"),
-        latex_citecolor => latex_defs.and_then(|l| l.citecolor.as_deref()).unwrap_or("blue!60!black"),
-        typst_fontsize => typst_defs.and_then(|t| t.fontsize.as_deref()).unwrap_or("11pt"),
-        typst_leading => typst_defs.and_then(|t| t.leading.as_deref()).unwrap_or("0.65em"),
-        typst_justify => typst_defs.and_then(|t| t.justify).unwrap_or(true),
-        typst_heading_numbering => typst_defs.and_then(|t| t.heading_numbering.as_deref()).unwrap_or("1.1"),
         label_contents => label_defs.and_then(|l| l.contents.as_deref()).unwrap_or("Contents"),
     };
 
