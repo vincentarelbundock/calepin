@@ -41,7 +41,7 @@ impl OutputRenderer for HtmlRenderer {
                 }
             },
         );
-        let embed = renderer.defaults.embed_resources.unwrap_or(true);
+        let embed = renderer.metadata.embed_resources.unwrap_or(true);
         if embed {
             Some(embed_images_base64(&html))
         } else {

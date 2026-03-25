@@ -2,7 +2,155 @@
 
 use std::collections::HashMap;
 
+use serde::Deserialize;
+
 use crate::value::{self, Value as MetaValue};
+
+// ---------------------------------------------------------------------------
+// Defaults sub-types (rendering defaults for figures, code execution, etc.)
+// ---------------------------------------------------------------------------
+
+/// Default syntax highlighting theme configuration.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HighlightDefaults {
+    /// Theme for light mode.
+    pub light: Option<String>,
+    /// Theme for dark mode.
+    pub dark: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct FigureDefaults {
+    pub width: Option<f64>,
+    #[serde(alias = "out-width")]
+    pub out_width: Option<f64>,
+    #[serde(alias = "aspect-ratio")]
+    pub aspect_ratio: Option<f64>,
+    pub device: Option<String>,
+    pub alignment: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ExecuteDefaults {
+    pub cache: Option<bool>,
+    pub eval: Option<bool>,
+    pub echo: Option<bool>,
+    pub include: Option<bool>,
+    pub warning: Option<bool>,
+    pub message: Option<bool>,
+    pub comment: Option<String>,
+    pub results: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct TocDefaults {
+    pub enabled: Option<bool>,
+    pub depth: Option<u32>,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct CalloutDefaults {
+    pub appearance: Option<String>,
+    pub note: Option<String>,
+    pub tip: Option<String>,
+    pub warning: Option<String>,
+    pub important: Option<String>,
+    pub caution: Option<String>,
+    pub icon_note: Option<String>,
+    pub icon_tip: Option<String>,
+    pub icon_warning: Option<String>,
+    pub icon_important: Option<String>,
+    pub icon_caution: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct VideoDefaults {
+    pub width: Option<String>,
+    pub height: Option<String>,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct PlaceholderDefaults {
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LipsumDefaults {
+    pub paragraphs: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LayoutDefaults {
+    pub valign: Option<String>,
+    pub columns: Option<usize>,
+    pub rows: Option<usize>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LatexDefaults {
+    pub documentclass: Option<String>,
+    pub fontsize: Option<String>,
+    pub linkcolor: Option<String>,
+    pub urlcolor: Option<String>,
+    pub citecolor: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct TypstDefaults {
+    pub fontsize: Option<String>,
+    pub leading: Option<String>,
+    pub justify: Option<bool>,
+    #[serde(alias = "heading-numbering")]
+    pub heading_numbering: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct RevealJsDefaults {
+    pub theme: Option<String>,
+    #[serde(alias = "code-theme")]
+    pub code_theme: Option<String>,
+    pub transition: Option<String>,
+    #[serde(alias = "slide-number")]
+    pub slide_number: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LabelsDefaults {
+    pub abstract_title: Option<String>,
+    pub keywords: Option<String>,
+    pub appendix: Option<String>,
+    pub citation: Option<String>,
+    pub reuse: Option<String>,
+    pub funding: Option<String>,
+    pub copyright: Option<String>,
+    pub listing: Option<String>,
+    pub proof: Option<String>,
+    pub contents: Option<String>,
+}
+
+/// Merge two `Option<T>` where `Some(inner)` structs are merged field-by-field.
+macro_rules! merge_option_struct {
+    ($user:expr, $builtin:expr, { $( $field:ident ),* $(,)? }) => {
+        match (&$user, &$builtin) {
+            (Some(u), Some(b)) => Some({
+                let mut merged = b.clone();
+                $(
+                    if u.$field.is_some() {
+                        merged.$field = u.$field.clone();
+                    }
+                )*
+                merged
+            }),
+            (Some(u), None) => Some(u.clone()),
+            (None, b) => b.clone(),
+        }
+    };
+}
 
 // ---------------------------------------------------------------------------
 // Scholarly front matter: authors & affiliations
@@ -145,8 +293,24 @@ pub struct Metadata {
     pub static_dirs: Vec<String>,
     pub embed_resources: Option<bool>,
 
-    // -- Defaults (rendering defaults for figures, code execution, etc.) --
-    pub defaults: crate::project::Defaults,
+    // -- Rendering defaults (figures, code execution, etc.) --
+    pub preview_port: Option<u16>,
+    pub dpi: Option<f64>,
+    pub timeout: Option<u64>,
+    pub math: Option<String>,
+    pub highlight: Option<HighlightDefaults>,
+    pub figure: Option<FigureDefaults>,
+    pub execute: Option<ExecuteDefaults>,
+    pub toc_defaults: Option<TocDefaults>,
+    pub callout: Option<CalloutDefaults>,
+    pub video: Option<VideoDefaults>,
+    pub placeholder: Option<PlaceholderDefaults>,
+    pub lipsum: Option<LipsumDefaults>,
+    pub layout: Option<LayoutDefaults>,
+    pub latex: Option<LatexDefaults>,
+    pub typst: Option<TypstDefaults>,
+    pub revealjs: Option<RevealJsDefaults>,
+    pub labels: Option<LabelsDefaults>,
 
     // -- Collection structure --
     pub contents: Vec<crate::project::ContentSection>,
@@ -350,8 +514,27 @@ impl Metadata {
         merge_vec!(static_dirs);
         merge_opt!(embed_resources);
 
-        // Defaults: overlay on top of base
-        self.defaults = crate::project::Defaults::merge(&self.defaults, &overlay.defaults);
+        // Rendering defaults: merge field-by-field
+        macro_rules! or {
+            ($u:expr, $b:expr) => { $u.clone().or_else(|| $b.clone()) };
+        }
+        self.preview_port = overlay.preview_port.or(self.preview_port);
+        self.dpi = overlay.dpi.or(self.dpi);
+        self.timeout = overlay.timeout.or(self.timeout);
+        self.math = or!(overlay.math, self.math);
+        self.highlight = merge_option_struct!(overlay.highlight, self.highlight, { light, dark });
+        self.figure = merge_option_struct!(overlay.figure, self.figure, { width, out_width, aspect_ratio, device, alignment });
+        self.execute = merge_option_struct!(overlay.execute, self.execute, { cache, eval, echo, include, warning, message, comment, results });
+        self.toc_defaults = merge_option_struct!(overlay.toc_defaults, self.toc_defaults, { enabled, depth, title });
+        self.callout = merge_option_struct!(overlay.callout, self.callout, { appearance, note, tip, warning, important, caution, icon_note, icon_tip, icon_warning, icon_important, icon_caution });
+        self.video = merge_option_struct!(overlay.video, self.video, { width, height, title });
+        self.placeholder = merge_option_struct!(overlay.placeholder, self.placeholder, { width, height, color });
+        self.lipsum = merge_option_struct!(overlay.lipsum, self.lipsum, { paragraphs });
+        self.layout = merge_option_struct!(overlay.layout, self.layout, { valign, columns, rows });
+        self.latex = merge_option_struct!(overlay.latex, self.latex, { documentclass, fontsize, linkcolor, urlcolor, citecolor });
+        self.typst = merge_option_struct!(overlay.typst, self.typst, { fontsize, leading, justify, heading_numbering });
+        self.revealjs = merge_option_struct!(overlay.revealjs, self.revealjs, { theme, code_theme, transition, slide_number });
+        self.labels = merge_option_struct!(overlay.labels, self.labels, { abstract_title, keywords, appendix, citation, reuse, funding, copyright, listing, proof, contents });
 
         // Collection structure
         merge_vec!(contents);

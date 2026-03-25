@@ -32,6 +32,6 @@ pub trait Filter {
         element: &Element,
         format: &str,
         vars: &mut HashMap<String, String>,
-        defaults: &crate::project::Defaults,
+        defaults: &crate::metadata::Metadata,
     ) -> FilterResult;
 }

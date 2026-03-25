@@ -13,7 +13,7 @@ pub(crate) fn register(
     env: &mut minijinja::Environment<'_>,
     format: &str,
     fragments: &Arc<Mutex<Vec<String>>>,
-    defaults: &crate::project::Defaults,
+    defaults: &crate::metadata::Metadata,
 ) {
     register_pagebreak(env, format, fragments);
     register_video(env, format, fragments, defaults);
@@ -45,7 +45,7 @@ fn register_video(
     env: &mut minijinja::Environment<'_>,
     format: &str,
     fragments: &Arc<Mutex<Vec<String>>>,
-    defaults: &crate::project::Defaults,
+    defaults: &crate::metadata::Metadata,
 ) {
     let fmt = format.to_string();
     let frags = Arc::clone(fragments);
@@ -141,7 +141,7 @@ fn register_kbd(
     });
 }
 
-fn register_lipsum(env: &mut minijinja::Environment<'_>, defaults: &crate::project::Defaults) {
+fn register_lipsum(env: &mut minijinja::Environment<'_>, defaults: &crate::metadata::Metadata) {
     let lipsum_default_paragraphs = defaults.lipsum.as_ref().and_then(|l| l.paragraphs).unwrap_or(1);
     env.add_function("lipsum", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
         if let Ok(n) = kwargs.get::<u64>("words") {
@@ -162,7 +162,7 @@ fn register_placeholder(
     env: &mut minijinja::Environment<'_>,
     format: &str,
     fragments: &Arc<Mutex<Vec<String>>>,
-    defaults: &crate::project::Defaults,
+    defaults: &crate::metadata::Metadata,
 ) {
     let fmt = format.to_string();
     let frags = Arc::clone(fragments);

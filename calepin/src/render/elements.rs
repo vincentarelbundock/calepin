@@ -81,8 +81,8 @@ pub struct ElementRenderer {
     raw_fragments: std::cell::RefCell<Vec<String>>,
     sc_fragments: Vec<String>,
     preamble: Vec<String>,
-    /// Resolved rendering defaults (highlight, figure, callout, labels, etc.).
-    pub defaults: crate::project::Defaults,
+    /// Resolved rendering metadata (highlight, figure, callout, labels, etc.).
+    pub metadata: crate::metadata::Metadata,
     pub number_sections: bool,
     pub shift_headings: bool,
     pub convert_math: bool,
@@ -141,7 +141,7 @@ impl ElementRenderer {
             raw_fragments: std::cell::RefCell::new(Vec::new()),
             sc_fragments: Vec::new(),
             preamble: Vec::new(),
-            defaults: crate::project::Defaults::default(),
+            metadata: crate::metadata::Metadata::default(),
             number_sections: false,
             shift_headings: false,
             convert_math: false,
@@ -165,8 +165,8 @@ impl ElementRenderer {
         metadata: &crate::metadata::Metadata,
         options: &crate::pipeline::RenderCoreOptions,
     ) -> Self {
-        let hl = metadata.defaults.highlight.as_ref();
-        let builtin_hl = crate::project::builtin_metadata().defaults.highlight.as_ref();
+        let hl = metadata.highlight.as_ref();
+        let builtin_hl = crate::project::builtin_metadata().highlight.as_ref();
         let highlight_config = metadata.var.get("highlight-style")
             .map(|v| crate::render::highlighting::parse_highlight_config(v))
             .unwrap_or_else(|| {
@@ -180,7 +180,7 @@ impl ElementRenderer {
                 }
             });
         let mut er = Self::new(engine, highlight_config);
-        er.defaults = metadata.defaults.clone();
+        er.metadata = metadata.clone();
         er.number_sections = metadata.number_sections;
         er.convert_math = metadata.convert_math;
         er.shift_headings = metadata.title.is_some();
@@ -255,7 +255,7 @@ impl ElementRenderer {
                 min_heading_level: self.min_heading_level.get(),
                 suppress_footnote_section: true,
             };
-            let embed = self.defaults.embed_resources.unwrap_or(true);
+            let embed = self.metadata.embed_resources.unwrap_or(true);
             let result = crate::render::convert::render_html_with_metadata(
                 &processed, &fragments, &options, embed,
             );
@@ -327,7 +327,7 @@ impl ElementRenderer {
             &self.raw_fragments,
             &self.theorem_numbers,
             &self.template_env,
-            &self.defaults,
+            &self.metadata,
         )
     }
 
@@ -349,7 +349,7 @@ impl ElementRenderer {
                 meta.ids.insert(label.clone(), (count + 1).to_string());
                 let num = count + 1;
 
-                let label_defs = self.defaults.labels.clone();
+                let label_defs = self.metadata.labels.clone();
                 let mut listing_vars = HashMap::new();
                 listing_vars.insert("base".to_string(), self.ext.clone());
                 listing_vars.insert("engine".to_string(), self.ext.clone());
@@ -372,7 +372,7 @@ impl ElementRenderer {
     fn render_bracketed_spans(&self, text: &str) -> String {
         crate::render::span::render(
             text, &self.ext, &self.registry, &self.raw_fragments,
-            &self.defaults,
+            &self.metadata,
             &|name| self.resolve_element_template(name),
             &self.template_env,
         )
@@ -390,7 +390,7 @@ impl ElementRenderer {
         );
 
         for filter in [&code_filter as &dyn Filter, &figure_filter as &dyn Filter] {
-            match filter.apply(element, &self.ext, &mut vars, &self.defaults) {
+            match filter.apply(element, &self.ext, &mut vars, &self.metadata) {
                 FilterResult::Rendered(output) => return output,
                 FilterResult::Continue | FilterResult::Pass => {}
             }

@@ -100,7 +100,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
         return Ok(());
     }
 
-    let style = load_csl_style(metadata.csl.as_deref(), &metadata.defaults)?;
+    let style = load_csl_style(metadata.csl.as_deref(), metadata)?;
     let locales: Vec<citationberg::Locale> = Vec::new();
 
     // Single driver call with all citations
@@ -218,7 +218,7 @@ fn extract_year(cite: &str) -> String {
         .unwrap_or_else(|| cite.to_string())
 }
 
-fn load_csl_style(csl_path: Option<&str>, defaults: &crate::project::Defaults) -> Result<IndependentStyle> {
+fn load_csl_style(csl_path: Option<&str>, meta: &crate::metadata::Metadata) -> Result<IndependentStyle> {
     // Build the cache key from the CSL path (or "default" for fallback)
     let cache_key = csl_path.unwrap_or("__default__").to_string();
 
@@ -229,7 +229,7 @@ fn load_csl_style(csl_path: Option<&str>, defaults: &crate::project::Defaults) -
         }
     }
 
-    let style = load_csl_style_uncached(csl_path, defaults)?;
+    let style = load_csl_style_uncached(csl_path, meta)?;
 
     // Store in cache
     if let Ok(mut cache) = CSL_CACHE.lock() {
@@ -239,7 +239,7 @@ fn load_csl_style(csl_path: Option<&str>, defaults: &crate::project::Defaults) -
     Ok(style)
 }
 
-fn load_csl_style_uncached(csl_path: Option<&str>, defaults: &crate::project::Defaults) -> Result<IndependentStyle> {
+fn load_csl_style_uncached(csl_path: Option<&str>, meta: &crate::metadata::Metadata) -> Result<IndependentStyle> {
     use hayagriva::archive::ArchivedStyle;
 
     // 1. Explicit CSL from front matter: file path or archive name
@@ -274,7 +274,7 @@ fn load_csl_style_uncached(csl_path: Option<&str>, defaults: &crate::project::De
     }
 
     // 2. Default from calepin.toml
-    let default_name = defaults.csl.as_deref()
+    let default_name = meta.csl.as_deref()
         .or_else(|| crate::project::builtin_metadata().csl.as_deref())
         .unwrap_or("chicago-author-date");
     if let Some(archived) = ArchivedStyle::by_name(default_name) {

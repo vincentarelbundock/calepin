@@ -32,7 +32,7 @@ pub trait StructuralHandler {
         render_element: &dyn Fn(&Element) -> String,
         resolve_template: &dyn Fn(&str) -> Option<String>,
         raw_fragments: &RefCell<Vec<String>>,
-        defaults: &crate::project::Defaults,
+        defaults: &crate::metadata::Metadata,
     ) -> Option<String>;
 }
 
@@ -242,7 +242,7 @@ impl StructuralHandler for TabsetHandler {
         render_element: &dyn Fn(&Element) -> String,
         _resolve_template: &dyn Fn(&str) -> Option<String>,
         _raw_fragments: &RefCell<Vec<String>>,
-        _defaults: &crate::project::Defaults,
+        _defaults: &crate::metadata::Metadata,
     ) -> Option<String> {
         Some(crate::structures::tabset::render(format, attrs, children, render_element))
     }
@@ -257,7 +257,7 @@ impl StructuralHandler for LayoutHandler {
         render_element: &dyn Fn(&Element) -> String,
         _resolve_template: &dyn Fn(&str) -> Option<String>,
         raw_fragments: &RefCell<Vec<String>>,
-        defaults: &crate::project::Defaults,
+        defaults: &crate::metadata::Metadata,
     ) -> Option<String> {
         Some(crate::structures::layout::render(id, attrs, children, format, render_element, raw_fragments, defaults))
     }
@@ -379,7 +379,7 @@ impl Filter for NoopFilter {
         _element: &Element,
         _format: &str,
         _vars: &mut HashMap<String, String>,
-        _defaults: &crate::project::Defaults,
+        _defaults: &crate::metadata::Metadata,
     ) -> crate::render::transform_element::FilterResult {
         crate::render::transform_element::FilterResult::Pass
     }

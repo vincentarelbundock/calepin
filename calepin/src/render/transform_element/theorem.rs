@@ -32,7 +32,7 @@ impl TheoremFilter {
 }
 
 impl Filter for TheoremFilter {
-    fn apply(&self, element: &Element, _format: &str, vars: &mut HashMap<String, String>, _defaults: &crate::project::Defaults) -> FilterResult {
+    fn apply(&self, element: &Element, _format: &str, vars: &mut HashMap<String, String>, _defaults: &crate::metadata::Metadata) -> FilterResult {
         let classes = match element {
             Element::Div { classes, .. } => classes,
             _ => return FilterResult::Pass,

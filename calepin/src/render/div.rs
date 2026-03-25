@@ -25,7 +25,7 @@ pub fn render(
     raw_fragments: &std::cell::RefCell<Vec<String>>,
     theorem_numbers: &std::cell::RefCell<HashMap<String, String>>,
     template_env: &crate::render::template::TemplateEnv,
-    defaults: &crate::project::Defaults,
+    defaults: &crate::metadata::Metadata,
 ) -> String {
     let matching = registry.matching_filters(classes, attrs, id.as_deref(), format, "div");
 

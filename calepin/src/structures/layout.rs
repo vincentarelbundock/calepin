@@ -13,7 +13,7 @@ pub fn render(
     format: &str,
     render_element: &dyn Fn(&Element) -> String,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
-    defaults: &crate::project::Defaults,
+    defaults: &crate::metadata::Metadata,
 ) -> String {
     let defs = defaults;
     let default_valign = defs.layout.as_ref().and_then(|l| l.valign.clone()).unwrap_or_else(|| "top".to_string());

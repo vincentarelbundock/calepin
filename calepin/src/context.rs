@@ -64,7 +64,7 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
 
     // Target name: CLI flag -> front matter -> default from config
     let default_format = project_metadata.as_ref()
-        .and_then(|m| m.defaults.format.clone())
+        .and_then(|m| m.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let (target_name, explicit_target) = if let Some(name) = cli_target {
         (name.to_string(), true)

@@ -1,12 +1,10 @@
 //! Project configuration: calepin.toml parsing, target resolution, and project root detection.
 
 mod content;
-mod defaults;
 mod targets;
 
 // Re-export all public types and functions so existing `crate::project::` paths keep working.
 pub use content::{DocumentNode, expand_contents, expand_contents_for_lang, expand_glob_pub};
-pub use defaults::*;
 pub use targets::{Target, CompileConfig, resolve_target, resolve_target_output_path, target_vars_to_jinja_from_meta, resolve_inheritance};
 
 use std::path::Path;
@@ -77,16 +75,6 @@ impl DocumentEntry {
             DocumentEntry::Named { title, .. } => Some(title),
         }
     }
-}
-
-/// Default syntax highlighting theme configuration.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct HighlightDefaults {
-    /// Theme for light mode.
-    pub light: Option<String>,
-    /// Theme for dark mode.
-    pub dark: Option<String>,
 }
 
 /// A post-processing command run after the site build completes.
@@ -415,22 +403,21 @@ fontsize = "12pt"
 [labels]
 abstract_title = "Summary"
 "#);
-        let d = &meta.defaults;
-        assert_eq!(d.format.as_deref(), Some("html"));
-        assert_eq!(d.csl.as_deref(), Some("apa"));
-        assert_eq!(d.dpi, Some(300.0));
-        assert_eq!(d.highlight.as_ref().and_then(|h| h.light.as_deref()), Some("github"));
-        assert_eq!(d.toc.as_ref().and_then(|t| t.enabled), Some(true));
-        assert_eq!(d.toc.as_ref().and_then(|t| t.depth), Some(4));
-        assert_eq!(d.execute.as_ref().and_then(|e| e.cache), Some(false));
-        assert_eq!(d.figure.as_ref().and_then(|f| f.width), Some(8.0));
-        assert_eq!(d.callout.as_ref().and_then(|c| c.appearance.as_deref()), Some("minimal"));
-        assert_eq!(d.layout.as_ref().and_then(|l| l.valign.as_deref()), Some("center"));
-        assert_eq!(d.video.as_ref().and_then(|v| v.width.as_deref()), Some("80%"));
-        assert_eq!(d.lipsum.as_ref().and_then(|l| l.paragraphs), Some(3));
-        assert_eq!(d.latex.as_ref().and_then(|l| l.documentclass.as_deref()), Some("book"));
-        assert_eq!(d.typst.as_ref().and_then(|t| t.fontsize.as_deref()), Some("12pt"));
-        assert_eq!(d.labels.as_ref().and_then(|l| l.abstract_title.as_deref()), Some("Summary"));
+        assert_eq!(meta.target.as_deref(), Some("html"));
+        assert_eq!(meta.csl.as_deref(), Some("apa"));
+        assert_eq!(meta.dpi, Some(300.0));
+        assert_eq!(meta.highlight.as_ref().and_then(|h| h.light.as_deref()), Some("github"));
+        assert_eq!(meta.toc_defaults.as_ref().and_then(|t| t.enabled), Some(true));
+        assert_eq!(meta.toc_defaults.as_ref().and_then(|t| t.depth), Some(4));
+        assert_eq!(meta.execute.as_ref().and_then(|e| e.cache), Some(false));
+        assert_eq!(meta.figure.as_ref().and_then(|f| f.width), Some(8.0));
+        assert_eq!(meta.callout.as_ref().and_then(|c| c.appearance.as_deref()), Some("minimal"));
+        assert_eq!(meta.layout.as_ref().and_then(|l| l.valign.as_deref()), Some("center"));
+        assert_eq!(meta.video.as_ref().and_then(|v| v.width.as_deref()), Some("80%"));
+        assert_eq!(meta.lipsum.as_ref().and_then(|l| l.paragraphs), Some(3));
+        assert_eq!(meta.latex.as_ref().and_then(|l| l.documentclass.as_deref()), Some("book"));
+        assert_eq!(meta.typst.as_ref().and_then(|t| t.fontsize.as_deref()), Some("12pt"));
+        assert_eq!(meta.labels.as_ref().and_then(|l| l.abstract_title.as_deref()), Some("Summary"));
         // lang and csl also appear on metadata directly
         assert_eq!(meta.lang.as_deref(), Some("en"));
         assert_eq!(meta.csl.as_deref(), Some("apa"));

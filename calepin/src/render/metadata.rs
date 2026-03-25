@@ -84,7 +84,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
 
     let mut sections: Vec<String> = Vec::new();
     let fmt = ext.to_string();
-    let label_defs = meta.defaults.labels.clone();
+    let label_defs = meta.labels.clone();
 
     // License
     if let Some(ref lic) = meta.license {

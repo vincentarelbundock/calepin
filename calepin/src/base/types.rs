@@ -62,8 +62,8 @@ pub struct ChunkOptions {
     pub inner: HashMap<String, OptionValue>,
     /// Keys that were merged from document-level defaults (not set per-chunk).
     pub defaults_keys: std::collections::HashSet<String>,
-    /// Resolved rendering defaults for fallback values.
-    pub defaults: crate::project::Defaults,
+    /// Resolved rendering metadata for fallback values.
+    pub metadata: crate::metadata::Metadata,
 }
 
 #[derive(Debug, Clone)]
@@ -111,36 +111,36 @@ impl ChunkOptions {
 
     // Convenience accessors mirroring calepin's reactor defaults
     pub fn cache(&self) -> bool {
-        let d = self.defaults.execute.as_ref().and_then(|c| c.cache).unwrap_or(true);
+        let d = self.metadata.execute.as_ref().and_then(|c| c.cache).unwrap_or(true);
         self.get_bool("cache", d)
     }
     pub fn eval(&self) -> bool {
-        let d = self.defaults.execute.as_ref().and_then(|c| c.eval).unwrap_or(true);
+        let d = self.metadata.execute.as_ref().and_then(|c| c.eval).unwrap_or(true);
         self.get_bool("eval", d)
     }
     #[allow(dead_code)]
     pub fn echo(&self) -> bool {
-        let d = self.defaults.execute.as_ref().and_then(|c| c.echo).unwrap_or(true);
+        let d = self.metadata.execute.as_ref().and_then(|c| c.echo).unwrap_or(true);
         self.get_bool("echo", d)
     }
     pub fn include(&self) -> bool {
-        let d = self.defaults.execute.as_ref().and_then(|c| c.include).unwrap_or(true);
+        let d = self.metadata.execute.as_ref().and_then(|c| c.include).unwrap_or(true);
         self.get_bool("include", d)
     }
     pub fn warning(&self) -> bool {
-        let d = self.defaults.execute.as_ref().and_then(|c| c.warning).unwrap_or(true);
+        let d = self.metadata.execute.as_ref().and_then(|c| c.warning).unwrap_or(true);
         self.get_bool("warning", d)
     }
     pub fn message(&self) -> bool {
-        let d = self.defaults.execute.as_ref().and_then(|c| c.message).unwrap_or(true);
+        let d = self.metadata.execute.as_ref().and_then(|c| c.message).unwrap_or(true);
         self.get_bool("message", d)
     }
     pub fn comment(&self) -> String {
-        let d = self.defaults.execute.as_ref().and_then(|c| c.comment.clone()).unwrap_or_else(|| "> ".to_string());
+        let d = self.metadata.execute.as_ref().and_then(|c| c.comment.clone()).unwrap_or_else(|| "> ".to_string());
         self.get_string("comment", &d)
     }
     pub fn results(&self) -> ResultsMode {
-        let d = self.defaults.execute.as_ref().and_then(|c| c.results.clone()).unwrap_or_else(|| "markup".to_string());
+        let d = self.metadata.execute.as_ref().and_then(|c| c.results.clone()).unwrap_or_else(|| "markup".to_string());
         match self.get_string("results", &d).as_str() {
             "asis" => ResultsMode::Asis,
             "hide" => ResultsMode::Hide,
@@ -153,13 +153,13 @@ impl ChunkOptions {
     }
 
     fn default_fig_width(&self) -> f64 {
-        self.defaults.figure.as_ref().and_then(|f| f.width).unwrap_or(6.0)
+        self.metadata.figure.as_ref().and_then(|f| f.width).unwrap_or(6.0)
     }
     fn default_out_width_frac(&self) -> f64 {
-        self.defaults.figure.as_ref().and_then(|f| f.out_width).unwrap_or(0.70)
+        self.metadata.figure.as_ref().and_then(|f| f.out_width).unwrap_or(0.70)
     }
     fn default_fig_asp(&self) -> f64 {
-        self.defaults.figure.as_ref().and_then(|f| f.aspect_ratio).unwrap_or(0.618)
+        self.metadata.figure.as_ref().and_then(|f| f.aspect_ratio).unwrap_or(0.618)
     }
 
     /// Graphics device width in inches.
@@ -210,7 +210,7 @@ impl ChunkOptions {
     pub fn lst_cap(&self) -> Option<String> { self.get_opt_string("lst_cap") }
     pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig_alt") }
     pub fn dev(&self) -> String {
-        let default = self.defaults.figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
+        let default = self.metadata.figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
         self.get_string("dev", &default)
     }
     pub fn fig_align(&self) -> Option<String> { self.get_opt_string("fig_align") }

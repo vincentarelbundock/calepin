@@ -82,8 +82,7 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
                         .and_then(|t| t.first())
                         .map(|(k, _)| k.clone())
                 });
-                meta.target = val.clone();
-                meta.defaults.format = val;
+                meta.target = val;
             }
             "theme" => meta.theme = v.as_str().map(String::from),
             "number_sections" => meta.number_sections = v.as_bool().unwrap_or(false),
@@ -94,17 +93,13 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
                 meta.bibliography = value_string_list(v);
             }
             "csl" => {
-                let val = v.as_str().map(String::from);
-                meta.csl = val.clone();
-                meta.defaults.csl = val;
+                meta.csl = v.as_str().map(String::from);
             }
             "html_math_method" => meta.html_math_method = v.as_str().map(String::from),
             // Project-level fields (also valid in front matter)
             "output" => meta.output = v.as_str().map(String::from),
             "lang" => {
-                let val = v.as_str().map(String::from);
-                meta.lang = val.clone();
-                meta.defaults.lang = val;
+                meta.lang = v.as_str().map(String::from);
             }
             "url" => meta.url = v.as_str().map(String::from),
             "favicon" => meta.favicon = v.as_str().map(String::from),
@@ -113,9 +108,7 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "orchestrator" => meta.orchestrator = v.as_str().map(String::from),
             "global_crossref" => meta.global_crossref = v.as_bool().unwrap_or(false),
             "embed_resources" => {
-                let val = Some(v.as_bool().unwrap_or(false));
-                meta.embed_resources = val;
-                meta.defaults.embed_resources = val;
+                meta.embed_resources = Some(v.as_bool().unwrap_or(false));
             }
             "number_offset" => {} // accepted but handled elsewhere
             "calepin" => {
@@ -131,31 +124,31 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
                 }
             }
 
-            // -- Defaults sections (populate meta.defaults) --
-            "dpi" => meta.defaults.dpi = v.as_floating_point(),
-            "timeout" => meta.defaults.timeout = v.as_integer().map(|n| n as u64),
-            "math" => meta.defaults.math = v.as_str().map(String::from),
-            "preview_port" => meta.defaults.preview_port = v.as_integer().map(|n| n as u16),
-            "highlight" => meta.defaults.highlight = deserialize_section(v),
+            // -- Defaults sections --
+            "dpi" => meta.dpi = v.as_floating_point(),
+            "timeout" => meta.timeout = v.as_integer().map(|n| n as u64),
+            "math" => meta.math = v.as_str().map(String::from),
+            "preview_port" => meta.preview_port = v.as_integer().map(|n| n as u16),
+            "highlight" => meta.highlight = deserialize_section(v),
             "toc" => {
                 // "toc" can be a bool (in front matter) or a table (in config)
                 if let Some(b) = v.as_bool() {
                     meta.toc = Some(b);
                 } else {
-                    meta.defaults.toc = deserialize_section(v);
+                    meta.toc_defaults = deserialize_section(v);
                 }
             }
-            "labels" => meta.defaults.labels = deserialize_section(v),
-            "execute" => meta.defaults.execute = deserialize_section(v),
-            "figure" => meta.defaults.figure = deserialize_section(v),
-            "callout" => meta.defaults.callout = deserialize_section(v),
-            "layout" => meta.defaults.layout = deserialize_section(v),
-            "video" => meta.defaults.video = deserialize_section(v),
-            "placeholder" => meta.defaults.placeholder = deserialize_section(v),
-            "lipsum" => meta.defaults.lipsum = deserialize_section(v),
-            "latex" => meta.defaults.latex = deserialize_section(v),
-            "typst" => meta.defaults.typst = deserialize_section(v),
-            "revealjs" => meta.defaults.revealjs = deserialize_section(v),
+            "labels" => meta.labels = deserialize_section(v),
+            "execute" => meta.execute = deserialize_section(v),
+            "figure" => meta.figure = deserialize_section(v),
+            "callout" => meta.callout = deserialize_section(v),
+            "layout" => meta.layout = deserialize_section(v),
+            "video" => meta.video = deserialize_section(v),
+            "placeholder" => meta.placeholder = deserialize_section(v),
+            "lipsum" => meta.lipsum = deserialize_section(v),
+            "latex" => meta.latex = deserialize_section(v),
+            "typst" => meta.typst = deserialize_section(v),
+            "revealjs" => meta.revealjs = deserialize_section(v),
 
             // -- Collection structure (deserialized via serde_json) --
             "targets" => {

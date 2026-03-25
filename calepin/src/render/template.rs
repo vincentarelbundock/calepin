@@ -279,7 +279,7 @@ pub fn build_template_vars_with_headings(
 ) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
-    let defs = &meta.defaults;
+    let defs = meta;
 
     vars.insert("body".to_string(), body.to_string());
     vars.insert(
@@ -408,7 +408,7 @@ pub fn build_template_vars_with_headings(
     }
 
     // Table of contents
-    let toc_defs = defs.toc.clone();
+    let toc_defs = defs.toc_defaults.clone();
     let toc_enabled = match meta.toc {
         Some(v) => v,
         None => toc_defs.as_ref().and_then(|t| t.enabled).unwrap_or(ext == "html"),

@@ -41,15 +41,7 @@ pub fn render_documents(
         return Ok(HashMap::new());
     }
 
-    // Resolve defaults from metadata, letting target override embed-resources
-    let mut defaults = project::resolve_defaults(Some(&meta.defaults));
-    if let Some(t) = target {
-        if let Some(embed) = t.embed_resources {
-            defaults.embed_resources = Some(embed);
-        }
-    }
-
-    let overrides = build_overrides(&defaults);
+    let overrides = build_overrides(meta, target);
 
     if !quiet {
         eprintln!("Rendering {} documents...", pages.len());
@@ -216,14 +208,7 @@ pub fn render_documents_with_crossref(
         return Ok(HashMap::new());
     }
 
-    let mut defaults = project::resolve_defaults(Some(&meta.defaults));
-    if let Some(t) = target {
-        if let Some(embed) = t.embed_resources {
-            defaults.embed_resources = Some(embed);
-        }
-    }
-
-    let overrides = build_overrides(&defaults);
+    let overrides = build_overrides(meta, target);
 
     if !quiet {
         eprintln!("Rendering {} documents (cross-ref pass 1)...", pages.len());
@@ -442,11 +427,18 @@ fn assign_chapter_numbers(meta: &crate::metadata::Metadata) -> HashMap<String, u
     chapter_map
 }
 
-fn build_overrides(defaults: &project::Defaults) -> Vec<String> {
+fn build_overrides(meta: &crate::metadata::Metadata, target: Option<&project::Target>) -> Vec<String> {
     let mut overrides = Vec::new();
 
-    // Highlight style from defaults
-    if let Some(ref hl) = defaults.highlight {
+    // embed-resources override from target
+    if let Some(t) = target {
+        if let Some(embed) = t.embed_resources {
+            overrides.push(format!("embed-resources={}", embed));
+        }
+    }
+
+    // Highlight style from metadata
+    if let Some(ref hl) = meta.highlight {
         if let Some(ref light) = hl.light {
             overrides.push(format!("highlight-style.light={}", light));
         }

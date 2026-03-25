@@ -43,7 +43,7 @@ impl OutputRenderer for RevealJsRenderer {
                 }
                 // Render math include using html engine (since ext="revealjs"
                 // would skip the html-only branch in build_template_vars)
-                let defs = &renderer.defaults;
+                let defs = &renderer.metadata;
                 let mut math_vars = HashMap::new();
                 math_vars.insert("html_math_method".to_string(),
                     meta.html_math_method.as_deref()

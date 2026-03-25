@@ -572,9 +572,9 @@ fn render_orchestrator(
     let var_ctx = crate::project::target_vars_to_jinja_from_meta(&meta.var);
 
     // Format-specific defaults for orchestrator templates
-    let latex_defs = meta.defaults.latex.as_ref();
-    let typst_defs = meta.defaults.typst.as_ref();
-    let label_defs = meta.defaults.labels.as_ref();
+    let latex_defs = meta.latex.as_ref();
+    let typst_defs = meta.typst.as_ref();
+    let label_defs = meta.labels.as_ref();
 
     let ctx = minijinja::context! {
         meta => meta_ctx,
