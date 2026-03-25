@@ -69,15 +69,12 @@ pub fn render_documents(
                 let output_dir = output_dir;
                 let format = &format_owned;
                 let target = &target_owned;
-                let defaults = defaults.clone();
                 let project_meta = meta;
                 let done = &done;
                 let quiet = quiet;
                 s.spawn(move || {
-                    // Set active target, project root, and defaults in this thread
                     crate::paths::set_active_target(target.as_deref());
                     crate::paths::set_project_root(Some(base_dir));
-                    project::set_active_defaults(defaults);
                     let key = page.source.display().to_string();
                     let result = render_one_document(page, overrides, base_dir, output_dir, format, apply_page_template, Some(project_meta));
                     let n = done.fetch_add(1, Ordering::Relaxed) + 1;
@@ -117,7 +114,6 @@ pub fn render_documents(
         for page in &failed {
             crate::paths::set_active_target(target_name.map(|s| s));
             crate::paths::set_project_root(Some(base_dir));
-            project::set_active_defaults(defaults.clone());
             let key = page.source.display().to_string();
             match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template, Some(meta)) {
                 Ok(render_result) => {
@@ -249,14 +245,12 @@ pub fn render_documents_with_crossref(
                 let base_dir = base_dir;
                 let output_dir = output_dir;
                 let target = &target_owned;
-                let defaults = defaults.clone();
                 let chapter = chapter_map.get(&page.source.display().to_string()).copied();
                 let done = &done;
                 let quiet = quiet;
                 s.spawn(move || {
                     crate::paths::set_active_target(target.as_deref());
                     crate::paths::set_project_root(Some(base_dir));
-                    project::set_active_defaults(defaults);
                     let key = page.source.display().to_string();
                     let result = render_one_document_pass1(page, overrides, base_dir, output_dir, chapter);
                     let n = done.fetch_add(1, Ordering::Relaxed) + 1;

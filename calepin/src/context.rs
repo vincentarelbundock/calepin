@@ -79,12 +79,6 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
     let user_targets = project_metadata.as_ref().map(|m| &m.targets).unwrap_or(&empty_targets);
     let target = project::resolve_target(&target_name, user_targets)?;
 
-    let mut defaults = project::resolve_defaults(project_metadata.as_ref().map(|m| &m.defaults));
-    if let Some(embed) = target.embed_resources {
-        defaults.embed_resources = Some(embed);
-    }
-    project::set_active_defaults(defaults);
-
     // In document mode (no _calepin.toml), the project root is the
     // input file's parent directory so that all paths resolve relative to it.
     let effective_root = project_root.clone().unwrap_or_else(|| abs_input_dir.clone());

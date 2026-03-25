@@ -1,6 +1,5 @@
-//! Defaults merging and thread-local state management.
+//! Defaults types and merging.
 
-use std::cell::RefCell;
 use serde::Deserialize;
 use super::HighlightDefaults;
 
@@ -206,29 +205,6 @@ impl Defaults {
             labels: merge_option_struct!(user.labels, builtin.labels, { abstract_title, keywords, appendix, citation, reuse, funding, copyright, listing, proof, contents }),
         }
     }
-}
-
-// ---------------------------------------------------------------------------
-// Thread-local defaults state
-// ---------------------------------------------------------------------------
-
-// Thread-local resolved defaults, set once per render.
-thread_local! {
-    static ACTIVE_DEFAULTS: RefCell<Option<Defaults>> = RefCell::new(None);
-}
-
-/// Set the active defaults for the current render.
-pub fn set_active_defaults(defaults: Defaults) {
-    ACTIVE_DEFAULTS.with(|d| *d.borrow_mut() = Some(defaults));
-}
-
-/// Get a reference to the active defaults. Falls back to built-in if not set.
-pub fn get_defaults() -> Defaults {
-    ACTIVE_DEFAULTS.with(|d| {
-        d.borrow().clone().unwrap_or_else(|| {
-            super::builtin_metadata().defaults.clone()
-        })
-    })
 }
 
 /// Get resolved defaults, merging user defaults with built-in.

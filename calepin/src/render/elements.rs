@@ -141,7 +141,7 @@ impl ElementRenderer {
             raw_fragments: std::cell::RefCell::new(Vec::new()),
             sc_fragments: Vec::new(),
             preamble: Vec::new(),
-            defaults: crate::project::get_defaults(),
+            defaults: crate::project::Defaults::default(),
             number_sections: false,
             shift_headings: false,
             convert_math: false,

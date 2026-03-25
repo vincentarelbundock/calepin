@@ -83,8 +83,7 @@ pub fn render(
             v.insert("label".to_string(), id_val.clone());
             v.entry("template".to_string()).or_insert_with(|| "figure_div".to_string());
 
-            let defs = crate::project::get_defaults();
-            let default_align = defs.figure.as_ref()
+            let default_align = defaults.figure.as_ref()
                 .and_then(|f| f.alignment.as_deref()).unwrap_or("center");
             let align = v.get("fig_align").cloned().unwrap_or_else(|| default_align.to_string());
             let align_style = crate::render::transform_element::figure::format_align(&align, format);
