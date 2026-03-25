@@ -8,76 +8,40 @@
 \usepackage[normalem]{ulem}
 \usepackage{fancyvrb}
 \usepackage[most]{tcolorbox}
-
-%%%% inspired by classicthesis.sty
-\usepackage{newpxtext,newpxmath}
 \usepackage{microtype}
-\usepackage{titlesec}
-\titleformat{\chapter}[display]
-  {\relax}{\large\scshape\MakeUppercase{\chaptertitlename}~\thechapter}{0pt}{\large\scshape}
-\titleformat{\section}{\large\scshape}{\thesection}{1em}{}
-\titleformat{\subsection}{\normalsize\itshape}{\thesubsection}{1em}{}
-\titleformat{\subsubsection}{\normalsize\normalfont}{\thesubsubsection}{1em}{}
 
-
-% Source code box (light gray background, left accent bar)
 \newtcolorbox{srccode}{
   enhanced, breakable,
-  colback=gray!5, colframe=gray!40,
+  colback=white, colframe=black!20,
   left=4pt, right=4pt, top=2pt, bottom=2pt,
-  boxrule=0pt, leftrule=3pt,
+  boxrule=0.4pt,
   arc=0pt, outer arc=0pt
 }
 
-% Output box (white background, thin border)
 \newtcolorbox{outcode}{
   enhanced, breakable,
-  colback=white, colframe=gray!50,
+  colback=white, colframe=black!20,
   left=4pt, right=4pt, top=2pt, bottom=2pt,
-  boxrule=0.5pt,
+  boxrule=0.4pt,
   arc=0pt, outer arc=0pt,
   fontupper=\small
 }
 {%- elif base == "typst" %}
 #set document(title: "{{plain_title}}", author: "{{author}}")
-#set page(margin: (x: 4.5cm, y: 3.5cm))
 #set text(size: 11pt)
 #set par(justify: true, leading: 0.65em)
 #set heading(numbering: "1.1")
 
-// Heading styles — match LaTeX titlesec at 11pt:
-// \section:       \large\scshape   → 12pt smallcaps
-// \subsection:    \normalsize\itshape → 11pt italic
-// \subsubsection: \normalsize      → 11pt normal
-#show heading.where(level: 1): set text(size: 12pt, weight: "regular")
-#show heading.where(level: 1): it => {
-  v(1.2em)
-  if it.numbering != none {
-    block(smallcaps[#counter(heading).display(it.numbering) #it.body])
-  } else {
-    block(smallcaps(it.body))
-  }
-  v(0.4em)
-}
-#show heading.where(level: 2): set text(size: 11pt, style: "italic", weight: "regular")
-#show heading.where(level: 3): set text(size: 11pt, weight: "regular")
-
-// Source code box (light gray, left accent bar)
 #let srcbox(body) = block(
-  fill: luma(245),
-  stroke: (left: 3pt + luma(180)),
+  stroke: 0.4pt + luma(200),
   inset: (x: 8pt, y: 6pt),
-  radius: 0pt,
   width: 100%,
   body
 )
 
-// Output box (white, thin border)
 #let outbox(body) = block(
-  fill: white,
-  stroke: 0.5pt + luma(180),
+  stroke: 0.4pt + luma(200),
   inset: (x: 8pt, y: 6pt),
-  radius: 0pt,
   width: 100%,
   body
 )

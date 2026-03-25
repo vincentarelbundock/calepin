@@ -1071,4 +1071,24 @@ mod tests {
     fn test_relative_url_parent() {
         assert_eq!(relative_url("guides/intro.html", "index.html"), "../index.html");
     }
+
+    #[test]
+    fn test_fig_label_no_double_prefix() {
+        // A chunk labelled "fig-myplot" should produce id="fig-myplot",
+        // and the crossref DB should index it as "fig-myplot" (not "fig-fig-myplot").
+        let html = "<figure id=\"fig-myplot\"><img src=\"x.png\"/><figcaption>Cap</figcaption></figure>\nSee @fig-myplot.";
+        let result = resolve_html_with_ids(html, &HashMap::new(), &HashMap::new());
+        assert!(result.contains("href=\"#fig-myplot\""), "link target should be fig-myplot");
+        assert!(result.contains("Figure 1"), "should resolve to Figure 1");
+        assert!(!result.contains("fig-fig-"), "fig- prefix must not be doubled");
+    }
+
+    #[test]
+    fn test_tbl_label_no_double_prefix() {
+        let html = "<div id=\"tbl-data\"><table><tr><td>x</td></tr></table><p>My table</p></div>\nSee @tbl-data.";
+        let result = resolve_html_with_ids(html, &HashMap::new(), &HashMap::new());
+        assert!(result.contains("href=\"#tbl-data\""), "link target should be tbl-data");
+        assert!(result.contains("Table 1"), "should resolve to Table 1");
+        assert!(!result.contains("tbl-tbl-"), "tbl- prefix must not be doubled");
+    }
 }

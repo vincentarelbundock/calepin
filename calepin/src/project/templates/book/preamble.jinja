@@ -1,62 +1,58 @@
+{%- if base == "latex" %}
 \usepackage{xcolor}
-\usepackage{amsmath}
+\usepackage{amsmath,amssymb}
 \usepackage[normalem]{ulem}
 \usepackage{fancyvrb}
 \usepackage[most]{tcolorbox}
 \usepackage{booktabs}
 \usepackage{longtable}
-
-%%% Typography (classicthesis-inspired)
-\usepackage{newpxtext,newpxmath}
 \usepackage{microtype}
-\usepackage{titlesec}
 
-%%% Chapter and section formatting
-\titleformat{\chapter}[display]
-  {\relax}{\large\scshape\MakeUppercase{\chaptername}~\thechapter}{0pt}{\Large\scshape}
-\titleformat{\section}{\large\scshape}{\thesection}{1em}{}
-\titleformat{\subsection}{\normalsize\itshape}{\thesubsection}{1em}{}
-\titleformat{\subsubsection}{\normalsize\normalfont}{\thesubsubsection}{1em}{}
-
-%%% Source code box (light gray background, left accent bar)
 \newtcolorbox{srccode}{
   enhanced, breakable,
-  colback=gray!5, colframe=gray!40,
+  colback=white, colframe=black!20,
   left=4pt, right=4pt, top=2pt, bottom=2pt,
-  boxrule=0pt, leftrule=3pt,
+  boxrule=0.4pt,
   arc=0pt, outer arc=0pt
 }
 
-%%% Output box (white background, thin border)
 \newtcolorbox{outcode}{
   enhanced, breakable,
-  colback=white, colframe=gray!50,
+  colback=white, colframe=black!20,
   left=4pt, right=4pt, top=2pt, bottom=2pt,
-  boxrule=0.5pt,
+  boxrule=0.4pt,
   arc=0pt, outer arc=0pt,
   fontupper=\small
 }
 
-%%% Syntax highlighting colors
-\definecolor{hl1}{RGB}{0,134,179}
-\definecolor{hl2}{RGB}{51,51,51}
-\definecolor{hl3}{RGB}{121,93,163}
-\definecolor{hl4}{RGB}{99,163,92}
-\definecolor{hl5}{RGB}{24,54,145}
-
-%%% Headers and footers
-\usepackage{fancyhdr}
-\pagestyle{fancy}
-\fancyhf{}
-\fancyhead[LE]{\scshape\nouppercase{\leftmark}}
-\fancyhead[RO]{\scshape\nouppercase{\rightmark}}
-\fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
-
-%%% Hyperlink styling
 \hypersetup{
   colorlinks=true,
   linkcolor=black,
   urlcolor=blue!60!black,
   citecolor=blue!60!black,
 }
+{%- elif base == "typst" %}
+#set document(title: "{{meta.title}}", author: "{{meta.author}}")
+#set text(size: 11pt)
+#set par(justify: true, leading: 0.65em)
+#set heading(numbering: "1.1")
+
+#show heading.where(level: 1): it => {
+  pagebreak(weak: true)
+  it
+}
+
+#let srcbox(body) = block(
+  stroke: 0.4pt + luma(200),
+  inset: (x: 8pt, y: 6pt),
+  width: 100%,
+  body
+)
+
+#let outbox(body) = block(
+  stroke: 0.4pt + luma(200),
+  inset: (x: 8pt, y: 6pt),
+  width: 100%,
+  body
+)
+{%- endif %}

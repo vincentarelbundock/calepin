@@ -38,10 +38,21 @@ fn resolve_template_alias(name: &str) -> &str {
 }
 
 /// Look up a built-in template by name and base.
-/// Checks `templates/{base}/{name}.{ext}` then `templates/common/{name}.jinja`.
+/// Checks `templates/{target}/{name}.{ext}` (active target, if different from base),
+/// then `templates/{base}/{name}.{ext}`, then `templates/common/{name}.jinja`.
 pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> {
     let resolved = resolve_template_alias(name);
     let ext = crate::paths::engine_to_ext(base);
+
+    // Target-specific (e.g., templates/book/page.typ)
+    if let Some(target) = crate::paths::get_active_target() {
+        if target != base {
+            let target_path = format!("templates/{}/{}.{}", target, resolved, ext);
+            if let Some(file) = BUILTIN_PROJECT.get_file(&target_path) {
+                return file.contents_utf8();
+            }
+        }
+    }
 
     // Base-specific
     let base_path = format!("templates/{}/{}.{}", base, resolved, ext);

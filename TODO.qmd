@@ -1,9 +1,5 @@
 PATH CHECK FOR SINGLE typst file
 
-## Misc
-
-- [ ] Keywords and Abstracts should be omitted when the fields are empty
-
 ## Blog listings
 
 - [ ] User interface
@@ -31,38 +27,13 @@ PATH CHECK FOR SINGLE typst file
     - [ ] latex
     - [ ] pdf
 - [ ] PDF metadata should be optional (author, title, etc.)
-- [ ] Allow users to supply `postprocess.latex` or `postprocess.html` in `_calepin/`
-- [ ] How do lettered appendices work?
 
 
-## Language
-
-- [ ] Language / localization (`lang:` option, custom translation strings)
+## Slides
 
 
-## Code execution
-
-This should put the printout after each line where it is generated. Now we print the block, and then two separate outputs.
-
-````
----
-format: html
----
-```{r}
-2+4
-4*2
-```
-````
-
-- [ ] Code annotation (line markers `# <1>` with numbered explanations)
-- [ ] Multiple figures from a single code chunk with `fig-subcap`
-- [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
-- [ ] Chunk labels should not add a fig- or a tbl- automatically if that is already in the label specified in ```{lang, fig-blahblah}. Otherwise we get duplicated fig-fig-blahblah.
-
-
-## Tables
-
-- [ ] Caption location: does this work in all formats?
+- [ ] reveal.js
+- [ ] slidev
 
 
 ## Math
@@ -247,3 +218,22 @@ format: html
 - [ ] tinytable
 - [ ] modelsummary
 - [ ] marginaleffects
+
+
+# Later
+
+- [ ] Code annotations
+- [ ] Code numbering
+- [ ] Tables: Caption location in different output formats.
+- [ ] Appendix A (lettered)
+    - [ ] latex
+    - [ ] html
+    - [ ] markdown
+    - [ ] typst
+- [ ] Language / localization 
+    - [ ] dates everywhere relevant
+    - [ ] what else?
+- [ ] `fig-subcap`: Multiple figures from a single code chunk.
+- [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
+- [ ] Chunk labels should not add a fig- or a tbl- automatically if that is already in the label specified in ```{lang, fig-blahblah}. Otherwise we get duplicated fig-fig-blahblah.
+
