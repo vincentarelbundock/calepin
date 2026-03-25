@@ -126,6 +126,22 @@ pub fn render_core_with_options(
         .to_string_lossy();
     paths::validate_paths(&metadata, &path_ctx, &input_name)?;
 
+    // 2c. Diagnostic: show effective project root (and code chunk cwd when different)
+    if !crate::cli::is_quiet() {
+        let input_dir = input.parent().unwrap_or(Path::new("."));
+        let root = if path_ctx.project_root.as_os_str().is_empty() { Path::new(".") } else { &path_ctx.project_root };
+        let idir = if input_dir.as_os_str().is_empty() { Path::new(".") } else { input_dir };
+        if idir != root {
+            eprintln!(
+                "  root: {}  (code chunks run from {})",
+                root.display(),
+                idir.display()
+            );
+        } else {
+            eprintln!("  root: {}", root.display());
+        }
+    }
+
     // 3. Create renderer for this format
     let format_str = format
         .map(|s| s.to_string())

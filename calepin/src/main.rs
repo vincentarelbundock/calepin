@@ -3,25 +3,25 @@ mod cli;
 mod commands;
 mod engines;
 mod filters;
-mod formats;
 mod jinja;
 mod math;
 mod parse;
 mod pipeline;
-mod plugin_manifest;
 mod preview;
-mod registry;
-mod theme_manifest;
 mod render;
 mod collection;
 mod structures;
-mod paths;
 mod project;
 mod tools;
-mod types;
-mod typst_compile;
-mod util;
-mod value;
+
+// Grouped modules with crate-level re-exports for backward compatibility.
+mod base;
+pub(crate) use base::{types, value, paths, util};
+
+mod plugins;
+pub(crate) use plugins::{registry, manifest as plugin_manifest, theme as theme_manifest};
+
+pub(crate) use render::{formats, typst_compile};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -113,6 +113,19 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
     // In document mode (no _calepin.toml), the project root is the
     // input file's parent directory so that all paths resolve relative to it.
     let effective_root = project_root.clone().unwrap_or_else(|| abs_input_dir.clone());
+
+    // Warn when document mode root differs from cwd (e.g., `calepin render subdir/doc.qmd`)
+    if project_root.is_none() && !cli::is_quiet() {
+        if let Ok(cwd) = std::env::current_dir() {
+            if cwd != effective_root {
+                eprintln!(
+                    "Note: project root is {} (input file directory, no _calepin.toml found)",
+                    effective_root.display()
+                );
+            }
+        }
+    }
+
     paths::set_project_root(Some(&effective_root));
 
     // Resolve theme: CLI flag -> front matter -> project config

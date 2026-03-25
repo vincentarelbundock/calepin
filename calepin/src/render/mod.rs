@@ -24,3 +24,5 @@ pub mod typst_emit;
 
 pub mod span;
 pub mod template;
+pub mod formats;
+pub mod typst_compile;
