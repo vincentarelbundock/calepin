@@ -380,21 +380,6 @@ fn register_builtins(plugins: &mut Vec<LoadedPlugin>) {
         Box::new(crate::render::transform_element::TheoremFilter::new()),
     ));
 
-    // Callout
-    plugins.push(builtin_filter(
-        "callout",
-        "Callout enrichment (title, icon, collapse)",
-        FilterMatch {
-            classes: vec![
-                "callout-note".into(), "callout-warning".into(),
-                "callout-tip".into(), "callout-caution".into(),
-                "callout-important".into(),
-            ],
-            ..Default::default()
-        },
-        vec!["div".to_string()],
-        Box::new(crate::render::transform_element::CalloutFilter::new()),
-    ));
 }
 
 fn builtin_structural(

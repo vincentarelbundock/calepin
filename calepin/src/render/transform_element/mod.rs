@@ -4,7 +4,6 @@
 //! pipeline (render/div.rs). Each transform handles a specific element type
 //! (callouts, theorems, code blocks, figures).
 
-pub mod callout;
 pub mod code;
 pub mod figure;
 pub mod theorem;
@@ -13,7 +12,6 @@ use std::collections::HashMap;
 
 use crate::types::Element;
 
-pub use callout::CalloutFilter;
 pub use theorem::TheoremFilter;
 
 /// Result of applying an element transform.
