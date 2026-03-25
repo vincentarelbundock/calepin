@@ -1,12 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-// Re-export metadata types for backward compatibility with `crate::types::Metadata` etc.
-pub use crate::metadata::{
-    Metadata, Copyright, Funding, CitationMeta,
-    format_date_str,
-};
-
 /// A parsed block from the .qmd file
 #[derive(Debug, Clone)]
 pub enum Block {

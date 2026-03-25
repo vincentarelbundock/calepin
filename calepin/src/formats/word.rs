@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use crate::formats::OutputRenderer;
-use crate::types::Metadata;
+use crate::metadata::Metadata;
 use crate::render::elements::ElementRenderer;
 
 pub struct WordRenderer;

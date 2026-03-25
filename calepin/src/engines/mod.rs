@@ -24,7 +24,8 @@ use std::path::Path;
 
 use std::collections::HashMap;
 
-use crate::types::{Block, ChunkOptions, ChunkResult, CodeChunk, Element, Metadata, OptionValue};
+use crate::types::{Block, ChunkOptions, ChunkResult, CodeChunk, Element, OptionValue};
+use crate::metadata::Metadata;
 
 /// Holds mutable references to the active engine sessions.
 /// Threaded through the evaluate pipeline so block/inline code can dispatch.

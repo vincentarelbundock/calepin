@@ -3,7 +3,8 @@
 // - needs_engine() — Scan parsed blocks, inline expressions, and metadata to determine
 //                    whether a specific engine (R or Python) needs to be initialized.
 
-use crate::types::{Block, Metadata};
+use crate::types::Block;
+use crate::metadata::Metadata;
 
 /// Check whether any parsed blocks or metadata fields require a specific engine.
 /// For "r", also returns true if there are code chunks with no explicit engine

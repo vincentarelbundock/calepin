@@ -1,6 +1,6 @@
 use crate::render::elements::ElementRenderer;
 use crate::formats::OutputRenderer;
-use crate::types::Metadata;
+use crate::metadata::Metadata;
 
 pub struct TypstRenderer;
 

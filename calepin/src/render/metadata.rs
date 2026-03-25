@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::types::Metadata;
+use crate::metadata::Metadata;
 use crate::render::elements::resolve_element_template;
 use crate::render::template::apply_template;
 
@@ -167,7 +167,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
 }
 
 /// Build the copyright text from a Copyright struct.
-fn build_copyright_text(cr: &crate::types::Copyright) -> String {
+fn build_copyright_text(cr: &crate::metadata::Copyright) -> String {
     if let Some(ref stmt) = cr.statement {
         stmt.clone()
     } else {
@@ -183,7 +183,7 @@ fn build_copyright_text(cr: &crate::types::Copyright) -> String {
 }
 
 /// Build the citation text from metadata and citation info.
-fn build_citation_text(meta: &Metadata, cite: &crate::types::CitationMeta, ext: &str) -> String {
+fn build_citation_text(meta: &Metadata, cite: &crate::metadata::CitationMeta, ext: &str) -> String {
     let mut parts: Vec<String> = Vec::new();
     if let Some(ref a) = meta.author {
         parts.push(a.join(", "));
@@ -223,7 +223,7 @@ fn build_citation_text(meta: &Metadata, cite: &crate::types::CitationMeta, ext: 
 }
 
 /// Build funding items as a pre-formatted list string.
-fn build_funding_items(funding: &[crate::types::Funding], ext: &str) -> String {
+fn build_funding_items(funding: &[crate::metadata::Funding], ext: &str) -> String {
     let items: Vec<String> = funding.iter().filter_map(|f| {
         if let Some(ref stmt) = f.statement {
             Some(stmt.clone())

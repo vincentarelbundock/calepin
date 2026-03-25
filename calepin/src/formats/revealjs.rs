@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 use crate::render::elements::ElementRenderer;
 use crate::render::template;
 use crate::formats::OutputRenderer;
-use crate::types::Metadata;
+use crate::metadata::Metadata;
 
 pub struct RevealJsRenderer;
 

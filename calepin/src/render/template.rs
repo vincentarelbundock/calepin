@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::types::Metadata;
+use crate::metadata::Metadata;
 
 /// Build an HTML table of contents from heading metadata collected during the AST walk.
 pub fn build_toc_html(headings: &[crate::render::emit::TocEntry], depth: u8, title: &str) -> String {

@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 
-use crate::types::Metadata;
+use crate::metadata::Metadata;
 
 // ---------------------------------------------------------------------------
 // Active target name (thread-local)
@@ -195,7 +195,7 @@ pub fn resolve_path_cwd(dir: &str, filename: &str) -> Option<PathBuf> {
 /// Map a base name to its file extension for template/component lookup.
 /// Derives the mapping from the built-in _calepin.toml.
 pub fn engine_to_ext(base: &str) -> &str {
-    let target = crate::project::builtin_config().targets.get(base);
+    let target = crate::project::builtin_metadata().targets.get(base);
     target
         .and_then(|t| t.extension.as_deref())
         .unwrap_or(base)

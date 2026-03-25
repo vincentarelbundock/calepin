@@ -351,7 +351,7 @@ fn validate_csl(csl: &str, project_root: &Path) -> Result<()> {
 }
 
 /// Parse the built-in default config (cached via LazyLock).
-pub fn builtin_config() -> &'static ProjectConfig {
+fn builtin_config() -> &'static ProjectConfig {
     use std::sync::LazyLock;
     static CONFIG: LazyLock<ProjectConfig> = LazyLock::new(|| {
         let content = crate::render::elements::BUILTIN_PROJECT
@@ -365,6 +365,15 @@ pub fn builtin_config() -> &'static ProjectConfig {
         config
     });
     &CONFIG
+}
+
+/// Get the built-in default metadata (cached).
+pub fn builtin_metadata() -> &'static crate::metadata::Metadata {
+    use std::sync::LazyLock;
+    static META: LazyLock<crate::metadata::Metadata> = LazyLock::new(|| {
+        builtin_config().as_metadata()
+    });
+    &META
 }
 
 // ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
-use crate::{parse, paths, project, theme_manifest};
+use crate::{paths, project, theme_manifest};
 
 /// Resolved project context: project metadata + target, shared by render and preview.
 pub(crate) struct ProjectContext {
@@ -61,7 +61,7 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
 
     // Read front matter once (used for target and theme resolution)
     let front_meta = fs::read_to_string(input).ok()
-        .and_then(|text| parse::yaml::split_yaml(&text).ok())
+        .and_then(|text| crate::metadata::split_frontmatter(&text).ok())
         .map(|(meta, _)| meta);
 
     // Target name: CLI flag -> front matter -> default from config
@@ -151,7 +151,7 @@ pub(crate) fn apply_engine_override(ctx: &mut ProjectContext, engine: Option<&st
     ctx.target.engine = engine.to_string();
 
     // Update extension and fig-extension to match the new engine
-    let builtin = project::builtin_config().targets.get(engine);
+    let builtin = project::builtin_metadata().targets.get(engine);
     if let Some(b) = builtin {
         ctx.target.extension = b.extension.clone();
         ctx.target.fig_extension = b.fig_extension.clone();

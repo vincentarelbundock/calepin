@@ -18,12 +18,11 @@ use crate::project;
 use crate::registry;
 use crate::render;
 use crate::render::elements::ElementRenderer;
-use crate::types;
 
 /// Result of the core render pipeline (before page template wrapping).
 pub struct RenderResult {
     pub rendered: String,
-    pub metadata: types::Metadata,
+    pub metadata: crate::metadata::Metadata,
     pub element_renderer: ElementRenderer,
 }
 
@@ -46,7 +45,7 @@ pub fn render_core(
     overrides: &[String],
     project_root_override: Option<&Path>,
     options: &RenderCoreOptions,
-    project_metadata: Option<&types::Metadata>,
+    project_metadata: Option<&crate::metadata::Metadata>,
 ) -> Result<RenderResult> {
 
     // 1. Read input file
@@ -54,7 +53,7 @@ pub fn render_core(
         .with_context(|| format!("Failed to read input file: {}", input.display()))?;
 
     // 2. Parse YAML front matter, then apply CLI overrides
-    let (mut metadata, body) = parse::yaml::split_yaml(&input_text)?;
+    let (mut metadata, body) = crate::metadata::split_frontmatter(&input_text)?;
     let body = render::markers::sanitize(&body);
     metadata.apply_overrides(overrides);
     metadata.resolve_date(Some(input));
@@ -141,7 +140,7 @@ pub fn render_file(
     target: Option<&project::Target>,
     project_root: Option<&Path>,
     output_dir: Option<&str>,
-    project_metadata: Option<&types::Metadata>,
+    project_metadata: Option<&crate::metadata::Metadata>,
 ) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
     // If we have a target, use its engine as the format
     let resolved_format = if let Some(t) = target {

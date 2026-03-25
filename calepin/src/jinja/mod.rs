@@ -17,7 +17,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use regex::Regex;
 
 use crate::registry::PluginRegistry;
-use crate::types::Metadata;
+use crate::metadata::Metadata;
 
 use protection::{protect_code_blocks, protect_inline_code, restore_code_blocks};
 

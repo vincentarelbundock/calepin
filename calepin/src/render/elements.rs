@@ -159,7 +159,7 @@ impl ElementRenderer {
     /// Create an ElementRenderer from document metadata and pipeline options.
     pub fn from_metadata(
         engine: &str,
-        metadata: &crate::types::Metadata,
+        metadata: &crate::metadata::Metadata,
         options: &crate::pipeline::RenderCoreOptions,
     ) -> Self {
         let highlight_config = metadata.var.get("highlight-style")
@@ -167,8 +167,8 @@ impl ElementRenderer {
             .unwrap_or_else(|| {
                 let defs = crate::project::get_defaults();
                 let hl = defs.highlight.as_ref();
-                let cfg = crate::project::builtin_config();
-                let meta_hl = cfg.highlight.as_ref();
+                let builtin = crate::project::builtin_metadata();
+                let meta_hl = builtin.defaults.highlight.as_ref();
                 crate::render::highlighting::HighlightConfig::LightDark {
                     light: hl.and_then(|h| h.light.clone())
                         .or_else(|| meta_hl.and_then(|h| h.light.clone()))

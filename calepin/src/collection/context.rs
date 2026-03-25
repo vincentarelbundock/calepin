@@ -350,7 +350,7 @@ const DEFAULT_DATE_FORMAT: &str = "%B %e, %Y";
 
 /// Format a YYYY-MM-DD date string for display.
 pub fn format_date(date: &str) -> String {
-    crate::types::format_date_str(date, DEFAULT_DATE_FORMAT)
+    crate::metadata::format_date_str(date, DEFAULT_DATE_FORMAT)
 }
 
 fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcrumb> {

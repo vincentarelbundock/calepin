@@ -13,7 +13,8 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 
-use crate::types::{Element, Metadata};
+use crate::types::Element;
+use crate::metadata::Metadata;
 use crate::render::elements::ElementRenderer;
 
 /// Trait for pluggable output formats.
@@ -33,7 +34,7 @@ pub trait OutputRenderer {
 
     /// Default figure file extension, derived from the built-in config.
     fn default_fig_ext(&self) -> &str {
-        crate::project::builtin_config()
+        crate::project::builtin_metadata()
             .targets.get(self.engine())
             .and_then(|t| t.fig_extension.as_deref())
             .unwrap_or("png")
