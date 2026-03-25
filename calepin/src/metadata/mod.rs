@@ -4,4 +4,4 @@ mod types;
 mod parse;
 
 pub use types::*;
-pub use parse::split_frontmatter;
+pub use parse::{split_frontmatter, parse_metadata};

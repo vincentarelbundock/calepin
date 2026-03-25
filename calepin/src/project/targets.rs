@@ -143,7 +143,7 @@ fn resolve_one(
     }
 
     let target = targets.get(name)
-        .or_else(|| super::builtin_config().targets.get(name))
+        .or_else(|| super::builtin_metadata().targets.get(name))
         .ok_or_else(|| anyhow::anyhow!(
             "target '{}' not found (referenced in inherits chain: {})",
             name, chain.join(" -> "),
@@ -193,7 +193,7 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
     }
 
     // 2. Built-in config (always fully specified)
-    if let Some(target) = super::builtin_config().targets.get(name) {
+    if let Some(target) = super::builtin_metadata().targets.get(name) {
         return Ok(target.clone());
     }
 
@@ -205,7 +205,7 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
 
 /// Fill unset fields in a user target from the built-in target for the same base.
 fn merge_with_builtin(user: &Target) -> Target {
-    let builtin = super::builtin_config().targets.get(&user.engine);
+    let builtin = super::builtin_metadata().targets.get(&user.engine);
     Target {
         inherits: None,
         engine: user.engine.clone(),
@@ -217,35 +217,6 @@ fn merge_with_builtin(user: &Target) -> Target {
         embed_resources: user.embed_resources.or(builtin.and_then(|b| b.embed_resources)),
         vars: user.vars.clone(),
         post: user.post.clone(),
-    }
-}
-
-/// Convert a target's vars (toml::Value) into a minijinja-compatible Value.
-pub fn target_vars_to_jinja(vars: Option<&toml::Value>) -> minijinja::Value {
-    match vars {
-        Some(v) => toml_to_jinja(v),
-        None => minijinja::Value::from(()),
-    }
-}
-
-fn toml_to_jinja(v: &toml::Value) -> minijinja::Value {
-    match v {
-        toml::Value::String(s) => minijinja::Value::from(s.as_str()),
-        toml::Value::Integer(i) => minijinja::Value::from(*i),
-        toml::Value::Float(f) => minijinja::Value::from(*f),
-        toml::Value::Boolean(b) => minijinja::Value::from(*b),
-        toml::Value::Array(arr) => {
-            let items: Vec<minijinja::Value> = arr.iter().map(toml_to_jinja).collect();
-            minijinja::Value::from(items)
-        }
-        toml::Value::Table(map) => {
-            let mut m = std::collections::BTreeMap::new();
-            for (k, v) in map {
-                m.insert(k.as_str(), toml_to_jinja(v));
-            }
-            minijinja::Value::from_serialize(&m)
-        }
-        toml::Value::Datetime(d) => minijinja::Value::from(d.to_string()),
     }
 }
 

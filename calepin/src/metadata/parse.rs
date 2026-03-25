@@ -1,8 +1,17 @@
 use anyhow::Result;
 use std::collections::HashMap;
 
+use serde::de::DeserializeOwned;
+
 use crate::value::{self, Value, Table, table_get, table_str, table_bool, value_string_list};
 use super::{Affiliation, Author, AuthorName, CitationMeta, Copyright, Funding, License, Metadata};
+
+/// Deserialize a Value into a typed struct via serde_json roundtrip.
+/// Returns Some(T) on success, None on failure (silently drops parse errors).
+fn deserialize_section<T: DeserializeOwned>(v: &Value) -> Option<T> {
+    let json = crate::value::to_json(v);
+    serde_json::from_value(json).ok()
+}
 
 /// Split front matter from the document body.
 /// Returns (metadata, body_text).
@@ -67,34 +76,47 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "funding" => meta.funding = parse_funding(v),
             "appendix_style" => meta.appendix_style = v.as_str().map(String::from),
             "target" | "format" => {
-                meta.target = v.as_str().map(String::from).or_else(|| {
+                let val = v.as_str().map(String::from).or_else(|| {
                     // Support `target: { html: default }` or [target]\n html = "default"
                     v.as_table()
                         .and_then(|t| t.first())
                         .map(|(k, _)| k.clone())
                 });
+                meta.target = val.clone();
+                meta.defaults.format = val;
             }
             "theme" => meta.theme = v.as_str().map(String::from),
             "number_sections" => meta.number_sections = v.as_bool().unwrap_or(false),
-            "toc" => meta.toc = Some(v.as_bool().unwrap_or(false)),
             "toc_depth" => meta.toc_depth = v.as_integer().unwrap_or(3) as u8,
             "toc_title" => meta.toc_title = v.as_str().map(String::from),
             "date_format" => meta.date_format = v.as_str().map(String::from),
             "bibliography" => {
                 meta.bibliography = value_string_list(v);
             }
-            "csl" => meta.csl = v.as_str().map(String::from),
+            "csl" => {
+                let val = v.as_str().map(String::from);
+                meta.csl = val.clone();
+                meta.defaults.csl = val;
+            }
             "html_math_method" => meta.html_math_method = v.as_str().map(String::from),
             // Project-level fields (also valid in front matter)
             "output" => meta.output = v.as_str().map(String::from),
-            "lang" => meta.lang = v.as_str().map(String::from),
+            "lang" => {
+                let val = v.as_str().map(String::from);
+                meta.lang = val.clone();
+                meta.defaults.lang = val;
+            }
             "url" => meta.url = v.as_str().map(String::from),
             "favicon" => meta.favicon = v.as_str().map(String::from),
             "logo" => meta.logo = v.as_str().map(String::from),
             "logo_dark" => meta.logo_dark = v.as_str().map(String::from),
             "orchestrator" => meta.orchestrator = v.as_str().map(String::from),
             "global_crossref" => meta.global_crossref = v.as_bool().unwrap_or(false),
-            "embed_resources" => meta.embed_resources = Some(v.as_bool().unwrap_or(false)),
+            "embed_resources" => {
+                let val = Some(v.as_bool().unwrap_or(false));
+                meta.embed_resources = val;
+                meta.defaults.embed_resources = val;
+            }
             "number_offset" => {} // accepted but handled elsewhere
             "calepin" => {
                 if let Some(cmap) = v.as_table() {
@@ -108,6 +130,109 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
                     }
                 }
             }
+
+            // -- Defaults sections (populate meta.defaults) --
+            "format" => meta.defaults.format = v.as_str().map(String::from),
+            "dpi" => meta.defaults.dpi = v.as_floating_point(),
+            "timeout" => meta.defaults.timeout = v.as_integer().map(|n| n as u64),
+            "math" => meta.defaults.math = v.as_str().map(String::from),
+            "preview_port" => meta.defaults.preview_port = v.as_integer().map(|n| n as u16),
+            "highlight" => meta.defaults.highlight = deserialize_section(v),
+            "toc" => {
+                // "toc" can be a bool (in front matter) or a table (in config)
+                if let Some(b) = v.as_bool() {
+                    meta.toc = Some(b);
+                } else {
+                    meta.defaults.toc = deserialize_section(v);
+                }
+            }
+            "labels" => meta.defaults.labels = deserialize_section(v),
+            "execute" => meta.defaults.execute = deserialize_section(v),
+            "figure" => meta.defaults.figure = deserialize_section(v),
+            "callout" => meta.defaults.callout = deserialize_section(v),
+            "layout" => meta.defaults.layout = deserialize_section(v),
+            "video" => meta.defaults.video = deserialize_section(v),
+            "placeholder" => meta.defaults.placeholder = deserialize_section(v),
+            "lipsum" => meta.defaults.lipsum = deserialize_section(v),
+            "latex" => meta.defaults.latex = deserialize_section(v),
+            "typst" => meta.defaults.typst = deserialize_section(v),
+            "revealjs" => meta.defaults.revealjs = deserialize_section(v),
+
+            // -- Legacy grouped sections (flatten into defaults) --
+            "shortcodes" => {
+                if let Some(t) = v.as_table() {
+                    if let Some(sv) = table_get(t, "video") { meta.defaults.video = deserialize_section(sv); }
+                    if let Some(sv) = table_get(t, "placeholder") { meta.defaults.placeholder = deserialize_section(sv); }
+                    if let Some(sv) = table_get(t, "lipsum") { meta.defaults.lipsum = deserialize_section(sv); }
+                }
+            }
+            "formats" => {
+                if let Some(t) = v.as_table() {
+                    if let Some(sv) = table_get(t, "latex") { meta.defaults.latex = deserialize_section(sv); }
+                    if let Some(sv) = table_get(t, "typst") { meta.defaults.typst = deserialize_section(sv); }
+                    if let Some(sv) = table_get(t, "revealjs") { meta.defaults.revealjs = deserialize_section(sv); }
+                }
+            }
+
+            // -- Legacy [identity] section (flatten into top-level) --
+            "identity" => {
+                if let Some(t) = v.as_table() {
+                    if meta.title.is_none() { meta.title = table_str(t, "title"); }
+                    if meta.subtitle.is_none() { meta.subtitle = table_str(t, "subtitle"); }
+                    if meta.url.is_none() { meta.url = table_str(t, "url"); }
+                    if meta.favicon.is_none() { meta.favicon = table_str(t, "favicon"); }
+                    if meta.logo.is_none() { meta.logo = table_str(t, "logo"); }
+                    if meta.logo_dark.is_none() {
+                        meta.logo_dark = table_str(t, "logo_dark")
+                            .or_else(|| table_str(t, "logo-dark"));
+                    }
+                    if meta.orchestrator.is_none() { meta.orchestrator = table_str(t, "orchestrator"); }
+                    // author from identity (simple string or array)
+                    if meta.author.is_none() {
+                        if let Some(av) = table_get(t, "author") {
+                            let top_affs = Vec::new();
+                            parse_authors(av, &mut meta, &top_affs);
+                        }
+                    }
+                }
+            }
+
+            // -- Collection structure (deserialized via serde_json) --
+            "targets" => {
+                let json = crate::value::to_json(v);
+                if let Ok(t) = serde_json::from_value(json) {
+                    meta.targets = t;
+                }
+            }
+            "contents" => {
+                let json = crate::value::to_json(v);
+                if let Ok(c) = serde_json::from_value(json) {
+                    meta.contents = c;
+                }
+            }
+            "languages" => {
+                let json = crate::value::to_json(v);
+                if let Ok(l) = serde_json::from_value(json) {
+                    meta.languages = l;
+                }
+            }
+            "post" => {
+                let json = crate::value::to_json(v);
+                if let Ok(p) = serde_json::from_value(json) {
+                    meta.post = p;
+                }
+            }
+            "static" | "static_dirs" => {
+                meta.static_dirs = value_string_list(v);
+            }
+            "var" => {
+                if let Some(t) = v.as_table() {
+                    for (k, val) in t {
+                        meta.var.insert(k.clone(), val.clone());
+                    }
+                }
+            }
+
             _ => {
                 extra.insert(key.to_string(), v.clone());
             }

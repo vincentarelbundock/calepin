@@ -11,7 +11,7 @@ use super::HighlightDefaults;
 /// Resolved defaults, stored in thread-local for the current render.
 /// Fields are kept flat (no nesting) for easy access by consumers.
 /// The TOML structure groups some of these under [shortcodes] and [formats],
-/// but `ProjectConfig::as_defaults()` flattens them back.
+/// `parse_metadata()` populates these from TOML/YAML sections.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Defaults {
     pub format: Option<String>,
@@ -152,22 +152,6 @@ pub struct LabelsDefaults {
     pub contents: Option<String>,
 }
 
-/// Wrapper for [shortcodes] TOML section. Flattened into Defaults by `as_defaults()`.
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct ShortcodesConfig {
-    pub video: Option<VideoDefaults>,
-    pub placeholder: Option<PlaceholderDefaults>,
-    pub lipsum: Option<LipsumDefaults>,
-}
-
-/// Wrapper for [formats] TOML section. Flattened into Defaults by `as_defaults()`.
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct FormatsConfig {
-    pub latex: Option<LatexDefaults>,
-    pub typst: Option<TypstDefaults>,
-    pub revealjs: Option<RevealJsDefaults>,
-}
-
 // ---------------------------------------------------------------------------
 // Defaults merging
 // ---------------------------------------------------------------------------
@@ -242,14 +226,14 @@ pub fn set_active_defaults(defaults: Defaults) {
 pub fn get_defaults() -> Defaults {
     ACTIVE_DEFAULTS.with(|d| {
         d.borrow().clone().unwrap_or_else(|| {
-            super::builtin_config().as_defaults()
+            super::builtin_metadata().defaults.clone()
         })
     })
 }
 
 /// Get resolved defaults, merging user defaults with built-in.
 pub fn resolve_defaults(user: Option<&Defaults>) -> Defaults {
-    let builtin = super::builtin_config().as_defaults();
+    let builtin = super::builtin_metadata().defaults.clone();
     match user {
         Some(user) => Defaults::merge(&builtin, user),
         None => builtin,

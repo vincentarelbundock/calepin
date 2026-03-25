@@ -1,3 +1,12 @@
+# Built-in defaults for calepin.
+# All fields here can be overridden in _calepin.toml or front matter.
+
+# -- Identity --
+title = "Calepin"
+subtitle = "A document and site generator"
+author = "Vincent Arel-Bundock"
+
+# -- Rendering --
 format = "html"
 lang = "en"
 preview_port = 3456
@@ -5,21 +14,20 @@ csl = "chicago-author-date"
 dpi = 150.0
 math = "katex"
 embed_resources = true
+global_crossref = false
 
-[identity]
-title = "Calepin"
-subtitle = "A document and site generator"
-author = "Vincent Arel-Bundock"
-
+# -- Highlight --
 [highlight]
 light = "github"
 dark = "nord"
 
+# -- Table of contents --
 [toc]
 enabled = false
 depth = 3
 title = "Contents"
 
+# -- Labels --
 [labels]
 abstract_title = "Abstract"
 keywords = "Keywords"
@@ -32,6 +40,7 @@ listing = "Listing"
 proof = "Proof"
 contents = "Contents"
 
+# -- Code execution --
 [execute]
 cache = true
 eval = true
@@ -42,6 +51,7 @@ message = true
 comment = "> "
 results = "markup"
 
+# -- Figure defaults --
 [figure]
 width = 6.0
 out_width = 0.70
@@ -49,6 +59,7 @@ aspect_ratio = 0.618
 device = "png"
 alignment = "center"
 
+# -- Callout defaults --
 [callout]
 appearance = "default"
 note = "Note"
@@ -62,45 +73,47 @@ icon_warning = "\u26A0\uFE0F"
 icon_important = "\u2757"
 icon_caution = "\U0001F525"
 
+# -- Layout defaults --
 [layout]
 valign = "top"
 columns = 1
 rows = 1
 
-[shortcodes.video]
+# -- Shortcode defaults --
+[video]
 width = "100%"
 height = "400"
 title = "Video"
 
-[shortcodes.placeholder]
+[placeholder]
 width = 600
 height = 400
 color = "#cccccc"
 
-[shortcodes.lipsum]
+[lipsum]
 paragraphs = 1
 
-[formats.latex]
+# -- Format-specific defaults --
+[latex]
 documentclass = "article"
 fontsize = "11pt"
 linkcolor = "black"
 urlcolor = "blue!60!black"
 citecolor = "blue!60!black"
 
-[formats.typst]
+[typst]
 fontsize = "11pt"
 leading = "0.65em"
 justify = true
 heading_numbering = "1.1"
 
-[formats.revealjs]
+[revealjs]
 theme = "white"
 code_theme = "monokai"
 transition = "slide"
 slide_number = true
 
-global_crossref = false
-
+# -- Targets --
 [targets.html]
 engine = "html"
 template = "page"
