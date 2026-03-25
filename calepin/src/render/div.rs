@@ -68,6 +68,48 @@ pub fn render(
         let label_defs = crate::project::get_defaults().labels;
         v.insert("label_proof".to_string(), label_defs.as_ref().and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
 
+        // Render caption from raw markdown for fig-/tbl- divs
+        if let Some(raw_cap) = v.get("fig_cap").cloned().or_else(|| v.get("tbl_cap").cloned()) {
+            if !raw_cap.is_empty() {
+                let rendered = crate::render::convert::render_inline(&raw_cap, format);
+                v.insert("caption".to_string(), rendered);
+            }
+        }
+
+        // Figure div enrichments
+        if id.as_ref().map_or(false, |i| i.starts_with("fig-")) {
+            let id_val = id.as_ref().unwrap();
+            v.insert("label".to_string(), id_val.clone());
+            v.entry("template".to_string()).or_insert_with(|| "figure_div".to_string());
+
+            let defs = crate::project::get_defaults();
+            let default_align = defs.figure.as_ref()
+                .and_then(|f| f.alignment.as_deref()).unwrap_or("center");
+            let align = v.get("fig_align").cloned().unwrap_or_else(|| default_align.to_string());
+            let align_style = crate::render::transform_element::figure::format_align(&align, format);
+            v.insert("align".to_string(), align);
+            v.insert("align_style".to_string(), align_style);
+
+            if let Some(pos) = v.get("fig_pos").cloned() {
+                v.insert("fig_pos".to_string(), format!("[{}]", pos));
+            }
+            if !v.contains_key("fig_env") {
+                v.insert("fig_env".to_string(), "figure".to_string());
+            }
+        }
+
+        // Table div enrichments
+        if id.as_ref().map_or(false, |i| i.starts_with("tbl-")) {
+            let id_val = id.as_ref().unwrap();
+            v.insert("label".to_string(), id_val.clone());
+            v.entry("template".to_string()).or_insert_with(|| "table_div".to_string());
+
+            let cap_loc = v.get("tbl_cap_location")
+                .cloned()
+                .unwrap_or_else(|| "top".to_string());
+            v.insert("cap_location".to_string(), cap_loc);
+        }
+
         *vars = Some(v);
     };
 
@@ -151,6 +193,11 @@ fn validate_div_id(id: &str, classes: &[String]) -> Option<String> {
     };
 
     if !RESERVED_PREFIXES.contains(&prefix) {
+        return None;
+    }
+
+    // fig- and tbl- divs are identified by ID prefix, not classes
+    if prefix == "fig" || prefix == "tbl" {
         return None;
     }
 

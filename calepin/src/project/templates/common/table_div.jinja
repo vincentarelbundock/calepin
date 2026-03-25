@@ -17,27 +17,27 @@
 {%- endif %}
 {%- elif base == "latex" %}
 {%- if loc == "bottom" %}
-{{tbl_begin}}
+\begin{{_lb}}table{{_rb}}{% if tbl_pos %}[{{tbl_pos}}]{% endif %}
 \centering
 {{children}}
-{{caption_cmd}}
-{{label}}
-\end{table}
+{% if caption %}\caption{{_lb}}{{caption}}{{_rb}}{% endif %}
+\label{{_lb}}{{id}}{{_rb}}
+\end{{_lb}}table{{_rb}}
 {%- else %}
-{{tbl_begin}}
+\begin{{_lb}}table{{_rb}}{% if tbl_pos %}[{{tbl_pos}}]{% endif %}
 \centering
-{{caption_cmd}}
-{{label}}
+{% if caption %}\caption{{_lb}}{{caption}}{{_rb}}{% endif %}
+\label{{_lb}}{{id}}{{_rb}}
 {{children}}
-\end{table}
+\end{{_lb}}table{{_rb}}
 {%- endif %}
 {%- elif base == "typst" %}
 {%- if caption %}
 #figure(kind: table, [
 {{children}}
-], caption: [{{caption}}]) {{label}}
+], caption: [{{caption}}]) <{{id}}>
 {%- else %}
-{{children}} {{label}}
+{{children}} <{{id}}>
 {%- endif %}
 {%- else %}
 {%- if loc == "bottom" %}

@@ -1,13 +1,11 @@
-//! Table div structure: renders `#tbl-` prefixed divs as captioned table environments.
-
-use std::collections::HashMap;
+//! Table div utilities: caption extraction for `#tbl-` prefixed divs.
 
 use crate::types::Element;
 
 /// Separate the caption from a table div's children.
 /// The caption is the last paragraph that isn't part of a markdown table
 /// (i.e., doesn't start with `|`).
-fn separate_table_caption(children: &[Element]) -> (Vec<Element>, String) {
+pub fn separate_table_caption(children: &[Element]) -> (Vec<Element>, String) {
     let mut content = children.to_vec();
     let mut caption = String::new();
 
@@ -33,59 +31,4 @@ fn separate_table_caption(children: &[Element]) -> (Vec<Element>, String) {
     }
 
     (content, caption)
-}
-
-/// Render a `#tbl-` prefixed div as a captioned table environment.
-pub fn render_div(
-    id: &str,
-    attrs: &HashMap<String, String>,
-    children: &[Element],
-    format: &str,
-    render_element: &dyn Fn(&Element) -> String,
-    resolve_template: &dyn Fn(&str) -> Option<String>,
-) -> String {
-    let (content_children, caption) = separate_table_caption(children);
-
-    let content_rendered: String = content_children
-        .iter()
-        .map(render_element)
-        .collect::<Vec<_>>()
-        .join("\n\n");
-
-    let cap_rendered = if !caption.is_empty() {
-        crate::render::convert::render_inline(&caption, format)
-    } else {
-        String::new()
-    };
-
-    let cap_location = attrs
-        .get("tbl-cap-location")
-        .map(|s| s.as_str())
-        .unwrap_or("top");
-
-    let mut vars = HashMap::new();
-    vars.insert("base".to_string(), format.to_string());
-    vars.insert("engine".to_string(), format.to_string());
-    vars.insert("children".to_string(), content_rendered);
-    vars.insert("id".to_string(), id.to_string());
-    vars.insert("cap_location".to_string(), cap_location.to_string());
-
-    // Pre-built format-specific strings (avoids triple-brace issues in Jinja)
-    let tbl_pos = attrs.get("tbl_pos").map(|s| format!("[{}]", s)).unwrap_or_default();
-    vars.insert("tbl_begin".to_string(), format!("\\begin{{table}}{}", tbl_pos));
-    vars.insert("caption_cmd".to_string(), if cap_rendered.is_empty() {
-        String::new()
-    } else {
-        format!("\\caption{{{}}}", &cap_rendered)
-    });
-    vars.insert("caption".to_string(), cap_rendered);
-    vars.insert("label".to_string(), match format {
-        "latex" => format!("\\label{{{}}}", id),
-        "typst" => format!("<{}>", id),
-        _ => String::new(),
-    });
-
-    let tpl = resolve_template("table_div")
-        .unwrap_or_else(|| include_str!("../project/templates/common/table_div.jinja").to_string());
-    crate::render::template::apply_template(&tpl, &vars)
 }

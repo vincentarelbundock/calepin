@@ -264,48 +264,6 @@ impl StructuralHandler for LayoutHandler {
     }
 }
 
-struct FigureDivHandler;
-
-impl StructuralHandler for FigureDivHandler {
-    fn render_div(
-        &self,
-        classes: &[String],
-        id: &Option<String>,
-        attrs: &HashMap<String, String>,
-        children: &[Element],
-        format: &str,
-        render_element: &dyn Fn(&Element) -> String,
-        resolve_template: &dyn Fn(&str) -> Option<String>,
-        _raw_fragments: &RefCell<Vec<String>>,
-    ) -> Option<String> {
-        // Guard: don't handle figure divs that are also callouts
-        if classes.iter().any(|c| c.starts_with("callout-")) {
-            return None;
-        }
-        let id_val = id.as_ref()?;
-        Some(crate::structures::figure::render_div(id_val, attrs, children, format, render_element, resolve_template))
-    }
-}
-
-struct TableDivHandler;
-
-impl StructuralHandler for TableDivHandler {
-    fn render_div(
-        &self,
-        _classes: &[String],
-        id: &Option<String>,
-        attrs: &HashMap<String, String>,
-        children: &[Element],
-        format: &str,
-        render_element: &dyn Fn(&Element) -> String,
-        resolve_template: &dyn Fn(&str) -> Option<String>,
-        _raw_fragments: &RefCell<Vec<String>>,
-    ) -> Option<String> {
-        let id_val = id.as_ref()?;
-        Some(crate::structures::table::render_div(id_val, attrs, children, format, render_element, resolve_template))
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Built-in plugin registration
 // ---------------------------------------------------------------------------
@@ -337,30 +295,6 @@ fn register_builtins(plugins: &mut Vec<LoadedPlugin>) {
         },
         vec!["div".to_string()],
         Box::new(LayoutHandler),
-    ));
-
-    // Figure div
-    plugins.push(builtin_structural(
-        "figure-div",
-        "Figure div rendering",
-        FilterMatch {
-            id_prefix: Some("fig-".to_string()),
-            ..Default::default()
-        },
-        vec!["div".to_string()],
-        Box::new(FigureDivHandler),
-    ));
-
-    // Table div
-    plugins.push(builtin_structural(
-        "table-div",
-        "Table div rendering",
-        FilterMatch {
-            id_prefix: Some("tbl-".to_string()),
-            ..Default::default()
-        },
-        vec!["div".to_string()],
-        Box::new(TableDivHandler),
     ));
 
     // Theorem

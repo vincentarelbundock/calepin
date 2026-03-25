@@ -244,11 +244,28 @@ pub fn evaluate(
                 let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
                 sc_fragments.extend(child_result.sc_fragments);
                 preamble.extend(child_result.preamble);
+                let mut child_elements = child_result.elements;
+                let mut div_attrs = div.attrs.clone();
+                if let Some(ref id) = div.id {
+                    if id.starts_with("fig-") && !div_attrs.contains_key("fig_cap") {
+                        let (remaining, caption) = crate::structures::figure::separate_figure_caption(&child_elements);
+                        if !caption.is_empty() {
+                            div_attrs.insert("fig_cap".to_string(), caption);
+                            child_elements = remaining;
+                        }
+                    } else if id.starts_with("tbl-") && !div_attrs.contains_key("tbl_cap") {
+                        let (remaining, caption) = crate::structures::table::separate_table_caption(&child_elements);
+                        if !caption.is_empty() {
+                            div_attrs.insert("tbl_cap".to_string(), caption);
+                            child_elements = remaining;
+                        }
+                    }
+                }
                 elements.push(Element::Div {
                     classes: div.classes.clone(),
                     id: div.id.clone(),
-                    attrs: div.attrs.clone(),
-                    children: child_result.elements,
+                    attrs: div_attrs,
+                    children: child_elements,
                 });
             }
             Block::Raw(raw) => {
