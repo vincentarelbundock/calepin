@@ -19,7 +19,6 @@ use crate::registry;
 use crate::render;
 use crate::render::elements::ElementRenderer;
 use crate::types;
-use crate::value;
 
 /// Result of the core render pipeline (before page template wrapping).
 pub struct RenderResult {
@@ -45,9 +44,9 @@ pub fn render_core(
     output_path: &Path,
     format: Option<&str>,
     overrides: &[String],
-    project_var: Option<&toml::Value>,
     project_root_override: Option<&Path>,
     options: &RenderCoreOptions,
+    project_metadata: Option<&types::Metadata>,
 ) -> Result<RenderResult> {
 
     // 1. Read input file
@@ -60,15 +59,9 @@ pub fn render_core(
     metadata.apply_overrides(overrides);
     metadata.resolve_date(Some(input));
 
-    // Merge project-level var as defaults (front matter wins)
-    if let Some(pv) = project_var {
-        if let Some(table) = pv.as_table() {
-            for (key, val) in table {
-                if !metadata.var.contains_key(key) {
-                    metadata.var.insert(key.clone(), value::from_toml(val.clone()));
-                }
-            }
-        }
+    // Merge project metadata as base layer (front matter wins)
+    if let Some(project_meta) = project_metadata {
+        metadata = project_meta.clone().merge(metadata);
     }
 
     // 2b. Construct path context and validate paths
@@ -147,8 +140,8 @@ pub fn render_file(
     overrides: &[String],
     target: Option<&project::Target>,
     project_root: Option<&Path>,
-    project_var: Option<&toml::Value>,
     output_dir: Option<&str>,
+    project_metadata: Option<&types::Metadata>,
 ) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
     // If we have a target, use its engine as the format
     let resolved_format = if let Some(t) = target {
@@ -179,7 +172,7 @@ pub fn render_file(
         input.with_extension(ext)
     };
 
-    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, project_var, None, &RenderCoreOptions::default())?;
+    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, None, &RenderCoreOptions::default(), project_metadata)?;
 
     // Assemble page (page template wrapping)
     let final_output = renderer

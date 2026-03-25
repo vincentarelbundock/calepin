@@ -1,8 +1,8 @@
 //! Calepin's internal value type.
 //!
-//! Replaces saphyr's `YamlOwned` as the common representation for
-//! front matter, plugin manifests, and configuration values.
-//! Both TOML and minimal YAML parse into this type.
+//! Common representation for front matter, plugin manifests, and
+//! configuration values. Both TOML and YAML parse into this type
+//! via `from_toml` / `from_yaml` converters.
 
 use std::collections::HashMap;
 use indexmap::IndexMap;
@@ -133,6 +133,58 @@ pub fn table_from_toml(map: toml::map::Map<String, toml::Value>) -> Table {
 }
 
 // ---------------------------------------------------------------------------
+// Conversion from serde_yaml::Value
+// ---------------------------------------------------------------------------
+
+/// Convert a `serde_yaml::Value` into our `Value`.
+pub fn from_yaml(yv: serde_yaml::Value) -> Value {
+    match yv {
+        serde_yaml::Value::Null => Value::Null,
+        serde_yaml::Value::Bool(b) => Value::Bool(b),
+        serde_yaml::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Value::Integer(i)
+            } else if let Some(f) = n.as_f64() {
+                Value::Float(f)
+            } else {
+                Value::String(n.to_string())
+            }
+        }
+        serde_yaml::Value::String(s) => Value::String(s),
+        serde_yaml::Value::Sequence(seq) => {
+            Value::Array(seq.into_iter().map(from_yaml).collect())
+        }
+        serde_yaml::Value::Mapping(map) => {
+            let table: Table = map.into_iter()
+                .filter_map(|(k, v)| {
+                    let key = match k {
+                        serde_yaml::Value::String(s) => s,
+                        other => other.as_str().map(|s| s.to_string())
+                            .unwrap_or_else(|| format!("{:?}", other)),
+                    };
+                    Some((key, from_yaml(v)))
+                })
+                .collect();
+            Value::Table(table)
+        }
+        serde_yaml::Value::Tagged(tagged) => from_yaml(tagged.value),
+    }
+}
+
+/// Convert a `serde_yaml::Mapping` into our `Table`.
+pub fn table_from_yaml(map: serde_yaml::Mapping) -> Table {
+    map.into_iter()
+        .filter_map(|(k, v)| {
+            let key = match k {
+                serde_yaml::Value::String(s) => s,
+                other => other.as_str().map(|s| s.to_string())?,
+            };
+            Some((key, from_yaml(v)))
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
 // Conversion to serde_json::Value
 // ---------------------------------------------------------------------------
 
@@ -231,329 +283,6 @@ fn merge_tables(target: &mut Table, source: Table) {
 }
 
 // ---------------------------------------------------------------------------
-// Minimal YAML parser
-// ---------------------------------------------------------------------------
-
-/// Parse minimal YAML: flat `key: value` scalars, simple lists (`- item`),
-/// and one level of nesting (for `format:`, `calepin:`, `author:`).
-/// This is NOT a full YAML parser -- use TOML for complex front matter.
-pub fn parse_minimal_yaml(text: &str) -> Table {
-    let mut result = Table::new();
-    let lines: Vec<&str> = text.lines().collect();
-    let mut i = 0;
-
-    while i < lines.len() {
-        let line = lines[i];
-        let trimmed = line.trim();
-
-        // Skip blank lines and comments
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            i += 1;
-            continue;
-        }
-
-        // Must be a top-level key: value or key:
-        if let Some((key, rest)) = trimmed.split_once(':') {
-            let key = key.trim().to_string();
-            let rest = rest.trim();
-
-            if rest.is_empty() {
-                // Could be a list, a nested mapping, or a block scalar
-                i += 1;
-                let indent = next_indent(&lines, i);
-                if indent == 0 {
-                    // Empty value
-                    result.insert(key, Value::Null);
-                    continue;
-                }
-
-                // Check if first indented line starts with "- "
-                if i < lines.len() && lines[i].trim().starts_with("- ") {
-                    let list = parse_yaml_list(&lines, &mut i, indent);
-                    result.insert(key, list);
-                } else if i < lines.len() && lines[i].trim().starts_with('|') {
-                    // Block scalar
-                    i += 1; // skip the | line... wait, | should be on the key line
-                    // Actually in YAML: `abstract: |` then indented lines
-                    // But we already consumed the line. Let's collect indented lines.
-                    let block = collect_indented_block(&lines, &mut i, indent);
-                    result.insert(key, Value::String(block));
-                } else {
-                    // Nested mapping
-                    let sub = parse_yaml_submapping(&lines, &mut i, indent);
-                    result.insert(key, Value::Table(sub));
-                }
-            } else if rest == "|" || rest == "|-" || rest == "|+" || rest == ">" || rest == ">-" {
-                // Block scalar
-                i += 1;
-                let indent = next_indent(&lines, i);
-                let block = collect_indented_block(&lines, &mut i, indent);
-                let block = if rest.starts_with('>') {
-                    // Folded: join lines with spaces
-                    block.lines().collect::<Vec<_>>().join(" ")
-                } else {
-                    block
-                };
-                result.insert(key, Value::String(block));
-            } else {
-                // Inline value
-                result.insert(key, parse_yaml_scalar(rest));
-                i += 1;
-            }
-        } else {
-            i += 1;
-        }
-    }
-
-    result
-}
-
-/// Parse a YAML list (lines starting with `- `) at the given indent level.
-fn parse_yaml_list(lines: &[&str], i: &mut usize, min_indent: usize) -> Value {
-    let mut items = Vec::new();
-
-    while *i < lines.len() {
-        let line = lines[*i];
-        if line.trim().is_empty() {
-            *i += 1;
-            continue;
-        }
-
-        let cur_indent = line.len() - line.trim_start().len();
-        if cur_indent < min_indent {
-            break;
-        }
-
-        let trimmed = line.trim();
-        if let Some(rest) = trimmed.strip_prefix("- ") {
-            let rest = rest.trim();
-            // Check if this is a mapping item (has key: value)
-            if rest.contains(": ") || rest.ends_with(':') {
-                // Mapping item in list
-                let mut sub = Table::new();
-                // Parse first key: value on same line as -
-                if let Some((k, v)) = rest.split_once(':') {
-                    let k = k.trim().to_string();
-                    let v = v.trim();
-                    if v.is_empty() {
-                        *i += 1;
-                        let sub_indent = next_indent(lines, *i);
-                        if sub_indent > cur_indent {
-                            if lines.get(*i).map_or(false, |l| l.trim().starts_with("- ")) {
-                                let list = parse_yaml_list(lines, i, sub_indent);
-                                sub.insert(k, list);
-                            } else {
-                                let submap = parse_yaml_submapping(lines, i, sub_indent);
-                                sub.insert(k, Value::Table(submap));
-                            }
-                        } else {
-                            sub.insert(k, Value::Null);
-                        }
-                    } else {
-                        sub.insert(k, parse_yaml_scalar(v));
-                        *i += 1;
-                    }
-                }
-                // Continue collecting key: value pairs at deeper indent
-                while *i < lines.len() {
-                    let next_line = lines[*i];
-                    if next_line.trim().is_empty() {
-                        *i += 1;
-                        continue;
-                    }
-                    let line_indent = next_line.len() - next_line.trim_start().len();
-                    // Must be more indented than the "- " and not start with "-"
-                    if line_indent <= cur_indent || next_line.trim().starts_with("- ") {
-                        break;
-                    }
-                    let nt = next_line.trim();
-                    if let Some((k, v)) = nt.split_once(':') {
-                        let k = k.trim().to_string();
-                        let v = v.trim();
-                        if v.is_empty() {
-                            *i += 1;
-                            let sub_indent = next_indent(lines, *i);
-                            if sub_indent > line_indent {
-                                if lines.get(*i).map_or(false, |l| l.trim().starts_with("- ")) {
-                                    let list = parse_yaml_list(lines, i, sub_indent);
-                                    sub.insert(k, list);
-                                } else {
-                                    let submap = parse_yaml_submapping(lines, i, sub_indent);
-                                    sub.insert(k, Value::Table(submap));
-                                }
-                            } else {
-                                sub.insert(k, Value::Null);
-                            }
-                        } else {
-                            sub.insert(k, parse_yaml_scalar(v));
-                            *i += 1;
-                        }
-                    } else {
-                        *i += 1;
-                    }
-                }
-                items.push(Value::Table(sub));
-            } else {
-                // Simple string item
-                items.push(parse_yaml_scalar(rest));
-                *i += 1;
-            }
-        } else {
-            break;
-        }
-    }
-
-    Value::Array(items)
-}
-
-/// Parse a nested submapping at the given indent level.
-fn parse_yaml_submapping(lines: &[&str], i: &mut usize, min_indent: usize) -> Table {
-    let mut result = Table::new();
-
-    while *i < lines.len() {
-        let line = lines[*i];
-        if line.trim().is_empty() {
-            *i += 1;
-            continue;
-        }
-
-        let cur_indent = line.len() - line.trim_start().len();
-        if cur_indent < min_indent {
-            break;
-        }
-
-        let trimmed = line.trim();
-        if let Some((key, rest)) = trimmed.split_once(':') {
-            let key = key.trim().to_string();
-            let rest = rest.trim();
-
-            if rest.is_empty() {
-                *i += 1;
-                let sub_indent = next_indent(lines, *i);
-                if sub_indent > cur_indent {
-                    if lines.get(*i).map_or(false, |l| l.trim().starts_with("- ")) {
-                        let list = parse_yaml_list(lines, i, sub_indent);
-                        result.insert(key, list);
-                    } else {
-                        let sub = parse_yaml_submapping(lines, i, sub_indent);
-                        result.insert(key, Value::Table(sub));
-                    }
-                } else {
-                    result.insert(key, Value::Null);
-                }
-            } else if rest == "|" || rest == "|-" || rest == "|+" || rest == ">" || rest == ">-" {
-                *i += 1;
-                let block_indent = next_indent(lines, *i);
-                let block = collect_indented_block(lines, i, block_indent);
-                let block = if rest.starts_with('>') {
-                    block.lines().collect::<Vec<_>>().join(" ")
-                } else {
-                    block
-                };
-                result.insert(key, Value::String(block));
-            } else {
-                result.insert(key, parse_yaml_scalar(rest));
-                *i += 1;
-            }
-        } else {
-            *i += 1;
-        }
-    }
-
-    result
-}
-
-/// Get the indent level of the next non-blank line.
-fn next_indent(lines: &[&str], from: usize) -> usize {
-    for line in &lines[from..] {
-        if !line.trim().is_empty() {
-            return line.len() - line.trim_start().len();
-        }
-    }
-    0
-}
-
-/// Collect indented lines into a block string.
-fn collect_indented_block(lines: &[&str], i: &mut usize, min_indent: usize) -> String {
-    let mut block_lines = Vec::new();
-    while *i < lines.len() {
-        let line = lines[*i];
-        if line.trim().is_empty() {
-            block_lines.push("");
-            *i += 1;
-            continue;
-        }
-        let cur_indent = line.len() - line.trim_start().len();
-        if cur_indent < min_indent {
-            break;
-        }
-        // Strip the minimum indent
-        if line.len() >= min_indent {
-            block_lines.push(&line[min_indent..]);
-        } else {
-            block_lines.push(line.trim());
-        }
-        *i += 1;
-    }
-    // Trim trailing empty lines
-    while block_lines.last() == Some(&"") {
-        block_lines.pop();
-    }
-    block_lines.join("\n")
-}
-
-/// Parse a scalar YAML value (inline, after the `: `).
-fn parse_yaml_scalar(s: &str) -> Value {
-    let s = s.trim();
-
-    // Quoted strings
-    if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
-        return Value::String(s[1..s.len()-1].to_string());
-    }
-
-    // Flow sequence: [a, b, c]
-    if s.starts_with('[') && s.ends_with(']') {
-        let inner = &s[1..s.len()-1];
-        let items: Vec<Value> = inner.split(',')
-            .map(|item| parse_yaml_scalar(item.trim()))
-            .collect();
-        return Value::Array(items);
-    }
-
-    // Flow mapping: {key: value, ...}
-    if s.starts_with('{') && s.ends_with('}') {
-        let inner = &s[1..s.len()-1];
-        let mut table = Table::new();
-        for pair in inner.split(',') {
-            if let Some((k, v)) = pair.split_once(':') {
-                table.insert(k.trim().to_string(), parse_yaml_scalar(v.trim()));
-            }
-        }
-        return Value::Table(table);
-    }
-
-    // Booleans
-    match s {
-        "true" | "True" | "TRUE" | "yes" | "Yes" | "YES" => return Value::Bool(true),
-        "false" | "False" | "FALSE" | "no" | "No" | "NO" => return Value::Bool(false),
-        "null" | "Null" | "NULL" | "~" => return Value::Null,
-        _ => {}
-    }
-
-    // Numbers
-    if let Ok(n) = s.parse::<i64>() {
-        return Value::Integer(n);
-    }
-    if let Ok(f) = s.parse::<f64>() {
-        if f.is_finite() {
-            return Value::Float(f);
-        }
-    }
-
-    Value::String(s.to_string())
-}
-
-// ---------------------------------------------------------------------------
 // Front matter format detection
 // ---------------------------------------------------------------------------
 
@@ -602,7 +331,12 @@ pub fn parse_frontmatter(text: &str) -> anyhow::Result<Table> {
             }
         }
         FrontMatterFormat::Yaml => {
-            Ok(parse_minimal_yaml(text))
+            let yv: serde_yaml::Value = serde_yaml::from_str(text)
+                .map_err(|e| anyhow::anyhow!("YAML parse error: {}", e))?;
+            match yv {
+                serde_yaml::Value::Mapping(map) => Ok(table_from_yaml(map)),
+                _ => Ok(Table::new()),
+            }
         }
     }
 }
@@ -624,16 +358,16 @@ mod tests {
     }
 
     #[test]
-    fn test_minimal_yaml_scalars() {
-        let table = parse_minimal_yaml("title: Hello\nauthor: World\nformat: html");
+    fn test_yaml_scalars() {
+        let table = parse_frontmatter("title: Hello\nauthor: World\nformat: html").unwrap();
         assert_eq!(table_str(&table, "title").as_deref(), Some("Hello"));
         assert_eq!(table_str(&table, "author").as_deref(), Some("World"));
         assert_eq!(table_str(&table, "format").as_deref(), Some("html"));
     }
 
     #[test]
-    fn test_minimal_yaml_list() {
-        let table = parse_minimal_yaml("bibliography:\n  - refs.bib\n  - extra.bib");
+    fn test_yaml_list() {
+        let table = parse_frontmatter("bibliography:\n  - refs.bib\n  - extra.bib").unwrap();
         let bib = table_get(&table, "bibliography").unwrap();
         let arr = bib.as_array().unwrap();
         assert_eq!(arr.len(), 2);
@@ -642,8 +376,8 @@ mod tests {
     }
 
     #[test]
-    fn test_minimal_yaml_nested() {
-        let table = parse_minimal_yaml("calepin:\n  plugins:\n    - txtfmt\n  files-dir: custom");
+    fn test_yaml_nested() {
+        let table = parse_frontmatter("calepin:\n  plugins:\n    - txtfmt\n  files-dir: custom").unwrap();
         let cal = table_get(&table, "calepin").unwrap().as_table().unwrap();
         let plugins = table_get(cal, "plugins").unwrap().as_array().unwrap();
         assert_eq!(plugins.len(), 1);
@@ -652,15 +386,15 @@ mod tests {
     }
 
     #[test]
-    fn test_minimal_yaml_booleans() {
-        let table = parse_minimal_yaml("number-sections: true\ntoc: false");
+    fn test_yaml_booleans() {
+        let table = parse_frontmatter("number-sections: true\ntoc: false").unwrap();
         assert_eq!(table_get(&table, "number-sections").unwrap().as_bool(), Some(true));
         assert_eq!(table_get(&table, "toc").unwrap().as_bool(), Some(false));
     }
 
     #[test]
-    fn test_minimal_yaml_quoted_strings() {
-        let table = parse_minimal_yaml("title: \"Hello World\"\nauthor: 'Jane Doe'");
+    fn test_yaml_quoted_strings() {
+        let table = parse_frontmatter("title: \"Hello World\"\nauthor: 'Jane Doe'").unwrap();
         assert_eq!(table_str(&table, "title").as_deref(), Some("Hello World"));
         assert_eq!(table_str(&table, "author").as_deref(), Some("Jane Doe"));
     }
@@ -682,7 +416,7 @@ mod tests {
 
     #[test]
     fn test_yaml_format_mapping() {
-        let table = parse_minimal_yaml("format:\n  html: default");
+        let table = parse_frontmatter("format:\n  html: default").unwrap();
         let fmt = table_get(&table, "format").unwrap();
         let fmt_table = fmt.as_table().unwrap();
         assert_eq!(fmt_table.keys().next().unwrap(), "html");
@@ -690,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_yaml_block_scalar() {
-        let table = parse_minimal_yaml("abstract: |\n  some content\n  more content");
+        let table = parse_frontmatter("abstract: |\n  some content\n  more content").unwrap();
         let abs = table_str(&table, "abstract").unwrap();
         assert!(abs.contains("some content"));
         assert!(abs.contains("more content"));
@@ -698,7 +432,7 @@ mod tests {
 
     #[test]
     fn test_yaml_flow_sequence() {
-        let table = parse_minimal_yaml("keywords: [one, two, three]");
+        let table = parse_frontmatter("keywords: [one, two, three]").unwrap();
         let kw = table_get(&table, "keywords").unwrap().as_array().unwrap();
         assert_eq!(kw.len(), 3);
         assert_eq!(kw[0].as_str(), Some("one"));
@@ -716,7 +450,7 @@ mod tests {
     #[test]
     fn test_yaml_author_list_of_mappings() {
         let yaml = "author:\n  - name: Alice\n    email: alice@example.com\n  - name: Bob\n    email: bob@example.com";
-        let table = parse_minimal_yaml(yaml);
+        let table = parse_frontmatter(yaml).unwrap();
         let authors = table_get(&table, "author").unwrap().as_array().unwrap();
         assert_eq!(authors.len(), 2);
         let a0 = authors[0].as_table().unwrap();

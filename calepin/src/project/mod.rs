@@ -115,6 +115,47 @@ impl ProjectConfig {
             .map(|l| l.code.as_str())
     }
 
+    /// Extract a `Metadata` from this config's identity and shared fields.
+    /// Used as the base layer that document front matter overrides via `Metadata::merge()`.
+    pub fn as_metadata(&self) -> crate::metadata::Metadata {
+        let id = self.identity.as_ref();
+        let mut meta = crate::metadata::Metadata::default();
+
+        meta.title = id.and_then(|i| i.title.clone());
+        meta.subtitle = id.and_then(|i| i.subtitle.clone());
+        meta.url = id.and_then(|i| i.url.clone());
+        meta.favicon = id.and_then(|i| i.favicon.clone());
+        meta.logo = id.and_then(|i| i.logo.clone());
+        meta.logo_dark = id.and_then(|i| i.logo_dark.clone());
+        meta.orchestrator = id.and_then(|i| i.orchestrator.clone());
+
+        meta.bibliography = self.bibliography.clone();
+        meta.csl = self.csl.clone();
+        meta.output = self.output.clone();
+        meta.target = self.target.clone();
+        meta.lang = self.lang.clone();
+        meta.global_crossref = self.global_crossref;
+        meta.static_dirs = self.static_dirs.clone();
+        meta.embed_resources = self.embed_resources;
+
+        // Collection structure
+        meta.contents = self.contents.clone();
+        meta.languages = self.languages.clone();
+        meta.targets = self.targets.clone();
+        meta.post = self.post.clone();
+
+        // Convert project [var] table to metadata var
+        if let Some(ref pv) = self.var {
+            if let Some(table) = pv.as_table() {
+                for (key, val) in table {
+                    meta.var.insert(key.clone(), crate::value::from_toml(val.clone()));
+                }
+            }
+        }
+
+        meta
+    }
+
     /// Extract a flat `Defaults` from this config's top-level fields.
     /// Flattens [shortcodes] and [formats] sections into individual fields.
     pub fn as_defaults(&self) -> Defaults {

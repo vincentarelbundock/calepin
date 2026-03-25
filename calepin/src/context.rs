@@ -7,10 +7,10 @@ use anyhow::Result;
 
 use crate::{parse, paths, project, theme_manifest};
 
-/// Resolved project context: project config + target, shared by render and preview.
+/// Resolved project context: project metadata + target, shared by render and preview.
 pub(crate) struct ProjectContext {
     pub project_root: Option<PathBuf>,
-    pub project_config: Option<project::ProjectConfig>,
+    pub project_metadata: Option<crate::metadata::Metadata>,
     pub target_name: String,
     pub target: project::Target,
     /// True when the target was explicitly set (CLI flag or front matter),
@@ -21,14 +21,9 @@ pub(crate) struct ProjectContext {
 }
 
 impl ProjectContext {
-    /// Get the project-level `[var]` table, if any.
-    pub fn project_var(&self) -> Option<&toml::Value> {
-        self.project_config.as_ref().and_then(|c| c.var.as_ref())
-    }
-
     /// Get the configured output directory, if any.
     pub fn output_dir(&self) -> Option<&str> {
-        self.project_config.as_ref().and_then(|c| c.output.as_deref())
+        self.project_metadata.as_ref().and_then(|m| m.output.as_deref())
     }
 }
 
@@ -116,9 +111,11 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
         }
     }
 
+    let project_metadata = project_config.as_ref().map(|c| c.as_metadata());
+
     Ok(ProjectContext {
         project_root: Some(effective_root),
-        project_config,
+        project_metadata,
         target_name,
         target,
         explicit_target,

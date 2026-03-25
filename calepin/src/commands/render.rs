@@ -96,8 +96,8 @@ fn render_one_with_context(
         overrides,
         Some(&ctx.target),
         ctx.project_root.as_deref(),
-        ctx.project_var(),
         if ctx.explicit_target { ctx.output_dir() } else { None },
+        ctx.project_metadata.as_ref(),
     )?;
 
     renderer.write_output(&final_output, &output_path)?;

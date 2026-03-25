@@ -56,6 +56,7 @@ pub fn render_documents(
         }
     }
 
+    let project_meta = config.as_metadata();
     let format_owned = format.to_string();
     let target_owned = target_name.map(|s| s.to_string());
     let total = pages.len();
@@ -72,6 +73,7 @@ pub fn render_documents(
                 let format = &format_owned;
                 let target = &target_owned;
                 let defaults = defaults.clone();
+                let project_meta = &project_meta;
                 let done = &done;
                 let quiet = quiet;
                 s.spawn(move || {
@@ -80,7 +82,7 @@ pub fn render_documents(
                     crate::paths::set_project_root(Some(base_dir));
                     project::set_active_defaults(defaults);
                     let key = page.source.display().to_string();
-                    let result = render_one_document(page, overrides, base_dir, output_dir, format, apply_page_template);
+                    let result = render_one_document(page, overrides, base_dir, output_dir, format, apply_page_template, Some(project_meta));
                     let n = done.fetch_add(1, Ordering::Relaxed) + 1;
                     if !quiet {
                         let out = output_dir.join(&page.output);
@@ -120,7 +122,7 @@ pub fn render_documents(
             crate::paths::set_project_root(Some(base_dir));
             project::set_active_defaults(defaults.clone());
             let key = page.source.display().to_string();
-            match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template) {
+            match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template, Some(&project_meta)) {
                 Ok(render_result) => {
                     if !quiet {
                         eprintln!("  [ok] {}", key);
@@ -144,6 +146,7 @@ fn render_one_document(
     output_dir: &Path,
     format: &str,
     apply_page_template: bool,
+    project_metadata: Option<&crate::metadata::Metadata>,
 ) -> Result<CollectionRenderResult> {
     let input = base_dir.join(&page.source);
     let output_path = output_dir.join(&page.output);
@@ -154,7 +157,7 @@ fn render_one_document(
         std::fs::create_dir_all(parent).ok();
     }
 
-    let result = crate::pipeline::render_core(&input, &output_path, Some(format), overrides, None, Some(base_dir), &crate::pipeline::RenderCoreOptions::default())?;
+    let result = crate::pipeline::render_core(&input, &output_path, Some(format), overrides, Some(base_dir), &crate::pipeline::RenderCoreOptions::default(), project_metadata)?;
 
     let body = if apply_page_template {
         // Apply the project's page template (e.g., book's minimal page.tex)
@@ -368,7 +371,7 @@ fn render_one_document_pass1(
         chapter_number,
     };
     let result = crate::pipeline::render_core(
-        &input, &output_path, Some("html"), overrides, None, Some(base_dir), &options,
+        &input, &output_path, Some("html"), overrides, Some(base_dir), &options, None,
     )?;
 
     // Collect cross-ref data for global resolution in pass 2 (before moving body)
@@ -451,12 +454,8 @@ fn assign_chapter_numbers(config: &ProjectConfig) -> HashMap<String, usize> {
 fn build_overrides(config: &ProjectConfig) -> Vec<String> {
     let mut overrides = Vec::new();
 
-    // Bibliography from top-level config
-    for bib in &config.bibliography {
-        overrides.push(format!("bibliography+={}", bib));
-    }
-
     // Highlight style from top-level config
+    // (bibliography now flows through Metadata::merge)
     if let Some(ref hl) = config.highlight {
         if let Some(ref light) = hl.light {
             overrides.push(format!("highlight-style.light={}", light));

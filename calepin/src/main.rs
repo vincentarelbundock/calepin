@@ -8,6 +8,7 @@ pub(crate) use references::{bibliography, crossref};
 mod engines;
 mod jinja;
 mod math;
+mod metadata;
 mod parse;
 mod pipeline;
 mod preview;
