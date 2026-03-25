@@ -1,5 +1,18 @@
 PATH CHECK FOR SINGLE typst file
 
+## UI
+
+calepin test.qmd -f revealjs
+calepin test.qmd -f slidev
+calepin test.qmd -f html
+calepin test.qmd -f html --theme minimal
+calepin test.qmd -f typst --compile
+calepin test.qmd -f latex --compile
+calepin test.qmd -f latex --theme tufte --compile
+calepin test.qmd -f latex --theme letter --compile
+calepin test.qmd -f website
+calepin test.qmd -f website --theme blog
+
 ## Blog listings
 
 - [ ] User interface
@@ -41,11 +54,6 @@ PATH CHECK FOR SINGLE typst file
 - [ ] slidev
 
 
-## Math
-
-- [ ] Typst math is currently suppressed
-- [ ] LaTeX to Typst math plugin
-
 
 ## Figures
 
@@ -63,6 +71,7 @@ PATH CHECK FOR SINGLE typst file
 
 ## Plugins
 
+- [ ] How are shortcodes implemented?
 - [ ] Stable template API is too large: exposing too many template variables as public API locks in internal rendering details
 - [ ] How to register new plugins? What are they allowed to do?
 - [ ] ANSI colors in txtfmt plugin
@@ -82,18 +91,6 @@ PATH CHECK FOR SINGLE typst file
 - [ ] Collect all hard-coded values from the rust code
 - [ ] Transfer everythin we can to .toml
 - [ ] Formal categories: content, content_standalone, what else?
-
-
-## File paths
-
-- [ ] Path resolution rule for csl bibliography and other assets in the preambles of collections? Should these be ignored and we only consider the basic one?
-- [ ] Strict, consistent, simple, cross-platform
-- [ ] Clear separation of output and input locations
-- [ ] Format-specific path handling (Typst, LaTeX, HTML, Markdown)
-- [ ] Tectonic path resolution quirks
-- [ ] _calepin/ directory with cache, files, and output subdirectories?
-- [ ] Ask Claude to list all write locations
-- [ ] Brainstorm on trade-offs for defaults: intuitive defaults, not too much clutter, not too deeply nested.
 
 
 ## calepin new
@@ -210,6 +207,12 @@ PATH CHECK FOR SINGLE typst file
 - [ ] Column option for code output placement (`column: margin`, `column: page`, etc.)
 - [ ] Chunk labels should not add a fig- or a tbl- automatically if that is already in the label specified in ```{lang, fig-blahblah}. Otherwise we get duplicated fig-fig-blahblah.
 - [ ] Custom cross-reference types.
+
+
+## Typst
+
+- [ ] Check if math works
+- [ ] Improve math conversion AST + conversion
 
 
 ## Layout
