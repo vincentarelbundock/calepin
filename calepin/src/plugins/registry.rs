@@ -1,15 +1,13 @@
 //! Plugin registry: loading, indexing, and dispatch.
 //!
 //! The `PluginRegistry` is the single entry point for all plugin-related
-//! operations. It replaces the previous scattered extension mechanisms:
-//! WASM plugins, external filters, external shortcodes, element/page
-//! templates, custom formats.
+//! operations: built-in structural handlers (tabset, layout, figure-div),
+//! built-in filters (theorem, callout), element/page templates, CSL styles,
+//! and custom format definitions.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Child, ChildStdin, Command, Stdio};
 
 use crate::filters::Filter;
 use crate::plugin_manifest::{FilterMatch, FilterSpec, FormatSpec, PluginManifest, PluginProvides};
@@ -50,14 +48,6 @@ pub enum PluginKind {
     /// Runs after child rendering, receives rendered content + vars.
     BuiltinFilter(Box<dyn Filter>),
 
-    /// External subprocess plugin. Spawned per-call.
-    Subprocess { path: PathBuf },
-
-    /// Persistent subprocess plugin. Spawned once, communicates via JSON lines.
-    PersistentSubprocess {
-        path: PathBuf,
-        process: RefCell<Option<PersistentProcess>>,
-    },
 }
 
 // ---------------------------------------------------------------------------
@@ -67,51 +57,6 @@ pub enum PluginKind {
 pub struct LoadedPlugin {
     pub manifest: PluginManifest,
     pub kind: PluginKind,
-}
-
-// ---------------------------------------------------------------------------
-// Persistent subprocess
-// ---------------------------------------------------------------------------
-
-pub struct PersistentProcess {
-    child: Child,
-    stdin: ChildStdin,
-    stdout: BufReader<std::process::ChildStdout>,
-}
-
-impl PersistentProcess {
-    fn spawn(path: &Path) -> Option<Self> {
-        let mut child = Command::new(path)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .map_err(|e| eprintln!("Warning: failed to spawn persistent plugin {:?}: {}", path, e))
-            .ok()?;
-
-        let stdin = child.stdin.take()?;
-        let stdout = BufReader::new(child.stdout.take()?);
-
-        Some(PersistentProcess { child, stdin, stdout })
-    }
-
-    fn call(&mut self, request: &serde_json::Value) -> Option<serde_json::Value> {
-        let mut line = serde_json::to_string(request).ok()?;
-        line.push('\n');
-        self.stdin.write_all(line.as_bytes()).ok()?;
-        self.stdin.flush().ok()?;
-
-        let mut response_line = String::new();
-        self.stdout.read_line(&mut response_line).ok()?;
-        serde_json::from_str(&response_line).ok()
-    }
-}
-
-impl Drop for PersistentProcess {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -129,25 +74,18 @@ impl PluginRegistry {
     pub fn load(names: &[String], project_root: &Path) -> Self {
         let mut plugins = Vec::new();
 
-        // Load user plugins
+        // Load user plugins (templates, elements, CSL only -- no subprocess execution)
         for name in names {
             match crate::paths::resolve_plugin_dir(name, project_root) {
                 Some(dir) => match PluginManifest::load(&dir) {
                     Ok(manifest) => {
-                        // Check if any filter is persistent
-                        let persistent_filter = manifest.provides.filters.iter()
-                            .find(|f| f.persistent);
-                        let kind = if let Some(pf) = persistent_filter {
-                            let path = pf.run.clone()
-                                .unwrap_or_else(|| dir.join("filter"));
-                            PluginKind::PersistentSubprocess {
-                                path,
-                                process: RefCell::new(None),
-                            }
-                        } else {
-                            PluginKind::Subprocess { path: dir }
-                        };
-                        plugins.push(LoadedPlugin { manifest, kind });
+                        // User plugins provide templates/elements/CSL but don't execute code.
+                        // The PluginKind doesn't matter for template-only plugins; we use
+                        // a dummy BuiltinFilter with a no-op filter that always passes.
+                        plugins.push(LoadedPlugin {
+                            manifest,
+                            kind: PluginKind::BuiltinFilter(Box::new(NoopFilter)),
+                        });
                     }
                     Err(e) => eprintln!("Warning: failed to load plugin '{}': {}", name, e),
                 },
@@ -194,113 +132,6 @@ impl PluginRegistry {
             }
         }
         result
-    }
-
-    /// Call a subprocess filter (one-shot or persistent).
-    /// Returns `Some(output)` if the plugin rendered, `None` to pass.
-    pub fn call_subprocess_filter(
-        &self,
-        plugin: &LoadedPlugin,
-        filter_spec: &FilterSpec,
-        context: &str,
-        content: &str,
-        classes: &[String],
-        id: &str,
-        format: &str,
-        attrs: &HashMap<String, String>,
-    ) -> Option<String> {
-        let input = build_filter_json(context, content, classes, id, format, attrs);
-        let run_path = filter_spec.run.as_ref();
-        let response = call_subprocess(plugin, run_path, "filter", input)?;
-        match response["result"].as_str()? {
-            "rendered" => response["output"].as_str().map(|s| s.to_string()),
-            _ => None,
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Shortcode dispatch
-    // -----------------------------------------------------------------------
-
-    /// Find the first plugin that handles a shortcode name.
-    pub fn matching_shortcode(&self, name: &str) -> Option<&LoadedPlugin> {
-        self.plugins.iter().find(|p| {
-            p.manifest.provides.shortcode.as_ref()
-                .map_or(false, |s| s.names.iter().any(|n| n == name))
-        })
-    }
-
-    /// Return all shortcode names and their plugin index, for Jinja function registration.
-    pub fn shortcode_names(&self) -> Vec<(String, usize)> {
-        let mut result = Vec::new();
-        for (idx, plugin) in self.plugins.iter().enumerate() {
-            if let Some(ref sc) = plugin.manifest.provides.shortcode {
-                for name in &sc.names {
-                    result.push((name.clone(), idx));
-                }
-            }
-        }
-        result
-    }
-
-    /// Get a plugin by its index in the plugins vector.
-    pub fn plugin_by_index(&self, idx: usize) -> Option<&LoadedPlugin> {
-        self.plugins.get(idx)
-    }
-
-    /// Call a subprocess shortcode.
-    pub fn call_subprocess_shortcode(
-        &self,
-        plugin: &LoadedPlugin,
-        name: &str,
-        args: &[String],
-        kwargs: &HashMap<String, String>,
-        format: &str,
-        meta: &serde_json::Value,
-    ) -> Option<String> {
-        let input = serde_json::json!({
-            "name": name,
-            "args": args,
-            "kwargs": kwargs,
-            "format": format,
-            "meta": meta,
-        });
-        let run_path = plugin.manifest.provides.shortcode.as_ref()?.run.as_ref();
-        let response = call_subprocess(plugin, run_path, "shortcode", input)?;
-        response["output"].as_str().map(|s| s.to_string())
-    }
-
-    // -----------------------------------------------------------------------
-    // Postprocess dispatch
-    // -----------------------------------------------------------------------
-
-    /// Return plugins that have a postprocess handler for the given format.
-    pub fn postprocessors(&self, format: &str) -> Vec<&LoadedPlugin> {
-        self.plugins.iter().filter(|p| {
-            p.manifest.provides.postprocess.as_ref().map_or(false, |pp| {
-                pp.formats.is_empty() || pp.formats.iter().any(|f| f == format)
-            })
-        }).collect()
-    }
-
-    /// Call a subprocess postprocessor.
-    pub fn call_subprocess_postprocess(
-        &self,
-        plugin: &LoadedPlugin,
-        body: &str,
-        format: &str,
-        title: &str,
-        css: &str,
-    ) -> Option<String> {
-        let input = serde_json::json!({
-            "body": body,
-            "format": format,
-            "title": title,
-            "css": css,
-        });
-        let run_path = plugin.manifest.provides.postprocess.as_ref()?.run.as_ref();
-        let response = call_subprocess(plugin, run_path, "postprocess", input)?;
-        response["output"].as_str().map(|s| s.to_string())
     }
 
     // -----------------------------------------------------------------------
@@ -583,7 +414,6 @@ fn builtin_structural(
                     run: None,
                     match_rule,
                     contexts,
-                    persistent: false,
                 }],
                 ..Default::default()
             },
@@ -610,7 +440,6 @@ fn builtin_filter(
                     run: None,
                     match_rule,
                     contexts,
-                    persistent: false,
                 }],
                 ..Default::default()
             },
@@ -621,72 +450,18 @@ fn builtin_filter(
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Noop filter for user plugins (template/element providers only)
 // ---------------------------------------------------------------------------
 
+struct NoopFilter;
 
-/// Dispatch a subprocess call (one-shot or persistent).
-///
-/// For one-shot plugins, runs `run_path` with `input` on stdin.
-/// For persistent plugins, spawns the process if needed, sends a typed
-/// JSON-lines request, and returns the parsed response.
-///
-/// Returns `Some(response)` on success. For one-shot plugins, the response
-/// is `{"output": "..."}` to match the persistent protocol.
-fn call_subprocess(
-    plugin: &LoadedPlugin,
-    run_path: Option<&PathBuf>,
-    request_type: &str,
-    input: serde_json::Value,
-) -> Option<serde_json::Value> {
-    match &plugin.kind {
-        PluginKind::Subprocess { path: _ } => {
-            let run_path = run_path?;
-            let output = crate::util::run_json_process(run_path, &input)?;
-            Some(serde_json::json!({ "result": "rendered", "output": output }))
-        }
-        PluginKind::PersistentSubprocess { path, process } => {
-            let mut proc = process.borrow_mut();
-            if proc.is_none() {
-                *proc = PersistentProcess::spawn(path);
-            }
-            let proc = proc.as_mut()?;
-
-            let mut request = serde_json::json!({ "type": request_type });
-            if let serde_json::Value::Object(ref mut map) = request {
-                if let serde_json::Value::Object(input_map) = input {
-                    map.extend(input_map);
-                }
-            }
-
-            proc.call(&request)
-        }
-        _ => None,
+impl Filter for NoopFilter {
+    fn apply(
+        &self,
+        _element: &Element,
+        _format: &str,
+        _vars: &mut HashMap<String, String>,
+    ) -> crate::filters::FilterResult {
+        crate::filters::FilterResult::Pass
     }
-}
-
-/// Build the JSON payload for a filter subprocess call.
-fn build_filter_json(
-    context: &str,
-    content: &str,
-    classes: &[String],
-    id: &str,
-    format: &str,
-    attrs: &HashMap<String, String>,
-) -> serde_json::Value {
-    let mut map = serde_json::Map::new();
-    map.insert("context".into(), serde_json::Value::String(context.into()));
-    map.insert("content".into(), serde_json::Value::String(content.into()));
-    map.insert("classes".into(), serde_json::json!(classes));
-    map.insert("id".into(), serde_json::Value::String(id.into()));
-    map.insert("format".into(), serde_json::Value::String(format.into()));
-
-    // Flatten attrs
-    for (k, v) in attrs {
-        if !map.contains_key(k) {
-            map.insert(k.clone(), serde_json::Value::String(v.clone()));
-        }
-    }
-
-    serde_json::Value::Object(map)
 }

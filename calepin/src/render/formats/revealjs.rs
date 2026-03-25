@@ -14,24 +14,25 @@ impl OutputRenderer for RevealJsRenderer {
     fn engine(&self) -> &str { "html" }
     fn extension(&self) -> &str { "html" }
 
-    fn apply_template(
-        &self,
-        body: &str,
-        meta: &Metadata,
-        renderer: &ElementRenderer,
-    ) -> Option<String> {
+    fn transform_body(&self, body: &str, renderer: &ElementRenderer) -> String {
         let footnotes = renderer.render_footnote_section();
         let full_body = if footnotes.is_empty() {
             body.to_string()
         } else {
             format!("{}{}", body, footnotes)
         };
+        split_into_slides(&full_body)
+    }
 
-        let slides_html = split_into_slides(&full_body);
-
+    fn assemble_page(
+        &self,
+        body: &str,
+        meta: &Metadata,
+        renderer: &ElementRenderer,
+    ) -> Option<String> {
         let walk_meta = renderer.walk_metadata();
         let html = template::assemble_page(
-            &slides_html, meta, "revealjs", &walk_meta.headings, renderer.preamble(),
+            body, meta, "revealjs", &walk_meta.headings, renderer.preamble(),
             |vars| {
                 // Inject syntax highlighting CSS
                 let syntax_css = renderer.syntax_css_with_scope(

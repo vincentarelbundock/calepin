@@ -23,7 +23,6 @@ mod protection;
 pub use includes::expand_includes;
 pub(crate) use lipsum::{lipsum_words, lipsum_sentence, lipsum_paragraphs};
 
-use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
 use regex::Regex;
@@ -48,7 +47,7 @@ pub fn process_body(
     text: &str,
     format: &str,
     metadata: &Metadata,
-    registry: &PluginRegistry,
+    _registry: &PluginRegistry,
 ) -> BodyResult {
     let fragments = Arc::new(Mutex::new(Vec::new()));
 
@@ -244,52 +243,7 @@ pub fn process_body(
         });
     }
 
-    // Register plugin shortcodes as Jinja functions
-    for (name, plugin_idx) in registry.shortcode_names() {
-        let meta_json = serde_json::json!({
-            "title": metadata.title,
-            "author": metadata.author,
-            "date": metadata.date,
-        });
-        let fmt = format.to_string();
-        let frags = Arc::clone(&fragments);
-        let sc_name = name.clone();
-        // SAFETY: The registry reference is valid for the entire duration of
-        // process_body(). The closures registered here only execute during
-        // env.render_str() below (line ~306), which is synchronous and single-
-        // threaded. The usize cast bypasses Send+Sync bounds that MiniJinja
-        // requires but that are irrelevant here (no cross-thread sharing).
-        // If process_body ever becomes async or multi-threaded, this must
-        // be replaced with an Arc<Mutex<PluginRegistry>> or similar.
-        let registry_addr = registry as *const PluginRegistry as usize;
-        env.add_function(name.clone(), move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
-            let registry = unsafe { &*(registry_addr as *const PluginRegistry) };
 
-            let plugin = match registry.plugin_by_index(plugin_idx) {
-                Some(p) => p,
-                None => return Ok(Value::from("")),
-            };
-
-            // Convert kwargs to the format expected by call_subprocess_shortcode
-            let mut kw = HashMap::new();
-            for key in kwargs.args() {
-                if let Ok(val) = kwargs.get::<String>(key) {
-                    kw.insert(key.to_string(), val);
-                }
-            }
-
-            let positional: Vec<String> = Vec::new();
-
-            if let Some(output) = registry.call_subprocess_shortcode(
-                plugin, &sc_name, &positional, &kw, &fmt, &meta_json,
-            ) {
-                let trimmed = output.trim().to_string();
-                Ok(Value::from_safe_string(wrap_if_needed(&trimmed, &fmt, &frags)))
-            } else {
-                Ok(Value::from(""))
-            }
-        });
-    }
 
     // 3. Build context with metadata, variables, and environment
     let meta_val = build_meta_map(metadata);

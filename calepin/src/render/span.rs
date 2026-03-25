@@ -56,7 +56,7 @@ pub fn render(
         let empty_attrs = HashMap::new();
         let matching = registry.matching_filters(&classes, &empty_attrs, id.as_deref(), format, "span");
 
-        for (plugin, filter_spec) in &matching {
+        for (plugin, _filter_spec) in &matching {
             match &plugin.kind {
                 PluginKind::BuiltinFilter(filter) => {
                     let span_element = crate::types::Element::Text { content: content.to_string() };
@@ -65,20 +65,6 @@ pub fn render(
                             return wrap_output(format, raw_fragments, output);
                         }
                         _ => {}
-                    }
-                }
-                PluginKind::Subprocess { .. } | PluginKind::PersistentSubprocess { .. } => {
-                    if let Some(output) = registry.call_subprocess_filter(
-                        plugin,
-                        filter_spec,
-                        "span",
-                        content,
-                        &classes,
-                        id.as_deref().unwrap_or(""),
-                        format,
-                        &kv,
-                    ) {
-                        return wrap_output(format, raw_fragments, output);
                     }
                 }
                 PluginKind::BuiltinStructural(_) => {}

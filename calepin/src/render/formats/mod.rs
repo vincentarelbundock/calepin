@@ -99,17 +99,23 @@ pub trait OutputRenderer {
         }
 
         let body = parts.join("\n\n");
-        Ok(self.postprocess(&body, renderer))
+        Ok(body)
     }
 
-    /// Format-specific post-processing on the rendered body.
-    fn postprocess(&self, body: &str, _renderer: &ElementRenderer) -> String {
+    /// Format-specific transformation of the rendered body string.
+    /// Called after render(), before cross-ref resolution.
+    fn transform_body(&self, body: &str, _renderer: &ElementRenderer) -> String {
         body.to_string()
     }
 
     /// Wrap the rendered body in a page template. Return None to skip.
-    fn apply_template(&self, body: &str, meta: &Metadata, renderer: &ElementRenderer)
+    fn assemble_page(&self, body: &str, meta: &Metadata, renderer: &ElementRenderer)
         -> Option<String>;
+
+    /// Format-specific transformation of the complete document (after page template).
+    fn transform_document(&self, document: &str, _renderer: &ElementRenderer) -> String {
+        document.to_string()
+    }
 
     /// Optional preprocess script path. If set, the raw .qmd body is piped
     /// through this script before block parsing.
@@ -184,62 +190,59 @@ impl OutputRenderer for CustomRenderer {
         self.base.default_fig_ext()
     }
 
-    fn postprocess(&self, body: &str, renderer: &ElementRenderer) -> String {
-        self.base.postprocess(body, renderer)
+    fn transform_body(&self, body: &str, renderer: &ElementRenderer) -> String {
+        self.base.transform_body(body, renderer)
     }
 
-    fn apply_template(
+    fn assemble_page(
         &self,
         body: &str,
         meta: &Metadata,
         renderer: &ElementRenderer,
     ) -> Option<String> {
         // Try custom page template first: page.{name}
-        let templated = {
-            let custom_tpl = crate::render::template::load_page_template(
-                &format!("page.{}", self.name),
-                self.base.format(),
-            );
-            if !custom_tpl.is_empty() {
-                let base = self.base.format();
-                if !matches!(base, "html" | "latex" | "typst") {
-                    return None;
-                }
-                let mut vars = crate::render::template::build_template_vars(meta, body, base);
-                crate::render::template::inject_preamble(&mut vars, renderer.preamble());
-                if base == "html" {
-                    let syntax_css = renderer.syntax_css();
-                    if !syntax_css.is_empty() {
-                        let css = vars.entry("css".to_string()).or_default();
-                        css.push_str(&format!("\n<style>\n{}</style>", &syntax_css));
-                        vars.insert("syntax_css".to_string(), syntax_css);
-                    }
-                    let datatheme_css = renderer.syntax_css_with_scope(
-                        crate::filters::highlighting::ColorScope::DataTheme,
-                    );
-                    if !datatheme_css.is_empty() {
-                        vars.insert("syntax_css_datatheme".to_string(), datatheme_css);
-                    }
-                }
-                Some(crate::render::template::render_page_template(&custom_tpl, &vars, base))
-            } else {
-                // No custom template: delegate to base format
-                self.base.apply_template(body, meta, renderer)
+        let custom_tpl = crate::render::template::load_page_template(
+            &format!("page.{}", self.name),
+            self.base.format(),
+        );
+        if !custom_tpl.is_empty() {
+            let base = self.base.format();
+            if !matches!(base, "html" | "latex" | "typst") {
+                return None;
             }
-        };
+            let mut vars = crate::render::template::build_template_vars(meta, body, base);
+            crate::render::template::inject_preamble(&mut vars, renderer.preamble());
+            if base == "html" {
+                let syntax_css = renderer.syntax_css();
+                if !syntax_css.is_empty() {
+                    let css = vars.entry("css".to_string()).or_default();
+                    css.push_str(&format!("\n<style>\n{}</style>", &syntax_css));
+                    vars.insert("syntax_css".to_string(), syntax_css);
+                }
+                let datatheme_css = renderer.syntax_css_with_scope(
+                    crate::filters::highlighting::ColorScope::DataTheme,
+                );
+                if !datatheme_css.is_empty() {
+                    vars.insert("syntax_css_datatheme".to_string(), datatheme_css);
+                }
+            }
+            Some(crate::render::template::render_page_template(&custom_tpl, &vars, base))
+        } else {
+            // No custom template: delegate to base format
+            self.base.assemble_page(body, meta, renderer)
+        }
+    }
 
-        // Script postprocess (transforms the complete document)
+    fn transform_document(&self, document: &str, _renderer: &ElementRenderer) -> String {
         if let Some(ref script) = self.postprocess_script {
-            let input = templated.as_deref().unwrap_or(body);
-            match run_script(script, input, &[&self.name]) {
-                Ok(output) => return Some(output),
+            match run_script(script, document, &[&self.name]) {
+                Ok(output) => return output,
                 Err(e) => {
-                    eprintln!("Warning: postprocess script failed: {}", e);
+                    eprintln!("Warning: transform_document script failed: {}", e);
                 }
             }
         }
-
-        templated
+        document.to_string()
     }
 
     fn preprocess(&self) -> Option<&Path> {

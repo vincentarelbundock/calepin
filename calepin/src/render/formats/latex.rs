@@ -8,7 +8,7 @@ impl OutputRenderer for LatexRenderer {
     fn format(&self) -> &str { "latex" }
     fn extension(&self) -> &str { "tex" }
 
-    fn postprocess(&self, body: &str, renderer: &ElementRenderer) -> String {
+    fn transform_body(&self, body: &str, renderer: &ElementRenderer) -> String {
         let color_defs = renderer.latex_color_definitions();
         if color_defs.is_empty() {
             body.to_string()
@@ -17,14 +17,14 @@ impl OutputRenderer for LatexRenderer {
         }
     }
 
-    fn apply_template(
+    fn assemble_page(
         &self,
         body: &str,
         meta: &Metadata,
         renderer: &ElementRenderer,
     ) -> Option<String> {
-        // Note: postprocess() is already called by the render pipeline before
-        // apply_template, so color definitions are already prepended to body.
+        // Note: transform_body() is called by the pipeline before
+        // assemble_page, so color definitions are already prepended to body.
         Some(crate::render::template::assemble_page(
             body, meta, "latex", &[], renderer.preamble(), |_| {},
         ))

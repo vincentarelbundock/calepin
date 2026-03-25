@@ -159,7 +159,7 @@ fn render_one_document(
     let body = if apply_page_template {
         // Apply the project's page template (e.g., book's minimal page.tex)
         let renderer = crate::formats::create_renderer(format)?;
-        renderer.apply_template(&result.rendered, &result.metadata, &result.element_renderer)
+        renderer.assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
             .unwrap_or(result.rendered)
     } else if format == "html" {
         // HTML site mode: prepend syntax highlighting CSS, append footnotes

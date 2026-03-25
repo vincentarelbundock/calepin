@@ -71,7 +71,7 @@ pub fn render(
         *vars = Some(v);
     };
 
-    for (plugin, filter_spec) in &matching {
+    for (plugin, _filter_spec) in &matching {
         match &plugin.kind {
             PluginKind::BuiltinStructural(handler) => {
                 if let Some(output) = handler.render_div(
@@ -92,22 +92,6 @@ pub fn render(
                 match filter.apply(&div_element, format, vars.as_mut().unwrap()) {
                     FilterResult::Rendered(output) => return output,
                     FilterResult::Continue | FilterResult::Pass => {}
-                }
-            }
-            PluginKind::Subprocess { .. } | PluginKind::PersistentSubprocess { .. } => {
-                ensure_rendered(&mut children_rendered);
-                ensure_vars(&mut vars, children_rendered.as_ref().unwrap());
-                if let Some(output) = registry.call_subprocess_filter(
-                    plugin,
-                    filter_spec,
-                    "div",
-                    children_rendered.as_ref().unwrap(),
-                    classes,
-                    id.as_deref().unwrap_or(""),
-                    format,
-                    vars.as_ref().unwrap(),
-                ) {
-                    return output;
                 }
             }
         }

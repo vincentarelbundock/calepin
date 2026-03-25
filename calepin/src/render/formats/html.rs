@@ -15,7 +15,7 @@ impl OutputRenderer for HtmlRenderer {
     fn format(&self) -> &str { "html" }
     fn extension(&self) -> &str { "html" }
 
-    fn apply_template(
+    fn assemble_page(
         &self,
         body: &str,
         meta: &Metadata,

@@ -192,130 +192,147 @@ impl ElementRenderer {
     #[inline(never)]
     pub fn render(&self, element: &Element) -> String {
         match element {
-            Element::Text { content } => {
-                let processed = self.render_bracketed_spans(content);
-                // Append global footnote definitions if this text has footnote refs
-                // so comrak can resolve them within a single parse.
-                let processed = {
-                    let defs = self.global_footnote_defs.borrow();
-                    if !defs.is_empty() && processed.contains("[^") {
-                        format!("{}{}", processed, defs)
-                    } else {
-                        processed
-                    }
-                };
-                let fragments = self.raw_fragments.borrow();
-                let rendered = if self.ext == "html" {
-                    let options = crate::render::ast::WalkOptions {
-                        number_sections: self.number_sections,
-                        shift_headings: self.shift_headings,
-                        footnote_counter_start: self.footnote_counter.get(),
-                        section_counters_start: self.section_counters.get(),
-                        min_heading_level: self.min_heading_level.get(),
-                        suppress_footnote_section: true,
-                    };
-                    let result = crate::render::convert::render_html_with_metadata(
-                        &processed, &fragments, &options,
-                    );
-                    self.footnote_counter.set(result.metadata.footnote_counter_end);
-                    self.section_counters.set(Some(result.metadata.section_counters_end));
-                    self.min_heading_level.set(Some(result.metadata.min_heading_level));
-                    if !result.metadata.footnote_defs.is_empty() {
-                        let mut acc = self.accumulated_footnote_defs.borrow_mut();
-                        for def in result.metadata.footnote_defs {
-                            if !acc.iter().any(|(id, _)| *id == def.0) {
-                                acc.push(def);
-                            }
-                        }
-                    }
-                    let mut meta = self.walk_metadata.borrow_mut();
-                    meta.headings.extend(result.metadata.headings);
-                    meta.ids.extend(result.metadata.ids);
-                    result.output
-                } else {
-                    let fn_start = self.footnote_counter.get();
-                    let (output, fn_end) = match self.ext.as_str() {
-                        "typst" => crate::render::typst_emit::markdown_to_typst_with_counter(
-                            &processed, &fragments, fn_start, self.convert_math,
-                        ),
-                        "latex" => crate::render::latex_emit::markdown_to_latex_with_counter(
-                            &processed, &fragments, self.number_sections, fn_start,
-                        ),
-                        _ => crate::render::markdown_emit::markdown_to_markdown_with_counter(
-                            &processed, &fragments, fn_start,
-                        ),
-                    };
-                    self.footnote_counter.set(fn_end);
-                    output
-                };
-                crate::render::markers::resolve_shortcode_raw(&rendered, &self.sc_fragments)
-            }
+            Element::Text { content } => self.render_text(content),
             Element::CodeAsis { text } => text.clone(),
-            Element::Div { classes, id, attrs, children } => {
-                // Track cross-referenceable div IDs
-                if let Some(ref div_id) = id {
-                    let trackable_prefix = if div_id.starts_with("fig-") || div_id.starts_with("tbl-") {
-                        Some(&div_id[..4])
-                    } else if div_id.starts_with("tip-") || div_id.starts_with("nte-")
-                        || div_id.starts_with("wrn-") || div_id.starts_with("imp-")
-                        || div_id.starts_with("cau-") || div_id.starts_with("lst-")
-                    {
-                        Some(&div_id[..4])
-                    } else {
-                        None
-                    };
-                    if let Some(prefix) = trackable_prefix {
-                        let mut meta = self.walk_metadata.borrow_mut();
-                        let count = meta.ids.keys().filter(|k| k.starts_with(prefix)).count();
-                        meta.ids.insert(div_id.clone(), (count + 1).to_string());
-                    }
-                }
-                crate::render::div::render(
-                    classes, id, attrs, children, &self.ext,
-                    &self.registry,
-                    &|e| self.render(e),
-                    &|name| self.resolve_element_template(name),
-                    &self.raw_fragments,
-                    &self.theorem_numbers,
-                    &self.template_env,
-                )
+            Element::Div { classes, id, attrs, children } => self.render_div(classes, id, attrs, children),
+            _ => self.render_templated(element),
+        }
+    }
+
+    /// Render a text element: span dispatch, footnote injection, markdown
+    /// conversion, metadata accumulation, shortcode marker resolution.
+    fn render_text(&self, content: &str) -> String {
+        let processed = self.render_bracketed_spans(content);
+        // Append global footnote definitions if this text has footnote refs
+        // so comrak can resolve them within a single parse.
+        let processed = {
+            let defs = self.global_footnote_defs.borrow();
+            if !defs.is_empty() && processed.contains("[^") {
+                format!("{}{}", processed, defs)
+            } else {
+                processed
             }
-            _ => {
-                if matches!(element, Element::CodeSource { .. }) {
-                    self.has_code.set(true);
-                }
-                let name = element.template_name();
-                let rendered = self.build_template_output(name, element);
-
-                // Wrap code source in a listing div when the label has a lst- prefix
-                if let Element::CodeSource { label, lst_cap, .. } = element {
-                    if label.starts_with("lst-") {
-                        // Track listing ID for cross-references
-                        let mut meta = self.walk_metadata.borrow_mut();
-                        let count = meta.ids.keys().filter(|k| k.starts_with("lst-")).count();
-                        meta.ids.insert(label.clone(), (count + 1).to_string());
-                        let num = count + 1;
-
-                        let label_defs = crate::project::get_defaults().labels;
-                        let mut listing_vars = HashMap::new();
-                        listing_vars.insert("base".to_string(), self.ext.clone());
-                        listing_vars.insert("engine".to_string(), self.ext.clone());
-                        listing_vars.insert("label".to_string(), label.clone());
-                        listing_vars.insert("number".to_string(), num.to_string());
-                        listing_vars.insert("content".to_string(), rendered);
-                        listing_vars.insert("label_listing".to_string(), label_defs.as_ref().and_then(|l| l.listing.clone()).unwrap_or_else(|| "Listing".to_string()));
-                        if let Some(cap) = lst_cap {
-                            listing_vars.insert("lst_cap".to_string(), cap.clone());
-                        }
-                        let tpl = self.resolve_element_template("code_listing")
-                            .unwrap_or_else(|| include_str!("../project/templates/common/code_listing.jinja").to_string());
-                        return self.template_env.render_dynamic("code_listing", &tpl, &listing_vars);
+        };
+        let fragments = self.raw_fragments.borrow();
+        let rendered = if self.ext == "html" {
+            let options = crate::render::ast::WalkOptions {
+                number_sections: self.number_sections,
+                shift_headings: self.shift_headings,
+                footnote_counter_start: self.footnote_counter.get(),
+                section_counters_start: self.section_counters.get(),
+                min_heading_level: self.min_heading_level.get(),
+                suppress_footnote_section: true,
+            };
+            let result = crate::render::convert::render_html_with_metadata(
+                &processed, &fragments, &options,
+            );
+            self.footnote_counter.set(result.metadata.footnote_counter_end);
+            self.section_counters.set(Some(result.metadata.section_counters_end));
+            self.min_heading_level.set(Some(result.metadata.min_heading_level));
+            if !result.metadata.footnote_defs.is_empty() {
+                let mut acc = self.accumulated_footnote_defs.borrow_mut();
+                for def in result.metadata.footnote_defs {
+                    if !acc.iter().any(|(id, _)| *id == def.0) {
+                        acc.push(def);
                     }
                 }
+            }
+            let mut meta = self.walk_metadata.borrow_mut();
+            meta.headings.extend(result.metadata.headings);
+            meta.ids.extend(result.metadata.ids);
+            result.output
+        } else {
+            let fn_start = self.footnote_counter.get();
+            let (output, fn_end) = match self.ext.as_str() {
+                "typst" => crate::render::typst_emit::markdown_to_typst_with_counter(
+                    &processed, &fragments, fn_start, self.convert_math,
+                ),
+                "latex" => crate::render::latex_emit::markdown_to_latex_with_counter(
+                    &processed, &fragments, self.number_sections, fn_start,
+                ),
+                _ => crate::render::markdown_emit::markdown_to_markdown_with_counter(
+                    &processed, &fragments, fn_start,
+                ),
+            };
+            self.footnote_counter.set(fn_end);
+            output
+        };
+        crate::render::markers::resolve_shortcode_raw(&rendered, &self.sc_fragments)
+    }
 
-                rendered
+    /// Render a fenced div: track cross-referenceable IDs, delegate to div pipeline.
+    fn render_div(
+        &self,
+        classes: &[String],
+        id: &Option<String>,
+        attrs: &HashMap<String, String>,
+        children: &[Element],
+    ) -> String {
+        // Track cross-referenceable div IDs
+        if let Some(ref div_id) = id {
+            let trackable_prefix = if div_id.starts_with("fig-") || div_id.starts_with("tbl-") {
+                Some(&div_id[..4])
+            } else if div_id.starts_with("tip-") || div_id.starts_with("nte-")
+                || div_id.starts_with("wrn-") || div_id.starts_with("imp-")
+                || div_id.starts_with("cau-") || div_id.starts_with("lst-")
+            {
+                Some(&div_id[..4])
+            } else {
+                None
+            };
+            if let Some(prefix) = trackable_prefix {
+                let mut meta = self.walk_metadata.borrow_mut();
+                let count = meta.ids.keys().filter(|k| k.starts_with(prefix)).count();
+                meta.ids.insert(div_id.clone(), (count + 1).to_string());
             }
         }
+        crate::render::div::render(
+            classes, id, attrs, children, &self.ext,
+            &self.registry,
+            &|e| self.render(e),
+            &|name| self.resolve_element_template(name),
+            &self.raw_fragments,
+            &self.theorem_numbers,
+            &self.template_env,
+        )
+    }
+
+    /// Render a templated element (code, figure, diagnostic): build template
+    /// vars, apply element template, handle code listing wrapping.
+    fn render_templated(&self, element: &Element) -> String {
+        if matches!(element, Element::CodeSource { .. }) {
+            self.has_code.set(true);
+        }
+        let name = element.template_name();
+        let rendered = self.build_template_output(name, element);
+
+        // Wrap code source in a listing div when the label has a lst- prefix
+        if let Element::CodeSource { label, lst_cap, .. } = element {
+            if label.starts_with("lst-") {
+                // Track listing ID for cross-references
+                let mut meta = self.walk_metadata.borrow_mut();
+                let count = meta.ids.keys().filter(|k| k.starts_with("lst-")).count();
+                meta.ids.insert(label.clone(), (count + 1).to_string());
+                let num = count + 1;
+
+                let label_defs = crate::project::get_defaults().labels;
+                let mut listing_vars = HashMap::new();
+                listing_vars.insert("base".to_string(), self.ext.clone());
+                listing_vars.insert("engine".to_string(), self.ext.clone());
+                listing_vars.insert("label".to_string(), label.clone());
+                listing_vars.insert("number".to_string(), num.to_string());
+                listing_vars.insert("content".to_string(), rendered);
+                listing_vars.insert("label_listing".to_string(), label_defs.as_ref().and_then(|l| l.listing.clone()).unwrap_or_else(|| "Listing".to_string()));
+                if let Some(cap) = lst_cap {
+                    listing_vars.insert("lst_cap".to_string(), cap.clone());
+                }
+                let tpl = self.resolve_element_template("code_listing")
+                    .unwrap_or_else(|| include_str!("../project/templates/common/code_listing.jinja").to_string());
+                return self.template_env.render_dynamic("code_listing", &tpl, &listing_vars);
+            }
+        }
+
+        rendered
     }
 
     fn render_bracketed_spans(&self, text: &str) -> String {

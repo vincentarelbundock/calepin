@@ -1,9 +1,8 @@
 //! Plugin manifest parsing.
 //!
 //! Each plugin is a directory containing a `plugin.toml` file
-//! that declares its capabilities: filters,
-//! shortcodes, postprocessors, element/page templates, CSL styles, and
-//! custom format definitions.
+//! that declares its capabilities: filters, element/page templates,
+//! CSL styles, and custom format definitions.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -30,8 +29,6 @@ pub struct PluginManifest {
 pub struct PluginProvides {
     /// Multiple filters, each with its own match rules and executable.
     pub filters: Vec<FilterSpec>,
-    pub shortcode: Option<ShortcodeSpec>,
-    pub postprocess: Option<PostprocessSpec>,
     pub elements: Option<ElementsSpec>,
     pub templates: Option<TemplatesSpec>,
     pub csl: Option<String>,
@@ -46,8 +43,6 @@ pub struct FilterSpec {
     pub match_rule: FilterMatch,
     /// Which contexts this filter handles: "div", "span", or both.
     pub contexts: Vec<String>,
-    /// If true, use persistent JSON-lines subprocess protocol.
-    pub persistent: bool,
 }
 
 /// Rules for matching a filter to a div/span element.
@@ -60,22 +55,6 @@ pub struct FilterMatch {
     /// ID prefix that triggers this filter.
     pub id_prefix: Option<String>,
     /// Output formats this filter applies to. Empty = all formats.
-    pub formats: Vec<String>,
-}
-
-/// Shortcode specification.
-pub struct ShortcodeSpec {
-    /// Path to executable, relative to plugin dir. None for built-in.
-    pub run: Option<PathBuf>,
-    /// Shortcode names this plugin handles.
-    pub names: Vec<String>,
-}
-
-/// Postprocess specification.
-pub struct PostprocessSpec {
-    /// Path to executable, relative to plugin dir.
-    pub run: Option<PathBuf>,
-    /// Output formats this postprocessor applies to. Empty = all.
     pub formats: Vec<String>,
 }
 
@@ -175,8 +154,6 @@ impl PluginManifest {
 fn parse_provides(root: &Value, plugin_dir: &Path) -> Result<PluginProvides> {
     Ok(PluginProvides {
         filters: parse_filter_specs(root, plugin_dir),
-        shortcode: parse_shortcode_spec(root, plugin_dir),
-        postprocess: parse_postprocess_spec(root, plugin_dir),
         elements: parse_elements_spec(root),
         templates: parse_templates_spec(root),
         csl: root.get("csl").and_then(|v| v.as_str()).map(String::from),
@@ -232,27 +209,7 @@ fn parse_one_filter_spec(node: &Value, plugin_dir: &Path) -> Option<FilterSpec> 
         }
     };
 
-    let persistent = node.get("persistent")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-
-    Some(FilterSpec { run, match_rule, contexts, persistent })
-}
-
-fn parse_shortcode_spec(provides: &Value, plugin_dir: &Path) -> Option<ShortcodeSpec> {
-    let node = provides.get("shortcode")?;
-    Some(ShortcodeSpec {
-        run: node.get("run").and_then(|v| v.as_str()).map(|s| plugin_dir.join(s)),
-        names: val_str_vec(node, "names"),
-    })
-}
-
-fn parse_postprocess_spec(provides: &Value, plugin_dir: &Path) -> Option<PostprocessSpec> {
-    let node = provides.get("postprocess")?;
-    Some(PostprocessSpec {
-        run: node.get("run").and_then(|v| v.as_str()).map(|s| plugin_dir.join(s)),
-        formats: val_str_vec(node, "formats"),
-    })
+    Some(FilterSpec { run, match_rule, contexts })
 }
 
 fn parse_elements_spec(provides: &Value) -> Option<ElementsSpec> {

@@ -13,7 +13,7 @@ impl OutputRenderer for WordRenderer {
     fn extension(&self) -> &str { "docx" }
     fn engine(&self) -> &str { "markdown" }
 
-    fn apply_template(
+    fn assemble_page(
         &self,
         _body: &str,
         _meta: &Metadata,

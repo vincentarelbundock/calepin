@@ -8,7 +8,7 @@ impl OutputRenderer for TypstRenderer {
     fn format(&self) -> &str { "typst" }
     fn extension(&self) -> &str { "typ" }
 
-    fn apply_template(
+    fn assemble_page(
         &self,
         body: &str,
         meta: &Metadata,

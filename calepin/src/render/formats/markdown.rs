@@ -8,7 +8,7 @@ impl OutputRenderer for MarkdownRenderer {
     fn format(&self) -> &str { "markdown" }
     fn extension(&self) -> &str { "md" }
 
-    fn apply_template(
+    fn assemble_page(
         &self,
         _body: &str,
         _meta: &Metadata,

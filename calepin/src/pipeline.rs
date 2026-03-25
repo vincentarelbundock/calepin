@@ -249,7 +249,7 @@ pub fn render_core_with_options(
     let eval_result = timed!("evaluate", engines::evaluate(&blocks, &fig_dir, fig_ext, renderer.engine(), &metadata, &registry, &mut ctx, &mut cache)?);
     let mut elements = eval_result.elements;
 
-    // 9. Bibliography
+    // 9. Bibliography (transform_elements stage)
     timed!("bibliography", filters::bibliography::process_citations(&mut elements, &metadata, &path_ctx.project_root)?);
 
     // 10. Set registry on element renderer
@@ -257,8 +257,11 @@ pub fn render_core_with_options(
     element_renderer.set_sc_fragments(eval_result.sc_fragments);
     element_renderer.set_preamble(eval_result.preamble);
 
-    // 12. Render elements to final format
+    // 11. Render elements to body string
     let rendered = timed!("render", renderer.render(&elements, &element_renderer)?);
+
+    // 12. Transform body (format-specific: slide splitting, color defs)
+    let rendered = renderer.transform_body(&rendered, &element_renderer);
 
     // 13. Cross-ref resolution (section IDs pre-collected from AST walk)
     let thm_nums = element_renderer.theorem_numbers();
@@ -338,9 +341,13 @@ pub fn render_file(
 
     let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, project_var, None)?;
 
+    // Assemble page (page template wrapping)
     let final_output = renderer
-        .apply_template(&result.rendered, &result.metadata, &result.element_renderer)
+        .assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
         .unwrap_or(result.rendered);
+
+    // Transform document (format-specific post-template)
+    let final_output = renderer.transform_document(&final_output, &result.element_renderer);
 
     Ok((output_path, final_output, renderer))
 }
