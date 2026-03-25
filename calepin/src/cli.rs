@@ -111,7 +111,7 @@ pub struct RenderArgs {
     /// Override the engine for compound targets (pdf, book).
     /// Allowed values depend on the target: pdf accepts html/latex/typst/markdown,
     /// book accepts latex/typst.
-    #[arg(long, alias = "base", value_parser = ["html", "latex", "typst", "markdown"])]
+    #[arg(long, value_parser = ["html", "latex", "typst", "markdown"])]
     pub engine: Option<String>,
 
     /// Theme to apply on top of the target.
@@ -183,16 +183,10 @@ pub enum InfoAction {
     },
 }
 
-/// Returns true if the input is a collection config file (_calepin.toml or .yaml/.yml).
+/// Returns true if the input is a collection config file (_calepin.toml).
 pub fn is_collection_config(path: &std::path::Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    match name {
-        "_calepin.toml" => true,
-        _ => matches!(
-            path.extension().and_then(|e| e.to_str()),
-            Some("yaml") | Some("yml")
-        ),
-    }
+    name == "_calepin.toml"
 }
 
 /// Print a yellow warning to stderr.

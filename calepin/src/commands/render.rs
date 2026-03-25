@@ -12,7 +12,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
         overrides.push("highlight-style=none".to_string());
     }
 
-    // Collection mode: single .toml config with [[contents]], or legacy .yaml manifest
+    // Collection mode: _calepin.toml config with [[contents]]
     if args.input.len() == 1 && crate::cli::is_collection_config(&args.input[0]) {
         let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
         return crate::collection::build_collection(Some(args.input[0].as_path()), &output, args.clean, args.quiet, args.target.as_deref());

@@ -71,25 +71,6 @@ fn expand_section_documents(entries: &[DocumentEntry], base_dir: &std::path::Pat
     result
 }
 
-/// Collect all document paths from [[contents]], including standalone.
-#[allow(dead_code)]
-pub fn collect_all_document_paths(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<String> {
-    let mut paths = Vec::new();
-    for section in contents {
-        if let Some(ref idx) = section.index {
-            paths.push(idx.clone());
-        }
-        for entry in &section.pages {
-            for path in expand_glob(entry.path(), base_dir) {
-                if path.ends_with(".qmd") {
-                    paths.push(path);
-                }
-            }
-        }
-    }
-    paths
-}
-
 /// Public wrapper for glob expansion, used by collection config.
 pub fn expand_glob_pub(pattern: &str, base_dir: &std::path::Path) -> Vec<String> {
     expand_glob(pattern, base_dir)

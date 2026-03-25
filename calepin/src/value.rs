@@ -170,7 +170,7 @@ pub fn coerce_value(s: &str) -> Value {
             if let Ok(n) = s.parse::<i64>() {
                 Value::Integer(n)
             } else if let Ok(f) = s.parse::<f64>() {
-                Value::Float(f)
+                if f.is_finite() { Value::Float(f) } else { Value::String(s.to_string()) }
             } else {
                 Value::String(s.to_string())
             }
@@ -545,7 +545,9 @@ fn parse_yaml_scalar(s: &str) -> Value {
         return Value::Integer(n);
     }
     if let Ok(f) = s.parse::<f64>() {
-        return Value::Float(f);
+        if f.is_finite() {
+            return Value::Float(f);
+        }
     }
 
     Value::String(s.to_string())

@@ -31,8 +31,10 @@ pub fn slugify(text: &str) -> String {
 
 /// Run a subprocess with JSON on stdin, return stdout on success.
 /// Used by external filters and plugin functions.
+/// Writes stdin in a separate thread to prevent deadlock on large payloads.
 pub fn run_json_process(path: &Path, input: &serde_json::Value) -> Option<String> {
     use std::process::{Command, Stdio};
+    use std::io::Write;
     match Command::new(path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -40,13 +42,24 @@ pub fn run_json_process(path: &Path, input: &serde_json::Value) -> Option<String
         .spawn()
     {
         Ok(mut child) => {
-            if let Some(mut stdin) = child.stdin.take() {
-                if let Err(e) = serde_json::to_writer(&mut stdin, input) {
-                    eprintln!("Warning: subprocess {:?}: failed to write stdin: {}", path, e);
+            // Write stdin in a separate thread to avoid deadlock when pipe buffers fill
+            let mut stdin = child.stdin.take()?;
+            let json_bytes = match serde_json::to_vec(input) {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!("Warning: subprocess {:?}: failed to serialize input: {}", path, e);
+                    return None;
                 }
-                drop(stdin);
-            }
-            match child.wait_with_output() {
+            };
+            let writer = std::thread::spawn(move || {
+                let _ = stdin.write_all(&json_bytes);
+                // stdin dropped here, closing the pipe
+            });
+
+            let result = child.wait_with_output();
+            let _ = writer.join();
+
+            match result {
                 Ok(output) if output.status.success() => {
                     Some(String::from_utf8_lossy(&output.stdout).to_string())
                 }

@@ -17,7 +17,7 @@ pub struct Target {
     /// Inherit all fields from another target.
     pub inherits: Option<String>,
     /// Rendering engine: html, latex, typst, or markdown.
-    #[serde(default, alias = "base")]
+    #[serde(default)]
     pub engine: String,
     /// Document template name (default: "page").
     pub template: Option<String>,
@@ -199,20 +199,10 @@ pub fn resolve_target(name: &str, config: Option<&super::ProjectConfig>) -> Resu
         return Ok(target.clone());
     }
 
-    // 3. Aliases: map to a canonical target name and retry
-    let canonical = match name {
-        "tex" => "latex",
-        "typ" => "typst",
-        "md" => "markdown",
-        _ => bail!(
-            "Unknown target '{}'. Define it in _calepin.toml under [targets.{}].",
-            name, name,
-        ),
-    };
-
-    super::builtin_config().targets.get(canonical)
-        .cloned()
-        .ok_or_else(|| anyhow::anyhow!("Unknown target '{}'", name))
+    bail!(
+        "Unknown target '{}'. Define it in _calepin.toml under [targets.{}].",
+        name, name,
+    )
 }
 
 /// Fill unset fields in a user target from the built-in target for the same base.
@@ -233,7 +223,6 @@ fn merge_with_builtin(user: &Target) -> Target {
 }
 
 /// Convert a target's vars (toml::Value) into a minijinja-compatible Value.
-#[allow(dead_code)]
 pub fn target_vars_to_jinja(vars: Option<&toml::Value>) -> minijinja::Value {
     match vars {
         Some(v) => toml_to_jinja(v),

@@ -224,8 +224,7 @@ fn parse_author_mapping(
     }
 
     // Roles
-    let role_key = table_get(m, "roles")
-        .or_else(|| table_get(m, "role"));
+    let role_key = table_get(m, "roles");
     if let Some(rv) = role_key {
         if let Some(s) = rv.as_str() {
             author.roles.push(s.to_string());
@@ -239,8 +238,7 @@ fn parse_author_mapping(
     }
 
     // Affiliations
-    let aff_key = table_get(m, "affiliations")
-        .or_else(|| table_get(m, "affiliation"));
+    let aff_key = table_get(m, "affiliations");
     if let Some(aff_val) = aff_key {
         let aff_entries: Vec<&Value> = if aff_val.as_str().is_some() || aff_val.as_table().is_some() {
             vec![aff_val]
@@ -309,7 +307,7 @@ fn resolve_affiliation(
             name,
             department: table_str(m, "department"),
             city: table_str(m, "city"),
-            region: table_str(m, "region").or_else(|| table_str(m, "state")),
+            region: table_str(m, "region"),
             country: table_str(m, "country"),
             ..Default::default()
         };
@@ -461,7 +459,7 @@ mod tests {
 
     #[test]
     fn test_rich_author_with_affiliations() {
-        let text = "---\nauthor:\n  - name: Norah Jones\n    email: norah@example.com\n    orcid: 0000-0001-2345-6789\n    corresponding: true\n    affiliations:\n      - name: Carnegie Mellon University\n        city: Pittsburgh\n        state: PA\n---\nBody";
+        let text = "---\nauthor:\n  - name: Norah Jones\n    email: norah@example.com\n    orcid: 0000-0001-2345-6789\n    corresponding: true\n    affiliations:\n      - name: Carnegie Mellon University\n        city: Pittsburgh\n        region: PA\n---\nBody";
         let (meta, _) = split_yaml(text).unwrap();
         assert_eq!(meta.authors.len(), 1);
         assert_eq!(meta.authors[0].email.as_deref(), Some("norah@example.com"));

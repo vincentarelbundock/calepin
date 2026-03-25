@@ -78,7 +78,7 @@ icon = "github"
 href = "https://github.com/vincentarelbundock/calepin"
 
 [targets.latex]
-base = "latex"
+engine ="latex"
 template = "calepin"
 extension = "tex"
 fig-extension = "pdf"
@@ -88,7 +88,7 @@ command = "tectonic {input}"
 extension = "pdf"
 
 [targets.typst]
-base = "typst"
+engine ="typst"
 template = "calepin"
 extension = "typ"
 fig-extension = "svg"
@@ -97,7 +97,7 @@ preview = "serve"
 extension = "pdf"
 
 [targets.markdown]
-base = "markdown"
+engine ="markdown"
 template = "calepin"
 extension = "md"
 fig-extension = "png"

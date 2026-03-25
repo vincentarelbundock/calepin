@@ -74,4 +74,4 @@ icon = "envelope"
 href = "mailto:vincent.arel-bundock@umontreal.ca"
 
 [targets.website]
-base = "html"
+engine = "html"

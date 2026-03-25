@@ -132,6 +132,7 @@ impl World for CalepinWorld {
     }
 
     fn today(&self, offset: Option<i64>) -> Option<Datetime> {
+        use chrono::{Datelike, Timelike};
         let now = chrono::Local::now();
         let naive = match offset {
             Some(hours) => {
@@ -141,12 +142,12 @@ impl World for CalepinWorld {
             None => now.naive_local(),
         };
         Datetime::from_ymd_hms(
-            naive.format("%Y").to_string().parse().ok()?,
-            naive.format("%m").to_string().parse().ok()?,
-            naive.format("%d").to_string().parse().ok()?,
-            naive.format("%H").to_string().parse().ok()?,
-            naive.format("%M").to_string().parse().ok()?,
-            naive.format("%S").to_string().parse().ok()?,
+            naive.year(),
+            naive.month() as u8,
+            naive.day() as u8,
+            naive.hour() as u8,
+            naive.minute() as u8,
+            naive.second() as u8,
         )
     }
 }

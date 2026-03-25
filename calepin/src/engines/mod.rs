@@ -102,7 +102,6 @@ pub fn evaluate(
                 // If #| jinja: true, process chunk source through Jinja before execution
                 let jinja_chunk;
                 let chunk_ref = if merged_chunk.options.get_bool("jinja", false)
-                    || merged_chunk.options.get_bool("tera", false)
                 {
                     let joined = merged_chunk.source.join("\n");
                     let jinja_result = crate::jinja::process_body(
@@ -364,13 +363,7 @@ fn process_results(
 // ---------------------------------------------------------------------------
 
 pub fn format_matches(format_name: &str, output_format: &str) -> bool {
-    let normalized = match format_name {
-        "tex" | "pdf" => "latex",
-        "typ" => "typst",
-        "md" => "markdown",
-        other => other,
-    };
-    normalized == output_format
+    format_name == output_format
 }
 
 fn div_is_visible(
@@ -455,14 +448,6 @@ mod tests {
     }
 
     #[test]
-    fn test_format_matches_aliases() {
-        assert!(format_matches("tex", "latex"));
-        assert!(format_matches("pdf", "latex"));
-        assert!(format_matches("typ", "typst"));
-        assert!(format_matches("md", "markdown"));
-    }
-
-    #[test]
     fn test_content_visible_when_format() {
         let classes = vec!["content-visible".to_string()];
         let mut attrs = HashMap::new();
@@ -475,7 +460,7 @@ mod tests {
     fn test_content_visible_unless_format() {
         let classes = vec!["content-visible".to_string()];
         let mut attrs = HashMap::new();
-        attrs.insert("unless-format".to_string(), "pdf".to_string());
+        attrs.insert("unless-format".to_string(), "latex".to_string());
         assert!(content_is_visible(&classes, &attrs, "html", None));
         assert!(!content_is_visible(&classes, &attrs, "latex", None));
     }
@@ -493,7 +478,7 @@ mod tests {
     fn test_content_hidden_unless_format() {
         let classes = vec!["content-hidden".to_string()];
         let mut attrs = HashMap::new();
-        attrs.insert("unless-format".to_string(), "pdf".to_string());
+        attrs.insert("unless-format".to_string(), "latex".to_string());
         assert!(!content_is_visible(&classes, &attrs, "html", None));
         assert!(content_is_visible(&classes, &attrs, "latex", None));
     }

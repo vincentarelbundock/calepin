@@ -1,7 +1,7 @@
 // Cross-reference resolution as a post-processing pass on rendered output.
 //
-// - resolve_html()  — Collect IDs from headings/figures/theorems/equations in HTML,
-//                     then resolve @ref-id, [@ref-id], [-@ref-id] to <a> links.
+// - resolve_html_with_ids() — Collect IDs from headings/figures/theorems/equations in HTML,
+//                             then resolve @ref-id, [@ref-id], [-@ref-id] to <a> links.
 // - resolve_latex() — Same for LaTeX with \hyperref and \ref commands.
 // - resolve_plain() — Same for Typst/Markdown with plain "Type N" text.
 //
@@ -48,9 +48,6 @@ pub struct CrossRefEntry {
     pub number: String,
     /// Output file URL relative to site root: "guides/chapter2.html".
     pub source_url: String,
-    /// Prefix type: "fig", "sec", "thm", etc.
-    #[allow(dead_code)]
-    pub prefix: String,
 }
 
 /// Global cross-reference registry built from all pages in a collection.
@@ -69,7 +66,6 @@ impl CrossRefRegistry {
         let mut entries = HashMap::new();
         for (chapter, url, ref_data) in pages {
             for (id, local_num) in &ref_data.ids {
-                let (prefix, _) = split_ref_id(id);
                 let number = renumber_with_chapter(local_num, *chapter);
                 if let Some(existing) = entries.get(id) {
                     let existing: &CrossRefEntry = existing;
@@ -82,7 +78,6 @@ impl CrossRefRegistry {
                 entries.insert(id.clone(), CrossRefEntry {
                     number,
                     source_url: url.clone(),
-                    prefix: prefix.to_string(),
                 });
             }
         }
@@ -244,16 +239,6 @@ fn resolve_grouped_plain(ids: &[String], db: &HashMap<String, String>) -> String
         }
     }).collect();
     format!("({})", parts.join("; "))
-}
-
-/// Post-process rendered HTML: resolve all cross-references (no pre-collected IDs).
-#[inline(never)]
-#[allow(dead_code)]
-pub fn resolve_html(
-    html: &str,
-    theorem_nums: &HashMap<String, String>,
-) -> String {
-    resolve_html_with_ids(html, theorem_nums, &HashMap::new())
 }
 
 /// Post-process rendered HTML with pre-collected IDs from the AST walk.
@@ -838,7 +823,7 @@ mod tests {
         let html = "<h1 id=\"sec-intro\">Intro</h1>\n\
                      <h2 id=\"methods\">Methods</h2>\n\
                      <p>See @sec-intro and @sec-methods</p>";
-        let result = resolve_html(html, &HashMap::new());
+        let result = resolve_html_with_ids(html, &HashMap::new(), &HashMap::new());
         assert!(result.contains("Section 1"), "result: {}", result);
         assert!(result.contains("Section 1.1"), "result: {}", result);
     }
@@ -847,7 +832,7 @@ mod tests {
     fn test_resolve_html_figures() {
         let html = "<div class=\"figure\" id=\"fig-scatter\"><p>Caption</p></div>\n\
                      <p>See @fig-scatter</p>";
-        let result = resolve_html(html, &HashMap::new());
+        let result = resolve_html_with_ids(html, &HashMap::new(), &HashMap::new());
         assert!(result.contains("Figure 1"), "result: {}", result);
         assert!(result.contains("fig-scatter"), "result: {}", result);
     }
@@ -856,7 +841,7 @@ mod tests {
     fn test_resolve_suppress() {
         let html = "<div id=\"fig-scatter\"></div>\n\
                      <p>number [-@fig-scatter]</p>";
-        let result = resolve_html(html, &HashMap::new());
+        let result = resolve_html_with_ids(html, &HashMap::new(), &HashMap::new());
         assert!(result.contains(">1<"), "result: {}", result);
         assert!(!result.contains("Figure"), "result: {}", result);
     }
@@ -865,7 +850,7 @@ mod tests {
     fn test_resolve_bracket() {
         let html = "<h1 id=\"sec-intro\">Intro</h1>\n\
                      <p>see [@sec-intro]</p>";
-        let result = resolve_html(html, &HashMap::new());
+        let result = resolve_html_with_ids(html, &HashMap::new(), &HashMap::new());
         assert!(result.contains("[<a"), "result: {}", result);
         assert!(result.contains("Section 1</a>]"), "result: {}", result);
     }
@@ -876,7 +861,7 @@ mod tests {
         nums.insert("tip-example".to_string(), "1".to_string());
         let html = "<div class=\"callout\" id=\"tip-example\"></div>\n\
                      <p>See @tip-example</p>";
-        let result = resolve_html(html, &nums);
+        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
         assert!(result.contains("Tip 1"), "result: {}", result);
         assert!(result.contains("href=\"#tip-example\""), "result: {}", result);
     }
@@ -887,7 +872,7 @@ mod tests {
         nums.insert("nte-important-info".to_string(), "1".to_string());
         let html = "<div class=\"callout\" id=\"nte-important-info\"></div>\n\
                      <p>See @nte-important-info</p>";
-        let result = resolve_html(html, &nums);
+        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
         assert!(result.contains("Note 1"), "result: {}", result);
     }
 
@@ -897,7 +882,7 @@ mod tests {
         nums.insert("wrn-danger".to_string(), "1".to_string());
         let html = "<div class=\"callout\" id=\"wrn-danger\"></div>\n\
                      <p>See @wrn-danger</p>";
-        let result = resolve_html(html, &nums);
+        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
         assert!(result.contains("Warning 1"), "result: {}", result);
     }
 
@@ -907,7 +892,7 @@ mod tests {
         nums.insert("tip-example".to_string(), "1".to_string());
         let html = "<div class=\"callout\" id=\"tip-example\"></div>\n\
                      <p>number [-@tip-example]</p>";
-        let result = resolve_html(html, &nums);
+        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
         assert!(result.contains(">1<"), "result: {}", result);
         assert!(!result.contains("Tip"), "result: {}", result);
     }
@@ -918,7 +903,7 @@ mod tests {
         nums.insert("lst-pyplot".to_string(), "1".to_string());
         let html = "<div class=\"code-listing\" id=\"lst-pyplot\"></div>\n\
                      <p>See @lst-pyplot</p>";
-        let result = resolve_html(html, &nums);
+        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
         assert!(result.contains("Listing 1"), "result: {}", result);
         assert!(result.contains("href=\"#lst-pyplot\""), "result: {}", result);
     }
@@ -929,7 +914,7 @@ mod tests {
         nums.insert("lst-sort".to_string(), "2".to_string());
         let html = "<div class=\"code-listing\" id=\"lst-sort\"></div>\n\
                      <p>see [@lst-sort]</p>";
-        let result = resolve_html(html, &nums);
+        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
         assert!(result.contains("[<a"), "result: {}", result);
         assert!(result.contains("Listing 2"), "result: {}", result);
     }
@@ -1022,7 +1007,6 @@ mod tests {
         entries.insert("fig-scatter".to_string(), CrossRefEntry {
             number: "2.3".to_string(),
             source_url: "chapter2.html".to_string(),
-            prefix: "fig".to_string(),
         });
         let registry = CrossRefRegistry { entries };
         let html = r#"<p>See @fig-scatter</p>"#;
@@ -1037,7 +1021,6 @@ mod tests {
         entries.insert("fig-scatter".to_string(), CrossRefEntry {
             number: "1.5".to_string(),
             source_url: "chapter1.html".to_string(),
-            prefix: "fig".to_string(),
         });
         let registry = CrossRefRegistry { entries };
         let html = r#"<p>See @fig-scatter</p>"#;
@@ -1052,7 +1035,6 @@ mod tests {
         entries.insert("fig-a".to_string(), CrossRefEntry {
             number: "1.1".to_string(),
             source_url: "guides/intro.html".to_string(),
-            prefix: "fig".to_string(),
         });
         let registry = CrossRefRegistry { entries };
         let html = r#"<p>See @fig-a</p>"#;
@@ -1067,7 +1049,6 @@ mod tests {
         entries.insert("fig-a".to_string(), CrossRefEntry {
             number: "2.1".to_string(),
             source_url: "ch2.html".to_string(),
-            prefix: "fig".to_string(),
         });
         let registry = CrossRefRegistry { entries };
         let html = r#"<p>number [-@fig-a]</p>"#;

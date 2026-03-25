@@ -173,41 +173,14 @@ impl PluginManifest {
 }
 
 fn parse_provides(root: &Value, plugin_dir: &Path) -> Result<PluginProvides> {
-    // New flat format: [[filter]], [[shortcode]], [[postprocess]] at root level.
-    // Old format: [provides.filter], [provides.shortcode], etc. under [provides].
-    // Accept both during transition.
-
-    let has_flat = root.get("filter").is_some()
-        || root.get("shortcode").is_some()
-        || root.get("postprocess").is_some();
-
-    if has_flat {
-        // New flat format
-        return Ok(PluginProvides {
-            filters: parse_filter_specs(root, plugin_dir),
-            shortcode: parse_shortcode_spec(root, plugin_dir),
-            postprocess: parse_postprocess_spec(root, plugin_dir),
-            elements: parse_elements_spec(root),
-            templates: parse_templates_spec(root),
-            csl: root.get("csl").and_then(|v| v.as_str()).map(String::from),
-            format: parse_format_spec(root, plugin_dir),
-        });
-    }
-
-    // Legacy [provides] format
-    let provides_node = match root.get("provides") {
-        Some(v) => v,
-        None => return Ok(PluginProvides::default()),
-    };
-
     Ok(PluginProvides {
-        filters: parse_filter_specs(provides_node, plugin_dir),
-        shortcode: parse_shortcode_spec(provides_node, plugin_dir),
-        postprocess: parse_postprocess_spec(provides_node, plugin_dir),
-        elements: parse_elements_spec(provides_node),
-        templates: parse_templates_spec(provides_node),
-        csl: provides_node.get("csl").and_then(|v| v.as_str()).map(String::from),
-        format: parse_format_spec(provides_node, plugin_dir),
+        filters: parse_filter_specs(root, plugin_dir),
+        shortcode: parse_shortcode_spec(root, plugin_dir),
+        postprocess: parse_postprocess_spec(root, plugin_dir),
+        elements: parse_elements_spec(root),
+        templates: parse_templates_spec(root),
+        csl: root.get("csl").and_then(|v| v.as_str()).map(String::from),
+        format: parse_format_spec(root, plugin_dir),
     })
 }
 
@@ -242,16 +215,16 @@ fn parse_one_filter_spec(node: &Value, plugin_dir: &Path) -> Option<FilterSpec> 
 
     let match_rule = match node.get("match") {
         Some(match_node) => FilterMatch {
-            classes: val_str_vec_alias(match_node, "class", "classes"),
-            attrs: val_str_vec_alias(match_node, "attr", "attrs"),
+            classes: val_str_vec(match_node, "classes"),
+            attrs: val_str_vec(match_node, "attrs"),
             id_prefix: match_node.get("id_prefix").and_then(|v| v.as_str()).map(String::from),
-            formats: val_str_vec_alias(match_node, "formats", "format"),
+            formats: val_str_vec(match_node, "formats"),
         },
         None => FilterMatch::default(),
     };
 
     let contexts = {
-        let v = val_str_vec_alias(node, "context", "contexts");
+        let v = val_str_vec(node, "contexts");
         if v.is_empty() {
             vec!["div".to_string(), "span".to_string()]
         } else {
@@ -270,7 +243,7 @@ fn parse_shortcode_spec(provides: &Value, plugin_dir: &Path) -> Option<Shortcode
     let node = provides.get("shortcode")?;
     Some(ShortcodeSpec {
         run: node.get("run").and_then(|v| v.as_str()).map(|s| plugin_dir.join(s)),
-        names: val_str_vec_alias(node, "name", "names"),
+        names: val_str_vec(node, "names"),
     })
 }
 
@@ -317,10 +290,3 @@ fn val_str_vec(node: &Value, key: &str) -> Vec<String> {
     }
 }
 
-/// Try `primary` key first, then `fallback`. Supports both singular (string)
-/// and plural (array) forms, e.g., `class = ["note"]` or `classes = ["note"]`.
-fn val_str_vec_alias(node: &Value, primary: &str, fallback: &str) -> Vec<String> {
-    let v = val_str_vec(node, primary);
-    if !v.is_empty() { return v; }
-    val_str_vec(node, fallback)
-}

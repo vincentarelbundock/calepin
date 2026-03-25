@@ -16,7 +16,6 @@ mod collection;
 mod structures;
 mod paths;
 mod project;
-#[allow(dead_code)]
 mod tools;
 mod types;
 mod typst_compile;
@@ -86,23 +85,19 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
         }
     };
 
+    // Read front matter once (used for target and theme resolution)
+    let front_meta = fs::read_to_string(input).ok()
+        .and_then(|text| parse::yaml::split_yaml(&text).ok())
+        .map(|(meta, _)| meta);
+
     // Target name: CLI flag -> front matter -> default from config
     let default_format = project::get_defaults().format.clone().unwrap_or_else(|| "html".to_string());
     let (target_name, explicit_target) = if let Some(name) = cli_target {
         (name.to_string(), true)
     } else {
-        // Read front matter to check for target:
-        if let Ok(text) = fs::read_to_string(input) {
-            if let Ok((meta, _)) = parse::yaml::split_yaml(&text) {
-                match meta.target {
-                    Some(t) => (t, true),
-                    None => (default_format.clone(), false),
-                }
-            } else {
-                (default_format.clone(), false)
-            }
-        } else {
-            (default_format.clone(), false)
+        match front_meta.as_ref().and_then(|m| m.target.clone()) {
+            Some(t) => (t, true),
+            None => (default_format.clone(), false),
         }
     };
 
@@ -121,15 +116,7 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
 
     // Resolve theme: CLI flag -> front matter -> project config
     let theme_name = cli_theme.map(|s| s.to_string())
-        .or_else(|| {
-            // Read front matter theme
-            if let Ok(text) = fs::read_to_string(input) {
-                if let Ok((meta, _)) = parse::yaml::split_yaml(&text) {
-                    return meta.theme;
-                }
-            }
-            None
-        });
+        .or_else(|| front_meta.as_ref().and_then(|m| m.theme.clone()));
 
     // If theme is active, set theme dir for template resolution
     if let Some(ref theme) = theme_name {

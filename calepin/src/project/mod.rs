@@ -5,7 +5,7 @@ mod defaults;
 mod targets;
 
 // Re-export all public types and functions so existing `crate::project::` paths keep working.
-pub use content::{DocumentNode, expand_contents, expand_contents_for_lang, collect_all_document_paths, expand_glob_pub};
+pub use content::{DocumentNode, expand_contents, expand_contents_for_lang, expand_glob_pub};
 pub use defaults::*;
 pub use targets::{Target, CompileConfig, resolve_target, resolve_target_output_path, target_vars_to_jinja, resolve_inheritance};
 
@@ -92,12 +92,6 @@ pub struct ProjectConfig {
 }
 
 impl ProjectConfig {
-    /// Whether this config describes a collection (has [[contents]]).
-    #[allow(dead_code)]
-    pub fn is_collection(&self) -> bool {
-        !self.contents.is_empty()
-    }
-
     /// The default language code, or None if no languages are configured.
     pub fn default_language(&self) -> Option<&str> {
         if self.languages.is_empty() {
@@ -162,7 +156,6 @@ impl DocumentEntry {
     }
 
     /// The explicit title override, if any.
-    #[allow(dead_code)]
     pub fn title(&self) -> Option<&str> {
         match self {
             DocumentEntry::Path(_) => None,
@@ -274,7 +267,7 @@ mod tests {
     fn test_parse_minimal_config() {
         let toml = r#"
 [targets.web]
-base = "html"
+engine = "html"
 "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
         assert_eq!(config.targets.len(), 1);
@@ -288,7 +281,7 @@ base = "html"
     fn test_parse_full_config() {
         let toml = r#"
 [targets.article]
-base = "latex"
+engine = "latex"
 template = "article"
 extension = "tex"
 fig-extension = "pdf"
@@ -313,10 +306,10 @@ toc = false
     }
 
     #[test]
-    fn test_invalid_base_rejected() {
+    fn test_invalid_engine_rejected() {
         let toml = r#"
 [targets.bad]
-base = "word"
+engine = "word"
 "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
         let target = &config.targets["bad"];
@@ -327,7 +320,7 @@ base = "word"
     fn test_unknown_fields_rejected() {
         let toml = r#"
 [targets.web]
-base = "html"
+engine = "html"
 unknown_field = "oops"
 "#;
         let result: Result<ProjectConfig, _> = toml::from_str(toml);
@@ -340,7 +333,7 @@ unknown_field = "oops"
         assert_eq!(target.engine, "html");
         assert_eq!(target.template_name(), "page");
 
-        let target = resolve_target("tex", None).unwrap();
+        let target = resolve_target("latex", None).unwrap();
         assert_eq!(target.engine, "latex");
 
         assert!(resolve_target("unknown", None).is_err());
@@ -412,7 +405,7 @@ unknown_field = "oops"
 output = "output"
 
 [targets.web]
-base = "html"
+engine = "html"
 "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
         assert_eq!(config.output.as_deref(), Some("output"));
@@ -422,7 +415,7 @@ base = "html"
     fn test_config_output_field_absent() {
         let toml = r#"
 [targets.web]
-base = "html"
+engine = "html"
 "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
         assert_eq!(config.output, None);
@@ -434,7 +427,7 @@ base = "html"
 target = "website"
 
 [targets.website]
-base = "html"
+engine = "html"
 "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
         assert_eq!(config.target.as_deref(), Some("website"));

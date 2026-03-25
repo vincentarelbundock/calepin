@@ -55,14 +55,6 @@ impl Fmt {
     }
 }
 
-/// Format a text+url as a link in the appropriate output format.
-pub fn format_link(text: &str, url: Option<&str>, ext: &str) -> String {
-    match url {
-        Some(url) => Fmt::link(text, url, ext),
-        None => text.to_string(),
-    }
-}
-
 /// Strip markdown image/link syntax to produce plain text for <title> etc.
 /// `![alt](url)` -> `alt`, `[text](url)` -> `text`.
 /// For images with no alt text, extracts the filename stem from the URL.
@@ -106,12 +98,9 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         if let Some(ref text) = lic.text {
             if let Some(tpl) = resolve_element_template("license", ext) {
                 let mut vars = HashMap::new();
-                vars.insert("base".to_string(), fmt.clone());
                 vars.insert("engine".to_string(), fmt.clone());
                 vars.insert("text".to_string(), text.clone());
                 vars.insert("url".to_string(), lic.url.as_deref().unwrap_or("").to_string());
-                // Keep content for backward compatibility with overridden templates
-                vars.insert("content".to_string(), format_link(text, lic.url.as_deref(), ext));
                 sections.push(apply_template(&tpl, &vars));
             }
         }

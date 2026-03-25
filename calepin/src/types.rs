@@ -115,7 +115,6 @@ impl ChunkOptions {
         let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.eval).unwrap_or(true);
         self.get_bool("eval", d)
     }
-    #[allow(dead_code)]
     pub fn echo(&self) -> bool {
         let d = crate::project::get_defaults().chunk.as_ref().and_then(|c| c.echo).unwrap_or(true);
         self.get_bool("echo", d)
@@ -265,7 +264,7 @@ pub struct AuthorName {
     pub family: Option<String>,
 }
 
-/// A rich author record (Quarto-compatible schema).
+/// A rich author record with structured metadata.
 #[derive(Debug, Clone, Default)]
 pub struct Author {
     pub name: AuthorName,
@@ -347,7 +346,7 @@ pub struct CitationMeta {
 pub struct Metadata {
     pub title: Option<String>,
     pub subtitle: Option<String>,
-    /// Simple author name list (backward-compatible, always populated).
+    /// Simple author name list (always populated from structured or plain author data).
     pub author: Option<Vec<String>>,
     /// Rich author metadata (populated when structured author data is present).
     pub authors: Vec<Author>,
@@ -385,9 +384,7 @@ impl Metadata {
                 let value = value.trim();
                 match key {
                     "bibliography" => {
-                        if self.bibliography.is_empty() {
-                            self.bibliography.push(value.to_string());
-                        }
+                        self.bibliography.push(value.to_string());
                     }
                     _ => {}
                 }

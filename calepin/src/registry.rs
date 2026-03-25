@@ -325,7 +325,7 @@ impl PluginRegistry {
             }
         }
 
-        // Three-layer resolution: project templates/ → user templates/ → legacy
+        // Three-layer resolution: project elements/ → theme elements/ → built-in
         crate::paths::resolve_template(&canonical, format)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
@@ -345,26 +345,18 @@ impl PluginRegistry {
             }
         }
 
-        // Try new three-layer resolution if filename has a dot (e.g., "calepin.html")
+        // Three-layer resolution if filename has a dot (e.g., "calepin.html")
         if let Some(dot) = filename.rfind('.') {
             let name = &filename[..dot];
             let ext = &filename[dot + 1..];
-            let base = match ext {
-                "tex" => "latex",
-                "typ" => "typst",
-                "md" => "markdown",
-                other => other,
-            };
-            if let Some(path) = crate::paths::resolve_template(name, base) {
+            if let Some(path) = crate::paths::resolve_template(name, ext) {
                 if let Ok(content) = std::fs::read_to_string(path) {
                     return Some(content);
                 }
             }
         }
 
-        // Legacy fallback
-        crate::paths::resolve_path_cwd("templates", filename)
-            .and_then(|p| std::fs::read_to_string(p).ok())
+        None
     }
 
     /// Resolve a CSL file from plugins.

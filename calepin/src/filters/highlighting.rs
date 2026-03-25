@@ -54,20 +54,7 @@ fn highlight_cache_key(code: &str, lang: &str, ext: &str) -> u64 {
 }
 
 /// Resolve a user-facing theme name to an internal key.
-/// Handles a few legacy aliases, otherwise passes through as-is.
 fn resolve_theme_name(name: &str) -> Option<&'static str> {
-    // Legacy syntect built-in aliases
-    match name.to_lowercase().as_str() {
-        "inspiredgithub" | "inspired-github" => return Some("github"),
-        "base16-ocean-dark" | "base16-ocean.dark" => return Some("base16-ocean.dark"),
-        "base16-ocean-light" | "base16-ocean.light" => return Some("base16-ocean.light"),
-        "base16-eighties-dark" | "base16-eighties.dark" => return Some("base16-eighties.dark"),
-        "base16-mocha-dark" | "base16-mocha.dark" => return Some("base16-mocha.dark"),
-        "solarized-dark" => return Some("Solarized (dark)"),
-        "solarized-light" => return Some("Solarized (light)"),
-        _ => {}
-    }
-
     // Check if a .tmTheme file exists in the built-in highlighting themes
     let path = format!("{}.tmTheme", name);
     if crate::render::elements::BUILTIN_HIGHLIGHTING.get_file(&path).is_some() {

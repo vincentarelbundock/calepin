@@ -64,7 +64,7 @@ The pipeline transforms data through three representations:
 
 ## Format Names
 
-Internally, formats use canonical names: `html`, `latex`, `typst`, `markdown`. File extensions for output are: `.html`, `.tex`, `.typ`, `.md`. All template/filter resolution uses the canonical format name (e.g., `theorem.latex`, `calepin.typst`). Aliases (`tex`, `pdf`, `typ`, `md`) are only accepted in `format_matches()` for Quarto raw block compatibility.
+Internally, formats use canonical names: `html`, `latex`, `typst`, `markdown`. File extensions for output are: `.html`, `.tex`, `.typ`, `.md`. All template/filter resolution uses the canonical format name (e.g., `theorem.latex`, `calepin.typst`). Raw blocks must use canonical names (```` ```{=latex} ````, not ```` ```{=tex} ````). Format aliases are resolved at the CLI/config level by `resolve_format_from_extension()` and `create_renderer()`.
 
 ## Module Layout
 

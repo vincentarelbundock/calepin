@@ -296,7 +296,6 @@ pub fn process_body(
     let var_val = build_variables_map(metadata);
 
     let context = minijinja::context! {
-        base => format,     // deprecated alias for engine
         engine => format,   // rendering engine (html, latex, typst, markdown)
         target => format,   // target name (defaults to engine when no target specified)
         meta => meta_val,

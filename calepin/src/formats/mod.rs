@@ -131,10 +131,10 @@ pub trait OutputRenderer {
 pub fn create_renderer(format: &str) -> Result<Box<dyn OutputRenderer>> {
     match format {
         "html" => Ok(Box::new(html::HtmlRenderer)),
-        "latex" | "tex" | "pdf" => Ok(Box::new(latex::LatexRenderer)),
-        "markdown" | "md" => Ok(Box::new(markdown::MarkdownRenderer)),
-        "typst" | "typ" => Ok(Box::new(typst::TypstRenderer)),
-        "word" | "docx" => Ok(Box::new(word::WordRenderer)),
+        "latex" => Ok(Box::new(latex::LatexRenderer)),
+        "markdown" => Ok(Box::new(markdown::MarkdownRenderer)),
+        "typst" => Ok(Box::new(typst::TypstRenderer)),
+        "word" => Ok(Box::new(word::WordRenderer)),
         other => load_custom_format(other),
     }
 }

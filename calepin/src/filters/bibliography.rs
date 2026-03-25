@@ -127,22 +127,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
 
     for (i, key) in all_keys.iter().enumerate() {
         if let Some(c) = rendered.citations.get(i) {
-            let mut paren = format_plain(&c.citation); // e.g. "Arel-Bundock et al. 2026"
-
-            // hayagriva 0.9 may not apply et-al truncation correctly.
-            // If the entry has 4+ authors and the citation doesn't contain
-            // "et al.", manually truncate to first author + "et al."
-            if let Some(entry) = library.get(key) {
-                if let Some(authors) = entry.authors() {
-                    if authors.len() >= 4 && !paren.contains("et al.") {
-                        if let Some(first) = authors.first() {
-                            let surname = &first.name;
-                            let year = extract_year(&paren);
-                            paren = format!("{} et al. {}", surname, year);
-                        }
-                    }
-                }
-            }
+            let paren = format_plain(&c.citation); // e.g. "Arel-Bundock et al. 2026"
 
             paren_map.insert(key.clone(), paren.clone());
             prose_map.insert(key.clone(), format_narrative(&paren));
