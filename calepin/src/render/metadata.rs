@@ -17,14 +17,6 @@ use crate::render::template::apply_template;
 struct Fmt;
 
 impl Fmt {
-    fn link(text: &str, url: &str, ext: &str) -> String {
-        match ext {
-            "html" => format!("<a href=\"{}\">{}</a>", url, text),
-            "latex" => format!("{} (\\url{{{}}})", text, url),
-            "typst" => format!("#link(\"{}\")[{}]", url, text),
-            _ => format!("[{}]({})", text, url),
-        }
-    }
 
     fn superscript(text: &str, ext: &str) -> String {
         match ext {

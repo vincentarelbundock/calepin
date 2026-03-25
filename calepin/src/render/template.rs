@@ -270,12 +270,6 @@ pub fn render_element(name: &str, ext: &str, vars: &HashMap<String, String>) -> 
 }
 
 /// Build page template variables from metadata and rendered body.
-/// Shared across all output formats; format-specific blocks are rendered
-/// through overridable element templates.
-pub fn build_template_vars(meta: &Metadata, body: &str, ext: &str) -> HashMap<String, String> {
-    build_template_vars_with_headings(meta, body, ext, &[])
-}
-
 /// Build page template variables with pre-collected heading metadata for TOC.
 pub fn build_template_vars_with_headings(
     meta: &Metadata,

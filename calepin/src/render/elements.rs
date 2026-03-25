@@ -221,13 +221,6 @@ impl ElementRenderer {
         crate::render::emit::html::render_footnote_section(&defs)
     }
 
-    pub fn render_template(&self, name: &str) -> String {
-        let mut vars = HashMap::new();
-        vars.insert("base".to_string(), self.ext.clone());
-        vars.insert("engine".to_string(), self.ext.clone());
-        self.template_env.render(name, &vars)
-    }
-
     #[inline(never)]
     pub fn render(&self, element: &Element) -> String {
         match element {
@@ -424,11 +417,6 @@ impl ElementRenderer {
 
     pub fn theorem_numbers(&self) -> HashMap<String, String> {
         self.theorem_numbers.borrow().clone()
-    }
-
-    pub fn syntax_css(&self) -> String {
-        if self.ext != "html" || !self.has_code.get() { return String::new(); }
-        self.highlighter.syntax_css()
     }
 
     pub fn syntax_css_with_scope(&self, scope: ColorScope) -> String {

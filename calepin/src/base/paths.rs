@@ -170,24 +170,6 @@ pub fn assets_dir(project_root: &Path) -> PathBuf {
     calepin_dir(project_root, &["assets"])
 }
 
-/// Resolve a file under the project `_calepin/` directory.
-/// Returns the first path that exists, or None.
-///
-/// Resolution: `{project_root}/_calepin/{dir}/{filename}`
-pub fn resolve_path(project_root: &Path, dir: &str, filename: &str) -> Option<PathBuf> {
-    let local = calepin_dir(project_root, &[dir, filename]);
-    if local.exists() {
-        return Some(local);
-    }
-
-    None
-}
-
-/// Wrapper: resolves relative to the thread-local project root.
-pub fn resolve_path_cwd(dir: &str, filename: &str) -> Option<PathBuf> {
-    resolve_path(&get_project_root(), dir, filename)
-}
-
 // ---------------------------------------------------------------------------
 // Template, snippet, and plugin resolution
 // ---------------------------------------------------------------------------

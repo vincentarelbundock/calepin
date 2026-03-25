@@ -295,10 +295,6 @@ impl Highlighter {
     ///
     /// For a single theme, emits unscoped CSS.
     /// For light/dark, wraps each theme's CSS in `@media (prefers-color-scheme: ...)`.
-    pub fn syntax_css(&self) -> String {
-        self.syntax_css_with_scope(ColorScope::MediaQuery)
-    }
-
     /// Generate CSS with a specific scoping strategy for light/dark themes.
     pub fn syntax_css_with_scope(&self, scope: ColorScope) -> String {
         match &self.config {
