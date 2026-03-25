@@ -2,7 +2,7 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
+use crate::render::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
 use crate::render::convert::ImageAttrs;
 
 pub struct TypstEmitter;
@@ -23,9 +23,9 @@ pub fn markdown_to_typst_with_counter(
     let options = WalkOptions { footnote_counter_start, ..WalkOptions::default() };
     let result = walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options);
     let output = if convert_math {
-        crate::filters::math::convert_math_for_typst(&result.output)
+        crate::render::math::convert_math_for_typst(&result.output)
     } else {
-        crate::filters::math::strip_math_for_typst(&result.output)
+        crate::render::math::strip_math_for_typst(&result.output)
     };
     (output, result.metadata.footnote_counter_end)
 }
@@ -115,7 +115,7 @@ impl FormatEmitter for TypstEmitter {
     fn link_close(&self, _url: &str) -> String { "]".to_string() }
 
     fn image(&self, url: &str, _alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::filters::figure::select_image_variant(
+        let resolved = crate::render::transform_element::figure::select_image_variant(
             std::path::Path::new(url), "typst",
         );
         let params = attrs.to_typst_params();

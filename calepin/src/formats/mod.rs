@@ -220,7 +220,7 @@ impl OutputRenderer for CustomRenderer {
                     vars.insert("syntax_css".to_string(), syntax_css);
                 }
                 let datatheme_css = renderer.syntax_css_with_scope(
-                    crate::filters::highlighting::ColorScope::DataTheme,
+                    crate::render::highlighting::ColorScope::DataTheme,
                 );
                 if !datatheme_css.is_empty() {
                     vars.insert("syntax_css_datatheme".to_string(), datatheme_css);

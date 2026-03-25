@@ -6,9 +6,9 @@ use std::rc::Rc;
 use include_dir::{include_dir, Dir};
 
 use crate::types::Element;
-use crate::filters::{Filter, FilterResult};
+use crate::render::transform_element::{Filter, FilterResult};
 use crate::registry::PluginRegistry;
-use crate::filters::highlighting::{Highlighter, HighlightConfig, ColorScope};
+use crate::render::highlighting::{Highlighter, HighlightConfig, ColorScope};
 
 // ---------------------------------------------------------------------------
 // Built-in project tree (embedded at compile time)
@@ -92,7 +92,7 @@ pub struct ElementRenderer {
     /// Keyed by full id (e.g. "thm-cauchy"), value is the number string.
     pub theorem_numbers: std::cell::RefCell<HashMap<String, String>>,
     /// Accumulated walk metadata (headings, IDs) from all Text element renders.
-    pub walk_metadata: std::cell::RefCell<crate::render::ast::WalkMetadata>,
+    pub walk_metadata: std::cell::RefCell<crate::render::emit::WalkMetadata>,
     /// Running footnote counter across Text elements.
     footnote_counter: std::cell::Cell<usize>,
     /// Section counters chained across Text elements.
@@ -145,7 +145,7 @@ impl ElementRenderer {
             default_fig_cap_location: None,
             chapter_number: None,
             theorem_numbers: std::cell::RefCell::new(HashMap::new()),
-            walk_metadata: std::cell::RefCell::new(crate::render::ast::WalkMetadata::default()),
+            walk_metadata: std::cell::RefCell::new(crate::render::emit::WalkMetadata::default()),
             footnote_counter: std::cell::Cell::new(0),
             section_counters: std::cell::Cell::new(None),
             min_heading_level: std::cell::Cell::new(None),
@@ -179,7 +179,7 @@ impl ElementRenderer {
         if defs.is_empty() || self.ext != "html" {
             return String::new();
         }
-        crate::render::html_emit::render_footnote_section(&defs)
+        crate::render::emit::html::render_footnote_section(&defs)
     }
 
     pub fn render_template(&self, name: &str) -> String {
@@ -215,7 +215,7 @@ impl ElementRenderer {
         };
         let fragments = self.raw_fragments.borrow();
         let rendered = if self.ext == "html" {
-            let options = crate::render::ast::WalkOptions {
+            let options = crate::render::emit::WalkOptions {
                 number_sections: self.number_sections,
                 shift_headings: self.shift_headings,
                 footnote_counter_start: self.footnote_counter.get(),
@@ -244,13 +244,13 @@ impl ElementRenderer {
         } else {
             let fn_start = self.footnote_counter.get();
             let (output, fn_end) = match self.ext.as_str() {
-                "typst" => crate::render::typst_emit::markdown_to_typst_with_counter(
+                "typst" => crate::render::emit::typst::markdown_to_typst_with_counter(
                     &processed, &fragments, fn_start, self.convert_math,
                 ),
-                "latex" => crate::render::latex_emit::markdown_to_latex_with_counter(
+                "latex" => crate::render::emit::latex::markdown_to_latex_with_counter(
                     &processed, &fragments, self.number_sections, fn_start,
                 ),
-                _ => crate::render::markdown_emit::markdown_to_markdown_with_counter(
+                _ => crate::render::emit::markdown::markdown_to_markdown_with_counter(
                     &processed, &fragments, fn_start,
                 ),
             };
@@ -349,8 +349,8 @@ impl ElementRenderer {
         vars.insert("engine".to_string(), self.ext.clone());
 
         // Run element through pipeline filters
-        let code_filter = crate::filters::code::CodeFilter::new(&self.highlighter);
-        let figure_filter = crate::filters::figure::FigureFilter::new(
+        let code_filter = crate::render::transform_element::code::CodeFilter::new(&self.highlighter);
+        let figure_filter = crate::render::transform_element::figure::FigureFilter::new(
             self.default_fig_cap_location.clone(),
         );
 
@@ -400,7 +400,7 @@ impl ElementRenderer {
     }
 
     /// Return the accumulated walk metadata (headings for TOC, IDs for cross-refs).
-    pub fn walk_metadata(&self) -> crate::render::ast::WalkMetadata {
+    pub fn walk_metadata(&self) -> crate::render::emit::WalkMetadata {
         self.walk_metadata.borrow().clone()
     }
 

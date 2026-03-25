@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use crate::types::Element;
-use crate::filters::figure::format_align;
+use crate::render::transform_element::figure::format_align;
 
 /// Render a `#fig-` prefixed div as a figure environment.
 pub fn render_div(

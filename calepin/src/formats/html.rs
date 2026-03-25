@@ -32,7 +32,7 @@ impl OutputRenderer for HtmlRenderer {
             &full_body, meta, "html", &walk_meta.headings, renderer.preamble(),
             |vars| {
                 let syntax_css = renderer.syntax_css_with_scope(
-                    crate::filters::highlighting::ColorScope::Both,
+                    crate::render::highlighting::ColorScope::Both,
                 );
                 if !syntax_css.is_empty() {
                     let css = vars.entry("css".to_string()).or_default();

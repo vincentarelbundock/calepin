@@ -1,9 +1,14 @@
-//! Unified AST walker for all output formats.
+//! AST emitters: shared walker + format-specific implementations.
 //!
 //! A single `walk_ast()` function traverses comrak's node tree and calls
 //! methods on a `FormatEmitter` trait to produce format-specific output.
 //! Shared logic -- heading ID extraction, footnote pre-pass, section
 //! numbering, table state, math/marker protection -- lives here.
+
+pub mod html;
+pub mod latex;
+pub mod typst;
+pub mod markdown;
 
 use comrak::nodes::{NodeValue, TableAlignment, ListType};
 use comrak::{parse_document, Arena};

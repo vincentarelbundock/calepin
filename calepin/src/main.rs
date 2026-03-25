@@ -1,8 +1,9 @@
 #[macro_use]
 mod cli;
 mod commands;
+mod bibliography;
+mod crossref;
 mod engines;
-mod filters;
 mod jinja;
 mod math;
 mod parse;
@@ -21,7 +22,8 @@ pub(crate) use base::{types, value, paths, util};
 mod plugins;
 pub(crate) use plugins::{registry, manifest as plugin_manifest, theme as theme_manifest};
 
-pub(crate) use render::{formats, typst_compile};
+mod formats;
+pub(crate) use render::typst_compile;
 use std::fs;
 use std::path::{Path, PathBuf};
 

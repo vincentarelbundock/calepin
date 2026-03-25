@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use super::{Filter, FilterResult};
 use crate::types::Element;
-use crate::filters::highlighting::Highlighter;
+use crate::render::highlighting::Highlighter;
 
 pub struct CodeFilter<'a> {
     highlighter: &'a Highlighter,

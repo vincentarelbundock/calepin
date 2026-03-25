@@ -164,7 +164,7 @@ fn render_one_document(
     } else if format == "html" {
         // HTML site mode: prepend syntax highlighting CSS, append footnotes
         let syntax_css = result.element_renderer.syntax_css_with_scope(
-            crate::filters::highlighting::ColorScope::DataTheme,
+            crate::render::highlighting::ColorScope::DataTheme,
         );
         let footnotes = result.element_renderer.render_footnote_section();
         let mut body = result.rendered;
@@ -214,7 +214,7 @@ pub fn render_documents_with_crossref(
     target: Option<&Target>,
     quiet: bool,
 ) -> Result<HashMap<String, CollectionRenderResult>> {
-    use crate::filters::crossref::{CrossRefRegistry, resolve_html_global, renumber_display_html};
+    use crate::crossref::{CrossRefRegistry, resolve_html_global, renumber_display_html};
 
     if pages.is_empty() {
         return Ok(HashMap::new());
@@ -284,7 +284,7 @@ pub fn render_documents_with_crossref(
     // Multilingual sites can have duplicate IDs across languages (e.g., sec-code
     // in both English and French pages), so each language gets its own registry.
     let has_languages = !config.languages.is_empty();
-    let mut lang_registry_input: HashMap<Option<String>, Vec<(usize, String, crate::filters::crossref::PageRefData)>> = HashMap::new();
+    let mut lang_registry_input: HashMap<Option<String>, Vec<(usize, String, crate::crossref::PageRefData)>> = HashMap::new();
     for page in pages {
         let key = page.source.display().to_string();
         if let Some(r) = pass1_results.get(&key) {
@@ -345,7 +345,7 @@ struct Pass1Result {
     date: Option<String>,
     subtitle: Option<String>,
     abstract_text: Option<String>,
-    ref_data: Option<crate::filters::crossref::PageRefData>,
+    ref_data: Option<crate::crossref::PageRefData>,
 }
 
 /// Render a single document for pass 1: skip cross-ref resolution, collect ref data.
@@ -373,7 +373,7 @@ fn render_one_document_pass1(
 
     // HTML site mode: prepend syntax highlighting CSS, append footnotes
     let syntax_css = result.element_renderer.syntax_css_with_scope(
-        crate::filters::highlighting::ColorScope::DataTheme,
+        crate::render::highlighting::ColorScope::DataTheme,
     );
     let footnotes = result.element_renderer.render_footnote_section();
     let mut body = result.rendered;

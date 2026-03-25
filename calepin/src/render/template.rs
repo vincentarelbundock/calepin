@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::types::Metadata;
 
 /// Build an HTML table of contents from heading metadata collected during the AST walk.
-pub fn build_toc_html(headings: &[crate::render::ast::TocEntry], depth: u8, title: &str) -> String {
+pub fn build_toc_html(headings: &[crate::render::emit::TocEntry], depth: u8, title: &str) -> String {
     let items: Vec<(u8, &str, &str)> = headings.iter()
         .filter(|h| h.level <= depth)
         .filter(|h| !h.classes.iter().any(|c| c == "unlisted"))
@@ -281,7 +281,7 @@ pub fn build_template_vars_with_headings(
     meta: &Metadata,
     body: &str,
     ext: &str,
-    headings: &[crate::render::ast::TocEntry],
+    headings: &[crate::render::emit::TocEntry],
 ) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
@@ -509,7 +509,7 @@ pub fn assemble_page(
     body: &str,
     meta: &Metadata,
     format: &str,
-    headings: &[crate::render::ast::TocEntry],
+    headings: &[crate::render::emit::TocEntry],
     preamble: &[String],
     customize: impl FnOnce(&mut HashMap<String, String>),
 ) -> String {

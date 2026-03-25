@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use crate::filters::FilterResult;
+use crate::render::transform_element::FilterResult;
 use crate::registry::{PluginKind, PluginRegistry};
 use crate::types::Element;
 
@@ -155,7 +155,7 @@ fn validate_div_id(id: &str, classes: &[String]) -> Option<String> {
     }
 
     for cls in classes {
-        if let Some(p) = crate::filters::theorem::theorem_prefix(cls) {
+        if let Some(p) = crate::render::transform_element::theorem::theorem_prefix(cls) {
             if p == prefix {
                 return None;
             }

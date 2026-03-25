@@ -2,7 +2,7 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, WalkResult, walk_and_render_with_metadata};
+use crate::render::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, WalkResult, walk_and_render_with_metadata};
 use crate::render::convert::ImageAttrs;
 
 pub struct HtmlEmitter;
@@ -139,7 +139,7 @@ impl FormatEmitter for HtmlEmitter {
     fn link_close(&self, _url: &str) -> String { "</a>".to_string() }
 
     fn image(&self, url: &str, alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::filters::figure::select_image_variant(
+        let resolved = crate::render::transform_element::figure::select_image_variant(
             std::path::Path::new(url), "html",
         );
         let embed = crate::project::get_defaults().embed_resources.unwrap_or(true);
@@ -223,7 +223,7 @@ impl FormatEmitter for HtmlEmitter {
         vars.insert("engine".to_string(), "html".to_string());
         vars.insert("footnotes".to_string(), "true".to_string());
         vars.insert("footnote_items".to_string(), footnote_items);
-        let tpl = include_str!("../project/templates/common/footnotes.jinja");
+        let tpl = include_str!("../../project/templates/common/footnotes.jinja");
         crate::render::template::apply_template(tpl, &vars)
     }
 

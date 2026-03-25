@@ -6,7 +6,7 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::render::ast::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
+use crate::render::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
 use crate::render::convert::ImageAttrs;
 
 pub struct MarkdownEmitter;

@@ -16,7 +16,6 @@ use crate::engines::r::RSession;
 use crate::engines::python::PythonSession;
 use crate::engines::EngineContext;
 use crate::engines::cache::CacheState;
-use crate::filters;
 use crate::formats;
 use crate::jinja;
 use crate::parse;
@@ -34,7 +33,7 @@ pub struct RenderResult {
     pub metadata: types::Metadata,
     pub element_renderer: ElementRenderer,
     /// Cross-reference data collected from this page (populated when skip_crossref is true).
-    pub ref_data: Option<filters::crossref::PageRefData>,
+    pub ref_data: Option<crate::crossref::PageRefData>,
 }
 
 /// Options for the core render pipeline that control collection-specific behavior.
@@ -201,13 +200,13 @@ pub fn render_core_with_options(
 
     // 7. Create element renderer
     let highlight_config = metadata.var.get("highlight-style")
-        .map(|v| filters::highlighting::parse_highlight_config(v))
+        .map(|v| crate::render::highlighting::parse_highlight_config(v))
         .unwrap_or_else(|| {
             let defs = project::get_defaults();
             let hl = defs.highlight.as_ref();
             let cfg = project::builtin_config();
             let meta_hl = cfg.highlight.as_ref();
-            filters::highlighting::HighlightConfig::LightDark {
+            crate::render::highlighting::HighlightConfig::LightDark {
                 light: hl.and_then(|h| h.light.clone())
                     .or_else(|| meta_hl.and_then(|h| h.light.clone()))
                     .unwrap_or_else(|| "github".to_string()),
@@ -250,7 +249,7 @@ pub fn render_core_with_options(
     let mut elements = eval_result.elements;
 
     // 9. Bibliography (transform_elements stage)
-    timed!("bibliography", filters::bibliography::process_citations(&mut elements, &metadata, &path_ctx.project_root)?);
+    timed!("bibliography", crate::bibliography::process_citations(&mut elements, &metadata, &path_ctx.project_root)?);
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);
@@ -269,7 +268,7 @@ pub fn render_core_with_options(
     let (rendered, ref_data) = if options.skip_crossref {
         // Collection mode pass 1: collect IDs but don't resolve refs yet
         let ref_data = if renderer.engine() == "html" {
-            Some(filters::crossref::collect_ids_html(&rendered, &thm_nums, &walk_meta.ids))
+            Some(crate::crossref::collect_ids_html(&rendered, &thm_nums, &walk_meta.ids))
         } else {
             None
         };
@@ -277,9 +276,9 @@ pub fn render_core_with_options(
     } else {
         // Single-file mode: resolve refs immediately
         let rendered = timed!("crossref", match renderer.engine() {
-            "html" => filters::crossref::resolve_html_with_ids(&rendered, &thm_nums, &walk_meta.ids),
-            "latex" => filters::crossref::resolve_latex(&rendered, &thm_nums),
-            _ => filters::crossref::resolve_plain(&rendered, &thm_nums),
+            "html" => crate::crossref::resolve_html_with_ids(&rendered, &thm_nums, &walk_meta.ids),
+            "latex" => crate::crossref::resolve_latex(&rendered, &thm_nums),
+            _ => crate::crossref::resolve_plain(&rendered, &thm_nums),
         });
         (rendered, None)
     };

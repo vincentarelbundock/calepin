@@ -61,7 +61,7 @@ pub fn render(
                 PluginKind::BuiltinFilter(filter) => {
                     let span_element = crate::types::Element::Text { content: content.to_string() };
                     match filter.apply(&span_element, format, &mut vars) {
-                        crate::filters::FilterResult::Rendered(output) => {
+                        crate::render::transform_element::FilterResult::Rendered(output) => {
                             return wrap_output(format, raw_fragments, output);
                         }
                         _ => {}

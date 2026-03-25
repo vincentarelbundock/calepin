@@ -178,7 +178,7 @@ pub fn select_image_variant(path: &Path, format: &str) -> PathBuf {
                 if candidate.exists() {
                     // For LaTeX, convert SVG to PDF on the fly
                     if format == "latex" && *ext == "svg" {
-                        match super::svg::convert_svg_to_pdf(&candidate) {
+                        match crate::render::svg::convert_svg_to_pdf(&candidate) {
                             Ok(pdf_path) => return pdf_path,
                             Err(e) => {
                                 cwarn!("SVG→PDF conversion failed for {}: {}", candidate.display(), e);
@@ -194,7 +194,7 @@ pub fn select_image_variant(path: &Path, format: &str) -> PathBuf {
 
     // If the path itself is an SVG and we're targeting LaTeX, convert it
     if format == "latex" && path.extension().is_some_and(|e| e == "svg") && path.exists() {
-        match super::svg::convert_svg_to_pdf(path) {
+        match crate::render::svg::convert_svg_to_pdf(path) {
             Ok(pdf_path) => return pdf_path,
             Err(e) => {
                 cwarn!("SVG→PDF conversion failed for {}: {}", path.display(), e);

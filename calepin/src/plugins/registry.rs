@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::filters::Filter;
+use crate::render::transform_element::Filter;
 use crate::plugin_manifest::{FilterMatch, FilterSpec, FormatSpec, PluginManifest, PluginProvides};
 use crate::types::Element;
 
@@ -377,7 +377,7 @@ fn register_builtins(plugins: &mut Vec<LoadedPlugin>) {
             ..Default::default()
         },
         vec!["div".to_string()],
-        Box::new(crate::filters::TheoremFilter::new()),
+        Box::new(crate::render::transform_element::TheoremFilter::new()),
     ));
 
     // Callout
@@ -393,7 +393,7 @@ fn register_builtins(plugins: &mut Vec<LoadedPlugin>) {
             ..Default::default()
         },
         vec!["div".to_string()],
-        Box::new(crate::filters::CalloutFilter::new()),
+        Box::new(crate::render::transform_element::CalloutFilter::new()),
     ));
 }
 
@@ -461,7 +461,7 @@ impl Filter for NoopFilter {
         _element: &Element,
         _format: &str,
         _vars: &mut HashMap<String, String>,
-    ) -> crate::filters::FilterResult {
-        crate::filters::FilterResult::Pass
+    ) -> crate::render::transform_element::FilterResult {
+        crate::render::transform_element::FilterResult::Pass
     }
 }

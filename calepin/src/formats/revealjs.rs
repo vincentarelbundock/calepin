@@ -36,7 +36,7 @@ impl OutputRenderer for RevealJsRenderer {
             |vars| {
                 // Inject syntax highlighting CSS
                 let syntax_css = renderer.syntax_css_with_scope(
-                    crate::filters::highlighting::ColorScope::Both,
+                    crate::render::highlighting::ColorScope::Both,
                 );
                 if !syntax_css.is_empty() {
                     vars.insert("syntax_css".to_string(), syntax_css);
