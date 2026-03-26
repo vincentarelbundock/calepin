@@ -367,6 +367,7 @@ pub fn build_template_vars_with_headings(
     vars.insert("js".to_string(), String::new());
     vars.insert("bib_preamble".to_string(), String::new());
     vars.insert("bib_end".to_string(), String::new());
+    vars.insert("colors".to_string(), String::new());
 
     // Math include for html-engine targets
     if ext == "html" {

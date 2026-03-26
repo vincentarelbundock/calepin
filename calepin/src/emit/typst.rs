@@ -23,9 +23,9 @@ pub fn markdown_to_typst_with_counter(
     let options = WalkOptions { footnote_counter_start, ..WalkOptions::default() };
     let result = walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options);
     let output = if convert_math {
-        crate::modules::convert_math_latex_typst::convert_math_for_typst(&result.output)
+        crate::modules::convert_math::convert_math_for_typst(&result.output)
     } else {
-        crate::modules::convert_math_latex_typst::strip_math_for_typst(&result.output)
+        crate::modules::convert_math::strip_math_for_typst(&result.output)
     };
     (output, result.metadata.footnote_counter_end)
 }

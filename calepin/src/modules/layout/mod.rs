@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use crate::types::Element;
-use crate::modules::figure_div;
+use crate::modules::figure;
 
 /// Render a layout div with grid-based layout.
 pub fn render(
@@ -25,7 +25,7 @@ pub fn render(
         if let Some(cap) = attrs.get("fig_cap") {
             (children.to_vec(), cap.clone())
         } else {
-            figure_div::separate_figure_caption(children)
+            figure::separate_figure_caption(children)
         }
     } else {
         (children.to_vec(), String::new())

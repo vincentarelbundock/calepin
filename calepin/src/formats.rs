@@ -195,6 +195,7 @@ impl FormatPipeline {
 
         // Collect page transform vars from modules
         let mut extra_vars = HashMap::new();
+        extra_vars.insert("base".to_string(), self.engine.clone());
         self.transform_page(&mut extra_vars, renderer, meta);
 
         let page_vars = &self.page_vars;

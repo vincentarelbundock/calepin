@@ -5,7 +5,7 @@
 //! # Example
 //!
 //! ```ignore
-//! use crate::modules::convert_math_latex_typst::latex_to_typst;
+//! use crate::modules::convert_math::latex_to_typst;
 //!
 //! let typst = latex_to_typst("\\frac{a}{b}");
 //! assert_eq!(typst, "frac(a, b)");

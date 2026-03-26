@@ -9,7 +9,7 @@ extension = "html"
 fig_extension = "svg"
 fig_formats = ["svg", "png", "jpg", "webp", "gif"]
 preview = "serve"
-modules = ["highlight", "append_footnotes_html", "embed_images_html"]
+modules = ["highlight", "append_footnotes", "embed_images"]
 crossref = "html"
 
 [targets.latex]
@@ -19,7 +19,7 @@ extension = "tex"
 fig_extension = "pdf"
 fig_formats = ["pdf", "eps", "svg", "png", "jpg"]
 preview = "serve"
-modules = ["highlight", "convert_svg_pdf", "inject_color_defs_latex"]
+modules = ["highlight", "convert_svg_pdf"]
 crossref = "latex"
 toc_headings = false
 
@@ -39,7 +39,7 @@ template = "page"
 extension = "pdf"
 fig_extension = "pdf"
 compile = "tectonic {input}"
-modules = ["highlight", "convert_svg_pdf", "inject_color_defs_latex"]
+modules = ["highlight", "convert_svg_pdf"]
 crossref = "latex"
 toc_headings = false
 
@@ -50,7 +50,7 @@ extension = "html"
 fig_extension = "svg"
 embed_resources = false
 preview = "serve"
-modules = ["highlight", "append_footnotes_html", "split_slides_html"]
+modules = ["highlight", "append_footnotes", "split_slides"]
 crossref = "html"
 toc_headings = false
 

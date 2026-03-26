@@ -250,13 +250,13 @@ pub fn evaluate(
                 let mut div_attrs = div.attrs.clone();
                 if let Some(ref id) = div.id {
                     if id.starts_with("fig-") && !div_attrs.contains_key("fig_cap") {
-                        let (remaining, caption) = crate::modules::figure_div::separate_figure_caption(&child_elements);
+                        let (remaining, caption) = crate::modules::figure::separate_figure_caption(&child_elements);
                         if !caption.is_empty() {
                             div_attrs.insert("fig_cap".to_string(), caption);
                             child_elements = remaining;
                         }
                     } else if id.starts_with("tbl-") && !div_attrs.contains_key("tbl_cap") {
-                        let (remaining, caption) = crate::modules::table_div::separate_table_caption(&child_elements);
+                        let (remaining, caption) = crate::modules::table::separate_table_caption(&child_elements);
                         if !caption.is_empty() {
                             div_attrs.insert("tbl_cap".to_string(), caption);
                             child_elements = remaining;

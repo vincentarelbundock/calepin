@@ -414,24 +414,22 @@ fn register_builtins(modules: &mut Vec<LoadedModule>) {
     ));
 
     // Body transforms
-    modules.push(builtin_body_transform("append_footnotes_html",
-        Box::new(crate::modules::append_footnotes_html::AppendFootnotesHtml)));
-    modules.push(builtin_body_transform("split_slides_html",
-        Box::new(crate::modules::split_slides_html::SplitSlidesHtml)));
-    modules.push(builtin_body_transform("inject_color_defs_latex",
-        Box::new(crate::modules::inject_color_defs_latex::InjectColorDefsLatex)));
+    modules.push(builtin_body_transform("append_footnotes",
+        Box::new(crate::modules::append_footnotes::AppendFootnotesHtml)));
+    modules.push(builtin_body_transform("split_slides",
+        Box::new(crate::modules::split_slides::SplitSlidesHtml)));
 
     // Page transforms
     modules.push(builtin_page_transform("highlight",
-        Box::new(crate::modules::highlight::transform_page::InjectSyntaxCss)));
+        Box::new(crate::modules::highlight::transform_page::InjectHighlightVars)));
 
     // Element raw transforms (pre-render)
     modules.push(builtin_element_raw_simple("convert_svg_pdf",
         Box::new(crate::modules::convert_svg_pdf::ConvertSvgPdf)));
 
     // Document transforms
-    modules.push(builtin_document_transform("embed_images_html",
-        Box::new(crate::modules::embed_images_html::EmbedImagesHtml)));
+    modules.push(builtin_document_transform("embed_images",
+        Box::new(crate::modules::embed_images::EmbedImagesHtml)));
 }
 
 fn builtin_element_raw(
