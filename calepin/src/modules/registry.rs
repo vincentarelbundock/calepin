@@ -146,7 +146,17 @@ impl ModuleRegistry {
             match crate::paths::resolve_module_dir(name, project_root) {
                 Some(dir) => match ModuleManifest::load(&dir) {
                     Ok(manifest) => {
-                        modules.push(LoadedModule { manifest, kind: ModuleKind::Noop });
+                        let kind = if let Some(ref script) = manifest.provides.document_script {
+                            ModuleKind::Document(Box::new(
+                                crate::modules::transform_document::ScriptTransformDocument {
+                                    script_path: script.clone(),
+                                    module_dir: manifest.module_dir.clone(),
+                                }
+                            ))
+                        } else {
+                            ModuleKind::Noop
+                        };
+                        modules.push(LoadedModule { manifest, kind });
                     }
                     Err(e) => eprintln!("Warning: failed to load module '{}': {}", name, e),
                 },

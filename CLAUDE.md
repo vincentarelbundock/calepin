@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **calepin** is a Rust CLI that renders `.qmd` (Quarto-compatible) documents to HTML, LaTeX, Typst, and Markdown. It runs R (via a persistent `Rscript` subprocess) and Python (via a persistent `python3` subprocess) to execute code chunks, processes citations with hayagriva, and resolves cross-references.
 
-The tutorial (`website/basics.qmd`) must be valid Quarto syntax so it can be benchmarked against Quarto and litedown. calepin-specific extensions (plugins, `.hidden` divs, custom shortcodes) are documented in `website/templates.qmd`, `website/filters.qmd`, `website/shortcodes.qmd`, and `website/plugins.qmd`.
+The tutorial (`website/basics.qmd`) must be valid Quarto syntax so it can be benchmarked against Quarto and litedown. calepin-specific extensions (modules, `.hidden` divs, custom shortcodes) are documented in `website/templates.qmd`, `website/filters.qmd`, `website/shortcodes.qmd`, and `website/plugins.qmd`.
 
 When referring to the software by name in documentation or notebooks, always write *Calepin* (italic, capital C).
 
@@ -47,166 +47,202 @@ Batch mode: `calepin --batch manifest.json` or `calepin --batch - < manifest.jso
 
 The pipeline transforms data through three representations:
 
-1. **`.qmd` text** → **`Block`** (parse stage) — Raw text, code chunks, fenced divs, raw blocks. Defined in `calepin/src/types.rs`.
-2. **`Block`** → **`Element`** (evaluate stage) — Code is executed, shortcodes expanded, conditional content filtered. Elements are the intermediate representation: `Text`, `CodeSource`, `CodeOutput`, `Figure`, `Div`, `CodeAsis`. Defined in `calepin/src/render/elements.rs`.
-3. **`Element`** → **output string** (render stage) — Each element passes through filters (callout enrichment, theorem numbering, template variable filling) then a format-specific template to produce HTML/LaTeX/Typst/Markdown.
+1. **`.qmd` text** -> **`Block`** (parse stage) -- Raw text, code chunks, fenced divs, raw blocks. Defined in `base/types.rs`.
+2. **`Block`** -> **`Element`** (evaluate stage) -- Code is executed, shortcodes expanded, conditional content filtered. Elements are: `Text`, `CodeSource`, `CodeOutput`, `Figure`, `Div`, `CodeAsis`. Defined in `base/types.rs`.
+3. **`Element`** -> **output string** (render stage) -- Each element passes through var builders and partials to produce HTML/LaTeX/Typst/Markdown.
 
 ### Pipeline stages
 
-1. **Parse** -- YAML front matter (`parse/yaml.rs`), then recursive block parsing into `Block` enum (`parse/blocks.rs`). Chunk options use pipe-only syntax (`#| key: value`). Dashes in option names are normalized to dots internally (`fig-width` -> `fig.width`).
-2. **Evaluate** (`engines/mod.rs`) -- Jinja body processing replaces shortcodes (via `jinja::process_body()`), then inline code, then blocks become `Element`s. `engines::evaluate()` orchestrates; `engines::block::evaluate_block()` handles code chunks; `engines::inline::evaluate_inline()` handles inline expressions. Conditional content (`.content-visible`/`.content-hidden` with `when-format`/`unless-format`/`when-meta`/`unless-meta`) filtered here. `.hidden` divs execute but emit nothing.
-3. **Load plugin registry** (`registry.rs`) -- Plugins from front matter `calepin: { plugins: [name] }`. Each plugin is a directory with a `plugin.toml` manifest. Resolved from `_calepin/plugins/{name}/`. Built-in plugins (tabset, layout, figure-div, theorem, callout) are appended automatically.
-4. **Bibliography** (`bibliography.rs`) -- Citation keys resolved via hayagriva. Operates on `Vec<Element>`.
-5. **Render** -- `ElementRenderer` dispatches each element via `render_text()`, `render_div()`, or `render_templated()`. `Element::Text` blocks are converted from markdown to the output format by a shared AST walker (`render/emit/mod.rs`) that traverses comrak's parsed node tree via a `FormatEmitter` trait (one implementation per format in `render/emit/`). Per-element transforms (callout, theorem) live in `render/transform_element/`.
-6. **Transform body** -- `OutputRenderer::transform_body()`. Format-specific body mutation (RevealJS slide splitting, LaTeX color definitions).
-7. **Cross-ref resolution** (`crossref.rs`) -- Post-rendering pass resolves `@fig-x` references to links/numbers.
-8. **Assemble page** -- `OutputRenderer::assemble_page()`. MiniJinja-based page template wrapping (`render/template.rs`) with `{{variable}}` substitution, conditionals, loops, and filters.
-9. **Transform document** -- `OutputRenderer::transform_document()`. Post-template transformation (custom format scripts).
+```
+parse -> evaluate -> bibliography
+  -> TransformElement (pre-render: SVG-to-PDF)
+  -> render (includes TransformElementChildren per div)
+  -> crossref
+  -> assemble_page (page template wrapping)
+  -> TransformDocument (highlight CSS/colors, footnotes, slides, image embedding)
+  -> write
+```
+
+1. **Parse** -- YAML front matter (`config/parse.rs`), then recursive block parsing into `Block` enum (`parse/blocks.rs`).
+2. **Evaluate** (`engines/mod.rs`) -- Jinja body processing, code execution, blocks become `Element`s.
+3. **Bibliography** (`references/bibliography.rs`) -- Citation keys resolved via hayagriva.
+4. **TransformElement** -- Pre-render element mutations. Modules implementing `TransformElement` receive each element and can mutate it (e.g., `convert_svg_pdf` rewrites SVG figure paths to PDF).
+5. **Render** -- `ElementRenderer` dispatches each element. Divs go through the module registry (`TransformElementChildren` for structural rewriting, then partial lookup). Code/figure elements go through `BuildElementVars` then partials.
+6. **Cross-ref resolution** (`references/crossref.rs`) -- `@fig-x` references resolved to links/numbers.
+7. **Assemble page** -- MiniJinja page template wrapping (`render/template.rs`).
+8. **TransformDocument** -- Post-assembly document transforms. Modules receive the full document string and can modify it (highlight CSS injection, footnote appending, slide splitting, image embedding).
+9. **Write** -- File output or pandoc conversion.
+
+### Module system
+
+All extensibility flows through the `ModuleRegistry` (`modules/registry.rs`). Three module kinds:
+
+| Trait | `ModuleKind` | When | What |
+|---|---|---|---|
+| `TransformElement` | `Element` | Pre-render | Mutate individual elements (pipeline handles tree recursion) |
+| `TransformElementChildren` | `ElementChildren` | During render, per div | Rewrite div children (tabset, layout) |
+| `TransformDocument` | `Document` | Post-assembly | Transform the full document string |
+| -- | `Noop` | -- | Partial/template providers only |
+
+Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` to inject `{{ number }}` and `{{ type_class }}` vars.
+
+### Built-in modules
+
+| Module | Kind | What |
+|---|---|---|
+| `convert_svg_pdf` | TransformElement | SVG-to-PDF figure conversion for LaTeX |
+| `tabset` | TransformElementChildren | `.panel-tabset` -> tab navigation (HTML only) |
+| `layout` | TransformElementChildren | `layout-ncol`/`layout-nrow` -> grid markup |
+| `theorem` | Noop + number=true | Auto-number theorem-type divs |
+| `highlight` | TransformDocument | Inject syntax CSS (HTML) or `\definecolor` (LaTeX) |
+| `append_footnotes` | TransformDocument | Append footnote section (HTML) |
+| `split_slides` | TransformDocument | Split body into `<section>` slides (RevealJS) |
+| `embed_images` | TransformDocument | Base64-encode `<img>` sources (HTML) |
+
+### Target configuration
+
+Each output format is a Target in `config/document.toml`. Targets declare engine, modules, crossref strategy, and other options:
+
+```toml
+[targets.html]
+engine = "html"
+modules = ["highlight", "append_footnotes", "embed_images"]
+crossref = "html"
+
+[targets.latex]
+engine = "latex"
+modules = ["highlight", "convert_svg_pdf"]
+crossref = "latex"
+```
+
+User targets in `_calepin.toml` inherit from built-in targets via `inherits`.
+
+### FormatPipeline
+
+`FormatPipeline` (`formats.rs`) replaces the old `OutputRenderer` trait. It reads pipeline config from the Target and dispatches to modules at each stage. Created via `FormatPipeline::from_target()` or `FormatPipeline::from_engine()`.
 
 ## Format Names
 
-Internally, formats use canonical names: `html`, `latex`, `typst`, `markdown`. File extensions for output are: `.html`, `.tex`, `.typ`, `.md`. All template/filter resolution uses the canonical format name (e.g., `theorem.latex`, `calepin.typst`). Raw blocks must use canonical names (```` ```{=latex} ````, not ```` ```{=tex} ````). Format aliases are resolved at the CLI/config level by `resolve_format_from_extension()` and `create_renderer()`.
+Internally, formats use canonical engine names: `html`, `latex`, `typst`, `markdown`. File extensions: `.html`, `.tex`, `.typ`, `.md`. Partial resolution uses the engine name (e.g., `partials/html/figure.html`). Raw blocks use canonical names (```` ```{=latex} ````).
 
-## Module Layout
+## Source Layout
 
-### `calepin/src/engines/` — Code execution
+### `calepin/src/` -- Top-level files
 
-The engines module owns all code evaluation — block-level, inline-level, the evaluate loop that drives them, and the language-specific backends.
+- `main.rs` -- Entry point
+- `pipeline.rs` -- Core render pipeline orchestrator
+- `formats.rs` -- `FormatPipeline`: dispatches modules at each pipeline stage
+- `context.rs` -- `ProjectContext`: resolves project config and target
 
-- `mod.rs` — `evaluate()` orchestrator (walks `Block`s → `Element`s), `execute_chunk()` dispatch, `process_results()` (shared sentinel protocol parser), `make_sentinel()`, `eval_inline()` dispatch, visibility logic (`content_is_visible`, `format_matches`)
-- `block.rs` — `evaluate_block()`: chunk → `Element`s (handles `echo`, `eval`, `include`, `results`, `warning`, `message`, figures)
-- `inline.rs` — `evaluate_inline()`: `` `{r}` ``/`` `{python}` `` in text → evaluated strings
-- `r.rs` — `RSession` (persistent `Rscript` subprocess), R-specific `capture()` (wraps code in R script with graphics device + sentinel protocol), `eval_inline()` (R formatting with digit/comma support)
-- `python.rs` — `PythonSession` (persistent `python3` subprocess), Python-specific `capture()` (wraps code in Python script with stdout/matplotlib/warning capture), `eval_inline()`. Shared globals dict persists variables across chunks.
-- `util.rs` — `needs_engine()`: scans blocks and body to determine if R/Python runtime should be initialized
+### `cli/` -- CLI and command handlers
 
-### Root (`calepin/src/`) -- Orchestration and core types
+- `args.rs` -- CLI argument parsing (clap) + `cwarn!` macro
+- `render.rs`, `preview.rs`, `info.rs`, `new.rs`, `flush.rs` -- Command handlers
 
-- `main.rs` -- Entry point, CLI dispatch
-- `pipeline.rs` -- Core render pipeline orchestrator: explicit stage calls (parse -> evaluate -> bibliography -> render -> transform_body -> crossref -> assemble_page -> transform_document)
-- `bibliography.rs` -- Citation resolution via hayagriva. Operates on `Vec<Element>` between evaluate and render.
-- `crossref.rs` -- Cross-reference resolution. Operates on the rendered body string after transform_body.
-- `cli.rs` -- CLI argument parsing (clap) + `cwarn!` macro + `is_collection_config()`
-- `util.rs` -- `slugify()`, `escape_html()`
+### `modules/` -- Module system and built-in modules
 
-### `calepin/src/render/` -- Element rendering
+- `registry.rs` -- `ModuleRegistry`, `TransformElement`, `TransformElementChildren`, `TransformDocument` traits, `ModuleKind`, `ModuleContext`, `ModuleResult`, built-in module registration
+- `manifest.rs` -- `module.toml` parsing: `ModuleManifest`, `MatchRule`, `MatchSpec`
+- `transform_document.rs` -- `TransformDocument` trait + `ScriptTransformDocument` (user script execution)
+- `highlight/` -- Syntax highlighting: `Highlighter`, themes (`.tmTheme` files), CSS generation, LaTeX color defs, `TransformDocument` for injecting into assembled pages
+- `convert_svg_pdf/` -- `TransformElement`: SVG-to-PDF figure conversion
+- `convert_math/` -- LaTeX-to-Typst math converter (parser, AST, emitter, symbols)
+- `tabset/` -- `TransformElementChildren`: panel-tabset -> HTML tabs
+- `layout/` -- `TransformElementChildren`: layout grids (CSS Grid, LaTeX minipage, Typst grid)
+- `figure/` -- Figure div helper functions
+- `table/` -- Table div helper functions
+- `append_footnotes/` -- `TransformDocument`: append HTML footnote section
+- `split_slides/` -- `TransformDocument`: split body into RevealJS slides
+- `embed_images/` -- `TransformDocument`: base64-encode images
 
-- `elements.rs` -- `ElementRenderer`: dispatches each element via `render_text()`, `render_div()`, `render_templated()`
-- `div.rs` -- Div rendering pipeline: plugin registry dispatch (structural -> filter -> template)
-- `span.rs` -- Span rendering pipeline: plugin registry dispatch -> template -> fallback
-- `convert.rs` -- Comrak options, `ImageAttrs` parsing, `render_html()`/`render_typst()`/`render_inline()` entry points
-- `template.rs` -- MiniJinja-based template rendering (`apply_template()`) + page template loading + `build_template_vars()`
-- `markers.rs` -- Marker systems for protecting content through conversion
-- `metadata.rs` -- Author/citation/appendix formatting
-- `highlighting.rs` -- Syntax highlighting via syntect
-- `math.rs` -- Math format conversion (LaTeX/Typst)
-- `svg.rs` -- SVG to PDF conversion
-
-### `calepin/src/render/emit/` -- AST emitters
+### `emit/` -- AST emitters (the 4 irreducible atoms)
 
 Shared AST walker + format-specific implementations. All formats share a single comrak traversal via the `FormatEmitter` trait.
 
-- `mod.rs` -- `FormatEmitter` trait + `walk_ast()`. Heading ID extraction, section numbering, footnote pre-pass, table state, math/marker protection.
+- `mod.rs` -- `FormatEmitter` trait + `walk_ast()`, heading IDs, section numbering, footnotes, tables
 - `html.rs` -- `HtmlEmitter`
 - `latex.rs` -- `LatexEmitter`
 - `typst.rs` -- `TypstEmitter`
 - `markdown.rs` -- `MarkdownEmitter`
 
-### `calepin/src/render/transform_element/` -- Per-element transforms
+### `render/` -- Element rendering infrastructure
 
-Enrich template variables or produce final output during the render stage. Dispatched per-element by the div pipeline.
+- `elements.rs` -- `ElementRenderer`: dispatches each element, holds pre-compiled template env
+- `div.rs` -- Div rendering pipeline: module dispatch (TransformElementChildren), auto-numbering, partial lookup
+- `span.rs` -- Span rendering pipeline
+- `filter/` -- Per-element var builders (not modules, called directly by ElementRenderer)
+  - `mod.rs` -- `BuildElementVars` trait
+  - `code.rs` -- `BuildCodeVars`: syntax highlighting vars
+  - `figure.rs` -- `BuildFigureVars`: image path, dimensions, alignment vars
+  - `theorem.rs` -- `theorem_prefix()`: cross-ref ID prefix mapping
+- `convert.rs` -- Comrak options, `ImageAttrs`, `render_inline()` entry points
+- `template.rs` -- MiniJinja template engine: `apply_template()`, page template loading, `build_template_vars()`
+- `markers.rs` -- Unicode marker system for protecting content through conversion
+- `metadata.rs` -- Author/citation/appendix formatting via partials
+- `typst_compile.rs` -- Typst PDF compilation
 
-- `mod.rs` -- `Filter` trait + `FilterResult` enum
-- `callout.rs` -- Callout enrichment: title, icon, collapse/appearance
-- `theorem.rs` -- Theorem auto-numbering: per-type counters, injects `{{number}}`
-- `code.rs` -- Code block template variable filling (syntax highlighting)
-- `figure.rs` -- Figure template vars, image helpers, path resolution
+### `partials/` -- Built-in Jinja templates (embedded at compile time)
 
-### `calepin/src/formats/` -- Output format backends
+Per-engine partials for elements, page templates, shortcodes:
+`partials/{html,latex,typst,markdown,revealjs,website,book}/`
 
-Each format implements `OutputRenderer` with stage-specific methods: `transform_body()`, `assemble_page()`, `transform_document()`.
+User overrides: `_calepin/partials/{engine}/{name}.{ext}`
 
-- `mod.rs` -- `OutputRenderer` trait, `create_renderer()`, `CustomRenderer` (user-defined formats via `_calepin/formats/{name}.toml`)
-- `html.rs`, `latex.rs`, `typst.rs`, `markdown.rs`, `revealjs.rs`, `word.rs`
+### Other directories
 
-### `calepin/src/structures/` -- Structural div handlers
+- `config/` -- Metadata types (`types.rs`, `parse.rs`, `merge.rs`) + embedded TOML configs (`document.toml`, `shared.toml`, `collection.toml`)
+- `engines/` -- Code execution: R, Python, shell subprocess management
+- `parse/` -- Block parsing: `.qmd` text -> `Block` enum
+- `references/` -- Bibliography (`bibliography.rs`) + cross-references (`crossref.rs`)
+- `jinja/` -- Jinja body processing, shortcode functions, lipsum
+- `base/` -- Core types (`types.rs`), paths (`paths.rs`), utilities (`util.rs`, `value.rs`)
+- `project/` -- Target resolution (`targets.rs`), content discovery (`content.rs`)
+- `collection/` -- Multi-document builds (site/book rendering)
+- `preview/` -- Live preview server with hot reload
+- `assets/` -- Website CSS/JS + scaffold files (404.qmd, index.qmd)
+- `scaffold/` -- (removed, merged into assets/website/)
 
-- `tabset.rs` -- `.panel-tabset` -> tabs (HTML) or plain sections
-- `layout.rs` -- `layout-ncol`/`layout-nrow`/`layout` -> CSS Grid / minipage / #grid
-- `figure.rs` -- Figure div rendering
-- `table.rs` -- Table div rendering
+## Partials and Module Resolution
 
-### `plugins/` -- Legacy WASM plugin sources
+Partials use Jinja syntax (`{{variable}}`, `{% if %}`, `{% for %}`). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
 
-Legacy WASM plugin sources (not used at runtime). These are historical and may be removed.
+**Partial resolution order** (first match wins):
+1. Module element dirs (in registry order)
+2. `_calepin/partials/{target}/{name}.{ext}` (target-specific)
+3. `_calepin/partials/{engine}/{name}.{ext}` (engine-specific)
+4. `_calepin/partials/common/{name}.jinja` (format-agnostic)
+5. Built-in `partials/{engine}/{name}.{ext}` (embedded in binary)
 
-## Plugin System
+**Module resolution**: `_calepin/modules/{name}/module.toml`
 
-All extensibility flows through the `PluginRegistry` (`plugins/registry.rs`). A plugin is a directory with a `plugin.toml` manifest declaring its capabilities.
-
-### Plugin types
-
-- **Built-in structural** (`BuiltinStructural`) -- Receive raw `&[Element]` children + render closure. Run before child rendering. Used by: tabset, layout, figure-div, table-div.
-- **Built-in filter** (`BuiltinFilter`) -- Implement the `Filter` trait (in `render/transform_element/`). Run after child rendering. Used by: theorem, callout.
-
-### Dispatch order
-
-`render/div.rs` iterates matching plugins in registry order (user plugins first, then built-in):
-
-1. For each matching plugin (by classes/attrs/id_prefix/formats):
-   - **Structural** -> call with raw children, return if handled
-   - **Filter** -> lazy-render children, call, return if `Rendered`; accumulate vars if `Continue`
-2. **Template lookup** -- explicit override -> class-based -> `div` fallback
-
-### plugin.toml manifest
+**module.toml manifest**:
 
 ```toml
-name = "myplugin"
-version = "0.1.0"
-description = "What this plugin does"
+name = "mymodule"
 
-[filter]
+[element]
 match.classes = ["myclass"]     # CSS classes (OR'd)
 match.attrs = ["my-attr"]       # Attribute names (OR'd)
 match.id_prefix = "fig-"        # ID prefix
 match.formats = ["html"]        # Output formats (omit = all)
-contexts = ["div", "span"]      # Default: both
+match.number = true             # Auto-number matching divs
 
-[elements]
-dir = "elements/"
-
-[templates]
-dir = "templates/"
-
-csl = "style.csl"
-
-[format]
-name = "myformat"
-base = "html"
-extension = "html"
+[document]
+run = "postprocess.sh"          # Script: stdin=document, stdout=transformed
 ```
-
-### Resolution
-
-1. `_calepin/plugins/{name}/plugin.yml` (project)
-
-### CLI
-
-- `calepin plugin init <name>` — scaffold a new plugin
-- `calepin plugin list` — list available plugins
 
 ## Raw Output Protection
 
-Format-specific output from span templates and shortcodes must survive markdown-to-format conversion without being re-escaped. All markers use Unicode noncharacters (`\u{FFFF}` start, `\u{FFFE}` end) as delimiters — these cannot appear in legitimate text, making collisions impossible. Input is sanitized by `markers::sanitize()` at the start of the pipeline. When protecting content from processing elsewhere (e.g., verbatim blocks in cross-ref resolution), always use the marker infrastructure from `render/markers.rs` rather than plain-text sentinel strings.
+Format-specific output from span partials and shortcodes must survive markdown-to-format conversion without being re-escaped. All markers use Unicode noncharacters (`\u{FFFF}` start, `\u{FFFE}` end) as delimiters. Input is sanitized by `markers::sanitize()` at the start of the pipeline.
 
 Marker types (single-char prefix between delimiters):
 
-- **`M`** — Math expressions (`$...$` and `$$...$$`). Use `\$` for a literal dollar sign.
-- **`D`** — Escaped dollar signs. Resolved per-format by `markers::resolve_escaped_dollars()`: HTML wraps in `<span class="nodollar">` (MathJax ignores it), LaTeX/Typst produce `\$`.
-- **`L`** — Equation labels (`{#eq-...}` after display math).
-- **`R`** — Raw span/template output. Stored in `ElementRenderer::raw_fragments`. Also used locally for temporary protection (e.g., verbatim blocks in cross-ref resolution).
-- **`S`** — Shortcode raw output.
-- **`X`** — Escaped shortcode literals.
+- **`M`** -- Math expressions (`$...$` and `$$...$$`). Use `\$` for a literal dollar sign.
+- **`D`** -- Escaped dollar signs. Resolved per-format by `markers::resolve_escaped_dollars()`.
+- **`L`** -- Equation labels (`{#eq-...}` after display math).
+- **`R`** -- Raw span/partial output.
+- **`S`** -- Shortcode raw output.
+- **`X`** -- Escaped shortcode literals.
 
 ## calepin-specific YAML
 
@@ -220,19 +256,6 @@ calepin:
 
 Standard Quarto fields (`title`, `author`, `bibliography`, `format`, etc.) remain at the top level.
 
-## Template and Filter Resolution
-
-Templates use Jinja syntax (`{{variable}}`, `{% if %}`, `{% for %}`, filters, macros). Template variable names use underscores (e.g., `id_attr`, `plain_title`). CSS class names in source documents keep dashes; the template resolver normalizes dashes to underscores when looking up templates by class name.
-
-Resolution order: plugin-provided dirs (in plugin order) → `_calepin/{elements,templates}/` → built-in.
-
-- Element templates: plugin `elements/` dir → `_calepin/elements/{name}.{format}` → built-in
-- Page templates: plugin `templates/` dir → `_calepin/templates/calepin.{format}` → built-in
-- CSL: plugin `csl` field → `_calepin/templates/calepin.csl` → built-in
-- Filters: provided via plugin `filter` capability (subprocess executables with `plugin.yml`)
-- Shortcodes: provided via plugin `shortcode` capability (registered as Jinja functions)
-- Custom formats: provided via plugin `format` capability, or `_calepin/formats/{name}.yaml`
-
 ## Chunk Options
 
 Both pipe syntax (`#| key: value`) and header key-value pairs (`{r, echo=FALSE}`) are accepted. Header options are converted internally to pipe-equivalent options; when both are present, pipe comments take precedence. Option names use dashes (`fig-width`), normalized to dots internally. `label` is rejected in pipe comments -- it must be in the header.
@@ -241,49 +264,48 @@ Both pipe syntax (`#| key: value`) and header key-value pairs (`{r, echo=FALSE}`
 
 The `.qmd` body text is processed as a Jinja template during the evaluate stage (`jinja_engine.rs`). Code blocks and inline code are protected from Jinja evaluation. Use `#| jinja: true` chunk option to opt-in to Jinja processing inside a code chunk.
 
-Built-in Jinja functions (replace old `{{< shortcode >}}` syntax):
+Built-in Jinja functions (output driven by per-engine partials in `partials/{engine}/`):
 
-- `{{ pagebreak() }}` — format-specific page break
-- `{{ video(url="...", width="...", height="...", title="...") }}` — video embed
-- `{{ kbd(keys=["Ctrl", "C"]) }}` — keyboard shortcuts
-- `{{ lipsum(paragraphs=2) }}` — placeholder lorem ipsum text (also `sentences`, `words`)
-- `{{ placeholder(width=600, height=400) }}` — placeholder image (also `text`, `color`)
+- `{{ pagebreak() }}` -- format-specific page break
+- `{{ video(url="...", width="...", height="...", title="...") }}` -- video embed
+- `{{ kbd(keys=["Ctrl", "C"]) }}` -- keyboard shortcuts
+- `{{ lipsum(paragraphs=2) }}` -- placeholder lorem ipsum text (also `sentences`, `words`)
+- `{{ placeholder(width=600, height=400) }}` -- placeholder image (also `text`, `color`)
 
 Context variables:
-- `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. — document metadata
-- `{{ var.key.subkey }}` — non-standard front matter fields (with nesting)
-- `{{ env.HOME }}`, `{{ env.USER }}`, etc. — system environment variables
-- `{{ format }}` — current output format
+- `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. -- document metadata
+- `{{ var.key.subkey }}` -- non-standard front matter fields (with nesting)
+- `{{ env.HOME }}`, `{{ env.USER }}`, etc. -- system environment variables
+- `{{ format }}` -- current output format
 
-File inclusion uses Jinja's include tag: `{% include "file.qmd" %}` (pre-parse directive, runs before block parsing via `jinja_engine::expand_includes()`). Escaping uses `{% raw %}...{% endraw %}`.
-
-Plugin shortcodes are registered as Jinja functions via the plugin registry.
+File inclusion: `{% include "file.qmd" %}` (pre-parse, runs before block parsing). Escaping: `{% raw %}...{% endraw %}`.
 
 ## Dependencies
 
-- `comrak` — CommonMark + GFM markdown parsing/rendering
-- `hayagriva` — Citation/bibliography processing
-- `syntect` — Syntax highlighting
-- `minijinja` — Template engine for element/page templates and body processing
-- `clap` + `clap_complete` — CLI and shell completions
-- `saphyr` — YAML parsing (DOM-style `YamlOwned` enum, not serde-based)
+- `comrak` -- CommonMark + GFM markdown parsing/rendering
+- `hayagriva` -- Citation/bibliography processing
+- `syntect` -- Syntax highlighting
+- `minijinja` -- Template engine for element/page partials and body processing
+- `clap` + `clap_complete` -- CLI and shell completions
+- `saphyr` -- YAML parsing (DOM-style `YamlOwned` enum, not serde-based)
+- `usvg` + `svg2pdf` -- SVG-to-PDF conversion for LaTeX targets
 
 ## Function Naming Convention
 
 Use `verb_noun` or `verb_noun_qualifier` format. Consistent verbs for similar operations:
 
-- **`parse_*`** — Convert text/input into structured data (`parse_body`, `parse_yaml`, `parse_attributes`)
-- **`render_*`** — Produce output strings from structured data (`render_html`, `render_div`, `render_image`)
-- **`resolve_*`** — Look up a resource/path or infer a value from context (`resolve_path`, `resolve_plugin`, `resolve_format`)
-- **`load_*`** — Read and parse file contents (`load_plugins`, `load_page_template`, `load_csl_style`)
-- **`build_*`** — Assemble compound data structures or template variable maps (`build_template_vars`, `build_figure_vars`, `build_author_block`, `build_template_output`)
-- **`apply_*`** — Transform input by applying something to it (`apply_template`, `apply_image_attrs_html`, `apply_overrides`)
-- **`escape_*`** — Escape strings for a target format (`escape_html`, `escape_latex`, `escape_code_for_format`)
-- **`format_*`** — Format or convert a value for output (`format_width`, `format_height`, `format_narrative`)
-- **`wrap_*`** — Wrap content in markers for protection through conversion (`wrap_raw`, `wrap_shortcode_raw`, `wrap_raw_output`)
-- **`collect_*`** — Gather items from a sequence (`collect_div_body`, `collect_inline_code`, `collect_fenced_body`)
-- **`inject_*`** — Insert content into existing output (`inject_markers`, `inject_reload_script`)
-- **`transform_*`** -- Pipeline stage methods on `OutputRenderer` (`transform_body`, `transform_document`) and per-element transforms (`transform_element/`)
+- **`parse_*`** -- Convert text/input into structured data (`parse_body`, `parse_yaml`, `parse_attributes`)
+- **`render_*`** -- Produce output strings from structured data (`render_html`, `render_div`, `render_image`)
+- **`resolve_*`** -- Look up a resource/path or infer a value from context (`resolve_partial`, `resolve_module_dir`, `resolve_format`)
+- **`load_*`** -- Read and parse file contents (`load_page_template`, `load_csl_style`)
+- **`build_*`** -- Assemble compound data structures or template variable maps (`build_template_vars`, `build_figure_vars`, `build_author_block`)
+- **`apply_*`** -- Transform input by applying something to it (`apply_template`, `apply_overrides`)
+- **`escape_*`** -- Escape strings for a target format (`escape_html`, `escape_latex`)
+- **`format_*`** -- Format or convert a value for output (`format_width`, `format_height`)
+- **`wrap_*`** -- Wrap content in markers for protection (`wrap_raw`, `wrap_shortcode_raw`)
+- **`collect_*`** -- Gather items from a sequence (`collect_div_body`, `collect_fenced_body`)
+- **`inject_*`** -- Insert content into existing output (`inject_markers`, `inject_reload_script`)
+- **`transform_*`** -- Module pipeline stage methods (`transform_document`, `transform_elements`)
 - **`assemble_*`** -- Compose a complete output from parts (`assemble_page`)
 - **`process_*`** -- Multi-step transformation of data (`process_shortcodes`, `process_results`)
 

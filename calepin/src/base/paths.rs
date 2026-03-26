@@ -238,8 +238,8 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
 /// Resolve a module directory by name.
 /// Checks `{project_root}/_calepin/modules/{name}/plugin.toml`.
 pub fn resolve_module_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
-    let local = calepin_dir(project_root, &["plugins", name]);
-    if local.join("plugin.toml").exists() {
+    let local = calepin_dir(project_root, &["modules", name]);
+    if local.join("module.toml").exists() {
         return Some(local);
     }
 
@@ -288,7 +288,7 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
             continue;
         }
         let local_dir = ctx.project_root.join("_calepin/modules").join(plugin);
-        let local_path = local_dir.join("plugin.toml");
+        let local_path = local_dir.join("module.toml");
         if !local_path.exists() {
             errors.push(format!(
                 "  calepin.plugins: {}\n    -> not found: {}",

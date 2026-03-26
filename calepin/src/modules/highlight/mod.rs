@@ -98,6 +98,7 @@ pub enum ColorScope {
     #[allow(dead_code)]
     MediaQuery,
     /// Use `[data-theme='light']` / `[data-theme='dark']` — for Starlight/Astro.
+    #[allow(dead_code)]
     DataTheme,
     /// Emit both `@media` and `[data-theme]` rules — for standalone HTML with a theme toggle.
     Both,

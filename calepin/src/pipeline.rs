@@ -98,7 +98,7 @@ pub fn render_core(
     // 5b. Evaluate inline code in metadata fields (title, date, etc.)
     metadata.evaluate_inline(&mut ctx);
 
-    // 6. Load plugin registry
+    // 6. Load module registry
     let registry = std::rc::Rc::new(
         registry::ModuleRegistry::load(&metadata.plugins, &path_ctx.project_root)
     );

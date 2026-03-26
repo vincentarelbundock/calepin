@@ -35,6 +35,8 @@ pub struct ModuleProvides {
     pub partials: Option<PartialsSpec>,
     pub csl: Option<String>,
     pub format: Option<FormatSpec>,
+    /// Script for document transforms (receives document on stdin, writes to stdout).
+    pub document_script: Option<PathBuf>,
 }
 
 /// Filter specification: executable path, match rules, contexts.
@@ -159,12 +161,19 @@ impl ModuleManifest {
 }
 
 fn parse_provides(root: &Value, module_dir: &Path) -> Result<ModuleProvides> {
+    // Parse [document].run script path
+    let document_script = root.get("document")
+        .and_then(|d| d.get("run"))
+        .and_then(|v| v.as_str())
+        .map(|s| module_dir.join(s));
+
     Ok(ModuleProvides {
         matchers: parse_match_specs(root, module_dir),
         elements: parse_elements_spec(root),
         partials: parse_partials_spec(root),
         csl: root.get("csl").and_then(|v| v.as_str()).map(String::from),
         format: parse_format_spec(root, module_dir),
+        document_script,
     })
 }
 

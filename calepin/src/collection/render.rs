@@ -149,20 +149,10 @@ fn render_one_document(
         let pipeline = crate::formats::FormatPipeline::from_engine(format)?;
         pipeline.assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
             .unwrap_or(result.rendered)
-    } else if format == "html" {
-        // HTML site mode: prepend syntax highlighting CSS (with DataTheme scope
-        // for site theme switching). Footnotes are already appended by the
-        // append_footnotes_html body transform in render_core.
-        let syntax_css = result.element_renderer.syntax_css_with_scope(
-            crate::modules::highlight::ColorScope::DataTheme,
-        );
-        let mut body = result.rendered;
-        if !syntax_css.is_empty() {
-            body = format!("<style>\n{}</style>\n{}", syntax_css, body);
-        }
-        body
     } else {
-        result.rendered
+        // Site mode: run document transforms (footnotes, highlight CSS, etc.)
+        let pipeline = crate::formats::FormatPipeline::from_engine(format)?;
+        pipeline.transform_document(&result.rendered, &result.element_renderer)
     };
 
     // Build TOC from rendered headings (HTML only)
@@ -352,16 +342,8 @@ fn render_one_document_pass1(
     let pipeline = crate::formats::FormatPipeline::from_engine("html")?;
     let ref_data = pipeline.collect_crossref_data(&result.rendered, &result.element_renderer);
 
-    // HTML site mode: prepend syntax highlighting CSS (with DataTheme scope
-    // for site theme switching). Footnotes are already appended by the
-    // append_footnotes_html body transform in render_core.
-    let syntax_css = result.element_renderer.syntax_css_with_scope(
-        crate::modules::highlight::ColorScope::DataTheme,
-    );
-    let mut body = result.rendered;
-    if !syntax_css.is_empty() {
-        body = format!("<style>\n{}</style>\n{}", syntax_css, body);
-    }
+    // Run document transforms (footnotes, highlight CSS, etc.)
+    let body = pipeline.transform_document(&result.rendered, &result.element_renderer);
 
     let toc = if result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
         let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;

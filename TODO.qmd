@@ -19,10 +19,6 @@
 - [ ] inspect each pages
 
 
-## Misc
-
-- [ ] date formatting should be in dates.rs not metadata.rs
-
 ## arelbundockcom
 
 - [ ] review all blog posts
