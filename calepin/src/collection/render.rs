@@ -405,7 +405,7 @@ fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usi
     chapter_map
 }
 
-fn build_overrides(meta: &crate::config::Metadata, target: Option<&project::Target>) -> Vec<String> {
+pub fn build_overrides(meta: &crate::config::Metadata, target: Option<&project::Target>) -> Vec<String> {
     let mut overrides = Vec::new();
 
     // embed-resources override from target

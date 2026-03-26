@@ -71,10 +71,16 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
                 } else if name != "." && name != ".." && name != ".git" && name != "node_modules" {
                     find_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation, stem_filter);
                 }
-            } else if do_compilation && p.is_file() && stem_filter.is_none() {
-                if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
-                    if latex_exts.contains(&ext) {
-                        targets.push(p);
+            } else if p.is_file() {
+                let name = entry.file_name();
+                // Page-level collection cache
+                if do_cache && name == ".page_cache.json" && stem_filter.is_none() {
+                    targets.push(p);
+                } else if do_compilation && stem_filter.is_none() {
+                    if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                        if latex_exts.contains(&ext) {
+                            targets.push(p);
+                        }
                     }
                 }
             }

@@ -201,3 +201,40 @@
 - [ ] YAML to TOML translation layer
 - [ ] There's lots of leftover there. Figure out what to extract and how to make a robust conversion layer.
 
+
+
+## Watch
+
+
+  What the watch system already does
+
+  The watch system is file-change-driven, not hash-driven. It works like this:
+
+  1. notify watches the filesystem for modify/create events on .qmd files
+  2. On change, it collects the paths that changed (with 100ms debounce)
+  3. For single-file preview: re-renders the entire file from scratch
+  4. For collection preview: rebuild_documents matches changed paths against discovered pages, then only re-renders those specific pages
+
+  This is already the right granularity for incremental rebuilds -- you only re-render what changed. The watcher is reasonably robust (debouncing, canonicalized path matching, Ctrl+C handling).
+
+  Where hashing would add value (and where it wouldn't)
+
+  It wouldn't help the watch case. The watcher already knows which files changed because the OS told it. Hashing the file content before deciding to re-render would add overhead for almost no benefit -- if the file was touched, you almost certainly
+  want to re-render it.
+
+  It would help make docs / calepin --batch (cold builds). Today, a full collection build re-renders every page even if nothing changed since the last build. A content hash cache could skip pages whose source (and config/templates) haven't changed.
+  But this requires:
+
+  - Hashing not just the .qmd content but everything that affects output: YAML config, shared partials, _calepin/ overrides, bibliography files, code chunk outputs
+  - Invalidating correctly when a cross-reference target changes (page A references page B's figure -- if B changes, A's cross-refs may need updating)
+  - Storing the cache somewhere (.cache/ directory with hash-keyed entries)
+
+  The dependency graph problem is the hard part. Zensical sidesteps it because its pages are mostly independent (no cross-references between pages). Calepin's cross-references, shared bibliography, and code chunk dependencies make the invalidation
+  surface much larger.
+
+  What's actually worth doing
+
+  The low-hanging fruit is what you already have: the watcher-based incremental rebuild for collections. For make docs, the most practical improvement would be skipping unchanged standalone pages (ones with no cross-references to other pages). That's
+  a simple file-mtime or content-hash check without needing a full dependency graph. Pages with cross-references would always re-render, which is the safe default.
+
+

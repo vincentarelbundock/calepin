@@ -3,6 +3,7 @@ mod config;
 mod context;
 mod discover;
 mod icons;
+mod page_cache;
 mod render;
 mod partials;
 
@@ -130,25 +131,89 @@ pub fn build_collection(
         }
     }
 
-    // 6. Render all pages with calepin (in parallel)
-    //    For HTML sites without an orchestrator, use the two-pass cross-ref pipeline
-    //    so that cross-file references resolve globally.
-    //    For orchestrated builds (LaTeX/Typst), use single-pass with page template
-    //    (the native toolchains handle global refs).
+    // 6. Page-level cache: skip rendering for pages whose source + config
+    //    haven't changed since the last build. Read config content once for hashing.
+    //    Disabled for crossref builds (they need ref_data from every page) and
+    //    when clean=true (the output directory was just wiped).
     let apply_page_template = orchestrator.is_some();
-    let results = if format == "html" && !apply_page_template && meta.global_crossref {
-        render::render_documents_with_crossref(&pages, &meta, &base_dir, output, Some(&collection_target_name), Some(&collection_target), quiet)?
+    let use_crossref = format == "html" && !apply_page_template && meta.global_crossref;
+    let use_page_cache = !clean && !use_crossref;
+
+    let config_bytes = fs::read(&found_path).unwrap_or_default();
+    let old_cache = if use_page_cache { page_cache::load(output) } else { HashMap::new() };
+    let mut new_cache: HashMap<String, u64> = HashMap::new();
+
+    // Build overrides once (same logic render.rs uses) for the hash
+    let cache_overrides = render::build_overrides(&meta, Some(&collection_target));
+
+    // Partition pages into stale (need rendering) and fresh (output already on disk)
+    let (stale_pages, fresh_keys): (Vec<&DocumentInfo>, Vec<String>) = if use_page_cache {
+        let mut stale = Vec::new();
+        let mut fresh = Vec::new();
+        for page in &pages {
+            let key = page.source.display().to_string();
+            let source_path = base_dir.join(&page.source);
+            let source_bytes = fs::read(&source_path).unwrap_or_default();
+            let hash = page_cache::page_hash(&source_bytes, &config_bytes, &collection_target_name, &cache_overrides);
+            new_cache.insert(key.clone(), hash);
+
+            let output_exists = output.join(&page.output).exists();
+            if output_exists && old_cache.get(&key) == Some(&hash) {
+                fresh.push(key);
+            } else {
+                stale.push(page);
+            }
+        }
+        (stale, fresh)
     } else {
-        render::render_documents(&pages, &meta, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
+        (pages.iter().collect(), Vec::new())
     };
 
-    // 7. Write page output files
+    let skipped = fresh_keys.len();
+
+    // 7. Render pages
+    let results = if use_crossref {
+        render::render_documents_with_crossref(&pages, &meta, &base_dir, output, Some(&collection_target_name), Some(&collection_target), quiet)?
+    } else {
+        // Render only stale pages
+        let stale_owned: Vec<DocumentInfo> = stale_pages.into_iter().cloned().collect();
+        let mut results = render::render_documents(&stale_owned, &meta, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?;
+
+        // Load cached results from existing output files for fresh pages
+        for key in &fresh_keys {
+            if let Some(page) = pages.iter().find(|p| p.source.display().to_string() == *key) {
+                let output_path = output.join(&page.output);
+                if let Ok(body) = fs::read_to_string(&output_path) {
+                    results.insert(key.clone(), render::CollectionRenderResult {
+                        body,
+                        toc: None,
+                        title: page.meta.title.clone(),
+                        date: page.meta.date.clone(),
+                        subtitle: page.meta.subtitle.clone(),
+                        abstract_text: page.meta.r#abstract.clone(),
+                    });
+                }
+            }
+        }
+
+        results
+    };
+
+    if !quiet && skipped > 0 {
+        eprintln!("Skipped {} unchanged page(s)", skipped);
+    }
+
+    // 8. Write page output files
     //    For orchestrated builds, strip the output directory prefix from paths
     //    in the rendered bodies so they resolve correctly when the compile
     //    command runs from the output directory.
     let output_prefix = format!("{}/", output.display());
     for page in &pages {
         let source_key = page.source.display().to_string();
+        // Don't overwrite fresh pages -- their output is already correct on disk
+        if fresh_keys.contains(&source_key) {
+            continue;
+        }
         if let Some(result) = results.get(&source_key) {
             let output_path = output.join(&page.output);
             if let Some(parent) = output_path.parent() {
@@ -163,20 +228,24 @@ pub fn build_collection(
         }
     }
 
-    // 8. Site-specific wrapping (HTML) or orchestrator assembly
+    // 9. Site-specific wrapping (HTML) or orchestrator assembly
     if let Some(ref orchestrator_path) = orchestrator {
-        // Render the orchestrator template with page tree
         render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
     } else {
-        // HTML site path: re-wrap pages through Jinja site templates
         apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
     }
 
-    // 9. Copy assets/ and static directories to output
+    // 10. Copy assets/ and static directories to output
     assets::copy_assets(&base_dir, output, &meta.static_dirs)?;
 
-    // 10. Run user-configured post-processing commands
+    // 11. Run user-configured post-processing commands
     run_post_commands(&meta, &collection_target_name, &base_dir, output, quiet)?;
+
+    // 12. Save page cache (after successful build only)
+    if use_page_cache {
+        // For crossref builds we skipped caching, so don't write a stale cache
+        page_cache::save(output, &new_cache);
+    }
 
     if !quiet {
         eprintln!("Collection built: {}", output.display());
