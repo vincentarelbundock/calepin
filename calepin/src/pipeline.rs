@@ -63,8 +63,14 @@ pub fn render_core(
     paths::set_sidecar_root(sidecar_dir.as_deref());
 
     // Merge: project < sidecar config < front matter < CLI
+    // Clear document-identity fields from project config so they don't
+    // override page-specific values (e.g., collection title leaking into pages).
     let mut metadata = if let Some(project_meta) = project_metadata {
-        project_meta.clone()
+        let mut m = project_meta.clone();
+        m.title = None;
+        m.subtitle = None;
+        m.authors.clear();
+        m
     } else {
         crate::config::Metadata::default()
     };

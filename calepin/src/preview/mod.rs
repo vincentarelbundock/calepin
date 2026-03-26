@@ -83,6 +83,7 @@ pub fn run_collection(
     let config_path = config_path.to_path_buf();
     let target = args.format.clone();
     let quiet = args.quiet;
+    let output_name = output_name.to_string();
     watcher::watch_dir(&watch_dir, Arc::clone(&stop), Some(output.as_path()), |changed_paths| {
         let names: Vec<_> = changed_paths.iter()
             .filter_map(|p| p.file_name())
@@ -90,10 +91,12 @@ pub fn run_collection(
             .collect();
         spinner.set_message(format!("rebuilding {}...", names.join(", ")));
         let start = std::time::Instant::now();
-        let result = crate::collection::rebuild_documents(
+        let result = crate::collection::build_collection(
             Some(config_path.as_path()),
+            &std::path::PathBuf::from(&output_name),
+            false,
+            true,
             target.as_deref(),
-            changed_paths,
         );
         match result {
             Ok(()) => {

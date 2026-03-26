@@ -1,0 +1,78 @@
+---
+title = "Getting Started"
+---
+
+*Calepin* has four main commands:
+
+- `render`: produce output files.
+- `preview`: start a live-reloading server.
+- `flush`: clean up caches and build artefacts.
+- `new`: scaffold projects and generate shell completions.
+
+Run `calepin --help` or `calepin <command> --help` for full option details.
+
+## render
+
+```bash
+# Render a document to HTML (default)
+calepin render document.qmd
+
+# Choose an output format
+calepin render document.qmd -t latex     # → document.tex
+calepin render document.qmd -t typst     # → document.typ
+calepin render document.qmd -t markdown  # → document.md
+
+# Render to multiple formats at once
+calepin render document.qmd -t html,latex,typst
+
+# Specify an output path (format inferred from extension)
+calepin render document.qmd -o paper.tex
+
+# Compile to PDF via LaTeX or Typst
+calepin render document.qmd -t pdf
+calepin render document.qmd -t pdf --writer typst
+
+# Override metadata from the command line
+calepin render document.qmd -s toc=true
+calepin render document.qmd -s title="Draft" number-sections=true
+calepin render document.qmd -s bibliography=refs.bib fig-width=6
+
+# Quiet mode
+calepin render document.qmd -q
+```
+
+## preview
+
+```bash
+# Live preview with hot reload
+calepin preview document.qmd
+calepin preview document.qmd --port 8080
+
+# Preview a website project
+calepin preview website/
+```
+
+## flush
+
+```bash
+# Delete cache and build artefacts
+calepin flush
+calepin flush -y              # skip confirmation
+calepin flush --cache          # cache only
+calepin flush --files          # generated files only
+calepin flush --compilation    # LaTeX artefacts only (.aux, .log, etc.)
+calepin flush path/to/dir      # flush a specific directory
+```
+
+## new
+
+```bash
+# Scaffold a new notebook or website
+calepin new notebook
+calepin new website
+
+# Generate shell completions
+calepin new completions bash
+calepin new completions zsh
+calepin new completions fish
+```

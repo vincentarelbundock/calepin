@@ -49,7 +49,7 @@ check:  ## Run cargo check (fast compile check)
 
 site: build ## Build and serve static site from website/
 	calepin flush -y
-	uv run calepin preview website/_calepin.toml
+	uv run calepin preview website
 
 # ==============================================================================
 # Render targets

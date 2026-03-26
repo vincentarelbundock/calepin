@@ -167,6 +167,12 @@ pub enum NewAction {
         dir: std::path::PathBuf,
     },
 
+    /// Print shell completions (bash, zsh, fish, elvish, powershell)
+    Completions {
+        /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)
+        shell: Shell,
+    },
+
     /// Generate .qmd files filled with lorem ipsum text
     Gibberish {
         /// Number of .qmd files to generate
@@ -194,11 +200,6 @@ pub enum InfoAction {
     Csl,
     /// List available syntax highlighting themes
     Themes,
-    /// Print shell completions (bash, zsh, fish, elvish, powershell)
-    Completions {
-        /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)
-        shell: Shell,
-    },
 }
 
 /// Returns true if the input is a collection config file (_calepin/config.toml).

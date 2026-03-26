@@ -110,9 +110,6 @@ pub fn build_collection(
 
     // 4. Discover all .qmd pages (auto-discovered, filtered by exclude)
     let mut pages = discover_documents(&meta, &base_dir, output_ext)?;
-    if !quiet {
-        eprintln!("Found {} documents", pages.len());
-    }
 
     // 5. Discover listing pages and merge into the page list
     let mut all_listing_documents: HashMap<String, Vec<DocumentInfo>> = HashMap::new();
@@ -140,7 +137,8 @@ pub fn build_collection(
     let use_crossref = format == "html" && !apply_page_template && meta.global_crossref;
     let use_page_cache = !clean && !use_crossref;
 
-    let config_bytes = fs::read(&found_path).unwrap_or_default();
+    let mut config_bytes = fs::read(&found_path).unwrap_or_default();
+    config_bytes.extend_from_slice(&page_cache::collect_auxiliary_bytes(&base_dir));
     let old_cache = if use_page_cache { page_cache::load(output) } else { HashMap::new() };
     let mut new_cache: HashMap<String, u64> = HashMap::new();
 
@@ -235,166 +233,6 @@ pub fn build_collection(
 
     if !quiet {
         eprintln!("Collection built: {}", output.display());
-    }
-
-    Ok(())
-}
-
-/// Rebuild only the specified documents within an already-built site.
-/// Discovers all documents (for nav context) but only re-renders those whose
-/// source paths are in `changed_sources`. Skips the clean step and assets copy.
-pub fn rebuild_documents(
-    config_path: Option<&Path>,
-    cli_target: Option<&str>,
-    changed_sources: &[std::path::PathBuf],
-) -> Result<()> {
-    let cwd = std::env::current_dir()?;
-    let (meta, found_path) = config::load_config(config_path, &cwd)?;
-    let base_dir = resolve_project_root(&found_path, &cwd);
-
-    let collection_target_name = cli_target.map(|s| s.to_string())
-        .or_else(|| meta.target.clone())
-        .unwrap_or_else(|| "html".to_string());
-    let collection_target = crate::config::resolve_target(&collection_target_name, &meta.targets)?;
-    let format = &collection_target.writer;
-    let output_ext = collection_target.output_extension();
-
-    crate::paths::set_active_target(Some(&collection_target_name));
-    crate::paths::set_project_root(Some(&base_dir));
-
-    let output_dir = base_dir.join(meta.output.as_deref().unwrap_or("output"));
-
-    // Discover all pages (needed for nav context)
-    let pages = discover_documents(&meta, &base_dir, output_ext)?;
-
-    // Determine which pages to re-render by matching changed absolute paths
-    // against the discovered page sources. Canonicalize both sides so that
-    // symlinks and path normalization differences don't cause mismatches.
-    let canon_changed: Vec<std::path::PathBuf> = changed_sources.iter()
-        .filter_map(|c| c.canonicalize().ok())
-        .collect();
-    let changed_documents: Vec<&DocumentInfo> = pages.iter().filter(|p| {
-        let abs = base_dir.join(&p.source);
-        let canon = abs.canonicalize().unwrap_or(abs);
-        canon_changed.iter().any(|c| c == &canon)
-    }).collect();
-
-    if changed_documents.is_empty() {
-        return Ok(());
-    }
-
-    // Render only the changed pages
-    let documents_to_render: Vec<DocumentInfo> = changed_documents.iter().map(|p| (*p).clone()).collect();
-    let results = render::render_documents(
-        &documents_to_render, &meta, &base_dir, &output_dir, format,
-        false, Some(&collection_target_name), Some(&collection_target), true,
-    )?;
-
-    // For non-HTML formats, write the rendered body directly (no collection template)
-    if format != "html" {
-        for page in &documents_to_render {
-            let source_key = page.source.display().to_string();
-            if let Some(result) = results.get(&source_key) {
-                let output_path = output_dir.join(&page.output);
-                if let Some(parent) = output_path.parent() {
-                    fs::create_dir_all(parent)?;
-                }
-                fs::write(&output_path, &result.body)?;
-            }
-        }
-        return Ok(());
-    }
-
-    // HTML: apply collection templates to the changed pages (with full nav context).
-    // Write the final templated HTML directly -- skip the intermediate raw body write
-    // to avoid a window where the file on disk is incomplete (the live-reload server
-    // reads from disk, so a partial write would show a broken page).
-    {
-        let env = partials::init_jinja(&base_dir, &collection_target_name)?
-            .ok_or_else(|| anyhow::anyhow!("No template files found"))?;
-
-        let collection_ctx = build_collection_context(&meta, &pages, &base_dir);
-        let var_ctx = crate::config::target_vars_to_jinja_from_meta(&meta.var);
-
-        let tpl_ext = match format.as_str() {
-            "latex" => "tex",
-            "typst" => "typ",
-            "markdown" => "md",
-            _ => format,
-        };
-
-        // Also discover listings that the changed pages might need
-        let mut all_listing_documents: HashMap<String, Vec<DocumentInfo>> = HashMap::new();
-        for page in &documents_to_render {
-            if let Some(ref listing) = page.meta.listing {
-                let listing_documents = discover_listing_documents(listing, &base_dir, &pages, output_ext)?;
-                all_listing_documents.insert(page.source.display().to_string(), listing_documents);
-            }
-        }
-
-        for page in &documents_to_render {
-            let source_key = page.source.display().to_string();
-            let result = results.get(&source_key);
-
-            let listing_items = all_listing_documents.get(&source_key).map(|listing_documents| {
-                listing_documents.iter().map(|lp| build_listing_item(lp, &results)).collect()
-            });
-
-            let doc_ctx = build_document_context(page, result, &pages, listing_items, &meta.languages, &meta, &base_dir);
-
-            let mut nav_tree = if !meta.languages.is_empty() {
-                if let Some(ref lang) = page.lang {
-                    build_nav_tree_for_lang(&meta, &pages, &base_dir, lang)
-                } else {
-                    collection_ctx.pages.clone()
-                }
-            } else {
-                collection_ctx.pages.clone()
-            };
-            mark_active(&mut nav_tree, &page.url);
-
-            let collection_with_active = minijinja::context! {
-                collection => context::CollectionContext {
-                    title: collection_ctx.title.clone(),
-                    subtitle: collection_ctx.subtitle.clone(),
-                    url: collection_ctx.url.clone(),
-                    favicon: collection_ctx.favicon.clone(),
-                    navbar: collection_ctx.navbar.clone(),
-                    pages: nav_tree,
-                    languages: collection_ctx.languages.clone(),
-                    dark_mode: collection_ctx.dark_mode,
-                    math: collection_ctx.math.clone(),
-                },
-                document => doc_ctx,
-                var => var_ctx.clone(),
-            };
-
-            let template_name = if page.meta.listing.is_some() {
-                format!("listing.{}", tpl_ext)
-            } else {
-                format!("page.{}", tpl_ext)
-            };
-
-            let tpl = env.get_template(&template_name)
-                .with_context(|| format!("Failed to get template {} for {}", template_name, source_key))?;
-            let rendered = tpl.render(&collection_with_active)
-                .with_context(|| format!("Failed to render template for {}", source_key))?;
-
-            let output_path = output_dir.join(&page.output);
-            fs::write(&output_path, &rendered)?;
-        }
-
-        // Update _source/ copies for the changed pages
-        for page in &documents_to_render {
-            let source_dest = output_dir.join("_source").join(&page.source);
-            if let Some(parent) = source_dest.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            let source_src = base_dir.join(&page.source);
-            if source_src.exists() {
-                fs::copy(&source_src, &source_dest)?;
-            }
-        }
     }
 
     Ok(())

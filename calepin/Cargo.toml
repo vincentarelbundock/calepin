@@ -55,6 +55,7 @@ bincode = { version = "2", features = ["serde"] }
 # Preview server
 chrono = "0.4"
 notify = "8"
+notify-debouncer-full = "0.7"
 tiny_http = "0.12"
 open = "5"
 ctrlc = "3"

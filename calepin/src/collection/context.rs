@@ -259,12 +259,15 @@ pub fn build_document_context(
     let subtitle = result.and_then(|r| r.subtitle.clone()).or_else(|| page.meta.subtitle.clone());
     let abstract_text = result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone());
 
-    // Prev/next navigation: only pages listed in [[contents]] and matching language
+    // Prev/next navigation: pages in [[contents]] order, matching language
     let nav_paths = super::config::collect_document_paths(meta, base_dir);
-    let nav_set: std::collections::HashSet<&str> = nav_paths.iter().map(|s| s.as_str()).collect();
-    let nav_documents: Vec<&DocumentInfo> = pages.iter().filter(|p| {
-        nav_set.contains(p.source.display().to_string().as_str()) && p.lang == page.lang
-    }).collect();
+    let pages_by_source: std::collections::HashMap<String, &DocumentInfo> = pages.iter()
+        .map(|p| (p.source.display().to_string(), p))
+        .collect();
+    let nav_documents: Vec<&DocumentInfo> = nav_paths.iter()
+        .filter_map(|path| pages_by_source.get(path.as_str()).copied())
+        .filter(|p| p.lang == page.lang)
+        .collect();
     let idx = nav_documents.iter().position(|p| p.source == page.source);
     let prev = idx.and_then(|i| {
         if i > 0 {

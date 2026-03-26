@@ -271,9 +271,7 @@ impl PathContext {
         let input_dir = input.parent().unwrap_or(Path::new("."));
         let root = if self.project_root.as_os_str().is_empty() { Path::new(".") } else { &self.project_root };
         let idir = if input_dir.as_os_str().is_empty() { Path::new(".") } else { input_dir };
-        if idir != root {
-            eprintln!("  root: {}  (code chunks run from {})", root.display(), idir.display());
-        }
+        let _ = (root, idir); // suppress verbose diagnostic
     }
 }
 

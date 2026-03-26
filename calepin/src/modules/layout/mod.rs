@@ -137,7 +137,7 @@ fn render_rows_via_partials(
 
         let mut row_vars = HashMap::new();
         row_vars.insert("cells".to_string(), cells_rendered.join(cell_separator));
-        row_vars.insert("columns".to_string(), columns.join(", "));
+        row_vars.insert("columns".to_string(), columns.join(" "));
         row_vars.insert("align_items".to_string(), align_items.to_string());
         row_vars.insert("valign".to_string(), valign_char.to_string());
         output.push_str(&apply_template(row_tpl, &row_vars));

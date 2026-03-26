@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use anyhow::Result;
+use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::config;
 use super::discover::DocumentInfo;
@@ -43,13 +44,20 @@ pub fn render_documents(
 
     let overrides = build_overrides(meta, target);
 
-    if !quiet {
-        eprintln!("Rendering {} documents...", pages.len());
-    }
     let format_owned = format.to_string();
     let target_owned = target_name.map(|s| s.to_string());
-    let total = pages.len();
-    let done = AtomicUsize::new(0);
+
+    let pb = if quiet {
+        ProgressBar::hidden()
+    } else {
+        let pb = ProgressBar::new(pages.len() as u64);
+        pb.set_style(ProgressStyle::default_bar()
+            .template("  [{bar:30}] {pos}/{len} {msg}")
+            .unwrap()
+            .progress_chars("=> "));
+        pb
+    };
+    let pb = Arc::new(pb);
 
     // Render all pages in parallel using thread::scope
     let results: Vec<(String, Result<CollectionRenderResult>)> = std::thread::scope(|s| {
@@ -62,24 +70,21 @@ pub fn render_documents(
                 let format = &format_owned;
                 let target = &target_owned;
                 let project_meta = meta;
-                let done = &done;
-                let quiet = quiet;
+                let pb = Arc::clone(&pb);
                 s.spawn(move || {
                     crate::paths::set_active_target(target.as_deref());
                     crate::paths::set_project_root(Some(base_dir));
                     let key = page.source.display().to_string();
                     let result = render_one_document(page, overrides, base_dir, output_dir, format, apply_page_template, Some(project_meta));
-                    let n = done.fetch_add(1, Ordering::Relaxed) + 1;
-                    if !quiet {
-                        let out = output_dir.join(&page.output);
-                        eprintln!("  [{}/{}] {}", n, total, out.display());
-                    }
+                    pb.set_message(page.output.display().to_string());
+                    pb.inc(1);
                     (key, result)
                 })
             })
             .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
+    pb.finish_and_clear();
 
     let mut map = HashMap::new();
     let mut failed: Vec<&DocumentInfo> = Vec::new();
@@ -198,16 +203,22 @@ pub fn render_documents_with_crossref(
 
     let overrides = build_overrides(meta, target);
 
-    if !quiet {
-        eprintln!("Rendering {} documents (cross-ref pass 1)...", pages.len());
-    }
-
     // Assign chapter numbers based on [[contents]] ordering
     let chapter_map = assign_chapter_numbers(meta);
 
     let target_owned = target_name.map(|s| s.to_string());
-    let total = pages.len();
-    let done = AtomicUsize::new(0);
+
+    let pb = if quiet {
+        ProgressBar::hidden()
+    } else {
+        let pb = ProgressBar::new(pages.len() as u64);
+        pb.set_style(ProgressStyle::default_bar()
+            .template("  [{bar:30}] {pos}/{len} {msg}")
+            .unwrap()
+            .progress_chars("=> "));
+        pb
+    };
+    let pb = Arc::new(pb);
 
     // Pass 1: Render all pages in parallel with skip_crossref=true
     let pass1: Vec<(String, Result<Pass1Result>)> = std::thread::scope(|s| {
@@ -219,24 +230,21 @@ pub fn render_documents_with_crossref(
                 let output_dir = output_dir;
                 let target = &target_owned;
                 let chapter = chapter_map.get(&page.source.display().to_string()).copied();
-                let done = &done;
-                let quiet = quiet;
+                let pb = Arc::clone(&pb);
                 s.spawn(move || {
                     crate::paths::set_active_target(target.as_deref());
                     crate::paths::set_project_root(Some(base_dir));
                     let key = page.source.display().to_string();
                     let result = render_one_document_pass1(page, overrides, base_dir, output_dir, chapter);
-                    let n = done.fetch_add(1, Ordering::Relaxed) + 1;
-                    if !quiet {
-                        let out = output_dir.join(&page.output);
-                        eprintln!("  [{}/{}] {}", n, total, out.display());
-                    }
+                    pb.set_message(page.output.display().to_string());
+                    pb.inc(1);
                     (key, result)
                 })
             })
             .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
+    pb.finish_and_clear();
 
     // Collect pass 1 results
     let mut pass1_results: HashMap<String, Pass1Result> = HashMap::new();

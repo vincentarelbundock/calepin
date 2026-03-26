@@ -83,6 +83,12 @@ fn main() -> Result<()> {
             cli::NewAction::Notebook { path } => cli::new_notebook::handle_new_notebook(&path),
             cli::NewAction::Website { dir } => cli::new_website::handle_new_website(&dir),
             cli::NewAction::Book { dir } => cli::new_book::handle_new_book(&dir),
+            cli::NewAction::Completions { shell } => {
+                use clap::CommandFactory;
+                let mut cmd = <cli::Cli as CommandFactory>::command();
+                clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
+                Ok(())
+            }
             cli::NewAction::Gibberish { files, paragraphs, dir, complexity } => {
                 cli::new_gibberish::generate_gibberish(&dir, files, paragraphs, complexity)
             }

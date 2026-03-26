@@ -46,8 +46,9 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
             let p = entry.path();
             if p.is_dir() {
                 let name = entry.file_name();
-                if name == "_calepin" {
-                    // Check for cache/ and files/ inside _calepin/
+                let name_str = name.to_string_lossy();
+                if name_str.ends_with("_calepin") {
+                    // Match both _calepin/ and {stem}_calepin/ sidecar dirs
                     if do_cache {
                         let cache = p.join("cache");
                         if cache.is_dir() {
@@ -68,7 +69,7 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
                             }
                         }
                     }
-                } else if name != "." && name != ".." && name != ".git" && name != "node_modules" {
+                } else if name_str != "." && name_str != ".." && name_str != ".git" && name_str != "node_modules" && name_str != "output" {
                     find_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation, stem_filter);
                 }
             } else if p.is_file() {

@@ -10,13 +10,13 @@ title = "Math"
 
 Inline math is enclosed in single dollar signs: $a^2 + b^2 = c^2$.
 
-Display math uses double dollars `$$`:
+Display math uses double dollar signs:
 
 $$
 \int_0^1 x^2 \, dx = \frac{1}{3}
 $$
 
-Multi-line equations use `\begin{aligned}` inside double dollars:
+Multi-line equations use `\begin{aligned}` inside double dollar signs:
 
 $$
 \begin{aligned}

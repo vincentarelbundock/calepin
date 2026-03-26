@@ -1,7 +1,7 @@
 //! The `calepin info` command: display system capabilities (CSL styles, themes, completions).
 
 use anyhow::Result;
-use crate::cli::{Cli, InfoAction};
+use crate::cli::InfoAction;
 
 pub fn handle_info(action: InfoAction) -> Result<()> {
     match action {
@@ -51,12 +51,6 @@ pub fn handle_info(action: InfoAction) -> Result<()> {
             }
             println!("\n{} themes available.", names.len());
             println!("Custom themes: place a .tmTheme file in _calepin/assets/highlighting/");
-            Ok(())
-        }
-        InfoAction::Completions { shell } => {
-            use clap::CommandFactory;
-            let mut cmd = <Cli as CommandFactory>::command();
-            clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
             Ok(())
         }
     }
