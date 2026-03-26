@@ -12,7 +12,7 @@ pub fn render(
     children: &[Element],
     format: &str,
     render_element: &dyn Fn(&Element) -> String,
-    raw_fragments: &std::cell::RefCell<Vec<String>>,
+    _raw_fragments: &std::cell::RefCell<Vec<String>>,
     defaults: &crate::config::Metadata,
 ) -> String {
     let defs = defaults;
@@ -53,13 +53,8 @@ pub fn render(
 
     let id_str = id.as_deref().unwrap_or("");
 
-    // Render the inner rows for the current format
-    let rows_content = match format {
-        "html" => render_rows_html(&rows_rendered, valign, raw_fragments),
-        "latex" => render_rows_latex(&rows_rendered, valign),
-        "typst" => render_rows_typst(&rows_rendered),
-        _ => render_rows_plain(&rows_rendered),
-    };
+    // Render the inner rows through format-specific partials
+    let rows_content = render_rows_via_partials(&rows_rendered, valign, format);
 
     // Build template variables for the figure wrapper
     let mut vars = HashMap::new();
@@ -84,80 +79,90 @@ pub fn render(
     crate::render::template::apply_template(tpl, &vars)
 }
 
-fn render_rows_html(
+/// Render rows through format-specific layout_row and layout_cell partials.
+fn render_rows_via_partials(
     rows: &[Vec<(String, f64)>],
     valign: &str,
-    _raw_fragments: &std::cell::RefCell<Vec<String>>,
+    format: &str,
 ) -> String {
+    use crate::render::elements::resolve_builtin_partial;
+    use crate::render::template::apply_template;
+
+    let cell_tpl = resolve_builtin_partial("layout_cell", format).unwrap_or("{{ content }}");
+    let row_tpl = resolve_builtin_partial("layout_row", format).unwrap_or("{{ cells }}");
+
+    let valign_char = match valign {
+        "center" => "c",
+        "bottom" => "b",
+        _ => "t",
+    };
     let align_items = match valign {
         "center" => "center",
         "bottom" => "end",
         _ => "start",
     };
 
-    let mut html = String::new();
-    for row in rows {
-        let cols: Vec<String> = row.iter()
-            .filter(|(_, w)| *w > 0.0)
-            .map(|(_, w)| format!("{}fr", (w * 100.0).round() as u32))
-            .collect();
-        html.push_str(&format!(
-            "<div class=\"layout-grid\" style=\"display:grid;grid-template-columns:{};gap:1em;align-items:{}\">\n",
-            cols.join(" "), align_items
-        ));
-        for (content, w) in row {
-            if *w < 0.0 { continue; }
-            // Images inside layout cells should fill the cell width
-            let content = content.replace("max-width: 60%", "max-width: 100%");
-            html.push_str(&format!("<div class=\"layout-cell\">\n{}\n</div>\n", content));
-        }
-        html.push_str("</div>\n");
-    }
-
-    html
-}
-
-fn render_rows_latex(
-    rows: &[Vec<(String, f64)>],
-    valign: &str,
-) -> String {
-    let valign_char = match valign {
-        "center" => "c",
-        "bottom" => "b",
-        _ => "t",
-    };
-
-    let mut latex = String::new();
+    let mut output = String::new();
     for row in rows {
         let positive_cells: Vec<&(String, f64)> = row.iter().filter(|(_, w)| *w > 0.0).collect();
         let total: f64 = positive_cells.iter().map(|(_, w)| w).sum();
         let gap = if positive_cells.len() > 1 { 0.02 } else { 0.0 };
 
+        // Build column spec
+        let columns: Vec<String> = positive_cells.iter()
+            .map(|(_, w)| format!("{}fr", (w / total * 100.0).round() as u32))
+            .collect();
+
+        // Render each cell
+        let mut cells_rendered: Vec<String> = Vec::new();
         for (i, (content, w)) in positive_cells.iter().enumerate() {
             let width = w / total * (1.0 - gap * (positive_cells.len() as f64 - 1.0));
-            // Strip nested \begin{figure}...\end{figure} from children to avoid
-            // "not in outer par mode" errors. Keep the inner content (centering,
-            // includegraphics, caption, label).
-            let inner = unwrap_latex_figure(content);
-            // Images inside layout cells should fill the cell width
-            let inner = inner.replace("width=0.60\\textwidth", "width=\\textwidth");
-            latex.push_str(&format!(
-                "\\begin{{minipage}}[{}]{{{:.3}\\textwidth}}\n{}\n\\end{{minipage}}",
-                valign_char, width, inner
-            ));
-            if i < positive_cells.len() - 1 {
-                latex.push_str("\\hfill\n");
+
+            // Format-specific content adjustments
+            let content = adjust_cell_content(content, format);
+
+            let mut cell_vars = HashMap::new();
+            cell_vars.insert("content".to_string(), content);
+            cell_vars.insert("width".to_string(), format!("{:.3}", width));
+            cell_vars.insert("valign".to_string(), valign_char.to_string());
+            cells_rendered.push(apply_template(cell_tpl, &cell_vars));
+
+            // LaTeX: add \hfill between cells
+            if format == "latex" && i < positive_cells.len() - 1 {
+                cells_rendered.push("\\hfill".to_string());
             }
         }
-        latex.push('\n');
+
+        let cell_separator = if format == "latex" { "\n" } else { "\n" };
+
+        let mut row_vars = HashMap::new();
+        row_vars.insert("cells".to_string(), cells_rendered.join(cell_separator));
+        row_vars.insert("columns".to_string(), columns.join(", "));
+        row_vars.insert("align_items".to_string(), align_items.to_string());
+        row_vars.insert("valign".to_string(), valign_char.to_string());
+        output.push_str(&apply_template(row_tpl, &row_vars));
     }
 
-    latex
+    output
+}
+
+/// Adjust cell content for the target format (e.g. expand images to fill cells,
+/// strip nested figure floats for LaTeX).
+fn adjust_cell_content(content: &str, format: &str) -> String {
+    match format {
+        "html" => content.replace("max-width: 60%", "max-width: 100%"),
+        "latex" => {
+            let inner = unwrap_latex_figure(content);
+            inner.replace("width=0.60\\textwidth", "width=\\textwidth")
+        }
+        "typst" => content.replace("width: 60%", "width: 100%"),
+        _ => content.to_string(),
+    }
 }
 
 /// Strip `\begin{figure}...\end{figure}` wrapper from LaTeX content,
 /// keeping the inner body. This prevents nested figure floats inside minipages.
-fn unwrap_latex_figure(content: &str) -> &str {
+fn unwrap_latex_figure(content: &str) -> String {
     let trimmed = content.trim();
     // Try common figure environments
     for env in &["figure", "figure*"] {
@@ -172,46 +177,11 @@ fn unwrap_latex_figure(content: &str) -> &str {
                 } else {
                     inner
                 };
-                return inner.trim();
+                return inner.trim().to_string();
             }
         }
     }
-    content
-}
-
-fn render_rows_typst(
-    rows: &[Vec<(String, f64)>],
-) -> String {
-    let mut typ = String::new();
-    for row in rows {
-        let positive_cells: Vec<&(String, f64)> = row.iter().filter(|(_, w)| *w > 0.0).collect();
-        let total: f64 = positive_cells.iter().map(|(_, w)| w).sum();
-        let cols: Vec<String> = positive_cells.iter()
-            .map(|(_, w)| format!("{}fr", (w / total * 100.0).round() as u32))
-            .collect();
-
-        typ.push_str(&format!("#grid(columns: ({}), gutter: 1em,\n", cols.join(", ")));
-        for (content, _) in &positive_cells {
-            // Images inside layout cells should fill the cell width
-            let content = content.replace("width: 60%", "width: 100%");
-            typ.push_str(&format!("  [\n{}\n  ],\n", content));
-        }
-        typ.push_str(")\n");
-    }
-
-    typ
-}
-
-fn render_rows_plain(rows: &[Vec<(String, f64)>]) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    for row in rows {
-        for (content, w) in row {
-            if *w > 0.0 && !content.is_empty() {
-                parts.push(content.clone());
-            }
-        }
-    }
-    parts.join("\n\n")
+    content.to_string()
 }
 
 // ---------------------------------------------------------------------------

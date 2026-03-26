@@ -1,5 +1,9 @@
 <div class="authors">
 {{authors}}
-{{affiliations}}
+{%- if affiliations_items %}
+  <div class="affiliations">
+{{affiliations_items}}
+  </div>
+{%- endif %}
 {{corresponding_note}}
 </div>

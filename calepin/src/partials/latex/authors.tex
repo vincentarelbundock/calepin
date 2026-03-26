@@ -1,2 +1,4 @@
 {{authors_cmd}}
-{{affiliations}}
+{%- if affiliations_items %}
+\newcommand{\affiliationblock}{\begin{center}\small {{affiliations_items}}\end{center}}
+{%- endif %}

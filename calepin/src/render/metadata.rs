@@ -234,14 +234,16 @@ fn build_funding_items(funding: &[crate::config::Funding], ext: &str) -> String 
     if items.is_empty() {
         return String::new();
     }
-    match ext {
-        "html" => items.iter().map(|i| format!("<li>{}</li>", i)).collect::<Vec<_>>().join("\n"),
-        "latex" => items.iter().map(|i| {
-            let escaped = i.replace('#', "\\#").replace('%', "\\%").replace('&', "\\&").replace('_', "\\_");
-            format!("\\item {}", escaped)
-        }).collect::<Vec<_>>().join("\n"),
-        _ => items.iter().map(|i| format!("- {}", i)).collect::<Vec<_>>().join("\n"),
-    }
+    items.iter().map(|i| {
+        let text = if ext == "latex" {
+            i.replace('#', "\\#").replace('%', "\\%").replace('&', "\\&").replace('_', "\\_")
+        } else {
+            i.clone()
+        };
+        let mut vars = HashMap::new();
+        vars.insert("text".to_string(), text);
+        render_fmt_template("funding_item", ext, &vars)
+    }).collect::<Vec<_>>().join("\n")
 }
 
 /// Build the author block for any format using element templates.
@@ -324,15 +326,10 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             if author.corresponding {
                 if let Some(ref email) = author.email {
                     let mailto = format!("mailto:{}", email);
-                    Some(match ext {
-                        "html" => format!(
-                            "  <p class=\"corresponding\">* Corresponding author: <a href=\"{}\">{}</a></p>",
-                            mailto, email
-                        ),
-                        "latex" => format!("\\textsuperscript{{*}} Corresponding author: \\url{{{}}}", email),
-                        "typst" => format!("#super[\\*] Corresponding author: #link(\"{}\")", mailto),
-                        _ => format!("* Corresponding author: {}", email),
-                    })
+                    let mut vars = HashMap::new();
+                    vars.insert("email".to_string(), email.clone());
+                    vars.insert("mailto".to_string(), mailto);
+                    Some(render_fmt_template("corresponding", ext, &vars))
                 } else {
                     None
                 }
@@ -341,41 +338,17 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             }
         }).collect::<Vec<_>>().join("\n");
 
-        // Assemble through author-block template
+        // Join authors and affiliations with format-appropriate separators
         let authors_joined = match ext {
             "latex" => authors_rendered.join(" \\and "),
             "typst" => authors_rendered.join(", "),
             _ => authors_rendered.join("\n"),
         };
 
-        let affiliations_joined = match ext {
-            "html" => {
-                if affs_rendered.is_empty() {
-                    String::new()
-                } else {
-                    format!("  <div class=\"affiliations\">\n{}\n  </div>", affs_rendered.join("\n"))
-                }
-            }
-            "latex" => {
-                if affs_rendered.is_empty() {
-                    String::new()
-                } else {
-                    format!(
-                        "\\newcommand{{\\affiliationblock}}{{\\begin{{center}}\\small {}\\end{{center}}}}",
-                        affs_rendered.join(" \\\\\n")
-                    )
-                }
-            }
-            "typst" => {
-                if affs_rendered.is_empty() {
-                    String::new()
-                } else {
-                    format!(
-                        "\n  #v(0.3em)\n  #text(size: 9pt, style: \"italic\")[{}]",
-                        affs_rendered.join(" \\\n")
-                    )
-                }
-            }
+        let affiliations_items = match ext {
+            "latex" => affs_rendered.join(" \\\\\n"),
+            "typst" => affs_rendered.join(" \\\n"),
+            "html" => affs_rendered.join("\n"),
             _ => affs_rendered.join(", "),
         };
 
@@ -385,21 +358,18 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             vars.insert("engine".to_string(), ext.to_string());
             vars.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
             vars.insert("authors".to_string(), authors_joined);
-            vars.insert("affiliations".to_string(), affiliations_joined);
+            vars.insert("affiliations_items".to_string(), affiliations_items);
             vars.insert("corresponding_note".to_string(), corresponding_note);
             apply_template(&tpl, &vars)
         } else {
-            format!("{}\n{}\n{}", authors_joined, affiliations_joined, corresponding_note)
+            format!("{}\n{}\n{}", authors_joined, affiliations_items, corresponding_note)
         }
     } else {
         let names = meta.author_names();
         if !names.is_empty() {
-            match ext {
-                "html" => format!("<h2>{}</h2>", names.join(", ")),
-                "latex" => format!("\\author{{{}}}", names.join(" \\and ")),
-                "typst" => format!("#text(size: 12pt)[{}]", names.join(", ")),
-                _ => names.join(", "),
-            }
+            let mut vars = HashMap::new();
+            vars.insert("names".to_string(), names.join(", "));
+            render_fmt_template("authors_simple", ext, &vars)
         } else {
             String::new()
         }
