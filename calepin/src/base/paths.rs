@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 
 // ---------------------------------------------------------------------------
 // Active target name (thread-local)
@@ -20,7 +20,6 @@ use crate::metadata::Metadata;
 thread_local! {
     static ACTIVE_TARGET: RefCell<Option<String>> = RefCell::new(None);
     static PROJECT_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
-    static THEME_DIR: RefCell<Option<PathBuf>> = RefCell::new(None);
 }
 
 /// Set the active target name for template resolution.
@@ -47,17 +46,6 @@ pub fn get_project_root() -> PathBuf {
     PROJECT_ROOT.with(|r| {
         r.borrow().clone().unwrap_or_else(|| PathBuf::from("."))
     })
-}
-
-/// Set the active theme directory for template resolution.
-pub fn set_theme_dir(dir: Option<&Path>) {
-    THEME_DIR.with(|t| {
-        *t.borrow_mut() = dir.map(|p| p.to_path_buf());
-    });
-}
-
-pub fn get_theme_dir() -> Option<PathBuf> {
-    THEME_DIR.with(|t| t.borrow().clone())
 }
 
 // ---------------------------------------------------------------------------
@@ -160,11 +148,6 @@ pub fn partials_dir(project_root: &Path) -> PathBuf {
     calepin_dir(project_root, &["partials"])
 }
 
-/// `{root}/_calepin/themes`
-pub fn themes_dir(project_root: &Path) -> PathBuf {
-    calepin_dir(project_root, &["themes"])
-}
-
 /// `{root}/_calepin/assets`
 pub fn assets_dir(project_root: &Path) -> PathBuf {
     calepin_dir(project_root, &["assets"])
@@ -215,21 +198,6 @@ pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
     let p = tpl.join("common").join(&generic);
     if p.exists() { return Some(p); }
 
-    // 4. Theme templates (same three-layer resolution)
-    if let Some(theme_dir) = get_theme_dir() {
-        let theme_tpl = theme_dir.join("partials");
-        if let Some(ref target) = active_target {
-            if target != base {
-                let p = theme_tpl.join(target).join(&base_specific);
-                if p.exists() { return Some(p); }
-            }
-        }
-        let p = theme_tpl.join(base).join(&base_specific);
-        if p.exists() { return Some(p); }
-        let p = theme_tpl.join("common").join(&generic);
-        if p.exists() { return Some(p); }
-    }
-
     None
 }
 
@@ -264,25 +232,10 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
     let p = snip.join("common").join(&generic);
     if p.exists() { return Some(p); }
 
-    // 4. Theme snippets (same three-layer resolution)
-    if let Some(theme_dir) = get_theme_dir() {
-        let theme_snip = theme_dir.join("snippets");
-        if let Some(ref target) = active_target {
-            if target != base {
-                let p = theme_snip.join(target).join(&specific);
-                if p.exists() { return Some(p); }
-            }
-        }
-        let p = theme_snip.join(base).join(&specific);
-        if p.exists() { return Some(p); }
-        let p = theme_snip.join("common").join(&generic);
-        if p.exists() { return Some(p); }
-    }
-
     None
 }
 
-/// Resolve a plugin directory by name.
+/// Resolve a module directory by name.
 /// Checks `{project_root}/_calepin/modules/{name}/plugin.toml`.
 pub fn resolve_module_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
     let local = calepin_dir(project_root, &["plugins", name]);

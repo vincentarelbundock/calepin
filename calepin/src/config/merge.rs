@@ -55,7 +55,6 @@ impl Metadata {
 
         // Rendering
         merge_opt!(target);
-        merge_opt!(theme);
         if overlay.number_sections { self.number_sections = true; }
         merge_opt!(date_format);
         merge_vec!(bibliography);

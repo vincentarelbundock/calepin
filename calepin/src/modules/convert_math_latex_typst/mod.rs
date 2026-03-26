@@ -5,7 +5,7 @@
 //! # Example
 //!
 //! ```ignore
-//! use crate::math::latex_to_typst;
+//! use crate::modules::convert_math_latex_typst::latex_to_typst;
 //!
 //! let typst = latex_to_typst("\\frac{a}{b}");
 //! assert_eq!(typst, "frac(a, b)");
@@ -42,6 +42,45 @@ pub fn convert_math_expression(expr: &str) -> String {
     } else {
         expr.to_string()
     }
+}
+
+// ---------------------------------------------------------------------------
+// Typst math filters (strip or convert LaTeX math in Typst output)
+// ---------------------------------------------------------------------------
+
+/// Strip LaTeX math from Typst output.
+pub fn strip_math_for_typst(text: &str) -> String {
+    use std::sync::LazyLock;
+    use regex::Regex;
+    static RE_DISPLAY: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?s)\$\$.*?\$\$").unwrap()
+    });
+    static RE_DOLLAR: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?s)\$[^$]+?\$").unwrap()
+    });
+    let text = RE_DISPLAY.replace_all(text, "").to_string();
+    RE_DOLLAR.replace_all(&text, "").to_string()
+}
+
+/// Convert LaTeX math to Typst math syntax in rendered output.
+pub fn convert_math_for_typst(text: &str) -> String {
+    use std::sync::LazyLock;
+    use regex::Regex;
+    static RE_MATH: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?s)\$\$(.*?)\$\$|\$([^$]+?)\$").unwrap()
+    });
+
+    RE_MATH.replace_all(text, |caps: &regex::Captures| {
+        if let Some(display) = caps.get(1) {
+            let converted = latex_to_typst(display.as_str().trim());
+            format!("$ {} $", converted)
+        } else if let Some(inline) = caps.get(2) {
+            let converted = latex_to_typst(inline.as_str());
+            format!("${}$", converted)
+        } else {
+            caps[0].to_string()
+        }
+    }).to_string()
 }
 
 #[cfg(test)]

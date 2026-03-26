@@ -118,10 +118,6 @@ pub struct RenderArgs {
     #[arg(long, value_parser = ["html", "latex", "typst", "markdown"])]
     pub engine: Option<String>,
 
-    /// Theme to apply on top of the target.
-    #[arg(long)]
-    pub theme: Option<String>,
-
     /// Remove output directory before building (project manifests only)
     #[arg(long)]
     pub clean: bool,
@@ -178,8 +174,6 @@ pub enum InfoAction {
     Csl,
     /// List available syntax highlighting themes
     Themes,
-    /// List available document themes
-    ThemeList,
     /// Print shell completions (bash, zsh, fish, elvish, powershell)
     Completions {
         /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)

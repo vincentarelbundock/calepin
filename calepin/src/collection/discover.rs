@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 
 /// Metadata extracted from a document's YAML frontmatter.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

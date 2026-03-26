@@ -37,7 +37,7 @@ pub struct ModuleContext<'a> {
     pub id: &'a Option<String>,
     pub attrs: &'a HashMap<String, String>,
     pub format: &'a str,
-    pub defaults: &'a crate::metadata::Metadata,
+    pub defaults: &'a crate::config::Metadata,
     pub vars: HashMap<String, String>,
 
     children: &'a [Element],
@@ -55,7 +55,7 @@ impl<'a> ModuleContext<'a> {
         attrs: &'a HashMap<String, String>,
         children: &'a [Element],
         format: &'a str,
-        defaults: &'a crate::metadata::Metadata,
+        defaults: &'a crate::config::Metadata,
         render_fn: &'a dyn Fn(&Element) -> String,
         resolve_fn: &'a dyn Fn(&str) -> Option<String>,
         raw_fragments: &'a RefCell<Vec<String>>,

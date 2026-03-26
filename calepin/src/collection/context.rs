@@ -10,7 +10,7 @@ use serde::Serialize;
 use super::discover::DocumentInfo;
 use super::render::CollectionRenderResult;
 use crate::project::{DocumentNode, expand_contents_for_lang, LanguageConfig};
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 
 /// Collection-level context available to all templates as `{{ collection.* }}`.
 #[derive(Debug, Serialize)]

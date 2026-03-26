@@ -1,16 +1,16 @@
-//! Runtime project context: resolves project config, target, and theme for a render.
+//! Runtime project context: resolves project config and target for a render.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
-use crate::{paths, project, theme_manifest};
+use crate::{paths, project};
 
 /// Resolved project context: project metadata + target, shared by render and preview.
 pub(crate) struct ProjectContext {
     pub project_root: Option<PathBuf>,
-    pub project_metadata: Option<crate::metadata::Metadata>,
+    pub project_metadata: Option<crate::config::Metadata>,
     pub target_name: String,
     pub target: project::Target,
     /// True when the target was explicitly set (CLI flag or front matter),
@@ -28,11 +28,6 @@ impl ProjectContext {
 /// Resolve project config and target from an input file and optional CLI flags.
 /// Falls back to front matter `target:`, then "html".
 pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectContext> {
-    resolve_context_with_theme(input, cli_target, None)
-}
-
-/// Resolve project config, target, and theme from an input file and optional CLI flags.
-pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>, cli_theme: Option<&str>) -> Result<ProjectContext> {
     let input_dir = input.parent().unwrap_or(Path::new("."));
     let abs_input_dir = if input_dir.is_relative() {
         std::env::current_dir().unwrap_or_default().join(input_dir)
@@ -57,9 +52,9 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
         }
     };
 
-    // Read front matter once (used for target and theme resolution)
+    // Read front matter once (for target resolution)
     let front_meta = fs::read_to_string(input).ok()
-        .and_then(|text| crate::metadata::split_frontmatter(&text).ok())
+        .and_then(|text| crate::config::split_frontmatter(&text).ok())
         .map(|(meta, _)| meta);
 
     // Target name: CLI flag -> front matter -> default from config
@@ -96,17 +91,6 @@ pub(crate) fn resolve_context_with_theme(input: &Path, cli_target: Option<&str>,
     }
 
     paths::set_project_root(Some(&effective_root));
-
-    // Resolve theme: CLI flag -> front matter -> project config
-    let theme_name = cli_theme.map(|s| s.to_string())
-        .or_else(|| front_meta.as_ref().and_then(|m| m.theme.clone()));
-
-    // If theme is active, set theme dir for template resolution
-    if let Some(ref theme) = theme_name {
-        if let Some(theme_dir) = theme_manifest::resolve_theme_dir(theme, &effective_root) {
-            paths::set_theme_dir(Some(&theme_dir));
-        }
-    }
 
     Ok(ProjectContext {
         project_root: Some(effective_root),

@@ -63,7 +63,7 @@ pub struct ChunkOptions {
     /// Keys that were merged from document-level defaults (not set per-chunk).
     pub defaults_keys: std::collections::HashSet<String>,
     /// Resolved rendering metadata for fallback values.
-    pub metadata: crate::metadata::Metadata,
+    pub metadata: crate::config::Metadata,
 }
 
 #[derive(Debug, Clone)]

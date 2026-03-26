@@ -1,15 +1,13 @@
 #[macro_use]
 mod cli;
-mod commands;
 mod context;
 pub(crate) use context::{ProjectContext, resolve_context, apply_engine_override};
 mod references;
 pub(crate) use references::{bibliography, crossref};
 mod date;
 mod engines;
+mod config;
 mod jinja;
-mod math;
-mod metadata;
 mod parse;
 mod pipeline;
 mod preview;
@@ -23,7 +21,7 @@ mod base;
 pub(crate) use base::{types, value, paths, util};
 
 mod modules;
-pub(crate) use modules::{registry, manifest as module_manifest, theme as theme_manifest};
+pub(crate) use modules::{registry, manifest as module_manifest};
 
 mod emit;
 mod formats;
@@ -64,8 +62,8 @@ fn main() -> Result<()> {
     let cli = parse_cli();
 
     match cli.command {
-        Command::Render(args) => commands::render::handle_render(args),
-        Command::Preview(args) => commands::preview::handle_preview(args),
+        Command::Render(args) => cli::render::handle_render(args),
+        Command::Preview(args) => cli::preview::handle_preview(args),
         Command::Flush { path, yes, cache, files, compilation, all } => {
             // Default to --all when no category flag is given
             let (do_cache, do_files, do_compilation) = if all || (!cache && !files && !compilation) {
@@ -81,9 +79,9 @@ fn main() -> Result<()> {
                 let name = path.to_string_lossy().to_string();
                 (PathBuf::from("."), Some(name))
             };
-            commands::flush::handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
+            cli::flush::handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
         }
-        Command::New { action } => commands::new::handle_new(action),
-        Command::Info { action } => commands::info::handle_info(action),
+        Command::New { action } => cli::new::handle_new(action),
+        Command::Info { action } => cli::info::handle_info(action),
     }
 }

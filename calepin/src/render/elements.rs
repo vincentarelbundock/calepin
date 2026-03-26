@@ -20,13 +20,6 @@ pub static BUILTIN_PARTIALS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/sr
 /// Built-in assets (CSS, JS, scaffold files), embedded at compile time.
 pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/assets");
 
-/// Built-in scaffold files (404.qmd, index.qmd), embedded at compile time.
-#[allow(dead_code)]
-pub static BUILTIN_SCAFFOLD: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold");
-
-/// Built-in syntax highlighting themes (`.tmTheme` files), embedded at compile time.
-pub static BUILTIN_HIGHLIGHTING: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/assets/highlighting");
-
 /// Template name aliases: multiple names can map to the same template file.
 fn resolve_partial_alias(name: &str) -> &str {
     match name {
@@ -88,7 +81,7 @@ pub struct ElementRenderer {
     sc_fragments: Vec<String>,
     preamble: Vec<String>,
     /// Resolved rendering metadata (highlight, figure, callout, labels, etc.).
-    pub metadata: crate::metadata::Metadata,
+    pub metadata: crate::config::Metadata,
     pub number_sections: bool,
     pub shift_headings: bool,
     pub convert_math: bool,
@@ -149,7 +142,7 @@ impl ElementRenderer {
             raw_fragments: std::cell::RefCell::new(Vec::new()),
             sc_fragments: Vec::new(),
             preamble: Vec::new(),
-            metadata: crate::metadata::Metadata::default(),
+            metadata: crate::config::Metadata::default(),
             number_sections: false,
             shift_headings: false,
             convert_math: false,
@@ -171,7 +164,7 @@ impl ElementRenderer {
     /// Create an ElementRenderer from document metadata and pipeline options.
     pub fn from_metadata(
         engine: &str,
-        metadata: &crate::metadata::Metadata,
+        metadata: &crate::config::Metadata,
         options: &crate::pipeline::RenderCoreOptions,
     ) -> Self {
         let hl = metadata.highlight.as_ref();

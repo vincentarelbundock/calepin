@@ -100,7 +100,6 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
                 });
                 meta.target = val;
             }
-            "theme" => meta.theme = v.as_str().map(String::from),
             "number_sections" => meta.number_sections = v.as_bool().unwrap_or(false),
             "toc_depth" => {
                 let depth = v.as_integer().unwrap_or(3) as u32;

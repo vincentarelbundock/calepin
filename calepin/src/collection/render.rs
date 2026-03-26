@@ -28,7 +28,7 @@ pub struct CollectionRenderResult {
 /// Jinja templates.
 pub fn render_documents(
     pages: &[DocumentInfo],
-    meta: &crate::metadata::Metadata,
+    meta: &crate::config::Metadata,
     base_dir: &Path,
     output_dir: &Path,
     format: &str,
@@ -131,7 +131,7 @@ fn render_one_document(
     output_dir: &Path,
     format: &str,
     apply_page_template: bool,
-    project_metadata: Option<&crate::metadata::Metadata>,
+    project_metadata: Option<&crate::config::Metadata>,
 ) -> Result<CollectionRenderResult> {
     let input = base_dir.join(&page.source);
     let output_path = output_dir.join(&page.output);
@@ -193,7 +193,7 @@ fn render_one_document(
 ///   Pass 2: Resolve cross-refs and renumber display numbers in parallel.
 pub fn render_documents_with_crossref(
     pages: &[DocumentInfo],
-    meta: &crate::metadata::Metadata,
+    meta: &crate::config::Metadata,
     base_dir: &Path,
     output_dir: &Path,
     target_name: Option<&str>,
@@ -386,7 +386,7 @@ fn render_one_document_pass1(
 /// Assign chapter numbers to pages based on their position in [[contents]].
 /// Each non-standalone page gets a sequential chapter number (1-based).
 /// Returns a map from source path (string) to chapter number.
-fn assign_chapter_numbers(meta: &crate::metadata::Metadata) -> HashMap<String, usize> {
+fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usize> {
     let mut chapter_map = HashMap::new();
     let mut chapter = 0usize;
 
@@ -423,7 +423,7 @@ fn assign_chapter_numbers(meta: &crate::metadata::Metadata) -> HashMap<String, u
     chapter_map
 }
 
-fn build_overrides(meta: &crate::metadata::Metadata, target: Option<&project::Target>) -> Vec<String> {
+fn build_overrides(meta: &crate::config::Metadata, target: Option<&project::Target>) -> Vec<String> {
     let mut overrides = Vec::new();
 
     // embed-resources override from target

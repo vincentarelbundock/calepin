@@ -262,7 +262,7 @@ fn render_and_compile(input: &Path, target_name: &str, overrides: &[String]) -> 
 
     if let Some(ref compile_cmd) = target.compile {
         let ext = target.output_extension();
-        crate::commands::render::run_compile_step(&output_path, compile_cmd, ext, true)?;
+        crate::cli::render::run_compile_step(&output_path, compile_cmd, ext, true)?;
         Ok(output_path.with_extension(ext))
     } else {
         Ok(output_path)

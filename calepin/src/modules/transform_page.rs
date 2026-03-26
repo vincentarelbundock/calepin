@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 use crate::render::elements::ElementRenderer;
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 
 pub trait TransformPage: Send + Sync {
     fn transform(&self, vars: &mut HashMap<String, String>, renderer: &ElementRenderer, meta: &Metadata);

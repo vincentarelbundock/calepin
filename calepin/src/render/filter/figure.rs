@@ -27,7 +27,7 @@ impl FigureFilter {
 }
 
 impl Filter for FigureFilter {
-    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, defaults: &crate::metadata::Metadata) -> FilterResult {
+    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, defaults: &crate::config::Metadata) -> FilterResult {
         if let Element::Figure { path, alt, caption, label, number, attrs } = element {
             build_figure_vars(
                 vars, path, alt, caption.as_deref(), label,
@@ -53,7 +53,7 @@ fn build_figure_vars(
     attrs: &crate::types::FigureAttrs,
     format: &str,
     default_cap_location: Option<&str>,
-    defaults: &crate::metadata::Metadata,
+    defaults: &crate::config::Metadata,
     fig_formats: &[String],
 ) {
     vars.insert("alt".to_string(), alt.to_string());

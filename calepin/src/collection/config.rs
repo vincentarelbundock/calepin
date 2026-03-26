@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 
 /// Load and validate a project config, returning it as `Metadata`.
 /// Looks for `_calepin.toml` at the given path or in `base_dir`.

@@ -8,6 +8,11 @@
 
 pub mod transform_page;
 
+use include_dir::{include_dir, Dir};
+
+/// Built-in syntax highlighting themes (`.tmTheme` files), embedded at compile time.
+pub static BUILTIN_THEMES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/modules/highlight/themes");
+
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::sync::{LazyLock, Mutex};
@@ -60,7 +65,7 @@ fn highlight_cache_key(code: &str, lang: &str, ext: &str) -> u64 {
 fn resolve_theme_name(name: &str) -> Option<&'static str> {
     // Check if a .tmTheme file exists in the built-in highlighting themes
     let path = format!("{}.tmTheme", name);
-    if crate::render::elements::BUILTIN_HIGHLIGHTING.get_file(&path).is_some() {
+    if crate::modules::highlight::BUILTIN_THEMES.get_file(&path).is_some() {
         // Intern the name so we return &'static str without leaking duplicates.
         static INTERNED: LazyLock<Mutex<std::collections::HashSet<&'static str>>> =
             LazyLock::new(|| Mutex::new(std::collections::HashSet::new()));
@@ -131,7 +136,7 @@ fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
     }
 
     // 2. Built-in: embedded highlighting themes
-    if let Some(file) = crate::render::elements::BUILTIN_HIGHLIGHTING.get_file(&filename) {
+    if let Some(file) = crate::modules::highlight::BUILTIN_THEMES.get_file(&filename) {
         return ThemeSet::load_from_reader(&mut Cursor::new(file.contents())).ok();
     }
 

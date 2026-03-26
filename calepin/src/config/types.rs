@@ -221,7 +221,6 @@ pub struct Metadata {
 
     // -- Rendering --
     pub target: Option<String>,
-    pub theme: Option<String>,
     pub number_sections: bool,
     pub date_format: Option<String>,
     pub bibliography: Vec<String>,

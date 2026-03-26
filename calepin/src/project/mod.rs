@@ -117,7 +117,7 @@ pub struct PostCommand {
 
 /// Load a project config and return it as `Metadata`.
 /// Parses TOML into Value::Table, then through parse_metadata().
-pub fn load_project_metadata(path: &Path) -> Result<crate::metadata::Metadata> {
+pub fn load_project_metadata(path: &Path) -> Result<crate::config::Metadata> {
     let content = std::fs::read_to_string(path)
         .with_context(|| format!("Failed to read {}", path.display()))?;
 
@@ -128,7 +128,7 @@ pub fn load_project_metadata(path: &Path) -> Result<crate::metadata::Metadata> {
         _ => crate::value::Table::new(),
     };
 
-    let mut meta = crate::metadata::parse_metadata(&table)?;
+    let mut meta = crate::config::parse_metadata(&table)?;
     let project_root = path.parent().unwrap_or(Path::new("."));
 
     // Resolve target inheritance and validate
@@ -170,14 +170,14 @@ fn validate_csl(csl: &str, project_root: &Path) -> Result<()> {
 }
 
 /// Parse a built-in TOML string (concatenation of shared + specific) into Metadata.
-fn parse_builtin(toml_str: &str) -> crate::metadata::Metadata {
+fn parse_builtin(toml_str: &str) -> crate::config::Metadata {
     let tv: toml::Value = toml::from_str(toml_str)
         .expect("built-in TOML must be valid");
     let table = match tv {
         toml::Value::Table(map) => crate::value::table_from_toml(map),
         _ => crate::value::Table::new(),
     };
-    let mut meta = crate::metadata::parse_metadata(&table)
+    let mut meta = crate::config::parse_metadata(&table)
         .expect("built-in TOML must produce valid metadata");
     resolve_inheritance(&mut meta.targets)
         .expect("built-in TOML inheritance must be valid");
@@ -190,9 +190,9 @@ const DOCUMENT_TOML: &str = include_str!("../config/document.toml");
 const COLLECTION_TOML: &str = include_str!("../config/collection.toml");
 
 /// Get the built-in document defaults (shared + document).
-pub fn builtin_metadata() -> &'static crate::metadata::Metadata {
+pub fn builtin_metadata() -> &'static crate::config::Metadata {
     use std::sync::LazyLock;
-    static META: LazyLock<crate::metadata::Metadata> = LazyLock::new(|| {
+    static META: LazyLock<crate::config::Metadata> = LazyLock::new(|| {
         parse_builtin(&format!("{}\n{}", SHARED_TOML, DOCUMENT_TOML))
     });
     &META
@@ -200,9 +200,9 @@ pub fn builtin_metadata() -> &'static crate::metadata::Metadata {
 
 /// Get the built-in collection defaults (shared + collection).
 #[allow(dead_code)]
-pub fn builtin_collection_metadata() -> &'static crate::metadata::Metadata {
+pub fn builtin_collection_metadata() -> &'static crate::config::Metadata {
     use std::sync::LazyLock;
-    static META: LazyLock<crate::metadata::Metadata> = LazyLock::new(|| {
+    static META: LazyLock<crate::config::Metadata> = LazyLock::new(|| {
         parse_builtin(&format!("{}\n{}", SHARED_TOML, COLLECTION_TOML))
     });
     &META
@@ -219,13 +219,13 @@ mod tests {
     use std::collections::HashMap;
 
     /// Parse a TOML string into Metadata via Value::Table -> parse_metadata().
-    fn parse_toml(toml_str: &str) -> crate::metadata::Metadata {
+    fn parse_toml(toml_str: &str) -> crate::config::Metadata {
         let tv: toml::Value = toml::from_str(toml_str).unwrap();
         let table = match tv {
             toml::Value::Table(map) => crate::value::table_from_toml(map),
             _ => crate::value::Table::new(),
         };
-        crate::metadata::parse_metadata(&table).unwrap()
+        crate::config::parse_metadata(&table).unwrap()
     }
 
     #[test]

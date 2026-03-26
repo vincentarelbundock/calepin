@@ -345,7 +345,7 @@ pub fn rebuild_documents(
 /// (page.html, listing.html with extends/includes).
 /// Overwrites the raw body files written in step 7 with fully templated HTML.
 fn apply_collection_partials(
-    meta: &crate::metadata::Metadata,
+    meta: &crate::config::Metadata,
     pages: &[DocumentInfo],
     results: &HashMap<String, render::CollectionRenderResult>,
     all_listing_documents: &HashMap<String, Vec<DocumentInfo>>,
@@ -492,7 +492,7 @@ fn apply_collection_partials(
 /// command string are replaced with the output directory and project root paths.
 /// Commands with a `targets` restriction are skipped if the active target doesn't match.
 fn run_post_commands(
-    meta: &crate::metadata::Metadata,
+    meta: &crate::config::Metadata,
     target: &str,
     project_root: &Path,
     output: &Path,
@@ -539,7 +539,7 @@ fn run_post_commands(
 /// Fragment files are already written; this produces the master file
 /// that references them via \include{} or equivalent.
 fn render_orchestrator(
-    meta: &crate::metadata::Metadata,
+    meta: &crate::config::Metadata,
     pages: &[DocumentInfo],
     results: &HashMap<String, render::CollectionRenderResult>,
     base_dir: &Path,

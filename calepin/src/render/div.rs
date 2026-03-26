@@ -24,7 +24,7 @@ pub fn render(
     raw_fragments: &std::cell::RefCell<Vec<String>>,
     theorem_numbers: &std::cell::RefCell<HashMap<String, String>>,
     template_env: &crate::render::template::TemplateEnv,
-    defaults: &crate::metadata::Metadata,
+    defaults: &crate::config::Metadata,
 ) -> String {
     let matching = registry.matching_filters(classes, attrs, id.as_deref(), format, "div");
 
@@ -123,7 +123,7 @@ fn build_div_vars(
     attrs: &HashMap<String, String>,
     children_rendered: &str,
     format: &str,
-    defaults: &crate::metadata::Metadata,
+    defaults: &crate::config::Metadata,
 ) {
     for (k, val) in attrs {
         vars.insert(k.clone(), val.clone());

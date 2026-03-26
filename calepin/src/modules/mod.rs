@@ -10,7 +10,6 @@
 
 pub mod manifest;
 pub mod registry;
-pub mod theme;
 
 // Transform traits
 pub mod transform_body;
@@ -25,6 +24,7 @@ pub mod table_div;
 
 // Built-in body transform modules
 pub mod append_footnotes_html;
+pub mod convert_math_latex_typst;
 pub mod convert_svg_pdf;
 pub mod embed_images_html;
 pub mod highlight;

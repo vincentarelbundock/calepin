@@ -18,7 +18,7 @@ pub fn render(
     format: &str,
     registry: &ModuleRegistry,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
-    defaults: &crate::metadata::Metadata,
+    defaults: &crate::config::Metadata,
     resolve_partial: &dyn Fn(&str) -> Option<String>,
     template_env: &crate::render::template::TemplateEnv,
 ) -> String {

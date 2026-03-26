@@ -22,7 +22,6 @@ pub mod elements;
 pub mod convert;
 pub mod markers;
 pub mod metadata;
-pub mod math;
 
 pub mod span;
 pub mod template;

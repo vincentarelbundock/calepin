@@ -2,7 +2,7 @@
 
 use minijinja::Value;
 
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 
 /// Build the full Jinja context for body processing.
 pub(crate) fn build_context(metadata: &Metadata, format: &str) -> minijinja::Value {

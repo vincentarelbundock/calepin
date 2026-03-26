@@ -11,7 +11,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use crate::types::Element;
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 use crate::render::elements::ElementRenderer;
 use crate::project::Target;
 

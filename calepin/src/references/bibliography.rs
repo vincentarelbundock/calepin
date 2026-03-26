@@ -18,7 +18,7 @@ use std::path::Path;
 use std::sync::{LazyLock, Mutex};
 
 use crate::types::Element;
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 
 // ---------------------------------------------------------------------------
 // Process-global CSL style cache
@@ -218,7 +218,7 @@ fn extract_year(cite: &str) -> String {
         .unwrap_or_else(|| cite.to_string())
 }
 
-fn load_csl_style(csl_path: Option<&str>, meta: &crate::metadata::Metadata) -> Result<IndependentStyle> {
+fn load_csl_style(csl_path: Option<&str>, meta: &crate::config::Metadata) -> Result<IndependentStyle> {
     // Build the cache key from the CSL path (or "default" for fallback)
     let cache_key = csl_path.unwrap_or("__default__").to_string();
 
@@ -239,7 +239,7 @@ fn load_csl_style(csl_path: Option<&str>, meta: &crate::metadata::Metadata) -> R
     Ok(style)
 }
 
-fn load_csl_style_uncached(csl_path: Option<&str>, meta: &crate::metadata::Metadata) -> Result<IndependentStyle> {
+fn load_csl_style_uncached(csl_path: Option<&str>, meta: &crate::config::Metadata) -> Result<IndependentStyle> {
     use hayagriva::archive::ArchivedStyle;
 
     // 1. Explicit CSL from front matter: file path or archive name

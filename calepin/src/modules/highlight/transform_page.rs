@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::modules::transform_page::TransformPage;
 use crate::modules::highlight::ColorScope;
 use crate::render::elements::ElementRenderer;
-use crate::metadata::Metadata;
+use crate::config::Metadata;
 
 pub struct InjectSyntaxCss;
 
