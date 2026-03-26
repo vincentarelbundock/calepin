@@ -6,16 +6,13 @@ use std::sync::LazyLock;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 
-use crate::render::elements::ElementRenderer;
-use crate::project::Target;
-use crate::modules::transform_body::TransformBody;
+use crate::modules::transform_document::TransformDocument;
 
 pub struct EmbedImagesHtml;
 
-impl TransformBody for EmbedImagesHtml {
-
-    fn transform(&self, body: &str, _renderer: &ElementRenderer, _target: &Target) -> String {
-        embed_images_base64(body)
+impl TransformDocument for EmbedImagesHtml {
+    fn transform(&self, document: &str) -> String {
+        embed_images_base64(document)
     }
 }
 

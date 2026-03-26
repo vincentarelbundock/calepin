@@ -189,7 +189,7 @@ pub fn default_fig_formats(format: &str) -> Vec<String> {
 }
 
 /// Find the preferred image format variant using an explicit preference list.
-pub fn select_image_variant_with_prefs(path: &Path, format: &str, preferred: &[String]) -> PathBuf {
+pub fn select_image_variant_with_prefs(path: &Path, _format: &str, preferred: &[String]) -> PathBuf {
     let preferred: Vec<&str> = preferred.iter().map(|s| s.as_str()).collect();
 
     if let Some(stem) = path.file_stem() {
@@ -197,28 +197,8 @@ pub fn select_image_variant_with_prefs(path: &Path, format: &str, preferred: &[S
             for ext in preferred {
                 let candidate = parent.join(format!("{}.{}", stem.to_string_lossy(), ext));
                 if candidate.exists() {
-                    // For LaTeX, convert SVG to PDF on the fly
-                    if format == "latex" && ext == "svg" {
-                        match crate::render::svg::convert_svg_to_pdf(&candidate) {
-                            Ok(pdf_path) => return pdf_path,
-                            Err(e) => {
-                                cwarn!("SVG→PDF conversion failed for {}: {}", candidate.display(), e);
-                                return candidate;
-                            }
-                        }
-                    }
                     return candidate;
                 }
-            }
-        }
-    }
-
-    // If the path itself is an SVG and we're targeting LaTeX, convert it
-    if format == "latex" && path.extension().is_some_and(|e| e == "svg") && path.exists() {
-        match crate::render::svg::convert_svg_to_pdf(path) {
-            Ok(pdf_path) => return pdf_path,
-            Err(e) => {
-                cwarn!("SVG→PDF conversion failed for {}: {}", path.display(), e);
             }
         }
     }

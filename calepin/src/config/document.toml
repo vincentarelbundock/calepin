@@ -9,7 +9,7 @@ extension = "html"
 fig_extension = "svg"
 fig_formats = ["svg", "png", "jpg", "webp", "gif"]
 preview = "serve"
-body_transforms = ["append_footnotes_html", "inject_syntax_css_html"]
+modules = ["highlight", "append_footnotes_html", "embed_images_html"]
 crossref = "html"
 
 [targets.latex]
@@ -19,7 +19,7 @@ extension = "tex"
 fig_extension = "pdf"
 fig_formats = ["pdf", "eps", "svg", "png", "jpg"]
 preview = "serve"
-body_transforms = ["inject_color_defs_latex"]
+modules = ["highlight", "convert_svg_pdf", "inject_color_defs_latex"]
 crossref = "latex"
 toc_headings = false
 
@@ -30,6 +30,7 @@ extension = "typ"
 fig_extension = "svg"
 fig_formats = ["svg", "png", "jpg"]
 preview = "serve"
+modules = ["highlight"]
 crossref = "plain"
 
 [targets.pdf]
@@ -38,7 +39,7 @@ template = "page"
 extension = "pdf"
 fig_extension = "pdf"
 compile = "tectonic {input}"
-body_transforms = ["inject_color_defs_latex"]
+modules = ["highlight", "convert_svg_pdf", "inject_color_defs_latex"]
 crossref = "latex"
 toc_headings = false
 
@@ -49,7 +50,7 @@ extension = "html"
 fig_extension = "svg"
 embed_resources = false
 preview = "serve"
-body_transforms = ["append_footnotes_html", "split_slides_html"]
+modules = ["highlight", "append_footnotes_html", "split_slides_html"]
 crossref = "html"
 toc_headings = false
 
@@ -61,11 +62,13 @@ engine = "markdown"
 extension = "md"
 fig_extension = "png"
 preview = "none"
+modules = ["highlight"]
 crossref = "plain"
 
 [targets.word]
 engine = "markdown"
 extension = "docx"
 fig_extension = "png"
+modules = ["highlight"]
 crossref = "plain"
 writer = "pandoc"

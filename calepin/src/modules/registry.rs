@@ -12,6 +12,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::modules::transform_body::TransformBody;
+use crate::modules::transform_document::TransformDocument;
+use crate::modules::transform_page::TransformPage;
 use crate::module_manifest::{FilterMatch, FilterSpec, FormatSpec, ModuleManifest, ModuleProvides};
 use crate::types::Element;
 
@@ -96,9 +98,21 @@ impl<'a> ModuleContext<'a> {
     }
 }
 
-/// Operates on raw Element children before rendering.
+/// Operates on raw elements before rendering.
+///
+/// Two hook points:
+/// - `transform_all`: called once on the full element list before the render loop.
+///   Used for pre-render mutations (SVG-to-PDF conversion).
+/// - `apply`: called per-div during rendering via ModuleContext.
+///   Used for structural transforms (tabset, layout).
 pub trait TransformElementRaw: Send + Sync {
-    fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult;
+    /// Called once on the full element list before rendering. Default: no-op.
+    fn transform_all(&self, _elements: &mut Vec<Element>) {}
+
+    /// Called per-div during rendering via ModuleContext. Default: Pass.
+    fn apply(&self, _ctx: &mut ModuleContext) -> ModuleResult {
+        ModuleResult::Pass
+    }
 }
 
 /// Operates on rendered children + template vars.
@@ -114,6 +128,8 @@ pub enum ModuleKind {
     ElementRaw(Box<dyn TransformElementRaw>),
     ElementRendered(Box<dyn TransformElementRendered>),
     Body(Box<dyn TransformBody>),
+    Page(Box<dyn TransformPage>),
+    Document(Box<dyn TransformDocument>),
     Noop,
 }
 
@@ -248,9 +264,9 @@ impl ModuleRegistry {
     }
 
     pub fn resolve_body_transform(&self, name: &str) -> Option<&dyn TransformBody> {
-        for plugin in &self.modules {
-            if plugin.manifest.name == name {
-                if let ModuleKind::Body(ref t) = plugin.kind {
+        for m in &self.modules {
+            if m.manifest.name == name {
+                if let ModuleKind::Body(ref t) = m.kind {
                     return Some(t.as_ref());
                 }
             }
@@ -258,8 +274,47 @@ impl ModuleRegistry {
         None
     }
 
+    /// Collect all raw element transforms from active modules (for pre-render pass).
+    pub fn resolve_element_raw_transforms(&self, active: &[String]) -> Vec<&dyn TransformElementRaw> {
+        let mut result = Vec::new();
+        for m in &self.modules {
+            if active.contains(&m.manifest.name) {
+                if let ModuleKind::ElementRaw(ref t) = m.kind {
+                    result.push(t.as_ref());
+                }
+            }
+        }
+        result
+    }
+
+    /// Collect all page transforms from active modules.
+    pub fn resolve_page_transforms(&self, active: &[String]) -> Vec<&dyn TransformPage> {
+        let mut result = Vec::new();
+        for m in &self.modules {
+            if active.contains(&m.manifest.name) {
+                if let ModuleKind::Page(ref t) = m.kind {
+                    result.push(t.as_ref());
+                }
+            }
+        }
+        result
+    }
+
+    /// Collect all document transforms from active modules.
+    pub fn resolve_document_transforms(&self, active: &[String]) -> Vec<&dyn TransformDocument> {
+        let mut result = Vec::new();
+        for m in &self.modules {
+            if active.contains(&m.manifest.name) {
+                if let ModuleKind::Document(ref t) = m.kind {
+                    result.push(t.as_ref());
+                }
+            }
+        }
+        result
+    }
+
     #[allow(dead_code)]
-    pub fn plugins(&self) -> &[LoadedModule] { &self.modules }
+    pub fn modules(&self) -> &[LoadedModule] { &self.modules }
 }
 
 // ---------------------------------------------------------------------------
@@ -363,12 +418,20 @@ fn register_builtins(modules: &mut Vec<LoadedModule>) {
         Box::new(crate::modules::append_footnotes_html::AppendFootnotesHtml)));
     modules.push(builtin_body_transform("split_slides_html",
         Box::new(crate::modules::split_slides_html::SplitSlidesHtml)));
-    modules.push(builtin_body_transform("inject_syntax_css_html",
-        Box::new(crate::modules::inject_syntax_css_html::InjectSyntaxCssHtml)));
-    modules.push(builtin_body_transform("embed_images_html",
-        Box::new(crate::modules::embed_images_html::EmbedImagesHtml)));
     modules.push(builtin_body_transform("inject_color_defs_latex",
         Box::new(crate::modules::inject_color_defs_latex::InjectColorDefsLatex)));
+
+    // Page transforms
+    modules.push(builtin_page_transform("highlight",
+        Box::new(crate::modules::highlight::transform_page::InjectSyntaxCss)));
+
+    // Element raw transforms (pre-render)
+    modules.push(builtin_element_raw_simple("convert_svg_pdf",
+        Box::new(crate::modules::convert_svg_pdf::ConvertSvgPdf)));
+
+    // Document transforms
+    modules.push(builtin_document_transform("embed_images_html",
+        Box::new(crate::modules::embed_images_html::EmbedImagesHtml)));
 }
 
 fn builtin_element_raw(
@@ -413,5 +476,39 @@ fn builtin_body_transform(name: &str, transform: Box<dyn TransformBody>) -> Load
             module_dir: PathBuf::new(),
         },
         kind: ModuleKind::Body(transform),
+    }
+}
+
+/// Element raw transform without filter matching (uses transform_all, not per-div apply).
+fn builtin_element_raw_simple(name: &str, plugin: Box<dyn TransformElementRaw>) -> LoadedModule {
+    LoadedModule {
+        manifest: ModuleManifest {
+            name: name.to_string(), version: None, description: None,
+            provides: ModuleProvides::default(),
+            module_dir: PathBuf::new(),
+        },
+        kind: ModuleKind::ElementRaw(plugin),
+    }
+}
+
+fn builtin_page_transform(name: &str, transform: Box<dyn TransformPage>) -> LoadedModule {
+    LoadedModule {
+        manifest: ModuleManifest {
+            name: name.to_string(), version: None, description: None,
+            provides: ModuleProvides::default(),
+            module_dir: PathBuf::new(),
+        },
+        kind: ModuleKind::Page(transform),
+    }
+}
+
+fn builtin_document_transform(name: &str, transform: Box<dyn TransformDocument>) -> LoadedModule {
+    LoadedModule {
+        manifest: ModuleManifest {
+            name: name.to_string(), version: None, description: None,
+            provides: ModuleProvides::default(),
+            module_dir: PathBuf::new(),
+        },
+        kind: ModuleKind::Document(transform),
     }
 }

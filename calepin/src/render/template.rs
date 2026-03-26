@@ -362,14 +362,22 @@ pub fn build_template_vars_with_headings(
     // Appendix
     vars.insert("appendix".to_string(), build_appendix(meta, ext));
 
-    // Default empty values for format-specific template variables.
-    // These ensure templates don't fail on undefined variables.
-    // Actual values are injected by FormatPipeline::assemble_page.
+    // Default values for format-specific template variables.
     vars.insert("css".to_string(), load_default_css());
     vars.insert("js".to_string(), String::new());
-    vars.insert("math".to_string(), String::new());
     vars.insert("bib_preamble".to_string(), String::new());
     vars.insert("bib_end".to_string(), String::new());
+
+    // Math include for html-engine targets
+    if ext == "html" {
+        let mut math_vars = HashMap::new();
+        math_vars.insert("html_math_method".to_string(),
+            meta.html_math_method.as_deref()
+                .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
+        vars.insert("math".to_string(), render_element("math", ext, &math_vars));
+    } else {
+        vars.insert("math".to_string(), String::new());
+    }
 
     // Bibliography block (format-specific via element template)
     if !meta.bibliography.is_empty() {

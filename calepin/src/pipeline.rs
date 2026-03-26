@@ -122,6 +122,9 @@ pub fn render_core(
     element_renderer.set_sc_fragments(eval_result.sc_fragments);
     element_renderer.set_preamble(eval_result.preamble);
 
+    // 10b. Pre-render element transforms (SVG-to-PDF, etc.)
+    pipeline.transform_elements_pre(&mut elements, &element_renderer);
+
     // 11. Render elements to body string
     let rendered = pipeline.render(&elements, &element_renderer)?;
 
@@ -191,6 +194,9 @@ pub fn render_file(
         .assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
         .unwrap_or(result.rendered);
 
+    // Document transforms (post-assembly: image embedding, etc.)
+    let final_output = pipeline.transform_document(&final_output, &result.element_renderer);
+
     Ok((output_path, final_output, pipeline))
 }
 
@@ -209,7 +215,7 @@ fn default_target_for_engine(engine: &str) -> project::Target {
             embed_resources: None,
             vars: None,
             post: Vec::new(),
-            body_transforms: Vec::new(),
+            modules: Vec::new(),
             crossref: None,
             writer: None,
             toc_headings: None,

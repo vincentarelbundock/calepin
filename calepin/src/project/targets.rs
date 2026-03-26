@@ -39,7 +39,7 @@ pub struct Target {
     /// Body transform modules applied after element rendering, before crossref.
     /// Order matters. Named modules are resolved from the built-in registry.
     #[serde(default)]
-    pub body_transforms: Vec<String>,
+    pub modules: Vec<String>,
     /// Cross-reference resolution strategy: "html", "latex", or "plain".
     /// Default: inferred from engine.
     pub crossref: Option<String>,
@@ -180,7 +180,7 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
         embed_resources: child.embed_resources.or(parent.embed_resources),
         vars: child.vars.clone().or_else(|| parent.vars.clone()),
         post: if child.post.is_empty() { parent.post.clone() } else { child.post.clone() },
-        body_transforms: if child.body_transforms.is_empty() { parent.body_transforms.clone() } else { child.body_transforms.clone() },
+        modules: if child.modules.is_empty() { parent.modules.clone() } else { child.modules.clone() },
         crossref: child.crossref.clone().or_else(|| parent.crossref.clone()),
         writer: child.writer.clone().or_else(|| parent.writer.clone()),
         toc_headings: child.toc_headings.or(parent.toc_headings),
@@ -230,10 +230,10 @@ fn merge_with_builtin(user: &Target) -> Target {
         embed_resources: user.embed_resources.or(builtin.and_then(|b| b.embed_resources)),
         vars: user.vars.clone(),
         post: user.post.clone(),
-        body_transforms: if user.body_transforms.is_empty() {
-            builtin.map(|b| b.body_transforms.clone()).unwrap_or_default()
+        modules: if user.modules.is_empty() {
+            builtin.map(|b| b.modules.clone()).unwrap_or_default()
         } else {
-            user.body_transforms.clone()
+            user.modules.clone()
         },
         crossref: user.crossref.clone().or_else(|| builtin.and_then(|b| b.crossref.clone())),
         writer: user.writer.clone().or_else(|| builtin.and_then(|b| b.writer.clone())),

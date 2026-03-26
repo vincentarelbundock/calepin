@@ -4,6 +4,9 @@
 // - Highlighter::syntax_css() — Generate CSS for HTML class-based highlighting.
 // - Highlighter::latex_color_definitions() — Emit \definecolor commands for LaTeX.
 // - LatexColorRegistry        — Allocates and deduplicates named LaTeX colors.
+// - transform_page            — TransformPage: inject syntax CSS into page template vars.
+
+pub mod transform_page;
 
 use std::collections::HashMap;
 use std::fmt::Write;

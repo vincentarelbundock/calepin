@@ -23,7 +23,6 @@ pub mod convert;
 pub mod markers;
 pub mod metadata;
 pub mod math;
-pub mod svg;
 
 pub mod span;
 pub mod template;

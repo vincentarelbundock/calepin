@@ -13,9 +13,7 @@ use anyhow::{Context, Result};
 use crate::types::Element;
 use crate::metadata::Metadata;
 use crate::render::elements::ElementRenderer;
-use crate::modules::highlight::ColorScope;
 use crate::project::Target;
-use crate::modules;
 
 // ---------------------------------------------------------------------------
 // FormatPipeline
@@ -40,9 +38,10 @@ pub struct FormatPipeline {
     pub page_template: Option<String>,
     pub crossref: String,
     pub writer: WriterKind,
+    #[allow(dead_code)]
     pub embed_resources: bool,
-    /// Body transform names, resolved via the plugin registry at call time.
-    transform_names: Vec<String>,
+    /// Module names, resolved via the registry at each pipeline stage.
+    module_names: Vec<String>,
     /// The target name (e.g., "revealjs", "html"), used for template resolution.
     pub target_name: String,
     /// Whether to pass headings for TOC generation during page assembly.
@@ -83,7 +82,7 @@ impl FormatPipeline {
             crossref,
             writer,
             embed_resources: target.embed_resources.unwrap_or(true),
-            transform_names: target.body_transforms.clone(),
+            module_names: target.modules.clone(),
             target_name: target_name.to_string(),
             toc_headings,
             page_vars: target.page_vars.clone(),
@@ -101,8 +100,9 @@ impl FormatPipeline {
     pub fn default_fig_ext(&self) -> &str { &self.fig_extension }
 
     /// Whether a given body transform is active in this pipeline.
+    #[allow(dead_code)]
     pub fn has_transform(&self, name: &str) -> bool {
-        self.transform_names.iter().any(|n| n == name)
+        self.module_names.iter().any(|n| n == name)
     }
 
     /// Render a list of elements into the final document body.
@@ -124,7 +124,7 @@ impl FormatPipeline {
     pub fn transform_body(&self, body: &str, renderer: &ElementRenderer, target: &Target) -> String {
         let registry = renderer.registry();
         let mut result = body.to_string();
-        for name in &self.transform_names {
+        for name in &self.module_names {
             if let Some(t) = registry.resolve_body_transform(name) {
                 result = t.transform(&result, renderer, target);
             }
@@ -154,6 +154,33 @@ impl FormatPipeline {
         }
     }
 
+    /// Run pre-render element transforms from active modules.
+    /// Calls `transform_all` on each raw element transform.
+    pub fn transform_elements_pre(&self, elements: &mut Vec<Element>, renderer: &ElementRenderer) {
+        let registry = renderer.registry();
+        for t in registry.resolve_element_raw_transforms(&self.module_names) {
+            t.transform_all(elements);
+        }
+    }
+
+    /// Run page transforms from active modules (during page assembly).
+    pub fn transform_page(&self, vars: &mut HashMap<String, String>, renderer: &ElementRenderer, meta: &Metadata) {
+        let registry = renderer.registry();
+        for t in registry.resolve_page_transforms(&self.module_names) {
+            t.transform(vars, renderer, meta);
+        }
+    }
+
+    /// Run document transforms from active modules (post-assembly).
+    pub fn transform_document(&self, document: &str, renderer: &ElementRenderer) -> String {
+        let registry = renderer.registry();
+        let mut result = document.to_string();
+        for t in registry.resolve_document_transforms(&self.module_names) {
+            result = t.transform(&result);
+        }
+        result
+    }
+
     /// Wrap the rendered body in a page template.
     pub fn assemble_page(
         &self,
@@ -166,55 +193,29 @@ impl FormatPipeline {
         let walk_meta = renderer.walk_metadata();
         let headings = if self.toc_headings { &walk_meta.headings[..] } else { &[][..] };
 
+        // Collect page transform vars from modules
+        let mut extra_vars = HashMap::new();
+        self.transform_page(&mut extra_vars, renderer, meta);
+
         let page_vars = &self.page_vars;
-        let has_syntax_css = self.has_transform("inject_syntax_css_html");
-        let engine = &self.engine;
 
         let html = crate::render::template::assemble_page(
             body, meta, &self.target_name, headings, renderer.preamble(),
             renderer.target.as_ref(),
             |vars| {
-                // Inject syntax highlighting CSS when the transform is active
-                if has_syntax_css {
-                    let syntax_css = modules::inject_syntax_css_html::generate(
-                        renderer, ColorScope::Both,
-                    );
-                    if !syntax_css.is_empty() {
-                        let css = vars.entry("css".to_string()).or_default();
-                        css.push('\n');
-                        css.push_str(&syntax_css);
-                        // Also set as a standalone var for templates that use it separately
-                        vars.insert("syntax_css".to_string(),
-                            modules::inject_syntax_css_html::generate(renderer, ColorScope::Both));
-                    }
+                // Apply module-provided page vars
+                for (k, v) in &extra_vars {
+                    vars.insert(k.clone(), v.clone());
                 }
 
-                // Render math include for html-engine targets
-                if engine == "html" {
-                    let defs = &renderer.metadata;
-                    let mut math_vars = HashMap::new();
-                    math_vars.insert("html_math_method".to_string(),
-                        meta.html_math_method.as_deref()
-                            .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
-                    let math_html = crate::render::template::render_element("math", "html", &math_vars);
-                    if !math_html.is_empty() {
-                        vars.insert("math".to_string(), math_html);
-                    }
-                }
-
-                // Apply page_vars from target config (overrides computed values)
+                // Apply page_vars from target config (overrides everything)
                 for (k, v) in page_vars {
                     vars.insert(k.clone(), v.clone());
                 }
             },
         );
 
-        // Embed images as base64 if configured
-        if self.embed_resources && self.engine == "html" {
-            Some(modules::embed_images_html::embed_images_base64(&html))
-        } else {
-            Some(html)
-        }
+        Some(html)
     }
 
     /// Resolve citations in the element list via hayagriva.
