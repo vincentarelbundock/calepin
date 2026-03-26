@@ -177,25 +177,10 @@ pub fn build_collection(
     } else {
         // Render only stale pages
         let stale_owned: Vec<DocumentInfo> = stale_pages.into_iter().cloned().collect();
-        let mut results = render::render_documents(&stale_owned, &meta, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?;
+        let results = render::render_documents(&stale_owned, &meta, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?;
 
-        // Load cached results from existing output files for fresh pages
-        for key in &fresh_keys {
-            if let Some(page) = pages.iter().find(|p| p.source.display().to_string() == *key) {
-                let output_path = output.join(&page.output);
-                if let Ok(body) = fs::read_to_string(&output_path) {
-                    results.insert(key.clone(), render::CollectionRenderResult {
-                        body,
-                        toc: None,
-                        title: page.meta.title.clone(),
-                        date: page.meta.date.clone(),
-                        subtitle: page.meta.subtitle.clone(),
-                        abstract_text: page.meta.r#abstract.clone(),
-                    });
-                }
-            }
-        }
-
+        // Fresh pages already have correct output on disk -- don't load them
+        // into results, so apply_collection_partials will skip them.
         results
     };
 
@@ -306,20 +291,26 @@ pub fn rebuild_documents(
         false, Some(&collection_target_name), Some(&collection_target), true,
     )?;
 
-    // Write raw body files
-    for page in &documents_to_render {
-        let source_key = page.source.display().to_string();
-        if let Some(result) = results.get(&source_key) {
-            let output_path = output_dir.join(&page.output);
-            if let Some(parent) = output_path.parent() {
-                fs::create_dir_all(parent)?;
+    // For non-HTML formats, write the rendered body directly (no collection template)
+    if format != "html" {
+        for page in &documents_to_render {
+            let source_key = page.source.display().to_string();
+            if let Some(result) = results.get(&source_key) {
+                let output_path = output_dir.join(&page.output);
+                if let Some(parent) = output_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&output_path, &result.body)?;
             }
-            fs::write(&output_path, &result.body)?;
         }
+        return Ok(());
     }
 
-    // Apply collection templates to the changed pages (with full nav context)
-    if format == "html" {
+    // HTML: apply collection templates to the changed pages (with full nav context).
+    // Write the final templated HTML directly -- skip the intermediate raw body write
+    // to avoid a window where the file on disk is incomplete (the live-reload server
+    // reads from disk, so a partial write would show a broken page).
+    {
         let env = partials::init_jinja(&base_dir, &collection_target_name)?
             .ok_or_else(|| anyhow::anyhow!("No template files found"))?;
 
@@ -448,7 +439,12 @@ fn apply_collection_partials(
     // Render each page through MiniJinja, overwriting the raw body files
     for page in pages {
         let source_key = page.source.display().to_string();
-        let result = results.get(&source_key);
+        // Skip pages not in results -- their output is already correct on disk
+        // (from a previous build). Re-wrapping them would double-wrap the HTML.
+        let result = match results.get(&source_key) {
+            Some(r) => r,
+            None => continue,
+        };
 
         let all_listing_items: Option<Vec<ListingItem>> = all_listing_documents.get(&source_key).map(|listing_documents| {
             listing_documents.iter().map(|lp| build_listing_item(lp, results)).collect()
@@ -501,7 +497,7 @@ fn apply_collection_partials(
 
         for (page_idx, (items, pagination)) in paginated.iter().enumerate() {
             let listing = if items.is_empty() { None } else { Some(items.clone()) };
-            let mut doc_ctx = build_document_context(page, result, pages, listing, &meta.languages);
+            let mut doc_ctx = build_document_context(page, Some(result), pages, listing, &meta.languages);
             doc_ctx.pagination = pagination.clone();
 
             let collection_with_active = minijinja::context! {

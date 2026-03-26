@@ -325,13 +325,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; 
 }
 .navbar.hidden { transform: translateY(-100%); }
 
-.navbar-brand {
-  display: flex; align-items: center; gap: 0.25rem;
-  font-weight: 600; font-size: 1.1rem; color: var(--c-text);
-  text-decoration: none; flex-shrink: 0; padding: 0 0.25rem;
-}
-.navbar-brand:hover { text-decoration: none; color: var(--c-text); }
-.navbar-brand img { height: calc(var(--c-navbar-height) - 12px); width: auto; }
+.navbar-nav.left img { height: calc(var(--c-navbar-height) - 12px); width: auto; }
 .logo-dark { display: none; }
 [data-theme="dark"] .logo-light { display: none; }
 [data-theme="dark"] .logo-dark { display: inline; }

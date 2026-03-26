@@ -5,8 +5,13 @@ use anyhow::Result;
 use crate::cli::PreviewArgs;
 
 pub fn handle_preview(args: PreviewArgs) -> Result<()> {
-    // Directory: serve it over HTTP
+    // Directory: check for _calepin.toml inside, otherwise serve statically
     if args.input.is_dir() {
+        let config = args.input.join("_calepin.toml");
+        if config.exists() {
+            let args = PreviewArgs { input: config, ..args };
+            return handle_preview(args);
+        }
         return crate::collection::serve(&args.input, args.port);
     }
     // Project manifest: build, serve with live-reload, and watch for changes

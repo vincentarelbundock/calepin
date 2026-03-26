@@ -49,8 +49,9 @@ pub fn watch(path: &Path, stop: Arc<AtomicBool>, on_change: impl Fn()) -> Result
 /// Watch a directory recursively for `.qmd` file modifications.
 /// Calls `on_change` with the paths of changed files.
 /// Collects all changed paths during the debounce window.
+/// Ignores changes inside `exclude_dir` (typically the output directory).
 /// Blocks until Ctrl+C is pressed or the watcher errors.
-pub fn watch_dir(dir: &Path, stop: Arc<AtomicBool>, on_change: impl Fn(&[std::path::PathBuf])) -> Result<()> {
+pub fn watch_dir(dir: &Path, stop: Arc<AtomicBool>, exclude_dir: Option<&Path>, on_change: impl Fn(&[std::path::PathBuf])) -> Result<()> {
     let (tx, rx) = mpsc::channel();
     let mut watcher = notify::recommended_watcher(tx)
         .context("Failed to create file watcher")?;
@@ -59,6 +60,8 @@ pub fn watch_dir(dir: &Path, stop: Arc<AtomicBool>, on_change: impl Fn(&[std::pa
         .with_context(|| format!("Watch directory not found: {}", dir.display()))?;
     watcher.watch(&canon_dir, RecursiveMode::Recursive)
         .with_context(|| format!("Failed to watch {}", canon_dir.display()))?;
+
+    let canon_exclude = exclude_dir.and_then(|p| p.canonicalize().ok());
 
     fn is_qmd(p: &Path) -> bool {
         p.extension().and_then(|e| e.to_str()) == Some("qmd")
@@ -81,6 +84,7 @@ pub fn watch_dir(dir: &Path, stop: Arc<AtomicBool>, on_change: impl Fn(&[std::pa
                 }
                 let qmd_paths: Vec<std::path::PathBuf> = event.paths.iter()
                     .filter(|p| is_qmd(p))
+                    .filter(|p| canon_exclude.as_ref().map_or(true, |ex| !p.starts_with(ex)))
                     .cloned()
                     .collect();
                 if !qmd_paths.is_empty() {

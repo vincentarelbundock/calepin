@@ -70,6 +70,12 @@ pub fn run_collection(
     let stop_clone = Arc::clone(&stop);
     ctrlc::set_handler(move || {
         stop_clone.store(true, Ordering::Relaxed);
+        // Exit immediately so the server socket is released.
+        // The server thread holds an Arc<Server> that keeps the port bound
+        // even after the watcher loop breaks, because tiny_http's blocking
+        // iterator never yields. Without this, the port stays occupied and
+        // the next preview launch falls back to a different port.
+        std::process::exit(0);
     }).context("Failed to set Ctrl+C handler")?;
 
     status.set_message(format!("built at {}", format_local_time()));
@@ -80,7 +86,7 @@ pub fn run_collection(
     let config_path = config_path.to_path_buf();
     let target = args.format.clone();
     let quiet = args.quiet;
-    watcher::watch_dir(&watch_dir, Arc::clone(&stop), |changed_paths| {
+    watcher::watch_dir(&watch_dir, Arc::clone(&stop), Some(output.as_path()), |changed_paths| {
         let names: Vec<_> = changed_paths.iter()
             .filter_map(|p| p.file_name())
             .map(|n| n.to_string_lossy().to_string())
@@ -192,6 +198,12 @@ fn run_preview(input: &Path, input_abs: &Path, args: &PreviewArgs, mode: Preview
     let stop_clone = Arc::clone(&stop);
     ctrlc::set_handler(move || {
         stop_clone.store(true, Ordering::Relaxed);
+        // Exit immediately so the server socket is released.
+        // The server thread holds an Arc<Server> that keeps the port bound
+        // even after the watcher loop breaks, because tiny_http's blocking
+        // iterator never yields. Without this, the port stays occupied and
+        // the next preview launch falls back to a different port.
+        std::process::exit(0);
     }).context("Failed to set Ctrl+C handler")?;
 
     status.set_message(format!("built at {}", format_local_time()));
