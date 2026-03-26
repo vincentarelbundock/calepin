@@ -1,4 +1,4 @@
-//! Built-in Jinja functions: pagebreak, video, kbd, lipsum, placeholder.
+//! Built-in Jinja functions: pagebreak, video, lipsum, placeholder.
 //!
 //! Format-specific output is driven by element templates in
 //! `project/partials/{engine}/`, making shortcodes user-overridable.
@@ -23,7 +23,6 @@ pub(crate) fn register(
 ) {
     register_pagebreak(env, format, fragments);
     register_video(env, format, fragments, defaults);
-    register_kbd(env, format, fragments);
     register_lipsum(env, defaults);
     register_placeholder(env, format, fragments, defaults);
 }
@@ -98,43 +97,6 @@ fn register_video(
 
         let fallback = format!("[{}]({})", title, url);
         let output = render_shortcode("video", &fmt, &vars, &fallback);
-        Ok(Value::from_safe_string(wrap_if_needed(&output, &fmt, &frags)))
-    });
-}
-
-fn register_kbd(
-    env: &mut minijinja::Environment<'_>,
-    format: &str,
-    fragments: &Arc<Mutex<Vec<String>>>,
-) {
-    let fmt = format.to_string();
-    let frags = Arc::clone(fragments);
-    env.add_function("kbd", move |kwargs: minijinja::value::Kwargs| -> Result<Value, Error> {
-        let keys_val: Value = kwargs.get("keys").unwrap_or(Value::from(Vec::<String>::new()));
-        kwargs.assert_all_used()?;
-        let keys: Vec<String> = keys_val.try_iter()
-            .map(|iter| iter.filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
-            .unwrap_or_default();
-
-        if keys.is_empty() {
-            return Ok(Value::from(""));
-        }
-
-        // For kbd, we need to pass a list to the template. Since apply_template
-        // works with string vars, we render inline using the template directly.
-        let output = if let Some(tpl) = resolve_element_partial("kbd", &fmt) {
-            let mut env = minijinja::Environment::new();
-            env.add_template("kbd", &tpl).ok();
-            if let Some(tmpl) = env.get_template("kbd").ok() {
-                let ctx = minijinja::context! { keys => keys };
-                tmpl.render(ctx).unwrap_or_else(|_| keys.join("+"))
-            } else {
-                keys.join("+")
-            }
-        } else {
-            keys.join("+")
-        };
-
         Ok(Value::from_safe_string(wrap_if_needed(&output, &fmt, &frags)))
     });
 }
