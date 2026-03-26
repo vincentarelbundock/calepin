@@ -74,10 +74,10 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
         Regex::new(r"(?:\[-)?@([a-zA-Z0-9_][-a-zA-Z0-9_:]*)\]?").unwrap()
     });
     // Cross-reference prefixes that should not be looked up as citation keys
-    static CROSSREF_PREFIXES: &[&str] = &[
-        "fig-", "sec-", "tbl-", "eq-", "thm-", "lem-", "cor-", "prp-",
-        "cnj-", "def-", "exm-", "exr-", "sol-", "rem-", "alg-",
-    ];
+    let crossref_prefixes: Vec<String> = crate::registry::all_crossref_prefixes()
+        .iter()
+        .map(|(p, _)| format!("{}-", p))
+        .collect();
 
     let re_any = &*RE_ANY;
     let mut all_keys: Vec<String> = Vec::new();
@@ -87,7 +87,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
             for caps in re_any.captures_iter(content) {
                 let key = caps[1].to_string();
                 if !key.contains(':')
-                    && !CROSSREF_PREFIXES.iter().any(|p| key.starts_with(p))
+                    && !crossref_prefixes.iter().any(|p| key.starts_with(p.as_str()))
                     && seen_keys.insert(key.clone())
                     && library.get(&key).is_some()
                 {

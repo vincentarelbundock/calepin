@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use crate::types::Element;
 
 /// Cross-reference prefix mapping (class -> short prefix).
-const CALLOUT_PREFIXES: &[(&str, &str)] = &[
+pub const CALLOUT_PREFIXES: &[(&str, &str)] = &[
     ("callout-tip", "tip"),
     ("callout-note", "nte"),
     ("callout-warning", "wrn"),
@@ -60,7 +60,7 @@ pub fn render(
         vars.insert("id".to_string(), String::new());
     }
 
-    // Copy div attrs into vars
+    // Copy div attrs into vars (title, icon, collapse, appearance)
     for (k, val) in attrs {
         vars.insert(k.clone(), val.clone());
     }

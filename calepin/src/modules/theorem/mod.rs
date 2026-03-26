@@ -13,7 +13,7 @@ const ITALIC_TYPES: &[&str] = &["theorem", "lemma", "corollary", "conjecture", "
 const NORMAL_TYPES: &[&str] = &["definition", "example", "exercise", "solution", "remark", "algorithm"];
 
 /// Cross-reference prefix mapping (class -> short prefix).
-const THEOREM_PREFIXES: &[(&str, &str)] = &[
+pub const THEOREM_PREFIXES: &[(&str, &str)] = &[
     ("theorem", "thm"), ("lemma", "lem"), ("corollary", "cor"),
     ("proposition", "prp"), ("conjecture", "cnj"), ("definition", "def"),
     ("example", "exm"), ("exercise", "exr"), ("solution", "sol"),

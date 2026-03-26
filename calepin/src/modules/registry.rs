@@ -250,6 +250,51 @@ impl ModuleRegistry {
 }
 
 // ---------------------------------------------------------------------------
+// Built-in module names and cross-reference prefixes
+// ---------------------------------------------------------------------------
+
+/// All cross-reference prefix-to-label mappings, collected from modules.
+/// Used by bibliography (to exclude from citation lookup), crossref (to
+/// resolve/renumber), and div validation (to check prefix ownership).
+pub fn all_crossref_prefixes() -> Vec<(&'static str, &'static str)> {
+    let mut prefixes = vec![
+        // Core (not module-owned)
+        ("fig", "Figure"),
+        ("tbl", "Table"),
+        ("eq", "Equation"),
+        ("sec", "Section"),
+        ("lst", "Listing"),
+    ];
+    // Theorem module
+    for &(_, prefix) in crate::modules::theorem::THEOREM_PREFIXES {
+        let label = match prefix {
+            "thm" => "Theorem", "lem" => "Lemma", "cor" => "Corollary",
+            "prp" => "Proposition", "cnj" => "Conjecture", "def" => "Definition",
+            "exm" => "Example", "exr" => "Exercise", "sol" => "Solution",
+            "rem" => "Remark", "alg" => "Algorithm",
+            _ => "",
+        };
+        prefixes.push((prefix, label));
+    }
+    // Callout module
+    for &(_, prefix) in crate::modules::callout::CALLOUT_PREFIXES {
+        let label = match prefix {
+            "tip" => "Tip", "nte" => "Note", "wrn" => "Warning",
+            "imp" => "Important", "cau" => "Caution",
+            _ => "",
+        };
+        prefixes.push((prefix, label));
+    }
+    prefixes
+}
+
+/// All built-in module names (from modules.toml). Used for path validation
+/// to skip filesystem checks for built-in modules.
+pub fn builtin_module_names() -> Vec<String> {
+    parse_builtin_entries().into_iter().map(|e| e.name).collect()
+}
+
+// ---------------------------------------------------------------------------
 // Built-in module config (parsed from embedded TOML)
 // ---------------------------------------------------------------------------
 

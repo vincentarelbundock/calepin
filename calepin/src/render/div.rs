@@ -105,27 +105,23 @@ fn build_div_vars(
 // Cross-reference ID validation
 // ---------------------------------------------------------------------------
 
-const RESERVED_PREFIXES: &[&str] = &[
-    "fig", "tbl", "lst", "tip", "nte", "wrn", "imp", "cau",
-    "thm", "lem", "cor", "prp", "cnj", "def", "exm", "exr",
-    "sol", "rem", "alg", "eq", "sec",
-];
-
 fn validate_div_id(id: &str, classes: &[String]) -> Option<String> {
     let prefix = match id.find('-') {
         Some(pos) => &id[..pos],
         None => return None,
     };
 
-    if !RESERVED_PREFIXES.contains(&prefix) {
+    let all_prefixes = crate::registry::all_crossref_prefixes();
+    if !all_prefixes.iter().any(|(p, _)| *p == prefix) {
         return None;
     }
 
-    // Check if any class owns this prefix (figure, table, theorem, callout)
+    // fig- and tbl- are always valid (matched by id_prefix in modules.toml)
     if prefix == "fig" || prefix == "tbl" {
         return None;
     }
 
+    // Check if any class owns this prefix via module prefix functions
     for cls in classes {
         if let Some(p) = crate::modules::theorem::theorem_prefix(cls) {
             if p == prefix { return None; }
@@ -135,10 +131,11 @@ fn validate_div_id(id: &str, classes: &[String]) -> Option<String> {
         }
     }
 
+    let prefix_list: Vec<&str> = all_prefixes.iter().map(|(p, _)| *p).collect();
     Some(format!(
         "Error: fenced div id '{}' uses reserved cross-reference prefix '{}'. \
          Reserved prefixes are: {}. \
          Use a matching class (e.g., ::: {{.theorem #thm-...}}) or choose a different id.",
-        id, prefix, RESERVED_PREFIXES.join(", "),
+        id, prefix, prefix_list.join(", "),
     ))
 }

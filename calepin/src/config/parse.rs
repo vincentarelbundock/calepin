@@ -172,7 +172,6 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "labels" => meta.labels = deserialize_section(v),
             "execute" => meta.execute = deserialize_section(v),
             "figure" => meta.figure = deserialize_section(v),
-            "callout" => meta.callout = deserialize_section(v),
             "layout" => meta.layout = deserialize_section(v),
             "video" => meta.video = deserialize_section(v),
             "placeholder" => meta.placeholder = deserialize_section(v),

@@ -399,9 +399,6 @@ echo = false
 fig_width = 8.0
 device = "svg"
 
-[callout]
-appearance = "minimal"
-
 [layout]
 valign = "center"
 
@@ -428,7 +425,6 @@ abstract_title = "Summary"
         assert_eq!(meta.toc.as_ref().and_then(|t| t.depth), Some(4));
         assert_eq!(meta.execute.as_ref().and_then(|e| e.cache), Some(false));
         assert_eq!(meta.figure.as_ref().and_then(|f| f.fig_width), Some(8.0));
-        assert_eq!(meta.callout.as_ref().and_then(|c| c.appearance.as_deref()), Some("minimal"));
         assert_eq!(meta.layout.as_ref().and_then(|l| l.valign.as_deref()), Some("center"));
         assert_eq!(meta.video.as_ref().and_then(|v| v.width.as_deref()), Some("80%"));
         assert_eq!(meta.lipsum.as_ref().and_then(|l| l.paragraphs), Some(3));

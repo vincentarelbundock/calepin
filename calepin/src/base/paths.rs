@@ -470,7 +470,7 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
 
 /// Built-in plugin names that don't need filesystem resolution.
 fn is_builtin_plugin(name: &str) -> bool {
-    matches!(name, "tabset" | "layout" | "figure-div" | "table-div" | "theorem" | "callout")
+    crate::registry::builtin_module_names().iter().any(|n| n == name)
 }
 
 #[cfg(test)]

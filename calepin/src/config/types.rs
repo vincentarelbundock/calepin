@@ -52,21 +52,6 @@ pub struct TocConfig {
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub struct CalloutConfig {
-    pub appearance: Option<String>,
-    pub note: Option<String>,
-    pub tip: Option<String>,
-    pub warning: Option<String>,
-    pub important: Option<String>,
-    pub caution: Option<String>,
-    pub icon_note: Option<String>,
-    pub icon_tip: Option<String>,
-    pub icon_warning: Option<String>,
-    pub icon_important: Option<String>,
-    pub icon_caution: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
 pub struct VideoConfig {
     pub width: Option<String>,
     pub height: Option<String>,
@@ -248,7 +233,6 @@ pub struct Metadata {
     pub figure: Option<FigureConfig>,
     pub execute: Option<ExecuteConfig>,
     pub toc: Option<TocConfig>,
-    pub callout: Option<CalloutConfig>,
     pub video: Option<VideoConfig>,
     pub placeholder: Option<PlaceholderConfig>,
     pub lipsum: Option<LipsumConfig>,

@@ -487,12 +487,12 @@ pub fn renumber_display_html(html: &str, registry: &CrossRefRegistry) -> String 
         }
     }).to_string();
 
-    // Theorem/callout headers: id="thm-xxx" followed by "Theorem N" etc.
+    // Module-registered headers: id="thm-xxx" followed by "Theorem N" etc.
     static RENUMBER_REGEXES: LazyLock<Vec<(&str, Regex)>> = LazyLock::new(|| {
-        let prefixes = ["thm", "lem", "cor", "prp", "cnj", "def", "exm", "exr", "sol", "rem", "alg", "lst", "tip", "nte", "wrn", "imp", "cau"];
-        prefixes.iter().filter_map(|prefix| {
-            let label = type_label(prefix);
-            if label.is_empty() { return None; }
+        crate::registry::all_crossref_prefixes().iter().filter_map(|&(prefix, label)| {
+            if label.is_empty() || prefix == "fig" || prefix == "tbl" || prefix == "eq" || prefix == "sec" {
+                return None; // These have dedicated renumbering above
+            }
             let pattern = format!(r#"(?s)id="({prefix}-[^"]+)"[^>]*>.*?{label}\s+(\d+)"#);
             Regex::new(&pattern).ok().map(|re| (label, re))
         }).collect()
@@ -776,30 +776,12 @@ use crate::util::slugify;
 // Helpers
 
 fn type_label(typ: &str) -> &str {
-    match typ {
-        "fig" => "Figure",
-        "sec" => "Section",
-        "tbl" => "Table",
-        "eq" => "Equation",
-        "thm" => "Theorem",
-        "lem" => "Lemma",
-        "cor" => "Corollary",
-        "prp" => "Proposition",
-        "cnj" => "Conjecture",
-        "def" => "Definition",
-        "exm" => "Example",
-        "exr" => "Exercise",
-        "sol" => "Solution",
-        "rem" => "Remark",
-        "alg" => "Algorithm",
-        "lst" => "Listing",
-        "tip" => "Tip",
-        "nte" => "Note",
-        "wrn" => "Warning",
-        "imp" => "Important",
-        "cau" => "Caution",
-        _ => "",
+    for (prefix, label) in crate::registry::all_crossref_prefixes() {
+        if prefix == typ {
+            return label;
+        }
     }
+    ""
 }
 
 fn warn_unresolved(id: &str) {

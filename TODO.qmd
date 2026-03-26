@@ -1,3 +1,9 @@
+## Modularize
+
+- [ ] What else?
+- [ ] Check for leaks many times in many different ways
+- [ ] Define targets in terms of a manifest of modules
+- [ ] How to register plug-in modules supplied by users
 
 ## Blog listings
 
