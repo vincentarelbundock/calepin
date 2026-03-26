@@ -5,7 +5,7 @@ urls:
   docs: https://github.com/vincentarelbundock/calepin
 ---
 
-*Calepin* processes the body of every `.qmd` document through the [MiniJinja](https://github.com/mitsuhiko/minijinja) template engine. This means you can use expressions, functions, conditionals, and loops directly in your prose. Fenced code blocks and inline code spans are automatically protected from evaluation.
+*Calepin* processes the body of every `.qmd` document through the [MiniJinja](https://github.com/mitsuhiko/minijinja) template engine. This means you can use expressions, conditionals, and loops directly in your prose. Fenced code blocks and inline code spans are automatically protected from evaluation.
 
 ::: {.callout-note}
 Jinja expressions inside fenced code blocks and inline code spans are not evaluated by default. To opt-in to Jinja processing inside a code chunk, use the `#| jinja: true` chunk option.
@@ -91,15 +91,17 @@ This paragraph only appears in HTML output.
 See [Jinja Syntax](jinja.html) for the full template syntax reference.
 
 
-# Built-in functions
+# Built-in spans
+
+Built-in spans use bracketed span syntax: `[content]{.class key=value}`. They produce format-appropriate output for HTML, LaTeX, Typst, and Markdown.
 
 ## pagebreak
 
-Insert a native page break. Produces format-appropriate output: `<div style="page-break-after: always;">` in HTML, `\newpage{}` in LaTeX, `#pagebreak()` in Typst.
+Insert a native page break. Produces `<div style="page-break-after: always;">` in HTML, `\newpage{}` in LaTeX, `#pagebreak()` in Typst.
 
 Page one content.
 
-{% raw %}`{{ pagebreak() }}`{% endraw %}
+`[]{.pagebreak}`
 
 Page two content.
 
@@ -108,16 +110,16 @@ Page two content.
 Embed a video or streaming service. Supports YouTube, Vimeo, and direct video URLs:
 
 ```
-{{ video(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ") }}
-{{ video(url="https://vimeo.com/123456", width="640", height="480", title="My Video") }}
+[]{.video url="https://www.youtube.com/watch?v=dQw4w9WgXcQ"}
+[]{.video url="https://vimeo.com/123456" width="640" height="480" title="My Video"}
 ```
 
 YouTube and Vimeo URLs are automatically converted to embed URLs.
 
-{{ video(url="https://www.youtube.com/watch?v=XfELJU1mRMg", width="320", height="180") }}
+[]{.video url="https://www.youtube.com/watch?v=XfELJU1mRMg" width="320" height="180"}
 
-| Argument | Default | Description |
-|----------|---------|-------------|
+| Attribute | Default | Description |
+|-----------|---------|-------------|
 | `url` | *required* | Video URL (YouTube, Vimeo, or direct) |
 | `width` | `"100%"` | Player width |
 | `height` | `"400"` | Player height |
@@ -135,35 +137,35 @@ Access branding information from the `brand:` block in front matter (or in `_cal
 
 See [brand.yml specification](https://posit-dev.github.io/brand-yml/) for the structure of the `brand:` block.
 
-## lipsum
+## lorem
 
 Insert placeholder lorem ipsum text. Default: 1 paragraph.
 
 ```
-{{ lipsum() }}
-{{ lipsum(paragraphs=3) }}
-{{ lipsum(sentences=5) }}
-{{ lipsum(words=20) }}
+[]{.lorem}
+[]{.lorem paragraphs=3}
+[]{.lorem sentences=5}
+[]{.lorem words=20}
 ```
 
-Example with 2 sentences: {{ lipsum(sentences=2) }}
+Example with 2 sentences: []{.lorem sentences=2}
 
 ## placeholder
 
 Insert a placeholder image for layout prototyping. Produces an inline SVG in HTML, `\fbox` in LaTeX, `#rect` in Typst.
 
 ```
-{{ placeholder() }}
-{{ placeholder(width=300, height=200) }}
-{{ placeholder(width=400, height=100, text="Banner", color="#e0e0ff") }}
+[]{.placeholder}
+[]{.placeholder width=300 height=200}
+[]{.placeholder width=400 height=100 text="Banner" color="#e0e0ff"}
 ```
 
 Default dimensions are 600x400.
 
-{{ placeholder(width=300, height=150) }}
+[]{.placeholder width=300 height=150}
 
-| Argument | Default | Description |
-|----------|---------|-------------|
+| Attribute | Default | Description |
+|-----------|---------|-------------|
 | `width` | `600` | Width in pixels |
 | `height` | `400` | Height in pixels |
 | `text` | `"WxH"` | Display text |
@@ -178,50 +180,24 @@ Include the content of another file:
 This is a pre-parse directive. Included content is parsed as blocks, so code chunks and fenced divs work normally. YAML front matter in the included file is stripped automatically.
 
 
-# Plugin functions
+# Custom spans
 
-Plugins can register custom Jinja functions via the `shortcode` capability in their `plugin.yml`. They are called with the same {% raw %}`{{ name(args) }}`{% endraw %} syntax as built-in functions.
+You can create custom spans by adding a template file in `_calepin/partials/{engine}/`. For example, to create a `[text]{.highlight}` span, add:
 
-For example, a greeting plugin:
+`_calepin/partials/html/highlight.html`:
 
-`_calepin/plugins/greeting/plugin.yml`:
-
-```yaml
-name: greeting
-version: 0.1.0
-provides:
-  shortcode:
-    run: shortcode.py
-    names: [greeting]
+```html
+<mark class="highlight">{{ content }}</mark>
 ```
 
-`_calepin/plugins/greeting/shortcode.py`:
-
-```python
-#!/usr/bin/env python3
-import json, sys
-
-data = json.load(sys.stdin)
-name = data["kwargs"].get("name", "World")
-fmt = data["format"]
-
-if fmt == "html":
-    print(f'<strong>Hello, {name}!</strong>')
-else:
-    print(f'Hello, {name}!')
-```
-
-{% raw %}Use it as `{{ greeting(name="Alice") }}`.{% endraw %}
-
-The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, and `meta` fields, and prints replacement text to stdout. See [Plugins](../misc/plugins.html) for the full protocol.
+The template receives all span attributes as variables, plus `content`, `class`, `classes`, `id`, `base`, and `engine`.
 
 
 # Resolution order
 
-For each function call, *Calepin* checks:
+For each bracketed span, *Calepin* checks:
 
-1. Built-in functions (`pagebreak`, `video`, `brand`, `lipsum`, `placeholder`)
-2. Context variables (`meta`, `var`, `env`, `engine`, `base`, `target`)
-3. Plugin registry (in front matter order)
-
-Built-in functions take precedence over plugin functions.
+1. Built-in spans (`pagebreak`, `video`, `brand`, `lorem`, `placeholder`)
+2. User project templates (`_calepin/partials/{engine}/{class}.{ext}`)
+3. Plugin templates (in plugin order)
+4. Default `span` template (fallback)

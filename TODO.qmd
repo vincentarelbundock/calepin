@@ -1,9 +1,3 @@
-## Philosophy
-
-- Content vs. Container vs. Appearance
-    - Content: .qmd files
-    - Container: .toml files
-    - Appearance: templates and themes (css, html, latex, typst)
 
 ## Blog listings
 
@@ -41,13 +35,11 @@
 
 ## Plugins
 
-- [ ] How are shortcodes implemented?
 - [ ] Stable template API is too large: exposing too many template variables as public API locks in internal rendering details
 - [ ] How to register new plugins? What are they allowed to do?
 - [ ] ANSI colors in txtfmt plugin
 - [ ] CSL helpers: https://github.com/citation-style-language/styles/
 - [ ] Test lightbox
-
 
 
 ## TOML
@@ -79,18 +71,6 @@
 ## HTML
 
 - [ ] footnotes should have hover
-
-
-## Docs
-
-- [ ] Calepin Terminology intro
-- [ ] HTML sales pitch: classless CSS, standalone files by default
-- [ ] LLM-friendly
-- [ ] Performance page with `bench/rubbish.sh`
-- [ ] Accessibility: 
-    - [x] HTML: aria codes, skip to content, etc.
-    - [ ] PDF: ???
-    - [ ] Automatic alt-text for generated figures?
 
 
 ## Internal
@@ -128,6 +108,18 @@
 - [ ] Table with a list of all variables supported in the different .toml blocks
 
 
+## Terminology
+
+- [ ] Calepin Terminology intro
+- [ ] HTML sales pitch: classless CSS, standalone files by default
+- [ ] LLM-friendly
+- [ ] Performance page with `bench/rubbish.sh`
+- [ ] Accessibility: 
+    - [x] HTML: aria codes, skip to content, etc.
+    - [ ] PDF: ???
+    - [ ] Automatic alt-text for generated figures?
+
+
 ## Aesthetics
 
 - [ ] *Calepin* always in italics with capital letter in website/
@@ -135,6 +127,10 @@
 
 ## Philosophy
 
+- Content vs. Container vs. Appearance
+    - Content: .qmd files
+    - Container: .toml files
+    - Appearance: templates and themes (css, html, latex, typst)
 - [ ] High performance
 - [ ] Simplicity
     - [ ] Classless HTML with simple CSS.

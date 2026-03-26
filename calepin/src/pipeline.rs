@@ -119,7 +119,6 @@ pub fn render_core(
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);
-    element_renderer.set_sc_fragments(eval_result.sc_fragments);
     element_renderer.set_preamble(eval_result.preamble);
 
     // 10b. Prepare elements (pre-render: SVG-to-PDF, etc.)

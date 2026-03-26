@@ -84,7 +84,6 @@ impl EnginePool {
 /// Result of evaluating all blocks.
 pub struct EvalResult {
     pub elements: Vec<Element>,
-    pub sc_fragments: Vec<String>,
     /// Preamble content collected from code chunks (e.g. \usepackage lines).
     pub preamble: Vec<String>,
 }
@@ -134,7 +133,6 @@ pub fn evaluate(
     cache: &mut cache::CacheState,
 ) -> Result<EvalResult> {
     let mut elements: Vec<Element> = Vec::new();
-    let mut sc_fragments: Vec<String> = Vec::new();
     let mut preamble: Vec<String> = Vec::new();
 
     for block in blocks {
@@ -149,7 +147,6 @@ pub fn evaluate(
                     cache.advance_digest_inline(&format!("{}:{}", ic.engine, ic.expr));
                 }
                 let processed = inline::evaluate_inline(&jinja_result.text, ctx)?;
-                sc_fragments.extend(jinja_result.sc_fragments);
                 elements.push(Element::Text { content: processed });
             }
             Block::Code(chunk) => {
@@ -195,7 +192,6 @@ pub fn evaluate(
                     let jinja_result = crate::jinja::process_body(
                         &joined, output_ext, metadata, registry,
                     );
-                    sc_fragments.extend(jinja_result.sc_fragments);
                     jinja_chunk = CodeChunk {
                         source: jinja_result.text.lines().map(|l| l.to_string()).collect(),
                         ..merged_chunk.clone()
@@ -244,7 +240,6 @@ pub fn evaluate(
                     continue;
                 }
                 let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
-                sc_fragments.extend(child_result.sc_fragments);
                 preamble.extend(child_result.preamble);
                 let mut child_elements = child_result.elements;
                 let mut div_attrs = div.attrs.clone();
@@ -280,7 +275,7 @@ pub fn evaluate(
         }
     }
 
-    Ok(EvalResult { elements, sc_fragments, preamble })
+    Ok(EvalResult { elements, preamble })
 }
 
 // ---------------------------------------------------------------------------

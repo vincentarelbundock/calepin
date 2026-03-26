@@ -233,16 +233,14 @@ run = "postprocess.sh"          # Script: stdin=document, stdout=transformed
 
 ## Raw Output Protection
 
-Format-specific output from span partials and shortcodes must survive markdown-to-format conversion without being re-escaped. All markers use Unicode noncharacters (`\u{FFFF}` start, `\u{FFFE}` end) as delimiters. Input is sanitized by `markers::sanitize()` at the start of the pipeline.
+Format-specific output from span partials must survive markdown-to-format conversion without being re-escaped. All markers use Unicode noncharacters (`\u{FFFF}` start, `\u{FFFE}` end) as delimiters. Input is sanitized by `markers::sanitize()` at the start of the pipeline.
 
 Marker types (single-char prefix between delimiters):
 
 - **`M`** -- Math expressions (`$...$` and `$$...$$`). Use `\$` for a literal dollar sign.
 - **`D`** -- Escaped dollar signs. Resolved per-format by `markers::resolve_escaped_dollars()`.
 - **`L`** -- Equation labels (`{#eq-...}` after display math).
-- **`R`** -- Raw span/partial output.
-- **`S`** -- Shortcode raw output.
-- **`X`** -- Escaped shortcode literals.
+- **`R`** -- Raw span/partial output (including built-in spans like pagebreak, video, placeholder).
 
 ## calepin-specific YAML
 
@@ -264,13 +262,6 @@ Both pipe syntax (`#| key: value`) and header key-value pairs (`{r, echo=FALSE}`
 
 The `.qmd` body text is processed as a Jinja template during the evaluate stage (`jinja_engine.rs`). Code blocks and inline code are protected from Jinja evaluation. Use `#| jinja: true` chunk option to opt-in to Jinja processing inside a code chunk.
 
-Built-in Jinja functions (output driven by per-engine partials in `partials/{engine}/`):
-
-- `{{ pagebreak() }}` -- format-specific page break
-- `{{ video(url="...", width="...", height="...", title="...") }}` -- video embed
-- `{{ lipsum(paragraphs=2) }}` -- placeholder lorem ipsum text (also `sentences`, `words`)
-- `{{ placeholder(width=600, height=400) }}` -- placeholder image (also `text`, `color`)
-
 Context variables:
 - `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. -- document metadata
 - `{{ var.key.subkey }}` -- non-standard front matter fields (with nesting)
@@ -278,6 +269,15 @@ Context variables:
 - `{{ format }}` -- current output format
 
 File inclusion: `{% include "file.qmd" %}` (pre-parse, runs before block parsing). Escaping: `{% raw %}...{% endraw %}`.
+
+## Built-in Spans
+
+Bracketed spans `[content]{.class key=value}` are processed during rendering. Built-in spans (output driven by per-engine partials in `partials/{engine}/`):
+
+- `[]{.pagebreak}` -- format-specific page break
+- `[]{.video url="..." width="..." height="..." title="..."}` -- video embed
+- `[]{.lorem paragraphs=2}` -- placeholder lorem ipsum text (also `sentences`, `words`)
+- `[]{.placeholder width=600 height=400}` -- placeholder image (also `text`, `color`)
 
 ## Dependencies
 

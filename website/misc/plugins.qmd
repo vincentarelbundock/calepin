@@ -21,7 +21,7 @@ A plugin with multiple capabilities:
 _calepin/plugins/mytheme/
   plugin.toml
   filter.py           # filter logic
-  shortcode.py        # custom Jinja function
+  span.py             # custom span handler
   postprocess.py      # full-document rewrite
   elements/           # element template overrides
     callout.html
@@ -74,10 +74,6 @@ formats = ["html"]
 Other capabilities:
 
 ```toml
-[shortcode]
-run = "shortcode.py"
-name = ["greeting", "farewell"]
-
 [postprocess]
 run = "postprocess.py"
 formats = ["html"]
@@ -193,11 +189,6 @@ else:
 ```
 
 Usage: `[hover me]{.tooltip tip="Extra info"}`
-
-
-# Custom functions
-
-A shortcode plugin registers Jinja functions callable as {% raw %}`{{ name(args) }}`{% endraw %} in document bodies. The executable receives JSON with `name`, `args`, `kwargs`, `format`, and `meta`.
 
 
 # Postprocessors

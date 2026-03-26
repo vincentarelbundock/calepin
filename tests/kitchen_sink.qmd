@@ -432,13 +432,11 @@ Features of this document:
 - {{ item }}
 {% endfor %}
 
-## Built-in functions
+## Built-in spans
 
-{{ kbd(keys=["Ctrl", "Shift", "P"]) }}
+[]{.lorem sentences=2}
 
-{{ lipsum(sentences=2) }}
-
-{{ pagebreak() }}
+[]{.pagebreak}
 
 After the page break.
 

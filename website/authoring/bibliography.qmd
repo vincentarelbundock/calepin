@@ -73,13 +73,13 @@ When a document contains at least one resolved citation, *Calepin* appends a Ref
 Two dummy figures so we can demonstrate cross-references:
 
 ::: {#fig-one}
-{{ placeholder(width=100, height=100) }}
+[]{.placeholder width=100 height=100}
 
 First figure
 :::
 
 ::: {#fig-two}
-{{ placeholder(width=100, height=100) }}
+[]{.placeholder width=100 height=100}
 
 Second figure
 :::

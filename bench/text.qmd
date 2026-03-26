@@ -3,7 +3,7 @@ title: Benchmark Document
 subtitle: A Comprehensive Stress Test
 author: calepin
 date: "2025-06-01"
-abstract: A heavyweight document for profiling calepin rendering performance. No executed code --- pure markup, cross-references, tabsets, footnotes, callouts, theorems, citations, raw blocks, shortcodes, content visibility, and lots of prose and mathematics.
+abstract: A heavyweight document for profiling calepin rendering performance. No executed code --- pure markup, cross-references, tabsets, footnotes, callouts, theorems, citations, raw blocks, spans, content visibility, and lots of prose and mathematics.
 bibliography: library.bib
 number-sections: true
 keywords:
@@ -752,13 +752,13 @@ It uses native LaTeX commands.}}
 ```
 
 
-# Shortcodes and Variables {#sec-shortcodes}
+# Spans and Variables {#sec-shortcodes}
 
 This document's title is "{{ meta.title }}" by {{ meta.author }}, dated {{ meta.date }}.
 
 The abstract begins: "{{ meta.abstract }}"
 
-{{ pagebreak() }}
+[]{.pagebreak}
 
 
 # Advanced Mathematics {#sec-advanced-math}

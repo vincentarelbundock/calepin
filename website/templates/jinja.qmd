@@ -25,12 +25,12 @@ Dot notation accesses nested values:
 
 # Functions
 
-Call functions with parentheses and keyword arguments:
+Several built-in functions are available as [spans](shortcuts.html) with bracket syntax:
 
 ```
-{{ pagebreak() }}
-{{ video(url="https://youtube.com/watch?v=abc") }}
-{{ lipsum(paragraphs=3) }}
+[]{.pagebreak}
+[]{.video url="https://youtube.com/watch?v=abc"}
+[]{.lorem paragraphs=3}
 ```
 
 

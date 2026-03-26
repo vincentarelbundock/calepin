@@ -34,7 +34,7 @@ $$
 Extend *Calepin* with plugins:
 
 - **Filters**: transform divs and spans
-- **Custom functions**: Jinja shortcodes
+- **Built-in spans**: pagebreak, video, lorem, placeholder
 - **revealjs**: these slides!
 
 Custom formats via `_calepin/formats/revealjs.yaml`:

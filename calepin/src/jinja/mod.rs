@@ -3,16 +3,15 @@
 //! - `expand_includes()` -- Pre-parse `{% include "file" %}` expansion.
 //! - `process_body()`    -- Main entry: Jinja-render a text block (code-block-safe).
 
-mod functions;
 mod includes;
 pub mod lipsum;
 mod protection;
 mod variables;
 
 pub use includes::expand_includes;
-pub(crate) use lipsum::{lipsum_words, lipsum_sentence, lipsum_paragraphs};
+pub use lipsum::{lipsum_words, lipsum_sentence, lipsum_paragraphs};
 
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::LazyLock;
 
 use regex::Regex;
 
@@ -24,7 +23,6 @@ use protection::{protect_code_blocks, protect_inline_code, restore_code_blocks};
 /// Result of Jinja body processing.
 pub struct BodyResult {
     pub text: String,
-    pub sc_fragments: Vec<String>,
 }
 
 /// Process a text block through MiniJinja, evaluating functions and variable references.
@@ -35,8 +33,6 @@ pub fn process_body(
     metadata: &Metadata,
     _registry: &ModuleRegistry,
 ) -> BodyResult {
-    let fragments = Arc::new(Mutex::new(Vec::new()));
-
     // 1. Protect fenced code blocks and inline code from Jinja
     let (protected, mut code_blocks) = protect_code_blocks(text);
     let protected = protect_inline_code(&protected, &mut code_blocks);
@@ -52,14 +48,12 @@ pub fn process_body(
     if !protected.contains("{{") && !protected.contains("{%") {
         return BodyResult {
             text: text.to_string(),
-            sc_fragments: Vec::new(),
         };
     }
 
-    // 2. Build MiniJinja environment with built-in functions
+    // 2. Build MiniJinja environment
     let mut env = minijinja::Environment::new();
     env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
-    functions::register(&mut env, format, &fragments, metadata);
 
     // 3. Build context with metadata, variables, and environment
     let context = variables::build_context(metadata, format);
@@ -78,12 +72,7 @@ pub fn process_body(
     let rendered = rendered.replace('\u{FDD2}', "{").replace('\u{FDD3}', "}");
     let text = restore_code_blocks(&rendered, &code_blocks);
 
-    let sc_fragments = match Arc::try_unwrap(fragments) {
-        Ok(mutex) => mutex.into_inner().unwrap(),
-        Err(arc) => arc.lock().unwrap().clone(),
-    };
-
-    BodyResult { text, sc_fragments }
+    BodyResult { text }
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +109,6 @@ mod tests {
         let registry = ModuleRegistry::empty();
         let result = process_body(text, "html", &meta, &registry);
         assert_eq!(result.text, text);
-        assert!(result.sc_fragments.is_empty());
     }
 
     #[test]
@@ -140,70 +128,6 @@ mod tests {
         let result = process_body("{{ env.CALEPIN_TEST_VAR }}", "html", &meta, &registry);
         assert_eq!(result.text, "hello_jinja");
         std::env::remove_var("CALEPIN_TEST_VAR");
-    }
-
-    #[test]
-    fn test_lipsum_default() {
-        let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body("{{ lipsum() }}", "html", &meta, &registry);
-        assert!(result.text.contains("Lorem"));
-        assert!(result.text.contains('.'));
-    }
-
-    #[test]
-    fn test_lipsum_words() {
-        let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body("{{ lipsum(words=5) }}", "html", &meta, &registry);
-        assert_eq!(result.text.split_whitespace().count(), 5);
-    }
-
-    #[test]
-    fn test_lipsum_paragraphs() {
-        let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body("{{ lipsum(paragraphs=3) }}", "html", &meta, &registry);
-        // 3 paragraphs separated by double newlines
-        let paras: Vec<&str> = result.text.split("\n\n").collect();
-        assert_eq!(paras.len(), 3);
-    }
-
-    #[test]
-    fn test_placeholder_html() {
-        let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body("{{ placeholder(width=200, height=100) }}", "html", &meta, &registry);
-        assert!(result.text.contains("<svg"));
-        assert!(result.text.contains("200"));
-        assert!(result.text.contains("100"));
-    }
-
-    #[test]
-    fn test_placeholder_latex() {
-        let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body("{{ placeholder(width=200, height=100) }}", "latex", &meta, &registry);
-        assert!(!result.sc_fragments.is_empty());
-        assert!(result.sc_fragments[0].contains("fbox"));
-    }
-
-    #[test]
-    fn test_pagebreak_html() {
-        let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body("{{ pagebreak() }}", "html", &meta, &registry);
-        assert!(result.text.contains("page-break-after"));
-    }
-
-    #[test]
-    fn test_pagebreak_latex_marker() {
-        let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body("{{ pagebreak() }}", "latex", &meta, &registry);
-        // LaTeX output should be wrapped in markers
-        assert!(!result.sc_fragments.is_empty());
-        assert_eq!(result.sc_fragments[0], "\\newpage{}");
     }
 
     #[test]

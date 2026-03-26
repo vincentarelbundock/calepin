@@ -78,7 +78,6 @@ pub struct ElementRenderer {
     highlighter: Highlighter,
     registry: Rc<ModuleRegistry>,
     raw_fragments: std::cell::RefCell<Vec<String>>,
-    sc_fragments: Vec<String>,
     preamble: Vec<String>,
     /// Resolved rendering metadata (highlight, figure, callout, labels, etc.).
     pub metadata: crate::config::Metadata,
@@ -140,7 +139,6 @@ impl ElementRenderer {
             highlighter: Highlighter::new(highlight_config),
             registry: Rc::new(ModuleRegistry::empty()),
             raw_fragments: std::cell::RefCell::new(Vec::new()),
-            sc_fragments: Vec::new(),
             preamble: Vec::new(),
             metadata: crate::config::Metadata::default(),
             number_sections: false,
@@ -209,10 +207,6 @@ impl ElementRenderer {
         &self.registry
     }
 
-    pub fn set_sc_fragments(&mut self, sc: Vec<String>) {
-        self.sc_fragments = sc;
-    }
-
     pub fn set_preamble(&mut self, preamble: Vec<String>) {
         self.preamble = preamble;
     }
@@ -242,7 +236,7 @@ impl ElementRenderer {
     }
 
     /// Render a text element: span dispatch, footnote injection, markdown
-    /// conversion, metadata accumulation, shortcode marker resolution.
+    /// conversion, metadata accumulation.
     fn render_text(&self, content: &str) -> String {
         let processed = self.render_bracketed_spans(content);
         // Append global footnote definitions if this text has footnote refs
@@ -300,7 +294,7 @@ impl ElementRenderer {
             self.footnote_counter.set(fn_end);
             output
         };
-        crate::render::markers::resolve_shortcode_raw(&rendered, &self.sc_fragments)
+        rendered
     }
 
     /// Render a fenced div: track cross-referenceable IDs, delegate to div pipeline.

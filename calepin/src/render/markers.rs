@@ -17,8 +17,6 @@
 //! - `D` — escaped dollar sign (`\$`)
 //! - `L` — equation label (`{#eq-...}`)
 //! - `R` — span template output (indexed into external `raw_fragments`)
-//! - `S` — shortcode raw output
-//! - `X` — escaped shortcode literal
 //!
 //! Because `\u{FFFF}` and `\u{FFFE}` cannot appear in legitimate document
 //! text (they are Unicode noncharacters), markers are collision-proof.
@@ -41,7 +39,6 @@ const TY_MATH: char = 'M';
 const TY_ESC_DOLLAR: char = 'D';
 const TY_EQ_LABEL: char = 'L';
 const TY_RAW: char = 'R';
-const TY_SC_RAW: char = 'S';
 
 // ---------------------------------------------------------------------------
 // Compiled regex patterns (one per marker type that needs resolution)
@@ -63,11 +60,6 @@ static RE_MATH: LazyLock<Regex> = LazyLock::new(|| {
 /// Matches raw span markers: `\u{FFFF}R<digits>\u{FFFE}`
 static RE_RAW: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!("{}{}(\\d+){}", MS, TY_RAW, ME)).unwrap()
-});
-
-/// Matches shortcode raw markers: `\u{FFFF}S<digits>\u{FFFE}`
-static RE_SC_RAW: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!("{}{}(\\d+){}", MS, TY_SC_RAW, ME)).unwrap()
 });
 
 // ---------------------------------------------------------------------------
@@ -110,14 +102,6 @@ pub fn wrap_raw(fragments: &mut Vec<String>, content: String) -> String {
     let idx = fragments.len();
     fragments.push(content);
     format!("{}{}{}{}", MS, TY_RAW, idx, ME)
-}
-
-/// Wrap shortcode output in a raw marker. Stores the content in `fragments`
-/// and returns an opaque `\u{FFFF}S<idx>\u{FFFE}` placeholder.
-pub fn wrap_shortcode_raw(fragments: &mut Vec<String>, content: String) -> String {
-    let idx = fragments.len();
-    fragments.push(content);
-    format!("{}{}{}{}", MS, TY_SC_RAW, idx, ME)
 }
 
 // ---------------------------------------------------------------------------
@@ -325,17 +309,6 @@ pub fn resolve_raw(text: &str, fragments: &[String]) -> String {
     }).to_string()
 }
 
-/// Resolve shortcode raw markers (`S` type) to their content.
-pub fn resolve_shortcode_raw(text: &str, fragments: &[String]) -> String {
-    if !text.contains(MS) {
-        return text.to_string();
-    }
-    RE_SC_RAW.replace_all(text, |caps: &regex::Captures| {
-        let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
-        fragments.get(idx).cloned().unwrap_or_default()
-    }).to_string()
-}
-
 // ---------------------------------------------------------------------------
 // Preprocessing (shared by markdown.rs and latex.rs)
 // ---------------------------------------------------------------------------
@@ -491,15 +464,6 @@ mod tests {
         assert_eq!(fragments.len(), 1);
         let resolved = resolve_raw(&marker, &fragments);
         assert_eq!(resolved, "\\textbf{hello}");
-    }
-
-    #[test]
-    fn test_wrap_shortcode_raw_roundtrip() {
-        let mut fragments = Vec::new();
-        let marker = wrap_shortcode_raw(&mut fragments, "\\newpage{}".to_string());
-        assert_eq!(fragments.len(), 1);
-        let resolved = resolve_shortcode_raw(&marker, &fragments);
-        assert_eq!(resolved, "\\newpage{}");
     }
 
     #[test]
