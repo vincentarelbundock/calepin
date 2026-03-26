@@ -1,6 +1,5 @@
 //! Runtime project context: resolves project config and target for a render.
 
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
@@ -52,22 +51,14 @@ pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<
         }
     };
 
-    // Read front matter once (for target resolution)
-    let front_meta = fs::read_to_string(input).ok()
-        .and_then(|text| crate::config::split_frontmatter(&text).ok())
-        .map(|(meta, _)| meta);
-
-    // Target name: CLI flag -> front matter -> default from config
+    // Target name: CLI flag -> default from config
     let default_format = project_metadata.as_ref()
         .and_then(|m| m.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let (target_name, explicit_target) = if let Some(name) = cli_target {
         (name.to_string(), true)
     } else {
-        match front_meta.as_ref().and_then(|m| m.target.clone()) {
-            Some(t) => (t, true),
-            None => (default_format.clone(), false),
-        }
+        (default_format.clone(), false)
     };
 
     let empty_targets = std::collections::HashMap::new();

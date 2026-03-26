@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -7,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Metadata;
 
-/// Metadata extracted from a document's YAML frontmatter.
+/// Metadata extracted from a document's frontmatter.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DocumentMeta {
     pub title: Option<String>,
@@ -200,29 +199,8 @@ fn resolve_sort_value(page: &DocumentInfo, field: &str) -> String {
 }
 
 /// Extract frontmatter from a .qmd file.
-fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
-    let text = fs::read_to_string(path)?;
-    let trimmed = text.trim_start();
-
-    if !trimmed.starts_with("---") {
-        return Ok(DocumentMeta::default());
-    }
-
-    // Find the closing ---
-    let after_first = &trimmed[3..];
-    let end = after_first
-        .find("\n---")
-        .or_else(|| after_first.find("\r\n---"));
-
-    match end {
-        Some(pos) => {
-            let fm_str = &after_first[..pos];
-            let table = crate::value::parse_frontmatter(fm_str).unwrap_or_default();
-            let json_val = crate::value::to_json(&crate::value::Value::Table(table));
-            let meta: DocumentMeta = serde_json::from_value(json_val).unwrap_or_default();
-            Ok(meta)
-        }
-        None => Ok(DocumentMeta::default()),
-    }
+/// Preambles are ignored; returns default metadata.
+fn extract_frontmatter(_path: &Path) -> Result<DocumentMeta> {
+    Ok(DocumentMeta::default())
 }
 

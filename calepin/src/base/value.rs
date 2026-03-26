@@ -1,8 +1,7 @@
 //! Calepin's internal value type.
 //!
-//! Common representation for front matter, plugin manifests, and
-//! configuration values. Both TOML and YAML parse into this type
-//! via `from_toml` / `from_yaml` converters.
+//! Common representation for plugin manifests and configuration values.
+//! TOML parses into this type via the `from_toml` converter.
 
 use std::collections::HashMap;
 use indexmap::IndexMap;
@@ -133,58 +132,6 @@ pub fn table_from_toml(map: toml::map::Map<String, toml::Value>) -> Table {
 }
 
 // ---------------------------------------------------------------------------
-// Conversion from serde_yaml::Value
-// ---------------------------------------------------------------------------
-
-/// Convert a `serde_yaml::Value` into our `Value`.
-pub fn from_yaml(yv: serde_yaml::Value) -> Value {
-    match yv {
-        serde_yaml::Value::Null => Value::Null,
-        serde_yaml::Value::Bool(b) => Value::Bool(b),
-        serde_yaml::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Value::Integer(i)
-            } else if let Some(f) = n.as_f64() {
-                Value::Float(f)
-            } else {
-                Value::String(n.to_string())
-            }
-        }
-        serde_yaml::Value::String(s) => Value::String(s),
-        serde_yaml::Value::Sequence(seq) => {
-            Value::Array(seq.into_iter().map(from_yaml).collect())
-        }
-        serde_yaml::Value::Mapping(map) => {
-            let table: Table = map.into_iter()
-                .filter_map(|(k, v)| {
-                    let key = match k {
-                        serde_yaml::Value::String(s) => s,
-                        other => other.as_str().map(|s| s.to_string())
-                            .unwrap_or_else(|| format!("{:?}", other)),
-                    };
-                    Some((key, from_yaml(v)))
-                })
-                .collect();
-            Value::Table(table)
-        }
-        serde_yaml::Value::Tagged(tagged) => from_yaml(tagged.value),
-    }
-}
-
-/// Convert a `serde_yaml::Mapping` into our `Table`.
-pub fn table_from_yaml(map: serde_yaml::Mapping) -> Table {
-    map.into_iter()
-        .filter_map(|(k, v)| {
-            let key = match k {
-                serde_yaml::Value::String(s) => s,
-                other => other.as_str().map(|s| s.to_string())?,
-            };
-            Some((key, from_yaml(v)))
-        })
-        .collect()
-}
-
-// ---------------------------------------------------------------------------
 // Conversion to serde_json::Value
 // ---------------------------------------------------------------------------
 
@@ -283,121 +230,23 @@ fn merge_tables(target: &mut Table, source: Table) {
 }
 
 // ---------------------------------------------------------------------------
-// Front matter format detection
+// TOML front matter parsing
 // ---------------------------------------------------------------------------
 
-/// Detect whether front matter text is TOML or minimal YAML.
-pub fn detect_frontmatter_format(text: &str) -> FrontMatterFormat {
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
-        }
-        // TOML indicators: `key = value`, `[section]`, `[[array]]`
-        if trimmed.starts_with('[') {
-            return FrontMatterFormat::Toml;
-        }
-        if trimmed.contains(" = ") || trimmed.contains("= ") {
-            // But not inside a YAML flow mapping like `{key: val}`
-            if !trimmed.starts_with('{') {
-                return FrontMatterFormat::Toml;
-            }
-        }
-        // If we see `key: value` first, it's YAML
-        if trimmed.contains(": ") || trimmed.ends_with(':') {
-            return FrontMatterFormat::Yaml;
-        }
-    }
-    // Default to YAML for empty/ambiguous content
-    FrontMatterFormat::Yaml
-}
-
-#[derive(Debug, PartialEq)]
-pub enum FrontMatterFormat {
-    Toml,
-    Yaml,
-}
-
-/// Parse front matter text (between `---` delimiters) into a Table.
-/// Auto-detects TOML vs minimal YAML.
+/// Parse TOML text into a Table. Used by tests and project config loading.
+#[cfg(test)]
 pub fn parse_frontmatter(text: &str) -> anyhow::Result<Table> {
-    match detect_frontmatter_format(text) {
-        FrontMatterFormat::Toml => {
-            let tv: toml::Value = toml::from_str(text)
-                .map_err(|e| anyhow::anyhow!("TOML parse error: {}", e))?;
-            match tv {
-                toml::Value::Table(map) => Ok(table_from_toml(map)),
-                _ => Ok(Table::new()),
-            }
-        }
-        FrontMatterFormat::Yaml => {
-            let yv: serde_yaml::Value = serde_yaml::from_str(text)
-                .map_err(|e| anyhow::anyhow!("YAML parse error: {}", e))?;
-            match yv {
-                serde_yaml::Value::Mapping(map) => Ok(table_from_yaml(map)),
-                _ => Ok(Table::new()),
-            }
-        }
+    let tv: toml::Value = toml::from_str(text)
+        .map_err(|e| anyhow::anyhow!("TOML parse error: {}", e))?;
+    match tv {
+        toml::Value::Table(map) => Ok(table_from_toml(map)),
+        _ => Ok(Table::new()),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_detect_toml() {
-        assert_eq!(detect_frontmatter_format("title = \"Hello\""), FrontMatterFormat::Toml);
-        assert_eq!(detect_frontmatter_format("[section]\nkey = 1"), FrontMatterFormat::Toml);
-    }
-
-    #[test]
-    fn test_detect_yaml() {
-        assert_eq!(detect_frontmatter_format("title: Hello"), FrontMatterFormat::Yaml);
-        assert_eq!(detect_frontmatter_format("format: html"), FrontMatterFormat::Yaml);
-    }
-
-    #[test]
-    fn test_yaml_scalars() {
-        let table = parse_frontmatter("title: Hello\nauthor: World\nformat: html").unwrap();
-        assert_eq!(table_str(&table, "title").as_deref(), Some("Hello"));
-        assert_eq!(table_str(&table, "author").as_deref(), Some("World"));
-        assert_eq!(table_str(&table, "format").as_deref(), Some("html"));
-    }
-
-    #[test]
-    fn test_yaml_list() {
-        let table = parse_frontmatter("bibliography:\n  - refs.bib\n  - extra.bib").unwrap();
-        let bib = table_get(&table, "bibliography").unwrap();
-        let arr = bib.as_array().unwrap();
-        assert_eq!(arr.len(), 2);
-        assert_eq!(arr[0].as_str(), Some("refs.bib"));
-        assert_eq!(arr[1].as_str(), Some("extra.bib"));
-    }
-
-    #[test]
-    fn test_yaml_nested() {
-        let table = parse_frontmatter("calepin:\n  plugins:\n    - txtfmt\n  files-dir: custom").unwrap();
-        let cal = table_get(&table, "calepin").unwrap().as_table().unwrap();
-        let plugins = table_get(cal, "plugins").unwrap().as_array().unwrap();
-        assert_eq!(plugins.len(), 1);
-        assert_eq!(plugins[0].as_str(), Some("txtfmt"));
-        assert_eq!(table_str(cal, "files-dir").as_deref(), Some("custom"));
-    }
-
-    #[test]
-    fn test_yaml_booleans() {
-        let table = parse_frontmatter("number-sections: true\ntoc: false").unwrap();
-        assert_eq!(table_get(&table, "number-sections").unwrap().as_bool(), Some(true));
-        assert_eq!(table_get(&table, "toc").unwrap().as_bool(), Some(false));
-    }
-
-    #[test]
-    fn test_yaml_quoted_strings() {
-        let table = parse_frontmatter("title: \"Hello World\"\nauthor: 'Jane Doe'").unwrap();
-        assert_eq!(table_str(&table, "title").as_deref(), Some("Hello World"));
-        assert_eq!(table_str(&table, "author").as_deref(), Some("Jane Doe"));
-    }
 
     #[test]
     fn test_toml_frontmatter() {
@@ -415,46 +264,11 @@ mod tests {
     }
 
     #[test]
-    fn test_yaml_format_mapping() {
-        let table = parse_frontmatter("format:\n  html: default").unwrap();
-        let fmt = table_get(&table, "format").unwrap();
-        let fmt_table = fmt.as_table().unwrap();
-        assert_eq!(fmt_table.keys().next().unwrap(), "html");
-    }
-
-    #[test]
-    fn test_yaml_block_scalar() {
-        let table = parse_frontmatter("abstract: |\n  some content\n  more content").unwrap();
-        let abs = table_str(&table, "abstract").unwrap();
-        assert!(abs.contains("some content"));
-        assert!(abs.contains("more content"));
-    }
-
-    #[test]
-    fn test_yaml_flow_sequence() {
-        let table = parse_frontmatter("keywords: [one, two, three]").unwrap();
-        let kw = table_get(&table, "keywords").unwrap().as_array().unwrap();
-        assert_eq!(kw.len(), 3);
-        assert_eq!(kw[0].as_str(), Some("one"));
-    }
-
-    #[test]
     fn test_coerce_value() {
         assert!(matches!(coerce_value("true"), Value::Bool(true)));
         assert!(matches!(coerce_value("false"), Value::Bool(false)));
         assert!(matches!(coerce_value("42"), Value::Integer(42)));
         assert!(matches!(coerce_value("3.14"), Value::Float(_)));
         assert!(matches!(coerce_value("hello"), Value::String(_)));
-    }
-
-    #[test]
-    fn test_yaml_author_list_of_mappings() {
-        let yaml = "author:\n  - name: Alice\n    email: alice@example.com\n  - name: Bob\n    email: bob@example.com";
-        let table = parse_frontmatter(yaml).unwrap();
-        let authors = table_get(&table, "author").unwrap().as_array().unwrap();
-        assert_eq!(authors.len(), 2);
-        let a0 = authors[0].as_table().unwrap();
-        assert_eq!(table_str(a0, "name").as_deref(), Some("Alice"));
-        assert_eq!(table_str(a0, "email").as_deref(), Some("alice@example.com"));
     }
 }

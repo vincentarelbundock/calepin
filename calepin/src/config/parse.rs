@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use serde::de::DeserializeOwned;
 
-use crate::value::{self, Value, Table, table_get, table_str, table_bool, value_string_list};
+use crate::value::{Value, Table, table_get, table_str, table_bool, value_string_list};
 use super::{Affiliation, Author, AuthorName, CitationConfig, Copyright, Funding, License, Metadata, TocConfig};
 
 /// Deserialize a Value into a typed struct via serde_json roundtrip.
@@ -29,9 +29,9 @@ fn normalize_keys(v: &Value) -> Value {
     }
 }
 
-/// Split front matter from the document body.
-/// Returns (metadata, body_text).
-/// Front matter is delimited by `---` and auto-detected as TOML or minimal YAML.
+/// Strip front matter (preamble) from the document body.
+/// Returns (default metadata, body_text). The preamble is discarded;
+/// all configuration comes from `_calepin.toml`.
 #[inline(never)]
 pub fn split_frontmatter(text: &str) -> Result<(Metadata, String)> {
     let lines: Vec<&str> = text.lines().collect();
@@ -54,12 +54,8 @@ pub fn split_frontmatter(text: &str) -> Result<(Metadata, String)> {
         None => return Ok((Metadata::default(), text.to_string())),
     };
 
-    let fm_str: String = lines[1..end].join("\n");
     let body: String = lines[end + 1..].join("\n");
-
-    let table = value::parse_frontmatter(&fm_str)?;
-    let metadata = parse_metadata(&table)?;
-    Ok((metadata, body))
+    Ok((Metadata::default(), body))
 }
 
 pub fn parse_metadata(table: &Table) -> Result<Metadata> {
@@ -541,16 +537,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_split_frontmatter() {
-        let text = "---\ntitle: Hello\nauthor: World\n---\n\n# Body\n\nSome text.";
+    fn test_split_frontmatter_strips_preamble() {
+        let text = "---\ntitle = \"Hello\"\nauthor = \"World\"\n---\n\n# Body\n\nSome text.";
         let (meta, body) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.title.as_deref(), Some("Hello"));
-        assert_eq!(meta.author_names(), vec!["World"]);
+        // Preamble is ignored; metadata comes from _calepin.toml
+        assert!(meta.title.is_none());
         assert!(body.starts_with("\n# Body"));
     }
 
     #[test]
-    fn test_no_yaml() {
+    fn test_no_frontmatter() {
         let text = "# Just markdown\n\nNo front matter.";
         let (meta, body) = split_frontmatter(text).unwrap();
         assert!(meta.title.is_none());
@@ -558,109 +554,18 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_author_string() {
-        let text = "---\nauthor: Norah Jones\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.author_names(), vec!["Norah Jones"]);
-        assert_eq!(meta.authors.len(), 1);
-        assert_eq!(meta.authors[0].name.literal, "Norah Jones");
-    }
-
-    #[test]
-    fn test_simple_author_list() {
-        let text = "---\nauthor:\n  - Alice Smith\n  - Bob Lee\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.author_names(), vec!["Alice Smith", "Bob Lee"]);
-        assert_eq!(meta.authors.len(), 2);
-    }
-
-    #[test]
-    fn test_rich_author_with_affiliations() {
-        let text = "---\nauthor:\n  - name: Norah Jones\n    email: norah@example.com\n    orcid: 0000-0001-2345-6789\n    corresponding: true\n    affiliations:\n      - name: Carnegie Mellon University\n        city: Pittsburgh\n        region: PA\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.authors.len(), 1);
-        assert_eq!(meta.authors[0].email.as_deref(), Some("norah@example.com"));
-        assert_eq!(meta.authors[0].orcid.as_deref(), Some("0000-0001-2345-6789"));
-        assert!(meta.authors[0].corresponding);
-        assert_eq!(meta.authors[0].affiliation_ids, vec![0]);
-        assert_eq!(meta.affiliations.len(), 1);
-        assert_eq!(meta.affiliations[0].name.as_deref(), Some("Carnegie Mellon University"));
-        assert_eq!(meta.affiliations[0].city.as_deref(), Some("Pittsburgh"));
-        assert_eq!(meta.affiliations[0].region.as_deref(), Some("PA"));
-        assert_eq!(meta.affiliations[0].number, 1);
-    }
-
-    #[test]
-    fn test_shared_affiliations_via_ref() {
-        let text = "---\nauthor:\n  - name: Alice\n    affiliations:\n      - ref: mit\n  - name: Bob\n    affiliations:\n      - ref: mit\naffiliations:\n  - id: mit\n    name: MIT\n    city: Cambridge\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.affiliations.len(), 1);
-        assert_eq!(meta.authors[0].affiliation_ids, vec![0]);
-        assert_eq!(meta.authors[1].affiliation_ids, vec![0]);
-        assert_eq!(meta.affiliations[0].name.as_deref(), Some("MIT"));
-    }
-
-    #[test]
-    fn test_multiple_affiliations() {
-        let text = "---\nauthor:\n  - name: Alice\n    affiliations:\n      - MIT\n      - Stanford\n  - name: Bob\n    affiliations:\n      - Stanford\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.affiliations.len(), 2);
-        assert_eq!(meta.authors[0].affiliation_ids, vec![0, 1]);
-        assert_eq!(meta.authors[1].affiliation_ids, vec![1]); // deduplicated
-    }
-
-    #[test]
-    fn test_yaml_block_scalar_with_dashes() {
-        let text = "---\ntitle: Test\nabstract: |\n  some content\n  ---\n  more content\n---\nBody";
-        let (meta, body) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.title.as_deref(), Some("Test"));
-        assert!(meta.abstract_text.as_ref().unwrap().contains("more content"));
-        assert_eq!(body, "Body");
-    }
-
-    #[test]
-    fn test_format_mapping() {
-        let text = "---\ntitle: Test\nformat:\n  html: default\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.target.as_deref(), Some("html"));
-    }
-
-    #[test]
-    fn test_format_string() {
-        let text = "---\nformat: latex\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.target.as_deref(), Some("latex"));
-    }
-
-    #[test]
-    fn test_bibliography_list() {
-        let text = "---\nbibliography:\n  - refs.bib\n  - extra.bib\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.bibliography, vec!["refs.bib", "extra.bib"]);
-    }
-
-    #[test]
-    fn test_bibliography_string() {
-        let text = "---\nbibliography: refs.bib\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.bibliography, vec!["refs.bib"]);
-    }
-
-    #[test]
-    fn test_toml_frontmatter() {
-        let text = "---\ntitle = \"Hello\"\nauthor = \"World\"\nformat = \"html\"\n---\nBody";
-        let (meta, body) = split_frontmatter(text).unwrap();
+    fn test_parse_metadata_from_toml_table() {
+        let table = crate::value::parse_frontmatter("title = \"Hello\"\nauthor = \"World\"\nformat = \"html\"").unwrap();
+        let meta = parse_metadata(&table).unwrap();
         assert_eq!(meta.title.as_deref(), Some("Hello"));
         assert_eq!(meta.author_names(), vec!["World"]);
         assert_eq!(meta.target.as_deref(), Some("html"));
-        assert_eq!(body, "Body");
     }
 
     #[test]
-    fn test_toml_frontmatter_nested() {
-        let text = "---\ntitle = \"Hello\"\n\n[calepin]\nplugins = [\"txtfmt\"]\n---\nBody";
-        let (meta, _) = split_frontmatter(text).unwrap();
-        assert_eq!(meta.title.as_deref(), Some("Hello"));
+    fn test_parse_metadata_nested_toml() {
+        let table = crate::value::parse_frontmatter("[calepin]\nplugins = [\"txtfmt\"]").unwrap();
+        let meta = parse_metadata(&table).unwrap();
         assert_eq!(meta.plugins, vec!["txtfmt"]);
     }
 }

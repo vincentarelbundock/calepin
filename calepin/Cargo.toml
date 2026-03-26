@@ -16,10 +16,9 @@ clap_complete = "4"
 # Markdown rendering
 comrak = "0.51"
 
-# Front matter (TOML + YAML)
+# Front matter (TOML)
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
-serde_yaml = "0.9"
 
 # Syntax highlighting
 syntect = "5"

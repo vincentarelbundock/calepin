@@ -305,7 +305,6 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "serde_yaml",
  "svg2pdf",
  "syntect",
  "tempfile",

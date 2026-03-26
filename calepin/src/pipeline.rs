@@ -54,7 +54,7 @@ pub fn render_core(
     let input_text = fs::read_to_string(input)
         .with_context(|| format!("Failed to read input file: {}", input.display()))?;
 
-    // 2. Parse YAML front matter, then apply CLI overrides
+    // 2. Strip front matter preamble, then apply CLI overrides
     let (mut metadata, body) = crate::config::split_frontmatter(&input_text)?;
     let body = render::markers::sanitize(&body);
     metadata.apply_overrides(overrides);
