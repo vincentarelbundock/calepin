@@ -25,25 +25,6 @@ pub fn latex_to_typst(input: &str) -> String {
     emitter::emit(&nodes)
 }
 
-/// Convert a full math expression (with dollar delimiters) from LaTeX to Typst.
-///
-/// - `$content$` (inline) becomes `$typst_content$`
-/// - `$$content$$` (display) becomes `$ typst_content $`
-#[allow(dead_code)]
-pub fn convert_math_expression(expr: &str) -> String {
-    if expr.starts_with("$$") && expr.ends_with("$$") && expr.len() > 4 {
-        let inner = &expr[2..expr.len() - 2];
-        let converted = latex_to_typst(inner.trim());
-        format!("$ {} $", converted)
-    } else if expr.starts_with('$') && expr.ends_with('$') && expr.len() > 2 {
-        let inner = &expr[1..expr.len() - 1];
-        let converted = latex_to_typst(inner);
-        format!("${}$", converted)
-    } else {
-        expr.to_string()
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Typst math filters (strip or convert LaTeX math in Typst output)
 // ---------------------------------------------------------------------------
@@ -380,26 +361,4 @@ mod tests {
         assert_eq!(latex_to_typst("e^{i\\pi} + 1 = 0"), "e^(i pi) + 1 = 0");
     }
 
-    // --- Full expression conversion ---
-
-    #[test]
-    fn test_convert_inline() {
-        assert_eq!(convert_math_expression("$x^2$"), "$x^2$");
-    }
-
-    #[test]
-    fn test_convert_display() {
-        assert_eq!(
-            convert_math_expression("$$\\frac{a}{b}$$"),
-            "$ frac(a, b) $"
-        );
-    }
-
-    #[test]
-    fn test_convert_inline_complex() {
-        assert_eq!(
-            convert_math_expression("$\\alpha + \\beta$"),
-            "$alpha + beta$"
-        );
-    }
 }

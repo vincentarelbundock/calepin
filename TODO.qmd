@@ -31,12 +31,6 @@
 - [ ] slidev
 
 
-## Figures
-
-- [ ] Figure templates in latex are pre-computed. Templates need to handle \begin{ {{variables}} }
-- [ ] Can more code be shared between figures and code-generated figures?
-
-
 ## calepin new
 
 - [ ] Built-in website template

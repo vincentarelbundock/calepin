@@ -186,24 +186,11 @@ fn parse_builtin(toml_str: &str) -> crate::config::Metadata {
 
 const SHARED_TOML: &str = include_str!("../config/shared.toml");
 const DOCUMENT_TOML: &str = include_str!("../config/document.toml");
-#[allow(dead_code)]
-const COLLECTION_TOML: &str = include_str!("../config/collection.toml");
-
 /// Get the built-in document defaults (shared + document).
 pub fn builtin_metadata() -> &'static crate::config::Metadata {
     use std::sync::LazyLock;
     static META: LazyLock<crate::config::Metadata> = LazyLock::new(|| {
         parse_builtin(&format!("{}\n{}", SHARED_TOML, DOCUMENT_TOML))
-    });
-    &META
-}
-
-/// Get the built-in collection defaults (shared + collection).
-#[allow(dead_code)]
-pub fn builtin_collection_metadata() -> &'static crate::config::Metadata {
-    use std::sync::LazyLock;
-    static META: LazyLock<crate::config::Metadata> = LazyLock::new(|| {
-        parse_builtin(&format!("{}\n{}", SHARED_TOML, COLLECTION_TOML))
     });
     &META
 }

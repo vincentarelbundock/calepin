@@ -77,11 +77,6 @@ impl Target {
         self.fig_extension.as_deref().unwrap_or("png")
     }
 
-    /// Preview behavior: "serve", "open", or "none".
-    #[allow(dead_code)]
-    pub fn preview_mode(&self) -> &str {
-        self.preview.as_deref().unwrap_or("none")
-    }
 }
 
 // ---------------------------------------------------------------------------

@@ -118,7 +118,7 @@ impl ChunkOptions {
         let d = self.metadata.execute.as_ref().and_then(|c| c.eval).unwrap_or(true);
         self.get_bool("eval", d)
     }
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn echo(&self) -> bool {
         let d = self.metadata.execute.as_ref().and_then(|c| c.echo).unwrap_or(true);
         self.get_bool("echo", d)

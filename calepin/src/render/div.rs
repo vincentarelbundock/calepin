@@ -33,7 +33,7 @@ pub fn render(
         if let ModuleKind::ElementChildren(ref p) = plugin.kind {
             let mut ctx = ModuleContext::new(
                 classes, id, attrs, children, format, defaults,
-                render_element, resolve_partial, raw_fragments,
+                render_element, raw_fragments,
             );
             match p.apply(&mut ctx) {
                 ModuleResult::Rendered(output) => return output,

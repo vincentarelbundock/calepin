@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::modules::transform_document::TransformDocument;
-use crate::module_manifest::{MatchRule, MatchSpec, FormatSpec, ModuleManifest, ModuleProvides};
+use crate::module_manifest::{MatchRule, MatchSpec, ModuleManifest, ModuleProvides};
 use crate::types::Element;
 
 // ---------------------------------------------------------------------------
@@ -42,10 +42,7 @@ pub struct ModuleContext<'a> {
 
     children: &'a [Element],
     render_fn: &'a dyn Fn(&Element) -> String,
-    #[allow(dead_code)]
-    resolve_fn: &'a dyn Fn(&str) -> Option<String>,
     raw_fragments: &'a RefCell<Vec<String>>,
-    rendered_cache: RefCell<Option<String>>,
 }
 
 impl<'a> ModuleContext<'a> {
@@ -57,14 +54,12 @@ impl<'a> ModuleContext<'a> {
         format: &'a str,
         defaults: &'a crate::config::Metadata,
         render_fn: &'a dyn Fn(&Element) -> String,
-        resolve_fn: &'a dyn Fn(&str) -> Option<String>,
         raw_fragments: &'a RefCell<Vec<String>>,
     ) -> Self {
         Self {
             classes, id, attrs, format, defaults,
             vars: HashMap::new(),
-            children, render_fn, resolve_fn, raw_fragments,
-            rendered_cache: RefCell::new(None),
+            children, render_fn, raw_fragments,
         }
     }
 
@@ -72,26 +67,6 @@ impl<'a> ModuleContext<'a> {
 
     pub fn render_child(&self, element: &Element) -> String {
         (self.render_fn)(element)
-    }
-
-    /// All children rendered and joined (lazy, cached).
-    #[allow(dead_code)]
-    pub fn render_children(&self) -> String {
-        let mut cache = self.rendered_cache.borrow_mut();
-        if cache.is_none() {
-            let rendered = self.children.iter()
-                .map(|el| (self.render_fn)(el))
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<_>>()
-                .join("\n\n");
-            *cache = Some(rendered);
-        }
-        cache.as_ref().unwrap().clone()
-    }
-
-    #[allow(dead_code)]
-    pub fn resolve_partial(&self, name: &str) -> Option<String> {
-        (self.resolve_fn)(name)
     }
 
     pub fn raw_fragments(&self) -> &RefCell<Vec<String>> {
@@ -214,53 +189,6 @@ impl ModuleRegistry {
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 
-    #[allow(dead_code)]
-    pub fn resolve_page_partial(&self, filename: &str) -> Option<String> {
-        for plugin in &self.modules {
-            if let Some(ref spec) = plugin.manifest.provides.partials {
-                let path = plugin.manifest.module_dir.join(&spec.dir).join(filename);
-                if path.exists() {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        return Some(content);
-                    }
-                }
-            }
-        }
-
-        if let Some(dot) = filename.rfind('.') {
-            let name = &filename[..dot];
-            let ext = &filename[dot + 1..];
-            if let Some(path) = crate::paths::resolve_partial(name, ext) {
-                if let Ok(content) = std::fs::read_to_string(path) {
-                    return Some(content);
-                }
-            }
-        }
-
-        None
-    }
-
-    #[allow(dead_code)]
-    pub fn resolve_csl(&self) -> Option<PathBuf> {
-        for plugin in &self.modules {
-            if let Some(ref csl_file) = plugin.manifest.provides.csl {
-                let path = plugin.manifest.module_dir.join(csl_file);
-                if path.exists() {
-                    return Some(path);
-                }
-            }
-        }
-        None
-    }
-
-    #[allow(dead_code)]
-    pub fn resolve_format(&self, name: &str) -> Option<&FormatSpec> {
-        self.modules.iter().find_map(|p| {
-            p.manifest.provides.format.as_ref()
-                .filter(|f| f.name == name)
-        })
-    }
-
     /// Collect all element preparers from active modules.
     pub fn resolve_transform_element(&self, active: &[String]) -> Vec<&dyn TransformElement> {
         let mut result = Vec::new();
@@ -287,8 +215,6 @@ impl ModuleRegistry {
         result
     }
 
-    #[allow(dead_code)]
-    pub fn modules(&self) -> &[LoadedModule] { &self.modules }
 }
 
 // ---------------------------------------------------------------------------

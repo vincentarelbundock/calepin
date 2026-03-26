@@ -38,8 +38,6 @@ pub struct FormatPipeline {
     pub page_template: Option<String>,
     pub crossref: String,
     pub writer: WriterKind,
-    #[allow(dead_code)]
-    pub embed_resources: bool,
     /// Module names, resolved via the registry at each pipeline stage.
     module_names: Vec<String>,
     /// The target name (e.g., "revealjs", "html"), used for template resolution.
@@ -81,7 +79,6 @@ impl FormatPipeline {
             page_template: target.template.clone(),
             crossref,
             writer,
-            embed_resources: target.embed_resources.unwrap_or(true),
             module_names: target.modules.clone(),
             target_name: target_name.to_string(),
             toc_headings,
@@ -98,12 +95,6 @@ impl FormatPipeline {
     pub fn engine(&self) -> &str { &self.engine }
     pub fn extension(&self) -> &str { &self.extension }
     pub fn default_fig_ext(&self) -> &str { &self.fig_extension }
-
-    /// Whether a given body transform is active in this pipeline.
-    #[allow(dead_code)]
-    pub fn has_transform(&self, name: &str) -> bool {
-        self.module_names.iter().any(|n| n == name)
-    }
 
     /// Render a list of elements into the final document body.
     pub fn render(&self, elements: &[Element], renderer: &ElementRenderer) -> Result<String> {

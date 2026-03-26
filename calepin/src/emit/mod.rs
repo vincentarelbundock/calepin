@@ -60,9 +60,6 @@ pub struct TocEntry {
     pub id: String,
     /// Plain text content (no formatting markup).
     pub text: String,
-    /// Section number string (e.g. "1.2.3"), if numbering is enabled.
-    #[allow(dead_code)]
-    pub number: Option<String>,
     pub classes: Vec<String>,
 }
 
@@ -671,7 +668,6 @@ fn emit_leaving(
                         level,
                         id: attrs.id.clone(),
                         text: RE_HEADING_ATTR.replace(&s.heading_raw_text, "").trim().to_string(),
-                        number: section_number.clone(),
                         classes: attrs.classes.clone(),
                     });
                 }
