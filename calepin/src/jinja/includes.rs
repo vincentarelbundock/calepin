@@ -1,7 +1,10 @@
-//! Pre-parse `{% include "file" %}` and `{{ snip.name }}` expansion.
+//! Pre-parse `{% include "file" %}` expansion.
 //!
 //! Runs before block parsing so that included content gets parsed as blocks
 //! (code chunks, divs, etc.) rather than inline text.
+//!
+//! When an include path has no file extension, format-aware resolution is used
+//! (target-specific -> engine-specific -> common), looking in `_calepin/partials/`.
 
 use std::sync::LazyLock;
 use regex::Regex;
@@ -32,30 +35,29 @@ pub fn expand_includes(text: &str, project_root: &std::path::Path, format: &str)
         format!("\u{FDD2}RAW{}\u{FDD3}", idx)
     }).to_string();
 
-    // Expand includes (resolve relative to project root)
+    // Expand includes (resolve relative to project root).
+    // When the path has no extension, use format-aware resolution via
+    // `resolve_include()` (target -> engine -> common under `_calepin/partials/`).
     let text = INCLUDE_RE.replace_all(&text, |caps: &regex::Captures| {
         let path = caps[1].trim();
-        let resolved = project_root.join(path);
-        include_file(&resolved.to_string_lossy())
-    }).to_string();
-
-    // Expand {{ snip.name }} references (pre-parse, so div syntax works)
-    static SNIP_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"\{\{\s*snip\.(\w+)\s*\}\}").unwrap()
-    });
-    let text = SNIP_RE.replace_all(&text, |caps: &regex::Captures| {
-        let name = &caps[1];
-        match crate::paths::resolve_snippet(name, format) {
-            Some(path) => match std::fs::read_to_string(&path) {
-                Ok(content) => content,
-                Err(e) => {
-                    cwarn!("snippet '{}': {}", name, e);
+        if std::path::Path::new(path).extension().is_some() {
+            // Explicit extension: resolve relative to project root
+            let resolved = project_root.join(path);
+            include_file(&resolved.to_string_lossy())
+        } else {
+            // No extension: format-aware resolution
+            match crate::paths::resolve_include(path, format) {
+                Some(resolved) => match std::fs::read_to_string(&resolved) {
+                    Ok(content) => content,
+                    Err(e) => {
+                        cwarn!("include '{}': {}", path, e);
+                        String::new()
+                    }
+                },
+                None => {
+                    cwarn!("include '{}' not found", path);
                     String::new()
                 }
-            },
-            None => {
-                cwarn!("snippet '{}' not found", name);
-                String::new()
             }
         }
     }).to_string();

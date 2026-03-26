@@ -12,7 +12,7 @@ toc: true
 </div>
 ```
 
-{{ snip.source_tip }}
+{% include "source_tip" %}
 
 What is a *calepin*? In French, it's a small pocket notebook -- the kind you carry around to jot down ideas. *Calepin* is a fast rendering engine for Quarto-compatible notebooks, written in Rust.
 

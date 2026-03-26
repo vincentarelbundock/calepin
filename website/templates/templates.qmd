@@ -51,7 +51,7 @@ The `.qmd` body is processed as a Jinja template. Code blocks and inline code ar
 | {% raw %}`{{ env.HOME }}`{% endraw %} | System environment variables |
 | {% raw %}`{{ engine }}`{% endraw %} | Rendering engine: `html`, `latex`, `typst`, `markdown` |
 | {% raw %}`{{ target }}`{% endraw %} | Target name (defaults to engine name) |
-| {% raw %}`{{ snip.name }}`{% endraw %} | Snippet from `snippets/` directory |
+| {% raw %}`{% include "name" %}`{% endraw %} | Reusable content from `_calepin/partials/` |
 
 Built-in functions: `pagebreak()`, `video()`, `brand()`, `kbd()`, `lipsum()`, `placeholder()`. Plugins can register additional functions via the shortcode capability.
 

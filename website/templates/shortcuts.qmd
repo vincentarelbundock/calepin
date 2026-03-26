@@ -73,11 +73,11 @@ The current rendering engine is available as {% raw %}`{{ engine }}`{% endraw %}
 
 ## snip
 
-Insert reusable snippets from the `snippets/` directory by name:
+Insert reusable content from `_calepin/partials/` by name (no extension triggers format-aware resolution):
 
-{% raw %}`{{ snip.source_tip }}`{% endraw %}
+{% raw %}`{% include "source_tip" %}`{% endraw %}
 
-See [Snippets](snippets.html) for the full reference, including resolution order and examples.
+See [Includes](snippets.html) for the full reference, including resolution order and examples.
 
 
 # Conditionals and loops

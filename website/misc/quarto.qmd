@@ -66,15 +66,13 @@ In *Calepin*, the label must be in the header. Using `#| label:` in a pipe comme
 Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses a project-level directory structure:
 
 ```
-templates/
-  common/         # format-agnostic templates (.jinja)
-  html/           # HTML-specific templates
-  latex/          # LaTeX-specific templates
-  typst/          # Typst-specific templates
-snippets/
-  common/         # format-agnostic snippets (.jinja)
 _calepin/
-  plugins/        # plugin directories (filters, custom functions, etc.)
+  partials/
+    common/       # format-agnostic partials (.jinja)
+    html/         # HTML-specific partials
+    latex/        # LaTeX-specific partials
+    typst/        # Typst-specific partials
+  modules/        # module directories (filters, custom functions, etc.)
 ```
 
 The legacy `_calepin/elements/` and `_calepin/templates/` paths are still supported as fallbacks.

@@ -39,7 +39,7 @@ calepin tutorial.qmd
 
 Here is a paragraph about Montreal that illustrates all of these features.
 
-{{ snip.source_tip }}
+{% include "source_tip" %}
 
 ---
 

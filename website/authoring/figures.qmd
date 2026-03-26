@@ -79,7 +79,7 @@ The `fig-width` and `fig-height` options still exist for full manual control, bu
 
 Figures can be arranged in grids using `layout-ncol`. The following example places three plots side by side with individual subcaptions and an overall caption.
 
-{{ snip.source_tip }}
+{% include "source_tip" %}
 
 ::: {#fig-panels layout-ncol=3 fig-cap="Three growth patterns compared."}
 ```{r, line}

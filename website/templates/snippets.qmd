@@ -1,52 +1,59 @@
 ---
-title: Snippets
+title: Includes
 ---
 
-Snippets are reusable text fragments that you can insert into any document. They are useful when you find yourself copying the same block of content --- a callout, a disclaimer, a standard methods section --- across multiple pages. Instead of duplicating the text, write it once as a snippet file and reference it by name.
+Includes let you insert reusable content into any document. They are useful when you find yourself copying the same block of content -- a callout, a disclaimer, a standard methods section -- across multiple pages. Instead of duplicating the text, write it once and reference it by name.
 
 
 # Syntax
 
-Insert a snippet with {% raw %}`{{ snip.name }}`{% endraw %}, where `name` matches the file name (without extension):
+Use the standard Jinja `include` tag. When the path has a file extension, it resolves relative to the project root:
 
 {% raw %}
 ```
-{{ snip.source_tip }}
+{% include "path/to/file.qmd" %}
 ```
 {% endraw %}
 
-Use underscores in snippet names, since Jinja dot-access does not allow dashes.
+When the path has **no extension**, *Calepin* uses format-aware resolution under `_calepin/partials/`:
+
+{% raw %}
+```
+{% include "source_tip" %}
+```
+{% endraw %}
 
 
-# Where to store snippets
+# Where to store reusable content
 
-Snippet files live in a `snippets/` directory at the project root, organized into subdirectories by format:
+For format-aware includes (no extension), files live in `_calepin/partials/`, organized by format:
 
 ```
-snippets/
-  common/          # format-agnostic (.jinja extension)
-  html/            # HTML-specific (.html extension)
-  latex/           # LaTeX-specific (.tex extension)
-  typst/           # Typst-specific (.typ extension)
+_calepin/
+  partials/
+    common/          # format-agnostic (.jinja extension)
+    html/            # HTML-specific (.html extension)
+    latex/           # LaTeX-specific (.tex extension)
+    typst/           # Typst-specific (.typ extension)
 ```
 
 
 # Resolution order
 
-When *Calepin* encounters {% raw %}`{{ snip.source_tip }}`{% endraw %}, it looks for a file in this order (first match wins):
+When *Calepin* encounters {% raw %}`{% include "source_tip" %}`{% endraw %} (no extension), it looks for a file in this order (first match wins):
 
-1. **Target-specific** --- `snippets/{target}/source_tip.{ext}` (e.g., `snippets/website/source_tip.html` when rendering the `website` target)
-2. **Base-specific** --- `snippets/{base}/source_tip.{ext}` (e.g., `snippets/html/source_tip.html`)
-3. **Format-agnostic** --- `snippets/common/source_tip.jinja`
+1. **Target-specific** -- `_calepin/partials/{target}/source_tip.{ext}` (e.g., `_calepin/partials/website/source_tip.html` when rendering the `website` target)
+2. **Engine-specific** -- `_calepin/partials/{engine}/source_tip.{ext}` (e.g., `_calepin/partials/html/source_tip.html`)
+3. **Format-agnostic** -- `_calepin/partials/common/source_tip.jinja`
 
-Most snippets only need a single file in `common/`. Use the format-specific directories when the content must differ between output formats --- for example, when it contains raw HTML or LaTeX.
+Most reusable content only needs a single file in `common/`. Use the format-specific directories when the content must differ between output formats -- for example, when it contains raw HTML or LaTeX.
 
 
 # Examples
 
 ## A reusable callout
 
-File `snippets/common/source_tip.jinja`:
+File `_calepin/partials/common/source_tip.jinja`:
 
 {% raw %}
 ````
@@ -66,15 +73,15 @@ Then in any document:
 
 {% raw %}
 ```
-{{ snip.source_tip }}
+{% include "source_tip" %}
 ```
 {% endraw %}
 
 ## A standard disclaimer with metadata
 
-Snippets go through normal Jinja processing after expansion, so they can reference front matter fields and variables:
+Included content goes through normal Jinja processing after expansion, so it can reference front matter fields and variables:
 
-File `snippets/common/draft_notice.jinja`:
+File `_calepin/partials/common/draft_notice.jinja`:
 
 {% raw %}
 ````
@@ -88,18 +95,18 @@ This is a draft of *{{ meta.title }}*. Do not cite or circulate.
 
 ## Format-specific content
 
-When the same snippet needs fundamentally different markup per format, use the format-specific directories. For example, to embed a custom HTML widget in HTML output and a static image in LaTeX:
+When the same include needs fundamentally different markup per format, use the format-specific directories. For example, to embed a custom HTML widget in HTML output and a static image in LaTeX:
 
-File `snippets/html/widget.html`:
+File `_calepin/partials/html/widget.html`:
 
 ```html
-<div id="interactive-widget">…</div>
+<div id="interactive-widget">...</div>
 ```
 
-File `snippets/latex/widget.tex`:
+File `_calepin/partials/latex/widget.tex`:
 
 ```latex
 \includegraphics[width=\textwidth]{fig/widget-static.pdf}
 ```
 
-Both are accessed with the same call: {% raw %}`{{ snip.widget }}`{% endraw %}.
+Both are accessed with the same call: {% raw %}`{% include "widget" %}`{% endraw %}.

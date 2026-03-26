@@ -154,7 +154,7 @@ pub fn assets_dir(project_root: &Path) -> PathBuf {
 }
 
 // ---------------------------------------------------------------------------
-// Template, snippet, and plugin resolution
+// Template, partial, and plugin resolution
 // ---------------------------------------------------------------------------
 
 /// Map a base name to its file extension for template/component lookup.
@@ -201,38 +201,17 @@ pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
     None
 }
 
-/// Resolve a snippet file under `_calepin/snippets/`.
+/// Resolve an extensionless `{% include "name" %}` under `_calepin/partials/`.
 ///
 /// Lookup order (first match wins):
-///   1. `_calepin/snippets/{target}/{name}.{ext}` (target-specific)
-///   2. `_calepin/snippets/{base}/{name}.{ext}` (base-specific, when target != base)
-///   3. `_calepin/snippets/common/{name}.jinja` (format-agnostic)
-pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
-    let ext = engine_to_ext(base);
-    let specific = format!("{}.{}", name, ext);
-    let generic = format!("{}.jinja", name);
-
-    let root = get_project_root();
-    let snip = calepin_dir(&root, &["snippets"]); // no dedicated helper -- snippets are rare
-    let active_target = get_active_target();
-
-    // 1. User target-specific
-    if let Some(ref target) = active_target {
-        if target != base {
-            let p = snip.join(target).join(&specific);
-            if p.exists() { return Some(p); }
-        }
-    }
-
-    // 2. User engine-specific
-    let p = snip.join(base).join(&specific);
-    if p.exists() { return Some(p); }
-
-    // 3. User format-agnostic
-    let p = snip.join("common").join(&generic);
-    if p.exists() { return Some(p); }
-
-    None
+///   1. `_calepin/partials/{target}/{name}.{ext}` (target-specific)
+///   2. `_calepin/partials/{base}/{name}.{ext}` (base-specific, when target != base)
+///   3. `_calepin/partials/common/{name}.jinja` (format-agnostic)
+///
+/// This is the same cascade as `resolve_partial()`, reused here so that
+/// `{% include "name" %}` (no extension) gets format-aware resolution.
+pub fn resolve_include(name: &str, base: &str) -> Option<PathBuf> {
+    resolve_partial(name, base)
 }
 
 /// Resolve a module directory by name.

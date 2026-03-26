@@ -6,7 +6,7 @@ title: Math
 
 # Inline and display math
 
-{{ snip.source_tip }}
+{% include "source_tip" %}
 
 Inline math is enclosed in single dollar signs: $a^2 + b^2 = c^2$.
 
