@@ -1,9 +1,13 @@
 {%- set env = fig_env | default("figure") -%}
+{%- set loc = cap_location | default("bottom") -%}
 \begin{{_lb}}{{env}}{{_rb}}{{fig_pos}}
 {{align_style}}
+{%- if loc == "top" and caption %}
+\caption{{short_caption}}{{_lb}}{{caption}}{{_rb}}
+{%- endif %}
 {{children}}
-{%- if caption %}
-\caption{{_lb}}{{caption}}{{_rb}}
+{%- if loc != "top" and caption %}
+\caption{{short_caption}}{{_lb}}{{caption}}{{_rb}}
 {%- endif %}
 \label{{_lb}}{{label}}{{_rb}}
 \end{{_lb}}{{env}}{{_rb}}

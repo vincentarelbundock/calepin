@@ -1,8 +1,8 @@
-{%- set env = fig_env | default("figure") -%}
+{%- set loc = cap_location | default("bottom") -%}
 {%- if caption %}
-#figure([
+#figure(placement: auto, caption: [{{caption}}]{% if loc == "top" %}, caption-pos: top{% endif %})[
 {{children}}
-], caption: [{{caption}}]) <{{label}}>
+] <{{label}}>
 {%- else %}
 {{children}} <{{label}}>
 {%- endif %}

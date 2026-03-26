@@ -155,19 +155,10 @@ fn build_div_vars(
         vars.insert("label".to_string(), id_val.clone());
         vars.entry("template".to_string()).or_insert_with(|| "figure_div".to_string());
 
-        let default_align = defaults.figure.as_ref()
-            .and_then(|f| f.alignment.as_deref()).unwrap_or("center");
-        let align = vars.get("fig_align").cloned().unwrap_or_else(|| default_align.to_string());
-        let align_style = crate::render::filter::figure::format_align(&align, format);
-        vars.insert("align".to_string(), align);
-        vars.insert("align_style".to_string(), align_style);
-
-        if let Some(pos) = vars.get("fig_pos").cloned() {
-            vars.insert("fig_pos".to_string(), format!("[{}]", pos));
-        }
-        if !vars.contains_key("fig_env") {
-            vars.insert("fig_env".to_string(), "figure".to_string());
-        }
+        let fig_attrs = crate::render::filter::figure::figure_attrs_from_div(attrs);
+        crate::render::filter::figure::build_figure_wrapper_vars(
+            vars, &fig_attrs, format, None, defaults,
+        );
     }
 
     // Table div enrichments

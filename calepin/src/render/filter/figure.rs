@@ -81,8 +81,19 @@ fn build_figure_vars(
     vars.insert("width_attr".to_string(), format_width(attrs, format));
     vars.insert("height_attr".to_string(), format_height(attrs));
 
-    let defs = defaults;
-    let default_align = defs.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
+    build_figure_wrapper_vars(vars, attrs, format, default_cap_location, defaults);
+}
+
+/// Populate figure-wrapper template vars shared by both `Element::Figure` and
+/// figure divs: alignment, fig_env, fig_pos, short_caption, cap_location, link.
+pub fn build_figure_wrapper_vars(
+    vars: &mut HashMap<String, String>,
+    attrs: &crate::types::FigureAttrs,
+    format: &str,
+    default_cap_location: Option<&str>,
+    defaults: &crate::config::Metadata,
+) {
+    let default_align = defaults.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
     let align = attrs.fig_align.as_deref().unwrap_or(default_align);
     vars.insert("align_style".to_string(), format_align(align, format));
     vars.insert("align".to_string(), align.to_string());
@@ -98,7 +109,7 @@ fn build_figure_vars(
         Some(sc) => format!("[{}]", sc),
         None => String::new(),
     };
-    vars.insert("short_caption".to_string(), short_caption.clone());
+    vars.insert("short_caption".to_string(), short_caption);
 
     if let Some(loc) = attrs.cap_location.as_deref().or(default_cap_location) {
         vars.insert("cap_location".to_string(), loc.to_string());
@@ -106,6 +117,20 @@ fn build_figure_vars(
 
     if let Some(ref link) = attrs.link {
         vars.insert("link".to_string(), link.clone());
+    }
+}
+
+/// Build a `FigureAttrs` from div attribute key-value pairs.
+pub fn figure_attrs_from_div(attrs: &HashMap<String, String>) -> crate::types::FigureAttrs {
+    crate::types::FigureAttrs {
+        width: attrs.get("fig_width").cloned(),
+        height: attrs.get("fig_height").cloned(),
+        fig_align: attrs.get("fig_align").cloned(),
+        fig_scap: attrs.get("fig_scap").cloned(),
+        fig_env: attrs.get("fig_env").cloned(),
+        fig_pos: attrs.get("fig_pos").cloned(),
+        cap_location: attrs.get("fig_cap_location").or_else(|| attrs.get("cap_location")).cloned(),
+        link: attrs.get("fig_link").or_else(|| attrs.get("link")).cloned(),
     }
 }
 
