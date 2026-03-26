@@ -2,10 +2,14 @@
 
 use std::path::Path;
 
+/// Default date display format (strftime-style).
+pub const DEFAULT_DATE_FORMAT: &str = "%B %e, %Y";
+
 /// Resolve date keywords in a metadata date string.
 /// `today`/`now` -> current date, `last-modified` -> file mtime.
-/// Returns the resolved date string, or None if the input is not a keyword.
-pub(crate) fn resolve_date(date: &str, date_format: Option<&str>, input_path: Option<&Path>) -> Option<String> {
+/// Always returns YYYY-MM-DD. Display formatting is handled separately by
+/// `format_date_display()`.
+pub(crate) fn resolve_date(date: &str, input_path: Option<&Path>) -> Option<String> {
     let date = date.trim();
     let secs = match date {
         "today" | "now" => {
@@ -24,10 +28,14 @@ pub(crate) fn resolve_date(date: &str, date_format: Option<&str>, input_path: Op
         }
         _ => return None,
     };
-    Some(match date_format {
-        Some(fmt) => format_date(secs, fmt),
-        None => epoch_days_to_date(secs / 86400),
-    })
+    Some(epoch_days_to_date(secs / 86400))
+}
+
+/// Format a YYYY-MM-DD date string for display using `date_format` if provided,
+/// otherwise the default `"%B %e, %Y"`.
+pub fn format_date_display(date: &str, date_format: Option<&str>) -> String {
+    let fmt = date_format.unwrap_or(DEFAULT_DATE_FORMAT);
+    format_date_str(date, fmt)
 }
 
 /// Convert days since Unix epoch to YYYY-MM-DD string.
@@ -80,17 +88,6 @@ pub fn format_date_str(date: &str, fmt: &str) -> String {
     format_ymd(y, m, d, fmt)
 }
 
-pub(crate) fn format_date(secs: u64, fmt: &str) -> String {
-    let days = secs / 86400;
-    let ymd = epoch_days_to_date(days);
-    let parts: Vec<&str> = ymd.split('-').collect();
-    let (y, m, d) = (
-        parts[0].parse::<i64>().unwrap_or(1970),
-        parts[1].parse::<usize>().unwrap_or(1),
-        parts[2].parse::<usize>().unwrap_or(1),
-    );
-    format_ymd(y, m, d, fmt)
-}
 
 fn format_ymd(y: i64, m: usize, d: usize, fmt: &str) -> String {
     static MONTHS: [&str; 12] = [

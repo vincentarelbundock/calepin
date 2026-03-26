@@ -334,7 +334,7 @@ pub fn build_template_vars_with_headings(
             },
         );
     }
-    vars.insert("date".to_string(), meta.date.clone().unwrap_or_default());
+    vars.insert("date".to_string(), meta.formatted_date().unwrap_or_default());
 
 
     // Subtitle (already available as {{subtitle}} via vars set above)

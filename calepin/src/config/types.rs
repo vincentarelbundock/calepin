@@ -282,13 +282,21 @@ impl Metadata {
             .map(|l| l.abbreviation.as_str())
     }
 
-    /// Resolve date keywords (`today`, `now`, `last-modified`) to actual dates.
+    /// Resolve date keywords (`today`, `now`, `last-modified`) to YYYY-MM-DD.
     pub fn resolve_date(&mut self, input_path: Option<&std::path::Path>) {
         if let Some(ref date) = self.date {
-            if let Some(resolved) = crate::date::resolve_date(date, self.date_format.as_deref(), input_path) {
+            if let Some(resolved) = crate::date::resolve_date(date, input_path) {
                 self.date = Some(resolved);
             }
         }
+    }
+
+    /// Return the date formatted for display, applying `date_format` if set
+    /// or the default `"%B %e, %Y"`.
+    pub fn formatted_date(&self) -> Option<String> {
+        self.date.as_ref().map(|d| {
+            crate::date::format_date_display(d, self.date_format.as_deref())
+        })
     }
 
     /// Evaluate inline code expressions (`` `{r} expr` ``, `` `{python} expr` ``)

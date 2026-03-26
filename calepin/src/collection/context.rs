@@ -343,12 +343,9 @@ fn resolve_translations(
     result
 }
 
-/// Default date display format (strftime-style).
-const DEFAULT_DATE_FORMAT: &str = "%B %e, %Y";
-
-/// Format a YYYY-MM-DD date string for display.
+/// Format a YYYY-MM-DD date string for display using the default format.
 pub fn format_date(date: &str) -> String {
-    crate::date::format_date_str(date, DEFAULT_DATE_FORMAT)
+    crate::date::format_date_display(date, None)
 }
 
 fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcrumb> {
