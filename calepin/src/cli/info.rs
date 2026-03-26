@@ -45,22 +45,11 @@ pub fn handle_info(action: InfoAction) -> Result<()> {
         }
         InfoAction::Themes => {
             println!("Built-in syntax highlighting themes:\n");
-            if let Some(dir) = Some(&crate::modules::highlight::BUILTIN_THEMES) {
-                let mut names: Vec<&str> = dir.files()
-                    .filter_map(|f| {
-                        if f.path().extension()?.to_str()? == "tmTheme" {
-                            f.path().file_stem()?.to_str()
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-                names.sort();
-                for name in &names {
-                    println!("  {}", name);
-                }
-                println!("\n{} themes available.", names.len());
+            let names = crate::modules::list_builtin_themes();
+            for name in &names {
+                println!("  {}", name);
             }
+            println!("\n{} themes available.", names.len());
             println!("Custom themes: place a .tmTheme file in _calepin/assets/highlighting/");
             Ok(())
         }

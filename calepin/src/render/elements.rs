@@ -8,7 +8,7 @@ use include_dir::{include_dir, Dir};
 use crate::types::Element;
 use crate::render::filter::BuildElementVars;
 use crate::registry::ModuleRegistry;
-use crate::modules::highlight::{Highlighter, HighlightConfig, ColorScope};
+use crate::modules::Highlighter;
 
 // ---------------------------------------------------------------------------
 // Built-in project tree (embedded at compile time)
@@ -87,17 +87,12 @@ pub struct ElementRenderer {
     pub module_ids: std::cell::RefCell<HashMap<String, String>>,
     /// Accumulated walk metadata (headings, IDs) from all Text element renders.
     pub walk_metadata: std::cell::RefCell<crate::emit::WalkMetadata>,
-    /// Running footnote counter across Text elements.
-    footnote_counter: std::cell::Cell<usize>,
+    /// Footnote state: counter, accumulated defs, cross-block defs.
+    pub footnotes: crate::modules::FootnoteState,
     /// Section counters chained across Text elements.
     section_counters: std::cell::Cell<Option<[usize; 6]>>,
     /// Minimum heading level chained across Text elements.
     min_heading_level: std::cell::Cell<Option<usize>>,
-    /// Accumulated footnote defs from all Text elements (for combined section at end).
-    accumulated_footnote_defs: std::cell::RefCell<Vec<(usize, String)>>,
-    /// Footnote definitions collected from all Text elements (for cross-block resolution).
-    /// Each entry is the full `[^name]: content` line(s).
-    global_footnote_defs: std::cell::RefCell<String>,
     /// Cache for resolved element templates (avoids repeated filesystem lookups).
     partial_cache: std::cell::RefCell<HashMap<String, Option<String>>>,
     /// Whether any code blocks were rendered (gates syntax CSS generation).
@@ -107,7 +102,7 @@ pub struct ElementRenderer {
 }
 
 impl ElementRenderer {
-    pub fn new(ext: &str, highlight_config: HighlightConfig) -> Self {
+    pub fn new(ext: &str, highlighter: Highlighter) -> Self {
         // Pre-compile all known element templates into a single minijinja
         // environment. This pays the parse cost once; each subsequent
         // render() call just executes the compiled template.
@@ -126,7 +121,7 @@ impl ElementRenderer {
         Self {
             ext: ext.to_string(),
             template_env,
-            highlighter: Highlighter::new(highlight_config),
+            highlighter,
             registry: Rc::new(ModuleRegistry::empty()),
             raw_fragments: std::cell::RefCell::new(Vec::new()),
             preamble: Vec::new(),
@@ -138,11 +133,9 @@ impl ElementRenderer {
             chapter_number: None,
             module_ids: std::cell::RefCell::new(HashMap::new()),
             walk_metadata: std::cell::RefCell::new(crate::emit::WalkMetadata::default()),
-            footnote_counter: std::cell::Cell::new(0),
+            footnotes: crate::modules::FootnoteState::new(),
             section_counters: std::cell::Cell::new(None),
             min_heading_level: std::cell::Cell::new(None),
-            accumulated_footnote_defs: std::cell::RefCell::new(Vec::new()),
-            global_footnote_defs: std::cell::RefCell::new(String::new()),
             partial_cache: std::cell::RefCell::new(HashMap::new()),
             has_code: std::cell::Cell::new(false),
             target: None,
@@ -155,21 +148,7 @@ impl ElementRenderer {
         metadata: &crate::config::Metadata,
         options: &crate::pipeline::RenderCoreOptions,
     ) -> Self {
-        let hl = metadata.highlight.as_ref();
-        let builtin_hl = crate::config::builtin_metadata().highlight.as_ref();
-        let highlight_config = metadata.var.get("highlight-style")
-            .map(|v| crate::modules::highlight::parse_highlight_config(v))
-            .unwrap_or_else(|| {
-                crate::modules::highlight::HighlightConfig::LightDark {
-                    light: hl.and_then(|h| h.light.clone())
-                        .or_else(|| builtin_hl.and_then(|h| h.light.clone()))
-                        .unwrap_or_else(|| "github".to_string()),
-                    dark: hl.and_then(|h| h.dark.clone())
-                        .or_else(|| builtin_hl.and_then(|h| h.dark.clone()))
-                        .unwrap_or_else(|| "nord".to_string()),
-                }
-            });
-        let mut er = Self::new(engine, highlight_config);
+        let mut er = Self::new(engine, Highlighter::from_metadata(metadata));
         er.metadata = metadata.clone();
         er.number_sections = metadata.number_sections;
         er.convert_math = metadata.convert_math;
@@ -205,16 +184,6 @@ impl ElementRenderer {
         &self.preamble
     }
 
-    /// Render the combined footnote section from all accumulated Text elements.
-    /// Returns empty string if no footnotes or if format is not HTML.
-    pub fn render_footnote_section(&self) -> String {
-        let defs = self.accumulated_footnote_defs.borrow();
-        if defs.is_empty() || self.ext != "html" {
-            return String::new();
-        }
-        crate::emit::html::render_footnote_section(&defs)
-    }
-
     #[inline(never)]
     pub fn render(&self, element: &Element) -> String {
         match element {
@@ -229,16 +198,8 @@ impl ElementRenderer {
     /// conversion, metadata accumulation.
     fn render_text(&self, content: &str) -> String {
         let processed = self.render_bracketed_spans(content);
-        // Append global footnote definitions if this text has footnote refs
-        // so comrak can resolve them within a single parse.
-        let processed = {
-            let defs = self.global_footnote_defs.borrow();
-            if !defs.is_empty() && processed.contains("[^") {
-                format!("{}{}", processed, defs)
-            } else {
-                processed
-            }
-        };
+        // Inject cross-block footnote definitions so comrak can resolve them
+        let processed = self.footnotes.inject_defs(&processed);
         let fragments = self.raw_fragments.borrow();
         let config = crate::registry::EmitterConfig {
             embed_resources: self.metadata.embed_resources.unwrap_or(true),
@@ -249,7 +210,7 @@ impl ElementRenderer {
         let options = crate::emit::WalkOptions {
             number_sections: self.number_sections,
             shift_headings: self.shift_headings,
-            footnote_counter_start: self.footnote_counter.get(),
+            footnote_counter_start: self.footnotes.counter(),
             section_counters_start: self.section_counters.get(),
             min_heading_level: self.min_heading_level.get(),
             suppress_footnote_section: true,
@@ -257,13 +218,13 @@ impl ElementRenderer {
         let result = crate::emit::walk_and_render_with_metadata(
             emitter.as_ref(), &processed, &fragments, &options,
         );
-        self.footnote_counter.set(result.metadata.footnote_counter_end);
+        self.footnotes.set_counter(result.metadata.footnote_counter_end);
         // Typst math conversion post-pass
         let output = if self.ext == "typst" {
             if self.convert_math {
-                crate::emit::convert_math::convert_math_for_typst(&result.output)
+                crate::modules::convert_math_for_typst(&result.output)
             } else {
-                crate::emit::convert_math::strip_math_for_typst(&result.output)
+                crate::modules::strip_math_for_typst(&result.output)
             }
         } else {
             result.output
@@ -278,14 +239,7 @@ impl ElementRenderer {
             self.section_counters.set(Some(result.metadata.section_counters_end));
             self.min_heading_level.set(Some(result.metadata.min_heading_level));
         }
-        if !result.metadata.footnote_defs.is_empty() {
-            let mut acc = self.accumulated_footnote_defs.borrow_mut();
-            for def in result.metadata.footnote_defs {
-                if !acc.iter().any(|(id, _)| *id == def.0) {
-                    acc.push(def);
-                }
-            }
-        }
+        self.footnotes.accumulate(result.metadata.footnote_defs);
         output
     }
 
@@ -321,27 +275,11 @@ impl ElementRenderer {
         // Wrap code source in a listing div when the label has a lst- prefix
         if let Element::CodeSource { label, lst_cap, .. } = element {
             if label.starts_with("lst-") {
-                // Track listing ID for cross-references
-                let ids = self.module_ids.borrow();
-                let count = ids.keys().filter(|k| k.starts_with("lst-")).count();
-                drop(ids);
-                let num = count + 1;
-                self.module_ids.borrow_mut().insert(label.clone(), num.to_string());
-
-                let label_defs = self.metadata.labels.clone();
-                let mut listing_vars = HashMap::new();
-                listing_vars.insert("base".to_string(), self.ext.clone());
-                listing_vars.insert("engine".to_string(), self.ext.clone());
-                listing_vars.insert("label".to_string(), label.clone());
-                listing_vars.insert("number".to_string(), num.to_string());
-                listing_vars.insert("content".to_string(), rendered);
-                listing_vars.insert("label_listing".to_string(), label_defs.as_ref().and_then(|l| l.listing.clone()).unwrap_or_else(|| "Listing".to_string()));
-                if let Some(cap) = lst_cap {
-                    listing_vars.insert("lst_cap".to_string(), cap.clone());
-                }
-                let tpl = self.resolve_element_partial("code_listing")
-                    .unwrap_or_else(|| crate::render::elements::resolve_builtin_partial("code_listing", &self.ext).unwrap_or("").to_string());
-                return self.template_env.render_dynamic("code_listing", &tpl, &listing_vars);
+                return crate::modules::wrap_listing(
+                    label, lst_cap.as_deref(), &rendered, &self.ext,
+                    &self.module_ids, &self.metadata, &self.template_env,
+                    &|name| self.resolve_element_partial(name),
+                );
             }
         }
 
@@ -364,13 +302,10 @@ impl ElementRenderer {
 
         // Run element through pipeline filters
         let code_filter = crate::render::filter::code::BuildCodeVars::new(&self.highlighter);
-        let fig_formats = self.target.as_ref()
-            .map(|t| t.fig_formats.clone())
-            .filter(|f| !f.is_empty())
-            .unwrap_or_else(|| crate::modules::figure::default_fig_formats(&self.ext));
-        let figure_filter = crate::modules::figure::BuildFigureVars::new(
+        let figure_filter = crate::modules::BuildFigureVars::new(
+            &self.ext,
+            self.target.as_ref(),
             self.default_fig_cap_location.clone(),
-            fig_formats,
         );
 
         for builder in [&code_filter as &dyn BuildElementVars, &figure_filter as &dyn BuildElementVars] {
@@ -400,9 +335,9 @@ impl ElementRenderer {
         self.module_ids.borrow().clone()
     }
 
-    pub fn syntax_css_with_scope(&self, scope: ColorScope) -> String {
+    pub fn syntax_css(&self) -> String {
         if self.ext != "html" || !self.has_code.get() { return String::new(); }
-        self.highlighter.syntax_css_with_scope(scope)
+        self.highlighter.syntax_css()
     }
 
     pub fn latex_color_definitions(&self) -> String {
@@ -415,34 +350,6 @@ impl ElementRenderer {
         self.walk_metadata.borrow().clone()
     }
 
-    /// Pre-scan all Text elements for footnote definitions (`[^name]: ...`).
-    /// These are collected so they can be appended to Text elements that contain
-    /// footnote references (`[^name]`), enabling cross-block footnote resolution.
-    pub fn collect_footnote_defs(&self, elements: &[Element]) {
-        let mut defs = String::new();
-        Self::collect_footnote_defs_recursive(elements, &mut defs);
-        *self.global_footnote_defs.borrow_mut() = defs;
-    }
-
-    fn collect_footnote_defs_recursive(elements: &[Element], defs: &mut String) {
-        use regex::Regex;
-        use std::sync::LazyLock;
-        static RE_FN_DEF: LazyLock<Regex> = LazyLock::new(|| {
-            Regex::new(r"(?m)^\[\^[^\]]+\]:.*(?:\n(?:    |\t).*)*").unwrap()
-        });
-
-        for el in elements {
-            if let Element::Text { content } = el {
-                for m in RE_FN_DEF.find_iter(content) {
-                    defs.push_str("\n\n");
-                    defs.push_str(m.as_str());
-                }
-            }
-            if let Element::Div { children, .. } = el {
-                Self::collect_footnote_defs_recursive(children, defs);
-            }
-        }
-    }
 }
 
 /// Resolve an element template: project → user → built-in.

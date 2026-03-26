@@ -345,7 +345,7 @@ mod tests {
         // The ElementRenderer should collect defs and inject them so comrak resolves both.
         use crate::render::elements::ElementRenderer;
         use crate::types::Element;
-        use crate::modules::highlight::HighlightConfig;
+        use crate::modules::Highlighter;
 
         let elements = vec![
             Element::Text { content: "See note[^abc].".to_string() },
@@ -353,8 +353,8 @@ mod tests {
         ];
 
         for fmt in ["html", "latex", "typst"] {
-            let renderer = ElementRenderer::new(fmt, HighlightConfig::None);
-            renderer.collect_footnote_defs(&elements);
+            let renderer = ElementRenderer::new(fmt, Highlighter::disabled());
+            renderer.footnotes.collect_defs(&elements);
             let parts: Vec<String> = elements.iter()
                 .map(|el| renderer.render(el))
                 .filter(|s| !s.is_empty())

@@ -4,7 +4,6 @@
 //! For LaTeX: injects \definecolor commands before \begin{document}.
 
 use crate::modules::transform_document::TransformDocument;
-use crate::modules::highlight::ColorScope;
 use crate::render::elements::ElementRenderer;
 
 pub struct InjectHighlightMarkup;
@@ -13,7 +12,7 @@ impl TransformDocument for InjectHighlightMarkup {
     fn transform(&self, document: &str, engine: &str, renderer: &ElementRenderer) -> String {
         match engine {
             "html" => {
-                let css = renderer.syntax_css_with_scope(ColorScope::Both);
+                let css = renderer.syntax_css();
                 if css.is_empty() {
                     return document.to_string();
                 }

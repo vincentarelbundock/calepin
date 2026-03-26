@@ -7,7 +7,42 @@
 #   "element"          -- TransformElement (pre-render element mutation)
 #   "element_children" -- TransformElementChildren (structural div rewriting)
 #   "document"         -- TransformDocument (post-assembly full document)
+#   "span"             -- TransformSpan (span-level rendering)
 #   "noop"             -- No transform logic (partial/template provider only)
+
+# -- Span transforms --
+
+[[modules]]
+name = "pagebreak"
+kind = "span"
+contexts = ["span"]
+
+[modules.match]
+classes = ["pagebreak"]
+
+[[modules]]
+name = "video"
+kind = "span"
+contexts = ["span"]
+
+[modules.match]
+classes = ["video"]
+
+[[modules]]
+name = "placeholder"
+kind = "span"
+contexts = ["span"]
+
+[modules.match]
+classes = ["placeholder"]
+
+[[modules]]
+name = "lorem"
+kind = "span"
+contexts = ["span"]
+
+[modules.match]
+classes = ["lorem"]
 
 # -- Element children transforms (per-div structural rewriting) --
 

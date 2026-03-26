@@ -95,7 +95,7 @@ impl FormatPipeline {
 
     /// Render a list of elements into the final document body.
     pub fn render(&self, elements: &[Element], renderer: &ElementRenderer) -> Result<String> {
-        renderer.collect_footnote_defs(elements);
+        renderer.footnotes.collect_defs(elements);
 
         let body = elements
             .iter()

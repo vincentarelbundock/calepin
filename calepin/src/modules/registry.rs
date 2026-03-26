@@ -92,6 +92,17 @@ pub trait TransformElementChildren: Send + Sync {
     fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult;
 }
 
+/// Span-level transform. Receives attributes and content, returns rendered output.
+pub trait TransformSpan: Send + Sync {
+    fn render(
+        &self,
+        attrs: &HashMap<String, String>,
+        content: &str,
+        format: &str,
+        defaults: &crate::config::Metadata,
+    ) -> Option<String>;
+}
+
 // ---------------------------------------------------------------------------
 // Module kind
 // ---------------------------------------------------------------------------
@@ -111,6 +122,7 @@ pub struct EmitterConfig {
 pub enum ModuleKind {
     Element(Box<dyn TransformElement>),
     ElementChildren(Box<dyn TransformElementChildren>),
+    Span(Box<dyn TransformSpan>),
     Document(Box<dyn TransformDocument>),
     Emitter(EmitterFactory),
     Noop,
@@ -389,6 +401,16 @@ fn resolve_builtin_kind(name: &str, kind_str: &str) -> ModuleKind {
         ("callout", "element_children") => ModuleKind::ElementChildren(
             Box::new(BuiltinElementChildren(builtin_element_children_fn::callout))),
 
+        // Span transforms
+        ("pagebreak", "span") => ModuleKind::Span(
+            Box::new(BuiltinSpan(builtin_span_fn::pagebreak))),
+        ("video", "span") => ModuleKind::Span(
+            Box::new(BuiltinSpan(builtin_span_fn::video))),
+        ("placeholder", "span") => ModuleKind::Span(
+            Box::new(BuiltinSpan(builtin_span_fn::placeholder))),
+        ("lorem", "span") => ModuleKind::Span(
+            Box::new(BuiltinSpan(builtin_span_fn::lorem))),
+
         // Element transforms
         ("convert_svg_pdf", "element") => ModuleKind::Element(
             Box::new(crate::modules::convert_svg_pdf::ConvertSvgPdf)),
@@ -470,6 +492,40 @@ mod builtin_element_children_fn {
             &|el| ctx.render_child(el), ctx.module_ids(),
         );
         ModuleResult::Rendered(output)
+    }
+}
+
+// Generic wrapper for span transforms via function pointer.
+struct BuiltinSpan(fn(&HashMap<String, String>, &str, &str, &crate::config::Metadata) -> Option<String>);
+
+impl TransformSpan for BuiltinSpan {
+    fn render(&self, attrs: &HashMap<String, String>, content: &str, format: &str,
+              defaults: &crate::config::Metadata) -> Option<String> {
+        (self.0)(attrs, content, format, defaults)
+    }
+}
+
+mod builtin_span_fn {
+    use std::collections::HashMap;
+
+    pub fn pagebreak(_attrs: &HashMap<String, String>, _content: &str, format: &str,
+                     _defaults: &crate::config::Metadata) -> Option<String> {
+        Some(crate::modules::pagebreak::render(format))
+    }
+
+    pub fn video(attrs: &HashMap<String, String>, _content: &str, format: &str,
+                 defaults: &crate::config::Metadata) -> Option<String> {
+        Some(crate::modules::video::render(attrs, format, defaults))
+    }
+
+    pub fn placeholder(attrs: &HashMap<String, String>, _content: &str, format: &str,
+                       defaults: &crate::config::Metadata) -> Option<String> {
+        Some(crate::modules::placeholder::render(attrs, format, defaults))
+    }
+
+    pub fn lorem(attrs: &HashMap<String, String>, _content: &str, _format: &str,
+                 defaults: &crate::config::Metadata) -> Option<String> {
+        Some(crate::modules::lorem::render(attrs, defaults))
     }
 }
 

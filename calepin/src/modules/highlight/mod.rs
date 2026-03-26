@@ -97,13 +97,6 @@ pub enum HighlightConfig {
     LightDark { light: String, dark: String },
 }
 
-/// Strategy for scoping light/dark CSS.
-pub enum ColorScope {
-    /// Emit both `@media (prefers-color-scheme)` and `[data-theme]` rules.
-    Both,
-}
-
-
 /// Syntax highlighting engine.
 ///
 /// The SyntaxSet is a process-global singleton (loaded once, shared across
@@ -158,7 +151,34 @@ fn is_syntect_builtin(key: &str) -> bool {
 }
 
 impl Highlighter {
-    pub fn new(config: HighlightConfig) -> Self {
+    /// Create a highlighter from document metadata.
+    /// Reads `highlight-style` from metadata vars and `highlight.light`/`highlight.dark`
+    /// from the highlight config, falling back to built-in defaults.
+    pub fn from_metadata(metadata: &crate::config::Metadata) -> Self {
+        let hl = metadata.highlight.as_ref();
+        let builtin_hl = crate::config::builtin_metadata().highlight.as_ref();
+        let config = metadata.var.get("highlight-style")
+            .map(|v| parse_highlight_config(v))
+            .unwrap_or_else(|| {
+                HighlightConfig::LightDark {
+                    light: hl.and_then(|h| h.light.clone())
+                        .or_else(|| builtin_hl.and_then(|h| h.light.clone()))
+                        .unwrap_or_else(|| "github".to_string()),
+                    dark: hl.and_then(|h| h.dark.clone())
+                        .or_else(|| builtin_hl.and_then(|h| h.dark.clone()))
+                        .unwrap_or_else(|| "nord".to_string()),
+                }
+            });
+        Self::new(config)
+    }
+
+    /// Create a highlighter with no syntax highlighting (for tests or plain output).
+    #[allow(dead_code)]
+    pub fn disabled() -> Self {
+        Self::new(HighlightConfig::None)
+    }
+
+    fn new(config: HighlightConfig) -> Self {
         // Handle custom .tmTheme file path in config — resolve it eagerly so we
         // can report errors early and normalise the config to "_custom".
         let config = if let HighlightConfig::Single(ref key) = config {
@@ -300,9 +320,9 @@ impl Highlighter {
     /// Generate CSS for syntax highlighting (HTML only).
     ///
     /// For a single theme, emits unscoped CSS.
-    /// For light/dark, wraps each theme's CSS in `@media (prefers-color-scheme: ...)`.
-    /// Generate CSS with a specific scoping strategy for light/dark themes.
-    pub fn syntax_css_with_scope(&self, scope: ColorScope) -> String {
+    /// For light/dark, wraps each theme's CSS in both `@media (prefers-color-scheme)`
+    /// and `[data-theme]` selectors.
+    pub fn syntax_css(&self) -> String {
         match &self.config {
             HighlightConfig::None => String::new(),
             HighlightConfig::Single(key) => {
@@ -319,12 +339,10 @@ impl Highlighter {
 
                 let mut css = String::new();
 
-                let scopes: Vec<(&str, &str)> = match scope {
-                    ColorScope::Both => vec![
-                        ("@media (prefers-color-scheme: light)", "@media (prefers-color-scheme: dark)"),
-                        ("[data-theme='light']", "[data-theme='dark']"),
-                    ],
-                };
+                let scopes = [
+                    ("@media (prefers-color-scheme: light)", "@media (prefers-color-scheme: dark)"),
+                    ("[data-theme='light']", "[data-theme='dark']"),
+                ];
 
                 for (light_wrap, dark_wrap) in &scopes {
                     write!(css, "{} {{\n{}", light_wrap, light_css).unwrap();

@@ -121,12 +121,9 @@ fn validate_div_id(id: &str, classes: &[String]) -> Option<String> {
         return None;
     }
 
-    // Check if any class owns this prefix via module prefix functions
+    // Check if any class owns this prefix via module prefix lookup
     for cls in classes {
-        if let Some(p) = crate::modules::theorem::theorem_prefix(cls) {
-            if p == prefix { return None; }
-        }
-        if let Some(p) = crate::modules::callout::callout_prefix(cls) {
+        if let Some(p) = crate::modules::prefix_for_class(cls) {
             if p == prefix { return None; }
         }
     }

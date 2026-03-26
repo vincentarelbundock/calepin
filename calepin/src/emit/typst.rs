@@ -27,9 +27,9 @@ pub fn markdown_to_typst_with_counter(
     let options = WalkOptions { footnote_counter_start, ..WalkOptions::default() };
     let result = walk_and_render_with_metadata(&emitter, markdown, raw_fragments, &options);
     let output = if convert_math {
-        crate::emit::convert_math::convert_math_for_typst(&result.output)
+        crate::modules::convert_math_for_typst(&result.output)
     } else {
-        crate::emit::convert_math::strip_math_for_typst(&result.output)
+        crate::modules::strip_math_for_typst(&result.output)
     };
     (output, result.metadata.footnote_counter_end)
 }
@@ -119,7 +119,7 @@ impl FormatEmitter for TypstEmitter {
     fn link_close(&self, _url: &str) -> String { "]".to_string() }
 
     fn image(&self, url: &str, _alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::modules::figure::select_image_variant(
+        let resolved = crate::modules::select_image_variant(
             std::path::Path::new(url), "typst",
         );
         let params = attrs.to_typst_params();

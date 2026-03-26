@@ -91,13 +91,21 @@ fn render_children(children: &[Element], render_element: &dyn Fn(&Element) -> St
 // ---------------------------------------------------------------------------
 
 pub struct BuildFigureVars {
-    pub default_cap_location: Option<String>,
+    default_cap_location: Option<String>,
     /// Preferred image formats for variant selection, in priority order.
-    pub fig_formats: Vec<String>,
+    fig_formats: Vec<String>,
 }
 
 impl BuildFigureVars {
-    pub fn new(default_cap_location: Option<String>, fig_formats: Vec<String>) -> Self {
+    pub fn new(
+        ext: &str,
+        target: Option<&crate::config::Target>,
+        default_cap_location: Option<String>,
+    ) -> Self {
+        let fig_formats = target
+            .map(|t| t.fig_formats.clone())
+            .filter(|f| !f.is_empty())
+            .unwrap_or_else(|| default_fig_formats(ext));
         Self { default_cap_location, fig_formats }
     }
 }
@@ -295,7 +303,7 @@ pub fn select_image_variant(path: &Path, format: &str) -> PathBuf {
 }
 
 /// Engine-appropriate default image format preferences.
-pub fn default_fig_formats(format: &str) -> Vec<String> {
+fn default_fig_formats(format: &str) -> Vec<String> {
     match format {
         "latex" => vec!["pdf", "eps", "svg", "png", "jpg"],
         "typst" => vec!["svg", "png", "jpg"],

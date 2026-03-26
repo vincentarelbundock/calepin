@@ -36,11 +36,6 @@ pub fn markdown_to_html_ast_with_metadata(
     walk_and_render_with_metadata(&emitter, markdown, raw_fragments, options)
 }
 
-/// Render a combined footnote section from accumulated defs.
-pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
-    HtmlEmitter { embed_resources: false }.footnote_section(defs)
-}
-
 impl FormatEmitter for HtmlEmitter {
     fn format_name(&self) -> &str { "html" }
 
@@ -147,7 +142,7 @@ impl FormatEmitter for HtmlEmitter {
     fn link_close(&self, _url: &str) -> String { "</a>".to_string() }
 
     fn image(&self, url: &str, alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::modules::figure::select_image_variant(
+        let resolved = crate::modules::select_image_variant(
             std::path::Path::new(url), "html",
         );
         let embed = self.embed_resources;
@@ -209,30 +204,7 @@ impl FormatEmitter for HtmlEmitter {
     }
 
     fn footnote_section(&self, defs: &[(usize, String)]) -> String {
-        // Build individual footnote items in Rust (backref injection is complex)
-        let mut footnote_items = String::new();
-        for (id, content) in defs {
-            let backref = format!(
-                " <a href=\"#fnref-{}\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"{}\" aria-label=\"Back to reference {}\">↩</a>",
-                id, id, id
-            );
-            // Insert backref before the last </p> so it appears inline
-            let body = if let Some(pos) = content.rfind("</p>") {
-                format!("{}{}{}", &content[..pos], backref, &content[pos..])
-            } else {
-                format!("{}{}", content, backref)
-            };
-            footnote_items.push_str(&format!("<li id=\"fn-{}\">\n{}\n</li>\n", id, body));
-        }
-
-        // Use the footnotes template for the wrapper
-        let mut vars = std::collections::HashMap::new();
-        vars.insert("base".to_string(), "html".to_string());
-        vars.insert("engine".to_string(), "html".to_string());
-        vars.insert("footnotes".to_string(), "true".to_string());
-        vars.insert("footnote_items".to_string(), footnote_items);
-        let tpl = include_str!("../partials/html/footnotes.html");
-        crate::render::template::apply_template(tpl, &vars)
+        crate::modules::render_footnote_section(defs)
     }
 
     fn html_block(&self, literal: &str) -> String { literal.to_string() }
@@ -455,7 +427,7 @@ mod tests {
             (1, "<p>First note.</p>".to_string()),
             (2, "<p>Second note.</p>".to_string()),
         ];
-        let html = render_footnote_section(&defs);
+        let html = crate::modules::render_footnote_section(&defs);
         assert!(html.contains("id=\"fn-1\""), "html: {}", html);
         assert!(html.contains("id=\"fn-2\""), "html: {}", html);
         assert!(html.contains("fnref-1"), "html: {}", html);

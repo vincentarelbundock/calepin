@@ -169,7 +169,7 @@ impl FormatEmitter for LatexEmitter {
     fn link_close(&self, _url: &str) -> String { "}".to_string() }
 
     fn image(&self, url: &str, _alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::modules::figure::select_image_variant(
+        let resolved = crate::modules::select_image_variant(
             std::path::Path::new(url), "latex",
         );
         let options = attrs.to_latex_options();

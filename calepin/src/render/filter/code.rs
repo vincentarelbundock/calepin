@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use super::BuildElementVars;
 use crate::types::Element;
-use crate::modules::highlight::Highlighter;
+use crate::modules::Highlighter;
 
 pub struct BuildCodeVars<'a> {
     highlighter: &'a Highlighter,
