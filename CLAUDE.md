@@ -268,7 +268,6 @@ Built-in Jinja functions (output driven by per-engine partials in `partials/{eng
 
 - `{{ pagebreak() }}` -- format-specific page break
 - `{{ video(url="...", width="...", height="...", title="...") }}` -- video embed
-- `{{ kbd(keys=["Ctrl", "C"]) }}` -- keyboard shortcuts
 - `{{ lipsum(paragraphs=2) }}` -- placeholder lorem ipsum text (also `sentences`, `words`)
 - `{{ placeholder(width=600, height=400) }}` -- placeholder image (also `text`, `color`)
 

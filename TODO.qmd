@@ -49,12 +49,6 @@
 - [ ] Test lightbox
 
 
-## Quarto compatibility layer
-
-- [ ] Decide on a minimal set of supported Quarto preamble features
-- [ ] YAML to TOML translation layer
-- [ ] There's lots of leftover there. Figure out what to extract and how to make a robust conversion layer.
-
 
 ## TOML
 
@@ -115,12 +109,8 @@
 
 ## Manual code review
 
-- [ ] `src/filters/`
-- [ ] `src/render/`
-- [ ] `src/formats/`
-- [ ] `src/structures/`
-- [ ] `src/parse/`
-- [ ] `src/` (root modules: main, types, plugins, cli, util, website, site_builder, preview, compile)
+- [ ] Everything
+
 
 ## Paths again
 
@@ -128,6 +118,7 @@
 - [ ] Brainstorm
 - [ ] PATH CHECK FOR SINGLE typst file
 - [ ] Manual checks
+
 
 # Docs
 
@@ -206,3 +197,11 @@
     - [ ] latex
     - [ ] pdf
 - [ ] PDF metadata should be optional (author, title, etc.)
+
+
+## Quarto compatibility layer
+
+- [ ] Decide on a minimal set of supported Quarto preamble features
+- [ ] YAML to TOML translation layer
+- [ ] There's lots of leftover there. Figure out what to extract and how to make a robust conversion layer.
+

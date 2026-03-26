@@ -53,7 +53,7 @@ The `.qmd` body is processed as a Jinja template. Code blocks and inline code ar
 | {% raw %}`{{ target }}`{% endraw %} | Target name (defaults to engine name) |
 | {% raw %}`{% include "name" %}`{% endraw %} | Reusable content from `_calepin/partials/` |
 
-Built-in functions: `pagebreak()`, `video()`, `brand()`, `kbd()`, `lipsum()`, `placeholder()`. Plugins can register additional functions via the shortcode capability.
+Built-in functions: `pagebreak()`, `video()`, `brand()`, `lipsum()`, `placeholder()`. Plugins can register additional functions via the shortcode capability.
 
 
 ## Element templates

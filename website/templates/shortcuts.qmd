@@ -143,14 +143,6 @@ Access branding information from the `brand:` block in front matter (or in `_cal
 
 See [brand.yml specification](https://posit-dev.github.io/brand-yml/) for the structure of the `brand:` block.
 
-## kbd
-
-Render keyboard shortcuts:
-
-{% raw %}`{{ kbd(keys=["Ctrl", "C"]) }}`{% endraw %}
-
-Produces `<kbd>Ctrl</kbd>+<kbd>C</kbd>` in HTML, `\texttt{Ctrl}+\texttt{C}` in LaTeX, `#raw("Ctrl")+#raw("C")` in Typst.
-
 ## lipsum
 
 Insert placeholder lorem ipsum text. Default: 1 paragraph.
@@ -236,7 +228,7 @@ The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, a
 
 For each function call, *Calepin* checks:
 
-1. Built-in functions (`pagebreak`, `video`, `brand`, `kbd`, `lipsum`, `placeholder`)
+1. Built-in functions (`pagebreak`, `video`, `brand`, `lipsum`, `placeholder`)
 2. Context variables (`meta`, `var`, `env`, `engine`, `base`, `target`, `snip`)
 3. Plugin registry (in front matter order)
 
