@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::metadata::Metadata;
 
 /// Build an HTML table of contents from heading metadata collected during the AST walk.
-pub fn build_toc_html(headings: &[crate::render::emit::TocEntry], depth: u8, title: &str) -> String {
+pub fn build_toc_html(headings: &[crate::emit::TocEntry], depth: u8, title: &str) -> String {
     let items: Vec<(u8, &str, &str)> = headings.iter()
         .filter(|h| h.level <= depth)
         .filter(|h| !h.classes.iter().any(|c| c == "unlisted"))
@@ -93,7 +93,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     vars.insert("title".to_string(), title.to_string());
     vars.insert("toc_list".to_string(), toc_list);
     vars.insert("depth".to_string(), String::new());
-    let tpl = include_str!("../project/templates/html/toc.html");
+    let tpl = include_str!("../partials/html/toc.html");
     apply_template(tpl, &vars)
 }
 
@@ -102,17 +102,17 @@ use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_a
 /// Load a page template by name and base.
 ///
 /// Resolution order:
-///   1. Project filesystem (templates/{target}/, templates/{base}/, or templates/common/)
+///   1. Project filesystem (partials/{target}/, partials/{base}/, or templates/common/)
 ///   2. Built-in (discovered from embedded project tree)
 pub fn load_page_template(template_name: &str, base: &str) -> String {
     // Filesystem resolution
-    if let Some(path) = crate::paths::resolve_template(template_name, base) {
+    if let Some(path) = crate::paths::resolve_partial(template_name, base) {
         if let Ok(s) = std::fs::read_to_string(&path) {
             return s;
         }
     }
     // Built-in: discovered from embedded project tree
-    crate::render::elements::resolve_builtin_template(template_name, base)
+    crate::render::elements::resolve_builtin_partial(template_name, base)
         .unwrap_or("")
         .to_string()
 }
@@ -121,15 +121,15 @@ pub fn load_page_template(template_name: &str, base: &str) -> String {
 pub fn load_default_css() -> String {
     // Check project/user overrides for CSS
     let root = crate::paths::get_project_root();
-    let p = crate::paths::templates_dir(&root).join("html").join("page.css");
+    let p = crate::paths::partials_dir(&root).join("html").join("page.css");
     if p.exists() {
         if let Ok(s) = std::fs::read_to_string(&p) {
             return s;
         }
     }
     // Built-in: discovered from embedded project tree
-    crate::render::elements::BUILTIN_PROJECT
-        .get_file("templates/html/page.css")
+    crate::render::elements::BUILTIN_PARTIALS
+        .get_file("html/page.css")
         .and_then(|f| f.contents_utf8())
         .unwrap_or("")
         .to_string()
@@ -258,8 +258,8 @@ impl TemplateEnv {
 /// Render a metadata field through an element template if available.
 /// Returns empty string if no template is found.
 pub fn render_element(name: &str, ext: &str, vars: &HashMap<String, String>) -> String {
-    use crate::render::elements::resolve_element_template;
-    if let Some(tpl) = resolve_element_template(name, ext) {
+    use crate::render::elements::resolve_element_partial;
+    if let Some(tpl) = resolve_element_partial(name, ext) {
         let mut vars = vars.clone();
         vars.insert("base".to_string(), ext.to_string());
         vars.insert("engine".to_string(), ext.to_string());
@@ -275,7 +275,7 @@ pub fn build_template_vars_with_headings(
     meta: &Metadata,
     body: &str,
     ext: &str,
-    headings: &[crate::render::emit::TocEntry],
+    headings: &[crate::emit::TocEntry],
     _target: Option<&crate::project::Target>,
 ) -> HashMap<String, String> {
     let mut vars = HashMap::new();
@@ -362,23 +362,14 @@ pub fn build_template_vars_with_headings(
     // Appendix
     vars.insert("appendix".to_string(), build_appendix(meta, ext));
 
-    // CSS (HTML only)
-    if ext == "html" {
-        vars.insert("css".to_string(), load_default_css());
-        vars.insert("js".to_string(), String::new());
-        let mut math_vars = HashMap::new();
-        math_vars.insert("html_math_method".to_string(),
-            meta.html_math_method.as_deref()
-                .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
-        vars.insert("math".to_string(),
-            render_element("math", ext, &math_vars));
-    }
-
-    // LaTeX-specific defaults
-    if ext == "latex" {
-        vars.insert("bib_preamble".to_string(), String::new());
-        vars.insert("bib_end".to_string(), String::new());
-    }
+    // Default empty values for format-specific template variables.
+    // These ensure templates don't fail on undefined variables.
+    // Actual values are injected by FormatPipeline::assemble_page.
+    vars.insert("css".to_string(), load_default_css());
+    vars.insert("js".to_string(), String::new());
+    vars.insert("math".to_string(), String::new());
+    vars.insert("bib_preamble".to_string(), String::new());
+    vars.insert("bib_end".to_string(), String::new());
 
     // Bibliography block (format-specific via element template)
     if !meta.bibliography.is_empty() {
@@ -406,7 +397,7 @@ pub fn build_template_vars_with_headings(
             toc_vars.insert("title".to_string(), toc_title.to_string());
             toc_vars.insert("depth".to_string(), toc_depth.to_string());
             toc_vars.insert("toc_list".to_string(), String::new());
-            let tpl = crate::render::elements::resolve_builtin_template("toc", ext).unwrap_or("");
+            let tpl = crate::render::elements::resolve_builtin_partial("toc", ext).unwrap_or("");
             apply_template(tpl, &toc_vars)
         };
         vars.insert("toc".to_string(), toc);
@@ -482,7 +473,7 @@ pub fn assemble_page(
     body: &str,
     meta: &Metadata,
     format: &str,
-    headings: &[crate::render::emit::TocEntry],
+    headings: &[crate::emit::TocEntry],
     preamble: &[String],
     target: Option<&crate::project::Target>,
     customize: impl FnOnce(&mut HashMap<String, String>),
@@ -497,10 +488,10 @@ pub fn assemble_page(
 /// Render a page template with {% include %} support.
 ///
 /// Sets up a MiniJinja environment with:
-///   1. templates/{target}/ (target-specific, from active target)
-///   2. templates/{base}/ (base-specific)
+///   1. partials/{target}/ (target-specific, from active target)
+///   2. partials/{base}/ (base-specific)
 ///   3. templates/common/ (format-agnostic fallback)
-///   4. Built-in templates/{base}/ (embedded in binary)
+///   4. Built-in partials/{base}/ (embedded in binary)
 ///   5. Built-in templates/common/ (embedded in binary)
 ///
 /// The page template and all included component templates share the same
@@ -517,7 +508,7 @@ pub fn render_page_template(
 
     let root = crate::paths::get_project_root();
     let active_target = crate::paths::get_active_target();
-    let tpl_dir = crate::paths::templates_dir(&root);
+    let tpl_dir = crate::paths::partials_dir(&root);
 
     // Load templates from filesystem directories
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();
@@ -546,8 +537,7 @@ pub fn render_page_template(
     }
 
     // Load built-in base-specific templates as fallback
-    let builtin_base_path = format!("templates/{}", base);
-    if let Some(base_dir) = crate::render::elements::BUILTIN_PROJECT.get_dir(&builtin_base_path) {
+    if let Some(base_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir(base) {
         for entry in base_dir.files() {
             if let Some(content) = entry.contents_utf8() {
                 let name = entry.path().file_name()
@@ -561,7 +551,7 @@ pub fn render_page_template(
     }
 
     // Load built-in common templates as fallback
-    if let Some(common_dir) = crate::render::elements::BUILTIN_PROJECT.get_dir("templates/common") {
+    if let Some(common_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir("common") {
         for entry in common_dir.files() {
             if let Some(content) = entry.contents_utf8() {
                 let name = entry.path().file_name()

@@ -15,7 +15,6 @@ mod pipeline;
 mod preview;
 mod render;
 mod collection;
-mod structures;
 mod project;
 mod tools;
 
@@ -23,9 +22,10 @@ mod tools;
 mod base;
 pub(crate) use base::{types, value, paths, util};
 
-mod plugins;
-pub(crate) use plugins::{registry, manifest as plugin_manifest, theme as theme_manifest};
+mod modules;
+pub(crate) use modules::{registry, manifest as module_manifest, theme as theme_manifest};
 
+mod emit;
 mod formats;
 pub(crate) use render::typst_compile;
 use std::path::PathBuf;

@@ -16,7 +16,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use regex::Regex;
 
-use crate::registry::PluginRegistry;
+use crate::registry::ModuleRegistry;
 use crate::metadata::Metadata;
 
 use protection::{protect_code_blocks, protect_inline_code, restore_code_blocks};
@@ -33,7 +33,7 @@ pub fn process_body(
     text: &str,
     format: &str,
     metadata: &Metadata,
-    _registry: &PluginRegistry,
+    _registry: &ModuleRegistry,
 ) -> BodyResult {
     let fragments = Arc::new(Mutex::new(Vec::new()));
 
@@ -108,7 +108,7 @@ mod tests {
     fn test_inline_code_protected() {
         let mut meta = Metadata::default();
         meta.title = Some("T".to_string());
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("version: `{{ meta.title }}`", "html", &meta, &registry);
         assert!(result.text.contains("`{{ meta.title }}`"));
     }
@@ -117,7 +117,7 @@ mod tests {
     fn test_no_jinja_syntax_passthrough() {
         let text = "plain text with no template syntax";
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body(text, "html", &meta, &registry);
         assert_eq!(result.text, text);
         assert!(result.sc_fragments.is_empty());
@@ -127,7 +127,7 @@ mod tests {
     fn test_meta_variable_access() {
         let mut meta = Metadata::default();
         meta.title = Some("My Title".to_string());
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("Title: {{ meta.title }}", "html", &meta, &registry);
         assert_eq!(result.text, "Title: My Title");
     }
@@ -136,7 +136,7 @@ mod tests {
     fn test_env_context_variable() {
         std::env::set_var("CALEPIN_TEST_VAR", "hello_jinja");
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("{{ env.CALEPIN_TEST_VAR }}", "html", &meta, &registry);
         assert_eq!(result.text, "hello_jinja");
         std::env::remove_var("CALEPIN_TEST_VAR");
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn test_lipsum_default() {
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("{{ lipsum() }}", "html", &meta, &registry);
         assert!(result.text.contains("Lorem"));
         assert!(result.text.contains('.'));
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn test_lipsum_words() {
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("{{ lipsum(words=5) }}", "html", &meta, &registry);
         assert_eq!(result.text.split_whitespace().count(), 5);
     }
@@ -162,7 +162,7 @@ mod tests {
     #[test]
     fn test_lipsum_paragraphs() {
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("{{ lipsum(paragraphs=3) }}", "html", &meta, &registry);
         // 3 paragraphs separated by double newlines
         let paras: Vec<&str> = result.text.split("\n\n").collect();
@@ -172,7 +172,7 @@ mod tests {
     #[test]
     fn test_placeholder_html() {
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("{{ placeholder(width=200, height=100) }}", "html", &meta, &registry);
         assert!(result.text.contains("<svg"));
         assert!(result.text.contains("200"));
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn test_placeholder_latex() {
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("{{ placeholder(width=200, height=100) }}", "latex", &meta, &registry);
         assert!(!result.sc_fragments.is_empty());
         assert!(result.sc_fragments[0].contains("fbox"));
@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn test_pagebreak_html() {
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("{{ pagebreak() }}", "html", &meta, &registry);
         assert!(result.text.contains("page-break-after"));
     }
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn test_pagebreak_latex_marker() {
         let meta = Metadata::default();
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body("{{ pagebreak() }}", "latex", &meta, &registry);
         // LaTeX output should be wrapped in markers
         assert!(!result.sc_fragments.is_empty());
@@ -211,7 +211,7 @@ mod tests {
         let text = "before {{ meta.title }}\n```\n{{ not_a_var }}\n```\nafter";
         let mut meta = Metadata::default();
         meta.title = Some("T".to_string());
-        let registry = PluginRegistry::empty();
+        let registry = ModuleRegistry::empty();
         let result = process_body(text, "html", &meta, &registry);
         assert!(result.text.contains("before T"));
         assert!(result.text.contains("{{ not_a_var }}"));

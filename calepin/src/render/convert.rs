@@ -29,22 +29,22 @@ pub use markers::wrap_raw;
 
 /// Render markdown to HTML via AST walk.
 pub fn render_html(markdown: &str, raw_fragments: &[String], embed_resources: bool) -> String {
-    crate::render::emit::html::markdown_to_html_ast(markdown, raw_fragments, false, false, embed_resources)
+    crate::emit::html::markdown_to_html_ast(markdown, raw_fragments, false, false, embed_resources)
 }
 
 /// Render markdown to HTML and return collected metadata (headings, IDs).
 pub fn render_html_with_metadata(
     markdown: &str,
     raw_fragments: &[String],
-    options: &crate::render::emit::WalkOptions,
+    options: &crate::emit::WalkOptions,
     embed_resources: bool,
-) -> crate::render::emit::WalkResult {
-    crate::render::emit::html::markdown_to_html_ast_with_metadata(markdown, raw_fragments, options, embed_resources)
+) -> crate::emit::WalkResult {
+    crate::emit::html::markdown_to_html_ast_with_metadata(markdown, raw_fragments, options, embed_resources)
 }
 
 /// Render markdown to Typst via AST walk.
 pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
-    crate::render::emit::typst::markdown_to_typst_ast(markdown, raw_fragments, false)
+    crate::emit::typst::markdown_to_typst_ast(markdown, raw_fragments, false)
 }
 
 /// Render a short inline markdown string (e.g., title) to the target format.
@@ -52,9 +52,9 @@ pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
 pub fn render_inline(text: &str, format: &str) -> String {
     let rendered = match format {
         "html" => render_html(text, &[], false),
-        "latex" => crate::render::emit::latex::markdown_to_latex(text, &[], false),
+        "latex" => crate::emit::latex::markdown_to_latex(text, &[], false),
         "typst" => render_typst(text, &[]),
-        _ => crate::render::emit::markdown::markdown_to_markdown(text, &[]),
+        _ => crate::emit::markdown::markdown_to_markdown(text, &[]),
     };
     // Strip wrapping paragraph tags
     let trimmed = rendered.trim();
@@ -241,7 +241,7 @@ mod tests {
     // -----------------------------------------------------------------------
 
     fn latex(md: &str) -> String {
-        crate::render::emit::latex::markdown_to_latex(md, &[], false)
+        crate::emit::latex::markdown_to_latex(md, &[], false)
     }
 
     // -- Inline formatting --

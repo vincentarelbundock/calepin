@@ -9,41 +9,42 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::metadata::Metadata;
-use crate::render::elements::resolve_element_template;
+use crate::render::elements::resolve_element_partial;
 use crate::render::template::apply_template;
 
-/// Format primitives that dispatch on output format.
-/// Each method produces the appropriate markup for html/latex/typst/markdown.
+/// Format primitives driven by element templates.
+/// Each method renders the appropriate markup via `partials/{engine}/` templates,
+/// making output user-overridable.
 struct Fmt;
 
 impl Fmt {
-
     fn superscript(text: &str, ext: &str) -> String {
-        match ext {
-            "html" => format!("<sup>{}</sup>", text),
-            "latex" => format!("\\textsuperscript{{{}}}", text),
-            "typst" => format!("#super[{}]", text),
-            _ => String::new(),
-        }
+        let mut vars = HashMap::new();
+        vars.insert("text".to_string(), text.to_string());
+        render_fmt_template("superscript", ext, &vars)
     }
 
     fn emphasis(text: &str, ext: &str) -> String {
-        match ext {
-            "html" => format!("<em>{}</em>", text),
-            "latex" => format!("\\emph{{{}}}", text),
-            "typst" => format!("#emph[{}]", text),
-            _ => format!("*{}*", text),
-        }
+        let mut vars = HashMap::new();
+        vars.insert("text".to_string(), text.to_string());
+        render_fmt_template("emphasis", ext, &vars)
     }
 
     fn url(url: &str, label: Option<&str>, ext: &str) -> String {
         let label = label.unwrap_or(url);
-        match ext {
-            "html" => format!("<a href=\"{}\">{}</a>", url, label),
-            "latex" => format!("\\url{{{}}}", url),
-            "typst" => format!("#link(\"{}\")[{}]", url, label),
-            _ => format!("[{}]({})", label, url),
-        }
+        let mut vars = HashMap::new();
+        vars.insert("url".to_string(), url.to_string());
+        vars.insert("label".to_string(), label.to_string());
+        render_fmt_template("url", ext, &vars)
+    }
+}
+
+/// Render a format-primitive template. Falls back to empty string if not found.
+fn render_fmt_template(name: &str, ext: &str, vars: &HashMap<String, String>) -> String {
+    if let Some(tpl) = resolve_element_partial(name, ext) {
+        apply_template(&tpl, vars)
+    } else {
+        String::new()
     }
 }
 
@@ -89,7 +90,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     // License
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
-            if let Some(tpl) = resolve_element_template("license", ext) {
+            if let Some(tpl) = resolve_element_partial("license", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
                 vars.insert("engine".to_string(), fmt.clone());
@@ -104,7 +105,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     // Citation
     if let Some(ref cite) = meta.citation {
         let content = build_citation_text(meta, cite, ext);
-        if let Some(tpl) = resolve_element_template("citation", ext) {
+        if let Some(tpl) = resolve_element_partial("citation", ext) {
             let mut vars = HashMap::new();
             vars.insert("base".to_string(), fmt.clone());
             vars.insert("engine".to_string(), fmt.clone());
@@ -118,7 +119,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref cr) = meta.copyright {
         let text = build_copyright_text(cr);
         if !text.is_empty() {
-            if let Some(tpl) = resolve_element_template("copyright", ext) {
+            if let Some(tpl) = resolve_element_partial("copyright", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
                 vars.insert("engine".to_string(), fmt.clone());
@@ -133,7 +134,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if !meta.funding.is_empty() {
         let items = build_funding_items(&meta.funding, ext);
         if !items.is_empty() {
-            if let Some(tpl) = resolve_element_template("funding", ext) {
+            if let Some(tpl) = resolve_element_partial("funding", ext) {
                 let mut vars = HashMap::new();
                 vars.insert("base".to_string(), fmt.clone());
                 vars.insert("engine".to_string(), fmt.clone());
@@ -146,7 +147,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
 
     if sections.is_empty() {
         String::new()
-    } else if let Some(tpl) = resolve_element_template("appendix", ext) {
+    } else if let Some(tpl) = resolve_element_partial("appendix", ext) {
         let mut vars = HashMap::new();
         vars.insert("base".to_string(), fmt.clone());
         vars.insert("engine".to_string(), fmt);
@@ -257,7 +258,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
 
     if has_rich {
         // Render each author through the author-item template
-        let author_tpl = resolve_element_template("author_item", ext);
+        let author_tpl = resolve_element_partial("author_item", ext);
         let authors_rendered: Vec<String> = meta.authors.iter().map(|author| {
             let superscripts = if !author.affiliation_ids.is_empty() && meta.affiliations.len() > 1 {
                 let sups: Vec<String> = author.affiliation_ids.iter()
@@ -295,7 +296,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
         }).collect();
 
         // Render each affiliation through the affiliation-item template
-        let aff_tpl = resolve_element_template("affiliation_item", ext);
+        let aff_tpl = resolve_element_partial("affiliation_item", ext);
         let affs_rendered: Vec<String> = meta.affiliations.iter().filter_map(|aff| {
             let display = aff.display();
             if display.is_empty() {
@@ -378,7 +379,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             _ => affs_rendered.join(", "),
         };
 
-        if let Some(tpl) = resolve_element_template("authors", ext) {
+        if let Some(tpl) = resolve_element_partial("authors", ext) {
             let mut vars = HashMap::new();
             vars.insert("base".to_string(), ext.to_string());
             vars.insert("engine".to_string(), ext.to_string());

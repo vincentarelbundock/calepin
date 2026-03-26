@@ -44,10 +44,8 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
     }
 
     // Copy built-in target-scoped assets as fallback.
-    // Resolve the active target name to find assets/{target}/ in BUILTIN_PROJECT.
     if let Some(target_name) = crate::paths::get_active_target() {
-        let builtin_path = format!("assets/{}", target_name);
-        if let Some(builtin_dir) = crate::render::elements::BUILTIN_PROJECT.get_dir(&builtin_path) {
+        if let Some(builtin_dir) = crate::render::elements::BUILTIN_ASSETS.get_dir(&target_name) {
             fs::create_dir_all(&assets_dst)?;
             for file in builtin_dir.files() {
                 let name = file.path().file_name()

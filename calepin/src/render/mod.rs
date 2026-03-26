@@ -16,8 +16,7 @@
 //!   - `convert` — comrak options, image attrs, render entry points
 //!   - `markers` — math/raw output protection
 
-pub mod emit;
-pub mod transform_element;
+pub mod filter;
 pub mod div;
 pub mod elements;
 pub mod convert;

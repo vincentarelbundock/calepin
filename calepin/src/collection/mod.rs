@@ -4,7 +4,7 @@ mod context;
 mod discover;
 mod icons;
 mod render;
-mod templates;
+mod partials;
 
 use std::collections::HashMap;
 use std::fs;
@@ -80,12 +80,12 @@ pub fn build_collection(
     let orchestrator_filename = format!("orchestrator.{}", ext);
     let orchestrator = meta.orchestrator.clone()
         .or_else(|| {
-            let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
+            let p = crate::paths::partials_dir(&base_dir).join(&collection_target_name)
                 .join(&orchestrator_filename);
             if p.exists() { return Some(p.display().to_string()); }
             // Check built-in templates
-            let builtin_path = format!("templates/{}/{}", collection_target_name, orchestrator_filename);
-            if crate::render::elements::BUILTIN_PROJECT.get_file(&builtin_path).is_some() {
+            let builtin_path = format!("{}/{}", collection_target_name, orchestrator_filename);
+            if crate::render::elements::BUILTIN_PARTIALS.get_file(&builtin_path).is_some() {
                 Some(format!("__builtin__:{}", builtin_path))
             } else {
                 None
@@ -169,7 +169,7 @@ pub fn build_collection(
         render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
     } else {
         // HTML site path: re-wrap pages through Jinja site templates
-        apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
+        apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
     }
 
     // 9. Copy assets/ and static directories to output
@@ -251,7 +251,7 @@ pub fn rebuild_documents(
 
     // Apply collection templates to the changed pages (with full nav context)
     if format == "html" {
-        let env = templates::init_jinja(&base_dir, &collection_target_name)?
+        let env = partials::init_jinja(&base_dir, &collection_target_name)?
             .ok_or_else(|| anyhow::anyhow!("No template files found"))?;
 
         let collection_ctx = build_collection_context(&meta, &pages, &base_dir);
@@ -344,7 +344,7 @@ pub fn rebuild_documents(
 /// HTML collection path: wrap each document's body through Jinja site templates
 /// (page.html, listing.html with extends/includes).
 /// Overwrites the raw body files written in step 7 with fully templated HTML.
-fn apply_collection_templates(
+fn apply_collection_partials(
     meta: &crate::metadata::Metadata,
     pages: &[DocumentInfo],
     results: &HashMap<String, render::CollectionRenderResult>,
@@ -355,7 +355,7 @@ fn apply_collection_templates(
     target_name: &str,
 ) -> Result<()> {
     // Initialize MiniJinja from templates/{target}/
-    let env = templates::init_jinja(base_dir, target_name)?
+    let env = partials::init_jinja(base_dir, target_name)?
         .ok_or_else(|| anyhow::anyhow!(
             "No template files found in templates/{}/. \
              At least base and page templates are required for multi-file collection mode.",
@@ -585,8 +585,8 @@ fn render_orchestrator(
 
     // Load templates from templates/{target}/ and templates/common/
     let dirs = [
-        crate::paths::templates_dir(&base_dir).join(target_name),
-        crate::paths::templates_dir(&base_dir).join("common"),
+        crate::paths::partials_dir(&base_dir).join(target_name),
+        crate::paths::partials_dir(&base_dir).join("common"),
     ];
     for dir in &dirs {
         if !dir.is_dir() { continue; }
@@ -606,8 +606,8 @@ fn render_orchestrator(
     }
 
     // Also load built-in templates as fallback (target-specific + common)
-    for builtin_dir_name in &[format!("templates/{}", target_name), "templates/common".to_string()] {
-        for entry in crate::render::elements::BUILTIN_PROJECT.get_dir(builtin_dir_name.as_str()).into_iter().flat_map(|d| d.files()) {
+    for builtin_dir_name in &[format!("partials/{}", target_name), "common".to_string()] {
+        for entry in crate::render::elements::BUILTIN_PARTIALS.get_dir(builtin_dir_name.as_str()).into_iter().flat_map(|d| d.files()) {
             if let Some(content) = entry.contents_utf8() {
                 let name = entry.path().file_name()
                     .and_then(|n| n.to_str())
@@ -621,7 +621,7 @@ fn render_orchestrator(
 
     // Load the orchestrator template itself
     let tpl_source = if let Some(builtin_path) = orchestrator_path.strip_prefix("__builtin__:") {
-        crate::render::elements::BUILTIN_PROJECT.get_file(builtin_path)
+        crate::render::elements::BUILTIN_PARTIALS.get_file(builtin_path)
             .and_then(|f| f.contents_utf8())
             .map(|s| s.to_string())
             .ok_or_else(|| anyhow::anyhow!("Built-in orchestrator template not found: {}", builtin_path))?

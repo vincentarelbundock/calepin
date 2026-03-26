@@ -268,21 +268,7 @@ pub fn resolve_equation_labels(text: &str, format: &str) -> String {
         let math = &caps[1];
         let label = &caps[2];
         let inner = &math[2..math.len() - 2];
-        match format {
-            "html" => format!(
-                "<div class=\"equation\" id=\"{}\">\n{}\n</div>",
-                label, math
-            ),
-            "latex" => format!(
-                "\\begin{{equation}}\n{}\n\\label{{{}}}\n\\end{{equation}}",
-                inner.trim(), label
-            ),
-            "typst" => format!(
-                "$ {} $ <{}>",
-                inner.trim(), label
-            ),
-            _ => math.to_string(),
-        }
+        render_equation_label(format, math, label, inner.trim())
     }).to_string()
 }
 
@@ -292,11 +278,36 @@ pub fn resolve_escaped_dollars(text: &str, format: &str) -> String {
         return text.to_string();
     }
     let marker = esc_dollar_marker();
-    let replacement = match format {
-        "html" => "<span class=\"nodollar\">$</span>",
-        _ => "\\$",
-    };
-    text.replace(&marker, replacement)
+    let replacement = resolve_escaped_dollar_replacement(format);
+    text.replace(&marker, &replacement)
+}
+
+/// Get the escaped dollar replacement for the given format, via template or fallback.
+fn resolve_escaped_dollar_replacement(format: &str) -> String {
+    use crate::render::elements::resolve_element_partial;
+    if let Some(tpl) = resolve_element_partial("escaped_dollar", format) {
+        tpl.trim().to_string()
+    } else {
+        "\\$".to_string()
+    }
+}
+
+/// Render an equation label using the format-specific template.
+fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> String {
+    use std::collections::HashMap;
+    use crate::render::elements::resolve_element_partial;
+    use crate::render::template::apply_template;
+
+    if let Some(tpl) = resolve_element_partial("equation_label", format) {
+        let mut vars = HashMap::new();
+        vars.insert("math".to_string(), math.to_string());
+        vars.insert("label".to_string(), label.to_string());
+        vars.insert("inner".to_string(), inner.to_string());
+        apply_template(&tpl, &vars)
+    } else {
+        // Fallback: pass through the math expression unchanged
+        math.to_string()
+    }
 }
 
 // ---------------------------------------------------------------------------

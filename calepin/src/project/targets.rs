@@ -36,6 +36,27 @@ pub struct Target {
     /// Post-processing commands run after rendering.
     #[serde(default)]
     pub post: Vec<String>,
+    /// Body transform modules applied after element rendering, before crossref.
+    /// Order matters. Named modules are resolved from the built-in registry.
+    #[serde(default)]
+    pub body_transforms: Vec<String>,
+    /// Cross-reference resolution strategy: "html", "latex", or "plain".
+    /// Default: inferred from engine.
+    pub crossref: Option<String>,
+    /// Output writer: "file" (default) or "pandoc".
+    pub writer: Option<String>,
+    /// Whether to pass headings to the page template for TOC generation.
+    /// Default: true for html, false for latex.
+    pub toc_headings: Option<bool>,
+    /// Extra template variables injected during page assembly.
+    /// These override computed values. Useful for setting `base = "html"`
+    /// in revealjs or other derived targets.
+    #[serde(default)]
+    pub page_vars: HashMap<String, String>,
+    /// Preferred image formats for figure variant selection, in priority order.
+    /// Default: engine-appropriate list (e.g., ["svg", "png", "jpg"] for html).
+    #[serde(default)]
+    pub fig_formats: Vec<String>,
 }
 
 impl Target {
@@ -159,6 +180,12 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
         embed_resources: child.embed_resources.or(parent.embed_resources),
         vars: child.vars.clone().or_else(|| parent.vars.clone()),
         post: if child.post.is_empty() { parent.post.clone() } else { child.post.clone() },
+        body_transforms: if child.body_transforms.is_empty() { parent.body_transforms.clone() } else { child.body_transforms.clone() },
+        crossref: child.crossref.clone().or_else(|| parent.crossref.clone()),
+        writer: child.writer.clone().or_else(|| parent.writer.clone()),
+        toc_headings: child.toc_headings.or(parent.toc_headings),
+        page_vars: if child.page_vars.is_empty() { parent.page_vars.clone() } else { child.page_vars.clone() },
+        fig_formats: if child.fig_formats.is_empty() { parent.fig_formats.clone() } else { child.fig_formats.clone() },
     }
 }
 
@@ -203,6 +230,24 @@ fn merge_with_builtin(user: &Target) -> Target {
         embed_resources: user.embed_resources.or(builtin.and_then(|b| b.embed_resources)),
         vars: user.vars.clone(),
         post: user.post.clone(),
+        body_transforms: if user.body_transforms.is_empty() {
+            builtin.map(|b| b.body_transforms.clone()).unwrap_or_default()
+        } else {
+            user.body_transforms.clone()
+        },
+        crossref: user.crossref.clone().or_else(|| builtin.and_then(|b| b.crossref.clone())),
+        writer: user.writer.clone().or_else(|| builtin.and_then(|b| b.writer.clone())),
+        toc_headings: user.toc_headings.or(builtin.and_then(|b| b.toc_headings)),
+        page_vars: if user.page_vars.is_empty() {
+            builtin.map(|b| b.page_vars.clone()).unwrap_or_default()
+        } else {
+            user.page_vars.clone()
+        },
+        fig_formats: if user.fig_formats.is_empty() {
+            builtin.map(|b| b.fig_formats.clone()).unwrap_or_default()
+        } else {
+            user.fig_formats.clone()
+        },
     }
 }
 

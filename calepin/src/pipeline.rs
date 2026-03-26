@@ -11,6 +11,7 @@ use anyhow::{Context, Result};
 
 use crate::engines;
 use crate::formats;
+use crate::formats::FormatPipeline;
 use crate::jinja;
 use crate::parse;
 use crate::paths;
@@ -70,12 +71,16 @@ pub fn render_core(
     paths::validate_paths(&metadata, &path_ctx, &input_name)?;
     path_ctx.print_root_diagnostic(input);
 
-    // 3. Create renderer for this format
+    // 3. Build format pipeline from target or engine name
     let format_str = format
         .map(|s| s.to_string())
         .or_else(|| metadata.target.clone())
         .unwrap_or_else(|| "html".to_string());
-    let renderer = formats::create_renderer(&format_str)?;
+    let pipeline = if let Some(t) = target {
+        FormatPipeline::from_target(t, &format_str)?
+    } else {
+        FormatPipeline::from_engine(&format_str)?
+    };
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
     let body = jinja::expand_includes(&body, &path_ctx.project_root, &format_str);
@@ -85,7 +90,7 @@ pub fn render_core(
 
     // 5. Initialize code engines (R, Python, sh) -- only starts what's needed
     let mut engines = engines::EnginePool::init(
-        &blocks, &body, &metadata, renderer.engine(),
+        &blocks, &body, &metadata, pipeline.engine(),
         paths::PathContext::code_working_dir(input),
     )?;
     let mut ctx = engines.context();
@@ -95,22 +100,22 @@ pub fn render_core(
 
     // 6. Load plugin registry
     let registry = std::rc::Rc::new(
-        registry::PluginRegistry::load(&metadata.plugins, &path_ctx.project_root)
+        registry::ModuleRegistry::load(&metadata.plugins, &path_ctx.project_root)
     );
 
     // 7. Create element renderer
-    let mut element_renderer = ElementRenderer::from_metadata(renderer.engine(), &metadata, options);
+    let mut element_renderer = ElementRenderer::from_metadata(pipeline.engine(), &metadata, options);
     element_renderer.set_target(target.cloned());
 
     // 8. Evaluate: execute code chunks and produce elements
     let eval_result = engines::evaluate_document(
-        input, &blocks, &body, renderer.engine(), &metadata, &registry,
-        &mut ctx, &path_ctx, renderer.default_fig_ext(),
+        input, &blocks, &body, pipeline.engine(), &metadata, &registry,
+        &mut ctx, &path_ctx, pipeline.default_fig_ext(),
     )?;
     let mut elements = eval_result.elements;
 
     // 9. Resolve bibliography
-    renderer.resolve_bibliography(&mut elements, &metadata, &path_ctx.project_root)?;
+    pipeline.resolve_bibliography(&mut elements, &metadata, &path_ctx.project_root)?;
 
     // 10. Set registry on element renderer
     element_renderer.set_registry(registry);
@@ -118,22 +123,23 @@ pub fn render_core(
     element_renderer.set_preamble(eval_result.preamble);
 
     // 11. Render elements to body string
-    let rendered = renderer.render(&elements, &element_renderer)?;
+    let rendered = pipeline.render(&elements, &element_renderer)?;
 
-    // 12. Transform body (format-specific: slide splitting, color defs)
-    let rendered = renderer.transform_body(&rendered, &element_renderer);
+    // 12. Transform body (module pipeline: footnotes, slides, color defs, etc.)
+    let rendered = pipeline.transform_body(&rendered, &element_renderer,
+        target.unwrap_or(&default_target_for_engine(pipeline.engine())));
 
     // 13. Cross-ref resolution (skipped in collection mode pass 1)
     let rendered = if options.skip_crossref {
         rendered
     } else {
-        renderer.resolve_crossrefs(&rendered, &element_renderer)
+        pipeline.resolve_crossrefs(&rendered, &element_renderer)
     };
 
     Ok(RenderResult { rendered, metadata, element_renderer })
 }
 
-/// Full render pipeline. Returns (output_path, rendered_content, renderer).
+/// Full render pipeline. Returns (output_path, rendered_content, pipeline).
 pub fn render_file(
     input: &Path,
     output: Option<&Path>,
@@ -143,7 +149,7 @@ pub fn render_file(
     project_root: Option<&Path>,
     output_dir: Option<&str>,
     project_metadata: Option<&crate::metadata::Metadata>,
-) -> Result<(PathBuf, String, Box<dyn formats::OutputRenderer>)> {
+) -> Result<(PathBuf, String, FormatPipeline)> {
     // If we have a target, use its engine as the format
     let resolved_format = if let Some(t) = target {
         Some(t.engine.clone())
@@ -158,10 +164,15 @@ pub fn render_file(
             })
     };
 
-    // Determine output extension (target override or renderer default)
+    // Build pipeline
     let preliminary_format = resolved_format.as_deref().unwrap_or("html");
-    let renderer = formats::create_renderer(preliminary_format)?;
-    let ext = target.map(|t| t.output_extension()).unwrap_or(renderer.extension());
+    let target_name = format.unwrap_or(preliminary_format);
+    let pipeline = if let Some(t) = target {
+        FormatPipeline::from_target(t, target_name)?
+    } else {
+        FormatPipeline::from_engine(preliminary_format)?
+    };
+    let ext = target.map(|t| t.output_extension()).unwrap_or(pipeline.extension());
 
     // Resolve output path
     let output_path = if let Some(o) = output {
@@ -176,12 +187,33 @@ pub fn render_file(
     let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, None, &RenderCoreOptions::default(), project_metadata, target)?;
 
     // Assemble page (page template wrapping)
-    let final_output = renderer
+    let final_output = pipeline
         .assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
         .unwrap_or(result.rendered);
 
-    // Transform document (format-specific post-template)
-    let final_output = renderer.transform_document(&final_output, &result.element_renderer);
+    Ok((output_path, final_output, pipeline))
+}
 
-    Ok((output_path, final_output, renderer))
+/// Construct a minimal default Target for an engine name.
+/// Used when render_core is called without an explicit target.
+fn default_target_for_engine(engine: &str) -> project::Target {
+    crate::project::resolve_target(engine, &std::collections::HashMap::new())
+        .unwrap_or_else(|_| project::Target {
+            inherits: None,
+            engine: engine.to_string(),
+            template: Some("page".to_string()),
+            extension: None,
+            fig_extension: None,
+            preview: None,
+            compile: None,
+            embed_resources: None,
+            vars: None,
+            post: Vec::new(),
+            body_transforms: Vec::new(),
+            crossref: None,
+            writer: None,
+            toc_headings: None,
+            page_vars: std::collections::HashMap::new(),
+            fig_formats: Vec::new(),
+        })
 }

@@ -1,10 +1,16 @@
 //! Built-in Jinja functions: pagebreak, video, kbd, lipsum, placeholder.
+//!
+//! Format-specific output is driven by element templates in
+//! `project/partials/{engine}/`, making shortcodes user-overridable.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use minijinja::{self, Value, Error, ErrorKind};
 
 use crate::render::markers;
+use crate::render::template::apply_template;
+use crate::render::elements::resolve_element_partial;
 
 use super::lipsum;
 
@@ -22,6 +28,16 @@ pub(crate) fn register(
     register_placeholder(env, format, fragments, defaults);
 }
 
+/// Render a shortcode template by name. Falls back to a plain default if
+/// no template is found for the given engine.
+fn render_shortcode(name: &str, engine: &str, vars: &HashMap<String, String>, fallback: &str) -> String {
+    if let Some(tpl) = resolve_element_partial(name, engine) {
+        apply_template(&tpl, vars)
+    } else {
+        fallback.to_string()
+    }
+}
+
 fn register_pagebreak(
     env: &mut minijinja::Environment<'_>,
     format: &str,
@@ -30,14 +46,9 @@ fn register_pagebreak(
     let fmt = format.to_string();
     let frags = Arc::clone(fragments);
     env.add_function("pagebreak", move |_args: &[Value]| -> Result<Value, Error> {
-        let output = match fmt.as_str() {
-            "html" => "<div style=\"page-break-after: always;\"></div>",
-            "latex" | "tex" => "\\newpage{}",
-            "typst" | "typ" => "#pagebreak()",
-            "markdown" | "md" => "\n---\n",
-            _ => "\u{0C}",
-        };
-        Ok(Value::from_safe_string(wrap_if_needed(output, &fmt, &frags)))
+        let vars = HashMap::new();
+        let output = render_shortcode("pagebreak", &fmt, &vars, "\u{0C}");
+        Ok(Value::from_safe_string(wrap_if_needed(&output, &fmt, &frags)))
     });
 }
 
@@ -76,24 +87,17 @@ fn register_video(
             url.to_string()
         };
 
-        let output = match fmt.as_str() {
-            "html" => {
-                if embed_url.contains("youtube.com/embed") || embed_url.contains("player.vimeo.com") {
-                    format!(
-                        "<iframe src=\"{}\" width=\"{}\" height=\"{}\" title=\"{}\" frameborder=\"0\" allowfullscreen></iframe>",
-                        embed_url, width, height, title
-                    )
-                } else {
-                    format!(
-                        "<video controls width=\"{}\"><source src=\"{}\">Your browser does not support the video tag.</video>",
-                        width, url
-                    )
-                }
-            }
-            "latex" | "tex" => format!("\\url{{{}}}", url),
-            "typst" | "typ" => format!("#link(\"{}\")[{}]", url, title),
-            _ => format!("[{}]({})", title, url),
-        };
+        let is_embed = embed_url.contains("youtube.com/embed") || embed_url.contains("player.vimeo.com");
+        let mut vars = HashMap::new();
+        vars.insert("src".to_string(), url.to_string());
+        vars.insert("url".to_string(), embed_url);
+        vars.insert("width".to_string(), width.to_string());
+        vars.insert("height".to_string(), height.to_string());
+        vars.insert("title".to_string(), title.to_string());
+        vars.insert("is_embed".to_string(), is_embed.to_string());
+
+        let fallback = format!("[{}]({})", title, url);
+        let output = render_shortcode("video", &fmt, &vars, &fallback);
         Ok(Value::from_safe_string(wrap_if_needed(&output, &fmt, &frags)))
     });
 }
@@ -116,27 +120,21 @@ fn register_kbd(
             return Ok(Value::from(""));
         }
 
-        let output = match fmt.as_str() {
-            "html" => {
-                let parts: Vec<String> = keys.iter()
-                    .map(|k| format!("<kbd>{}</kbd>", k))
-                    .collect();
-                parts.join("+")
+        // For kbd, we need to pass a list to the template. Since apply_template
+        // works with string vars, we render inline using the template directly.
+        let output = if let Some(tpl) = resolve_element_partial("kbd", &fmt) {
+            let mut env = minijinja::Environment::new();
+            env.add_template("kbd", &tpl).ok();
+            if let Some(tmpl) = env.get_template("kbd").ok() {
+                let ctx = minijinja::context! { keys => keys };
+                tmpl.render(ctx).unwrap_or_else(|_| keys.join("+"))
+            } else {
+                keys.join("+")
             }
-            "latex" | "tex" => {
-                let parts: Vec<String> = keys.iter()
-                    .map(|k| format!("\\texttt{{{}}}", k))
-                    .collect();
-                parts.join("+")
-            }
-            "typst" | "typ" => {
-                let parts: Vec<String> = keys.iter()
-                    .map(|k| format!("#raw(\"{}\")", k))
-                    .collect();
-                parts.join("+")
-            }
-            _ => keys.join("+"),
+        } else {
+            keys.join("+")
         };
+
         Ok(Value::from_safe_string(wrap_if_needed(&output, &fmt, &frags)))
     });
 }
@@ -182,32 +180,14 @@ fn register_placeholder(
             .unwrap_or_else(|| format!("{}\u{00d7}{}", width, height));
         kwargs.assert_all_used()?;
 
-        let output = match fmt.as_str() {
-            "html" => {
-                format!(
-                    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\">\
-                     <rect width=\"100%\" height=\"100%\" fill=\"{}\"/>\
-                     <text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" \
-                     font-family=\"sans-serif\" font-size=\"20\" fill=\"#666\">{}</text>\
-                     </svg>",
-                    width, height, crate::util::escape_html(color),
-                    crate::util::escape_html(&text)
-                )
-            }
-            "latex" | "tex" => {
-                format!(
-                    "\\fbox{{\\parbox[c][{}pt]{{{}pt}}{{\\centering {}}}}}",
-                    height, width, text
-                )
-            }
-            "typst" | "typ" => {
-                format!(
-                    "#rect(width: {}pt, height: {}pt, fill: luma(200))[#align(center + horizon)[{}]]",
-                    width, height, text
-                )
-            }
-            _ => format!("[{} ({}x{})]", text, width, height),
-        };
+        let mut vars = HashMap::new();
+        vars.insert("width".to_string(), width.clone());
+        vars.insert("height".to_string(), height.clone());
+        vars.insert("color".to_string(), crate::util::escape_html(color));
+        vars.insert("text".to_string(), crate::util::escape_html(&text));
+
+        let fallback = format!("[{} ({}x{})]", text, width, height);
+        let output = render_shortcode("placeholder", &fmt, &vars, &fallback);
         Ok(Value::from_safe_string(wrap_if_needed(&output, &fmt, &frags)))
     });
 }

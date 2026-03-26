@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::registry::{PluginKind, PluginRegistry};
+use crate::registry::{ModuleKind, ModuleRegistry};
 
 static RE_BRACKETED_SPAN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\[([^\]]+)\]\{([^}]+)\}").unwrap()
@@ -16,10 +16,10 @@ static RE_BRACKETED_SPAN: LazyLock<Regex> = LazyLock::new(|| {
 pub fn render(
     text: &str,
     format: &str,
-    registry: &PluginRegistry,
+    registry: &ModuleRegistry,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
     defaults: &crate::metadata::Metadata,
-    resolve_template: &dyn Fn(&str) -> Option<String>,
+    resolve_partial: &dyn Fn(&str) -> Option<String>,
     template_env: &crate::render::template::TemplateEnv,
 ) -> String {
     raw_fragments.borrow_mut().clear();
@@ -57,32 +57,38 @@ pub fn render(
         let empty_attrs = HashMap::new();
         let matching = registry.matching_filters(&classes, &empty_attrs, id.as_deref(), format, "span");
 
+        // Spans only use rendered transforms (no raw children to iterate)
         for (plugin, _filter_spec) in &matching {
-            match &plugin.kind {
-                PluginKind::BuiltinFilter(filter) => {
-                    let span_element = crate::types::Element::Text { content: content.to_string() };
-                    match filter.apply(&span_element, format, &mut vars, defaults) {
-                        crate::render::transform_element::FilterResult::Rendered(output) => {
-                            return wrap_output(format, raw_fragments, output);
-                        }
-                        _ => {}
+            if let ModuleKind::ElementRendered(ref p) = plugin.kind {
+                let empty_children: Vec<crate::types::Element> = vec![];
+                let mut ctx = crate::registry::ModuleContext::new(
+                    &classes, &id, &kv, &empty_children, format, defaults,
+                    &|_| String::new(), resolve_partial, raw_fragments,
+                );
+                ctx.vars = vars.clone();
+                match p.apply(&mut ctx) {
+                    crate::registry::ModuleResult::Rendered(output) => {
+                        return wrap_output(format, raw_fragments, output);
                     }
+                    crate::registry::ModuleResult::Continue => {
+                        vars = ctx.vars;
+                    }
+                    crate::registry::ModuleResult::Pass => {}
                 }
-                PluginKind::BuiltinStructural(_) => {}
             }
         }
 
         // Template lookup
         if !first_class.is_empty() {
-            if let Some(tpl) = resolve_template(first_class) {
+            if let Some(tpl) = resolve_partial(first_class) {
                 let rendered = template_env.render_dynamic(first_class, &tpl, &vars);
                 return wrap_output(format, raw_fragments, rendered);
             }
         }
 
         // Default fallback: use span template
-        let tpl = resolve_template("span")
-            .unwrap_or_else(|| crate::render::elements::resolve_builtin_template("span", format).unwrap_or("").to_string());
+        let tpl = resolve_partial("span")
+            .unwrap_or_else(|| crate::render::elements::resolve_builtin_partial("span", format).unwrap_or("").to_string());
         let output = template_env.render_dynamic("span", &tpl, &vars);
         wrap_output(format, raw_fragments, output)
     })

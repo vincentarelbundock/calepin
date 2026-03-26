@@ -155,9 +155,9 @@ pub fn calepin_dir(project_root: &Path, segments: &[&str]) -> PathBuf {
     p
 }
 
-/// `{root}/_calepin/templates`
-pub fn templates_dir(project_root: &Path) -> PathBuf {
-    calepin_dir(project_root, &["templates"])
+/// `{root}/_calepin/partials`
+pub fn partials_dir(project_root: &Path) -> PathBuf {
+    calepin_dir(project_root, &["partials"])
 }
 
 /// `{root}/_calepin/themes`
@@ -183,20 +183,20 @@ pub fn engine_to_ext(base: &str) -> &str {
         .unwrap_or(base)
 }
 
-/// Resolve a template (element or page) under `_calepin/templates/`.
+/// Resolve a partial (element or page) under `_calepin/partials/`.
 ///
 /// Lookup order (first match wins):
-///   1. `_calepin/templates/{target}/{name}.{ext}` (target-specific)
-///   2. `_calepin/templates/{base}/{name}.{ext}` (base-specific, when target != base)
-///   3. `_calepin/templates/common/{name}.jinja` (format-agnostic)
+///   1. `_calepin/partials/{target}/{name}.{ext}` (target-specific)
+///   2. `_calepin/partials/{base}/{name}.{ext}` (base-specific, when target != base)
+///   3. `_calepin/partials/common/{name}.jinja` (format-agnostic)
 ///   4. (caller falls back to built-in)
-pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
+pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
     let ext = engine_to_ext(base);
     let base_specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
 
     let root = get_project_root();
-    let tpl = templates_dir(&root);
+    let tpl = partials_dir(&root);
     let active_target = get_active_target();
 
     // 1. User target-specific (e.g., _calepin/templates/book/)
@@ -217,7 +217,7 @@ pub fn resolve_template(name: &str, base: &str) -> Option<PathBuf> {
 
     // 4. Theme templates (same three-layer resolution)
     if let Some(theme_dir) = get_theme_dir() {
-        let theme_tpl = theme_dir.join("templates");
+        let theme_tpl = theme_dir.join("partials");
         if let Some(ref target) = active_target {
             if target != base {
                 let p = theme_tpl.join(target).join(&base_specific);
@@ -283,8 +283,8 @@ pub fn resolve_snippet(name: &str, base: &str) -> Option<PathBuf> {
 }
 
 /// Resolve a plugin directory by name.
-/// Checks `{project_root}/_calepin/plugins/{name}/plugin.toml`.
-pub fn resolve_plugin_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
+/// Checks `{project_root}/_calepin/modules/{name}/plugin.toml`.
+pub fn resolve_module_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
     let local = calepin_dir(project_root, &["plugins", name]);
     if local.join("plugin.toml").exists() {
         return Some(local);
@@ -334,7 +334,7 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
         if is_builtin_plugin(plugin) {
             continue;
         }
-        let local_dir = ctx.project_root.join("_calepin/plugins").join(plugin);
+        let local_dir = ctx.project_root.join("_calepin/modules").join(plugin);
         let local_path = local_dir.join("plugin.toml");
         if !local_path.exists() {
             errors.push(format!(

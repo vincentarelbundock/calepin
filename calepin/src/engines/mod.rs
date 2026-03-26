@@ -96,7 +96,7 @@ pub fn evaluate_document(
     _body: &str,
     output_ext: &str,
     metadata: &Metadata,
-    registry: &crate::registry::PluginRegistry,
+    registry: &crate::registry::ModuleRegistry,
     ctx: &mut EngineContext,
     path_ctx: &crate::paths::PathContext,
     default_fig_ext: &str,
@@ -129,7 +129,7 @@ pub fn evaluate(
     fig_ext: &str,
     output_ext: &str,
     metadata: &Metadata,
-    registry: &crate::registry::PluginRegistry,
+    registry: &crate::registry::ModuleRegistry,
     ctx: &mut EngineContext,
     cache: &mut cache::CacheState,
 ) -> Result<EvalResult> {
@@ -250,13 +250,13 @@ pub fn evaluate(
                 let mut div_attrs = div.attrs.clone();
                 if let Some(ref id) = div.id {
                     if id.starts_with("fig-") && !div_attrs.contains_key("fig_cap") {
-                        let (remaining, caption) = crate::structures::figure::separate_figure_caption(&child_elements);
+                        let (remaining, caption) = crate::modules::builtin::element::figure::separate_figure_caption(&child_elements);
                         if !caption.is_empty() {
                             div_attrs.insert("fig_cap".to_string(), caption);
                             child_elements = remaining;
                         }
                     } else if id.starts_with("tbl-") && !div_attrs.contains_key("tbl_cap") {
-                        let (remaining, caption) = crate::structures::table::separate_table_caption(&child_elements);
+                        let (remaining, caption) = crate::modules::builtin::element::table::separate_table_caption(&child_elements);
                         if !caption.is_empty() {
                             div_attrs.insert("tbl_cap".to_string(), caption);
                             child_elements = remaining;

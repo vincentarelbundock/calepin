@@ -146,21 +146,19 @@ fn render_one_document(
 
     let body = if apply_page_template {
         // Apply the project's page template (e.g., book's minimal page.tex)
-        let renderer = crate::formats::create_renderer(format)?;
-        renderer.assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
+        let pipeline = crate::formats::FormatPipeline::from_engine(format)?;
+        pipeline.assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
             .unwrap_or(result.rendered)
     } else if format == "html" {
-        // HTML site mode: prepend syntax highlighting CSS, append footnotes
+        // HTML site mode: prepend syntax highlighting CSS (with DataTheme scope
+        // for site theme switching). Footnotes are already appended by the
+        // append_footnotes_html body transform in render_core.
         let syntax_css = result.element_renderer.syntax_css_with_scope(
             crate::render::highlighting::ColorScope::DataTheme,
         );
-        let footnotes = result.element_renderer.render_footnote_section();
         let mut body = result.rendered;
         if !syntax_css.is_empty() {
             body = format!("<style>\n{}</style>\n{}", syntax_css, body);
-        }
-        if !footnotes.is_empty() {
-            body.push_str(&footnotes);
         }
         body
     } else {
@@ -351,20 +349,18 @@ fn render_one_document_pass1(
     )?;
 
     // Collect cross-ref data for global resolution in pass 2 (before moving body)
-    let html_renderer = crate::formats::create_renderer("html")?;
-    let ref_data = html_renderer.collect_crossref_data(&result.rendered, &result.element_renderer);
+    let pipeline = crate::formats::FormatPipeline::from_engine("html")?;
+    let ref_data = pipeline.collect_crossref_data(&result.rendered, &result.element_renderer);
 
-    // HTML site mode: prepend syntax highlighting CSS, append footnotes
+    // HTML site mode: prepend syntax highlighting CSS (with DataTheme scope
+    // for site theme switching). Footnotes are already appended by the
+    // append_footnotes_html body transform in render_core.
     let syntax_css = result.element_renderer.syntax_css_with_scope(
         crate::render::highlighting::ColorScope::DataTheme,
     );
-    let footnotes = result.element_renderer.render_footnote_section();
     let mut body = result.rendered;
     if !syntax_css.is_empty() {
         body = format!("<style>\n{}</style>\n{}", syntax_css, body);
-    }
-    if !footnotes.is_empty() {
-        body.push_str(&footnotes);
     }
 
     let toc = if result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
