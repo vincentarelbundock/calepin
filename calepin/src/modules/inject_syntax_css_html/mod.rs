@@ -5,9 +5,9 @@
 //! for collection pages it is inlined before the body.
 
 use crate::render::elements::ElementRenderer;
-use crate::render::highlighting::ColorScope;
+use crate::modules::highlight::ColorScope;
 use crate::project::Target;
-use crate::modules::builtin::body::TransformBody;
+use crate::modules::transform_body::TransformBody;
 
 pub struct InjectSyntaxCssHtml;
 

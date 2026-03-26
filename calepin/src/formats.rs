@@ -13,9 +13,9 @@ use anyhow::{Context, Result};
 use crate::types::Element;
 use crate::metadata::Metadata;
 use crate::render::elements::ElementRenderer;
-use crate::render::highlighting::ColorScope;
+use crate::modules::highlight::ColorScope;
 use crate::project::Target;
-use crate::modules::builtin::body as transforms;
+use crate::modules;
 
 // ---------------------------------------------------------------------------
 // FormatPipeline
@@ -176,7 +176,7 @@ impl FormatPipeline {
             |vars| {
                 // Inject syntax highlighting CSS when the transform is active
                 if has_syntax_css {
-                    let syntax_css = transforms::html::inject_syntax_css::generate(
+                    let syntax_css = modules::inject_syntax_css_html::generate(
                         renderer, ColorScope::Both,
                     );
                     if !syntax_css.is_empty() {
@@ -185,7 +185,7 @@ impl FormatPipeline {
                         css.push_str(&syntax_css);
                         // Also set as a standalone var for templates that use it separately
                         vars.insert("syntax_css".to_string(),
-                            transforms::html::inject_syntax_css::generate(renderer, ColorScope::Both));
+                            modules::inject_syntax_css_html::generate(renderer, ColorScope::Both));
                     }
                 }
 
@@ -211,7 +211,7 @@ impl FormatPipeline {
 
         // Embed images as base64 if configured
         if self.embed_resources && self.engine == "html" {
-            Some(transforms::html::embed_images::embed_images_base64(&html))
+            Some(modules::embed_images_html::embed_images_base64(&html))
         } else {
             Some(html)
         }

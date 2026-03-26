@@ -351,7 +351,7 @@ mod tests {
         // The ElementRenderer should collect defs and inject them so comrak resolves both.
         use crate::render::elements::ElementRenderer;
         use crate::types::Element;
-        use crate::render::highlighting::HighlightConfig;
+        use crate::modules::highlight::HighlightConfig;
 
         let elements = vec![
             Element::Text { content: "See note[^abc].".to_string() },

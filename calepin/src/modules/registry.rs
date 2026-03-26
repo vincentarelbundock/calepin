@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::modules::builtin::body::TransformBody;
+use crate::modules::transform_body::TransformBody;
 use crate::module_manifest::{FilterMatch, FilterSpec, FormatSpec, ModuleManifest, ModuleProvides};
 use crate::types::Element;
 
@@ -270,7 +270,7 @@ struct TransformTabset;
 
 impl TransformElementRaw for TransformTabset {
     fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult {
-        let output = crate::modules::builtin::element::tabset::render(
+        let output = crate::modules::tabset::render(
             ctx.format, ctx.attrs, ctx.children(), &|el| ctx.render_child(el),
         );
         ModuleResult::Rendered(output)
@@ -281,7 +281,7 @@ struct TransformLayout;
 
 impl TransformElementRaw for TransformLayout {
     fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult {
-        let output = crate::modules::builtin::element::layout::render(
+        let output = crate::modules::layout::render(
             ctx.id, ctx.attrs, ctx.children(), ctx.format,
             &|el| ctx.render_child(el), ctx.raw_fragments(), ctx.defaults,
         );
@@ -360,15 +360,15 @@ fn register_builtins(modules: &mut Vec<LoadedModule>) {
 
     // Body transforms
     modules.push(builtin_body_transform("append_footnotes_html",
-        Box::new(crate::modules::builtin::body::html::append_footnotes::AppendFootnotesHtml)));
+        Box::new(crate::modules::append_footnotes_html::AppendFootnotesHtml)));
     modules.push(builtin_body_transform("split_slides_html",
-        Box::new(crate::modules::builtin::body::html::split_slides::SplitSlidesHtml)));
+        Box::new(crate::modules::split_slides_html::SplitSlidesHtml)));
     modules.push(builtin_body_transform("inject_syntax_css_html",
-        Box::new(crate::modules::builtin::body::html::inject_syntax_css::InjectSyntaxCssHtml)));
+        Box::new(crate::modules::inject_syntax_css_html::InjectSyntaxCssHtml)));
     modules.push(builtin_body_transform("embed_images_html",
-        Box::new(crate::modules::builtin::body::html::embed_images::EmbedImagesHtml)));
+        Box::new(crate::modules::embed_images_html::EmbedImagesHtml)));
     modules.push(builtin_body_transform("inject_color_defs_latex",
-        Box::new(crate::modules::builtin::body::latex::inject_color_defs::InjectColorDefsLatex)));
+        Box::new(crate::modules::inject_color_defs_latex::InjectColorDefsLatex)));
 }
 
 fn builtin_element_raw(

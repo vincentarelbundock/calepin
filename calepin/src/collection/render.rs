@@ -154,7 +154,7 @@ fn render_one_document(
         // for site theme switching). Footnotes are already appended by the
         // append_footnotes_html body transform in render_core.
         let syntax_css = result.element_renderer.syntax_css_with_scope(
-            crate::render::highlighting::ColorScope::DataTheme,
+            crate::modules::highlight::ColorScope::DataTheme,
         );
         let mut body = result.rendered;
         if !syntax_css.is_empty() {
@@ -356,7 +356,7 @@ fn render_one_document_pass1(
     // for site theme switching). Footnotes are already appended by the
     // append_footnotes_html body transform in render_core.
     let syntax_css = result.element_renderer.syntax_css_with_scope(
-        crate::render::highlighting::ColorScope::DataTheme,
+        crate::modules::highlight::ColorScope::DataTheme,
     );
     let mut body = result.rendered;
     if !syntax_css.is_empty() {

@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 
 use crate::render::elements::ElementRenderer;
 use crate::project::Target;
-use crate::modules::builtin::body::TransformBody;
+use crate::modules::transform_body::TransformBody;
 
 pub struct SplitSlidesHtml;
 

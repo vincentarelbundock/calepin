@@ -1,27 +1,17 @@
-//! Theme manifest parsing.
-//!
-//! A theme is a directory under `_calepin/themes/{name}/` that provides
-//! templates, snippets, and assets layered on top of a target's built-in
-//! templates.
+//! Theme manifests: load and list themes from `_calepin/themes/`.
 
 use std::path::{Path, PathBuf};
-
 use anyhow::{Context, Result};
 
-/// Parsed theme manifest (`theme.toml`).
-#[allow(dead_code)]
+/// A theme is a directory with a `theme.toml` manifest that provides
+/// partials, snippets, and assets layered on top of a target's built-in
+/// partials.
+#[derive(Debug)]
 pub struct ThemeManifest {
-    /// Theme name. Must match directory name.
     pub name: String,
-    /// Which target this theme is designed for.
     pub target: String,
-    /// Shown in `calepin info themes`.
     pub description: Option<String>,
-    /// Default settings when this theme is active.
-    pub defaults: Option<toml::Value>,
-    /// Default template variables.
-    pub vars: Option<toml::Value>,
-    /// Absolute path to the theme directory.
+    #[allow(dead_code)]
     pub theme_dir: PathBuf,
 }
 
@@ -31,18 +21,20 @@ impl ThemeManifest {
         let toml_path = dir.join("theme.toml");
         let content = std::fs::read_to_string(&toml_path)
             .with_context(|| format!("Failed to read {}", toml_path.display()))?;
-        let config: toml::Value = toml::from_str(&content)
+        let parsed: toml::Value = content.parse()
             .with_context(|| format!("Failed to parse {}", toml_path.display()))?;
 
-        let name = config.get("name")
+        let name = parsed.get("name")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Theme manifest missing 'name' field: {}", toml_path.display()))?
+            .unwrap_or_else(|| dir.file_name().unwrap_or_default().to_str().unwrap_or(""))
             .to_string();
-
-        let target = config.get("target")
+        let target = parsed.get("target")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Theme manifest missing 'target' field: {}", toml_path.display()))?
+            .unwrap_or("html")
             .to_string();
+        let description = parsed.get("description")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         let theme_dir = dir.canonicalize()
             .unwrap_or_else(|_| dir.to_path_buf());
@@ -50,16 +42,13 @@ impl ThemeManifest {
         Ok(ThemeManifest {
             name,
             target,
-            description: config.get("description").and_then(|v| v.as_str()).map(String::from),
-            defaults: config.get("defaults").cloned(),
-            vars: config.get("vars").cloned(),
+            description,
             theme_dir,
         })
     }
 }
 
-/// Resolve a theme directory by name.
-/// Checks `{project_root}/_calepin/themes/{name}/theme.toml`.
+/// Resolve a theme directory by name from `_calepin/themes/`.
 pub fn resolve_theme_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
     let dir = crate::paths::themes_dir(project_root).join(name);
     if dir.join("theme.toml").exists() {
@@ -69,13 +58,12 @@ pub fn resolve_theme_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
     }
 }
 
-/// List all available themes in the project.
+/// List all available themes in `_calepin/themes/`.
 pub fn list_themes(project_root: &Path) -> Vec<ThemeManifest> {
     let themes_dir = crate::paths::themes_dir(project_root);
     if !themes_dir.is_dir() {
         return Vec::new();
     }
-
     let mut themes = Vec::new();
     if let Ok(entries) = std::fs::read_dir(&themes_dir) {
         for entry in entries.flatten() {

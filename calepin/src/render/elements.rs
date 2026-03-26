@@ -8,7 +8,7 @@ use include_dir::{include_dir, Dir};
 use crate::types::Element;
 use crate::render::filter::{Filter, FilterResult};
 use crate::registry::ModuleRegistry;
-use crate::render::highlighting::{Highlighter, HighlightConfig, ColorScope};
+use crate::modules::highlight::{Highlighter, HighlightConfig, ColorScope};
 
 // ---------------------------------------------------------------------------
 // Built-in project tree (embedded at compile time)
@@ -177,9 +177,9 @@ impl ElementRenderer {
         let hl = metadata.highlight.as_ref();
         let builtin_hl = crate::project::builtin_metadata().highlight.as_ref();
         let highlight_config = metadata.var.get("highlight-style")
-            .map(|v| crate::render::highlighting::parse_highlight_config(v))
+            .map(|v| crate::modules::highlight::parse_highlight_config(v))
             .unwrap_or_else(|| {
-                crate::render::highlighting::HighlightConfig::LightDark {
+                crate::modules::highlight::HighlightConfig::LightDark {
                     light: hl.and_then(|h| h.light.clone())
                         .or_else(|| builtin_hl.and_then(|h| h.light.clone()))
                         .unwrap_or_else(|| "github".to_string()),
