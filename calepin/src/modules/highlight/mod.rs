@@ -94,13 +94,7 @@ pub enum HighlightConfig {
 
 /// Strategy for scoping light/dark CSS.
 pub enum ColorScope {
-    /// Use `@media (prefers-color-scheme: ...)` — for standalone HTML.
-    #[allow(dead_code)]
-    MediaQuery,
-    /// Use `[data-theme='light']` / `[data-theme='dark']` — for Starlight/Astro.
-    #[allow(dead_code)]
-    DataTheme,
-    /// Emit both `@media` and `[data-theme]` rules — for standalone HTML with a theme toggle.
+    /// Emit both `@media (prefers-color-scheme)` and `[data-theme]` rules.
     Both,
 }
 
@@ -324,12 +318,6 @@ impl Highlighter {
                 let mut css = String::new();
 
                 let scopes: Vec<(&str, &str)> = match scope {
-                    ColorScope::MediaQuery => vec![
-                        ("@media (prefers-color-scheme: light)", "@media (prefers-color-scheme: dark)"),
-                    ],
-                    ColorScope::DataTheme => vec![
-                        ("[data-theme='light']", "[data-theme='dark']"),
-                    ],
                     ColorScope::Both => vec![
                         ("@media (prefers-color-scheme: light)", "@media (prefers-color-scheme: dark)"),
                         ("[data-theme='light']", "[data-theme='dark']"),
