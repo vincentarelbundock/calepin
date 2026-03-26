@@ -60,7 +60,6 @@ title = "Templates"
 pages = [
   "templates/templates.qmd",
   "templates/shortcuts.qmd",
-  "templates/snippets.qmd",
   "templates/themes.qmd",
   "templates/yaml.qmd",
   "templates/sites.qmd",

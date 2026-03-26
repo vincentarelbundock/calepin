@@ -75,7 +75,7 @@ calepin document.qmd --theme blog
 calepin document.qmd -t website --theme blog
 ```
 
-Themes are directories under `_calepin/themes/` that bundle templates, snippets, and assets. See [Themes](templates/themes.html) for details.
+Themes are directories under `_calepin/themes/` that bundle templates and assets. See [Themes](templates/themes.html) for details.
 
 
 # Live preview

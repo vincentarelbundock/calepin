@@ -111,8 +111,6 @@ All template lookups follow the same chain. The first match wins:
 5. **Theme** templates (same three-layer lookup: target, engine, common)
 6. **Built-in** (compiled into the binary)
 
-The same order applies to snippets under `_calepin/snippets/`.
-
 User files always win over plugins and themes. Plugins override themes. See [Themes](themes.html) for the theme layer and [Plugins](../misc/plugins.html) for plugin template overrides.
 
 

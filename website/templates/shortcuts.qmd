@@ -71,14 +71,6 @@ The `SHELL` environment variable on the local machine is: {{ env.SHELL }}.
 
 The current rendering engine is available as {% raw %}`{{ engine }}`{% endraw %}, one of `html`, `latex`, `typst`, or `markdown`. The target name is available as {% raw %}`{{ target }}`{% endraw %} (defaults to the engine name when no named target is used). {% raw %}`{{ base }}`{% endraw %} is a deprecated alias for {% raw %}`{{ engine }}`{% endraw %}.
 
-## snip
-
-Insert reusable content from `_calepin/partials/` by name (no extension triggers format-aware resolution):
-
-{% raw %}`{% include "source_tip" %}`{% endraw %}
-
-See [Includes](snippets.html) for the full reference, including resolution order and examples.
-
 
 # Conditionals and loops
 
@@ -229,7 +221,7 @@ The executable receives JSON on stdin with `name`, `args`, `kwargs`, `format`, a
 For each function call, *Calepin* checks:
 
 1. Built-in functions (`pagebreak`, `video`, `brand`, `lipsum`, `placeholder`)
-2. Context variables (`meta`, `var`, `env`, `engine`, `base`, `target`, `snip`)
+2. Context variables (`meta`, `var`, `env`, `engine`, `base`, `target`)
 3. Plugin registry (in front matter order)
 
 Built-in functions take precedence over plugin functions.

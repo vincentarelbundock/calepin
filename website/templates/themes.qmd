@@ -2,7 +2,7 @@
 title: Themes
 ---
 
-A theme bundles templates, snippets, and assets into a reusable package that gives documents a consistent look. Themes sit between your project-level overrides and *Calepin*'s built-in defaults.
+A theme bundles templates and assets into a reusable package that gives documents a consistent look. Themes sit between your project-level overrides and *Calepin*'s built-in defaults.
 
 
 # Engines, targets, and themes
@@ -11,7 +11,7 @@ A theme bundles templates, snippets, and assets into a reusable package that giv
 |---------|------------|----------|----------------|
 | **Engine** | Converts markdown to output text | html, latex, typst, markdown | No (derived from target) |
 | **Target** | Output profile: engine + extension + compilation + defaults | html, latex, typst, website, book, pdf | Yes (`-t`) |
-| **Theme** | Templates + snippets + assets layered on a target | blog, letter, minutes | Yes (`--theme`) |
+| **Theme** | Templates + assets layered on a target | blog, letter, minutes | Yes (`--theme`) |
 
 An engine is fixed for each target. A target defines *what* is produced. A theme defines *how it looks*.
 
@@ -27,13 +27,11 @@ _calepin/themes/blog/
     website/page.html         # target-specific
     html/callout.html         # engine-specific
     common/card.jinja         # format-agnostic
-  snippets/
-    common/bio.jinja
   assets/
     blog.css
 ```
 
-Templates and snippets use three subdirectories: `{target}/`, `{engine}/`, and `common/`.
+Templates use three subdirectories: `{target}/`, `{engine}/`, and `common/`.
 
 
 # Manifest
@@ -81,7 +79,7 @@ calepin doc.qmd -t website --theme blog
 
 # Resolution order
 
-When resolving any template or snippet:
+When resolving any template:
 
 1. **User** `_calepin/templates/{target}/`
 2. **User** `_calepin/templates/{engine}/`
