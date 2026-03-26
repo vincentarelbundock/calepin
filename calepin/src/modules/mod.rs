@@ -1,17 +1,15 @@
 //! Module system: registry, manifests, and built-in modules.
 //!
 //! Each module lives in its own directory under `modules/`.
-//! Transform traits at pipeline stages:
-//!   - `TransformElement` / `TransformElementRendered` -- per div/span
-//!   - `TransformBody` -- body string mutation
-//!   - `TransformPage` -- page template variable injection
-//!   - `TransformDocument` -- post-assembly document mutation
+//! Three module kinds:
+//!   - `TransformElement` -- pre-render element list mutation
+//!   - `TransformElementChildren` -- per-div structural rewriting
+//!   - `TransformDocument` -- post-assembly document transformation
 
 pub mod manifest;
 pub mod registry;
 
-// Transform traits
-pub mod transform_body;
+// Transform trait
 pub mod transform_document;
 
 // Built-in modules

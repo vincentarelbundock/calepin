@@ -122,17 +122,13 @@ pub fn render_core(
     element_renderer.set_sc_fragments(eval_result.sc_fragments);
     element_renderer.set_preamble(eval_result.preamble);
 
-    // 10b. Pre-render element transforms (SVG-to-PDF, etc.)
+    // 10b. Prepare elements (pre-render: SVG-to-PDF, etc.)
     pipeline.transform_elements(&mut elements, &element_renderer);
 
     // 11. Render elements to body string
     let rendered = pipeline.render(&elements, &element_renderer)?;
 
-    // 12. Transform body (module pipeline: footnotes, slides, color defs, etc.)
-    let rendered = pipeline.transform_body(&rendered, &element_renderer,
-        target.unwrap_or(&default_target_for_engine(pipeline.engine())));
-
-    // 13. Cross-ref resolution (skipped in collection mode pass 1)
+    // 12. Cross-ref resolution (skipped in collection mode pass 1)
     let rendered = if options.skip_crossref {
         rendered
     } else {
@@ -200,26 +196,3 @@ pub fn render_file(
     Ok((output_path, final_output, pipeline))
 }
 
-/// Construct a minimal default Target for an engine name.
-/// Used when render_core is called without an explicit target.
-fn default_target_for_engine(engine: &str) -> project::Target {
-    crate::project::resolve_target(engine, &std::collections::HashMap::new())
-        .unwrap_or_else(|_| project::Target {
-            inherits: None,
-            engine: engine.to_string(),
-            template: Some("page".to_string()),
-            extension: None,
-            fig_extension: None,
-            preview: None,
-            compile: None,
-            embed_resources: None,
-            vars: None,
-            post: Vec::new(),
-            modules: Vec::new(),
-            crossref: None,
-            writer: None,
-            toc_headings: None,
-            page_vars: std::collections::HashMap::new(),
-            fig_formats: Vec::new(),
-        })
-}

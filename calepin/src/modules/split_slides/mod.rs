@@ -4,15 +4,13 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 use crate::render::elements::ElementRenderer;
-use crate::project::Target;
-use crate::modules::transform_body::TransformBody;
+use crate::modules::transform_document::TransformDocument;
 
-pub struct SplitSlidesHtml;
+pub struct SplitSlides;
 
-impl TransformBody for SplitSlidesHtml {
-
-    fn transform(&self, body: &str, _renderer: &ElementRenderer, _target: &Target) -> String {
-        split_into_slides(body)
+impl TransformDocument for SplitSlides {
+    fn transform(&self, document: &str, _engine: &str, _renderer: &ElementRenderer) -> String {
+        split_into_slides(document)
     }
 }
 

@@ -119,19 +119,6 @@ impl FormatPipeline {
         Ok(body)
     }
 
-    /// Run all body transforms in declared order, resolving each by name
-    /// from the plugin registry.
-    pub fn transform_body(&self, body: &str, renderer: &ElementRenderer, target: &Target) -> String {
-        let registry = renderer.registry();
-        let mut result = body.to_string();
-        for name in &self.module_names {
-            if let Some(t) = registry.resolve_body_transform(name) {
-                result = t.transform(&result, renderer, target);
-            }
-        }
-        result
-    }
-
     /// Resolve cross-references using the configured strategy.
     pub fn resolve_crossrefs(&self, body: &str, renderer: &ElementRenderer) -> String {
         let thm_nums = renderer.theorem_numbers();
@@ -155,11 +142,11 @@ impl FormatPipeline {
     }
 
     /// Run pre-render element transforms from active modules.
-    /// Calls `transform_all` on each raw element transform.
+    /// Each transform is called on every element (including nested children).
     pub fn transform_elements(&self, elements: &mut Vec<Element>, renderer: &ElementRenderer) {
         let registry = renderer.registry();
-        for t in registry.resolve_element_transforms(&self.module_names) {
-            t.transform_all(elements);
+        for t in registry.resolve_transform_element(&self.module_names) {
+            apply_transform_recursive(elements, t);
         }
     }
 
@@ -243,6 +230,16 @@ impl FormatPipeline {
 
                 Ok(())
             }
+        }
+    }
+}
+
+/// Walk the element tree and apply a transform to each element.
+fn apply_transform_recursive(elements: &mut Vec<Element>, t: &dyn crate::registry::TransformElement) {
+    for element in elements.iter_mut() {
+        t.transform(element);
+        if let Element::Div { children, .. } = element {
+            apply_transform_recursive(children, t);
         }
     }
 }

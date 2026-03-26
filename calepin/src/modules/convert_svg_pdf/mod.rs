@@ -1,7 +1,4 @@
 //! Element transform: convert SVG figures to PDF for LaTeX targets.
-//!
-//! Implements `transform_all` to walk the full element list before rendering
-//! and convert any SVG figure paths to PDF.
 
 use std::path::{Path, PathBuf};
 
@@ -13,16 +10,8 @@ use crate::types::Element;
 pub struct ConvertSvgPdf;
 
 impl TransformElement for ConvertSvgPdf {
-    fn transform_all(&self, elements: &mut Vec<Element>) {
-        for element in elements.iter_mut() {
-            convert_figures(element);
-        }
-    }
-}
-
-fn convert_figures(element: &mut Element) {
-    match element {
-        Element::Figure { path, .. } => {
+    fn transform(&self, element: &mut Element) {
+        if let Element::Figure { path, .. } = element {
             if path.extension().is_some_and(|e| e == "svg") && path.exists() {
                 match convert_svg_to_pdf(path) {
                     Ok(pdf_path) => *path = pdf_path,
@@ -32,12 +21,6 @@ fn convert_figures(element: &mut Element) {
                 }
             }
         }
-        Element::Div { children, .. } => {
-            for child in children.iter_mut() {
-                convert_figures(child);
-            }
-        }
-        _ => {}
     }
 }
 

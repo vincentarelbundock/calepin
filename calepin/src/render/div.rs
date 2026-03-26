@@ -28,9 +28,9 @@ pub fn render(
 ) -> String {
     let matching = registry.matching_modules(classes, attrs, id.as_deref(), format, "div");
 
-    // Phase 1: Raw element transforms (receive raw children, render them directly)
+    // Phase 1: Element children transforms (structural rewriting)
     for (plugin, _filter_spec) in &matching {
-        if let ModuleKind::Element(ref p) = plugin.kind {
+        if let ModuleKind::ElementChildren(ref p) = plugin.kind {
             let mut ctx = ModuleContext::new(
                 classes, id, attrs, children, format, defaults,
                 render_element, resolve_partial, raw_fragments,

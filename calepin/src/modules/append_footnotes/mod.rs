@@ -1,19 +1,27 @@
-//! Append the rendered footnote section to the body.
+//! Append the rendered footnote section to the document.
 
 use crate::render::elements::ElementRenderer;
-use crate::project::Target;
-use crate::modules::transform_body::TransformBody;
+use crate::modules::transform_document::TransformDocument;
 
-pub struct AppendFootnotesHtml;
+pub struct AppendFootnotes;
 
-impl TransformBody for AppendFootnotesHtml {
-
-    fn transform(&self, body: &str, renderer: &ElementRenderer, _target: &Target) -> String {
+impl TransformDocument for AppendFootnotes {
+    fn transform(&self, document: &str, engine: &str, renderer: &ElementRenderer) -> String {
+        if engine != "html" {
+            return document.to_string();
+        }
         let footnotes = renderer.render_footnote_section();
         if footnotes.is_empty() {
-            body.to_string()
+            document.to_string()
         } else {
-            format!("{}{}", body, footnotes)
+            // Insert before </main> or </body> or append at end
+            if let Some(pos) = document.find("</main>") {
+                format!("{}{}\n{}", &document[..pos], footnotes, &document[pos..])
+            } else if let Some(pos) = document.find("</body>") {
+                format!("{}{}\n{}", &document[..pos], footnotes, &document[pos..])
+            } else {
+                format!("{}{}", document, footnotes)
+            }
         }
     }
 }
