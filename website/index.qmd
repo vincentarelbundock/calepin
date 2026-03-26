@@ -1,7 +1,7 @@
 ---
-bibliography: assets/library.bib
-number-sections: true
-toc: true
+bibliography = "assets/library.bib"
+number-sections = true
+toc = true
 ---
 
 ```{=html}

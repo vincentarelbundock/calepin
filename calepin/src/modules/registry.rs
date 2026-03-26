@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 
 use crate::modules::transform_document::TransformDocument;
 use crate::module_manifest::{MatchRule, MatchSpec, ModuleManifest, ModuleProvides};
+use crate::emit::FormatEmitter;
 use crate::types::Element;
 
 // ---------------------------------------------------------------------------
@@ -43,6 +44,7 @@ pub struct ModuleContext<'a> {
     children: &'a [Element],
     render_fn: &'a dyn Fn(&Element) -> String,
     raw_fragments: &'a RefCell<Vec<String>>,
+    module_ids: &'a RefCell<HashMap<String, String>>,
 }
 
 impl<'a> ModuleContext<'a> {
@@ -55,11 +57,12 @@ impl<'a> ModuleContext<'a> {
         defaults: &'a crate::config::Metadata,
         render_fn: &'a dyn Fn(&Element) -> String,
         raw_fragments: &'a RefCell<Vec<String>>,
+        module_ids: &'a RefCell<HashMap<String, String>>,
     ) -> Self {
         Self {
             classes, id, attrs, format, defaults,
             vars: HashMap::new(),
-            children, render_fn, raw_fragments,
+            children, render_fn, raw_fragments, module_ids,
         }
     }
 
@@ -71,6 +74,10 @@ impl<'a> ModuleContext<'a> {
 
     pub fn raw_fragments(&self) -> &RefCell<Vec<String>> {
         self.raw_fragments
+    }
+
+    pub fn module_ids(&self) -> &RefCell<HashMap<String, String>> {
+        self.module_ids
     }
 }
 
@@ -89,10 +96,23 @@ pub trait TransformElementChildren: Send + Sync {
 // Module kind
 // ---------------------------------------------------------------------------
 
+/// Factory that creates a configured FormatEmitter at render time.
+/// Emitter configuration (embed_resources, number_sections, etc.) varies
+/// per document, so the registry stores a factory rather than an instance.
+pub type EmitterFactory = fn(&EmitterConfig) -> Box<dyn FormatEmitter>;
+
+/// Per-render emitter configuration, derived from document metadata.
+#[derive(Default)]
+pub struct EmitterConfig {
+    pub embed_resources: bool,
+    pub number_sections: bool,
+}
+
 pub enum ModuleKind {
     Element(Box<dyn TransformElement>),
     ElementChildren(Box<dyn TransformElementChildren>),
     Document(Box<dyn TransformDocument>),
+    Emitter(EmitterFactory),
     Noop,
 }
 
@@ -202,6 +222,18 @@ impl ModuleRegistry {
         result
     }
 
+    /// Resolve the emitter (FormatEmitter) for the given format name.
+    pub fn resolve_emitter(&self, name: &str, config: &EmitterConfig) -> Option<Box<dyn FormatEmitter>> {
+        for m in &self.modules {
+            if m.manifest.name == name {
+                if let ModuleKind::Emitter(factory) = &m.kind {
+                    return Some(factory(config));
+                }
+            }
+        }
+        None
+    }
+
     /// Collect all document transforms from active modules.
     pub fn resolve_document_transforms(&self, active: &[String]) -> Vec<&dyn TransformDocument> {
         let mut result = Vec::new();
@@ -218,36 +250,181 @@ impl ModuleRegistry {
 }
 
 // ---------------------------------------------------------------------------
-// Built-in element transforms
+// Built-in module config (parsed from embedded TOML)
 // ---------------------------------------------------------------------------
 
-struct TransformTabset;
+const MODULES_TOML: &str = include_str!("../config/modules.toml");
 
-impl TransformElementChildren for TransformTabset {
+/// Parsed entry from modules.toml.
+struct BuiltinEntry {
+    name: String,
+    kind: String,
+    matchers: Vec<MatchSpec>,
+}
+
+fn parse_builtin_entries() -> Vec<BuiltinEntry> {
+    let root: toml::Value = toml::from_str(MODULES_TOML)
+        .expect("Failed to parse built-in modules.toml");
+
+    let modules = root.get("modules")
+        .and_then(|v| v.as_array())
+        .expect("modules.toml must contain [[modules]]");
+
+    modules.iter().map(|entry| {
+        let name = entry.get("name").and_then(|v| v.as_str())
+            .expect("module entry missing 'name'").to_string();
+        let kind = entry.get("kind").and_then(|v| v.as_str())
+            .expect("module entry missing 'kind'").to_string();
+
+        let matchers = parse_entry_matchers(entry);
+
+        BuiltinEntry { name, kind, matchers }
+    }).collect()
+}
+
+fn parse_entry_matchers(entry: &toml::Value) -> Vec<MatchSpec> {
+    let match_rule = match entry.get("match") {
+        Some(m) => MatchRule {
+            classes: toml_str_vec(m, "classes"),
+            attrs: toml_str_vec(m, "attrs"),
+            id_prefix: m.get("id_prefix").and_then(|v| v.as_str()).map(String::from),
+            formats: toml_str_vec(m, "formats"),
+        },
+        None => MatchRule::default(),
+    };
+
+    let contexts = {
+        let v = toml_str_vec(entry, "contexts");
+        if v.is_empty() { return Vec::new(); }
+        v
+    };
+
+    vec![MatchSpec { run: None, match_rule, contexts }]
+}
+
+fn toml_str_vec(node: &toml::Value, key: &str) -> Vec<String> {
+    node.get(key)
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+        .unwrap_or_default()
+}
+
+// ---------------------------------------------------------------------------
+// Built-in dispatch: name -> Rust implementation
+// ---------------------------------------------------------------------------
+
+/// Resolve a built-in module name to its Rust implementation.
+fn resolve_builtin_kind(name: &str, kind_str: &str) -> ModuleKind {
+    match (name, kind_str) {
+        // Emitters (AST -> format output)
+        ("html", "emitter") => ModuleKind::Emitter(|cfg| {
+            Box::new(crate::emit::html::HtmlEmitter { embed_resources: cfg.embed_resources })
+        }),
+        ("latex", "emitter") => ModuleKind::Emitter(|cfg| {
+            Box::new(crate::emit::latex::LatexEmitter { number_sections: cfg.number_sections })
+        }),
+        ("typst", "emitter") => ModuleKind::Emitter(|_| {
+            Box::new(crate::emit::typst::TypstEmitter)
+        }),
+        ("markdown", "emitter") => ModuleKind::Emitter(|_| {
+            Box::new(crate::emit::markdown::MarkdownEmitter)
+        }),
+
+        // Element children transforms
+        ("tabset", "element_children") => ModuleKind::ElementChildren(
+            Box::new(BuiltinElementChildren(builtin_element_children_fn::tabset))),
+        ("layout", "element_children") => ModuleKind::ElementChildren(
+            Box::new(BuiltinElementChildren(builtin_element_children_fn::layout))),
+        ("figure", "element_children") => ModuleKind::ElementChildren(
+            Box::new(BuiltinElementChildren(builtin_element_children_fn::figure))),
+        ("table", "element_children") => ModuleKind::ElementChildren(
+            Box::new(BuiltinElementChildren(builtin_element_children_fn::table))),
+        ("theorem", "element_children") => ModuleKind::ElementChildren(
+            Box::new(BuiltinElementChildren(builtin_element_children_fn::theorem))),
+        ("callout", "element_children") => ModuleKind::ElementChildren(
+            Box::new(BuiltinElementChildren(builtin_element_children_fn::callout))),
+
+        // Element transforms
+        ("convert_svg_pdf", "element") => ModuleKind::Element(
+            Box::new(crate::modules::convert_svg_pdf::ConvertSvgPdf)),
+
+        // Document transforms
+        ("append_footnotes", "document") => ModuleKind::Document(
+            Box::new(crate::modules::append_footnotes::AppendFootnotes)),
+        ("split_slides", "document") => ModuleKind::Document(
+            Box::new(crate::modules::split_slides::SplitSlides)),
+        ("highlight", "document") => ModuleKind::Document(
+            Box::new(crate::modules::highlight::transform_page::InjectHighlightMarkup)),
+        ("embed_images", "document") => ModuleKind::Document(
+            Box::new(crate::modules::embed_images::EmbedImagesHtml)),
+
+        // Noop / partial-only
+        (_, "noop") => ModuleKind::Noop,
+
+        (name, kind) => {
+            eprintln!("Warning: unknown built-in module '{name}' with kind '{kind}'");
+            ModuleKind::Noop
+        }
+    }
+}
+
+// Generic wrapper for element children transforms via function pointer.
+struct BuiltinElementChildren(fn(&mut ModuleContext) -> ModuleResult);
+
+impl TransformElementChildren for BuiltinElementChildren {
     fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult {
+        (self.0)(ctx)
+    }
+}
+
+mod builtin_element_children_fn {
+    use super::*;
+
+    pub fn tabset(ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::tabset::render(
             ctx.format, ctx.attrs, ctx.children(), &|el| ctx.render_child(el),
         );
         ModuleResult::Rendered(output)
     }
-}
 
-struct TransformLayout;
-
-impl TransformElementChildren for TransformLayout {
-    fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult {
+    pub fn layout(ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::layout::render(
             ctx.id, ctx.attrs, ctx.children(), ctx.format,
             &|el| ctx.render_child(el), ctx.raw_fragments(), ctx.defaults,
         );
         ModuleResult::Rendered(output)
     }
-}
 
-struct NoopElementChildren;
-impl TransformElementChildren for NoopElementChildren {
-    fn apply(&self, _ctx: &mut ModuleContext) -> ModuleResult {
-        ModuleResult::Pass
+    pub fn figure(ctx: &mut ModuleContext) -> ModuleResult {
+        let output = crate::modules::figure::render(
+            ctx.id, ctx.attrs, ctx.children(), ctx.format,
+            &|el| ctx.render_child(el), ctx.defaults, ctx.module_ids(),
+        );
+        ModuleResult::Rendered(output)
+    }
+
+    pub fn theorem(ctx: &mut ModuleContext) -> ModuleResult {
+        let output = crate::modules::theorem::render(
+            ctx.classes, ctx.id, ctx.attrs, ctx.children(), ctx.format,
+            &|el| ctx.render_child(el), ctx.defaults, ctx.module_ids(),
+        );
+        ModuleResult::Rendered(output)
+    }
+
+    pub fn table(ctx: &mut ModuleContext) -> ModuleResult {
+        let output = crate::modules::table::render(
+            ctx.id, ctx.attrs, ctx.children(), ctx.format,
+            &|el| ctx.render_child(el), ctx.module_ids(),
+        );
+        ModuleResult::Rendered(output)
+    }
+
+    pub fn callout(ctx: &mut ModuleContext) -> ModuleResult {
+        let output = crate::modules::callout::render(
+            ctx.classes, ctx.id, ctx.attrs, ctx.children(), ctx.format,
+            &|el| ctx.render_child(el), ctx.module_ids(),
+        );
+        ModuleResult::Rendered(output)
     }
 }
 
@@ -256,95 +433,20 @@ impl TransformElementChildren for NoopElementChildren {
 // ---------------------------------------------------------------------------
 
 fn register_builtins(modules: &mut Vec<LoadedModule>) {
-    // Element children transforms (per-div structural rewriting)
-    modules.push(builtin_element_children(
-        "tabset",
-        MatchRule {
-            classes: vec!["panel-tabset".to_string()],
-            formats: vec!["html".to_string()],
-            ..Default::default()
-        },
-        vec!["div".to_string()],
-        Box::new(TransformTabset),
-    ));
-
-    modules.push(builtin_element_children(
-        "layout",
-        MatchRule {
-            attrs: vec!["layout_ncol".into(), "layout_nrow".into(), "layout".into()],
-            ..Default::default()
-        },
-        vec!["div".to_string()],
-        Box::new(TransformLayout),
-    ));
-
-    // Auto-numbered elements (number=true in match rule, no transform code)
-    modules.push(builtin_element_children(
-        "theorem",
-        MatchRule {
-            classes: vec![
-                "theorem".into(), "lemma".into(), "corollary".into(),
-                "proposition".into(), "conjecture".into(), "definition".into(),
-                "example".into(), "exercise".into(), "solution".into(),
-                "remark".into(), "algorithm".into(), "proof".into(),
-            ],
-            number: true,
-            ..Default::default()
-        },
-        vec!["div".to_string()],
-        Box::new(NoopElementChildren),
-    ));
-
-    // Prepare elements (pre-render mutations)
-    modules.push(builtin_transform_element("convert_svg_pdf",
-        Box::new(crate::modules::convert_svg_pdf::ConvertSvgPdf)));
-
-    // Document transforms
-    modules.push(builtin_document_transform("append_footnotes",
-        Box::new(crate::modules::append_footnotes::AppendFootnotes)));
-    modules.push(builtin_document_transform("split_slides",
-        Box::new(crate::modules::split_slides::SplitSlides)));
-    modules.push(builtin_document_transform("highlight",
-        Box::new(crate::modules::highlight::transform_page::InjectHighlightMarkup)));
-    modules.push(builtin_document_transform("embed_images",
-        Box::new(crate::modules::embed_images::EmbedImagesHtml)));
-}
-
-fn builtin_element_children(
-    name: &str, match_rule: MatchRule, contexts: Vec<String>,
-    plugin: Box<dyn TransformElementChildren>,
-) -> LoadedModule {
-    LoadedModule {
-        manifest: ModuleManifest {
-            name: name.to_string(), version: None, description: None,
-            provides: ModuleProvides {
-                matchers: vec![MatchSpec { run: None, match_rule, contexts }],
-                ..Default::default()
+    for entry in parse_builtin_entries() {
+        let kind = resolve_builtin_kind(&entry.name, &entry.kind);
+        modules.push(LoadedModule {
+            manifest: ModuleManifest {
+                name: entry.name,
+                version: None,
+                description: None,
+                provides: ModuleProvides {
+                    matchers: entry.matchers,
+                    ..Default::default()
+                },
+                module_dir: PathBuf::new(),
             },
-            module_dir: PathBuf::new(),
-        },
-        kind: ModuleKind::ElementChildren(plugin),
-    }
-}
-
-fn builtin_transform_element(name: &str, transform: Box<dyn TransformElement>) -> LoadedModule {
-    LoadedModule {
-        manifest: ModuleManifest {
-            name: name.to_string(), version: None, description: None,
-            provides: ModuleProvides::default(),
-            module_dir: PathBuf::new(),
-        },
-        kind: ModuleKind::Element(transform),
-    }
-}
-
-fn builtin_document_transform(name: &str, transform: Box<dyn TransformDocument>) -> LoadedModule {
-    LoadedModule {
-        manifest: ModuleManifest {
-            name: name.to_string(), version: None, description: None,
-            provides: ModuleProvides::default(),
-            module_dir: PathBuf::new(),
-        },
-        kind: ModuleKind::Document(transform),
+            kind,
+        });
     }
 }

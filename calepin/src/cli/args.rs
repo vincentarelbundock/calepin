@@ -35,30 +35,29 @@ pub enum Command {
     /// Preview a file, project, or directory with live-reload
     Preview(PreviewArgs),
 
-    /// Delete generated files (_calepin/cache/, _calepin/files/, and LaTeX artefacts).
-    /// Pass a stem name (e.g., "index") to flush only that page's cache/files.
+    /// Delete cache, generated files, and build artefacts
     Flush {
-        /// Directory to clean, or a stem name to flush selectively
+        /// Directory or stem name (e.g., "index") to flush selectively
         #[arg(default_value = ".")]
         path: PathBuf,
 
-        /// Skip confirmation prompt
+        /// Skip confirmation
         #[arg(short = 'y', long)]
         yes: bool,
 
-        /// Delete only _calepin/cache/ directories
+        /// Cache only
         #[arg(long)]
         cache: bool,
 
-        /// Delete only _calepin/files/ directories
+        /// Generated files only
         #[arg(long)]
         files: bool,
 
-        /// Delete only LaTeX compilation artefacts (.aux, .log, etc.)
+        /// LaTeX artefacts only (.aux, .log, etc.)
         #[arg(long)]
         compilation: bool,
 
-        /// Delete everything (default when no category flag is given)
+        /// Everything (default)
         #[arg(long)]
         all: bool,
     },
@@ -89,7 +88,7 @@ pub struct RenderArgs {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
-    /// Output format: a format name from _calepin.toml (e.g., web, article)
+    /// Output format: a format name from _calepin/config.toml (e.g., web, article)
     /// or a base name (html, latex, typst, revealjs, website, markdown).
     /// If omitted, auto-detected from output extension or YAML front matter.
     #[arg(short = 't', long)]
@@ -147,6 +146,27 @@ pub struct PreviewArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum NewAction {
+    /// Scaffold a .qmd notebook with its sidecar directory
+    Notebook {
+        /// Path for the new .qmd file
+        #[arg(default_value = "my_calepin_notebook.qmd")]
+        path: std::path::PathBuf,
+    },
+
+    /// Scaffold a website project
+    Website {
+        /// Directory name for the new website
+        #[arg(default_value = "my_calepin_website")]
+        dir: std::path::PathBuf,
+    },
+
+    /// Scaffold a book project
+    Book {
+        /// Directory name for the new book
+        #[arg(default_value = "my_calepin_book")]
+        dir: std::path::PathBuf,
+    },
+
     /// Generate .qmd files filled with lorem ipsum text
     Gibberish {
         /// Number of .qmd files to generate
@@ -181,10 +201,22 @@ pub enum InfoAction {
     },
 }
 
-/// Returns true if the input is a collection config file (_calepin.toml).
+/// Returns true if the input is a collection config file (_calepin/config.toml).
 pub fn is_collection_config(path: &std::path::Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    name == "_calepin.toml"
+    if name == "config.toml" {
+        if let Some(parent) = path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()) {
+            return parent == "_calepin";
+        }
+    }
+    false
+}
+
+/// Find the project config file in a directory.
+/// Checks `_calepin/config.toml`.
+pub fn find_project_config(dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    let path = dir.join("_calepin").join("config.toml");
+    if path.exists() { Some(path) } else { None }
 }
 
 /// Print a yellow warning to stderr.

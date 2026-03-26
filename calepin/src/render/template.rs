@@ -276,7 +276,7 @@ pub fn build_template_vars_with_headings(
     body: &str,
     ext: &str,
     headings: &[crate::emit::TocEntry],
-    _target: Option<&crate::project::Target>,
+    _target: Option<&crate::config::Target>,
 ) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
@@ -483,7 +483,7 @@ pub fn assemble_page(
     format: &str,
     headings: &[crate::emit::TocEntry],
     preamble: &[String],
-    target: Option<&crate::project::Target>,
+    target: Option<&crate::config::Target>,
     customize: impl FnOnce(&mut HashMap<String, String>),
 ) -> String {
     let mut vars = build_template_vars_with_headings(meta, body, format, headings, target);

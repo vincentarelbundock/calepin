@@ -29,9 +29,9 @@ fn normalize_keys(v: &Value) -> Value {
     }
 }
 
-/// Strip front matter (preamble) from the document body.
-/// Returns (default metadata, body_text). The preamble is discarded;
-/// all configuration comes from `_calepin.toml`.
+/// Parse TOML front matter from the document and return (metadata, body).
+/// Front matter is delimited by `---` (opening) and `---` or `...` (closing).
+/// If the front matter block is empty or absent, returns default metadata.
 #[inline(never)]
 pub fn split_frontmatter(text: &str) -> Result<(Metadata, String)> {
     let lines: Vec<&str> = text.lines().collect();
@@ -54,8 +54,19 @@ pub fn split_frontmatter(text: &str) -> Result<(Metadata, String)> {
         None => return Ok((Metadata::default(), text.to_string())),
     };
 
+    let raw = lines[1..end].join("\n");
     let body: String = lines[end + 1..].join("\n");
-    Ok((Metadata::default(), body))
+
+    if raw.trim().is_empty() {
+        return Ok((Metadata::default(), body));
+    }
+
+    // Parse as TOML; silently ignore non-TOML front matter (e.g., YAML)
+    let meta = match crate::value::parse_frontmatter(&raw) {
+        Ok(table) => parse_metadata(&table).unwrap_or_default(),
+        Err(_) => Metadata::default(),
+    };
+    Ok((meta, body))
 }
 
 pub fn parse_metadata(table: &Table) -> Result<Metadata> {
@@ -193,6 +204,9 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             }
             "static" => {
                 meta.static_dirs = value_string_list(v);
+            }
+            "exclude" => {
+                meta.exclude = value_string_list(v);
             }
             "var" => {
                 if let Some(t) = v.as_table() {
@@ -537,10 +551,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_split_frontmatter_strips_preamble() {
+    fn test_split_frontmatter_parses_toml() {
         let text = "---\ntitle = \"Hello\"\nauthor = \"World\"\n---\n\n# Body\n\nSome text.";
         let (meta, body) = split_frontmatter(text).unwrap();
-        // Preamble is ignored; metadata comes from _calepin.toml
+        assert_eq!(meta.title.as_deref(), Some("Hello"));
+        assert_eq!(meta.author_names(), vec!["World"]);
+        assert!(body.starts_with("\n# Body"));
+    }
+
+    #[test]
+    fn test_split_frontmatter_empty_block() {
+        let text = "---\n---\n\n# Body";
+        let (meta, body) = split_frontmatter(text).unwrap();
+        assert!(meta.title.is_none());
+        assert!(body.starts_with("\n# Body"));
+    }
+
+    #[test]
+    fn test_split_frontmatter_yaml_ignored() {
+        let text = "---\ntitle: Hello\nauthor: World\n---\n\n# Body";
+        let (meta, body) = split_frontmatter(text).unwrap();
+        // YAML is not valid TOML, so front matter is silently ignored
         assert!(meta.title.is_none());
         assert!(body.starts_with("\n# Body"));
     }

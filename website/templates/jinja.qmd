@@ -1,5 +1,5 @@
 ---
-title: Jinja2
+title = "Jinja2"
 ---
 
 *Calepin* uses [MiniJinja](https://github.com/mitsuhiko/minijinja), a Jinja2 template engine for Rust. The same syntax is used everywhere: in document bodies ([shortcuts](shortcuts.html)), in element templates ([elements](elements.html)), in page templates ([pages](pages.html)), and in collection templates ([collections](sites.html)).

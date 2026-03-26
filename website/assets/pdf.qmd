@@ -1,48 +1,58 @@
 ---
-title: "*Calepin* Tutorial (PDF)"
-author:
-  - name: Vincent Arel-Bundock
-    corresponding: true
-    affiliations:
-      - name: Université de Montréal
-        department: Department of Political Science
-        city: Montreal
-        country: Canada
-  - name: Norah Jones
-    email: norah@example.com
-    orcid: 0000-0003-1689-0557
-    affiliations:
-      - name: Carnegie Mellon University
-        department: Machine Learning
-        city: Pittsburgh
-        region: PA
-        country: USA
-      - name: University of Chicago
-        city: Chicago
-        region: IL
-        country: USA
-date: "2026-03-19"
-abstract: |
-  This document renders the *Calepin* tutorial to PDF via LaTeX. It demonstrates
-  scholarly front matter (authors, affiliations, ORCID), the appendix, and the
-  `include` directive for pulling in content from another file.
-copyright:
-  holder: Vincent Arel-Bundock
-  year: 2026
-license: CC BY
-citation:
-  type: article-journal
-  container-title: Journal of Reproducible Research
-  volume: 1
-  issue: 1
-  issued: 2026-03
-  doi: 10.1234/calepin.2026
-funding:
-  - source: Social Sciences and Humanities Research Council
-    award: "Grant #123456"
-    recipient: Vincent Arel-Bundock
-format: latex
-bibliography: assets/library.bib
+title = "*Calepin* Tutorial (PDF)"
+date = "2026-03-19"
+abstract = """
+This document renders the *Calepin* tutorial to PDF via LaTeX. It demonstrates \
+scholarly front matter (authors, affiliations, ORCID), the appendix, and the \
+`include` directive for pulling in content from another file."""
+license = "CC BY"
+format = "latex"
+bibliography = "assets/library.bib"
+
+[[author]]
+name = "Vincent Arel-Bundock"
+corresponding = true
+
+[[author.affiliations]]
+name = "Université de Montréal"
+department = "Department of Political Science"
+city = "Montreal"
+country = "Canada"
+
+[[author]]
+name = "Norah Jones"
+email = "norah@example.com"
+orcid = "0000-0003-1689-0557"
+
+[[author.affiliations]]
+name = "Carnegie Mellon University"
+department = "Machine Learning"
+city = "Pittsburgh"
+region = "PA"
+country = "USA"
+
+[[author.affiliations]]
+name = "University of Chicago"
+city = "Chicago"
+region = "IL"
+country = "USA"
+
+[copyright]
+holder = "Vincent Arel-Bundock"
+year = 2026
+
+[citation]
+type = "article-journal"
+container-title = "Journal of Reproducible Research"
+volume = 1
+issue = 1
+issued = "2026-03"
+doi = "10.1234/calepin.2026"
+
+[[funding]]
+source = "Social Sciences and Humanities Research Council"
+award = "Grant #123456"
+recipient = "Vincent Arel-Bundock"
 ---
 
 {% include "../basics.qmd" %}

@@ -1,5 +1,5 @@
 ---
-title: YAML Settings
+title = "YAML Settings"
 ---
 
 The YAML front matter at the top of every `.qmd` file configures metadata, output options, and custom variables. *Calepin* parses the block between `---` delimiters before processing the document body.
@@ -192,6 +192,6 @@ This is useful for batch rendering with different configurations.
 
 # Collection configuration
 
-For collections, `_calepin.toml` (or `calepin.toml`) provides project-wide settings. The `[site]` section configures navigation, sidebar, and other collection-wide options. See [Collections](sites.html) for the full reference.
+For collections, `_calepin/config.toml` (or `_calepin/config.toml`) provides project-wide settings. The `[site]` section configures navigation, sidebar, and other collection-wide options. See [Collections](sites.html) for the full reference.
 
 Document-level front matter takes precedence over collection configuration for metadata fields like `title`, `author`, and `date`.

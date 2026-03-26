@@ -50,6 +50,11 @@ static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_
 static HIGHLIGHT_CACHE: LazyLock<Mutex<HashMap<u64, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Global LaTeX color registry. Persists across rebuilds so that cached
+/// highlight results (which reference `hlN` names) remain valid.
+static LATEX_COLOR_REGISTRY: LazyLock<Mutex<LatexColorRegistry>> =
+    LazyLock::new(|| Mutex::new(LatexColorRegistry::new()));
+
 fn highlight_cache_key(code: &str, lang: &str, ext: &str) -> u64 {
     use xxhash_rust::xxh3::xxh3_64;
     let mut buf = Vec::with_capacity(code.len() + lang.len() + ext.len() + 2);
@@ -107,7 +112,6 @@ pub enum ColorScope {
 pub struct Highlighter {
     ts: std::cell::OnceCell<ThemeSet>,
     config: HighlightConfig,
-    latex_colors: std::cell::RefCell<LatexColorRegistry>,
 }
 
 /// Load a .tmTheme by name.
@@ -168,7 +172,6 @@ impl Highlighter {
                         return Self {
                             ts: ts_cell,
                             config: HighlightConfig::Single("_custom".to_string()),
-                            latex_colors: std::cell::RefCell::new(LatexColorRegistry::new()),
                         };
                     }
                     Err(e) => {
@@ -186,7 +189,6 @@ impl Highlighter {
         Self {
             ts: std::cell::OnceCell::new(),
             config,
-            latex_colors: std::cell::RefCell::new(LatexColorRegistry::new()),
         }
     }
 
@@ -254,7 +256,7 @@ impl Highlighter {
             _ => crate::util::escape_html(code),
         };
 
-        // Store in cache
+        // Store in cache (including LaTeX, for other consumers)
         if let Ok(mut cache) = HIGHLIGHT_CACHE.lock() {
             cache.insert(key, result.clone());
         }
@@ -280,7 +282,7 @@ impl Highlighter {
         let ss = self.syntax_set();
         let mut h = HighlightLines::new(syntax, self.theme(theme_key));
         let mut output = String::new();
-        let mut colors = self.latex_colors.borrow_mut();
+        let mut colors = LATEX_COLOR_REGISTRY.lock().unwrap();
 
         for (i, line) in LinesWithEndings::from(code).enumerate() {
             if i > 0 {
@@ -354,7 +356,7 @@ impl Highlighter {
 
     /// Emit LaTeX color definitions (call after all elements are rendered).
     pub fn latex_color_definitions(&self) -> String {
-        self.latex_colors.borrow().emit_definitions()
+        LATEX_COLOR_REGISTRY.lock().unwrap().emit_definitions()
     }
 }
 

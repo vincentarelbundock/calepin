@@ -7,7 +7,20 @@ use anyhow::Result;
 use tiny_http::{Header, Response, Server, StatusCode};
 
 pub struct ServerHandle {
-    _server: Arc<Server>,
+    server: Arc<Server>,
+}
+
+impl ServerHandle {
+    /// Unblock the server's request loop so its thread can exit and release the port.
+    pub fn shutdown(&self) {
+        self.server.unblock();
+    }
+}
+
+impl Drop for ServerHandle {
+    fn drop(&mut self) {
+        self.server.unblock();
+    }
 }
 
 pub fn start(
@@ -40,7 +53,7 @@ pub fn start(
         }
     });
 
-    Ok((ServerHandle { _server: server }, actual_port))
+    Ok((ServerHandle { server }, actual_port))
 }
 
 /// Start an HTTP server that serves files from a directory on disk, with
@@ -109,28 +122,64 @@ pub fn start_collection(
         }
     });
 
-    Ok((ServerHandle { _server: server }, actual_port))
+    Ok((ServerHandle { server }, actual_port))
 }
 
 /// Try the requested port, then fall back to nearby ports.
+/// If the port is held by a stale calepin preview (detected via `/__version`),
+/// warns and falls back rather than hanging.
 pub(crate) fn try_bind(port: u16) -> Result<(Server, u16)> {
     // Try the requested port first
-    if let Ok(server) = Server::http(format!("127.0.0.1:{}",port)) {
+    if let Ok(server) = Server::http(format!("127.0.0.1:{}", port)) {
         return Ok((server, port));
     }
 
+    // Check if a stale calepin preview holds the port
+    let stale = check_stale_preview(port);
+
     // Try the next 10 ports
     for p in (port + 1)..=(port + 10) {
-        if let Ok(server) = Server::http(format!("127.0.0.1:{}",p)) {
-            eprintln!(
-                "\x1b[33mWarning:\x1b[0m port {} in use, using {} instead",
-                port, p
-            );
+        if let Ok(server) = Server::http(format!("127.0.0.1:{}", p)) {
+            if stale {
+                eprintln!(
+                    "\x1b[33mWarning:\x1b[0m port {} held by a stale preview, using {} instead",
+                    port, p
+                );
+            } else {
+                eprintln!(
+                    "\x1b[33mWarning:\x1b[0m port {} in use, using {} instead",
+                    port, p
+                );
+            }
             return Ok((server, p));
         }
     }
 
-    anyhow::bail!("Could not find an available port in range {}–{}", port, port + 10)
+    anyhow::bail!("Could not find an available port in range {}-{}", port, port + 10)
+}
+
+/// Check if a calepin preview server is running on the given port
+/// by probing the `/__version` endpoint.
+fn check_stale_preview(port: u16) -> bool {
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+
+    let Ok(mut stream) = TcpStream::connect_timeout(
+        &format!("127.0.0.1:{}", port).parse().unwrap(),
+        std::time::Duration::from_millis(200),
+    ) else {
+        return false;
+    };
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(200)));
+    let _ = stream.write_all(b"GET /__version HTTP/1.0\r\nHost: localhost\r\n\r\n");
+    let mut buf = [0u8; 256];
+    if let Ok(n) = stream.read(&mut buf) {
+        let response = String::from_utf8_lossy(&buf[..n]);
+        // A calepin preview responds with a version number
+        response.contains("200") && response.split("\r\n\r\n").nth(1).map_or(false, |body| body.trim().parse::<u64>().is_ok())
+    } else {
+        false
+    }
 }
 
 fn serve_static(request: tiny_http::Request, url: &str, serve_dir: &PathBuf) {

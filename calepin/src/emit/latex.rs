@@ -2,7 +2,9 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
+use crate::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs};
+#[cfg(test)]
+use crate::emit::{WalkOptions, walk_and_render_with_metadata};
 use crate::render::convert::ImageAttrs;
 
 pub struct LatexEmitter {
@@ -10,11 +12,13 @@ pub struct LatexEmitter {
 }
 
 /// Convert markdown to LaTeX via the shared AST walker.
+#[cfg(test)]
 pub fn markdown_to_latex(markdown: &str, raw_fragments: &[String], number_sections: bool) -> String {
     markdown_to_latex_with_counter(markdown, raw_fragments, number_sections, 0).0
 }
 
 /// Convert markdown to LaTeX, returning (output, final_footnote_counter).
+#[cfg(test)]
 pub fn markdown_to_latex_with_counter(
     markdown: &str,
     raw_fragments: &[String],
@@ -165,7 +169,7 @@ impl FormatEmitter for LatexEmitter {
     fn link_close(&self, _url: &str) -> String { "}".to_string() }
 
     fn image(&self, url: &str, _alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::render::filter::figure::select_image_variant(
+        let resolved = crate::modules::figure::select_image_variant(
             std::path::Path::new(url), "latex",
         );
         let options = attrs.to_latex_options();

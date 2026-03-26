@@ -1,0 +1,17 @@
+---
+title = "About"
+---
+
+This is the about page for your *Calepin* website.
+
+## The project
+
+Describe what this project is about, its goals, and its scope.
+
+## The team
+
+List the people involved and their roles.
+
+## Contact
+
+Provide contact information or links to relevant channels.

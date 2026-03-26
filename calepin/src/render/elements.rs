@@ -23,12 +23,6 @@ pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/
 /// Template name aliases: multiple names can map to the same template file.
 fn resolve_partial_alias(name: &str) -> &str {
     match name {
-        // Italic-body theorem environments share one template
-        "theorem" | "lemma" | "corollary" | "conjecture" | "proposition" => "theorem_italic",
-        // Normal-body theorem environments share one template
-        "definition" | "example" | "exercise" | "solution" | "remark" | "algorithm" => "theorem_normal",
-        // Callout types share one template
-        "callout_note" | "callout_tip" | "callout_warning" | "callout_caution" | "callout_important" => "callout",
         // Code diagnostics share one template
         "code_error" | "code_warning" | "code_message" => "code_diagnostic",
         // Everything else: name matches file directly
@@ -88,9 +82,9 @@ pub struct ElementRenderer {
     /// Chapter number for collection pages. When set, section counters start
     /// at [chapter, 0, 0, 0, 0, 0] so sections get chapter-prefixed numbers.
     pub chapter_number: Option<usize>,
-    /// Theorem numbers populated during rendering by TheoremFilter.
-    /// Keyed by full id (e.g. "thm-cauchy"), value is the number string.
-    pub theorem_numbers: std::cell::RefCell<HashMap<String, String>>,
+    /// IDs registered by modules during rendering (e.g. "thm-cauchy" -> "1").
+    /// Used by the cross-ref system to resolve `@id` references.
+    pub module_ids: std::cell::RefCell<HashMap<String, String>>,
     /// Accumulated walk metadata (headings, IDs) from all Text element renders.
     pub walk_metadata: std::cell::RefCell<crate::emit::WalkMetadata>,
     /// Running footnote counter across Text elements.
@@ -109,7 +103,7 @@ pub struct ElementRenderer {
     /// Whether any code blocks were rendered (gates syntax CSS generation).
     has_code: std::cell::Cell<bool>,
     /// The resolved target.
-    pub target: Option<crate::project::Target>,
+    pub target: Option<crate::config::Target>,
 }
 
 impl ElementRenderer {
@@ -120,11 +114,7 @@ impl ElementRenderer {
         let mut template_env = crate::render::template::TemplateEnv::new();
         let element_names: &[&'static str] = &[
             "code_source", "code_output", "code_warning", "code_message", "code_error",
-            "figure", "div",
-            "callout_note", "callout_warning", "callout_tip", "callout_caution", "callout_important",
-            "theorem", "lemma", "corollary", "proposition", "conjecture",
-            "definition", "example", "exercise", "solution", "remark", "algorithm", "proof",
-            "preamble",
+            "figure", "div", "preamble",
         ];
 
         for name in element_names {
@@ -146,7 +136,7 @@ impl ElementRenderer {
             convert_math: false,
             default_fig_cap_location: None,
             chapter_number: None,
-            theorem_numbers: std::cell::RefCell::new(HashMap::new()),
+            module_ids: std::cell::RefCell::new(HashMap::new()),
             walk_metadata: std::cell::RefCell::new(crate::emit::WalkMetadata::default()),
             footnote_counter: std::cell::Cell::new(0),
             section_counters: std::cell::Cell::new(None),
@@ -166,7 +156,7 @@ impl ElementRenderer {
         options: &crate::pipeline::RenderCoreOptions,
     ) -> Self {
         let hl = metadata.highlight.as_ref();
-        let builtin_hl = crate::project::builtin_metadata().highlight.as_ref();
+        let builtin_hl = crate::config::builtin_metadata().highlight.as_ref();
         let highlight_config = metadata.var.get("highlight-style")
             .map(|v| crate::modules::highlight::parse_highlight_config(v))
             .unwrap_or_else(|| {
@@ -195,7 +185,7 @@ impl ElementRenderer {
         er
     }
 
-    pub fn set_target(&mut self, target: Option<crate::project::Target>) {
+    pub fn set_target(&mut self, target: Option<crate::config::Target>) {
         self.target = target;
     }
 
@@ -250,54 +240,56 @@ impl ElementRenderer {
             }
         };
         let fragments = self.raw_fragments.borrow();
-        let rendered = if self.ext == "html" {
-            let options = crate::emit::WalkOptions {
-                number_sections: self.number_sections,
-                shift_headings: self.shift_headings,
-                footnote_counter_start: self.footnote_counter.get(),
-                section_counters_start: self.section_counters.get(),
-                min_heading_level: self.min_heading_level.get(),
-                suppress_footnote_section: true,
-            };
-            let embed = self.metadata.embed_resources.unwrap_or(true);
-            let result = crate::render::convert::render_html_with_metadata(
-                &processed, &fragments, &options, embed,
-            );
-            self.footnote_counter.set(result.metadata.footnote_counter_end);
-            self.section_counters.set(Some(result.metadata.section_counters_end));
-            self.min_heading_level.set(Some(result.metadata.min_heading_level));
-            if !result.metadata.footnote_defs.is_empty() {
-                let mut acc = self.accumulated_footnote_defs.borrow_mut();
-                for def in result.metadata.footnote_defs {
-                    if !acc.iter().any(|(id, _)| *id == def.0) {
-                        acc.push(def);
-                    }
-                }
+        let config = crate::registry::EmitterConfig {
+            embed_resources: self.metadata.embed_resources.unwrap_or(true),
+            number_sections: self.number_sections,
+        };
+        let emitter = self.registry.resolve_emitter(&self.ext, &config)
+            .expect("no engine registered for format");
+        let options = crate::emit::WalkOptions {
+            number_sections: self.number_sections,
+            shift_headings: self.shift_headings,
+            footnote_counter_start: self.footnote_counter.get(),
+            section_counters_start: self.section_counters.get(),
+            min_heading_level: self.min_heading_level.get(),
+            suppress_footnote_section: true,
+        };
+        let result = crate::emit::walk_and_render_with_metadata(
+            emitter.as_ref(), &processed, &fragments, &options,
+        );
+        self.footnote_counter.set(result.metadata.footnote_counter_end);
+        // Typst math conversion post-pass
+        let output = if self.ext == "typst" {
+            if self.convert_math {
+                crate::emit::convert_math::convert_math_for_typst(&result.output)
+            } else {
+                crate::emit::convert_math::strip_math_for_typst(&result.output)
             }
+        } else {
+            result.output
+        };
+        // Accumulate walk metadata (headings, IDs, footnote defs)
+        if !result.metadata.headings.is_empty() || !result.metadata.ids.is_empty() {
             let mut meta = self.walk_metadata.borrow_mut();
             meta.headings.extend(result.metadata.headings);
             meta.ids.extend(result.metadata.ids);
-            result.output
-        } else {
-            let fn_start = self.footnote_counter.get();
-            let (output, fn_end) = match self.ext.as_str() {
-                "typst" => crate::emit::typst::markdown_to_typst_with_counter(
-                    &processed, &fragments, fn_start, self.convert_math,
-                ),
-                "latex" => crate::emit::latex::markdown_to_latex_with_counter(
-                    &processed, &fragments, self.number_sections, fn_start,
-                ),
-                _ => crate::emit::markdown::markdown_to_markdown_with_counter(
-                    &processed, &fragments, fn_start,
-                ),
-            };
-            self.footnote_counter.set(fn_end);
-            output
-        };
-        rendered
+        }
+        if self.section_counters.get().is_some() || options.number_sections {
+            self.section_counters.set(Some(result.metadata.section_counters_end));
+            self.min_heading_level.set(Some(result.metadata.min_heading_level));
+        }
+        if !result.metadata.footnote_defs.is_empty() {
+            let mut acc = self.accumulated_footnote_defs.borrow_mut();
+            for def in result.metadata.footnote_defs {
+                if !acc.iter().any(|(id, _)| *id == def.0) {
+                    acc.push(def);
+                }
+            }
+        }
+        output
     }
 
-    /// Render a fenced div: track cross-referenceable IDs, delegate to div pipeline.
+    /// Render a fenced div: delegate to div pipeline (modules handle ID registration).
     fn render_div(
         &self,
         classes: &[String],
@@ -305,31 +297,13 @@ impl ElementRenderer {
         attrs: &HashMap<String, String>,
         children: &[Element],
     ) -> String {
-        // Track cross-referenceable div IDs
-        if let Some(ref div_id) = id {
-            let trackable_prefix = if div_id.starts_with("fig-") || div_id.starts_with("tbl-") {
-                Some(&div_id[..4])
-            } else if div_id.starts_with("tip-") || div_id.starts_with("nte-")
-                || div_id.starts_with("wrn-") || div_id.starts_with("imp-")
-                || div_id.starts_with("cau-") || div_id.starts_with("lst-")
-            {
-                Some(&div_id[..4])
-            } else {
-                None
-            };
-            if let Some(prefix) = trackable_prefix {
-                let mut meta = self.walk_metadata.borrow_mut();
-                let count = meta.ids.keys().filter(|k| k.starts_with(prefix)).count();
-                meta.ids.insert(div_id.clone(), (count + 1).to_string());
-            }
-        }
         crate::render::div::render(
             classes, id, attrs, children, &self.ext,
             &self.registry,
             &|e| self.render(e),
             &|name| self.resolve_element_partial(name),
             &self.raw_fragments,
-            &self.theorem_numbers,
+            &self.module_ids,
             &self.template_env,
             &self.metadata,
         )
@@ -348,10 +322,11 @@ impl ElementRenderer {
         if let Element::CodeSource { label, lst_cap, .. } = element {
             if label.starts_with("lst-") {
                 // Track listing ID for cross-references
-                let mut meta = self.walk_metadata.borrow_mut();
-                let count = meta.ids.keys().filter(|k| k.starts_with("lst-")).count();
-                meta.ids.insert(label.clone(), (count + 1).to_string());
+                let ids = self.module_ids.borrow();
+                let count = ids.keys().filter(|k| k.starts_with("lst-")).count();
+                drop(ids);
                 let num = count + 1;
+                self.module_ids.borrow_mut().insert(label.clone(), num.to_string());
 
                 let label_defs = self.metadata.labels.clone();
                 let mut listing_vars = HashMap::new();
@@ -392,8 +367,8 @@ impl ElementRenderer {
         let fig_formats = self.target.as_ref()
             .map(|t| t.fig_formats.clone())
             .filter(|f| !f.is_empty())
-            .unwrap_or_else(|| crate::render::filter::figure::default_fig_formats(&self.ext));
-        let figure_filter = crate::render::filter::figure::BuildFigureVars::new(
+            .unwrap_or_else(|| crate::modules::figure::default_fig_formats(&self.ext));
+        let figure_filter = crate::modules::figure::BuildFigureVars::new(
             self.default_fig_cap_location.clone(),
             fig_formats,
         );
@@ -421,8 +396,8 @@ impl ElementRenderer {
         self.section_counters.set(Some(counters));
     }
 
-    pub fn theorem_numbers(&self) -> HashMap<String, String> {
-        self.theorem_numbers.borrow().clone()
+    pub fn module_ids(&self) -> HashMap<String, String> {
+        self.module_ids.borrow().clone()
     }
 
     pub fn syntax_css_with_scope(&self, scope: ColorScope) -> String {

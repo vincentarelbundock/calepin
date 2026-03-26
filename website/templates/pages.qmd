@@ -1,5 +1,5 @@
 ---
-title: Pages
+title = "Pages"
 ---
 
 The page template wraps the entire rendered body in a document shell: the `<html>` and `<head>` for HTML, the `\documentclass` and preamble for LaTeX, the equivalent for Typst.

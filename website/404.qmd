@@ -1,5 +1,5 @@
 ---
-title: Page Not Found
+title = "Page Not Found"
 ---
 
 <div style="text-align: center; padding: 4rem 1rem;">

@@ -28,21 +28,13 @@ pub fn build_comrak_options() -> Options<'static> {
 pub use markers::wrap_raw;
 
 /// Render markdown to HTML via AST walk.
+#[cfg(test)]
 pub fn render_html(markdown: &str, raw_fragments: &[String], embed_resources: bool) -> String {
     crate::emit::html::markdown_to_html_ast(markdown, raw_fragments, false, false, embed_resources)
 }
 
-/// Render markdown to HTML and return collected metadata (headings, IDs).
-pub fn render_html_with_metadata(
-    markdown: &str,
-    raw_fragments: &[String],
-    options: &crate::emit::WalkOptions,
-    embed_resources: bool,
-) -> crate::emit::WalkResult {
-    crate::emit::html::markdown_to_html_ast_with_metadata(markdown, raw_fragments, options, embed_resources)
-}
-
 /// Render markdown to Typst via AST walk.
+#[cfg(test)]
 pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
     crate::emit::typst::markdown_to_typst_ast(markdown, raw_fragments, false)
 }
@@ -50,14 +42,16 @@ pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
 /// Render a short inline markdown string (e.g., title) to the target format.
 /// Strips the wrapping <p> tags that comrak adds.
 pub fn render_inline(text: &str, format: &str) -> String {
-    let rendered = match format {
-        "html" => render_html(text, &[], false),
-        "latex" => crate::emit::latex::markdown_to_latex(text, &[], false),
-        "typst" => render_typst(text, &[]),
-        _ => crate::emit::markdown::markdown_to_markdown(text, &[]),
-    };
+    let registry = crate::registry::ModuleRegistry::empty();
+    let config = crate::registry::EmitterConfig::default();
+    let emitter = registry.resolve_emitter(format, &config)
+        .expect("no engine registered for format");
+    let options = crate::emit::WalkOptions::default();
+    let result = crate::emit::walk_and_render_with_metadata(
+        emitter.as_ref(), text, &[], &options,
+    );
     // Strip wrapping paragraph tags
-    let trimmed = rendered.trim();
+    let trimmed = result.output.trim();
     let trimmed = trimmed.strip_prefix("<p>").unwrap_or(trimmed);
     let trimmed = trimmed.strip_suffix("</p>").unwrap_or(trimmed);
     trimmed.trim().to_string()

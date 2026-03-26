@@ -102,7 +102,7 @@ pub fn evaluate_document(
 ) -> Result<EvalResult> {
     let rel_stem = path_ctx.relative_stem(input);
     let fig_dir = path_ctx.figures_dir(&rel_stem);
-    let cache_dir = path_ctx.cache_root(&rel_stem);
+    let cache_dir = path_ctx.cache_dir(&rel_stem);
     let cache_enabled = metadata.var.get("execute")
         .and_then(|v| v.get("cache"))
         .and_then(|v| v.as_bool())
@@ -151,7 +151,7 @@ pub fn evaluate(
             }
             Block::Code(chunk) => {
                 // Merge document-level defaults from front matter var into chunk options.
-                // Resolution order: chunk #| options > front matter var > _calepin.toml defaults.
+                // Resolution order: chunk #| options > front matter var > _calepin/config.toml defaults.
                 // Only merge keys that look like chunk options (contain a dot or match known names).
                 static CHUNK_OPT_PREFIXES: &[&str] = &[
                     "echo", "eval", "include", "warning", "message", "results", "cache",
@@ -241,27 +241,11 @@ pub fn evaluate(
                 }
                 let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
                 preamble.extend(child_result.preamble);
-                let mut child_elements = child_result.elements;
-                let mut div_attrs = div.attrs.clone();
-                if let Some(ref id) = div.id {
-                    if id.starts_with("fig-") && !div_attrs.contains_key("fig_cap") {
-                        let (remaining, caption) = crate::modules::figure::separate_figure_caption(&child_elements);
-                        if !caption.is_empty() {
-                            div_attrs.insert("fig_cap".to_string(), caption);
-                            child_elements = remaining;
-                        }
-                    } else if id.starts_with("tbl-") && !div_attrs.contains_key("tbl_cap") {
-                        let (remaining, caption) = crate::modules::table::separate_table_caption(&child_elements);
-                        if !caption.is_empty() {
-                            div_attrs.insert("tbl_cap".to_string(), caption);
-                            child_elements = remaining;
-                        }
-                    }
-                }
+                let child_elements = child_result.elements;
                 elements.push(Element::Div {
                     classes: div.classes.clone(),
                     id: div.id.clone(),
-                    attrs: div_attrs,
+                    attrs: div.attrs.clone(),
                     children: child_elements,
                 });
             }

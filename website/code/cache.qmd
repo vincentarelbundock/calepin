@@ -1,5 +1,5 @@
 ---
-title: Cache
+title = "Cache"
 ---
 
 Documents with expensive code chunks (model fitting, simulations, large data imports) can take a long time to render. Since most edits only touch prose or a single chunk, re-executing every chunk from scratch is wasteful and slow. This is especially painful with `calepin --preview`, which watches the source file and re-renders on every save, ideally instantly, without waiting for expensive code chunks to run again.

@@ -6,17 +6,21 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, walk_and_render_with_metadata};
+use crate::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs};
+#[cfg(test)]
+use crate::emit::{WalkOptions, walk_and_render_with_metadata};
 use crate::render::convert::ImageAttrs;
 
 pub struct MarkdownEmitter;
 
 /// Convert markdown to markdown via the shared AST walker.
+#[cfg(test)]
 pub fn markdown_to_markdown(markdown: &str, raw_fragments: &[String]) -> String {
     markdown_to_markdown_with_counter(markdown, raw_fragments, 0).0
 }
 
 /// Convert markdown to markdown, returning (output, final_footnote_counter).
+#[cfg(test)]
 pub fn markdown_to_markdown_with_counter(
     markdown: &str,
     raw_fragments: &[String],

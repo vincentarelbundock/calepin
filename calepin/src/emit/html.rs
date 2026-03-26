@@ -2,7 +2,9 @@
 
 use comrak::nodes::TableAlignment;
 
-use crate::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs, WalkOptions, WalkResult, walk_and_render_with_metadata};
+use crate::emit::{FormatEmitter, FootnoteStrategy, HeadingAttrs};
+#[cfg(test)]
+use crate::emit::{WalkOptions, WalkResult, walk_and_render_with_metadata};
 use crate::render::convert::ImageAttrs;
 
 pub struct HtmlEmitter {
@@ -10,6 +12,7 @@ pub struct HtmlEmitter {
 }
 
 /// Convert markdown to HTML via the shared AST walker.
+#[cfg(test)]
 pub fn markdown_to_html_ast(
     markdown: &str,
     raw_fragments: &[String],
@@ -22,6 +25,7 @@ pub fn markdown_to_html_ast(
 }
 
 /// Convert markdown to HTML and return collected metadata (headings, IDs).
+#[cfg(test)]
 pub fn markdown_to_html_ast_with_metadata(
     markdown: &str,
     raw_fragments: &[String],
@@ -143,7 +147,7 @@ impl FormatEmitter for HtmlEmitter {
     fn link_close(&self, _url: &str) -> String { "</a>".to_string() }
 
     fn image(&self, url: &str, alt: &str, attrs: &ImageAttrs) -> String {
-        let resolved = crate::render::filter::figure::select_image_variant(
+        let resolved = crate::modules::figure::select_image_variant(
             std::path::Path::new(url), "html",
         );
         let embed = self.embed_resources;

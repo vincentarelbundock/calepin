@@ -1,5 +1,5 @@
 ---
-title: Themes
+title = "Themes"
 ---
 
 A theme bundles templates and assets into a reusable package that gives documents a consistent look. Themes sit between your project-level overrides and *Calepin*'s built-in defaults.
@@ -99,10 +99,10 @@ Settings merge in this order (last wins):
 
 1. Built-in target defaults
 2. Theme `[defaults]` and `[vars]`
-3. Project `_calepin.toml` settings
+3. Project `_calepin/config.toml` settings
 4. Document front matter
 
 
 # Assets
 
-Files in the theme's `assets/` directory are copied to the output during collection builds. User `static` directories from `_calepin.toml` take priority on conflicts.
+Files in the theme's `assets/` directory are copied to the output during collection builds. User `static` directories from `_calepin/config.toml` take priority on conflicts.

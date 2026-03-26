@@ -245,10 +245,10 @@ fn resolve_grouped_plain(ids: &[String], db: &HashMap<String, String>) -> String
 #[inline(never)]
 pub fn resolve_html_with_ids(
     html: &str,
-    theorem_nums: &HashMap<String, String>,
+    module_ids: &HashMap<String, String>,
     walk_ids: &HashMap<String, String>,
 ) -> String {
-    let ref_data = collect_ids_html(html, theorem_nums, walk_ids);
+    let ref_data = collect_ids_html(html, module_ids, walk_ids);
     let make_href = |id: &str| format!("#{}", id);
     resolve_html_refs(html, &ref_data.ids, &make_href)
 }
@@ -341,7 +341,7 @@ fn resolve_html_refs(
 /// Used as pass 1 in the two-pass collection pipeline.
 pub fn collect_ids_html(
     html: &str,
-    theorem_nums: &HashMap<String, String>,
+    module_ids: &HashMap<String, String>,
     walk_ids: &HashMap<String, String>,
 ) -> PageRefData {
     let mut data = PageRefData::default();
@@ -384,8 +384,8 @@ pub fn collect_ids_html(
         data.ids.insert(format!("tbl-{}", &caps[1]), data.tbl_count.to_string());
     }
 
-    // Theorems
-    for (k, v) in theorem_nums {
+    // Module-registered IDs (theorems, figures, tables, callouts, listings)
+    for (k, v) in module_ids {
         data.ids.insert(k.clone(), v.clone());
     }
 
@@ -547,7 +547,7 @@ fn relative_url(from: &str, to: &str) -> String {
 /// LaTeX has its own \label/\ref system, so unresolved refs emit \ref{} instead
 /// of warnings — LaTeX will resolve them during compilation.
 #[inline(never)]
-pub fn resolve_latex(latex: &str, theorem_nums: &HashMap<String, String>) -> String {
+pub fn resolve_latex(latex: &str, module_ids: &HashMap<String, String>) -> String {
     let mut db: HashMap<String, String> = HashMap::new();
 
     // Collect section numbers
@@ -586,7 +586,7 @@ pub fn resolve_latex(latex: &str, theorem_nums: &HashMap<String, String>) -> Str
     }
 
     // Theorem numbers from rendering phase
-    db.extend(theorem_nums.iter().map(|(k, v)| (k.clone(), v.clone())));
+    db.extend(module_ids.iter().map(|(k, v)| (k.clone(), v.clone())));
 
     // Count equations from \label{eq-*}
     static RE_LATEX_EQ: LazyLock<Regex> = LazyLock::new(|| {
@@ -659,7 +659,7 @@ pub fn resolve_latex(latex: &str, theorem_nums: &HashMap<String, String>) -> Str
 
 /// Post-process for Typst/Markdown: resolve cross-refs as plain text.
 /// Must resolve them — Typst interprets bare `@label` as its own ref syntax.
-pub fn resolve_plain(text: &str, theorem_nums: &HashMap<String, String>) -> String {
+pub fn resolve_plain(text: &str, module_ids: &HashMap<String, String>) -> String {
     let mut db: HashMap<String, String> = HashMap::new();
 
     // Count figures — collect from both syntaxes but deduplicate by label
@@ -707,7 +707,7 @@ pub fn resolve_plain(text: &str, theorem_nums: &HashMap<String, String>) -> Stri
     }
 
     // Theorem numbers from rendering phase
-    db.extend(theorem_nums.iter().map(|(k, v)| (k.clone(), v.clone())));
+    db.extend(module_ids.iter().map(|(k, v)| (k.clone(), v.clone())));
 
     // Count equations from <eq-*>
     static RE_PLAIN_EQ: LazyLock<Regex> = LazyLock::new(|| {
@@ -946,9 +946,9 @@ mod tests {
     #[test]
     fn test_collect_ids_html_with_theorems() {
         let html = "";
-        let mut thm_nums = HashMap::new();
-        thm_nums.insert("thm-cauchy".to_string(), "1".to_string());
-        let data = collect_ids_html(html, &thm_nums, &HashMap::new());
+        let mut module_ids = HashMap::new();
+        module_ids.insert("thm-cauchy".to_string(), "1".to_string());
+        let data = collect_ids_html(html, &module_ids, &HashMap::new());
         assert_eq!(data.ids.get("thm-cauchy"), Some(&"1".to_string()));
     }
 

@@ -1,6 +1,6 @@
 //! Document tree expansion: resolving `[[contents]]` sections and glob patterns.
 
-use super::{ContentSection, DocumentEntry};
+use crate::config::{ContentSection, DocumentEntry};
 
 /// A node in the expanded document tree.
 #[derive(Debug, Clone)]
@@ -10,7 +10,6 @@ pub enum DocumentNode {
 }
 
 /// Expand `[[contents]]` into a flat `DocumentNode` tree, resolving globs.
-/// Standalone sections are excluded (they are not part of navigation).
 /// When `lang` is Some, only sections matching that language (or with no lang) are included.
 pub fn expand_contents(contents: &[ContentSection], base_dir: &std::path::Path) -> Vec<DocumentNode> {
     expand_contents_for_lang(contents, base_dir, None)
@@ -24,9 +23,6 @@ pub fn expand_contents_for_lang(
 ) -> Vec<DocumentNode> {
     let mut result = Vec::new();
     for section in contents {
-        if section.standalone {
-            continue;
-        }
         // Language filter: if lang is requested, skip sections that don't match
         if let Some(filter_lang) = lang {
             if let Some(ref section_lang) = section.lang {

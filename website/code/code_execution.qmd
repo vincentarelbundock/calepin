@@ -1,5 +1,5 @@
 ---
-title: Code Execution
+title = "Code Execution"
 ---
 
 *Calepin* runs R and Python code chunks via persistent subprocesses (`Rscript` and `python3`). Variables persist across chunks within the same language, plots are captured automatically, and results are woven into the final document.

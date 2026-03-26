@@ -14,7 +14,15 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
 
     let compile = args.compile;
 
-    // Collection mode: _calepin.toml config with [[contents]]
+    // Directory: look for project config inside
+    if args.input.len() == 1 && args.input[0].is_dir() {
+        if let Some(config) = crate::cli::find_project_config(&args.input[0]) {
+            let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
+            return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
+        }
+    }
+
+    // Collection mode: _calepin/config.toml or _calepin/config.toml config with [[contents]]
     if args.input.len() == 1 && crate::cli::is_collection_config(&args.input[0]) {
         let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
         return crate::collection::build_collection(Some(args.input[0].as_path()), &output, args.clean, args.quiet, args.format.as_deref());
@@ -106,11 +114,14 @@ fn render_one_with_context(
         eprintln!("-> {}", output_path.display());
     }
 
-    // Run compile step if --compile was passed and the format defines one
-    if compile {
-        if let Some(ref compile_cmd) = ctx.target.compile {
-            run_compile_step(&output_path, compile_cmd, ctx.target.output_extension(), quiet)?;
-        }
+    // Run compile step: either explicit --compile flag, explicit compile command on target,
+    // or engine extension differs from output extension (e.g., typst -> pdf).
+    let needs_compile = compile
+        || ctx.target.compile.is_some()
+        || crate::paths::engine_to_ext(&ctx.target.engine) != ctx.target.output_extension();
+    if needs_compile {
+        let cmd = ctx.target.compile.as_deref().unwrap_or("");
+        run_compile_step(&output_path, cmd, ctx.target.output_extension(), quiet)?;
     }
 
     // Run target-level post-processing commands
@@ -125,9 +136,8 @@ fn render_one_with_context(
 
 /// Run a target's compile step.
 ///
-/// `compile_command` is the shell command template (e.g., "tectonic {input}").
+/// `compile_command` is the shell command template (e.g., "typst compile {input}").
 /// `output_ext` is the final output extension (from target.extension).
-/// If the rendered file is `.typ` and no command is given, uses the built-in Typst compiler.
 pub fn run_compile_step(
     rendered_path: &Path,
     compile_command: &str,
@@ -135,20 +145,6 @@ pub fn run_compile_step(
     quiet: bool,
 ) -> Result<()> {
     let output_path = rendered_path.with_extension(output_ext);
-
-    // Native Typst compilation when no explicit command is given.
-    if compile_command.is_empty()
-        && rendered_path.extension().is_some_and(|e| e == "typ")
-    {
-        if !quiet {
-            eprintln!("  compiling: {} -> {}", rendered_path.display(), output_path.display());
-        }
-        crate::typst_compile::compile_typst_to_pdf(rendered_path, &output_path)?;
-        if !quiet {
-            eprintln!("-> {}", output_path.display());
-        }
-        return Ok(());
-    }
 
     let cmd = compile_command
         .replace("{input}", &rendered_path.to_string_lossy())

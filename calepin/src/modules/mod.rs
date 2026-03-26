@@ -14,7 +14,7 @@ pub mod transform_document;
 
 // Built-in modules
 pub mod append_footnotes;
-pub mod convert_math;
+pub mod callout;
 pub mod convert_svg_pdf;
 pub mod embed_images;
 pub mod figure;
@@ -23,3 +23,4 @@ pub mod layout;
 pub mod split_slides;
 pub mod table;
 pub mod tabset;
+pub mod theorem;

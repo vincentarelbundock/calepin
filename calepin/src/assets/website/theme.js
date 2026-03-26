@@ -62,6 +62,31 @@
       });
     }
 
+    // Navbar dropdown toggle
+    document.querySelectorAll('.navbar-dropdown-toggle').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var dropdown = btn.closest('.navbar-dropdown');
+        var wasOpen = dropdown.classList.contains('open');
+        // Close all dropdowns
+        document.querySelectorAll('.navbar-dropdown.open').forEach(function(d) {
+          d.classList.remove('open');
+          d.querySelector('.navbar-dropdown-toggle').setAttribute('aria-expanded', 'false');
+        });
+        if (!wasOpen) {
+          dropdown.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+    // Close dropdowns on outside click
+    document.addEventListener('click', function() {
+      document.querySelectorAll('.navbar-dropdown.open').forEach(function(d) {
+        d.classList.remove('open');
+        d.querySelector('.navbar-dropdown-toggle').setAttribute('aria-expanded', 'false');
+      });
+    });
+
     // Tabset: click to switch tabs
     document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
       btn.addEventListener('click', function() {

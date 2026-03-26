@@ -1,5 +1,5 @@
 ---
-title: Shell
+title = "Shell"
 ---
 
 *Calepin* runs shell chunks in a persistent `/bin/sh` subprocess. Shell state --- variables, working directory, and environment --- persists across chunks.

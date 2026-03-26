@@ -1,5 +1,5 @@
 ---
-title: Templates
+title = "Templates"
 ---
 
 Every piece of output in *Calepin* is controlled by a template: element markup, page wrappers, collection layouts. Templates use [MiniJinja](https://github.com/mitsuhiko/minijinja) syntax (Jinja2 for Rust). Learn one syntax and it works everywhere.

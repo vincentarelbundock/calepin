@@ -1,5 +1,6 @@
 mod assets;
 mod config;
+pub(crate) mod contents;
 mod context;
 mod discover;
 mod icons;
@@ -14,8 +15,10 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use context::{build_document_context, build_collection_context, build_nav_tree_for_lang, mark_active, ListingItem};
-use discover::{discover_listing_documents, discover_documents, discover_standalone_documents, DocumentInfo};
-use crate::project::{DocumentNode, expand_contents};
+use discover::{discover_listing_documents, discover_documents, DocumentInfo};
+use contents::{DocumentNode, expand_contents};
+
+use crate::paths::resolve_project_root;
 
 /// Extract the first <img> src from rendered HTML.
 fn extract_first_image(html: &str) -> Option<String> {
@@ -57,7 +60,7 @@ pub fn build_collection(
     // 1. Load config and convert to metadata
     let (meta, found_path) = config::load_config(config_path, &cwd)?;
 
-    let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
+    let base_dir = resolve_project_root(&found_path, &cwd);
     if !quiet {
         eprintln!("Config: {}", found_path.display());
     }
@@ -67,7 +70,7 @@ pub fn build_collection(
     let collection_target_name = cli_target.map(|s| s.to_string())
         .or_else(|| meta.target.clone())
         .unwrap_or_else(|| "html".to_string());
-    let collection_target = crate::project::resolve_target(&collection_target_name, &meta.targets)?;
+    let collection_target = crate::config::resolve_target(&collection_target_name, &meta.targets)?;
     let format = &collection_target.engine;
     let output_ext = collection_target.output_extension();
 
@@ -105,10 +108,8 @@ pub fn build_collection(
     }
     fs::create_dir_all(output)?;
 
-    // 4. Discover pages (nav + standalone)
+    // 4. Discover all .qmd pages (auto-discovered, filtered by exclude)
     let mut pages = discover_documents(&meta, &base_dir, output_ext)?;
-    let standalone = discover_standalone_documents(&meta, &base_dir, output_ext)?;
-    pages.extend(standalone);
     if !quiet {
         eprintln!("Found {} documents", pages.len());
     }
@@ -249,12 +250,12 @@ pub fn rebuild_documents(
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let (meta, found_path) = config::load_config(config_path, &cwd)?;
-    let base_dir = found_path.parent().unwrap_or(&cwd).to_path_buf();
+    let base_dir = resolve_project_root(&found_path, &cwd);
 
     let collection_target_name = cli_target.map(|s| s.to_string())
         .or_else(|| meta.target.clone())
         .unwrap_or_else(|| "html".to_string());
-    let collection_target = crate::project::resolve_target(&collection_target_name, &meta.targets)?;
+    let collection_target = crate::config::resolve_target(&collection_target_name, &meta.targets)?;
     let format = &collection_target.engine;
     let output_ext = collection_target.output_extension();
 
@@ -263,10 +264,8 @@ pub fn rebuild_documents(
 
     let output_dir = base_dir.join(meta.output.as_deref().unwrap_or("output"));
 
-    // Discover all pages (needed for nav context), including standalone
-    let mut pages = discover_documents(&meta, &base_dir, output_ext)?;
-    let standalone = discover_standalone_documents(&meta, &base_dir, output_ext)?;
-    pages.extend(standalone);
+    // Discover all pages (needed for nav context)
+    let pages = discover_documents(&meta, &base_dir, output_ext)?;
 
     // Determine which pages to re-render by matching changed absolute paths
     // against the discovered page sources. Canonicalize both sides so that
@@ -315,7 +314,7 @@ pub fn rebuild_documents(
             .ok_or_else(|| anyhow::anyhow!("No template files found"))?;
 
         let collection_ctx = build_collection_context(&meta, &pages, &base_dir);
-        let var_ctx = crate::project::target_vars_to_jinja_from_meta(&meta.var);
+        let var_ctx = crate::config::target_vars_to_jinja_from_meta(&meta.var);
 
         let tpl_ext = match format.as_str() {
             "latex" => "tex",
@@ -341,7 +340,7 @@ pub fn rebuild_documents(
                 listing_documents.iter().map(|lp| build_listing_item(lp, &results)).collect()
             });
 
-            let doc_ctx = build_document_context(page, result, &pages, listing_items, &meta.languages);
+            let doc_ctx = build_document_context(page, result, &pages, listing_items, &meta.languages, &meta, &base_dir);
 
             let mut nav_tree = if !meta.languages.is_empty() {
                 if let Some(ref lang) = page.lang {
@@ -426,7 +425,7 @@ fn apply_collection_partials(
     let collection_ctx = build_collection_context(meta, pages, base_dir);
 
     // Convert var to minijinja Value for template access
-    let var_ctx = crate::project::target_vars_to_jinja_from_meta(&meta.var);
+    let var_ctx = crate::config::target_vars_to_jinja_from_meta(&meta.var);
 
     // Determine template extension
     let tpl_ext = match format {
@@ -497,7 +496,7 @@ fn apply_collection_partials(
 
         for (page_idx, (items, pagination)) in paginated.iter().enumerate() {
             let listing = if items.is_empty() { None } else { Some(items.clone()) };
-            let mut doc_ctx = build_document_context(page, Some(result), pages, listing, &meta.languages);
+            let mut doc_ctx = build_document_context(page, Some(result), pages, listing, &meta.languages, meta, base_dir);
             doc_ctx.pagination = pagination.clone();
 
             let collection_with_active = minijinja::context! {
@@ -551,7 +550,7 @@ fn apply_collection_partials(
     Ok(())
 }
 
-/// Run user-configured post-processing commands from `[[post]]` in calepin.toml.
+/// Run user-configured post-processing commands from `[[post]]` in config.toml.
 ///
 /// Each command is executed from the project root. `{output}` and `{root}` in the
 /// command string are replaced with the output directory and project root paths.
@@ -568,8 +567,10 @@ fn run_post_commands(
             continue;
         }
 
+        let relative_output = output.strip_prefix(project_root)
+            .unwrap_or(output);
         let cmd = post.command
-            .replace("{output}", &output.display().to_string())
+            .replace("{output}", &relative_output.display().to_string())
             .replace("{root}", &project_root.display().to_string());
 
         if !quiet {
@@ -632,7 +633,7 @@ fn render_orchestrator(
         url => meta.url.clone(),
     };
 
-    let var_ctx = crate::project::target_vars_to_jinja_from_meta(&meta.var);
+    let var_ctx = crate::config::target_vars_to_jinja_from_meta(&meta.var);
 
     let label_defs = meta.labels.as_ref();
 
@@ -725,18 +726,7 @@ fn render_orchestrator(
         let compile_ext = target_def.map(|t| t.output_extension()).unwrap_or("pdf");
         let output_filename = format!("book.{}", compile_ext);
 
-        if cmd.is_empty() && master_name.ends_with(".typ") {
-            // Native Typst compilation
-            let input_path = output.join(&master_name);
-            let output_file = output.join(&output_filename);
-            if !quiet {
-                eprintln!("  Compiling: {} -> {}", input_path.display(), output_file.display());
-            }
-            crate::typst_compile::compile_typst_to_pdf(&input_path, &output_file)?;
-            if !quiet {
-                eprintln!("  Output: {}", output_file.display());
-            }
-        } else {
+        {
             let expanded = cmd
                 .replace("{input}", &master_name)
                 .replace("{output}", &output_filename);

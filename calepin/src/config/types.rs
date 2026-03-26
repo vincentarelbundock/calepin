@@ -198,7 +198,7 @@ pub struct CitationConfig {
 
 /// Unified document/project metadata.
 ///
-/// Both `_calepin.toml` (project config) and front matter (YAML/TOML preamble)
+/// Both `_calepin/config.toml` (project config) and front matter (YAML/TOML preamble)
 /// parse into this type. Document-level fields override project-level fields
 /// via `Metadata::merge()`.
 #[derive(Debug, Clone, Default)]
@@ -234,7 +234,7 @@ pub struct Metadata {
     pub lang: Option<String>,
     pub url: Option<String>,
     pub favicon: Option<String>,
-    pub navbar: Option<crate::project::NavbarConfig>,
+    pub navbar: Option<super::NavbarConfig>,
     pub orchestrator: Option<String>,
     pub global_crossref: bool,
     pub static_dirs: Vec<String>,
@@ -256,10 +256,12 @@ pub struct Metadata {
     pub labels: Option<LabelsConfig>,
 
     // -- Collection structure --
-    pub contents: Vec<crate::project::ContentSection>,
-    pub languages: Vec<crate::project::LanguageConfig>,
-    pub targets: HashMap<String, crate::project::Target>,
-    pub post: Vec<crate::project::PostCommand>,
+    pub contents: Vec<super::ContentSection>,
+    pub languages: Vec<super::LanguageConfig>,
+    pub targets: HashMap<String, super::Target>,
+    pub post: Vec<super::PostCommand>,
+    /// Glob patterns for .qmd files to exclude from rendering.
+    pub exclude: Vec<String>,
 
     // -- Extra variables (custom key-value pairs) --
     pub var: HashMap<String, MetaValue>,

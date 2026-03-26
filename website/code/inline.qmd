@@ -1,5 +1,5 @@
 ---
-title: Inline
+title = "Inline"
 ---
 
 Inline expressions let you embed computed values directly in your prose. Wrap an expression in backticks with the engine name, and *Calepin* evaluates it during rendering.

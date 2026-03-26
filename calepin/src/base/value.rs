@@ -233,8 +233,7 @@ fn merge_tables(target: &mut Table, source: Table) {
 // TOML front matter parsing
 // ---------------------------------------------------------------------------
 
-/// Parse TOML text into a Table. Used by tests and project config loading.
-#[cfg(test)]
+/// Parse TOML text into a Table.
 pub fn parse_frontmatter(text: &str) -> anyhow::Result<Table> {
     let tv: toml::Value = toml::from_str(text)
         .map_err(|e| anyhow::anyhow!("TOML parse error: {}", e))?;

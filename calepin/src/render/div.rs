@@ -22,7 +22,7 @@ pub fn render(
     render_element: &dyn Fn(&Element) -> String,
     resolve_partial: &dyn Fn(&str) -> Option<String>,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
-    theorem_numbers: &std::cell::RefCell<HashMap<String, String>>,
+    module_ids: &std::cell::RefCell<HashMap<String, String>>,
     template_env: &crate::render::template::TemplateEnv,
     defaults: &crate::config::Metadata,
 ) -> String {
@@ -33,33 +33,11 @@ pub fn render(
         if let ModuleKind::ElementChildren(ref p) = plugin.kind {
             let mut ctx = ModuleContext::new(
                 classes, id, attrs, children, format, defaults,
-                render_element, raw_fragments,
+                render_element, raw_fragments, module_ids,
             );
             match p.apply(&mut ctx) {
                 ModuleResult::Rendered(output) => return output,
                 ModuleResult::Continue | ModuleResult::Pass => {}
-            }
-        }
-    }
-
-    // Phase 2: Auto-numbering for modules with number=true
-    let mut extra_vars: Option<HashMap<String, String>> = None;
-    for (_plugin, filter_spec) in &matching {
-        if filter_spec.match_rule.number {
-            // Find the matching class for numbering
-            for cls in classes {
-                if filter_spec.match_rule.classes.iter().any(|c| c == cls) {
-                    static COUNTERS: std::sync::LazyLock<std::sync::Mutex<HashMap<String, usize>>> =
-                        std::sync::LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
-                    let mut counters = COUNTERS.lock().unwrap();
-                    let count = counters.entry(cls.clone()).or_insert(0);
-                    *count += 1;
-                    let mut vars = HashMap::new();
-                    vars.insert("number".to_string(), count.to_string());
-                    vars.insert("type_class".to_string(), cls.clone());
-                    extra_vars = Some(vars);
-                    break;
-                }
             }
         }
     }
@@ -79,21 +57,7 @@ pub fn render(
         .join("\n\n");
 
     let mut vars = HashMap::new();
-    build_div_vars(&mut vars, classes, id, attrs, &children_rendered, format, defaults);
-
-    // Merge auto-numbering vars
-    if let Some(ev) = extra_vars {
-        for (k, v) in ev {
-            vars.insert(k, v);
-        }
-    }
-
-    // Register theorem numbers for crossref resolution
-    if let (Some(id_val), Some(num)) = (id.as_deref(), vars.get("number")) {
-        if !num.is_empty() {
-            theorem_numbers.borrow_mut().insert(id_val.to_string(), num.clone());
-        }
-    }
+    build_div_vars(&mut vars, classes, id, attrs, &children_rendered, format);
 
     // Template lookup: explicit override -> class-based -> fallback
     let (tpl_name, tpl_source) = vars.get("template")
@@ -121,7 +85,6 @@ fn build_div_vars(
     attrs: &HashMap<String, String>,
     children_rendered: &str,
     format: &str,
-    defaults: &crate::config::Metadata,
 ) {
     for (k, val) in attrs {
         vars.insert(k.clone(), val.clone());
@@ -136,42 +99,6 @@ fn build_div_vars(
         vars.insert("id".to_string(), String::new());
     }
 
-    // Labels for localisable strings
-    let label_defs = defaults.labels.clone();
-    vars.insert("label_proof".to_string(),
-        label_defs.as_ref().and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
-
-    // Render caption from raw markdown
-    if let Some(raw_cap) = vars.get("fig_cap").cloned().or_else(|| vars.get("tbl_cap").cloned()) {
-        if !raw_cap.is_empty() {
-            let rendered = crate::render::convert::render_inline(&raw_cap, format);
-            vars.insert("caption".to_string(), rendered);
-        }
-    }
-
-    // Figure div enrichments
-    if id.as_ref().map_or(false, |i| i.starts_with("fig-")) {
-        let id_val = id.as_ref().unwrap();
-        vars.insert("label".to_string(), id_val.clone());
-        vars.entry("template".to_string()).or_insert_with(|| "figure_div".to_string());
-
-        let fig_attrs = crate::render::filter::figure::figure_attrs_from_div(attrs);
-        crate::render::filter::figure::build_figure_wrapper_vars(
-            vars, &fig_attrs, format, None, defaults,
-        );
-    }
-
-    // Table div enrichments
-    if id.as_ref().map_or(false, |i| i.starts_with("tbl-")) {
-        let id_val = id.as_ref().unwrap();
-        vars.insert("label".to_string(), id_val.clone());
-        vars.entry("template".to_string()).or_insert_with(|| "table_div".to_string());
-
-        let cap_loc = vars.get("tbl_cap_location")
-            .cloned()
-            .unwrap_or_else(|| "top".to_string());
-        vars.insert("cap_location".to_string(), cap_loc);
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -194,28 +121,17 @@ fn validate_div_id(id: &str, classes: &[String]) -> Option<String> {
         return None;
     }
 
+    // Check if any class owns this prefix (figure, table, theorem, callout)
     if prefix == "fig" || prefix == "tbl" {
         return None;
     }
 
     for cls in classes {
-        if let Some(p) = crate::render::filter::theorem::theorem_prefix(cls) {
-            if p == prefix {
-                return None;
-            }
+        if let Some(p) = crate::modules::theorem::theorem_prefix(cls) {
+            if p == prefix { return None; }
         }
-    }
-
-    let callout_map: &[(&str, &str)] = &[
-        ("callout-tip", "tip"), ("callout-note", "nte"),
-        ("callout-warning", "wrn"), ("callout-important", "imp"),
-        ("callout-caution", "cau"),
-    ];
-    for cls in classes {
-        for (callout_cls, callout_pfx) in callout_map {
-            if cls.as_str() == *callout_cls && prefix == *callout_pfx {
-                return None;
-            }
+        if let Some(p) = crate::modules::callout::callout_prefix(cls) {
+            if p == prefix { return None; }
         }
     }
 

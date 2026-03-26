@@ -1,10 +1,23 @@
 {% if collection.navbar.middle %}
 <ul class="navbar-nav center" id="navbar-menu">
   {% for item in collection.navbar.middle %}
-  <li>
+  <li{% if item.children %} class="navbar-dropdown"{% endif %}>
+    {% if item.children %}
+    <button class="navbar-dropdown-toggle" aria-expanded="false">
+      {{ item.text }} {{ icon(name="chevron-right") }}
+    </button>
+    <ul class="navbar-dropdown-menu">
+      {% for child in item.children %}
+      <li><a href="{{ child.href | default(value='#') }}">
+        {% if child.icon %}{{ icon(name=child.icon) }} {% endif %}{{ child.text }}
+      </a></li>
+      {% endfor %}
+    </ul>
+    {% else %}
     <a href="{{ item.href | default(value='#') }}">
       {% if item.icon %}{{ icon(name=item.icon) }} {% endif %}{{ item.text }}
     </a>
+    {% endif %}
   </li>
   {% endfor %}
 </ul>

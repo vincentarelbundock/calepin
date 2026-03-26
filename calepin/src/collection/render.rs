@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::Result;
 
-use crate::project;
+use crate::config;
 use super::discover::DocumentInfo;
 
 /// Result of rendering a single document for the collection.
@@ -34,7 +34,7 @@ pub fn render_documents(
     format: &str,
     apply_page_template: bool,
     target_name: Option<&str>,
-    target: Option<&project::Target>,
+    target: Option<&config::Target>,
     quiet: bool,
 ) -> Result<HashMap<String, CollectionRenderResult>> {
     if pages.is_empty() {
@@ -187,7 +187,7 @@ pub fn render_documents_with_crossref(
     base_dir: &Path,
     output_dir: &Path,
     target_name: Option<&str>,
-    target: Option<&project::Target>,
+    target: Option<&config::Target>,
     quiet: bool,
 ) -> Result<HashMap<String, CollectionRenderResult>> {
     use crate::crossref::{CrossRefRegistry, resolve_html_global, renumber_display_html};
@@ -366,18 +366,13 @@ fn render_one_document_pass1(
 }
 
 /// Assign chapter numbers to pages based on their position in [[contents]].
-/// Each non-standalone page gets a sequential chapter number (1-based).
-/// Returns a map from source path (string) to chapter number.
+/// Each page listed in [[contents]] gets a sequential chapter number (1-based).
+/// Pages not in [[contents]] get no chapter number.
 fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usize> {
     let mut chapter_map = HashMap::new();
     let mut chapter = 0usize;
 
-    // Walk the contents sections in order -- this mirrors collect_document_paths ordering
     for section in &meta.contents {
-        if section.standalone {
-            continue;
-        }
-
         // Section index page gets its own chapter number
         if let Some(ref idx) = section.index {
             if idx.ends_with(".qmd") {
@@ -387,7 +382,7 @@ fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usi
         }
 
         for entry in &section.pages {
-            for path in crate::project::expand_glob_pub(entry.path(), std::path::Path::new("")) {
+            for path in super::contents::expand_glob_pub(entry.path(), std::path::Path::new("")) {
                 if path.ends_with(".qmd") {
                     // If no index page, each page in the section is a chapter
                     if section.index.is_none() {
@@ -399,13 +394,12 @@ fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usi
         }
     }
 
-    // Also handle pages not in contents (standalone pages) -- no chapter number
-    // They won't be in chapter_map, which is fine (chapter_number = None).
+    // Pages not in [[contents]] won't be in chapter_map (chapter_number = None).
 
     chapter_map
 }
 
-pub fn build_overrides(meta: &crate::config::Metadata, target: Option<&project::Target>) -> Vec<String> {
+pub fn build_overrides(meta: &crate::config::Metadata, target: Option<&config::Target>) -> Vec<String> {
     let mut overrides = Vec::new();
 
     // embed-resources override from target

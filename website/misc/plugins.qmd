@@ -1,5 +1,5 @@
 ---
-title: Plugins
+title = "Plugins"
 ---
 
 Plugins extend *Calepin* with custom behavior: filters that transform divs and spans, Jinja functions callable in document bodies, postprocessors that rewrite entire pages, and template overrides. They are executable scripts that read JSON from stdin and write to stdout. No compilation, no SDK.

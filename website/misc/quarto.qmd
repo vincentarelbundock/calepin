@@ -1,5 +1,5 @@
 ---
-title: Differences with Quarto
+title = "Differences with Quarto"
 ---
 
 *Calepin* aims for compatibility with Quarto's `.qmd` syntax, but there are deliberate differences and simplifications. Most notably, *Calepin* does not use Pandoc. Quarto delegates most of its parsing and format conversion to Pandoc, whereas *Calepin* handles everything internally — markdown parsing (via comrak), code execution, citation processing, cross-references, and template rendering are all built into a single Rust binary. This page documents the differences.

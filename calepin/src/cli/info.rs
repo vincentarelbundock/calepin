@@ -14,7 +14,7 @@ pub fn handle_info(action: InfoAction) -> Result<()> {
             println!();
             println!("  https://www.zotero.org/styles");
             println!();
-            println!("Download a .csl file and set csl: to its path in _calepin.toml");
+            println!("Download a .csl file and set csl: to its path in _calepin/config.toml");
             println!("or in document front matter.");
             println!();
             println!("The following shortcuts are also available as built-in names");

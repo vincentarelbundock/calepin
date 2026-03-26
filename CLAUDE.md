@@ -37,8 +37,6 @@ Run a single test: `cargo test test_name`
 
 CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--base FORMAT] [--completions SHELL]`
 
-Batch mode: `calepin --batch manifest.json` or `calepin --batch - < manifest.json`. Add `--batch-stdout` to get rendered bodies in JSON output instead of writing files. See `batch.rs` for manifest format.
-
 **Important**: website/ must be rendered with `cd website && ../calepin/target/debug/calepin file.qmd` so that `_calepin/` overrides are found relative to the working directory. `make docs` handles this.
 
 ## Architecture
@@ -63,7 +61,7 @@ parse -> evaluate -> bibliography
   -> write
 ```
 
-1. **Parse** -- YAML front matter (`config/parse.rs`), then recursive block parsing into `Block` enum (`parse/blocks.rs`).
+1. **Parse** -- TOML front matter is parsed (`config/parse.rs`) into metadata; non-TOML front matter (e.g., YAML) is silently ignored. Recursive block parsing into `Block` enum (`parse/blocks.rs`).
 2. **Evaluate** (`engines/mod.rs`) -- Jinja body processing, code execution, blocks become `Element`s.
 3. **Bibliography** (`references/bibliography.rs`) -- Citation keys resolved via hayagriva.
 4. **TransformElement** -- Pre-render element mutations. Modules implementing `TransformElement` receive each element and can mutate it (e.g., `convert_svg_pdf` rewrites SVG figure paths to PDF).
@@ -200,7 +198,6 @@ User overrides: `_calepin/partials/{engine}/{name}.{ext}`
 - `collection/` -- Multi-document builds (site/book rendering)
 - `preview/` -- Live preview server with hot reload
 - `assets/` -- Website CSS/JS + scaffold files (404.qmd, index.qmd)
-- `scaffold/` -- (removed, merged into assets/website/)
 
 ## Partials and Module Resolution
 
@@ -242,17 +239,22 @@ Marker types (single-char prefix between delimiters):
 - **`L`** -- Equation labels (`{#eq-...}` after display math).
 - **`R`** -- Raw span/partial output (including built-in spans like pagebreak, video, placeholder).
 
-## calepin-specific YAML
+## Configuration
 
-calepin-specific settings are nested under the `calepin:` key in front matter:
+Documents can carry TOML front matter between `---` delimiters. Non-TOML front matter (e.g., YAML) is silently ignored.
 
-```yaml
-calepin:
-  plugins:
-    - txtfmt
+**Merge order** (last wins): built-in defaults < `_calepin/calepin.toml` < `{stem}_calepin/calepin.toml` (sidecar) < TOML front matter < CLI (`-s`)
+
+**Sidecar directories**: Each document can have a `{stem}_calepin/` directory alongside it, mirroring the `_calepin/` structure (partials, modules, cache, files). For websites, `_calepin/` is the shared sidecar for all pages.
+
+calepin-specific settings are nested under the `[calepin]` table:
+
+```toml
+[calepin]
+plugins = ["txtfmt"]
 ```
 
-Standard Quarto fields (`title`, `author`, `bibliography`, `format`, etc.) remain at the top level.
+Standard fields (`title`, `author`, `bibliography`, `format`, etc.) are top-level keys.
 
 ## Chunk Options
 
@@ -286,14 +288,14 @@ Bracketed spans `[content]{.class key=value}` are processed during rendering. Bu
 - `syntect` -- Syntax highlighting
 - `minijinja` -- Template engine for element/page partials and body processing
 - `clap` + `clap_complete` -- CLI and shell completions
-- `saphyr` -- YAML parsing (DOM-style `YamlOwned` enum, not serde-based)
+- `toml` + `serde` -- TOML config parsing (front matter, `_calepin.toml`, sidecar config)
 - `usvg` + `svg2pdf` -- SVG-to-PDF conversion for LaTeX targets
 
 ## Function Naming Convention
 
 Use `verb_noun` or `verb_noun_qualifier` format. Consistent verbs for similar operations:
 
-- **`parse_*`** -- Convert text/input into structured data (`parse_body`, `parse_yaml`, `parse_attributes`)
+- **`parse_*`** -- Convert text/input into structured data (`parse_body`, `parse_metadata`, `parse_attributes`)
 - **`render_*`** -- Produce output strings from structured data (`render_html`, `render_div`, `render_image`)
 - **`resolve_*`** -- Look up a resource/path or infer a value from context (`resolve_partial`, `resolve_module_dir`, `resolve_format`)
 - **`load_*`** -- Read and parse file contents (`load_page_template`, `load_csl_style`)

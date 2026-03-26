@@ -1,0 +1,24 @@
+---
+title = "Configuration"
+---
+
+*Calepin* is configured through `_calepin/config.toml` and TOML front matter.
+
+## Project settings
+
+The `_calepin/config.toml` file controls site-wide settings:
+
+```toml
+title = "My Website"
+target = "website"
+```
+
+## Document settings
+
+Each `.qmd` file can override settings in its TOML front matter:
+
+```
+---
+title = "My Page"
+---
+```

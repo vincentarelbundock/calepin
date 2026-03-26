@@ -1,23 +1,17 @@
-//! Project configuration: calepin.toml parsing, target resolution, and project root detection.
-
-mod content;
-mod targets;
-
-// Re-export all public types and functions so existing `crate::project::` paths keep working.
-pub use content::{DocumentNode, expand_contents, expand_contents_for_lang, expand_glob_pub};
-pub use targets::{Target, resolve_target, resolve_target_output_path, target_vars_to_jinja_from_meta, resolve_inheritance};
+//! Project config loading: TOML parsing, built-in defaults, and validation.
 
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
-use serde::Deserialize;
+
+use super::targets::resolve_inheritance;
 
 // ---------------------------------------------------------------------------
 // Project config types
 // ---------------------------------------------------------------------------
 
 /// A language declaration in `[[languages]]`.
-#[derive(Debug, Clone, Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct LanguageConfig {
     /// Display name (e.g., "English", "Francais").
     pub language: String,
@@ -32,7 +26,7 @@ pub struct LanguageConfig {
 }
 
 /// A section in the `[[contents]]` array of tables.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, serde::Deserialize)]
 pub struct ContentSection {
     /// Section title (displayed in nav). None for top-level ungrouped pages.
     #[serde(default)]
@@ -40,9 +34,6 @@ pub struct ContentSection {
     /// Pages in this section: bare path strings or `{title, page}` tables.
     #[serde(default)]
     pub pages: Vec<DocumentEntry>,
-    /// If true, pages are rendered but excluded from navigation.
-    #[serde(default)]
-    pub standalone: bool,
     /// The section's own page (clickable section header in nav).
     #[serde(default)]
     pub index: Option<String>,
@@ -52,7 +43,7 @@ pub struct ContentSection {
 }
 
 /// A single document entry: either a bare path string or a `{title, page}` table.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 #[serde(untagged)]
 pub enum DocumentEntry {
     /// Bare string path (possibly a glob).
@@ -81,17 +72,19 @@ impl DocumentEntry {
 }
 
 /// A single item in a navbar position (left, middle, or right).
-#[derive(Debug, Clone, Default, Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct NavbarItem {
     pub text: Option<String>,
     pub href: Option<String>,
     pub icon: Option<String>,
     pub image: Option<String>,
     pub image_dark: Option<String>,
+    #[serde(default)]
+    pub children: Vec<NavbarItem>,
 }
 
 /// Navbar configuration with three positional slots.
-#[derive(Debug, Clone, Default, Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct NavbarConfig {
     #[serde(default)]
     pub left: Vec<NavbarItem>,
@@ -102,7 +95,7 @@ pub struct NavbarConfig {
 }
 
 /// A post-processing command run after the site build completes.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct PostCommand {
     /// Shell command to run. Supports `{output}` and `{root}` placeholders.
     pub command: String,
@@ -112,12 +105,20 @@ pub struct PostCommand {
 }
 
 // ---------------------------------------------------------------------------
+// Built-in TOML constants
+// ---------------------------------------------------------------------------
+
+pub const SHARED_TOML: &str = include_str!("shared.toml");
+pub const DOCUMENT_TOML: &str = include_str!("document.toml");
+pub const COLLECTION_TOML: &str = include_str!("collection.toml");
+
+// ---------------------------------------------------------------------------
 // Config loading
 // ---------------------------------------------------------------------------
 
 /// Load a project config and return it as `Metadata`.
 /// Parses TOML into Value::Table, then through parse_metadata().
-pub fn load_project_metadata(path: &Path) -> Result<crate::config::Metadata> {
+pub fn load_project_metadata(path: &Path) -> Result<super::Metadata> {
     let content = std::fs::read_to_string(path)
         .with_context(|| format!("Failed to read {}", path.display()))?;
 
@@ -128,7 +129,7 @@ pub fn load_project_metadata(path: &Path) -> Result<crate::config::Metadata> {
         _ => crate::value::Table::new(),
     };
 
-    let mut meta = crate::config::parse_metadata(&table)?;
+    let mut meta = super::parse_metadata(&table)?;
     let project_root = path.parent().unwrap_or(Path::new("."));
 
     // Resolve target inheritance and validate
@@ -170,27 +171,25 @@ fn validate_csl(csl: &str, project_root: &Path) -> Result<()> {
 }
 
 /// Parse a built-in TOML string (concatenation of shared + specific) into Metadata.
-fn parse_builtin(toml_str: &str) -> crate::config::Metadata {
+fn parse_builtin(toml_str: &str) -> super::Metadata {
     let tv: toml::Value = toml::from_str(toml_str)
         .expect("built-in TOML must be valid");
     let table = match tv {
         toml::Value::Table(map) => crate::value::table_from_toml(map),
         _ => crate::value::Table::new(),
     };
-    let mut meta = crate::config::parse_metadata(&table)
+    let mut meta = super::parse_metadata(&table)
         .expect("built-in TOML must produce valid metadata");
     resolve_inheritance(&mut meta.targets)
         .expect("built-in TOML inheritance must be valid");
     meta
 }
 
-const SHARED_TOML: &str = include_str!("../config/shared.toml");
-const DOCUMENT_TOML: &str = include_str!("../config/document.toml");
-/// Get the built-in document defaults (shared + document).
-pub fn builtin_metadata() -> &'static crate::config::Metadata {
+/// Get the built-in defaults (shared + document + collection targets).
+pub fn builtin_metadata() -> &'static super::Metadata {
     use std::sync::LazyLock;
     static META: LazyLock<crate::config::Metadata> = LazyLock::new(|| {
-        parse_builtin(&format!("{}\n{}", SHARED_TOML, DOCUMENT_TOML))
+        parse_builtin(&format!("{}\n{}\n{}", SHARED_TOML, DOCUMENT_TOML, COLLECTION_TOML))
     });
     &META
 }
@@ -206,13 +205,13 @@ mod tests {
     use std::collections::HashMap;
 
     /// Parse a TOML string into Metadata via Value::Table -> parse_metadata().
-    fn parse_toml(toml_str: &str) -> crate::config::Metadata {
+    fn parse_toml(toml_str: &str) -> super::super::Metadata {
         let tv: toml::Value = toml::from_str(toml_str).unwrap();
         let table = match tv {
             toml::Value::Table(map) => crate::value::table_from_toml(map),
             _ => crate::value::Table::new(),
         };
-        crate::config::parse_metadata(&table).unwrap()
+        super::super::parse_metadata(&table).unwrap()
     }
 
     #[test]
@@ -263,19 +262,19 @@ engine = "word"
 
     #[test]
     fn test_implicit_target_resolution() {
-        let target = resolve_target("html", &HashMap::new()).unwrap();
+        let target = super::super::resolve_target("html", &HashMap::new()).unwrap();
         assert_eq!(target.engine, "html");
         assert_eq!(target.template_name(), "page");
 
-        let target = resolve_target("latex", &HashMap::new()).unwrap();
+        let target = super::super::resolve_target("latex", &HashMap::new()).unwrap();
         assert_eq!(target.engine, "latex");
 
-        assert!(resolve_target("unknown", &HashMap::new()).is_err());
+        assert!(super::super::resolve_target("unknown", &HashMap::new()).is_err());
     }
 
     #[test]
     fn test_output_path_with_project_root() {
-        let path = resolve_target_output_path(
+        let path = super::super::resolve_target_output_path(
             Path::new("/project/book/ch1.qmd"),
             "web", "html",
             Some(Path::new("/project")), Some("output"),
@@ -285,7 +284,7 @@ engine = "word"
 
     #[test]
     fn test_output_path_without_project_root() {
-        let path = resolve_target_output_path(
+        let path = super::super::resolve_target_output_path(
             Path::new("/docs/paper.qmd"),
             "html", "html", None, None,
         );
@@ -294,7 +293,7 @@ engine = "word"
 
     #[test]
     fn test_output_path_no_output_dir() {
-        let path = resolve_target_output_path(
+        let path = super::super::resolve_target_output_path(
             Path::new("/project/ch1.qmd"),
             "web", "html",
             Some(Path::new("/project")), None,
@@ -304,7 +303,7 @@ engine = "word"
 
     #[test]
     fn test_output_path_custom_output_dir() {
-        let path = resolve_target_output_path(
+        let path = super::super::resolve_target_output_path(
             Path::new("/project/ch1.qmd"),
             "web", "html",
             Some(Path::new("/project")), Some("build"),
@@ -314,7 +313,7 @@ engine = "word"
 
     #[test]
     fn test_output_path_subdirectory_preserved() {
-        let path = resolve_target_output_path(
+        let path = super::super::resolve_target_output_path(
             Path::new("/project/code/diagrams.qmd"),
             "website", "html",
             Some(Path::new("/project")), Some("output"),
@@ -364,12 +363,8 @@ pages = [
   "guide/basics.qmd",
   {title = "Figures & Images", page = "guide/figures.qmd"},
 ]
-
-[[contents]]
-standalone = true
-pages = ["index.qmd", "404.qmd"]
 "#);
-        assert_eq!(meta.contents.len(), 3);
+        assert_eq!(meta.contents.len(), 2);
         assert!(meta.contents[0].title.is_none());
         assert_eq!(meta.contents[0].pages.len(), 2);
         assert_eq!(meta.contents[1].title.as_deref(), Some("Guide"));
@@ -377,7 +372,6 @@ pages = ["index.qmd", "404.qmd"]
         assert_eq!(meta.contents[1].pages.len(), 2);
         assert_eq!(meta.contents[1].pages[1].title(), Some("Figures & Images"));
         assert_eq!(meta.contents[1].pages[1].path(), "guide/figures.qmd");
-        assert!(meta.contents[2].standalone);
     }
 
     #[test]

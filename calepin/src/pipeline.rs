@@ -15,7 +15,7 @@ use crate::formats::FormatPipeline;
 use crate::jinja;
 use crate::parse;
 use crate::paths;
-use crate::project;
+use crate::config;
 use crate::registry;
 use crate::render;
 use crate::render::elements::ElementRenderer;
@@ -38,7 +38,7 @@ pub struct RenderCoreOptions {
 }
 
 /// Core render pipeline: parse, evaluate, render. Does NOT apply the page template.
-/// If `format` is None, falls back to the format declared in YAML front matter, then "html".
+/// If `format` is None, falls back to the format declared in front matter, then "html".
 pub fn render_core(
     input: &Path,
     output_path: &Path,
@@ -47,23 +47,37 @@ pub fn render_core(
     project_root_override: Option<&Path>,
     options: &RenderCoreOptions,
     project_metadata: Option<&crate::config::Metadata>,
-    target: Option<&project::Target>,
+    target: Option<&config::Target>,
 ) -> Result<RenderResult> {
 
     // 1. Read input file
     let input_text = fs::read_to_string(input)
         .with_context(|| format!("Failed to read input file: {}", input.display()))?;
 
-    // 2. Strip front matter preamble, then apply CLI overrides
-    let (mut metadata, body) = crate::config::split_frontmatter(&input_text)?;
+    // 2. Parse TOML front matter
+    let (frontmatter, body) = crate::config::split_frontmatter(&input_text)?;
     let body = render::markers::sanitize(&body);
+
+    // Resolve sidecar directory ({stem}_calepin/) for per-document overrides
+    let sidecar_dir = paths::resolve_sidecar_dir(input);
+    paths::set_sidecar_root(sidecar_dir.as_deref());
+
+    // Merge: project < sidecar config < front matter < CLI
+    let mut metadata = if let Some(project_meta) = project_metadata {
+        project_meta.clone()
+    } else {
+        crate::config::Metadata::default()
+    };
+    if let Some(ref dir) = sidecar_dir {
+        let sidecar_config = dir.join("config.toml");
+        if sidecar_config.exists() {
+            let sidecar_meta = config::load_project_metadata(&sidecar_config)?;
+            metadata = metadata.merge(sidecar_meta);
+        }
+    }
+    metadata = metadata.merge(frontmatter);
     metadata.apply_overrides(overrides);
     metadata.resolve_date(Some(input));
-
-    // Merge project metadata as base layer (front matter wins)
-    if let Some(project_meta) = project_metadata {
-        metadata = project_meta.clone().merge(metadata);
-    }
 
     // 2b. Construct path context and validate paths
     let path_ctx = paths::PathContext::new(input, output_path, project_root_override);
@@ -77,7 +91,7 @@ pub fn render_core(
         .or_else(|| metadata.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let pipeline = if let Some(t) = target {
-        FormatPipeline::from_target(t, &format_str)?
+        FormatPipeline::from_target(t)?
     } else {
         FormatPipeline::from_engine(&format_str)?
     };
@@ -143,7 +157,7 @@ pub fn render_file(
     output: Option<&Path>,
     format: Option<&str>,
     overrides: &[String],
-    target: Option<&project::Target>,
+    target: Option<&config::Target>,
     project_root: Option<&Path>,
     output_dir: Option<&str>,
     project_metadata: Option<&crate::config::Metadata>,
@@ -165,19 +179,33 @@ pub fn render_file(
     // Build pipeline
     let preliminary_format = resolved_format.as_deref().unwrap_or("html");
     let target_name = format.unwrap_or(preliminary_format);
+    // Set active target so partial resolution can find target-specific templates
+    paths::set_active_target(Some(target_name));
     let pipeline = if let Some(t) = target {
-        FormatPipeline::from_target(t, target_name)?
+        FormatPipeline::from_target(t)?
     } else {
         FormatPipeline::from_engine(preliminary_format)?
     };
-    let ext = target.map(|t| t.output_extension()).unwrap_or(pipeline.extension());
+    // When the target produces an intermediate file that needs compilation
+    // (explicit compile command, or engine differs from output extension),
+    // use the engine's native extension (.tex, .typ) for the rendered file.
+    let ext = if let Some(t) = target {
+        let engine_ext = paths::engine_to_ext(&t.engine);
+        if t.compile.is_some() || engine_ext != t.output_extension() {
+            engine_ext
+        } else {
+            t.output_extension()
+        }
+    } else {
+        pipeline.extension()
+    };
 
     // Resolve output path
     let output_path = if let Some(o) = output {
         o.to_path_buf()
     } else if let (Some(_), Some(fmt)) = (target, format) {
         // Use target-aware output path when a target is specified
-        project::resolve_target_output_path(input, fmt, ext, project_root, output_dir)
+        config::resolve_target_output_path(input, fmt, ext, project_root, output_dir)
     } else {
         input.with_extension(ext)
     };

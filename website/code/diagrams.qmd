@@ -1,5 +1,5 @@
 ---
-title: Diagrams
+title = "Diagrams"
 ---
 
 *Calepin* renders diagram code chunks to SVG using external CLI tools. The syntax follows Quarto conventions: use `{mermaid}`, `{dot}`, etc. as the code chunk language. Diagrams work in all output formats (HTML, LaTeX, Typst, Markdown) because the output is always an SVG image.

@@ -1,8 +1,8 @@
 ---
-title: Structure
+title = "Structure"
 ---
 
-A *Calepin* collection is a directory containing a `_calepin.toml` manifest and `.qmd` source files. Here is the structure of the *Calepin* documentation website itself:
+A *Calepin* collection is a directory containing a `_calepin/config.toml` manifest and `.qmd` source files. Here is the structure of the *Calepin* documentation website itself:
 
 ```{sh}
 tree website -I '_site|*_files|*_cache|*.html|*.qmd|*.tex|*.typ' --dirsfirst -L 4
@@ -12,7 +12,7 @@ tree website -I '_site|*_files|*_cache|*.html|*.qmd|*.tex|*.typ' --dirsfirst -L 
 
 | Path | Purpose |
 |------|---------|
-| `_calepin.toml` | Collection manifest: metadata, navbar, sidebar, documents, brand, format options |
+| `_calepin/config.toml` | Collection manifest: metadata, navbar, sidebar, documents, brand, format options |
 | `_calepin/` | Project-level overrides for templates, elements, and assets |
 | `_site/` | Default output directory (generated, should be in `.gitignore`) |
 | `_calepin_files/` | Generated figures and supporting files (per-document) |
@@ -20,7 +20,7 @@ tree website -I '_site|*_files|*_cache|*.html|*.qmd|*.tex|*.typ' --dirsfirst -L 
 
 # Manifest
 
-The `_calepin.toml` file configures the collection. See [Collections](../templates/sites.qmd) for the full reference. The main sections are:
+The `_calepin/config.toml` file configures the collection. See [Collections](../templates/sites.qmd) for the full reference. The main sections are:
 
 | Section | Controls |
 |---------|----------|

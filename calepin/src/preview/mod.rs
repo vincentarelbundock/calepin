@@ -19,10 +19,11 @@ pub fn run_collection(
 ) -> Result<()> {
     let config_abs = config_path.canonicalize()
         .with_context(|| format!("Config file not found: {}", config_path.display()))?;
-    let base_dir = config_abs.parent().unwrap().to_path_buf();
+    let cwd = std::env::current_dir()?;
+    let base_dir = crate::paths::resolve_project_root(&config_abs, &cwd);
 
     // Read output dir from config (defaults to "output")
-    let meta = crate::project::load_project_metadata(&config_abs)?;
+    let meta = crate::config::load_project_metadata(&config_abs)?;
     let output_name = meta.output.as_deref().unwrap_or("output");
     let output = base_dir.join(output_name);
 
@@ -53,7 +54,7 @@ pub fn run_collection(
     spinner.enable_steady_tick(Duration::from_millis(80));
 
     // Start collection server (serves from disk with live-reload)
-    let (_server, actual_port) = server::start_collection(
+    let (server_handle, actual_port) = server::start_collection(
         args.port,
         Arc::clone(&version),
         output.clone(),
@@ -65,17 +66,13 @@ pub fn run_collection(
     }
     let _ = open::that(&url);
 
-    // Ctrl+C handler
+    // Ctrl+C handler: signal stop and unblock the server so the port is released.
     let stop = Arc::new(AtomicBool::new(false));
     let stop_clone = Arc::clone(&stop);
+    let server_for_ctrlc = server_handle;
     ctrlc::set_handler(move || {
         stop_clone.store(true, Ordering::Relaxed);
-        // Exit immediately so the server socket is released.
-        // The server thread holds an Arc<Server> that keeps the port bound
-        // even after the watcher loop breaks, because tiny_http's blocking
-        // iterator never yields. Without this, the port stays occupied and
-        // the next preview launch falls back to a different port.
-        std::process::exit(0);
+        server_for_ctrlc.shutdown();
     }).context("Failed to set Ctrl+C handler")?;
 
     status.set_message(format!("built at {}", format_local_time()));
@@ -122,7 +119,7 @@ pub fn run(
     input: &Path,
     args: &PreviewArgs,
     target_name: &str,
-    target: &crate::project::Target,
+    target: &crate::config::Target,
 ) -> Result<()> {
     let input_abs = input.canonicalize()
         .with_context(|| format!("Input file not found: {}", input.display()))?;
@@ -180,7 +177,7 @@ fn run_preview(input: &Path, input_abs: &Path, args: &PreviewArgs, mode: Preview
     let content = Arc::new(RwLock::new(html));
 
     // Start HTTP server
-    let (_server, actual_port) = server::start(
+    let (server_handle, actual_port) = server::start(
         args.port,
         Arc::clone(&content),
         Arc::clone(&version),
@@ -193,17 +190,13 @@ fn run_preview(input: &Path, input_abs: &Path, args: &PreviewArgs, mode: Preview
     }
     let _ = open::that(&url);
 
-    // Ctrl+C handler
+    // Ctrl+C handler: signal stop and unblock the server so the port is released.
     let stop = Arc::new(AtomicBool::new(false));
     let stop_clone = Arc::clone(&stop);
+    let server_for_ctrlc = server_handle;
     ctrlc::set_handler(move || {
         stop_clone.store(true, Ordering::Relaxed);
-        // Exit immediately so the server socket is released.
-        // The server thread holds an Arc<Server> that keeps the port bound
-        // even after the watcher loop breaks, because tiny_http's blocking
-        // iterator never yields. Without this, the port stays occupied and
-        // the next preview launch falls back to a different port.
-        std::process::exit(0);
+        server_for_ctrlc.shutdown();
     }).context("Failed to set Ctrl+C handler")?;
 
     status.set_message(format!("built at {}", format_local_time()));
@@ -266,15 +259,18 @@ fn render_file_html(input: &Path, overrides: &[String]) -> Result<String> {
 /// Render to LaTeX/Typst, write the file, compile if the target defines it.
 /// Returns the final output path (PDF if compiled, rendered file otherwise).
 fn render_and_compile(input: &Path, target_name: &str, overrides: &[String]) -> Result<std::path::PathBuf> {
-    let target = crate::project::resolve_target(target_name, &std::collections::HashMap::new())?;
+    let target = crate::config::resolve_target(target_name, &std::collections::HashMap::new())?;
     let (output_path, content, renderer) = crate::pipeline::render_file(
         input, None, Some(target_name), overrides, Some(&target), None, None, None,
     )?;
     renderer.write_output(&content, &output_path)?;
 
-    if let Some(ref compile_cmd) = target.compile {
+    let needs_compile = target.compile.is_some()
+        || crate::paths::engine_to_ext(&target.engine) != target.output_extension();
+    if needs_compile {
+        let cmd = target.compile.as_deref().unwrap_or("");
         let ext = target.output_extension();
-        crate::cli::render::run_compile_step(&output_path, compile_cmd, ext, true)?;
+        crate::cli::render::run_compile_step(&output_path, cmd, ext, true)?;
         Ok(output_path.with_extension(ext))
     } else {
         Ok(output_path)

@@ -1,7 +1,7 @@
 ---
-title: "*Calepin* Slides"
-date: 2026-03-19
-format: revealjs
+title = "*Calepin* Slides"
+date = "2026-03-19"
+format = "revealjs"
 ---
 
 ## What is *Calepin*?

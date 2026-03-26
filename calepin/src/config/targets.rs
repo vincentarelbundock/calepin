@@ -191,8 +191,8 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
 /// Resolve a target by name.
 ///
 /// Lookup order:
-///   1. Project config (`calepin.toml` found on disk)
-///   2. Built-in config (embedded default `calepin.toml`)
+///   1. Project config (`config.toml` found on disk)
+///   2. Built-in config (embedded default `config.toml`)
 ///   3. Alias resolution (e.g., "tex" -> "latex" target)
 pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Target>) -> Result<Target> {
     // 1. User targets -- merge with built-in defaults for this base
@@ -206,7 +206,7 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
     }
 
     bail!(
-        "Unknown target '{}'. Define it in _calepin.toml under [targets.{}].",
+        "Unknown target '{}'. Define it in _calepin/config.toml under [targets.{}].",
         name, name,
     )
 }

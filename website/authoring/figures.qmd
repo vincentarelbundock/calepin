@@ -1,6 +1,6 @@
 ---
-title: Figures
-bibliography: assets/library.bib
+title = "Figures"
+bibliography = "assets/library.bib"
 ---
 
 Code chunks that produce plots automatically generate figures. Use `fig-cap` for a caption and a label in the chunk header for cross-referencing.

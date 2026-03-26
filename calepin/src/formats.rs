@@ -13,7 +13,7 @@ use anyhow::{Context, Result};
 use crate::types::Element;
 use crate::config::Metadata;
 use crate::render::elements::ElementRenderer;
-use crate::project::Target;
+use crate::config::Target;
 
 // ---------------------------------------------------------------------------
 // FormatPipeline
@@ -40,8 +40,6 @@ pub struct FormatPipeline {
     pub writer: WriterKind,
     /// Module names, resolved via the registry at each pipeline stage.
     module_names: Vec<String>,
-    /// The target name (e.g., "revealjs", "html"), used for template resolution.
-    pub target_name: String,
     /// Whether to pass headings for TOC generation during page assembly.
     pub toc_headings: bool,
     /// Extra template variables injected during page assembly.
@@ -50,7 +48,7 @@ pub struct FormatPipeline {
 
 impl FormatPipeline {
     /// Build a pipeline from a resolved Target.
-    pub fn from_target(target: &Target, target_name: &str) -> Result<Self> {
+    pub fn from_target(target: &Target) -> Result<Self> {
         let engine = target.engine.clone();
 
         // Crossref defaults to engine-appropriate strategy
@@ -80,7 +78,6 @@ impl FormatPipeline {
             crossref,
             writer,
             module_names: target.modules.clone(),
-            target_name: target_name.to_string(),
             toc_headings,
             page_vars: target.page_vars.clone(),
         })
@@ -88,8 +85,8 @@ impl FormatPipeline {
 
     /// Build a pipeline from just an engine name, using built-in target defaults.
     pub fn from_engine(engine: &str) -> Result<Self> {
-        let target = crate::project::resolve_target(engine, &std::collections::HashMap::new())?;
-        Self::from_target(&target, engine)
+        let target = crate::config::resolve_target(engine, &std::collections::HashMap::new())?;
+        Self::from_target(&target)
     }
 
     pub fn engine(&self) -> &str { &self.engine }
@@ -112,21 +109,21 @@ impl FormatPipeline {
 
     /// Resolve cross-references using the configured strategy.
     pub fn resolve_crossrefs(&self, body: &str, renderer: &ElementRenderer) -> String {
-        let thm_nums = renderer.theorem_numbers();
+        let module_ids = renderer.module_ids();
         let walk_meta = renderer.walk_metadata();
         match self.crossref.as_str() {
-            "html" => crate::crossref::resolve_html_with_ids(body, &thm_nums, &walk_meta.ids),
-            "latex" => crate::crossref::resolve_latex(body, &thm_nums),
-            _ => crate::crossref::resolve_plain(body, &thm_nums),
+            "html" => crate::crossref::resolve_html_with_ids(body, &module_ids, &walk_meta.ids),
+            "latex" => crate::crossref::resolve_latex(body, &module_ids),
+            _ => crate::crossref::resolve_plain(body, &module_ids),
         }
     }
 
     /// Collect cross-reference data without resolving (for collection mode pass 1).
     pub fn collect_crossref_data(&self, body: &str, renderer: &ElementRenderer) -> Option<crate::crossref::PageRefData> {
         if self.crossref == "html" {
-            let thm_nums = renderer.theorem_numbers();
+            let module_ids = renderer.module_ids();
             let walk_meta = renderer.walk_metadata();
-            Some(crate::crossref::collect_ids_html(body, &thm_nums, &walk_meta.ids))
+            Some(crate::crossref::collect_ids_html(body, &module_ids, &walk_meta.ids))
         } else {
             None
         }
@@ -167,7 +164,7 @@ impl FormatPipeline {
         let page_vars = &self.page_vars;
 
         let html = crate::render::template::assemble_page(
-            body, meta, &self.target_name, headings, renderer.preamble(),
+            body, meta, &self.engine, headings, renderer.preamble(),
             renderer.target.as_ref(),
             |vars| {
                 // Apply page_vars from target config

@@ -15,7 +15,7 @@ use xxhash_rust::xxh3::xxh3_128;
 ///
 /// Inputs mixed into the hash:
 /// - source file content (the .qmd body)
-/// - config file content (the _calepin.toml -- changes to nav, targets, etc.)
+/// - config file content (the _calepin/config.toml -- changes to nav, targets, etc.)
 /// - target name (html vs latex produce different output)
 /// - overrides (embed-resources, highlight style, etc.)
 pub fn page_hash(

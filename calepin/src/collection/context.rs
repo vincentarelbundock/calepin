@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use serde::Serialize;
 use super::discover::DocumentInfo;
 use super::render::CollectionRenderResult;
-use crate::project::{DocumentNode, expand_contents_for_lang, LanguageConfig};
-use crate::config::Metadata;
+use super::contents::{DocumentNode, expand_contents_for_lang};
+use crate::config::{Metadata, LanguageConfig};
 
 /// Collection-level context available to all templates as `{{ collection.* }}`.
 #[derive(Debug, Serialize)]
@@ -19,7 +19,7 @@ pub struct CollectionContext {
     pub subtitle: Option<String>,
     pub url: Option<String>,
     pub favicon: Option<String>,
-    pub navbar: crate::project::NavbarConfig,
+    pub navbar: crate::config::NavbarConfig,
     pub pages: Vec<NavNode>,
     pub languages: Vec<LanguageConfig>,
     pub dark_mode: bool,
@@ -248,6 +248,8 @@ pub fn build_document_context(
     pages: &[DocumentInfo],
     listing_items: Option<Vec<ListingItem>>,
     languages: &[LanguageConfig],
+    meta: &Metadata,
+    base_dir: &std::path::Path,
 ) -> DocumentContext {
     let body = result.map(|r| r.body.clone()).unwrap_or_default();
 
@@ -257,9 +259,11 @@ pub fn build_document_context(
     let subtitle = result.and_then(|r| r.subtitle.clone()).or_else(|| page.meta.subtitle.clone());
     let abstract_text = result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone());
 
-    // Prev/next navigation excludes standalone pages and pages in other languages
+    // Prev/next navigation: only pages listed in [[contents]] and matching language
+    let nav_paths = super::config::collect_document_paths(meta, base_dir);
+    let nav_set: std::collections::HashSet<&str> = nav_paths.iter().map(|s| s.as_str()).collect();
     let nav_documents: Vec<&DocumentInfo> = pages.iter().filter(|p| {
-        !p.standalone && p.lang == page.lang
+        nav_set.contains(p.source.display().to_string().as_str()) && p.lang == page.lang
     }).collect();
     let idx = nav_documents.iter().position(|p| p.source == page.source);
     let prev = idx.and_then(|i| {

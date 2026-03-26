@@ -1,12 +1,6 @@
 # Shared defaults for both document and collection rendering.
 
-# -- Identity --
-title = "Calepin"
-subtitle = "A document and site generator"
-authors = ["Vincent Arel-Bundock"]
-
 # -- Rendering --
-target = "html"
 csl = "chicago-author-date"
 math = "katex"
 lang = "en"

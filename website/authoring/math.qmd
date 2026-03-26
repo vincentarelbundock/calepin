@@ -1,5 +1,5 @@
 ---
-title: Math
+title = "Math"
 ---
 
 *Calepin* renders LaTeX math notation using KaTeX (HTML, optionally MathJax) or natively (LaTeX and Typst). Use `\$` for a literal dollar sign.

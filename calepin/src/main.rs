@@ -13,7 +13,6 @@ mod pipeline;
 mod preview;
 mod render;
 mod collection;
-mod project;
 mod tools;
 
 // Grouped modules with crate-level re-exports for backward compatibility.
@@ -25,7 +24,6 @@ pub(crate) use modules::{registry, manifest as module_manifest};
 
 mod emit;
 mod formats;
-pub(crate) use render::typst_compile;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -81,7 +79,14 @@ fn main() -> Result<()> {
             };
             cli::flush::handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
         }
-        Command::New { action } => cli::new::handle_new(action),
+        Command::New { action } => match action {
+            cli::NewAction::Notebook { path } => cli::new_notebook::handle_new_notebook(&path),
+            cli::NewAction::Website { dir } => cli::new_website::handle_new_website(&dir),
+            cli::NewAction::Book { dir } => cli::new_book::handle_new_book(&dir),
+            cli::NewAction::Gibberish { files, paragraphs, dir, complexity } => {
+                cli::new_gibberish::generate_gibberish(&dir, files, paragraphs, complexity)
+            }
+        },
         Command::Info { action } => cli::info::handle_info(action),
     }
 }

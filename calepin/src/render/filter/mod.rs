@@ -1,12 +1,9 @@
-//! Per-element var builders: enrich template vars for code and figure elements.
+//! Per-element var builders: enrich template vars for code elements.
 //!
 //! These run during element rendering in `ElementRenderer::render_templated()`,
-//! not through the module registry. They handle code highlighting and figure
-//! variable building for the element templates.
+//! not through the module registry.
 
 pub mod code;
-pub mod figure;
-pub mod theorem;
 
 use std::collections::HashMap;
 

@@ -1,5 +1,5 @@
 ---
-title: Serve
+title = "Serve"
 ---
 
 *Calepin* uses the `preview` subcommand for local development.
@@ -11,9 +11,9 @@ title: Serve
 For a collection:
 
 ```
-calepin preview _calepin.toml
-calepin preview _calepin.toml -p 4000
-calepin preview _calepin.toml -q
+calepin preview _calepin/config.toml
+calepin preview _calepin/config.toml -p 4000
+calepin preview _calepin/config.toml -q
 ```
 
 For a single file:

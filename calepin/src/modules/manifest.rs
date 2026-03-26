@@ -61,8 +61,6 @@ pub struct MatchRule {
     pub id_prefix: Option<String>,
     /// Output formats this filter applies to. Empty = all formats.
     pub formats: Vec<String>,
-    /// Auto-number matching divs. Injects `{{ number }}` and `{{ type_class }}` vars.
-    pub number: bool,
 }
 
 /// Element template directory specification.
@@ -212,7 +210,6 @@ fn parse_one_match_spec(node: &Value, module_dir: &Path) -> Option<MatchSpec> {
             attrs: val_str_vec(match_node, "attrs").into_iter().map(|a| crate::util::normalize_key(&a)).collect(),
             id_prefix: match_node.get("id_prefix").and_then(|v| v.as_str()).map(String::from),
             formats: val_str_vec(match_node, "formats"),
-            number: match_node.get("number").and_then(|v| v.as_bool()).unwrap_or(false),
         },
         None => MatchRule::default(),
     };

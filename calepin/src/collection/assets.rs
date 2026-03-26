@@ -65,6 +65,14 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
         }
     }
 
+    // Copy base page.css as fallback (the website template links both page.css and calepin.css).
+    let page_css_dst = assets_dst.join("page.css");
+    if !page_css_dst.exists() {
+        fs::create_dir_all(&assets_dst)?;
+        let css = crate::render::template::load_default_css();
+        fs::write(&page_css_dst, css)?;
+    }
+
     // Copy user-specified static paths (files or directories) into output
     for entry in static_dirs {
         let src = base_dir.join(entry);

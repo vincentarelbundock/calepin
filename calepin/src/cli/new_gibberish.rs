@@ -1,17 +1,9 @@
-//! The `calepin new` command: generate test content (gibberish .qmd files).
+//! `calepin new gibberish` -- generate test content (gibberish .qmd files).
 
 use anyhow::{Context, Result};
 use crate::jinja;
 
-pub fn handle_new(action: crate::cli::NewAction) -> Result<()> {
-    match action {
-        crate::cli::NewAction::Gibberish { files, paragraphs, dir, complexity } => {
-            generate_gibberish(&dir, files, paragraphs, complexity)
-        }
-    }
-}
-
-fn generate_gibberish(
+pub fn generate_gibberish(
     dir: &std::path::Path,
     num_files: usize,
     num_paragraphs: usize,

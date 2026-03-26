@@ -273,9 +273,9 @@ fn load_csl_style_uncached(csl_path: Option<&str>, meta: &crate::config::Metadat
         }
     }
 
-    // 2. Default from calepin.toml
+    // 2. Default from config.toml
     let default_name = meta.csl.as_deref()
-        .or_else(|| crate::project::builtin_metadata().csl.as_deref())
+        .or_else(|| crate::config::builtin_metadata().csl.as_deref())
         .unwrap_or("chicago-author-date");
     if let Some(archived) = ArchivedStyle::by_name(default_name) {
         match archived.get() {

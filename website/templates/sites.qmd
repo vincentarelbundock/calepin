@@ -1,13 +1,13 @@
 ---
-title: Collections
+title = "Collections"
 ---
 
-When you render a `_calepin.toml` manifest, *Calepin* renders a collection of `.qmd` files into a structured website with navigation, sidebar, search, dark mode, and a consistent layout.
+When you render a `_calepin/config.toml` manifest, *Calepin* renders a collection of `.qmd` files into a structured website with navigation, sidebar, search, dark mode, and a consistent layout.
 
 
 # Quick start
 
-1. Create a `_calepin.toml` in your project root:
+1. Create a `_calepin/config.toml` in your project root:
 
 ```toml
 [meta]
@@ -28,13 +28,13 @@ content = [
 2. Build the collection:
 
 ```
-calepin render _calepin.toml
+calepin render _calepin/config.toml
 ```
 
 3. Preview locally:
 
 ```
-calepin preview _calepin.toml
+calepin preview _calepin/config.toml
 ```
 
 The collection is written to `_site/` by default (or the `output` field if specified).
@@ -42,7 +42,7 @@ The collection is written to `_site/` by default (or the `output` field if speci
 
 # Configuration
 
-The `_calepin.toml` file configures your collection. You can also name it `calepin.toml`.
+The `_calepin/config.toml` file configures your collection. You can also name it `_calepin/config.toml`.
 
 ## Output
 
@@ -234,9 +234,9 @@ The base template provides blocks you can override: `head_extra`, `content`, `pa
 # CLI
 
 ```
-calepin render _calepin.toml             # Build collection
-calepin render _calepin.toml -o docs     # Build to docs/
-calepin render _calepin.toml --clean     # Clean output before building
-calepin preview _calepin.toml            # Build and serve locally
-calepin preview _calepin.toml -p 4000    # Custom port
+calepin render _calepin/config.toml             # Build collection
+calepin render _calepin/config.toml -o docs     # Build to docs/
+calepin render _calepin/config.toml --clean     # Clean output before building
+calepin preview _calepin/config.toml            # Build and serve locally
+calepin preview _calepin/config.toml -p 4000    # Custom port
 ```

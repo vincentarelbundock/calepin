@@ -65,10 +65,6 @@ xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 svg2pdf = "0.13"
 usvg = "0.45"
 
-# Typst → PDF compilation (native, no external typst binary needed)
-typst = "0.14"
-typst-pdf = "0.14"
-typst-kit = { version = "0.14", features = ["fonts", "embed-fonts"] }
 indexmap = "2.13.0"
 
 [[bench]]

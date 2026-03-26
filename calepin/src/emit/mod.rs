@@ -9,6 +9,7 @@ pub mod html;
 pub mod latex;
 pub mod typst;
 pub mod markdown;
+pub mod convert_math;
 
 use comrak::nodes::{NodeValue, TableAlignment, ListType};
 use comrak::{parse_document, Arena};

@@ -1,8 +1,8 @@
 ---
-title: Configuration
+title = "Configuration"
 ---
 
-The `_calepin.toml` file at the root of your project defines a collection. This page is a quick-reference overview of every section and field.
+The `_calepin/config.toml` file at the root of your project defines a collection. This page is a quick-reference overview of every section and field.
 
 # Minimal example
 
@@ -18,7 +18,7 @@ title = "Guide"
 pages = ["guide/intro.qmd", "guide/advanced.qmd"]
 ```
 
-Render with `calepin render _calepin.toml`, preview with `calepin preview _calepin.toml`.
+Render with `calepin render _calepin/config.toml`, preview with `calepin preview _calepin/config.toml`.
 
 # Top-level fields
 
@@ -210,7 +210,7 @@ dark = "nord"
 
 # Full example
 
-This is a simplified version of the `_calepin.toml` used by the *Calepin* documentation website:
+This is a simplified version of the `_calepin/config.toml` used by the *Calepin* documentation website:
 
 ```toml
 output = "output"

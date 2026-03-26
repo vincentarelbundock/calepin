@@ -34,14 +34,14 @@ modules = ["highlight"]
 crossref = "plain"
 
 [targets.pdf]
-engine = "latex"
+engine = "typst"
 template = "page"
 extension = "pdf"
-fig_extension = "pdf"
-compile = "tectonic {input}"
-modules = ["highlight", "convert_svg_pdf"]
-crossref = "latex"
-toc_headings = false
+fig_extension = "svg"
+fig_formats = ["svg", "png", "jpg"]
+compile = "typst compile {input}"
+modules = ["highlight"]
+crossref = "plain"
 
 [targets.revealjs]
 engine = "html"

@@ -12,6 +12,7 @@
   <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
   {% endfor %}
   {% endif %}
+  {% include "source_viewer.html" %}
   {% include "search.html" %}
   {% if collection.dark_mode %}{% include "theme_toggle.html" %}{% endif %}
 </ul>

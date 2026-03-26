@@ -14,8 +14,8 @@ embed_resources = false
 preview = "serve"
 
 [targets.book]
-engine = "latex"
+engine = "typst"
 template = "page"
 extension = "pdf"
-fig_extension = "pdf"
-compile = "tectonic {input}"
+fig_extension = "svg"
+compile = "typst compile {input}"

@@ -94,6 +94,7 @@ impl Metadata {
         merge_vec!(languages);
         if !overlay.targets.is_empty() { self.targets = overlay.targets; }
         merge_vec!(post);
+        merge_vec!(exclude);
 
         // Extra variables: overlay keys win
         for (k, v) in overlay.var {

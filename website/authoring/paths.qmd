@@ -1,5 +1,5 @@
 ---
-title: Paths
+title = "Paths"
 ---
 
 All paths in a *Calepin* document resolve from a single directory called the **project root**, with one exception: code chunks run from the input file's parent directory.
@@ -9,7 +9,7 @@ All paths in a *Calepin* document resolve from a single directory called the **p
 
 In **document mode** (`calepin render file.qmd`), the root is the directory containing the `.qmd` file -- so both rules point to the same place and every relative path means the same thing everywhere.
 
-In **collection mode** (`calepin render _calepin.toml`), the root is the directory containing `_calepin.toml`. Code chunks still run from each `.qmd` file's own directory. This means YAML paths and code chunk paths can resolve from different locations when documents live in subdirectories.
+In **collection mode** (`calepin render _calepin/config.toml`), the root is the directory containing `_calepin/config.toml`. Code chunks still run from each `.qmd` file's own directory. This means YAML paths and code chunk paths can resolve from different locations when documents live in subdirectories.
 
 *Calepin* prints the effective root at the start of each render (suppress with `-q`). When the two directories differ, both are shown. When you invoke a document-mode render from a different directory than the `.qmd` file's parent (e.g., `calepin render subdir/doc.qmd`), *Calepin* prints a note reminding you that the root is the input file's directory, not your shell's working directory.
 
@@ -24,7 +24,7 @@ bibliography: refs.bib          # same directory as the .qmd
 csl: styles/apa.csl             # subdirectory
 ```
 
-In collection mode, paths are relative to `_calepin.toml`, regardless of where the `.qmd` file sits in the project tree:
+In collection mode, paths are relative to `_calepin/config.toml`, regardless of where the `.qmd` file sits in the project tree:
 
 ```yaml
 bibliography: assets/library.bib   # from the project root, not the file's directory

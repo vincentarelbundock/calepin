@@ -1,5 +1,5 @@
 ---
-title: Quick Start
+title = "Quick Start"
 ---
 
 # Installation
@@ -58,7 +58,7 @@ Or let *Calepin* infer it from the output file extension with `-o`:
 calepin render document.qmd -o paper.tex
 ```
 
-Targets like `pdf` include a compilation step. For example, `calepin render document.qmd -t pdf` renders to LaTeX and then compiles to PDF via [tectonic](https://tectonic-typesetting.github.io/). Custom targets with compilation are configured in `calepin.toml`.
+Targets like `pdf` include a compilation step. For example, `calepin render document.qmd -t pdf` renders to LaTeX and then compiles to PDF via [tectonic](https://tectonic-typesetting.github.io/). Custom targets with compilation are configured in `_calepin/config.toml`.
 
 
 # Live preview

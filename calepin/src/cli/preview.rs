@@ -5,10 +5,9 @@ use anyhow::Result;
 use crate::cli::PreviewArgs;
 
 pub fn handle_preview(args: PreviewArgs) -> Result<()> {
-    // Directory: check for _calepin.toml inside, otherwise serve statically
+    // Directory: check for project config inside, otherwise serve statically
     if args.input.is_dir() {
-        let config = args.input.join("_calepin.toml");
-        if config.exists() {
+        if let Some(config) = crate::cli::find_project_config(&args.input) {
             let args = PreviewArgs { input: config, ..args };
             return handle_preview(args);
         }
@@ -19,8 +18,8 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
         // For non-HTML targets, do a one-shot build and open the output.
         let is_html = {
             let target_name = args.format.as_deref().unwrap_or("html");
-            let meta = crate::project::load_project_metadata(&args.input)?;
-            let target = crate::project::resolve_target(target_name, &meta.targets)?;
+            let meta = crate::config::load_project_metadata(&args.input)?;
+            let target = crate::config::resolve_target(target_name, &meta.targets)?;
             target.engine == "html"
         };
         if !is_html {

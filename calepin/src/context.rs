@@ -4,14 +4,15 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
-use crate::{paths, project};
+use crate::paths;
+use crate::config;
 
 /// Resolved project context: project metadata + target, shared by render and preview.
 pub(crate) struct ProjectContext {
     pub project_root: Option<PathBuf>,
     pub project_metadata: Option<crate::config::Metadata>,
     pub target_name: String,
-    pub target: project::Target,
+    pub target: config::Target,
     /// True when the target was explicitly set (CLI flag or front matter),
     /// false when it fell back to the default "html".
     pub explicit_target: bool,
@@ -37,9 +38,8 @@ pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<
     // Project root is the directory containing the input file.
     // Load config and convert to Metadata immediately.
     let (project_root, project_metadata) = {
-        let cfg_path = abs_input_dir.join("_calepin.toml");
-        if cfg_path.exists() {
-            match project::load_project_metadata(&cfg_path) {
+        if let Some(cfg_path) = crate::cli::find_project_config(&abs_input_dir) {
+            match config::load_project_metadata(&cfg_path) {
                 Ok(meta) => (Some(abs_input_dir.clone()), Some(meta)),
                 Err(e) => {
                     eprintln!("Warning: failed to load {}: {}", cfg_path.display(), e);
@@ -63,9 +63,9 @@ pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<
 
     let empty_targets = std::collections::HashMap::new();
     let user_targets = project_metadata.as_ref().map(|m| &m.targets).unwrap_or(&empty_targets);
-    let target = project::resolve_target(&target_name, user_targets)?;
+    let target = config::resolve_target(&target_name, user_targets)?;
 
-    // In document mode (no _calepin.toml), the project root is the
+    // In document mode (no _calepin/config.toml), the project root is the
     // input file's parent directory so that all paths resolve relative to it.
     let effective_root = project_root.clone().unwrap_or_else(|| abs_input_dir.clone());
 
@@ -74,7 +74,7 @@ pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<
         if let Ok(cwd) = std::env::current_dir() {
             if cwd != effective_root {
                 eprintln!(
-                    "Note: project root is {} (input file directory, no _calepin.toml found)",
+                    "Note: project root is {} (input file directory, no _calepin/config.toml found)",
                     effective_root.display()
                 );
             }
@@ -119,7 +119,7 @@ pub(crate) fn apply_engine_override(ctx: &mut ProjectContext, engine: Option<&st
     ctx.target.engine = engine.to_string();
 
     // Update extension and fig-extension to match the new engine
-    let builtin = project::builtin_metadata().targets.get(engine);
+    let builtin = config::builtin_metadata().targets.get(engine);
     if let Some(b) = builtin {
         ctx.target.extension = b.extension.clone();
         ctx.target.fig_extension = b.fig_extension.clone();
