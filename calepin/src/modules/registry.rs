@@ -1,7 +1,7 @@
 //! Plugin registry: loading, indexing, and dispatch.
 //!
 //! Two transform traits at different scopes:
-//!   - `TransformElementRaw` -- operates on raw Element children before rendering
+//!   - `TransformElement` -- operates on raw Element children before rendering
 //!   - `TransformElementRendered` -- operates on rendered children + template vars
 //!   - `TransformBody` -- operates on the full rendered body string
 //!
@@ -13,8 +13,7 @@ use std::path::{Path, PathBuf};
 
 use crate::modules::transform_body::TransformBody;
 use crate::modules::transform_document::TransformDocument;
-use crate::modules::transform_page::TransformPage;
-use crate::module_manifest::{FilterMatch, FilterSpec, FormatSpec, ModuleManifest, ModuleProvides};
+use crate::module_manifest::{MatchRule, MatchSpec, FormatSpec, ModuleManifest, ModuleProvides};
 use crate::types::Element;
 
 // ---------------------------------------------------------------------------
@@ -22,6 +21,7 @@ use crate::types::Element;
 // ---------------------------------------------------------------------------
 
 /// Result of element transform application.
+#[allow(dead_code)]
 pub enum ModuleResult {
     /// Transform produced final output. Stops further dispatch.
     Rendered(String),
@@ -32,6 +32,7 @@ pub enum ModuleResult {
 }
 
 /// Context passed to element transforms during div/span rendering.
+#[allow(dead_code)]
 pub struct ModuleContext<'a> {
     pub classes: &'a [String],
     pub id: &'a Option<String>,
@@ -75,6 +76,7 @@ impl<'a> ModuleContext<'a> {
     }
 
     /// All children rendered and joined (lazy, cached).
+    #[allow(dead_code)]
     pub fn render_children(&self) -> String {
         let mut cache = self.rendered_cache.borrow_mut();
         if cache.is_none() {
@@ -105,7 +107,7 @@ impl<'a> ModuleContext<'a> {
 ///   Used for pre-render mutations (SVG-to-PDF conversion).
 /// - `apply`: called per-div during rendering via ModuleContext.
 ///   Used for structural transforms (tabset, layout).
-pub trait TransformElementRaw: Send + Sync {
+pub trait TransformElement: Send + Sync {
     /// Called once on the full element list before rendering. Default: no-op.
     fn transform_all(&self, _elements: &mut Vec<Element>) {}
 
@@ -115,20 +117,13 @@ pub trait TransformElementRaw: Send + Sync {
     }
 }
 
-/// Operates on rendered children + template vars.
-pub trait TransformElementRendered: Send + Sync {
-    fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult;
-}
-
 // ---------------------------------------------------------------------------
-// Plugin kind
+// Module kind
 // ---------------------------------------------------------------------------
 
 pub enum ModuleKind {
-    ElementRaw(Box<dyn TransformElementRaw>),
-    ElementRendered(Box<dyn TransformElementRendered>),
+    Element(Box<dyn TransformElement>),
     Body(Box<dyn TransformBody>),
-    Page(Box<dyn TransformPage>),
     Document(Box<dyn TransformDocument>),
     Noop,
 }
@@ -176,17 +171,17 @@ impl ModuleRegistry {
         ModuleRegistry { modules }
     }
 
-    pub fn matching_filters<'a>(
+    pub fn matching_modules<'a>(
         &'a self,
         classes: &[String],
         attrs: &HashMap<String, String>,
         id: Option<&str>,
         format: &str,
         context: &str,
-    ) -> Vec<(&'a LoadedModule, &'a FilterSpec)> {
+    ) -> Vec<(&'a LoadedModule, &'a MatchSpec)> {
         let mut result = Vec::new();
         for plugin in &self.modules {
-            for spec in &plugin.manifest.provides.filters {
+            for spec in &plugin.manifest.provides.matchers {
                 if spec.contexts.iter().any(|c| c == context)
                     && spec.match_rule.matches(classes, attrs, id, format)
                 {
@@ -275,24 +270,11 @@ impl ModuleRegistry {
     }
 
     /// Collect all raw element transforms from active modules (for pre-render pass).
-    pub fn resolve_element_raw_transforms(&self, active: &[String]) -> Vec<&dyn TransformElementRaw> {
+    pub fn resolve_element_transforms(&self, active: &[String]) -> Vec<&dyn TransformElement> {
         let mut result = Vec::new();
         for m in &self.modules {
             if active.contains(&m.manifest.name) {
-                if let ModuleKind::ElementRaw(ref t) = m.kind {
-                    result.push(t.as_ref());
-                }
-            }
-        }
-        result
-    }
-
-    /// Collect all page transforms from active modules.
-    pub fn resolve_page_transforms(&self, active: &[String]) -> Vec<&dyn TransformPage> {
-        let mut result = Vec::new();
-        for m in &self.modules {
-            if active.contains(&m.manifest.name) {
-                if let ModuleKind::Page(ref t) = m.kind {
+                if let ModuleKind::Element(ref t) = m.kind {
                     result.push(t.as_ref());
                 }
             }
@@ -323,7 +305,7 @@ impl ModuleRegistry {
 
 struct TransformTabset;
 
-impl TransformElementRaw for TransformTabset {
+impl TransformElement for TransformTabset {
     fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::tabset::render(
             ctx.format, ctx.attrs, ctx.children(), &|el| ctx.render_child(el),
@@ -334,7 +316,7 @@ impl TransformElementRaw for TransformTabset {
 
 struct TransformLayout;
 
-impl TransformElementRaw for TransformLayout {
+impl TransformElement for TransformLayout {
     fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::layout::render(
             ctx.id, ctx.attrs, ctx.children(), ctx.format,
@@ -344,31 +326,8 @@ impl TransformElementRaw for TransformLayout {
     }
 }
 
-struct TransformTheorem {
-    counters: std::sync::Mutex<HashMap<String, usize>>,
-}
-
-impl TransformTheorem {
-    fn new() -> Self {
-        Self { counters: std::sync::Mutex::new(HashMap::new()) }
-    }
-}
-
-impl TransformElementRendered for TransformTheorem {
-    fn apply(&self, ctx: &mut ModuleContext) -> ModuleResult {
-        for cls in ctx.classes {
-            if crate::render::filter::theorem::theorem_prefix(cls).is_some() {
-                let mut counters = self.counters.lock().unwrap();
-                let count = counters.entry(cls.clone()).or_insert(0);
-                *count += 1;
-                ctx.vars.insert("number".to_string(), count.to_string());
-                ctx.vars.insert("type_class".to_string(), cls.clone());
-                return ModuleResult::Continue;
-            }
-        }
-        ModuleResult::Pass
-    }
-}
+struct NoopElement;
+impl TransformElement for NoopElement {}
 
 // ---------------------------------------------------------------------------
 // Built-in registration
@@ -376,9 +335,9 @@ impl TransformElementRendered for TransformTheorem {
 
 fn register_builtins(modules: &mut Vec<LoadedModule>) {
     // Element transforms (raw)
-    modules.push(builtin_element_raw(
+    modules.push(builtin_element(
         "tabset",
-        FilterMatch {
+        MatchRule {
             classes: vec!["panel-tabset".to_string()],
             formats: vec!["html".to_string()],
             ..Default::default()
@@ -387,9 +346,9 @@ fn register_builtins(modules: &mut Vec<LoadedModule>) {
         Box::new(TransformTabset),
     ));
 
-    modules.push(builtin_element_raw(
+    modules.push(builtin_element(
         "layout",
-        FilterMatch {
+        MatchRule {
             attrs: vec!["layout_ncol".into(), "layout_nrow".into(), "layout".into()],
             ..Default::default()
         },
@@ -397,20 +356,22 @@ fn register_builtins(modules: &mut Vec<LoadedModule>) {
         Box::new(TransformLayout),
     ));
 
-    // Element transforms (rendered)
-    modules.push(builtin_element_rendered(
+    // Auto-numbered element (theorem-type environments)
+    // The `number = true` flag tells div.rs to auto-number matching divs.
+    modules.push(builtin_element(
         "theorem",
-        FilterMatch {
+        MatchRule {
             classes: vec![
                 "theorem".into(), "lemma".into(), "corollary".into(),
                 "proposition".into(), "conjecture".into(), "definition".into(),
                 "example".into(), "exercise".into(), "solution".into(),
                 "remark".into(), "algorithm".into(), "proof".into(),
             ],
+            number: true,
             ..Default::default()
         },
         vec!["div".to_string()],
-        Box::new(TransformTheorem::new()),
+        Box::new(NoopElement),
     ));
 
     // Body transforms
@@ -419,50 +380,31 @@ fn register_builtins(modules: &mut Vec<LoadedModule>) {
     modules.push(builtin_body_transform("split_slides",
         Box::new(crate::modules::split_slides::SplitSlidesHtml)));
 
-    // Page transforms
-    modules.push(builtin_page_transform("highlight",
-        Box::new(crate::modules::highlight::transform_page::InjectHighlightVars)));
-
     // Element raw transforms (pre-render)
-    modules.push(builtin_element_raw_simple("convert_svg_pdf",
+    modules.push(builtin_element_simple("convert_svg_pdf",
         Box::new(crate::modules::convert_svg_pdf::ConvertSvgPdf)));
 
     // Document transforms
+    modules.push(builtin_document_transform("highlight",
+        Box::new(crate::modules::highlight::transform_page::InjectHighlightMarkup)));
     modules.push(builtin_document_transform("embed_images",
         Box::new(crate::modules::embed_images::EmbedImagesHtml)));
 }
 
-fn builtin_element_raw(
-    name: &str, match_rule: FilterMatch, contexts: Vec<String>,
-    plugin: Box<dyn TransformElementRaw>,
+fn builtin_element(
+    name: &str, match_rule: MatchRule, contexts: Vec<String>,
+    plugin: Box<dyn TransformElement>,
 ) -> LoadedModule {
     LoadedModule {
         manifest: ModuleManifest {
             name: name.to_string(), version: None, description: None,
             provides: ModuleProvides {
-                filters: vec![FilterSpec { run: None, match_rule, contexts }],
+                matchers: vec![MatchSpec { run: None, match_rule, contexts }],
                 ..Default::default()
             },
             module_dir: PathBuf::new(),
         },
-        kind: ModuleKind::ElementRaw(plugin),
-    }
-}
-
-fn builtin_element_rendered(
-    name: &str, match_rule: FilterMatch, contexts: Vec<String>,
-    plugin: Box<dyn TransformElementRendered>,
-) -> LoadedModule {
-    LoadedModule {
-        manifest: ModuleManifest {
-            name: name.to_string(), version: None, description: None,
-            provides: ModuleProvides {
-                filters: vec![FilterSpec { run: None, match_rule, contexts }],
-                ..Default::default()
-            },
-            module_dir: PathBuf::new(),
-        },
-        kind: ModuleKind::ElementRendered(plugin),
+        kind: ModuleKind::Element(plugin),
     }
 }
 
@@ -478,25 +420,14 @@ fn builtin_body_transform(name: &str, transform: Box<dyn TransformBody>) -> Load
 }
 
 /// Element raw transform without filter matching (uses transform_all, not per-div apply).
-fn builtin_element_raw_simple(name: &str, plugin: Box<dyn TransformElementRaw>) -> LoadedModule {
+fn builtin_element_simple(name: &str, plugin: Box<dyn TransformElement>) -> LoadedModule {
     LoadedModule {
         manifest: ModuleManifest {
             name: name.to_string(), version: None, description: None,
             provides: ModuleProvides::default(),
             module_dir: PathBuf::new(),
         },
-        kind: ModuleKind::ElementRaw(plugin),
-    }
-}
-
-fn builtin_page_transform(name: &str, transform: Box<dyn TransformPage>) -> LoadedModule {
-    LoadedModule {
-        manifest: ModuleManifest {
-            name: name.to_string(), version: None, description: None,
-            provides: ModuleProvides::default(),
-            module_dir: PathBuf::new(),
-        },
-        kind: ModuleKind::Page(transform),
+        kind: ModuleKind::Element(plugin),
     }
 }
 

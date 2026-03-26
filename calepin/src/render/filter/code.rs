@@ -1,27 +1,27 @@
 // Code filter: fills template variables for code elements.
 //
-// - CodeFilter::apply()       — Populate vars (code, lang, label, highlighted) for
+// - BuildCodeVars::apply()       — Populate vars (code, lang, label, highlighted) for
 //                                CodeSource, CodeOutput, CodeWarning/Message/Error.
 // - escape_code_for_format()  — Typst-specific escaping for code strings.
 
 use std::collections::HashMap;
 
-use super::{Filter, FilterResult};
+use super::BuildElementVars;
 use crate::types::Element;
 use crate::modules::highlight::Highlighter;
 
-pub struct CodeFilter<'a> {
+pub struct BuildCodeVars<'a> {
     highlighter: &'a Highlighter,
 }
 
-impl<'a> CodeFilter<'a> {
+impl<'a> BuildCodeVars<'a> {
     pub fn new(highlighter: &'a Highlighter) -> Self {
         Self { highlighter }
     }
 }
 
-impl<'a> Filter for CodeFilter<'a> {
-    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, _defaults: &crate::config::Metadata) -> FilterResult {
+impl<'a> BuildElementVars for BuildCodeVars<'a> {
+    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, _defaults: &crate::config::Metadata) {
         match element {
             Element::CodeSource { code, lang, label, filename, .. } => {
                 let escaped = escape_code_for_format(code, format);
@@ -33,11 +33,9 @@ impl<'a> Filter for CodeFilter<'a> {
                 vars.insert("lang".to_string(), lang.clone());
                 vars.insert("label".to_string(), label.clone());
                 vars.insert("highlighted".to_string(), highlighted);
-                FilterResult::Continue
             }
             Element::CodeOutput { text } => {
                 vars.insert("output".to_string(), escape_code_for_format(text, format));
-                FilterResult::Continue
             }
             Element::CodeWarning { text }
             | Element::CodeMessage { text }
@@ -50,9 +48,8 @@ impl<'a> Filter for CodeFilter<'a> {
                     _ => unreachable!(),
                 };
                 vars.insert("diagnostic_class".to_string(), cls.to_string());
-                FilterResult::Continue
             }
-            _ => FilterResult::Pass,
+            _ => {}
         }
     }
 }

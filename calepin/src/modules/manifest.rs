@@ -30,7 +30,7 @@ pub struct ModuleManifest {
 #[allow(dead_code)]
 pub struct ModuleProvides {
     /// Multiple filters, each with its own match rules and executable.
-    pub filters: Vec<FilterSpec>,
+    pub matchers: Vec<MatchSpec>,
     pub elements: Option<ElementsSpec>,
     pub partials: Option<PartialsSpec>,
     pub csl: Option<String>,
@@ -39,18 +39,18 @@ pub struct ModuleProvides {
 
 /// Filter specification: executable path, match rules, contexts.
 #[allow(dead_code)]
-pub struct FilterSpec {
+pub struct MatchSpec {
     /// Path to executable, relative to plugin dir. None for built-in plugins.
     pub run: Option<PathBuf>,
     /// Rules that determine when this filter is dispatched.
-    pub match_rule: FilterMatch,
+    pub match_rule: MatchRule,
     /// Which contexts this filter handles: "div", "span", or both.
     pub contexts: Vec<String>,
 }
 
 /// Rules for matching a filter to a div/span element.
 #[derive(Default)]
-pub struct FilterMatch {
+pub struct MatchRule {
     /// CSS classes that trigger this filter (OR'd).
     pub classes: Vec<String>,
     /// Attribute names whose presence triggers this filter (OR'd).
@@ -59,6 +59,8 @@ pub struct FilterMatch {
     pub id_prefix: Option<String>,
     /// Output formats this filter applies to. Empty = all formats.
     pub formats: Vec<String>,
+    /// Auto-number matching divs. Injects `{{ number }}` and `{{ type_class }}` vars.
+    pub number: bool,
 }
 
 /// Element template directory specification.
@@ -88,7 +90,7 @@ pub struct FormatSpec {
 // Matching
 // ---------------------------------------------------------------------------
 
-impl FilterMatch {
+impl MatchRule {
     /// Check if this match rule applies to the given element properties.
     pub fn matches(
         &self,
@@ -158,7 +160,7 @@ impl ModuleManifest {
 
 fn parse_provides(root: &Value, module_dir: &Path) -> Result<ModuleProvides> {
     Ok(ModuleProvides {
-        filters: parse_filter_specs(root, module_dir),
+        matchers: parse_match_specs(root, module_dir),
         elements: parse_elements_spec(root),
         partials: parse_partials_spec(root),
         csl: root.get("csl").and_then(|v| v.as_str()).map(String::from),
@@ -166,14 +168,14 @@ fn parse_provides(root: &Value, module_dir: &Path) -> Result<ModuleProvides> {
     })
 }
 
-fn parse_filter_specs(provides: &Value, module_dir: &Path) -> Vec<FilterSpec> {
+fn parse_match_specs(provides: &Value, module_dir: &Path) -> Vec<MatchSpec> {
     let mut specs = Vec::new();
 
     // Try plural `filters:` (array)
     if let Some(filters_node) = provides.get("filters") {
         if let Some(items) = filters_node.as_array() {
             for item in items {
-                if let Some(spec) = parse_one_filter_spec(item, module_dir) {
+                if let Some(spec) = parse_one_match_spec(item, module_dir) {
                     specs.push(spec);
                 }
             }
@@ -182,7 +184,7 @@ fn parse_filter_specs(provides: &Value, module_dir: &Path) -> Vec<FilterSpec> {
 
     // Try singular `filter:` (single object)
     if let Some(filter_node) = provides.get("filter") {
-        if let Some(spec) = parse_one_filter_spec(filter_node, module_dir) {
+        if let Some(spec) = parse_one_match_spec(filter_node, module_dir) {
             specs.push(spec);
         }
     }
@@ -190,19 +192,20 @@ fn parse_filter_specs(provides: &Value, module_dir: &Path) -> Vec<FilterSpec> {
     specs
 }
 
-fn parse_one_filter_spec(node: &Value, module_dir: &Path) -> Option<FilterSpec> {
+fn parse_one_match_spec(node: &Value, module_dir: &Path) -> Option<MatchSpec> {
     let run = node.get("run")
         .and_then(|v| v.as_str())
         .map(|s| module_dir.join(s));
 
     let match_rule = match node.get("match") {
-        Some(match_node) => FilterMatch {
+        Some(match_node) => MatchRule {
             classes: val_str_vec(match_node, "classes"),
             attrs: val_str_vec(match_node, "attrs").into_iter().map(|a| crate::util::normalize_key(&a)).collect(),
             id_prefix: match_node.get("id_prefix").and_then(|v| v.as_str()).map(String::from),
             formats: val_str_vec(match_node, "formats"),
+            number: match_node.get("number").and_then(|v| v.as_bool()).unwrap_or(false),
         },
-        None => FilterMatch::default(),
+        None => MatchRule::default(),
     };
 
     let contexts = {
@@ -214,7 +217,7 @@ fn parse_one_filter_spec(node: &Value, module_dir: &Path) -> Option<FilterSpec> 
         }
     };
 
-    Some(FilterSpec { run, match_rule, contexts })
+    Some(MatchSpec { run, match_rule, contexts })
 }
 
 fn parse_elements_spec(provides: &Value) -> Option<ElementsSpec> {

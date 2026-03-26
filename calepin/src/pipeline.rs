@@ -123,7 +123,7 @@ pub fn render_core(
     element_renderer.set_preamble(eval_result.preamble);
 
     // 10b. Pre-render element transforms (SVG-to-PDF, etc.)
-    pipeline.transform_elements_pre(&mut elements, &element_renderer);
+    pipeline.transform_elements(&mut elements, &element_renderer);
 
     // 11. Render elements to body string
     let rendered = pipeline.render(&elements, &element_renderer)?;

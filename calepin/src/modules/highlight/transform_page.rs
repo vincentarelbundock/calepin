@@ -1,38 +1,41 @@
-//! TransformPage: inject syntax highlighting variables into page template.
+//! TransformDocument: inject syntax highlighting into the assembled document.
 //!
-//! For HTML: injects CSS into the `css` and `syntax_css` template vars.
-//! For LaTeX: injects `\definecolor` commands into the `colors` template var.
+//! For HTML: injects a <style> block with syntax CSS before </head>.
+//! For LaTeX: injects \definecolor commands before \begin{document}.
 
-use std::collections::HashMap;
-
-use crate::modules::transform_page::TransformPage;
+use crate::modules::transform_document::TransformDocument;
 use crate::modules::highlight::ColorScope;
 use crate::render::elements::ElementRenderer;
-use crate::config::Metadata;
 
-pub struct InjectHighlightVars;
+pub struct InjectHighlightMarkup;
 
-impl TransformPage for InjectHighlightVars {
-    fn transform(&self, vars: &mut HashMap<String, String>, renderer: &ElementRenderer, _meta: &Metadata) {
-        let format = vars.get("base").map(|s| s.as_str()).unwrap_or("");
-
-        match format {
+impl TransformDocument for InjectHighlightMarkup {
+    fn transform(&self, document: &str, engine: &str, renderer: &ElementRenderer) -> String {
+        match engine {
             "html" => {
-                let syntax_css = renderer.syntax_css_with_scope(ColorScope::Both);
-                if !syntax_css.is_empty() {
-                    let css = vars.entry("css".to_string()).or_default();
-                    css.push('\n');
-                    css.push_str(&syntax_css);
-                    vars.insert("syntax_css".to_string(), syntax_css);
+                let css = renderer.syntax_css_with_scope(ColorScope::Both);
+                if css.is_empty() {
+                    return document.to_string();
+                }
+                let style_tag = format!("<style>\n{}</style>", css);
+                if let Some(pos) = document.find("</head>") {
+                    format!("{}{}\n{}", &document[..pos], style_tag, &document[pos..])
+                } else {
+                    format!("{}\n{}", style_tag, document)
                 }
             }
             "latex" => {
                 let colors = renderer.latex_color_definitions();
-                if !colors.is_empty() {
-                    vars.insert("colors".to_string(), colors);
+                if colors.is_empty() {
+                    return document.to_string();
+                }
+                if let Some(pos) = document.find("\\begin{document}") {
+                    format!("{}{}\n{}", &document[..pos], colors, &document[pos..])
+                } else {
+                    format!("{}\n{}", colors, document)
                 }
             }
-            _ => {}
+            _ => document.to_string(),
         }
     }
 }

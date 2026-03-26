@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::registry::{ModuleKind, ModuleRegistry};
+use crate::registry::ModuleRegistry;
 
 static RE_BRACKETED_SPAN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\[([^\]]+)\]\{([^}]+)\}").unwrap()
@@ -18,7 +18,7 @@ pub fn render(
     format: &str,
     registry: &ModuleRegistry,
     raw_fragments: &std::cell::RefCell<Vec<String>>,
-    defaults: &crate::config::Metadata,
+    _defaults: &crate::config::Metadata,
     resolve_partial: &dyn Fn(&str) -> Option<String>,
     template_env: &crate::render::template::TemplateEnv,
 ) -> String {
@@ -55,28 +55,7 @@ pub fn render(
 
         // Plugin dispatch via registry
         let empty_attrs = HashMap::new();
-        let matching = registry.matching_filters(&classes, &empty_attrs, id.as_deref(), format, "span");
-
-        // Spans only use rendered transforms (no raw children to iterate)
-        for (plugin, _filter_spec) in &matching {
-            if let ModuleKind::ElementRendered(ref p) = plugin.kind {
-                let empty_children: Vec<crate::types::Element> = vec![];
-                let mut ctx = crate::registry::ModuleContext::new(
-                    &classes, &id, &kv, &empty_children, format, defaults,
-                    &|_| String::new(), resolve_partial, raw_fragments,
-                );
-                ctx.vars = vars.clone();
-                match p.apply(&mut ctx) {
-                    crate::registry::ModuleResult::Rendered(output) => {
-                        return wrap_output(format, raw_fragments, output);
-                    }
-                    crate::registry::ModuleResult::Continue => {
-                        vars = ctx.vars;
-                    }
-                    crate::registry::ModuleResult::Pass => {}
-                }
-            }
-        }
+        let _matching = registry.matching_modules(&classes, &empty_attrs, id.as_deref(), format, "span");
 
         // Template lookup
         if !first_class.is_empty() {

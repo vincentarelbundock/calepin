@@ -1,6 +1,6 @@
 // Figure filter: fills template variables for Figure elements.
 //
-// - FigureFilter::apply()  — Dispatch to build_figure_vars for Figure elements.
+// - BuildFigureVars::apply()  — Dispatch to build_figure_vars for Figure elements.
 // - build_figure_vars()    — Populate all figure template vars (image tag, dimensions,
 //                            alignment, caption location, link wrapping).
 // - build_figure_vars()    — Populate figure template vars (path, dimensions,
@@ -11,23 +11,23 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::{Filter, FilterResult};
+use super::BuildElementVars;
 use crate::types::Element;
 
-pub struct FigureFilter {
+pub struct BuildFigureVars {
     pub default_cap_location: Option<String>,
     /// Preferred image formats for variant selection, in priority order.
     pub fig_formats: Vec<String>,
 }
 
-impl FigureFilter {
+impl BuildFigureVars {
     pub fn new(default_cap_location: Option<String>, fig_formats: Vec<String>) -> Self {
         Self { default_cap_location, fig_formats }
     }
 }
 
-impl Filter for FigureFilter {
-    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, defaults: &crate::config::Metadata) -> FilterResult {
+impl BuildElementVars for BuildFigureVars {
+    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, defaults: &crate::config::Metadata) {
         if let Element::Figure { path, alt, caption, label, number, attrs } = element {
             build_figure_vars(
                 vars, path, alt, caption.as_deref(), label,
@@ -36,9 +36,6 @@ impl Filter for FigureFilter {
                 defaults,
                 &self.fig_formats,
             );
-            FilterResult::Continue
-        } else {
-            FilterResult::Pass
         }
     }
 }

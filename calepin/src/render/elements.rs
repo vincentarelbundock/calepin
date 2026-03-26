@@ -6,7 +6,7 @@ use std::rc::Rc;
 use include_dir::{include_dir, Dir};
 
 use crate::types::Element;
-use crate::render::filter::{Filter, FilterResult};
+use crate::render::filter::BuildElementVars;
 use crate::registry::ModuleRegistry;
 use crate::modules::highlight::{Highlighter, HighlightConfig, ColorScope};
 
@@ -394,21 +394,18 @@ impl ElementRenderer {
         vars.insert("engine".to_string(), self.ext.clone());
 
         // Run element through pipeline filters
-        let code_filter = crate::render::filter::code::CodeFilter::new(&self.highlighter);
+        let code_filter = crate::render::filter::code::BuildCodeVars::new(&self.highlighter);
         let fig_formats = self.target.as_ref()
             .map(|t| t.fig_formats.clone())
             .filter(|f| !f.is_empty())
             .unwrap_or_else(|| crate::render::filter::figure::default_fig_formats(&self.ext));
-        let figure_filter = crate::render::filter::figure::FigureFilter::new(
+        let figure_filter = crate::render::filter::figure::BuildFigureVars::new(
             self.default_fig_cap_location.clone(),
             fig_formats,
         );
 
-        for filter in [&code_filter as &dyn Filter, &figure_filter as &dyn Filter] {
-            match filter.apply(element, &self.ext, &mut vars, &self.metadata) {
-                FilterResult::Rendered(output) => return output,
-                FilterResult::Continue | FilterResult::Pass => {}
-            }
+        for builder in [&code_filter as &dyn BuildElementVars, &figure_filter as &dyn BuildElementVars] {
+            builder.apply(element, &self.ext, &mut vars, &self.metadata);
         }
 
         self.template_env.render(template_name, &vars)

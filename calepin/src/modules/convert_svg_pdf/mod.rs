@@ -7,12 +7,12 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use crate::registry::TransformElementRaw;
+use crate::registry::TransformElement;
 use crate::types::Element;
 
 pub struct ConvertSvgPdf;
 
-impl TransformElementRaw for ConvertSvgPdf {
+impl TransformElement for ConvertSvgPdf {
     fn transform_all(&self, elements: &mut Vec<Element>) {
         for element in elements.iter_mut() {
             convert_figures(element);

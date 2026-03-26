@@ -7,12 +7,17 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 
 use crate::modules::transform_document::TransformDocument;
+use crate::render::elements::ElementRenderer;
 
 pub struct EmbedImagesHtml;
 
 impl TransformDocument for EmbedImagesHtml {
-    fn transform(&self, document: &str) -> String {
-        embed_images_base64(document)
+    fn transform(&self, document: &str, engine: &str, _renderer: &ElementRenderer) -> String {
+        if engine == "html" {
+            embed_images_base64(document)
+        } else {
+            document.to_string()
+        }
     }
 }
 

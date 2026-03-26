@@ -156,27 +156,20 @@ impl FormatPipeline {
 
     /// Run pre-render element transforms from active modules.
     /// Calls `transform_all` on each raw element transform.
-    pub fn transform_elements_pre(&self, elements: &mut Vec<Element>, renderer: &ElementRenderer) {
+    pub fn transform_elements(&self, elements: &mut Vec<Element>, renderer: &ElementRenderer) {
         let registry = renderer.registry();
-        for t in registry.resolve_element_raw_transforms(&self.module_names) {
+        for t in registry.resolve_element_transforms(&self.module_names) {
             t.transform_all(elements);
-        }
-    }
-
-    /// Run page transforms from active modules (during page assembly).
-    pub fn transform_page(&self, vars: &mut HashMap<String, String>, renderer: &ElementRenderer, meta: &Metadata) {
-        let registry = renderer.registry();
-        for t in registry.resolve_page_transforms(&self.module_names) {
-            t.transform(vars, renderer, meta);
         }
     }
 
     /// Run document transforms from active modules (post-assembly).
     pub fn transform_document(&self, document: &str, renderer: &ElementRenderer) -> String {
         let registry = renderer.registry();
+        let engine = &self.engine;
         let mut result = document.to_string();
         for t in registry.resolve_document_transforms(&self.module_names) {
-            result = t.transform(&result);
+            result = t.transform(&result, engine, renderer);
         }
         result
     }
@@ -193,23 +186,13 @@ impl FormatPipeline {
         let walk_meta = renderer.walk_metadata();
         let headings = if self.toc_headings { &walk_meta.headings[..] } else { &[][..] };
 
-        // Collect page transform vars from modules
-        let mut extra_vars = HashMap::new();
-        extra_vars.insert("base".to_string(), self.engine.clone());
-        self.transform_page(&mut extra_vars, renderer, meta);
-
         let page_vars = &self.page_vars;
 
         let html = crate::render::template::assemble_page(
             body, meta, &self.target_name, headings, renderer.preamble(),
             renderer.target.as_ref(),
             |vars| {
-                // Apply module-provided page vars
-                for (k, v) in &extra_vars {
-                    vars.insert(k.clone(), v.clone());
-                }
-
-                // Apply page_vars from target config (overrides everything)
+                // Apply page_vars from target config
                 for (k, v) in page_vars {
                     vars.insert(k.clone(), v.clone());
                 }

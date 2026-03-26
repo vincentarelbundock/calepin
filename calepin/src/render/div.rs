@@ -26,11 +26,11 @@ pub fn render(
     template_env: &crate::render::template::TemplateEnv,
     defaults: &crate::config::Metadata,
 ) -> String {
-    let matching = registry.matching_filters(classes, attrs, id.as_deref(), format, "div");
+    let matching = registry.matching_modules(classes, attrs, id.as_deref(), format, "div");
 
     // Phase 1: Raw element transforms (receive raw children, render them directly)
     for (plugin, _filter_spec) in &matching {
-        if let ModuleKind::ElementRaw(ref p) = plugin.kind {
+        if let ModuleKind::Element(ref p) = plugin.kind {
             let mut ctx = ModuleContext::new(
                 classes, id, attrs, children, format, defaults,
                 render_element, resolve_partial, raw_fragments,
@@ -42,25 +42,24 @@ pub fn render(
         }
     }
 
-    // Phase 2: Rendered element transforms (receive rendered children + vars)
-    let mut accumulated_vars: Option<HashMap<String, String>> = None;
-    for (plugin, _filter_spec) in &matching {
-        if let ModuleKind::ElementRendered(ref p) = plugin.kind {
-            let mut ctx = ModuleContext::new(
-                classes, id, attrs, children, format, defaults,
-                render_element, resolve_partial, raw_fragments,
-            );
-            let rendered = ctx.render_children();
-            build_div_vars(&mut ctx.vars, classes, id, attrs, &rendered, format, defaults);
-            if let Some(ref prev) = accumulated_vars {
-                for (k, v) in prev {
-                    ctx.vars.entry(k.clone()).or_insert_with(|| v.clone());
+    // Phase 2: Auto-numbering for modules with number=true
+    let mut extra_vars: Option<HashMap<String, String>> = None;
+    for (_plugin, filter_spec) in &matching {
+        if filter_spec.match_rule.number {
+            // Find the matching class for numbering
+            for cls in classes {
+                if filter_spec.match_rule.classes.iter().any(|c| c == cls) {
+                    static COUNTERS: std::sync::LazyLock<std::sync::Mutex<HashMap<String, usize>>> =
+                        std::sync::LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
+                    let mut counters = COUNTERS.lock().unwrap();
+                    let count = counters.entry(cls.clone()).or_insert(0);
+                    *count += 1;
+                    let mut vars = HashMap::new();
+                    vars.insert("number".to_string(), count.to_string());
+                    vars.insert("type_class".to_string(), cls.clone());
+                    extra_vars = Some(vars);
+                    break;
                 }
-            }
-            match p.apply(&mut ctx) {
-                ModuleResult::Rendered(output) => return output,
-                ModuleResult::Continue => { accumulated_vars = Some(ctx.vars); }
-                ModuleResult::Pass => {}
             }
         }
     }
@@ -79,16 +78,15 @@ pub fn render(
         .collect::<Vec<_>>()
         .join("\n\n");
 
-    let mut vars = if let Some(v) = accumulated_vars {
-        v
-    } else {
-        let mut v = HashMap::new();
-        build_div_vars(&mut v, classes, id, attrs, &children_rendered, format, defaults);
-        v
-    };
+    let mut vars = HashMap::new();
+    build_div_vars(&mut vars, classes, id, attrs, &children_rendered, format, defaults);
 
-    // Ensure children are in vars (may not be if only Continue plugins ran)
-    vars.entry("children".to_string()).or_insert_with(|| children_rendered);
+    // Merge auto-numbering vars
+    if let Some(ev) = extra_vars {
+        for (k, v) in ev {
+            vars.insert(k, v);
+        }
+    }
 
     // Register theorem numbers for crossref resolution
     if let (Some(id_val), Some(num)) = (id.as_deref(), vars.get("number")) {
