@@ -124,7 +124,7 @@ pub fn run(
     let input_abs = input.canonicalize()
         .with_context(|| format!("Input file not found: {}", input.display()))?;
 
-    match target.engine.as_str() {
+    match target.writer.as_str() {
         "latex" | "typst" => run_preview(input, &input_abs, args, PreviewMode::Pdf(target_name)),
         _ => run_preview(input, &input_abs, args, PreviewMode::Html),
     }
@@ -266,7 +266,7 @@ fn render_and_compile(input: &Path, target_name: &str, overrides: &[String]) -> 
     renderer.write_output(&content, &output_path)?;
 
     let needs_compile = target.compile.is_some()
-        || crate::paths::engine_to_ext(&target.engine) != target.output_extension();
+        || crate::paths::writer_to_ext(&target.writer) != target.output_extension();
     if needs_compile {
         let cmd = target.compile.as_deref().unwrap_or("");
         let ext = target.output_extension();

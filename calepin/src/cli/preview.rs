@@ -20,7 +20,7 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
             let target_name = args.format.as_deref().unwrap_or("html");
             let meta = crate::config::load_project_metadata(&args.input)?;
             let target = crate::config::resolve_target(target_name, &meta.targets)?;
-            target.engine == "html"
+            target.writer == "html"
         };
         if !is_html {
             let output = PathBuf::from("output");

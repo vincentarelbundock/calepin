@@ -89,7 +89,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     if toc_list.is_empty() { return String::new(); }
     let mut vars = HashMap::new();
     vars.insert("base".to_string(), "html".to_string());
-    vars.insert("engine".to_string(), "html".to_string());
+    vars.insert("writer".to_string(), "html".to_string());
     vars.insert("title".to_string(), title.to_string());
     vars.insert("toc_list".to_string(), toc_list);
     vars.insert("depth".to_string(), String::new());
@@ -262,7 +262,7 @@ pub fn render_element(name: &str, ext: &str, vars: &HashMap<String, String>) -> 
     if let Some(tpl) = resolve_element_partial(name, ext) {
         let mut vars = vars.clone();
         vars.insert("base".to_string(), ext.to_string());
-        vars.insert("engine".to_string(), ext.to_string());
+        vars.insert("writer".to_string(), ext.to_string());
         apply_template(&tpl, &vars)
     } else {
         String::new()
@@ -289,10 +289,10 @@ pub fn build_template_vars_with_headings(
     );
     vars.insert("preamble".to_string(), String::new());
 
-    // `base` = rendering engine (html, latex, typst, markdown)
+    // `base` = output writer (html, latex, typst, markdown)
     // `target` = named output profile (defaults to base when no target specified)
     vars.insert("base".to_string(), ext.to_string());
-    vars.insert("engine".to_string(), ext.to_string());
+    vars.insert("writer".to_string(), ext.to_string());
     vars.insert("target".to_string(), ext.to_string());
 
     // Language
@@ -368,7 +368,7 @@ pub fn build_template_vars_with_headings(
     vars.insert("bib_preamble".to_string(), String::new());
     vars.insert("bib_end".to_string(), String::new());
 
-    // Math include for html-engine targets
+    // Math include for html-writer targets
     if ext == "html" {
         let mut math_vars = HashMap::new();
         math_vars.insert("html_math_method".to_string(),
@@ -401,7 +401,7 @@ pub fn build_template_vars_with_headings(
             // LaTeX, Typst, others: use the toc template directly
             let mut toc_vars = HashMap::new();
             toc_vars.insert("base".to_string(), ext.to_string());
-            toc_vars.insert("engine".to_string(), ext.to_string());
+            toc_vars.insert("writer".to_string(), ext.to_string());
             toc_vars.insert("title".to_string(), toc_title.to_string());
             toc_vars.insert("depth".to_string(), toc_depth.to_string());
             toc_vars.insert("toc_list".to_string(), String::new());

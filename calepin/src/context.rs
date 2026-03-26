@@ -92,34 +92,34 @@ pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<
     })
 }
 
-/// Apply `--engine` override to a resolved project context.
+/// Apply `--writer` override to a resolved project context.
 ///
-/// Validates that the engine is allowed for the target:
+/// Validates that the writer is allowed for the target:
 ///   - `pdf`: html, latex, typst, markdown
 ///   - `book`: latex, typst
-///   - others: no override allowed (engine is fixed)
-pub(crate) fn apply_engine_override(ctx: &mut ProjectContext, engine: Option<&str>) -> Result<()> {
-    let Some(engine) = engine else { return Ok(()) };
+///   - others: no override allowed (writer is fixed)
+pub(crate) fn apply_writer_override(ctx: &mut ProjectContext, writer: Option<&str>) -> Result<()> {
+    let Some(writer) = writer else { return Ok(()) };
 
     let allowed: &[&str] = match ctx.target_name.as_str() {
         "pdf" => &["html", "latex", "typst", "markdown"],
         "book" => &["latex", "typst"],
         other => anyhow::bail!(
-            "--engine is only valid for pdf or book targets (got '{}')", other
+            "--writer is only valid for pdf or book targets (got '{}')", other
         ),
     };
 
-    if !allowed.contains(&engine) {
+    if !allowed.contains(&writer) {
         anyhow::bail!(
-            "--engine '{}' is not valid for target '{}'. Allowed: {}",
-            engine, ctx.target_name, allowed.join(", ")
+            "--writer '{}' is not valid for target '{}'. Allowed: {}",
+            writer, ctx.target_name, allowed.join(", ")
         );
     }
 
-    ctx.target.engine = engine.to_string();
+    ctx.target.writer = writer.to_string();
 
-    // Update extension and fig-extension to match the new engine
-    let builtin = config::builtin_metadata().targets.get(engine);
+    // Update extension and fig-extension to match the new writer
+    let builtin = config::builtin_metadata().targets.get(writer);
     if let Some(b) = builtin {
         ctx.target.extension = b.extension.clone();
         ctx.target.fig_extension = b.fig_extension.clone();

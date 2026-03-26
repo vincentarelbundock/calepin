@@ -39,7 +39,7 @@ pub fn render(
 
     let mut vars = HashMap::new();
     vars.insert("base".to_string(), format.to_string());
-    vars.insert("engine".to_string(), format.to_string());
+    vars.insert("writer".to_string(), format.to_string());
     vars.insert("children".to_string(), children_rendered);
     vars.insert("classes".to_string(), classes.join(" "));
 

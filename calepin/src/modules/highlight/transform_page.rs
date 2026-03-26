@@ -9,8 +9,8 @@ use crate::render::elements::ElementRenderer;
 pub struct InjectHighlightMarkup;
 
 impl TransformDocument for InjectHighlightMarkup {
-    fn transform(&self, document: &str, engine: &str, renderer: &ElementRenderer) -> String {
-        match engine {
+    fn transform(&self, document: &str, writer: &str, renderer: &ElementRenderer) -> String {
+        match writer {
             "html" => {
                 let css = renderer.syntax_css();
                 if css.is_empty() {

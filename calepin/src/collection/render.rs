@@ -146,12 +146,12 @@ fn render_one_document(
 
     let body = if apply_page_template {
         // Apply the project's page template (e.g., book's minimal page.tex)
-        let pipeline = crate::formats::FormatPipeline::from_engine(format)?;
+        let pipeline = crate::formats::FormatPipeline::from_writer(format)?;
         pipeline.assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
             .unwrap_or(result.rendered)
     } else {
         // Site mode: run document transforms (footnotes, highlight CSS, etc.)
-        let pipeline = crate::formats::FormatPipeline::from_engine(format)?;
+        let pipeline = crate::formats::FormatPipeline::from_writer(format)?;
         pipeline.transform_document(&result.rendered, &result.element_renderer)
     };
 
@@ -339,7 +339,7 @@ fn render_one_document_pass1(
     )?;
 
     // Collect cross-ref data for global resolution in pass 2 (before moving body)
-    let pipeline = crate::formats::FormatPipeline::from_engine("html")?;
+    let pipeline = crate::formats::FormatPipeline::from_writer("html")?;
     let ref_data = pipeline.collect_crossref_data(&result.rendered, &result.element_renderer);
 
     // Run document transforms (footnotes, highlight CSS, etc.)

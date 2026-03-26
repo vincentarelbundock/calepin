@@ -1,9 +1,9 @@
 //! Output format pipeline.
 //!
-//! A format is defined by a Target configuration that declares an engine
-//! (AST emitter), a list of body transform modules, a cross-reference
-//! strategy, and an output writer. The `FormatPipeline` reads this config
-//! and dispatches to the appropriate modules.
+//! A format is defined by a Target configuration that declares a writer
+//! (AST emitter), a list of body transform modules, and a cross-reference
+//! strategy. The `FormatPipeline` reads this config and dispatches to the
+//! appropriate modules.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -19,25 +19,16 @@ use crate::config::Target;
 // FormatPipeline
 // ---------------------------------------------------------------------------
 
-/// How to write the final output.
-pub enum WriterKind {
-    /// Write the string directly to the output file.
-    File,
-    /// Convert via pandoc (e.g., markdown -> docx).
-    Pandoc,
-}
-
 /// Pipeline executor driven by Target configuration.
 ///
 /// Each pipeline stage dispatches to registered modules declared in the
-/// Target's config: body transforms, crossref strategy, page template, writer.
+/// Target's config: body transforms, crossref strategy, page template.
 pub struct FormatPipeline {
-    pub engine: String,
+    pub writer: String,
     pub extension: String,
     pub fig_extension: String,
     pub page_template: Option<String>,
     pub crossref: String,
-    pub writer: WriterKind,
     /// Module names, resolved via the registry at each pipeline stage.
     module_names: Vec<String>,
     /// Whether to pass headings for TOC generation during page assembly.
@@ -49,47 +40,41 @@ pub struct FormatPipeline {
 impl FormatPipeline {
     /// Build a pipeline from a resolved Target.
     pub fn from_target(target: &Target) -> Result<Self> {
-        let engine = target.engine.clone();
+        let writer = target.writer.clone();
 
-        // Crossref defaults to engine-appropriate strategy
+        // Crossref defaults to writer-appropriate strategy
         let crossref = target.crossref.clone().unwrap_or_else(|| {
-            match engine.as_str() {
+            match writer.as_str() {
                 "html" => "html",
                 "latex" => "latex",
                 _ => "plain",
             }.to_string()
         });
 
-        let writer = match target.writer.as_deref() {
-            Some("pandoc") => WriterKind::Pandoc,
-            _ => WriterKind::File,
-        };
-
         // toc_headings defaults to true for html, false for latex
         let toc_headings = target.toc_headings.unwrap_or_else(|| {
-            engine != "latex"
+            writer != "latex"
         });
 
         Ok(FormatPipeline {
-            engine,
+            writer,
             extension: target.output_extension().to_string(),
             fig_extension: target.fig_ext().to_string(),
             page_template: target.template.clone(),
             crossref,
-            writer,
             module_names: target.modules.clone(),
             toc_headings,
             page_vars: target.page_vars.clone(),
         })
     }
 
-    /// Build a pipeline from just an engine name, using built-in target defaults.
-    pub fn from_engine(engine: &str) -> Result<Self> {
-        let target = crate::config::resolve_target(engine, &std::collections::HashMap::new())?;
+    /// Build a pipeline from just a writer name, using built-in target defaults.
+    pub fn from_writer(writer: &str) -> Result<Self> {
+        let target = crate::config::resolve_target(writer, &std::collections::HashMap::new())?;
         Self::from_target(&target)
     }
 
-    pub fn engine(&self) -> &str { &self.engine }
+    pub fn writer(&self) -> &str { &self.writer }
     pub fn extension(&self) -> &str { &self.extension }
     pub fn default_fig_ext(&self) -> &str { &self.fig_extension }
 
@@ -141,10 +126,10 @@ impl FormatPipeline {
     /// Run document transforms from active modules (post-assembly).
     pub fn transform_document(&self, document: &str, renderer: &ElementRenderer) -> String {
         let registry = renderer.registry();
-        let engine = &self.engine;
+        let writer = &self.writer;
         let mut result = document.to_string();
         for t in registry.resolve_document_transforms(&self.module_names) {
-            result = t.transform(&result, engine, renderer);
+            result = t.transform(&result, writer, renderer);
         }
         result
     }
@@ -164,7 +149,7 @@ impl FormatPipeline {
         let page_vars = &self.page_vars;
 
         let html = crate::render::template::assemble_page(
-            body, meta, &self.engine, headings, renderer.preamble(),
+            body, meta, &self.writer, headings, renderer.preamble(),
             renderer.target.as_ref(),
             |vars| {
                 // Apply page_vars from target config
@@ -189,36 +174,9 @@ impl FormatPipeline {
 
     /// Write the final rendered content to the output file.
     pub fn write_output(&self, content: &str, output_path: &Path) -> Result<()> {
-        match self.writer {
-            WriterKind::File => {
-                std::fs::write(output_path, content)
-                    .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
-                Ok(())
-            }
-            WriterKind::Pandoc => {
-                let tmp_dir = tempfile::tempdir()
-                    .context("Failed to create temporary directory")?;
-                let md_path = tmp_dir.path().join("input.md");
-                std::fs::write(&md_path, content)
-                    .context("Failed to write temporary markdown file")?;
-
-                let output = std::process::Command::new("pandoc")
-                    .args([
-                        &md_path.to_string_lossy() as &str,
-                        "-o",
-                        &output_path.to_string_lossy() as &str,
-                    ])
-                    .output()
-                    .map_err(|e| crate::tools::check_spawn_error(e, &crate::tools::PANDOC))?;
-
-                if !output.status.success() {
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    anyhow::bail!("pandoc failed: {}", stderr);
-                }
-
-                Ok(())
-            }
-        }
+        std::fs::write(output_path, content)
+            .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
+        Ok(())
     }
 }
 
@@ -239,7 +197,6 @@ pub fn resolve_format_from_extension(ext: &str) -> &str {
         "pdf" => "latex",
         "typ" => "typst",
         "md" => "markdown",
-        "docx" => "word",
         "html" => "html",
         other => other,
     }

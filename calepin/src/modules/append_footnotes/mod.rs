@@ -135,7 +135,7 @@ pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
 
     let mut vars = HashMap::new();
     vars.insert("base".to_string(), "html".to_string());
-    vars.insert("engine".to_string(), "html".to_string());
+    vars.insert("writer".to_string(), "html".to_string());
     vars.insert("footnotes".to_string(), "true".to_string());
     vars.insert("footnote_items".to_string(), footnote_items);
     let tpl = include_str!("../../partials/html/footnotes.html");
@@ -149,8 +149,8 @@ pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
 pub struct AppendFootnotes;
 
 impl TransformDocument for AppendFootnotes {
-    fn transform(&self, document: &str, engine: &str, renderer: &ElementRenderer) -> String {
-        let footnotes = renderer.footnotes.render_section(engine);
+    fn transform(&self, document: &str, writer: &str, renderer: &ElementRenderer) -> String {
+        let footnotes = renderer.footnotes.render_section(writer);
         if footnotes.is_empty() {
             return document.to_string();
         }

@@ -1,7 +1,7 @@
 #[macro_use]
 mod cli;
 mod context;
-pub(crate) use context::{ProjectContext, resolve_context, apply_engine_override};
+pub(crate) use context::{ProjectContext, resolve_context, apply_writer_override};
 mod references;
 pub(crate) use references::{bibliography, crossref};
 mod date;

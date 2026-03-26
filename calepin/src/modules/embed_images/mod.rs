@@ -12,8 +12,8 @@ use crate::render::elements::ElementRenderer;
 pub struct EmbedImagesHtml;
 
 impl TransformDocument for EmbedImagesHtml {
-    fn transform(&self, document: &str, engine: &str, _renderer: &ElementRenderer) -> String {
-        if engine == "html" {
+    fn transform(&self, document: &str, writer: &str, _renderer: &ElementRenderer) -> String {
+        if writer == "html" {
             embed_images_base64(document)
         } else {
             document.to_string()

@@ -3,7 +3,7 @@
 
 # -- Document targets --
 [targets.html]
-engine = "html"
+writer = "html"
 template = "page"
 extension = "html"
 fig_extension = "svg"
@@ -13,7 +13,7 @@ modules = ["highlight", "append_footnotes", "embed_images"]
 crossref = "html"
 
 [targets.latex]
-engine = "latex"
+writer = "latex"
 template = "page"
 extension = "tex"
 fig_extension = "pdf"
@@ -24,7 +24,7 @@ crossref = "latex"
 toc_headings = false
 
 [targets.typst]
-engine = "typst"
+writer = "typst"
 template = "page"
 extension = "typ"
 fig_extension = "svg"
@@ -34,7 +34,7 @@ modules = ["highlight"]
 crossref = "plain"
 
 [targets.pdf]
-engine = "typst"
+writer = "typst"
 template = "page"
 extension = "pdf"
 fig_extension = "svg"
@@ -44,7 +44,7 @@ modules = ["highlight"]
 crossref = "plain"
 
 [targets.revealjs]
-engine = "html"
+writer = "html"
 template = "page"
 extension = "html"
 fig_extension = "svg"
@@ -58,17 +58,9 @@ toc_headings = false
 base = "html"
 
 [targets.markdown]
-engine = "markdown"
+writer = "markdown"
 extension = "md"
 fig_extension = "png"
 preview = "none"
 modules = ["highlight"]
 crossref = "plain"
-
-[targets.word]
-engine = "markdown"
-extension = "docx"
-fig_extension = "png"
-modules = ["highlight"]
-crossref = "plain"
-writer = "pandoc"

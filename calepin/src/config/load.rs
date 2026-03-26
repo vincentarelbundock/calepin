@@ -218,11 +218,11 @@ mod tests {
     fn test_parse_minimal_config() {
         let meta = parse_toml(r#"
 [targets.web]
-engine = "html"
+writer = "html"
 "#);
         assert_eq!(meta.targets.len(), 1);
         let web = &meta.targets["web"];
-        assert_eq!(web.engine, "html");
+        assert_eq!(web.writer, "html");
         assert_eq!(web.template_name(), "page");
         assert_eq!(web.output_extension(), "html");
     }
@@ -231,7 +231,7 @@ engine = "html"
     fn test_parse_full_config() {
         let meta = parse_toml(r#"
 [targets.article]
-engine = "latex"
+writer = "latex"
 template = "article"
 extension = "pdf"
 fig-extension = "pdf"
@@ -243,7 +243,7 @@ fontsize = "11pt"
 toc = false
 "#);
         let article = &meta.targets["article"];
-        assert_eq!(article.engine, "latex");
+        assert_eq!(article.writer, "latex");
         assert_eq!(article.template_name(), "article");
         assert_eq!(article.output_extension(), "pdf");
         assert_eq!(article.fig_ext(), "pdf");
@@ -254,7 +254,7 @@ toc = false
     fn test_invalid_engine_rejected() {
         let meta = parse_toml(r#"
 [targets.bad]
-engine = "word"
+writer = "word"
 "#);
         let target = &meta.targets["bad"];
         assert!(target.validate().is_err());
@@ -263,11 +263,11 @@ engine = "word"
     #[test]
     fn test_implicit_target_resolution() {
         let target = super::super::resolve_target("html", &HashMap::new()).unwrap();
-        assert_eq!(target.engine, "html");
+        assert_eq!(target.writer, "html");
         assert_eq!(target.template_name(), "page");
 
         let target = super::super::resolve_target("latex", &HashMap::new()).unwrap();
-        assert_eq!(target.engine, "latex");
+        assert_eq!(target.writer, "latex");
 
         assert!(super::super::resolve_target("unknown", &HashMap::new()).is_err());
     }
@@ -326,7 +326,7 @@ engine = "word"
         let meta = parse_toml(r#"
 output = "output"
 [targets.web]
-engine = "html"
+writer = "html"
 "#);
         assert_eq!(meta.output.as_deref(), Some("output"));
     }
@@ -335,7 +335,7 @@ engine = "html"
     fn test_config_output_field_absent() {
         let meta = parse_toml(r#"
 [targets.web]
-engine = "html"
+writer = "html"
 "#);
         assert_eq!(meta.output, None);
     }
@@ -345,7 +345,7 @@ engine = "html"
         let meta = parse_toml(r#"
 target = "website"
 [targets.website]
-engine = "html"
+writer = "html"
 "#);
         assert_eq!(meta.target.as_deref(), Some("website"));
     }
@@ -409,10 +409,10 @@ width = "80%"
 paragraphs = 3
 
 [targets.test_latex]
-engine = "latex"
+writer = "latex"
 
 [targets.test_typst]
-engine = "typst"
+writer = "typst"
 
 [labels]
 abstract_title = "Summary"

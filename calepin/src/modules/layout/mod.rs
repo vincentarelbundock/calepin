@@ -59,7 +59,7 @@ pub fn render(
     // Build template variables for the figure wrapper
     let mut vars = HashMap::new();
     vars.insert("base".to_string(), format.to_string());
-    vars.insert("engine".to_string(), format.to_string());
+    vars.insert("writer".to_string(), format.to_string());
     vars.insert("id".to_string(), id_str.to_string());
     vars.insert("caption".to_string(), if !caption.is_empty() {
         crate::render::convert::render_inline(&caption, format)

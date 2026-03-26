@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use crate::render::elements::ElementRenderer;
 
 pub trait TransformDocument: Send + Sync {
-    fn transform(&self, document: &str, engine: &str, renderer: &ElementRenderer) -> String;
+    fn transform(&self, document: &str, writer: &str, renderer: &ElementRenderer) -> String;
 }
 
 /// A document transform backed by an external script.
@@ -20,7 +20,7 @@ pub struct ScriptTransformDocument {
 }
 
 impl TransformDocument for ScriptTransformDocument {
-    fn transform(&self, document: &str, engine: &str, _renderer: &ElementRenderer) -> String {
+    fn transform(&self, document: &str, writer: &str, _renderer: &ElementRenderer) -> String {
         use std::process::{Command, Stdio};
         use std::io::Write;
 
@@ -31,7 +31,7 @@ impl TransformDocument for ScriptTransformDocument {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .current_dir(&self.module_dir)
-            .env("CALEPIN_FORMAT", engine)
+            .env("CALEPIN_FORMAT", writer)
             .env("CALEPIN_ROOT", crate::paths::get_project_root().to_string_lossy().as_ref())
             .spawn()
             .and_then(|mut child| {

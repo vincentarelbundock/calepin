@@ -159,7 +159,7 @@ pub fn build_collection_context(
         let mut vars = HashMap::new();
         vars.insert("html_math_method".to_string(), html_math_method);
         vars.insert("base".to_string(), "html".to_string());
-        vars.insert("engine".to_string(), "html".to_string());
+        vars.insert("writer".to_string(), "html".to_string());
         crate::render::template::render_element("math", "html", &vars)
     };
 

@@ -36,14 +36,14 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                 let formats: Vec<&str> = fmt_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
                 for f in &formats {
                     let mut ctx = crate::resolve_context(&args.input[0], Some(f))?;
-                    crate::apply_engine_override(&mut ctx, args.engine.as_deref())?;
+                    crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
                     render_one_with_context(&args.input[0], None, &ctx, &overrides, args.quiet, compile)?;
                 }
                 return Ok(());
             }
         }
         let mut ctx = crate::resolve_context(&args.input[0], args.format.as_deref())?;
-        crate::apply_engine_override(&mut ctx, args.engine.as_deref())?;
+        crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
         return render_one_with_context(&args.input[0], args.output.as_deref(), &ctx, &overrides, args.quiet, compile);
     }
 
@@ -56,7 +56,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
 
     // Resolve project context once and share it across all files.
     let mut ctx = crate::resolve_context(&args.input[0], args.format.as_deref())?;
-    crate::apply_engine_override(&mut ctx, args.engine.as_deref())?;
+    crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
 
     let output_ext = args.output.as_ref().map(|dir| {
         (dir.clone(), ctx.target.output_extension().to_string())
@@ -115,10 +115,10 @@ fn render_one_with_context(
     }
 
     // Run compile step: either explicit --compile flag, explicit compile command on target,
-    // or engine extension differs from output extension (e.g., typst -> pdf).
+    // or writer extension differs from output extension (e.g., typst -> pdf).
     let needs_compile = compile
         || ctx.target.compile.is_some()
-        || crate::paths::engine_to_ext(&ctx.target.engine) != ctx.target.output_extension();
+        || crate::paths::writer_to_ext(&ctx.target.writer) != ctx.target.output_extension();
     if needs_compile {
         let cmd = ctx.target.compile.as_deref().unwrap_or("");
         run_compile_step(&output_path, cmd, ctx.target.output_extension(), quiet)?;

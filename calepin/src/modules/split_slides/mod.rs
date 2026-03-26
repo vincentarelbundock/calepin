@@ -9,7 +9,7 @@ use crate::modules::transform_document::TransformDocument;
 pub struct SplitSlides;
 
 impl TransformDocument for SplitSlides {
-    fn transform(&self, document: &str, _engine: &str, _renderer: &ElementRenderer) -> String {
+    fn transform(&self, document: &str, _writer: &str, _renderer: &ElementRenderer) -> String {
         split_into_slides(document)
     }
 }

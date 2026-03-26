@@ -309,7 +309,7 @@ pub fn assets_dir(project_root: &Path) -> PathBuf {
 
 /// Map a base name to its file extension for template/component lookup.
 /// Derives the mapping from the built-in _calepin/config.toml.
-pub fn engine_to_ext(base: &str) -> &str {
+pub fn writer_to_ext(base: &str) -> &str {
     let target = crate::config::builtin_metadata().targets.get(base);
     target
         .and_then(|t| t.extension.as_deref())
@@ -349,7 +349,7 @@ fn check_partials_dir(
 ///   6. `_calepin/partials/common/{name}.jinja` (project, format-agnostic)
 ///   7. (caller falls back to built-in)
 pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
-    let ext = engine_to_ext(base);
+    let ext = writer_to_ext(base);
     let base_specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
     let active_target = get_active_target();

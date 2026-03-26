@@ -93,7 +93,7 @@ pub fn render_core(
     let pipeline = if let Some(t) = target {
         FormatPipeline::from_target(t)?
     } else {
-        FormatPipeline::from_engine(&format_str)?
+        FormatPipeline::from_writer(&format_str)?
     };
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
@@ -104,7 +104,7 @@ pub fn render_core(
 
     // 5. Initialize code engines (R, Python, sh) -- only starts what's needed
     let mut engines = engines::EnginePool::init(
-        &blocks, &body, &metadata, pipeline.engine(),
+        &blocks, &body, &metadata, pipeline.writer(),
         paths::PathContext::code_working_dir(input),
     )?;
     let mut ctx = engines.context();
@@ -118,12 +118,12 @@ pub fn render_core(
     );
 
     // 7. Create element renderer
-    let mut element_renderer = ElementRenderer::from_metadata(pipeline.engine(), &metadata, options);
+    let mut element_renderer = ElementRenderer::from_metadata(pipeline.writer(), &metadata, options);
     element_renderer.set_target(target.cloned());
 
     // 8. Evaluate: execute code chunks and produce elements
     let eval_result = engines::evaluate_document(
-        input, &blocks, &body, pipeline.engine(), &metadata, &registry,
+        input, &blocks, &body, pipeline.writer(), &metadata, &registry,
         &mut ctx, &path_ctx, pipeline.default_fig_ext(),
     )?;
     let mut elements = eval_result.elements;
@@ -162,9 +162,9 @@ pub fn render_file(
     output_dir: Option<&str>,
     project_metadata: Option<&crate::config::Metadata>,
 ) -> Result<(PathBuf, String, FormatPipeline)> {
-    // If we have a target, use its engine as the format
+    // If we have a target, use its writer as the format
     let resolved_format = if let Some(t) = target {
-        Some(t.engine.clone())
+        Some(t.writer.clone())
     } else {
         format
             .map(|s| s.to_string())
@@ -184,15 +184,15 @@ pub fn render_file(
     let pipeline = if let Some(t) = target {
         FormatPipeline::from_target(t)?
     } else {
-        FormatPipeline::from_engine(preliminary_format)?
+        FormatPipeline::from_writer(preliminary_format)?
     };
     // When the target produces an intermediate file that needs compilation
-    // (explicit compile command, or engine differs from output extension),
-    // use the engine's native extension (.tex, .typ) for the rendered file.
+    // (explicit compile command, or writer differs from output extension),
+    // use the writer's native extension (.tex, .typ) for the rendered file.
     let ext = if let Some(t) = target {
-        let engine_ext = paths::engine_to_ext(&t.engine);
-        if t.compile.is_some() || engine_ext != t.output_extension() {
-            engine_ext
+        let writer_ext = paths::writer_to_ext(&t.writer);
+        if t.compile.is_some() || writer_ext != t.output_extension() {
+            writer_ext
         } else {
             t.output_extension()
         }

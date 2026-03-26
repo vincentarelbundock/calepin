@@ -45,7 +45,7 @@ pub fn render_inline(text: &str, format: &str) -> String {
     let registry = crate::registry::ModuleRegistry::empty();
     let config = crate::registry::EmitterConfig::default();
     let emitter = registry.resolve_emitter(format, &config)
-        .expect("no engine registered for format");
+        .expect("no writer registered for format");
     let options = crate::emit::WalkOptions::default();
     let result = crate::emit::walk_and_render_with_metadata(
         emitter.as_ref(), text, &[], &options,

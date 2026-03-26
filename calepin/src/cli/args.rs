@@ -111,11 +111,11 @@ pub struct RenderArgs {
     #[arg(long)]
     pub no_highlight: bool,
 
-    /// Override the engine for compound targets (pdf, book).
+    /// Override the writer for compound targets (pdf, book).
     /// Allowed values depend on the target: pdf accepts html/latex/typst/markdown,
     /// book accepts latex/typst.
     #[arg(long, value_parser = ["html", "latex", "typst", "markdown"])]
-    pub engine: Option<String>,
+    pub writer: Option<String>,
 
     /// Remove output directory before building (project manifests only)
     #[arg(long)]

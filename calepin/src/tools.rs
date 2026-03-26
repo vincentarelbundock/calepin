@@ -30,10 +30,6 @@ pub const SH: Tool = Tool {
     install_hint: "/bin/sh should be available on any Unix system",
 };
 
-pub const PANDOC: Tool = Tool {
-    cmd: "pandoc",
-    install_hint: "install from https://pandoc.org/installing.html",
-};
 
 pub const MMDC: Tool = Tool {
     cmd: "mmdc",
@@ -67,15 +63,4 @@ pub const D2: Tool = Tool {
 /// Format a "not found" error message for a tool.
 pub fn not_found_message(tool: &Tool) -> String {
     format!("{} not found on PATH. {}", tool.cmd, tool.install_hint)
-}
-
-/// Classify an `io::Error` from `Command::new(cmd).spawn()` / `.output()`.
-/// Returns a user-friendly message if the tool is not found, or re-wraps
-/// other errors.
-pub fn check_spawn_error(err: std::io::Error, tool: &Tool) -> anyhow::Error {
-    if err.kind() == std::io::ErrorKind::NotFound {
-        anyhow::anyhow!("{}", not_found_message(tool))
-    } else {
-        anyhow::anyhow!("failed to run {}: {}", tool.cmd, err)
-    }
 }

@@ -10,7 +10,7 @@ pub(crate) fn build_context(metadata: &Metadata, format: &str) -> minijinja::Val
     let var_val = build_variables_map(metadata);
 
     minijinja::context! {
-        engine => format,
+        writer => format,
         target => format,
         meta => meta_val,
         var => var_val,

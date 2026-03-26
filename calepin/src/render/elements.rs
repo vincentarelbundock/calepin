@@ -1,4 +1,4 @@
-//! Element rendering engine: thin dispatcher that delegates to filters.
+//! Element renderer: thin dispatcher that delegates to filters.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -35,7 +35,7 @@ fn resolve_partial_alias(name: &str) -> &str {
 /// then `partials/{base}/{name}.{ext}`, then `templates/common/{name}.jinja`.
 pub fn resolve_builtin_partial(name: &str, base: &str) -> Option<&'static str> {
     let resolved = resolve_partial_alias(name);
-    let ext = crate::paths::engine_to_ext(base);
+    let ext = crate::paths::writer_to_ext(base);
 
     // Target-specific (e.g., book/page.typ)
     if let Some(target) = crate::paths::get_active_target() {
@@ -144,11 +144,11 @@ impl ElementRenderer {
 
     /// Create an ElementRenderer from document metadata and pipeline options.
     pub fn from_metadata(
-        engine: &str,
+        writer: &str,
         metadata: &crate::config::Metadata,
         options: &crate::pipeline::RenderCoreOptions,
     ) -> Self {
-        let mut er = Self::new(engine, Highlighter::from_metadata(metadata));
+        let mut er = Self::new(writer, Highlighter::from_metadata(metadata));
         er.metadata = metadata.clone();
         er.number_sections = metadata.number_sections;
         er.convert_math = metadata.convert_math;
@@ -206,7 +206,7 @@ impl ElementRenderer {
             number_sections: self.number_sections,
         };
         let emitter = self.registry.resolve_emitter(&self.ext, &config)
-            .expect("no engine registered for format");
+            .expect("no writer registered for format");
         let options = crate::emit::WalkOptions {
             number_sections: self.number_sections,
             shift_headings: self.shift_headings,
@@ -298,7 +298,7 @@ impl ElementRenderer {
     fn build_template_output(&self, template_name: &str, element: &Element) -> String {
         let mut vars = HashMap::new();
         vars.insert("base".to_string(), self.ext.clone());
-        vars.insert("engine".to_string(), self.ext.clone());
+        vars.insert("writer".to_string(), self.ext.clone());
 
         // Run element through pipeline filters
         let code_filter = crate::render::filter::code::BuildCodeVars::new(&self.highlighter);

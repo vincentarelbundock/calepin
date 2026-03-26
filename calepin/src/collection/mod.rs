@@ -71,7 +71,7 @@ pub fn build_collection(
         .or_else(|| meta.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let collection_target = crate::config::resolve_target(&collection_target_name, &meta.targets)?;
-    let format = &collection_target.engine;
+    let format = &collection_target.writer;
     let output_ext = collection_target.output_extension();
 
     // Set active target and project root for template/component resolution
@@ -80,7 +80,7 @@ pub fn build_collection(
 
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
     // Falls back to built-in templates if not found on filesystem.
-    let ext = crate::paths::engine_to_ext(format);
+    let ext = crate::paths::writer_to_ext(format);
     let orchestrator_filename = format!("orchestrator.{}", ext);
     let orchestrator = meta.orchestrator.clone()
         .or_else(|| {
@@ -256,7 +256,7 @@ pub fn rebuild_documents(
         .or_else(|| meta.target.clone())
         .unwrap_or_else(|| "html".to_string());
     let collection_target = crate::config::resolve_target(&collection_target_name, &meta.targets)?;
-    let format = &collection_target.engine;
+    let format = &collection_target.writer;
     let output_ext = collection_target.output_extension();
 
     crate::paths::set_active_target(Some(&collection_target_name));

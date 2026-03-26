@@ -48,7 +48,7 @@ pub fn render(
     // Build template vars
     let mut vars = HashMap::new();
     vars.insert("base".to_string(), format.to_string());
-    vars.insert("engine".to_string(), format.to_string());
+    vars.insert("writer".to_string(), format.to_string());
     vars.insert("children".to_string(), children_rendered);
     vars.insert("label".to_string(), id_val.to_string());
     vars.insert("id".to_string(), id_val.to_string());

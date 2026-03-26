@@ -15,9 +15,9 @@ use serde::Deserialize;
 pub struct Target {
     /// Inherit all fields from another target.
     pub inherits: Option<String>,
-    /// Rendering engine: html, latex, typst, or markdown.
+    /// Output writer: html, latex, typst, or markdown.
     #[serde(default)]
-    pub engine: String,
+    pub writer: String,
     /// Document template name (default: "page").
     pub template: Option<String>,
     /// Output file extension (no dot).
@@ -41,10 +41,8 @@ pub struct Target {
     #[serde(default)]
     pub modules: Vec<String>,
     /// Cross-reference resolution strategy: "html", "latex", or "plain".
-    /// Default: inferred from engine.
+    /// Default: inferred from writer.
     pub crossref: Option<String>,
-    /// Output writer: "file" (default) or "pandoc".
-    pub writer: Option<String>,
     /// Whether to pass headings to the page template for TOC generation.
     /// Default: true for html, false for latex.
     pub toc_headings: Option<bool>,
@@ -54,7 +52,7 @@ pub struct Target {
     #[serde(default)]
     pub page_vars: HashMap<String, String>,
     /// Preferred image formats for figure variant selection, in priority order.
-    /// Default: engine-appropriate list (e.g., ["svg", "png", "jpg"] for html).
+    /// Default: writer-appropriate list (e.g., ["svg", "png", "jpg"] for html).
     #[serde(default)]
     pub fig_formats: Vec<String>,
 }
@@ -68,7 +66,7 @@ impl Target {
 
     /// Output file extension. Always set after resolution against the built-in config.
     pub fn output_extension(&self) -> &str {
-        self.extension.as_deref().unwrap_or(&self.engine)
+        self.extension.as_deref().unwrap_or(&self.writer)
     }
 
     /// Default figure extension. Always set after resolution against the built-in config.
@@ -86,9 +84,9 @@ impl Target {
 impl Target {
     /// Validate a target's fields. Returns a descriptive error on failure.
     pub fn validate(&self) -> Result<()> {
-        match self.engine.as_str() {
+        match self.writer.as_str() {
             "html" | "latex" | "typst" | "markdown" => {}
-            other => bail!("engine must be one of: html, latex, typst, markdown (got '{}')", other),
+            other => bail!("writer must be one of: html, latex, typst, markdown (got '{}')", other),
         }
         if let Some(ref ext) = self.extension {
             validate_extension(ext, "extension")?;
@@ -166,7 +164,7 @@ fn resolve_one(
 fn merge_targets(parent: &Target, child: &Target) -> Target {
     Target {
         inherits: None,
-        engine: if child.engine.is_empty() { parent.engine.clone() } else { child.engine.clone() },
+        writer: if child.writer.is_empty() { parent.writer.clone() } else { child.writer.clone() },
         template: child.template.clone().or_else(|| parent.template.clone()),
         extension: child.extension.clone().or_else(|| parent.extension.clone()),
         fig_extension: child.fig_extension.clone().or_else(|| parent.fig_extension.clone()),
@@ -177,7 +175,6 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
         post: if child.post.is_empty() { parent.post.clone() } else { child.post.clone() },
         modules: if child.modules.is_empty() { parent.modules.clone() } else { child.modules.clone() },
         crossref: child.crossref.clone().or_else(|| parent.crossref.clone()),
-        writer: child.writer.clone().or_else(|| parent.writer.clone()),
         toc_headings: child.toc_headings.or(parent.toc_headings),
         page_vars: if child.page_vars.is_empty() { parent.page_vars.clone() } else { child.page_vars.clone() },
         fig_formats: if child.fig_formats.is_empty() { parent.fig_formats.clone() } else { child.fig_formats.clone() },
@@ -213,10 +210,10 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
 
 /// Fill unset fields in a user target from the built-in target for the same base.
 fn merge_with_builtin(user: &Target) -> Target {
-    let builtin = super::builtin_metadata().targets.get(&user.engine);
+    let builtin = super::builtin_metadata().targets.get(&user.writer);
     Target {
         inherits: None,
-        engine: user.engine.clone(),
+        writer: user.writer.clone(),
         template: user.template.clone().or_else(|| builtin.and_then(|b| b.template.clone())),
         extension: user.extension.clone().or_else(|| builtin.and_then(|b| b.extension.clone())),
         fig_extension: user.fig_extension.clone().or_else(|| builtin.and_then(|b| b.fig_extension.clone())),
@@ -231,7 +228,6 @@ fn merge_with_builtin(user: &Target) -> Target {
             user.modules.clone()
         },
         crossref: user.crossref.clone().or_else(|| builtin.and_then(|b| b.crossref.clone())),
-        writer: user.writer.clone().or_else(|| builtin.and_then(|b| b.writer.clone())),
         toc_headings: user.toc_headings.or(builtin.and_then(|b| b.toc_headings)),
         page_vars: if user.page_vars.is_empty() {
             builtin.map(|b| b.page_vars.clone()).unwrap_or_default()
