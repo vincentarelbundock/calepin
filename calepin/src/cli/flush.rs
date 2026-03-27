@@ -12,82 +12,19 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
         path.to_path_buf()
     };
 
-    // Collect directories and files to delete
     let mut targets: Vec<PathBuf> = Vec::new();
     let latex_exts = ["aux", "log", "out", "toc", "fls", "fdb_latexmk", "synctex.gz", "xdv"];
 
-    // Search recursively for directories whose name matches the stem filter.
-    fn find_matching_dirs(dir: &Path, name: &str, targets: &mut Vec<PathBuf>) {
-        let entries = match std::fs::read_dir(dir) {
-            Ok(e) => e,
-            Err(_) => return,
-        };
-        for entry in entries.flatten() {
-            let p = entry.path();
-            if p.is_dir() {
-                if entry.file_name().to_string_lossy() == name {
-                    targets.push(p);
-                } else {
-                    find_matching_dirs(&p, name, targets);
-                }
-            }
-        }
-    }
+    // Find the _calepin/ directory to search in.
+    let calepin_dir = if root.file_name().unwrap_or_default().to_string_lossy().ends_with("_calepin") {
+        root.clone()
+    } else {
+        root.join("_calepin")
+    };
 
-    // Walk recursively to find matching artefacts
-    fn find_targets(dir: &Path, targets: &mut Vec<PathBuf>, latex_exts: &[&str],
-                    do_cache: bool, do_files: bool, do_compilation: bool,
-                    stem_filter: Option<&str>) {
-        let entries = match std::fs::read_dir(dir) {
-            Ok(e) => e,
-            Err(_) => return,
-        };
-        for entry in entries.flatten() {
-            let p = entry.path();
-            if p.is_dir() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                if name_str.ends_with("_calepin") {
-                    // Match both _calepin/ and {stem}_calepin/ sidecar dirs
-                    if do_cache {
-                        let cache = p.join("cache");
-                        if cache.is_dir() {
-                            if let Some(stem) = stem_filter {
-                                find_matching_dirs(&cache, stem, targets);
-                            } else {
-                                targets.push(cache);
-                            }
-                        }
-                    }
-                    if do_files {
-                        let files = p.join("files");
-                        if files.is_dir() {
-                            if let Some(stem) = stem_filter {
-                                find_matching_dirs(&files, stem, targets);
-                            } else {
-                                targets.push(files);
-                            }
-                        }
-                    }
-                } else if name_str != "." && name_str != ".." && name_str != ".git" && name_str != "node_modules" && name_str != crate::paths::DEFAULT_OUTPUT_DIR {
-                    find_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation, stem_filter);
-                }
-            } else if p.is_file() {
-                let name = entry.file_name();
-                // Page-level collection cache
-                if do_cache && name == ".page_cache.json" && stem_filter.is_none() {
-                    targets.push(p);
-                } else if do_compilation && stem_filter.is_none() {
-                    if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
-                        if latex_exts.contains(&ext) {
-                            targets.push(p);
-                        }
-                    }
-                }
-            }
-        }
+    if calepin_dir.is_dir() {
+        find_targets_in_calepin(&calepin_dir, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
     }
-    find_targets(&root, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
 
     if targets.is_empty() {
         eprintln!("Nothing to clean.");
@@ -123,16 +60,98 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
         } else {
             std::fs::remove_file(t)?;
         }
-        // Remove parent *_calepin/ dir if now empty
-        if let Some(parent) = t.parent() {
-            if parent.file_name().map_or(false, |n| n.to_string_lossy().ends_with("_calepin")) {
-                if parent.read_dir().map_or(false, |mut d| d.next().is_none()) {
-                    std::fs::remove_dir(parent).ok();
-                }
-            }
-        }
     }
 
     eprintln!("Done.");
     Ok(())
 }
+
+/// Recursively search inside a _calepin/ directory for flush targets.
+/// Looks for {stem}_calepin/cache/, {stem}_calepin/files/, and latex artifacts.
+fn find_targets_in_calepin(dir: &Path, targets: &mut Vec<PathBuf>, latex_exts: &[&str],
+                           do_cache: bool, do_files: bool, do_compilation: bool,
+                           stem_filter: Option<&str>) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.is_dir() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str.ends_with("_calepin") {
+                // If the dir has no files, target the whole thing
+                if !has_files(&p) {
+                    targets.push(p.clone());
+                } else {
+                    if do_cache {
+                        let cache = p.join("cache");
+                        if cache.is_dir() {
+                            if let Some(stem) = stem_filter {
+                                find_matching_dirs(&cache, stem, targets);
+                            } else {
+                                targets.push(cache);
+                            }
+                        }
+                    }
+                    if do_files {
+                        let files = p.join("files");
+                        if files.is_dir() {
+                            if let Some(stem) = stem_filter {
+                                find_matching_dirs(&files, stem, targets);
+                            } else {
+                                targets.push(files);
+                            }
+                        }
+                    }
+                }
+            }
+            // Always recurse deeper
+            find_targets_in_calepin(&p, targets, latex_exts, do_cache, do_files, do_compilation, stem_filter);
+        } else if p.is_file() && do_compilation && stem_filter.is_none() {
+            if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                if latex_exts.contains(&ext) {
+                    targets.push(p);
+                }
+            }
+        }
+    }
+}
+
+/// Check whether a directory tree contains any files.
+fn has_files(dir: &Path) -> bool {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return false,
+    };
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.is_file() {
+            return true;
+        }
+        if p.is_dir() && has_files(&p) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Search recursively for directories whose name matches the stem filter.
+fn find_matching_dirs(dir: &Path, name: &str, targets: &mut Vec<PathBuf>) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.is_dir() {
+            if entry.file_name().to_string_lossy() == name {
+                targets.push(p);
+            } else {
+                find_matching_dirs(&p, name, targets);
+            }
+        }
+    }
+}
+
