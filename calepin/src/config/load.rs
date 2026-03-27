@@ -40,6 +40,12 @@ pub struct ContentSection {
     /// Language code for this section.
     #[serde(default)]
     pub lang: Option<String>,
+    /// Auto-discover directory: recursively create nested sections from subdirectories.
+    #[serde(default)]
+    pub auto: Option<String>,
+    /// Glob patterns to exclude from auto-discovery.
+    #[serde(default)]
+    pub exclude: Vec<String>,
 }
 
 /// A single document entry: either a bare path string or a `{title, page}` table.

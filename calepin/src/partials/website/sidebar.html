@@ -26,18 +26,16 @@
   <nav>
     {% for node in collection.pages %}
       {% if node.children | length > 0 %}
-        <details class="sidebar-section" name="sidebar-nav"{% if var.sidebar_collapse_level >= 1 or node.active %} open{% endif %}>
+        <details class="sidebar-section" name="sidebar-nav"{% if node.active %} open{% endif %}>
           <summary class="sidebar-section-title">{{ node.text }}</summary>
           <ul class="sidebar-children">
-            {% for child in node.children %}
+            {% for child in node.children recursive %}
               {% if child.children | length > 0 %}
                 <li>
-                  <details class="sidebar-section"{% if var.sidebar_collapse_level >= 2 or child.active %} open{% endif %}>
+                  <details class="sidebar-section"{% if child.active %} open{% endif %}>
                     <summary class="sidebar-section-title sidebar-section-nested">{{ child.text }}</summary>
                     <ul class="sidebar-children">
-                      {% for grandchild in child.children %}
-                      <li><a href="{{ grandchild.href | default(value='#') }}"{% if grandchild.active and grandchild.href %} class="active" aria-current="page"{% endif %}>{{ grandchild.text }}</a></li>
-                      {% endfor %}
+                      {{ loop(child.children) }}
                     </ul>
                   </details>
                 </li>

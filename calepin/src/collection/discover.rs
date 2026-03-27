@@ -230,21 +230,30 @@ pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(Metad
     )
 }
 
-/// Collect .qmd page paths listed in [[contents]], expanding globs.
+/// Collect .qmd page paths listed in [[contents]], expanding globs and auto directories.
 /// These are the pages that appear in navigation (sidebar, prev/next).
 pub fn collect_document_paths(meta: &Metadata, base_dir: &Path) -> Vec<String> {
+    let nodes = super::contents::expand_contents(&meta.contents, base_dir);
+    collect_paths_from_nodes(&nodes)
+}
+
+/// Recursively collect all document paths from a `DocumentNode` tree.
+fn collect_paths_from_nodes(nodes: &[super::contents::DocumentNode]) -> Vec<String> {
     let mut paths = Vec::new();
-    for section in &meta.contents {
-        if let Some(ref idx) = section.index {
-            if idx.ends_with(".qmd") {
-                paths.push(idx.clone());
-            }
-        }
-        for entry in &section.pages {
-            for path in super::contents::expand_glob(entry.path(), base_dir) {
+    for node in nodes {
+        match node {
+            super::contents::DocumentNode::Document { path, .. } => {
                 if path.ends_with(".qmd") {
-                    paths.push(path);
+                    paths.push(path.clone());
                 }
+            }
+            super::contents::DocumentNode::Section { index, documents, .. } => {
+                if let Some(idx) = index {
+                    if idx.ends_with(".qmd") {
+                        paths.push(idx.clone());
+                    }
+                }
+                paths.extend(collect_paths_from_nodes(documents));
             }
         }
     }
