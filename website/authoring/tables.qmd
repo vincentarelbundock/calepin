@@ -1,0 +1,87 @@
+---
+title = "Tables"
+---
+
+# Markdown
+
+Tables can use the standard Github-Flavored Markdown pipe syntax. Column alignment is controlled by colons in the separator row: left (default), right (`---:`), or center (`:---:`).
+
+| Name  | Score | Grade |
+|-------|------:|:-----:|
+| Alice |    95 | A     |
+| Bob   |    87 | B     |
+| Carol |    92 | A     |
+
+
+## Captions and cross-references
+
+Wrap a table in a fenced div with a `#tbl-` id to add a caption and make it cross-referenceable. The last paragraph in the div becomes the caption:
+
+```
+::: {#tbl-grades}
+| Name  | Score | Grade |
+|-------|------:|:-----:|
+| Alice |    95 | A     |
+| Bob   |    87 | B     |
+| Carol |    92 | A     |
+
+Student grades for Fall 2026.
+:::
+```
+
+::: {#tbl-grades}
+| Name  | Score | Grade |
+|-------|------:|:-----:|
+| Alice |    95 | A     |
+| Bob   |    87 | B     |
+| Carol |    92 | A     |
+
+Student grades for Fall 2026.
+:::
+
+Reference tables with `@tbl-label`: @tbl-grades shows the full class results. Suppress the type prefix with `[-@tbl-label]`: [-@tbl-grades].
+
+
+## Caption location
+
+By default, captions appear above the table. Use `tbl-cap-location` to place them below:
+
+::: {#tbl-bottom tbl-cap-location="bottom"}
+| x | y  |
+|---|---:|
+| 1 |  1 |
+| 2 |  4 |
+| 3 |  9 |
+
+This caption appears below the table.
+:::
+
+
+# R
+
+The [tinytable](https://vincentarelbundock.github.io/tinytable/) R package generates format-aware tables that work automatically in *Calepin*. Use a `tbl-` label on the chunk and `tbl-cap` for the caption. The `style_tt()` function applies cell-level formatting, and `group_tt()` adds spanning headers.
+
+```{r, tbl-cars}
+#| tbl-cap: Motor Trend car data
+#| echo: fenced
+library(tinytable)
+tt(mtcars[1:5, 1:4]) |>
+  style_tt(2:3, background = "#5E81AC", color = "white") |>
+  group_tt(j = list("Group" = 3:4))
+```
+
+Cross-reference work as expected, by referring to the figure label: see @tbl-cars.
+
+The [gt](https://gt.rstudio.com/) and [`knitr`](https://yihui.org/knitr/) are two other popular packages in `R` to generate tables:
+
+```{r, tbl-cars}
+#| tbl-cap: Motor Trend car data
+#| echo: fenced
+gt::gt(mtcars[1:5, 1:4])
+```
+
+```{r, tbl-cars}
+#| tbl-cap: Motor Trend car data
+#| echo: fenced
+knitr::kable(mtcars[1:5, 1:4])
+```

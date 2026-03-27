@@ -1,0 +1,168 @@
+---
+title = "Pages"
+---
+
+The page template wraps the entire rendered body in a document shell: the `<html>` and `<head>` for HTML, the `\documentclass` and preamble for LaTeX, the equivalent for Typst.
+
+
+# Customizing page templates
+
+To customize the page layout for a format, create a template file in your project:
+
+- `templates/html/page.html`: HTML page wrapper
+- `templates/html/page.css`: default stylesheet (HTML only)
+- `templates/latex/page.tex`: LaTeX document wrapper
+- `templates/typst/page.typ`: Typst document wrapper
+- `templates/common/page.jinja`: format-agnostic (with conditionals)
+
+Resolution order:
+
+1. Plugin `templates/` directory (in plugin order)
+2. `templates/{target}/page.{ext}` (target-specific)
+3. `templates/{engine}/page.{ext}` (engine-specific)
+4. `templates/common/page.jinja` (format-agnostic)
+5. Theme `templates/` directory (same three-layer resolution)
+6. Built-in (compiled into the binary)
+
+
+# Page template variables
+
+All page templates receive these variables:
+
+## Content
+
+| Variable | Description |
+|----------|-------------|
+| {% raw %}`{{body}}`{% endraw %} | Rendered document content |
+| {% raw %}`{{toc}}`{% endraw %} | Table of contents (format-specific) |
+| {% raw %}`{{preamble}}`{% endraw %} | Extra preamble content (meta tags, etc.) |
+
+## Metadata
+
+| Variable | Description |
+|----------|-------------|
+| {% raw %}`{{plain_title}}`{% endraw %} | Title as plain text (markdown stripped) |
+| {% raw %}`{{title}}`{% endraw %} | Title with inline markdown rendered |
+| {% raw %}`{{author}}`{% endraw %} | Author(s), comma-joined |
+| {% raw %}`{{date}}`{% endraw %} | Date string |
+| {% raw %}`{{generator}}`{% endraw %} | `"calepin X.Y.Z"` |
+
+## Pre-rendered blocks
+
+These variables contain already-rendered markup, produced through overridable element templates (see [Elements](elements.html)):
+
+| Variable | Description |
+|----------|-------------|
+| {% raw %}`{{title}}`{% endraw %} | Title markup |
+| {% raw %}`{{subtitle}}`{% endraw %} | Subtitle markup |
+| {% raw %}`{{authors}}`{% endraw %} | Author metadata (names, affiliations, ORCID) |
+| {% raw %}`{{date}}`{% endraw %} | Date markup |
+| {% raw %}`{{abstract}}`{% endraw %} | Abstract text |
+| {% raw %}`{{keywords}}`{% endraw %} | Keywords list |
+| {% raw %}`{{appendix}}`{% endraw %} | License, citation, copyright, funding |
+| {% raw %}`{{bibliography}}`{% endraw %} | Bibliography section |
+
+## HTML-specific
+
+| Variable | Description |
+|----------|-------------|
+| {% raw %}`{{css}}`{% endraw %} | `<style>` tag with default CSS |
+| {% raw %}`{{js}}`{% endraw %} | JavaScript block |
+| {% raw %}`{{math}}`{% endraw %} | KaTeX/MathJax script tags |
+
+## LaTeX-specific
+
+| Variable | Description |
+|----------|-------------|
+| {% raw %}`{{bib_preamble}}`{% endraw %} | Bibliography preamble commands |
+| {% raw %}`{{bib_end}}`{% endraw %} | Bibliography end commands |
+
+## Custom fields
+
+Any non-standard front matter field is available as a page template variable (and in document bodies via {% raw %}`{{ var.key }}`{% endraw %}). For example:
+
+```yaml
+---
+title: My Report
+custom_footer: "Confidential"
+---
+```
+
+Then in `templates/html/page.html`:
+
+```html
+<footer>{{custom_footer}}</footer>
+```
+
+## Literal braces
+
+Use {% raw %}`{{_lb}}` and `{{_rb}}`{% endraw %} to insert literal `{` and `}` characters in templates where they would otherwise conflict with Jinja syntax. This is especially useful in LaTeX templates:
+
+```latex
+\label{{_lb}}{{id}}{{_rb}}
+```
+
+renders as `\label{my-id}`.
+
+
+# Examples
+
+## Minimal HTML page
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{plain_title}}</title>
+{{css}}
+{{header_includes}}
+</head>
+<body>
+{{title}}
+{{authors}}
+{{toc}}
+{{body}}
+{{appendix}}
+</body>
+</html>
+```
+
+Save as `templates/html/page.html` and all HTML output in your project will use it.
+
+## Blog post layout
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{plain_title}}</title>
+{{css}}
+</head>
+<body>
+<article>
+  <header>
+    <h1>{{title}}</h1>
+    <time>{{date}}</time>
+    <p class="author">{{author}}</p>
+  </header>
+  {{body}}
+  {{appendix}}
+</article>
+</body>
+</html>
+```
+
+## Custom CSS
+
+To change the stylesheet without replacing the entire HTML template, create `templates/html/page.css`. This replaces the default styles but keeps the HTML structure unchanged.
+
+```css
+body {
+  max-width: 40em;
+  margin: 2em auto;
+  font-family: Georgia, serif;
+  line-height: 1.6;
+}
+```

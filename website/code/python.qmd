@@ -1,0 +1,47 @@
+---
+title = "Python"
+---
+
+*Calepin* embeds Python via [PyO3](https://pyo3.rs/), running code directly in process. A shared globals dictionary persists variables across chunks.
+
+# Basic usage
+
+```{python}
+#| echo: fenced
+import math
+primes = [2, 3, 5, 7, 11, 13]
+print(f"Sum: {sum(primes)}, Mean: {sum(primes)/len(primes):.1f}")
+```
+
+# Inline expressions
+
+The square root of 2 is `{python} f"{2**0.5:.4f}"`.
+
+# Persistent state
+
+Variables defined in one chunk are available in later chunks:
+
+```{python}
+message = "Hello from Python"
+```
+
+```{python}
+print(message.upper())
+```
+
+# Plots
+
+Matplotlib figures are captured automatically:
+
+```{python}
+import matplotlib.pyplot as plt
+import math
+
+x = [i / 10 for i in range(63)]
+y = [math.sin(v) for v in x]
+plt.plot(x, y)
+plt.title("Sine wave")
+plt.xlabel("x")
+plt.ylabel("sin(x)")
+plt.show()
+```

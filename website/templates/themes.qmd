@@ -1,0 +1,108 @@
+---
+title = "Themes"
+---
+
+A theme bundles templates and assets into a reusable package that gives documents a consistent look. Themes sit between your project-level overrides and *Calepin*'s built-in defaults.
+
+
+# Engines, targets, and themes
+
+| Concept | What it is | Examples | You choose it? |
+|---------|------------|----------|----------------|
+| **Engine** | Converts markdown to output text | html, latex, typst, markdown | No (derived from target) |
+| **Target** | Output profile: engine + extension + compilation + defaults | html, latex, typst, website, book, pdf | Yes (`-t`) |
+| **Theme** | Templates + assets layered on a target | blog, letter, minutes | Yes (`--theme`) |
+
+An engine is fixed for each target. A target defines *what* is produced. A theme defines *how it looks*.
+
+
+# Structure
+
+A theme is a directory under `_calepin/themes/{name}/` with a `theme.toml` manifest:
+
+```
+_calepin/themes/blog/
+  theme.toml
+  templates/
+    website/page.html         # target-specific
+    html/callout.html         # engine-specific
+    common/card.jinja         # format-agnostic
+  assets/
+    blog.css
+```
+
+Templates use three subdirectories: `{target}/`, `{engine}/`, and `common/`.
+
+
+# Manifest
+
+```toml
+name = "blog"
+target = "website"
+description = "Blog layout with listing pages and sidebar"
+
+[defaults]
+toc = true
+number-sections = false
+
+[vars]
+sidebar = true
+listing-style = "cards"
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | yes | Must match directory name. |
+| `target` | yes | Which target this theme is for. |
+| `description` | no | Shown in `calepin info theme-list`. |
+| `[defaults]` | no | Default rendering settings. |
+| `[vars]` | no | Default template variables. |
+
+
+# Activation
+
+In front matter:
+
+```yaml
+---
+theme: blog
+---
+```
+
+On the command line:
+
+```bash
+calepin doc.qmd --theme blog
+calepin doc.qmd -t website --theme blog
+```
+
+
+# Resolution order
+
+When resolving any template:
+
+1. **User** `_calepin/templates/{target}/`
+2. **User** `_calepin/templates/{engine}/`
+3. **User** `_calepin/templates/common/`
+4. **Plugin** template directories (in plugin order)
+5. **Theme** `templates/{target}/`
+6. **Theme** `templates/{engine}/`
+7. **Theme** `templates/common/`
+8. **Built-in** (compiled into the binary)
+
+User files always win. Plugins override themes. Only one theme is active at a time.
+
+
+# Defaults and variables
+
+Settings merge in this order (last wins):
+
+1. Built-in target defaults
+2. Theme `[defaults]` and `[vars]`
+3. Project `_calepin/config.toml` settings
+4. Document front matter
+
+
+# Assets
+
+Files in the theme's `assets/` directory are copied to the output during collection builds. User `static` directories from `_calepin/config.toml` take priority on conflicts.

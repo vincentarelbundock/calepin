@@ -1,0 +1,53 @@
+---
+bibliography = "assets/library.bib"
+number-sections = true
+toc = true
+---
+
+```{=html}
+<div style="text-align: center; margin-bottom: 1.5rem;">
+  <span class="nav-icon" style="-webkit-mask-image: url(/assets/Calepin.svg); mask-image: url(/assets/Calepin.svg); width: 18em; height: 6.5em;"></span>
+  <p style="font-size: 1.1rem; color: var(--c-text-muted); margin-top: 0.5rem;">A notebook, website, and documentation generator written in Rust.</p>
+</div>
+```
+
+{% include "source_tip" %}
+
+*Calepin* is a fast rendering engine for Quarto-compatible notebooks, written in Rust. It turns `.qmd` files into HTML, LaTeX, Typst, or Markdown, executes R and Python code chunks, and builds websites and books. The name comes from the French word for a small pocket notebook.
+
+::: {.callout-tip}
+Click the `</>` button in the top right to view the `.qmd` source code side by side with the rendered output on any page of this site.
+:::
+
+::: {.callout-warning}
+*Calepin* is alpha software. Please report bugs and feature requests at [github.com/vincentarelbundock/calepin](https://github.com/vincentarelbundock/calepin).
+:::
+
+Fast:
+
+- Written in Rust.
+- Sub-millisecond rendering for typical notebooks.
+- Render many documents in parallel with the built-in batch mode.
+- Code chunk outputs are cached, so code only runs once (or when it changes).
+- Live preview with instant reload as you edit.
+
+Extensible:
+
+- Write filters, custom functions, and postprocessors in Python, R, shell, or anything that reads JSON.
+- Override templates with plain HTML, LaTeX, or Typst files. No programming required.
+
+Templates everywhere:
+
+- Every element is rendered through a small Jinja template that you can override by dropping a file in `_calepin/partials/`.
+- Document elements: figures, tables, code blocks, code output, callouts, theorems, proofs, equations, citations, footnotes, table of contents, abstracts, author blocks, affiliations.
+- Page layout: the full page wrapper, preamble, title block, date, subtitle, keywords, appendix, license, copyright, funding.
+- Website chrome: navbar, sidebar, footer, breadcrumbs, search, theme toggle, page navigation, source viewer.
+- One CSS file controls all styling. One TOML file controls all configuration.
+
+LLM-friendly:
+
+- Every piece of output is governed by a simple Jinja template and plain CSS.
+- HTML output is classless and minimal. No framework, no JavaScript build step.
+- Simple, plain CSS. No preprocessor, no utility classes.
+- The entire stack uses well-understood technologies: Markdown, HTML, Jinja, TOML.
+- LLMs already know these formats inside out, so you can describe what you want and let your LLM build or customize your website, templates, and styles directly.

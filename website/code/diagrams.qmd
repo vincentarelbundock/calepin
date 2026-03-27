@@ -1,0 +1,82 @@
+---
+title = "Diagrams"
+---
+
+*Calepin* renders diagram code chunks to SVG using external CLI tools. The syntax follows Quarto conventions: use `{mermaid}`, `{dot}`, etc. as the code chunk language. Diagrams work in all output formats (HTML, LaTeX, Typst, Markdown) because the output is always an SVG image.
+
+All standard chunk options apply: `fig-cap`, `fig-alt`, `fig-width`, `fig-height`, `label`, `echo`, `eval`.
+
+::: {.callout-note}
+Each diagram engine requires its CLI tool to be installed on your system. *Calepin* will print an error with install instructions if a tool is missing.
+:::
+
+
+# Mermaid
+
+[Mermaid](https://mermaid.js.org/) produces flowcharts, sequence diagrams, Gantt charts, and more. Requires [`mmdc`](https://github.com/mermaid-js/mermaid-cli) on PATH.
+
+Install: `npm install -g @mermaid-js/mermaid-cli`
+
+```{mermaid}
+graph LR
+    A[Input] --> B{Process}
+    B --> C[Output]
+    B --> D[Error]
+```
+
+
+# Graphviz
+
+[Graphviz](https://graphviz.org/) renders directed and undirected graphs from the DOT language. Requires `dot` on PATH.
+
+Install: [graphviz.org/download](https://graphviz.org/download/)
+
+```{dot}
+digraph {
+    rankdir=LR
+    node [shape=box]
+    Parse -> Evaluate -> Render
+}
+```
+
+
+# TikZ
+
+[TikZ](https://tikz.dev/) produces publication-quality diagrams via LaTeX. Requires [`tectonic`](https://tectonic-typesetting.github.io/) on PATH.
+
+*Calepin* wraps your code in a `standalone` document class automatically, so write only the TikZ environment:
+
+```{tikz}
+\begin{tikzpicture}
+    \draw[thick,->] (0,0) -- (3,0) node[right] {$x$};
+    \draw[thick,->] (0,0) -- (0,3) node[above] {$y$};
+    \draw[blue, thick] (0,0) -- (2,2) node[midway, above left] {$y=x$};
+\end{tikzpicture}
+```
+
+
+# D2
+
+[D2](https://d2lang.com/) is a modern diagramming language with auto-layout. Requires `d2` on PATH.
+
+Install: [d2lang.com](https://d2lang.com/)
+
+```{d2}
+server: Web Server
+database: PostgreSQL
+server -> database: queries
+```
+
+
+# Chunk options
+
+All diagram engines support the standard figure options:
+
+````
+```{mermaid, fig-flowchart}
+#| fig-cap: "A simple flowchart"
+#| fig-alt: "Flowchart showing input to process to output"
+graph LR
+    A[Input] --> B[Process] --> C[Output]
+```
+````

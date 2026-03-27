@@ -1,0 +1,135 @@
+---
+title = "Templates"
+---
+
+Every piece of output in *Calepin* is controlled by a template: element markup, page wrappers, collection layouts. Templates use [MiniJinja](https://github.com/mitsuhiko/minijinja) syntax (Jinja2 for Rust). Learn one syntax and it works everywhere.
+
+
+# Jinja syntax
+
+Insert values with double braces. Dot notation accesses nested fields:
+
+```
+{{ meta.title }}
+{{ var.urls.docs }}
+```
+
+Built-in spans use bracket syntax:
+
+```
+[]{.pagebreak}
+[]{.video url="https://youtube.com/watch?v=abc"}
+```
+
+Conditionals and loops:
+
+```
+{% if engine == "html" %}
+HTML-only content.
+{% endif %}
+
+{% for item in var.features %}
+- {{ item }}
+{% endfor %}
+```
+
+Filters transform values with pipes: {% raw %}`{{ meta.title | upper }}`{% endraw %}.
+
+Comments: {% raw %}`{# ignored #}`{% endraw %}. Raw blocks: {% raw %}`{% raw %}...{% endraw %}`{% endraw %}. Literal braces in LaTeX templates: {% raw %}`{{_lb}}` and `{{_rb}}`{% endraw %}.
+
+
+# Where templates are used
+
+## Document body
+
+The `.qmd` body is processed as a Jinja template. Code blocks and inline code are protected from evaluation. Available context:
+
+| Variable | Description |
+|----------|-------------|
+| {% raw %}`{{ meta.title }}`{% endraw %}, {% raw %}`{{ meta.author }}`{% endraw %}, ... | YAML front matter fields |
+| {% raw %}`{{ var.key }}`{% endraw %} | Custom front matter fields (with nesting) |
+| {% raw %}`{{ env.HOME }}`{% endraw %} | System environment variables |
+| {% raw %}`{{ engine }}`{% endraw %} | Rendering engine: `html`, `latex`, `typst`, `markdown` |
+| {% raw %}`{{ target }}`{% endraw %} | Target name (defaults to engine name) |
+| {% raw %}`{% include "name" %}`{% endraw %} | Reusable content from `_calepin/partials/` |
+
+Built-in spans: `pagebreak`, `video`, `brand`, `lorem`, `placeholder`. See [Shortcuts](shortcuts.html) for details.
+
+
+## Element templates
+
+Every rendered element (divs, spans, code blocks, figures, theorems, callouts) passes through a template. Templates are named `{element}.{format}` (e.g., `callout.html`, `theorem.latex`).
+
+Div variables: {% raw %}`{{children}}`{% endraw %}, {% raw %}`{{classes}}`{% endraw %}, {% raw %}`{{id}}`{% endraw %}, {% raw %}`{{id_attr}}`{% endraw %}, plus any user attributes from the div header.
+
+Span variables: {% raw %}`{{content}}`{% endraw %}, {% raw %}`{{class}}`{% endraw %}, {% raw %}`{{classes}}`{% endraw %}, {% raw %}`{{id}}`{% endraw %}, plus user attributes.
+
+Code variables: {% raw %}`{{code}}`{% endraw %}, {% raw %}`{{lang}}`{% endraw %}, {% raw %}`{{highlighted}}`{% endraw %}, {% raw %}`{{label}}`{% endraw %}.
+
+Figure variables: {% raw %}`{{image}}`{% endraw %}, {% raw %}`{{caption}}`{% endraw %}, {% raw %}`{{number}}`{% endraw %}, {% raw %}`{{label}}`{% endraw %}, {% raw %}`{{width_attr}}`{% endraw %}, {% raw %}`{{align}}`{% endraw %}.
+
+To override any element, drop a file in `_calepin/templates/{engine}/` (e.g., `templates/html/callout.html`). Hyphens in class names are normalized to underscores for lookup.
+
+### Example
+
+Create `_calepin/templates/html/highlight_box.html`:
+
+```html
+<div class="highlight-box" style="background: {{color}};
+     border-left: 4px solid #333; padding: 0.8em 1em;">
+<strong>{{title}}</strong>
+{{children}}
+</div>
+```
+
+Use as:
+
+    ::: {.highlight-box title="Key takeaway" color="#e8f4f8"}
+    Templates are the simplest way to customize *Calepin*.
+    :::
+
+
+## Page templates
+
+The page template wraps the rendered body in a document shell: the HTML `<head>`, the LaTeX preamble, or the Typst equivalent. Override with `_calepin/templates/{engine}/page.{ext}`.
+
+Key variables: {% raw %}`{{body}}`{% endraw %}, {% raw %}`{{toc}}`{% endraw %}, {% raw %}`{{plain_title}}`{% endraw %}, {% raw %}`{{title}}`{% endraw %}, {% raw %}`{{author}}`{% endraw %}, {% raw %}`{{date}}`{% endraw %}, {% raw %}`{{css}}`{% endraw %} (HTML), {% raw %}`{{preamble}}`{% endraw %}.
+
+Pre-rendered blocks (each produced by an overridable element template): {% raw %}`{{title}}`{% endraw %}, {% raw %}`{{authors}}`{% endraw %}, {% raw %}`{{date}}`{% endraw %}, {% raw %}`{{abstract}}`{% endraw %}, {% raw %}`{{appendix}}`{% endraw %}, {% raw %}`{{bibliography}}`{% endraw %}.
+
+Custom front matter fields are also available: `custom_footer: "Confidential"` in YAML becomes {% raw %}`{{custom_footer}}`{% endraw %} in the page template.
+
+
+# Resolution order
+
+All template lookups follow the same chain. The first match wins:
+
+1. **Plugin** `elements/` or `templates/` directory (in plugin declaration order)
+2. **User** `_calepin/templates/{target}/` (target-specific, e.g., `website/`)
+3. **User** `_calepin/templates/{engine}/` (engine-specific, e.g., `html/`)
+4. **User** `_calepin/templates/common/` (format-agnostic `.jinja`)
+5. **Theme** templates (same three-layer lookup: target, engine, common)
+6. **Built-in** (compiled into the binary)
+
+User files always win over plugins and themes. Plugins override themes. See [Themes](themes.html) for the theme layer and [Plugins](../misc/plugins.html) for plugin template overrides.
+
+
+# Built-in element templates
+
+| Template | Used by |
+|----------|---------|
+| `div` | Generic fenced divs |
+| `code_source` | Code chunks (source) |
+| `code_output` | Code chunks (output) |
+| `code_diagnostic` | Warnings, messages, errors |
+| `figure` | Figures and images |
+| `callout` | All callout types |
+| `theorem_italic` | theorem, lemma, corollary, proposition, conjecture |
+| `theorem_normal` | definition, example, exercise, solution, remark, algorithm |
+| `proof` | Proof environments |
+| `title` | Document title |
+| `authors` | Author metadata |
+| `date` | Document date |
+| `abstract` | Abstract text |
+| `bibliography` | Bibliography section |
+| `appendix` | Appendix wrapper |
