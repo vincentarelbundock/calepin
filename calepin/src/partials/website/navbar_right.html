@@ -2,7 +2,7 @@
   {% for item in collection.navbar.right %}
   <li>
     <a href="{{ item.href | default(value='#') }}">
-      {% if item.icon %}{{ icon(name=item.icon) }}{% endif %}
+      {% if item.icon %}<img class="nav-icon" src="/assets/icons/{{ item.icon }}.svg" alt="{{ item.icon }}">{% endif %}
       {% if item.text %}{{ item.text }}{% endif %}
     </a>
   </li>

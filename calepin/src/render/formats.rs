@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 
 use crate::types::Element;
 use crate::config::Metadata;
-use crate::render::elements::ElementRenderer;
+use super::elements::ElementRenderer;
 use crate::config::Target;
 
 // ---------------------------------------------------------------------------
@@ -148,7 +148,7 @@ impl FormatPipeline {
 
         let page_vars = &self.page_vars;
 
-        let html = crate::render::template::assemble_page(
+        let html = super::template::assemble_page(
             body, meta, &self.writer, headings, renderer.preamble(),
             renderer.target.as_ref(),
             |vars| {

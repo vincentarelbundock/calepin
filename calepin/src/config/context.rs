@@ -8,9 +8,9 @@ use crate::paths;
 use crate::config;
 
 /// Resolved project context: project metadata + target, shared by render and preview.
-pub(crate) struct ProjectContext {
+pub struct ProjectContext {
     pub project_root: Option<PathBuf>,
-    pub project_metadata: Option<crate::config::Metadata>,
+    pub project_metadata: Option<config::Metadata>,
     pub target_name: String,
     pub target: config::Target,
     /// True when the target was explicitly set (CLI flag or front matter),
@@ -27,7 +27,7 @@ impl ProjectContext {
 
 /// Resolve project config and target from an input file and optional CLI flags.
 /// Falls back to front matter `target:`, then "html".
-pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectContext> {
+pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectContext> {
     let input_dir = input.parent().unwrap_or(Path::new("."));
     let abs_input_dir = if input_dir.is_relative() {
         std::env::current_dir().unwrap_or_default().join(input_dir)
@@ -98,7 +98,7 @@ pub(crate) fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<
 ///   - `pdf`: html, latex, typst, markdown
 ///   - `book`: latex, typst
 ///   - others: no override allowed (writer is fixed)
-pub(crate) fn apply_writer_override(ctx: &mut ProjectContext, writer: Option<&str>) -> Result<()> {
+pub fn apply_writer_override(ctx: &mut ProjectContext, writer: Option<&str>) -> Result<()> {
     let Some(writer) = writer else { return Ok(()) };
 
     let allowed: &[&str] = match ctx.target_name.as_str() {

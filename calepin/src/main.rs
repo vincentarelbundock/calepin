@@ -1,19 +1,16 @@
 #[macro_use]
 mod cli;
-mod context;
-pub(crate) use context::{ProjectContext, resolve_context, apply_writer_override};
 mod references;
 pub(crate) use references::{bibliography, crossref};
-mod date;
 mod engines;
 mod config;
+pub(crate) use config::{ProjectContext, resolve_context, apply_writer_override};
 mod jinja;
 mod parse;
-mod pipeline;
 mod preview;
 mod render;
 mod collection;
-mod tools;
+mod utils;
 
 // Grouped modules with crate-level re-exports for backward compatibility.
 mod base;
@@ -23,7 +20,6 @@ mod modules;
 pub(crate) use modules::{registry, manifest as module_manifest};
 
 mod emit;
-mod formats;
 use std::path::PathBuf;
 
 use anyhow::Result;

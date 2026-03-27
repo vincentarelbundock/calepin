@@ -5,8 +5,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use minijinja::Environment;
 
-use super::icons;
-
 /// Initialize MiniJinja by loading template files from `partials/{target_name}/`.
 ///
 /// Files use flat namespacing: `{% extends "base.html" %}`
@@ -36,19 +34,12 @@ pub fn init_jinja(base_dir: &Path, target_name: &str) -> Result<Option<Environme
         }
     }
 
-    // Fall back to built-in templates for any names not already loaded
+    // Fall back to built-in templates for any names not already loaded.
+    // Recurse into subdirectories (e.g. icons/) preserving relative paths.
     let builtin_path = target_name.to_string();
     if let Some(builtin_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir(&builtin_path) {
-        for file in builtin_dir.files() {
-            if let Some(content) = file.contents_utf8() {
-                let name = file.path().file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
-                if !name.is_empty() {
-                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
-                }
-            }
-        }
+        let prefix = std::path::Path::new(&builtin_path);
+        load_builtin_dir_recursive(builtin_dir, prefix, &mut templates);
     }
 
     if templates.is_empty() {
@@ -60,18 +51,32 @@ pub fn init_jinja(base_dir: &Path, target_name: &str) -> Result<Option<Environme
     // Disable auto-escaping -- calepin output is trusted
     env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
 
-    // Register custom Jinja function for icons
-    env.add_function("icon", |kwargs: minijinja::value::Kwargs| -> Result<minijinja::Value, minijinja::Error> {
-        let name: &str = kwargs.get("name")
-            .map_err(|_| minijinja::Error::new(minijinja::ErrorKind::MissingArgument, "icon() requires a 'name' argument"))?;
-        kwargs.assert_all_used()?;
-        Ok(minijinja::Value::from_safe_string(icons::resolve_icon_svg(name)))
-    });
-
     let sources = Arc::new(templates);
     env.set_loader(move |name: &str| {
         Ok(sources.get(name).cloned())
     });
 
     Ok(Some(env))
+}
+
+/// Recursively load built-in template files, preserving relative paths as template names.
+fn load_builtin_dir_recursive(
+    dir: &include_dir::Dir<'static>,
+    prefix: &std::path::Path,
+    templates: &mut HashMap<String, String>,
+) {
+    for file in dir.files() {
+        if let Some(content) = file.contents_utf8() {
+            let name = file.path().strip_prefix(prefix)
+                .unwrap_or(file.path())
+                .display()
+                .to_string();
+            if !name.is_empty() {
+                templates.entry(name).or_insert_with(|| content.to_string());
+            }
+        }
+    }
+    for subdir in dir.dirs() {
+        load_builtin_dir_recursive(subdir, prefix, templates);
+    }
 }

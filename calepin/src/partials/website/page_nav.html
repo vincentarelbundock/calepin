@@ -2,7 +2,7 @@
 <nav class="page-nav" aria-label="Page navigation">
   {% if document.prev %}
   <a href="{{ document.prev.href }}" class="prev">
-    {{ icon(name="arrow-left") }}
+    {% include "icons/arrow-left.svg" %}
     <span>
       <span class="label">Previous</span><br>
       {{ document.prev.text }}
@@ -15,7 +15,7 @@
       <span class="label">Next</span><br>
       {{ document.next.text }}
     </span>
-    {{ icon(name="arrow-right") }}
+    {% include "icons/arrow-right.svg" %}
   </a>
   {% endif %}
 </nav>

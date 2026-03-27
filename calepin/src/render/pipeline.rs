@@ -10,15 +10,14 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use crate::engines;
-use crate::formats;
-use crate::formats::FormatPipeline;
+use super::formats;
+use super::formats::FormatPipeline;
 use crate::jinja;
 use crate::parse;
 use crate::paths;
 use crate::config;
 use crate::registry;
-use crate::render;
-use crate::render::elements::ElementRenderer;
+use super::elements::ElementRenderer;
 
 /// Result of the core render pipeline (before page template wrapping).
 pub struct RenderResult {
@@ -56,7 +55,7 @@ pub fn render_core(
 
     // 2. Parse TOML front matter
     let (frontmatter, body) = crate::config::split_frontmatter(&input_text)?;
-    let body = render::markers::sanitize(&body);
+    let body = super::markers::sanitize(&body);
 
     // Resolve sidecar directory ({stem}_calepin/) for per-document overrides
     let sidecar_dir = paths::resolve_sidecar_dir(input);

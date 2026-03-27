@@ -1,12 +1,12 @@
 <li>
   <button class="navbar-btn" data-search-toggle aria-label="Search (Ctrl+K)">
-    {{ icon(name="search") }}
+    {% include "icons/search.svg" %}
   </button>
 </li>
 <div class="search-overlay" role="dialog" aria-modal="true" aria-label="Search">
   <div class="search-modal">
     <div class="search-input-wrap">
-      {{ icon(name="search") }}
+      {% include "icons/search.svg" %}
       <input class="search-input" type="text" placeholder="Search..." aria-label="Search" aria-controls="search-results" aria-autocomplete="list" role="combobox" aria-expanded="false">
       <span class="search-kbd">Esc</span>
     </div>

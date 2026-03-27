@@ -3,8 +3,6 @@ mod config;
 pub(crate) mod contents;
 mod context;
 mod discover;
-mod icons;
-mod page_cache;
 mod render;
 mod partials;
 
@@ -138,8 +136,8 @@ pub fn build_collection(
     let use_page_cache = !clean && !use_crossref;
 
     let mut config_bytes = fs::read(&found_path).unwrap_or_default();
-    config_bytes.extend_from_slice(&page_cache::collect_auxiliary_bytes(&base_dir));
-    let old_cache = if use_page_cache { page_cache::load(output) } else { HashMap::new() };
+    config_bytes.extend_from_slice(&crate::utils::cache::collect_auxiliary_bytes(&base_dir));
+    let old_cache = if use_page_cache { crate::utils::cache::load(output) } else { HashMap::new() };
     let mut new_cache: HashMap<String, u64> = HashMap::new();
 
     // Build overrides once (same logic render.rs uses) for the hash
@@ -153,7 +151,7 @@ pub fn build_collection(
             let key = page.source.display().to_string();
             let source_path = base_dir.join(&page.source);
             let source_bytes = fs::read(&source_path).unwrap_or_default();
-            let hash = page_cache::page_hash(&source_bytes, &config_bytes, &collection_target_name, &cache_overrides);
+            let hash = crate::utils::cache::page_hash(&source_bytes, &config_bytes, &collection_target_name, &cache_overrides);
             new_cache.insert(key.clone(), hash);
 
             let output_exists = output.join(&page.output).exists();
@@ -228,7 +226,7 @@ pub fn build_collection(
     // 12. Save page cache (after successful build only)
     if use_page_cache {
         // For crossref builds we skipped caching, so don't write a stale cache
-        page_cache::save(output, &new_cache);
+        crate::utils::cache::save(output, &new_cache);
     }
 
     if !quiet {

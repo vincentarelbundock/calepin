@@ -4,12 +4,10 @@
 //! - `process_body()`    -- Main entry: Jinja-render a text block (code-block-safe).
 
 mod includes;
-pub mod lipsum;
 mod protection;
 mod variables;
 
 pub use includes::expand_includes;
-pub use lipsum::{lipsum_words, lipsum_sentence, lipsum_paragraphs};
 
 use std::sync::LazyLock;
 

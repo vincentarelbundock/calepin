@@ -1,14 +1,25 @@
-// Code filter: fills template variables for code elements.
+// Per-element var builders: enrich template vars before rendering.
 //
-// - BuildCodeVars::apply()       — Populate vars (code, lang, label, highlighted) for
-//                                CodeSource, CodeOutput, CodeWarning/Message/Error.
-// - escape_code_for_format()  — Typst-specific escaping for code strings.
+// These run during element rendering in `ElementRenderer::render_templated()`,
+// not through the module registry.
 
 use std::collections::HashMap;
 
-use super::BuildElementVars;
 use crate::types::Element;
 use crate::modules::Highlighter;
+use crate::utils::escape::escape_code_for_format;
+
+/// Populates template variables for a specific element type.
+/// Each builder handles the element types it knows about and ignores the rest.
+pub trait BuildElementVars {
+    fn apply(
+        &self,
+        element: &Element,
+        format: &str,
+        vars: &mut HashMap<String, String>,
+        defaults: &crate::config::Metadata,
+    );
+}
 
 pub struct BuildCodeVars<'a> {
     highlighter: &'a Highlighter,
@@ -53,11 +64,3 @@ impl<'a> BuildElementVars for BuildCodeVars<'a> {
         }
     }
 }
-
-fn escape_code_for_format(s: &str, format: &str) -> String {
-    match format {
-        "typst" => s.replace('\\', "\\\\").replace('"', "\\\""),
-        _ => s.to_string(),
-    }
-}
-

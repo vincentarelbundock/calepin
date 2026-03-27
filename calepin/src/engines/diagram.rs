@@ -6,7 +6,7 @@ use anyhow::Result;
 use std::ffi::OsString;
 use std::path::Path;
 
-use crate::tools::{self, Tool};
+use crate::utils::tools::{self, Tool};
 use crate::types::{ChunkOptions, ChunkResult};
 
 /// Diagram engine spec: input file extension and primary tool.

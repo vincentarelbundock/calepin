@@ -352,7 +352,7 @@ fn resolve_translations(
 
 /// Format a YYYY-MM-DD date string for display using the default format.
 pub fn format_date(date: &str) -> String {
-    crate::date::format_date_display(date, None)
+    crate::utils::date::format_date_display(date, None)
 }
 
 fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcrumb> {

@@ -16,12 +16,14 @@
 //!   - `convert` — comrak options, image attrs, render entry points
 //!   - `markers` — math/raw output protection
 
-pub mod filter;
+pub mod vars;
 pub mod div;
 pub mod elements;
 pub mod convert;
+pub mod formats;
 pub mod markers;
 pub mod metadata;
+pub mod pipeline;
 
 pub mod span;
 pub mod template;

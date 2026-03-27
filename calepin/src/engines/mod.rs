@@ -328,12 +328,12 @@ pub fn execute_chunk(
         }
         "sh" => {
             let session = ctx.sh.as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", crate::tools::not_found_message(&crate::tools::SH)))?;
+                .ok_or_else(|| anyhow::anyhow!("{}", crate::utils::tools::not_found_message(&crate::utils::tools::SH)))?;
             session.capture(&code)?
         }
         "python" => {
             let session = ctx.python.as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", crate::tools::not_found_message(&crate::tools::PYTHON)))?;
+                .ok_or_else(|| anyhow::anyhow!("{}", crate::utils::tools::not_found_message(&crate::utils::tools::PYTHON)))?;
             let dpi: f64 = options
                 .get_opt_string("dpi")
                 .and_then(|s| s.parse().ok())
@@ -342,7 +342,7 @@ pub fn execute_chunk(
         }
         _ => {
             let session = ctx.r.as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", crate::tools::not_found_message(&crate::tools::RSCRIPT)))?;
+                .ok_or_else(|| anyhow::anyhow!("{}", crate::utils::tools::not_found_message(&crate::utils::tools::RSCRIPT)))?;
             let dev = if options.get_opt_string("dev").is_some() {
                 options.dev()
             } else {
@@ -371,17 +371,17 @@ pub fn evaluate_inline(engine: &str, expr: &str, ctx: &mut EngineContext) -> Res
     match engine {
         "sh" => {
             let session = ctx.sh.as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", crate::tools::not_found_message(&crate::tools::SH)))?;
+                .ok_or_else(|| anyhow::anyhow!("{}", crate::utils::tools::not_found_message(&crate::utils::tools::SH)))?;
             session.evaluate_inline(expr)
         }
         "python" => {
             let session = ctx.python.as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", crate::tools::not_found_message(&crate::tools::PYTHON)))?;
+                .ok_or_else(|| anyhow::anyhow!("{}", crate::utils::tools::not_found_message(&crate::utils::tools::PYTHON)))?;
             session.evaluate_inline(expr)
         }
         "r" => {
             let session = ctx.r.as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", crate::tools::not_found_message(&crate::tools::RSCRIPT)))?;
+                .ok_or_else(|| anyhow::anyhow!("{}", crate::utils::tools::not_found_message(&crate::utils::tools::RSCRIPT)))?;
             session.evaluate_inline(expr)
         }
         _ => Err(anyhow::anyhow!("Unknown inline engine: {}", engine)),

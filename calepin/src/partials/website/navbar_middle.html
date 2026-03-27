@@ -4,18 +4,18 @@
   <li{% if item.children %} class="navbar-dropdown"{% endif %}>
     {% if item.children %}
     <button class="navbar-dropdown-toggle" aria-expanded="false">
-      {{ item.text }} {{ icon(name="chevron-right") }}
+      {{ item.text }} {% include "icons/chevron-right.svg" %}
     </button>
     <ul class="navbar-dropdown-menu">
       {% for child in item.children %}
       <li><a href="{{ child.href | default(value='#') }}">
-        {% if child.icon %}{{ icon(name=child.icon) }} {% endif %}{{ child.text }}
+        {% if child.icon %}<img class="nav-icon" src="/assets/icons/{{ child.icon }}.svg" alt="{{ child.icon }}"> {% endif %}{{ child.text }}
       </a></li>
       {% endfor %}
     </ul>
     {% else %}
     <a href="{{ item.href | default(value='#') }}">
-      {% if item.icon %}{{ icon(name=item.icon) }} {% endif %}{{ item.text }}
+      {% if item.icon %}<img class="nav-icon" src="/assets/icons/{{ item.icon }}.svg" alt="{{ item.icon }}"> {% endif %}{{ item.text }}
     </a>
     {% endif %}
   </li>

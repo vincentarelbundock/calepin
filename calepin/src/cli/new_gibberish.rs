@@ -1,7 +1,7 @@
 //! `calepin new gibberish` -- generate test content (gibberish .qmd files).
 
 use anyhow::{Context, Result};
-use crate::jinja;
+use crate::utils::lipsum;
 
 pub fn generate_gibberish(
     dir: &std::path::Path,
@@ -25,7 +25,7 @@ pub fn generate_gibberish(
         let filename = format!("page-{:03}.qmd", i + 1);
         let path = dir.join(&filename);
 
-        let title = jinja::lipsum_words(3 + (i * 7) % 4);
+        let title = lipsum::lipsum_words(3 + (i * 7) % 4);
         let mut body = String::new();
 
         // Distribute paragraphs across 5 headings with 3 subheadings each
@@ -33,10 +33,10 @@ pub fn generate_gibberish(
             .map(|h| format!("sec-{}-{}", i + 1, h + 1))
             .collect();
         let heading_titles: Vec<String> = (0..5)
-            .map(|h| jinja::lipsum_words(2 + ((i + h) * 5) % 4))
+            .map(|h| lipsum::lipsum_words(2 + ((i + h) * 5) % 4))
             .collect();
         let sub_titles: Vec<String> = (0..15)
-            .map(|s| jinja::lipsum_words(2 + ((i + s) * 3) % 4))
+            .map(|s| lipsum::lipsum_words(2 + ((i + s) * 3) % 4))
             .collect();
 
         let mut para_idx = 0;
@@ -55,7 +55,7 @@ pub fn generate_gibberish(
 
             let paras_before_subs = paras_per_section / 4;
             for _ in 0..paras_before_subs {
-                body.push_str(&jinja::lipsum_paragraphs(1));
+                body.push_str(&lipsum::lipsum_paragraphs(1));
                 body.push_str("\n\n");
                 para_idx += 1;
             }
@@ -76,7 +76,7 @@ pub fn generate_gibberish(
                     let mut sentences = Vec::new();
                     for j in 0..sentence_count {
                         let len = 8 + ((offset + j * 5) % 10);
-                        sentences.push(jinja::lipsum_sentence(len, offset + j * 11));
+                        sentences.push(lipsum::lipsum_sentence(len, offset + j * 11));
                     }
 
                     if extras {
@@ -86,7 +86,7 @@ pub fn generate_gibberish(
 
                         // Footnote every ~5th paragraph
                         if para_idx % 5 == 1 {
-                            let fn_text = jinja::lipsum_sentence(
+                            let fn_text = lipsum::lipsum_sentence(
                                 6 + (seed % 5),
                                 seed + 3,
                             );
@@ -151,7 +151,7 @@ pub fn generate_gibberish(
             let mut sentences = Vec::new();
             for j in 0..sentence_count {
                 let len = 8 + ((offset + j * 5) % 10);
-                sentences.push(jinja::lipsum_sentence(len, offset + j * 11));
+                sentences.push(lipsum::lipsum_sentence(len, offset + j * 11));
             }
             body.push_str(&sentences.join(" "));
             body.push_str("\n\n");
@@ -329,7 +329,7 @@ fn build_gibberish_table(file_idx: usize, table_idx: usize) -> String {
     }
 
     // Caption with cross-ref label
-    let caption = jinja::lipsum_sentence(5 + (seed % 4), seed + 2);
+    let caption = lipsum::lipsum_sentence(5 + (seed % 4), seed + 2);
     out.push_str(&format!(
         "\n: {} {{#{}}} \n",
         caption, label

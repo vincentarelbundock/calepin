@@ -2,26 +2,8 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use walkdir::WalkDir;
 
-/// Copy a directory tree recursively.
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
-    for entry in WalkDir::new(src) {
-        let entry = entry?;
-        let rel = entry.path().strip_prefix(src)?;
-        let target = dst.join(rel);
-
-        if entry.file_type().is_dir() {
-            fs::create_dir_all(&target)?;
-        } else {
-            if let Some(parent) = target.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::copy(entry.path(), &target)?;
-        }
-    }
-    Ok(())
-}
+use crate::paths::copy_dir_recursive;
 
 /// Copy `assets/` directory to `assets/` in the output directory.
 /// Also copies built-in target-scoped assets as fallback for files not
@@ -43,9 +25,9 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
             .context("Failed to copy _calepin/assets/ to output directory")?;
     }
 
-    // Copy built-in target-scoped assets as fallback.
-    if let Some(target_name) = crate::paths::get_active_target() {
-        if let Some(builtin_dir) = crate::render::elements::BUILTIN_ASSETS.get_dir(&target_name) {
+    // Copy built-in assets as fallback.
+    {
+        if let Some(builtin_dir) = crate::render::elements::BUILTIN_ASSETS.get_dir("assets") {
             fs::create_dir_all(&assets_dst)?;
             for file in builtin_dir.files() {
                 let name = file.path().file_name()

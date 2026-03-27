@@ -11,13 +11,13 @@ pub fn render(
         .unwrap_or(1) as usize;
 
     if let Some(n) = kv.get("words").and_then(|s| s.parse::<usize>().ok()) {
-        return crate::jinja::lipsum_words(n);
+        return crate::utils::lipsum::lipsum_words(n);
     }
     if let Some(n) = kv.get("sentences").and_then(|s| s.parse::<usize>().ok()) {
-        return crate::jinja::lipsum::lipsum_sentences(n);
+        return crate::utils::lipsum::lipsum_sentences(n);
     }
     let n = kv.get("paragraphs")
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(default_paragraphs);
-    crate::jinja::lipsum_paragraphs(n)
+    crate::utils::lipsum::lipsum_paragraphs(n)
 }

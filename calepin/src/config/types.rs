@@ -271,7 +271,7 @@ impl Metadata {
     /// Resolve date keywords (`today`, `now`, `last-modified`) to YYYY-MM-DD.
     pub fn resolve_date(&mut self, input_path: Option<&std::path::Path>) {
         if let Some(ref date) = self.date {
-            if let Some(resolved) = crate::date::resolve_date(date, input_path) {
+            if let Some(resolved) = crate::utils::date::resolve_date(date, input_path) {
                 self.date = Some(resolved);
             }
         }
@@ -281,7 +281,7 @@ impl Metadata {
     /// or the default `"%B %e, %Y"`.
     pub fn formatted_date(&self) -> Option<String> {
         self.date.as_ref().map(|d| {
-            crate::date::format_date_display(d, self.date_format.as_deref())
+            crate::utils::date::format_date_display(d, self.date_format.as_deref())
         })
     }
 

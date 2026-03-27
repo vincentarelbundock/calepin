@@ -145,13 +145,13 @@ pub fn write_builtin_partials(dest: &Path) {
     write_embedded_dir(&BUILTIN_PARTIALS, dest);
 }
 
-/// Write built-in assets for a target (e.g. "website") into the given directory.
-/// Files are written directly into `dest/`, stripping the target prefix.
+/// Write built-in assets into the given directory.
+/// Files are written directly into `dest/`, stripping the "assets" prefix.
 /// Recurses into subdirectories (e.g. `icons/`).
-pub fn write_builtin_assets(target: &str, dest: &Path) {
+pub fn write_builtin_assets(_target: &str, dest: &Path) {
     use crate::render::elements::BUILTIN_ASSETS;
-    if let Some(dir) = BUILTIN_ASSETS.get_dir(target) {
-        let prefix = Path::new(target);
+    if let Some(dir) = BUILTIN_ASSETS.get_dir("assets") {
+        let prefix = Path::new("assets");
         write_embedded_dir_stripped(dir, dest, prefix);
     }
 }
@@ -398,6 +398,29 @@ pub fn resolve_module_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
     }
 
     None
+}
+
+// ---------------------------------------------------------------------------
+// Filesystem utilities
+// ---------------------------------------------------------------------------
+
+/// Copy a directory tree recursively, creating parent directories as needed.
+pub fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    use walkdir::WalkDir;
+    for entry in WalkDir::new(src) {
+        let entry = entry?;
+        let rel = entry.path().strip_prefix(src)?;
+        let target = dst.join(rel);
+        if entry.file_type().is_dir() {
+            std::fs::create_dir_all(&target)?;
+        } else {
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

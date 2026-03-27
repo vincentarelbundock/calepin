@@ -110,7 +110,7 @@ impl BuildFigureVars {
     }
 }
 
-impl crate::render::filter::BuildElementVars for BuildFigureVars {
+impl crate::render::vars::BuildElementVars for BuildFigureVars {
     fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, defaults: &crate::config::Metadata) {
         if let Element::Figure { path, alt, caption, label, number, attrs } = element {
             build_figure_element_vars(

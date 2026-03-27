@@ -6,7 +6,7 @@ use std::rc::Rc;
 use include_dir::{include_dir, Dir};
 
 use crate::types::Element;
-use crate::render::filter::BuildElementVars;
+use crate::render::vars::BuildElementVars;
 use crate::registry::ModuleRegistry;
 use crate::modules::Highlighter;
 
@@ -18,7 +18,7 @@ use crate::modules::Highlighter;
 pub static BUILTIN_PARTIALS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/partials");
 
 /// Built-in assets (CSS, JS, scaffold files), embedded at compile time.
-pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/assets");
+pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold");
 
 /// Template name aliases: multiple names can map to the same template file.
 fn resolve_partial_alias(name: &str) -> &str {
@@ -146,7 +146,7 @@ impl ElementRenderer {
     pub fn from_metadata(
         writer: &str,
         metadata: &crate::config::Metadata,
-        options: &crate::pipeline::RenderCoreOptions,
+        options: &crate::render::pipeline::RenderCoreOptions,
     ) -> Self {
         let mut er = Self::new(writer, Highlighter::from_metadata(metadata));
         er.metadata = metadata.clone();
@@ -301,7 +301,7 @@ impl ElementRenderer {
         vars.insert("writer".to_string(), self.ext.clone());
 
         // Run element through pipeline filters
-        let code_filter = crate::render::filter::code::BuildCodeVars::new(&self.highlighter);
+        let code_filter = crate::render::vars::BuildCodeVars::new(&self.highlighter);
         let figure_filter = crate::modules::BuildFigureVars::new(
             &self.ext,
             self.target.as_ref(),

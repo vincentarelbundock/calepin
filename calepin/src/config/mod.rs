@@ -1,5 +1,6 @@
 //! Document metadata: types, parsing, targets, and config loading.
 
+pub mod context;
 mod types;
 mod parse;
 mod merge;
@@ -14,3 +15,4 @@ pub use load::{
     load_project_metadata, builtin_metadata,
     SHARED_TOML, DOCUMENT_TOML, COLLECTION_TOML,
 };
+pub use context::{ProjectContext, resolve_context, apply_writer_override};

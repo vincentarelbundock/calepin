@@ -3,7 +3,7 @@
 use std::path::Path;
 use anyhow::{Context, Result};
 use crate::cli::RenderArgs;
-use crate::pipeline;
+use crate::render::pipeline;
 
 pub fn handle_render(args: RenderArgs) -> Result<()> {
     crate::cli::set_quiet(args.quiet);
