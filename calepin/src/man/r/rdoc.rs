@@ -3,22 +3,12 @@
 //! Parses the JSON AST produced by extract_rdocs.R and emits clean
 //! markdown-style .qmd files with TOML front matter.  Cross-references
 //! (`\link[pkg]{fun}`) are resolved to hyperlinks using pkgdown site
-//! URLs discovered by the R script, with rdrr.io as fallback.
+//! URLs discovered from DESCRIPTION files, with rdrr.io as fallback.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 use serde::Deserialize;
-
-// ---------------------------------------------------------------------------
-// JSON model
-// ---------------------------------------------------------------------------
-
-#[derive(Deserialize, Debug)]
-pub struct RdOutput {
-    pub topics: Vec<RdTopic>,
-    #[serde(default)]
-    pub urls: HashMap<String, String>,
-}
 
 #[derive(Deserialize, Debug)]
 pub struct RdTopic {
@@ -504,5 +494,278 @@ fn collect_example_spans(nodes: &[RdNode], executable: bool, out: &mut Vec<(Stri
                 out.push((collect_text(node), executable));
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// External package URL discovery (pure Rust, replaces R-side logic)
+// ---------------------------------------------------------------------------
+
+/// Walk the Rd AST to collect external package names from `\link[pkg]{...}`.
+pub fn collect_linked_packages(topics: &[RdTopic], this_package: &str) -> HashSet<String> {
+    let mut pkgs = HashSet::new();
+    for topic in topics {
+        for node in &topic.nodes {
+            collect_links_from_node(node, this_package, &mut pkgs);
+        }
+    }
+    pkgs
+}
+
+fn collect_links_from_node(node: &RdNode, this_package: &str, pkgs: &mut HashSet<String>) {
+    match node {
+        RdNode::Parent { tag, children, option, .. } => {
+            if tag == "\\link" {
+                if let Some(opt) = option {
+                    if !opt.starts_with('=') {
+                        let ext_pkg = opt.split(':').next().unwrap_or(opt);
+                        if ext_pkg != this_package && !ext_pkg.is_empty() {
+                            pkgs.insert(ext_pkg.to_string());
+                        }
+                    }
+                }
+            }
+            for child in children {
+                collect_links_from_node(child, this_package, pkgs);
+            }
+        }
+        RdNode::Text { .. } => {}
+    }
+}
+
+/// Regex pattern matching pkgdown-style documentation sites.
+static PKGDOWN_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(
+        r"github\.io|gitlab\.io|r-lib\.org|tidyverse\.org|tidymodels\.org|bioconductor\.org"
+    ).unwrap()
+});
+
+/// Discover pkgdown URLs for a set of packages by reading their DESCRIPTION files.
+///
+/// Locates each package's DESCRIPTION via `R_LIBS` / `R_HOME` library paths,
+/// parses the `URL` field (DCF format), and returns the first URL that looks
+/// like a pkgdown site.
+pub fn discover_pkgdown_urls(packages: &HashSet<String>) -> HashMap<String, String> {
+    let lib_paths = r_library_paths();
+    let mut urls = HashMap::new();
+    for pkg in packages {
+        if let Some(url) = find_pkgdown_url(pkg, &lib_paths) {
+            urls.insert(pkg.clone(), url);
+        }
+    }
+    urls
+}
+
+/// Parse the `URL` field from an R package DESCRIPTION file and return the
+/// first URL that matches a pkgdown site pattern.
+fn find_pkgdown_url(package: &str, lib_paths: &[std::path::PathBuf]) -> Option<String> {
+    for lib in lib_paths {
+        let desc_path = lib.join(package).join("DESCRIPTION");
+        if let Ok(contents) = std::fs::read_to_string(&desc_path) {
+            if let Some(url) = extract_pkgdown_url_from_dcf(&contents) {
+                return Some(url);
+            }
+        }
+    }
+    None
+}
+
+/// Extract the first pkgdown-style URL from a DCF (Debian Control File) string.
+fn extract_pkgdown_url_from_dcf(dcf: &str) -> Option<String> {
+    // DCF format: "Key: value" with continuation lines starting with whitespace.
+    // Find the URL field and collect its full value.
+    let mut in_url = false;
+    let mut url_value = String::new();
+
+    for line in dcf.lines() {
+        if line.starts_with("URL:") {
+            in_url = true;
+            url_value = line.strip_prefix("URL:").unwrap().trim().to_string();
+        } else if in_url {
+            if line.starts_with(char::is_whitespace) {
+                // Continuation line
+                url_value.push(' ');
+                url_value.push_str(line.trim());
+            } else {
+                break;
+            }
+        }
+    }
+
+    if url_value.is_empty() {
+        return None;
+    }
+
+    // Split on commas and whitespace, find the first pkgdown-looking URL.
+    for url in url_value.split(|c: char| c == ',' || c.is_whitespace()) {
+        let url = url.trim();
+        if !url.is_empty() && PKGDOWN_RE.is_match(url) {
+            return Some(url.trim_end_matches('/').to_string());
+        }
+    }
+
+    None
+}
+
+/// Collect R library paths from the environment, similar to `.libPaths()`.
+fn r_library_paths() -> Vec<std::path::PathBuf> {
+    let mut paths = Vec::new();
+
+    // R_LIBS_USER, R_LIBS_SITE, R_LIBS (colon-separated)
+    for var in &["R_LIBS_USER", "R_LIBS_SITE", "R_LIBS"] {
+        if let Ok(val) = std::env::var(var) {
+            for p in val.split(':') {
+                let expanded = expand_r_path(p);
+                let path = Path::new(&expanded);
+                if path.is_dir() {
+                    paths.push(path.to_path_buf());
+                }
+            }
+        }
+    }
+
+    // Common default paths
+    if let Ok(home) = std::env::var("HOME") {
+        // macOS default user library
+        let user_lib = Path::new(&home).join("Library/R");
+        if user_lib.is_dir() {
+            // Find version-specific subdirectory (e.g., Library/R/arm64/4.4/library)
+            if let Ok(entries) = std::fs::read_dir(&user_lib) {
+                for entry in entries.flatten() {
+                    let lib_dir = find_library_subdir(&entry.path());
+                    if let Some(d) = lib_dir {
+                        if !paths.contains(&d) {
+                            paths.push(d);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // R_HOME/library
+    if let Ok(r_home) = std::env::var("R_HOME") {
+        let lib = Path::new(&r_home).join("library");
+        if lib.is_dir() && !paths.contains(&lib) {
+            paths.push(lib);
+        }
+    }
+
+    // Homebrew R on macOS
+    for prefix in &["/opt/homebrew/lib/R", "/usr/local/lib/R", "/usr/lib/R"] {
+        let lib = Path::new(prefix).join("library");
+        if lib.is_dir() && !paths.contains(&lib) {
+            paths.push(lib);
+        }
+    }
+
+    paths
+}
+
+/// Expand `%V` and `%p` placeholders in R library paths.
+fn expand_r_path(path: &str) -> String {
+    // These placeholders are common in R_LIBS_USER but we just strip them
+    // if we can't resolve the version. The path won't match anything, which
+    // is fine -- we have fallbacks.
+    path.replace("%V", "*").replace("%p", "*")
+        .replace('~', &std::env::var("HOME").unwrap_or_default())
+}
+
+/// Find a `library/` subdirectory under an R version directory.
+fn find_library_subdir(dir: &Path) -> Option<std::path::PathBuf> {
+    // Handles structures like: arm64/4.4/library or x86_64/4.3/library
+    if !dir.is_dir() {
+        return None;
+    }
+    // Direct library/ child
+    let lib = dir.join("library");
+    if lib.is_dir() {
+        return Some(lib);
+    }
+    // One level deeper (version dir)
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let lib = entry.path().join("library");
+            if lib.is_dir() {
+                return Some(lib);
+            }
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_pkgdown_url_from_dcf() {
+        let dcf = "\
+Package: ggplot2
+Title: Create Elegant Data Visualisations Using the Grammar of Graphics
+URL: https://ggplot2.tidyverse.org,
+    https://github.com/tidyverse/ggplot2
+BugReports: https://github.com/tidyverse/ggplot2/issues
+";
+        assert_eq!(
+            extract_pkgdown_url_from_dcf(dcf),
+            Some("https://ggplot2.tidyverse.org".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_pkgdown_url_github_io() {
+        let dcf = "\
+Package: data.table
+URL: https://r-datatable.com,
+    https://Rdatatable.gitlab.io/data.table,
+    https://github.com/Rdatatable/data.table
+";
+        assert_eq!(
+            extract_pkgdown_url_from_dcf(dcf),
+            Some("https://Rdatatable.gitlab.io/data.table".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_pkgdown_url_none() {
+        let dcf = "\
+Package: base
+Title: The R Base Package
+";
+        assert_eq!(extract_pkgdown_url_from_dcf(dcf), None);
+    }
+
+    #[test]
+    fn test_collect_linked_packages() {
+        let topics = vec![RdTopic {
+            topic: "test".to_string(),
+            nodes: vec![
+                RdNode::Parent {
+                    tag: "\\description".to_string(),
+                    children: vec![RdNode::Parent {
+                        tag: "\\link".to_string(),
+                        children: vec![RdNode::Text {
+                            tag: "TEXT".to_string(),
+                            text: "tibble".to_string(),
+                        }],
+                        option: Some("tibble".to_string()),
+                    }],
+                    option: None,
+                },
+                RdNode::Parent {
+                    tag: "\\link".to_string(),
+                    children: vec![RdNode::Text {
+                        tag: "TEXT".to_string(),
+                        text: "fun".to_string(),
+                    }],
+                    option: Some("=topic".to_string()),
+                },
+            ],
+        }];
+        let linked = collect_linked_packages(&topics, "mypkg");
+        assert!(linked.contains("tibble"));
+        assert!(!linked.contains("mypkg"));
+        assert_eq!(linked.len(), 1); // =topic links are same-package
     }
 }

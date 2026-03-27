@@ -67,9 +67,9 @@ pub fn build_collection(
             }
         });
 
-    // 3. Prepare output directory
+    // 3. Prepare output directory (relative to CWD, not project root)
     let output = if output.is_relative() {
-        &base_dir.join(output)
+        &cwd.join(output)
     } else {
         output
     };
