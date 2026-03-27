@@ -139,7 +139,7 @@ pub fn evaluate(
         match block {
             Block::Text(text) => {
                 let jinja_result = crate::jinja::process_body(
-                    &text.content, output_ext, metadata, registry,
+                    &text.content, output_ext, metadata,
                 );
                 // Only hash inline code expressions into the upstream digest,
                 // not the full text. This way prose edits don't invalidate chunk caches.
@@ -190,7 +190,7 @@ pub fn evaluate(
                 {
                     let joined = merged_chunk.source.join("\n");
                     let jinja_result = crate::jinja::process_body(
-                        &joined, output_ext, metadata, registry,
+                        &joined, output_ext, metadata,
                     );
                     jinja_chunk = CodeChunk {
                         source: jinja_result.text.lines().map(|l| l.to_string()).collect(),

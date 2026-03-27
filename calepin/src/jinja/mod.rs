@@ -13,7 +13,6 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::registry::ModuleRegistry;
 use crate::config::Metadata;
 
 use protection::{protect_code_blocks, protect_inline_code, restore_code_blocks};
@@ -29,7 +28,6 @@ pub fn process_body(
     text: &str,
     format: &str,
     metadata: &Metadata,
-    _registry: &ModuleRegistry,
 ) -> BodyResult {
     // 1. Protect fenced code blocks and inline code from Jinja
     let (protected, mut code_blocks) = protect_code_blocks(text);
@@ -95,8 +93,7 @@ mod tests {
     fn test_inline_code_protected() {
         let mut meta = Metadata::default();
         meta.title = Some("T".to_string());
-        let registry = ModuleRegistry::empty();
-        let result = process_body("version: `{{ meta.title }}`", "html", &meta, &registry);
+        let result = process_body("version: `{{ meta.title }}`", "html", &meta);
         assert!(result.text.contains("`{{ meta.title }}`"));
     }
 
@@ -104,8 +101,7 @@ mod tests {
     fn test_no_jinja_syntax_passthrough() {
         let text = "plain text with no template syntax";
         let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body(text, "html", &meta, &registry);
+        let result = process_body(text, "html", &meta);
         assert_eq!(result.text, text);
     }
 
@@ -113,8 +109,7 @@ mod tests {
     fn test_meta_variable_access() {
         let mut meta = Metadata::default();
         meta.title = Some("My Title".to_string());
-        let registry = ModuleRegistry::empty();
-        let result = process_body("Title: {{ meta.title }}", "html", &meta, &registry);
+        let result = process_body("Title: {{ meta.title }}", "html", &meta);
         assert_eq!(result.text, "Title: My Title");
     }
 
@@ -122,8 +117,7 @@ mod tests {
     fn test_env_context_variable() {
         std::env::set_var("CALEPIN_TEST_VAR", "hello_jinja");
         let meta = Metadata::default();
-        let registry = ModuleRegistry::empty();
-        let result = process_body("{{ env.CALEPIN_TEST_VAR }}", "html", &meta, &registry);
+        let result = process_body("{{ env.CALEPIN_TEST_VAR }}", "html", &meta);
         assert_eq!(result.text, "hello_jinja");
         std::env::remove_var("CALEPIN_TEST_VAR");
     }
@@ -133,8 +127,7 @@ mod tests {
         let text = "before {{ meta.title }}\n```\n{{ not_a_var }}\n```\nafter";
         let mut meta = Metadata::default();
         meta.title = Some("T".to_string());
-        let registry = ModuleRegistry::empty();
-        let result = process_body(text, "html", &meta, &registry);
+        let result = process_body(text, "html", &meta);
         assert!(result.text.contains("before T"));
         assert!(result.text.contains("{{ not_a_var }}"));
     }

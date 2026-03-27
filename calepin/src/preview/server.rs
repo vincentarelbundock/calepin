@@ -29,31 +29,16 @@ pub fn start(
     version: Arc<AtomicU64>,
     serve_dir: PathBuf,
 ) -> Result<(ServerHandle, u16)> {
-    let (server, actual_port) = try_bind(port)?;
-    let server = Arc::new(server);
-
-    let server_clone = Arc::clone(&server);
-    thread::spawn(move || {
-        for request in server_clone.incoming_requests() {
-            let url = request.url().to_string();
-
-            if url == "/__version" {
-                let v = version.load(Ordering::Relaxed).to_string();
-                let _ = request.respond(Response::from_string(v));
-            } else if url == "/" {
-                let html = content.read().unwrap().clone();
-                let header =
-                    Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
-                let response = Response::from_string(html).with_header(header);
-                let _ = request.respond(response);
-            } else {
-                // Serve static files relative to the document directory
-                serve_static(request, &url, &serve_dir);
-            }
+    serve(port, version, move |request, url| {
+        if url == "/" {
+            let html = content.read().unwrap().clone();
+            let header =
+                Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
+            let _ = request.respond(Response::from_string(html).with_header(header));
+        } else {
+            serve_static(request, &url, &serve_dir);
         }
-    });
-
-    Ok((ServerHandle { server }, actual_port))
+    })
 }
 
 /// Start an HTTP server that serves files from a directory on disk, with
@@ -63,6 +48,19 @@ pub fn start_collection(
     version: Arc<AtomicU64>,
     serve_dir: PathBuf,
 ) -> Result<(ServerHandle, u16)> {
+    let version_for_handler = Arc::clone(&version);
+    serve(port, version, move |request, url| {
+        serve_collection_request(request, &url, &serve_dir, &version_for_handler);
+    })
+}
+
+/// Bind the server and spawn a request-handling thread. The `/__version`
+/// endpoint is handled automatically; all other requests are forwarded to
+/// `handler`.
+fn serve<F>(port: u16, version: Arc<AtomicU64>, handler: F) -> Result<(ServerHandle, u16)>
+where
+    F: Fn(tiny_http::Request, String) + Send + 'static,
+{
     let (server, actual_port) = try_bind(port)?;
     let server = Arc::new(server);
 
@@ -77,52 +75,61 @@ pub fn start_collection(
                 continue;
             }
 
-            let rel = url.split('?').next().unwrap_or(&url).trim_start_matches('/');
-            let mut file_path = serve_dir.join(rel);
-            if file_path.is_dir() {
-                file_path = file_path.join("index.html");
-            }
-
-            // Prevent path traversal
-            if !file_path.starts_with(&serve_dir) {
-                let _ = request.respond(Response::from_string("Forbidden").with_status_code(StatusCode(403)));
-                continue;
-            }
-
-            let data = if file_path.is_file() {
-                std::fs::read(&file_path).ok()
-            } else {
-                None
-            };
-
-            if let Some(data) = data {
-                let mime = resolve_mime(&file_path);
-                if mime.starts_with("text/html") {
-                    let html = String::from_utf8_lossy(&data);
-                    let v = version.load(Ordering::Relaxed);
-                    let html = super::reload::inject_reload_script(&html, v);
-                    let header = Header::from_bytes("Content-Type", mime).unwrap();
-                    let _ = request.respond(Response::from_string(html).with_header(header));
-                } else {
-                    let header = Header::from_bytes("Content-Type", mime).unwrap();
-                    let _ = request.respond(Response::from_data(data).with_header(header));
-                }
-            } else {
-                // Serve 404.html if it exists, otherwise plain text
-                let page_404 = serve_dir.join("404.html");
-                if let Ok(body) = std::fs::read_to_string(&page_404) {
-                    let v = version.load(Ordering::Relaxed);
-                    let html = super::reload::inject_reload_script(&body, v);
-                    let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
-                    let _ = request.respond(Response::from_string(html).with_header(header).with_status_code(StatusCode(404)));
-                } else {
-                    let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
-                }
-            }
+            handler(request, url);
         }
     });
 
     Ok((ServerHandle { server }, actual_port))
+}
+
+fn serve_collection_request(
+    request: tiny_http::Request,
+    url: &str,
+    serve_dir: &PathBuf,
+    version: &AtomicU64,
+) {
+    let rel = url.split('?').next().unwrap_or(url).trim_start_matches('/');
+    let mut file_path = serve_dir.join(rel);
+    if file_path.is_dir() {
+        file_path = file_path.join("index.html");
+    }
+
+    // Prevent path traversal
+    if !file_path.starts_with(serve_dir) {
+        let _ = request.respond(Response::from_string("Forbidden").with_status_code(StatusCode(403)));
+        return;
+    }
+
+    let data = if file_path.is_file() {
+        std::fs::read(&file_path).ok()
+    } else {
+        None
+    };
+
+    if let Some(data) = data {
+        let mime = resolve_mime(&file_path);
+        if mime.starts_with("text/html") {
+            let html = String::from_utf8_lossy(&data);
+            let v = version.load(Ordering::Relaxed);
+            let html = super::reload::inject_reload_script(&html, v);
+            let header = Header::from_bytes("Content-Type", mime).unwrap();
+            let _ = request.respond(Response::from_string(html).with_header(header));
+        } else {
+            let header = Header::from_bytes("Content-Type", mime).unwrap();
+            let _ = request.respond(Response::from_data(data).with_header(header));
+        }
+    } else {
+        // Serve 404.html if it exists, otherwise plain text
+        let page_404 = serve_dir.join("404.html");
+        if let Ok(body) = std::fs::read_to_string(&page_404) {
+            let v = version.load(Ordering::Relaxed);
+            let html = super::reload::inject_reload_script(&body, v);
+            let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
+            let _ = request.respond(Response::from_string(html).with_header(header).with_status_code(StatusCode(404)));
+        } else {
+            let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
+        }
+    }
 }
 
 /// Try the requested port, then fall back to nearby ports.

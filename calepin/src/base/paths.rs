@@ -151,30 +151,22 @@ pub fn write_builtin_partials(dest: &Path) {
 pub fn write_builtin_assets(_target: &str, dest: &Path) {
     use crate::render::elements::BUILTIN_ASSETS;
     if let Some(dir) = BUILTIN_ASSETS.get_dir("assets") {
-        let prefix = Path::new("assets");
-        write_embedded_dir_stripped(dir, dest, prefix);
-    }
-}
-
-fn write_embedded_dir_stripped(dir: &include_dir::Dir<'static>, dest: &Path, prefix: &Path) {
-    for file in dir.files() {
-        let rel = file.path().strip_prefix(prefix).unwrap_or(file.path());
-        let target_path = dest.join(rel);
-        if let Some(parent) = target_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let _ = std::fs::write(&target_path, file.contents());
-    }
-    for subdir in dir.dirs() {
-        write_embedded_dir_stripped(subdir, dest, prefix);
+        write_embedded_dir_impl(dir, dest, Some(Path::new("assets")));
     }
 }
 
 /// Write an embedded `include_dir::Dir` to disk, preserving subdirectory structure.
+/// When `strip_prefix` is Some, paths are relativized by stripping that prefix.
 /// Silently skips files that fail to write.
 pub fn write_embedded_dir(dir: &include_dir::Dir<'static>, dest: &Path) {
+    write_embedded_dir_impl(dir, dest, None);
+}
+
+fn write_embedded_dir_impl(dir: &include_dir::Dir<'static>, dest: &Path, strip_prefix: Option<&Path>) {
     for file in dir.files() {
-        let rel = file.path();
+        let rel = strip_prefix
+            .and_then(|p| file.path().strip_prefix(p).ok())
+            .unwrap_or(file.path());
         let target = dest.join(rel);
         if let Some(parent) = target.parent() {
             let _ = std::fs::create_dir_all(parent);
@@ -182,7 +174,7 @@ pub fn write_embedded_dir(dir: &include_dir::Dir<'static>, dest: &Path) {
         let _ = std::fs::write(&target, file.contents());
     }
     for subdir in dir.dirs() {
-        write_embedded_dir(subdir, dest);
+        write_embedded_dir_impl(subdir, dest, strip_prefix);
     }
 }
 

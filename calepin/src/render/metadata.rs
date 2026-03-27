@@ -74,6 +74,20 @@ pub fn strip_markdown_formatting(text: &str) -> String {
     result.trim().to_string()
 }
 
+/// Resolve an element partial and render it with the given extra vars,
+/// automatically injecting `base` and `writer`. Returns `None` if the
+/// partial does not exist.
+fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, String)>) -> Option<String> {
+    let tpl = resolve_element_partial(name, ext)?;
+    let mut vars = HashMap::new();
+    vars.insert("base".to_string(), ext.to_string());
+    vars.insert("writer".to_string(), ext.to_string());
+    for (k, v) in extra_vars {
+        vars.insert(k.to_string(), v);
+    }
+    Some(apply_template(&tpl, &vars))
+}
+
 /// Build the appendix block for any format using element templates.
 /// Format-specific content (links, lists) is computed in Rust;
 /// structural markup comes from overridable templates.
@@ -84,34 +98,34 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     }
 
     let mut sections: Vec<String> = Vec::new();
-    let fmt = ext.to_string();
     let label_defs = meta.labels.clone();
+    let label = |getter: fn(&crate::config::LabelsConfig) -> Option<String>, default: &str| -> String {
+        label_defs
+            .as_ref()
+            .and_then(|l| getter(l))
+            .unwrap_or_else(|| default.to_string())
+    };
 
     // License
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
-            if let Some(tpl) = resolve_element_partial("license", ext) {
-                let mut vars = HashMap::new();
-                vars.insert("base".to_string(), fmt.clone());
-                vars.insert("writer".to_string(), fmt.clone());
-                vars.insert("text".to_string(), text.clone());
-                vars.insert("url".to_string(), lic.url.as_deref().unwrap_or("").to_string());
-                vars.insert("label_reuse".to_string(), label_defs.as_ref().and_then(|l| l.reuse.clone()).unwrap_or_else(|| "Reuse".to_string()));
-                sections.push(apply_template(&tpl, &vars));
+            if let Some(s) = render_section("license", ext, vec![
+                ("text", text.clone()),
+                ("url", lic.url.as_deref().unwrap_or("").to_string()),
+                ("label_reuse", label(|l| l.reuse.clone(), "Reuse")),
+            ]) {
+                sections.push(s);
             }
         }
     }
 
     // Citation
     if let Some(ref cite) = meta.citation {
-        let content = build_citation_text(meta, cite, ext);
-        if let Some(tpl) = resolve_element_partial("citation", ext) {
-            let mut vars = HashMap::new();
-            vars.insert("base".to_string(), fmt.clone());
-            vars.insert("writer".to_string(), fmt.clone());
-            vars.insert("content".to_string(), content);
-            vars.insert("label_citation".to_string(), label_defs.as_ref().and_then(|l| l.citation.clone()).unwrap_or_else(|| "Citation".to_string()));
-            sections.push(apply_template(&tpl, &vars));
+        if let Some(s) = render_section("citation", ext, vec![
+            ("content", build_citation_text(meta, cite, ext)),
+            ("label_citation", label(|l| l.citation.clone(), "Citation")),
+        ]) {
+            sections.push(s);
         }
     }
 
@@ -119,13 +133,11 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref cr) = meta.copyright {
         let text = build_copyright_text(cr);
         if !text.is_empty() {
-            if let Some(tpl) = resolve_element_partial("copyright", ext) {
-                let mut vars = HashMap::new();
-                vars.insert("base".to_string(), fmt.clone());
-                vars.insert("writer".to_string(), fmt.clone());
-                vars.insert("content".to_string(), text);
-                vars.insert("label_copyright".to_string(), label_defs.as_ref().and_then(|l| l.copyright.clone()).unwrap_or_else(|| "Copyright".to_string()));
-                sections.push(apply_template(&tpl, &vars));
+            if let Some(s) = render_section("copyright", ext, vec![
+                ("content", text),
+                ("label_copyright", label(|l| l.copyright.clone(), "Copyright")),
+            ]) {
+                sections.push(s);
             }
         }
     }
@@ -134,26 +146,22 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if !meta.funding.is_empty() {
         let items = build_funding_items(&meta.funding, ext);
         if !items.is_empty() {
-            if let Some(tpl) = resolve_element_partial("funding", ext) {
-                let mut vars = HashMap::new();
-                vars.insert("base".to_string(), fmt.clone());
-                vars.insert("writer".to_string(), fmt.clone());
-                vars.insert("items".to_string(), items);
-                vars.insert("label_funding".to_string(), label_defs.as_ref().and_then(|l| l.funding.clone()).unwrap_or_else(|| "Funding".to_string()));
-                sections.push(apply_template(&tpl, &vars));
+            if let Some(s) = render_section("funding", ext, vec![
+                ("items", items),
+                ("label_funding", label(|l| l.funding.clone(), "Funding")),
+            ]) {
+                sections.push(s);
             }
         }
     }
 
     if sections.is_empty() {
         String::new()
-    } else if let Some(tpl) = resolve_element_partial("appendix", ext) {
-        let mut vars = HashMap::new();
-        vars.insert("base".to_string(), fmt.clone());
-        vars.insert("writer".to_string(), fmt);
-        vars.insert("sections".to_string(), sections.join("\n"));
-        vars.insert("label_appendix".to_string(), label_defs.as_ref().and_then(|l| l.appendix.clone()).unwrap_or_else(|| "Appendix".to_string()));
-        apply_template(&tpl, &vars)
+    } else if let Some(s) = render_section("appendix", ext, vec![
+        ("sections", sections.join("\n")),
+        ("label_appendix", label(|l| l.appendix.clone(), "Appendix")),
+    ]) {
+        s
     } else {
         sections.join("\n\n")
     }

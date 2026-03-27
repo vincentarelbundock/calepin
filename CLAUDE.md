@@ -117,87 +117,100 @@ User targets in `_calepin.toml` inherit from built-in targets via `inherits`.
 
 ### FormatPipeline
 
-`FormatPipeline` (`formats.rs`) replaces the old `OutputRenderer` trait. It reads pipeline config from the Target and dispatches to modules at each stage. Created via `FormatPipeline::from_target()` or `FormatPipeline::from_engine()`.
+`FormatPipeline` (`render/formats.rs`) reads pipeline config from the Target and dispatches to modules at each stage. Created via `FormatPipeline::from_target()` or `FormatPipeline::from_writer()`.
 
 ## Format Names
 
-Internally, formats use canonical engine names: `html`, `latex`, `typst`, `markdown`. File extensions: `.html`, `.tex`, `.typ`, `.md`. Partial resolution uses the engine name (e.g., `partials/html/figure.html`). Raw blocks use canonical names (```` ```{=latex} ````).
+Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markdown`. File extensions: `.html`, `.tex`, `.typ`, `.md`. Partial resolution uses the writer name (e.g., `partials/html/figure.html`). Raw blocks use canonical names (```` ```{=latex} ````).
 
 ## Source Layout
 
-### `calepin/src/` -- Top-level files
+### `calepin/src/` -- Top-level
 
-- `main.rs` -- Entry point
-- `pipeline.rs` -- Core render pipeline orchestrator
-- `formats.rs` -- `FormatPipeline`: dispatches modules at each pipeline stage
-- `context.rs` -- `ProjectContext`: resolves project config and target
+- `main.rs` -- Entry point (only file at src/ root)
 
 ### `cli/` -- CLI and command handlers
 
 - `args.rs` -- CLI argument parsing (clap) + `cwarn!` macro
 - `render.rs`, `preview.rs`, `info.rs`, `new.rs`, `flush.rs` -- Command handlers
 
+### `config/` -- Configuration and project context
+
+- `types.rs` -- `Metadata`, `Author`, `Target` structs
+- `parse.rs` -- TOML front matter parsing: `split_frontmatter()`, `parse_metadata()`
+- `merge.rs` -- Metadata merge logic (last wins)
+- `targets.rs` -- Target resolution and inheritance
+- `load.rs` -- Project config loading, `LanguageConfig`, `ContentSection`
+- `context.rs` -- `ProjectContext`: resolves project config and target for a render
+- `document.toml`, `shared.toml`, `collection.toml`, `modules.toml` -- Embedded default configs
+
+### `render/` -- Element rendering and pipeline
+
+- `pipeline.rs` -- Core render pipeline orchestrator: parse, evaluate, render
+- `formats.rs` -- `FormatPipeline`: dispatches modules at each pipeline stage
+- `elements.rs` -- `ElementRenderer`: dispatches each element, holds pre-compiled template env
+- `div.rs` -- Div rendering pipeline: module dispatch, auto-numbering, partial lookup
+- `span.rs` -- Span rendering pipeline
+- `vars.rs` -- `BuildElementVars` trait + `BuildCodeVars`: per-element template var builders
+- `convert.rs` -- Comrak options, `ImageAttrs`, `render_inline()` entry points
+- `template.rs` -- MiniJinja template engine: `apply_template()`, page template loading, `build_template_vars()`
+- `markers.rs` -- Unicode marker system for protecting content through conversion
+- `metadata.rs` -- Author/citation/appendix formatting via partials
+
 ### `modules/` -- Module system and built-in modules
 
 - `registry.rs` -- `ModuleRegistry`, `TransformElement`, `TransformElementChildren`, `TransformDocument` traits, `ModuleKind`, `ModuleContext`, `ModuleResult`, built-in module registration
 - `manifest.rs` -- `module.toml` parsing: `ModuleManifest`, `MatchRule`, `MatchSpec`
 - `transform_document.rs` -- `TransformDocument` trait + `ScriptTransformDocument` (user script execution)
-- `highlight/` -- Syntax highlighting: `Highlighter`, themes (`.tmTheme` files), CSS generation, LaTeX color defs, `TransformDocument` for injecting into assembled pages
+- `highlight/` -- Syntax highlighting: `Highlighter`, themes, CSS/LaTeX color generation
 - `convert_svg_pdf/` -- `TransformElement`: SVG-to-PDF figure conversion
 - `convert_math/` -- LaTeX-to-Typst math converter (parser, AST, emitter, symbols)
 - `tabset/` -- `TransformElementChildren`: panel-tabset -> HTML tabs
 - `layout/` -- `TransformElementChildren`: layout grids (CSS Grid, LaTeX minipage, Typst grid)
-- `figure/` -- Figure div helper functions
+- `figure/` -- Figure div helper functions + `BuildFigureVars`
 - `table/` -- Table div helper functions
 - `append_footnotes/` -- `TransformDocument`: append HTML footnote section
 - `split_slides/` -- `TransformDocument`: split body into RevealJS slides
 - `embed_images/` -- `TransformDocument`: base64-encode images
 
-### `emit/` -- AST emitters (the 4 irreducible atoms)
+### `emit/` -- AST emitters
 
-Shared AST walker + format-specific implementations. All formats share a single comrak traversal via the `FormatEmitter` trait.
+Shared AST walker + format-specific implementations via `FormatEmitter` trait.
 
 - `mod.rs` -- `FormatEmitter` trait + `walk_ast()`, heading IDs, section numbering, footnotes, tables
-- `html.rs` -- `HtmlEmitter`
-- `latex.rs` -- `LatexEmitter`
-- `typst.rs` -- `TypstEmitter`
-- `markdown.rs` -- `MarkdownEmitter`
+- `html.rs`, `latex.rs`, `typst.rs`, `markdown.rs` -- Per-format emitters
 
-### `render/` -- Element rendering infrastructure
+### `utils/` -- Shared utilities
 
-- `elements.rs` -- `ElementRenderer`: dispatches each element, holds pre-compiled template env
-- `div.rs` -- Div rendering pipeline: module dispatch (TransformElementChildren), auto-numbering, partial lookup
-- `span.rs` -- Span rendering pipeline
-- `filter/` -- Per-element var builders (not modules, called directly by ElementRenderer)
-  - `mod.rs` -- `BuildElementVars` trait
-  - `code.rs` -- `BuildCodeVars`: syntax highlighting vars
-  - `figure.rs` -- `BuildFigureVars`: image path, dimensions, alignment vars
-  - `theorem.rs` -- `theorem_prefix()`: cross-ref ID prefix mapping
-- `convert.rs` -- Comrak options, `ImageAttrs`, `render_inline()` entry points
-- `template.rs` -- MiniJinja template engine: `apply_template()`, page template loading, `build_template_vars()`
-- `markers.rs` -- Unicode marker system for protecting content through conversion
-- `metadata.rs` -- Author/citation/appendix formatting via partials
-- `typst_compile.rs` -- Typst PDF compilation
+- `tools.rs` -- External tool availability checks and error messages
+- `escape.rs` -- Format-specific code escaping
+- `lipsum.rs` -- Lorem ipsum text generation
+- `cache.rs` -- Hash-based page cache for incremental builds
+- `date.rs` -- Date formatting and resolution helpers
 
 ### `partials/` -- Built-in Jinja templates (embedded at compile time)
 
 Per-engine partials for elements, page templates, shortcodes:
 `partials/{html,latex,typst,markdown,revealjs,website,book}/`
 
+Website template icons live in `partials/website/icons/` (used via `{% include %}`).
+
 User overrides: `_calepin/partials/{engine}/{name}.{ext}`
+
+### `scaffold/` -- Project scaffolding and shared assets
+
+- `website/`, `book/`, `notebook/` -- Starter project templates for `calepin new`
+- `assets/` -- Shared website assets (CSS, JS, social icons) copied to output at build time
 
 ### Other directories
 
-- `config/` -- Metadata types (`types.rs`, `parse.rs`, `merge.rs`) + embedded TOML configs (`document.toml`, `shared.toml`, `collection.toml`)
 - `engines/` -- Code execution: R, Python, shell subprocess management
 - `parse/` -- Block parsing: `.qmd` text -> `Block` enum
 - `references/` -- Bibliography (`bibliography.rs`) + cross-references (`crossref.rs`)
-- `jinja/` -- Jinja body processing, shortcode functions, lipsum
+- `jinja/` -- Jinja body processing: `{% include %}` expansion, code block protection, template context
 - `base/` -- Core types (`types.rs`), paths (`paths.rs`), utilities (`util.rs`, `value.rs`)
-- `project/` -- Target resolution (`targets.rs`), content discovery (`content.rs`)
 - `collection/` -- Multi-document builds (site/book rendering)
 - `preview/` -- Live preview server with hot reload
-- `assets/` -- Website CSS/JS + scaffold files (404.qmd, index.qmd)
 
 ## Partials and Module Resolution
 

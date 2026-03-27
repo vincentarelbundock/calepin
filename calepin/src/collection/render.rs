@@ -47,44 +47,13 @@ pub fn render_documents(
     let format_owned = format.to_string();
     let target_owned = target_name.map(|s| s.to_string());
 
-    let pb = if quiet {
-        ProgressBar::hidden()
-    } else {
-        let pb = ProgressBar::new(pages.len() as u64);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("  [{bar:30}] {pos}/{len} {msg}")
-            .unwrap()
-            .progress_chars("=> "));
-        pb
-    };
-    let pb = Arc::new(pb);
-
-    // Render all pages in parallel using thread::scope
-    let results: Vec<(String, Result<CollectionRenderResult>)> = std::thread::scope(|s| {
-        let handles: Vec<_> = pages
-            .iter()
-            .map(|page| {
-                let overrides = &overrides;
-                let base_dir = base_dir;
-                let output_dir = output_dir;
-                let format = &format_owned;
-                let target = &target_owned;
-                let project_meta = meta;
-                let pb = Arc::clone(&pb);
-                s.spawn(move || {
-                    crate::paths::set_active_target(target.as_deref());
-                    crate::paths::set_project_root(Some(base_dir));
-                    let key = page.source.display().to_string();
-                    let result = render_one_document(page, overrides, base_dir, output_dir, format, apply_page_template, Some(project_meta));
-                    pb.set_message(page.output.display().to_string());
-                    pb.inc(1);
-                    (key, result)
-                })
-            })
-            .collect();
-        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    let results = render_parallel(pages, quiet, |page| {
+        let key = page.source.display().to_string();
+        crate::paths::set_active_target(target_owned.as_deref());
+        crate::paths::set_project_root(Some(base_dir));
+        let result = render_one_document(page, &overrides, base_dir, output_dir, &format_owned, apply_page_template, Some(meta));
+        (key, result)
     });
-    pb.finish_and_clear();
 
     let mut map = HashMap::new();
     let mut failed: Vec<&DocumentInfo> = Vec::new();
@@ -208,43 +177,15 @@ pub fn render_documents_with_crossref(
 
     let target_owned = target_name.map(|s| s.to_string());
 
-    let pb = if quiet {
-        ProgressBar::hidden()
-    } else {
-        let pb = ProgressBar::new(pages.len() as u64);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("  [{bar:30}] {pos}/{len} {msg}")
-            .unwrap()
-            .progress_chars("=> "));
-        pb
-    };
-    let pb = Arc::new(pb);
-
     // Pass 1: Render all pages in parallel with skip_crossref=true
-    let pass1: Vec<(String, Result<Pass1Result>)> = std::thread::scope(|s| {
-        let handles: Vec<_> = pages
-            .iter()
-            .map(|page| {
-                let overrides = &overrides;
-                let base_dir = base_dir;
-                let output_dir = output_dir;
-                let target = &target_owned;
-                let chapter = chapter_map.get(&page.source.display().to_string()).copied();
-                let pb = Arc::clone(&pb);
-                s.spawn(move || {
-                    crate::paths::set_active_target(target.as_deref());
-                    crate::paths::set_project_root(Some(base_dir));
-                    let key = page.source.display().to_string();
-                    let result = render_one_document_pass1(page, overrides, base_dir, output_dir, chapter);
-                    pb.set_message(page.output.display().to_string());
-                    pb.inc(1);
-                    (key, result)
-                })
-            })
-            .collect();
-        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    let pass1 = render_parallel(pages, quiet, |page| {
+        let key = page.source.display().to_string();
+        let chapter = chapter_map.get(&key).copied();
+        crate::paths::set_active_target(target_owned.as_deref());
+        crate::paths::set_project_root(Some(base_dir));
+        let result = render_one_document_pass1(page, &overrides, base_dir, output_dir, chapter);
+        (key, result)
     });
-    pb.finish_and_clear();
 
     // Collect pass 1 results
     let mut pass1_results: HashMap<String, Pass1Result> = HashMap::new();
@@ -405,6 +346,55 @@ fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usi
     // Pages not in [[contents]] won't be in chapter_map (chapter_number = None).
 
     chapter_map
+}
+
+/// Create a progress bar for rendering a set of pages.
+fn create_progress_bar(total: u64, quiet: bool) -> Arc<ProgressBar> {
+    let pb = if quiet {
+        ProgressBar::hidden()
+    } else {
+        let pb = ProgressBar::new(total);
+        pb.set_style(ProgressStyle::default_bar()
+            .template("  [{bar:30}] {pos}/{len} {msg}")
+            .unwrap()
+            .progress_chars("=> "));
+        pb
+    };
+    Arc::new(pb)
+}
+
+/// Render pages in parallel using thread::scope, with a shared progress bar.
+///
+/// The closure `render_fn` receives a `&DocumentInfo` and returns `(key, Result<T>)`.
+/// It is called inside a spawned thread for each page.
+fn render_parallel<T, F>(
+    pages: &[DocumentInfo],
+    quiet: bool,
+    render_fn: F,
+) -> Vec<(String, Result<T>)>
+where
+    T: Send,
+    F: Fn(&DocumentInfo) -> (String, Result<T>) + Sync,
+{
+    let pb = create_progress_bar(pages.len() as u64, quiet);
+    let results = std::thread::scope(|s| {
+        let handles: Vec<_> = pages
+            .iter()
+            .map(|page| {
+                let pb = Arc::clone(&pb);
+                let render_fn = &render_fn;
+                s.spawn(move || {
+                    let result = render_fn(page);
+                    pb.set_message(page.output.display().to_string());
+                    pb.inc(1);
+                    result
+                })
+            })
+            .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    pb.finish_and_clear();
+    results
 }
 
 pub fn build_overrides(meta: &crate::config::Metadata, target: Option<&config::Target>) -> Vec<String> {
