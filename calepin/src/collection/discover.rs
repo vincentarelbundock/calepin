@@ -64,7 +64,7 @@ pub struct DocumentInfo {
 /// and files inside `_calepin/` or the output directory.
 pub fn discover_documents(config: &Metadata, base_dir: &Path, output_ext: &str) -> Result<Vec<DocumentInfo>> {
     let default_lang = config.default_language().map(|s| s.to_string());
-    let output_name = config.output.as_deref().unwrap_or("output");
+    let output_name = config.output.as_deref().unwrap_or(crate::paths::DEFAULT_OUTPUT_DIR);
     let mut seen = std::collections::HashSet::new();
     let mut pages = Vec::new();
 

@@ -22,10 +22,8 @@ pub fn run_collection(
     let cwd = std::env::current_dir()?;
     let base_dir = crate::paths::resolve_project_root(&config_abs, &cwd);
 
-    // Read output dir from config (defaults to "output")
     let meta = crate::config::load_project_metadata(&config_abs)?;
-    let output_name = meta.output.as_deref().unwrap_or("output");
-    let output = base_dir.join(output_name);
+    let output = crate::paths::output_dir(&base_dir, meta.output.as_deref());
 
     let version = Arc::new(AtomicU64::new(1));
 
@@ -45,7 +43,7 @@ pub fn run_collection(
     spinner.finish_and_clear();
     crate::collection::build_collection(
         Some(config_path),
-        &std::path::PathBuf::from(output_name),
+        &output,
         true,
         false,
         args.format.as_deref(),
@@ -83,7 +81,6 @@ pub fn run_collection(
     let config_path = config_path.to_path_buf();
     let target = args.format.clone();
     let quiet = args.quiet;
-    let output_name = output_name.to_string();
     watcher::watch_dir(&watch_dir, Arc::clone(&stop), Some(output.as_path()), |changed_paths| {
         let names: Vec<_> = changed_paths.iter()
             .filter_map(|p| p.file_name())
@@ -93,7 +90,7 @@ pub fn run_collection(
         let start = std::time::Instant::now();
         let result = crate::collection::build_collection(
             Some(config_path.as_path()),
-            &std::path::PathBuf::from(&output_name),
+            &output,
             false,
             true,
             target.as_deref(),

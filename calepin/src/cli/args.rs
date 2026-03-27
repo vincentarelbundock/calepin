@@ -309,7 +309,7 @@ pub fn is_collection_config(path: &std::path::Path) -> bool {
 /// Find the project config file in a directory.
 /// Checks `_calepin/config.toml`.
 pub fn find_project_config(dir: &std::path::Path) -> Option<std::path::PathBuf> {
-    let path = dir.join("_calepin").join("config.toml");
+    let path = crate::paths::calepin_dir(dir, &[]).join("config.toml");
     if path.exists() { Some(path) } else { None }
 }
 

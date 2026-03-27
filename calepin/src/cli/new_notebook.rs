@@ -35,9 +35,11 @@ pub fn handle_new_notebook(path: &Path) -> Result<()> {
     std::fs::write(&path, template)?;
 
     // Create the sidecar directory with default config
-    let stem = path.file_stem().unwrap().to_string_lossy();
-    let sidecar = path.parent().unwrap_or(Path::new(".")).join(format!("{}_calepin", stem));
-    paths::create_sidecar(&sidecar);
+    let sidecar = paths::resolve_sidecar_dir(&path)
+        .unwrap_or_else(|| {
+            let stem = path.file_stem().unwrap().to_string_lossy();
+            path.parent().unwrap_or(Path::new(".")).join(format!("{}_calepin", stem))
+        });
 
     eprintln!("Created {}", path.display());
     eprintln!("Created {}/config.toml", sidecar.display());

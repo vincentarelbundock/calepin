@@ -27,7 +27,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                         if !args.quiet {
                             eprintln!("Found collection config: {}", config.display());
                         }
-                        let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
+                        let output = args.output.unwrap_or_else(|| std::path::PathBuf::from(crate::paths::DEFAULT_OUTPUT_DIR));
                         return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
                     }
                     ProjectKind::Document { qmd, .. } => {

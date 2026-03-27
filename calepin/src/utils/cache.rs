@@ -21,7 +21,7 @@ const AUX_EXTENSIONS: &[&str] = &["css", "js", "html", "tex", "md", "typ"];
 pub fn collect_auxiliary_bytes(base_dir: &Path) -> Vec<u8> {
     let mut buf = Vec::new();
     collect_from_dir(&mut buf, base_dir);
-    let calepin_dir = base_dir.join("_calepin");
+    let calepin_dir = crate::paths::calepin_dir(base_dir, &[]);
     if calepin_dir.is_dir() {
         collect_from_dir(&mut buf, &calepin_dir);
     }

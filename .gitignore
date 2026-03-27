@@ -48,6 +48,6 @@ bench_results
 q2
 _calepin_files/
 _calepin_cache/
-output/
+_calepin_output/
 _site/
 *.tar.gz

@@ -88,7 +88,6 @@ pub fn render_core(
     let path_ctx = paths::PathContext::new(input, output_path, project_root_override);
     let input_name = input.file_name().unwrap_or_default().to_string_lossy();
     paths::validate_paths(&metadata, &path_ctx, &input_name)?;
-    path_ctx.print_root_diagnostic(input);
 
     // 3. Build format pipeline from target or engine name
     let format_str = format

@@ -97,7 +97,7 @@ impl ProjectKind {
 
         // Case 3: directory
         if path.is_dir() {
-            let config = path.join("_calepin").join("config.toml");
+            let config = calepin_dir(&path, &[]).join("config.toml");
             if config.exists() {
                 return Ok(ProjectKind::Collection {
                     root: path.to_path_buf(),
@@ -121,17 +121,6 @@ impl ProjectKind {
         }
     }
 
-    /// The directory where partials should be written/read.
-    #[allow(dead_code)]
-    pub fn partials_dir(&self) -> PathBuf {
-        self.calepin_dir().join("partials")
-    }
-
-    /// The directory where assets should be written/read.
-    #[allow(dead_code)]
-    pub fn assets_dir(&self) -> PathBuf {
-        self.calepin_dir().join("assets")
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -222,15 +211,14 @@ pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
 pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     let stem = input.file_stem()?.to_string_lossy();
     let sidecar_name = format!("{}_calepin", stem);
+    let project_root = get_project_root_if_set();
 
-    let dir = if let Some(root) = get_project_root_if_set() {
+    let dir = if let Some(ref root) = project_root {
         // Preserve subdirectory structure relative to project root
-        let abs_input = if input.is_relative() {
-            std::env::current_dir().unwrap_or_default().join(input)
-        } else {
-            input.to_path_buf()
-        };
-        let relative = abs_input.strip_prefix(&root).unwrap_or(&abs_input);
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let abs_input = if input.is_relative() { cwd.join(input) } else { input.to_path_buf() };
+        let abs_root = if root.is_relative() { cwd.join(root) } else { root.clone() };
+        let relative = abs_input.strip_prefix(&abs_root).unwrap_or(&abs_input);
         let relative_parent = relative.parent().unwrap_or(Path::new(""));
         root.join("_calepin").join(relative_parent).join(&sidecar_name)
     } else {
@@ -238,7 +226,7 @@ pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     };
 
     if !dir.is_dir() {
-        if get_project_root_if_set().is_some() {
+        if project_root.is_some() {
             // Collection mode: just create the directory, no config.toml or partials
             std::fs::create_dir_all(&dir).ok();
         } else {
@@ -319,43 +307,31 @@ impl PathContext {
     /// Construct a PathContext, with optional project root override.
     /// In document mode (no override), project_root = input's parent directory.
     pub fn new(input: &Path, output_path: &Path, project_root_override: Option<&Path>) -> Self {
-        if let Some(root) = project_root_override {
-            Self {
-                project_root: root.to_path_buf(),
-                output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
-            }
-        } else {
-            Self::for_document(input, output_path)
-        }
-    }
-
-    /// Build a PathContext for a document render (no project root override).
-    pub fn for_document(input: &Path, output: &Path) -> Self {
-        let project_root = input.parent().unwrap_or(Path::new(".")).to_path_buf();
-        let output_dir = output.parent().unwrap_or(Path::new(".")).to_path_buf();
+        let project_root = project_root_override
+            .map(|r| r.to_path_buf())
+            .unwrap_or_else(|| input.parent().unwrap_or(Path::new(".")).to_path_buf());
+        let output_dir = output_path.parent().unwrap_or(Path::new(".")).to_path_buf();
         Self { project_root, output_dir }
     }
 
-    /// Resolve the figure output directory for a given document stem.
-    /// If a document sidecar exists, files go directly in `{stem}_calepin/files/`.
-    /// Otherwise, they go in `_calepin/files/{stem}/` (namespaced by stem).
-    pub fn figures_dir(&self, stem: &str) -> PathBuf {
+    /// Resolve a subdirectory, checking the sidecar first then falling back
+    /// to `_calepin/{subdir}/{stem}/` under `fallback_root`.
+    fn sidecar_or_project_subdir(subdir: &str, stem: &str, fallback_root: &Path) -> PathBuf {
         if let Some(sidecar) = get_sidecar_root() {
-            sidecar.join("files")
+            sidecar.join(subdir)
         } else {
-            calepin_dir(&self.output_dir, &["files", stem])
+            calepin_dir(fallback_root, &[subdir, stem])
         }
     }
 
+    /// Resolve the figure output directory for a given document stem.
+    pub fn figures_dir(&self, stem: &str) -> PathBuf {
+        Self::sidecar_or_project_subdir("files", stem, &self.output_dir)
+    }
+
     /// Resolve the cache directory for a given document stem.
-    /// If a document sidecar exists, cache goes directly in `{stem}_calepin/cache/`.
-    /// Otherwise, it goes in `_calepin/cache/{stem}/` (namespaced by stem).
     pub fn cache_dir(&self, stem: &str) -> PathBuf {
-        if let Some(sidecar) = get_sidecar_root() {
-            sidecar.join("cache")
-        } else {
-            calepin_dir(&self.project_root, &["cache", stem])
-        }
+        Self::sidecar_or_project_subdir("cache", stem, &self.project_root)
     }
 
     /// Compute a relative stem from input path, for use as cache/figure key.
@@ -373,17 +349,6 @@ impl PathContext {
     pub fn code_working_dir(input: &Path) -> Option<&Path> {
         input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) })
     }
-
-    /// Print a diagnostic showing the effective project root.
-    /// Only prints when the root differs from the input's parent directory
-    /// (i.e., in collection builds or when a project root override is active).
-    pub fn print_root_diagnostic(&self, input: &Path) {
-        if crate::cli::is_quiet() { return; }
-        let input_dir = input.parent().unwrap_or(Path::new("."));
-        let root = if self.project_root.as_os_str().is_empty() { Path::new(".") } else { &self.project_root };
-        let idir = if input_dir.as_os_str().is_empty() { Path::new(".") } else { input_dir };
-        let _ = (root, idir); // suppress verbose diagnostic
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +365,22 @@ pub fn calepin_dir(project_root: &Path, segments: &[&str]) -> PathBuf {
         p = p.join(s);
     }
     p
+}
+
+/// Default output directory name for collection builds.
+pub const DEFAULT_OUTPUT_DIR: &str = "_calepin_output";
+
+/// Resolve the output directory for a collection build.
+/// Uses the config `output` field if set, otherwise `DEFAULT_OUTPUT_DIR`.
+/// The result is always absolute (joined to `project_root`).
+pub fn output_dir(project_root: &Path, config_output: Option<&str>) -> PathBuf {
+    let name = config_output.unwrap_or(DEFAULT_OUTPUT_DIR);
+    let p = PathBuf::from(name);
+    if p.is_absolute() {
+        p
+    } else {
+        project_root.join(name)
+    }
 }
 
 /// `{root}/_calepin/partials`
@@ -564,7 +545,7 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
         }
         let found = resolve_module_dir(plugin, &ctx.project_root).is_some();
         if !found {
-            let local_path = ctx.project_root.join("_calepin/modules").join(plugin).join("module.toml");
+            let local_path = calepin_dir(&ctx.project_root, &["modules", plugin]).join("module.toml");
             errors.push(format!(
                 "  calepin.plugins: {}\n    -> not found: {}",
                 plugin,

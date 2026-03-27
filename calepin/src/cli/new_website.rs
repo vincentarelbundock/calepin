@@ -18,7 +18,7 @@ pub fn handle_new_website(dir: &Path) -> Result<()> {
     crate::paths::write_embedded_dir(&SCAFFOLD, dir);
 
     // Compose config.toml: scaffold project config + shared defaults + collection defaults
-    let calepin_dir = dir.join("_calepin");
+    let calepin_dir = crate::paths::calepin_dir(dir, &[]);
     let project_config = SCAFFOLD.get_file("_calepin/config.toml")
         .and_then(|f| f.contents_utf8())
         .unwrap_or("");

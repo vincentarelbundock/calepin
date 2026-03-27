@@ -28,7 +28,7 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
             target.writer == "html"
         };
         if !is_html {
-            let output = PathBuf::from("output");
+            let output = PathBuf::from(crate::paths::DEFAULT_OUTPUT_DIR);
             crate::collection::build_collection(Some(args.input.as_path()), &output, true, false, args.format.as_deref())?;
             let pdf = output.join("book.pdf");
             if pdf.exists() {

@@ -69,7 +69,7 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
                             }
                         }
                     }
-                } else if name_str != "." && name_str != ".." && name_str != ".git" && name_str != "node_modules" && name_str != "output" {
+                } else if name_str != "." && name_str != ".." && name_str != ".git" && name_str != "node_modules" && name_str != crate::paths::DEFAULT_OUTPUT_DIR {
                     find_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation, stem_filter);
                 }
             } else if p.is_file() {
