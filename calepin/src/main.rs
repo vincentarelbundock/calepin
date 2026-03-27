@@ -1,5 +1,6 @@
 #[macro_use]
 mod cli;
+mod man;
 mod types;
 mod config;
 mod emit;
@@ -89,8 +90,17 @@ fn main() -> Result<()> {
             }
         },
         Command::Man { action } => match action {
-            cli::ManAction::R { package, output, quiet } => cli::man::handle_man_r(&package, &output, quiet),
-            cli::ManAction::Python { package, output, quiet } => cli::man::handle_man_python(&package, &output, quiet),
+            cli::ManAction::R { package, output, quiet } => man::handle_man_r(&package, &output, quiet),
+            cli::ManAction::Python { package, output, quiet, style, exports_only, imports, include_tests, include_private } => {
+                let opts = man::python::ManPythonOptions {
+                    style: Some(&style),
+                    exports_only,
+                    include_imports: imports,
+                    include_tests,
+                    include_private,
+                };
+                man::handle_man_python(&package, &output, quiet, opts)
+            }
         },
         Command::Info { action } => cli::info::handle_info(action),
     }

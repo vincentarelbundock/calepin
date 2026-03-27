@@ -140,9 +140,8 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
    ================================================================= */
 
 /* --- Heading hierarchy --- */
-article h1, article h2 { font-variant: small-caps; }
 article h3 { font-style: italic; }
-article h1 ~ h2, article h1 ~ * h2 { font-variant: normal; font-style: italic; }
+article h1 ~ h2, article h1 ~ * h2 { font-style: italic; }
 
 /* --- Code chunk accents --- */
 pre:has(> code.code),
@@ -356,6 +355,29 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; 
 
 .navbar-toggle { display: none; }
 
+.navbar-dropdown { position: relative; }
+.navbar-dropdown-toggle {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.4rem 0.6rem; color: var(--c-text-secondary);
+  border-radius: 6px; font-size: 0.9rem; white-space: nowrap;
+  background: none; border: none; cursor: pointer;
+}
+.navbar-dropdown-toggle:hover { color: var(--c-text); background: color-mix(in srgb, var(--c-bg) 85%, var(--c-text) 5%); }
+.navbar-dropdown-toggle svg { flex-shrink: 0; transition: transform 0.15s; }
+.navbar-dropdown.open > .navbar-dropdown-toggle svg { transform: rotate(90deg); }
+.navbar-dropdown-menu {
+  display: none; position: absolute; top: 100%; left: 0; z-index: 1000;
+  min-width: 10rem; padding: 0.35rem 0; margin: 0.25rem 0 0;
+  list-style: none; background: var(--c-bg); border: 1px solid var(--c-border);
+  border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.navbar-dropdown.open > .navbar-dropdown-menu { display: block; }
+.navbar-dropdown-menu li a {
+  display: block; padding: 0.4rem 0.75rem; color: var(--c-text-secondary);
+  font-size: 0.875rem; white-space: nowrap;
+}
+.navbar-dropdown-menu li a:hover { color: var(--c-text); background: color-mix(in srgb, var(--c-bg) 90%, var(--c-text) 5%); text-decoration: none; }
+
 /* --- Site layout: sidebar + content + TOC --- */
 .site-container {
   display: flex; margin-top: var(--c-navbar-height);
@@ -392,7 +414,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: 0.75em; 
 .sidebar-section > .sidebar-children { padding-left: 0.5rem; }
 
 .sidebar-section-title {
-  font-weight: 700; font-size: 0.8rem; text-transform: uppercase;
+  font-weight: 700; font-size: 0.8rem;
   letter-spacing: 0.05em; color: var(--c-text-muted);
   padding: 0.75rem 0.75rem 0.35rem; margin-top: 0.5rem;
   cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.3rem;

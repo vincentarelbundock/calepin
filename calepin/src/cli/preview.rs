@@ -8,9 +8,14 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
     // Directory: check for project config inside, otherwise serve statically
     if args.input.is_dir() {
         if let Some(config) = crate::cli::find_project_config(&args.input) {
+            eprintln!(
+                "Found collection config: {}",
+                config.display()
+            );
             let args = PreviewArgs { input: config, ..args };
             return handle_preview(args);
         }
+        eprintln!("Serving static files from: {}", args.input.display());
         return crate::collection::serve(&args.input, args.port);
     }
     // Project manifest: build, serve with live-reload, and watch for changes

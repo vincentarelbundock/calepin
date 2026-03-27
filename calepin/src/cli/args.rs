@@ -228,6 +228,26 @@ pub enum ManAction {
         /// Quiet mode
         #[arg(short, long)]
         quiet: bool,
+
+        /// Docstring style: google, numpy, sphinx, markdown, or auto (default: auto)
+        #[arg(long, default_value = "auto")]
+        style: String,
+
+        /// Only include names exported in __all__
+        #[arg(long, name = "all")]
+        exports_only: bool,
+
+        /// Also include names re-exported via __init__.py imports
+        #[arg(long)]
+        imports: bool,
+
+        /// Include test modules and directories
+        #[arg(long)]
+        include_tests: bool,
+
+        /// Include private (_-prefixed) modules and directories
+        #[arg(long)]
+        include_private: bool,
     },
 }
 

@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
+use serde::Deserialize;
 
 use super::targets::resolve_inheritance;
 
@@ -25,31 +26,245 @@ pub struct LanguageConfig {
     pub icon: Option<String>,
 }
 
-/// A section in the `[[contents]]` array of tables.
-#[derive(Debug, Clone, Default, serde::Deserialize)]
+/// A navigation/content item used by both `[[contents]]` (sidebar) and
+/// `[[navbar.*]]` (navbar).
+///
+/// # TOML syntax
+///
+/// ```toml
+/// [[contents]]
+/// text = "Python API"
+/// href = "man/python/index.qmd"
+/// include = "man/python"              # directory -> recursive nested sections
+///
+/// [[contents]]
+/// include = ["intro.qmd", "cli.qmd"]  # explicit flat pages
+///
+/// [[contents]]
+/// text = "Guides"
+/// include = [
+///   "guides/install.qmd",
+///   {text = "Config", href = "guides/config.qmd", icon = "settings"},
+/// ]
+/// exclude = ["**/draft_*.qmd"]
+/// ```
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct ContentSection {
-    /// Section title (displayed in nav). None for top-level ungrouped pages.
+    /// Display text (section header, navbar label).
     #[serde(default)]
-    pub title: Option<String>,
-    /// Pages in this section: bare path strings or `{title, page}` tables.
+    pub text: Option<String>,
+
+    /// Link target (clickable section header, navbar link).
     #[serde(default)]
-    pub pages: Vec<DocumentEntry>,
-    /// The section's own page (clickable section header in nav).
+    pub href: Option<String>,
+
+    /// Icon name (navbar items).
     #[serde(default)]
-    pub index: Option<String>,
-    /// Language code for this section.
+    pub icon: Option<String>,
+
+    /// Image path (navbar logo).
     #[serde(default)]
-    pub lang: Option<String>,
-    /// Auto-discover directory: recursively create nested sections from subdirectories.
+    pub image: Option<String>,
+
+    /// Dark-mode image path (navbar logo).
     #[serde(default)]
-    pub auto: Option<String>,
-    /// Glob patterns to exclude from auto-discovery.
+    pub image_dark: Option<String>,
+
+    /// Children: paths, globs, directory, or items with metadata.
+    ///
+    /// Accepts:
+    /// - A single string: directory path (recursive nested sections) or glob
+    /// - A list of strings and/or `{text, href, icon}` tables
+    #[serde(default, deserialize_with = "deserialize_include")]
+    pub include: Vec<IncludeEntry>,
+
+    /// Glob patterns to exclude (applied after include).
     #[serde(default)]
     pub exclude: Vec<String>,
+
+    /// Nested children (for navbar dropdowns with inline items).
+    #[serde(default)]
+    pub children: Vec<ContentSection>,
+
+    /// Language code for this section (sidebar only).
+    #[serde(default)]
+    pub lang: Option<String>,
+
+    /// Standalone section (rendered but not in navigation).
+    #[serde(default)]
+    pub standalone: bool,
+
+    // --- Backwards-compatible aliases (deprecated) ---
+
+    /// Alias for `text` (deprecated, use `text`).
+    #[serde(default)]
+    pub title: Option<String>,
+
+    /// Alias for `href` (deprecated, use `href`).
+    #[serde(default)]
+    pub index: Option<String>,
+
+    /// Alias for `include` with explicit paths (deprecated, use `include`).
+    #[serde(default)]
+    pub pages: Vec<DocumentEntry>,
+
+    /// Alias for `include` with a directory (deprecated, use `include`).
+    #[serde(default)]
+    pub dir: Option<String>,
+}
+
+impl ContentSection {
+    /// Resolved display text: `text` field, falling back to `title` alias.
+    pub fn display_text(&self) -> Option<&str> {
+        self.text.as_deref().or(self.title.as_deref())
+    }
+
+    /// Resolved href: `href` field, falling back to `index` alias.
+    pub fn display_href(&self) -> Option<&str> {
+        self.href.as_deref().or(self.index.as_deref())
+    }
+
+    /// Collect all include entries, merging `include`, `pages`, `dir`, and
+    /// `children` aliases into a single list.
+    pub fn resolved_include(&self) -> Vec<IncludeEntry> {
+        let mut result = self.include.clone();
+
+        // Merge `pages` (deprecated alias)
+        for entry in &self.pages {
+            match entry {
+                DocumentEntry::Path(p) => result.push(IncludeEntry::Path(p.clone())),
+                DocumentEntry::Named { title, page } => {
+                    result.push(IncludeEntry::Item {
+                        text: Some(title.clone()),
+                        href: Some(page.clone()),
+                        icon: None,
+                        image: None,
+                        image_dark: None,
+                    });
+                }
+            }
+        }
+
+        // Merge `dir` (deprecated alias)
+        if let Some(ref dir) = self.dir {
+            result.push(IncludeEntry::Path(dir.clone()));
+        }
+
+        result
+    }
+}
+
+/// An entry in the `include` field: either a path/glob string or a table
+/// with metadata.
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(untagged)]
+pub enum IncludeEntry {
+    /// A path string (file, glob, or directory).
+    Path(String),
+    /// An item with metadata.
+    Item {
+        text: Option<String>,
+        href: Option<String>,
+        icon: Option<String>,
+        image: Option<String>,
+        image_dark: Option<String>,
+    },
+}
+
+impl<'de> serde::Deserialize<'de> for IncludeEntry {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de;
+
+        struct IncludeEntryVisitor;
+
+        impl<'de> de::Visitor<'de> for IncludeEntryVisitor {
+            type Value = IncludeEntry;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a string path/glob or a table with text/href/icon fields")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> std::result::Result<IncludeEntry, E> {
+                Ok(IncludeEntry::Path(v.to_string()))
+            }
+
+            fn visit_string<E: de::Error>(self, v: String) -> std::result::Result<IncludeEntry, E> {
+                Ok(IncludeEntry::Path(v))
+            }
+
+            fn visit_map<M>(self, map: M) -> std::result::Result<IncludeEntry, M::Error>
+            where
+                M: de::MapAccess<'de>,
+            {
+                #[derive(serde::Deserialize)]
+                struct ItemFields {
+                    text: Option<String>,
+                    href: Option<String>,
+                    // Accept `page` as alias for `href`
+                    page: Option<String>,
+                    icon: Option<String>,
+                    image: Option<String>,
+                    image_dark: Option<String>,
+                    // Accept `title` as alias for `text`
+                    title: Option<String>,
+                }
+
+                let fields = ItemFields::deserialize(de::value::MapAccessDeserializer::new(map))?;
+                Ok(IncludeEntry::Item {
+                    text: fields.text.or(fields.title),
+                    href: fields.href.or(fields.page),
+                    icon: fields.icon,
+                    image: fields.image,
+                    image_dark: fields.image_dark,
+                })
+            }
+        }
+
+        deserializer.deserialize_any(IncludeEntryVisitor)
+    }
+}
+
+/// Custom deserializer for `include`: accepts a single string or a list.
+fn deserialize_include<'de, D>(deserializer: D) -> std::result::Result<Vec<IncludeEntry>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de;
+
+    struct IncludeVisitor;
+
+    impl<'de> de::Visitor<'de> for IncludeVisitor {
+        type Value = Vec<IncludeEntry>;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("a string, or a list of strings and/or tables")
+        }
+
+        fn visit_str<E: de::Error>(self, v: &str) -> std::result::Result<Vec<IncludeEntry>, E> {
+            Ok(vec![IncludeEntry::Path(v.to_string())])
+        }
+
+        fn visit_string<E: de::Error>(self, v: String) -> std::result::Result<Vec<IncludeEntry>, E> {
+            Ok(vec![IncludeEntry::Path(v)])
+        }
+
+        fn visit_seq<S>(self, seq: S) -> std::result::Result<Vec<IncludeEntry>, S::Error>
+        where
+            S: de::SeqAccess<'de>,
+        {
+            Vec::<IncludeEntry>::deserialize(de::value::SeqAccessDeserializer::new(seq))
+        }
+    }
+
+    deserializer.deserialize_any(IncludeVisitor)
 }
 
 /// A single document entry: either a bare path string or a `{title, page}` table.
-#[derive(Debug, Clone, serde::Deserialize)]
+/// Kept for backwards compatibility with `pages` field.
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(untagged)]
 pub enum DocumentEntry {
     /// Bare string path (possibly a glob).
@@ -77,27 +292,16 @@ impl DocumentEntry {
     }
 }
 
-/// A single item in a navbar position (left, middle, or right).
-#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
-pub struct NavbarItem {
-    pub text: Option<String>,
-    pub href: Option<String>,
-    pub icon: Option<String>,
-    pub image: Option<String>,
-    pub image_dark: Option<String>,
-    #[serde(default)]
-    pub children: Vec<NavbarItem>,
-}
-
-/// Navbar configuration with three positional slots.
+/// Navbar configuration uses the same `ContentSection` type for items.
+/// The three positions (left, middle, right) each contain a list of items.
 #[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct NavbarConfig {
     #[serde(default)]
-    pub left: Vec<NavbarItem>,
+    pub left: Vec<ContentSection>,
     #[serde(default)]
-    pub middle: Vec<NavbarItem>,
+    pub middle: Vec<ContentSection>,
     #[serde(default)]
-    pub right: Vec<NavbarItem>,
+    pub right: Vec<ContentSection>,
 }
 
 /// A post-processing command run after the site build completes.
@@ -357,7 +561,29 @@ writer = "html"
     }
 
     #[test]
-    fn test_contents_parsing() {
+    fn test_contents_new_syntax() {
+        let meta = parse_toml(r#"
+[[contents]]
+include = ["install.qmd", "cli.qmd"]
+
+[[contents]]
+text = "Guide"
+href = "guide/index.qmd"
+include = [
+  "guide/basics.qmd",
+  {text = "Figures & Images", href = "guide/figures.qmd"},
+]
+"#);
+        assert_eq!(meta.contents.len(), 2);
+        assert!(meta.contents[0].display_text().is_none());
+        assert_eq!(meta.contents[0].resolved_include().len(), 2);
+        assert_eq!(meta.contents[1].display_text(), Some("Guide"));
+        assert_eq!(meta.contents[1].display_href(), Some("guide/index.qmd"));
+        assert_eq!(meta.contents[1].resolved_include().len(), 2);
+    }
+
+    #[test]
+    fn test_contents_backwards_compat() {
         let meta = parse_toml(r#"
 [[contents]]
 pages = ["install.qmd", "cli.qmd"]
@@ -371,13 +597,26 @@ pages = [
 ]
 "#);
         assert_eq!(meta.contents.len(), 2);
-        assert!(meta.contents[0].title.is_none());
-        assert_eq!(meta.contents[0].pages.len(), 2);
-        assert_eq!(meta.contents[1].title.as_deref(), Some("Guide"));
-        assert_eq!(meta.contents[1].index.as_deref(), Some("guide/index.qmd"));
-        assert_eq!(meta.contents[1].pages.len(), 2);
-        assert_eq!(meta.contents[1].pages[1].title(), Some("Figures & Images"));
-        assert_eq!(meta.contents[1].pages[1].path(), "guide/figures.qmd");
+        assert!(meta.contents[0].display_text().is_none());
+        assert_eq!(meta.contents[0].resolved_include().len(), 2);
+        assert_eq!(meta.contents[1].display_text(), Some("Guide"));
+        assert_eq!(meta.contents[1].display_href(), Some("guide/index.qmd"));
+        let includes = meta.contents[1].resolved_include();
+        assert_eq!(includes.len(), 2);
+    }
+
+    #[test]
+    fn test_include_single_string() {
+        let meta = parse_toml(r#"
+[[contents]]
+text = "API"
+include = "man/python"
+"#);
+        assert_eq!(meta.contents[0].include.len(), 1);
+        match &meta.contents[0].include[0] {
+            IncludeEntry::Path(p) => assert_eq!(p, "man/python"),
+            _ => panic!("expected Path"),
+        }
     }
 
     #[test]
@@ -435,7 +674,6 @@ abstract_title = "Summary"
         assert_eq!(meta.video.as_ref().and_then(|v| v.width.as_deref()), Some("80%"));
         assert_eq!(meta.lipsum.as_ref().and_then(|l| l.paragraphs), Some(3));
         assert_eq!(meta.labels.as_ref().and_then(|l| l.abstract_title.as_deref()), Some("Summary"));
-        // lang and csl also appear on metadata directly
         assert_eq!(meta.lang.as_deref(), Some("en"));
         assert_eq!(meta.csl.as_deref(), Some("apa"));
     }

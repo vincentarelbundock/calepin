@@ -24,31 +24,33 @@
   </div>
   {% endif %}
   <nav>
-    {% for node in collection.pages %}
+    {% for node in collection.pages recursive %}
       {% if node.children | length > 0 %}
-        <details class="sidebar-section" name="sidebar-nav"{% if node.active %} open{% endif %}>
+        {% if loop.depth0 == 0 %}
+        <details class="sidebar-section" name="sidebar-nav"{% if var.sidebar_collapse_level >= loop.depth or node.active %} open{% endif %}>
           <summary class="sidebar-section-title">{{ node.text }}</summary>
           <ul class="sidebar-children">
-            {% for child in node.children recursive %}
-              {% if child.children | length > 0 %}
-                <li>
-                  <details class="sidebar-section"{% if child.active %} open{% endif %}>
-                    <summary class="sidebar-section-title sidebar-section-nested">{{ child.text }}</summary>
-                    <ul class="sidebar-children">
-                      {{ loop(child.children) }}
-                    </ul>
-                  </details>
-                </li>
-              {% else %}
-                <li><a href="{{ child.href | default(value='#') }}"{% if child.active and child.href %} class="active" aria-current="page"{% endif %}>{{ child.text }}</a></li>
-              {% endif %}
-            {% endfor %}
+            {{ loop(node.children) }}
           </ul>
         </details>
+        {% else %}
+        <li>
+          <details class="sidebar-section"{% if var.sidebar_collapse_level >= loop.depth or node.active %} open{% endif %}>
+            <summary class="sidebar-section-title sidebar-section-nested">{{ node.text }}</summary>
+            <ul class="sidebar-children">
+              {{ loop(node.children) }}
+            </ul>
+          </details>
+        </li>
+        {% endif %}
       {% else %}
+        {% if loop.depth0 == 0 %}
         <ul>
           <li><a href="{{ node.href | default(value='#') }}"{% if node.active and node.href %} class="active" aria-current="page"{% endif %}>{{ node.text }}</a></li>
         </ul>
+        {% else %}
+        <li><a href="{{ node.href | default(value='#') }}"{% if node.active and node.href %} class="active" aria-current="page"{% endif %}>{{ node.text }}</a></li>
+        {% endif %}
       {% endif %}
     {% endfor %}
   </nav>

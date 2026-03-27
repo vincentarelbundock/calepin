@@ -230,30 +230,26 @@ pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(Metad
     )
 }
 
-/// Collect .qmd page paths listed in [[contents]], expanding globs and auto directories.
+/// Collect .qmd page paths listed in [[contents]], expanding globs.
 /// These are the pages that appear in navigation (sidebar, prev/next).
 pub fn collect_document_paths(meta: &Metadata, base_dir: &Path) -> Vec<String> {
-    let nodes = super::contents::expand_contents(&meta.contents, base_dir);
-    collect_paths_from_nodes(&nodes)
-}
-
-/// Recursively collect all document paths from a `DocumentNode` tree.
-fn collect_paths_from_nodes(nodes: &[super::contents::DocumentNode]) -> Vec<String> {
     let mut paths = Vec::new();
-    for node in nodes {
-        match node {
-            super::contents::DocumentNode::Document { path, .. } => {
-                if path.ends_with(".qmd") {
-                    paths.push(path.clone());
-                }
+    for section in &meta.contents {
+        if let Some(href) = section.display_href() {
+            if href.ends_with(".qmd") {
+                paths.push(href.to_string());
             }
-            super::contents::DocumentNode::Section { index, documents, .. } => {
-                if let Some(idx) = index {
-                    if idx.ends_with(".qmd") {
-                        paths.push(idx.clone());
-                    }
+        }
+        for entry in &section.resolved_include() {
+            let entry_path = match entry {
+                crate::config::IncludeEntry::Path(p) => p.as_str(),
+                crate::config::IncludeEntry::Item { href: Some(h), .. } => h.as_str(),
+                _ => continue,
+            };
+            for path in super::contents::expand_glob(entry_path, base_dir) {
+                if path.ends_with(".qmd") {
+                    paths.push(path);
                 }
-                paths.extend(collect_paths_from_nodes(documents));
             }
         }
     }

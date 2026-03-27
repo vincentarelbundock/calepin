@@ -142,6 +142,32 @@ pub trait FormatEmitter {
     // -- Links & images --
     fn link_open(&self, url: &str) -> String;
     fn link_close(&self, url: &str) -> String;
+
+    /// Rewrite `.qmd` links to `.html` for HTML output.
+    /// Only rewrites local relative links (no scheme, no fragment-only).
+    fn resolve_qmd_link<'u>(&self, url: &'u str) -> std::borrow::Cow<'u, str> {
+        if self.format_name() != "html" {
+            return std::borrow::Cow::Borrowed(url);
+        }
+        if url.contains("://") || url.starts_with('#') {
+            return std::borrow::Cow::Borrowed(url);
+        }
+        // Split off fragment (e.g. "page.qmd#section")
+        let (path, fragment) = match url.split_once('#') {
+            Some((p, f)) => (p, Some(f)),
+            None => (url, None),
+        };
+        if let Some(stem) = path.strip_suffix(".qmd") {
+            let mut resolved = format!("{}.html", stem);
+            if let Some(frag) = fragment {
+                resolved.push('#');
+                resolved.push_str(frag);
+            }
+            std::borrow::Cow::Owned(resolved)
+        } else {
+            std::borrow::Cow::Borrowed(url)
+        }
+    }
     fn image(&self, url: &str, alt: &str, attrs: &ImageAttrs) -> String;
 
     // -- Table --

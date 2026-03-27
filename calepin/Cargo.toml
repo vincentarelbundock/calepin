@@ -26,6 +26,11 @@ syntect = "5"
 # Regex for chunk parsing
 regex = "1"
 
+# Python AST parsing (for man python)
+ruff_python_parser = { git = "https://github.com/astral-sh/ruff", tag = "0.11.6" }
+ruff_python_ast = { git = "https://github.com/astral-sh/ruff", tag = "0.11.6" }
+ruff_text_size = { git = "https://github.com/astral-sh/ruff", tag = "0.11.6" }
+
 # Temp files for R code/plots
 tempfile = "3"
 

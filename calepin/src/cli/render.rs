@@ -17,6 +17,9 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
     // Directory: look for project config inside
     if args.input.len() == 1 && args.input[0].is_dir() {
         if let Some(config) = crate::cli::find_project_config(&args.input[0]) {
+            if !args.quiet {
+                eprintln!("Found collection config: {}", config.display());
+            }
             let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
             return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
         }

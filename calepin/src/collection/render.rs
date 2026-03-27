@@ -323,18 +323,22 @@ fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usi
 
     for section in &meta.contents {
         // Section index page gets its own chapter number
-        if let Some(ref idx) = section.index {
-            if idx.ends_with(".qmd") {
+        if let Some(href) = section.display_href() {
+            if href.ends_with(".qmd") {
                 chapter += 1;
-                chapter_map.insert(idx.clone(), chapter);
+                chapter_map.insert(href.to_string(), chapter);
             }
         }
 
-        for entry in &section.pages {
-            for path in super::contents::expand_glob(entry.path(), std::path::Path::new("")) {
+        for entry in &section.resolved_include() {
+            let entry_path = match entry {
+                crate::config::IncludeEntry::Path(p) => p.as_str(),
+                crate::config::IncludeEntry::Item { href: Some(h), .. } => h.as_str(),
+                _ => continue,
+            };
+            for path in super::contents::expand_glob(entry_path, std::path::Path::new("")) {
                 if path.ends_with(".qmd") {
-                    // If no index page, each page in the section is a chapter
-                    if section.index.is_none() {
+                    if section.display_href().is_none() {
                         chapter += 1;
                     }
                     chapter_map.insert(path, chapter);

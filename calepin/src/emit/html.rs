@@ -137,7 +137,8 @@ impl FormatEmitter for HtmlEmitter {
     fn highlight_close(&self) -> &str { "</mark>" }
 
     fn link_open(&self, url: &str) -> String {
-        format!("<a href=\"{}\">", self.escape_text(url))
+        let url = self.resolve_qmd_link(url);
+        format!("<a href=\"{}\">", self.escape_text(&url))
     }
     fn link_close(&self, _url: &str) -> String { "</a>".to_string() }
 
