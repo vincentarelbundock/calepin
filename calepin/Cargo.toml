@@ -1,6 +1,6 @@
 [package]
 name = "calepin"
-version = "0.0.1-alpha.4"
+version = "0.0.1-alpha.5"
 edition = "2021"
 description = "A Rust CLI for rendering .qmd files to HTML, LaTeX, Typst, or Markdown"
 license = "MIT"
