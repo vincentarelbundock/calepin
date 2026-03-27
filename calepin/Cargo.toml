@@ -5,6 +5,7 @@ edition = "2021"
 description = "A Rust CLI for rendering .qmd files to HTML, LaTeX, Typst, or Markdown"
 license = "MIT"
 repository = "https://github.com/vincentarelbundock/calepin"
+homepage = "https://vincentarelbundock.github.io/calepin"
 exclude = []
 
 [dependencies]

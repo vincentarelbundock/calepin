@@ -1,0 +1,23 @@
+[workspace]
+members = ["calepin"]
+
+[workspace.metadata.dist]
+# The preferred cargo-dist version to use in CI (required)
+cargo-dist-version = "0.31.0"
+# CI backends to support
+ci = "github"
+# Target platforms to build for
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+]
+# Installers to generate
+installers = ["shell", "powershell"]
+# Whether to auto-include files like README/LICENSE/CHANGELOG
+auto-includes = true
+# Post-announce jobs
+pr-run-mode = "plan"
+# Enable GitHub Attestations for provenance
+github-attestations = true
