@@ -58,6 +58,10 @@ pub struct ContentSection {
     #[serde(default)]
     pub href: Option<String>,
 
+    /// Built-in widget name (e.g. "search", "source", "theme-toggle").
+    #[serde(default)]
+    pub widget: Option<String>,
+
     /// Monochrome icon path (rendered via CSS mask-image, adapts to text color).
     #[serde(default)]
     pub icon: Option<String>,

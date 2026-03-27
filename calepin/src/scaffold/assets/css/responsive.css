@@ -1,0 +1,19 @@
+/* =================================================================
+   7. Responsive
+   ================================================================= */
+
+@media (max-width: 1200px) {
+  .sidebar-right { display: none; }
+  .content-main { margin-right: 0; max-width: calc(100% - var(--c-sidebar-width)); }
+  .site-footer { margin-right: 0; }
+}
+
+@media (max-width: 768px) {
+  .navbar-toggle { display: flex; }
+  .navbar-nav { display: none; }
+  .sidebar-left { transform: translateX(-100%); transition: transform 0.2s ease; }
+  .sidebar-left.open { transform: translateX(0); }
+  .content-main { margin-left: 0; max-width: 100%; padding: 1.5rem 1rem; }
+  .site-footer { margin-left: 0; padding: 1.5rem 1rem; }
+  .page-nav a { max-width: 50%; }
+}

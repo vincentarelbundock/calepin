@@ -125,6 +125,19 @@ pub fn render_core(
     let mut element_renderer = ElementRenderer::from_metadata(pipeline.writer(), &metadata, options);
     element_renderer.set_target(target.cloned());
 
+    // Shift headings down one level only when the document has a title AND
+    // the body uses h1 (`#`) headers. If the author starts at `##`, headings
+    // render at their natural level. Only check Text blocks (not code blocks).
+    if metadata.title.is_some() {
+        let has_h1 = blocks.iter().any(|b| match b {
+            crate::types::Block::Text(t) => t.content.lines().any(|l| l.starts_with("# ")),
+            _ => false,
+        });
+        if has_h1 {
+            element_renderer.set_shift_headings(true);
+        }
+    }
+
     // 8. Evaluate: execute code chunks and produce elements
     let eval_result = engines::evaluate_document(
         input, &blocks, &body, pipeline.writer(), &metadata, &registry,

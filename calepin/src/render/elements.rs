@@ -152,7 +152,9 @@ impl ElementRenderer {
         er.metadata = metadata.clone();
         er.number_sections = metadata.number_sections;
         er.convert_math = metadata.convert_math;
-        er.shift_headings = metadata.title.is_some();
+        // Only shift headings when the document has a title AND uses h1 (#) headers.
+        // If the document starts at h2 (##), don't shift -- let h2 render as <h2>.
+        er.shift_headings = false;
         er.chapter_number = options.chapter_number;
         if let Some(ch) = options.chapter_number {
             let mut counters = [0usize; 6];
@@ -166,6 +168,10 @@ impl ElementRenderer {
 
     pub fn set_target(&mut self, target: Option<crate::config::Target>) {
         self.target = target;
+    }
+
+    pub fn set_shift_headings(&mut self, shift: bool) {
+        self.shift_headings = shift;
     }
 
     pub fn set_registry(&mut self, registry: Rc<ModuleRegistry>) {

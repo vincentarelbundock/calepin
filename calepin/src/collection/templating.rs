@@ -171,9 +171,9 @@ pub(super) fn apply_collection_partials(
     }
 
     if format == "html" {
-        // Copy .qmd source files to _source/ for the source viewer
+        // Copy .qmd source files to _calepin_source/ for the source viewer
         for page in pages {
-            let source_dest = output.join("_source").join(&page.source);
+            let source_dest = output.join("_calepin_source").join(&page.source);
             if let Some(parent) = source_dest.parent() {
                 fs::create_dir_all(parent)?;
             }

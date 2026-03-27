@@ -380,7 +380,7 @@ pub fn build_document_context(
         r#abstract: abstract_text,
         body,
         url: page.url.clone(),
-        source_url: format!("/_source/{}", page.source.display()),
+        source_url: format!("/_calepin_source/{}", page.source.display()),
         toc: result.and_then(|r| r.toc.clone()),
         listing: listing_items,
         listing_type: page.meta.listing.as_ref().map(|l| l.r#type.clone()),
@@ -479,7 +479,10 @@ fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcr
     }
     // Final crumb: page title (not clickable, it's the current page)
     if let Some(title) = &page.meta.title {
-        crumbs.push(Breadcrumb { text: title.clone(), href: None });
+        crumbs.push(Breadcrumb {
+            text: crate::render::convert::render_inline(title, "html"),
+            href: None,
+        });
     }
     crumbs
 }

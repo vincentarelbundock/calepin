@@ -1,0 +1,59 @@
+/* =================================================================
+   3. Classless base
+   Styles bare HTML elements. A plain .qmd with no calepin-specific
+   features looks good with just this section.
+   ================================================================= */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scrollbar-color: color-mix(in srgb, var(--c-text-muted) 30%, transparent) transparent; }
+
+/* Thin, subtle scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--c-text-muted) 25%, transparent); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--c-text-muted) 45%, transparent); }
+
+body {
+  margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-size: 1rem; line-height: 1.6;
+  color: var(--c-text); background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+body > main { max-width: 48rem; margin: 0 auto; padding: 2rem 1.5rem; }
+
+a { color: var(--c-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img { max-width: 100%; height: auto; }
+hr { border: none; border-top: 1px solid var(--c-border); margin: 2em 0; }
+
+blockquote {
+  margin: 1em 0; padding: 0.5rem 1rem;
+  border-left: 4px solid var(--c-border); color: var(--c-text-muted);
+}
+
+table:not(.tinytable) { width: 100%; border-collapse: collapse; margin: 1em 0; }
+table:not(.tinytable) th, table:not(.tinytable) td { padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--c-border); text-align: left; }
+table:not(.tinytable) th { font-weight: 600; }
+
+.table-div { margin: 1.5rem 0; }
+.table-caption, .figure .caption { text-align: center; font-size: 0.9rem; color: color-mix(in srgb, var(--c-text) 70%, var(--c-text-muted)); }
+
+h1, h2, h3, h4, h5, h6 { font-weight: normal; line-height: 1.25; margin: 1.5em 0 0.5em; color: var(--c-text); }
+h1 { font-size: 1.8rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.15rem; }
+h4 { font-size: 1rem; }
+
+code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.875em; background: var(--c-code-bg); padding: 0.15em 0.35em; border-radius: 3px;
+}
+
+pre {
+  background: var(--c-code-bg); border: 1px solid var(--c-border); border-radius: 4px;
+  padding: 0.8em 1em; overflow-x: auto; line-height: 1.45;
+}
+pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }

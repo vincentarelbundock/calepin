@@ -1,0 +1,72 @@
+/* =================================================================
+   6. Site chrome
+   Navbar, sidebars, search, listings, breadcrumbs, prev/next,
+   footer, source viewer. Only active when site templates emit
+   the matching markup.
+   ================================================================= */
+
+/* --- Navbar --- */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--c-navbar-height); background: var(--c-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
+  display: flex; align-items: center; padding: 0 0.5rem; z-index: 1000; gap: 0.5rem;
+  transition: transform 0.3s ease;
+}
+.navbar.hidden { transform: translateY(-100%); }
+
+.navbar-nav.left img { height: calc(var(--c-navbar-height) - 12px); width: auto; }
+.nav-icon { display: inline-block; width: 1.2em; height: 1.2em; background: currentColor; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; vertical-align: middle; }
+.logo-dark { display: none; }
+[data-theme="dark"] .logo-light { display: none; }
+[data-theme="dark"] .logo-dark { display: inline; }
+[data-theme="dark"] .invert-dark { filter: brightness(0) invert(1); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-light { display: none; }
+  :root:not([data-theme="light"]) .logo-dark { display: inline; }
+  :root:not([data-theme="light"]) .invert-dark { filter: brightness(0) invert(1); }
+}
+
+.navbar-nav { display: flex; align-items: center; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
+.navbar-nav.left { margin-right: auto; }
+.navbar-nav.right { margin-left: auto; }
+
+.navbar-nav a {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.4rem 0.6rem; color: var(--c-text-secondary);
+  border-radius: 6px; font-size: 0.9rem; white-space: nowrap;
+}
+.navbar-nav a:hover { color: var(--c-text); background: color-mix(in srgb, var(--c-bg) 85%, var(--c-text) 5%); text-decoration: none; }
+.navbar-nav a svg { flex-shrink: 0; }
+
+.navbar-btn {
+  background: none; border: none; cursor: pointer; padding: 0.4rem;
+  color: var(--c-text-secondary); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.navbar-btn:hover { color: var(--c-text); background: color-mix(in srgb, var(--c-bg) 85%, var(--c-text) 5%); }
+
+.navbar-toggle { display: none; }
+
+.navbar-dropdown { position: relative; }
+.navbar-dropdown-toggle {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.4rem 0.6rem; color: var(--c-text-secondary);
+  border-radius: 6px; font-size: 0.9rem; white-space: nowrap;
+  background: none; border: none; cursor: pointer;
+}
+.navbar-dropdown-toggle:hover { color: var(--c-text); background: color-mix(in srgb, var(--c-bg) 85%, var(--c-text) 5%); }
+.navbar-dropdown-toggle svg { flex-shrink: 0; transition: transform 0.15s; }
+.navbar-dropdown.open > .navbar-dropdown-toggle svg { transform: rotate(90deg); }
+.navbar-dropdown-menu {
+  display: none; position: absolute; top: 100%; left: 0; z-index: 1000;
+  min-width: 10rem; padding: 0.35rem 0; margin: 0.25rem 0 0;
+  list-style: none; background: var(--c-bg); border: 1px solid var(--c-border);
+  border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.navbar-dropdown.open > .navbar-dropdown-menu { display: block; }
+.navbar-dropdown-menu li a {
+  display: block; padding: 0.4rem 0.75rem; color: var(--c-text-secondary);
+  font-size: 0.875rem; white-space: nowrap;
+}
+.navbar-dropdown-menu li a:hover { color: var(--c-text); background: color-mix(in srgb, var(--c-bg) 90%, var(--c-text) 5%); text-decoration: none; }

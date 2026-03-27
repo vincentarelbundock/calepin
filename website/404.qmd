@@ -3,8 +3,7 @@ title = "Page Not Found"
 ---
 
 <div style="text-align: center; padding: 4rem 1rem;">
-<img src="/assets/Calepin.svg" alt="Calepin" style="width: 120px; margin-bottom: 2rem;" class="logo-light">
-<img src="/assets/Calepin_dark.svg" alt="Calepin" style="width: 120px; margin-bottom: 2rem;" class="logo-dark">
+<span class="nav-icon" style="-webkit-mask-image: url(/assets/Calepin.svg); mask-image: url(/assets/Calepin.svg); width: 8em; height: 3em; margin-bottom: 2rem;"></span>
 
 <p style="font-size: 4rem; font-weight: 200; margin: 0; color: var(--c-text-muted);">404</p>
 

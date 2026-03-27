@@ -1,5 +1,12 @@
 <ul class="navbar-nav right">
   {% for item in collection.navbar.right %}
+  {% if item.widget == "search" %}
+  {% include "widget_search.html" %}
+  {% elif item.widget == "source" %}
+  {% include "widget_source.html" %}
+  {% elif item.widget == "dark" %}
+  {% include "widget_dark.html" %}
+  {% else %}
   <li>
     <a href="{{ item.href | default(value='#') }}">
       {% if item.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ item.icon }}); mask-image: url(/{{ item.icon }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span>{% endif %}
@@ -16,13 +23,11 @@
       {% if item.text %}{{ item.text }}{% endif %}
     </a>
   </li>
+  {% endif %}
   {% endfor %}
   {% if document.translations %}
   {% for t in document.translations %}
   <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
   {% endfor %}
   {% endif %}
-  {% include "source_viewer.html" %}
-  {% include "search.html" %}
-  {% if collection.dark_mode %}{% include "theme_toggle.html" %}{% endif %}
 </ul>

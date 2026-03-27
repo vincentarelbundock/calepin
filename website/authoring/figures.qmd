@@ -19,7 +19,7 @@ plot(
 
 Figures with labels can be cross-referenced with `@fig-label`. See @fig-scatter above.
 
-Any plotting library works — here is a ggplot2 example:
+Any plotting library works. Here is a ggplot2 example:
 
 ```{r, fig-ggplot}
 #| echo: fenced
