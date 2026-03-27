@@ -1,5 +1,15 @@
 [workspace]
 members = ["calepin"]
+resolver = "2"
+
+[profile.profiling]
+inherits = "release"
+debug = true
+
+# cargo-dist uses this profile for release builds
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (required)

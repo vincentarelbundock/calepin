@@ -1,6 +1,6 @@
 [package]
 name = "calepin"
-version = "0.0.1-alpha.3"
+version = "0.0.1-alpha.4"
 edition = "2021"
 description = "A Rust CLI for rendering .qmd files to HTML, LaTeX, Typst, or Markdown"
 license = "MIT"
@@ -80,7 +80,3 @@ indexmap = "2.13.0"
 [[bench]]
 name = "template_bench"
 harness = false
-
-[profile.profiling]
-inherits = "release"
-debug = true
