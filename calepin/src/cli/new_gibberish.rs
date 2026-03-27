@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use crate::utils::lipsum;
 
-pub fn generate_gibberish(
+pub fn handle_new_gibberish(
     dir: &std::path::Path,
     num_files: usize,
     num_paragraphs: usize,

@@ -255,12 +255,12 @@ pub fn build_document_context(
 
     let title = result.and_then(|r| r.title.clone()).or_else(|| page.meta.title.clone());
     let date = result.and_then(|r| r.date.clone()).or_else(|| page.meta.date.clone())
-        .map(|d| format_date(&d));
+        .map(|d| crate::utils::date::format_date_display(&d, None));
     let subtitle = result.and_then(|r| r.subtitle.clone()).or_else(|| page.meta.subtitle.clone());
     let abstract_text = result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone());
 
     // Prev/next navigation: pages in [[contents]] order, matching language
-    let nav_paths = super::config::collect_document_paths(meta, base_dir);
+    let nav_paths = super::discover::collect_document_paths(meta, base_dir);
     let pages_by_source: std::collections::HashMap<String, &DocumentInfo> = pages.iter()
         .map(|p| (p.source.display().to_string(), p))
         .collect();
@@ -351,9 +351,6 @@ fn resolve_translations(
 }
 
 /// Format a YYYY-MM-DD date string for display using the default format.
-pub fn format_date(date: &str) -> String {
-    crate::utils::date::format_date_display(date, None)
-}
 
 fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcrumb> {
     // Collect all page URLs for checking if a path leads to a real page

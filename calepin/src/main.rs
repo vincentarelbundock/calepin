@@ -1,25 +1,24 @@
 #[macro_use]
 mod cli;
-mod references;
-pub(crate) use references::{bibliography, crossref};
-mod engines;
+mod types;
 mod config;
-pub(crate) use config::{ProjectContext, resolve_context, apply_writer_override};
+mod emit;
+mod engines;
 mod jinja;
+mod modules;
 mod parse;
 mod preview;
+mod references;
 mod render;
 mod collection;
 mod utils;
 
-// Grouped modules with crate-level re-exports for backward compatibility.
-mod base;
-pub(crate) use base::{types, value, paths, util};
-
-mod modules;
+// Crate-level re-exports: short paths for pervasive types and modules.
+pub(crate) use config::{ProjectContext, resolve_context, apply_writer_override};
+pub(crate) use config::{paths, value};
 pub(crate) use modules::{registry, manifest as module_manifest};
-
-mod emit;
+pub(crate) use references::{bibliography, crossref};
+pub(crate) use utils::util;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -86,7 +85,7 @@ fn main() -> Result<()> {
                 Ok(())
             }
             cli::NewAction::Gibberish { files, paragraphs, dir, complexity } => {
-                cli::new_gibberish::generate_gibberish(&dir, files, paragraphs, complexity)
+                cli::new_gibberish::handle_new_gibberish(&dir, files, paragraphs, complexity)
             }
         },
         Command::Info { action } => cli::info::handle_info(action),

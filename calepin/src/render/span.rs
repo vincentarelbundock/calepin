@@ -35,7 +35,7 @@ pub fn render(
         let attr_str = &caps[2];
         let (classes, id, kv) = crate::parse::blocks::parse_attributes(attr_str);
 
-        if !crate::engines::content_is_visible(&classes, &kv, format, None) {
+        if !crate::engines::is_content_visible(&classes, &kv, format, None) {
             return String::new();
         }
 

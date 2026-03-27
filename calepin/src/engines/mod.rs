@@ -7,7 +7,7 @@
 // - make_sentinel()     — Generate a unique sentinel string for the capture protocol.
 // - process_results()   — Parse sentinel-delimited engine output into ChunkResults.
 // - format_matches()    — Check if a format name matches the current output format (with aliases).
-// - content_is_visible() — Evaluate .content-visible/.content-hidden conditions.
+// - is_content_visible() — Evaluate .content-visible/.content-hidden conditions.
 
 pub mod block;
 pub mod cache;
@@ -475,10 +475,10 @@ fn div_is_visible(
     output_format: &str,
     meta_extra: &HashMap<String, crate::value::Value>,
 ) -> bool {
-    content_is_visible(classes, attrs, output_format, Some(meta_extra))
+    is_content_visible(classes, attrs, output_format, Some(meta_extra))
 }
 
-pub fn content_is_visible(
+pub fn is_content_visible(
     classes: &[String],
     attrs: &HashMap<String, String>,
     output_format: &str,
@@ -555,8 +555,8 @@ mod tests {
         let classes = vec!["content-visible".to_string()];
         let mut attrs = HashMap::new();
         attrs.insert("when_format".to_string(), "html".to_string());
-        assert!(content_is_visible(&classes, &attrs, "html", None));
-        assert!(!content_is_visible(&classes, &attrs, "latex", None));
+        assert!(is_content_visible(&classes, &attrs, "html", None));
+        assert!(!is_content_visible(&classes, &attrs, "latex", None));
     }
 
     #[test]
@@ -564,8 +564,8 @@ mod tests {
         let classes = vec!["content-visible".to_string()];
         let mut attrs = HashMap::new();
         attrs.insert("unless_format".to_string(), "latex".to_string());
-        assert!(content_is_visible(&classes, &attrs, "html", None));
-        assert!(!content_is_visible(&classes, &attrs, "latex", None));
+        assert!(is_content_visible(&classes, &attrs, "html", None));
+        assert!(!is_content_visible(&classes, &attrs, "latex", None));
     }
 
     #[test]
@@ -573,8 +573,8 @@ mod tests {
         let classes = vec!["content-hidden".to_string()];
         let mut attrs = HashMap::new();
         attrs.insert("when_format".to_string(), "html".to_string());
-        assert!(!content_is_visible(&classes, &attrs, "html", None));
-        assert!(content_is_visible(&classes, &attrs, "latex", None));
+        assert!(!is_content_visible(&classes, &attrs, "html", None));
+        assert!(is_content_visible(&classes, &attrs, "latex", None));
     }
 
     #[test]
@@ -582,8 +582,8 @@ mod tests {
         let classes = vec!["content-hidden".to_string()];
         let mut attrs = HashMap::new();
         attrs.insert("unless_format".to_string(), "latex".to_string());
-        assert!(!content_is_visible(&classes, &attrs, "html", None));
-        assert!(content_is_visible(&classes, &attrs, "latex", None));
+        assert!(!is_content_visible(&classes, &attrs, "html", None));
+        assert!(is_content_visible(&classes, &attrs, "latex", None));
     }
 
     #[test]
@@ -592,15 +592,15 @@ mod tests {
         let mut attrs = HashMap::new();
         attrs.insert("when_format".to_string(), "html".to_string());
         attrs.insert("unless_format".to_string(), "html".to_string());
-        assert!(!content_is_visible(&classes, &attrs, "html", None));
+        assert!(!is_content_visible(&classes, &attrs, "html", None));
     }
 
     #[test]
     fn test_no_conditional_class() {
         let classes = vec!["theorem".to_string()];
         let attrs = HashMap::new();
-        assert!(content_is_visible(&classes, &attrs, "html", None));
-        assert!(content_is_visible(&classes, &attrs, "latex", None));
+        assert!(is_content_visible(&classes, &attrs, "html", None));
+        assert!(is_content_visible(&classes, &attrs, "latex", None));
     }
 
     #[test]
@@ -611,9 +611,9 @@ mod tests {
         attrs.insert("when_meta".to_string(), "draft".to_string());
         let mut extra = HashMap::new();
         extra.insert("draft".to_string(), Value::Bool(true));
-        assert!(content_is_visible(&classes, &attrs, "html", Some(&extra)));
+        assert!(is_content_visible(&classes, &attrs, "html", Some(&extra)));
         extra.insert("draft".to_string(), Value::Bool(false));
-        assert!(!content_is_visible(&classes, &attrs, "html", Some(&extra)));
+        assert!(!is_content_visible(&classes, &attrs, "html", Some(&extra)));
     }
 
     #[test]
@@ -624,9 +624,9 @@ mod tests {
         attrs.insert("unless_meta".to_string(), "published".to_string());
         let mut extra = HashMap::new();
         extra.insert("published".to_string(), Value::Bool(true));
-        assert!(content_is_visible(&classes, &attrs, "html", Some(&extra)));
+        assert!(is_content_visible(&classes, &attrs, "html", Some(&extra)));
         extra.insert("published".to_string(), Value::Bool(false));
-        assert!(!content_is_visible(&classes, &attrs, "html", Some(&extra)));
+        assert!(!is_content_visible(&classes, &attrs, "html", Some(&extra)));
     }
 
     #[test]
@@ -639,6 +639,6 @@ mod tests {
         let mut opts = crate::value::Table::new();
         opts.insert("show-code".to_string(), Value::Bool(true));
         extra.insert("options".to_string(), Value::Table(opts));
-        assert!(content_is_visible(&classes, &attrs, "html", Some(&extra)));
+        assert!(is_content_visible(&classes, &attrs, "html", Some(&extra)));
     }
 }

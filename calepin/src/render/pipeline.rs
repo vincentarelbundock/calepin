@@ -195,7 +195,7 @@ pub fn render_file(
     // (explicit compile command, or writer differs from output extension),
     // use the writer's native extension (.tex, .typ) for the rendered file.
     let ext = if let Some(t) = target {
-        let writer_ext = paths::writer_to_ext(&t.writer);
+        let writer_ext = paths::resolve_extension(&t.writer);
         if t.compile.is_some() || writer_ext != t.output_extension() {
             writer_ext
         } else {

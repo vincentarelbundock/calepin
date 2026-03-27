@@ -71,7 +71,7 @@ pub fn render(
     }
 
     // Figure wrapper vars (alignment, fig_env, fig_pos, short_caption, cap_location, link)
-    let fig_attrs = figure_attrs_from_div(attrs);
+    let fig_attrs = build_figure_attrs(attrs);
     build_figure_wrapper_vars(&mut vars, &fig_attrs, format, None, defaults);
 
     let tpl = crate::render::elements::resolve_builtin_partial("figure_div", format).unwrap_or("");
@@ -193,7 +193,7 @@ pub fn separate_figure_caption(children: &[Element]) -> (Vec<Element>, String) {
 // ---------------------------------------------------------------------------
 
 /// Build a `FigureAttrs` from div attribute key-value pairs.
-pub fn figure_attrs_from_div(attrs: &HashMap<String, String>) -> crate::types::FigureAttrs {
+pub fn build_figure_attrs(attrs: &HashMap<String, String>) -> crate::types::FigureAttrs {
     crate::types::FigureAttrs {
         width: attrs.get("fig_width").cloned(),
         height: attrs.get("fig_height").cloned(),

@@ -35,7 +35,7 @@ fn resolve_partial_alias(name: &str) -> &str {
 /// then `partials/{base}/{name}.{ext}`, then `templates/common/{name}.jinja`.
 pub fn resolve_builtin_partial(name: &str, base: &str) -> Option<&'static str> {
     let resolved = resolve_partial_alias(name);
-    let ext = crate::paths::writer_to_ext(base);
+    let ext = crate::paths::resolve_extension(base);
 
     // Target-specific (e.g., book/page.typ)
     if let Some(target) = crate::paths::get_active_target() {

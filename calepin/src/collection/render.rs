@@ -331,7 +331,7 @@ fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usi
         }
 
         for entry in &section.pages {
-            for path in super::contents::expand_glob_pub(entry.path(), std::path::Path::new("")) {
+            for path in super::contents::expand_glob(entry.path(), std::path::Path::new("")) {
                 if path.ends_with(".qmd") {
                     // If no index page, each page in the section is a chapter
                     if section.index.is_none() {

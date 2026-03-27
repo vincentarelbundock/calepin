@@ -269,7 +269,7 @@ fn render_and_compile(input: &Path, target_name: &str, overrides: &[String]) -> 
     renderer.write_output(&content, &output_path)?;
 
     let needs_compile = target.compile.is_some()
-        || crate::paths::writer_to_ext(&target.writer) != target.output_extension();
+        || crate::paths::resolve_extension(&target.writer) != target.output_extension();
     if needs_compile {
         let cmd = target.compile.as_deref().unwrap_or("");
         let ext = target.output_extension();

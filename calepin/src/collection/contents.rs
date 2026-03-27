@@ -67,13 +67,8 @@ fn expand_section_documents(entries: &[DocumentEntry], base_dir: &std::path::Pat
     result
 }
 
-/// Public wrapper for glob expansion, used by collection config.
-pub fn expand_glob_pub(pattern: &str, base_dir: &std::path::Path) -> Vec<String> {
-    expand_glob(pattern, base_dir)
-}
-
 /// Expand a string as a glob pattern if it contains `*`, otherwise return as-is.
-fn expand_glob(pattern: &str, base_dir: &std::path::Path) -> Vec<String> {
+pub fn expand_glob(pattern: &str, base_dir: &std::path::Path) -> Vec<String> {
     if !pattern.contains('*') {
         return vec![pattern.to_string()];
     }

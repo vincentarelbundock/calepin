@@ -118,7 +118,7 @@ fn render_one_with_context(
     // or writer extension differs from output extension (e.g., typst -> pdf).
     let needs_compile = compile
         || ctx.target.compile.is_some()
-        || crate::paths::writer_to_ext(&ctx.target.writer) != ctx.target.output_extension();
+        || crate::paths::resolve_extension(&ctx.target.writer) != ctx.target.output_extension();
     if needs_compile {
         let cmd = ctx.target.compile.as_deref().unwrap_or("");
         run_compile_step(&output_path, cmd, ctx.target.output_extension(), quiet)?;

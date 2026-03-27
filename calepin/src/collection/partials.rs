@@ -14,7 +14,7 @@ use minijinja::Environment;
 /// templates are found, or to fill in templates the project doesn't override.
 ///
 /// Returns Ok(None) if no templates are found at all (triggers orchestrator path).
-pub fn init_jinja(base_dir: &Path, target_name: &str) -> Result<Option<Environment<'static>>> {
+pub fn load_templates(base_dir: &Path, target_name: &str) -> Result<Option<Environment<'static>>> {
     let mut templates: HashMap<String, String> = HashMap::new();
 
     // Load project templates from partials/{target_name}/ (any extension)

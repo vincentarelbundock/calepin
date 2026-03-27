@@ -447,7 +447,7 @@ fn resolve_affiliation(
 // Copyright, license, citation, funding parsing
 // ---------------------------------------------------------------------------
 
-fn expand_cc_license(s: &str) -> Option<(&'static str, &'static str)> {
+fn resolve_cc_license(s: &str) -> Option<(&'static str, &'static str)> {
     let normalized = s.to_uppercase().replace('-', " ");
     match normalized.trim() {
         "CC0" => Some(("CC0 1.0 Universal", "https://creativecommons.org/publicdomain/zero/1.0/")),
@@ -479,7 +479,7 @@ fn parse_copyright(v: &Value) -> Copyright {
 
 fn parse_license(v: &Value) -> License {
     if let Some(s) = v.as_str() {
-        return if let Some((text, url)) = expand_cc_license(s) {
+        return if let Some((text, url)) = resolve_cc_license(s) {
             License { text: Some(text.to_string()), url: Some(url.to_string()) }
         } else {
             License { text: Some(s.to_string()), ..Default::default() }
@@ -492,7 +492,7 @@ fn parse_license(v: &Value) -> License {
             ..Default::default()
         };
         if let Some(t) = table_str(m, "type") {
-            if let Some((text, url)) = expand_cc_license(&t) {
+            if let Some((text, url)) = resolve_cc_license(&t) {
                 if lic.text.is_none() { lic.text = Some(text.to_string()); }
                 if lic.url.is_none() { lic.url = Some(url.to_string()); }
             } else if lic.text.is_none() {

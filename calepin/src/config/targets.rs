@@ -243,7 +243,7 @@ fn merge_with_builtin(user: &Target) -> Target {
 }
 
 /// Convert a `HashMap<String, MetaValue>` to a minijinja Value for template access.
-pub fn target_vars_to_jinja_from_meta(vars: &std::collections::HashMap<String, crate::value::Value>) -> minijinja::Value {
+pub fn build_jinja_vars(vars: &std::collections::HashMap<String, crate::value::Value>) -> minijinja::Value {
     if vars.is_empty() {
         return minijinja::Value::from(());
     }
