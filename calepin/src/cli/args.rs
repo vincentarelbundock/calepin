@@ -38,8 +38,7 @@ pub enum Command {
     /// Delete cache, generated files, and build artefacts
     Flush {
         /// Directory or stem name (e.g., "index") to flush selectively
-        #[arg(default_value = ".")]
-        path: PathBuf,
+        path: Option<PathBuf>,
 
         /// Skip confirmation
         #[arg(short = 'y', long)]
@@ -310,7 +309,11 @@ pub fn is_collection_config(path: &std::path::Path) -> bool {
 /// Checks `_calepin/config.toml`.
 pub fn find_project_config(dir: &std::path::Path) -> Option<std::path::PathBuf> {
     let path = crate::paths::calepin_dir(dir, &[]).join("config.toml");
-    if path.exists() { path.canonicalize().ok().or(Some(path)) } else { None }
+    if path.exists() {
+        path.canonicalize().ok().or_else(|| Some(crate::paths::normalize_path(&path)))
+    } else {
+        None
+    }
 }
 
 /// Print a yellow warning to stderr.

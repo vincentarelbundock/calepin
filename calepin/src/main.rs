@@ -66,13 +66,17 @@ fn main() -> Result<()> {
             } else {
                 (cache, files, compilation)
             };
-            // If path is not a directory, search for it as a name within
-            // the cache/files structure
-            let (root, stem) = if path.is_dir() {
-                (path, None)
+            // When no path is given, auto-discover _calepin/ and *_calepin/
+            // sidecar directories in the current directory.
+            let (root, stem) = if let Some(path) = path {
+                if path.is_dir() {
+                    (path, None)
+                } else {
+                    let name = path.to_string_lossy().to_string();
+                    (PathBuf::from("."), Some(name))
+                }
             } else {
-                let name = path.to_string_lossy().to_string();
-                (PathBuf::from("."), Some(name))
+                (PathBuf::from("."), None)
             };
             cli::flush::handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
         }

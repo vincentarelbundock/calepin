@@ -71,8 +71,10 @@ fn parse_blocks(
     let mut i = start;
 
     while i < lines.len() {
-        // Check for div closing fence (return to parent)
-        if i > start && closer_min > 0 && is_div_close(lines[i], closer_min) {
+        // Check for div closing fence (return to parent).
+        // Must check on the very first line (i == start) to handle empty divs
+        // like `::: {.class}\n:::`, otherwise the parser loops forever.
+        if closer_min > 0 && is_div_close(lines[i], closer_min) {
             break;
         }
 

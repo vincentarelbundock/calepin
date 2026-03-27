@@ -90,6 +90,7 @@ pub fn render_core(
     paths::validate_paths(&metadata, &path_ctx, &input_name)?;
 
     // 3. Build format pipeline from target or engine name
+
     let format_str = format
         .map(|s| s.to_string())
         .or_else(|| metadata.target.clone())
@@ -159,11 +160,13 @@ pub fn render_core(
     let rendered = pipeline.render(&elements, &element_renderer)?;
 
     // 12. Cross-ref resolution (skipped in collection mode pass 1)
+
     let rendered = if options.skip_crossref {
         rendered
     } else {
         pipeline.resolve_crossrefs(&rendered, &element_renderer)
     };
+
 
     Ok(RenderResult { rendered, metadata, element_renderer })
 }

@@ -42,11 +42,11 @@ impl ProjectKind {
     /// - A bare `_calepin/config.toml` path -> `Collection`
     pub fn discover(path: &Path) -> Result<Self> {
         let path = if path.is_relative() {
-            std::env::current_dir()
+            normalize_path(&std::env::current_dir()
                 .unwrap_or_default()
-                .join(path)
+                .join(path))
         } else {
-            path.to_path_buf()
+            normalize_path(path)
         };
 
         // Case 1: .qmd file
@@ -354,6 +354,19 @@ impl PathContext {
 // ---------------------------------------------------------------------------
 // Path resolution
 // ---------------------------------------------------------------------------
+
+/// Remove `.` and resolve `..` components without touching the filesystem.
+pub fn normalize_path(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => { out.pop(); }
+            c => out.push(c),
+        }
+    }
+    out
+}
 
 /// Build a path under the project `_calepin/` directory.
 /// Does not check existence -- use `resolve_path` for that.

@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
 
 use anyhow::Result;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use crate::config;
 use super::discover::DocumentInfo;
@@ -352,22 +351,7 @@ fn assign_chapter_numbers(meta: &crate::config::Metadata) -> HashMap<String, usi
     chapter_map
 }
 
-/// Create a progress bar for rendering a set of pages.
-fn create_progress_bar(total: u64, quiet: bool) -> Arc<ProgressBar> {
-    let pb = if quiet {
-        ProgressBar::hidden()
-    } else {
-        let pb = ProgressBar::new(total);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("  [{bar:30}] {pos}/{len} {msg}")
-            .unwrap()
-            .progress_chars("=> "));
-        pb
-    };
-    Arc::new(pb)
-}
-
-/// Render pages in parallel using thread::scope, with a shared progress bar.
+/// Render pages in parallel using thread::scope, with per-file progress.
 ///
 /// The closure `render_fn` receives a `&DocumentInfo` and returns `(key, Result<T>)`.
 /// It is called inside a spawned thread for each page.
@@ -380,24 +364,45 @@ where
     T: Send,
     F: Fn(&DocumentInfo) -> (String, Result<T>) + Sync,
 {
-    let pb = create_progress_bar(pages.len() as u64, quiet);
+    let mp = MultiProgress::new();
+    let spinner_style = ProgressStyle::default_spinner()
+        .template("  {spinner} {msg}")
+        .unwrap();
+
+    let spinners: Vec<_> = pages
+        .iter()
+        .map(|page| {
+            if quiet {
+                mp.add(ProgressBar::hidden())
+            } else {
+                let pb = mp.add(ProgressBar::new_spinner());
+                pb.set_style(spinner_style.clone());
+                pb.set_message(page.output.display().to_string());
+                pb.enable_steady_tick(std::time::Duration::from_millis(80));
+                pb
+            }
+        })
+        .collect();
+
     let results = std::thread::scope(|s| {
         let handles: Vec<_> = pages
             .iter()
-            .map(|page| {
-                let pb = Arc::clone(&pb);
+            .zip(spinners.iter())
+            .map(|(page, pb)| {
                 let render_fn = &render_fn;
                 s.spawn(move || {
                     let result = render_fn(page);
-                    pb.set_message(page.output.display().to_string());
-                    pb.inc(1);
+                    let name = page.output.display().to_string();
+                    match &result.1 {
+                        Ok(_) => pb.finish_and_clear(),
+                        Err(_) => pb.finish_with_message(format!("\x1b[31m✗\x1b[0m {}", name)),
+                    }
                     result
                 })
             })
             .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
-    pb.finish_and_clear();
     results
 }
 

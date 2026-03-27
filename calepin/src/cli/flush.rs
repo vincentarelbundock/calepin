@@ -123,6 +123,14 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
         } else {
             std::fs::remove_file(t)?;
         }
+        // Remove parent *_calepin/ dir if now empty
+        if let Some(parent) = t.parent() {
+            if parent.file_name().map_or(false, |n| n.to_string_lossy().ends_with("_calepin")) {
+                if parent.read_dir().map_or(false, |mut d| d.next().is_none()) {
+                    std::fs::remove_dir(parent).ok();
+                }
+            }
+        }
     }
 
     eprintln!("Done.");
