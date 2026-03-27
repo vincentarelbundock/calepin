@@ -1,7 +1,7 @@
 ---
-title: Analyse Causale et Méthodes Quantitatives
-subtitle: Une introduction avec R, Stata et SPSS
-lang: fr
+title = "Analyse Causale et Methodes Quantitatives"
+subtitle = "Une introduction avec R, Stata et SPSS"
+lang = "fr"
 ---
 
 ### J'ai écrit un livre!

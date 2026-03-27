@@ -23,11 +23,14 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
         if input.is_dir() || input.file_name().and_then(|n| n.to_str()) == Some("config.toml") {
             if let Ok(kind) = ProjectKind::discover(input) {
                 match kind {
-                    ProjectKind::Collection { config, .. } => {
+                    ProjectKind::Collection { config, root } => {
                         if !args.quiet {
                             eprintln!("Found collection config: {}", config.display());
                         }
-                        let output = args.output.unwrap_or_else(|| std::path::PathBuf::from(crate::paths::DEFAULT_OUTPUT_DIR));
+                        let output = args.output.unwrap_or_else(|| {
+                            let meta = crate::config::load_project_metadata(&config).ok();
+                            crate::paths::output_dir(&root, meta.as_ref().and_then(|m| m.output.as_deref()))
+                        });
                         return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
                     }
                     ProjectKind::Document { qmd, .. } => {

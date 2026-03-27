@@ -17,8 +17,8 @@ use minijinja::Environment;
 pub fn load_templates(base_dir: &Path, target_name: &str) -> Result<Option<Environment<'static>>> {
     let mut templates: HashMap<String, String> = HashMap::new();
 
-    // Load project templates from partials/{target_name}/ (any extension)
-    let dir = base_dir.join(format!("partials/{}", target_name));
+    // Load project templates from _calepin/partials/{target_name}/ (any extension)
+    let dir = crate::paths::partials_dir(base_dir).join(target_name);
     if dir.is_dir() {
         let pattern = dir.join("**").join("*.*");
         let pattern_str = pattern.display().to_string();

@@ -20,6 +20,8 @@ use crate::config::paths::ProjectKind;
 pub use crate::render::elements::BUILTIN_PARTIALS;
 pub use crate::render::elements::BUILTIN_ASSETS;
 
+static THEME_MINIMAL: Dir<'static> = include_dir::include_dir!("$CARGO_MANIFEST_DIR/src/themes/minimal");
+
 // ---------------------------------------------------------------------------
 // ThemeManifest
 // ---------------------------------------------------------------------------
@@ -118,10 +120,27 @@ impl Theme {
         }
     }
 
+    /// Load the built-in minimal theme (no sidebar, no table of contents).
+    pub fn builtin_minimal() -> Self {
+        let mut files = BTreeMap::new();
+        collect_embedded_files(&THEME_MINIMAL, Path::new(""), &mut files);
+        // Remove theme.toml from the file set -- it's metadata, not a project file.
+        files.remove(Path::new("theme.toml"));
+        Self {
+            manifest: ThemeManifest {
+                name: "minimal".to_string(),
+                description: "Clean layout without sidebar or table of contents".to_string(),
+            },
+            files,
+            config_fragment: None,
+        }
+    }
+
     /// Load a built-in theme by name.
     pub fn builtin(name: &str) -> Option<Self> {
         match name {
             "default" => Some(Self::builtin_default()),
+            "minimal" => Some(Self::builtin_minimal()),
             _ => None,
         }
     }
@@ -194,6 +213,10 @@ impl Theme {
             ThemeManifest {
                 name: "default".to_string(),
                 description: "Default Calepin theme".to_string(),
+            },
+            ThemeManifest {
+                name: "minimal".to_string(),
+                description: "Clean layout without sidebar or table of contents".to_string(),
             },
         ]
     }

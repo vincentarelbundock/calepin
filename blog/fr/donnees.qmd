@@ -1,8 +1,9 @@
 ---
-title: Données
-lang: fr
-translations:
-  en: data.qmd
+title = "Donnees"
+lang = "fr"
+
+[translations]
+en = "data.qmd"
 ---
 
 * [Political Risk Insurance and Finance](https://github.com/vincentarelbundock/opic): Ce projet vise à rendre accessible l'information au niveau de l'entreprise sur chaque contrat d'assurance émis, chaque projet de financement initié et chaque réclamation réglée par l'Overseas Private Investment Corporation des États-Unis.

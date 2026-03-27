@@ -1,8 +1,9 @@
 {% if collection.navbar.middle %}
 <ul class="navbar-nav middle" id="navbar-menu">
   {% for item in collection.navbar.middle %}
-  <li{% if item.children %} class="navbar-dropdown"{% endif %}>
-    {% if item.children %}
+  {% if not item.lang or item.lang == document.lang %}
+    {% if item.children and item.text %}
+  <li class="navbar-dropdown">
     <button class="navbar-dropdown-toggle" aria-expanded="false">
       {{ item.text }} {% include "icons/chevron-right.svg" %}
     </button>
@@ -13,12 +14,21 @@
       </a></li>
       {% endfor %}
     </ul>
+  </li>
+    {% elif item.children %}
+      {% for child in item.children %}
+  <li><a href="{{ child.href | default(value='#') }}">
+    {% if child.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ child.icon }}); mask-image: url(/{{ child.icon }});{% if child.width %} width: {{ child.width }};{% endif %}{% if child.height %} height: {{ child.height }};{% endif %}"></span> {% endif %}{{ child.text }}
+  </a></li>
+      {% endfor %}
     {% else %}
+  <li>
     <a href="{{ item.href | default(value='#') }}">
       {% if item.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ item.icon }}); mask-image: url(/{{ item.icon }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span> {% endif %}{{ item.text }}
     </a>
-    {% endif %}
   </li>
+    {% endif %}
+  {% endif %}
   {% endfor %}
 </ul>
 {% endif %}

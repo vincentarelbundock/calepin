@@ -133,6 +133,19 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "lang" => {
                 meta.lang = v.as_str().map(String::from);
             }
+            "translations" => {
+                if let Some(table) = v.as_table() {
+                    let mut map = std::collections::HashMap::new();
+                    for (k, val) in table {
+                        if let Some(s) = val.as_str() {
+                            map.insert(k.clone(), s.to_string());
+                        }
+                    }
+                    if !map.is_empty() {
+                        meta.translations = Some(map);
+                    }
+                }
+            }
             "url" => meta.url = v.as_str().map(String::from),
             "favicon" => meta.favicon = v.as_str().map(String::from),
             "navbar" => meta.navbar = deserialize_section(v),

@@ -1,8 +1,9 @@
 ---
-title: À propos
-lang: fr
-translations:
-  en: index.qmd
+title = "Vincent Arel-Bundock"
+lang = "fr"
+
+[translations]
+en = "index.qmd"
 ---
 
 Je suis professeur à l'Université de Montréal, où j'enseigne l'économie politique comparée et internationale. Je m'intéresse particulièrement à la politique de la fiscalité internationale et de l'investissement direct à l'étranger, mais j'ai aussi travaillé sur la politique monétaire, l'aide internationale, le vote économique et les méthodes de recherche.

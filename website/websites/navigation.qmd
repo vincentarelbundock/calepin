@@ -1,0 +1,47 @@
+---
+title = "Navigation"
+---
+
+# Prev / Next
+
+*Calepin* websites automatically display "Previous" and "Next" links at the bottom of each page. The order of these links is governed by the `[[contents]]` array in `_calepin/config.toml`.
+
+Pages appear in the prev/next sequence in the same order they are listed in `[[contents]]`. For example, given this configuration:
+
+```toml
+[[contents]]
+include = ["pages/installation.qmd", "pages/getting_started.qmd"]
+
+[[contents]]
+text = "Guide"
+include = [
+  "guide/intro.qmd",
+  "guide/advanced.qmd",
+]
+```
+
+the navigation order is:
+
+1. `pages/installation.qmd`
+2. `pages/getting_started.qmd`
+3. `guide/intro.qmd`
+4. `guide/advanced.qmd`
+
+The "Previous" link on `guide/intro.qmd` points to `pages/getting_started.qmd`, and its "Next" link points to `guide/advanced.qmd`. Section boundaries are crossed seamlessly.
+
+Pages marked `standalone = true` are excluded from the prev/next chain:
+
+```toml
+[[contents]]
+standalone = true
+include = ["index.qmd", "404.qmd"]
+```
+
+## Template variables
+
+In collection templates, the prev/next links are available as:
+
+- {% raw %}`{{ document.prev.text }}`{% endraw %} and {% raw %}`{{ document.prev.href }}`{% endraw %}
+- {% raw %}`{{ document.next.text }}`{% endraw %} and {% raw %}`{{ document.next.href }}`{% endraw %}
+
+Both are empty when there is no previous or next page.

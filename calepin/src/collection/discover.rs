@@ -203,7 +203,7 @@ fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
         r#abstract: None,
         listing: None,
         lang: meta.lang,
-        translations: None,
+        translations: meta.translations,
     })
 }
 

@@ -1,8 +1,9 @@
 ---
-title: Livres
-lang: fr
-translations:
-  en: books.qmd
+title = "Livres"
+lang = "fr"
+
+[translations]
+en = "books.qmd"
 ---
 
 ## Model to Meaning

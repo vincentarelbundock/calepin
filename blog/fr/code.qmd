@@ -1,8 +1,9 @@
 ---
-title: Code
-lang: fr
-translations:
-  en: code.qmd
+title = "Code"
+lang = "fr"
+
+[translations]
+en = "code.qmd"
 ---
 
 * [marginaleffects](https://marginaleffects.com): Extension R pour calculer et visualiser des prédictions, des pentes, des moyennes marginales et des comparaisons (contrastes, rapports de risque, rapports de cotes, etc.) pour plus de 70 classes de modèles statistiques en R. Permet de réaliser des tests d'hypothèses linéaires et non linéaires, ainsi que des tests d'équivalence par la méthode delta.

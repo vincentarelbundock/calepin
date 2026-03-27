@@ -1,6 +1,16 @@
 {% if collection.navbar.left %}
-<ul class="navbar-nav left">
+<ul class="navbar-nav left" id="navbar-left-menu">
   {% for item in collection.navbar.left %}
+  {% if not item.lang or item.lang == document.lang %}
+    {% if item.children %}
+      {% for child in item.children %}
+  <li>
+    <a href="{{ child.href | default(value='#') }}">
+      {% if child.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ child.icon }}); mask-image: url(/{{ child.icon }});{% if child.width %} width: {{ child.width }};{% endif %}{% if child.height %} height: {{ child.height }};{% endif %}"></span> {% endif %}{{ child.text }}
+    </a>
+  </li>
+      {% endfor %}
+    {% else %}
   <li>
     <a href="{{ item.href | default(value='/index.html') }}">
       {% if item.image %}
@@ -17,6 +27,8 @@
       {% elif item.text %}{{ item.text }}{% endif %}
     </a>
   </li>
+    {% endif %}
+  {% endif %}
   {% endfor %}
 </ul>
 {% endif %}

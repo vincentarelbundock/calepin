@@ -6,6 +6,12 @@
   {% include "widget_source.html" %}
   {% elif item.widget == "dark" %}
   {% include "widget_dark.html" %}
+  {% elif item.widget == "language" %}
+  {% if document.translations %}
+  {% for t in document.translations %}
+  <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
+  {% endfor %}
+  {% endif %}
   {% else %}
   <li>
     <a href="{{ item.href | default(value='#') }}">
@@ -25,9 +31,4 @@
   </li>
   {% endif %}
   {% endfor %}
-  {% if document.translations %}
-  {% for t in document.translations %}
-  <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
-  {% endfor %}
-  {% endif %}
 </ul>

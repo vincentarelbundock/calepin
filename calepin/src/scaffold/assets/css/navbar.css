@@ -14,6 +14,10 @@
   transition: transform 0.3s ease;
 }
 .navbar.hidden { transform: translateY(-100%); }
+.navbar-inner {
+  display: flex; align-items: center; gap: 0.5rem;
+  width: 100%; max-width: var(--c-content-max-width); margin: 0 auto;
+}
 
 .navbar-nav.left img { height: calc(var(--c-navbar-height) - 12px); width: auto; }
 .nav-icon { display: inline-block; width: 1.2em; height: 1.2em; background: currentColor; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; vertical-align: middle; }
@@ -29,6 +33,7 @@
 
 .navbar-nav { display: flex; align-items: center; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
 .navbar-nav.left { margin-right: auto; }
+.navbar-nav.middle { margin-right: auto; }
 .navbar-nav.right { margin-left: auto; }
 
 .navbar-nav a {

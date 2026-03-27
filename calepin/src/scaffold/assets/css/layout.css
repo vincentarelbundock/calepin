@@ -5,6 +5,8 @@
 }
 .content-main > article { max-width: var(--c-content-max-width); margin: 0 auto; }
 
+.no-sidebar .content-main { margin-left: 0; margin-right: 0; max-width: 100%; }
+
 .sidebar-right {
   position: fixed; top: var(--c-navbar-height); right: 0; bottom: 0;
   width: var(--c-toc-width); overflow-y: auto;

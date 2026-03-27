@@ -1,8 +1,9 @@
 ---
-title: Recherche
-lang: fr
-translations:
-  en: research.qmd
+title = "Recherche"
+lang = "fr"
+
+[translations]
+en = "research.qmd"
 ---
 
 Les données et le code utilisés dans mes recherches sont généralement archivés par l'[Open Science Foundation.](https://osf.io/w3kf4/)
