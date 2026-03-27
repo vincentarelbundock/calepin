@@ -204,7 +204,7 @@ pub enum NewAction {
 pub enum ManAction {
     /// Extract R package documentation
     R {
-        /// Package name (must be installed)
+        /// Package name or path to source directory
         package: String,
 
         /// Output directory for .qmd files
@@ -218,7 +218,7 @@ pub enum ManAction {
 
     /// Extract Python package documentation
     Python {
-        /// Package name (must be installed)
+        /// Package name or path to source directory
         package: String,
 
         /// Output directory for .qmd files

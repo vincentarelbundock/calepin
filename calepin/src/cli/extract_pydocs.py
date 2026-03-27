@@ -215,7 +215,18 @@ def main():
             parser = arg.split("=", 1)[1]
 
     try:
-        package = griffe.load(pkg_name, allow_inspection=True)
+        if os.path.isdir(pkg_name):
+            # Source directory: load from the parent, using the dir name as module
+            abs_path = os.path.abspath(pkg_name)
+            parent = os.path.dirname(abs_path)
+            module_name = os.path.basename(abs_path)
+            package = griffe.load(
+                module_name,
+                search_paths=[parent],
+                allow_inspection=False,
+            )
+        else:
+            package = griffe.load(pkg_name, allow_inspection=True)
     except Exception as e:
         print(f"Error: could not load '{pkg_name}': {e}", file=sys.stderr)
         sys.exit(1)

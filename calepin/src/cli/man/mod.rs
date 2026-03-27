@@ -3,14 +3,32 @@
 //! Subcommands:
 //!   - `calepin man r <package>` -- R package docs via Rd AST
 //!   - `calepin man python <package>` -- Python package docs via inspect
+//!
+//! The `<package>` argument can be either an installed package name or a path
+//! to a source directory (containing `man/*.Rd` for R, or a Python package).
 
 mod rdoc;
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result};
+
+/// If `pkg` looks like a filesystem path (contains a separator or is `.`/`..`),
+/// canonicalize it; otherwise return it unchanged as a package name.
+fn resolve_package_arg(pkg: &str) -> String {
+    let p = Path::new(pkg);
+    if p.is_dir() {
+        // Canonicalize so the scripts receive an absolute path.
+        let abs: PathBuf = std::env::current_dir()
+            .map(|cwd| cwd.join(p))
+            .unwrap_or_else(|_| p.to_path_buf());
+        abs.display().to_string()
+    } else {
+        pkg.to_string()
+    }
+}
 
 // ---------------------------------------------------------------------------
 // R
@@ -21,6 +39,7 @@ const R_EXTRACT_DOCS: &str = include_str!("../extract_rdocs.R");
 
 pub fn handle_man_r(package: &str, output: &Path, quiet: bool) -> Result<()> {
     let output_str = output.display().to_string();
+    let pkg_arg = resolve_package_arg(package);
 
     let tmp_dir = tempfile::tempdir()
         .context("Failed to create temporary directory")?;
@@ -29,13 +48,13 @@ pub fn handle_man_r(package: &str, output: &Path, quiet: bool) -> Result<()> {
         .context("Failed to write temporary R script")?;
 
     if !quiet {
-        eprintln!("Extracting R docs for '{}' -> {}", package, output_str);
+        eprintln!("Extracting R docs for '{}' -> {}", pkg_arg, output_str);
     }
 
     let result = Command::new("Rscript")
         .args([
             script_path.to_str().unwrap(),
-            package,
+            &pkg_arg,
             &output_str,
         ])
         .output()
@@ -82,6 +101,7 @@ const PY_EXTRACT_DOCS: &str = include_str!("../extract_pydocs.py");
 
 pub fn handle_man_python(package: &str, output: &Path, quiet: bool) -> Result<()> {
     let output_str = output.display().to_string();
+    let pkg_arg = resolve_package_arg(package);
 
     let tmp_dir = tempfile::tempdir()
         .context("Failed to create temporary directory")?;
@@ -90,13 +110,13 @@ pub fn handle_man_python(package: &str, output: &Path, quiet: bool) -> Result<()
         .context("Failed to write temporary Python script")?;
 
     if !quiet {
-        eprintln!("Extracting Python docs for '{}' -> {}", package, output_str);
+        eprintln!("Extracting Python docs for '{}' -> {}", pkg_arg, output_str);
     }
 
     let result = Command::new("python3")
         .args([
             script_path.to_str().unwrap(),
-            package,
+            &pkg_arg,
             &output_str,
         ])
         .output()
