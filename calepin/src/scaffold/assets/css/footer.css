@@ -4,3 +4,5 @@
   padding: 2rem 2.5rem; border-top: 1px solid var(--c-border);
   font-size: 0.8rem; color: var(--c-text-muted); text-align: center;
 }
+.footer-logo { height: 2em; width: auto; vertical-align: middle; }
+.footer-logo.nav-icon { width: 6em; height: 2em; }

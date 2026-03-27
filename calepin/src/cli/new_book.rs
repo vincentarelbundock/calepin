@@ -19,6 +19,7 @@ pub fn handle_new_book(dir: &Path) -> Result<()> {
 
     // Compose config.toml: scaffold project config + shared defaults + collection defaults
     let calepin_dir = crate::paths::calepin_dir(dir, &[]);
+    std::fs::create_dir_all(&calepin_dir)?;
     let project_config = SCAFFOLD.get_file("_calepin/config.toml")
         .and_then(|f| f.contents_utf8())
         .unwrap_or("");

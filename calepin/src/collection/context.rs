@@ -164,6 +164,16 @@ fn resolve_navbar_includes(
         items.iter().map(|item| {
             let includes = item.resolved_include();
             if includes.is_empty() {
+                // Resolve .qmd hrefs to output URLs
+                if let Some(ref href) = item.href {
+                    if href.ends_with(".qmd") {
+                        if let Some(info) = document_map.get(href.as_str()) {
+                            let mut resolved = item.clone();
+                            resolved.href = Some(info.url.clone());
+                            return resolved;
+                        }
+                    }
+                }
                 return item.clone();
             }
             let nodes = expand_includes(&includes, &item.exclude, base_dir);

@@ -44,6 +44,15 @@ details.sidebar-section[open] > .sidebar-section-title::before { transform: rota
 .sidebar-section-nested { font-size: 0.78rem; margin-top: 0.25rem; text-transform: none; font-weight: 600; }
 .sidebar-children { padding-left: 0.5rem; }
 
+/* Logo in sidebar: hidden on desktop (navbar visible), shown in mobile hamburger */
+.sidebar-header { display: none; }
+@media (max-width: 768px) { .sidebar-header { display: block; padding: 0.5rem 0.75rem 0.75rem; border-bottom: 1px solid var(--c-border); margin-bottom: 0.5rem; } }
+.sidebar-header img { height: 2.8em; width: auto; }
+.sidebar-nav-links { display: none; }
+@media (max-width: 768px) { .sidebar-nav-links { display: flex; flex-direction: column; padding: 0 0.75rem 0.5rem; border-bottom: 1px solid var(--c-border); margin-bottom: 0.5rem; } }
+.sidebar-nav-links a { display: block; padding: 0.35rem 0.75rem; color: var(--c-text); font-size: 0.875rem; }
+.sidebar-nav-links a:hover { text-decoration: none; background: color-mix(in srgb, var(--c-bg) 85%, var(--c-text) 5%); border-radius: 4px; }
+
 .sidebar-toggle-btn {
   background: none; border: none; cursor: pointer; padding: 2px;
   color: var(--c-text-muted); display: inline-flex; align-items: center;
