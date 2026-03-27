@@ -191,7 +191,7 @@ fn apply_transform_recursive(elements: &mut Vec<Element>, t: &dyn crate::registr
 }
 
 /// Map a file extension to a canonical format name.
-pub fn resolve_format_from_extension(ext: &str) -> &str {
+pub fn resolve_format(ext: &str) -> &str {
     match ext {
         "tex" => "latex",
         "pdf" => "latex",
