@@ -1,0 +1,67 @@
+# -- Site identity --
+title = "Vincent Arel-Bundock"
+target = "website"
+output = "_calepin_output"
+static = ["files", "research", "CNAME"]
+
+# -- Languages --
+[[languages]]
+language = "English"
+abbreviation = "en"
+default = true
+
+[[languages]]
+language = "Francais"
+abbreviation = "fr"
+
+# -- Syntax highlighting --
+[highlight]
+light = "github"
+dark = "nord"
+
+# -- Navbar --
+[[navbar.left]]
+lang = "en"
+include = [{text = "About", href = "index.qmd"}, "blog.qmd", "research.qmd", "books.qmd", "code.qmd", "data.qmd"]
+
+[[navbar.left]]
+lang = "fr"
+include = [{text = "À propos", href = "fr/index.qmd"}, "fr/blogue.qmd", "fr/recherche.qmd", "fr/livres.qmd", "fr/code.qmd", "fr/donnees.qmd"]
+
+[[navbar.right]]
+icon = "assets/fontawesome/solid/envelope.svg"
+href = "mailto:vincent.arel-bundock@umontreal.ca"
+width = "20px"
+height = "20px"
+
+[[navbar.right]]
+icon = "assets/fontawesome/brands/bluesky.svg"
+href = "https://bsky.app/profile/vincentab.bsky.social"
+width = "20px"
+height = "20px"
+
+[[navbar.right]]
+icon = "assets/fontawesome/brands/google-scholar.svg"
+href = "https://scholar.google.com/citations?user=eFtJoKkAAAAJ&hl"
+width = "20px"
+height = "20px"
+
+[[navbar.right]]
+widget = "language"
+
+[[navbar.right]]
+widget = "search"
+
+[[navbar.right]]
+widget = "dark"
+
+# -- Post-processing --
+[[post]]
+command = "pagefind --site {output}"
+
+# -- Contents (order drives prev/next navigation) --
+[[contents]]
+include = ["index.qmd", "blog.qmd", "research.qmd", "books.qmd", "code.qmd", "data.qmd"]
+
+[[contents]]
+include = ["fr/index.qmd", "fr/blogue.qmd", "fr/recherche.qmd", "fr/livres.qmd", "fr/code.qmd", "fr/donnees.qmd"]
