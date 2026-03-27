@@ -10,8 +10,6 @@
 //!   - `sort` -- sort spec: "date desc", "title asc", etc. (optional)
 //!   - `type` -- display type: "default", "grid", "table" (default: "default")
 
-use std::collections::HashMap;
-
 use crate::collection::discover::{ListingConfig, DocumentInfo};
 use crate::modules::registry::ModuleContext;
 use crate::render::convert::render_inline;
@@ -56,7 +54,7 @@ fn render_listing_html(pages: &[DocumentInfo], listing_type: &str) -> String {
             .map(|t| render_inline(t, "html"))
             .unwrap_or_else(|| "Untitled".to_string());
         let date = p.meta.date.as_deref()
-            .map(|d| crate::utils::date::format_date_display(d).unwrap_or_else(|| d.to_string()));
+            .map(|d| crate::utils::date::format_date_display(d, None));
         let description = p.meta.description.clone();
         let image = p.meta.image.clone();
         let url = p.url.clone();
