@@ -24,13 +24,19 @@ When asked to commit, do NOT run `git add` or `git commit` yourself. Instead:
 ## Build Commands
 
 ```
-make build          # Debug build (R only)
-make release        # Optimized release build (R only)
+make build          # Debug build
+make release        # Optimized release build
 make install        # Install to ~/.cargo/bin + shell completions
 make check          # Fast compile check (no linking)
 make test           # cargo test
 make docs           # Render all .qmd files in website/ to all formats
-make bench          # Benchmark vs litedown and Quarto (uses website/basics.qmd)
+make bench          # Benchmark vs Quarto on bench/*.qmd (requires hyperfine)
+make plugins        # Build WASM plugins (requires wasm32-unknown-unknown target)
+make site           # Build debug + serve static site from website/
+make clean          # Remove build artifacts
+make flush          # Delete all *_cache and *_files directories
+make prof           # Profile with per-stage timing (set PROF_FILE=path/to/file.qmd)
+make prof-samply    # Profile with samply in browser
 ```
 
 Run a single test: `cargo test test_name`
@@ -303,6 +309,22 @@ Bracketed spans `[content]{.class key=value}` are processed during rendering. Bu
 - `clap` + `clap_complete` -- CLI and shell completions
 - `toml` + `serde` -- TOML config parsing (front matter, `_calepin.toml`, sidecar config)
 - `usvg` + `svg2pdf` -- SVG-to-PDF conversion for LaTeX targets
+
+## WASM Plugins
+
+Plugins are `.wasm` files in `_calepin/plugins/`, declared in front matter under `[calepin] plugins = ["name"]`. Plugin source lives in `plugins/{name}/` (each a Rust crate targeting `wasm32-unknown-unknown`). Build all plugins with `make plugins`.
+
+Custom output formats can be defined via `_calepin/formats/{name}.yaml` with `base`, `extension`, and `plugin` fields.
+
+## Profiling
+
+Build with `make prof-build` (release + debug symbols). Profile a specific file:
+
+```
+make prof PROF_FILE=bench/text.qmd           # Per-stage timing (CALEPIN_TIMING=1)
+make prof-samply PROF_FILE=bench/text.qmd    # Open samply in browser
+make prof-batch PROF_N=100 PROF_FILE=bench/text.qmd  # Batch N iterations
+```
 
 ## Function Naming Convention
 

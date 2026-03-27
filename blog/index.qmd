@@ -1,8 +1,9 @@
 ---
-title: About
-lang: en
-translations:
-  fr: fr/index.qmd
+title = "About"
+lang = "en"
+
+[translations]
+fr = "fr/index.qmd"
 ---
 
 I am a Professor at the Universite de Montreal, where I read on comparative and international political economy. I am particularly interested in the politics of international taxation and foreign direct investment, but I have also worked on monetary policy, foreign aid, economic voting, and research methods.

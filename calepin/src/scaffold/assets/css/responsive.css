@@ -10,7 +10,7 @@
 
 @media (max-width: 768px) {
   .navbar-toggle { display: flex; }
-  .navbar-nav { display: none; }
+  .navbar-nav.middle { display: none; }
   .sidebar-left { transform: translateX(-100%); transition: transform 0.2s ease; }
   .sidebar-left.open { transform: translateX(0); }
   .content-main { margin-left: 0; max-width: 100%; padding: 1.5rem 1rem; }

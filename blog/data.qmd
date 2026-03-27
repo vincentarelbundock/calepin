@@ -1,8 +1,9 @@
 ---
-title: Data
-lang: en
-translations:
-  fr: fr/donnees.qmd
+title = "Data"
+lang = "en"
+
+[translations]
+fr = "fr/donnees.qmd"
 ---
 
 * [Political Risk Insurance and Finance](https://github.com/vincentarelbundock/opic): This project aims to make available firm-level information about every insurance contract issued, financing project initiated, and insurance claim settled by the US Overseas Private Investment Corporation.
