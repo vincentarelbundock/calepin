@@ -9,13 +9,13 @@
     <ul class="navbar-dropdown-menu">
       {% for child in item.children %}
       <li><a href="{{ child.href | default(value='#') }}">
-        {% if child.icon %}<img class="nav-icon" src="/assets/icons/{{ child.icon }}.svg" alt="{{ child.icon }}"> {% endif %}{{ child.text }}
+        {% if child.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ child.icon }}); mask-image: url(/{{ child.icon }});{% if child.width %} width: {{ child.width }};{% endif %}{% if child.height %} height: {{ child.height }};{% endif %}"></span> {% endif %}{{ child.text }}
       </a></li>
       {% endfor %}
     </ul>
     {% else %}
     <a href="{{ item.href | default(value='#') }}">
-      {% if item.icon %}<img class="nav-icon" src="/assets/icons/{{ item.icon }}.svg" alt="{{ item.icon }}"> {% endif %}{{ item.text }}
+      {% if item.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ item.icon }}); mask-image: url(/{{ item.icon }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span> {% endif %}{{ item.text }}
     </a>
     {% endif %}
   </li>

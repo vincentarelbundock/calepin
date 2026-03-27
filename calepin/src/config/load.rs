@@ -58,23 +58,31 @@ pub struct ContentSection {
     #[serde(default)]
     pub href: Option<String>,
 
-    /// Icon name (navbar items).
+    /// Monochrome icon path (rendered via CSS mask-image, adapts to text color).
     #[serde(default)]
     pub icon: Option<String>,
 
-    /// Image path (navbar logo).
+    /// Image path (rendered as `<img>`, for logos and photos).
     #[serde(default)]
     pub image: Option<String>,
 
-    /// Dark-mode image path (navbar logo).
+    /// Dark-mode image path, or `"invert"` for CSS filter.
     #[serde(default)]
     pub image_dark: Option<String>,
+
+    /// Width for icon/image (e.g. "80px", "2em").
+    #[serde(default)]
+    pub width: Option<String>,
+
+    /// Height for icon/image (e.g. "28px", "1.5em").
+    #[serde(default)]
+    pub height: Option<String>,
 
     /// Children: paths, globs, directory, or items with metadata.
     ///
     /// Accepts:
     /// - A single string: directory path (recursive nested sections) or glob
-    /// - A list of strings and/or `{text, href, icon}` tables
+    /// - A list of strings and/or `{text, href, image}` tables
     #[serde(default, deserialize_with = "deserialize_include")]
     pub include: Vec<IncludeEntry>,
 
@@ -137,7 +145,6 @@ impl ContentSection {
                     result.push(IncludeEntry::Item {
                         text: Some(title.clone()),
                         href: Some(page.clone()),
-                        icon: None,
                         image: None,
                         image_dark: None,
                     });
@@ -165,7 +172,6 @@ pub enum IncludeEntry {
     Item {
         text: Option<String>,
         href: Option<String>,
-        icon: Option<String>,
         image: Option<String>,
         image_dark: Option<String>,
     },
@@ -184,7 +190,7 @@ impl<'de> serde::Deserialize<'de> for IncludeEntry {
             type Value = IncludeEntry;
 
             fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                f.write_str("a string path/glob or a table with text/href/icon fields")
+                f.write_str("a string path/glob or a table with text/href/image fields")
             }
 
             fn visit_str<E: de::Error>(self, v: &str) -> std::result::Result<IncludeEntry, E> {
@@ -205,7 +211,6 @@ impl<'de> serde::Deserialize<'de> for IncludeEntry {
                     href: Option<String>,
                     // Accept `page` as alias for `href`
                     page: Option<String>,
-                    icon: Option<String>,
                     image: Option<String>,
                     image_dark: Option<String>,
                     // Accept `title` as alias for `text`
@@ -216,7 +221,6 @@ impl<'de> serde::Deserialize<'de> for IncludeEntry {
                 Ok(IncludeEntry::Item {
                     text: fields.text.or(fields.title),
                     href: fields.href.or(fields.page),
-                    icon: fields.icon,
                     image: fields.image,
                     image_dark: fields.image_dark,
                 })

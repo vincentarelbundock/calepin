@@ -1,13 +1,22 @@
+{% if collection.navbar.left %}
 <ul class="navbar-nav left">
   {% for item in collection.navbar.left %}
   <li>
     <a href="{{ item.href | default(value='/index.html') }}">
       {% if item.image %}
-      <img class="logo-light" src="/{{ item.image }}" alt="{{ item.text | default(value='Home') }}">
-      {% if item.image_dark %}<img class="logo-dark" src="/{{ item.image_dark }}" alt="{{ item.text | default(value='Home') }}">{% endif %}
-      {% elif item.icon %}<img class="nav-icon" src="/assets/icons/{{ item.icon }}.svg" alt="{{ item.icon }}">
+        {% if item.image_dark == "invert" %}
+      <img class="invert-dark" src="/{{ item.image }}" alt="{{ item.text or 'Home' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+        {% elif item.image_dark %}
+      <img class="logo-light" src="/{{ item.image }}" alt="{{ item.text or 'Home' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+      <img class="logo-dark" src="/{{ item.image_dark }}" alt="{{ item.text or 'Home' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+        {% else %}
+      <img src="/{{ item.image }}" alt="{{ item.text or 'Home' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+        {% endif %}
+      {% elif item.icon %}
+      <span class="nav-icon" style="-webkit-mask-image: url(/{{ item.icon }}); mask-image: url(/{{ item.icon }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span>
       {% elif item.text %}{{ item.text }}{% endif %}
     </a>
   </li>
   {% endfor %}
 </ul>
+{% endif %}
