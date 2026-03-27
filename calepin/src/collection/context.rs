@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use serde::Serialize;
 use super::discover::DocumentInfo;
 use super::render::CollectionRenderResult;
-use super::contents::{DocumentNode, expand_contents_for_lang};
-use crate::config::{Metadata, LanguageConfig};
+use super::contents::{DocumentNode, expand_contents_for_lang, expand_includes};
+use crate::config::{ContentSection, Metadata, LanguageConfig, NavbarConfig};
 
 /// Collection-level context available to all templates as `{{ collection.* }}`.
 #[derive(Debug, Serialize)]
@@ -140,6 +140,82 @@ pub struct NavLink {
     pub href: String,
 }
 
+/// Resolve `include`/`exclude` on navbar items into `children` for dropdown menus.
+///
+/// For each navbar item that has `include` entries, expands them using the same
+/// glob/directory machinery as `[[contents]]`, then converts the resulting
+/// `DocumentNode` tree into nested `ContentSection` children with titles
+/// resolved from page metadata.
+fn resolve_navbar_includes(
+    navbar: &NavbarConfig,
+    pages: &[DocumentInfo],
+    base_dir: &std::path::Path,
+) -> NavbarConfig {
+    let document_map: std::collections::HashMap<String, &DocumentInfo> = pages
+        .iter()
+        .map(|p| (p.source.display().to_string(), p))
+        .collect();
+
+    fn resolve_items(
+        items: &[ContentSection],
+        document_map: &std::collections::HashMap<String, &DocumentInfo>,
+        base_dir: &std::path::Path,
+    ) -> Vec<ContentSection> {
+        items.iter().map(|item| {
+            let includes = item.resolved_include();
+            if includes.is_empty() {
+                return item.clone();
+            }
+            let nodes = expand_includes(&includes, &item.exclude, base_dir);
+            let children = nodes_to_children(&nodes, document_map);
+            let mut resolved = item.clone();
+            resolved.children = children;
+            // Clear include so it doesn't get re-resolved
+            resolved.include = Vec::new();
+            resolved.pages = Vec::new();
+            resolved.dir = None;
+            resolved
+        }).collect()
+    }
+
+    fn nodes_to_children(
+        nodes: &[DocumentNode],
+        document_map: &std::collections::HashMap<String, &DocumentInfo>,
+    ) -> Vec<ContentSection> {
+        nodes.iter().filter_map(|node| match node {
+            DocumentNode::Document { path, title } => {
+                let info = document_map.get(path.as_str());
+                let text = title.clone()
+                    .or_else(|| info.and_then(|p| p.meta.title.clone()))
+                    .unwrap_or_else(|| path.clone());
+                let href = info.map(|p| p.url.clone());
+                Some(ContentSection {
+                    text: Some(crate::render::convert::render_inline(&text, "html")),
+                    href,
+                    ..Default::default()
+                })
+            }
+            DocumentNode::Section { title, index, documents } => {
+                let href = index.as_ref().and_then(|idx| {
+                    document_map.get(idx.as_str()).map(|p| p.url.clone())
+                });
+                Some(ContentSection {
+                    text: Some(title.clone()),
+                    href,
+                    children: nodes_to_children(documents, document_map),
+                    ..Default::default()
+                })
+            }
+        }).collect()
+    }
+
+    NavbarConfig {
+        left: resolve_items(&navbar.left, &document_map, base_dir),
+        middle: resolve_items(&navbar.middle, &document_map, base_dir),
+        right: resolve_items(&navbar.right, &document_map, base_dir),
+    }
+}
+
 /// Build the collection-level context from project config.
 /// The `pages` field contains the nav tree for the default language.
 /// Use `build_nav_tree_for_lang` to get a language-specific nav tree.
@@ -163,12 +239,18 @@ pub fn build_collection_context(
         crate::render::template::render_element("math", "html", &vars)
     };
 
+    let navbar = resolve_navbar_includes(
+        &meta.navbar.clone().unwrap_or_default(),
+        pages,
+        base_dir,
+    );
+
     CollectionContext {
         title: meta.title.clone(),
         subtitle: meta.subtitle.clone(),
         url: meta.url.clone(),
         favicon: meta.favicon.clone(),
-        navbar: meta.navbar.clone().unwrap_or_default(),
+        navbar,
         pages: nav_tree,
         languages: meta.languages.clone(),
         dark_mode: true,

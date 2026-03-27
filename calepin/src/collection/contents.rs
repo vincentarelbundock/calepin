@@ -59,7 +59,7 @@ pub fn expand_contents_for_lang(
 }
 
 /// Expand a list of include entries into document nodes.
-fn expand_includes(
+pub fn expand_includes(
     includes: &[IncludeEntry],
     exclude: &[String],
     base_dir: &Path,

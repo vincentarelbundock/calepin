@@ -1,5 +1,0 @@
----
-title = "Top Link 3"
----
-
-This page is also inside a navbar dropdown menu.

@@ -38,37 +38,11 @@ pub fn handle_new_website(dir: &Path) -> Result<()> {
     };
     theme.apply_quiet(&kind)?;
 
-    // Print tree
-    // List scaffolded files (excluding _calepin internals)
-    let mut files: Vec<String> = Vec::new();
-    for file in SCAFFOLD.files() {
-        let p = file.path().display().to_string();
-        if !p.starts_with("_calepin/") {
-            files.push(p);
-        }
-    }
-    fn collect_files(dir: &include_dir::Dir<'static>, files: &mut Vec<String>) {
-        for file in dir.files() {
-            let p = file.path().display().to_string();
-            if !p.starts_with("_calepin/") {
-                files.push(p);
-            }
-        }
-        for sub in dir.dirs() { collect_files(sub, files); }
-    }
-    files.clear();
-    collect_files(&SCAFFOLD, &mut files);
-    files.sort();
-
     eprintln!("Created website project in {}/", dir.display());
     eprintln!();
-    eprintln!("  {}/", dir.display());
-    eprintln!("  |-- _calepin/config.toml");
-    for f in &files {
-        eprintln!("  |-- {}", f);
-    }
+    print_tree(dir, 2);
     eprintln!();
-    eprintln!("To preview:  cd {} && calepin preview", dir.display());
+    eprintln!("To preview:  calepin preview {}", dir.display());
 
     // Warn if pagefind is not installed
     if std::process::Command::new("pagefind").arg("--version").output().is_err() {
@@ -78,4 +52,40 @@ pub fn handle_new_website(dir: &Path) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Print a directory tree to stderr with a maximum depth.
+fn print_tree(root: &Path, max_depth: usize) {
+    eprintln!("  {}/", root.display());
+    print_tree_dir(root, "", max_depth, 0);
+}
+
+fn print_tree_dir(dir: &Path, prefix: &str, max_depth: usize, depth: usize) {
+    let mut entries: Vec<_> = match std::fs::read_dir(dir) {
+        Ok(rd) => rd.filter_map(|e| e.ok()).collect(),
+        Err(_) => return,
+    };
+    entries.sort_by_key(|e| e.file_name());
+
+    let count = entries.len();
+    for (i, entry) in entries.iter().enumerate() {
+        let is_last = i + 1 == count;
+        let connector = if is_last { "`-- " } else { "|-- " };
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+
+        if entry.path().is_dir() {
+            eprintln!("  {}{}{}/", prefix, connector, name);
+            if depth + 1 < max_depth {
+                let child_prefix = if is_last {
+                    format!("{}    ", prefix)
+                } else {
+                    format!("{}|   ", prefix)
+                };
+                print_tree_dir(&entry.path(), &child_prefix, max_depth, depth + 1);
+            }
+        } else {
+            eprintln!("  {}{}{}", prefix, connector, name);
+        }
+    }
 }

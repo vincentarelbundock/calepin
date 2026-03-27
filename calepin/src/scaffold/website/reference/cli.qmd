@@ -1,0 +1,19 @@
+---
+title = "CLI Reference"
+---
+
+The *Calepin* command-line interface.
+
+## Rendering
+
+```sh
+calepin myfile.qmd
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-o PATH` | Output path |
+| `-t TARGET` | Output target (html, latex, typst) |
+| `-q` | Quiet mode |
