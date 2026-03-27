@@ -42,7 +42,7 @@ digraph {
 
 # TikZ
 
-[TikZ](https://tikz.dev/) produces publication-quality diagrams via LaTeX. Requires [`tectonic`](https://tectonic-typesetting.github.io/) and [`pdf2svg`](https://github.com/dawbarton/pdf2svg) on PATH.
+[TikZ](https://tikz.dev/) produces publication-quality diagrams via LaTeX. Requires [`tectonic`](https://tectonic-typesetting.github.io/) on PATH.
 
 *Calepin* wraps your code in a `standalone` document class automatically, so write only the TikZ environment:
 

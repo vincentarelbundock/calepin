@@ -35,7 +35,7 @@ PDF compilation:
 
 Diagrams:
 
-- [tectonic](https://tectonic-typesetting.github.io/) + [pdf2svg](https://github.com/dawbarton/pdf2svg) -- TikZ diagrams (`{tikz}`). SVG-to-PDF conversion (for LaTeX output) is handled internally.
+- [tectonic](https://tectonic-typesetting.github.io/) -- TikZ diagrams (`{tikz}`). PDF-to-SVG and SVG-to-PDF conversions are handled internally.
 - [mmdc](https://github.com/mermaid-js/mermaid-cli) -- Mermaid diagrams (`{mermaid}`)
 - [dot](https://graphviz.org/) -- Graphviz diagrams (`{dot}`)
 - [d2](https://d2lang.com/) -- D2 diagrams (`{d2}`)

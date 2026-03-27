@@ -46,11 +46,6 @@ pub const TECTONIC: Tool = Tool {
     install_hint: "install from https://tectonic-typesetting.github.io/",
 };
 
-pub const PDF2SVG: Tool = Tool {
-    cmd: "pdf2svg",
-    install_hint: "install from https://github.com/dawbarton/pdf2svg",
-};
-
 pub const D2: Tool = Tool {
     cmd: "d2",
     install_hint: "install from https://d2lang.com/",
