@@ -14,6 +14,127 @@ use anyhow::{bail, Result};
 use crate::config::Metadata;
 
 // ---------------------------------------------------------------------------
+// ProjectKind: unified document/collection discovery
+// ---------------------------------------------------------------------------
+
+/// The kind of project a path resolves to.
+#[derive(Debug, Clone)]
+pub enum ProjectKind {
+    /// Single `.qmd` document with its sidecar directory.
+    Document {
+        qmd: PathBuf,
+        sidecar: PathBuf,
+    },
+    /// Collection (website/book) with a project `_calepin/` directory.
+    Collection {
+        root: PathBuf,
+        config: PathBuf,
+    },
+}
+
+impl ProjectKind {
+    /// Discover the project kind from a path.
+    ///
+    /// Accepted inputs:
+    /// - A `.qmd` file -> `Document`
+    /// - A sidecar `{stem}_calepin/config.toml` (with a sibling `{stem}.qmd`) -> `Document`
+    /// - A directory containing `_calepin/config.toml` -> `Collection`
+    /// - A bare `_calepin/config.toml` path -> `Collection`
+    pub fn discover(path: &Path) -> Result<Self> {
+        let path = if path.is_relative() {
+            std::env::current_dir()
+                .unwrap_or_default()
+                .join(path)
+        } else {
+            path.to_path_buf()
+        };
+
+        // Case 1: .qmd file
+        if path.extension().and_then(|e| e.to_str()) == Some("qmd") {
+            if !path.exists() {
+                bail!("File not found: {}", path.display());
+            }
+            let stem = path.file_stem().unwrap().to_string_lossy();
+            let parent = path.parent().unwrap_or(Path::new("."));
+            let sidecar = parent.join(format!("{}_calepin", stem));
+            return Ok(ProjectKind::Document { qmd: path, sidecar });
+        }
+
+        // Case 2: config.toml file -- could be sidecar or collection
+        if path.file_name().and_then(|n| n.to_str()) == Some("config.toml") {
+            if let Some(parent) = path.parent() {
+                let parent_name = parent.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+
+                // Collection: parent is _calepin
+                if parent_name == "_calepin" {
+                    let root = parent.parent().unwrap_or(Path::new("."));
+                    return Ok(ProjectKind::Collection {
+                        root: root.to_path_buf(),
+                        config: path.to_path_buf(),
+                    });
+                }
+
+                // Sidecar: parent is {stem}_calepin
+                if let Some(stem) = parent_name.strip_suffix("_calepin") {
+                    let grandparent = parent.parent().unwrap_or(Path::new("."));
+                    let qmd = grandparent.join(format!("{}.qmd", stem));
+                    if qmd.exists() {
+                        return Ok(ProjectKind::Document {
+                            qmd,
+                            sidecar: parent.to_path_buf(),
+                        });
+                    }
+                    bail!(
+                        "Sidecar config found at {} but no matching {}.qmd",
+                        path.display(), stem
+                    );
+                }
+            }
+            bail!("Unexpected config.toml location: {}", path.display());
+        }
+
+        // Case 3: directory
+        if path.is_dir() {
+            let config = path.join("_calepin").join("config.toml");
+            if config.exists() {
+                return Ok(ProjectKind::Collection {
+                    root: path.to_path_buf(),
+                    config,
+                });
+            }
+            bail!(
+                "No calepin project found at {}. Run `calepin new` first or specify a .qmd file.",
+                path.display()
+            );
+        }
+
+        bail!("Cannot determine project kind for: {}", path.display());
+    }
+
+    /// The directory where `_calepin/` (collection) or sidecar lives.
+    pub fn calepin_dir(&self) -> PathBuf {
+        match self {
+            ProjectKind::Document { sidecar, .. } => sidecar.clone(),
+            ProjectKind::Collection { root, .. } => root.join("_calepin"),
+        }
+    }
+
+    /// The directory where partials should be written/read.
+    #[allow(dead_code)]
+    pub fn partials_dir(&self) -> PathBuf {
+        self.calepin_dir().join("partials")
+    }
+
+    /// The directory where assets should be written/read.
+    #[allow(dead_code)]
+    pub fn assets_dir(&self) -> PathBuf {
+        self.calepin_dir().join("assets")
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Active target name (thread-local)
 // ---------------------------------------------------------------------------
 
@@ -151,16 +272,6 @@ pub fn create_sidecar(dir: &Path) {
 pub fn write_builtin_partials(dest: &Path) {
     use crate::render::elements::BUILTIN_PARTIALS;
     write_embedded_dir(&BUILTIN_PARTIALS, dest);
-}
-
-/// Write built-in assets into the given directory.
-/// Files are written directly into `dest/`, stripping the "assets" prefix.
-/// Recurses into subdirectories (e.g. `icons/`).
-pub fn write_builtin_assets(_target: &str, dest: &Path) {
-    use crate::render::elements::BUILTIN_ASSETS;
-    if let Some(dir) = BUILTIN_ASSETS.get_dir("assets") {
-        write_embedded_dir_impl(dir, dest, Some(Path::new("assets")));
-    }
 }
 
 /// Write an embedded `include_dir::Dir` to disk, preserving subdirectory structure.

@@ -14,24 +14,34 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
 
     let compile = args.compile;
 
-    // Directory: look for project config inside
-    if args.input.len() == 1 && args.input[0].is_dir() {
-        if let Some(config) = crate::cli::find_project_config(&args.input[0]) {
-            if !args.quiet {
-                eprintln!("Found collection config: {}", config.display());
+    // Single input: use ProjectKind discovery for directories and config files
+    if args.input.len() == 1 {
+        use crate::config::paths::ProjectKind;
+        let input = &args.input[0];
+
+        // Try ProjectKind discovery for directories and config.toml paths
+        if input.is_dir() || input.file_name().and_then(|n| n.to_str()) == Some("config.toml") {
+            if let Ok(kind) = ProjectKind::discover(input) {
+                match kind {
+                    ProjectKind::Collection { config, .. } => {
+                        if !args.quiet {
+                            eprintln!("Found collection config: {}", config.display());
+                        }
+                        let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
+                        return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
+                    }
+                    ProjectKind::Document { qmd, .. } => {
+                        // Sidecar config.toml: render the discovered .qmd
+                        let mut ctx = crate::resolve_context(&qmd, args.format.as_deref())?;
+                        crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
+                        return render_one_with_context(&qmd, args.output.as_deref(), &ctx, &overrides, args.quiet, compile);
+                    }
+                }
             }
-            let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
-            return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
         }
     }
 
-    // Collection mode: _calepin/config.toml or _calepin/config.toml config with [[contents]]
-    if args.input.len() == 1 && crate::cli::is_collection_config(&args.input[0]) {
-        let output = args.output.unwrap_or_else(|| std::path::PathBuf::from("output"));
-        return crate::collection::build_collection(Some(args.input[0].as_path()), &output, args.clean, args.quiet, args.format.as_deref());
-    }
-
-    // Single file: may use -o as output file path
+    // Single .qmd file: may use -o as output file path
     if args.input.len() == 1 {
         // Multi-format: split comma-separated formats and render each
         if let Some(ref fmt_str) = args.format {

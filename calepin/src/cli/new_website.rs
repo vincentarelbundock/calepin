@@ -30,9 +30,13 @@ pub fn handle_new_website(dir: &Path) -> Result<()> {
     );
     std::fs::write(calepin_dir.join("config.toml"), composed)?;
 
-    // Add built-in partials + website assets to _calepin/
-    crate::paths::write_builtin_partials(&calepin_dir.join("partials"));
-    crate::paths::write_builtin_assets("website", &calepin_dir.join("assets"));
+    // Apply default theme (partials + assets)
+    let theme = crate::themes::Theme::builtin_default();
+    let kind = crate::config::paths::ProjectKind::Collection {
+        root: dir.to_path_buf(),
+        config: calepin_dir.join("config.toml"),
+    };
+    theme.apply_quiet(&kind)?;
 
     // Print tree
     // List scaffolded files (excluding _calepin internals)

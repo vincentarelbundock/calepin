@@ -12,6 +12,7 @@ mod preview;
 mod references;
 mod render;
 mod collection;
+mod themes;
 mod utils;
 
 // Crate-level re-exports: short paths for pervasive types and modules.
@@ -32,7 +33,7 @@ use cli::{Cli, Command};
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "flush", "new", "man", "info"];
+    let known = ["render", "preview", "flush", "new", "man", "info", "theme"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -101,6 +102,11 @@ fn main() -> Result<()> {
                 };
                 man::handle_man_python(&package, &output, quiet, opts)
             }
+        },
+        Command::Theme { action } => match action {
+            cli::ThemeAction::List => cli::theme::handle_theme_list(),
+            cli::ThemeAction::Show { name, path } => cli::theme::handle_theme_show(&name, &path),
+            cli::ThemeAction::Apply { name, path, yes } => cli::theme::handle_theme_apply(&name, &path, yes),
         },
         Command::Info { action } => cli::info::handle_info(action),
     }

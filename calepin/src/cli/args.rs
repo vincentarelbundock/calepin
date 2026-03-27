@@ -74,10 +74,46 @@ pub enum Command {
         action: ManAction,
     },
 
+    /// Apply or list themes
+    Theme {
+        #[command(subcommand)]
+        action: ThemeAction,
+    },
+
     /// Show information and utilities
     Info {
         #[command(subcommand)]
         action: InfoAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ThemeAction {
+    /// List available themes
+    List,
+
+    /// Show what a theme would change (dry run)
+    Show {
+        /// Theme name or path to a theme directory
+        name: String,
+
+        /// Target document or project directory
+        #[arg(default_value = ".")]
+        path: PathBuf,
+    },
+
+    /// Apply a theme to a document or project
+    Apply {
+        /// Theme name or path to a theme directory
+        name: String,
+
+        /// Target document or project directory
+        #[arg(default_value = ".")]
+        path: PathBuf,
+
+        /// Skip confirmation prompt
+        #[arg(short = 'y', long)]
+        yes: bool,
     },
 }
 
