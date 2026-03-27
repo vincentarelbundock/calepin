@@ -275,6 +275,7 @@ pub enum DocumentEntry {
 
 impl DocumentEntry {
     /// The file path, regardless of variant.
+    #[allow(dead_code)]
     pub fn path(&self) -> &str {
         match self {
             DocumentEntry::Path(p) => p,

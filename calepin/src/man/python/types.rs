@@ -94,6 +94,7 @@ pub enum SectionContent {
     Raises(Vec<DocRaise>),
     Examples(Vec<ExampleItem>),
     /// Generic list of named items (attributes, other_parameters, etc.).
+    #[allow(dead_code)]
     Generic(Vec<DocParam>),
     Admonition { title: String, description: String },
 }
@@ -121,6 +122,7 @@ pub struct PyParam {
     pub name: String,
     pub annotation: Option<String>,
     pub default: Option<String>,
+    #[allow(dead_code)]
     pub kind: ParamKind,
 }
 
