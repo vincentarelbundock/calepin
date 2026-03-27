@@ -66,7 +66,15 @@ pub fn get_sidecar_root() -> Option<PathBuf> {
 pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
     if let Some(parent) = config_path.parent() {
         if parent.file_name().map(|n| n == "_calepin").unwrap_or(false) {
-            return parent.parent().unwrap_or(fallback).to_path_buf();
+            let root = parent.parent().unwrap_or(fallback);
+            // parent.parent() of a relative "_calepin" is "" -- use fallback
+            if root.as_os_str().is_empty() {
+                return fallback.to_path_buf();
+            }
+            return root.to_path_buf();
+        }
+        if parent.as_os_str().is_empty() {
+            return fallback.to_path_buf();
         }
         return parent.to_path_buf();
     }

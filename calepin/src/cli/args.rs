@@ -68,6 +68,12 @@ pub enum Command {
         action: NewAction,
     },
 
+    /// Extract package documentation as .qmd files
+    Man {
+        #[command(subcommand)]
+        action: ManAction,
+    },
+
     /// Show information and utilities
     Info {
         #[command(subcommand)]
@@ -191,6 +197,37 @@ pub enum NewAction {
         /// 2 = + cross-references, footnotes, citations, and tables
         #[arg(short, long, default_value = "1", value_parser = clap::value_parser!(u8).range(0..=2))]
         complexity: u8,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ManAction {
+    /// Extract R package documentation
+    R {
+        /// Package name (must be installed)
+        package: String,
+
+        /// Output directory for .qmd files
+        #[arg(short, long, default_value = "man")]
+        output: PathBuf,
+
+        /// Quiet mode
+        #[arg(short, long)]
+        quiet: bool,
+    },
+
+    /// Extract Python package documentation
+    Python {
+        /// Package name (must be installed)
+        package: String,
+
+        /// Output directory for .qmd files
+        #[arg(short, long, default_value = "man")]
+        output: PathBuf,
+
+        /// Quiet mode
+        #[arg(short, long)]
+        quiet: bool,
     },
 }
 

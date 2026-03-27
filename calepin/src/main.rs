@@ -31,7 +31,7 @@ use cli::{Cli, Command};
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "flush", "new", "info"];
+    let known = ["render", "preview", "flush", "new", "man", "info"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -87,6 +87,10 @@ fn main() -> Result<()> {
             cli::NewAction::Gibberish { files, paragraphs, dir, complexity } => {
                 cli::new_gibberish::handle_new_gibberish(&dir, files, paragraphs, complexity)
             }
+        },
+        Command::Man { action } => match action {
+            cli::ManAction::R { package, output, quiet } => cli::man::handle_man_r(&package, &output, quiet),
+            cli::ManAction::Python { package, output, quiet } => cli::man::handle_man_python(&package, &output, quiet),
         },
         Command::Info { action } => cli::info::handle_info(action),
     }
