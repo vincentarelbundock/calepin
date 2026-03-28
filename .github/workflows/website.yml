@@ -39,7 +39,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install Python packages
-        run: uv pip install --system numpy matplotlib pandas
+        run: uv pip install --system --break-system-packages numpy matplotlib pandas
 
       - name: Install pagefind
         run: npx pagefind --version
