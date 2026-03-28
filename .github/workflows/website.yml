@@ -14,10 +14,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            calepin/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build calepin
+        run: cargo build --release --manifest-path calepin/Cargo.toml
+
       - name: Install calepin
-        run: |
-          curl --proto '=https' --tlsv1.2 -LsSf \
-            https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh
+        run: cp calepin/target/release/calepin /usr/local/bin/
 
       - name: Install R
         uses: r-lib/actions/setup-r@v2
