@@ -39,13 +39,18 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install Python packages
-        run: uv pip install --system --break-system-packages numpy matplotlib pandas
+        run: |
+          uv venv .venv
+          source .venv/bin/activate
+          uv pip install numpy matplotlib pandas
 
       - name: Install pagefind
         run: npx pagefind --version
 
       - name: Build website
-        run: cd website && uv run calepin render _calepin/config.toml
+        run: |
+          source .venv/bin/activate
+          cd website && calepin render _calepin/config.toml
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
