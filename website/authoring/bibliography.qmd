@@ -58,7 +58,7 @@ csl: styles/my-journal.csl       # file path
 Resolution order (first match wins):
 
 1. File path --- If the `csl` value points to an existing `.csl` file, it is used directly.
-2. Built-in name --- *Calepin* ships with hundreds of styles from the [hayagriva](https://github.com/typst/hayagriva) archive. Run `calepin info csl` to list all available names.
+2. Built-in name --- *Calepin* ships with hundreds of styles from the [hayagriva](https://github.com/typst/hayagriva) archive. Run `calepin extra csl` to list all available names.
 3. Default --- If no `csl` field is set, *Calepin* falls back to `chicago-author-date`.
 
 If the specified style is not found or is a dependent style, *Calepin* warns and falls back to the default.

@@ -129,16 +129,16 @@ calepin theme show mytheme my_website/
 calepin theme apply mytheme my_website/
 ```
 
-### info
+### extra
 
 Query built-in resources.
 
 ```bash
 # List available CSL citation styles
-calepin info csl
+calepin extra csl
 
 # List available syntax highlighting themes
-calepin info themes
+calepin extra themes
 ```
 
 ### man

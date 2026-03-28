@@ -384,7 +384,7 @@ fn validate_csl(csl: &str, project_root: &Path) -> Result<()> {
 
     bail!(
         "'{}' is not a known CSL style or an existing file.\n  \
-         Run `calepin info csl` to see available styles.",
+         Run `calepin extra csl` to see available styles.",
         csl
     );
 }

@@ -34,7 +34,7 @@ use cli::{Cli, Command};
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "flush", "new", "man", "info"];
+    let known = ["render", "preview", "flush", "new", "man", "extra"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -103,6 +103,6 @@ fn main() -> Result<()> {
                 man::handle_man_python(&package, &output, quiet, opts)
             }
         },
-        Command::Info { action } => cli::info::handle_info(action),
+        Command::Extra { action } => cli::info::handle_extra(action),
     }
 }

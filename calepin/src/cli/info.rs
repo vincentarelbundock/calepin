@@ -1,11 +1,11 @@
-//! The `calepin info` command: display system capabilities (CSL styles, themes, completions).
+//! The `calepin extra` command: display system capabilities (CSL styles, themes, completions).
 
 use anyhow::Result;
-use crate::cli::InfoAction;
+use crate::cli::ExtraAction;
 
-pub fn handle_info(action: InfoAction) -> Result<()> {
+pub fn handle_extra(action: ExtraAction) -> Result<()> {
     match action {
-        InfoAction::Csl => {
+        ExtraAction::Csl => {
             use hayagriva::archive::ArchivedStyle;
 
             println!("Calepin uses CSL (Citation Style Language) for bibliography");
@@ -43,13 +43,13 @@ pub fn handle_info(action: InfoAction) -> Result<()> {
             }
             Ok(())
         }
-        InfoAction::Completions { shell } => {
+        ExtraAction::Completions { shell } => {
             use clap::CommandFactory;
             let mut cmd = <crate::cli::Cli as CommandFactory>::command();
             clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
             Ok(())
         }
-        InfoAction::Highlight => {
+        ExtraAction::Highlight => {
             println!("Built-in syntax highlighting themes:\n");
             let names = crate::modules::list_builtin_themes();
             for name in &names {

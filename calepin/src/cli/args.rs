@@ -75,9 +75,9 @@ pub enum Command {
     },
 
     /// Show information and utilities
-    Info {
+    Extra {
         #[command(subcommand)]
-        action: InfoAction,
+        action: ExtraAction,
     },
 }
 
@@ -268,7 +268,7 @@ pub enum ManAction {
 
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
-pub enum InfoAction {
+pub enum ExtraAction {
     /// List available citation styles
     Csl,
     /// List available syntax highlighting themes
@@ -276,9 +276,9 @@ pub enum InfoAction {
     /// Print shell completions
     #[command(arg_required_else_help = true, after_help = "\
 \x1B[1;4mExamples:\x1B[0m
-  calepin info completions zsh  > ~/.zfunc/_calepin
-  calepin info completions bash > ~/.local/share/bash-completion/completions/calepin
-  calepin info completions fish > ~/.config/fish/completions/calepin.fish")]
+  calepin extra completions zsh  > ~/.zfunc/_calepin
+  calepin extra completions bash > ~/.local/share/bash-completion/completions/calepin
+  calepin extra completions fish > ~/.config/fish/completions/calepin.fish")]
     Completions {
         /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)
         shell: Shell,

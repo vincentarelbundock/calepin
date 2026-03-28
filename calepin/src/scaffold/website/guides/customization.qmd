@@ -16,4 +16,4 @@ with the `plugins` field in your config or front matter.
 
 ## Themes
 
-Apply a built-in theme or create your own with `calepin info themes`.
+Apply a built-in theme or create your own with `calepin extra themes`.
