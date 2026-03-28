@@ -49,7 +49,7 @@ jobs:
           uv pip install numpy matplotlib pandas
 
       - name: Install pagefind
-        run: npx pagefind --version
+        run: npm install -g pagefind
 
       - name: Build website
         run: |
