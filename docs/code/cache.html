@@ -1805,7 +1805,7 @@ x</span></code></pre>
     key = sha256(source, exec_options, upstream_digest)
     upstream_digest = sha256(upstream_digest, key)</span></code></pre>
 
-<p>This means any upstream change, even in a non-cached chunk, cascades invalidation to all downstream cached chunks. Inline code expressions (<code>__CALEPIN_92c7_51___ERROR:object 'expr' not found</code>) also advance the digest, since they can mutate session state.</p>
+<p>This means any upstream change, even in a non-cached chunk, cascades invalidation to all downstream cached chunks. Inline code expressions (<code>__CALEPIN_edde_7___ERROR:object 'expr' not found</code>) also advance the digest, since they can mutate session state.</p>
 <p>Chunks with <code>eval: false</code> still contribute to the digest chain (based on their source and options) so that toggling <code>eval</code> correctly invalidates downstream caches.</p>
 <h3 id="storage-layout">Storage layout</h3>
 <p>Cache files live in <code>&lt;stem&gt;_cache/&lt;label&gt;/</code>:</p>
