@@ -3,7 +3,8 @@
 ## Concepts
 
 - **Extension** -- A directory with an `extension.toml` manifest. The single unit of distribution and customization. Bundles a target definition, partials, modules, and assets. Built-in targets (html, latex, typst, slides, website, book) are also extensions.
-- **Target** -- An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the `[target]` section of an extension manifest or in `_calepin/config.toml`.
+- **Target** -- An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the `[target]` section of an extension manifest or in `_calepin/config.toml`. Every target has a `type`: either `notebook` or `collection`.
+- **Type** -- One of two fundamental target types. `notebook`: a single document rendered to one output file (html, latex, typst, markdown, slides). `collection`: a multi-document project rendered to a directory of output files (website, book). Inherited from the parent and cannot be changed.
 - **Writer** -- One of the four rendering engines: `html`, `latex`, `typst`, `markdown`. Every target has exactly one writer. Writers are not user-extensible.
 - **Partial** -- A Jinja template that renders a specific element or page component (e.g., `figure.html`, `page.tex`). Partials are resolved by name through a layered chain. Adding a partial is enough to create a custom div style -- no module needed.
 - **Module** -- A declared transform in the extension manifest. Only needed when partials alone are insufficient: structural transforms that rewrite children, match rules beyond class names, auto-numbering, or external code execution.
@@ -59,6 +60,7 @@ inherits = "html"
 # Full target definition (same fields as [targets.X] in config.toml).
 # These override the parent's values after inheritance resolution.
 [target]
+type = "notebook"                   # "notebook" or "collection"; inherited, cannot be changed
 writer = "html"                     # inherited if omitted
 extension = "html"                  # inherited if omitted
 template = "page"                   # inherited if omitted
@@ -332,15 +334,37 @@ Module templates are resolved via the standard partial resolution chain (see Par
 
 A module must be listed in the active target's `modules` field to run as a document/element transform. Modules that match by class/attr/id (span transforms, element children transforms) run whenever a matching element is encountered, regardless of the `modules` list.
 
-## Built-in targets as extensions
+## Built-in targets
 
-The built-in targets are structured internally as extensions. Each has the same shape:
+Every target derives from one of two fundamental types:
+
+- **Notebook** -- A single document rendered to one output file.
+- **Collection** -- A multi-document project rendered to a directory of output files.
+
+The built-in targets form this inheritance tree:
+
+```
+notebook (type)
+  html                  writer = "html"
+    slides              inherits = "html"
+  latex                 writer = "latex"
+  typst                 writer = "typst"
+  markdown              writer = "markdown"
+
+collection (type)
+  website               inherits = "html"
+  book                  inherits = "html"
+```
+
+The base notebook targets (`html`, `latex`, `typst`, `markdown`) each define a writer and a default set of modules, partials, and settings. The composed targets (`slides`, `website`, `book`) inherit from a base and override specific pieces. The `type` is inherited and cannot be changed by child extensions.
+
+Internally, all built-in targets are structured as extensions:
 
 ```
 (embedded at compile time)
 
 html/
-  extension.toml        # writer = "html", modules = [...]
+  extension.toml        # type = "notebook", writer = "html"
   partials/
     html/
       page.html
@@ -349,20 +373,20 @@ html/
       ...
 
 latex/
-  extension.toml
+  extension.toml        # type = "notebook", writer = "latex"
   partials/
     latex/
       page.tex
       ...
 
 slides/
-  extension.toml        # inherits = "html"
+  extension.toml        # type = "notebook", inherits = "html"
   partials/
     slides/
       page.html         # overrides html/page.html
 
 website/
-  extension.toml        # inherits = "html"
+  extension.toml        # type = "collection", inherits = "html"
   partials/
     website/
       base.html
@@ -376,11 +400,9 @@ website/
 
 The current `config/document.toml` target entries become the `[target]` section of each extension's `extension.toml`. The current `partials/{writer}/` directories map directly to `{name}/partials/{writer}/`. Built-in modules remain in Rust code; they are registered by name in `modules.toml` as today.
 
-This means:
-
 - `slides` inherits from `html`, overriding `page.html` and adding `split_slides` to modules.
 - `website` inherits from `html`, adding navbar/sidebar partials, CSS assets, and `document_listing` support.
-- A user extension inherits from any of these and follows the same rules.
+- A user extension inherits from any of these and follows the same rules. The `type` is inherited from the parent.
 
 ## `calepin init extension`
 

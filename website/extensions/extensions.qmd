@@ -80,6 +80,7 @@ The `inherits` field names exactly one parent: a built-in target or another inst
 
 ```toml
 [target]
+type = "notebook"                   # "notebook" or "collection"; inherited, cannot be changed
 writer = "html"                     # inherited if omitted
 extension = "html"                  # output file extension; inherited if omitted
 template = "page"                   # page template name; inherited if omitted
