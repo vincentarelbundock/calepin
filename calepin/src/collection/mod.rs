@@ -39,10 +39,13 @@ pub fn build_collection(
     }
 
     // 2. Resolve collection target (format and extension)
-    //    CLI -f flag takes precedence over [site].target, which defaults to "html".
+    //    CLI -t flag takes precedence over `target` in config.toml.
     let collection_target_name = cli_target.map(|s| s.to_string())
         .or_else(|| meta.target.clone())
-        .unwrap_or_else(|| "html".to_string());
+        .ok_or_else(|| anyhow::anyhow!(
+            "No target specified. Set `target = \"website\"` in your config.toml \
+             or pass `-t website` on the command line."
+        ))?;
     let collection_target = crate::config::resolve_target(&collection_target_name, &meta.targets)?;
     let format = &collection_target.writer;
     let output_ext = collection_target.output_extension();
