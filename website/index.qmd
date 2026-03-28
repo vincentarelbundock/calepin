@@ -1,5 +1,5 @@
 ---
-bibliography = "assets/library.bib"
+bibliography = "_calepin/assets/library.bib"
 number-sections = true
 toc = true
 ---
