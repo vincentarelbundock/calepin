@@ -1,0 +1,167 @@
+---
+title = "Getting Started"
+---
+
+## Documents
+
+A *Calepin* notebook is a simple Markdown document with some added features: TOML front matter, executable code chunks, citations, cross-references, and Jinja templating. It looks a lot like a Quarto `.qmd` file, except that the preamble is specified in TOML rather than YAML (this may change before the 1.0 release).
+
+Here is a minimal example:
+
+````markdown
+---
+title = "My First Notebook"
+date = "today"
+bibliography = "references.bib"
+
+[toc]
+enabled = true
+---
+
+## Introduction
+
+This is a *Calepin* document. Code chunks are executed and their
+output is included in the rendered document.
+
+```{r}
+summary(mtcars[, 1:4])
+```
+
+```{python}
+import pandas as pd
+pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+```
+
+See @knuth1984 for details.
+````
+
+Render it with:
+
+```bash
+calepin render notebook.qmd
+```
+
+## Commands
+
+*Calepin* has seven main commands:
+
+- `render`: produce output files.
+- `preview`: start a live-reloading server.
+- `new`: scaffold projects and generate shell completions.
+- `theme`: apply or list themes.
+- `info`: show available CSL styles and syntax themes.
+- `man`: extract package documentation as `.qmd` files.
+- `flush`: clean up caches and build artefacts.
+
+Run `calepin --help` or `calepin <command> --help` for full option details.
+
+### render
+
+```bash
+# Render a document to HTML (default)
+calepin render document.qmd
+
+# Choose an output format
+calepin render document.qmd -t latex     # -> document.tex
+calepin render document.qmd -t typst     # -> document.typ
+calepin render document.qmd -t markdown  # -> document.md
+
+# Render to multiple formats at once
+calepin render document.qmd -t html,latex,typst
+
+# Specify an output path (format inferred from extension)
+calepin render document.qmd -o paper.tex
+
+# Compile to PDF via LaTeX or Typst
+calepin render document.qmd -t pdf
+calepin render document.qmd -t pdf --writer typst
+
+# Override metadata from the command line
+calepin render document.qmd -s toc=true
+calepin render document.qmd -s title="Draft" number-sections=true
+calepin render document.qmd -s bibliography=refs.bib fig-width=6
+
+# Quiet mode
+calepin render document.qmd -q
+```
+
+### preview
+
+```bash
+# Live preview with hot reload
+calepin preview document.qmd
+calepin preview document.qmd --port 8080
+
+# Preview a website project
+calepin preview my_website/
+```
+
+### new
+
+Scaffold new projects or generate shell completions.
+
+```bash
+# Scaffold a new project
+calepin new notebook
+calepin new website
+calepin new book
+
+# Generate shell completions
+calepin new completions bash
+calepin new completions zsh
+calepin new completions fish
+```
+
+A scaffolded website includes a `_calepin/config.toml` with navbar, sidebar, and post-processing configuration, plus example pages in several directories.
+
+### theme
+
+Themes control the look of your website or document. A theme is a collection of partials and assets that override the built-in defaults.
+
+```bash
+# List available themes
+calepin theme list
+
+# Preview what a theme would change (dry run)
+calepin theme show mytheme my_website/
+
+# Apply a theme
+calepin theme apply mytheme my_website/
+```
+
+### info
+
+Query built-in resources.
+
+```bash
+# List available CSL citation styles
+calepin info csl
+
+# List available syntax highlighting themes
+calepin info themes
+```
+
+### man
+
+Extract package documentation as `.qmd` files, ready for rendering or inclusion in a website.
+
+```bash
+# Extract R package documentation
+calepin man r ggplot2
+calepin man r ./path/to/package
+
+# Extract Python package documentation
+calepin man python numpy
+```
+
+### flush
+
+```bash
+# Delete cache and build artefacts
+calepin flush
+calepin flush -y              # skip confirmation
+calepin flush --cache          # cache only
+calepin flush --files          # generated files only
+calepin flush --compilation    # LaTeX artefacts only (.aux, .log, etc.)
+calepin flush path/to/dir      # flush a specific directory
+```

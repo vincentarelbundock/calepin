@@ -1,0 +1,270 @@
+---
+title = "Basics"
+---
+
+This page reviews some of the basics of Quarto and Markdown syntax supported by *Calepin*. It covers document structure, code chunks, figures, math, cross-references, citations, and other features that work out of the box.
+
+# Getting started
+
+*Calepin* renders `.qmd` documents to HTML, LaTeX, Typst, and Markdown. It executes R code chunks, captures output and plots, resolves citations and cross-references, and wraps everything in a template.
+
+To render this tutorial:
+
+```
+calepin tutorial.qmd
+```
+
+# Markdown basics
+
+*Calepin* supports standard CommonMark and GitHub Flavored Markdown. The table below summarizes the basic Markdown notation from the original specification.
+
+| Element | Syntax |
+|---|---|
+| Heading | `# H1`, `## H2`, ..., `###### H6` |
+| Paragraph | Blank line between blocks of text |
+| Line break | Two trailing spaces or `\` at end of line |
+| Italic | `*text*` or `_text_` |
+| Bold | `**text**` or `__text__` |
+| Bold + italic | `***text***` |
+| Blockquote | `> quoted text` |
+| Ordered list | `1. item` |
+| Unordered list | `- item`, `* item`, or `+ item` |
+| Inline code | `` `code` `` |
+| Code block | Indent by 4 spaces or fence with ` ``` ` |
+| Horizontal rule | `---`, `***`, or `___` |
+| Link | `[text](url)` or `[text](url "title")` |
+| Reference link | `[text][id]` then `[id]: url` |
+| Image | `![alt text](path)` |
+| Escape | `\*`, `\[`, `\\`, etc. |
+
+Here is a paragraph about Montreal that illustrates all of these features.
+
+{% include "source_tip" %}
+
+---
+
+## Montréal
+
+> *Montréal is a city of contrasts: old-world charm meets modern ambition.*
+
+Montréal is the largest city in the province of Québec and the *second most populous* in Canada. Founded in 1642, the city sits on an island in the *Saint Lawrence River*. Visitors should explore these landmarks:
+
+1. Old Montréal: cobblestone streets and the [Notre-Dame Basilica](https://www.basiliquenotredame.ca)
+2. Mount Royal: the park designed by Frederick Law Olmsted
+3. The Plateau: colourful row houses and lively cafés
+
+Local specialties worth trying:
+
+- Poutine
+- Smoked meat sandwiches
+- Bagels from [St-Viateur](https://www.stviateurbagel.com "St-Viateur Bagel")
+
+The city's motto is `Concordia Salus`[^mtl], meaning "well-being through harmony."
+
+[^mtl]: The motto was adopted in 1833 and appears on the city's coat of arms.
+
+As the Montréal tourism board puts it:\
+"*There is no place quite like it.*"
+
+![A view of the Montréal skyline](/assets/placeholder.png)
+
+
+# Code chunks
+
+Code chunks are fenced with triple backticks and a `{r}` header. Options go inside the chunk as `#|` pipe comments. See the [Chunks](/code/chunks.html) vignette for the full list of chunk options.
+
+```{r}
+#| echo = fenced
+x <- 1:10
+mean(x)
+```
+
+
+# Inline code
+
+R expressions can be evaluated inline using back ticks and curly braces. See the [Inline](/code/inline.html) vignette for more details.
+
+```
+`{r} round(pi, 4)`
+```
+
+The numbers in this sentence are computed dynamically: The mean of 1:10 is `{r} mean(1:10)` and pi is approximately `{r} round(pi, 4)`.
+
+
+# Figures
+
+```{r, fig-scatter}
+#| fig-width = 5
+#| fig-height = 4
+#| fig-cap = "A simple scatter plot"
+plot(
+    1:10,
+    (1:10)^2,
+    main = "Square Numbers",
+    xlab = "x",
+    ylab = "x^2"
+)
+```
+
+
+# Cross-references
+
+*Calepin* resolves references to figures, sections, and theorem environments.
+
+* @fig-scatter renders as a linked reference
+* @sec-figures links to the Figures section
+* [-@fig-scatter] suppresses the type prefix
+
+Sections get automatic ids from their heading text.
+
+
+# Math
+
+Inline math: $a^2 + b^2 = c^2$. Display math:
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$
+
+::: {.theorem #thm-pythagoras}
+In a right triangle, the square of the hypotenuse equals the sum of the squares of the other two sides: $a^2 + b^2 = c^2$.
+:::
+
+::: {.proof}
+Let a right triangle have legs $a$, $b$ and hypotenuse $c$. By constructing squares on each side and comparing areas, we obtain $a^2 + b^2 = c^2$.
+:::
+
+By @thm-pythagoras, the relationship is fundamental to Euclidean geometry.
+
+
+# Callouts
+
+Callout divs highlight important information. Five types are available: `callout-note`, `callout-warning`, `callout-tip`, `callout-caution`, and `callout-important`. They can be nested.
+
+:::: {.callout-note}
+This is a note callout. Use it for supplementary information.
+
+::: {.callout-warning}
+Callouts can be nested. This warning appears inside the note above.
+:::
+::::
+
+
+# Conditional content
+
+Fenced divs with `.content-visible` or `.content-hidden` classes control which content appears in each output format.
+
+::: {.content-visible when-format="html"}
+This paragraph only appears in HTML output.
+:::
+
+::: {.content-hidden when-format="latex"}
+This paragraph is hidden in LaTeX but visible in all other formats.
+:::
+
+Format aliases are supported: `latex` and `pdf` both match LaTeX output, `markdown` and `md` both match Markdown.
+
+
+# Raw blocks
+
+Raw blocks inject format-specific markup that passes through verbatim when the output format matches and is dropped otherwise.
+
+```{=html}
+<details><summary>Click to expand</summary>
+<p>This raw HTML only appears in HTML output.</p>
+</details>
+```
+
+
+# Tabsets
+
+Tabsets organize content into switchable tabs. In HTML, readers click to switch tabs. In LaTeX and Typst, tabs render as regular sections.
+
+::: {.panel-tabset}
+
+## R
+
+```{r}
+x <- c(1, 2, 3)
+mean(x)
+```
+
+## Python
+
+```python
+x = [1, 2, 3]
+sum(x) / len(x)
+```
+
+## Julia
+
+```julia
+x = [1, 2, 3]
+sum(x) / length(x)
+```
+
+:::
+
+Tabsets with the same `group` attribute switch together:
+
+::: {.panel-tabset group="lang"}
+
+## R
+
+R version of example 2.
+
+## Python
+
+Python version of example 2.
+
+:::
+
+::: {.panel-tabset group="lang"}
+
+## R
+
+R content stays synced with the tabset above.
+
+## Python
+
+Python content stays synced too.
+
+:::
+
+
+# Line blocks
+
+Line blocks preserve line breaks and leading spaces. Prefix each line with `|`.
+
+| The limerick packs laughs anatomical
+| Into space that is quite economical.
+|    But the good ones I've seen
+|    So seldom are clean
+| And the clean ones so seldom are comical.
+
+
+# Footnotes
+
+There are two ways to create footnotes. Named references use `[^label]` at the point of reference and `[^label]: text` for the definition elsewhere in the document. Inline footnotes use `^[text]` directly without a separate definition.
+
+Named footnote[^3] and inline footnote^[This is defined right here.].
+
+[^3]: This is defined separately.
+
+
+# Numbered sections
+
+Add `number-sections: true` to the YAML front matter to automatically number all section headings.
+
+
+# The `.hidden` div
+
+The `.hidden` div executes its content but produces no output.
+
+::: {.hidden}
+```{r}
+secret <- 42
+```
+:::
+
+The value computed silently: `{r} secret`.

@@ -1,0 +1,10 @@
+/* =================================================================
+   8. Print
+   ================================================================= */
+
+@media print {
+  body { max-width: 100%; }
+  tr, img { break-inside: avoid; }
+  .toc { display: none; }
+  .landscape { size: landscape; }
+}

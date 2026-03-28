@@ -1,0 +1,86 @@
+---
+title = "Bibliography"
+---
+
+*Calepin* processes citations from BibTeX/BibLaTeX files using [hayagriva](https://github.com/typst/hayagriva). Specify one or more `.bib` files in the front matter, and citation keys in the document body are resolved automatically.
+
+
+# Front matter
+
+The `bibliography` field accepts a single path or a list. The optional `csl` field points to a [Citation Style Language](https://citationstyles.org/) file.
+
+```yaml
+---
+title: My Document
+bibliography: references.bib
+csl: apa.csl
+---
+```
+
+Multiple bibliography files are merged into a single library:
+
+```yaml
+---
+bibliography:
+  - refs_theory.bib
+  - refs_empirical.bib
+---
+```
+
+
+# Citation syntax
+
+Three citation forms are supported:
+
+| Syntax | Output | Description |
+|--------|--------|-------------|
+| `@key` | Author et al. (Year) | Narrative citation |
+| `[@key]` | (Author et al. Year) | Parenthetical citation |
+| `[-@key]` | Year | Suppress author, year only |
+| `[@key1; @key2]` | (Author1 Year1; Author2 Year2) | Grouped citations |
+
+Grouped references also work for cross-references: `[@fig-one; @fig-two]` produces linked references like [@fig-one; @fig-two].
+
+These are compatible with Quarto and Pandoc syntax.
+
+
+# CSL styles
+
+By default, *Calepin* uses the Chicago author-date style. To customize citation formatting, set the `csl` field in the front matter or in `_calepin/config.toml`. The value can be a built-in style name or a file path:
+
+```yaml
+---
+csl: apa                          # built-in name (no .csl extension)
+csl: styles/my-journal.csl       # file path
+---
+```
+
+Resolution order (first match wins):
+
+1. File path --- If the `csl` value points to an existing `.csl` file, it is used directly.
+2. Built-in name --- *Calepin* ships with hundreds of styles from the [hayagriva](https://github.com/typst/hayagriva) archive. Run `calepin info csl` to list all available names.
+3. Default --- If no `csl` field is set, *Calepin* falls back to `chicago-author-date`.
+
+If the specified style is not found or is a dependent style, *Calepin* warns and falls back to the default.
+
+Additional `.csl` files for journals not covered by the built-in archive are available from the [Zotero style repository](https://www.zotero.org/styles).
+
+# References section
+
+When a document contains at least one resolved citation, *Calepin* appends a References section at the end of the output automatically. Unresolved keys (those not found in any `.bib` file) are left as-is.
+
+
+Two dummy figures so we can demonstrate cross-references:
+
+::: {#fig-one}
+[]{.placeholder width=100 height=100}
+
+First figure
+:::
+
+::: {#fig-two}
+[]{.placeholder width=100 height=100}
+
+Second figure
+:::
+

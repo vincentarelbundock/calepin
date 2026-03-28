@@ -1,0 +1,33 @@
+/* --- Page header (site wraps title/date/abstract outside the body) --- */
+.page-header { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--c-border); }
+.page-header h1 { font-size: 2rem; font-weight: 700; margin: 0 0 0.25rem; line-height: 1.2; }
+.page-header .subtitle { font-size: 1.2rem; color: var(--c-text-secondary); margin: 0.25rem 0 0; }
+.page-header .date { font-size: 0.875rem; color: var(--c-text-muted); margin-top: 0.5rem; }
+.page-header .abstract {
+  margin-top: 1rem; padding: 1rem; background: var(--c-bg-secondary);
+  border-radius: 6px; border-left: 4px solid var(--c-link);
+  font-style: italic; color: var(--c-text-secondary);
+}
+
+/* --- Prev/next navigation --- */
+.page-nav {
+  display: flex; justify-content: space-between;
+  margin-top: 3rem; padding-top: 1.5rem;
+  border-top: 1px solid var(--c-border); gap: 1rem;
+  max-width: var(--c-content-max-width); margin-left: auto; margin-right: auto;
+}
+.page-nav a {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.75rem 1rem; border: 1px solid var(--c-border);
+  border-radius: 8px; color: var(--c-text-secondary); max-width: 50%; font-size: 0.9rem;
+}
+.page-nav a:hover { border-color: var(--c-link); color: var(--c-link); text-decoration: none; }
+.page-nav .prev { margin-right: auto; }
+.page-nav .next { margin-left: auto; }
+.page-nav .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--c-text-muted); }
+
+/* --- Breadcrumbs --- */
+.breadcrumbs { display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; color: var(--c-text-muted); margin-bottom: 1rem; }
+.breadcrumbs a { color: var(--c-text-muted); }
+.breadcrumbs a:hover { color: var(--c-link); }
+.breadcrumbs .separator { color: var(--c-text-muted); margin: 0 0.1rem; }
