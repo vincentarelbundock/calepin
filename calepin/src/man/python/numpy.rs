@@ -34,27 +34,6 @@
 
 use super::types::*;
 
-/// Known section names mapped to their kind.
-fn section_kind(name: &str) -> Option<SectionKind> {
-    match name.to_lowercase().as_str() {
-        "parameters" | "params" | "args" => Some(SectionKind::Parameters),
-        "other parameters" | "other params" | "keyword arguments" => {
-            Some(SectionKind::OtherParameters)
-        }
-        "returns" | "return" => Some(SectionKind::Returns),
-        "yields" | "yield" => Some(SectionKind::Yields),
-        "raises" | "raise" | "except" | "exceptions" => Some(SectionKind::Raises),
-        "examples" | "example" => Some(SectionKind::Examples),
-        "notes" | "note" => Some(SectionKind::Notes),
-        "warnings" | "warns" | "warning" => Some(SectionKind::Warnings),
-        "references" => Some(SectionKind::References),
-        "attributes" | "attrs" => Some(SectionKind::Attributes),
-        "deprecated" => Some(SectionKind::Deprecated),
-        "see also" => Some(SectionKind::Notes),
-        "methods" => Some(SectionKind::Attributes),
-        _ => None,
-    }
-}
 
 /// Parse a NumPy-style docstring into sections.
 pub fn parse_numpy(docstring: &str) -> Vec<DocSection> {
@@ -94,7 +73,7 @@ pub fn parse_numpy(docstring: &str) -> Vec<DocSection> {
             let (body_lines, next_i) = read_section_body(&lines, i);
             i = next_i;
 
-            if let Some(kind) = section_kind(name) {
+            if let Some(kind) = SectionKind::from_name(name) {
                 let section = parse_section(kind, &body_lines);
                 sections.push(section);
             } else {
@@ -272,60 +251,8 @@ fn parse_numpy_examples(lines: &[String]) -> Vec<ExampleItem> {
 }
 
 /// Read items from a NumPy-style section body.
-///
-/// Items are separated by their indentation: headers are at base indentation,
-/// descriptions are indented further.
 fn read_numpy_items(lines: &[String]) -> Vec<(String, Vec<String>)> {
-    let mut items: Vec<(String, Vec<String>)> = Vec::new();
-    if lines.is_empty() {
-        return items;
-    }
-
-    // Find base indentation
-    let base_indent = lines
-        .iter()
-        .filter(|l| !l.trim().is_empty())
-        .map(|l| l.len() - l.trim_start().len())
-        .min()
-        .unwrap_or(0);
-
-    let mut current_header: Option<String> = None;
-    let mut current_desc: Vec<String> = Vec::new();
-
-    for line in lines {
-        if line.trim().is_empty() {
-            if current_header.is_some() {
-                current_desc.push(String::new());
-            }
-            continue;
-        }
-
-        let indent = line.len() - line.trim_start().len();
-
-        if indent <= base_indent {
-            // New item header
-            if let Some(header) = current_header.take() {
-                while current_desc.last().map_or(false, |l| l.is_empty()) {
-                    current_desc.pop();
-                }
-                items.push((header, std::mem::take(&mut current_desc)));
-            }
-            current_header = Some(line.trim().to_string());
-        } else {
-            // Description line
-            current_desc.push(line.trim().to_string());
-        }
-    }
-
-    // Flush last item
-    if let Some(header) = current_header.take() {
-        while current_desc.last().map_or(false, |l| l.is_empty()) {
-            current_desc.pop();
-        }
-        items.push((header, current_desc));
-    }
-
-    items
+    super::types::parse_indented_items(lines)
 }
 
 /// Dedent body text by removing the common leading whitespace.
@@ -362,7 +289,7 @@ pub fn is_numpy_style(docstring: &str) -> bool {
     for i in 0..lines.len() {
         if is_numpy_section_start(&lines, i) {
             let name = lines[i].trim();
-            if section_kind(name).is_some() {
+            if SectionKind::from_name(name).is_some() {
                 return true;
             }
         }

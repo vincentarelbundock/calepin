@@ -2,134 +2,144 @@
 title = "Templates"
 ---
 
-Every piece of output in *Calepin* is controlled by a template: element markup, page wrappers, collection layouts. Templates use [MiniJinja](https://github.com/mitsuhiko/minijinja) syntax (Jinja2 for Rust). Learn one syntax and it works everywhere.
+# Templates everywhere
+
+*Calepin* uses templates for nearly all text transformations and assembly operations. Every rendered element (a figure, a code block, a callout, a heading) passes through a template. The page wrapper that adds `<html>` or `\documentclass` is a template. The navbar, sidebar, and footer of a website are templates. If you can see it in the output, there is a template behind it.
+
+This means customization is always the same operation: find the template, edit it. No need to learn Rust or Go or Lua. Just write plain text!
+
+It also means that *Calepin* projects are super LLM-friendly. Just ask your agent what you need, and it will almost certainly get it right:
+
+> Go to the `_calepin/partials` folder. Switch all the colors to a Studio Ghibli inspired pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
 
 
-# Jinja syntax
+# Jinja2
 
-Insert values with double braces. Dot notation accesses nested fields:
+Templates use [Jinja2](https://jinja.palletsprojects.com/) syntax (via [MiniJinja](https://github.com/mitsuhiko/minijinja), a Rust implementation). Jinja2 is one of the most popular templating systems in the world. It is easy to learn, powerful, and well-documented.
 
-```
-{{ meta.title }}
-{{ var.urls.docs }}
-```
-
-Built-in spans use bracket syntax:
-
-```
-[]{.pagebreak}
-[]{.video url="https://youtube.com/watch?v=abc"}
-```
-
-Conditionals and loops:
+The core idea: write normal text, and mark locations where values should be inserted with double curly braces:
 
 ```
-{% if engine == "html" %}
-HTML-only content.
+Hello, {{ name }}!
+```
+
+When the template is rendered with `name = "World"`, the output is `Hello, World!`. That is the basic mechanism. Everything else builds on it.
+
+For a thorough introduction, see the [Jinja2 Template Designer Documentation](https://jinja.palletsprojects.com/en/3.1.x/templates/).
+
+
+# Partials
+
+In *Calepin*, individual template files are called "partials." Each partial controls one piece of output. They live in `_calepin/partials/`, organized by format:
+
+```
+_calepin/partials/
+  html/         # HTML partials (figure.html, callout.html, page.html, ...)
+  latex/        # LaTeX partials (figure.tex, page.tex, ...)
+  typst/        # Typst partials (figure.typ, page.typ, ...)
+  website/      # Website layout partials (navbar.html, sidebar.html, ...)
+  common/       # Format-agnostic partials (.jinja)
+```
+
+Override rules are simple: if `_calepin/partials/` exists, *Calepin* uses only those files. If it does not exist, *Calepin* uses only its built-in defaults. There is no merging or fallback chain. You either use the defaults, or you take full control.
+
+
+# Element partials
+
+Element partials control small, self-contained components. Here is the built-in emphasis template for HTML:
+
+`html/emphasis.html`:
+
+```html
+<em>{{ text }}</em>
+```
+
+And for LaTeX:
+
+`latex/emphasis.tex`:
+
+```latex
+\emph{ {{- text -}} }
+```
+
+That is the entire file. One line, one element. Every emphasis in the output passes through this template.
+
+
+# Div partials
+
+Fenced divs (`::: {.classname} ... :::`) use templates for larger structures like figures, callouts, theorems, and code blocks. These templates receive richer variables.
+
+Here is the built-in figure template for Typst:
+
+`typst/figure.typ`:
+
+```
+{%- set loc = cap_location | default("bottom") %}
+#figure(
+  image("{{src}}", width: {{width_attr | default("70%")}})
+{%- if caption %}, caption: [{{caption}}]{%- endif %}
+){% if label %} <{{label}}>{% endif %}
+```
+
+The template receives variables like `src`, `caption`, `label`, `width_attr`, and `cap_location`, which are set by *Calepin* based on the figure's attributes.
+
+
+# Page assembly
+
+The page template wraps the entire rendered body in a complete document. Here is a simplified version of the built-in LaTeX page template:
+
+`latex/page.tex`:
+
+```latex
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,hyperref}
+{{bib_preamble}}
+{{preamble}}
+
+{% if title %}\title{ {{-title-}} }{% endif %}
+{% if author %}\author{ {{-author-}} }{% endif %}
+
+\begin{document}
+{% if title %}\maketitle{% endif %}
+
+{{abstract}}
+{{toc}}
+{{body}}
+{{appendix}}
+{{bibliography}}
+{{bib_end}}
+\end{document}
+```
+
+Variables like `body`, `title`, `preamble`, `bibliography`, and `toc` are populated by *Calepin* before the template is rendered. Custom front matter fields are also available: a field `custom_footer = "Confidential"` in your document becomes `{{custom_footer}}` in the page template.
+
+
+# More powerful features
+
+Jinja2 goes far beyond simple variable insertion. Here are three features that are especially useful in templates.
+
+**Conditionals** let you vary output by format or by the presence of a variable:
+
+```
+{% if caption %}
+<figcaption>{{caption}}</figcaption>
 {% endif %}
+```
 
-{% for item in var.features %}
-- {{ item }}
+**Loops** iterate over lists:
+
+```
+{% for item in keywords %}
+\keyword{ {{- item -}} }
 {% endfor %}
 ```
 
-Filters transform values with pipes: {% raw %}`{{ meta.title | upper }}`{% endraw %}.
+**Filters** transform values inline. Jinja2 provides `upper`, `lower`, `trim`, `replace`, `default`, `length`, and many others:
 
-Comments: {% raw %}`{# ignored #}`{% endraw %}. Raw blocks: {% raw %}`{% raw %}...{% endraw %}`{% endraw %}. Literal braces in LaTeX templates: {% raw %}`{{_lb}}` and `{{_rb}}`{% endraw %}.
-
-
-# Where templates are used
-
-## Document body
-
-The `.qmd` body is processed as a Jinja template. Code blocks and inline code are protected from evaluation. Available context:
-
-| Variable | Description |
-|----------|-------------|
-| {% raw %}`{{ meta.title }}`{% endraw %}, {% raw %}`{{ meta.author }}`{% endraw %}, ... | YAML front matter fields |
-| {% raw %}`{{ var.key }}`{% endraw %} | Custom front matter fields (with nesting) |
-| {% raw %}`{{ env.HOME }}`{% endraw %} | System environment variables |
-| {% raw %}`{{ engine }}`{% endraw %} | Rendering engine: `html`, `latex`, `typst`, `markdown` |
-| {% raw %}`{{ target }}`{% endraw %} | Target name (defaults to engine name) |
-| {% raw %}`{% include "name" %}`{% endraw %} | Reusable content from `_calepin/partials/` |
-
-Built-in spans: `pagebreak`, `video`, `brand`, `lorem`, `placeholder`. See [Shortcuts](shortcuts.html) for details.
-
-
-## Element templates
-
-Every rendered element (divs, spans, code blocks, figures, theorems, callouts) passes through a template. Templates are named `{element}.{format}` (e.g., `callout.html`, `theorem.latex`).
-
-Div variables: {% raw %}`{{children}}`{% endraw %}, {% raw %}`{{classes}}`{% endraw %}, {% raw %}`{{id}}`{% endraw %}, {% raw %}`{{id_attr}}`{% endraw %}, plus any user attributes from the div header.
-
-Span variables: {% raw %}`{{content}}`{% endraw %}, {% raw %}`{{class}}`{% endraw %}, {% raw %}`{{classes}}`{% endraw %}, {% raw %}`{{id}}`{% endraw %}, plus user attributes.
-
-Code variables: {% raw %}`{{code}}`{% endraw %}, {% raw %}`{{lang}}`{% endraw %}, {% raw %}`{{highlighted}}`{% endraw %}, {% raw %}`{{label}}`{% endraw %}.
-
-Figure variables: {% raw %}`{{image}}`{% endraw %}, {% raw %}`{{caption}}`{% endraw %}, {% raw %}`{{number}}`{% endraw %}, {% raw %}`{{label}}`{% endraw %}, {% raw %}`{{width_attr}}`{% endraw %}, {% raw %}`{{align}}`{% endraw %}.
-
-To override any element, drop a file in `_calepin/templates/{engine}/` (e.g., `templates/html/callout.html`). Hyphens in class names are normalized to underscores for lookup.
-
-### Example
-
-Create `_calepin/templates/html/highlight_box.html`:
-
-```html
-<div class="highlight-box" style="background: {{color}};
-     border-left: 4px solid #333; padding: 0.8em 1em;">
-<strong>{{title}}</strong>
-{{children}}
-</div>
+```
+{{ title | upper }}
+{{ width | default("100%") }}
 ```
 
-Use as:
-
-    ::: {.highlight-box title="Key takeaway" color="#e8f4f8"}
-    Templates are the simplest way to customize *Calepin*.
-    :::
-
-
-## Page templates
-
-The page template wraps the rendered body in a document shell: the HTML `<head>`, the LaTeX preamble, or the Typst equivalent. Override with `_calepin/templates/{engine}/page.{ext}`.
-
-Key variables: {% raw %}`{{body}}`{% endraw %}, {% raw %}`{{toc}}`{% endraw %}, {% raw %}`{{plain_title}}`{% endraw %}, {% raw %}`{{title}}`{% endraw %}, {% raw %}`{{author}}`{% endraw %}, {% raw %}`{{date}}`{% endraw %}, {% raw %}`{{css}}`{% endraw %} (HTML), {% raw %}`{{preamble}}`{% endraw %}.
-
-Pre-rendered blocks (each produced by an overridable element template): {% raw %}`{{title}}`{% endraw %}, {% raw %}`{{authors}}`{% endraw %}, {% raw %}`{{date}}`{% endraw %}, {% raw %}`{{abstract}}`{% endraw %}, {% raw %}`{{appendix}}`{% endraw %}, {% raw %}`{{bibliography}}`{% endraw %}.
-
-Custom front matter fields are also available: `custom_footer: "Confidential"` in YAML becomes {% raw %}`{{custom_footer}}`{% endraw %} in the page template.
-
-
-# Resolution order
-
-All template lookups follow the same chain. The first match wins:
-
-1. **Plugin** `elements/` or `templates/` directory (in plugin declaration order)
-2. **User** `_calepin/templates/{target}/` (target-specific, e.g., `website/`)
-3. **User** `_calepin/templates/{engine}/` (engine-specific, e.g., `html/`)
-4. **User** `_calepin/templates/common/` (format-agnostic `.jinja`)
-5. **Theme** templates (same three-layer lookup: target, engine, common)
-6. **Built-in** (compiled into the binary)
-
-User files always win over plugins and themes. Plugins override themes. See [Themes](themes.html) for the theme layer and [Plugins](../misc/plugins.html) for plugin template overrides.
-
-
-# Built-in element templates
-
-| Template | Used by |
-|----------|---------|
-| `div` | Generic fenced divs |
-| `code_source` | Code chunks (source) |
-| `code_output` | Code chunks (output) |
-| `code_diagnostic` | Warnings, messages, errors |
-| `figure` | Figures and images |
-| `callout` | All callout types |
-| `theorem_italic` | theorem, lemma, corollary, proposition, conjecture |
-| `theorem_normal` | definition, example, exercise, solution, remark, algorithm |
-| `proof` | Proof environments |
-| `title` | Document title |
-| `authors` | Author metadata |
-| `date` | Document date |
-| `abstract` | Abstract text |
-| `bibliography` | Bibliography section |
-| `appendix` | Appendix wrapper |
+Again, see the [Jinja2 documentation](https://jinja.palletsprojects.com/en/3.1.x/templates/) for the full syntax.

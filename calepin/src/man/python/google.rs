@@ -35,26 +35,6 @@ use std::sync::LazyLock;
 
 use super::types::*;
 
-/// Known section names mapped to their kind.
-fn section_kind(name: &str) -> Option<SectionKind> {
-    match name.to_lowercase().as_str() {
-        "args" | "arguments" | "params" | "parameters" => Some(SectionKind::Parameters),
-        "keyword args" | "keyword arguments" | "other parameters" | "other params" => {
-            Some(SectionKind::OtherParameters)
-        }
-        "returns" | "return" => Some(SectionKind::Returns),
-        "yields" | "yield" => Some(SectionKind::Yields),
-        "raises" | "raise" | "except" | "exceptions" => Some(SectionKind::Raises),
-        "examples" | "example" => Some(SectionKind::Examples),
-        "notes" | "note" => Some(SectionKind::Notes),
-        "warnings" | "warns" | "warning" => Some(SectionKind::Warnings),
-        "references" => Some(SectionKind::References),
-        "attributes" | "attrs" => Some(SectionKind::Attributes),
-        "deprecated" => Some(SectionKind::Deprecated),
-        "see also" => Some(SectionKind::Notes),
-        _ => None,
-    }
-}
 
 static RE_SECTION_HEADER: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\s*)(\w[\w\s]*\w|\w)\s*:\s*$").unwrap());
@@ -102,7 +82,7 @@ pub fn parse_google(docstring: &str) -> Vec<DocSection> {
             let (body_lines, next_i) = read_indented_block(&lines, i, header_indent);
             i = next_i;
 
-            if let Some(kind) = section_kind(name) {
+            if let Some(kind) = SectionKind::from_name(name) {
                 let section = parse_section(kind, &body_lines);
                 sections.push(section);
             } else {
@@ -397,62 +377,9 @@ pub fn parse_examples(lines: &[String]) -> Vec<ExampleItem> {
     items
 }
 
-/// Read block items from a section body. Each item starts at the base
-/// indentation level, and continuation lines are further indented.
-///
-/// Returns a list of (first_line, continuation_lines).
+/// Read block items from a section body.
 fn read_block_items(lines: &[String]) -> Vec<(String, Vec<String>)> {
-    let mut items: Vec<(String, Vec<String>)> = Vec::new();
-    if lines.is_empty() {
-        return items;
-    }
-
-    // Determine base indentation from first non-empty line
-    let base_indent = lines
-        .iter()
-        .filter(|l| !l.trim().is_empty())
-        .map(|l| l.len() - l.trim_start().len())
-        .min()
-        .unwrap_or(0);
-
-    let mut current_first: Option<String> = None;
-    let mut current_rest: Vec<String> = Vec::new();
-
-    for line in lines {
-        if line.trim().is_empty() {
-            if current_first.is_some() {
-                current_rest.push(String::new());
-            }
-            continue;
-        }
-
-        let indent = line.len() - line.trim_start().len();
-
-        if indent <= base_indent {
-            // New item at base indentation
-            if let Some(first) = current_first.take() {
-                // Trim trailing empty lines from current rest
-                while current_rest.last().map_or(false, |l| l.is_empty()) {
-                    current_rest.pop();
-                }
-                items.push((first, std::mem::take(&mut current_rest)));
-            }
-            current_first = Some(line.trim().to_string());
-        } else {
-            // Continuation line
-            current_rest.push(line.trim().to_string());
-        }
-    }
-
-    // Flush last item
-    if let Some(first) = current_first.take() {
-        while current_rest.last().map_or(false, |l| l.is_empty()) {
-            current_rest.pop();
-        }
-        items.push((first, current_rest));
-    }
-
-    items
+    super::types::parse_indented_items(lines)
 }
 
 /// Detect whether a docstring uses Google style.
@@ -466,7 +393,7 @@ pub fn is_google_style(docstring: &str) -> bool {
                 .and_then(|c| c.get(2))
                 .map(|m| m.as_str())
                 .unwrap_or("");
-            if section_kind(name).is_some() {
+            if SectionKind::from_name(name).is_some() {
                 return true;
             }
         }

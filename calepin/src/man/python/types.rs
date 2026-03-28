@@ -53,6 +53,26 @@ impl SectionKind {
             SectionKind::Admonition => Some("Note"),
         }
     }
+
+    /// Map a section name (from any docstring style) to its kind.
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name.to_lowercase().as_str() {
+            "args" | "arguments" | "params" | "parameters" => Some(SectionKind::Parameters),
+            "keyword args" | "keyword arguments" | "other parameters" | "other params" => {
+                Some(SectionKind::OtherParameters)
+            }
+            "returns" | "return" => Some(SectionKind::Returns),
+            "yields" | "yield" => Some(SectionKind::Yields),
+            "raises" | "raise" | "except" | "exceptions" => Some(SectionKind::Raises),
+            "examples" | "example" => Some(SectionKind::Examples),
+            "notes" | "note" | "see also" => Some(SectionKind::Notes),
+            "warnings" | "warns" | "warning" => Some(SectionKind::Warnings),
+            "references" => Some(SectionKind::References),
+            "attributes" | "attrs" | "methods" => Some(SectionKind::Attributes),
+            "deprecated" => Some(SectionKind::Deprecated),
+            _ => None,
+        }
+    }
 }
 
 /// A parameter documented in a docstring.
@@ -93,9 +113,6 @@ pub enum SectionContent {
     Returns(Vec<DocReturn>),
     Raises(Vec<DocRaise>),
     Examples(Vec<ExampleItem>),
-    /// Generic list of named items (attributes, other_parameters, etc.).
-    #[allow(dead_code)]
-    Generic(Vec<DocParam>),
     Admonition { title: String, description: String },
 }
 
@@ -106,24 +123,12 @@ pub struct DocSection {
     pub content: SectionContent,
 }
 
-/// The kind of a function parameter (from the AST, not the docstring).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ParamKind {
-    PositionalOnly,
-    Regular,
-    VarPositional,
-    KeywordOnly,
-    VarKeyword,
-}
-
 /// A function parameter extracted from the Python AST.
 #[derive(Debug, Clone)]
 pub struct PyParam {
     pub name: String,
     pub annotation: Option<String>,
     pub default: Option<String>,
-    #[allow(dead_code)]
-    pub kind: ParamKind,
 }
 
 /// The kind of a top-level Python object.
@@ -141,6 +146,59 @@ pub struct PyObject {
     pub kind: PyObjectKind,
     pub docstring: Option<String>,
     pub parameters: Vec<PyParam>,
+}
+
+/// Read indented block items from a section body.
+///
+/// Items start at the base indentation level. Continuation lines are further
+/// indented. Returns a list of `(first_line, continuation_lines)`.
+pub fn parse_indented_items(lines: &[String]) -> Vec<(String, Vec<String>)> {
+    let mut items: Vec<(String, Vec<String>)> = Vec::new();
+    if lines.is_empty() {
+        return items;
+    }
+
+    let base_indent = lines
+        .iter()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.len() - l.trim_start().len())
+        .min()
+        .unwrap_or(0);
+
+    let mut current_first: Option<String> = None;
+    let mut current_rest: Vec<String> = Vec::new();
+
+    for line in lines {
+        if line.trim().is_empty() {
+            if current_first.is_some() {
+                current_rest.push(String::new());
+            }
+            continue;
+        }
+
+        let indent = line.len() - line.trim_start().len();
+
+        if indent <= base_indent {
+            if let Some(first) = current_first.take() {
+                while current_rest.last().map_or(false, |l| l.is_empty()) {
+                    current_rest.pop();
+                }
+                items.push((first, std::mem::take(&mut current_rest)));
+            }
+            current_first = Some(line.trim().to_string());
+        } else {
+            current_rest.push(line.trim().to_string());
+        }
+    }
+
+    if let Some(first) = current_first.take() {
+        while current_rest.last().map_or(false, |l| l.is_empty()) {
+            current_rest.pop();
+        }
+        items.push((first, current_rest));
+    }
+
+    items
 }
 
 /// Docstring style to use for parsing.

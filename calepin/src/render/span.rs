@@ -82,8 +82,7 @@ pub fn render(
         }
 
         // Default fallback: use span template
-        let tpl = resolve_partial("span")
-            .unwrap_or_else(|| crate::render::elements::resolve_builtin_partial("span", format).unwrap_or("").to_string());
+        let tpl = resolve_partial("span").unwrap_or_default();
         let output = template_env.render_dynamic("span", &tpl, &vars);
         wrap_output(format, raw_fragments, output)
     })

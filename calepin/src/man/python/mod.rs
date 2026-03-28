@@ -92,7 +92,6 @@ pub fn handle_man_python(
     let allowed_names = if opts.exports_only {
         Some(collect_public_names(
             &pkg_path,
-            package,
             opts.include_imports,
         ))
     } else {
@@ -200,7 +199,6 @@ pub fn handle_man_python(
 /// includes names imported at the package level.
 fn collect_public_names(
     pkg_path: &Path,
-    package: &str,
     include_imports: bool,
 ) -> HashSet<String> {
     let mut names = HashSet::new();
@@ -220,7 +218,7 @@ fn collect_public_names(
     // Also check for __all__ in subpackage __init__.py files, but only
     // if the parent package re-exports them. For simplicity, we walk all
     // __init__.py and collect their __all__ entries too.
-    walk_init_files(pkg_path, package, include_imports, &mut names);
+    walk_init_files(pkg_path, include_imports, &mut names);
 
     names
 }
@@ -228,7 +226,6 @@ fn collect_public_names(
 /// Recursively walk __init__.py files and collect __all__ names.
 fn walk_init_files(
     dir: &Path,
-    _package: &str,
     include_imports: bool,
     names: &mut HashSet<String>,
 ) {
@@ -253,7 +250,7 @@ fn walk_init_files(
                     names.extend(extract::extract_imports(&source));
                 }
             }
-            walk_init_files(&path, _package, include_imports, names);
+            walk_init_files(&path, include_imports, names);
         }
     }
 }

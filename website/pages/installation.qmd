@@ -2,22 +2,19 @@
 title = "Installation"
 ---
 
-Install *Calepin* from source using Cargo:
+# Install calepin 0.0.1-alpha.7
 
-```bash
-git clone https://github.com/vincentarelbundock/calepin
-cd calepin
-make install
+## Install prebuilt binaries via shell script
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/download/v0.0.1-alpha.7/calepin-installer.sh | sh
 ```
 
-This builds the release binary, installs it to `~/.cargo/bin/`, and sets up shell completions.
+## Install prebuilt binaries via powershell script
 
-Check your installation:
-
-```bash
-calepin -v
+```sh
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/download/v0.0.1-alpha.7/calepin-installer.ps1 | iex"
 ```
-
 
 # External tools
 
@@ -25,24 +22,24 @@ calepin -v
 
 Code execution:
 
-- [R](https://cran.r-project.org/) -- R code chunks (`{r}`)
-- [python3](https://www.python.org/) -- Python code chunks (`{python}`), requires building with `cargo build --features python`
+- [R](https://cran.r-project.org/): R code chunks (`{r}`)
+- [python3](https://www.python.org/): Python code chunks (`{python}`), requires building with `cargo build --features python`
 
 PDF compilation:
 
-- [tectonic](https://tectonic-typesetting.github.io/) -- compile LaTeX to PDF (`calepin render -t pdf`)
-- [typst](https://typst.app/) -- compile Typst to PDF (`calepin render -t pdf --writer typst`)
+- [tectonic](https://tectonic-typesetting.github.io/): compile LaTeX to PDF (`calepin render -t pdf`)
+- [typst](https://typst.app/): compile Typst to PDF (`calepin render -t pdf --writer typst`)
 
 Diagrams:
 
-- [tectonic](https://tectonic-typesetting.github.io/) -- TikZ diagrams (`{tikz}`). PDF-to-SVG and SVG-to-PDF conversions are handled internally.
-- [mmdc](https://github.com/mermaid-js/mermaid-cli) -- Mermaid diagrams (`{mermaid}`)
-- [dot](https://graphviz.org/) -- Graphviz diagrams (`{dot}`)
-- [d2](https://d2lang.com/) -- D2 diagrams (`{d2}`)
+- [tectonic](https://tectonic-typesetting.github.io/): TikZ diagrams (`{tikz}`). PDF-to-SVG and SVG-to-PDF conversions are handled internally.
+- [mmdc](https://github.com/mermaid-js/mermaid-cli): Mermaid diagrams (`{mermaid}`)
+- [dot](https://graphviz.org/): Graphviz diagrams (`{dot}`)
+- [d2](https://d2lang.com/): D2 diagrams (`{d2}`)
 
 Website features:
 
-- [pagefind](https://pagefind.app/) -- static site search (optional)
+- [pagefind](https://pagefind.app/): static site search (optional)
 
 # Shell completions
 

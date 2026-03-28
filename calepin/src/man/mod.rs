@@ -9,3 +9,16 @@ pub mod python;
 
 pub use r::handle_man_r;
 pub use python::handle_man_python;
+
+/// Sanitize a name for use as a filename.
+pub fn safe_name(name: &str) -> String {
+    name.chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '.' || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}

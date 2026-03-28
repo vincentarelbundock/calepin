@@ -6,9 +6,9 @@ title = "Serve"
 
 # Preview
 
-`calepin preview` renders the collection or document, starts a local server, and watches for changes. When a `.qmd` file is saved, the document is re-rendered and the browser reloads automatically.
+`calepin preview` renders the website or document, starts a local server, and watches for changes. When a `.qmd` file is saved, the document is re-rendered and the browser reloads automatically.
 
-For a collection:
+For a website:
 
 ```
 calepin preview _calepin/config.toml
@@ -32,7 +32,7 @@ calepin preview file.qmd -p 8080
 
 # Static file server
 
-When given a directory path, `calepin preview` acts as a plain static file server --- no rendering, no watching, no live reload. This works with any directory that contains an `index.html`, not just *Calepin* collections.
+When given a directory path, `calepin preview` acts as a plain static file server: no rendering, no watching, no live reload. This works with any directory that contains an `index.html`, not just *Calepin* websites.
 
 ```
 calepin preview _site

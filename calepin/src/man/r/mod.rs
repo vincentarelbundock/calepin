@@ -74,7 +74,7 @@ pub fn handle_man_r(package: &str, output: &Path, quiet: bool) -> Result<()> {
     let mut written = 0;
     for topic in &topics {
         let qmd = renderer.render_topic(topic);
-        let safe_name = topic.topic.replace(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-', "_");
+        let safe_name = crate::man::safe_name(&topic.topic);
         let outpath = output.join(format!("{}.qmd", safe_name));
         fs::write(&outpath, &qmd)?;
         written += 1;

@@ -401,6 +401,21 @@ pub fn partials_dir(project_root: &Path) -> PathBuf {
     calepin_dir(project_root, &["partials"])
 }
 
+/// Check whether user-provided partials exist (sidecar or project-level).
+///
+/// When this returns `true`, resolution should use ONLY user partials and
+/// never fall back to built-in templates. When `false`, resolution should
+/// use ONLY built-in templates and skip filesystem lookups entirely.
+pub fn has_user_partials() -> bool {
+    if let Some(sidecar) = get_sidecar_root() {
+        if sidecar.join("partials").is_dir() {
+            return true;
+        }
+    }
+    let root = get_project_root();
+    partials_dir(&root).is_dir()
+}
+
 /// `{root}/_calepin/assets`
 pub fn assets_dir(project_root: &Path) -> PathBuf {
     calepin_dir(project_root, &["assets"])

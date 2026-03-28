@@ -36,4 +36,4 @@ If `posts/analysis.qmd` calls `read.csv("data.csv")`, it finds `data.csv` next t
 # Output
 
 - Single document: output goes alongside the input, or where `-o` specifies.
-- Collection: output goes to `output/` (configurable in `config.toml`).
+- Website: output goes to `_calepin_output/` by default (configurable via the `output` field in `config.toml`).

@@ -25,7 +25,17 @@ use ruff_python_ast::{self as ast, Expr, Stmt};
 use ruff_python_parser::parse_module;
 use ruff_text_size::Ranged;
 
-use super::types::{ParamKind, PyObject, PyObjectKind, PyParam};
+use super::types::{PyObject, PyObjectKind, PyParam};
+
+/// Extract the string value from a `StringLiteral` AST node.
+fn string_literal_value(str_lit: &ast::ExprStringLiteral) -> String {
+    str_lit
+        .value
+        .iter()
+        .map(|part| part.value.as_ref())
+        .collect::<Vec<_>>()
+        .join("")
+}
 
 /// Parse a Python source file and extract all documented public objects.
 pub fn extract_objects(source: &str, module_path: &str) -> Vec<PyObject> {
@@ -143,30 +153,22 @@ fn is_all_name(expr: &Expr) -> bool {
 /// Collect string literals from a list or tuple expression.
 /// Returns `true` if any string literals were found.
 fn collect_string_elements(expr: &Expr, out: &mut HashSet<String>) -> bool {
-    let mut found = false;
-    match expr {
-        Expr::List(list) => {
-            for elt in &list.elts {
-                if let Some(s) = string_value(elt) {
-                    out.insert(s);
-                    found = true;
-                }
-            }
-        }
-        Expr::Tuple(tuple) => {
-            for elt in &tuple.elts {
-                if let Some(s) = string_value(elt) {
-                    out.insert(s);
-                    found = true;
-                }
-            }
-        }
-        // __all__ = some_other.__all__ + [...] -- process both sides
+    let elts = match expr {
+        Expr::List(list) => &list.elts,
+        Expr::Tuple(tuple) => &tuple.elts,
         Expr::BinOp(binop) => {
-            found |= collect_string_elements(&binop.left, out);
-            found |= collect_string_elements(&binop.right, out);
+            let left = collect_string_elements(&binop.left, out);
+            let right = collect_string_elements(&binop.right, out);
+            return left || right;
         }
-        _ => {}
+        _ => return false,
+    };
+    let mut found = false;
+    for elt in elts {
+        if let Some(s) = string_value(elt) {
+            out.insert(s);
+            found = true;
+        }
     }
     found
 }
@@ -225,13 +227,7 @@ fn collect_dict_keys(body: &[Stmt], var_name: &str, out: &mut HashSet<String>) {
 /// Extract a plain string value from a string literal expression.
 fn string_value(expr: &Expr) -> Option<String> {
     if let Expr::StringLiteral(str_lit) = expr {
-        let text: String = str_lit
-            .value
-            .iter()
-            .map(|part| part.value.as_ref())
-            .collect::<Vec<_>>()
-            .join("");
-        Some(text)
+        Some(string_literal_value(str_lit))
     } else {
         None
     }
@@ -248,7 +244,7 @@ fn walk_body(body: &[Stmt], source: &str, prefix: &str, out: &mut Vec<PyObject>)
                 }
                 let path = format!("{}.{}", prefix, name);
                 let docstring = extract_docstring(&func.body)
-                    .or_else(|| extract_decorator_docstring(&func.decorator_list, source));
+                    .or_else(|| extract_decorator_docstring(&func.decorator_list));
                 let parameters = extract_parameters(&func.parameters, source);
                 out.push(PyObject {
                     name: name.to_string(),
@@ -265,7 +261,7 @@ fn walk_body(body: &[Stmt], source: &str, prefix: &str, out: &mut Vec<PyObject>)
                 }
                 let path = format!("{}.{}", prefix, name);
                 let docstring = extract_docstring(&class.body)
-                    .or_else(|| extract_decorator_docstring(&class.decorator_list, source));
+                    .or_else(|| extract_decorator_docstring(&class.decorator_list));
 
                 // Extract __init__ parameters if available
                 let parameters = extract_init_params(&class.body, source);
@@ -287,7 +283,7 @@ fn walk_body(body: &[Stmt], source: &str, prefix: &str, out: &mut Vec<PyObject>)
                         }
                         let mpath = format!("{}.{}", path, mname);
                         let mdoc = extract_docstring(&method.body)
-                            .or_else(|| extract_decorator_docstring(&method.decorator_list, source));
+                            .or_else(|| extract_decorator_docstring(&method.decorator_list));
                         let mparams = extract_parameters(&method.parameters, source);
                         // Skip `self`/`cls` first parameter
                         let mparams = skip_self(mparams);
@@ -315,23 +311,16 @@ fn walk_body(body: &[Stmt], source: &str, prefix: &str, out: &mut Vec<PyObject>)
 /// literal, and returns that string as the docstring.
 fn extract_decorator_docstring(
     decorators: &[ast::Decorator],
-    source: &str,
 ) -> Option<String> {
     for decorator in decorators {
         // Look for @something("""...""") -- a Call with a string first arg
         if let Expr::Call(call) = &decorator.expression {
             if let Some(first_arg) = call.arguments.args.first() {
                 if let Expr::StringLiteral(str_lit) = first_arg {
-                    let text: String = str_lit
-                        .value
-                        .iter()
-                        .map(|part| part.value.as_ref())
-                        .collect::<Vec<_>>()
-                        .join("");
-                    let text = clean_docstring(&text);
+                    let text = clean_docstring(&string_literal_value(str_lit));
                     if !text.trim().is_empty() {
                         // Strip unresolved {placeholder} template variables
-                        let text = strip_placeholders(&text, source);
+                        let text = strip_placeholders(&text);
                         return Some(text);
                     }
                 }
@@ -346,7 +335,7 @@ fn extract_decorator_docstring(
 /// Decorator-based docstrings often use `{param_model}` style placeholders
 /// that are interpolated at runtime. Since we parse statically, we strip
 /// lines that are just a bare placeholder so the output stays clean.
-fn strip_placeholders(text: &str, _source: &str) -> String {
+fn strip_placeholders(text: &str) -> String {
     let mut lines = Vec::new();
     for line in text.lines() {
         let trimmed = line.trim();
@@ -387,12 +376,7 @@ fn extract_docstring(body: &[Stmt]) -> Option<String> {
     let first = body.first()?;
     if let Stmt::Expr(ast::StmtExpr { value, .. }) = first {
         if let Expr::StringLiteral(str_lit) = value.as_ref() {
-            let text: String = str_lit
-                .value
-                .iter()
-                .map(|part| part.value.as_ref())
-                .collect::<Vec<_>>()
-                .join("");
+            let text = string_literal_value(str_lit);
             if text.trim().is_empty() {
                 return None;
             }
@@ -447,12 +431,12 @@ fn extract_parameters(params: &ast::Parameters, source: &str) -> Vec<PyParam> {
 
     // Positional-only parameters
     for pwd in &params.posonlyargs {
-        result.push(param_with_default(pwd, source, ParamKind::PositionalOnly));
+        result.push(param_with_default(pwd, source));
     }
 
     // Regular parameters
     for pwd in &params.args {
-        result.push(param_with_default(pwd, source, ParamKind::Regular));
+        result.push(param_with_default(pwd, source));
     }
 
     // *args
@@ -461,13 +445,12 @@ fn extract_parameters(params: &ast::Parameters, source: &str) -> Vec<PyParam> {
             name: format!("*{}", vararg.name.as_str()),
             annotation: vararg.annotation.as_ref().map(|a| expr_to_source(a, source)),
             default: None,
-            kind: ParamKind::VarPositional,
         });
     }
 
     // Keyword-only parameters
     for pwd in &params.kwonlyargs {
-        result.push(param_with_default(pwd, source, ParamKind::KeywordOnly));
+        result.push(param_with_default(pwd, source));
     }
 
     // **kwargs
@@ -476,7 +459,6 @@ fn extract_parameters(params: &ast::Parameters, source: &str) -> Vec<PyParam> {
             name: format!("**{}", kwarg.name.as_str()),
             annotation: kwarg.annotation.as_ref().map(|a| expr_to_source(a, source)),
             default: None,
-            kind: ParamKind::VarKeyword,
         });
     }
 
@@ -487,7 +469,6 @@ fn extract_parameters(params: &ast::Parameters, source: &str) -> Vec<PyParam> {
 fn param_with_default(
     pwd: &ast::ParameterWithDefault,
     source: &str,
-    kind: ParamKind,
 ) -> PyParam {
     PyParam {
         name: pwd.parameter.name.as_str().to_string(),
@@ -497,7 +478,6 @@ fn param_with_default(
             .as_ref()
             .map(|a| expr_to_source(a, source)),
         default: pwd.default.as_ref().map(|d| expr_to_source(d, source)),
-        kind,
     }
 }
 

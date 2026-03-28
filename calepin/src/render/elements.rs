@@ -362,12 +362,12 @@ impl ElementRenderer {
 /// Template names use underscores internally; hyphens are normalized.
 pub fn resolve_element_partial(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
-    // Project/user filesystem resolution
-    if let Some(path) = crate::paths::resolve_partial(&canonical, ext) {
-        if let Ok(content) = std::fs::read_to_string(&path) {
-            return Some(content);
-        }
+    if crate::paths::has_user_partials() {
+        // User partials exist: use only filesystem, no built-in fallback
+        crate::paths::resolve_partial(&canonical, ext)
+            .and_then(|path| std::fs::read_to_string(&path).ok())
+    } else {
+        // No user partials: use only built-in
+        resolve_builtin_partial(&canonical, ext).map(|s| s.to_string())
     }
-    // Built-in: discovered from embedded project tree
-    resolve_builtin_partial(&canonical, ext).map(|s| s.to_string())
 }

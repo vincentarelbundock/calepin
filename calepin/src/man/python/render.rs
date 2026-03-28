@@ -181,8 +181,6 @@ fn render_section(content: &SectionContent) -> String {
 
         SectionContent::Examples(items) => render_examples(items),
 
-        SectionContent::Generic(items) => render_params(items),
-
         SectionContent::Admonition { title, description } => {
             format!("**{}**\n\n{}", title, description)
         }
@@ -257,15 +255,7 @@ fn render_examples(items: &[ExampleItem]) -> String {
 
 /// Sanitize a name for use as a filename.
 pub fn safe_name(name: &str) -> String {
-    name.chars()
-        .map(|c| {
-            if c.is_alphanumeric() || c == '.' || c == '_' || c == '-' {
-                c
-            } else {
-                '_'
-            }
-        })
-        .collect()
+    crate::man::safe_name(name)
 }
 
 #[cfg(test)]
@@ -279,13 +269,11 @@ mod tests {
                 name: "x".into(),
                 annotation: Some("int".into()),
                 default: None,
-                kind: ParamKind::Regular,
             },
             PyParam {
                 name: "y".into(),
                 annotation: Some("str".into()),
                 default: Some("\"hello\"".into()),
-                kind: ParamKind::Regular,
             },
         ];
         assert_eq!(
@@ -305,7 +293,6 @@ mod tests {
                 name: "x".into(),
                 annotation: Some("int".into()),
                 default: None,
-                kind: ParamKind::Regular,
             }],
         };
         let sections = vec![DocSection {

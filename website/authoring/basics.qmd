@@ -49,9 +49,9 @@ Here is a paragraph about Montreal that illustrates all of these features.
 
 Montréal is the **largest city** in the province of Québec and the *second most populous* in Canada. Founded in 1642, the city sits on an island in the ***Saint Lawrence River***. Visitors should explore these landmarks:
 
-1. **Old Montréal** -- cobblestone streets and the [Notre-Dame Basilica](https://www.basiliquenotredame.ca)
-2. **Mount Royal** -- the park designed by Frederick Law Olmsted
-3. **The Plateau** -- colourful row houses and lively cafés
+1. **Old Montréal**: cobblestone streets and the [Notre-Dame Basilica](https://www.basiliquenotredame.ca)
+2. **Mount Royal**: the park designed by Frederick Law Olmsted
+3. **The Plateau**: colourful row houses and lively cafés
 
 Local specialties worth trying:
 

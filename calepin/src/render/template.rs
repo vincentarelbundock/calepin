@@ -101,20 +101,18 @@ use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_a
 
 /// Load a page template by name and base.
 ///
-/// Resolution order:
-///   1. Project filesystem (partials/{target}/, partials/{base}/, or templates/common/)
-///   2. Built-in (discovered from embedded project tree)
+/// If user partials exist (`_calepin/partials/` or sidecar), uses only those.
+/// Otherwise uses only built-in templates. No fallback chain.
 pub fn load_page_template(template_name: &str, base: &str) -> String {
-    // Filesystem resolution
-    if let Some(path) = crate::paths::resolve_partial(template_name, base) {
-        if let Ok(s) = std::fs::read_to_string(&path) {
-            return s;
-        }
+    if crate::paths::has_user_partials() {
+        crate::paths::resolve_partial(template_name, base)
+            .and_then(|path| std::fs::read_to_string(&path).ok())
+            .unwrap_or_default()
+    } else {
+        crate::render::elements::resolve_builtin_partial(template_name, base)
+            .unwrap_or("")
+            .to_string()
     }
-    // Built-in: discovered from embedded project tree
-    crate::render::elements::resolve_builtin_partial(template_name, base)
-        .unwrap_or("")
-        .to_string()
 }
 
 
@@ -405,7 +403,8 @@ pub fn build_template_vars_with_headings(
             toc_vars.insert("title".to_string(), toc_title.to_string());
             toc_vars.insert("depth".to_string(), toc_depth.to_string());
             toc_vars.insert("toc_list".to_string(), String::new());
-            let tpl = crate::render::elements::resolve_builtin_partial("toc", ext).unwrap_or("");
+            let tpl_owned = crate::render::elements::resolve_element_partial("toc", ext).unwrap_or_default();
+            let tpl = tpl_owned.as_str();
             apply_template(tpl, &toc_vars)
         };
         vars.insert("toc".to_string(), toc);
