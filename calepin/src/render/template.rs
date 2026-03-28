@@ -147,16 +147,16 @@ pub fn load_default_css() -> String {
     css
 }
 
-/// Load CSS from extensions in the active target's inheritance chain.
-/// Walks from parent to child so child CSS overrides parent.
-fn load_extension_css(project_root: &std::path::Path, target_name: &str) -> String {
+/// Walk the extension inheritance chain and collect asset file contents.
+/// Returns concatenated content in parent-first order (so child overrides parent).
+fn load_extension_assets(project_root: &std::path::Path, target_name: &str, get_files: impl Fn(&crate::config::extension::ExtensionAssets) -> &[String]) -> String {
     let extensions_dir = project_root.join("_calepin").join("extensions");
     if !extensions_dir.is_dir() {
         return String::new();
     }
 
     // Build the chain from target up to root (child-first)
-    let mut chain = Vec::new();
+    let mut chain: Vec<(std::path::PathBuf, Vec<String>)> = Vec::new();
     let mut current = Some(target_name.to_string());
     let mut visited = std::collections::HashSet::new();
     while let Some(name) = current.take() {
@@ -165,25 +165,36 @@ fn load_extension_css(project_root: &std::path::Path, target_name: &str) -> Stri
         if ext_dir.join("extension.toml").exists() {
             if let Ok(content) = std::fs::read_to_string(ext_dir.join("extension.toml")) {
                 if let Ok(manifest) = toml::from_str::<crate::config::extension::ExtensionManifest>(&content) {
-                    chain.push((ext_dir, manifest.assets.css.clone()));
+                    let files = get_files(&manifest.assets).to_vec();
+                    chain.push((ext_dir, files));
                     current = manifest.inherits;
                 }
             }
         }
     }
 
-    // Reverse to parent-first order (so child CSS overrides parent)
+    // Reverse to parent-first order
     let mut result = String::new();
-    for (ext_dir, css_files) in chain.iter().rev() {
-        for css_file in css_files {
-            let css_path = ext_dir.join("assets").join(css_file);
-            if let Ok(ext_css) = std::fs::read_to_string(&css_path) {
+    for (ext_dir, files) in chain.iter().rev() {
+        for file in files {
+            let path = ext_dir.join("assets").join(file);
+            if let Ok(content) = std::fs::read_to_string(&path) {
                 result.push('\n');
-                result.push_str(&ext_css);
+                result.push_str(&content);
             }
         }
     }
     result
+}
+
+/// Load CSS from extensions in the active target's inheritance chain.
+fn load_extension_css(project_root: &std::path::Path, target_name: &str) -> String {
+    load_extension_assets(project_root, target_name, |a| &a.css)
+}
+
+/// Load JS from extensions in the active target's inheritance chain.
+fn load_extension_js(project_root: &std::path::Path, target_name: &str) -> String {
+    load_extension_assets(project_root, target_name, |a| &a.js)
 }
 
 /// Build a MiniJinja render context from a variable map.
@@ -415,7 +426,10 @@ pub fn build_template_vars_with_headings(
 
     // Default values for format-specific template variables.
     vars.insert("css".to_string(), load_default_css());
-    vars.insert("js".to_string(), String::new());
+    vars.insert("js".to_string(), {
+        let root = crate::paths::get_project_root();
+        load_extension_js(&root, &crate::paths::get_active_target().unwrap_or_default())
+    });
     vars.insert("bib_preamble".to_string(), String::new());
     vars.insert("bib_end".to_string(), String::new());
 

@@ -67,8 +67,8 @@ fn append_footnotes_html() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn split_slides_revealjs() {
-    let html = render("---\ntitle: Slides\n---\n\n## Slide 1\n\nContent 1\n\n## Slide 2\n\nContent 2\n", "revealjs");
+fn split_slides_slides() {
+    let html = render("---\ntitle: Slides\n---\n\n## Slide 1\n\nContent 1\n\n## Slide 2\n\nContent 2\n", "slides");
     assert!(html.contains("<section>"), "should contain <section> tags for slides");
     assert!(html.matches("<section>").count() >= 2, "should have at least 2 slides");
 }

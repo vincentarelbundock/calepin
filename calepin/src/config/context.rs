@@ -99,6 +99,12 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
 /// Build the list of extension partial directories for layered resolution.
 /// Walks the inheritance chain from the active target up to the root,
 /// collecting `_calepin/extensions/{name}/partials/` directories.
+///
+/// Public alias for use from the collection pipeline.
+pub fn resolve_extension_partial_dirs_for(target_name: &str, project_root: &Path) -> Vec<PathBuf> {
+    resolve_extension_partial_dirs(target_name, project_root)
+}
+
 fn resolve_extension_partial_dirs(target_name: &str, project_root: &Path) -> Vec<PathBuf> {
     let mut dirs = Vec::new();
     let extensions_dir = project_root.join("_calepin").join("extensions");

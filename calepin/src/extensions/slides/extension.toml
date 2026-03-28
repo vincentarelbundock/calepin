@@ -1,4 +1,4 @@
-name = "revealjs"
+name = "slides"
 description = "RevealJS slide presentation"
 inherits = "html"
 

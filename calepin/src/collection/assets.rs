@@ -34,6 +34,49 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
         fs::write(&page_css_dst, css)?;
     }
 
+    // Copy extension static assets (declared in [assets].static)
+    {
+        let target_name = crate::paths::get_active_target().unwrap_or_default();
+        let extensions_dir = base_dir.join("_calepin").join("extensions");
+        if extensions_dir.is_dir() {
+            // Walk the extension inheritance chain (child-first), reversed for parent-first
+            let mut chain: Vec<(std::path::PathBuf, Vec<String>)> = Vec::new();
+            let mut current = Some(target_name);
+            let mut visited = std::collections::HashSet::new();
+            while let Some(name) = current.take() {
+                if !visited.insert(name.clone()) { break; }
+                let ext_dir = extensions_dir.join(&name);
+                if ext_dir.join("extension.toml").exists() {
+                    if let Ok(content) = fs::read_to_string(ext_dir.join("extension.toml")) {
+                        if let Ok(manifest) = toml::from_str::<crate::config::extension::ExtensionManifest>(&content) {
+                            chain.push((ext_dir, manifest.assets.static_files.clone()));
+                            current = manifest.inherits;
+                        }
+                    }
+                }
+            }
+            for (ext_dir, static_files) in chain.iter().rev() {
+                for entry in static_files {
+                    let src = ext_dir.join("assets").join(entry);
+                    let dst = assets_dst.join(entry);
+                    if src.is_dir() {
+                        copy_dir_recursive(&src, &dst)
+                            .with_context(|| format!("Failed to copy extension static dir '{}'", entry))?;
+                    } else if src.is_file() {
+                        if let Some(parent) = dst.parent() {
+                            fs::create_dir_all(parent)?;
+                        }
+                        // Don't overwrite user assets
+                        if !dst.exists() {
+                            fs::copy(&src, &dst)
+                                .with_context(|| format!("Failed to copy extension static file '{}'", entry))?;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Copy user-specified static paths (files or directories) into output
     for entry in static_dirs {
         let src = base_dir.join(entry);

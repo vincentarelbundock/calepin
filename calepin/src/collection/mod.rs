@@ -54,6 +54,10 @@ pub fn build_collection(
     crate::paths::set_active_target(Some(&collection_target_name));
     crate::paths::set_project_root(Some(&base_dir));
 
+    // Set extension partial directories for layered resolution
+    let ext_dirs = crate::config::context::resolve_extension_partial_dirs_for(&collection_target_name, &base_dir);
+    crate::paths::set_extension_partial_dirs(ext_dirs);
+
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
     // Falls back to built-in templates if not found on filesystem.
     let ext = crate::paths::resolve_extension(format);
@@ -192,10 +196,54 @@ pub fn build_collection(
         templating::apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;
     }
 
-    // 10. Copy assets/ and static directories to output
+    // 10. Run user-defined project modules (from extensions).
+    //     Built-in project modules (site_wrap, crossref_global, orchestrator) are
+    //     handled above by the collection pipeline. User-defined project modules
+    //     run here on the final output files.
+    {
+        let registry = crate::registry::ModuleRegistry::load(&collection_target.modules, &base_dir);
+        let project_transforms = registry.resolve_project_transforms(&collection_target.modules);
+        if !project_transforms.is_empty() {
+            // Build RenderedPage list from output files
+            let mut rendered_pages: Vec<crate::registry::RenderedPage> = Vec::new();
+            for page in &pages {
+                let output_path_full = output.join(&page.output);
+                let body = fs::read_to_string(&output_path_full).unwrap_or_default();
+                rendered_pages.push(crate::registry::RenderedPage {
+                    source: page.source.clone(),
+                    output: page.output.clone(),
+                    body,
+                    title: page.meta.title.clone(),
+                    date: page.meta.date.clone(),
+                    subtitle: page.meta.subtitle.clone(),
+                    abstract_text: page.meta.r#abstract.clone(),
+                    url: page.url.clone(),
+                    toc: None,
+                    lang: page.lang.clone(),
+                    metadata: crate::config::Metadata::default(),
+                });
+            }
+
+            for transform in &project_transforms {
+                // Skip built-in project modules (they're already handled above)
+                transform.transform(&mut rendered_pages, &meta, format)?;
+            }
+
+            // Write back any pages modified by project modules
+            for rp in &rendered_pages {
+                let out_path = output.join(&rp.output);
+                if let Some(parent) = out_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&out_path, &rp.body)?;
+            }
+        }
+    }
+
+    // 11. Copy assets/ and static directories to output
     assets::copy_assets(&base_dir, output, &meta.static_dirs)?;
 
-    // 11. Run user-configured post-processing commands
+    // 12. Run user-configured post-processing commands
     run_post_commands(&meta, &collection_target_name, &base_dir, output, quiet)?;
 
     // 12. Save page cache (after successful build only)

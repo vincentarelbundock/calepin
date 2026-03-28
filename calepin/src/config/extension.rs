@@ -212,7 +212,7 @@ pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
     ("latex", include_str!("../extensions/latex/extension.toml")),
     ("typst", include_str!("../extensions/typst/extension.toml")),
     ("markdown", include_str!("../extensions/markdown/extension.toml")),
-    ("revealjs", include_str!("../extensions/revealjs/extension.toml")),
+    ("slides", include_str!("../extensions/slides/extension.toml")),
     ("website", include_str!("../extensions/website/extension.toml")),
     ("book", include_str!("../extensions/book/extension.toml")),
 ];
@@ -252,8 +252,8 @@ mod tests {
     }
 
     #[test]
-    fn test_revealjs_inherits_html() {
-        let manifest = builtin_extension("revealjs").unwrap();
+    fn test_slides_inherits_html() {
+        let manifest = builtin_extension("slides").unwrap();
         assert_eq!(manifest.inherits.as_deref(), Some("html"));
         let target = manifest.to_target();
         assert!(target.modules.contains(&"split_slides".to_string()));

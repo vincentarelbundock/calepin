@@ -43,7 +43,7 @@ compile = "typst compile {input}"
 modules = ["highlight"]
 crossref = "plain"
 
-[targets.revealjs]
+[targets.slides]
 writer = "html"
 template = "page"
 extension = "html"
@@ -54,7 +54,7 @@ modules = ["highlight", "append_footnotes", "split_slides"]
 crossref = "html"
 toc_headings = false
 
-[targets.revealjs.page_vars]
+[targets.slides.page_vars]
 base = "html"
 
 [targets.markdown]

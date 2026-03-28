@@ -95,7 +95,7 @@ pub struct RenderArgs {
     pub output: Option<PathBuf>,
 
     /// Output format: a format name from _calepin/config.toml (e.g., web, article)
-    /// or a base name (html, latex, typst, revealjs, website, markdown).
+    /// or a base name (html, latex, typst, slides, website, markdown).
     /// If omitted, auto-detected from output extension or YAML front matter.
     #[arg(short = 't', long)]
     pub format: Option<String>,

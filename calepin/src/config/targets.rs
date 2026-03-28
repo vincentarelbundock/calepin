@@ -48,7 +48,7 @@ pub struct Target {
     pub toc_headings: Option<bool>,
     /// Extra template variables injected during page assembly.
     /// These override computed values. Useful for setting `base = "html"`
-    /// in revealjs or other derived targets.
+    /// in slides or other derived targets.
     #[serde(default)]
     pub page_vars: HashMap<String, String>,
     /// Preferred image formats for figure variant selection, in priority order.
