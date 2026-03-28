@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
 use include_dir::Dir;
 
-use crate::config::paths::ProjectKind;
+use crate::paths::ProjectKind;
 
 // ---------------------------------------------------------------------------
 // Built-in partials and assets (embedded at compile time)

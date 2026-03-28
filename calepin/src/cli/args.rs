@@ -15,6 +15,7 @@ pub fn is_quiet() -> bool { QUIET.load(Ordering::Relaxed) }
     about = "Render .qmd files to HTML, LaTeX, Typst, or Markdown",
     version,
     disable_version_flag = true,
+    arg_required_else_help = true,
 )]
 #[command(arg(clap::Arg::new("version")
     .short('v')
@@ -154,6 +155,7 @@ pub struct PreviewArgs {
 }
 
 #[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
 pub enum NewAction {
     /// Scaffold a .qmd notebook with its sidecar directory
     Notebook {
@@ -191,12 +193,6 @@ pub enum NewAction {
     /// Overwrite local partials with the latest built-in templates
     Partials,
 
-    /// Print shell completions (bash, zsh, fish, elvish, powershell)
-    Completions {
-        /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)
-        shell: Shell,
-    },
-
     /// Generate .qmd files filled with lorem ipsum text
     Gibberish {
         /// Number of .qmd files to generate
@@ -219,6 +215,7 @@ pub enum NewAction {
 }
 
 #[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
 pub enum ManAction {
     /// Extract R package documentation
     R {
@@ -270,11 +267,22 @@ pub enum ManAction {
 }
 
 #[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
 pub enum InfoAction {
     /// List available citation styles
     Csl,
     /// List available syntax highlighting themes
-    Themes,
+    Highlight,
+    /// Print shell completions
+    #[command(arg_required_else_help = true, after_help = "\
+\x1B[1;4mExamples:\x1B[0m
+  calepin info completions zsh  > ~/.zfunc/_calepin
+  calepin info completions bash > ~/.local/share/bash-completion/completions/calepin
+  calepin info completions fish > ~/.config/fish/completions/calepin.fish")]
+    Completions {
+        /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)
+        shell: Shell,
+    },
 }
 
 /// Returns true if the input is a collection config file (_calepin/config.toml).

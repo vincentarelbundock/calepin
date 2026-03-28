@@ -14,7 +14,7 @@ pub fn handle_info(action: InfoAction) -> Result<()> {
             println!();
             println!("  https://www.zotero.org/styles");
             println!();
-            println!("Download a .csl file and set csl: to its path in _calepin/config.toml");
+            println!("Download a .csl file and set 'csl' to its path in _calepin/config.toml");
             println!("or in document front matter.");
             println!();
             println!("The following shortcuts are also available as built-in names");
@@ -43,7 +43,13 @@ pub fn handle_info(action: InfoAction) -> Result<()> {
             }
             Ok(())
         }
-        InfoAction::Themes => {
+        InfoAction::Completions { shell } => {
+            use clap::CommandFactory;
+            let mut cmd = <crate::cli::Cli as CommandFactory>::command();
+            clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
+            Ok(())
+        }
+        InfoAction::Highlight => {
             println!("Built-in syntax highlighting themes:\n");
             let names = crate::modules::list_builtin_themes();
             for name in &names {

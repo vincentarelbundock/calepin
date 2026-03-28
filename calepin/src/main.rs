@@ -17,7 +17,8 @@ mod utils;
 
 // Crate-level re-exports: short paths for pervasive types and modules.
 pub(crate) use config::{ProjectContext, resolve_context, apply_writer_override};
-pub(crate) use config::{paths, value};
+pub(crate) use config::value;
+pub(crate) use utils::paths;
 pub(crate) use modules::{registry, manifest as module_manifest};
 pub(crate) use references::{bibliography, crossref};
 pub(crate) use utils::util;
@@ -85,12 +86,6 @@ fn main() -> Result<()> {
             cli::NewAction::Website { dir, theme } => cli::new_website::handle_new_website(&dir, &theme),
             cli::NewAction::Book { dir, theme } => cli::new_book::handle_new_book(&dir, &theme),
             cli::NewAction::Partials => cli::new_partials::handle_new_partials(),
-            cli::NewAction::Completions { shell } => {
-                use clap::CommandFactory;
-                let mut cmd = <cli::Cli as CommandFactory>::command();
-                clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
-                Ok(())
-            }
             cli::NewAction::Gibberish { files, paragraphs, dir, complexity } => {
                 cli::new_gibberish::handle_new_gibberish(&dir, files, paragraphs, complexity)
             }

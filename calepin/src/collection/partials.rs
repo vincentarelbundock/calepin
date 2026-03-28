@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use minijinja::Environment;
 
-use crate::utils::url::UrlMode;
+use crate::utils::links::UrlMode;
 
 /// Initialize MiniJinja by loading template files from `partials/{target_name}/`.
 ///
@@ -70,7 +70,7 @@ pub fn load_templates_with_url(base_dir: &Path, target_name: &str, base_path: &s
         let depth: usize = state.lookup("_page_depth")
             .and_then(|v| v.as_usize())
             .unwrap_or(0);
-        crate::utils::url::link(&path, &bp, url_mode, depth)
+        crate::utils::links::link(&path, &bp, url_mode, depth)
     });
 
     Ok(Some(env))

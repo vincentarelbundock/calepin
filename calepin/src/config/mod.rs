@@ -1,7 +1,6 @@
 //! Document metadata: types, parsing, targets, and config loading.
 
 pub mod context;
-pub mod paths;
 pub mod value;
 mod types;
 mod parse;

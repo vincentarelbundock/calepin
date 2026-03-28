@@ -44,7 +44,7 @@ pub fn handle_new_notebook(path: &Path, theme_name: Option<&str>) -> Result<()> 
     // Apply theme if specified
     if let Some(name) = theme_name {
         let theme = crate::themes::Theme::resolve(name)?;
-        let kind = crate::config::paths::ProjectKind::Document {
+        let kind = crate::paths::ProjectKind::Document {
             qmd: path.clone(),
             sidecar: sidecar.clone(),
         };

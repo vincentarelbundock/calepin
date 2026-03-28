@@ -49,15 +49,15 @@ pub(super) fn apply_collection_partials(
     output: &Path,
     format: &str,
     target_name: &str,
-    url_mode: crate::utils::url::UrlMode,
+    url_mode: crate::utils::links::UrlMode,
     serve: bool,
 ) -> Result<()> {
     // In serve mode, ignore the deploy base path and use "/" so the local server works.
     let base_path = if serve {
         "/".to_string()
     } else {
-        let raw_base = crate::utils::url::extract_base_path(meta.url.as_deref());
-        crate::utils::url::normalize_base_path(raw_base)
+        let raw_base = crate::utils::links::extract_base_path(meta.url.as_deref());
+        crate::utils::links::normalize_base_path(raw_base)
     };
 
     // Initialize MiniJinja from templates/{target}/
@@ -133,7 +133,7 @@ pub(super) fn apply_collection_partials(
         };
         mark_active(&mut nav_tree, &page.url);
 
-        let page_depth = crate::utils::url::path_depth(&page.url);
+        let page_depth = crate::utils::links::path_depth(&page.url);
         context::resolve_nav_urls(&mut nav_tree, &base_path, url_mode, page_depth);
 
         let template_name = if page.meta.listing.is_some() {

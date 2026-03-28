@@ -185,7 +185,7 @@ pub fn build_collection(
     if let Some(ref orchestrator_path) = orchestrator {
         orchestrator::render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
     } else {
-        let url_mode = if portable { crate::utils::url::UrlMode::Relative } else { crate::utils::url::UrlMode::ServerRelative };
+        let url_mode = if portable { crate::utils::links::UrlMode::Relative } else { crate::utils::links::UrlMode::ServerRelative };
         templating::apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;
     }
 

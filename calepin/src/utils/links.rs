@@ -64,7 +64,6 @@ pub fn normalize_base_path(path: &str) -> String {
 ///
 /// External URLs (http://, https://, #, data:, mailto:) pass through unchanged.
 pub fn link(path: &str, base_path: &str, mode: UrlMode, current_depth: usize) -> String {
-    // Pass through external URLs and anchors
     if path.starts_with("http://") || path.starts_with("https://")
         || path.starts_with('#') || path.starts_with("data:")
         || path.starts_with("mailto:")
@@ -72,29 +71,17 @@ pub fn link(path: &str, base_path: &str, mode: UrlMode, current_depth: usize) ->
         return path.to_string();
     }
 
-    // Strip leading / from the path if present
     let path = path.strip_prefix('/').unwrap_or(path);
 
     match mode {
-        UrlMode::ServerRelative => {
-            if base_path == "/" {
-                format!("/{}", path)
-            } else {
-                // base_path already ends with /
-                format!("{}{}", base_path, path)
-            }
-        }
+        // base_path is normalized to always end with `/` (including "/" itself)
+        UrlMode::ServerRelative => format!("{}{}", base_path, path),
         UrlMode::Relative => {
             if current_depth == 0 {
-                if path.is_empty() {
-                    ".".to_string()
-                } else {
-                    path.to_string()
-                }
+                if path.is_empty() { ".".to_string() } else { path.to_string() }
             } else {
                 let prefix = "../".repeat(current_depth);
                 if path.is_empty() {
-                    // Trim trailing /
                     prefix.trim_end_matches('/').to_string()
                 } else {
                     format!("{}{}", prefix, path)
@@ -116,7 +103,7 @@ pub fn canonical_url(path: &str, site_url: Option<&str>) -> Option<String> {
     Some(format!("{}/{}", site_url, path))
 }
 
-/// Compute the directory depth of a path (number of `/` separators in the directory portion).
+/// Compute the directory depth of a path (number of `/` separators).
 ///
 /// ```text
 /// "index.html"           -> 0
@@ -124,11 +111,7 @@ pub fn canonical_url(path: &str, site_url: Option<&str>) -> Option<String> {
 /// "guide/sub/page.html"  -> 2
 /// ```
 pub fn path_depth(path: &str) -> usize {
-    let path = path.strip_prefix('/').unwrap_or(path);
-    match path.rfind('/') {
-        Some(_) => path.matches('/').count(),
-        None => 0,
-    }
+    path.strip_prefix('/').unwrap_or(path).matches('/').count()
 }
 
 #[cfg(test)]

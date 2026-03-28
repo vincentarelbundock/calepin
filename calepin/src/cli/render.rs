@@ -16,7 +16,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
 
     // Single input: use ProjectKind discovery for directories and config files
     if args.input.len() == 1 {
-        use crate::config::paths::ProjectKind;
+        use crate::paths::ProjectKind;
         let input = &args.input[0];
 
         // Try ProjectKind discovery for directories and config.toml paths

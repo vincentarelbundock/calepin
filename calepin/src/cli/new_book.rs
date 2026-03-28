@@ -33,7 +33,7 @@ pub fn handle_new_book(dir: &Path, theme_name: &str) -> Result<()> {
 
     // Apply theme (partials + assets)
     let theme = crate::themes::Theme::resolve(theme_name)?;
-    let kind = crate::config::paths::ProjectKind::Collection {
+    let kind = crate::paths::ProjectKind::Collection {
         root: dir.to_path_buf(),
         config: calepin_dir.join("config.toml"),
     };

@@ -211,7 +211,7 @@ pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
 pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     let stem = input.file_stem()?.to_string_lossy();
     let sidecar_name = format!("{}_calepin", stem);
-    let project_root = get_project_root_if_set();
+    let project_root = PROJECT_ROOT.with(|r| r.borrow().clone());
 
     let dir = if let Some(ref root) = project_root {
         // Preserve subdirectory structure relative to project root
@@ -237,11 +237,6 @@ pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     Some(dir)
 }
 
-/// Returns the project root only if explicitly set (collection mode).
-fn get_project_root_if_set() -> Option<PathBuf> {
-    PROJECT_ROOT.with(|r| r.borrow().clone())
-}
-
 /// Create a sidecar directory with a default `config.toml` and all built-in partials.
 pub fn create_sidecar(dir: &Path) {
     if let Err(e) = std::fs::create_dir_all(dir) {
@@ -263,25 +258,17 @@ pub fn write_builtin_partials(dest: &Path) {
 }
 
 /// Write an embedded `include_dir::Dir` to disk, preserving subdirectory structure.
-/// When `strip_prefix` is Some, paths are relativized by stripping that prefix.
 /// Silently skips files that fail to write.
 pub fn write_embedded_dir(dir: &include_dir::Dir<'static>, dest: &Path) {
-    write_embedded_dir_impl(dir, dest, None);
-}
-
-fn write_embedded_dir_impl(dir: &include_dir::Dir<'static>, dest: &Path, strip_prefix: Option<&Path>) {
     for file in dir.files() {
-        let rel = strip_prefix
-            .and_then(|p| file.path().strip_prefix(p).ok())
-            .unwrap_or(file.path());
-        let target = dest.join(rel);
+        let target = dest.join(file.path());
         if let Some(parent) = target.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
         let _ = std::fs::write(&target, file.contents());
     }
     for subdir in dir.dirs() {
-        write_embedded_dir_impl(subdir, dest, strip_prefix);
+        write_embedded_dir(subdir, dest);
     }
 }
 
@@ -398,27 +385,22 @@ pub fn output_dir(project_root: &Path, config_output: Option<&str>) -> PathBuf {
 
 /// `{root}/_calepin/partials`
 pub fn partials_dir(project_root: &Path) -> PathBuf {
-    calepin_dir(project_root, &["partials"])
+    project_root.join("_calepin/partials")
 }
 
 /// Check whether user-provided partials exist (sidecar or project-level).
-///
-/// When this returns `true`, resolution should use ONLY user partials and
-/// never fall back to built-in templates. When `false`, resolution should
-/// use ONLY built-in templates and skip filesystem lookups entirely.
 pub fn has_user_partials() -> bool {
     if let Some(sidecar) = get_sidecar_root() {
         if sidecar.join("partials").is_dir() {
             return true;
         }
     }
-    let root = get_project_root();
-    partials_dir(&root).is_dir()
+    partials_dir(&get_project_root()).is_dir()
 }
 
 /// `{root}/_calepin/assets`
 pub fn assets_dir(project_root: &Path) -> PathBuf {
-    calepin_dir(project_root, &["assets"])
+    project_root.join("_calepin/assets")
 }
 
 // ---------------------------------------------------------------------------
@@ -459,52 +441,40 @@ fn check_partials_dir(
 /// Resolve a partial (element or page).
 ///
 /// Lookup order (first match wins):
-///   1. `{stem}_calepin/partials/{target}/{name}.{ext}` (sidecar, target-specific)
-///   2. `{stem}_calepin/partials/{base}/{name}.{ext}` (sidecar, engine-specific)
-///   3. `{stem}_calepin/partials/common/{name}.jinja` (sidecar, format-agnostic)
-///   4. `_calepin/partials/{target}/{name}.{ext}` (project, target-specific)
-///   5. `_calepin/partials/{base}/{name}.{ext}` (project, engine-specific)
-///   6. `_calepin/partials/common/{name}.jinja` (project, format-agnostic)
-///   7. (caller falls back to built-in)
+///   1. Sidecar partials: `{stem}_calepin/partials/{target|base|common}/`
+///   2. Project partials: `_calepin/partials/{target|base|common}/`
+///   3. (caller falls back to built-in)
 pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
     let ext = resolve_extension(base);
     let base_specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
     let active_target = get_active_target();
 
-    // Check sidecar partials first
+    // Check sidecar then project-level partials
+    let mut dirs = Vec::with_capacity(2);
     if let Some(sidecar) = get_sidecar_root() {
-        let tpl = sidecar.join("partials");
-        if let Some(p) = check_partials_dir(&tpl, base, &base_specific, &generic, &active_target) {
+        dirs.push(sidecar.join("partials"));
+    }
+    dirs.push(partials_dir(&get_project_root()));
+
+    for tpl in &dirs {
+        if let Some(p) = check_partials_dir(tpl, base, &base_specific, &generic, &active_target) {
             return Some(p);
         }
     }
-
-    // Then project-level partials
-    let root = get_project_root();
-    let tpl = partials_dir(&root);
-    check_partials_dir(&tpl, base, &base_specific, &generic, &active_target)
+    None
 }
 
 /// Resolve a module directory by name.
-/// Checks sidecar first (`{stem}_calepin/modules/{name}/module.toml`),
-/// then project-level (`_calepin/modules/{name}/module.toml`).
+/// Checks sidecar first, then project-level `_calepin/modules/{name}/`.
 pub fn resolve_module_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
-    // 1. Document sidecar
-    if let Some(sidecar) = get_sidecar_root() {
-        let local = sidecar.join("modules").join(name);
-        if local.join("module.toml").exists() {
-            return Some(local);
-        }
-    }
-
-    // 2. Project-level
-    let local = calepin_dir(project_root, &["modules", name]);
-    if local.join("module.toml").exists() {
-        return Some(local);
-    }
-
-    None
+    let candidates = [
+        get_sidecar_root().map(|s| s.join("modules").join(name)),
+        Some(calepin_dir(project_root, &["modules", name])),
+    ];
+    candidates.into_iter()
+        .flatten()
+        .find(|dir| dir.join("module.toml").exists())
 }
 
 // ---------------------------------------------------------------------------
