@@ -1,0 +1,19 @@
+name = "website"
+description = "Multi-page website"
+inherits = "html"
+
+[target]
+embed_resources = false
+modules = ["highlight", "append_footnotes", "embed_images"]
+
+[assets]
+css = ["calepin.css"]
+static = ["css/", "fontawesome/"]
+
+[[modules]]
+name = "site_wrap"
+kind = "project"
+
+[[modules]]
+name = "crossref_global"
+kind = "project"

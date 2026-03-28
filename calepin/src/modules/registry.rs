@@ -104,6 +104,47 @@ pub trait TransformSpan: Send + Sync {
 }
 
 // ---------------------------------------------------------------------------
+// Project-level transform (cross-page coordination)
+// ---------------------------------------------------------------------------
+
+/// A rendered page with its metadata, passed to project-level transforms.
+pub struct RenderedPage {
+    /// Source path relative to project root.
+    pub source: PathBuf,
+    /// Output path relative to output directory.
+    pub output: PathBuf,
+    /// Rendered body (HTML, LaTeX, etc.).
+    pub body: String,
+    /// Page title (from front matter or first heading).
+    pub title: Option<String>,
+    /// Page date (from front matter).
+    pub date: Option<String>,
+    /// Page subtitle.
+    pub subtitle: Option<String>,
+    /// Abstract text.
+    pub abstract_text: Option<String>,
+    /// URL path for this page (e.g., "/guides/intro.html").
+    pub url: String,
+    /// Table of contents HTML (if generated).
+    pub toc: Option<String>,
+    /// Page language (for multilingual sites).
+    pub lang: Option<String>,
+    /// Full page metadata.
+    pub metadata: crate::config::Metadata,
+}
+
+/// Project-level transform. Operates on all rendered pages at once.
+/// Used for cross-page coordination: navigation, cross-references, site wrapping.
+pub trait TransformProject: Send + Sync {
+    fn transform(
+        &self,
+        pages: &mut Vec<RenderedPage>,
+        config: &crate::config::Metadata,
+        writer: &str,
+    ) -> anyhow::Result<()>;
+}
+
+// ---------------------------------------------------------------------------
 // Module kind
 // ---------------------------------------------------------------------------
 
@@ -124,6 +165,7 @@ pub enum ModuleKind {
     ElementChildren(Box<dyn TransformElementChildren>),
     Span(Box<dyn TransformSpan>),
     Document(Box<dyn TransformDocument>),
+    Project(Box<dyn TransformProject>),
     Emitter(EmitterFactory),
     Noop,
 }
@@ -252,6 +294,19 @@ impl ModuleRegistry {
         for m in &self.modules {
             if active.contains(&m.manifest.name) {
                 if let ModuleKind::Document(ref t) = m.kind {
+                    result.push(t.as_ref());
+                }
+            }
+        }
+        result
+    }
+
+    /// Resolve all project-level transforms from the active module list.
+    pub fn resolve_project_transforms(&self, active: &[String]) -> Vec<&dyn TransformProject> {
+        let mut result = Vec::new();
+        for m in &self.modules {
+            if active.contains(&m.manifest.name) {
+                if let ModuleKind::Project(ref t) = m.kind {
                     result.push(t.as_ref());
                 }
             }

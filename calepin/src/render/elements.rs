@@ -358,16 +358,18 @@ impl ElementRenderer {
 
 }
 
-/// Resolve an element template: project → user → built-in.
+/// Resolve an element template: filesystem → built-in (layered).
 /// Template names use underscores internally; hyphens are normalized.
+/// Checks user partials first (sidecar, then project-level), then falls
+/// through to built-in partials embedded in the binary.
 pub fn resolve_element_partial(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
-    if crate::paths::has_user_partials() {
-        // User partials exist: use only filesystem, no built-in fallback
-        crate::paths::resolve_partial(&canonical, ext)
-            .and_then(|path| std::fs::read_to_string(&path).ok())
-    } else {
-        // No user partials: use only built-in
-        resolve_builtin_partial(&canonical, ext).map(|s| s.to_string())
+    // Try filesystem first (sidecar → project)
+    if let Some(content) = crate::paths::resolve_partial(&canonical, ext)
+        .and_then(|path| std::fs::read_to_string(&path).ok())
+    {
+        return Some(content);
     }
+    // Fall through to built-in
+    resolve_builtin_partial(&canonical, ext).map(|s| s.to_string())
 }

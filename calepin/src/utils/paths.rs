@@ -131,6 +131,8 @@ thread_local! {
     static ACTIVE_TARGET: RefCell<Option<String>> = RefCell::new(None);
     static PROJECT_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
     static SIDECAR_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
+    /// Extension partial directories to check, in inheritance order (child first).
+    static EXTENSION_PARTIAL_DIRS: RefCell<Vec<PathBuf>> = RefCell::new(Vec::new());
 }
 
 /// Set the active target name for template resolution.
@@ -168,6 +170,18 @@ pub fn set_sidecar_root(root: Option<&Path>) {
 
 pub fn get_sidecar_root() -> Option<PathBuf> {
     SIDECAR_ROOT.with(|r| r.borrow().clone())
+}
+
+/// Set extension partial directories (child-first order).
+/// Called once during target resolution to establish the extension chain.
+pub fn set_extension_partial_dirs(dirs: Vec<PathBuf>) {
+    EXTENSION_PARTIAL_DIRS.with(|d| {
+        *d.borrow_mut() = dirs;
+    });
+}
+
+pub fn get_extension_partial_dirs() -> Vec<PathBuf> {
+    EXTENSION_PARTIAL_DIRS.with(|d| d.borrow().clone())
 }
 
 /// Given the path to a config file (e.g. `<root>/_calepin/config.toml`),
@@ -443,7 +457,8 @@ fn check_partials_dir(
 /// Lookup order (first match wins):
 ///   1. Sidecar partials: `{stem}_calepin/partials/{target|base|common}/`
 ///   2. Project partials: `_calepin/partials/{target|base|common}/`
-///   3. (caller falls back to built-in)
+///   3. Extension partials (child-first inheritance chain)
+///   4. (caller falls back to built-in)
 pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
     let ext = resolve_extension(base);
     let base_specific = format!("{}.{}", name, ext);
@@ -462,6 +477,14 @@ pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
             return Some(p);
         }
     }
+
+    // Check extension partials (child-first order)
+    for ext_dir in get_extension_partial_dirs() {
+        if let Some(p) = check_partials_dir(&ext_dir, base, &base_specific, &generic, &active_target) {
+            return Some(p);
+        }
+    }
+
     None
 }
 

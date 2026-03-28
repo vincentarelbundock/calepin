@@ -99,20 +99,21 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
 
 use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_authors};
 
-/// Load a page template by name and base.
+/// Load a page template by name and base (layered resolution).
 ///
-/// If user partials exist (`_calepin/partials/` or sidecar), uses only those.
-/// Otherwise uses only built-in templates. No fallback chain.
+/// Checks user partials first (sidecar, then project-level), then falls
+/// through to built-in templates embedded in the binary.
 pub fn load_page_template(template_name: &str, base: &str) -> String {
-    if crate::paths::has_user_partials() {
-        crate::paths::resolve_partial(template_name, base)
-            .and_then(|path| std::fs::read_to_string(&path).ok())
-            .unwrap_or_default()
-    } else {
-        crate::render::elements::resolve_builtin_partial(template_name, base)
-            .unwrap_or("")
-            .to_string()
+    // Try filesystem first (sidecar → project)
+    if let Some(content) = crate::paths::resolve_partial(template_name, base)
+        .and_then(|path| std::fs::read_to_string(&path).ok())
+    {
+        return content;
     }
+    // Fall through to built-in
+    crate::render::elements::resolve_builtin_partial(template_name, base)
+        .unwrap_or("")
+        .to_string()
 }
 
 
@@ -526,6 +527,17 @@ pub fn render_page_template(
     }
     dirs.push(tpl_dir.join(base));
     dirs.push(tpl_dir.join("common"));
+
+    // Also check extension partial directories (child-first order)
+    for ext_dir in crate::paths::get_extension_partial_dirs() {
+        if let Some(ref target) = active_target {
+            if target != base {
+                dirs.push(ext_dir.join(target));
+            }
+        }
+        dirs.push(ext_dir.join(base));
+        dirs.push(ext_dir.join("common"));
+    }
 
     for dir in &dirs {
         if !dir.is_dir() { continue; }

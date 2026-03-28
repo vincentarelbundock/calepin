@@ -6,6 +6,7 @@
 //!   - `TransformElementChildren` -- per-div structural rewriting
 //!   - `TransformSpan` -- span-level rendering
 //!   - `TransformDocument` -- post-assembly document transformation
+//!   - `TransformProject` -- cross-page coordination (navigation, cross-refs)
 //!
 //! External code should import from `crate::modules::` (this file),
 //! never from individual submodules like `crate::modules::highlight::`.

@@ -23,8 +23,8 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock
 
 Code execution:
 
-- [R](https://cran.r-project.org/): R code chunks (`{r}`)
-- [python3](https://www.python.org/): Python code chunks (`{python}`), requires building with `cargo build --features python`
+- [R](https://cran.r-project.org/): R code chunks `{r}`.
+- [python3](https://www.python.org/): Python code chunks `{python}`.
 
 PDF compilation:
 
@@ -33,10 +33,10 @@ PDF compilation:
 
 Diagrams:
 
-- [tectonic](https://tectonic-typesetting.github.io/): TikZ diagrams (`{tikz}`). PDF-to-SVG and SVG-to-PDF conversions are handled internally.
-- [mmdc](https://github.com/mermaid-js/mermaid-cli): Mermaid diagrams (`{mermaid}`)
-- [dot](https://graphviz.org/): Graphviz diagrams (`{dot}`)
-- [d2](https://d2lang.com/): D2 diagrams (`{d2}`)
+- [tectonic](https://tectonic-typesetting.github.io/): TikZ diagrams `{tikz}`.
+- [mmdc](https://github.com/mermaid-js/mermaid-cli): Mermaid diagrams `{mermaid}`.
+- [dot](https://graphviz.org/): Graphviz diagrams `{dot}`.
+- [d2](https://d2lang.com/): D2 diagrams `{d2}`.
 
 Website features:
 

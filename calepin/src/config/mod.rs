@@ -2,6 +2,7 @@
 
 pub mod context;
 pub mod value;
+pub mod extension;
 mod types;
 mod parse;
 mod merge;

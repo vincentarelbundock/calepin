@@ -1,0 +1,10 @@
+name = "book"
+description = "Multi-chapter book"
+inherits = "html"
+
+[target]
+modules = ["highlight", "append_footnotes"]
+
+[[modules]]
+name = "orchestrator"
+kind = "project"

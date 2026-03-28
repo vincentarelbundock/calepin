@@ -189,15 +189,35 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
 ///
 /// Lookup order:
 ///   1. Project config (`config.toml` found on disk)
-///   2. Built-in config (embedded default `config.toml`)
-///   3. Alias resolution (e.g., "tex" -> "latex" target)
+///   2. Installed extensions (`_calepin/extensions/{name}/`)
+///   3. Built-in config (embedded default `config.toml`)
 pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Target>) -> Result<Target> {
     // 1. User targets -- merge with built-in defaults for this base
     if let Some(target) = targets.get(name) {
         return Ok(merge_with_builtin(target));
     }
 
-    // 2. Built-in config (always fully specified)
+    // 2. Installed extensions
+    let project_root = crate::paths::get_project_root();
+    let ext_dir = project_root.join("_calepin").join("extensions").join(name);
+    if ext_dir.join("extension.toml").exists() {
+        if let Ok(manifest) = super::extension::ExtensionManifest::load(&ext_dir) {
+            let target = manifest.to_target();
+            // Resolve inheritance if present
+            if target.inherits.is_some() {
+                let mut target_map = HashMap::new();
+                target_map.insert(name.to_string(), target);
+                resolve_inheritance(&mut target_map)?;
+                if let Some(resolved) = target_map.remove(name) {
+                    return Ok(merge_with_builtin(&resolved));
+                }
+            } else {
+                return Ok(merge_with_builtin(&target));
+            }
+        }
+    }
+
+    // 3. Built-in config (always fully specified)
     if let Some(target) = super::builtin_metadata().targets.get(name) {
         return Ok(target.clone());
     }

@@ -1,0 +1,11 @@
+name = "revealjs"
+description = "RevealJS slide presentation"
+inherits = "html"
+
+[target]
+embed_resources = false
+toc_headings = false
+modules = ["highlight", "append_footnotes", "split_slides"]
+
+[target.page_vars]
+base = "html"

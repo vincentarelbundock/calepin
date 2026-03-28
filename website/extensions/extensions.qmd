@@ -154,17 +154,28 @@ classes = ["sidenote", "margin-note"]
 # description = "Rewrite external links to open in new tab"
 # kind = "document"
 # run = "scripts/rewrite-links.sh"  # .wasm for WASM runtime
+
+# Project module (cross-page coordination)
+# [[modules]]
+# name = "site_wrap"
+# description = "Wrap pages in site template with navigation"
+# kind = "project"
 ```
 
 
 # Module kinds
 
-| `kind` | When it runs | What it does |
-|---|---|---|
-| `span` | During render, per span | Renders matching bracketed spans |
-| `element_children` | During render, per div | Rewrites div children (structural transforms) |
-| `element` | Pre-render | Mutates individual elements before rendering |
-| `document` | Post-assembly | Transforms the full document string |
+| `kind` | When it runs | What it receives | What it does |
+|---|---|---|---|
+| `span` | During render, per span | One span | Renders matching bracketed spans |
+| `element_children` | During render, per div | One div's children | Rewrites div children (structural transforms) |
+| `element` | Pre-render | One element | Mutates individual elements before rendering |
+| `document` | Post-assembly, per page | One page's document string | Transforms a single page |
+| `project` | After all pages rendered | All rendered pages + config | Cross-page coordination (navigation, cross-refs, site wrapping) |
+
+The first four kinds operate on a single page. The `project` kind operates on the full set of rendered pages at once. This is how multi-document features (websites, books) work without needing a separate pipeline.
+
+For single documents, the pipeline renders one page and no `project` modules run. For multi-document projects (when `[[contents]]` is present in config), pages are discovered and rendered in parallel, then `project` modules coordinate across them.
 
 
 # Partials vs. modules
@@ -241,6 +252,40 @@ kind = "document"
 run = "scripts/rewrite-links.sh"
 protocol = "text"                    # "json" (default) or "text"
 ```
+
+**Project modules** (`project`) receive all rendered pages at once:
+
+```json
+{
+  "name": "site_wrap",
+  "kind": "project",
+  "writer": "html",
+  "pages": [
+    {
+      "source": "index.qmd",
+      "output": "index.html",
+      "body": "<article>...</article>",
+      "title": "Home",
+      "url": "/index.html"
+    }
+  ],
+  "config": { "contents": [...] },
+  "vars": {}
+}
+```
+
+And return the transformed pages:
+
+```json
+{
+  "action": "rendered",
+  "pages": [
+    { "output": "index.html", "body": "<!DOCTYPE html>..." }
+  ]
+}
+```
+
+Project modules can add pages to the output (e.g., pagination pages) by including new entries in the `pages` array.
 
 
 # Installation
@@ -327,33 +372,39 @@ A module must be listed in the active target's `modules` field to run as a docum
 
 # Built-in targets
 
-Every target derives from one of two fundamental types:
-
-- **Notebook** -- A single document rendered to one output file.
-- **Collection** -- A multi-document project rendered to a directory of output files.
-
 The built-in targets form this inheritance tree:
 
 ```
-notebook (type)
-  html                  writer = "html"
-    slides              inherits = "html"
-  latex                 writer = "latex"
-  typst                 writer = "typst"
-  markdown              writer = "markdown"
-
-collection (type)
+html                    writer = "html"
+  slides                inherits = "html"
   website               inherits = "html"
   book                  inherits = "html"
+latex                   writer = "latex"
+typst                   writer = "typst"
+markdown                writer = "markdown"
 ```
 
-The base notebook targets (`html`, `latex`, `typst`, `markdown`) each define a writer and a default set of modules, partials, and settings. The composed targets (`slides`, `website`, `book`) inherit from a base and override specific pieces.
+The base targets (`html`, `latex`, `typst`, `markdown`) each define a writer and a default set of modules, partials, and settings. The composed targets (`slides`, `website`, `book`) inherit from a base and add behavior through modules.
+
+There is no separate "notebook" vs. "collection" type. The pipeline is always the same:
+
+```
+1. resolve_pages(config)           # 1 page if no [[contents]], N otherwise
+2. for each page (parallel):
+     parse -> evaluate -> render -> assemble_page -> transform_document
+3. transform_project(all_pages)    # project modules run here (if any)
+4. write all pages
+5. copy assets
+6. run post commands
+```
+
+For single documents, step 1 yields one page and step 3 is a no-op. For websites and books, step 1 discovers pages from `[[contents]]` and step 3 runs project modules that handle navigation, cross-references, or orchestrator assembly.
 
 Internally, all built-in targets are structured as extensions:
 
 ```
 html/
-  extension.toml        # type = "notebook", writer = "html"
+  extension.toml        # writer = "html"
   partials/
     html/
       page.html
@@ -362,20 +413,20 @@ html/
       ...
 
 latex/
-  extension.toml        # type = "notebook", writer = "latex"
+  extension.toml        # writer = "latex"
   partials/
     latex/
       page.tex
       ...
 
 slides/
-  extension.toml        # type = "notebook", inherits = "html"
+  extension.toml        # inherits = "html"
   partials/
     slides/
       page.html         # overrides html/page.html
 
 website/
-  extension.toml        # type = "collection", inherits = "html"
+  extension.toml        # inherits = "html"
   partials/
     website/
       base.html
@@ -385,11 +436,20 @@ website/
     calepin.css
     css/...
     fontawesome/...
+
+book/
+  extension.toml        # inherits = "html"
+  partials/
+    book/
+      orchestrator.typ
 ```
 
-- `slides` inherits from `html`, overriding `page.html` and adding `split_slides` to modules.
-- `website` inherits from `html`, adding navbar/sidebar partials, CSS assets, and `document_listing` support.
-- A user extension inherits from any of these and follows the same rules. The `type` is inherited from the parent and cannot be changed.
+What makes `website` and `book` different from `html` is not a type flag -- it is the project modules they declare:
+
+- **`website`** declares `site_wrap` (wraps each page in the site template with navbar, sidebar, prev/next, breadcrumbs) and `crossref_global` (resolves cross-references across pages with chapter-qualified numbering).
+- **`book`** declares `orchestrator` (assembles chapter fragments into a master file for PDF compilation).
+- **`slides`** has no project modules. It just overrides `page.html` and adds `split_slides` to the per-page document modules.
+- A user extension inherits from any of these and follows the same rules.
 
 
 # Scaffolding
@@ -596,36 +656,59 @@ The template at `partials/html/lightbox.html` is resolved by class name through 
 - **No config fragments.** An extension provides a target definition, partials, modules, and assets. Document-level config (title, author, bibliography, execute options) stays in the document or project config.
 - **Additive partial chain.** Each level in the chain can override partials from the level below. The user always has final say (project `_calepin/partials/` overrides everything).
 - **Modules are for behavior, partials are for presentation.** Adding a partial to `partials/` is enough for custom div/span styles. A `[[modules]]` declaration is only needed for structural transforms, advanced matching, auto-numbering, or external code.
+- **One pipeline.** There is no separate "collection" or "notebook" mode. The same pipeline handles 1 page or 1000 pages. Multi-document features (navigation, cross-references, orchestrator assembly) are `project` modules declared by the extension, not a different code path.
 
 
-# Open question: partial resolution vs. wholesale copy
+# Partial resolution in practice
 
-::: {.callout-warning}
-This section describes an unresolved design question that affects the entire extension architecture.
-:::
+Partials use layered resolution. You only create the files you want to change. Everything else falls through to the extension, its parent, and ultimately the built-in defaults.
 
-The spec above describes a layered partial resolution chain: user overrides > extension > parent extension > built-in. Each level can override individual partials while inheriting the rest.
+## Example: customizing figures
 
-But the current system does not work this way. Today, `calepin init website` copies *all* built-in partials into `_calepin/partials/`. The user gets a complete, self-contained set of templates. Resolution is flat: either everything comes from the filesystem, or everything comes from the built-ins. There is no mixing.
+Suppose you have a website and want to change how figures render. You do not need to copy or even know about the other ~50 partials. Create one file:
 
-## Advantages of wholesale copy
+```
+my-site/
+  _calepin/
+    config.toml
+    partials/
+      html/
+        figure.html       # just this file
+  index.qmd
+  about.qmd
+```
 
-- **Predictability.** The user sees every template that will be used. No hidden inheritance, no wondering "which level is this partial coming from?"
-- **Stability.** When *Calepin* updates its built-in partials, the user's project is unaffected. They opted into a specific version of the templates at scaffold time.
-- **Debuggability.** If output looks wrong, the user can inspect and edit the local file directly.
+Your `figure.html`:
 
-## Problems with wholesale copy
+```html
+<figure id="{{ id }}" class="{{ classes }}">
+  <img src="{{ src }}" alt="{{ alt }}" style="border-radius: 8px" />
+  {% if caption %}<figcaption>{{ caption }}</figcaption>{% endif %}
+</figure>
+```
 
-- **An extension that overrides 3 partials must ship all ~50.** Otherwise, the remaining partials have to come from somewhere, which requires the layered chain. With wholesale copy, every extension must be a complete fork of its parent's template set.
-- **Updates do not propagate.** If the `html` extension fixes a bug in `code_source.html`, no child extension or user project picks it up unless they re-copy manually.
-- **Extension authoring is heavy.** Creating a "tufte" extension that only changes `page.html` and `figure.html` would require copying and maintaining 48 other files verbatim.
+All other partials (`page.html`, `code_source.html`, `callout.html`, etc.) come from the built-in `website` extension. Your override applies only to figures.
 
-## Possible approaches
+The same principle applies to extensions. A "tufte" extension that changes `page.html` and `figure.html` ships only those two files. The remaining partials come from its parent (`html`).
 
-1. **Layered resolution (as specced above).** Extensions only ship the partials they override. Missing partials fall through to the parent. Accept the resolution complexity.
+## Debugging resolution
 
-2. **Wholesale copy with scaffolding.** `calepin init extension --inherits html` copies all of the parent's partials into the new extension. The extension is self-contained. Updates require re-scaffolding. Simple but heavy.
+To see where each partial is resolved from, run:
 
-3. **Hybrid: layered by default, `calepin eject` to flatten.** Normal operation uses the layered chain. A `calepin eject` command copies all resolved partials into the project's `_calepin/partials/`, switching to the flat model. Users who want full control can eject; extensions stay lightweight.
+```
+calepin info --partials
+```
 
-4. **Layered resolution with `calepin info --partials` for debugging.** Keep the layered chain, but provide a command that shows exactly where each partial is resolved from (extension name, file path). Makes the chain inspectable without flattening it.
+This prints the full resolution chain for the active target:
+
+```
+page.html          _calepin/partials/website/page.html
+figure.html        _calepin/partials/html/figure.html (override)
+code_source.html   built-in: html
+callout.html       built-in: html
+...
+```
+
+## `calepin init` does not copy partials
+
+`calepin init website` creates a project config and starter pages. It does not copy built-in partials into `_calepin/partials/`. The project starts clean, inheriting everything from the extension. Users create individual partial files only when they want to override something.

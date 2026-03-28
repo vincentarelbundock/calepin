@@ -1,0 +1,12 @@
+name = "html"
+description = "HTML document output"
+
+[target]
+writer = "html"
+template = "page"
+extension = "html"
+fig_extension = "svg"
+fig_formats = ["svg", "png", "jpg", "webp", "gif"]
+preview = "serve"
+crossref = "html"
+modules = ["highlight", "append_footnotes", "embed_images"]
