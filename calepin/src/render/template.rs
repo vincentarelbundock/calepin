@@ -144,6 +144,14 @@ pub fn load_default_css() -> String {
         css.push_str(&ext_css);
     }
 
+    // 3. Side-loaded extensions (calepin.extensions = [...])
+    for ext_name in crate::paths::get_sideloaded_extensions() {
+        let ext_css = load_extension_css(&root, &ext_name);
+        if !ext_css.is_empty() {
+            css.push_str(&ext_css);
+        }
+    }
+
     css
 }
 
@@ -258,6 +266,8 @@ pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String 
 pub struct TemplateEnv {
     env: minijinja::Environment<'static>,
     sources: std::sync::Arc<std::sync::Mutex<HashMap<String, String>>>,
+    /// Document-level vars (including extension vars), injected as `{{ var.key }}`.
+    var_context: Option<minijinja::Value>,
 }
 
 impl TemplateEnv {
@@ -269,7 +279,15 @@ impl TemplateEnv {
         env.set_loader(move |name: &str| {
             Ok(src.lock().unwrap().get(name).cloned())
         });
-        Self { env, sources }
+        Self { env, sources, var_context: None }
+    }
+
+    /// Set document-level vars for injection into all template renders.
+    pub fn set_var_context(&mut self, vars: &std::collections::HashMap<String, crate::value::Value>) {
+        if vars.is_empty() {
+            return;
+        }
+        self.var_context = Some(crate::config::build_jinja_vars(vars));
     }
 
     /// Add a named template. Sources are owned by the loader and compiled
@@ -306,7 +324,11 @@ impl TemplateEnv {
             Ok(t) => t,
             Err(_) => return String::new(),
         };
-        let ctx = build_jinja_context(vars);
+        let mut ctx = build_jinja_context(vars);
+        // Inject document-level vars (including extension vars) as {{ var.key }}
+        if let Some(ref var_val) = self.var_context {
+            ctx.insert("var", var_val.clone());
+        }
         match tpl.render(minijinja::Value::from_serialize(&ctx)) {
             Ok(rendered) => rendered,
             Err(e) => {
@@ -428,7 +450,14 @@ pub fn build_template_vars_with_headings(
     vars.insert("css".to_string(), load_default_css());
     vars.insert("js".to_string(), {
         let root = crate::paths::get_project_root();
-        load_extension_js(&root, &crate::paths::get_active_target().unwrap_or_default())
+        let mut js = load_extension_js(&root, &crate::paths::get_active_target().unwrap_or_default());
+        for ext_name in crate::paths::get_sideloaded_extensions() {
+            let ext_js = load_extension_js(&root, &ext_name);
+            if !ext_js.is_empty() {
+                js.push_str(&ext_js);
+            }
+        }
+        js
     });
     vars.insert("bib_preamble".to_string(), String::new());
     vars.insert("bib_end".to_string(), String::new());

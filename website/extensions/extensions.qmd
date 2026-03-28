@@ -696,16 +696,22 @@ The same principle applies to extensions. A "tufte" extension that changes `page
 To see where each partial is resolved from, run:
 
 ```
-calepin info --partials
+calepin extra partials html
 ```
 
-This prints the full resolution chain for the active target:
+Or for a specific target:
 
 ```
-page.html          _calepin/partials/website/page.html
-figure.html        _calepin/partials/html/figure.html (override)
-code_source.html   built-in: html
-callout.html       built-in: html
+calepin extra partials website
+```
+
+This prints the full resolution chain, color-coded by source:
+
+```
+page.html          _calepin/partials/website/page.html    (green = user override)
+figure.html        _calepin/partials/html/figure.html     (green = user override)
+code_source.html   built-in: html                         (cyan = built-in)
+callout.html       built-in: html                         (cyan = built-in)
 ...
 ```
 

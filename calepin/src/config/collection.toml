@@ -18,4 +18,4 @@ writer = "typst"
 template = "page"
 extension = "pdf"
 fig_extension = "svg"
-compile = "typst compile {input}"
+post = ["typst compile {input}"]

@@ -17,6 +17,7 @@ use super::targets::Target;
 
 /// Parsed extension manifest (`extension.toml`).
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct ExtensionManifest {
     /// Extension name (e.g., "tufte", "slides").
     pub name: String,
@@ -83,6 +84,7 @@ pub struct ExtensionAssets {
 
 /// Module declaration within an extension manifest.
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct ExtensionModule {
     /// Module name.
     pub name: String,
@@ -110,6 +112,7 @@ fn default_protocol() -> String {
 
 /// Match rules for element-level modules.
 #[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
 pub struct ExtensionMatchRule {
     /// CSS classes that trigger this module (OR'd).
     #[serde(default)]
@@ -154,7 +157,6 @@ impl ExtensionManifest {
             extension: ext_target.and_then(|t| t.extension.clone()),
             fig_extension: ext_target.and_then(|t| t.fig_extension.clone()),
             preview: ext_target.and_then(|t| t.preview.clone()),
-            compile: None,
             embed_resources: ext_target.and_then(|t| t.embed_resources),
             vars: ext_target.and_then(|t| t.vars.clone()),
             post: ext_target.and_then(|t| t.post.clone()).unwrap_or_default(),
@@ -172,6 +174,7 @@ impl ExtensionManifest {
 // ---------------------------------------------------------------------------
 
 /// Discover installed extensions in `_calepin/extensions/`.
+#[allow(dead_code)]
 pub fn discover_extensions(project_root: &Path) -> Vec<(String, PathBuf)> {
     let extensions_dir = project_root.join("_calepin").join("extensions");
     if !extensions_dir.is_dir() {
@@ -192,6 +195,7 @@ pub fn discover_extensions(project_root: &Path) -> Vec<(String, PathBuf)> {
 }
 
 /// Load all installed extensions from `_calepin/extensions/`.
+#[allow(dead_code)]
 pub fn load_extensions(project_root: &Path) -> Result<HashMap<String, (ExtensionManifest, PathBuf)>> {
     let mut extensions = HashMap::new();
     for (name, path) in discover_extensions(project_root) {
@@ -215,6 +219,7 @@ pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
     ("slides", include_str!("../extensions/slides/extension.toml")),
     ("website", include_str!("../extensions/website/extension.toml")),
     ("book", include_str!("../extensions/book/extension.toml")),
+    ("minimal", include_str!("../extensions/minimal/extension.toml")),
 ];
 
 /// Parse a built-in extension manifest by name.

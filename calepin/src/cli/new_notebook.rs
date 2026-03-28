@@ -9,7 +9,7 @@ use crate::paths;
 
 static SCAFFOLD: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold/notebook");
 
-pub fn handle_new_notebook(path: &Path, theme_name: Option<&str>) -> Result<()> {
+pub fn handle_new_notebook(path: &Path, target_name: Option<&str>) -> Result<()> {
     if path.exists() {
         bail!("File already exists: {}", path.display());
     }
@@ -41,14 +41,13 @@ pub fn handle_new_notebook(path: &Path, theme_name: Option<&str>) -> Result<()> 
             path.parent().unwrap_or(Path::new(".")).join(format!("{}_calepin", stem))
         });
 
-    // Apply theme if specified
-    if let Some(name) = theme_name {
-        let theme = crate::themes::Theme::resolve(name)?;
+    // Apply theme assets if specified
+    if let Some(_name) = target_name {
         let kind = crate::paths::ProjectKind::Document {
             qmd: path.clone(),
             sidecar: sidecar.clone(),
         };
-        theme.apply(&kind)?;
+        crate::themes::copy_builtin_assets(&kind)?;
     }
 
     eprintln!("Created {}", path.display());

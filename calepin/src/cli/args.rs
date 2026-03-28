@@ -109,10 +109,6 @@ pub struct RenderArgs {
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
 
-    /// Compile output to PDF (for typst and latex formats)
-    #[arg(long)]
-    pub compile: bool,
-
     /// Disable syntax highlighting for code blocks
     #[arg(long)]
     pub no_highlight: bool,
@@ -163,9 +159,9 @@ pub enum InitAction {
         #[arg(default_value = "my_calepin_notebook.qmd")]
         path: std::path::PathBuf,
 
-        /// Theme to apply (built-in name or path to a theme directory)
+        /// Target extension to apply (e.g., website, minimal)
         #[arg(long)]
-        theme: Option<String>,
+        target: Option<String>,
     },
 
     /// Scaffold a website project
@@ -174,9 +170,9 @@ pub enum InitAction {
         #[arg(default_value = "my_calepin_website")]
         dir: std::path::PathBuf,
 
-        /// Theme to apply (built-in name or path to a theme directory)
+        /// Target extension (e.g., website, minimal)
         #[arg(long, default_value = "default")]
-        theme: String,
+        target: String,
     },
 
     /// Scaffold a book project
@@ -184,10 +180,6 @@ pub enum InitAction {
         /// Directory name for the new book
         #[arg(default_value = "my_calepin_book")]
         dir: std::path::PathBuf,
-
-        /// Theme to apply (built-in name or path to a theme directory)
-        #[arg(long, default_value = "default")]
-        theme: String,
     },
 
     /// Scaffold a new extension
@@ -213,9 +205,9 @@ pub enum InitAction {
         #[arg(long)]
         partials: bool,
 
-        /// Theme to apply to the new sidecar
+        /// Target extension to apply to the new sidecar
         #[arg(long)]
-        theme: Option<String>,
+        target: Option<String>,
 
         /// Print what would happen without writing anything
         #[arg(long)]

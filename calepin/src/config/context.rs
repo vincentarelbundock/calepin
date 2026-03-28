@@ -84,8 +84,18 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
     paths::set_project_root(Some(&effective_root));
 
     // Set extension partial directories for layered resolution
-    let ext_dirs = resolve_extension_partial_dirs(&target_name, &effective_root);
+    let mut ext_dirs = resolve_extension_partial_dirs(&target_name, &effective_root);
+
+    // Add side-loaded extensions' partial directories
+    let sideloaded = project_metadata.as_ref()
+        .map(|m| m.extensions.clone())
+        .unwrap_or_default();
+    for ext_name in &sideloaded {
+        let mut more = resolve_extension_partial_dirs(ext_name, &effective_root);
+        ext_dirs.append(&mut more);
+    }
     paths::set_extension_partial_dirs(ext_dirs);
+    paths::set_sideloaded_extensions(sideloaded);
 
     Ok(ProjectContext {
         project_root: Some(effective_root),
@@ -167,7 +177,7 @@ pub fn apply_writer_override(ctx: &mut ProjectContext, writer: Option<&str>) -> 
     if let Some(b) = builtin {
         ctx.target.extension = b.extension.clone();
         ctx.target.fig_extension = b.fig_extension.clone();
-        ctx.target.compile = b.compile.clone();
+        ctx.target.post = b.post.clone();
         ctx.target.preview = b.preview.clone();
     }
 

@@ -12,8 +12,6 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
         overrides.push("highlight-style=none".to_string());
     }
 
-    let compile = args.compile;
-
     // Single input: use ProjectKind discovery for directories and config files
     if args.input.len() == 1 {
         use crate::paths::ProjectKind;
@@ -37,7 +35,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                         // Sidecar config.toml: render the discovered .qmd
                         let mut ctx = crate::resolve_context(&qmd, args.format.as_deref())?;
                         crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
-                        return render_one_with_context(&qmd, args.output.as_deref(), &ctx, &overrides, args.quiet, compile);
+                        return render_one_with_context(&qmd, args.output.as_deref(), &ctx, &overrides, args.quiet);
                     }
                 }
             }
@@ -53,14 +51,14 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                 for f in &formats {
                     let mut ctx = crate::resolve_context(&args.input[0], Some(f))?;
                     crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
-                    render_one_with_context(&args.input[0], None, &ctx, &overrides, args.quiet, compile)?;
+                    render_one_with_context(&args.input[0], None, &ctx, &overrides, args.quiet)?;
                 }
                 return Ok(());
             }
         }
         let mut ctx = crate::resolve_context(&args.input[0], args.format.as_deref())?;
         crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
-        return render_one_with_context(&args.input[0], args.output.as_deref(), &ctx, &overrides, args.quiet, compile);
+        return render_one_with_context(&args.input[0], args.output.as_deref(), &ctx, &overrides, args.quiet);
     }
 
     // Multiple files: render in parallel.
@@ -87,7 +85,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
             let file_output = output_ext.as_ref().map(|(dir, ext)| {
                 dir.join(input.file_name().unwrap()).with_extension(ext)
             });
-            match render_one_with_context(input, file_output.as_deref(), &ctx, &overrides, args.quiet, compile) {
+            match render_one_with_context(input, file_output.as_deref(), &ctx, &overrides, args.quiet) {
                 Ok(()) => None,
                 Err(e) => Some(format!("{:#}", e)),
             }
@@ -105,39 +103,86 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
 }
 
 /// Render a single .qmd file with a pre-resolved project context.
+///
+/// Uses the same render pipeline as collections: constructs a one-element
+/// page list and renders through `render_page` + project module dispatch.
 fn render_one_with_context(
     input: &Path,
     output: Option<&Path>,
     ctx: &crate::ProjectContext,
     overrides: &[String],
     quiet: bool,
-    compile: bool,
 ) -> Result<()> {
-    let (output_path, final_output, renderer) = pipeline::render_file(
-        input,
-        output,
-        Some(&ctx.target_name),
-        overrides,
-        Some(&ctx.target),
+    // Resolve output path: when the writer extension differs from the target
+    // extension (e.g., typst writer -> .typ but target wants .pdf), render to
+    // the writer's native extension and let post commands handle conversion.
+    let writer = &ctx.target.writer;
+    let ext = {
+        let writer_ext = crate::paths::resolve_extension(writer);
+        if writer_ext != ctx.target.output_extension() {
+            writer_ext
+        } else {
+            ctx.target.output_extension()
+        }
+    };
+    let output_path = if let Some(o) = output {
+        o.to_path_buf()
+    } else if ctx.explicit_target {
+        crate::config::resolve_target_output_path(
+            input, &ctx.target_name, ext,
+            ctx.project_root.as_deref(), ctx.output_dir(),
+        )
+    } else {
+        input.with_extension(ext)
+    };
+
+    // Set active target for partial/extension resolution
+    crate::paths::set_active_target(Some(&ctx.target_name));
+
+    // Build overrides from project metadata
+    let mut all_overrides: Vec<String> = overrides.to_vec();
+    if let Some(ref meta) = ctx.project_metadata {
+        all_overrides.extend(crate::collection::render::build_overrides(meta, Some(&ctx.target)));
+    }
+
+    // Render through the shared pipeline (render_core + assemble_page + transform_document)
+    let (page, _result) = pipeline::render_page(
+        input, &output_path, writer,
+        &all_overrides,
         ctx.project_root.as_deref(),
-        if ctx.explicit_target { ctx.output_dir() } else { None },
+        &pipeline::RenderCoreOptions::default(),
         ctx.project_metadata.as_ref(),
+        Some(&ctx.target),
     )?;
 
-    renderer.write_output(&final_output, &output_path)?;
+    // Run project-level modules from extensions
+    let mut final_body = page.body;
+    {
+        let project_root = ctx.project_root.as_deref().unwrap_or(Path::new("."));
+        let registry = crate::registry::ModuleRegistry::load(&ctx.target.modules, project_root);
+        let project_transforms = registry.resolve_project_transforms(&ctx.target.modules);
+        if !project_transforms.is_empty() {
+            let mut pages = vec![crate::registry::RenderedPage {
+                body: final_body,
+                ..page
+            }];
+            for transform in &project_transforms {
+                if let Err(e) = transform.transform(&mut pages, &ctx.project_metadata.clone().unwrap_or_default(), writer) {
+                    cwarn!("project module error: {}", e);
+                }
+            }
+            final_body = pages.into_iter().next().map(|p| p.body).unwrap_or_default();
+        }
+    }
+
+    // Write output
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&output_path, &final_body)?;
 
     if !quiet {
         eprintln!("-> {}", output_path.display());
-    }
-
-    // Run compile step: either explicit --compile flag, explicit compile command on target,
-    // or writer extension differs from output extension (e.g., typst -> pdf).
-    let needs_compile = compile
-        || ctx.target.compile.is_some()
-        || crate::paths::resolve_extension(&ctx.target.writer) != ctx.target.output_extension();
-    if needs_compile {
-        let cmd = ctx.target.compile.as_deref().unwrap_or("");
-        run_compile_step(&output_path, cmd, ctx.target.output_extension(), quiet)?;
     }
 
     // Run target-level post-processing commands
@@ -150,47 +195,13 @@ fn render_one_with_context(
     Ok(())
 }
 
-/// Run a target's compile step.
-///
-/// `compile_command` is the shell command template (e.g., "typst compile {input}").
-/// `output_ext` is the final output extension (from target.extension).
-pub fn run_compile_step(
-    rendered_path: &Path,
-    compile_command: &str,
-    output_ext: &str,
-    quiet: bool,
-) -> Result<()> {
-    let output_path = rendered_path.with_extension(output_ext);
-
-    let cmd = compile_command
-        .replace("{input}", &rendered_path.to_string_lossy())
-        .replace("{output}", &output_path.to_string_lossy());
-
-    if !quiet {
-        eprintln!("  compiling: {}", cmd);
-    }
-
-    let status = std::process::Command::new("sh")
-        .arg("-c")
-        .arg(&cmd)
-        .status()
-        .with_context(|| format!("Failed to run compile command: {}", cmd))?;
-
-    if !status.success() {
-        anyhow::bail!("Compile command failed: {}", cmd);
-    }
-
-    if !quiet {
-        eprintln!("-> {}", output_path.display());
-    }
-
-    Ok(())
-}
-
 /// Run target-level post-processing commands.
 ///
-/// Each command supports `{output}` (rendered file path) and `{root}` (project root).
-fn run_target_post_commands(
+/// Each command supports these placeholders:
+/// - `{input}` -- the rendered file path (e.g., `file.typ`)
+/// - `{output}` -- alias for `{input}` (for backward compatibility)
+/// - `{root}` -- the project root directory
+pub fn run_target_post_commands(
     commands: &[String],
     output: &Path,
     project_root: &Path,
@@ -198,6 +209,7 @@ fn run_target_post_commands(
 ) -> Result<()> {
     for command in commands {
         let cmd = command
+            .replace("{input}", &output.display().to_string())
             .replace("{output}", &output.display().to_string())
             .replace("{root}", &project_root.display().to_string());
 

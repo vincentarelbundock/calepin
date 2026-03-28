@@ -211,6 +211,8 @@ pub struct Metadata {
     pub bibliography: Vec<String>,
     pub csl: Option<String>,
     pub plugins: Vec<String>,
+    /// Side-loaded extensions (activated without being the target).
+    pub extensions: Vec<String>,
     pub convert_math: bool,
     pub html_math_method: Option<String>,
 

@@ -58,7 +58,7 @@ pub fn handle_init_sidecar(
     path: &Path,
     force: bool,
     write_partials: bool,
-    theme_name: Option<&str>,
+    target_name: Option<&str>,
     dry_run: bool,
     no_backup: bool,
 ) -> Result<()> {
@@ -94,8 +94,8 @@ pub fn handle_init_sidecar(
             if write_partials {
                 crate::paths::write_builtin_partials(&sidecar_dir.join("partials"));
             }
-            if let Some(name) = theme_name {
-                apply_theme(name, path, &sidecar_dir)?;
+            if let Some(name) = target_name {
+                apply_target_assets(name, path, &sidecar_dir)?;
             }
             println!("Created: {}", sidecar_dir.display());
             return Ok(());
@@ -114,8 +114,8 @@ pub fn handle_init_sidecar(
             if write_partials {
                 crate::paths::write_builtin_partials(&sidecar_dir.join("partials"));
             }
-            if let Some(name) = theme_name {
-                apply_theme(name, path, &sidecar_dir)?;
+            if let Some(name) = target_name {
+                apply_target_assets(name, path, &sidecar_dir)?;
             }
             println!("Created: {}", sidecar_dir.display());
             return Ok(());
@@ -191,8 +191,8 @@ pub fn handle_init_sidecar(
         println!("Wrote built-in partials.");
     }
 
-    if let Some(name) = theme_name {
-        apply_theme(name, path, &sidecar_dir)?;
+    if let Some(name) = target_name {
+        apply_target_assets(name, path, &sidecar_dir)?;
         println!("Applied theme: {}", name);
     }
 
@@ -216,12 +216,12 @@ fn is_identity_key(key: &str) -> bool {
     IDENTITY_KEYS.iter().any(|k| k.replace('-', "_") == normalized)
 }
 
-fn apply_theme(name: &str, qmd_path: &Path, sidecar: &Path) -> Result<()> {
+fn apply_target_assets(_name: &str, qmd_path: &Path, sidecar: &Path) -> Result<()> {
     use crate::paths::ProjectKind;
-    let theme = crate::themes::Theme::resolve(name)?;
+    // Apply assets only (partials come from built-in via layered resolution)
     let kind = ProjectKind::Document {
         qmd: qmd_path.to_path_buf(),
         sidecar: sidecar.to_path_buf(),
     };
-    theme.apply(&kind)
+    crate::themes::copy_builtin_assets(&kind)
 }

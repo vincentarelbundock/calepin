@@ -1,6 +1,5 @@
 # -- Site identity --
 title = "My Website"
-target = "website"
 
 # -- Navbar --
 [[navbar.left]]

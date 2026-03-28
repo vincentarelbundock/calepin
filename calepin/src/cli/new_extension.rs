@@ -12,7 +12,7 @@ pub fn handle_new_extension(name: &str, inherits: &str) -> Result<()> {
     }
 
     // Validate inherits target
-    let valid_parents = ["html", "latex", "typst", "markdown", "slides", "website", "book"];
+    let valid_parents = ["html", "latex", "typst", "markdown", "slides", "website", "book", "minimal"];
     if !valid_parents.contains(&inherits) {
         // Allow any name -- it could be a user-installed extension
         eprintln!(
@@ -23,7 +23,7 @@ pub fn handle_new_extension(name: &str, inherits: &str) -> Result<()> {
 
     // Determine writer from parent for partial directory naming
     let writer = match inherits {
-        "html" | "slides" | "website" | "book" => "html",
+        "html" | "slides" | "website" | "book" | "minimal" => "html",
         "latex" => "latex",
         "typst" => "typst",
         "markdown" => "markdown",

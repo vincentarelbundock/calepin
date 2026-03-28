@@ -133,6 +133,8 @@ thread_local! {
     static SIDECAR_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
     /// Extension partial directories to check, in inheritance order (child first).
     static EXTENSION_PARTIAL_DIRS: RefCell<Vec<PathBuf>> = RefCell::new(Vec::new());
+    /// Side-loaded extension names (from calepin.extensions config).
+    static SIDELOADED_EXTENSIONS: RefCell<Vec<String>> = RefCell::new(Vec::new());
 }
 
 /// Set the active target name for template resolution.
@@ -182,6 +184,17 @@ pub fn set_extension_partial_dirs(dirs: Vec<PathBuf>) {
 
 pub fn get_extension_partial_dirs() -> Vec<PathBuf> {
     EXTENSION_PARTIAL_DIRS.with(|d| d.borrow().clone())
+}
+
+/// Set side-loaded extension names (from `[calepin] extensions = [...]`).
+pub fn set_sideloaded_extensions(names: Vec<String>) {
+    SIDELOADED_EXTENSIONS.with(|e| {
+        *e.borrow_mut() = names;
+    });
+}
+
+pub fn get_sideloaded_extensions() -> Vec<String> {
+    SIDELOADED_EXTENSIONS.with(|e| e.borrow().clone())
 }
 
 /// Given the path to a config file (e.g. `<root>/_calepin/config.toml`),
@@ -400,17 +413,6 @@ pub fn output_dir(project_root: &Path, config_output: Option<&str>) -> PathBuf {
 /// `{root}/_calepin/partials`
 pub fn partials_dir(project_root: &Path) -> PathBuf {
     project_root.join("_calepin/partials")
-}
-
-/// Check whether user-provided partials exist (sidecar or project-level).
-#[allow(dead_code)]
-pub fn has_user_partials() -> bool {
-    if let Some(sidecar) = get_sidecar_root() {
-        if sidecar.join("partials").is_dir() {
-            return true;
-        }
-    }
-    partials_dir(&get_project_root()).is_dir()
 }
 
 /// `{root}/_calepin/assets`

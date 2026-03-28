@@ -84,13 +84,14 @@ parse -> evaluate -> bibliography
 
 ### Module system
 
-All extensibility flows through the `ModuleRegistry` (`modules/registry.rs`). Three module kinds:
+All extensibility flows through the `ModuleRegistry` (`modules/registry.rs`). Five module kinds:
 
 | Trait | `ModuleKind` | When | What |
 |---|---|---|---|
 | `TransformElement` | `Element` | Pre-render | Mutate individual elements (pipeline handles tree recursion) |
 | `TransformElementChildren` | `ElementChildren` | During render, per div | Rewrite div children (tabset, layout) |
 | `TransformDocument` | `Document` | Post-assembly | Transform the full document string |
+| `TransformProject` | `Project` | After all pages rendered | Cross-page coordination (navigation, cross-refs) |
 | -- | `Noop` | -- | Partial/template providers only |
 
 Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` to inject `{{ number }}` and `{{ type_class }}` vars.
@@ -105,26 +106,22 @@ Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` t
 | `theorem` | Noop + number=true | Auto-number theorem-type divs |
 | `highlight` | TransformDocument | Inject syntax CSS (HTML) or `\definecolor` (LaTeX) |
 | `append_footnotes` | TransformDocument | Append footnote section (HTML) |
-| `split_slides` | TransformDocument | Split body into `<section>` slides (RevealJS) |
+| `split_slides` | TransformDocument | Split body into `<section>` slides |
 | `embed_images` | TransformDocument | Base64-encode `<img>` sources (HTML) |
+
+### Extension system
+
+Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`, `minimal`. User extensions live in `_calepin/extensions/{name}/`.
+
+An extension bundles a target definition, partials, modules, CSS/JS assets, and variables. Extensions inherit from a parent via `inherits`. Partial resolution is layered: user overrides > extension partials > parent extension > built-in defaults.
+
+Extension manifests are parsed by `config/extension.rs` (`ExtensionManifest` struct). Built-in manifests are embedded at compile time via `include_str!`.
 
 ### Target configuration
 
-Each output format is a Target in `config/document.toml`. Targets declare engine, modules, crossref strategy, and other options:
+Targets are defined in `config/document.toml` (document targets) and `config/collection.toml` (collection targets), with built-in extension manifests as an additional source. Resolved by `config/targets.rs::resolve_target()`.
 
-```toml
-[targets.html]
-engine = "html"
-modules = ["highlight", "append_footnotes", "embed_images"]
-crossref = "html"
-
-[targets.latex]
-engine = "latex"
-modules = ["highlight", "convert_svg_pdf"]
-crossref = "latex"
-```
-
-User targets in `_calepin.toml` inherit from built-in targets via `inherits`.
+User targets in `_calepin/config.toml` inherit from built-in targets via `inherits`.
 
 ### FormatPipeline
 
@@ -151,6 +148,7 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 - `parse.rs` -- TOML front matter parsing: `split_frontmatter()`, `parse_metadata()`
 - `merge.rs` -- Metadata merge logic (last wins)
 - `targets.rs` -- Target resolution and inheritance
+- `extension.rs` -- `ExtensionManifest` parsing, built-in extension embedding, discovery
 - `load.rs` -- Project config loading, `LanguageConfig`, `ContentSection`
 - `context.rs` -- `ProjectContext`: resolves project config and target for a render
 - `document.toml`, `shared.toml`, `collection.toml`, `modules.toml` -- Embedded default configs
@@ -170,9 +168,11 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 
 ### `modules/` -- Module system and built-in modules
 
-- `registry.rs` -- `ModuleRegistry`, `TransformElement`, `TransformElementChildren`, `TransformDocument` traits, `ModuleKind`, `ModuleContext`, `ModuleResult`, built-in module registration
+- `registry.rs` -- `ModuleRegistry`, `TransformElement`, `TransformElementChildren`, `TransformDocument`, `TransformProject` traits, `ModuleKind`, `RenderedPage`, built-in module registration
 - `manifest.rs` -- `module.toml` parsing: `ModuleManifest`, `MatchRule`, `MatchSpec`
 - `transform_document.rs` -- `TransformDocument` trait + `ScriptTransformDocument` (user script execution)
+- `project_modules.rs` -- Built-in `TransformProject` implementations (site_wrap, crossref_global, orchestrator)
+- `external.rs` -- External module execution via JSON/text protocol (scripts, WASM)
 - `highlight/` -- Syntax highlighting: `Highlighter`, themes, CSS/LaTeX color generation
 - `convert_svg_pdf/` -- `TransformElement`: SVG-to-PDF figure conversion
 - `convert_math/` -- LaTeX-to-Typst math converter (parser, AST, emitter, symbols)
@@ -202,7 +202,7 @@ Shared AST walker + format-specific implementations via `FormatEmitter` trait.
 ### `partials/` -- Built-in Jinja templates (embedded at compile time)
 
 Per-engine partials for elements, page templates, shortcodes:
-`partials/{html,latex,typst,markdown,revealjs,website,book}/`
+`partials/{html,latex,typst,markdown,slides,minimal,website,book}/`
 
 Website template icons live in `partials/website/icons/` (used via `{% include %}`).
 
@@ -227,12 +227,14 @@ User overrides: `_calepin/partials/{engine}/{name}.{ext}`
 
 Partials use Jinja syntax (`{{variable}}`, `{% if %}`, `{% for %}`). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
 
-**Partial resolution order** (first match wins):
+**Partial resolution order** (first match wins, layered):
 1. Module element dirs (in registry order)
-2. `_calepin/partials/{target}/{name}.{ext}` (target-specific)
-3. `_calepin/partials/{engine}/{name}.{ext}` (engine-specific)
-4. `_calepin/partials/common/{name}.jinja` (format-agnostic)
-5. Built-in `partials/{engine}/{name}.{ext}` (embedded in binary)
+2. Sidecar partials: `{stem}_calepin/partials/{target|writer|common}/`
+3. Project partials: `_calepin/partials/{target|writer|common}/`
+4. Extension partials: `_calepin/extensions/{name}/partials/{writer|common}/` (child-first inheritance order)
+5. Built-in `partials/{writer}/{name}.{ext}` (embedded in binary)
+
+Resolution is layered: individual files can be overridden at any level. Missing files fall through to the next level. `calepin init` does not copy partials; projects start clean and override only what they need.
 
 **Module resolution**: `_calepin/modules/{name}/module.toml`
 
@@ -276,6 +278,7 @@ calepin-specific settings are nested under the `[calepin]` table:
 ```toml
 [calepin]
 plugins = ["txtfmt"]
+extensions = ["lightbox"]
 ```
 
 Standard fields (`title`, `author`, `bibliography`, `format`, etc.) are top-level keys.
@@ -315,11 +318,21 @@ Bracketed spans `[content]{.class key=value}` are processed during rendering. Bu
 - `toml` + `serde` -- TOML config parsing (front matter, `_calepin.toml`, sidecar config)
 - `usvg` + `svg2pdf` -- SVG-to-PDF conversion for LaTeX targets
 
-## WASM Plugins
+## Extensions
 
-Plugins are `.wasm` files in `_calepin/plugins/`, declared in front matter under `[calepin] plugins = ["name"]`. Plugin source lives in `plugins/{name}/` (each a Rust crate targeting `wasm32-unknown-unknown`). Build all plugins with `make plugins`.
+Extensions are the unit of distribution and customization. An extension is a directory with an `extension.toml` manifest that can provide partials, CSS/JS assets, modules, and variables.
 
-Custom output formats can be defined via `_calepin/formats/{name}.yaml` with `base`, `extension`, and `plugin` fields.
+**Installation**: `_calepin/extensions/{name}/extension.toml`
+
+**Activation**: Set `target = "name"` in config, or side-load with `[calepin] extensions = ["name"]`.
+
+**Scaffolding**: `calepin init extension myext --inherits html`
+
+**Debugging**: `calepin extra partials html` shows the full resolution chain.
+
+**External modules**: Extensions can declare modules with `run = "scripts/foo.sh"` that execute via stdin/stdout (text or JSON protocol).
+
+See `website/extensions/extensions.qmd` for the full specification.
 
 ## Profiling
 

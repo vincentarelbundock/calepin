@@ -260,8 +260,8 @@ fn render_file_html(input: &Path, overrides: &[String]) -> Result<String> {
     Ok(html)
 }
 
-/// Render to LaTeX/Typst, write the file, compile if the target defines it.
-/// Returns the final output path (PDF if compiled, rendered file otherwise).
+/// Render to LaTeX/Typst, write the file, run post commands if defined.
+/// Returns the final output path (PDF if post commands produce it, rendered file otherwise).
 fn render_and_compile(input: &Path, target_name: &str, overrides: &[String]) -> Result<std::path::PathBuf> {
     let target = crate::config::resolve_target(target_name, &std::collections::HashMap::new())?;
     let (output_path, content, renderer) = crate::render::pipeline::render_file(
@@ -269,13 +269,16 @@ fn render_and_compile(input: &Path, target_name: &str, overrides: &[String]) -> 
     )?;
     renderer.write_output(&content, &output_path)?;
 
-    let needs_compile = target.compile.is_some()
-        || crate::paths::resolve_extension(&target.writer) != target.output_extension();
-    if needs_compile {
-        let cmd = target.compile.as_deref().unwrap_or("");
-        let ext = target.output_extension();
-        crate::cli::render::run_compile_step(&output_path, cmd, ext, true)?;
-        Ok(output_path.with_extension(ext))
+    // Run post commands (which may include compilation steps like "typst compile {input}")
+    if !target.post.is_empty() {
+        let root = output_path.parent().unwrap_or(std::path::Path::new("."));
+        crate::cli::render::run_target_post_commands(&target.post, &output_path, root, true)?;
+    }
+
+    // If writer extension differs from target extension, the final output has the target extension
+    let writer_ext = crate::paths::resolve_extension(&target.writer);
+    if writer_ext != target.output_extension() {
+        Ok(output_path.with_extension(target.output_extension()))
     } else {
         Ok(output_path)
     }

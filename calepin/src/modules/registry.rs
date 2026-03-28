@@ -1,4 +1,4 @@
-//! Plugin registry: loading, indexing, and dispatch.
+//! Module registry: loading, indexing, and dispatch.
 //!
 //! Two transform traits at different scopes:
 //!   - `TransformElement` -- operates on raw Element children before rendering
@@ -108,6 +108,7 @@ pub trait TransformSpan: Send + Sync {
 // ---------------------------------------------------------------------------
 
 /// A rendered page with its metadata, passed to project-level transforms.
+#[allow(dead_code)]
 pub struct RenderedPage {
     /// Source path relative to project root.
     pub source: PathBuf,
@@ -209,9 +210,20 @@ impl ModuleRegistry {
                     }
                     Err(e) => eprintln!("Warning: failed to load module '{}': {}", name, e),
                 },
-                None => eprintln!("Warning: module '{}' not found", name),
+                None => {
+                    // Don't warn for built-in modules or extension-declared modules
+                    let builtin_names = builtin_module_names();
+                    let is_builtin = builtin_names.iter().any(|b| b == name);
+                    let is_extension = is_extension_module(name, project_root);
+                    if !is_builtin && !is_extension {
+                        eprintln!("Warning: module '{}' not found", name);
+                    }
+                }
             }
         }
+
+        // Load external modules from installed extensions
+        load_extension_modules(&mut modules, project_root);
 
         register_builtins(&mut modules);
         ModuleRegistry { modules }
@@ -621,5 +633,182 @@ fn register_builtins(modules: &mut Vec<LoadedModule>) {
             },
             kind,
         });
+    }
+}
+
+/// Check if a module name is declared in any installed extension.
+fn is_extension_module(name: &str, project_root: &Path) -> bool {
+    let extensions_dir = project_root.join("_calepin").join("extensions");
+    if !extensions_dir.is_dir() { return false; }
+    if let Ok(entries) = std::fs::read_dir(&extensions_dir) {
+        for entry in entries.flatten() {
+            let manifest_path = entry.path().join("extension.toml");
+            if let Ok(content) = std::fs::read_to_string(&manifest_path) {
+                if let Ok(manifest) = toml::from_str::<crate::config::extension::ExtensionManifest>(&content) {
+                    if manifest.modules.iter().any(|m| m.name == name) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Load external modules from installed extensions.
+///
+/// Scans the active target's extension chain and any side-loaded extensions
+/// for `[[modules]]` entries with `run` fields. Creates the appropriate
+/// external transform (script or WASM) for each.
+fn load_extension_modules(modules: &mut Vec<LoadedModule>, project_root: &Path) {
+    let extensions_dir = project_root.join("_calepin").join("extensions");
+    if !extensions_dir.is_dir() {
+        return;
+    }
+
+    // Collect extension names to check: active target chain + side-loaded
+    let mut ext_names = Vec::new();
+    let target = crate::paths::get_active_target().unwrap_or_default();
+    let mut current = Some(target);
+    let mut visited = std::collections::HashSet::new();
+    while let Some(name) = current.take() {
+        if !visited.insert(name.clone()) { break; }
+        ext_names.push(name.clone());
+        let ext_dir = extensions_dir.join(&name);
+        if let Ok(content) = std::fs::read_to_string(ext_dir.join("extension.toml")) {
+            if let Ok(manifest) = toml::from_str::<crate::config::extension::ExtensionManifest>(&content) {
+                current = manifest.inherits;
+            }
+        }
+    }
+    for name in crate::paths::get_sideloaded_extensions() {
+        if !ext_names.contains(&name) {
+            ext_names.push(name);
+        }
+    }
+
+    // Check each extension for modules with `run` fields
+    for ext_name in &ext_names {
+        let ext_dir = extensions_dir.join(ext_name);
+        let manifest_path = ext_dir.join("extension.toml");
+        if !manifest_path.exists() { continue; }
+        let content = match std::fs::read_to_string(&manifest_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let manifest: crate::config::extension::ExtensionManifest = match toml::from_str(&content) {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+
+        // Build vars from extension manifest
+        let vars_json = if manifest.vars.is_empty() {
+            serde_json::Value::Object(serde_json::Map::new())
+        } else {
+            let mut map = serde_json::Map::new();
+            for (k, v) in &manifest.vars {
+                map.insert(k.clone(), serde_json::to_value(v).unwrap_or_default());
+            }
+            serde_json::Value::Object(map)
+        };
+
+        for module_decl in &manifest.modules {
+            let Some(ref run_path) = module_decl.run else { continue };
+            let script = ext_dir.join("scripts").join(run_path);
+            if !script.exists() {
+                // Also check directly in the extension dir
+                let alt = ext_dir.join(run_path);
+                if !alt.exists() {
+                    continue;
+                }
+            }
+            let script_path = if ext_dir.join("scripts").join(run_path).exists() {
+                ext_dir.join("scripts").join(run_path)
+            } else {
+                ext_dir.join(run_path)
+            };
+            // Ensure absolute path for script execution
+            let script_path = if script_path.is_relative() {
+                std::env::current_dir().unwrap_or_default().join(&script_path)
+            } else {
+                script_path
+            };
+            let ext_dir_abs = if ext_dir.is_relative() {
+                std::env::current_dir().unwrap_or_default().join(&ext_dir)
+            } else {
+                ext_dir.clone()
+            };
+
+            let kind = match module_decl.kind.as_str() {
+                "document" => {
+                    if module_decl.protocol == "text" {
+                        ModuleKind::Document(Box::new(
+                            crate::modules::transform_document::ScriptTransformDocument {
+                                script_path: script_path.clone(),
+                                module_dir: ext_dir_abs.clone(),
+                            }
+                        ))
+                    } else {
+                        ModuleKind::Document(Box::new(
+                            crate::modules::external::JsonDocumentTransform {
+                                name: module_decl.name.clone(),
+                                script_path: script_path.clone(),
+                                module_dir: ext_dir_abs.clone(),
+                                vars: vars_json.clone(),
+                            }
+                        ))
+                    }
+                }
+                "project" => {
+                    ModuleKind::Project(Box::new(
+                        crate::modules::external::ExternalProjectTransform {
+                            name: module_decl.name.clone(),
+                            script_path: script_path.clone(),
+                            module_dir: ext_dir_abs.clone(),
+                            protocol: module_decl.protocol.clone(),
+                            vars: vars_json.clone(),
+                        }
+                    ))
+                }
+                "element_children" => {
+                    ModuleKind::ElementChildren(Box::new(
+                        crate::modules::external::ExternalElementChildrenTransform {
+                            name: module_decl.name.clone(),
+                            script_path: script_path.clone(),
+                            module_dir: ext_dir_abs.clone(),
+                            vars: vars_json.clone(),
+                        }
+                    ))
+                }
+                _ => continue, // span/element not yet supported as external
+            };
+
+            // Create manifest with match rules from extension declaration
+            let matchers = if let Some(ref rule) = module_decl.match_rule {
+                vec![crate::module_manifest::MatchSpec {
+                    run: None,
+                    match_rule: crate::module_manifest::MatchRule {
+                        classes: rule.classes.clone(),
+                        attrs: rule.attrs.clone(),
+                        id_prefix: rule.id_prefix.clone(),
+                        formats: rule.writers.clone(),
+                    },
+                    contexts: module_decl.contexts.clone(),
+                }]
+            } else {
+                Vec::new()
+            };
+            let mod_manifest = ModuleManifest {
+                name: module_decl.name.clone(),
+                version: None,
+                description: Some(module_decl.description.clone()),
+                provides: crate::module_manifest::ModuleProvides {
+                    matchers,
+                    ..Default::default()
+                },
+                module_dir: ext_dir_abs.clone(),
+            };
+            modules.push(LoadedModule { manifest: mod_manifest, kind });
+        }
     }
 }

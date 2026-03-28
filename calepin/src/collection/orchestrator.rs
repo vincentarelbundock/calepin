@@ -140,41 +140,44 @@ pub(super) fn render_orchestrator(
         eprintln!("  Master: {}", master_path.display());
     }
 
-    // Run compile command if configured
+    // Run post commands if configured (e.g., "typst compile {input}")
     let target_def = meta.targets.get(target_name);
-    let compile_cmd = target_def.and_then(|t| t.compile.as_deref());
+    let post_cmds = target_def.map(|t| &t.post);
 
-    if let Some(cmd) = compile_cmd {
-        let compile_ext = target_def.map(|t| t.output_extension()).unwrap_or("pdf");
-        let output_filename = format!("book.{}", compile_ext);
+    if let Some(cmds) = post_cmds {
+        if !cmds.is_empty() {
+            let target_ext = target_def.map(|t| t.output_extension()).unwrap_or("pdf");
+            let output_filename = format!("book.{}", target_ext);
 
-        {
-            let expanded = cmd
-                .replace("{input}", &master_name)
-                .replace("{output}", &output_filename);
+            for cmd in cmds {
+                let expanded = cmd
+                    .replace("{input}", &master_name)
+                    .replace("{output}", &output_filename)
+                    .replace("{root}", &base_dir.display().to_string());
 
-            if !quiet {
-                eprintln!("  Compiling: {}", expanded);
-            }
+                if !quiet {
+                    eprintln!("  \x1b[36mpost:\x1b[0m {}", expanded);
+                }
 
-            // Run from the output directory (so \include paths resolve),
-            // but add both the output dir and the project root to TEXINPUTS
-            // so image paths (relative to either) resolve correctly.
-            let texinputs = format!(
-                "{}:{}:",
-                output.display(),
-                base_dir.display(),
-            );
-            let status = std::process::Command::new("sh")
-                .arg("-c")
-                .arg(&expanded)
-                .current_dir(output)
-                .env("TEXINPUTS", &texinputs)
-                .status()
-                .with_context(|| format!("Failed to run compile command: {}", expanded))?;
+                // Run from the output directory (so \include paths resolve),
+                // but add both the output dir and the project root to TEXINPUTS
+                // so image paths (relative to either) resolve correctly.
+                let texinputs = format!(
+                    "{}:{}:",
+                    output.display(),
+                    base_dir.display(),
+                );
+                let status = std::process::Command::new("sh")
+                    .arg("-c")
+                    .arg(&expanded)
+                    .current_dir(output)
+                    .env("TEXINPUTS", &texinputs)
+                    .status()
+                    .with_context(|| format!("Failed to run post command: {}", expanded))?;
 
-            if !status.success() {
-                anyhow::bail!("Compile command failed: {}", expanded);
+                if !status.success() {
+                    anyhow::bail!("Post command failed: {}", expanded);
+                }
             }
 
             if !quiet {

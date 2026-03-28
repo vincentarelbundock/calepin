@@ -7,7 +7,7 @@ use include_dir::{include_dir, Dir};
 
 static SCAFFOLD: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold/website");
 
-pub fn handle_new_website(dir: &Path, theme_name: &str) -> Result<()> {
+pub fn handle_new_website(dir: &Path, target_name: &str) -> Result<()> {
     if dir.exists() {
         bail!("Directory already exists: {}", dir.display());
     }
@@ -23,21 +23,26 @@ pub fn handle_new_website(dir: &Path, theme_name: &str) -> Result<()> {
     let project_config = SCAFFOLD.get_file("_calepin/config.toml")
         .and_then(|f| f.contents_utf8())
         .unwrap_or("");
+
+    // Set the target (website by default, or the theme/extension name)
+    let target = if target_name == "default" { "website" } else { target_name };
+    let target_line = format!("\ntarget = \"{}\"\n", target);
+
     let composed = format!(
-        "{}\n\n# === Built-in defaults ===\n\n{}\n{}",
+        "{}{}\n\n# === Built-in defaults ===\n\n{}\n{}",
         project_config.trim(),
+        target_line,
         crate::config::SHARED_TOML,
         crate::config::COLLECTION_TOML,
     );
     std::fs::write(calepin_dir.join("config.toml"), composed)?;
 
-    // Apply theme (partials + assets)
-    let theme = crate::themes::Theme::resolve(theme_name)?;
+    // Copy built-in assets (CSS, fonts, icons)
     let kind = crate::paths::ProjectKind::Collection {
         root: dir.to_path_buf(),
         config: calepin_dir.join("config.toml"),
     };
-    theme.apply(&kind)?;
+    crate::themes::copy_builtin_assets(&kind)?;
 
     eprintln!("Created website project in {}/", dir.display());
     eprintln!();

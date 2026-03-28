@@ -17,6 +17,8 @@ pub mod registry;
 // Transform traits
 pub mod transform_document;
 pub mod project_modules;
+#[allow(dead_code)]
+pub mod external;
 
 // Built-in modules (private -- external access via re-exports below)
 mod append_footnotes;

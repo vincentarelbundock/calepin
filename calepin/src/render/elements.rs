@@ -163,6 +163,8 @@ impl ElementRenderer {
         }
         er.default_fig_cap_location = metadata.var.get("fig_cap_location")
             .and_then(|v| v.as_str()).map(|s| s.to_string());
+        // Set document-level vars (including extension vars) for partial templates
+        er.template_env.set_var_context(&metadata.var);
         er
     }
 

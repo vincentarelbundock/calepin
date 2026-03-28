@@ -202,7 +202,22 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "calepin" => {
                 if let Some(cmap) = v.as_table() {
                     if let Some(pv) = table_get(cmap, "plugins") {
-                        meta.plugins = value_string_list(pv);
+                        let plugins = value_string_list(pv);
+                        meta.plugins = plugins.clone();
+                        // plugins is an alias for extensions
+                        for p in &plugins {
+                            if !meta.extensions.contains(p) {
+                                meta.extensions.push(p.clone());
+                            }
+                        }
+                    }
+                    if let Some(ev) = table_get(cmap, "extensions") {
+                        let exts = value_string_list(ev);
+                        for e in exts {
+                            if !meta.extensions.contains(&e) {
+                                meta.extensions.push(e);
+                            }
+                        }
                     }
                     if let Some(cm) = table_get(cmap, "convert_math")
                         .or_else(|| table_get(cmap, "convert-math"))

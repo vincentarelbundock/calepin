@@ -26,9 +26,6 @@ pub struct Target {
     pub fig_extension: Option<String>,
     /// Preview behavior: "serve", "open", or "none".
     pub preview: Option<String>,
-    /// Compile command (e.g., "tectonic {input}"). When set, the rendered file
-    /// is compiled after writing. {input} and {output} are replaced with paths.
-    pub compile: Option<String>,
     /// Whether to embed images as base64 data URIs (HTML only).
     pub embed_resources: Option<bool>,
     /// Arbitrary key-value pairs passed to templates as target_vars.
@@ -93,11 +90,6 @@ impl Target {
         }
         if let Some(ref ext) = self.fig_extension {
             validate_extension(ext, "fig-extension")?;
-        }
-        if let Some(ref cmd) = self.compile {
-            if !cmd.is_empty() && !cmd.contains("{input}") {
-                bail!("compile must contain {{input}} placeholder");
-            }
         }
         if let Some(ref mode) = self.preview {
             match mode.as_str() {
@@ -169,7 +161,6 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
         extension: child.extension.clone().or_else(|| parent.extension.clone()),
         fig_extension: child.fig_extension.clone().or_else(|| parent.fig_extension.clone()),
         preview: child.preview.clone().or_else(|| parent.preview.clone()),
-        compile: child.compile.clone().or_else(|| parent.compile.clone()),
         embed_resources: child.embed_resources.or(parent.embed_resources),
         vars: child.vars.clone().or_else(|| parent.vars.clone()),
         post: if child.post.is_empty() { parent.post.clone() } else { child.post.clone() },
@@ -217,9 +208,24 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
         }
     }
 
-    // 3. Built-in config (always fully specified)
+    // 3. Built-in config (from document.toml/collection.toml)
     if let Some(target) = super::builtin_metadata().targets.get(name) {
         return Ok(target.clone());
+    }
+
+    // 4. Built-in extension manifests (embedded in binary)
+    if let Some(manifest) = super::extension::builtin_extension(name) {
+        let target = manifest.to_target();
+        if target.inherits.is_some() {
+            let mut target_map = HashMap::new();
+            target_map.insert(name.to_string(), target);
+            resolve_inheritance(&mut target_map)?;
+            if let Some(resolved) = target_map.remove(name) {
+                return Ok(merge_with_builtin(&resolved));
+            }
+        } else {
+            return Ok(merge_with_builtin(&target));
+        }
     }
 
     bail!(
@@ -238,7 +244,6 @@ fn merge_with_builtin(user: &Target) -> Target {
         extension: user.extension.clone().or_else(|| builtin.and_then(|b| b.extension.clone())),
         fig_extension: user.fig_extension.clone().or_else(|| builtin.and_then(|b| b.fig_extension.clone())),
         preview: user.preview.clone().or_else(|| builtin.and_then(|b| b.preview.clone())),
-        compile: user.compile.clone(),
         embed_resources: user.embed_resources.or(builtin.and_then(|b| b.embed_resources)),
         vars: user.vars.clone(),
         post: user.post.clone(),

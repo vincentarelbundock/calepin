@@ -1,6 +1,6 @@
-//! Plugin manifest parsing.
+//! Module manifest parsing.
 //!
-//! Each plugin is a directory containing a `module.toml` file
+//! Each module is a directory containing a `module.toml` file
 //! that declares its capabilities: filters, element/page templates,
 //! CSL styles, and custom format definitions.
 
@@ -21,11 +21,11 @@ pub struct ModuleManifest {
     pub version: Option<String>,
     pub description: Option<String>,
     pub provides: ModuleProvides,
-    /// Absolute path to the plugin directory.
+    /// Absolute path to the module directory.
     pub module_dir: PathBuf,
 }
 
-/// All capabilities a plugin can provide (all optional).
+/// All capabilities a module can provide (all optional).
 #[derive(Default)]
 #[allow(dead_code)]
 pub struct ModuleProvides {
@@ -34,7 +34,6 @@ pub struct ModuleProvides {
     pub elements: Option<ElementsSpec>,
     pub partials: Option<PartialsSpec>,
     pub csl: Option<String>,
-    pub format: Option<FormatSpec>,
     /// Script for document transforms (receives document on stdin, writes to stdout).
     pub document_script: Option<PathBuf>,
 }
@@ -42,7 +41,7 @@ pub struct ModuleProvides {
 /// Filter specification: executable path, match rules, contexts.
 #[allow(dead_code)]
 pub struct MatchSpec {
-    /// Path to executable, relative to plugin dir. None for built-in plugins.
+    /// Path to executable, relative to module dir. None for built-in modules.
     pub run: Option<PathBuf>,
     /// Rules that determine when this filter is dispatched.
     pub match_rule: MatchRule,
@@ -65,25 +64,15 @@ pub struct MatchRule {
 
 /// Element template directory specification.
 pub struct ElementsSpec {
-    /// Directory containing `{name}.{format}` template files, relative to plugin dir.
+    /// Directory containing `{name}.{format}` template files, relative to module dir.
     pub dir: PathBuf,
 }
 
 /// Page template directory specification.
 #[allow(dead_code)]
 pub struct PartialsSpec {
-    /// Directory containing `calepin.{format}` and `calepin.css`, relative to plugin dir.
+    /// Directory containing `calepin.{format}` and `calepin.css`, relative to module dir.
     pub dir: PathBuf,
-}
-
-/// Custom format specification.
-#[allow(dead_code)]
-pub struct FormatSpec {
-    pub name: String,
-    pub base: String,
-    pub extension: Option<String>,
-    pub preprocess: Option<PathBuf>,
-    pub postprocess: Option<PathBuf>,
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +159,6 @@ fn parse_provides(root: &Value, module_dir: &Path) -> Result<ModuleProvides> {
         elements: parse_elements_spec(root),
         partials: parse_partials_spec(root),
         csl: root.get("csl").and_then(|v| v.as_str()).map(String::from),
-        format: parse_format_spec(root, module_dir),
         document_script,
     })
 }
@@ -234,20 +222,6 @@ fn parse_elements_spec(provides: &Value) -> Option<ElementsSpec> {
 fn parse_partials_spec(provides: &Value) -> Option<PartialsSpec> {
     let node = provides.get("templates")?;
     node.get("dir").and_then(|v| v.as_str()).map(|s| PartialsSpec { dir: PathBuf::from(s) })
-}
-
-fn parse_format_spec(provides: &Value, module_dir: &Path) -> Option<FormatSpec> {
-    let node = provides.get("format")?;
-    let name = node.get("name")?.as_str()?.to_string();
-    let base = node.get("base")?.as_str()?.to_string();
-
-    Some(FormatSpec {
-        name,
-        base,
-        extension: node.get("extension").and_then(|v| v.as_str()).map(String::from),
-        preprocess: node.get("preprocess").and_then(|v| v.as_str()).map(|s| module_dir.join(s)),
-        postprocess: node.get("postprocess").and_then(|v| v.as_str()).map(|s| module_dir.join(s)),
-    })
 }
 
 // ---------------------------------------------------------------------------

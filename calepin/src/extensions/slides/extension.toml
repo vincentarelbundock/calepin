@@ -1,5 +1,5 @@
 name = "slides"
-description = "RevealJS slide presentation"
+description = "Slide presentations"
 inherits = "html"
 
 [target]

@@ -147,7 +147,7 @@ preview = "serve"
 writer = "typst"
 extension = "pdf"
 fig_extension = "svg"
-compile = "typst compile {input}"
+post = ["typst compile {input}"]
 
 [targets.revealjs]
 writer = "html"
@@ -183,7 +183,7 @@ writer = "typst"
 template = "page"
 extension = "pdf"
 fig_extension = "svg"
-compile = "typst compile {input}"
+post = ["typst compile {input}"]
 ```
 
 # Collection config example

@@ -1,2 +1,3 @@
 name = "minimal"
 description = "Clean layout without sidebar or table of contents"
+inherits = "website"

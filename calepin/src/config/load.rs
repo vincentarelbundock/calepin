@@ -108,14 +108,6 @@ pub struct ContentSection {
 
     // --- Backwards-compatible aliases (deprecated) ---
 
-    /// Alias for `text` (deprecated, use `text`).
-    #[serde(default)]
-    pub title: Option<String>,
-
-    /// Alias for `href` (deprecated, use `href`).
-    #[serde(default)]
-    pub index: Option<String>,
-
     /// Alias for `include` with explicit paths (deprecated, use `include`).
     #[serde(default)]
     pub pages: Vec<DocumentEntry>,
@@ -126,14 +118,14 @@ pub struct ContentSection {
 }
 
 impl ContentSection {
-    /// Resolved display text: `text` field, falling back to `title` alias.
+    /// Resolved display text.
     pub fn display_text(&self) -> Option<&str> {
-        self.text.as_deref().or(self.title.as_deref())
+        self.text.as_deref()
     }
 
-    /// Resolved href: `href` field, falling back to `index` alias.
+    /// Resolved href.
     pub fn display_href(&self) -> Option<&str> {
-        self.href.as_deref().or(self.index.as_deref())
+        self.href.as_deref()
     }
 
     /// Collect all include entries, merging `include`, `pages`, `dir`, and
@@ -454,7 +446,7 @@ writer = "latex"
 template = "article"
 extension = "pdf"
 fig-extension = "pdf"
-compile = "tectonic {input}"
+post = ["tectonic {input}"]
 
 [targets.article.vars]
 documentclass = "article"
@@ -466,7 +458,7 @@ toc = false
         assert_eq!(article.template_name(), "article");
         assert_eq!(article.output_extension(), "pdf");
         assert_eq!(article.fig_ext(), "pdf");
-        assert_eq!(article.compile.as_deref(), Some("tectonic {input}"));
+        assert_eq!(article.post, vec!["tectonic {input}".to_string()]);
     }
 
     #[test]
@@ -598,8 +590,8 @@ include = [
 pages = ["install.qmd", "cli.qmd"]
 
 [[contents]]
-title = "Guide"
-index = "guide/index.qmd"
+text = "Guide"
+href = "guide/index.qmd"
 pages = [
   "guide/basics.qmd",
   {title = "Figures & Images", page = "guide/figures.qmd"},

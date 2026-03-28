@@ -6,8 +6,6 @@
 //! Currently these are placeholders that establish the module interface.
 //! The actual implementation delegates to the existing collection code.
 
-use std::collections::HashMap;
-
 use anyhow::Result;
 
 use crate::modules::registry::{TransformProject, RenderedPage};

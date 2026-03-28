@@ -1,9 +1,9 @@
-//! Div rendering: orchestrates the plugin pipeline for fenced divs.
+//! Div rendering: orchestrates the module pipeline for fenced divs.
 //!
 //! Dispatch order:
-//! 1. Iterate matching plugins in registry order (user first, then built-in)
-//!    - Raw plugins: receive raw children, render them directly
-//!    - Rendered plugins: receive pre-rendered children + template vars
+//! 1. Iterate matching modules in registry order (user first, then built-in)
+//!    - Raw modules: receive raw children, render them directly
+//!    - Rendered modules: receive pre-rendered children + template vars
 //! 2. Template lookup (fallback)
 
 use std::collections::HashMap;
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use crate::registry::{ModuleKind, ModuleContext, ModuleResult, ModuleRegistry};
 use crate::types::Element;
 
-/// Render a fenced div through the unified plugin pipeline.
+/// Render a fenced div through the unified module pipeline.
 pub fn render(
     classes: &[String],
     id: &Option<String>,

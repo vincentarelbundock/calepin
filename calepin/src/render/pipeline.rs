@@ -116,6 +116,16 @@ pub fn render_core(
         paths::set_active_target(Some(&format_str));
     }
 
+    // 3b. Inject extension vars into metadata (namespaced by extension name).
+    //     Walks the extension inheritance chain and merges [vars] from each.
+    //     Also includes side-loaded extensions (calepin.extensions = [...]).
+    //     User vars in front matter override extension defaults.
+    let project_root = paths::get_project_root();
+    inject_extension_vars(&mut metadata, &project_root);
+    for ext_name in paths::get_sideloaded_extensions() {
+        inject_extension_vars_for(&mut metadata, &project_root, &ext_name);
+    }
+
     // 4. Expand includes before block parsing (so included code chunks are parsed)
     let body = jinja::expand_includes(&body, &path_ctx.project_root, &format_str);
 
@@ -133,8 +143,14 @@ pub fn render_core(
     metadata.evaluate_inline(&mut ctx);
 
     // 6. Load module registry
+    let mut module_names = metadata.plugins.clone();
+    for ext in &metadata.extensions {
+        if !module_names.contains(ext) {
+            module_names.push(ext.clone());
+        }
+    }
     let registry = std::rc::Rc::new(
-        registry::ModuleRegistry::load(&metadata.plugins, &path_ctx.project_root)
+        registry::ModuleRegistry::load(&module_names, &path_ctx.project_root)
     );
 
     // 7. Create element renderer
@@ -186,6 +202,64 @@ pub fn render_core(
     Ok(RenderResult { rendered, metadata, element_renderer })
 }
 
+/// Render a single page: render_core + assemble_page + transform_document.
+///
+/// This is the shared per-page pipeline used by both single-document rendering
+/// and collection rendering. Returns a `RenderedPage` with structured metadata
+/// that project modules can transform.
+pub fn render_page(
+    input: &Path,
+    output_path: &Path,
+    format: &str,
+    overrides: &[String],
+    project_root: Option<&Path>,
+    options: &RenderCoreOptions,
+    project_metadata: Option<&config::Metadata>,
+    target: Option<&config::Target>,
+) -> Result<(crate::registry::RenderedPage, RenderResult)> {
+    let result = render_core(input, output_path, Some(format), overrides, project_root, options, project_metadata, target)?;
+
+    let pipeline = if let Some(t) = target {
+        FormatPipeline::from_target(t)?
+    } else {
+        FormatPipeline::from_writer(format)?
+    };
+
+    // Assemble page (page template wrapping)
+    let assembled = pipeline
+        .assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
+        .unwrap_or_else(|| result.rendered.clone());
+
+    // Document transforms (post-assembly: highlight CSS, footnotes, etc.)
+    let final_output = pipeline.transform_document(&assembled, &result.element_renderer);
+
+    // Build TOC
+    let toc = if format == "html" && result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
+        let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;
+        let title = result.metadata.toc.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents");
+        let toc_html = crate::render::template::build_toc_html_from_body(&final_output, depth, title);
+        if toc_html.is_empty() { None } else { Some(toc_html) }
+    } else {
+        None
+    };
+
+    let page = crate::registry::RenderedPage {
+        source: input.to_path_buf(),
+        output: output_path.to_path_buf(),
+        body: final_output,
+        title: result.metadata.title.clone(),
+        date: result.metadata.date.clone(),
+        subtitle: result.metadata.subtitle.clone(),
+        abstract_text: result.metadata.abstract_text.clone(),
+        url: String::new(),
+        toc,
+        lang: None,
+        metadata: result.metadata.clone(),
+    };
+
+    Ok((page, result))
+}
+
 /// Full render pipeline. Returns (output_path, rendered_content, pipeline).
 pub fn render_file(
     input: &Path,
@@ -221,12 +295,12 @@ pub fn render_file(
     } else {
         FormatPipeline::from_writer(preliminary_format)?
     };
-    // When the target produces an intermediate file that needs compilation
-    // (explicit compile command, or writer differs from output extension),
-    // use the writer's native extension (.tex, .typ) for the rendered file.
+    // When the target's writer extension differs from the output extension
+    // (e.g., typst writer -> .typ but target wants .pdf), use the writer's
+    // native extension for the rendered file. Post commands handle conversion.
     let ext = if let Some(t) = target {
         let writer_ext = paths::resolve_extension(&t.writer);
-        if t.compile.is_some() || writer_ext != t.output_extension() {
+        if writer_ext != t.output_extension() {
             writer_ext
         } else {
             t.output_extension()
@@ -245,16 +319,78 @@ pub fn render_file(
         input.with_extension(ext)
     };
 
-    let result = render_core(input, &output_path, resolved_format.as_deref(), overrides, None, &RenderCoreOptions::default(), project_metadata, target)?;
+    // Use the shared per-page pipeline: render_core + assemble_page + transform_document
+    let (mut page, result) = render_page(input, &output_path, preliminary_format, overrides, None, &RenderCoreOptions::default(), project_metadata, target)?;
 
-    // Assemble page (page template wrapping)
-    let final_output = pipeline
-        .assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
-        .unwrap_or(result.rendered);
+    // Run project-level modules from extensions (single-doc mode).
+    // For collections, this happens in build_collection instead.
+    if let Some(t) = target {
+        let pr = project_root.unwrap_or(Path::new("."));
+        let registry = crate::registry::ModuleRegistry::load(&t.modules, pr);
+        let project_transforms = registry.resolve_project_transforms(&t.modules);
+        if !project_transforms.is_empty() {
+            let mut pages = vec![page];
+            for transform in &project_transforms {
+                if let Err(e) = transform.transform(&mut pages, &result.metadata, pipeline.writer()) {
+                    cwarn!("project module error: {}", e);
+                }
+            }
+            page = pages.into_iter().next().unwrap();
+        }
+    }
 
-    // Document transforms (post-assembly: image embedding, etc.)
-    let final_output = pipeline.transform_document(&final_output, &result.element_renderer);
+    Ok((output_path, page.body, pipeline))
+}
 
-    Ok((output_path, final_output, pipeline))
+/// Inject extension vars into metadata, namespaced by extension name.
+///
+/// Walks the active target's extension inheritance chain and merges each
+/// extension's `[vars]` into `metadata.var` as a nested table:
+/// `metadata.var["ext_name"] = Table { key: value, ... }`
+///
+/// User vars in front matter take precedence (they're already in metadata.var).
+fn inject_extension_vars(metadata: &mut config::Metadata, project_root: &Path) {
+    let target_name = paths::get_active_target().unwrap_or_default();
+    inject_extension_vars_for(metadata, project_root, &target_name);
+}
+
+/// Inject vars from a specific extension's inheritance chain into metadata.
+fn inject_extension_vars_for(metadata: &mut config::Metadata, project_root: &Path, start_name: &str) {
+    let extensions_dir = project_root.join("_calepin").join("extensions");
+    if !extensions_dir.is_dir() {
+        return;
+    }
+
+    // Walk the chain (child-first), collect vars
+    let mut chain: Vec<(String, std::collections::HashMap<String, toml::Value>)> = Vec::new();
+    let mut current = Some(start_name.to_string());
+    let mut visited = std::collections::HashSet::new();
+    while let Some(name) = current.take() {
+        if !visited.insert(name.clone()) { break; }
+        let ext_dir = extensions_dir.join(&name);
+        if ext_dir.join("extension.toml").exists() {
+            if let Ok(content) = std::fs::read_to_string(ext_dir.join("extension.toml")) {
+                if let Ok(manifest) = toml::from_str::<config::extension::ExtensionManifest>(&content) {
+                    if !manifest.vars.is_empty() {
+                        chain.push((name.clone(), manifest.vars.clone()));
+                    }
+                    current = manifest.inherits;
+                }
+            }
+        }
+    }
+
+    // Apply parent-first (so child vars override parent)
+    for (ext_name, vars) in chain.iter().rev() {
+        // Only inject if the user hasn't already set vars for this extension
+        if metadata.var.contains_key(ext_name) {
+            continue;
+        }
+        let mut table = indexmap::IndexMap::new();
+        for (k, v) in vars {
+            table.insert(k.clone(), crate::value::from_toml(v.clone()));
+        }
+        metadata.var.insert(ext_name.clone(), crate::value::Value::Table(table));
+    }
 }
 

@@ -115,37 +115,49 @@ fn render_one_document(
         std::fs::create_dir_all(parent).ok();
     }
 
-    let result = crate::render::pipeline::render_core(&input, &output_path, Some(format), overrides, Some(base_dir), &crate::render::pipeline::RenderCoreOptions::default(), project_metadata, None)?;
-
-    let body = if apply_page_template {
-        // Apply the project's page template (e.g., book's minimal page.tex)
-        let pipeline = crate::render::formats::FormatPipeline::from_writer(format)?;
-        pipeline.assemble_page(&result.rendered, &result.metadata, &result.element_renderer)
-            .unwrap_or(result.rendered)
+    if apply_page_template {
+        // Orchestrator mode: use the shared render_page pipeline
+        // (render_core + assemble_page + transform_document)
+        let (page, _result) = crate::render::pipeline::render_page(
+            &input, &output_path, format, overrides, Some(base_dir),
+            &crate::render::pipeline::RenderCoreOptions::default(),
+            project_metadata, None,
+        )?;
+        return Ok(CollectionRenderResult {
+            body: page.body,
+            toc: page.toc,
+            title: page.title,
+            date: page.date,
+            subtitle: page.subtitle,
+            abstract_text: page.abstract_text,
+        });
     } else {
-        // Site mode: run document transforms (footnotes, highlight CSS, etc.)
+        // Site mode: render_core + transform_document (no assemble_page --
+        // the site template wraps pages later in apply_collection_partials)
+        let result = crate::render::pipeline::render_core(
+            &input, &output_path, Some(format), overrides, Some(base_dir),
+            &crate::render::pipeline::RenderCoreOptions::default(),
+            project_metadata, None,
+        )?;
         let pipeline = crate::render::formats::FormatPipeline::from_writer(format)?;
-        pipeline.transform_document(&result.rendered, &result.element_renderer)
-    };
-
-    // Build TOC from rendered headings (HTML only)
-    let toc = if format == "html" && result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
-        let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;
-        let title = result.metadata.toc.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents");
-        let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
-        if toc_html.is_empty() { None } else { Some(toc_html) }
-    } else {
-        None
-    };
-
-    Ok(CollectionRenderResult {
-        body,
-        toc,
-        title: result.metadata.title.map(|t| crate::render::convert::render_inline(&t, format)),
-        date: result.metadata.date,
-        subtitle: result.metadata.subtitle.map(|t| crate::render::convert::render_inline(&t, format)),
-        abstract_text: result.metadata.abstract_text,
-    })
+        let body = pipeline.transform_document(&result.rendered, &result.element_renderer);
+        let toc = if format == "html" && result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
+            let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;
+            let title = result.metadata.toc.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents");
+            let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
+            if toc_html.is_empty() { None } else { Some(toc_html) }
+        } else {
+            None
+        };
+        return Ok(CollectionRenderResult {
+            body,
+            toc,
+            title: result.metadata.title.map(|t| crate::render::convert::render_inline(&t, format)),
+            date: result.metadata.date,
+            subtitle: result.metadata.subtitle.map(|t| crate::render::convert::render_inline(&t, format)),
+            abstract_text: result.metadata.abstract_text,
+        });
+    }
 }
 
 /// Render documents with cross-file cross-reference resolution (HTML only).

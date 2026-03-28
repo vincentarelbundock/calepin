@@ -3,7 +3,7 @@ pub(crate) mod contents;
 mod context;
 pub(crate) mod discover;
 mod orchestrator;
-mod render;
+pub(crate) mod render;
 mod partials;
 mod templating;
 
@@ -55,8 +55,13 @@ pub fn build_collection(
     crate::paths::set_project_root(Some(&base_dir));
 
     // Set extension partial directories for layered resolution
-    let ext_dirs = crate::config::context::resolve_extension_partial_dirs_for(&collection_target_name, &base_dir);
+    let mut ext_dirs = crate::config::context::resolve_extension_partial_dirs_for(&collection_target_name, &base_dir);
+    for ext_name in &meta.extensions {
+        let mut more = crate::config::context::resolve_extension_partial_dirs_for(ext_name, &base_dir);
+        ext_dirs.append(&mut more);
+    }
     crate::paths::set_extension_partial_dirs(ext_dirs);
+    crate::paths::set_sideloaded_extensions(meta.extensions.clone());
 
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
     // Falls back to built-in templates if not found on filesystem.
