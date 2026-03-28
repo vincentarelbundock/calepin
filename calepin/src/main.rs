@@ -85,6 +85,7 @@ fn main() -> Result<()> {
             cli::InitAction::Notebook { path, theme } => cli::new_notebook::handle_new_notebook(&path, theme.as_deref()),
             cli::InitAction::Website { dir, theme } => cli::new_website::handle_new_website(&dir, &theme),
             cli::InitAction::Book { dir, theme } => cli::new_book::handle_new_book(&dir, &theme),
+            cli::InitAction::Extension { name, inherits } => cli::new_extension::handle_new_extension(&name, &inherits),
             cli::InitAction::Sidecar { path, force, partials, theme, dry_run, no_backup } => {
                 cli::init_sidecar::handle_init_sidecar(&path, force, partials, theme.as_deref(), dry_run, no_backup)
             }

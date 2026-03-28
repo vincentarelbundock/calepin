@@ -14,8 +14,9 @@
 pub mod manifest;
 pub mod registry;
 
-// Transform trait
+// Transform traits
 pub mod transform_document;
+pub mod project_modules;
 
 // Built-in modules (private -- external access via re-exports below)
 mod append_footnotes;

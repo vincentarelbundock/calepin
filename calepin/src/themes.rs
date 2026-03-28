@@ -58,13 +58,13 @@ pub struct Theme {
 
 impl Theme {
     /// Load the built-in default theme.
+    ///
+    /// With layered partial resolution, partials are no longer copied to the
+    /// project. Only assets (CSS, fonts, icons) are included.
     pub fn builtin_default() -> Self {
         let mut files = BTreeMap::new();
 
-        // Partials
-        collect_embedded_files(&BUILTIN_PARTIALS, Path::new("partials"), &mut files);
-
-        // Assets (the "assets" subdirectory inside BUILTIN_ASSETS)
+        // Assets only (partials come from built-in defaults via layered resolution)
         if let Some(assets_dir) = BUILTIN_ASSETS.get_dir("assets") {
             collect_embedded_dir_stripped(assets_dir, Path::new("assets"), Path::new("assets"), &mut files);
         }

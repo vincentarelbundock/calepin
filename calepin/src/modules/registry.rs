@@ -482,6 +482,16 @@ fn resolve_builtin_kind(name: &str, kind_str: &str) -> ModuleKind {
         ("embed_images", "document") => ModuleKind::Document(
             Box::new(crate::modules::embed_images::EmbedImagesHtml)),
 
+        // Project-level transforms (cross-page coordination)
+        (name, "project") => {
+            if let Some(module) = crate::modules::project_modules::resolve_builtin_project(name) {
+                ModuleKind::Project(module)
+            } else {
+                eprintln!("Warning: unknown project module '{name}'");
+                ModuleKind::Noop
+            }
+        }
+
         // Noop / partial-only
         (_, "noop") => ModuleKind::Noop,
 

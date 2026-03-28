@@ -83,6 +83,10 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
 
     paths::set_project_root(Some(&effective_root));
 
+    // Set extension partial directories for layered resolution
+    let ext_dirs = resolve_extension_partial_dirs(&target_name, &effective_root);
+    paths::set_extension_partial_dirs(ext_dirs);
+
     Ok(ProjectContext {
         project_root: Some(effective_root),
         project_metadata,
@@ -90,6 +94,40 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
         target,
         explicit_target,
     })
+}
+
+/// Build the list of extension partial directories for layered resolution.
+/// Walks the inheritance chain from the active target up to the root,
+/// collecting `_calepin/extensions/{name}/partials/` directories.
+fn resolve_extension_partial_dirs(target_name: &str, project_root: &Path) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    let extensions_dir = project_root.join("_calepin").join("extensions");
+
+    // Walk the inheritance chain: check if the target has an installed extension,
+    // then follow its `inherits` chain.
+    let mut current = Some(target_name.to_string());
+    let mut visited = std::collections::HashSet::new();
+
+    while let Some(name) = current.take() {
+        if !visited.insert(name.clone()) {
+            break; // cycle detection
+        }
+
+        let ext_partials = extensions_dir.join(&name).join("partials");
+        if ext_partials.is_dir() {
+            dirs.push(ext_partials);
+        }
+
+        // Check if this extension has a parent
+        let ext_toml = extensions_dir.join(&name).join("extension.toml");
+        if ext_toml.exists() {
+            if let Ok(manifest) = config::extension::ExtensionManifest::load(&extensions_dir.join(&name)) {
+                current = manifest.inherits;
+            }
+        }
+    }
+
+    dirs
 }
 
 /// Apply `--writer` override to a resolved project context.

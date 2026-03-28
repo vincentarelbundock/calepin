@@ -403,6 +403,7 @@ pub fn partials_dir(project_root: &Path) -> PathBuf {
 }
 
 /// Check whether user-provided partials exist (sidecar or project-level).
+#[allow(dead_code)]
 pub fn has_user_partials() -> bool {
     if let Some(sidecar) = get_sidecar_root() {
         if sidecar.join("partials").is_dir() {

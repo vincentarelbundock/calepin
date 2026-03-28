@@ -95,11 +95,26 @@ pub fn render_core(
         .map(|s| s.to_string())
         .or_else(|| metadata.target.clone())
         .unwrap_or_else(|| "html".to_string());
+
+    // If a target object was passed, use it directly.
+    // Otherwise, try to resolve from extensions, then fall back to writer.
     let pipeline = if let Some(t) = target {
         FormatPipeline::from_target(t)?
     } else {
-        FormatPipeline::from_writer(&format_str)?
+        // Try resolving as a target (from extensions or built-in config)
+        let empty_targets = std::collections::HashMap::new();
+        let user_targets = project_metadata.map(|m| &m.targets).unwrap_or(&empty_targets);
+        match config::resolve_target(&format_str, user_targets) {
+            Ok(resolved) => FormatPipeline::from_target(&resolved)?,
+            Err(_) => FormatPipeline::from_writer(&format_str)?,
+        }
     };
+
+    // Only set active target if not already set by the caller (render_file sets
+    // it to the target name, which may differ from the writer/format name).
+    if paths::get_active_target().is_none() {
+        paths::set_active_target(Some(&format_str));
+    }
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
     let body = jinja::expand_includes(&body, &path_ctx.project_root, &format_str);

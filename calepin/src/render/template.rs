@@ -118,20 +118,72 @@ pub fn load_page_template(template_name: &str, base: &str) -> String {
 
 
 pub fn load_default_css() -> String {
-    // Check project/user overrides for CSS
+    let mut css = String::new();
+
+    // 1. Base CSS: user override or built-in
     let root = crate::paths::get_project_root();
     let p = crate::paths::partials_dir(&root).join("html").join("page.css");
     if p.exists() {
         if let Ok(s) = std::fs::read_to_string(&p) {
-            return s;
+            css.push_str(&s);
+        }
+    } else {
+        if let Some(builtin) = crate::render::elements::BUILTIN_PARTIALS
+            .get_file("html/page.css")
+            .and_then(|f| f.contents_utf8())
+        {
+            css.push_str(builtin);
         }
     }
-    // Built-in: discovered from embedded project tree
-    crate::render::elements::BUILTIN_PARTIALS
-        .get_file("html/page.css")
-        .and_then(|f| f.contents_utf8())
-        .unwrap_or("")
-        .to_string()
+
+    // 2. Extension CSS: walk the active target's inheritance chain,
+    //    loading CSS from each extension's [assets] declaration.
+    let target_name = crate::paths::get_active_target().unwrap_or_default();
+    let ext_css = load_extension_css(&root, &target_name);
+    if !ext_css.is_empty() {
+        css.push_str(&ext_css);
+    }
+
+    css
+}
+
+/// Load CSS from extensions in the active target's inheritance chain.
+/// Walks from parent to child so child CSS overrides parent.
+fn load_extension_css(project_root: &std::path::Path, target_name: &str) -> String {
+    let extensions_dir = project_root.join("_calepin").join("extensions");
+    if !extensions_dir.is_dir() {
+        return String::new();
+    }
+
+    // Build the chain from target up to root (child-first)
+    let mut chain = Vec::new();
+    let mut current = Some(target_name.to_string());
+    let mut visited = std::collections::HashSet::new();
+    while let Some(name) = current.take() {
+        if !visited.insert(name.clone()) { break; }
+        let ext_dir = extensions_dir.join(&name);
+        if ext_dir.join("extension.toml").exists() {
+            if let Ok(content) = std::fs::read_to_string(ext_dir.join("extension.toml")) {
+                if let Ok(manifest) = toml::from_str::<crate::config::extension::ExtensionManifest>(&content) {
+                    chain.push((ext_dir, manifest.assets.css.clone()));
+                    current = manifest.inherits;
+                }
+            }
+        }
+    }
+
+    // Reverse to parent-first order (so child CSS overrides parent)
+    let mut result = String::new();
+    for (ext_dir, css_files) in chain.iter().rev() {
+        for css_file in css_files {
+            let css_path = ext_dir.join("assets").join(css_file);
+            if let Ok(ext_css) = std::fs::read_to_string(&css_path) {
+                result.push('\n');
+                result.push_str(&ext_css);
+            }
+        }
+    }
+    result
 }
 
 /// Build a MiniJinja render context from a variable map.

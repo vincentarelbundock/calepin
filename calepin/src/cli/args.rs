@@ -190,6 +190,16 @@ pub enum InitAction {
         theme: String,
     },
 
+    /// Scaffold a new extension
+    Extension {
+        /// Extension name (creates a directory with this name)
+        name: String,
+
+        /// Parent target to inherit from (e.g., html, latex, website)
+        #[arg(long, default_value = "html")]
+        inherits: String,
+    },
+
     /// Extract a sidecar directory from an existing .qmd document
     Sidecar {
         /// Path to the existing .qmd file
@@ -299,6 +309,12 @@ pub enum ExtraAction {
     Csl,
     /// List available syntax highlighting themes
     Highlight,
+    /// Show where each partial is resolved from for a target
+    Partials {
+        /// Target to inspect (default: html)
+        #[arg(default_value = "html")]
+        target: String,
+    },
     /// Print shell completions
     #[command(arg_required_else_help = true, after_help = "\
 \x1B[1;4mExamples:\x1B[0m
