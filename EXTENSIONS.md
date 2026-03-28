@@ -1,8 +1,18 @@
 # Extension System Specification
 
+## Concepts
+
+- **Extension** -- A directory with an `extension.toml` manifest. The single unit of distribution and customization. Bundles a target definition, partials, modules, and assets. Built-in targets (html, latex, typst, slides, website, book) are also extensions.
+- **Target** -- An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the `[target]` section of an extension manifest or in `_calepin/config.toml`.
+- **Writer** -- One of the four rendering engines: `html`, `latex`, `typst`, `markdown`. Every target has exactly one writer. Writers are not user-extensible.
+- **Partial** -- A Jinja template that renders a specific element or page component (e.g., `figure.html`, `page.tex`). Partials are resolved by name through a layered chain. Adding a partial is enough to create a custom div style -- no module needed.
+- **Module** -- A declared transform in the extension manifest. Only needed when partials alone are insufficient: structural transforms that rewrite children, match rules beyond class names, auto-numbering, or external code execution.
+- **Asset** -- A CSS, JS, or static file declared in the manifest's `[assets]` section. CSS/JS are injected into the page template; static files are copied to the output directory.
+- **Vars** -- Key-value pairs declared in `[vars]` in the extension manifest. Namespaced by extension name: `{{ vars.tufte.sidenote_style }}`. Extensions provide defaults; users override in front matter under `[vars.extension_name]`.
+
 ## Overview
 
-An **extension** is the single unit of distribution and customization in *Calepin*. It bundles targets, partials, modules, assets, and config into one directory. Both built-in formats (html, latex, typst, slides, website, book) and user-created formats are extensions -- the internal architecture mirrors the user-facing one exactly.
+Both built-in targets and user-created targets are extensions -- the internal architecture mirrors the user-facing one exactly.
 
 ## Extension directory layout
 
@@ -54,7 +64,7 @@ extension = "html"                  # inherited if omitted
 template = "page"                   # inherited if omitted
 fig_extension = "svg"               # inherited if omitted
 preview = "serve"                   # inherited if omitted
-embed_resources = false
+embed_resources = true
 crossref = "html"                   # inherited if omitted
 toc_headings = true                 # inherited if omitted
 
@@ -62,14 +72,14 @@ toc_headings = true                 # inherited if omitted
 # Omit to inherit parent's modules unchanged.
 modules = ["highlight", "append_footnotes", "sidenotes", "embed_images"]
 
-# Compile command (for formats that produce intermediate files).
-# compile = "typst compile {input}"
+# Post-processing commands. Run in order after rendering.
+# {input} = rendered file, {output} = final output path.
+# post = ["typst compile {input}", "pagefind --site {output}"]
 
-# Post-processing commands.
-# post = ["pagefind --site {output}"]
-
-# Arbitrary variables passed to templates as {{ target_vars.key }}.
-[target.vars]
+# Extension variables: namespaced under the extension name.
+# Available in templates as {{ vars.tufte.key }}.
+# Users can override in front matter: [vars.tufte] sidenote_style = "popup"
+[vars]
 sidenote_style = "margin"
 cdn = "https://cdn.example.com/tufte"
 
@@ -106,7 +116,7 @@ static = ["fonts/"]
 #
 # Declare a [[modules]] entry only when you need capabilities beyond what
 # a partial provides:
-#   - Match by attribute, id prefix, or format (not just class)
+#   - Match by attribute, id prefix, or writer (not just class)
 #   - Structural transforms (rewrite children before rendering)
 #   - Auto-numbering (number = true)
 #   - External code (run = "scripts/foo.sh" or "scripts/foo.wasm")
@@ -122,7 +132,7 @@ contexts = ["div"]
 classes = ["sidenote", "margin-note"]
 # attrs = ["sidenote-ref"]          # attribute names (OR'd with classes)
 # id_prefix = "sn-"                 # ID prefix trigger
-# formats = ["html"]                # restrict to formats (omit = all)
+# writers = ["html"]                # restrict to writers (omit = all)
 # number = true                     # auto-number matching divs
 
 # --- External module (script or WASM) ---
@@ -150,7 +160,7 @@ Most div/span customization does not require a module at all. Adding a partial t
 
 A `[[modules]]` declaration is needed only when you require:
 
-- **Match rules** beyond class name (attributes, id prefix, format restrictions)
+- **Match rules** beyond class name (attributes, id prefix, writer restrictions)
 - **Structural transforms** that rewrite children before rendering (like tabset, layout, figure)
 - **Auto-numbering** (`number = true` injects `{{ number }}` and `{{ type_class }}` into the template context)
 - **External code** that runs a script or WASM binary
@@ -171,7 +181,7 @@ External modules (both scripts and WASM) communicate via JSON on stdin/stdout.
 {
   "name": "sidenote",
   "kind": "element_children",
-  "format": "html",
+  "writer": "html",
   "context": "div",
   "content": "<p>The rendered children...</p>",
   "classes": ["sidenote"],
@@ -204,7 +214,7 @@ The `action` field controls what happens next:
 {
   "name": "rewrite-links",
   "kind": "document",
-  "format": "html",
+  "writer": "html",
   "body": "<!DOCTYPE html>...",
   "vars": {}
 }
@@ -218,7 +228,7 @@ The `action` field controls what happens next:
 }
 ```
 
-For backward compatibility and simplicity, document modules can also use plain text protocol: raw document on stdin, transformed document on stdout (no JSON wrapping). The manifest can declare this explicitly:
+Document modules can also use plain text protocol: raw document on stdin, transformed document on stdout (no JSON wrapping). The manifest can declare this explicitly:
 
 ```toml
 [[modules]]
@@ -236,7 +246,7 @@ protocol = "text"                    # "json" (default) or "text"
 
 ### Inheritance rules
 
-- `inherits` names exactly one parent: a built-in base format (`html`, `latex`, `typst`, `markdown`), a built-in composed format (`slides`, `website`, `book`), or an installed extension.
+- `inherits` names exactly one parent: a built-in base target (`html`, `latex`, `typst`, `markdown`), a built-in composed target (`slides`, `website`, `book`), or an installed extension.
 - Resolution is recursive with cycle detection (same algorithm as current target inheritance).
 - Field merge: child values override parent values. `Option` fields use child-or-parent. `Vec` fields (modules, post, fig_formats) use all-or-nothing: if the child specifies the field, it replaces the parent's list entirely; if omitted, the parent's list is inherited.
 - Partials, assets, and modules compose additively (see resolution order below).
@@ -295,7 +305,7 @@ At each level, the lookup order within the partials directory is:
 
 1. `{target}/{name}.{ext}` (target-specific, e.g., `tufte/page.html`)
 2. `{writer}/{name}.{ext}` (writer-specific, e.g., `html/page.html`)
-3. `common/{name}.jinja` (format-agnostic)
+3. `common/{name}.jinja` (writer-agnostic)
 
 ### Assets
 
@@ -322,9 +332,9 @@ Module templates are resolved via the standard partial resolution chain (see Par
 
 A module must be listed in the active target's `modules` field to run as a document/element transform. Modules that match by class/attr/id (span transforms, element children transforms) run whenever a matching element is encountered, regardless of the `modules` list.
 
-## Built-in formats as extensions
+## Built-in targets as extensions
 
-The built-in formats are structured internally as extensions. Each has the same shape:
+The built-in targets are structured internally as extensions. Each has the same shape:
 
 ```
 (embedded at compile time)
@@ -364,7 +374,7 @@ website/
     fontawesome/...
 ```
 
-The current `config/document.toml` target entries become the `[target]` section of each extension's `extension.toml`. The current `partials/{format}/` directories map directly to `{format}/partials/{format}/`. Built-in modules remain in Rust code; they are registered by name in `modules.toml` as today.
+The current `config/document.toml` target entries become the `[target]` section of each extension's `extension.toml`. The current `partials/{writer}/` directories map directly to `{name}/partials/{writer}/`. Built-in modules remain in Rust code; they are registered by name in `modules.toml` as today.
 
 This means:
 
@@ -372,12 +382,12 @@ This means:
 - `website` inherits from `html`, adding navbar/sidebar partials, CSS assets, and `document_listing` support.
 - A user extension inherits from any of these and follows the same rules.
 
-## `calepin new extension`
+## `calepin init extension`
 
 Scaffolds a new extension directory:
 
 ```
-$ calepin new extension sidenotes --inherits html
+$ calepin init extension sidenotes --inherits html
 ```
 
 Creates:
@@ -443,7 +453,7 @@ css = ["dark-academic.css"]
 
 No partials, no modules, no target overrides. The extension only adds a stylesheet. Activated with `target = "dark-academic"` or `calepin.extensions = ["dark-academic"]`.
 
-### Example 2: Presentation format
+### Example 2: Presentation target
 
 ```
 slidev/
@@ -468,8 +478,8 @@ inherits = "slides"
 modules = ["highlight", "append_footnotes", "split_slides"]
 embed_resources = false
 
-[target.vars]
-transition = "slide"
+[vars]
+transition = "slide"    # {{ vars.slidev.transition }}
 
 [assets]
 css = ["slidev.css"]
@@ -478,7 +488,7 @@ js = ["slidev.js"]
 
 Inherits from `slides` (which inherits from `html`). Overrides `page.html` for its own slide shell. The inheritance chain is `slidev -> slides -> html`.
 
-### Example 3: Academic journal format
+### Example 3: Academic journal target
 
 ```
 jss/
@@ -502,8 +512,8 @@ inherits = "latex"
 modules = ["highlight", "convert_svg_pdf"]
 fig_extension = "pdf"
 
-[target.vars]
-documentclass = "jss"
+[vars]
+documentclass = "jss"   # {{ vars.jss.documentclass }}
 
 [assets]
 static = ["jss.cls", "jss.bst"]
@@ -525,11 +535,11 @@ version = "1.0.0"
 inherits = "typst"
 
 [target]
-compile = "typst compile {input}"
 extension = "pdf"
+post = ["typst compile {input}"]
 ```
 
-No partials, no assets, no modules. Just inherits everything from `typst` and adds a compile command. A user who prefers LaTeX-based PDF would write their own extension with `inherits = "latex"` and `compile = "tectonic {input}"` instead.
+No partials, no assets, no modules. Just inherits everything from `typst` and adds a post-processing step. A user who prefers LaTeX-based PDF would write their own extension with `inherits = "latex"` and `post = ["tectonic {input}"]` instead.
 
 ### Example 5: Structural module (no target)
 
@@ -562,7 +572,7 @@ contexts = ["div"]
 
 [modules.match]
 classes = ["lightbox"]
-formats = ["html"]
+writers = ["html"]
 ```
 
 Everything is declared in the manifest. The template at `partials/html/lightbox.html` is resolved by class name through the standard partial chain. Activated with `calepin.extensions = ["lightbox"]`; the module runs whenever a matching div is encountered.
@@ -584,11 +594,11 @@ The word "plugin" is retired. What was previously called a plugin is now a modul
 
 ### What changes
 
-1. **`config/document.toml` target entries** become `extension.toml` manifests for each built-in format. The TOML structure is nearly identical; `[targets.html]` becomes `[target]` inside `html/extension.toml`.
+1. **`config/document.toml` target entries** become `extension.toml` manifests for each built-in target. The TOML structure is nearly identical; `[targets.html]` becomes `[target]` inside `html/extension.toml`.
 
 2. **`config/modules.toml` entries** move into the appropriate extension's `[[modules]]` declarations. Built-in Rust implementations remain in code, but their declarations live in the extension manifest instead of a separate file.
 
-3. **`partials/{format}/` directories** move under each extension: `html/partials/html/`, `latex/partials/latex/`, etc. The embedding strategy (`include_dir!`) stays the same but scoped per extension.
+3. **`partials/{writer}/` directories** move under each extension: `html/partials/html/`, `latex/partials/latex/`, etc. The embedding strategy (`include_dir!`) stays the same but scoped per extension.
 
 4. **`themes.rs` and `themes/` directory** are replaced by the extension system. The current `Theme` struct maps directly to an extension with only `partials/` and no target overrides. The `minimal` theme becomes a `minimal` extension that inherits `website`.
 
@@ -600,7 +610,7 @@ The word "plugin" is retired. What was previously called a plugin is now a modul
 
 8. **Asset handling** gains explicit declaration. Instead of implicitly copying everything from `_calepin/assets/`, extensions declare which CSS/JS files they contribute. The pipeline concatenates CSS/JS from the inheritance chain and injects them into the page template.
 
-9. **`calepin new website`** becomes `calepin new website --extension default` (or just `calepin new website`, using the default extension). The scaffold copies extension files into `_calepin/extensions/` or uses the built-in extension directly.
+9. **`calepin init website`** becomes `calepin init website --extension default` (or just `calepin init website`, using the default extension). The scaffold copies extension files into `_calepin/extensions/` or uses the built-in extension directly.
 
 ### What stays the same
 
@@ -615,18 +625,18 @@ The word "plugin" is retired. What was previously called a plugin is now a modul
 ### Internal refactoring sequence
 
 1. Define `ExtensionManifest` struct (parsed from `extension.toml`). Includes `[target]`, `[assets]`, and `[[modules]]` sections. Replaces both `ThemeManifest` and `ModuleManifest`.
-2. Write `extension.toml` manifests for each built-in format (`html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`), replacing entries in `document.toml`, `collection.toml`, and `modules.toml`.
-3. Restructure embedded partials: group by extension name instead of flat `partials/{format}/`.
+2. Write `extension.toml` manifests for each built-in target (`html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`), replacing entries in `document.toml`, `collection.toml`, and `modules.toml`.
+3. Restructure embedded partials: group by extension name instead of flat `partials/{writer}/`.
 4. Update `resolve_target()` to walk the extension inheritance chain.
 5. Update module registry to load `[[modules]]` from extension manifests instead of `modules.toml` + per-module `module.toml` files.
 6. Update partial resolution to check extension directories between project overrides and built-in fallbacks.
 7. Update asset copying to read `[assets]` declarations from the extension chain.
 8. Replace `themes.rs` with the extension resolver.
-9. Add `calepin new extension` subcommand.
+9. Add `calepin init extension` subcommand.
 
 ## Design constraints
 
-- **Single inheritance only.** No diamond inheritance, no multiple parents, no layers. One chain: child -> parent -> grandparent -> ... -> built-in base format.
+- **Single inheritance only.** No diamond inheritance, no multiple parents, no layers. One chain: child -> parent -> grandparent -> ... -> built-in base target.
 - **Full module list replacement.** If an extension specifies `modules` in `[target]`, it replaces the parent's list entirely. No `modules_add`, no `modules_remove`, no ordering ambiguity.
 - **Explicit everything.** The manifest is the complete index. CSS, JS, static files, and modules must be declared in `extension.toml`. No implicit directory scanning.
 - **No config fragments.** An extension does not inject arbitrary front matter keys. It provides a target definition, partials, modules, and assets. Document-level config (title, author, bibliography, execute options) stays in the document or project config.
@@ -637,7 +647,7 @@ The word "plugin" is retired. What was previously called a plugin is now a modul
 
 The spec above describes a layered partial resolution chain: user overrides > extension > parent extension > built-in. Each level can override individual partials while inheriting the rest.
 
-But the current system does not work this way. Today, `calepin new website` copies *all* built-in partials into `_calepin/partials/`. The user gets a complete, self-contained set of templates. Resolution is then flat: either everything comes from the filesystem, or everything comes from the built-ins. There is no mixing.
+But the current system does not work this way. Today, `calepin init website` copies *all* built-in partials into `_calepin/partials/`. The user gets a complete, self-contained set of templates. Resolution is then flat: either everything comes from the filesystem, or everything comes from the built-ins. There is no mixing.
 
 This wholesale-copy approach has real advantages:
 
@@ -657,7 +667,7 @@ Possible approaches:
 
 1. **Layered resolution (as specced above).** Extensions only ship the partials they override. Missing partials fall through to the parent. Accept the resolution complexity.
 
-2. **Wholesale copy with scaffolding.** `calepin new extension --inherits html` copies all of the parent's partials into the new extension. The extension is self-contained. Updates require re-scaffolding. This is simple but heavy.
+2. **Wholesale copy with scaffolding.** `calepin init extension --inherits html` copies all of the parent's partials into the new extension. The extension is self-contained. Updates require re-scaffolding. This is simple but heavy.
 
 3. **Hybrid: layered by default, `calepin eject` to flatten.** Normal operation uses the layered chain. A `calepin eject` (or `calepin export-partials`) command copies all resolved partials into the project's `_calepin/partials/`, switching to the flat model. Users who want full control can eject; extensions stay lightweight.
 

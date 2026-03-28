@@ -20,6 +20,7 @@ comrak = "0.51"
 # Front matter (TOML)
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
+toml_edit = "0.22"
 
 # Syntax highlighting
 syntect = "5"

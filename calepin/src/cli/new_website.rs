@@ -1,4 +1,4 @@
-//! `calepin new website` -- scaffold a website project.
+//! `calepin init website` -- scaffold a website project.
 
 use std::path::Path;
 

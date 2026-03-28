@@ -165,17 +165,20 @@ fn resolve_navbar_includes(
         items.iter().map(|item| {
             let includes = item.resolved_include();
             if includes.is_empty() {
+                let mut resolved = item.clone();
                 // Resolve .qmd hrefs to output URLs
                 if let Some(ref href) = item.href {
                     if href.ends_with(".qmd") {
                         if let Some(info) = document_map.get(href.as_str()) {
-                            let mut resolved = item.clone();
                             resolved.href = Some(info.url.clone());
-                            return resolved;
                         }
                     }
                 }
-                return item.clone();
+                // Recurse into children
+                if !resolved.children.is_empty() {
+                    resolved.children = resolve_items(&resolved.children, document_map, base_dir);
+                }
+                return resolved;
             }
             let nodes = expand_includes(&includes, &item.exclude, base_dir);
             let children = nodes_to_children(&nodes, document_map);

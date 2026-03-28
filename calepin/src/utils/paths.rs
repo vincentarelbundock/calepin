@@ -105,7 +105,7 @@ impl ProjectKind {
                 });
             }
             bail!(
-                "No calepin project found at {}. Run `calepin new` first or specify a .qmd file.",
+                "No calepin project found at {}. Run `calepin init` first or specify a .qmd file.",
                 path.display()
             );
         }

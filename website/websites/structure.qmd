@@ -7,7 +7,7 @@ title = "Structure"
 To scaffold a new website, run:
 
 ```
-calepin new website my_website
+calepin init website my_website
 ```
 
 This creates a `my_website/` directory with a starter `_calepin/config.toml`, an `index.qmd`, and a few example pages. You can then preview it immediately:

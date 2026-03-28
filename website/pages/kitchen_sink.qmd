@@ -1,0 +1,465 @@
+---
+title = "Kitchen Sink"
+subtitle = "Every Feature in One File"
+author = "Test Author"
+date = "2026-03-25"
+abstract = "This document exercises every supported feature of Calepin in a single file."
+keywords = ["test", "features"]
+bibliography = "_calepin/assets/library.bib"
+number_sections = true
+sample_size = 50
+features = ["R code chunks", "Python code chunks", "Cross-references"]
+show_extra = true
+---
+
+# Markdown basics {#sec-basics}
+
+This section tests standard CommonMark and GFM features.
+
+## Inline formatting
+
+*Italic*, **bold**, ***bold italic***, ~~strikethrough~~, and `inline code`.
+
+## Lists
+
+Ordered:
+
+1. First item
+2. Second item
+3. Third item
+
+Unordered:
+
+- Alpha
+- Beta
+- Gamma
+
+## Blockquote
+
+> This is a blockquote with **bold** and *italic* text.
+
+## Links and images
+
+A [link to nowhere](https://example.com "Example") and a reference-style [link][ref1].
+
+[ref1]: https://example.com
+
+![Placeholder image](https://placehold.co/200x100)
+
+## Footnotes
+
+Here is a sentence with a footnote[^fn1].
+
+[^fn1]: This is the footnote content.
+
+## Horizontal rule
+
+---
+
+## Table {#sec-tables}
+
+| Name  | Score | Grade |
+|-------|------:|:-----:|
+| Alice |    95 | A     |
+| Bob   |    87 | B     |
+| Carol |    92 | A     |
+
+
+# Code chunks
+
+## R chunks
+
+```{r}
+x <- 1:10
+mean(x)
+```
+
+### Echo fenced
+
+```{r}
+#| echo: fenced
+summary(mtcars$mpg)
+```
+
+### Figure from R {#sec-rfig}
+
+```{r, fig-scatter}
+#| fig-cap: "Scatter plot of x vs x squared"
+#| fig-asp: 0.5
+#| out-width: "80%"
+plot(1:10, (1:10)^2, pch = 19, col = "steelblue",
+     xlab = "x", ylab = "x squared")
+```
+
+See @fig-scatter for the scatter plot.
+
+### Echo false
+
+```{r}
+#| echo: false
+invisible("this code is hidden")
+```
+
+### Eval false
+
+```{r}
+#| eval: false
+stop("this would error if evaluated")
+```
+
+### Include false (silent execution)
+
+```{r}
+#| include: false
+secret_value <- 42
+```
+
+### Results asis
+
+```{r}
+#| results: asis
+cat("**This is bold from asis output.**\n")
+```
+
+### Warning and message control
+
+```{r}
+#| warning: false
+#| message: false
+warning("suppressed warning")
+message("suppressed message")
+cat("Only this output appears.\n")
+```
+
+## Python chunks
+
+```{python}
+import math
+print(f"Pi is approximately {math.pi:.4f}")
+```
+
+```{python}
+squares = [x**2 for x in range(1, 6)]
+print(squares)
+```
+
+## Shell chunks
+
+```{sh}
+echo "Hello from shell"
+```
+
+## Inline code
+
+The mean of 1 to 10 is `{r} mean(1:10)`. Pi is `{python} f"{__import__('math').pi:.2f}"`.
+The secret value is `{r} secret_value`.
+
+
+# Math {#sec-math}
+
+## Inline math
+
+The Pythagorean theorem states $a^2 + b^2 = c^2$.
+
+A literal dollar sign costs \$5.
+
+## Display math
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$
+
+## Labeled equation
+
+$$
+E = mc^2
+$$ {#eq-einstein}
+
+## Multi-line equation
+
+$$
+\begin{aligned}
+(a + b)^2 &= a^2 + 2ab + b^2 \\
+(a - b)^2 &= a^2 - 2ab + b^2
+\end{aligned}
+$$ {#eq-binomial}
+
+See @eq-einstein and @eq-binomial.
+
+
+# Cross-references {#sec-crossref}
+
+We can reference sections (@sec-basics, @sec-math), figures (@fig-scatter), tables (@tbl-planets), equations (@eq-einstein), theorems (@thm-fermat), definitions (@def-group), callouts (@nte-important), and code listings (@lst-example).
+
+Bracketed form: [@fig-scatter]. Suppress type: [-@eq-einstein]. Grouped: [@eq-einstein; @eq-binomial].
+
+
+# Citations
+
+Narrative citation: @arel2026quantitative. Parenthetical: [@arel2026quantitative]. Year only: [-@arel2026quantitative].
+
+
+# Callouts
+
+::: {.callout-note #nte-important}
+## A note
+This is a **note** callout with a custom title and an ID for cross-referencing.
+:::
+
+::: {.callout-tip}
+A tip callout with the default title.
+:::
+
+::: {.callout-warning}
+## Watch out
+A warning callout.
+:::
+
+::: {.callout-important}
+An important callout with the default title.
+:::
+
+::: {.callout-caution collapse="true"}
+## Collapsible caution
+This caution callout starts collapsed.
+:::
+
+
+# Theorems {#sec-theorems}
+
+::: {.theorem #thm-fermat}
+## Fermat's Last Theorem
+For $n > 2$, there are no positive integers $a$, $b$, $c$ such that $a^n + b^n = c^n$.
+:::
+
+::: {.proof}
+The proof was completed by Andrew Wiles in 1995 and is too long to include here.
+:::
+
+::: {.definition #def-group}
+## Group
+A group is a set $G$ with a binary operation satisfying closure, associativity, identity, and invertibility.
+:::
+
+::: {.lemma #lem-helper}
+Every finite group has an element of order dividing the group order.
+:::
+
+::: {.corollary #cor-consequence}
+Every group of prime order is cyclic.
+:::
+
+::: {.example #exm-integers}
+The integers under addition form a group.
+:::
+
+::: {.remark #rem-note}
+Groups are fundamental to abstract algebra.
+:::
+
+By @thm-fermat and @def-group, we see the connection. Also see @lem-helper, @cor-consequence, @exm-integers, and @rem-note.
+
+
+# Tabsets
+
+::: {.panel-tabset}
+
+## Tab A
+
+Content of the first tab.
+
+## Tab B
+
+Content of the second tab with some math: $e^{i\pi} + 1 = 0$.
+
+## Tab C
+
+```{r}
+cat("Code in a tab\n")
+```
+
+:::
+
+
+# Layouts
+
+## Two-column layout
+
+::: {layout-ncol=2}
+
+Left column content. This paragraph appears on the left side of a two-column layout.
+
+Right column content. This paragraph appears on the right side.
+
+:::
+
+## Custom grid layout
+
+::: {layout="[[1, 1, 1]]"}
+
+![A](https://placehold.co/150x100)
+
+![B](https://placehold.co/150x100)
+
+![C](https://placehold.co/150x100)
+
+:::
+
+
+# Figure divs
+
+::: {#fig-div-example}
+
+![](https://placehold.co/300x200)
+
+A figure div with a caption.
+:::
+
+See @fig-div-example.
+
+
+# Table divs
+
+::: {#tbl-planets}
+| Planet  | Moons |
+|---------|------:|
+| Earth   |     1 |
+| Mars    |     2 |
+| Jupiter |    95 |
+
+Number of known moons for selected planets.
+:::
+
+See @tbl-planets.
+
+
+# Code listings
+
+```{r, lst-example}
+#| lst-cap: "A simple R function"
+square <- function(x) x^2
+square(7)
+```
+
+See @lst-example.
+
+
+# Content visibility
+
+::: {.content-visible when-format="html"}
+This paragraph is only visible in **HTML** output.
+:::
+
+::: {.content-visible when-format="latex"}
+This paragraph is only visible in **LaTeX** output.
+:::
+
+::: {.content-visible when-format="typst"}
+This paragraph is only visible in **Typst** output.
+:::
+
+::: {.content-hidden when-format="html"}
+This paragraph is hidden in HTML output but visible elsewhere.
+:::
+
+::: {.content-visible when-meta="show_extra"}
+This paragraph is visible because `show_extra` is true.
+:::
+
+::: {.content-hidden when-meta="show_extra"}
+This paragraph is hidden because `show_extra` is true.
+:::
+
+
+# Hidden div
+
+::: {.hidden}
+```{r}
+hidden_result <- "computed but not shown"
+```
+:::
+
+The hidden div executed: `{r} hidden_result`.
+
+
+# Raw blocks
+
+```{=html}
+<div style="color: green; font-weight: bold;">This is raw HTML.</div>
+```
+
+```{=latex}
+\textbf{This is raw \LaTeX{}.}
+```
+
+```{=typst}
+#strong[This is raw Typst.]
+```
+
+```{=markdown}
+**This is raw Markdown.**
+```
+
+
+# Jinja features
+
+## Context variables
+
+The document title is: {{ meta.title }}.
+
+The sample size is: {{ var.sample_size }}.
+
+The current format is: {{ engine }}.
+
+## Conditionals
+
+{% if engine == "html" %}
+Rendering to HTML.
+{% else %}
+Rendering to {{ engine }}.
+{% endif %}
+
+## Loops
+
+Features of this document:
+
+{% for item in var.features %}
+- {{ item }}
+{% endfor %}
+
+## Built-in spans
+
+[]{.lorem sentences=2}
+
+[]{.pagebreak}
+
+After the page break.
+
+
+# Syntax highlighting
+
+Non-executable code blocks with syntax highlighting:
+
+```javascript
+function greet(name) {
+  return `Hello, ${name}!`;
+}
+```
+
+```python
+def factorial(n: int) -> int:
+    return 1 if n <= 1 else n * factorial(n - 1)
+```
+
+
+# Diagrams
+
+```{mermaid}
+graph LR
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action]
+    B -->|No| D[End]
+```
+
+
+# References

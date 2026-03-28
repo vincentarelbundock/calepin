@@ -34,7 +34,7 @@ use cli::{Cli, Command};
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "flush", "new", "man", "extra"];
+    let known = ["render", "preview", "flush", "init", "man", "extra"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -81,12 +81,15 @@ fn main() -> Result<()> {
             };
             cli::flush::handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
         }
-        Command::New { action } => match action {
-            cli::NewAction::Notebook { path, theme } => cli::new_notebook::handle_new_notebook(&path, theme.as_deref()),
-            cli::NewAction::Website { dir, theme } => cli::new_website::handle_new_website(&dir, &theme),
-            cli::NewAction::Book { dir, theme } => cli::new_book::handle_new_book(&dir, &theme),
-            cli::NewAction::Partials => cli::new_partials::handle_new_partials(),
-            cli::NewAction::Gibberish { files, paragraphs, dir, complexity } => {
+        Command::Init { action } => match action {
+            cli::InitAction::Notebook { path, theme } => cli::new_notebook::handle_new_notebook(&path, theme.as_deref()),
+            cli::InitAction::Website { dir, theme } => cli::new_website::handle_new_website(&dir, &theme),
+            cli::InitAction::Book { dir, theme } => cli::new_book::handle_new_book(&dir, &theme),
+            cli::InitAction::Sidecar { path, force, partials, theme, dry_run, no_backup } => {
+                cli::init_sidecar::handle_init_sidecar(&path, force, partials, theme.as_deref(), dry_run, no_backup)
+            }
+            cli::InitAction::Partials => cli::new_partials::handle_new_partials(),
+            cli::InitAction::Gibberish { files, paragraphs, dir, complexity } => {
                 cli::new_gibberish::handle_new_gibberish(&dir, files, paragraphs, complexity)
             }
         },

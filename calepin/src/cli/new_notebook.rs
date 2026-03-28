@@ -1,4 +1,4 @@
-//! `calepin new notebook` -- scaffold a .qmd file with its sidecar directory.
+//! `calepin init notebook` -- scaffold a .qmd file with its sidecar directory.
 
 use std::path::Path;
 

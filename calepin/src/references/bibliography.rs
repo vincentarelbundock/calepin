@@ -101,7 +101,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
     }
 
     let style = load_csl_style(metadata.csl.as_deref(), metadata)?;
-    let locales: Vec<citationberg::Locale> = Vec::new();
+    let locales = hayagriva::archive::locales();
 
     // Single driver call with all citations
     let mut driver = BibliographyDriver::new();

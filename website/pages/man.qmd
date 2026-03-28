@@ -13,7 +13,7 @@ Rscript -e 'install.packages("countrycode", repos = "https://cloud.r-project.org
 Second, create a website scaffold using *Calepin*:
 
 ```sh
-calepin new website countrycode_docs
+calepin init website countrycode_docs
 ```
 
 Third, extract the documentation from the package:

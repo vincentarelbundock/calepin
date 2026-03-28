@@ -10,6 +10,11 @@ The tutorial (`website/basics.qmd`) must be valid Quarto syntax so it can be ben
 
 When referring to the software by name in documentation or notebooks, always write *Calepin* (italic, capital C).
 
+## Writing style
+
+* Never use em or en dashes in documentation or websites.
+* Never use **bold** words in documentation or websites unless it was there in the original source.
+
 ## Workflow
 
 When you are done with changes and believe the feature works, run `make install` to install the updated binary.
@@ -205,7 +210,7 @@ User overrides: `_calepin/partials/{engine}/{name}.{ext}`
 
 ### `scaffold/` -- Project scaffolding and shared assets
 
-- `website/`, `book/`, `notebook/` -- Starter project templates for `calepin new`
+- `website/`, `book/`, `notebook/` -- Starter project templates for `calepin init`
 - `assets/` -- Shared website assets (CSS, JS, social icons) copied to output at build time
 
 ### Other directories

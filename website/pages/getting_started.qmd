@@ -102,14 +102,14 @@ Scaffold new projects or generate shell completions.
 
 ```bash
 # Scaffold a new project
-calepin new notebook
-calepin new website
-calepin new book
+calepin init notebook
+calepin init website
+calepin init book
 
 # Generate shell completions
-calepin new completions bash
-calepin new completions zsh
-calepin new completions fish
+calepin extra completions bash
+calepin extra completions zsh
+calepin extra completions fish
 ```
 
 A scaffolded website includes a `_calepin/config.toml` with navbar, sidebar, and post-processing configuration, plus example pages in several directories.

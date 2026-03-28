@@ -1,4 +1,4 @@
-//! `calepin new book` -- scaffold a book project.
+//! `calepin init book` -- scaffold a book project.
 
 use std::path::Path;
 

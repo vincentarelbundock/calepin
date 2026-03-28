@@ -61,12 +61,56 @@ pub fn split_frontmatter(text: &str) -> Result<(Metadata, String)> {
         return Ok((Metadata::default(), body));
     }
 
-    // Parse as TOML; silently ignore non-TOML front matter (e.g., YAML)
+    // Parse as TOML; fall back to simple YAML key: value parsing for basic fields
     let meta = match crate::value::parse_frontmatter(&raw) {
         Ok(table) => parse_metadata(&table).unwrap_or_default(),
-        Err(_) => Metadata::default(),
+        Err(_) => parse_yaml_simple(&raw),
     };
     Ok((meta, body))
+}
+
+/// Parse simple YAML-style `key: value` lines as a fallback when TOML parsing fails.
+/// Only recognizes: title, author, date, bibliography. Warns on unknown fields.
+fn parse_yaml_simple(raw: &str) -> Metadata {
+    const ALLOWED: &[&str] = &["title", "author", "date", "bibliography"];
+    let mut meta = Metadata::default();
+
+    for line in raw.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        // Match `key: value` pattern
+        let Some((key, val)) = trimmed.split_once(':') else {
+            continue;
+        };
+        let key = key.trim();
+        let val = val.trim();
+        // Strip surrounding quotes (single or double)
+        let val = val.strip_prefix('"').and_then(|v| v.strip_suffix('"'))
+            .or_else(|| val.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
+            .unwrap_or(val);
+
+        if !ALLOWED.contains(&key) {
+            cwarn!("ignoring unsupported front matter field: {}", key);
+            continue;
+        }
+
+        match key {
+            "title" => meta.title = Some(val.to_string()),
+            "author" => {
+                let name = parse_author_name_str(val);
+                meta.authors = vec![Author { name, ..Default::default() }];
+            }
+            "date" => meta.date = Some(val.to_string()),
+            "bibliography" => {
+                meta.bibliography = vec![val.to_string()];
+            }
+            _ => {}
+        }
+    }
+
+    meta
 }
 
 pub fn parse_metadata(table: &Table) -> Result<Metadata> {
@@ -580,12 +624,29 @@ mod tests {
     }
 
     #[test]
-    fn test_split_frontmatter_yaml_ignored() {
+    fn test_split_frontmatter_yaml_fallback() {
         let text = "---\ntitle: Hello\nauthor: World\n---\n\n# Body";
         let (meta, body) = split_frontmatter(text).unwrap();
-        // YAML is not valid TOML, so front matter is silently ignored
-        assert!(meta.title.is_none());
+        assert_eq!(meta.title.as_deref(), Some("Hello"));
+        assert_eq!(meta.author_names(), vec!["World"]);
         assert!(body.starts_with("\n# Body"));
+    }
+
+    #[test]
+    fn test_split_frontmatter_yaml_quoted() {
+        let text = "---\ntitle: \"Hello World\"\nauthor: 'Jane Doe'\n---\nBody";
+        let (meta, _body) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.title.as_deref(), Some("Hello World"));
+        assert_eq!(meta.author_names(), vec!["Jane Doe"]);
+    }
+
+    #[test]
+    fn test_split_frontmatter_yaml_bibliography() {
+        let text = "---\ntitle: Test\nbibliography: refs.bib\ndate: 2025-01-01\n---\nBody";
+        let (meta, _body) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.title.as_deref(), Some("Test"));
+        assert_eq!(meta.bibliography, vec!["refs.bib"]);
+        assert_eq!(meta.date.as_deref(), Some("2025-01-01"));
     }
 
     #[test]

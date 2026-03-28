@@ -47,9 +47,9 @@ Website features:
 *Calepin* can generate shell completions for tab-completion of commands and options:
 
 ```bash
-calepin new completions bash > ~/.bash_completion.d/calepin
-calepin new completions zsh > ~/.zfunc/_calepin
-calepin new completions fish > ~/.config/fish/completions/calepin.fish
+calepin extra completions bash > ~/.bash_completion.d/calepin
+calepin extra completions zsh > ~/.zfunc/_calepin
+calepin extra completions fish > ~/.config/fish/completions/calepin.fish
 ```
 
 Restart your shell or source the file to activate completions.

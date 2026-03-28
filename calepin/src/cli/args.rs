@@ -62,10 +62,10 @@ pub enum Command {
         all: bool,
     },
 
-    /// Generate scaffolding files
-    New {
+    /// Initialize projects, notebooks, and sidecars
+    Init {
         #[command(subcommand)]
-        action: NewAction,
+        action: InitAction,
     },
 
     /// Extract package documentation as .qmd files
@@ -156,7 +156,7 @@ pub struct PreviewArgs {
 
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
-pub enum NewAction {
+pub enum InitAction {
     /// Scaffold a .qmd notebook with its sidecar directory
     Notebook {
         /// Path for the new .qmd file
@@ -188,6 +188,32 @@ pub enum NewAction {
         /// Theme to apply (built-in name or path to a theme directory)
         #[arg(long, default_value = "default")]
         theme: String,
+    },
+
+    /// Extract a sidecar directory from an existing .qmd document
+    Sidecar {
+        /// Path to the existing .qmd file
+        path: std::path::PathBuf,
+
+        /// Overwrite an existing sidecar directory
+        #[arg(long)]
+        force: bool,
+
+        /// Also scaffold built-in partials into the sidecar
+        #[arg(long)]
+        partials: bool,
+
+        /// Theme to apply to the new sidecar
+        #[arg(long)]
+        theme: Option<String>,
+
+        /// Print what would happen without writing anything
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Skip creating the .qmd.bak backup file
+        #[arg(long)]
+        no_backup: bool,
     },
 
     /// Overwrite local partials with the latest built-in templates

@@ -1,4 +1,4 @@
-//! `calepin new partials`: overwrite local partials with built-in templates.
+//! `calepin init partials`: overwrite local partials with built-in templates.
 
 use std::path::PathBuf;
 

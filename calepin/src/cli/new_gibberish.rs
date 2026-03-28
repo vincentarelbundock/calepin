@@ -1,4 +1,4 @@
-//! `calepin new gibberish` -- generate test content (gibberish .qmd files).
+//! `calepin init gibberish` -- generate test content (gibberish .qmd files).
 
 use anyhow::{Context, Result};
 use crate::utils::lipsum;
