@@ -62,6 +62,11 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
         }
     }
 
+    // Second pass: remove any empty directories left behind under _calepin/
+    if calepin_dir.is_dir() {
+        remove_empty_dirs(&calepin_dir);
+    }
+
     eprintln!("Done.");
     Ok(())
 }
@@ -133,6 +138,30 @@ fn has_files(dir: &Path) -> bool {
         if p.is_dir() && has_files(&p) {
             return true;
         }
+    }
+    false
+}
+
+/// Recursively remove empty directories (bottom-up). Returns true if the directory was removed.
+fn remove_empty_dirs(dir: &Path) -> bool {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return false,
+    };
+    let mut has_remaining = false;
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.is_dir() {
+            if !remove_empty_dirs(&p) {
+                has_remaining = true;
+            }
+        } else {
+            has_remaining = true;
+        }
+    }
+    if !has_remaining {
+        let _ = std::fs::remove_dir(dir);
+        return true;
     }
     false
 }
