@@ -6,8 +6,9 @@ Cargo.lock
 quarto_website/
 *_files/
 *_cache/
+**/*_calepin/cache/
+**/*_calepin/files/
 cache/
-_calepin/
 _astro/
 node_modules/
 _site/
