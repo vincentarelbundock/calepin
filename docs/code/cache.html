@@ -37,10 +37,7 @@
   <li>
     <a href="/calepin/index.html">
       
-        
-      <img class="logo-light" src="/calepin/assets/Calepin.svg" alt="Home" width="80px" height="28px">
-      <img class="logo-dark" src="/calepin/assets/Calepin_dark.svg" alt="Home" width="80px" height="28px">
-        
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg); width: 80px; height: 28px;"></span>
       
     </a>
   </li>
@@ -260,10 +257,7 @@
   <div class="sidebar-header">
     <a href="/calepin/index.html">
       
-        
-      <img class="logo-light" src="/calepin/assets/Calepin.svg" alt="Calepin">
-      <img class="logo-dark" src="/calepin/assets/Calepin_dark.svg" alt="Calepin">
-        
+      <span class="sidebar-logo nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg); width: 80px; height: 28px;"></span>
       
     </a>
   </div>
@@ -1811,7 +1805,7 @@ x</span></code></pre>
     key = sha256(source, exec_options, upstream_digest)
     upstream_digest = sha256(upstream_digest, key)</span></code></pre>
 
-<p>This means any upstream change, even in a non-cached chunk, cascades invalidation to all downstream cached chunks. Inline code expressions (<code>__CALEPIN_1d13_5___ERROR:object 'expr' not found</code>) also advance the digest, since they can mutate session state.</p>
+<p>This means any upstream change, even in a non-cached chunk, cascades invalidation to all downstream cached chunks. Inline code expressions (<code>__CALEPIN_92c7_51___ERROR:object 'expr' not found</code>) also advance the digest, since they can mutate session state.</p>
 <p>Chunks with <code>eval: false</code> still contribute to the digest chain (based on their source and options) so that toggling <code>eval</code> correctly invalidates downstream caches.</p>
 <h3 id="storage-layout">Storage layout</h3>
 <p>Cache files live in <code>&lt;stem&gt;_cache/&lt;label&gt;/</code>:</p>
@@ -1914,10 +1908,7 @@ predict(model, newdata = data.frame(wt = 3))
   <footer class="site-footer">
   <p>Built with <a href="https://vincentarelbundock.github.io/calepin">
     
-      
-    <img class="logo-light footer-logo" src="/calepin/assets/Calepin.svg" alt="Calepin">
-    <img class="logo-dark footer-logo" src="/calepin/assets/Calepin_dark.svg" alt="Calepin">
-      
+    <span class="footer-logo nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg);"></span>
     
   </a></p>
 </footer>
