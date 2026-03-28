@@ -189,6 +189,12 @@ pub(super) fn apply_collection_partials(
     }
 
     if format == "html" {
+        // Create .nojekyll so GitHub Pages serves _-prefixed directories
+        let nojekyll = output.join(".nojekyll");
+        if !nojekyll.exists() {
+            fs::write(&nojekyll, "")?;
+        }
+
         // Copy .qmd source files to _calepin_source/ for the source viewer
         for page in pages {
             let source_dest = output.join("_calepin_source").join(&page.source);
