@@ -1,0 +1,1 @@
+#rect(width: {{ width }}pt, height: {{ height }}pt, fill: luma(200))[#align(center + horizon)[{{ text }}]]

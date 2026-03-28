@@ -1,0 +1,1 @@
+[{{ text }} ({{ width }}x{{ height }})]

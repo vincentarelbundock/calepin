@@ -1,0 +1,8 @@
+{%- if filename %}
+<div class="code-with-filename">
+<div class="code-filename">{{filename}}</div>
+{%- endif %}
+<pre><code class="language-{{lang}} code">{{highlighted}}</code></pre>
+{%- if filename %}
+</div>
+{%- endif %}

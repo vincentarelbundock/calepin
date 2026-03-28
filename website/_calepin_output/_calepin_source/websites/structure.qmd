@@ -1,0 +1,61 @@
+---
+title = "Structure"
+---
+
+# Creating a website
+
+To scaffold a new website, run:
+
+```
+calepin new website my_website
+```
+
+This creates a `my_website/` directory with a starter `_calepin/config.toml`, an `index.qmd`, and a few example pages. You can then preview it immediately:
+
+```
+calepin preview my_website
+```
+
+# Directory layout
+
+A *Calepin* website is a directory containing a `_calepin/config.toml` manifest and `.qmd` source files. Here is the structure of the *Calepin* documentation website itself:
+
+```{sh}
+tree .. -I '_site|_calepin_output|_calepin' --dirsfirst -L 2
+```
+
+# Key components
+
+| Path | Purpose |
+|------|---------|
+| `_calepin/config.toml` | Website manifest: metadata, navbar, sidebar, documents, brand, format options |
+| `_calepin/` | Project-level overrides for templates, elements, and assets |
+| `_calepin_output/` | Default output directory (generated, should be in `.gitignore`) |
+| `_calepin_files/` | Generated figures and supporting files (per-document) |
+| `_calepin_cache/` | Execution cache (per-document) |
+
+# Manifest
+
+The `_calepin/config.toml` file configures the website. See [Templates](../templates/sites.qmd) for the full reference. The main sections are:
+
+| Section | Controls |
+|---------|----------|
+| Top-level | Title, target |
+| `[[navbar.*]]` | Logo, nav links, widgets |
+| `[[contents]]` | Sidebar sections and document ordering |
+| `[[post]]` | Post-processing commands |
+
+# Documents
+
+The `[[contents]]` array defines the sidebar navigation. Documents can be flat entries, labeled sections, or directory includes:
+
+```toml
+[[contents]]
+include = ["pages/installation.qmd", "pages/getting_started.qmd"]
+
+[[contents]]
+text = "Guide"
+include = "guide"
+```
+
+Document titles are extracted from TOML front matter. Use `text` to override the navigation label. Pages marked `standalone = true` are rendered but excluded from the sidebar.

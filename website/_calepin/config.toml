@@ -1,0 +1,81 @@
+# -- Site identity --
+title = "Calepin"
+target = "website"
+
+# -- Navbar --
+[[navbar.left]]
+image = "assets/Calepin.svg"
+image_dark = "assets/Calepin_dark.svg"
+href = "index.qmd"
+width = "80px"
+height = "28px"
+
+[[navbar.middle]]
+text = "Examples"
+[[navbar.middle.children]]
+text = "arelbundock.com"
+href = "https://arelbundock.com"
+[[navbar.middle.children]]
+text = "WDI"
+href = "https://vincentarelbundock.github.io/WDI"
+
+[[navbar.right]]
+icon = "assets/fontawesome/brands/github.svg"
+href = "https://github.com/vincentarelbundock/calepin"
+width = "20px"
+height = "20px"
+
+[[navbar.right]]
+widget = "source"
+
+[[navbar.right]]
+widget = "search"
+
+[[navbar.right]]
+widget = "dark"
+
+# -- Contents (sidebar navigation) --
+[[contents]]
+include = ["pages/inst*tion.qmd", "pages/*started.qmd", "pages/quarto.qmd"]
+
+[[contents]]
+text = "Authoring"
+include = "authoring"
+
+[[contents]]
+text = "Code"
+include = [
+  "code/code_execution.qmd",
+  "code/chunks.qmd",
+  "code/inline.qmd",
+  "code/r.qmd",
+  "code/python.qmd",
+  "code/sh.qmd",
+  "code/diagrams.qmd",
+  "code/cache.qmd",
+  "code/builtins.qmd",
+]
+
+[[contents]]
+text = "Templates"
+include = [
+  "templates/templates.qmd",
+  "templates/snippets.qmd",
+  "templates/reference.qmd",
+]
+
+[[contents]]
+text = "Configuration"
+include = "configuration"
+
+[[contents]]
+text = "Websites"
+include = ["websites/structure.qmd", "websites/navigation.qmd", "websites/serve.qmd"]
+
+[[contents]]
+text = "Extensions"
+include = ["extensions/themes.qmd", "extensions/plugins.qmd"]
+
+# -- Post-processing --
+[[post]]
+command = "pagefind --site {output}"

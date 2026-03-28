@@ -1,0 +1,6 @@
+{%- set loc = cap_location | default("bottom") %}
+<figure id="{{label}}"{% if align_style %} style="{{align_style}}"{% endif %}>
+{%- if loc == "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
+{{children}}
+{%- if loc != "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
+</figure>

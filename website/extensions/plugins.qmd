@@ -1,0 +1,7 @@
+---
+title = "Plugins"
+---
+
+::: {.callout-note}
+Coming soon...
+:::

@@ -1,0 +1,16 @@
+{%- set loc = cap_location | default("bottom") -%}
+{%- if loc == "bottom" %}
+<div class="table-div" id="{{id}}">
+{{children}}
+{%- if caption %}
+<p class="table-caption">{{caption}}</p>
+{%- endif %}
+</div>
+{%- else %}
+<div class="table-div" id="{{id}}">
+{%- if caption %}
+<p class="table-caption">{{caption}}</p>
+{%- endif %}
+{{children}}
+</div>
+{%- endif %}

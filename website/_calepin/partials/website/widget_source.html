@@ -1,0 +1,24 @@
+<li>
+  <button class="navbar-btn source-toggle" id="source-toggle" aria-label="Toggle source view" aria-expanded="false" aria-controls="source-code">
+    <span style="font-family:monospace;font-weight:700;font-size:0.85rem">&lt;/&gt;</span>
+  </button>
+</li>
+<script>
+(function() {
+  var btn = document.getElementById('source-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    document.body.classList.toggle('split-active');
+    btn.classList.toggle('active');
+    var isActive = btn.classList.contains('active');
+    btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    var code = document.getElementById('source-code');
+    if (code && code.textContent === 'Loading source...') {
+      fetch('{{ document.source_url }}')
+        .then(function(r) { return r.text(); })
+        .then(function(t) { code.textContent = t; })
+        .catch(function() { code.textContent = 'Failed to load source.'; });
+    }
+  });
+})();
+</script>

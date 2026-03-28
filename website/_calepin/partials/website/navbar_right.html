@@ -1,0 +1,34 @@
+<ul class="navbar-nav right">
+  {% for item in collection.navbar.right %}
+  {% if item.widget == "search" %}
+  {% include "widget_search.html" %}
+  {% elif item.widget == "source" %}
+  {% include "widget_source.html" %}
+  {% elif item.widget == "dark" %}
+  {% include "widget_dark.html" %}
+  {% elif item.widget == "language" %}
+  {% if document.translations %}
+  {% for t in document.translations %}
+  <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
+  {% endfor %}
+  {% endif %}
+  {% else %}
+  <li>
+    <a href="{{ item.href | default(value='#') }}">
+      {% if item.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ item.icon }}); mask-image: url(/{{ item.icon }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span>{% endif %}
+      {% if item.image %}
+        {% if item.image_dark == "invert" %}
+      <img class="nav-img invert-dark" src="/{{ item.image }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+        {% elif item.image_dark %}
+      <img class="nav-img logo-light" src="/{{ item.image }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+      <img class="nav-img logo-dark" src="/{{ item.image_dark }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+        {% else %}
+      <img class="nav-img" src="/{{ item.image }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+        {% endif %}
+      {% endif %}
+      {% if item.text %}{{ item.text }}{% endif %}
+    </a>
+  </li>
+  {% endif %}
+  {% endfor %}
+</ul>

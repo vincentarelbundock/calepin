@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="{{generator}}">
+
+<title>{{plain_title}}</title>
+
+<script>
+// Apply saved theme immediately to prevent flash
+(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)})();
+</script>
+
+{% include "preamble.html" %}
+{% if keywords %}<meta name="keywords" content="{{keywords}}">{% endif %}
+
+{% if css %}<style>
+{{css}}
+</style>{% endif %}
+
+{% include "math.html" %}
+</head>
+
+<body>
+<a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
+<nav class="theme-toggle" aria-label="Theme">
+  <button id="theme-btn" aria-label="Toggle dark mode" aria-pressed="false"></button>
+</nav>
+<div class="page-layout">
+<main id="main-content" class="container">
+<header class="frontmatter">
+{% include "title.html" %}
+{% include "subtitle.html" %}
+{% include "authors.html" %}
+{% include "date.html" %}
+</header>
+
+{% include "abstract.html" %}
+{% include "keywords.html" %}
+
+<article>
+{{body}}
+</article>
+
+{{appendix}}
+</main>
+{% if toc %}<aside class="toc-sidebar" role="complementary" aria-label="Table of contents">{{toc}}</aside>{% endif %}
+</div>
+
+{{js}}
+<script>
+// Tabset switching
+document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var tabset = btn.closest('.panel-tabset');
+    var tabId = btn.getAttribute('data-tab');
+    var group = tabset.getAttribute('data-group');
+    // Get all tabsets to update (same group, or just this one)
+    var targets = group
+      ? document.querySelectorAll('.panel-tabset[data-group="' + group + '"]')
+      : [tabset];
+    targets.forEach(function(ts) {
+      ts.querySelectorAll('.nav-link').forEach(function(b) {
+        var isActive = b.getAttribute('data-tab') === tabId;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+      ts.querySelectorAll('.tab-pane').forEach(function(p) {
+        var isActive = p.getAttribute('data-tab') === tabId;
+        p.classList.toggle('active', isActive);
+        p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+      });
+    });
+  });
+});
+
+// Theme toggle
+(function() {
+  var btn = document.getElementById('theme-btn');
+  function current() {
+    return document.documentElement.getAttribute('data-theme') ||
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  }
+  function update(t) {
+    btn.textContent = t === 'dark' ? '\u2600' : '\u263e';
+    btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+  }
+  update(current());
+  btn.addEventListener('click', function() {
+    var t = current() === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('theme', t);
+    update(t);
+  });
+})();
+
+// TOC active section tracking
+(function() {
+  var links = document.querySelectorAll('.toc a');
+  if (!links.length) return;
+  var headings = [];
+  links.forEach(function(a) {
+    var id = a.getAttribute('href');
+    if (id) { var el = document.querySelector(id); if (el) headings.push({ el: el, link: a }); }
+  });
+  if (!headings.length) return;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(a) { a.classList.remove('active'); });
+        var match = headings.find(function(h) { return h.el === entry.target; });
+        if (match) {
+          match.link.classList.add('active');
+          match.link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    });
+  }, { rootMargin: '0px 0px -80% 0px' });
+  headings.forEach(function(h) { observer.observe(h.el); });
+})();
+
+// Footnote hover previews
+document.querySelectorAll('.footnote-ref a').forEach(function(a) {
+  var id = a.getAttribute('href');
+  if (!id) return;
+  var fn = document.querySelector(id);
+  if (!fn) return;
+  var text = fn.textContent.replace(/\s*↩\s*$/, '').trim();
+  if (!text) return;
+  var tip = document.createElement('span');
+  tip.className = 'fn-preview';
+  tip.textContent = text;
+  a.parentElement.appendChild(tip);
+});
+</script>
+</body>
+
+</html>

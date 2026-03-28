@@ -1,0 +1,1 @@
+{% if is_embed %}<iframe src="{{ url }}" width="{{ width }}" height="{{ height }}" title="{{ title }}" frameborder="0" allowfullscreen></iframe>{% else %}<video controls width="{{ width }}"><source src="{{ src }}">Your browser does not support the video tag.</video>{% endif %}
