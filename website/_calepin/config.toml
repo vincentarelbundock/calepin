@@ -76,6 +76,9 @@ include = ["websites/structure.qmd", "websites/navigation.qmd", "websites/serve.
 text = "Extensions"
 include = ["extensions/themes.qmd", "extensions/plugins.qmd"]
 
+[[contents]]
+include = ["pages/man.qmd"]
+
 # -- Post-processing --
 [[post]]
 command = "pagefind --site {output}"

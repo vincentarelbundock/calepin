@@ -1,0 +1,37 @@
+---
+title = "Software documentation"
+---
+
+*Calepin* can automatically extract documentation from `R` or `Python` code files and create a nice website to host your documentation. The steps are as follows.
+
+First, install the package you want to document:
+
+```sh
+Rscript -e 'install.packages("countrycode", repos = "https://cloud.r-project.org")'
+```
+
+Second, create a website scaffold using *Calepin*:
+
+```sh
+calepin new website countrycode_docs
+```
+
+Third, extract the documentation from the package:
+
+```sh
+calepin man r countrycode -o countrycode_docs/man
+```
+
+Fourth, add the documentation to the website structure, by editing `_calepin/config.yml`:
+
+```toml
+[[contents]]
+text = "Function reference"
+include = "man/**/*.qmd"
+```
+
+Finally, preview the website:
+
+```sh
+calepin preview countrycode_docs
+```
