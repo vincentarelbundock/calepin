@@ -7,8 +7,8 @@ url = "https://vincentarelbundock.github.io/calepin"
 [[navbar.left]]
 icon = "assets/Calepin.svg"
 href = "index.qmd"
-width = "80px"
-height = "28px"
+width = "104px"
+height = "36px"
 
 [[navbar.middle]]
 text = "Examples"

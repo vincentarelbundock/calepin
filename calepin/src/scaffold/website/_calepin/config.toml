@@ -1,0 +1,30 @@
+# -- Site identity --
+title = "My Website"
+target = "website"
+
+# -- Navbar --
+[[navbar.left]]
+icon = "assets/logo.svg"
+# image = "assets/logo.svg"
+# image_dark = "assets/logo_dark.svg"
+href = "index.qmd"
+width = "104px"
+height = "36px"
+
+[[navbar.right]]
+widget = "search"
+
+[[navbar.right]]
+widget = "dark"
+
+# -- Contents (sidebar navigation) --
+[[contents]]
+include = "pages"
+
+[[contents]]
+text = "Guides"
+include = "guides"
+
+[[contents]]
+text = "Reference"
+include = "reference"
