@@ -31,8 +31,8 @@ pre:has(> code.code) { position: relative; }
 pre:hover > .code-copy-btn { opacity: 0.6; }
 .code-copy-btn:hover { opacity: 1; color: var(--c-text); }
 .code-copy-btn.copied { opacity: 1; color: var(--c-tip, #28a745); }
-.code-copy-icon { -webkit-mask-image: url(/assets/fontawesome/regular/copy.svg); mask-image: url(/assets/fontawesome/regular/copy.svg); width: 1em; height: 1em; }
-.code-copy-icon.checked { -webkit-mask-image: url(/assets/fontawesome/regular/circle-check.svg); mask-image: url(/assets/fontawesome/regular/circle-check.svg); }
+.code-copy-icon { -webkit-mask-image: url(../fontawesome/regular/copy.svg); mask-image: url(../fontawesome/regular/copy.svg); width: 1em; height: 1em; }
+.code-copy-icon.checked { -webkit-mask-image: url(../fontawesome/regular/circle-check.svg); mask-image: url(../fontawesome/regular/circle-check.svg); }
 
 .code-with-filename { margin: 1rem 0; border: 1px solid var(--c-border); border-radius: 4px; overflow: hidden; }
 .code-with-filename .code-filename { background: var(--c-bg-secondary); padding: 0.25rem 0.75rem; font-size: 0.85rem; border-bottom: 1px solid var(--c-border); }

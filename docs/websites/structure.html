@@ -7,7 +7,7 @@
   
   
   
-  <link rel="stylesheet" href="/assets/calepin.css">
+  <link rel="stylesheet" href="/calepin/assets/calepin.css">
   
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
@@ -35,11 +35,11 @@
   
     
   <li>
-    <a href="/index.html">
+    <a href="/calepin/index.html">
       
         
-      <img class="logo-light" src="/assets/Calepin.svg" alt="Home" width="80px" height="28px">
-      <img class="logo-dark" src="/assets/Calepin_dark.svg" alt="Home" width="80px" height="28px">
+      <img class="logo-light" src="/calepin/assets/Calepin.svg" alt="Home" width="80px" height="28px">
+      <img class="logo-dark" src="/calepin/assets/Calepin_dark.svg" alt="Home" width="80px" height="28px">
         
       
     </a>
@@ -80,7 +80,7 @@
   
   <li>
     <a href="https://github.com/vincentarelbundock/calepin">
-      <span class="nav-icon" style="-webkit-mask-image: url(/assets/fontawesome/brands/github.svg); mask-image: url(/assets/fontawesome/brands/github.svg); width: 20px; height: 20px;"></span>
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/fontawesome/brands/github.svg); mask-image: url(/calepin/assets/fontawesome/brands/github.svg); width: 20px; height: 20px;"></span>
       
       
     </a>
@@ -104,7 +104,7 @@
     btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
     var code = document.getElementById('source-code');
     if (code && code.textContent === 'Loading source...') {
-      fetch('/_calepin_source/websites/structure.qmd')
+      fetch('/calepin/_calepin_source/websites/structure.qmd')
         .then(function(r) { return r.text(); })
         .then(function(t) { code.textContent = t; })
         .catch(function() { code.textContent = 'Failed to load source.'; });
@@ -141,7 +141,7 @@
   let selectedIdx = -1;
 
   // Preload pagefind immediately
-  const pagefind = await import('/pagefind/pagefind.js');
+  const pagefind = await import('/calepin/pagefind/pagefind.js');
 
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -249,7 +249,7 @@
     <span class="icon-moon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
   </button>
 </li>
-<script src="/assets/theme.js"></script>
+<script src="/calepin/assets/theme.js"></script>
   
   
 </ul>
@@ -258,11 +258,11 @@
   <div class="site-container">
     <aside id="sidebar-nav" class="sidebar-left" role="navigation" aria-label="Section navigation">
   <div class="sidebar-header">
-    <a href="/index.html">
+    <a href="/calepin/index.html">
       
         
-      <img class="logo-light" src="/assets/Calepin.svg" alt="Calepin">
-      <img class="logo-dark" src="/assets/Calepin_dark.svg" alt="Calepin">
+      <img class="logo-light" src="/calepin/assets/Calepin.svg" alt="Calepin">
+      <img class="logo-dark" src="/calepin/assets/Calepin_dark.svg" alt="Calepin">
         
       
     </a>
@@ -286,7 +286,7 @@
       
         
         <ul>
-          <li><a href="/pages/installation.html">Installation</a></li>
+          <li><a href="/calepin/pages/installation.html">Installation</a></li>
         </ul>
         
       
@@ -294,7 +294,7 @@
       
         
         <ul>
-          <li><a href="/pages/getting_started.html">Getting Started</a></li>
+          <li><a href="/calepin/pages/getting_started.html">Getting Started</a></li>
         </ul>
         
       
@@ -302,7 +302,7 @@
       
         
         <ul>
-          <li><a href="/pages/quarto.html">Calepin vs Quarto</a></li>
+          <li><a href="/calepin/pages/quarto.html">Calepin vs Quarto</a></li>
         </ul>
         
       
@@ -315,31 +315,31 @@
             
       
         
-        <li><a href="/authoring/basics.html">Basics</a></li>
+        <li><a href="/calepin/authoring/basics.html">Basics</a></li>
         
       
     
       
         
-        <li><a href="/authoring/bibliography.html">Bibliography</a></li>
+        <li><a href="/calepin/authoring/bibliography.html">Bibliography</a></li>
         
       
     
       
         
-        <li><a href="/authoring/figures.html">Figures</a></li>
+        <li><a href="/calepin/authoring/figures.html">Figures</a></li>
         
       
     
       
         
-        <li><a href="/authoring/math.html">Math</a></li>
+        <li><a href="/calepin/authoring/math.html">Math</a></li>
         
       
     
       
         
-        <li><a href="/authoring/tables.html">Tables</a></li>
+        <li><a href="/calepin/authoring/tables.html">Tables</a></li>
         
       
     
@@ -356,55 +356,55 @@
             
       
         
-        <li><a href="/code/code_execution.html">Code Execution</a></li>
+        <li><a href="/calepin/code/code_execution.html">Code Execution</a></li>
         
       
     
       
         
-        <li><a href="/code/chunks.html">Chunks</a></li>
+        <li><a href="/calepin/code/chunks.html">Chunks</a></li>
         
       
     
       
         
-        <li><a href="/code/inline.html">Inline</a></li>
+        <li><a href="/calepin/code/inline.html">Inline</a></li>
         
       
     
       
         
-        <li><a href="/code/r.html">R</a></li>
+        <li><a href="/calepin/code/r.html">R</a></li>
         
       
     
       
         
-        <li><a href="/code/python.html">Python</a></li>
+        <li><a href="/calepin/code/python.html">Python</a></li>
         
       
     
       
         
-        <li><a href="/code/sh.html">Shell</a></li>
+        <li><a href="/calepin/code/sh.html">Shell</a></li>
         
       
     
       
         
-        <li><a href="/code/diagrams.html">Diagrams</a></li>
+        <li><a href="/calepin/code/diagrams.html">Diagrams</a></li>
         
       
     
       
         
-        <li><a href="/code/cache.html">Cache</a></li>
+        <li><a href="/calepin/code/cache.html">Cache</a></li>
         
       
     
       
         
-        <li><a href="/code/builtins.html">Built-in Functions</a></li>
+        <li><a href="/calepin/code/builtins.html">Built-in Functions</a></li>
         
       
     
@@ -421,19 +421,19 @@
             
       
         
-        <li><a href="/templates/templates.html">Templates</a></li>
+        <li><a href="/calepin/templates/templates.html">Templates</a></li>
         
       
     
       
         
-        <li><a href="/templates/snippets.html">Snippets &amp; Variables</a></li>
+        <li><a href="/calepin/templates/snippets.html">Snippets &amp; Variables</a></li>
         
       
     
       
         
-        <li><a href="/templates/reference.html">Reference</a></li>
+        <li><a href="/calepin/templates/reference.html">Reference</a></li>
         
       
     
@@ -450,19 +450,19 @@
             
       
         
-        <li><a href="/configuration/paths.html">Paths</a></li>
+        <li><a href="/calepin/configuration/paths.html">Paths</a></li>
         
       
     
       
         
-        <li><a href="/configuration/structure.html">Project Structure</a></li>
+        <li><a href="/calepin/configuration/structure.html">Project Structure</a></li>
         
       
     
       
         
-        <li><a href="/configuration/toml.html">Configuration</a></li>
+        <li><a href="/calepin/configuration/toml.html">Configuration</a></li>
         
       
     
@@ -479,19 +479,19 @@
             
       
         
-        <li><a href="/websites/structure.html" class="active" aria-current="page">Structure</a></li>
+        <li><a href="/calepin/websites/structure.html" class="active" aria-current="page">Structure</a></li>
         
       
     
       
         
-        <li><a href="/websites/navigation.html">Navigation</a></li>
+        <li><a href="/calepin/websites/navigation.html">Navigation</a></li>
         
       
     
       
         
-        <li><a href="/websites/serve.html">Serve</a></li>
+        <li><a href="/calepin/websites/serve.html">Serve</a></li>
         
       
     
@@ -508,13 +508,13 @@
             
       
         
-        <li><a href="/extensions/themes.html">Themes</a></li>
+        <li><a href="/calepin/extensions/themes.html">Themes</a></li>
         
       
     
       
         
-        <li><a href="/extensions/plugins.html">Plugins</a></li>
+        <li><a href="/calepin/extensions/plugins.html">Plugins</a></li>
         
       
     
@@ -533,7 +533,7 @@
 <nav class="breadcrumbs" aria-label="Breadcrumbs">
   
   
-    <a href="/">Home</a>
+    <a href="/calepin/">Home</a>
     <span class="separator">/</span>
   
   
@@ -1739,7 +1739,6 @@ pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(>
 <pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-sh code"><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">tree</span></span><span class="meta function-call arguments shell"> ..<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> -</span>I</span> <span class="string quoted single shell"><span class="punctuation definition string begin shell">&#39;</span>_site|_calepin_output|_calepin<span class="punctuation definition string end shell">&#39;</span></span><span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>dirsfirst</span><span class="variable parameter option shell"><span class="punctuation definition parameter shell"> -</span>L</span> 2</span></span></code></pre>
 
 <pre><code class="output">> ..
-> ├── assets
 > ├── authoring
 > │   ├── basics.qmd
 > │   ├── bibliography.qmd
@@ -1778,7 +1777,7 @@ pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(>
 > ├── 404.qmd
 > └── index.qmd
 > 
-> 9 directories, 30 files</code></pre>
+> 8 directories, 30 files</code></pre>
 
 <h2 id="key-components">Key components</h2>
 <table>
@@ -1863,7 +1862,7 @@ include = &quot;guide&quot;</span></code></pre>
 
 <nav class="page-nav" aria-label="Page navigation">
   
-  <a href="/templates/reference.html" class="prev">
+  <a href="/calepin/templates/reference.html" class="prev">
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
     <span>
       <span class="label">Previous</span><br>
@@ -1872,7 +1871,7 @@ include = &quot;guide&quot;</span></code></pre>
   </a>
   
   
-  <a href="/websites/navigation.html" class="next">
+  <a href="/calepin/websites/navigation.html" class="next">
     <span>
       <span class="label">Next</span><br>
       Navigation
@@ -1905,8 +1904,8 @@ include = &quot;guide&quot;</span></code></pre>
   <p>Built with <a href="https://vincentarelbundock.github.io/calepin">
     
       
-    <img class="logo-light footer-logo" src="/assets/Calepin.svg" alt="Calepin">
-    <img class="logo-dark footer-logo" src="/assets/Calepin_dark.svg" alt="Calepin">
+    <img class="logo-light footer-logo" src="/calepin/assets/Calepin.svg" alt="Calepin">
+    <img class="logo-dark footer-logo" src="/calepin/assets/Calepin_dark.svg" alt="Calepin">
       
     
   </a></p>

@@ -25,6 +25,8 @@ pub fn build_collection(
     clean: bool,
     quiet: bool,
     cli_target: Option<&str>,
+    portable: bool,
+    serve: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -183,7 +185,8 @@ pub fn build_collection(
     if let Some(ref orchestrator_path) = orchestrator {
         orchestrator::render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
     } else {
-        templating::apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
+        let url_mode = if portable { crate::utils::url::UrlMode::Relative } else { crate::utils::url::UrlMode::ServerRelative };
+        templating::apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;
     }
 
     // 10. Copy assets/ and static directories to output

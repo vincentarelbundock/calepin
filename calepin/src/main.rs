@@ -84,6 +84,7 @@ fn main() -> Result<()> {
             cli::NewAction::Notebook { path, theme } => cli::new_notebook::handle_new_notebook(&path, theme.as_deref()),
             cli::NewAction::Website { dir, theme } => cli::new_website::handle_new_website(&dir, &theme),
             cli::NewAction::Book { dir, theme } => cli::new_book::handle_new_book(&dir, &theme),
+            cli::NewAction::Partials => cli::new_partials::handle_new_partials(),
             cli::NewAction::Completions { shell } => {
                 use clap::CommandFactory;
                 let mut cmd = <cli::Cli as CommandFactory>::command();

@@ -7,7 +7,7 @@
   
   
   
-  <link rel="stylesheet" href="/assets/calepin.css">
+  <link rel="stylesheet" href="/calepin/assets/calepin.css">
   
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
@@ -35,11 +35,11 @@
   
     
   <li>
-    <a href="/index.html">
+    <a href="/calepin/index.html">
       
         
-      <img class="logo-light" src="/assets/Calepin.svg" alt="Home" width="80px" height="28px">
-      <img class="logo-dark" src="/assets/Calepin_dark.svg" alt="Home" width="80px" height="28px">
+      <img class="logo-light" src="/calepin/assets/Calepin.svg" alt="Home" width="80px" height="28px">
+      <img class="logo-dark" src="/calepin/assets/Calepin_dark.svg" alt="Home" width="80px" height="28px">
         
       
     </a>
@@ -80,7 +80,7 @@
   
   <li>
     <a href="https://github.com/vincentarelbundock/calepin">
-      <span class="nav-icon" style="-webkit-mask-image: url(/assets/fontawesome/brands/github.svg); mask-image: url(/assets/fontawesome/brands/github.svg); width: 20px; height: 20px;"></span>
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/fontawesome/brands/github.svg); mask-image: url(/calepin/assets/fontawesome/brands/github.svg); width: 20px; height: 20px;"></span>
       
       
     </a>
@@ -104,7 +104,7 @@
     btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
     var code = document.getElementById('source-code');
     if (code && code.textContent === 'Loading source...') {
-      fetch('/_calepin_source/authoring/tables.qmd')
+      fetch('/calepin/_calepin_source/authoring/tables.qmd')
         .then(function(r) { return r.text(); })
         .then(function(t) { code.textContent = t; })
         .catch(function() { code.textContent = 'Failed to load source.'; });
@@ -141,7 +141,7 @@
   let selectedIdx = -1;
 
   // Preload pagefind immediately
-  const pagefind = await import('/pagefind/pagefind.js');
+  const pagefind = await import('/calepin/pagefind/pagefind.js');
 
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -249,7 +249,7 @@
     <span class="icon-moon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
   </button>
 </li>
-<script src="/assets/theme.js"></script>
+<script src="/calepin/assets/theme.js"></script>
   
   
 </ul>
@@ -258,11 +258,11 @@
   <div class="site-container">
     <aside id="sidebar-nav" class="sidebar-left" role="navigation" aria-label="Section navigation">
   <div class="sidebar-header">
-    <a href="/index.html">
+    <a href="/calepin/index.html">
       
         
-      <img class="logo-light" src="/assets/Calepin.svg" alt="Calepin">
-      <img class="logo-dark" src="/assets/Calepin_dark.svg" alt="Calepin">
+      <img class="logo-light" src="/calepin/assets/Calepin.svg" alt="Calepin">
+      <img class="logo-dark" src="/calepin/assets/Calepin_dark.svg" alt="Calepin">
         
       
     </a>
@@ -286,7 +286,7 @@
       
         
         <ul>
-          <li><a href="/pages/installation.html">Installation</a></li>
+          <li><a href="/calepin/pages/installation.html">Installation</a></li>
         </ul>
         
       
@@ -294,7 +294,7 @@
       
         
         <ul>
-          <li><a href="/pages/getting_started.html">Getting Started</a></li>
+          <li><a href="/calepin/pages/getting_started.html">Getting Started</a></li>
         </ul>
         
       
@@ -302,7 +302,7 @@
       
         
         <ul>
-          <li><a href="/pages/quarto.html">Calepin vs Quarto</a></li>
+          <li><a href="/calepin/pages/quarto.html">Calepin vs Quarto</a></li>
         </ul>
         
       
@@ -315,31 +315,31 @@
             
       
         
-        <li><a href="/authoring/basics.html">Basics</a></li>
+        <li><a href="/calepin/authoring/basics.html">Basics</a></li>
         
       
     
       
         
-        <li><a href="/authoring/bibliography.html">Bibliography</a></li>
+        <li><a href="/calepin/authoring/bibliography.html">Bibliography</a></li>
         
       
     
       
         
-        <li><a href="/authoring/figures.html">Figures</a></li>
+        <li><a href="/calepin/authoring/figures.html">Figures</a></li>
         
       
     
       
         
-        <li><a href="/authoring/math.html">Math</a></li>
+        <li><a href="/calepin/authoring/math.html">Math</a></li>
         
       
     
       
         
-        <li><a href="/authoring/tables.html" class="active" aria-current="page">Tables</a></li>
+        <li><a href="/calepin/authoring/tables.html" class="active" aria-current="page">Tables</a></li>
         
       
     
@@ -356,55 +356,55 @@
             
       
         
-        <li><a href="/code/code_execution.html">Code Execution</a></li>
+        <li><a href="/calepin/code/code_execution.html">Code Execution</a></li>
         
       
     
       
         
-        <li><a href="/code/chunks.html">Chunks</a></li>
+        <li><a href="/calepin/code/chunks.html">Chunks</a></li>
         
       
     
       
         
-        <li><a href="/code/inline.html">Inline</a></li>
+        <li><a href="/calepin/code/inline.html">Inline</a></li>
         
       
     
       
         
-        <li><a href="/code/r.html">R</a></li>
+        <li><a href="/calepin/code/r.html">R</a></li>
         
       
     
       
         
-        <li><a href="/code/python.html">Python</a></li>
+        <li><a href="/calepin/code/python.html">Python</a></li>
         
       
     
       
         
-        <li><a href="/code/sh.html">Shell</a></li>
+        <li><a href="/calepin/code/sh.html">Shell</a></li>
         
       
     
       
         
-        <li><a href="/code/diagrams.html">Diagrams</a></li>
+        <li><a href="/calepin/code/diagrams.html">Diagrams</a></li>
         
       
     
       
         
-        <li><a href="/code/cache.html">Cache</a></li>
+        <li><a href="/calepin/code/cache.html">Cache</a></li>
         
       
     
       
         
-        <li><a href="/code/builtins.html">Built-in Functions</a></li>
+        <li><a href="/calepin/code/builtins.html">Built-in Functions</a></li>
         
       
     
@@ -421,19 +421,19 @@
             
       
         
-        <li><a href="/templates/templates.html">Templates</a></li>
+        <li><a href="/calepin/templates/templates.html">Templates</a></li>
         
       
     
       
         
-        <li><a href="/templates/snippets.html">Snippets &amp; Variables</a></li>
+        <li><a href="/calepin/templates/snippets.html">Snippets &amp; Variables</a></li>
         
       
     
       
         
-        <li><a href="/templates/reference.html">Reference</a></li>
+        <li><a href="/calepin/templates/reference.html">Reference</a></li>
         
       
     
@@ -450,19 +450,19 @@
             
       
         
-        <li><a href="/configuration/paths.html">Paths</a></li>
+        <li><a href="/calepin/configuration/paths.html">Paths</a></li>
         
       
     
       
         
-        <li><a href="/configuration/structure.html">Project Structure</a></li>
+        <li><a href="/calepin/configuration/structure.html">Project Structure</a></li>
         
       
     
       
         
-        <li><a href="/configuration/toml.html">Configuration</a></li>
+        <li><a href="/calepin/configuration/toml.html">Configuration</a></li>
         
       
     
@@ -479,19 +479,19 @@
             
       
         
-        <li><a href="/websites/structure.html">Structure</a></li>
+        <li><a href="/calepin/websites/structure.html">Structure</a></li>
         
       
     
       
         
-        <li><a href="/websites/navigation.html">Navigation</a></li>
+        <li><a href="/calepin/websites/navigation.html">Navigation</a></li>
         
       
     
       
         
-        <li><a href="/websites/serve.html">Serve</a></li>
+        <li><a href="/calepin/websites/serve.html">Serve</a></li>
         
       
     
@@ -508,13 +508,13 @@
             
       
         
-        <li><a href="/extensions/themes.html">Themes</a></li>
+        <li><a href="/calepin/extensions/themes.html">Themes</a></li>
         
       
     
       
         
-        <li><a href="/extensions/plugins.html">Plugins</a></li>
+        <li><a href="/calepin/extensions/plugins.html">Plugins</a></li>
         
       
     
@@ -533,7 +533,7 @@
 <nav class="breadcrumbs" aria-label="Breadcrumbs">
   
   
-    <a href="/">Home</a>
+    <a href="/calepin/">Home</a>
     <span class="separator">/</span>
   
   
@@ -1846,23 +1846,23 @@ Student grades for Fall 2026.
 
     <script>
       // Create table-specific functions using external factory
-      const tableFns_mw69cx5fmuprbrshjx93 = TinyTable.createTableFunctions("tinytable_mw69cx5fmuprbrshjx93");
+      const tableFns_v44plylq1tjmfrtqzgoe = TinyTable.createTableFunctions("tinytable_v44plylq1tjmfrtqzgoe");
       // tinytable span after
       window.addEventListener('load', function () {
           var cellsToStyle = [
             // tinytable style arrays after
-          { positions: [ { i: '-1', j: 4 } ], css_id: 'tinytable_css_0p9gyjt5vspgj6q0grnf',}, 
-          { positions: [ { i: '-1', j: 3 } ], css_id: 'tinytable_css_drvowwsk15l34v293r7z',}, 
-          { positions: [ { i: '5', j: 1 }, { i: '5', j: 2 }, { i: '5', j: 3 }, { i: '5', j: 4 } ], css_id: 'tinytable_css_ssdsna6frsg87o1nhc8c',}, 
-          { positions: [ { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '2', j: 4 }, { i: '3', j: 4 } ], css_id: 'tinytable_css_lai2ouxxa0suj6fwu423',}, 
-          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 } ], css_id: 'tinytable_css_0tw66uwa4h91o1rbtav0',}, 
-          { positions: [ { i: '-1', j: 1 }, { i: '-1', j: 2 } ], css_id: 'tinytable_css_koaegybs73t2gbdo9qjm',}, 
+          { positions: [ { i: '-1', j: 4 } ], css_id: 'tinytable_css_xikgc1fu9tdt3o0k1ukb',}, 
+          { positions: [ { i: '-1', j: 3 } ], css_id: 'tinytable_css_owmn5vpaegrcb8mr3osd',}, 
+          { positions: [ { i: '5', j: 1 }, { i: '5', j: 2 }, { i: '5', j: 3 }, { i: '5', j: 4 } ], css_id: 'tinytable_css_x3yk71x2sbi5t5mnueoz',}, 
+          { positions: [ { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '2', j: 4 }, { i: '3', j: 4 } ], css_id: 'tinytable_css_9ggk3oibwjnme64km0r8',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 } ], css_id: 'tinytable_css_9nslot4fvs47knudfllg',}, 
+          { positions: [ { i: '-1', j: 1 }, { i: '-1', j: 2 } ], css_id: 'tinytable_css_em2easfo1g9rnuowebgh',}, 
           ];
 
           // Loop over the arrays to style the cells
           cellsToStyle.forEach(function (group) {
               group.positions.forEach(function (cell) {
-                  tableFns_mw69cx5fmuprbrshjx93.styleCell(cell.i, cell.j, group.css_id);
+                  tableFns_v44plylq1tjmfrtqzgoe.styleCell(cell.i, cell.j, group.css_id);
               });
           });
       });
@@ -1871,15 +1871,15 @@ Student grades for Fall 2026.
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
     <style>
     /* tinytable css entries after */
-    #tinytable_mw69cx5fmuprbrshjx93 td.tinytable_css_0p9gyjt5vspgj6q0grnf, #tinytable_mw69cx5fmuprbrshjx93 th.tinytable_css_0p9gyjt5vspgj6q0grnf {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.03em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
-    #tinytable_mw69cx5fmuprbrshjx93 td.tinytable_css_drvowwsk15l34v293r7z, #tinytable_mw69cx5fmuprbrshjx93 th.tinytable_css_drvowwsk15l34v293r7z {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.03em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 3%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
-    #tinytable_mw69cx5fmuprbrshjx93 td.tinytable_css_ssdsna6frsg87o1nhc8c, #tinytable_mw69cx5fmuprbrshjx93 th.tinytable_css_ssdsna6frsg87o1nhc8c {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
-    #tinytable_mw69cx5fmuprbrshjx93 td.tinytable_css_lai2ouxxa0suj6fwu423, #tinytable_mw69cx5fmuprbrshjx93 th.tinytable_css_lai2ouxxa0suj6fwu423 { color: white; background-color: #5E81AC }
-    #tinytable_mw69cx5fmuprbrshjx93 td.tinytable_css_0tw66uwa4h91o1rbtav0, #tinytable_mw69cx5fmuprbrshjx93 th.tinytable_css_0tw66uwa4h91o1rbtav0 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
-    #tinytable_mw69cx5fmuprbrshjx93 td.tinytable_css_koaegybs73t2gbdo9qjm, #tinytable_mw69cx5fmuprbrshjx93 th.tinytable_css_koaegybs73t2gbdo9qjm {  position: relative; --border-bottom: 0; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_v44plylq1tjmfrtqzgoe td.tinytable_css_xikgc1fu9tdt3o0k1ukb, #tinytable_v44plylq1tjmfrtqzgoe th.tinytable_css_xikgc1fu9tdt3o0k1ukb {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.03em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_v44plylq1tjmfrtqzgoe td.tinytable_css_owmn5vpaegrcb8mr3osd, #tinytable_v44plylq1tjmfrtqzgoe th.tinytable_css_owmn5vpaegrcb8mr3osd {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.03em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 3%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_v44plylq1tjmfrtqzgoe td.tinytable_css_x3yk71x2sbi5t5mnueoz, #tinytable_v44plylq1tjmfrtqzgoe th.tinytable_css_x3yk71x2sbi5t5mnueoz {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    #tinytable_v44plylq1tjmfrtqzgoe td.tinytable_css_9ggk3oibwjnme64km0r8, #tinytable_v44plylq1tjmfrtqzgoe th.tinytable_css_9ggk3oibwjnme64km0r8 { color: white; background-color: #5E81AC }
+    #tinytable_v44plylq1tjmfrtqzgoe td.tinytable_css_9nslot4fvs47knudfllg, #tinytable_v44plylq1tjmfrtqzgoe th.tinytable_css_9nslot4fvs47knudfllg {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    #tinytable_v44plylq1tjmfrtqzgoe td.tinytable_css_em2easfo1g9rnuowebgh, #tinytable_v44plylq1tjmfrtqzgoe th.tinytable_css_em2easfo1g9rnuowebgh {  position: relative; --border-bottom: 0; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
     </style>
     <div class="container">
-      <table class="tinytable" id="tinytable_mw69cx5fmuprbrshjx93" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+      <table class="tinytable" id="tinytable_v44plylq1tjmfrtqzgoe" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
         
         <thead>
 <tr>
@@ -1946,23 +1946,23 @@ Student grades for Fall 2026.
 
 <div class="table-div" id="tbl-cars">
 <p class="table-caption">Motor Trend car data</p>
-<!--html_preserve--><div id="zxspjghsjj" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#zxspjghsjj table {
+<!--html_preserve--><div id="yqioznljzp" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#yqioznljzp table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#zxspjghsjj thead, #zxspjghsjj tbody, #zxspjghsjj tfoot, #zxspjghsjj tr, #zxspjghsjj td, #zxspjghsjj th {
+#yqioznljzp thead, #yqioznljzp tbody, #yqioznljzp tfoot, #yqioznljzp tr, #yqioznljzp td, #yqioznljzp th {
   border-style: none;
 }
 
-#zxspjghsjj p {
+#yqioznljzp p {
   margin: 0;
   padding: 0;
 }
 
-#zxspjghsjj .gt_table {
+#yqioznljzp .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -1988,12 +1988,12 @@ Student grades for Fall 2026.
   border-left-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_caption {
+#yqioznljzp .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#zxspjghsjj .gt_title {
+#yqioznljzp .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -2005,7 +2005,7 @@ Student grades for Fall 2026.
   border-bottom-width: 0;
 }
 
-#zxspjghsjj .gt_subtitle {
+#yqioznljzp .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -2017,7 +2017,7 @@ Student grades for Fall 2026.
   border-top-width: 0;
 }
 
-#zxspjghsjj .gt_heading {
+#yqioznljzp .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -2029,13 +2029,13 @@ Student grades for Fall 2026.
   border-right-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_bottom_border {
+#yqioznljzp .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_col_headings {
+#yqioznljzp .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2050,7 +2050,7 @@ Student grades for Fall 2026.
   border-right-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_col_heading {
+#yqioznljzp .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2070,7 +2070,7 @@ Student grades for Fall 2026.
   overflow-x: hidden;
 }
 
-#zxspjghsjj .gt_column_spanner_outer {
+#yqioznljzp .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2082,15 +2082,15 @@ Student grades for Fall 2026.
   padding-right: 4px;
 }
 
-#zxspjghsjj .gt_column_spanner_outer:first-child {
+#yqioznljzp .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#zxspjghsjj .gt_column_spanner_outer:last-child {
+#yqioznljzp .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#zxspjghsjj .gt_column_spanner {
+#yqioznljzp .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -2102,11 +2102,11 @@ Student grades for Fall 2026.
   width: 100%;
 }
 
-#zxspjghsjj .gt_spanner_row {
+#yqioznljzp .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#zxspjghsjj .gt_group_heading {
+#yqioznljzp .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2132,7 +2132,7 @@ Student grades for Fall 2026.
   text-align: left;
 }
 
-#zxspjghsjj .gt_empty_group_heading {
+#yqioznljzp .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -2147,15 +2147,15 @@ Student grades for Fall 2026.
   vertical-align: middle;
 }
 
-#zxspjghsjj .gt_from_md > :first-child {
+#yqioznljzp .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#zxspjghsjj .gt_from_md > :last-child {
+#yqioznljzp .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#zxspjghsjj .gt_row {
+#yqioznljzp .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2174,7 +2174,7 @@ Student grades for Fall 2026.
   overflow-x: hidden;
 }
 
-#zxspjghsjj .gt_stub {
+#yqioznljzp .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2187,7 +2187,7 @@ Student grades for Fall 2026.
   padding-right: 5px;
 }
 
-#zxspjghsjj .gt_stub_row_group {
+#yqioznljzp .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2201,15 +2201,15 @@ Student grades for Fall 2026.
   vertical-align: top;
 }
 
-#zxspjghsjj .gt_row_group_first td {
+#yqioznljzp .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#zxspjghsjj .gt_row_group_first th {
+#yqioznljzp .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#zxspjghsjj .gt_summary_row {
+#yqioznljzp .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2219,16 +2219,16 @@ Student grades for Fall 2026.
   padding-right: 5px;
 }
 
-#zxspjghsjj .gt_first_summary_row {
+#yqioznljzp .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_first_summary_row.thick {
+#yqioznljzp .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#zxspjghsjj .gt_last_summary_row {
+#yqioznljzp .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2238,7 +2238,7 @@ Student grades for Fall 2026.
   border-bottom-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_grand_summary_row {
+#yqioznljzp .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2248,7 +2248,7 @@ Student grades for Fall 2026.
   padding-right: 5px;
 }
 
-#zxspjghsjj .gt_first_grand_summary_row {
+#yqioznljzp .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2258,7 +2258,7 @@ Student grades for Fall 2026.
   border-top-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_last_grand_summary_row_top {
+#yqioznljzp .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2268,11 +2268,11 @@ Student grades for Fall 2026.
   border-bottom-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_striped {
+#yqioznljzp .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#zxspjghsjj .gt_table_body {
+#yqioznljzp .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2281,7 +2281,7 @@ Student grades for Fall 2026.
   border-bottom-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_footnotes {
+#yqioznljzp .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2295,7 +2295,7 @@ Student grades for Fall 2026.
   border-right-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_footnote {
+#yqioznljzp .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -2304,7 +2304,7 @@ Student grades for Fall 2026.
   padding-right: 5px;
 }
 
-#zxspjghsjj .gt_sourcenotes {
+#yqioznljzp .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2318,7 +2318,7 @@ Student grades for Fall 2026.
   border-right-color: #D3D3D3;
 }
 
-#zxspjghsjj .gt_sourcenote {
+#yqioznljzp .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -2326,72 +2326,72 @@ Student grades for Fall 2026.
   padding-right: 5px;
 }
 
-#zxspjghsjj .gt_left {
+#yqioznljzp .gt_left {
   text-align: left;
 }
 
-#zxspjghsjj .gt_center {
+#yqioznljzp .gt_center {
   text-align: center;
 }
 
-#zxspjghsjj .gt_right {
+#yqioznljzp .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#zxspjghsjj .gt_font_normal {
+#yqioznljzp .gt_font_normal {
   font-weight: normal;
 }
 
-#zxspjghsjj .gt_font_bold {
+#yqioznljzp .gt_font_bold {
   font-weight: bold;
 }
 
-#zxspjghsjj .gt_font_italic {
+#yqioznljzp .gt_font_italic {
   font-style: italic;
 }
 
-#zxspjghsjj .gt_super {
+#yqioznljzp .gt_super {
   font-size: 65%;
 }
 
-#zxspjghsjj .gt_footnote_marks {
+#yqioznljzp .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#zxspjghsjj .gt_asterisk {
+#yqioznljzp .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#zxspjghsjj .gt_indent_1 {
+#yqioznljzp .gt_indent_1 {
   text-indent: 5px;
 }
 
-#zxspjghsjj .gt_indent_2 {
+#yqioznljzp .gt_indent_2 {
   text-indent: 10px;
 }
 
-#zxspjghsjj .gt_indent_3 {
+#yqioznljzp .gt_indent_3 {
   text-indent: 15px;
 }
 
-#zxspjghsjj .gt_indent_4 {
+#yqioznljzp .gt_indent_4 {
   text-indent: 20px;
 }
 
-#zxspjghsjj .gt_indent_5 {
+#yqioznljzp .gt_indent_5 {
   text-indent: 25px;
 }
 
-#zxspjghsjj .katex-display {
+#yqioznljzp .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#zxspjghsjj div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#yqioznljzp div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -2524,8 +2524,8 @@ Student grades for Fall 2026.
   <p>Built with <a href="https://vincentarelbundock.github.io/calepin">
     
       
-    <img class="logo-light footer-logo" src="/assets/Calepin.svg" alt="Calepin">
-    <img class="logo-dark footer-logo" src="/assets/Calepin_dark.svg" alt="Calepin">
+    <img class="logo-light footer-logo" src="/calepin/assets/Calepin.svg" alt="Calepin">
+    <img class="logo-dark footer-logo" src="/calepin/assets/Calepin_dark.svg" alt="Calepin">
       
     
   </a></p>

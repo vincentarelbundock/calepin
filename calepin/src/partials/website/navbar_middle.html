@@ -10,7 +10,7 @@
     <ul class="navbar-dropdown-menu">
       {% for child in item.children %}
       <li><a href="{{ child.href | default(value='#') }}">
-        {% if child.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ child.icon }}); mask-image: url(/{{ child.icon }});{% if child.width %} width: {{ child.width }};{% endif %}{% if child.height %} height: {{ child.height }};{% endif %}"></span> {% endif %}{{ child.text }}
+        {% if child.icon %}<span class="nav-icon" style="-webkit-mask-image: url({{ link(child.icon) }}); mask-image: url({{ link(child.icon) }});{% if child.width %} width: {{ child.width }};{% endif %}{% if child.height %} height: {{ child.height }};{% endif %}"></span> {% endif %}{{ child.text }}
       </a></li>
       {% endfor %}
     </ul>
@@ -18,13 +18,13 @@
     {% elif item.children %}
       {% for child in item.children %}
   <li><a href="{{ child.href | default(value='#') }}">
-    {% if child.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ child.icon }}); mask-image: url(/{{ child.icon }});{% if child.width %} width: {{ child.width }};{% endif %}{% if child.height %} height: {{ child.height }};{% endif %}"></span> {% endif %}{{ child.text }}
+    {% if child.icon %}<span class="nav-icon" style="-webkit-mask-image: url({{ link(child.icon) }}); mask-image: url({{ link(child.icon) }});{% if child.width %} width: {{ child.width }};{% endif %}{% if child.height %} height: {{ child.height }};{% endif %}"></span> {% endif %}{{ child.text }}
   </a></li>
       {% endfor %}
     {% else %}
   <li>
     <a href="{{ item.href | default(value='#') }}">
-      {% if item.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ item.icon }}); mask-image: url(/{{ item.icon }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span> {% endif %}{{ item.text }}
+      {% if item.icon %}<span class="nav-icon" style="-webkit-mask-image: url({{ link(item.icon) }}); mask-image: url({{ link(item.icon) }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span> {% endif %}{{ item.text }}
     </a>
   </li>
     {% endif %}

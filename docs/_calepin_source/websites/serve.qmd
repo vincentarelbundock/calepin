@@ -39,3 +39,13 @@ calepin preview _site
 calepin preview docs -p 8080
 calepin preview /path/to/any/website
 ```
+
+# Kill running servers
+
+To stop all running preview servers:
+
+```
+calepin preview kill
+```
+
+This finds and terminates every `calepin preview` process. Useful when a previous preview session was backgrounded or its terminal was closed without stopping the server. Works on macOS and Linux.

@@ -96,4 +96,15 @@ calepin new document paper.qmd     # sidecar for a single document
 calepin new notebook my-paper      # notebook project
 calepin new website my-site        # website project
 calepin new book my-book           # book project
+calepin new partials               # update local partials to latest built-in templates
 ```
+
+## Updating partials
+
+When *Calepin* is updated, the built-in templates may change (new features, bug fixes, `link()` support). If your project has custom partials in `_calepin/partials/`, they won't pick up these changes automatically.
+
+Run `calepin new partials` from your project root to overwrite all local partials that have a matching built-in template. The command lists the number of files and asks for confirmation before writing.
+
+::: {.callout-warning}
+This is destructive: any customizations you made to local partials will be lost. Commit or back up your partials before running this command.
+:::

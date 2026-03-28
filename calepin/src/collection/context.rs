@@ -18,6 +18,7 @@ pub struct CollectionContext {
     pub title: Option<String>,
     pub subtitle: Option<String>,
     pub url: Option<String>,
+    pub base_path: String,
     pub favicon: Option<String>,
     pub navbar: crate::config::NavbarConfig,
     pub pages: Vec<NavNode>,
@@ -255,10 +256,14 @@ pub fn build_collection_context(
         base_dir,
     );
 
+    let raw_base = crate::utils::url::extract_base_path(meta.url.as_deref());
+    let base_path = crate::utils::url::normalize_base_path(raw_base);
+
     CollectionContext {
         title: meta.title.clone(),
         subtitle: meta.subtitle.clone(),
         url: meta.url.clone(),
+        base_path,
         favicon: meta.favicon.clone(),
         navbar,
         pages: nav_tree,
@@ -495,5 +500,72 @@ fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcr
         });
     }
     crumbs
+}
+
+/// Rewrite all hrefs in a navbar config through `link()`.
+pub fn resolve_navbar_urls(navbar: &mut crate::config::NavbarConfig, base_path: &str, mode: crate::utils::url::UrlMode, depth: usize) {
+    fn resolve_items(items: &mut [crate::config::ContentSection], base_path: &str, mode: crate::utils::url::UrlMode, depth: usize) {
+        for item in items.iter_mut() {
+            if let Some(ref mut href) = item.href {
+                *href = crate::utils::url::link(href, base_path, mode, depth);
+            }
+            resolve_items(&mut item.children, base_path, mode, depth);
+        }
+    }
+    resolve_items(&mut navbar.left, base_path, mode, depth);
+    resolve_items(&mut navbar.middle, base_path, mode, depth);
+    resolve_items(&mut navbar.right, base_path, mode, depth);
+}
+
+/// Rewrite all hrefs in a nav tree through `link()`.
+pub fn resolve_nav_urls(nodes: &mut [NavNode], base_path: &str, mode: crate::utils::url::UrlMode, depth: usize) {
+    for node in nodes.iter_mut() {
+        if let Some(ref mut href) = node.href {
+            *href = crate::utils::url::link(href, base_path, mode, depth);
+        }
+        resolve_nav_urls(&mut node.children, base_path, mode, depth);
+    }
+}
+
+impl DocumentContext {
+    /// Rewrite all internal URLs through `link()` for the given mode and base path.
+    pub fn resolve_urls(&mut self, base_path: &str, mode: crate::utils::url::UrlMode, depth: usize) {
+        let resolve = |path: &str| crate::utils::url::link(path, base_path, mode, depth);
+
+        self.url = resolve(&self.url);
+        self.source_url = resolve(&self.source_url);
+
+        if let Some(ref mut prev) = self.prev {
+            prev.href = resolve(&prev.href);
+        }
+        if let Some(ref mut next) = self.next {
+            next.href = resolve(&next.href);
+        }
+
+        for crumb in &mut self.breadcrumbs {
+            if let Some(ref mut href) = crumb.href {
+                *href = resolve(href);
+            }
+        }
+
+        if let Some(ref mut items) = self.listing {
+            for item in items.iter_mut() {
+                item.url = resolve(&item.url);
+            }
+        }
+
+        if let Some(ref mut pagination) = self.pagination {
+            if let Some(ref mut url) = pagination.prev_url {
+                *url = resolve(url);
+            }
+            if let Some(ref mut url) = pagination.next_url {
+                *url = resolve(url);
+            }
+        }
+
+        for t in &mut self.translations {
+            t.url = resolve(&t.url);
+        }
+    }
 }
 

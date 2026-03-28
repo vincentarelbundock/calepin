@@ -1,6 +1,7 @@
 # -- Site identity --
 title = "Calepin"
 target = "website"
+url = "https://vincentarelbundock.github.io/calepin"
 
 # -- Navbar --
 [[navbar.left]]

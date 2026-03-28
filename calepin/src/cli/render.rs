@@ -31,7 +31,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                             let meta = crate::config::load_project_metadata(&config).ok();
                             crate::paths::output_dir(&root, meta.as_ref().and_then(|m| m.output.as_deref()))
                         });
-                        return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
+                        return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref(), args.portable, false);
                     }
                     ProjectKind::Document { qmd, .. } => {
                         // Sidecar config.toml: render the discovered .qmd

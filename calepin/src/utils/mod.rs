@@ -3,4 +3,5 @@ pub mod date;
 pub mod escape;
 pub mod lipsum;
 pub mod tools;
+pub mod url;
 pub mod util;

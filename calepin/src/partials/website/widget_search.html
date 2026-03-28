@@ -24,7 +24,7 @@
   let selectedIdx = -1;
 
   // Preload pagefind immediately
-  const pagefind = await import('/pagefind/pagefind.js');
+  const pagefind = await import('{{ link("pagefind/pagefind.js") }}');
 
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

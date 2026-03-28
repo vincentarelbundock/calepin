@@ -15,15 +15,15 @@
   {% else %}
   <li>
     <a href="{{ item.href | default(value='#') }}">
-      {% if item.icon %}<span class="nav-icon" style="-webkit-mask-image: url(/{{ item.icon }}); mask-image: url(/{{ item.icon }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span>{% endif %}
+      {% if item.icon %}<span class="nav-icon" style="-webkit-mask-image: url({{ link(item.icon) }}); mask-image: url({{ link(item.icon) }});{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span>{% endif %}
       {% if item.image %}
         {% if item.image_dark == "invert" %}
-      <img class="nav-img invert-dark" src="/{{ item.image }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+      <img class="nav-img invert-dark" src="{{ link(item.image) }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
         {% elif item.image_dark %}
-      <img class="nav-img logo-light" src="/{{ item.image }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
-      <img class="nav-img logo-dark" src="/{{ item.image_dark }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+      <img class="nav-img logo-light" src="{{ link(item.image) }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+      <img class="nav-img logo-dark" src="{{ link(item.image_dark) }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
         {% else %}
-      <img class="nav-img" src="/{{ item.image }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
+      <img class="nav-img" src="{{ link(item.image) }}" alt="{{ item.text or '' }}"{% if item.width %} width="{{ item.width }}"{% endif %}{% if item.height %} height="{{ item.height }}"{% endif %}>
         {% endif %}
       {% endif %}
       {% if item.text %}{{ item.text }}{% endif %}

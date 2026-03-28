@@ -6,9 +6,9 @@
   {% if document.title %}<title>{{ document.title }}{% if collection.title %} — {{ collection.title }}{% endif %}</title>
   {% elif collection.title %}<title>{{ collection.title }}</title>{% endif %}
   {% if document.abstract %}<meta name="description" content="{{ document.abstract }}">{% endif %}
-  {% if collection.favicon %}<link rel="icon" href="/{{ collection.favicon }}">{% endif %}
-  <link rel="stylesheet" href="/assets/page.css">
-  <link rel="stylesheet" href="/assets/calepin.css">
+  {% if collection.favicon %}<link rel="icon" href="{{ link(collection.favicon) }}">{% endif %}
+  <link rel="stylesheet" href="{{ link('assets/page.css') }}">
+  <link rel="stylesheet" href="{{ link('assets/calepin.css') }}">
   {{ collection.math }}
   {% block head_extra %}{% endblock %}
 </head>

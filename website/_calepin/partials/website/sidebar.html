@@ -1,16 +1,16 @@
 <aside id="sidebar-nav" class="sidebar-left" role="navigation" aria-label="Section navigation">
   <div class="sidebar-header">
-    <a href="/index.html">
+    <a href="{{ link('index.html') }}">
       {% if collection.navbar.left and collection.navbar.left[0].icon %}
-      <span class="sidebar-logo nav-icon" style="-webkit-mask-image: url(/{{ collection.navbar.left[0].icon }}); mask-image: url(/{{ collection.navbar.left[0].icon }});{% if collection.navbar.left[0].width %} width: {{ collection.navbar.left[0].width }};{% endif %}{% if collection.navbar.left[0].height %} height: {{ collection.navbar.left[0].height }};{% endif %}"></span>
+      <span class="sidebar-logo nav-icon" style="-webkit-mask-image: url({{ link(collection.navbar.left[0].icon) }}); mask-image: url({{ link(collection.navbar.left[0].icon) }});{% if collection.navbar.left[0].width %} width: {{ collection.navbar.left[0].width }};{% endif %}{% if collection.navbar.left[0].height %} height: {{ collection.navbar.left[0].height }};{% endif %}"></span>
       {% elif collection.navbar.left and collection.navbar.left[0].image %}
         {% if collection.navbar.left[0].image_dark == "invert" %}
-      <img class="invert-dark" src="/{{ collection.navbar.left[0].image }}" alt="{{ collection.title or 'Home' }}">
+      <img class="invert-dark" src="{{ link(collection.navbar.left[0].image) }}" alt="{{ collection.title or 'Home' }}">
         {% elif collection.navbar.left[0].image_dark %}
-      <img class="logo-light" src="/{{ collection.navbar.left[0].image }}" alt="{{ collection.title or 'Home' }}">
-      <img class="logo-dark" src="/{{ collection.navbar.left[0].image_dark }}" alt="{{ collection.title or 'Home' }}">
+      <img class="logo-light" src="{{ link(collection.navbar.left[0].image) }}" alt="{{ collection.title or 'Home' }}">
+      <img class="logo-dark" src="{{ link(collection.navbar.left[0].image_dark) }}" alt="{{ collection.title or 'Home' }}">
         {% else %}
-      <img src="/{{ collection.navbar.left[0].image }}" alt="{{ collection.title or 'Home' }}">
+      <img src="{{ link(collection.navbar.left[0].image) }}" alt="{{ collection.title or 'Home' }}">
         {% endif %}
       {% elif collection.title %}
       <span>{{ collection.title }}</span>
