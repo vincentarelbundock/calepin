@@ -33,7 +33,7 @@ use cli::{Cli, Command};
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "flush", "new", "man", "info", "theme"];
+    let known = ["render", "preview", "flush", "new", "man", "info"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -81,9 +81,9 @@ fn main() -> Result<()> {
             cli::flush::handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
         }
         Command::New { action } => match action {
-            cli::NewAction::Notebook { path } => cli::new_notebook::handle_new_notebook(&path),
-            cli::NewAction::Website { dir } => cli::new_website::handle_new_website(&dir),
-            cli::NewAction::Book { dir } => cli::new_book::handle_new_book(&dir),
+            cli::NewAction::Notebook { path, theme } => cli::new_notebook::handle_new_notebook(&path, theme.as_deref()),
+            cli::NewAction::Website { dir, theme } => cli::new_website::handle_new_website(&dir, &theme),
+            cli::NewAction::Book { dir, theme } => cli::new_book::handle_new_book(&dir, &theme),
             cli::NewAction::Completions { shell } => {
                 use clap::CommandFactory;
                 let mut cmd = <cli::Cli as CommandFactory>::command();
@@ -106,11 +106,6 @@ fn main() -> Result<()> {
                 };
                 man::handle_man_python(&package, &output, quiet, opts)
             }
-        },
-        Command::Theme { action } => match action {
-            cli::ThemeAction::List => cli::theme::handle_theme_list(),
-            cli::ThemeAction::Show { name, path } => cli::theme::handle_theme_show(&name, &path),
-            cli::ThemeAction::Apply { name, path, yes } => cli::theme::handle_theme_apply(&name, &path, yes),
         },
         Command::Info { action } => cli::info::handle_info(action),
     }

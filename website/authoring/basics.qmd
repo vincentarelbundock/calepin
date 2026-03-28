@@ -93,7 +93,7 @@ The numbers in this sentence are computed dynamically: The mean of 1:10 is `{r} 
 
 # Figures
 
-```{r, scatter}
+```{r, fig-scatter}
 #| fig-width = 5
 #| fig-height = 4
 #| fig-cap = "A simple scatter plot"

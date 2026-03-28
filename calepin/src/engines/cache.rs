@@ -253,7 +253,7 @@ pub fn execute_chunk_cached(
             use std::sync::atomic::{AtomicBool, Ordering};
             static CACHE_WARNED: AtomicBool = AtomicBool::new(false);
             if !crate::cli::is_quiet() && !CACHE_WARNED.swap(true, Ordering::Relaxed) {
-                eprintln!("  \x1b[36mcache:\x1b[0m using cached results. To clear: calepin flush. To disable: #| cache: false");
+                eprintln!("  \x1b[36mcache:\x1b[0m using cached results. To clear: calepin flush. To disable: #| cache = false");
             }
         }
         // Restore plot files to fig_dir

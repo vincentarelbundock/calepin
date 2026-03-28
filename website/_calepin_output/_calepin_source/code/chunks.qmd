@@ -47,7 +47,6 @@ Controls whether the source code is displayed. Default: `true`. When set to `fen
 ```{r}
 #| echo = fenced
 #| eval = false
-#| echo = false
 summary(mtcars$mpg)
 ```
 

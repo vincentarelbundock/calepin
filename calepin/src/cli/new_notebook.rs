@@ -9,7 +9,7 @@ use crate::paths;
 
 static SCAFFOLD: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold/notebook");
 
-pub fn handle_new_notebook(path: &Path) -> Result<()> {
+pub fn handle_new_notebook(path: &Path, theme_name: Option<&str>) -> Result<()> {
     if path.exists() {
         bail!("File already exists: {}", path.display());
     }
@@ -40,6 +40,16 @@ pub fn handle_new_notebook(path: &Path) -> Result<()> {
             let stem = path.file_stem().unwrap().to_string_lossy();
             path.parent().unwrap_or(Path::new(".")).join(format!("{}_calepin", stem))
         });
+
+    // Apply theme if specified
+    if let Some(name) = theme_name {
+        let theme = crate::themes::Theme::resolve(name)?;
+        let kind = crate::config::paths::ProjectKind::Document {
+            qmd: path.clone(),
+            sidecar: sidecar.clone(),
+        };
+        theme.apply(&kind)?;
+    }
 
     eprintln!("Created {}", path.display());
     eprintln!("Created {}/config.toml", sidecar.display());

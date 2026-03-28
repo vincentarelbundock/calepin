@@ -73,46 +73,10 @@ pub enum Command {
         action: ManAction,
     },
 
-    /// Apply or list themes
-    Theme {
-        #[command(subcommand)]
-        action: ThemeAction,
-    },
-
     /// Show information and utilities
     Info {
         #[command(subcommand)]
         action: InfoAction,
-    },
-}
-
-#[derive(Subcommand, Debug)]
-pub enum ThemeAction {
-    /// List available themes
-    List,
-
-    /// Show what a theme would change (dry run)
-    Show {
-        /// Theme name or path to a theme directory
-        name: String,
-
-        /// Target document or project directory
-        #[arg(default_value = ".")]
-        path: PathBuf,
-    },
-
-    /// Apply a theme to a document or project
-    Apply {
-        /// Theme name or path to a theme directory
-        name: String,
-
-        /// Target document or project directory
-        #[arg(default_value = ".")]
-        path: PathBuf,
-
-        /// Skip confirmation prompt
-        #[arg(short = 'y', long)]
-        yes: bool,
     },
 }
 
@@ -192,6 +156,10 @@ pub enum NewAction {
         /// Path for the new .qmd file
         #[arg(default_value = "my_calepin_notebook.qmd")]
         path: std::path::PathBuf,
+
+        /// Theme to apply (built-in name or path to a theme directory)
+        #[arg(long)]
+        theme: Option<String>,
     },
 
     /// Scaffold a website project
@@ -199,6 +167,10 @@ pub enum NewAction {
         /// Directory name for the new website
         #[arg(default_value = "my_calepin_website")]
         dir: std::path::PathBuf,
+
+        /// Theme to apply (built-in name or path to a theme directory)
+        #[arg(long, default_value = "default")]
+        theme: String,
     },
 
     /// Scaffold a book project
@@ -206,6 +178,10 @@ pub enum NewAction {
         /// Directory name for the new book
         #[arg(default_value = "my_calepin_book")]
         dir: std::path::PathBuf,
+
+        /// Theme to apply (built-in name or path to a theme directory)
+        #[arg(long, default_value = "default")]
+        theme: String,
     },
 
     /// Print shell completions (bash, zsh, fish, elvish, powershell)

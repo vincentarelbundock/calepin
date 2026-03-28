@@ -9,6 +9,5 @@ pub mod new_notebook;
 pub mod new_website;
 pub mod preview;
 pub mod render;
-pub mod theme;
 
 pub use args::*;

@@ -1773,7 +1773,7 @@ pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(>
 <td>Grouped citations</td>
 </tr>
 </table>
-<p>Grouped references also work for cross-references: <code>(<a class="cross-ref-fig" href="#fig-one">Figure 1</a>; <a class="cross-ref-fig" href="#fig-two">Figure 2</a>)</code> produces linked references like (<a class="cross-ref-fig" href="#fig-one">Figure 1</a>; <a class="cross-ref-fig" href="#fig-two">Figure 2</a>).</p>
+<p>Grouped references also work for cross-references: <code>[@fig-one; @fig-two]</code> produces linked references like (<a class="cross-ref-fig" href="#fig-one">Figure 1</a>; <a class="cross-ref-fig" href="#fig-two">Figure 2</a>).</p>
 <p>These are compatible with Quarto and Pandoc syntax.</p>
 <h2 id="csl-styles">CSL styles</h2>
 <p>By default, <em>Calepin</em> uses the Chicago author-date style. To customize citation formatting, set the <code>csl</code> field in the front matter or in <code>_calepin/config.toml</code>. The value can be a built-in style name or a file path:</p>

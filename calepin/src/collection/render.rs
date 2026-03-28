@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use anyhow::Result;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::config;
 use super::discover::DocumentInfo;
@@ -364,38 +364,62 @@ where
     T: Send,
     F: Fn(&DocumentInfo) -> (String, Result<T>) + Sync,
 {
-    let mp = MultiProgress::new();
-    let spinner_style = ProgressStyle::default_spinner()
-        .template("  {spinner} {msg}")
-        .unwrap();
+    let total = pages.len();
+    let pending: std::sync::Mutex<std::collections::BTreeSet<usize>> =
+        std::sync::Mutex::new((0..total).collect());
 
-    let spinners: Vec<_> = pages
-        .iter()
-        .map(|page| {
-            if quiet {
-                mp.add(ProgressBar::hidden())
-            } else {
-                let pb = mp.add(ProgressBar::new_spinner());
-                pb.set_style(spinner_style.clone());
-                pb.set_message(page.output.display().to_string());
-                pb.enable_steady_tick(std::time::Duration::from_millis(80));
-                pb
-            }
-        })
-        .collect();
+    let pb = if quiet {
+        ProgressBar::hidden()
+    } else {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("  {spinner} {msg}")
+                .unwrap(),
+        );
+        pb.set_message(format!("rendering {total} pages..."));
+        pb.enable_steady_tick(std::time::Duration::from_millis(80));
+        pb
+    };
+
+    let update_message = |idx: usize, error: Option<&str>| {
+        if let Some(name) = error {
+            pb.set_message(format!("\x1b[31m✗\x1b[0m {name}"));
+            return;
+        }
+        let mut set = pending.lock().unwrap();
+        set.remove(&idx);
+        let remaining = set.len();
+        if remaining == 0 {
+            return;
+        }
+        // Show up to 3 remaining file names
+        let names: Vec<_> = set.iter().take(3)
+            .map(|&i| pages[i].output.display().to_string())
+            .collect();
+        let suffix = if remaining > 3 {
+            format!(" (+{})", remaining - 3)
+        } else {
+            String::new()
+        };
+        pb.set_message(format!("{}{}", names.join(", "), suffix));
+    };
 
     let results = std::thread::scope(|s| {
         let handles: Vec<_> = pages
             .iter()
-            .zip(spinners.iter())
-            .map(|(page, pb)| {
+            .enumerate()
+            .map(|(idx, page)| {
                 let render_fn = &render_fn;
+                let update_message = &update_message;
                 s.spawn(move || {
                     let result = render_fn(page);
-                    let name = page.output.display().to_string();
                     match &result.1 {
-                        Ok(_) => pb.finish_and_clear(),
-                        Err(_) => pb.finish_with_message(format!("\x1b[31m✗\x1b[0m {}", name)),
+                        Ok(_) => update_message(idx, None),
+                        Err(_) => {
+                            let name = page.output.display().to_string();
+                            update_message(idx, Some(&name));
+                        }
                     }
                     result
                 })
@@ -403,6 +427,8 @@ where
             .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
+
+    pb.finish_and_clear();
     results
 }
 

@@ -25,7 +25,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                 match kind {
                     ProjectKind::Collection { config, root } => {
                         if !args.quiet {
-                            eprintln!("Found collection config: {}", config.display());
+                            eprintln!("  \x1b[36mconfig:\x1b[0m {}", config.display());
                         }
                         let output = args.output.unwrap_or_else(|| {
                             let meta = crate::config::load_project_metadata(&config).ok();
@@ -202,7 +202,7 @@ fn run_target_post_commands(
             .replace("{root}", &project_root.display().to_string());
 
         if !quiet {
-            eprintln!("  post: {}", cmd);
+            eprintln!("  \x1b[36mpost:\x1b[0m {}", cmd);
         }
 
         let result = std::process::Command::new("sh")

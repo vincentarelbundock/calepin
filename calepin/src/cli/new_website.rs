@@ -7,7 +7,7 @@ use include_dir::{include_dir, Dir};
 
 static SCAFFOLD: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold/website");
 
-pub fn handle_new_website(dir: &Path) -> Result<()> {
+pub fn handle_new_website(dir: &Path, theme_name: &str) -> Result<()> {
     if dir.exists() {
         bail!("Directory already exists: {}", dir.display());
     }
@@ -31,13 +31,13 @@ pub fn handle_new_website(dir: &Path) -> Result<()> {
     );
     std::fs::write(calepin_dir.join("config.toml"), composed)?;
 
-    // Apply default theme (partials + assets)
-    let theme = crate::themes::Theme::builtin_default();
+    // Apply theme (partials + assets)
+    let theme = crate::themes::Theme::resolve(theme_name)?;
     let kind = crate::config::paths::ProjectKind::Collection {
         root: dir.to_path_buf(),
         config: calepin_dir.join("config.toml"),
     };
-    theme.apply_quiet(&kind)?;
+    theme.apply(&kind)?;
 
     eprintln!("Created website project in {}/", dir.display());
     eprintln!();

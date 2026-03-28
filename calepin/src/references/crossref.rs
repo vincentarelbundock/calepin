@@ -276,10 +276,10 @@ fn resolve_html_refs(
         }
     }).to_string();
 
-    // Protect code blocks from cross-ref resolution
+    // Protect code blocks and inline code from cross-ref resolution
     let mut code_blocks: Vec<String> = Vec::new();
     static RE_HTML_CODE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?s)<pre[^>]*>.*?</pre>").unwrap()
+        Regex::new(r"(?s)<pre[^>]*>.*?</pre>|<code[^>]*>.*?</code>").unwrap()
     });
     result = RE_HTML_CODE.replace_all(&result, |caps: &regex::Captures| {
         markers::wrap_raw(&mut code_blocks, caps[0].to_string())
@@ -1037,6 +1037,17 @@ mod tests {
         let result = resolve_html_global(html, &registry, "ch1.html");
         assert!(result.contains(">2.1<"), "result: {}", result);
         assert!(!result.contains("Figure"), "result: {}", result);
+    }
+
+    #[test]
+    fn test_inline_code_protects_refs() {
+        let html = "<div class=\"figure\" id=\"fig-scatter\"><p>Caption</p></div>\n\
+                     <p>Use <code>@fig-label</code> to reference figures like @fig-scatter.</p>";
+        let result = resolve_html_with_ids(html, &HashMap::new(), &HashMap::new());
+        // The @fig-label inside <code> must be left untouched
+        assert!(result.contains("<code>@fig-label</code>"), "result: {}", result);
+        // The bare @fig-scatter outside code must be resolved
+        assert!(result.contains("Figure 1"), "result: {}", result);
     }
 
     #[test]

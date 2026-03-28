@@ -33,7 +33,7 @@ pub fn build_collection(
 
     let base_dir = resolve_project_root(&found_path, &cwd);
     if !quiet {
-        eprintln!("Config: {}", found_path.display());
+        eprintln!("  \x1b[36mconfig:\x1b[0m {}", found_path.display());
     }
 
     // 2. Resolve collection target (format and extension)
@@ -151,7 +151,7 @@ pub fn build_collection(
     };
 
     if !quiet && skipped > 0 {
-        eprintln!("Skipped {} unchanged page(s)", skipped);
+        eprintln!("  \x1b[36mcache:\x1b[0m skipped {} unchanged page(s)", skipped);
     }
 
     // 8. Write page output files
@@ -198,7 +198,7 @@ pub fn build_collection(
     }
 
     if !quiet {
-        eprintln!("Collection built: {}", output.display());
+        eprintln!("  \x1b[36mbuilt:\x1b[0m {}", output.display());
     }
 
     Ok(())
@@ -228,7 +228,7 @@ fn run_post_commands(
             .replace("{root}", &project_root.display().to_string());
 
         if !quiet {
-            eprintln!("  post: {}", cmd);
+            eprintln!("  \x1b[36mpost:\x1b[0m {}", cmd);
         }
 
         let result = std::process::Command::new("sh")

@@ -1765,6 +1765,13 @@ pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(>
 <p>Controls whether the source code is displayed. Default: <code>true</code>. When set to <code>fenced</code>, the chunk is shown with its fence markers and options — useful for tutorials.</p>
 
 
+
+<pre><code class="language-r code"><span class="source r">```<span class="punctuation section braces begin r">{</span>r, chunk<span class="keyword operator arithmetic r">-</span><span class="constant numeric float decimal r">3</span><span class="punctuation section braces end r">}</span>
+<span class="comment line number-sign r"><span class="punctuation definition comment r">#</span>| echo = fenced
+</span><span class="comment line number-sign r"><span class="punctuation definition comment r">#</span>| eval = false
+</span><span class="meta function-call r"><span class="support function r">summary</span>(</span><span class="meta function-call r"><span class="meta function-call parameters r">mtcars<span class="keyword other r">$</span>mpg</span><span class="punctuation section parens end r">)</span></span>
+```</span></code></pre>
+
 <p>Setting <code>echo = false</code> hides the chunk entirely. Only the output is shown:</p>
 
 
@@ -1797,7 +1804,7 @@ pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(>
 </span>invisible_result <span class="keyword operator assignment r">&lt;-</span> <span class="constant numeric float decimal r">42</span>
 ```</span></code></pre>
 
-<p>The value was computed silently: __CALEPIN_44d1_7___ERROR:object ‘invisible_result’ not found.</p>
+<p>The value was computed silently: 42.</p>
 <h3 id="warning-and-message">warning and message</h3>
 <p>Control whether warnings and messages from R are displayed. Default: <code>true</code> for both.</p>
 

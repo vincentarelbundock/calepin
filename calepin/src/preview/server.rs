@@ -59,10 +59,11 @@ pub fn start_collection(
 /// `handler`.
 fn serve<F>(port: u16, version: Arc<AtomicU64>, handler: F) -> Result<(ServerHandle, u16)>
 where
-    F: Fn(tiny_http::Request, String) + Send + 'static,
+    F: Fn(tiny_http::Request, String) + Send + Sync + 'static,
 {
     let (server, actual_port) = try_bind(port)?;
     let server = Arc::new(server);
+    let handler = Arc::new(handler);
 
     let server_clone = Arc::clone(&server);
     thread::spawn(move || {
@@ -75,11 +76,20 @@ where
                 continue;
             }
 
-            handler(request, url);
+            let handler = Arc::clone(&handler);
+            thread::spawn(move || handler(request, url));
         }
     });
 
+    // Give the server thread a moment to start accepting connections
+    thread::sleep(std::time::Duration::from_millis(50));
+
     Ok((ServerHandle { server }, actual_port))
+}
+
+/// Header to prevent browsers from caching preview responses.
+fn no_cache_header() -> Header {
+    Header::from_bytes("Cache-Control", "no-store").unwrap()
 }
 
 fn serve_collection_request(
@@ -113,10 +123,10 @@ fn serve_collection_request(
             let v = version.load(Ordering::Relaxed);
             let html = super::reload::inject_reload_script(&html, v);
             let header = Header::from_bytes("Content-Type", mime).unwrap();
-            let _ = request.respond(Response::from_string(html).with_header(header));
+            let _ = request.respond(Response::from_string(html).with_header(header).with_header(no_cache_header()));
         } else {
             let header = Header::from_bytes("Content-Type", mime).unwrap();
-            let _ = request.respond(Response::from_data(data).with_header(header));
+            let _ = request.respond(Response::from_data(data).with_header(header).with_header(no_cache_header()));
         }
     } else {
         // Serve 404.html if it exists, otherwise plain text
@@ -125,7 +135,7 @@ fn serve_collection_request(
             let v = version.load(Ordering::Relaxed);
             let html = super::reload::inject_reload_script(&body, v);
             let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
-            let _ = request.respond(Response::from_string(html).with_header(header).with_status_code(StatusCode(404)));
+            let _ = request.respond(Response::from_string(html).with_header(header).with_header(no_cache_header()).with_status_code(StatusCode(404)));
         } else {
             let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
         }

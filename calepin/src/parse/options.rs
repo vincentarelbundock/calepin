@@ -95,7 +95,7 @@ pub fn parse_pipe_options(lines: &[&str]) -> ChunkOptions {
         }
         Err(e) => {
             cwarn!("failed to parse chunk options as TOML: {}", e);
-            // Fall back to line-by-line colon parsing for robustness
+            // Fall back to line-by-line parsing
             for line in lines {
                 let line = line.trim();
                 if let Some((key, value)) = line.split_once(':') {
