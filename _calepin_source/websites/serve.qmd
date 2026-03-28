@@ -1,0 +1,51 @@
+---
+title = "Serve"
+---
+
+*Calepin* uses the `preview` subcommand for local development.
+
+# Preview
+
+`calepin preview` renders the website or document, starts a local server, and watches for changes. When a `.qmd` file is saved, the document is re-rendered and the browser reloads automatically.
+
+For a website:
+
+```
+calepin preview _calepin/config.toml
+calepin preview _calepin/config.toml -p 4000
+calepin preview _calepin/config.toml -q
+```
+
+For a single file:
+
+```
+calepin preview file.qmd
+calepin preview file.qmd -p 8080
+```
+
+| Flag | Description |
+|------|-------------|
+| `-p`, `--port` | Server port (default: 3456) |
+| `-t`, `--target` | Output target |
+| `-s`, `--set` | Override YAML metadata fields |
+| `-q`, `--quiet` | Suppress progress messages |
+
+# Static file server
+
+When given a directory path, `calepin preview` acts as a plain static file server: no rendering, no watching, no live reload. This works with any directory that contains an `index.html`, not just *Calepin* websites.
+
+```
+calepin preview _site
+calepin preview docs -p 8080
+calepin preview /path/to/any/website
+```
+
+# Kill running servers
+
+To stop all running preview servers:
+
+```
+calepin preview kill
+```
+
+This finds and terminates every `calepin preview` process. Useful when a previous preview session was backgrounded or its terminal was closed without stopping the server. Works on macOS and Linux.

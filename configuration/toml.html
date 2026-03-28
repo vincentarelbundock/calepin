@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuration — Calepin</title>
+  
+  
+  
+  <link rel="stylesheet" href="/calepin/assets/calepin.css">
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false},
+      {left: '\\[', right: '\\]', display: true}
+    ],
+    ignoredClasses: ['nodollar']
+  });"></script>
+  
+</head>
+<body>
+  <a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+  <button class="navbar-btn navbar-toggle" id="sidebar-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar-nav">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+</button>
+  
+<ul class="navbar-nav left" id="navbar-left-menu">
+  
+  
+    
+  <li>
+    <a href="/calepin/index.html">
+      
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg); width: 104px; height: 36px;"></span>
+      
+    </a>
+  </li>
+    
+  
+  
+</ul>
+
+  
+<ul class="navbar-nav middle" id="navbar-menu">
+  
+  
+    
+  <li class="navbar-dropdown">
+    <button class="navbar-dropdown-toggle" aria-expanded="false">
+      Examples <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <ul class="navbar-dropdown-menu">
+      
+      <li><a href="https://arelbundock.com">
+        arelbundock.com
+      </a></li>
+      
+      <li><a href="https://vincentarelbundock.github.io/WDI">
+        WDI
+      </a></li>
+      
+      <li><a href="/calepin/pages/kitchen_sink.html">
+        Kitchen Sink
+      </a></li>
+      
+    </ul>
+  </li>
+    
+  
+  
+</ul>
+
+  <ul class="navbar-nav right">
+  
+  
+  <li>
+    <a href="https://github.com/vincentarelbundock/calepin">
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/fontawesome/brands/github.svg); mask-image: url(/calepin/assets/fontawesome/brands/github.svg); width: 20px; height: 20px;"></span>
+      
+      
+    </a>
+  </li>
+  
+  
+  
+  <li>
+  <button class="navbar-btn source-toggle" id="source-toggle" aria-label="Toggle source view" aria-expanded="false" aria-controls="source-code">
+    <span style="font-family:monospace;font-weight:700;font-size:0.85rem">&lt;/&gt;</span>
+  </button>
+</li>
+<script>
+(function() {
+  var btn = document.getElementById('source-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    document.body.classList.toggle('split-active');
+    btn.classList.toggle('active');
+    var isActive = btn.classList.contains('active');
+    btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    var code = document.getElementById('source-code');
+    if (code && code.textContent === 'Loading source...') {
+      fetch('/calepin/_calepin_source/configuration/toml.qmd')
+        .then(function(r) { return r.text(); })
+        .then(function(t) { code.textContent = t; })
+        .catch(function() { code.textContent = 'Failed to load source.'; });
+    }
+  });
+})();
+</script>
+  
+  
+  
+  <li>
+  <button class="navbar-btn" data-search-toggle aria-label="Search (Ctrl+K)">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  </button>
+</li>
+<div class="search-overlay" role="dialog" aria-modal="true" aria-label="Search">
+  <div class="search-modal">
+    <div class="search-input-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="search-input" type="text" placeholder="Search..." aria-label="Search" aria-controls="search-results" aria-autocomplete="list" role="combobox" aria-expanded="false">
+      <span class="search-kbd">Esc</span>
+    </div>
+    <div id="search-results" class="search-results" role="listbox" aria-label="Search results">
+      <div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>
+    </div>
+    <div class="visually-hidden" aria-live="polite" id="search-status"></div>
+  </div>
+</div>
+<script type="module">
+  const overlay = document.querySelector('.search-overlay');
+  const toggle = document.querySelector('[data-search-toggle]');
+  const input = overlay.querySelector('.search-input');
+  const resultsEl = overlay.querySelector('.search-results');
+  let selectedIdx = -1;
+
+  // Preload pagefind immediately
+  const pagefind = await import('/calepin/pagefind/pagefind.js');
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  const statusEl = document.getElementById('search-status');
+
+  async function doSearch(query) {
+    if (!query.trim()) {
+      resultsEl.innerHTML = '<div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>';
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      statusEl.textContent = '';
+      selectedIdx = -1;
+      return;
+    }
+
+    const search = await pagefind.search(query);
+    const results = await Promise.all(search.results.slice(0, 15).map(r => r.data()));
+    selectedIdx = -1;
+    input.removeAttribute('aria-activedescendant');
+
+    if (results.length === 0) {
+      resultsEl.innerHTML = '<div class="search-hint">No results found.</div>';
+      input.setAttribute('aria-expanded', 'false');
+      statusEl.textContent = 'No results found.';
+      return;
+    }
+
+    input.setAttribute('aria-expanded', 'true');
+    statusEl.textContent = results.length + ' result' + (results.length === 1 ? '' : 's') + ' found.';
+    resultsEl.innerHTML = results.map((r, i) =>
+      '<a class="search-result" id="search-result-' + i + '" role="option" href="' + escHtml(r.url) + '">' +
+        '<div class="search-result-title">' + escHtml(r.meta.title || r.url) + '</div>' +
+        '<div class="search-result-text">' + (r.excerpt || '') + '</div>' +
+      '</a>'
+    ).join('');
+  }
+
+  function updateSelected() {
+    const items = resultsEl.querySelectorAll('.search-result');
+    items.forEach((el, i) => {
+      el.classList.toggle('selected', i === selectedIdx);
+      el.setAttribute('aria-selected', i === selectedIdx ? 'true' : 'false');
+    });
+    if (items[selectedIdx]) {
+      items[selectedIdx].scrollIntoView({ block: 'nearest' });
+      input.setAttribute('aria-activedescendant', 'search-result-' + selectedIdx);
+    }
+  }
+
+  function open() {
+    overlay.classList.add('active');
+    input.value = '';
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    resultsEl.innerHTML = '<div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>';
+    statusEl.textContent = '';
+    selectedIdx = -1;
+    setTimeout(() => input.focus(), 50);
+  }
+  function close() {
+    overlay.classList.remove('active');
+    // Return focus to the toggle button
+    if (toggle) toggle.focus();
+  }
+
+  let debounce = null;
+  input.addEventListener('input', function() {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => doSearch(input.value), 100);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    const items = resultsEl.querySelectorAll('.search-result');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIdx = Math.min(selectedIdx + 1, items.length - 1);
+      updateSelected();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIdx = Math.max(selectedIdx - 1, 0);
+      updateSelected();
+    } else if (e.key === 'Enter' && items[selectedIdx]) {
+      e.preventDefault();
+      items[selectedIdx].click();
+    }
+  });
+
+  if (toggle) toggle.addEventListener('click', open);
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) close();
+  });
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); open(); }
+    if (e.key === 'Escape') close();
+  });
+</script>
+  
+  
+  
+  <li>
+  <button class="navbar-btn" id="theme-toggle" aria-label="Toggle dark mode" aria-pressed="false">
+    <span class="icon-sun" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span>
+    <span class="icon-moon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+  </button>
+</li>
+<script src="/calepin/assets/theme.js"></script>
+  
+  
+</ul>
+</nav>
+
+  <div class="site-container">
+    <aside id="sidebar-nav" class="sidebar-left" role="navigation" aria-label="Section navigation">
+  <div class="sidebar-header">
+    <a href="/calepin/index.html">
+      
+      <span class="sidebar-logo nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg); width: 104px; height: 36px;"></span>
+      
+    </a>
+  </div>
+  
+  <div class="sidebar-nav-links">
+    
+    
+    <span class="sidebar-nav-group">Examples</span>
+    
+    <a href="https://arelbundock.com">arelbundock.com</a>
+    
+    <a href="https://vincentarelbundock.github.io/WDI">WDI</a>
+    
+    <a href="/calepin/pages/kitchen_sink.html">Kitchen Sink</a>
+    
+    
+    
+  </div>
+  
+  <nav>
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/installation.html">Installation</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/getting_started.html">Getting Started</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/quarto.html">Calepin vs Quarto</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Authoring</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/authoring/basics.html">Basics</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/bibliography.html">Bibliography</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/figures.html">Figures</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/math.html">Math</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/tables.html">Tables</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Code</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/code/code_execution.html">Code Execution</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/chunks.html">Chunks</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/inline.html">Inline</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/r.html">R</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/python.html">Python</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/sh.html">Shell</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/diagrams.html">Diagrams</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/cache.html">Cache</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/builtins.html">Built-in Functions</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Templates</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/templates/templates.html">Templates</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/templates/snippets.html">Snippets &amp; Variables</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/templates/reference.html">Reference</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav" open>
+          <summary class="sidebar-section-title">Configuration</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/configuration/paths.html">Paths</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/configuration/structure.html">Project Structure</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/configuration/toml.html" class="active" aria-current="page">Configuration</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Websites</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/websites/structure.html">Structure</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/websites/navigation.html">Navigation</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/websites/serve.html">Serve</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Extensions</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/extensions/themes.html">Themes</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/extensions/plugins.html">Plugins</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/man.html">Software documentation</a></li>
+        </ul>
+        
+      
+    
+  </nav>
+</aside>
+
+    <main id="main-content" class="content-main">
+      <article>
+        
+
+<nav class="breadcrumbs" aria-label="Breadcrumbs">
+  
+  
+    <a href="/calepin/">Home</a>
+    <span class="separator">/</span>
+  
+  
+  
+    <span>Configuration</span>
+    <span class="separator">/</span>
+  
+  
+  
+    <span aria-current="page">Configuration</span>
+  
+  
+</nav>
+
+
+<header class="page-header">
+  <h1>Configuration</h1>
+  
+  
+  
+</header>
+
+<div class="split-wrapper">
+  <div class="split-rendered">
+    <style>
+@media (prefers-color-scheme: light) {
+/*
+ * theme "GitHub" generated by syntect
+ */
+
+.code {
+ color: #333333;
+ background-color: #ffffff;
+}
+
+.comment {
+ color: #969896;
+}
+.keyword.operator, .support.constant {
+ color: #a71d5d;
+}
+.constant.language {
+ color: #0086b3;
+}
+.keyword, .storage {
+ color: #a71d5d;
+}
+.storage.type {
+ color: #a71d5d;
+}
+.support.type {
+ color: #0086b3;
+}
+.variable {
+ color: #0086b3;
+}
+.variable.language {
+ color: #df5000;
+}
+.variable.parameter.function {
+ color: #030303;
+}
+.entity.name.function, .entity {
+ color: #795da3;
+}
+.support.function {
+ color: #0086b3;
+}
+.entity.name.type, .entity.other.inherited-class {
+ color: #000000;
+}
+.support.class {
+ color: #0086b3;
+}
+.entity.name.exception {
+ color: #f93232;
+}
+.entity.name.section {
+}
+.constant.numeric, .constant {
+ color: #0086b3;
+}
+.constant.character, .string, .string .punctuation {
+ color: #183691;
+}
+.string.regexp, .string.regexp .constant.character, .string.regexp .punctuation {
+ color: #009926;
+}
+.constant.other.symbol {
+ color: #990073;
+}
+.string .source, .text .source {
+ color: #333333;
+}
+.variable.other.property {
+ color: #030303;
+}
+.entity.name {
+ color: #333333;
+}
+.invalid {
+ color: #0f0000;
+}
+.entity.name.tag {
+ color: #63a35c;
+}
+.punctuation.definition.tag {
+ color: #030303;
+}
+.meta.tag .string .punctuation {
+ color: #183691;
+}
+.constant.character.entity {
+ color: #000000;
+}
+.entity.other.attribute-name {
+ color: #795da3;
+}
+.meta.tag .string.quoted, .meta.tag .string.quoted .constant.character.entity {
+ color: #183691;
+}
+.meta.selector, .meta.selector .entity, .meta.selector .entity .punctuation, .entity.name.tag.css, .entity.other.attribute-name.class, .keyword.control.html.sass {
+ color: #63a35c;
+}
+.entity.other.attribute-name.class, .constant.other.unit {
+ color: #795da3;
+}
+.support.type.property-name, .support.constant.property-value {
+ color: #0086b3;
+}
+.keyword.other.special-method.ruby.gem {
+ color: #0086b3;
+}
+.variable.other.block.ruby {
+ color: #000000;
+}
+.support.function.prelude, .variable.other.generic-type.haskell {
+ color: #000000;
+}
+.constant.other.haskell, .support.constant.haskell {
+ color: #445588;
+}
+.meta.diff, .meta.diff.header {
+ color: #75715e;
+}
+.markup.deleted {
+ color: #770000;
+ background-color: #ffdddd;
+}
+.markup.inserted {
+ color: #003300;
+ background-color: #ddffdd;
+}
+.markup.changed {
+ color: #ececec;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #ffffff; color: #333333; }
+}
+@media (prefers-color-scheme: dark) {
+/*
+ * theme "Nord" generated by syntect
+ */
+
+.code {
+ color: #d8dee9;
+ background-color: #2e3440;
+}
+
+.comment, .punctuation.definition.comment {
+ color: #616e88;
+}
+.constant.numeric {
+ color: #b48ead;
+}
+.constant.language {
+ color: #81a1c1;
+}
+.constant.character.escape {
+ color: #ebcb8b;
+}
+.constant.other.placeholder {
+ color: #ebcb8b;
+}
+.constant.other {
+ color: #d8dee9;
+}
+.entity.name.class {
+ color: #8fbcbb;
+}
+.entity.name.struct {
+ color: #8fbcbb;
+}
+.entity.name.enum {
+ color: #8fbcbb;
+}
+.entity.name.union {
+ color: #8fbcbb;
+}
+.entity.name.trait {
+ color: #8fbcbb;
+}
+.entity.name.interface {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.entity.name.type {
+ color: #81a1c1;
+}
+.entity.other.inherited-class {
+ color: #8fbcbb;
+}
+.entity.name.function {
+ color: #88c0d0;
+}
+.entity.name.function.constructor {
+ color: #88c0d0;
+}
+.entity.name.function.destructor {
+ color: #88c0d0;
+}
+.entity.name.namespace {
+ color: #8fbcbb;
+}
+.entity.name.constant {
+ color: #81a1c1;
+}
+.entity.name.label {
+ color: #5e81ac;
+}
+.entity.name.section {
+ color: #88c0d0;
+}
+.entity.name.tag {
+ color: #81a1c1;
+}
+.entity.other.attribute-name {
+ color: #8fbcbb;
+}
+.invalid.illegal {
+ color: #d8dee9;
+ background-color: #bf616a;
+}
+.invalid.deprecated {
+ color: #d8dee9;
+ background-color: #ebcb8b;
+}
+.keyword.control {
+ color: #81a1c1;
+}
+.keyword.control.conditional {
+ color: #81a1c1;
+}
+.keyword.control.import {
+ color: #81a1c1;
+}
+.punctuation.definition.keyword {
+ color: #81a1c1;
+}
+.keyword.other {
+ color: #81a1c1;
+}
+.keyword.operator, .keyword.operator.assignment, .keyword.operator.arithmetic, .keyword.operator.bitwise, .keyword.operator.logical, .keyword.operator.word {
+ color: #81a1c1;
+}
+.markup.heading {
+ color: #88c0d0;
+}
+.markup.list.unnumbered, .markup.list.numbered {
+ color: #d8dee9;
+}
+.markup.bold {
+font-weight: bold;
+}
+.markup.italic {
+font-style: italic;
+}
+.markup.inserted {
+ color: #a3be8c;
+}
+.markup.deleted {
+ color: #bf616a;
+}
+.markup.changed {
+ color: #ebcb8b;
+}
+.markup.quote {
+ color: #616e88;
+}
+.markup.raw.inline, .markup.raw.block {
+ color: #8fbcbb;
+}
+.markup.other {
+ background-color: #eceff4;
+}
+.punctuation.separator, .punctuation.terminator {
+ color: #eceff4;
+}
+.punctuation.separator.continuation, .punctuation.accessor {
+ color: #81a1c1;
+}
+.punctuation.definition.tag {
+ color: #81a1c1;
+}
+.storage.type, .storage.modifier {
+ color: #81a1c1;
+}
+.string.quoted.single, .string.quoted.double, .string.quoted.triple, .string.quoted.other, .string.unquoted {
+ color: #a3be8c;
+}
+.punctuation.definition.string.begin, .punctuation.definition.string.end {
+ color: #a3be8c;
+}
+.string.regexp {
+ color: #ebcb8b;
+}
+.support.constant {
+ color: #8fbcbb;
+}
+.support.function {
+ color: #88c0d0;
+}
+.support.module {
+ color: #8fbcbb;
+}
+.support.type {
+ color: #8fbcbb;
+}
+.support.class {
+ color: #8fbcbb;
+}
+.text.html.basic, .text.xml {
+ color: #eceff4;
+}
+.variable.other, .variable.other.readwrite {
+ color: #d8dee9;
+}
+.punctuation.definition.variable {
+ color: #81a1c1;
+}
+.variable.other.constant {
+ color: #81a1c1;
+}
+.variable.language {
+ color: #81a1c1;
+}
+.variable.parameter {
+ color: #d8dee9;
+}
+.variable.other.member {
+ color: #d8dee9;
+}
+.variable.function {
+ color: #88c0d0;
+}
+.constant.numeric.line-number.find-in-files {
+ color: #d8dee9;
+}
+.constant.numeric.line-number.match.find-in-files {
+ color: #88c0d0;
+}
+.entity.name.filename.find-in-files {
+ color: #8fbcbb;
+}
+.text.find-in-files {
+ color: #d8dee9;
+}
+.source.c .keyword.control.import.include.c, .source.c .meta.preprocessor.c .keyword.control.import.c, .source.c\2b \2b  .keyword.control.import.include.c\2b \2b , .source.c\2b \2b  .meta.preprocessor.c\2b \2b  .keyword.control.import.c\2b \2b  {
+ color: #5e81ac;
+}
+.source.c .keyword.operator.word.c, .source.c\2b \2b  .keyword.operator.word.c\2b \2b  {
+ color: #88c0d0;
+font-style: italic;
+}
+.source.css .support.type.property-name.css, .source.sass .support.type.property-name.sass, .source.css .support.type.vendor-prefix.css {
+ color: #d8dee9;
+}
+.source.css .constant.other.color.rgb-value.css, .source.sass .constant.other.rgb-value.sass {
+ color: #b48ead;
+}
+.source.css .support.constant.color.w3c-special-color-keyword.css, .source.css .support.constant.property-value.css, .source.sass .support.constant.property-value.sass {
+ color: #81a1c1;
+}
+.source.css .entity.other.pseudo-class.css {
+ color: #8fbcbb;
+}
+.source.css .keyword.control.at-rule.media.css, .source.css .punctuation.definition.keyword.css, .source.sass .keyword.control.at-rule.sass {
+ color: #d08770;
+}
+.source.css .support.constant.color.w3c-standard-color-name.css {
+ color: #81a1c1;
+font-style: italic;
+}
+.source.css .entity.other.attribute-name.id.css, .source.sass .entity.other.attribute-name.id.sass {
+font-weight: bold;
+}
+.source.diff .meta.diff.range.context {
+ color: #8fbcbb;
+}
+.source.diff .meta.diff.header.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.separator {
+ color: #81a1c1;
+}
+.source.go .support.function.builtin.go {
+font-style: italic;
+}
+.text.html.basic .constant.character.entity.html {
+ color: #ebcb8b;
+}
+.variable.annotation.java, .punctuation.definition.annotation.java {
+ color: #d08770;
+}
+.punctuation.accessor.dot.java {
+ color: #eceff4;
+}
+.support.other.package.java {
+ color: #8fbcbb;
+}
+.source.java .comment.block.documentation.javadoc .punctuation.definition.entity.html {
+ color: #81a1c1;
+}
+.source.java .entity.name.constant {
+ color: #d8dee9;
+}
+.source.java .keyword.other.documentation, .source.java .comment.block.documentation.javadoc .punctuation.definition.keyword.javadoc {
+ color: #8fbcbb;
+}
+.source.java .variable.parameter.type.java {
+ color: #8fbcbb;
+}
+.source.java .entity.other.inherited-class.java {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.java .keyword.declaration.implements.java {
+ color: #81a1c1;
+}
+.source.json .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json, .source.json.sublime .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json {
+ color: #8fbcbb;
+}
+.source.json .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json .meta.structure.dictionary.json .punctuation.definition.string.end.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.end.json {
+ color: #eceff4;
+}
+.text.html.markdown .punctuation.definition.raw.code-fence.begin.markdown, .text.html.markdown .punctuation.definition.raw.code-fence.end.markdown, .text.html.markdown .markup.raw.code-fence.markdown .constant.other.language-name.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .punctuation.definition.list_item.markdown, .text.html.markdown .markup.list.numbered.bullet.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .markup.quote.markdown .punctuation.definition.blockquote.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .meta.link.inline.description.markdown, .text.html.markdown .meta.image.inline.description.markdown, .text.html.markdown .meta.link.reference.description.markdown, .text.html.markdown .constant.other.reference.link.markdown, .text.html.markdown .entity.name.reference.link.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.link.begin.markdown, .text.html.markdown .punctuation.definition.link.end.markdown, .text.html.markdown .punctuation.definition.image.begin.markdown, .text.html.markdown .punctuation.definition.image.end.markdown, .text.html.markdown .punctuation.definition.constant.begin.markdown, .text.html.markdown .punctuation.definition.constant.end.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .punctuation.separator.table-cell.markdown, .text.html.markdown .punctuation.section.table-header.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .meta.table.header.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.thematic-break.markdown {
+ color: #81a1c1;
+font-weight: bold;
+}
+.embedding.php .text.html.basic .punctuation.section.embedded.begin.php, .embedding.php .text.html.basic .punctuation.section.embedded.end.php {
+ color: #5e81ac;
+}
+.embedding.php .text.html.basic .comment.block.documentation.phpdoc.php .keyword.other.phpdoc.php {
+ color: #8fbcbb;
+}
+.embedding.php .text.html.basic .support.other.namespace.php {
+ color: #8fbcbb;
+}
+.source.python .meta.annotation.python .meta.qualified-name.python .support.function.builtin.python, .source.python .punctuation.definition.annotation.python {
+ color: #d08770;
+}
+.support.function.builtin.python {
+font-style: italic;
+}
+.source.python .support.type.exception.python {
+ color: #8fbcbb;
+}
+.source.python .support.type.python {
+ color: #81a1c1;
+}
+.source.sass .variable.parameter.sass {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ruby .support.function.builtin.ruby {
+font-style: italic;
+}
+.source.shell .support.function.builtin.shell {
+font-style: italic;
+}
+.text.xml .entity.name.tag.namespace {
+ color: #8fbcbb;
+}
+.text.xml .meta.tag.sgml.doctype.xml, .text.xml .meta.tag.preprocessor .entity.name.tag, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.end.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.end.xml {
+ color: #5e81ac;
+}
+.text.xml .string.unquoted.cdata.xml .punctuation.definition.string.begin.xml, .text.xml .string.unquoted.cdata.xml .punctuation.definition.string.end.xml {
+ color: #d08770;
+font-style: italic;
+}
+.source.yaml .entity.name.tag {
+ color: #8fbcbb;
+}
+.sublimelinter.mark.warning {
+ color: #ebcb8b;
+}
+.sublimelinter.mark.error {
+ color: #bf616a;
+}
+.markup.ignored.git_gutter {
+ color: #616e88;
+}
+.markup.untracked.git_gutter {
+ color: #88c0d0;
+}
+.markup.inserted.git_gutter {
+ color: #a3be8c;
+}
+.markup.changed.git_gutter {
+ color: #ebcb8b;
+}
+.markup.deleted.git_gutter {
+ color: #bf616a;
+}
+.source.js .tag.decorator.js .entity.name.tag.js, .source.js .tag.decorator.js .punctuation.definition.tag.js {
+ color: #d08770;
+}
+.source.js .string.quoted.js, .source.js .string.quoted.jsx, .source.js .meta.class.js .meta.class.property.js .string.interpolated.js, .source.js .string.interpolated.js, .source.js .string.template.js {
+ color: #a3be8c;
+}
+.source.js .variable.other.constant.js {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.js .constant.other.object.key.js .string.unquoted.label.js, .source.js .variable.other.readwrite.js {
+ color: #d8dee9;
+}
+.source.js .meta.class.js .meta.class.property.js .variable.other.property.js {
+ color: #88c0d0;
+}
+.source.js .variable.other.property.static.js {
+font-style: italic;
+}
+.source.js .variable.other.class.js {
+ color: #8fbcbb;
+}
+.source.js .string.interpolated.js .keyword.other.substitution.begin.js, .source.js .string.interpolated.js .keyword.other.substitution.end.js, .source.js .punctuation.definition.template-expression.begin.js, .source.js .punctuation.definition.template-expression.end.js {
+ color: #5e81ac;
+}
+.source.js .keyword.operator.spread.js {
+ color: #81a1c1;
+}
+.source.js .meta.export.js .variable.other.readwrite.js {
+ color: #8fbcbb;
+}
+.source.ts .meta.class.ts .entity.other.inherited-class.ts {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.ts .entity.name.type.class.ts, .source.ts .entity.name.type.enum.ts {
+ color: #8fbcbb;
+}
+.source.ts .entity.name.type.ts {
+ color: #8fbcbb;
+}
+.source.ts .support.type.primitive.ts {
+ color: #81a1c1;
+}
+.source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .variable.other.readwrite.ts, .source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .punctuation.decorator.ts {
+ color: #d08770;
+}
+.source.ts .punctuation.definition.template-expression.begin.ts, .source.ts .punctuation.definition.template-expression.end.ts {
+ color: #5e81ac;
+}
+.source.ts .string.template.ts {
+ color: #a3be8c;
+}
+.source.ts .support.function.math.ts {
+font-style: italic;
+}
+.source.ts .variable.other.constant.property.ts, .source.ts .variable.other.enummember.ts, .source.ts .variable.other.constant.ts {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ts .comment.block.documentation.ts .storage.type.class.jsdoc {
+ color: #8fbcbb;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #2e3440; color: #d8dee9; }
+}
+[data-theme='light'] {
+/*
+ * theme "GitHub" generated by syntect
+ */
+
+.code {
+ color: #333333;
+ background-color: #ffffff;
+}
+
+.comment {
+ color: #969896;
+}
+.keyword.operator, .support.constant {
+ color: #a71d5d;
+}
+.constant.language {
+ color: #0086b3;
+}
+.keyword, .storage {
+ color: #a71d5d;
+}
+.storage.type {
+ color: #a71d5d;
+}
+.support.type {
+ color: #0086b3;
+}
+.variable {
+ color: #0086b3;
+}
+.variable.language {
+ color: #df5000;
+}
+.variable.parameter.function {
+ color: #030303;
+}
+.entity.name.function, .entity {
+ color: #795da3;
+}
+.support.function {
+ color: #0086b3;
+}
+.entity.name.type, .entity.other.inherited-class {
+ color: #000000;
+}
+.support.class {
+ color: #0086b3;
+}
+.entity.name.exception {
+ color: #f93232;
+}
+.entity.name.section {
+}
+.constant.numeric, .constant {
+ color: #0086b3;
+}
+.constant.character, .string, .string .punctuation {
+ color: #183691;
+}
+.string.regexp, .string.regexp .constant.character, .string.regexp .punctuation {
+ color: #009926;
+}
+.constant.other.symbol {
+ color: #990073;
+}
+.string .source, .text .source {
+ color: #333333;
+}
+.variable.other.property {
+ color: #030303;
+}
+.entity.name {
+ color: #333333;
+}
+.invalid {
+ color: #0f0000;
+}
+.entity.name.tag {
+ color: #63a35c;
+}
+.punctuation.definition.tag {
+ color: #030303;
+}
+.meta.tag .string .punctuation {
+ color: #183691;
+}
+.constant.character.entity {
+ color: #000000;
+}
+.entity.other.attribute-name {
+ color: #795da3;
+}
+.meta.tag .string.quoted, .meta.tag .string.quoted .constant.character.entity {
+ color: #183691;
+}
+.meta.selector, .meta.selector .entity, .meta.selector .entity .punctuation, .entity.name.tag.css, .entity.other.attribute-name.class, .keyword.control.html.sass {
+ color: #63a35c;
+}
+.entity.other.attribute-name.class, .constant.other.unit {
+ color: #795da3;
+}
+.support.type.property-name, .support.constant.property-value {
+ color: #0086b3;
+}
+.keyword.other.special-method.ruby.gem {
+ color: #0086b3;
+}
+.variable.other.block.ruby {
+ color: #000000;
+}
+.support.function.prelude, .variable.other.generic-type.haskell {
+ color: #000000;
+}
+.constant.other.haskell, .support.constant.haskell {
+ color: #445588;
+}
+.meta.diff, .meta.diff.header {
+ color: #75715e;
+}
+.markup.deleted {
+ color: #770000;
+ background-color: #ffdddd;
+}
+.markup.inserted {
+ color: #003300;
+ background-color: #ddffdd;
+}
+.markup.changed {
+ color: #ececec;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #ffffff; color: #333333; }
+}
+[data-theme='dark'] {
+/*
+ * theme "Nord" generated by syntect
+ */
+
+.code {
+ color: #d8dee9;
+ background-color: #2e3440;
+}
+
+.comment, .punctuation.definition.comment {
+ color: #616e88;
+}
+.constant.numeric {
+ color: #b48ead;
+}
+.constant.language {
+ color: #81a1c1;
+}
+.constant.character.escape {
+ color: #ebcb8b;
+}
+.constant.other.placeholder {
+ color: #ebcb8b;
+}
+.constant.other {
+ color: #d8dee9;
+}
+.entity.name.class {
+ color: #8fbcbb;
+}
+.entity.name.struct {
+ color: #8fbcbb;
+}
+.entity.name.enum {
+ color: #8fbcbb;
+}
+.entity.name.union {
+ color: #8fbcbb;
+}
+.entity.name.trait {
+ color: #8fbcbb;
+}
+.entity.name.interface {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.entity.name.type {
+ color: #81a1c1;
+}
+.entity.other.inherited-class {
+ color: #8fbcbb;
+}
+.entity.name.function {
+ color: #88c0d0;
+}
+.entity.name.function.constructor {
+ color: #88c0d0;
+}
+.entity.name.function.destructor {
+ color: #88c0d0;
+}
+.entity.name.namespace {
+ color: #8fbcbb;
+}
+.entity.name.constant {
+ color: #81a1c1;
+}
+.entity.name.label {
+ color: #5e81ac;
+}
+.entity.name.section {
+ color: #88c0d0;
+}
+.entity.name.tag {
+ color: #81a1c1;
+}
+.entity.other.attribute-name {
+ color: #8fbcbb;
+}
+.invalid.illegal {
+ color: #d8dee9;
+ background-color: #bf616a;
+}
+.invalid.deprecated {
+ color: #d8dee9;
+ background-color: #ebcb8b;
+}
+.keyword.control {
+ color: #81a1c1;
+}
+.keyword.control.conditional {
+ color: #81a1c1;
+}
+.keyword.control.import {
+ color: #81a1c1;
+}
+.punctuation.definition.keyword {
+ color: #81a1c1;
+}
+.keyword.other {
+ color: #81a1c1;
+}
+.keyword.operator, .keyword.operator.assignment, .keyword.operator.arithmetic, .keyword.operator.bitwise, .keyword.operator.logical, .keyword.operator.word {
+ color: #81a1c1;
+}
+.markup.heading {
+ color: #88c0d0;
+}
+.markup.list.unnumbered, .markup.list.numbered {
+ color: #d8dee9;
+}
+.markup.bold {
+font-weight: bold;
+}
+.markup.italic {
+font-style: italic;
+}
+.markup.inserted {
+ color: #a3be8c;
+}
+.markup.deleted {
+ color: #bf616a;
+}
+.markup.changed {
+ color: #ebcb8b;
+}
+.markup.quote {
+ color: #616e88;
+}
+.markup.raw.inline, .markup.raw.block {
+ color: #8fbcbb;
+}
+.markup.other {
+ background-color: #eceff4;
+}
+.punctuation.separator, .punctuation.terminator {
+ color: #eceff4;
+}
+.punctuation.separator.continuation, .punctuation.accessor {
+ color: #81a1c1;
+}
+.punctuation.definition.tag {
+ color: #81a1c1;
+}
+.storage.type, .storage.modifier {
+ color: #81a1c1;
+}
+.string.quoted.single, .string.quoted.double, .string.quoted.triple, .string.quoted.other, .string.unquoted {
+ color: #a3be8c;
+}
+.punctuation.definition.string.begin, .punctuation.definition.string.end {
+ color: #a3be8c;
+}
+.string.regexp {
+ color: #ebcb8b;
+}
+.support.constant {
+ color: #8fbcbb;
+}
+.support.function {
+ color: #88c0d0;
+}
+.support.module {
+ color: #8fbcbb;
+}
+.support.type {
+ color: #8fbcbb;
+}
+.support.class {
+ color: #8fbcbb;
+}
+.text.html.basic, .text.xml {
+ color: #eceff4;
+}
+.variable.other, .variable.other.readwrite {
+ color: #d8dee9;
+}
+.punctuation.definition.variable {
+ color: #81a1c1;
+}
+.variable.other.constant {
+ color: #81a1c1;
+}
+.variable.language {
+ color: #81a1c1;
+}
+.variable.parameter {
+ color: #d8dee9;
+}
+.variable.other.member {
+ color: #d8dee9;
+}
+.variable.function {
+ color: #88c0d0;
+}
+.constant.numeric.line-number.find-in-files {
+ color: #d8dee9;
+}
+.constant.numeric.line-number.match.find-in-files {
+ color: #88c0d0;
+}
+.entity.name.filename.find-in-files {
+ color: #8fbcbb;
+}
+.text.find-in-files {
+ color: #d8dee9;
+}
+.source.c .keyword.control.import.include.c, .source.c .meta.preprocessor.c .keyword.control.import.c, .source.c\2b \2b  .keyword.control.import.include.c\2b \2b , .source.c\2b \2b  .meta.preprocessor.c\2b \2b  .keyword.control.import.c\2b \2b  {
+ color: #5e81ac;
+}
+.source.c .keyword.operator.word.c, .source.c\2b \2b  .keyword.operator.word.c\2b \2b  {
+ color: #88c0d0;
+font-style: italic;
+}
+.source.css .support.type.property-name.css, .source.sass .support.type.property-name.sass, .source.css .support.type.vendor-prefix.css {
+ color: #d8dee9;
+}
+.source.css .constant.other.color.rgb-value.css, .source.sass .constant.other.rgb-value.sass {
+ color: #b48ead;
+}
+.source.css .support.constant.color.w3c-special-color-keyword.css, .source.css .support.constant.property-value.css, .source.sass .support.constant.property-value.sass {
+ color: #81a1c1;
+}
+.source.css .entity.other.pseudo-class.css {
+ color: #8fbcbb;
+}
+.source.css .keyword.control.at-rule.media.css, .source.css .punctuation.definition.keyword.css, .source.sass .keyword.control.at-rule.sass {
+ color: #d08770;
+}
+.source.css .support.constant.color.w3c-standard-color-name.css {
+ color: #81a1c1;
+font-style: italic;
+}
+.source.css .entity.other.attribute-name.id.css, .source.sass .entity.other.attribute-name.id.sass {
+font-weight: bold;
+}
+.source.diff .meta.diff.range.context {
+ color: #8fbcbb;
+}
+.source.diff .meta.diff.header.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.separator {
+ color: #81a1c1;
+}
+.source.go .support.function.builtin.go {
+font-style: italic;
+}
+.text.html.basic .constant.character.entity.html {
+ color: #ebcb8b;
+}
+.variable.annotation.java, .punctuation.definition.annotation.java {
+ color: #d08770;
+}
+.punctuation.accessor.dot.java {
+ color: #eceff4;
+}
+.support.other.package.java {
+ color: #8fbcbb;
+}
+.source.java .comment.block.documentation.javadoc .punctuation.definition.entity.html {
+ color: #81a1c1;
+}
+.source.java .entity.name.constant {
+ color: #d8dee9;
+}
+.source.java .keyword.other.documentation, .source.java .comment.block.documentation.javadoc .punctuation.definition.keyword.javadoc {
+ color: #8fbcbb;
+}
+.source.java .variable.parameter.type.java {
+ color: #8fbcbb;
+}
+.source.java .entity.other.inherited-class.java {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.java .keyword.declaration.implements.java {
+ color: #81a1c1;
+}
+.source.json .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json, .source.json.sublime .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json {
+ color: #8fbcbb;
+}
+.source.json .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json .meta.structure.dictionary.json .punctuation.definition.string.end.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.end.json {
+ color: #eceff4;
+}
+.text.html.markdown .punctuation.definition.raw.code-fence.begin.markdown, .text.html.markdown .punctuation.definition.raw.code-fence.end.markdown, .text.html.markdown .markup.raw.code-fence.markdown .constant.other.language-name.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .punctuation.definition.list_item.markdown, .text.html.markdown .markup.list.numbered.bullet.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .markup.quote.markdown .punctuation.definition.blockquote.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .meta.link.inline.description.markdown, .text.html.markdown .meta.image.inline.description.markdown, .text.html.markdown .meta.link.reference.description.markdown, .text.html.markdown .constant.other.reference.link.markdown, .text.html.markdown .entity.name.reference.link.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.link.begin.markdown, .text.html.markdown .punctuation.definition.link.end.markdown, .text.html.markdown .punctuation.definition.image.begin.markdown, .text.html.markdown .punctuation.definition.image.end.markdown, .text.html.markdown .punctuation.definition.constant.begin.markdown, .text.html.markdown .punctuation.definition.constant.end.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .punctuation.separator.table-cell.markdown, .text.html.markdown .punctuation.section.table-header.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .meta.table.header.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.thematic-break.markdown {
+ color: #81a1c1;
+font-weight: bold;
+}
+.embedding.php .text.html.basic .punctuation.section.embedded.begin.php, .embedding.php .text.html.basic .punctuation.section.embedded.end.php {
+ color: #5e81ac;
+}
+.embedding.php .text.html.basic .comment.block.documentation.phpdoc.php .keyword.other.phpdoc.php {
+ color: #8fbcbb;
+}
+.embedding.php .text.html.basic .support.other.namespace.php {
+ color: #8fbcbb;
+}
+.source.python .meta.annotation.python .meta.qualified-name.python .support.function.builtin.python, .source.python .punctuation.definition.annotation.python {
+ color: #d08770;
+}
+.support.function.builtin.python {
+font-style: italic;
+}
+.source.python .support.type.exception.python {
+ color: #8fbcbb;
+}
+.source.python .support.type.python {
+ color: #81a1c1;
+}
+.source.sass .variable.parameter.sass {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ruby .support.function.builtin.ruby {
+font-style: italic;
+}
+.source.shell .support.function.builtin.shell {
+font-style: italic;
+}
+.text.xml .entity.name.tag.namespace {
+ color: #8fbcbb;
+}
+.text.xml .meta.tag.sgml.doctype.xml, .text.xml .meta.tag.preprocessor .entity.name.tag, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.end.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.end.xml {
+ color: #5e81ac;
+}
+.text.xml .string.unquoted.cdata.xml .punctuation.definition.string.begin.xml, .text.xml .string.unquoted.cdata.xml .punctuation.definition.string.end.xml {
+ color: #d08770;
+font-style: italic;
+}
+.source.yaml .entity.name.tag {
+ color: #8fbcbb;
+}
+.sublimelinter.mark.warning {
+ color: #ebcb8b;
+}
+.sublimelinter.mark.error {
+ color: #bf616a;
+}
+.markup.ignored.git_gutter {
+ color: #616e88;
+}
+.markup.untracked.git_gutter {
+ color: #88c0d0;
+}
+.markup.inserted.git_gutter {
+ color: #a3be8c;
+}
+.markup.changed.git_gutter {
+ color: #ebcb8b;
+}
+.markup.deleted.git_gutter {
+ color: #bf616a;
+}
+.source.js .tag.decorator.js .entity.name.tag.js, .source.js .tag.decorator.js .punctuation.definition.tag.js {
+ color: #d08770;
+}
+.source.js .string.quoted.js, .source.js .string.quoted.jsx, .source.js .meta.class.js .meta.class.property.js .string.interpolated.js, .source.js .string.interpolated.js, .source.js .string.template.js {
+ color: #a3be8c;
+}
+.source.js .variable.other.constant.js {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.js .constant.other.object.key.js .string.unquoted.label.js, .source.js .variable.other.readwrite.js {
+ color: #d8dee9;
+}
+.source.js .meta.class.js .meta.class.property.js .variable.other.property.js {
+ color: #88c0d0;
+}
+.source.js .variable.other.property.static.js {
+font-style: italic;
+}
+.source.js .variable.other.class.js {
+ color: #8fbcbb;
+}
+.source.js .string.interpolated.js .keyword.other.substitution.begin.js, .source.js .string.interpolated.js .keyword.other.substitution.end.js, .source.js .punctuation.definition.template-expression.begin.js, .source.js .punctuation.definition.template-expression.end.js {
+ color: #5e81ac;
+}
+.source.js .keyword.operator.spread.js {
+ color: #81a1c1;
+}
+.source.js .meta.export.js .variable.other.readwrite.js {
+ color: #8fbcbb;
+}
+.source.ts .meta.class.ts .entity.other.inherited-class.ts {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.ts .entity.name.type.class.ts, .source.ts .entity.name.type.enum.ts {
+ color: #8fbcbb;
+}
+.source.ts .entity.name.type.ts {
+ color: #8fbcbb;
+}
+.source.ts .support.type.primitive.ts {
+ color: #81a1c1;
+}
+.source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .variable.other.readwrite.ts, .source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .punctuation.decorator.ts {
+ color: #d08770;
+}
+.source.ts .punctuation.definition.template-expression.begin.ts, .source.ts .punctuation.definition.template-expression.end.ts {
+ color: #5e81ac;
+}
+.source.ts .string.template.ts {
+ color: #a3be8c;
+}
+.source.ts .support.function.math.ts {
+font-style: italic;
+}
+.source.ts .variable.other.constant.property.ts, .source.ts .variable.other.enummember.ts, .source.ts .variable.other.constant.ts {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ts .comment.block.documentation.ts .storage.type.class.jsdoc {
+ color: #8fbcbb;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #2e3440; color: #d8dee9; }
+}
+</style>
+<p><em>Calepin</em> keeps configuration minimal. The TOML file handles what needs to be structured data: targets, navigation, and rendering defaults. Everything else (navigation bars, table of contents, font sizes, colors, page layout) is controlled by editing templates and CSS directly. See <a href="../templates/templates.html">Templates</a> for details.</p>
+<p><em>Calepin</em> uses <a href="https://toml.io">TOML</a> for all configuration. Settings can appear in document front matter (between <code>---</code> delimiters) or in <code>_calepin/config.toml</code> for collections. Settings are resolved in order, with later values winning: built-in defaults, then <code>config.toml</code>, then front matter, then CLI (<code>-s key=value</code>).</p>
+<h2 id="toml-basics">TOML basics</h2>
+<p>Strings, numbers, and booleans:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">title = &quot;My Document&quot;
+dpi = 150.0
+number-sections = true</span></code></pre>
+
+<p>Tables group related settings under a header:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">[highlight]
+light = &quot;github&quot;
+dark = &quot;nord&quot;</span></code></pre>
+
+<p>Arrays of tables use double brackets. Each <code>[[contents]]</code> block adds one section to the sidebar:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">[[contents]]
+title = &quot;Guide&quot;
+pages = [&quot;intro.qmd&quot;, &quot;advanced.qmd&quot;]
+
+[[contents]]
+title = &quot;Reference&quot;
+pages = [&quot;api.qmd&quot;]</span></code></pre>
+
+<p>Inline tables work for simple cases:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">highlight = {light = &quot;github&quot;, dark = &quot;nord&quot;}</span></code></pre>
+
+<p>Lists use square brackets:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">bibliography = [&quot;refs.bib&quot;, &quot;extra.bib&quot;]
+pages = [&quot;chapter1.qmd&quot;, &quot;chapter2.qmd&quot;, &quot;appendix/*.qmd&quot;]</span></code></pre>
+
+<h2 id="config-resolution">Config resolution</h2>
+<p>Settings are resolved in order, with later values overriding earlier ones:</p>
+<ol>
+<li>Built-in defaults
+<ul>
+<li><code>src/config/shared.toml</code>: rendering, figures, code execution, labels.
+</li>
+<li><code>src/config/document.toml</code>: single-document targets (html, latex, typst, pdf, etc.).
+</li>
+<li><code>src/config/collection.toml</code>: collection targets (website, book).
+</li>
+</ul>
+</li>
+<li>
+<p>Project config</p>
+<ul>
+<li><code>_calepin/config.toml</code>: project-level settings for collections.
+</li>
+</ul>
+</li>
+<li>
+<p>Sidecar config</p>
+<ul>
+<li><code>{stem}_calepin/config.toml</code>: per-document overrides.
+</li>
+</ul>
+</li>
+<li>
+<p>Document front matter</p>
+<ul>
+<li>TOML between <code>---</code> delimiters at the top of the <code>.qmd</code> file.
+</li>
+</ul>
+</li>
+<li>
+<p>CLI overrides</p>
+<ul>
+<li><code>-s key=value</code> flags passed to <code>calepin render</code>.
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="shared-defaults">Shared defaults</h2>
+<p>These apply to both single documents and collections:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">csl = &quot;chicago-author-date&quot;
+math = &quot;katex&quot;
+lang = &quot;en&quot;
+embed_resources = true
+dpi = 150.0
+
+[highlight]
+light = &quot;github&quot;
+dark = &quot;nord&quot;
+
+[figure]
+fig_width = 6.0
+fig_asp = 0.618
+out_width = 0.70
+device = &quot;png&quot;
+alignment = &quot;center&quot;
+
+[execute]
+cache = true
+eval = true
+echo = true
+include = true
+warning = true
+message = true
+error = true
+comment = &quot;&gt; &quot;
+results = &quot;markup&quot;
+
+[toc]
+enabled = false
+depth = 3
+title = &quot;Contents&quot;
+
+[labels]
+abstract_title = &quot;Abstract&quot;
+keywords = &quot;Keywords&quot;
+appendix = &quot;Appendix&quot;
+citation = &quot;Citation&quot;
+reuse = &quot;Reuse&quot;
+funding = &quot;Funding&quot;
+copyright = &quot;Copyright&quot;
+listing = &quot;Listing&quot;
+proof = &quot;Proof&quot;
+contents = &quot;Contents&quot;</span></code></pre>
+
+<h2 id="document-targets">Document targets</h2>
+<p>Built-in targets for single documents:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">[targets.html]
+writer = &quot;html&quot;
+template = &quot;page&quot;
+extension = &quot;html&quot;
+fig_extension = &quot;svg&quot;
+preview = &quot;serve&quot;
+
+[targets.latex]
+writer = &quot;latex&quot;
+template = &quot;page&quot;
+extension = &quot;tex&quot;
+fig_extension = &quot;pdf&quot;
+preview = &quot;serve&quot;
+
+[targets.typst]
+writer = &quot;typst&quot;
+template = &quot;page&quot;
+extension = &quot;typ&quot;
+fig_extension = &quot;svg&quot;
+preview = &quot;serve&quot;
+
+[targets.pdf]
+writer = &quot;typst&quot;
+extension = &quot;pdf&quot;
+fig_extension = &quot;svg&quot;
+compile = &quot;typst compile {input}&quot;
+
+[targets.revealjs]
+writer = &quot;html&quot;
+extension = &quot;html&quot;
+fig_extension = &quot;svg&quot;
+preview = &quot;serve&quot;
+
+[targets.markdown]
+writer = &quot;markdown&quot;
+extension = &quot;md&quot;
+fig_extension = &quot;png&quot;
+preview = &quot;none&quot;</span></code></pre>
+
+<h2 id="collection-defaults">Collection defaults</h2>
+<p>Additional defaults for multi-document builds (websites, books):</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">global_crossref = false
+preview_port = 3456
+
+[targets.website]
+writer = &quot;html&quot;
+template = &quot;page&quot;
+extension = &quot;html&quot;
+fig_extension = &quot;svg&quot;
+embed_resources = false
+preview = &quot;serve&quot;
+
+[targets.book]
+writer = &quot;typst&quot;
+template = &quot;page&quot;
+extension = &quot;pdf&quot;
+fig_extension = &quot;svg&quot;
+compile = &quot;typst compile {input}&quot;</span></code></pre>
+
+<h2 id="collection-config-example">Collection config example</h2>
+<p>A typical <code>_calepin/config.toml</code>:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">title = &quot;My Site&quot;
+target = &quot;website&quot;
+output = &quot;output&quot;
+
+[[contents]]
+pages = [&quot;index.qmd&quot;, &quot;about.qmd&quot;]
+
+[[contents]]
+title = &quot;Guide&quot;
+pages = [&quot;guide/*.qmd&quot;]
+
+[[navbar.left]]
+text = &quot;My Site&quot;
+href = &quot;/index.html&quot;
+
+[[navbar.right]]
+icon = &quot;github&quot;
+href = &quot;https://github.com/user/repo&quot;
+
+[[post]]
+command = &quot;pagefind --site {output}&quot;
+
+[var]
+sidebar_collapse_level = 0</span></code></pre>
+  </div>
+  <div class="split-source" aria-live="polite">
+    <pre><code id="source-code">Loading source...</code></pre>
+  </div>
+</div>
+
+      </article>
+
+      
+
+
+    </main>
+
+    <aside class="sidebar-right" role="complementary" aria-label="Table of contents">
+  
+  <nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ul>
+<li><a href="#toml-basics">TOML basics</a></li>
+<li><a href="#config-resolution">Config resolution</a></li>
+<li><a href="#shared-defaults">Shared defaults</a></li>
+<li><a href="#document-targets">Document targets</a></li>
+<li><a href="#collection-defaults">Collection defaults</a></li>
+<li><a href="#collection-config-example">Collection config example</a></li>
+</ul>
+</nav>
+  
+</aside>
+  </div>
+
+  <footer class="site-footer">
+  <p>Built with <a href="https://vincentarelbundock.github.io/calepin">
+    
+    <span class="footer-logo nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg);"></span>
+    
+  </a></p>
+</footer>
+  <script>
+document.querySelectorAll('.code-copy-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    navigator.clipboard.writeText(code.textContent).then(function() {
+      var icon = btn.querySelector('.code-copy-icon');
+      btn.classList.add('copied');
+      icon.classList.add('checked');
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        icon.classList.remove('checked');
+      }, 1500);
+    });
+  });
+});
+</script>
+</body>
+</html>

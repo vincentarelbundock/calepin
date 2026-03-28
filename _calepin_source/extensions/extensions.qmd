@@ -1,0 +1,634 @@
+---
+title = "Extensions"
+---
+
+::: {.callout-warning}
+The extension interface is under active development and may change without warning. Do not rely on stability of manifest fields, module protocol, or resolution behavior until this warning is removed.
+:::
+
+# What is an extension?
+
+An extension is a directory with an `extension.toml` manifest. It is the single unit of distribution and customization in *Calepin*. An extension can bundle any combination of:
+
+- A **target** definition (writer, modules, post-processing)
+- **Partials** (template overrides for elements and pages)
+- **Modules** (structural transforms, auto-numbering, external code)
+- **Assets** (CSS, JS, fonts, images, static files)
+- **Vars** (default variables available in templates, overridable by the user)
+
+An extension can be as small as a manifest plus one CSS file, or as large as a full presentation framework with custom templates, modules, and scripts.
+
+Built-in targets (`html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`) are also extensions internally. The same architecture applies everywhere.
+
+
+# Key concepts
+
+- **Extension** -- A directory with an `extension.toml` manifest. The unit of distribution.
+- **Target** -- An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the `[target]` section of the manifest. Every target has a `type`: either `notebook` or `collection`.
+- **Type** -- One of two fundamental target types:
+  - `notebook` -- A single document rendered to one output file (`html`, `latex`, `typst`, `markdown`, `slides`).
+  - `collection` -- A multi-document project rendered to a directory of output files (`website`, `book`).
+- **Writer** -- One of the four rendering engines: `html`, `latex`, `typst`, `markdown`. Every target has exactly one writer. Writers are not user-extensible.
+- **Partial** -- A Jinja template that renders a specific element or page component (e.g., `figure.html`, `page.tex`). Resolved by name through a layered chain. Adding a partial is enough to create a custom div style.
+- **Module** -- A declared transform in the manifest. Only needed when partials alone are insufficient: structural transforms, match rules beyond class names, auto-numbering, or external code.
+- **Asset** -- A CSS, JS, or static file declared in `[assets]`. CSS and JS are injected into the page template; static files are copied to the output directory.
+- **Vars** -- Key-value pairs declared in `[vars]`. Namespaced by extension name in templates: `{{ vars.tufte.sidenote_style }}`. Users override them in front matter under `[vars.extension_name]`.
+
+
+# Directory layout
+
+```
+my-extension/
+  extension.toml        # Manifest (required)
+  partials/             # Template overrides
+    html/
+      page.html
+      figure.html
+    common/
+      note.jinja
+  assets/               # CSS, JS, images, fonts
+    tufte.css
+    tufte.js
+  scripts/              # External module executables (scripts, WASM)
+    postprocess.sh
+    transform.wasm
+```
+
+All subdirectories are optional. Module declarations live in `extension.toml` itself. There are no separate `module.toml` files. Module templates are resolved from `partials/` like any other partial (matched by class name). External executables live in `scripts/`.
+
+
+# The manifest
+
+The manifest is the complete index of everything the extension provides. Nothing is discovered by directory scanning.
+
+## Metadata and inheritance
+
+```toml
+name = "tufte"
+description = "Tufte-style HTML with sidenotes and margin notes"
+version = "1.0.0"
+author = "Jane Doe"
+license = "MIT"
+
+# Single-chain inheritance: exactly one parent.
+inherits = "html"
+```
+
+The `inherits` field names exactly one parent: a built-in target or another installed extension. Resolution is recursive with cycle detection. Fields in the child override fields in the parent. `Vec` fields (modules, post, fig_formats) use all-or-nothing: if the child specifies the field, it replaces the parent's list entirely; if omitted, the parent's list is inherited.
+
+## Target definition
+
+```toml
+[target]
+writer = "html"                     # inherited if omitted
+extension = "html"                  # output file extension; inherited if omitted
+template = "page"                   # page template name; inherited if omitted
+fig_extension = "svg"               # default figure extension; inherited if omitted
+preview = "serve"                   # "serve", "open", or "none"; inherited if omitted
+embed_resources = true              # embed images as base64 (HTML only)
+crossref = "html"                   # "html", "latex", or "plain"; inherited if omitted
+toc_headings = true                 # pass headings to page template for TOC
+
+# Modules: full ordered list. Replaces parent's module list entirely.
+# Omit to inherit parent's modules unchanged.
+modules = ["highlight", "append_footnotes", "sidenotes", "embed_images"]
+
+# Post-processing commands. Run in order after rendering.
+# {input} = rendered file, {output} = final output path.
+post = ["pagefind --site {output}"]
+
+# Preferred figure formats, in priority order.
+fig_formats = ["svg", "png", "jpg"]
+```
+
+## Variables
+
+```toml
+# Namespaced under the extension name in templates.
+# Available as {{ vars.tufte.sidenote_style }}.
+# Users override in front matter: [vars.tufte] sidenote_style = "popup"
+[vars]
+sidenote_style = "margin"
+cdn = "https://cdn.example.com/tufte"
+```
+
+## Assets
+
+```toml
+# Paths are relative to the extension directory.
+# CSS files are injected into the page template via {{ css }}.
+# JS files are injected via {{ js }}.
+# Static files are copied to assets/ in the output directory.
+[assets]
+css = ["tufte.css"]
+js = ["tufte.js"]
+static = ["fonts/"]
+```
+
+## Modules {#modules}
+
+Most extensions do not need `[[modules]]` entries at all. If you just want a custom div style, add a partial to `partials/{writer}/` and use `::: {.my-class}`. The partial is resolved by class name automatically.
+
+Declare a `[[modules]]` entry only when you need capabilities beyond what a partial provides:
+
+- Match by attribute, id prefix, or writer (not just class)
+- Structural transforms (rewrite children before rendering)
+- Auto-numbering (`number = true`)
+- External code (`run = "scripts/foo.sh"` or `run = "scripts/foo.wasm"`)
+
+```toml
+# Structural transform module
+[[modules]]
+name = "sidenotes"
+description = "Convert footnotes to margin sidenotes"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+classes = ["sidenote", "margin-note"]
+# attrs = ["sidenote-ref"]          # attribute names (OR'd with classes)
+# id_prefix = "sn-"                 # ID prefix trigger
+# writers = ["html"]                # restrict to writers (omit = all)
+# number = true                     # auto-number matching divs
+
+# External module (script or WASM)
+# [[modules]]
+# name = "rewrite-links"
+# description = "Rewrite external links to open in new tab"
+# kind = "document"
+# run = "scripts/rewrite-links.sh"  # .wasm for WASM runtime
+```
+
+
+# Module kinds
+
+| `kind` | When it runs | What it does |
+|---|---|---|
+| `span` | During render, per span | Renders matching bracketed spans |
+| `element_children` | During render, per div | Rewrites div children (structural transforms) |
+| `element` | Pre-render | Mutates individual elements before rendering |
+| `document` | Post-assembly | Transforms the full document string |
+
+
+# Partials vs. modules
+
+**Partials alone** handle most customization. Add `partials/html/note.html` to your extension and `::: {.note}` renders using that template. No module declaration needed. The partial receives standard variables (content, classes, attrs, id, etc.) and is overridable at every level of the resolution chain.
+
+**Modules** add behavior that partials cannot express: structural transforms, match rules beyond class names, auto-numbering, and external code execution. A module that matches an element still resolves its template via the partial chain (by class name), unless it returns rendered output directly (external modules with `"action": "rendered"`).
+
+
+# External modules
+
+Modules with a `run` field execute an external program. The runtime is determined by the file extension:
+
+- `.wasm` -- executed in the Extism WASM runtime (sandboxed, portable)
+- Anything else (`.sh`, `.py`, `.rb`, etc.) -- executed as a subprocess
+
+## Protocol
+
+External modules communicate via JSON on stdin/stdout.
+
+**Element modules** (`span`, `element_children`, `element`) receive a JSON object describing the matched element:
+
+```json
+{
+  "name": "sidenote",
+  "kind": "element_children",
+  "writer": "html",
+  "context": "div",
+  "content": "<p>The rendered children...</p>",
+  "classes": ["sidenote"],
+  "id": "sn-1",
+  "attrs": {"ref": "fn1"},
+  "number": 3,
+  "vars": {"sidenote_style": "margin"}
+}
+```
+
+And return a JSON result:
+
+```json
+{
+  "action": "rendered",
+  "output": "<aside class=\"sidenote\">...</aside>"
+}
+```
+
+The `action` field controls what happens next:
+
+| `action` | Meaning |
+|---|---|
+| `"rendered"` | Use `output` as the final rendering. Stop further dispatch. |
+| `"pass"` | This module declines. Continue to the next matching module or fallback template. |
+
+**Document modules** (`document`) receive the full document:
+
+```json
+{
+  "name": "rewrite-links",
+  "kind": "document",
+  "writer": "html",
+  "body": "<!DOCTYPE html>...",
+  "vars": {}
+}
+```
+
+And return the transformed document in the same `action`/`output` structure.
+
+Document modules can also use a plain text protocol: raw document on stdin, transformed document on stdout (no JSON). Declare this in the manifest:
+
+```toml
+[[modules]]
+name = "rewrite-links"
+kind = "document"
+run = "scripts/rewrite-links.sh"
+protocol = "text"                    # "json" (default) or "text"
+```
+
+
+# Installation
+
+Extensions live in `_calepin/extensions/{name}/`:
+
+```
+project/
+  _calepin/
+    config.toml
+    extensions/
+      tufte/
+        extension.toml
+        partials/...
+        assets/...
+      lightbox/
+        extension.toml
+        assets/...
+```
+
+A future `calepin install` command could fetch extensions from a registry or git URL. For now, copy or clone the directory manually.
+
+
+# Activation
+
+An extension that defines a target is activated by using it as the target name:
+
+```toml
+# _calepin/config.toml or document front matter
+target = "tufte"
+```
+
+An extension that only provides modules or assets (no custom target) is activated by listing it:
+
+```toml
+[calepin]
+extensions = ["lightbox"]
+```
+
+When `extensions` is set, those extensions' assets are included and their modules are available (they run when they match elements by class/attr/id, or when listed in the active target's `modules` field).
+
+
+# Resolution order
+
+## Partials
+
+First match wins:
+
+1. Document sidecar: `{stem}_calepin/partials/{target|writer|common}/`
+2. Project overrides: `_calepin/partials/{target|writer|common}/`
+3. Active extension's partials: `_calepin/extensions/{name}/partials/{writer|common}/`
+4. Parent extension's partials (walking up the inheritance chain)
+5. Built-in partials (embedded in binary)
+
+At each level, the lookup order within the partials directory is:
+
+1. `{target}/{name}.{ext}` (target-specific, e.g., `tufte/page.html`)
+2. `{writer}/{name}.{ext}` (writer-specific, e.g., `html/page.html`)
+3. `common/{name}.jinja` (writer-agnostic)
+
+## Assets
+
+Assets compose additively (all levels contribute):
+
+1. Project assets: `_calepin/assets/` (always included)
+2. Active extension's assets (CSS/JS declared in manifest)
+3. Parent extension's assets (walking up the inheritance chain)
+4. Built-in assets (embedded in binary, fill gaps)
+
+CSS and JS from multiple extensions are concatenated in inheritance order (parent first, child last), so the child's styles override the parent's. Static files from extensions are copied to `assets/` in the output directory. If two extensions provide a file at the same path, the child's file wins.
+
+## Modules
+
+Modules are resolved from:
+
+1. Active extension's `[[modules]]` entries (declared in its `extension.toml`)
+2. Parent extension's `[[modules]]` entries (walking up the inheritance chain)
+3. Built-in modules (embedded in binary)
+
+Module templates are resolved via the standard partial resolution chain (see above). A module's matched class name determines the partial lookup.
+
+A module must be listed in the active target's `modules` field to run as a document/element transform. Modules that match by class/attr/id (span transforms, element children transforms) run whenever a matching element is encountered, regardless of the `modules` list.
+
+
+# Built-in targets
+
+Every target derives from one of two fundamental types:
+
+- **Notebook** -- A single document rendered to one output file.
+- **Collection** -- A multi-document project rendered to a directory of output files.
+
+The built-in targets form this inheritance tree:
+
+```
+notebook (type)
+  html                  writer = "html"
+    slides              inherits = "html"
+  latex                 writer = "latex"
+  typst                 writer = "typst"
+  markdown              writer = "markdown"
+
+collection (type)
+  website               inherits = "html"
+  book                  inherits = "html"
+```
+
+The base notebook targets (`html`, `latex`, `typst`, `markdown`) each define a writer and a default set of modules, partials, and settings. The composed targets (`slides`, `website`, `book`) inherit from a base and override specific pieces.
+
+Internally, all built-in targets are structured as extensions:
+
+```
+html/
+  extension.toml        # type = "notebook", writer = "html"
+  partials/
+    html/
+      page.html
+      code_source.html
+      figure.html
+      ...
+
+latex/
+  extension.toml        # type = "notebook", writer = "latex"
+  partials/
+    latex/
+      page.tex
+      ...
+
+slides/
+  extension.toml        # type = "notebook", inherits = "html"
+  partials/
+    slides/
+      page.html         # overrides html/page.html
+
+website/
+  extension.toml        # type = "collection", inherits = "html"
+  partials/
+    website/
+      base.html
+      navbar.html
+      sidebar.html
+  assets/
+    calepin.css
+    css/...
+    fontawesome/...
+```
+
+- `slides` inherits from `html`, overriding `page.html` and adding `split_slides` to modules.
+- `website` inherits from `html`, adding navbar/sidebar partials, CSS assets, and `document_listing` support.
+- A user extension inherits from any of these and follows the same rules. The `type` is inherited from the parent and cannot be changed.
+
+
+# Scaffolding
+
+Scaffold a new extension directory:
+
+```
+calepin init extension sidenotes --inherits html
+```
+
+This creates:
+
+```
+sidenotes/
+  extension.toml
+  partials/
+    html/
+      .gitkeep
+  assets/
+    .gitkeep
+```
+
+With a starter `extension.toml`:
+
+```toml
+name = "sidenotes"
+description = ""
+version = "0.1.0"
+inherits = "html"
+
+[target]
+# modules = ["highlight", "append_footnotes", "embed_images"]
+
+[assets]
+# css = []
+# js = []
+
+# Declare [[modules]] only if you need structural transforms,
+# match rules beyond class names, auto-numbering, or external code.
+# For simple div styles, just add a partial.
+```
+
+Then:
+
+1. Add partials to `partials/html/` to override page templates or add new div styles (e.g., `sidenote.html`).
+2. Declare modules in `extension.toml` under `[[modules]]`.
+3. Add CSS/JS to `assets/` and declare them in `extension.toml`.
+4. Copy the directory into a project's `_calepin/extensions/` to install it.
+
+
+# Examples
+
+## Visual theme (CSS-only)
+
+```
+dark-academic/
+  extension.toml
+  assets/
+    dark-academic.css
+```
+
+```toml
+name = "dark-academic"
+description = "Dark color scheme with serif typography"
+version = "1.0.0"
+inherits = "html"
+
+[assets]
+css = ["dark-academic.css"]
+```
+
+No partials, no modules, no target overrides. Activated with `target = "dark-academic"` or `calepin.extensions = ["dark-academic"]`.
+
+## Presentation target
+
+```
+slidev/
+  extension.toml
+  partials/
+    html/
+      page.html
+  assets/
+    slidev.css
+    slidev.js
+  scripts/
+    slidev.wasm
+```
+
+```toml
+name = "slidev"
+description = "Slidev-compatible HTML presentations"
+version = "0.2.0"
+inherits = "slides"
+
+[target]
+modules = ["highlight", "append_footnotes", "split_slides"]
+embed_resources = false
+
+[vars]
+transition = "slide"    # {{ vars.slidev.transition }}
+
+[assets]
+css = ["slidev.css"]
+js = ["slidev.js"]
+```
+
+Inherits from `slides` (which inherits from `html`). Overrides `page.html` for its own slide shell. The inheritance chain is `slidev -> slides -> html`.
+
+## Academic journal target
+
+```
+jss/
+  extension.toml
+  partials/
+    latex/
+      page.tex
+      code_source.tex
+  assets/
+    jss.cls
+    jss.bst
+```
+
+```toml
+name = "jss"
+description = "Journal of Statistical Software article format"
+version = "1.0.0"
+inherits = "latex"
+
+[target]
+modules = ["highlight", "convert_svg_pdf"]
+fig_extension = "pdf"
+
+[vars]
+documentclass = "jss"   # {{ vars.jss.documentclass }}
+
+[assets]
+static = ["jss.cls", "jss.bst"]
+```
+
+Overrides the LaTeX page template and code rendering. Copies `.cls` and `.bst` files alongside the output.
+
+## PDF via post-processing
+
+```
+pdf/
+  extension.toml
+```
+
+```toml
+name = "pdf"
+description = "PDF output via Typst compilation"
+version = "1.0.0"
+inherits = "typst"
+
+[target]
+extension = "pdf"
+post = ["typst compile {input}"]
+```
+
+No partials, no assets, no modules. Just inherits everything from `typst` and adds a post-processing step. A user who prefers LaTeX-based PDF would write `inherits = "latex"` and `post = ["tectonic {input}"]` instead.
+
+## Structural module
+
+```
+lightbox/
+  extension.toml
+  partials/
+    html/
+      lightbox.html
+  assets/
+    lightbox.css
+    lightbox.js
+```
+
+```toml
+name = "lightbox"
+description = "Click-to-zoom image lightbox for HTML figures"
+version = "1.0.0"
+inherits = "html"
+
+[assets]
+css = ["lightbox.css"]
+js = ["lightbox.js"]
+
+[[modules]]
+name = "lightbox"
+description = "Wrap figure images in click-to-zoom lightbox links"
+kind = "element_children"
+contexts = ["div"]
+
+[modules.match]
+classes = ["lightbox"]
+writers = ["html"]
+```
+
+The template at `partials/html/lightbox.html` is resolved by class name through the standard partial chain. Activated with `calepin.extensions = ["lightbox"]`.
+
+
+# Design constraints
+
+- **Single inheritance only.** One chain: child -> parent -> grandparent -> built-in base target. No diamond inheritance, no multiple parents.
+- **Full module list replacement.** If an extension specifies `modules` in `[target]`, it replaces the parent's list entirely. No `modules_add`, no ordering ambiguity.
+- **Explicit everything.** The manifest is the complete index. CSS, JS, static files, and modules must be declared in `extension.toml`. No implicit directory scanning.
+- **No config fragments.** An extension provides a target definition, partials, modules, and assets. Document-level config (title, author, bibliography, execute options) stays in the document or project config.
+- **Additive partial chain.** Each level in the chain can override partials from the level below. The user always has final say (project `_calepin/partials/` overrides everything).
+- **Modules are for behavior, partials are for presentation.** Adding a partial to `partials/` is enough for custom div/span styles. A `[[modules]]` declaration is only needed for structural transforms, advanced matching, auto-numbering, or external code.
+
+
+# Open question: partial resolution vs. wholesale copy
+
+::: {.callout-warning}
+This section describes an unresolved design question that affects the entire extension architecture.
+:::
+
+The spec above describes a layered partial resolution chain: user overrides > extension > parent extension > built-in. Each level can override individual partials while inheriting the rest.
+
+But the current system does not work this way. Today, `calepin init website` copies *all* built-in partials into `_calepin/partials/`. The user gets a complete, self-contained set of templates. Resolution is flat: either everything comes from the filesystem, or everything comes from the built-ins. There is no mixing.
+
+## Advantages of wholesale copy
+
+- **Predictability.** The user sees every template that will be used. No hidden inheritance, no wondering "which level is this partial coming from?"
+- **Stability.** When *Calepin* updates its built-in partials, the user's project is unaffected. They opted into a specific version of the templates at scaffold time.
+- **Debuggability.** If output looks wrong, the user can inspect and edit the local file directly.
+
+## Problems with wholesale copy
+
+- **An extension that overrides 3 partials must ship all ~50.** Otherwise, the remaining partials have to come from somewhere, which requires the layered chain. With wholesale copy, every extension must be a complete fork of its parent's template set.
+- **Updates do not propagate.** If the `html` extension fixes a bug in `code_source.html`, no child extension or user project picks it up unless they re-copy manually.
+- **Extension authoring is heavy.** Creating a "tufte" extension that only changes `page.html` and `figure.html` would require copying and maintaining 48 other files verbatim.
+
+## Possible approaches
+
+1. **Layered resolution (as specced above).** Extensions only ship the partials they override. Missing partials fall through to the parent. Accept the resolution complexity.
+
+2. **Wholesale copy with scaffolding.** `calepin init extension --inherits html` copies all of the parent's partials into the new extension. The extension is self-contained. Updates require re-scaffolding. Simple but heavy.
+
+3. **Hybrid: layered by default, `calepin eject` to flatten.** Normal operation uses the layered chain. A `calepin eject` command copies all resolved partials into the project's `_calepin/partials/`, switching to the flat model. Users who want full control can eject; extensions stay lightweight.
+
+4. **Layered resolution with `calepin info --partials` for debugging.** Keep the layered chain, but provide a command that shows exactly where each partial is resolved from (extension name, file path). Makes the chain inspectable without flattening it.

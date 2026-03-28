@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Basics — Calepin</title>
+  
+  
+  
+  <link rel="stylesheet" href="/calepin/assets/calepin.css">
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false},
+      {left: '\\[', right: '\\]', display: true}
+    ],
+    ignoredClasses: ['nodollar']
+  });"></script>
+  
+</head>
+<body>
+  <a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+  <button class="navbar-btn navbar-toggle" id="sidebar-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar-nav">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+</button>
+  
+<ul class="navbar-nav left" id="navbar-left-menu">
+  
+  
+    
+  <li>
+    <a href="/calepin/index.html">
+      
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg); width: 104px; height: 36px;"></span>
+      
+    </a>
+  </li>
+    
+  
+  
+</ul>
+
+  
+<ul class="navbar-nav middle" id="navbar-menu">
+  
+  
+    
+  <li class="navbar-dropdown">
+    <button class="navbar-dropdown-toggle" aria-expanded="false">
+      Examples <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <ul class="navbar-dropdown-menu">
+      
+      <li><a href="https://arelbundock.com">
+        arelbundock.com
+      </a></li>
+      
+      <li><a href="https://vincentarelbundock.github.io/WDI">
+        WDI
+      </a></li>
+      
+      <li><a href="/calepin/pages/kitchen_sink.html">
+        Kitchen Sink
+      </a></li>
+      
+    </ul>
+  </li>
+    
+  
+  
+</ul>
+
+  <ul class="navbar-nav right">
+  
+  
+  <li>
+    <a href="https://github.com/vincentarelbundock/calepin">
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/fontawesome/brands/github.svg); mask-image: url(/calepin/assets/fontawesome/brands/github.svg); width: 20px; height: 20px;"></span>
+      
+      
+    </a>
+  </li>
+  
+  
+  
+  <li>
+  <button class="navbar-btn source-toggle" id="source-toggle" aria-label="Toggle source view" aria-expanded="false" aria-controls="source-code">
+    <span style="font-family:monospace;font-weight:700;font-size:0.85rem">&lt;/&gt;</span>
+  </button>
+</li>
+<script>
+(function() {
+  var btn = document.getElementById('source-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    document.body.classList.toggle('split-active');
+    btn.classList.toggle('active');
+    var isActive = btn.classList.contains('active');
+    btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    var code = document.getElementById('source-code');
+    if (code && code.textContent === 'Loading source...') {
+      fetch('/calepin/_calepin_source/authoring/basics.qmd')
+        .then(function(r) { return r.text(); })
+        .then(function(t) { code.textContent = t; })
+        .catch(function() { code.textContent = 'Failed to load source.'; });
+    }
+  });
+})();
+</script>
+  
+  
+  
+  <li>
+  <button class="navbar-btn" data-search-toggle aria-label="Search (Ctrl+K)">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  </button>
+</li>
+<div class="search-overlay" role="dialog" aria-modal="true" aria-label="Search">
+  <div class="search-modal">
+    <div class="search-input-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="search-input" type="text" placeholder="Search..." aria-label="Search" aria-controls="search-results" aria-autocomplete="list" role="combobox" aria-expanded="false">
+      <span class="search-kbd">Esc</span>
+    </div>
+    <div id="search-results" class="search-results" role="listbox" aria-label="Search results">
+      <div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>
+    </div>
+    <div class="visually-hidden" aria-live="polite" id="search-status"></div>
+  </div>
+</div>
+<script type="module">
+  const overlay = document.querySelector('.search-overlay');
+  const toggle = document.querySelector('[data-search-toggle]');
+  const input = overlay.querySelector('.search-input');
+  const resultsEl = overlay.querySelector('.search-results');
+  let selectedIdx = -1;
+
+  // Preload pagefind immediately
+  const pagefind = await import('/calepin/pagefind/pagefind.js');
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  const statusEl = document.getElementById('search-status');
+
+  async function doSearch(query) {
+    if (!query.trim()) {
+      resultsEl.innerHTML = '<div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>';
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      statusEl.textContent = '';
+      selectedIdx = -1;
+      return;
+    }
+
+    const search = await pagefind.search(query);
+    const results = await Promise.all(search.results.slice(0, 15).map(r => r.data()));
+    selectedIdx = -1;
+    input.removeAttribute('aria-activedescendant');
+
+    if (results.length === 0) {
+      resultsEl.innerHTML = '<div class="search-hint">No results found.</div>';
+      input.setAttribute('aria-expanded', 'false');
+      statusEl.textContent = 'No results found.';
+      return;
+    }
+
+    input.setAttribute('aria-expanded', 'true');
+    statusEl.textContent = results.length + ' result' + (results.length === 1 ? '' : 's') + ' found.';
+    resultsEl.innerHTML = results.map((r, i) =>
+      '<a class="search-result" id="search-result-' + i + '" role="option" href="' + escHtml(r.url) + '">' +
+        '<div class="search-result-title">' + escHtml(r.meta.title || r.url) + '</div>' +
+        '<div class="search-result-text">' + (r.excerpt || '') + '</div>' +
+      '</a>'
+    ).join('');
+  }
+
+  function updateSelected() {
+    const items = resultsEl.querySelectorAll('.search-result');
+    items.forEach((el, i) => {
+      el.classList.toggle('selected', i === selectedIdx);
+      el.setAttribute('aria-selected', i === selectedIdx ? 'true' : 'false');
+    });
+    if (items[selectedIdx]) {
+      items[selectedIdx].scrollIntoView({ block: 'nearest' });
+      input.setAttribute('aria-activedescendant', 'search-result-' + selectedIdx);
+    }
+  }
+
+  function open() {
+    overlay.classList.add('active');
+    input.value = '';
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    resultsEl.innerHTML = '<div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>';
+    statusEl.textContent = '';
+    selectedIdx = -1;
+    setTimeout(() => input.focus(), 50);
+  }
+  function close() {
+    overlay.classList.remove('active');
+    // Return focus to the toggle button
+    if (toggle) toggle.focus();
+  }
+
+  let debounce = null;
+  input.addEventListener('input', function() {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => doSearch(input.value), 100);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    const items = resultsEl.querySelectorAll('.search-result');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIdx = Math.min(selectedIdx + 1, items.length - 1);
+      updateSelected();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIdx = Math.max(selectedIdx - 1, 0);
+      updateSelected();
+    } else if (e.key === 'Enter' && items[selectedIdx]) {
+      e.preventDefault();
+      items[selectedIdx].click();
+    }
+  });
+
+  if (toggle) toggle.addEventListener('click', open);
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) close();
+  });
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); open(); }
+    if (e.key === 'Escape') close();
+  });
+</script>
+  
+  
+  
+  <li>
+  <button class="navbar-btn" id="theme-toggle" aria-label="Toggle dark mode" aria-pressed="false">
+    <span class="icon-sun" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span>
+    <span class="icon-moon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+  </button>
+</li>
+<script src="/calepin/assets/theme.js"></script>
+  
+  
+</ul>
+</nav>
+
+  <div class="site-container">
+    <aside id="sidebar-nav" class="sidebar-left" role="navigation" aria-label="Section navigation">
+  <div class="sidebar-header">
+    <a href="/calepin/index.html">
+      
+      <span class="sidebar-logo nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg); width: 104px; height: 36px;"></span>
+      
+    </a>
+  </div>
+  
+  <div class="sidebar-nav-links">
+    
+    
+    <span class="sidebar-nav-group">Examples</span>
+    
+    <a href="https://arelbundock.com">arelbundock.com</a>
+    
+    <a href="https://vincentarelbundock.github.io/WDI">WDI</a>
+    
+    <a href="/calepin/pages/kitchen_sink.html">Kitchen Sink</a>
+    
+    
+    
+  </div>
+  
+  <nav>
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/installation.html">Installation</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/getting_started.html">Getting Started</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/quarto.html">Calepin vs Quarto</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav" open>
+          <summary class="sidebar-section-title">Authoring</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/authoring/basics.html" class="active" aria-current="page">Basics</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/bibliography.html">Bibliography</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/figures.html">Figures</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/math.html">Math</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/tables.html">Tables</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Code</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/code/code_execution.html">Code Execution</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/chunks.html">Chunks</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/inline.html">Inline</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/r.html">R</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/python.html">Python</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/sh.html">Shell</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/diagrams.html">Diagrams</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/cache.html">Cache</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/builtins.html">Built-in Functions</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Templates</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/templates/templates.html">Templates</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/templates/snippets.html">Snippets &amp; Variables</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/templates/reference.html">Reference</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Configuration</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/configuration/paths.html">Paths</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/configuration/structure.html">Project Structure</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/configuration/toml.html">Configuration</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Websites</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/websites/structure.html">Structure</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/websites/navigation.html">Navigation</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/websites/serve.html">Serve</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Extensions</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/extensions/themes.html">Themes</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/extensions/plugins.html">Plugins</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/man.html">Software documentation</a></li>
+        </ul>
+        
+      
+    
+  </nav>
+</aside>
+
+    <main id="main-content" class="content-main">
+      <article>
+        
+
+<nav class="breadcrumbs" aria-label="Breadcrumbs">
+  
+  
+    <a href="/calepin/">Home</a>
+    <span class="separator">/</span>
+  
+  
+  
+    <span>Authoring</span>
+    <span class="separator">/</span>
+  
+  
+  
+    <span aria-current="page">Basics</span>
+  
+  
+</nav>
+
+
+<header class="page-header">
+  <h1>Basics</h1>
+  
+  
+  
+</header>
+
+<div class="split-wrapper">
+  <div class="split-rendered">
+    <style>
+@media (prefers-color-scheme: light) {
+/*
+ * theme "GitHub" generated by syntect
+ */
+
+.code {
+ color: #333333;
+ background-color: #ffffff;
+}
+
+.comment {
+ color: #969896;
+}
+.keyword.operator, .support.constant {
+ color: #a71d5d;
+}
+.constant.language {
+ color: #0086b3;
+}
+.keyword, .storage {
+ color: #a71d5d;
+}
+.storage.type {
+ color: #a71d5d;
+}
+.support.type {
+ color: #0086b3;
+}
+.variable {
+ color: #0086b3;
+}
+.variable.language {
+ color: #df5000;
+}
+.variable.parameter.function {
+ color: #030303;
+}
+.entity.name.function, .entity {
+ color: #795da3;
+}
+.support.function {
+ color: #0086b3;
+}
+.entity.name.type, .entity.other.inherited-class {
+ color: #000000;
+}
+.support.class {
+ color: #0086b3;
+}
+.entity.name.exception {
+ color: #f93232;
+}
+.entity.name.section {
+}
+.constant.numeric, .constant {
+ color: #0086b3;
+}
+.constant.character, .string, .string .punctuation {
+ color: #183691;
+}
+.string.regexp, .string.regexp .constant.character, .string.regexp .punctuation {
+ color: #009926;
+}
+.constant.other.symbol {
+ color: #990073;
+}
+.string .source, .text .source {
+ color: #333333;
+}
+.variable.other.property {
+ color: #030303;
+}
+.entity.name {
+ color: #333333;
+}
+.invalid {
+ color: #0f0000;
+}
+.entity.name.tag {
+ color: #63a35c;
+}
+.punctuation.definition.tag {
+ color: #030303;
+}
+.meta.tag .string .punctuation {
+ color: #183691;
+}
+.constant.character.entity {
+ color: #000000;
+}
+.entity.other.attribute-name {
+ color: #795da3;
+}
+.meta.tag .string.quoted, .meta.tag .string.quoted .constant.character.entity {
+ color: #183691;
+}
+.meta.selector, .meta.selector .entity, .meta.selector .entity .punctuation, .entity.name.tag.css, .entity.other.attribute-name.class, .keyword.control.html.sass {
+ color: #63a35c;
+}
+.entity.other.attribute-name.class, .constant.other.unit {
+ color: #795da3;
+}
+.support.type.property-name, .support.constant.property-value {
+ color: #0086b3;
+}
+.keyword.other.special-method.ruby.gem {
+ color: #0086b3;
+}
+.variable.other.block.ruby {
+ color: #000000;
+}
+.support.function.prelude, .variable.other.generic-type.haskell {
+ color: #000000;
+}
+.constant.other.haskell, .support.constant.haskell {
+ color: #445588;
+}
+.meta.diff, .meta.diff.header {
+ color: #75715e;
+}
+.markup.deleted {
+ color: #770000;
+ background-color: #ffdddd;
+}
+.markup.inserted {
+ color: #003300;
+ background-color: #ddffdd;
+}
+.markup.changed {
+ color: #ececec;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #ffffff; color: #333333; }
+}
+@media (prefers-color-scheme: dark) {
+/*
+ * theme "Nord" generated by syntect
+ */
+
+.code {
+ color: #d8dee9;
+ background-color: #2e3440;
+}
+
+.comment, .punctuation.definition.comment {
+ color: #616e88;
+}
+.constant.numeric {
+ color: #b48ead;
+}
+.constant.language {
+ color: #81a1c1;
+}
+.constant.character.escape {
+ color: #ebcb8b;
+}
+.constant.other.placeholder {
+ color: #ebcb8b;
+}
+.constant.other {
+ color: #d8dee9;
+}
+.entity.name.class {
+ color: #8fbcbb;
+}
+.entity.name.struct {
+ color: #8fbcbb;
+}
+.entity.name.enum {
+ color: #8fbcbb;
+}
+.entity.name.union {
+ color: #8fbcbb;
+}
+.entity.name.trait {
+ color: #8fbcbb;
+}
+.entity.name.interface {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.entity.name.type {
+ color: #81a1c1;
+}
+.entity.other.inherited-class {
+ color: #8fbcbb;
+}
+.entity.name.function {
+ color: #88c0d0;
+}
+.entity.name.function.constructor {
+ color: #88c0d0;
+}
+.entity.name.function.destructor {
+ color: #88c0d0;
+}
+.entity.name.namespace {
+ color: #8fbcbb;
+}
+.entity.name.constant {
+ color: #81a1c1;
+}
+.entity.name.label {
+ color: #5e81ac;
+}
+.entity.name.section {
+ color: #88c0d0;
+}
+.entity.name.tag {
+ color: #81a1c1;
+}
+.entity.other.attribute-name {
+ color: #8fbcbb;
+}
+.invalid.illegal {
+ color: #d8dee9;
+ background-color: #bf616a;
+}
+.invalid.deprecated {
+ color: #d8dee9;
+ background-color: #ebcb8b;
+}
+.keyword.control {
+ color: #81a1c1;
+}
+.keyword.control.conditional {
+ color: #81a1c1;
+}
+.keyword.control.import {
+ color: #81a1c1;
+}
+.punctuation.definition.keyword {
+ color: #81a1c1;
+}
+.keyword.other {
+ color: #81a1c1;
+}
+.keyword.operator, .keyword.operator.assignment, .keyword.operator.arithmetic, .keyword.operator.bitwise, .keyword.operator.logical, .keyword.operator.word {
+ color: #81a1c1;
+}
+.markup.heading {
+ color: #88c0d0;
+}
+.markup.list.unnumbered, .markup.list.numbered {
+ color: #d8dee9;
+}
+.markup.bold {
+font-weight: bold;
+}
+.markup.italic {
+font-style: italic;
+}
+.markup.inserted {
+ color: #a3be8c;
+}
+.markup.deleted {
+ color: #bf616a;
+}
+.markup.changed {
+ color: #ebcb8b;
+}
+.markup.quote {
+ color: #616e88;
+}
+.markup.raw.inline, .markup.raw.block {
+ color: #8fbcbb;
+}
+.markup.other {
+ background-color: #eceff4;
+}
+.punctuation.separator, .punctuation.terminator {
+ color: #eceff4;
+}
+.punctuation.separator.continuation, .punctuation.accessor {
+ color: #81a1c1;
+}
+.punctuation.definition.tag {
+ color: #81a1c1;
+}
+.storage.type, .storage.modifier {
+ color: #81a1c1;
+}
+.string.quoted.single, .string.quoted.double, .string.quoted.triple, .string.quoted.other, .string.unquoted {
+ color: #a3be8c;
+}
+.punctuation.definition.string.begin, .punctuation.definition.string.end {
+ color: #a3be8c;
+}
+.string.regexp {
+ color: #ebcb8b;
+}
+.support.constant {
+ color: #8fbcbb;
+}
+.support.function {
+ color: #88c0d0;
+}
+.support.module {
+ color: #8fbcbb;
+}
+.support.type {
+ color: #8fbcbb;
+}
+.support.class {
+ color: #8fbcbb;
+}
+.text.html.basic, .text.xml {
+ color: #eceff4;
+}
+.variable.other, .variable.other.readwrite {
+ color: #d8dee9;
+}
+.punctuation.definition.variable {
+ color: #81a1c1;
+}
+.variable.other.constant {
+ color: #81a1c1;
+}
+.variable.language {
+ color: #81a1c1;
+}
+.variable.parameter {
+ color: #d8dee9;
+}
+.variable.other.member {
+ color: #d8dee9;
+}
+.variable.function {
+ color: #88c0d0;
+}
+.constant.numeric.line-number.find-in-files {
+ color: #d8dee9;
+}
+.constant.numeric.line-number.match.find-in-files {
+ color: #88c0d0;
+}
+.entity.name.filename.find-in-files {
+ color: #8fbcbb;
+}
+.text.find-in-files {
+ color: #d8dee9;
+}
+.source.c .keyword.control.import.include.c, .source.c .meta.preprocessor.c .keyword.control.import.c, .source.c\2b \2b  .keyword.control.import.include.c\2b \2b , .source.c\2b \2b  .meta.preprocessor.c\2b \2b  .keyword.control.import.c\2b \2b  {
+ color: #5e81ac;
+}
+.source.c .keyword.operator.word.c, .source.c\2b \2b  .keyword.operator.word.c\2b \2b  {
+ color: #88c0d0;
+font-style: italic;
+}
+.source.css .support.type.property-name.css, .source.sass .support.type.property-name.sass, .source.css .support.type.vendor-prefix.css {
+ color: #d8dee9;
+}
+.source.css .constant.other.color.rgb-value.css, .source.sass .constant.other.rgb-value.sass {
+ color: #b48ead;
+}
+.source.css .support.constant.color.w3c-special-color-keyword.css, .source.css .support.constant.property-value.css, .source.sass .support.constant.property-value.sass {
+ color: #81a1c1;
+}
+.source.css .entity.other.pseudo-class.css {
+ color: #8fbcbb;
+}
+.source.css .keyword.control.at-rule.media.css, .source.css .punctuation.definition.keyword.css, .source.sass .keyword.control.at-rule.sass {
+ color: #d08770;
+}
+.source.css .support.constant.color.w3c-standard-color-name.css {
+ color: #81a1c1;
+font-style: italic;
+}
+.source.css .entity.other.attribute-name.id.css, .source.sass .entity.other.attribute-name.id.sass {
+font-weight: bold;
+}
+.source.diff .meta.diff.range.context {
+ color: #8fbcbb;
+}
+.source.diff .meta.diff.header.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.separator {
+ color: #81a1c1;
+}
+.source.go .support.function.builtin.go {
+font-style: italic;
+}
+.text.html.basic .constant.character.entity.html {
+ color: #ebcb8b;
+}
+.variable.annotation.java, .punctuation.definition.annotation.java {
+ color: #d08770;
+}
+.punctuation.accessor.dot.java {
+ color: #eceff4;
+}
+.support.other.package.java {
+ color: #8fbcbb;
+}
+.source.java .comment.block.documentation.javadoc .punctuation.definition.entity.html {
+ color: #81a1c1;
+}
+.source.java .entity.name.constant {
+ color: #d8dee9;
+}
+.source.java .keyword.other.documentation, .source.java .comment.block.documentation.javadoc .punctuation.definition.keyword.javadoc {
+ color: #8fbcbb;
+}
+.source.java .variable.parameter.type.java {
+ color: #8fbcbb;
+}
+.source.java .entity.other.inherited-class.java {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.java .keyword.declaration.implements.java {
+ color: #81a1c1;
+}
+.source.json .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json, .source.json.sublime .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json {
+ color: #8fbcbb;
+}
+.source.json .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json .meta.structure.dictionary.json .punctuation.definition.string.end.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.end.json {
+ color: #eceff4;
+}
+.text.html.markdown .punctuation.definition.raw.code-fence.begin.markdown, .text.html.markdown .punctuation.definition.raw.code-fence.end.markdown, .text.html.markdown .markup.raw.code-fence.markdown .constant.other.language-name.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .punctuation.definition.list_item.markdown, .text.html.markdown .markup.list.numbered.bullet.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .markup.quote.markdown .punctuation.definition.blockquote.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .meta.link.inline.description.markdown, .text.html.markdown .meta.image.inline.description.markdown, .text.html.markdown .meta.link.reference.description.markdown, .text.html.markdown .constant.other.reference.link.markdown, .text.html.markdown .entity.name.reference.link.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.link.begin.markdown, .text.html.markdown .punctuation.definition.link.end.markdown, .text.html.markdown .punctuation.definition.image.begin.markdown, .text.html.markdown .punctuation.definition.image.end.markdown, .text.html.markdown .punctuation.definition.constant.begin.markdown, .text.html.markdown .punctuation.definition.constant.end.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .punctuation.separator.table-cell.markdown, .text.html.markdown .punctuation.section.table-header.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .meta.table.header.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.thematic-break.markdown {
+ color: #81a1c1;
+font-weight: bold;
+}
+.embedding.php .text.html.basic .punctuation.section.embedded.begin.php, .embedding.php .text.html.basic .punctuation.section.embedded.end.php {
+ color: #5e81ac;
+}
+.embedding.php .text.html.basic .comment.block.documentation.phpdoc.php .keyword.other.phpdoc.php {
+ color: #8fbcbb;
+}
+.embedding.php .text.html.basic .support.other.namespace.php {
+ color: #8fbcbb;
+}
+.source.python .meta.annotation.python .meta.qualified-name.python .support.function.builtin.python, .source.python .punctuation.definition.annotation.python {
+ color: #d08770;
+}
+.support.function.builtin.python {
+font-style: italic;
+}
+.source.python .support.type.exception.python {
+ color: #8fbcbb;
+}
+.source.python .support.type.python {
+ color: #81a1c1;
+}
+.source.sass .variable.parameter.sass {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ruby .support.function.builtin.ruby {
+font-style: italic;
+}
+.source.shell .support.function.builtin.shell {
+font-style: italic;
+}
+.text.xml .entity.name.tag.namespace {
+ color: #8fbcbb;
+}
+.text.xml .meta.tag.sgml.doctype.xml, .text.xml .meta.tag.preprocessor .entity.name.tag, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.end.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.end.xml {
+ color: #5e81ac;
+}
+.text.xml .string.unquoted.cdata.xml .punctuation.definition.string.begin.xml, .text.xml .string.unquoted.cdata.xml .punctuation.definition.string.end.xml {
+ color: #d08770;
+font-style: italic;
+}
+.source.yaml .entity.name.tag {
+ color: #8fbcbb;
+}
+.sublimelinter.mark.warning {
+ color: #ebcb8b;
+}
+.sublimelinter.mark.error {
+ color: #bf616a;
+}
+.markup.ignored.git_gutter {
+ color: #616e88;
+}
+.markup.untracked.git_gutter {
+ color: #88c0d0;
+}
+.markup.inserted.git_gutter {
+ color: #a3be8c;
+}
+.markup.changed.git_gutter {
+ color: #ebcb8b;
+}
+.markup.deleted.git_gutter {
+ color: #bf616a;
+}
+.source.js .tag.decorator.js .entity.name.tag.js, .source.js .tag.decorator.js .punctuation.definition.tag.js {
+ color: #d08770;
+}
+.source.js .string.quoted.js, .source.js .string.quoted.jsx, .source.js .meta.class.js .meta.class.property.js .string.interpolated.js, .source.js .string.interpolated.js, .source.js .string.template.js {
+ color: #a3be8c;
+}
+.source.js .variable.other.constant.js {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.js .constant.other.object.key.js .string.unquoted.label.js, .source.js .variable.other.readwrite.js {
+ color: #d8dee9;
+}
+.source.js .meta.class.js .meta.class.property.js .variable.other.property.js {
+ color: #88c0d0;
+}
+.source.js .variable.other.property.static.js {
+font-style: italic;
+}
+.source.js .variable.other.class.js {
+ color: #8fbcbb;
+}
+.source.js .string.interpolated.js .keyword.other.substitution.begin.js, .source.js .string.interpolated.js .keyword.other.substitution.end.js, .source.js .punctuation.definition.template-expression.begin.js, .source.js .punctuation.definition.template-expression.end.js {
+ color: #5e81ac;
+}
+.source.js .keyword.operator.spread.js {
+ color: #81a1c1;
+}
+.source.js .meta.export.js .variable.other.readwrite.js {
+ color: #8fbcbb;
+}
+.source.ts .meta.class.ts .entity.other.inherited-class.ts {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.ts .entity.name.type.class.ts, .source.ts .entity.name.type.enum.ts {
+ color: #8fbcbb;
+}
+.source.ts .entity.name.type.ts {
+ color: #8fbcbb;
+}
+.source.ts .support.type.primitive.ts {
+ color: #81a1c1;
+}
+.source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .variable.other.readwrite.ts, .source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .punctuation.decorator.ts {
+ color: #d08770;
+}
+.source.ts .punctuation.definition.template-expression.begin.ts, .source.ts .punctuation.definition.template-expression.end.ts {
+ color: #5e81ac;
+}
+.source.ts .string.template.ts {
+ color: #a3be8c;
+}
+.source.ts .support.function.math.ts {
+font-style: italic;
+}
+.source.ts .variable.other.constant.property.ts, .source.ts .variable.other.enummember.ts, .source.ts .variable.other.constant.ts {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ts .comment.block.documentation.ts .storage.type.class.jsdoc {
+ color: #8fbcbb;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #2e3440; color: #d8dee9; }
+}
+[data-theme='light'] {
+/*
+ * theme "GitHub" generated by syntect
+ */
+
+.code {
+ color: #333333;
+ background-color: #ffffff;
+}
+
+.comment {
+ color: #969896;
+}
+.keyword.operator, .support.constant {
+ color: #a71d5d;
+}
+.constant.language {
+ color: #0086b3;
+}
+.keyword, .storage {
+ color: #a71d5d;
+}
+.storage.type {
+ color: #a71d5d;
+}
+.support.type {
+ color: #0086b3;
+}
+.variable {
+ color: #0086b3;
+}
+.variable.language {
+ color: #df5000;
+}
+.variable.parameter.function {
+ color: #030303;
+}
+.entity.name.function, .entity {
+ color: #795da3;
+}
+.support.function {
+ color: #0086b3;
+}
+.entity.name.type, .entity.other.inherited-class {
+ color: #000000;
+}
+.support.class {
+ color: #0086b3;
+}
+.entity.name.exception {
+ color: #f93232;
+}
+.entity.name.section {
+}
+.constant.numeric, .constant {
+ color: #0086b3;
+}
+.constant.character, .string, .string .punctuation {
+ color: #183691;
+}
+.string.regexp, .string.regexp .constant.character, .string.regexp .punctuation {
+ color: #009926;
+}
+.constant.other.symbol {
+ color: #990073;
+}
+.string .source, .text .source {
+ color: #333333;
+}
+.variable.other.property {
+ color: #030303;
+}
+.entity.name {
+ color: #333333;
+}
+.invalid {
+ color: #0f0000;
+}
+.entity.name.tag {
+ color: #63a35c;
+}
+.punctuation.definition.tag {
+ color: #030303;
+}
+.meta.tag .string .punctuation {
+ color: #183691;
+}
+.constant.character.entity {
+ color: #000000;
+}
+.entity.other.attribute-name {
+ color: #795da3;
+}
+.meta.tag .string.quoted, .meta.tag .string.quoted .constant.character.entity {
+ color: #183691;
+}
+.meta.selector, .meta.selector .entity, .meta.selector .entity .punctuation, .entity.name.tag.css, .entity.other.attribute-name.class, .keyword.control.html.sass {
+ color: #63a35c;
+}
+.entity.other.attribute-name.class, .constant.other.unit {
+ color: #795da3;
+}
+.support.type.property-name, .support.constant.property-value {
+ color: #0086b3;
+}
+.keyword.other.special-method.ruby.gem {
+ color: #0086b3;
+}
+.variable.other.block.ruby {
+ color: #000000;
+}
+.support.function.prelude, .variable.other.generic-type.haskell {
+ color: #000000;
+}
+.constant.other.haskell, .support.constant.haskell {
+ color: #445588;
+}
+.meta.diff, .meta.diff.header {
+ color: #75715e;
+}
+.markup.deleted {
+ color: #770000;
+ background-color: #ffdddd;
+}
+.markup.inserted {
+ color: #003300;
+ background-color: #ddffdd;
+}
+.markup.changed {
+ color: #ececec;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #ffffff; color: #333333; }
+}
+[data-theme='dark'] {
+/*
+ * theme "Nord" generated by syntect
+ */
+
+.code {
+ color: #d8dee9;
+ background-color: #2e3440;
+}
+
+.comment, .punctuation.definition.comment {
+ color: #616e88;
+}
+.constant.numeric {
+ color: #b48ead;
+}
+.constant.language {
+ color: #81a1c1;
+}
+.constant.character.escape {
+ color: #ebcb8b;
+}
+.constant.other.placeholder {
+ color: #ebcb8b;
+}
+.constant.other {
+ color: #d8dee9;
+}
+.entity.name.class {
+ color: #8fbcbb;
+}
+.entity.name.struct {
+ color: #8fbcbb;
+}
+.entity.name.enum {
+ color: #8fbcbb;
+}
+.entity.name.union {
+ color: #8fbcbb;
+}
+.entity.name.trait {
+ color: #8fbcbb;
+}
+.entity.name.interface {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.entity.name.type {
+ color: #81a1c1;
+}
+.entity.other.inherited-class {
+ color: #8fbcbb;
+}
+.entity.name.function {
+ color: #88c0d0;
+}
+.entity.name.function.constructor {
+ color: #88c0d0;
+}
+.entity.name.function.destructor {
+ color: #88c0d0;
+}
+.entity.name.namespace {
+ color: #8fbcbb;
+}
+.entity.name.constant {
+ color: #81a1c1;
+}
+.entity.name.label {
+ color: #5e81ac;
+}
+.entity.name.section {
+ color: #88c0d0;
+}
+.entity.name.tag {
+ color: #81a1c1;
+}
+.entity.other.attribute-name {
+ color: #8fbcbb;
+}
+.invalid.illegal {
+ color: #d8dee9;
+ background-color: #bf616a;
+}
+.invalid.deprecated {
+ color: #d8dee9;
+ background-color: #ebcb8b;
+}
+.keyword.control {
+ color: #81a1c1;
+}
+.keyword.control.conditional {
+ color: #81a1c1;
+}
+.keyword.control.import {
+ color: #81a1c1;
+}
+.punctuation.definition.keyword {
+ color: #81a1c1;
+}
+.keyword.other {
+ color: #81a1c1;
+}
+.keyword.operator, .keyword.operator.assignment, .keyword.operator.arithmetic, .keyword.operator.bitwise, .keyword.operator.logical, .keyword.operator.word {
+ color: #81a1c1;
+}
+.markup.heading {
+ color: #88c0d0;
+}
+.markup.list.unnumbered, .markup.list.numbered {
+ color: #d8dee9;
+}
+.markup.bold {
+font-weight: bold;
+}
+.markup.italic {
+font-style: italic;
+}
+.markup.inserted {
+ color: #a3be8c;
+}
+.markup.deleted {
+ color: #bf616a;
+}
+.markup.changed {
+ color: #ebcb8b;
+}
+.markup.quote {
+ color: #616e88;
+}
+.markup.raw.inline, .markup.raw.block {
+ color: #8fbcbb;
+}
+.markup.other {
+ background-color: #eceff4;
+}
+.punctuation.separator, .punctuation.terminator {
+ color: #eceff4;
+}
+.punctuation.separator.continuation, .punctuation.accessor {
+ color: #81a1c1;
+}
+.punctuation.definition.tag {
+ color: #81a1c1;
+}
+.storage.type, .storage.modifier {
+ color: #81a1c1;
+}
+.string.quoted.single, .string.quoted.double, .string.quoted.triple, .string.quoted.other, .string.unquoted {
+ color: #a3be8c;
+}
+.punctuation.definition.string.begin, .punctuation.definition.string.end {
+ color: #a3be8c;
+}
+.string.regexp {
+ color: #ebcb8b;
+}
+.support.constant {
+ color: #8fbcbb;
+}
+.support.function {
+ color: #88c0d0;
+}
+.support.module {
+ color: #8fbcbb;
+}
+.support.type {
+ color: #8fbcbb;
+}
+.support.class {
+ color: #8fbcbb;
+}
+.text.html.basic, .text.xml {
+ color: #eceff4;
+}
+.variable.other, .variable.other.readwrite {
+ color: #d8dee9;
+}
+.punctuation.definition.variable {
+ color: #81a1c1;
+}
+.variable.other.constant {
+ color: #81a1c1;
+}
+.variable.language {
+ color: #81a1c1;
+}
+.variable.parameter {
+ color: #d8dee9;
+}
+.variable.other.member {
+ color: #d8dee9;
+}
+.variable.function {
+ color: #88c0d0;
+}
+.constant.numeric.line-number.find-in-files {
+ color: #d8dee9;
+}
+.constant.numeric.line-number.match.find-in-files {
+ color: #88c0d0;
+}
+.entity.name.filename.find-in-files {
+ color: #8fbcbb;
+}
+.text.find-in-files {
+ color: #d8dee9;
+}
+.source.c .keyword.control.import.include.c, .source.c .meta.preprocessor.c .keyword.control.import.c, .source.c\2b \2b  .keyword.control.import.include.c\2b \2b , .source.c\2b \2b  .meta.preprocessor.c\2b \2b  .keyword.control.import.c\2b \2b  {
+ color: #5e81ac;
+}
+.source.c .keyword.operator.word.c, .source.c\2b \2b  .keyword.operator.word.c\2b \2b  {
+ color: #88c0d0;
+font-style: italic;
+}
+.source.css .support.type.property-name.css, .source.sass .support.type.property-name.sass, .source.css .support.type.vendor-prefix.css {
+ color: #d8dee9;
+}
+.source.css .constant.other.color.rgb-value.css, .source.sass .constant.other.rgb-value.sass {
+ color: #b48ead;
+}
+.source.css .support.constant.color.w3c-special-color-keyword.css, .source.css .support.constant.property-value.css, .source.sass .support.constant.property-value.sass {
+ color: #81a1c1;
+}
+.source.css .entity.other.pseudo-class.css {
+ color: #8fbcbb;
+}
+.source.css .keyword.control.at-rule.media.css, .source.css .punctuation.definition.keyword.css, .source.sass .keyword.control.at-rule.sass {
+ color: #d08770;
+}
+.source.css .support.constant.color.w3c-standard-color-name.css {
+ color: #81a1c1;
+font-style: italic;
+}
+.source.css .entity.other.attribute-name.id.css, .source.sass .entity.other.attribute-name.id.sass {
+font-weight: bold;
+}
+.source.diff .meta.diff.range.context {
+ color: #8fbcbb;
+}
+.source.diff .meta.diff.header.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.separator {
+ color: #81a1c1;
+}
+.source.go .support.function.builtin.go {
+font-style: italic;
+}
+.text.html.basic .constant.character.entity.html {
+ color: #ebcb8b;
+}
+.variable.annotation.java, .punctuation.definition.annotation.java {
+ color: #d08770;
+}
+.punctuation.accessor.dot.java {
+ color: #eceff4;
+}
+.support.other.package.java {
+ color: #8fbcbb;
+}
+.source.java .comment.block.documentation.javadoc .punctuation.definition.entity.html {
+ color: #81a1c1;
+}
+.source.java .entity.name.constant {
+ color: #d8dee9;
+}
+.source.java .keyword.other.documentation, .source.java .comment.block.documentation.javadoc .punctuation.definition.keyword.javadoc {
+ color: #8fbcbb;
+}
+.source.java .variable.parameter.type.java {
+ color: #8fbcbb;
+}
+.source.java .entity.other.inherited-class.java {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.java .keyword.declaration.implements.java {
+ color: #81a1c1;
+}
+.source.json .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json, .source.json.sublime .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json {
+ color: #8fbcbb;
+}
+.source.json .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json .meta.structure.dictionary.json .punctuation.definition.string.end.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.end.json {
+ color: #eceff4;
+}
+.text.html.markdown .punctuation.definition.raw.code-fence.begin.markdown, .text.html.markdown .punctuation.definition.raw.code-fence.end.markdown, .text.html.markdown .markup.raw.code-fence.markdown .constant.other.language-name.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .punctuation.definition.list_item.markdown, .text.html.markdown .markup.list.numbered.bullet.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .markup.quote.markdown .punctuation.definition.blockquote.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .meta.link.inline.description.markdown, .text.html.markdown .meta.image.inline.description.markdown, .text.html.markdown .meta.link.reference.description.markdown, .text.html.markdown .constant.other.reference.link.markdown, .text.html.markdown .entity.name.reference.link.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.link.begin.markdown, .text.html.markdown .punctuation.definition.link.end.markdown, .text.html.markdown .punctuation.definition.image.begin.markdown, .text.html.markdown .punctuation.definition.image.end.markdown, .text.html.markdown .punctuation.definition.constant.begin.markdown, .text.html.markdown .punctuation.definition.constant.end.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .punctuation.separator.table-cell.markdown, .text.html.markdown .punctuation.section.table-header.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .meta.table.header.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.thematic-break.markdown {
+ color: #81a1c1;
+font-weight: bold;
+}
+.embedding.php .text.html.basic .punctuation.section.embedded.begin.php, .embedding.php .text.html.basic .punctuation.section.embedded.end.php {
+ color: #5e81ac;
+}
+.embedding.php .text.html.basic .comment.block.documentation.phpdoc.php .keyword.other.phpdoc.php {
+ color: #8fbcbb;
+}
+.embedding.php .text.html.basic .support.other.namespace.php {
+ color: #8fbcbb;
+}
+.source.python .meta.annotation.python .meta.qualified-name.python .support.function.builtin.python, .source.python .punctuation.definition.annotation.python {
+ color: #d08770;
+}
+.support.function.builtin.python {
+font-style: italic;
+}
+.source.python .support.type.exception.python {
+ color: #8fbcbb;
+}
+.source.python .support.type.python {
+ color: #81a1c1;
+}
+.source.sass .variable.parameter.sass {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ruby .support.function.builtin.ruby {
+font-style: italic;
+}
+.source.shell .support.function.builtin.shell {
+font-style: italic;
+}
+.text.xml .entity.name.tag.namespace {
+ color: #8fbcbb;
+}
+.text.xml .meta.tag.sgml.doctype.xml, .text.xml .meta.tag.preprocessor .entity.name.tag, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.end.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.end.xml {
+ color: #5e81ac;
+}
+.text.xml .string.unquoted.cdata.xml .punctuation.definition.string.begin.xml, .text.xml .string.unquoted.cdata.xml .punctuation.definition.string.end.xml {
+ color: #d08770;
+font-style: italic;
+}
+.source.yaml .entity.name.tag {
+ color: #8fbcbb;
+}
+.sublimelinter.mark.warning {
+ color: #ebcb8b;
+}
+.sublimelinter.mark.error {
+ color: #bf616a;
+}
+.markup.ignored.git_gutter {
+ color: #616e88;
+}
+.markup.untracked.git_gutter {
+ color: #88c0d0;
+}
+.markup.inserted.git_gutter {
+ color: #a3be8c;
+}
+.markup.changed.git_gutter {
+ color: #ebcb8b;
+}
+.markup.deleted.git_gutter {
+ color: #bf616a;
+}
+.source.js .tag.decorator.js .entity.name.tag.js, .source.js .tag.decorator.js .punctuation.definition.tag.js {
+ color: #d08770;
+}
+.source.js .string.quoted.js, .source.js .string.quoted.jsx, .source.js .meta.class.js .meta.class.property.js .string.interpolated.js, .source.js .string.interpolated.js, .source.js .string.template.js {
+ color: #a3be8c;
+}
+.source.js .variable.other.constant.js {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.js .constant.other.object.key.js .string.unquoted.label.js, .source.js .variable.other.readwrite.js {
+ color: #d8dee9;
+}
+.source.js .meta.class.js .meta.class.property.js .variable.other.property.js {
+ color: #88c0d0;
+}
+.source.js .variable.other.property.static.js {
+font-style: italic;
+}
+.source.js .variable.other.class.js {
+ color: #8fbcbb;
+}
+.source.js .string.interpolated.js .keyword.other.substitution.begin.js, .source.js .string.interpolated.js .keyword.other.substitution.end.js, .source.js .punctuation.definition.template-expression.begin.js, .source.js .punctuation.definition.template-expression.end.js {
+ color: #5e81ac;
+}
+.source.js .keyword.operator.spread.js {
+ color: #81a1c1;
+}
+.source.js .meta.export.js .variable.other.readwrite.js {
+ color: #8fbcbb;
+}
+.source.ts .meta.class.ts .entity.other.inherited-class.ts {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.ts .entity.name.type.class.ts, .source.ts .entity.name.type.enum.ts {
+ color: #8fbcbb;
+}
+.source.ts .entity.name.type.ts {
+ color: #8fbcbb;
+}
+.source.ts .support.type.primitive.ts {
+ color: #81a1c1;
+}
+.source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .variable.other.readwrite.ts, .source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .punctuation.decorator.ts {
+ color: #d08770;
+}
+.source.ts .punctuation.definition.template-expression.begin.ts, .source.ts .punctuation.definition.template-expression.end.ts {
+ color: #5e81ac;
+}
+.source.ts .string.template.ts {
+ color: #a3be8c;
+}
+.source.ts .support.function.math.ts {
+font-style: italic;
+}
+.source.ts .variable.other.constant.property.ts, .source.ts .variable.other.enummember.ts, .source.ts .variable.other.constant.ts {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ts .comment.block.documentation.ts .storage.type.class.jsdoc {
+ color: #8fbcbb;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #2e3440; color: #d8dee9; }
+}
+</style>
+<p>This page reviews some of the basics of Quarto and Markdown syntax supported by <em>Calepin</em>. It covers document structure, code chunks, figures, math, cross-references, citations, and other features that work out of the box.</p>
+<h2 id="getting-started">Getting started</h2>
+<p><em>Calepin</em> renders <code>.qmd</code> documents to HTML, LaTeX, Typst, and Markdown. It executes R code chunks, captures output and plots, resolves citations and cross-references, and wraps everything in a template.</p>
+<p>To render this tutorial:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">calepin tutorial.qmd</span></code></pre>
+
+<h2 id="markdown-basics">Markdown basics</h2>
+<p><em>Calepin</em> supports standard CommonMark and GitHub Flavored Markdown. The table below summarizes the basic Markdown notation from the original specification.</p>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Syntax</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Heading</td>
+<td><code># H1</code>, <code>## H2</code>, …, <code>###### H6</code></td>
+</tr>
+<tr>
+<td>Paragraph</td>
+<td>Blank line between blocks of text</td>
+</tr>
+<tr>
+<td>Line break</td>
+<td>Two trailing spaces or <code>\</code> at end of line</td>
+</tr>
+<tr>
+<td>Italic</td>
+<td><code>*text*</code> or <code>_text_</code></td>
+</tr>
+<tr>
+<td>Bold</td>
+<td><code>**text**</code> or <code>__text__</code></td>
+</tr>
+<tr>
+<td>Bold + italic</td>
+<td><code>***text***</code></td>
+</tr>
+<tr>
+<td>Blockquote</td>
+<td><code>&gt; quoted text</code></td>
+</tr>
+<tr>
+<td>Ordered list</td>
+<td><code>1. item</code></td>
+</tr>
+<tr>
+<td>Unordered list</td>
+<td><code>- item</code>, <code>* item</code>, or <code>+ item</code></td>
+</tr>
+<tr>
+<td>Inline code</td>
+<td><code>`code`</code></td>
+</tr>
+<tr>
+<td>Code block</td>
+<td>Indent by 4 spaces or fence with <code>```</code></td>
+</tr>
+<tr>
+<td>Horizontal rule</td>
+<td><code>---</code>, <code>***</code>, or <code>___</code></td>
+</tr>
+<tr>
+<td>Link</td>
+<td><code>[text](url)</code> or <code>[text](url &quot;title&quot;)</code></td>
+</tr>
+<tr>
+<td>Reference link</td>
+<td><code>[text][id]</code> then <code>[id]: url</code></td>
+</tr>
+<tr>
+<td>Image</td>
+<td><code>![alt text](path)</code></td>
+</tr>
+<tr>
+<td>Escape</td>
+<td><code>\*</code>, <code>\[</code>, <code>\\</code>, etc.</td>
+</tr>
+</table>
+<p>Here is a paragraph about Montreal that illustrates all of these features.</p>
+<div class="callout callout-tip callout-simple" role="note" style="padding:0.5rem 1rem;margin:1rem 0;cursor:pointer" onclick="document.getElementById('source-toggle').click()"><p style="margin:0;font-size:0.85rem">💡 Click <span style="font-family:monospace;font-weight:700">&lt;/&gt;</span> here or in the navbar to view this page's source side-by-side.</p></div>
+<hr />
+<h3 id="montréal">Montréal</h3>
+<blockquote>
+<p><em>Montréal is a city of contrasts: old-world charm meets modern ambition.</em></p>
+</blockquote>
+<p>Montréal is the largest city in the province of Québec and the <em>second most populous</em> in Canada. Founded in 1642, the city sits on an island in the <em>Saint Lawrence River</em>. Visitors should explore these landmarks:</p>
+<ol>
+<li>Old Montréal: cobblestone streets and the <a href="https://www.basiliquenotredame.ca">Notre-Dame Basilica</a>
+</li>
+<li>Mount Royal: the park designed by Frederick Law Olmsted
+</li>
+<li>The Plateau: colourful row houses and lively cafés
+</li>
+</ol>
+<p>Local specialties worth trying:</p>
+<ul>
+<li>Poutine
+</li>
+<li>Smoked meat sandwiches
+</li>
+<li>Bagels from <a href="https://www.stviateurbagel.com">St-Viateur</a>
+</li>
+</ul>
+<p>The city’s motto is <code>Concordia Salus</code><sup class="footnote-ref" id="fnref-1"><a href="#fn-1" data-footnote-ref>1</a></sup>, meaning “well-being through harmony.”</p>
+<p>As the Montréal tourism board puts it:<br />
+“<em>There is no place quite like it.</em>”</p>
+<p></p>
+<img src="/assets/placeholder.png" alt="A view of the Montréal skyline" /><h2 id="code-chunks">Code chunks</h2>
+<p>Code chunks are fenced with triple backticks and a <code>{r}</code> header. Options go inside the chunk as <code>#|</code> pipe comments. See the <a href="/code/chunks.html">Chunks</a> vignette for the full list of chunk options.</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-r code"><span class="source r">```<span class="punctuation section braces begin r">{</span>r, chunk<span class="keyword operator arithmetic r">-</span><span class="constant numeric float decimal r">1</span><span class="punctuation section braces end r">}</span>
+<span class="comment line number-sign r"><span class="punctuation definition comment r">#</span>| echo = fenced
+</span>x <span class="keyword operator assignment r">&lt;-</span> <span class="constant numeric float decimal r">1</span><span class="keyword other r">:</span><span class="constant numeric float decimal r">10</span>
+<span class="meta function-call r"><span class="support function r">mean</span>(</span><span class="meta function-call r"><span class="meta function-call parameters r">x</span><span class="punctuation section parens end r">)</span></span>
+```</span></code></pre>
+
+<pre><code class="output">> [1] 5.5</code></pre>
+
+<h2 id="inline-code">Inline code</h2>
+<p>R expressions can be evaluated inline using back ticks and curly braces. See the <a href="/code/inline.html">Inline</a> vignette for more details.</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">`{r} round(pi, 4)`</span></code></pre>
+
+<p>The numbers in this sentence are computed dynamically: The mean of 1:10 is 5.5 and pi is approximately 3.14.</p>
+<h2 id="figures">Figures</h2>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-r code"><span class="source r"><span class="meta function-call r"><span class="support function r">plot</span>(</span><span class="meta function-call r"><span class="meta function-call parameters r">
+    <span class="constant numeric float decimal r">1</span><span class="keyword other r">:</span><span class="constant numeric float decimal r">10</span><span class="punctuation separator parameters r">,</span>
+    <span class="punctuation section parens begin r">(</span><span class="constant numeric float decimal r">1</span><span class="keyword other r">:</span><span class="constant numeric float decimal r">10</span><span class="punctuation section parens end r">)</span><span class="keyword operator arithmetic r">^</span><span class="constant numeric float decimal r">2</span><span class="punctuation separator parameters r">,</span>
+    <span class="variable parameter r">main</span> <span class="keyword operator assignment r">=</span> <span class="string quoted double r"><span class="punctuation definition string begin r">&quot;</span>Square Numbers<span class="punctuation definition string end r">&quot;</span></span><span class="punctuation separator parameters r">,</span>
+    <span class="variable parameter r">xlab</span> <span class="keyword operator assignment r">=</span> <span class="string quoted double r"><span class="punctuation definition string begin r">&quot;</span>x<span class="punctuation definition string end r">&quot;</span></span><span class="punctuation separator parameters r">,</span>
+    <span class="variable parameter r">ylab</span> <span class="keyword operator assignment r">=</span> <span class="string quoted double r"><span class="punctuation definition string begin r">&quot;</span>x^2<span class="punctuation definition string end r">&quot;</span></span>
+</span><span class="punctuation section parens end r">)</span></span></span></code></pre>
+
+
+<figure id="fig-scatter" style="text-align:center">
+<img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMzYwcHQiIGhlaWdodD0iMjg4cHQiIHZpZXdCb3g9IjAgMCAzNjAgMjg4Ij4KPGRlZnM+CjxnPgo8ZyBpZD0iZ2x5cGgtMC0wIj4KPHBhdGggZD0iTSA2LjA3ODEyNSAtMS4wNDY4NzUgTCAxLjU5Mzc1IC0xLjA0Njg3NSBDIDEuNzAzMTI1IC0xLjc2NTYyNSAyLjA5Mzc1IC0yLjIxODc1IDMuMTI1IC0yLjg1OTM3NSBMIDQuMzI4MTI1IC0zLjUzMTI1IEMgNS41MTU2MjUgLTQuMTg3NSA2LjEyNSAtNS4wNzgxMjUgNi4xMjUgLTYuMTQwNjI1IEMgNi4xMjUgLTYuODU5Mzc1IDUuODQzNzUgLTcuNTMxMjUgNS4zNDM3NSAtOCBDIDQuODQzNzUgLTguNDUzMTI1IDQuMjE4NzUgLTguNjcxODc1IDMuNDA2MjUgLTguNjcxODc1IEMgMi4zMjgxMjUgLTguNjcxODc1IDEuNTMxMjUgLTguMjk2ODc1IDEuMDYyNSAtNy41NDY4NzUgQyAwLjc1IC03LjA5Mzc1IDAuNjI1IC02LjU0Njg3NSAwLjU5Mzc1IC01LjY3MTg3NSBMIDEuNjU2MjUgLTUuNjcxODc1IEMgMS42ODc1IC02LjI2NTYyNSAxLjc2NTYyNSAtNi42MDkzNzUgMS45MDYyNSAtNi45MDYyNSBDIDIuMTg3NSAtNy40MjE4NzUgMi43MzQzNzUgLTcuNzUgMy4zNzUgLTcuNzUgQyA0LjMyODEyNSAtNy43NSA1LjA0Njg3NSAtNy4wNjI1IDUuMDQ2ODc1IC02LjEyNSBDIDUuMDQ2ODc1IC01LjQyMTg3NSA0LjY1NjI1IC00LjgyODEyNSAzLjkwNjI1IC00LjM5MDYyNSBMIDIuNzk2ODc1IC0zLjc1IEMgMS4wMTU2MjUgLTIuNzE4NzUgMC41IC0xLjkwNjI1IDAuNDA2MjUgLTAuMDE1NjI1IEwgNi4wNzgxMjUgLTAuMDE1NjI1IFogTSA2LjA3ODEyNSAtMS4wNDY4NzUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTAtMSI+CjxwYXRoIGQ9Ik0gMy45MjE4NzUgLTIuMDkzNzUgTCAzLjkyMTg3NSAwIEwgNC45ODQzNzUgMCBMIDQuOTg0Mzc1IC0yLjA5Mzc1IEwgNi4yMzQzNzUgLTIuMDkzNzUgTCA2LjIzNDM3NSAtMy4wNDY4NzUgTCA0Ljk4NDM3NSAtMy4wNDY4NzUgTCA0Ljk4NDM3NSAtOC42NzE4NzUgTCA0LjIwMzEyNSAtOC42NzE4NzUgTCAwLjM0Mzc1IC0zLjIxODc1IEwgMC4zNDM3NSAtMi4wOTM3NSBaIE0gMy45MjE4NzUgLTMuMDQ2ODc1IEwgMS4yNjU2MjUgLTMuMDQ2ODc1IEwgMy45MjE4NzUgLTYuODc1IFogTSAzLjkyMTg3NSAtMy4wNDY4NzUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTAtMiI+CjxwYXRoIGQ9Ik0gNS45Njg3NSAtNi40MjE4NzUgQyA1Ljc2NTYyNSAtNy44NDM3NSA0Ljg1OTM3NSAtOC42NzE4NzUgMy41NjI1IC04LjY3MTg3NSBDIDIuNjI1IC04LjY3MTg3NSAxLjc4MTI1IC04LjIxODc1IDEuMjgxMjUgLTcuNDM3NSBDIDAuNzUgLTYuNTkzNzUgMC41MTU2MjUgLTUuNTMxMjUgMC41MTU2MjUgLTMuOTUzMTI1IEMgMC41MTU2MjUgLTIuNSAwLjcxODc1IC0xLjU3ODEyNSAxLjIzNDM3NSAtMC43OTY4NzUgQyAxLjY4NzUgLTAuMDkzNzUgMi40Mzc1IDAuMjgxMjUgMy4zNzUgMC4yODEyNSBDIDQuOTg0Mzc1IDAuMjgxMjUgNi4xNTYyNSAtMC45Mzc1IDYuMTU2MjUgLTIuNjI1IEMgNi4xNTYyNSAtNC4yMTg3NSA1LjA3ODEyNSAtNS4zNTkzNzUgMy41NDY4NzUgLTUuMzU5Mzc1IEMgMi43MTg3NSAtNS4zNTkzNzUgMi4wNDY4NzUgLTUuMDQ2ODc1IDEuNTkzNzUgLTQuNDA2MjUgQyAxLjYwOTM3NSAtNi41NDY4NzUgMi4yODEyNSAtNy43MzQzNzUgMy40ODQzNzUgLTcuNzM0Mzc1IEMgNC4yMzQzNzUgLTcuNzM0Mzc1IDQuNzUgLTcuMjY1NjI1IDQuOTIxODc1IC02LjQyMTg3NSBaIE0gMy40MjE4NzUgLTQuNDIxODc1IEMgNC40Mzc1IC00LjQyMTg3NSA1LjA3ODEyNSAtMy43MDMxMjUgNS4wNzgxMjUgLTIuNTQ2ODc1IEMgNS4wNzgxMjUgLTEuNDUzMTI1IDQuMzU5Mzc1IC0wLjY1NjI1IDMuMzkwNjI1IC0wLjY1NjI1IEMgMi40MDYyNSAtMC42NTYyNSAxLjY1NjI1IC0xLjQ4NDM3NSAxLjY1NjI1IC0yLjU5Mzc1IEMgMS42NTYyNSAtMy42NzE4NzUgMi4zNzUgLTQuNDIxODc1IDMuNDIxODc1IC00LjQyMTg3NSBaIE0gMy40MjE4NzUgLTQuNDIxODc1ICIvPgo8L2c+CjxnIGlkPSJnbHlwaC0wLTMiPgo8cGF0aCBkPSJNIDQuNjg3NSAtNC41NzgxMjUgQyA1LjU3ODEyNSAtNS4xMDkzNzUgNS44NTkzNzUgLTUuNTQ2ODc1IDUuODU5Mzc1IC02LjM1OTM3NSBDIDUuODU5Mzc1IC03LjczNDM3NSA0LjgxMjUgLTguNjcxODc1IDMuMjk2ODc1IC04LjY3MTg3NSBDIDEuNzk2ODc1IC04LjY3MTg3NSAwLjc1IC03LjczNDM3NSAwLjc1IC02LjM3NSBDIDAuNzUgLTUuNTQ2ODc1IDEuMDE1NjI1IC01LjEyNSAxLjg5MDYyNSAtNC41NzgxMjUgQyAwLjkyMTg3NSAtNC4wNzgxMjUgMC40Mzc1IC0zLjM3NSAwLjQzNzUgLTIuNDA2MjUgQyAwLjQzNzUgLTAuODI4MTI1IDEuNjA5Mzc1IDAuMjgxMjUgMy4yOTY4NzUgMC4yODEyNSBDIDQuOTg0Mzc1IDAuMjgxMjUgNi4xNTYyNSAtMC44MjgxMjUgNi4xNTYyNSAtMi40MDYyNSBDIDYuMTU2MjUgLTMuMzc1IDUuNjcxODc1IC00LjA3ODEyNSA0LjY4NzUgLTQuNTc4MTI1IFogTSAzLjI5Njg3NSAtNy43MzQzNzUgQyA0LjIwMzEyNSAtNy43MzQzNzUgNC43ODEyNSAtNy4yMDMxMjUgNC43ODEyNSAtNi4zNDM3NSBDIDQuNzgxMjUgLTUuNTE1NjI1IDQuMTg3NSAtNC45ODQzNzUgMy4yOTY4NzUgLTQuOTg0Mzc1IEMgMi40MDYyNSAtNC45ODQzNzUgMS44MjgxMjUgLTUuNTE1NjI1IDEuODI4MTI1IC02LjM1OTM3NSBDIDEuODI4MTI1IC03LjIwMzEyNSAyLjQwNjI1IC03LjczNDM3NSAzLjI5Njg3NSAtNy43MzQzNzUgWiBNIDMuMjk2ODc1IC00LjA5Mzc1IEMgNC4zNTkzNzUgLTQuMDkzNzUgNS4wNzgxMjUgLTMuMzkwNjI1IDUuMDc4MTI1IC0yLjM5MDYyNSBDIDUuMDc4MTI1IC0xLjM0Mzc1IDQuMzc1IC0wLjY1NjI1IDMuMjgxMjUgLTAuNjU2MjUgQyAyLjI1IC0wLjY1NjI1IDEuNTMxMjUgLTEuMzc1IDEuNTMxMjUgLTIuMzc1IEMgMS41MzEyNSAtMy40MDYyNSAyLjIzNDM3NSAtNC4wOTM3NSAzLjI5Njg3NSAtNC4wOTM3NSBaIE0gMy4yOTY4NzUgLTQuMDkzNzUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTAtNCI+CjxwYXRoIGQ9Ik0gMy4xMDkzNzUgLTYuMTg3NSBMIDMuMTA5Mzc1IDAgTCA0LjE1NjI1IDAgTCA0LjE1NjI1IC04LjY3MTg3NSBMIDMuNDY4NzUgLTguNjcxODc1IEMgMy4wOTM3NSAtNy4zNDM3NSAyLjg1OTM3NSAtNy4xNTYyNSAxLjIxODc1IC02Ljk1MzEyNSBMIDEuMjE4NzUgLTYuMTg3NSBaIE0gMy4xMDkzNzUgLTYuMTg3NSAiLz4KPC9nPgo8ZyBpZD0iZ2x5cGgtMC01Ij4KPHBhdGggZD0iTSAzLjI5Njg3NSAtOC42NzE4NzUgQyAyLjUxNTYyNSAtOC42NzE4NzUgMS43ODEyNSAtOC4zMTI1IDEuMzQzNzUgLTcuNzM0Mzc1IEMgMC43OTY4NzUgLTYuOTUzMTI1IDAuNTE1NjI1IC01LjgxMjUgMC41MTU2MjUgLTQuMjAzMTI1IEMgMC41MTU2MjUgLTEuMjY1NjI1IDEuNDY4NzUgMC4yODEyNSAzLjI5Njg3NSAwLjI4MTI1IEMgNS4wOTM3NSAwLjI4MTI1IDYuMDc4MTI1IC0xLjI2NTYyNSA2LjA3ODEyNSAtNC4xMjUgQyA2LjA3ODEyNSAtNS44MTI1IDUuODEyNSAtNi45Mzc1IDUuMjUgLTcuNzM0Mzc1IEMgNC44MTI1IC04LjMyODEyNSA0LjEwOTM3NSAtOC42NzE4NzUgMy4yOTY4NzUgLTguNjcxODc1IFogTSAzLjI5Njg3NSAtNy43MzQzNzUgQyA0LjQzNzUgLTcuNzM0Mzc1IDUgLTYuNTc4MTI1IDUgLTQuMjE4NzUgQyA1IC0xLjc1IDQuNDUzMTI1IC0wLjU5Mzc1IDMuMjgxMjUgLTAuNTkzNzUgQyAyLjE1NjI1IC0wLjU5Mzc1IDEuNTkzNzUgLTEuNzk2ODc1IDEuNTkzNzUgLTQuMTg3NSBDIDEuNTkzNzUgLTYuNTc4MTI1IDIuMTU2MjUgLTcuNzM0Mzc1IDMuMjk2ODc1IC03LjczNDM3NSBaIE0gMy4yOTY4NzUgLTcuNzM0Mzc1ICIvPgo8L2c+CjxnIGlkPSJnbHlwaC0wLTYiPgo8cGF0aCBkPSJNIDMuNSAtMy4yNSBMIDUuNjA5Mzc1IC02LjI4MTI1IEwgNC40ODQzNzUgLTYuMjgxMjUgTCAyLjk2ODc1IC00LjAxNTYyNSBMIDEuNDY4NzUgLTYuMjgxMjUgTCAwLjMyODEyNSAtNi4yODEyNSBMIDIuNDIxODc1IC0zLjIwMzEyNSBMIDAuMjAzMTI1IDAgTCAxLjM0Mzc1IDAgTCAyLjkzNzUgLTIuNDA2MjUgTCA0LjUxNTYyNSAwIEwgNS42NzE4NzUgMCBaIE0gMy41IC0zLjI1ICIvPgo8L2c+CjxnIGlkPSJnbHlwaC0xLTAiPgo8cGF0aCBkPSJNIC04LjY3MTg3NSAtMy4yOTY4NzUgQyAtOC42NzE4NzUgLTIuNTE1NjI1IC04LjMxMjUgLTEuNzgxMjUgLTcuNzM0Mzc1IC0xLjM0Mzc1IEMgLTYuOTUzMTI1IC0wLjc5Njg3NSAtNS44MTI1IC0wLjUxNTYyNSAtNC4yMDMxMjUgLTAuNTE1NjI1IEMgLTEuMjY1NjI1IC0wLjUxNTYyNSAwLjI4MTI1IC0xLjQ2ODc1IDAuMjgxMjUgLTMuMjk2ODc1IEMgMC4yODEyNSAtNS4wOTM3NSAtMS4yNjU2MjUgLTYuMDc4MTI1IC00LjEyNSAtNi4wNzgxMjUgQyAtNS44MTI1IC02LjA3ODEyNSAtNi45Mzc1IC01LjgxMjUgLTcuNzM0Mzc1IC01LjI1IEMgLTguMzI4MTI1IC00LjgxMjUgLTguNjcxODc1IC00LjEwOTM3NSAtOC42NzE4NzUgLTMuMjk2ODc1IFogTSAtNy43MzQzNzUgLTMuMjk2ODc1IEMgLTcuNzM0Mzc1IC00LjQzNzUgLTYuNTc4MTI1IC01IC00LjIxODc1IC01IEMgLTEuNzUgLTUgLTAuNTkzNzUgLTQuNDUzMTI1IC0wLjU5Mzc1IC0zLjI4MTI1IEMgLTAuNTkzNzUgLTIuMTU2MjUgLTEuNzk2ODc1IC0xLjU5Mzc1IC00LjE4NzUgLTEuNTkzNzUgQyAtNi41NzgxMjUgLTEuNTkzNzUgLTcuNzM0Mzc1IC0yLjE1NjI1IC03LjczNDM3NSAtMy4yOTY4NzUgWiBNIC03LjczNDM3NSAtMy4yOTY4NzUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTEtMSI+CjxwYXRoIGQ9Ik0gLTEuMDQ2ODc1IC02LjA3ODEyNSBMIC0xLjA0Njg3NSAtMS41OTM3NSBDIC0xLjc2NTYyNSAtMS43MDMxMjUgLTIuMjE4NzUgLTIuMDkzNzUgLTIuODU5Mzc1IC0zLjEyNSBMIC0zLjUzMTI1IC00LjMyODEyNSBDIC00LjE4NzUgLTUuNTE1NjI1IC01LjA3ODEyNSAtNi4xMjUgLTYuMTQwNjI1IC02LjEyNSBDIC02Ljg1OTM3NSAtNi4xMjUgLTcuNTMxMjUgLTUuODQzNzUgLTggLTUuMzQzNzUgQyAtOC40NTMxMjUgLTQuODQzNzUgLTguNjcxODc1IC00LjIxODc1IC04LjY3MTg3NSAtMy40MDYyNSBDIC04LjY3MTg3NSAtMi4zMjgxMjUgLTguMjk2ODc1IC0xLjUzMTI1IC03LjU0Njg3NSAtMS4wNjI1IEMgLTcuMDkzNzUgLTAuNzUgLTYuNTQ2ODc1IC0wLjYyNSAtNS42NzE4NzUgLTAuNTkzNzUgTCAtNS42NzE4NzUgLTEuNjU2MjUgQyAtNi4yNjU2MjUgLTEuNjg3NSAtNi42MDkzNzUgLTEuNzY1NjI1IC02LjkwNjI1IC0xLjkwNjI1IEMgLTcuNDIxODc1IC0yLjE4NzUgLTcuNzUgLTIuNzM0Mzc1IC03Ljc1IC0zLjM3NSBDIC03Ljc1IC00LjMyODEyNSAtNy4wNjI1IC01LjA0Njg3NSAtNi4xMjUgLTUuMDQ2ODc1IEMgLTUuNDIxODc1IC01LjA0Njg3NSAtNC44MjgxMjUgLTQuNjU2MjUgLTQuMzkwNjI1IC0zLjkwNjI1IEwgLTMuNzUgLTIuNzk2ODc1IEMgLTIuNzE4NzUgLTEuMDE1NjI1IC0xLjkwNjI1IC0wLjUgLTAuMDE1NjI1IC0wLjQwNjI1IEwgLTAuMDE1NjI1IC02LjA3ODEyNSBaIE0gLTEuMDQ2ODc1IC02LjA3ODEyNSAiLz4KPC9nPgo8ZyBpZD0iZ2x5cGgtMS0yIj4KPHBhdGggZD0iTSAtMi4wOTM3NSAtMy45MjE4NzUgTCAwIC0zLjkyMTg3NSBMIDAgLTQuOTg0Mzc1IEwgLTIuMDkzNzUgLTQuOTg0Mzc1IEwgLTIuMDkzNzUgLTYuMjM0Mzc1IEwgLTMuMDQ2ODc1IC02LjIzNDM3NSBMIC0zLjA0Njg3NSAtNC45ODQzNzUgTCAtOC42NzE4NzUgLTQuOTg0Mzc1IEwgLTguNjcxODc1IC00LjIwMzEyNSBMIC0zLjIxODc1IC0wLjM0Mzc1IEwgLTIuMDkzNzUgLTAuMzQzNzUgWiBNIC0zLjA0Njg3NSAtMy45MjE4NzUgTCAtMy4wNDY4NzUgLTEuMjY1NjI1IEwgLTYuODc1IC0zLjkyMTg3NSBaIE0gLTMuMDQ2ODc1IC0zLjkyMTg3NSAiLz4KPC9nPgo8ZyBpZD0iZ2x5cGgtMS0zIj4KPHBhdGggZD0iTSAtNi40MjE4NzUgLTUuOTY4NzUgQyAtNy44NDM3NSAtNS43NjU2MjUgLTguNjcxODc1IC00Ljg1OTM3NSAtOC42NzE4NzUgLTMuNTYyNSBDIC04LjY3MTg3NSAtMi42MjUgLTguMjE4NzUgLTEuNzgxMjUgLTcuNDM3NSAtMS4yODEyNSBDIC02LjU5Mzc1IC0wLjc1IC01LjUzMTI1IC0wLjUxNTYyNSAtMy45NTMxMjUgLTAuNTE1NjI1IEMgLTIuNSAtMC41MTU2MjUgLTEuNTc4MTI1IC0wLjcxODc1IC0wLjc5Njg3NSAtMS4yMzQzNzUgQyAtMC4wOTM3NSAtMS42ODc1IDAuMjgxMjUgLTIuNDM3NSAwLjI4MTI1IC0zLjM3NSBDIDAuMjgxMjUgLTQuOTg0Mzc1IC0wLjkzNzUgLTYuMTU2MjUgLTIuNjI1IC02LjE1NjI1IEMgLTQuMjE4NzUgLTYuMTU2MjUgLTUuMzU5Mzc1IC01LjA3ODEyNSAtNS4zNTkzNzUgLTMuNTQ2ODc1IEMgLTUuMzU5Mzc1IC0yLjcxODc1IC01LjA0Njg3NSAtMi4wNDY4NzUgLTQuNDA2MjUgLTEuNTkzNzUgQyAtNi41NDY4NzUgLTEuNjA5Mzc1IC03LjczNDM3NSAtMi4yODEyNSAtNy43MzQzNzUgLTMuNDg0Mzc1IEMgLTcuNzM0Mzc1IC00LjIzNDM3NSAtNy4yNjU2MjUgLTQuNzUgLTYuNDIxODc1IC00LjkyMTg3NSBaIE0gLTQuNDIxODc1IC0zLjQyMTg3NSBDIC00LjQyMTg3NSAtNC40Mzc1IC0zLjcwMzEyNSAtNS4wNzgxMjUgLTIuNTQ2ODc1IC01LjA3ODEyNSBDIC0xLjQ1MzEyNSAtNS4wNzgxMjUgLTAuNjU2MjUgLTQuMzU5Mzc1IC0wLjY1NjI1IC0zLjM5MDYyNSBDIC0wLjY1NjI1IC0yLjQwNjI1IC0xLjQ4NDM3NSAtMS42NTYyNSAtMi41OTM3NSAtMS42NTYyNSBDIC0zLjY3MTg3NSAtMS42NTYyNSAtNC40MjE4NzUgLTIuMzc1IC00LjQyMTg3NSAtMy40MjE4NzUgWiBNIC00LjQyMTg3NSAtMy40MjE4NzUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTEtNCI+CjxwYXRoIGQ9Ik0gLTQuNTc4MTI1IC00LjY4NzUgQyAtNS4xMDkzNzUgLTUuNTc4MTI1IC01LjU0Njg3NSAtNS44NTkzNzUgLTYuMzU5Mzc1IC01Ljg1OTM3NSBDIC03LjczNDM3NSAtNS44NTkzNzUgLTguNjcxODc1IC00LjgxMjUgLTguNjcxODc1IC0zLjI5Njg3NSBDIC04LjY3MTg3NSAtMS43OTY4NzUgLTcuNzM0Mzc1IC0wLjc1IC02LjM3NSAtMC43NSBDIC01LjU0Njg3NSAtMC43NSAtNS4xMjUgLTEuMDE1NjI1IC00LjU3ODEyNSAtMS44OTA2MjUgQyAtNC4wNzgxMjUgLTAuOTIxODc1IC0zLjM3NSAtMC40Mzc1IC0yLjQwNjI1IC0wLjQzNzUgQyAtMC44MjgxMjUgLTAuNDM3NSAwLjI4MTI1IC0xLjYwOTM3NSAwLjI4MTI1IC0zLjI5Njg3NSBDIDAuMjgxMjUgLTQuOTg0Mzc1IC0wLjgyODEyNSAtNi4xNTYyNSAtMi40MDYyNSAtNi4xNTYyNSBDIC0zLjM3NSAtNi4xNTYyNSAtNC4wNzgxMjUgLTUuNjcxODc1IC00LjU3ODEyNSAtNC42ODc1IFogTSAtNy43MzQzNzUgLTMuMjk2ODc1IEMgLTcuNzM0Mzc1IC00LjIwMzEyNSAtNy4yMDMxMjUgLTQuNzgxMjUgLTYuMzQzNzUgLTQuNzgxMjUgQyAtNS41MTU2MjUgLTQuNzgxMjUgLTQuOTg0Mzc1IC00LjE4NzUgLTQuOTg0Mzc1IC0zLjI5Njg3NSBDIC00Ljk4NDM3NSAtMi40MDYyNSAtNS41MTU2MjUgLTEuODI4MTI1IC02LjM1OTM3NSAtMS44MjgxMjUgQyAtNy4yMDMxMjUgLTEuODI4MTI1IC03LjczNDM3NSAtMi40MDYyNSAtNy43MzQzNzUgLTMuMjk2ODc1IFogTSAtNC4wOTM3NSAtMy4yOTY4NzUgQyAtNC4wOTM3NSAtNC4zNTkzNzUgLTMuMzkwNjI1IC01LjA3ODEyNSAtMi4zOTA2MjUgLTUuMDc4MTI1IEMgLTEuMzQzNzUgLTUuMDc4MTI1IC0wLjY1NjI1IC00LjM3NSAtMC42NTYyNSAtMy4yODEyNSBDIC0wLjY1NjI1IC0yLjI1IC0xLjM3NSAtMS41MzEyNSAtMi4zNzUgLTEuNTMxMjUgQyAtMy40MDYyNSAtMS41MzEyNSAtNC4wOTM3NSAtMi4yMzQzNzUgLTQuMDkzNzUgLTMuMjk2ODc1IFogTSAtNC4wOTM3NSAtMy4yOTY4NzUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTEtNSI+CjxwYXRoIGQ9Ik0gLTYuMTg3NSAtMy4xMDkzNzUgTCAwIC0zLjEwOTM3NSBMIDAgLTQuMTU2MjUgTCAtOC42NzE4NzUgLTQuMTU2MjUgTCAtOC42NzE4NzUgLTMuNDY4NzUgQyAtNy4zNDM3NSAtMy4wOTM3NSAtNy4xNTYyNSAtMi44NTkzNzUgLTYuOTUzMTI1IC0xLjIxODc1IEwgLTYuMTg3NSAtMS4yMTg3NSBaIE0gLTYuMTg3NSAtMy4xMDkzNzUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTEtNiI+CjxwYXRoIGQ9Ik0gLTMuMjUgLTMuNSBMIC02LjI4MTI1IC01LjYwOTM3NSBMIC02LjI4MTI1IC00LjQ4NDM3NSBMIC00LjAxNTYyNSAtMi45Njg3NSBMIC02LjI4MTI1IC0xLjQ2ODc1IEwgLTYuMjgxMjUgLTAuMzI4MTI1IEwgLTMuMjAzMTI1IC0yLjQyMTg3NSBMIDAgLTAuMjAzMTI1IEwgMCAtMS4zNDM3NSBMIC0yLjQwNjI1IC0yLjkzNzUgTCAwIC00LjUxNTYyNSBMIDAgLTUuNjcxODc1IFogTSAtMy4yNSAtMy41ICIvPgo8L2c+CjxnIGlkPSJnbHlwaC0xLTciPgo8cGF0aCBkPSJNIC04LjUxNTYyNSAtMi4zNTkzNzUgTCAtMy45NTMxMjUgLTAuNTMxMjUgTCAtMy45NTMxMjUgLTEuMzU5Mzc1IEwgLTcuNTQ2ODc1IC0yLjgxMjUgTCAtMy45NTMxMjUgLTQuMjY1NjI1IEwgLTMuOTUzMTI1IC01LjA5Mzc1IEwgLTguNTE1NjI1IC0zLjIzNDM3NSBaIE0gLTguNTE1NjI1IC0yLjM1OTM3NSAiLz4KPC9nPgo8ZyBpZD0iZ2x5cGgtMi0wIj4KPHBhdGggZD0iTSA4Ljc1IC03LjI5Njg3NSBDIDguNzM0Mzc1IC05LjQ4NDM3NSA3LjI4MTI1IC0xMC42NzE4NzUgNC42MjUgLTEwLjY3MTg3NSBDIDIuMTA5Mzc1IC0xMC42NzE4NzUgMC42NDA2MjUgLTkuNSAwLjY0MDYyNSAtNy40NTMxMjUgQyAwLjY0MDYyNSAtNS44MTI1IDEuNDY4NzUgLTUuMDMxMjUgMy41OTM3NSAtNC42MjUgTCA1LjA3ODEyNSAtNC4zNDM3NSBDIDYuNTE1NjI1IC00LjA2MjUgNy4wNDY4NzUgLTMuNjU2MjUgNy4wNDY4NzUgLTIuODEyNSBDIDcuMDQ2ODc1IC0xLjkzNzUgNi4yMzQzNzUgLTEuMzkwNjI1IDQuOTIxODc1IC0xLjM5MDYyNSBDIDMuNDUzMTI1IC0xLjM5MDYyNSAyLjY0MDYyNSAtMi4wMTU2MjUgMi41NjI1IC0zLjE0MDYyNSBMIDAuNDY4NzUgLTMuMTQwNjI1IEMgMC41OTM3NSAtMC44OTA2MjUgMi4xMjUgMC4zMjgxMjUgNC44MTI1IDAuMzI4MTI1IEMgNy41MTU2MjUgMC4zMjgxMjUgOS4xMjUgLTAuOTIxODc1IDkuMTI1IC0zLjA2MjUgQyA5LjEyNSAtNC43MTg3NSA4LjI4MTI1IC01LjU5Mzc1IDYuMzQzNzUgLTUuOTY4NzUgTCA0LjcwMzEyNSAtNi4yODEyNSBDIDMuMTU2MjUgLTYuNTc4MTI1IDIuNzAzMTI1IC02Ljg5MDYyNSAyLjcwMzEyNSAtNy42NTYyNSBDIDIuNzAzMTI1IC04LjQzNzUgMy40MDYyNSAtOC45NTMxMjUgNC41MzEyNSAtOC45NTMxMjUgQyA1Ljg5MDYyNSAtOC45NTMxMjUgNi42NTYyNSAtOC4zNzUgNi43MzQzNzUgLTcuMjk2ODc1IFogTSA4Ljc1IC03LjI5Njg3NSAiLz4KPC9nPgo8ZyBpZD0iZ2x5cGgtMi0xIj4KPHBhdGggZD0iTSA1LjgxMjUgLTcuNzgxMjUgTCA1LjgxMjUgLTYuNjI1IEMgNS4zNDM3NSAtNy40ODQzNzUgNC42MjUgLTcuOTA2MjUgMy42NTYyNSAtNy45MDYyNSBDIDEuNzgxMjUgLTcuOTA2MjUgMC40MDYyNSAtNi4xNTYyNSAwLjQwNjI1IC0zLjc4MTI1IEMgMC40MDYyNSAtMi42NzE4NzUgMC43MTg3NSAtMS41NzgxMjUgMS4yMzQzNzUgLTAuODc1IEMgMS43NSAtMC4xNDA2MjUgMi43MTg3NSAwLjM0Mzc1IDMuNjQwNjI1IDAuMzQzNzUgQyA0LjYyNSAwLjM0Mzc1IDUuMzQzNzUgLTAuMDc4MTI1IDUuODEyNSAtMC45MjE4NzUgTCA1LjgxMjUgMy4xNDA2MjUgTCA3Ljg0Mzc1IDMuMTQwNjI1IEwgNy44NDM3NSAtNy43ODEyNSBaIE0gNC4xMjUgLTYuMjE4NzUgQyA1LjE1NjI1IC02LjIxODc1IDUuODEyNSAtNS4yNSA1LjgxMjUgLTMuNzM0Mzc1IEMgNS44MTI1IC0yLjMxMjUgNS4xMjUgLTEuMzQzNzUgNC4xMjUgLTEuMzQzNzUgQyAzLjEwOTM3NSAtMS4zNDM3NSAyLjQyMTg3NSAtMi4zMTI1IDIuNDIxODc1IC0zLjc4MTI1IEMgMi40MjE4NzUgLTUuMjM0Mzc1IDMuMTA5Mzc1IC02LjIxODc1IDQuMTI1IC02LjIxODc1IFogTSA0LjEyNSAtNi4yMTg3NSAiLz4KPC9nPgo8ZyBpZD0iZ2x5cGgtMi0yIj4KPHBhdGggZD0iTSA3Ljc5Njg3NSAwIEwgNy43OTY4NzUgLTcuNzgxMjUgTCA1Ljc4MTI1IC03Ljc4MTI1IEwgNS43ODEyNSAtMi45MDYyNSBDIDUuNzgxMjUgLTEuOTg0Mzc1IDUuMTQwNjI1IC0xLjM5MDYyNSA0LjE1NjI1IC0xLjM5MDYyNSBDIDMuMjgxMjUgLTEuMzkwNjI1IDIuODU5Mzc1IC0xLjg0Mzc1IDIuODU5Mzc1IC0yLjc4MTI1IEwgMi44NTkzNzUgLTcuNzgxMjUgTCAwLjgyODEyNSAtNy43ODEyNSBMIDAuODI4MTI1IC0yLjM1OTM3NSBDIDAuODI4MTI1IC0wLjY0MDYyNSAxLjc2NTYyNSAwLjMyODEyNSAzLjQzNzUgMC4zMjgxMjUgQyA0LjUgMC4zMjgxMjUgNS4yMDMxMjUgLTAuMDQ2ODc1IDUuNzgxMjUgLTAuOTIxODc1IEwgNS43ODEyNSAwIFogTSA3Ljc5Njg3NSAwICIvPgo8L2c+CjxnIGlkPSJnbHlwaC0yLTMiPgo8cGF0aCBkPSJNIDcuNTQ2ODc1IC0wLjI1IEMgNy4yMDMxMjUgLTAuNTc4MTI1IDcuMDkzNzUgLTAuODEyNSA3LjA5Mzc1IC0xLjIwMzEyNSBMIDcuMDkzNzUgLTUuNTE1NjI1IEMgNy4wOTM3NSAtNy4xMDkzNzUgNiAtNy45MDYyNSAzLjkwNjI1IC03LjkwNjI1IEMgMS43OTY4NzUgLTcuOTA2MjUgMC43MDMxMjUgLTcuMDE1NjI1IDAuNTc4MTI1IC01LjIxODc1IEwgMi41MTU2MjUgLTUuMjE4NzUgQyAyLjYyNSAtNi4wMTU2MjUgMi45NTMxMjUgLTYuMjgxMjUgMy45NTMxMjUgLTYuMjgxMjUgQyA0LjcxODc1IC02LjI4MTI1IDUuMTA5Mzc1IC02LjAxNTYyNSA1LjEwOTM3NSAtNS41IEMgNS4xMDkzNzUgLTUuMjUgNC45ODQzNzUgLTUuMDMxMjUgNC43NjU2MjUgLTQuODkwNjI1IEMgNC41IC00Ljc1IDQuNSAtNC43NSAzLjUgLTQuNTkzNzUgTCAyLjY4NzUgLTQuNDUzMTI1IEMgMS4xNTYyNSAtNC4xODc1IDAuNDA2MjUgLTMuNDA2MjUgMC40MDYyNSAtMiBDIDAuNDA2MjUgLTAuNjA5Mzc1IDEuMzQzNzUgMC4zMjgxMjUgMi43NjU2MjUgMC4zMjgxMjUgQyAzLjYyNSAwLjMyODEyNSA0LjQwNjI1IC0wLjAzMTI1IDUuMTI1IC0wLjc4MTI1IEMgNS4xMjUgLTAuMzc1IDUuMTcxODc1IC0wLjIzNDM3NSA1LjM1OTM3NSAwIEwgNy41NDY4NzUgMCBaIE0gNS4xMDkzNzUgLTMuMTI1IEMgNS4xMDkzNzUgLTEuOTUzMTI1IDQuNTMxMjUgLTEuMjk2ODc1IDMuNTE1NjI1IC0xLjI5Njg3NSBDIDIuODQzNzUgLTEuMjk2ODc1IDIuNDIxODc1IC0xLjY1NjI1IDIuNDIxODc1IC0yLjIzNDM3NSBDIDIuNDIxODc1IC0yLjg0Mzc1IDIuNzM0Mzc1IC0zLjEyNSAzLjU3ODEyNSAtMy4yOTY4NzUgTCA0LjI2NTYyNSAtMy40MjE4NzUgQyA0Ljc5Njg3NSAtMy41MzEyNSA0Ljg5MDYyNSAtMy41NjI1IDUuMTA5Mzc1IC0zLjY3MTg3NSBaIE0gNS4xMDkzNzUgLTMuMTI1ICIvPgo8L2c+CjxnIGlkPSJnbHlwaC0yLTQiPgo8cGF0aCBkPSJNIDAuOTA2MjUgLTcuNzgxMjUgTCAwLjkwNjI1IDAgTCAyLjkyMTg3NSAwIEwgMi45MjE4NzUgLTQuMTQwNjI1IEMgMi45MjE4NzUgLTUuMzEyNSAzLjUxNTYyNSAtNS45MDYyNSA0LjcwMzEyNSAtNS45MDYyNSBDIDQuOTA2MjUgLTUuOTA2MjUgNS4wNjI1IC01Ljg5MDYyNSA1LjMyODEyNSAtNS44NDM3NSBMIDUuMzI4MTI1IC03Ljg5MDYyNSBDIDUuMjE4NzUgLTcuOTA2MjUgNS4xNzE4NzUgLTcuOTA2MjUgNS4wNzgxMjUgLTcuOTA2MjUgQyA0LjE1NjI1IC03LjkwNjI1IDMuMzc1IC03LjI5Njg3NSAyLjkyMTg3NSAtNi4yNSBMIDIuOTIxODc1IC03Ljc4MTI1IFogTSAwLjkwNjI1IC03Ljc4MTI1ICIvPgo8L2c+CjxnIGlkPSJnbHlwaC0yLTUiPgo8cGF0aCBkPSJNIDcuNTQ2ODc1IC0zLjI1IEMgNy41NjI1IC0zLjQyMTg3NSA3LjU2MjUgLTMuNSA3LjU2MjUgLTMuNTkzNzUgQyA3LjU2MjUgLTQuMzc1IDcuNDUzMTI1IC01LjA5Mzc1IDcuMjY1NjI1IC01LjY0MDYyNSBDIDYuNzM0Mzc1IC03LjA2MjUgNS40ODQzNzUgLTcuOTA2MjUgMy45MjE4NzUgLTcuOTA2MjUgQyAxLjY4NzUgLTcuOTA2MjUgMC4zMTI1IC02LjI5Njg3NSAwLjMxMjUgLTMuNjg3NSBDIDAuMzEyNSAtMS4yMDMxMjUgMS42NzE4NzUgMC4zMjgxMjUgMy44NzUgMC4zMjgxMjUgQyA1LjYyNSAwLjMyODEyNSA3LjAzMTI1IC0wLjY0MDYyNSA3LjQ4NDM3NSAtMi4xODc1IEwgNS40ODQzNzUgLTIuMTg3NSBDIDUuMjUgLTEuNTYyNSA0LjY4NzUgLTEuMjAzMTI1IDMuOTUzMTI1IC0xLjIwMzEyNSBDIDMuMzc1IC0xLjIwMzEyNSAyLjkwNjI1IC0xLjQ1MzEyNSAyLjYyNSAtMS44OTA2MjUgQyAyLjQzNzUgLTIuMTcxODc1IDIuMzU5Mzc1IC0yLjUxNTYyNSAyLjMyODEyNSAtMy4yNSBaIE0gMi4zNTkzNzUgLTQuNTkzNzUgQyAyLjUgLTUuNzk2ODc1IDMgLTYuMzc1IDMuODkwNjI1IC02LjM3NSBDIDQuODEyNSAtNi4zNzUgNS4zNTkzNzUgLTUuNzUgNS40NTMxMjUgLTQuNTkzNzUgWiBNIDIuMzU5Mzc1IC00LjU5Mzc1ICIvPgo8L2c+CjxnIGlkPSJnbHlwaC0yLTYiPgo8L2c+CjxnIGlkPSJnbHlwaC0yLTciPgo8cGF0aCBkPSJNIDcuMzU5Mzc1IDAgTCA5LjUxNTYyNSAwIEwgOS41MTU2MjUgLTEwLjUgTCA3LjM1OTM3NSAtMTAuNSBMIDcuMzU5Mzc1IC0zLjM1OTM3NSBMIDMuMjAzMTI1IC0xMC41IEwgMC45ODQzNzUgLTEwLjUgTCAwLjk4NDM3NSAwIEwgMy4xNDA2MjUgMCBMIDMuMTQwNjI1IC03LjI2NTYyNSBaIE0gNy4zNTkzNzUgMCAiLz4KPC9nPgo8ZyBpZD0iZ2x5cGgtMi04Ij4KPHBhdGggZD0iTSAwLjg1OTM3NSAtNy43ODEyNSBMIDAuODU5Mzc1IDAgTCAyLjg3NSAwIEwgMi44NzUgLTQuNjcxODc1IEMgMi44NzUgLTUuNjQwNjI1IDMuNDA2MjUgLTYuMTg3NSA0LjI2NTYyNSAtNi4xODc1IEMgNC45Mzc1IC02LjE4NzUgNS4zNTkzNzUgLTUuODEyNSA1LjM1OTM3NSAtNS4xODc1IEwgNS4zNTkzNzUgMCBMIDcuMzc1IDAgTCA3LjM3NSAtNC42NzE4NzUgQyA3LjM3NSAtNS42MjUgNy44OTA2MjUgLTYuMTg3NSA4Ljc2NTYyNSAtNi4xODc1IEMgOS40Mzc1IC02LjE4NzUgOS44NTkzNzUgLTUuODEyNSA5Ljg1OTM3NSAtNS4xODc1IEwgOS44NTkzNzUgMCBMIDExLjg3NSAwIEwgMTEuODc1IC01LjUgQyAxMS44NzUgLTcuMDE1NjI1IDEwLjk1MzEyNSAtNy45MDYyNSA5LjM5MDYyNSAtNy45MDYyNSBDIDguNDA2MjUgLTcuOTA2MjUgNy43MTg3NSAtNy41NjI1IDcuMTA5Mzc1IC02Ljc1IEMgNi43MzQzNzUgLTcuNDg0Mzc1IDUuOTY4NzUgLTcuOTA2MjUgNSAtNy45MDYyNSBDIDQuMTA5Mzc1IC03LjkwNjI1IDMuNTMxMjUgLTcuNjI1IDIuODU5Mzc1IC02LjgxMjUgTCAyLjg1OTM3NSAtNy43ODEyNSBaIE0gMC44NTkzNzUgLTcuNzgxMjUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTItOSI+CjxwYXRoIGQ9Ik0gMC44NDM3NSAtMTAuNSBMIDAuODQzNzUgMCBMIDIuODU5Mzc1IDAgTCAyLjg1OTM3NSAtMC43OTY4NzUgQyAzLjM1OTM3NSAtMC4wMzEyNSA0LjAzMTI1IDAuMzI4MTI1IDUuMDE1NjI1IDAuMzI4MTI1IEMgNi44NzUgMC4zMjgxMjUgOC4yODEyNSAtMS40Mzc1IDguMjgxMjUgLTMuNzgxMjUgQyA4LjI4MTI1IC00Ljg0Mzc1IDcuOTY4NzUgLTUuOTA2MjUgNy40NTMxMjUgLTYuNjU2MjUgQyA2LjkyMTg3NSAtNy40MjE4NzUgNS45Njg3NSAtNy45MDYyNSA1LjAxNTYyNSAtNy45MDYyNSBDIDQuMDMxMjUgLTcuOTA2MjUgMy4zNTkzNzUgLTcuNTQ2ODc1IDIuODU5Mzc1IC02Ljc2NTYyNSBMIDIuODU5Mzc1IC0xMC41IFogTSA0LjU2MjUgLTYuMjE4NzUgQyA1LjU2MjUgLTYuMjE4NzUgNi4yNjU2MjUgLTUuMjE4NzUgNi4yNjU2MjUgLTMuNzgxMjUgQyA2LjI2NTYyNSAtMi4zNDM3NSA1LjU3ODEyNSAtMS4zNTkzNzUgNC41NjI1IC0xLjM1OTM3NSBDIDMuNTQ2ODc1IC0xLjM1OTM3NSAyLjg1OTM3NSAtMi4zMTI1IDIuODU5Mzc1IC0zLjgxMjUgQyAyLjg1OTM3NSAtNS4yNSAzLjU2MjUgLTYuMjE4NzUgNC41NjI1IC02LjIxODc1IFogTSA0LjU2MjUgLTYuMjE4NzUgIi8+CjwvZz4KPGcgaWQ9ImdseXBoLTItMTAiPgo8cGF0aCBkPSJNIDcuMjgxMjUgLTUuMjY1NjI1IEMgNy4yNSAtNi45MjE4NzUgNS45ODQzNzUgLTcuOTA2MjUgMy44OTA2MjUgLTcuOTA2MjUgQyAxLjkyMTg3NSAtNy45MDYyNSAwLjY4NzUgLTYuOTIxODc1IDAuNjg3NSAtNS4zMTI1IEMgMC42ODc1IC00Ljc5Njg3NSAwLjg0Mzc1IC00LjM0Mzc1IDEuMTI1IC00LjA0Njg3NSBDIDEuMzkwNjI1IC0zLjc4MTI1IDEuNjQwNjI1IC0zLjY0MDYyNSAyLjM5MDYyNSAtMy40MDYyNSBMIDQuNzk2ODc1IC0yLjY1NjI1IEMgNS4yOTY4NzUgLTIuNSA1LjQ2ODc1IC0yLjMyODEyNSA1LjQ2ODc1IC0yLjAxNTYyNSBDIDUuNDY4NzUgLTEuNTQ2ODc1IDQuOTA2MjUgLTEuMjUgMy45Njg3NSAtMS4yNSBDIDMuNDM3NSAtMS4yNSAzLjA0Njg3NSAtMS4zNDM3NSAyLjc4MTI1IC0xLjUzMTI1IEMgMi41NjI1IC0xLjY4NzUgMi40ODQzNzUgLTEuODQzNzUgMi4zOTA2MjUgLTIuMjY1NjI1IEwgMC40MjE4NzUgLTIuMjY1NjI1IEMgMC40Njg3NSAtMC41NDY4NzUgMS43MzQzNzUgMC4zMjgxMjUgNC4wOTM3NSAwLjMyODEyNSBDIDUuMTcxODc1IDAuMzI4MTI1IDYgMC4wOTM3NSA2LjU2MjUgLTAuMzU5Mzc1IEMgNy4xNDA2MjUgLTAuODI4MTI1IDcuNDg0Mzc1IC0xLjU0Njg3NSA3LjQ4NDM3NSAtMi4zMTI1IEMgNy40ODQzNzUgLTMuMzEyNSA2Ljk4NDM3NSAtMy45Njg3NSA1Ljk2ODc1IC00LjI2NTYyNSBMIDMuNDIxODc1IC01IEMgMi44NTkzNzUgLTUuMTcxODc1IDIuNzAzMTI1IC01LjI4MTI1IDIuNzAzMTI1IC01LjYwOTM3NSBDIDIuNzAzMTI1IC02LjAzMTI1IDMuMTcxODc1IC02LjMyODEyNSAzLjg3NSAtNi4zMjgxMjUgQyA0Ljg0Mzc1IC02LjMyODEyNSA1LjMxMjUgLTUuOTg0Mzc1IDUuMzI4MTI1IC01LjI2NTYyNSBaIE0gNy4yODEyNSAtNS4yNjU2MjUgIi8+CjwvZz4KPC9nPgo8L2RlZnM+CjxyZWN0IHg9Ii0zNiIgeT0iLTI4LjgiIHdpZHRoPSI0MzIiIGhlaWdodD0iMzQ1LjYiIGZpbGw9InJnYigxMDAlLCAxMDAlLCAxMDAlKSIgZmlsbC1vcGFjaXR5PSIxIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSA3MS43NjU2MjUgMjA4LjgwMDc4MSBDIDcxLjc2NTYyNSAyMTIuMzk4NDM4IDY2LjM2NzE4OCAyMTIuMzk4NDM4IDY2LjM2NzE4OCAyMDguODAwNzgxIEMgNjYuMzY3MTg4IDIwNS4xOTkyMTkgNzEuNzY1NjI1IDIwNS4xOTkyMTkgNzEuNzY1NjI1IDIwOC44MDA3ODEgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSA5OS42MTcxODggMjA0LjQzNzUgQyA5OS42MTcxODggMjA4LjAzNTE1NiA5NC4yMTg3NSAyMDguMDM1MTU2IDk0LjIxODc1IDIwNC40Mzc1IEMgOTQuMjE4NzUgMjAwLjgzNTkzOCA5OS42MTcxODggMjAwLjgzNTkzOCA5OS42MTcxODggMjA0LjQzNzUgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSAxMjcuNDY4NzUgMTk3LjE2NDA2MiBDIDEyNy40Njg3NSAyMDAuNzYxNzE5IDEyMi4wNzAzMTIgMjAwLjc2MTcxOSAxMjIuMDcwMzEyIDE5Ny4xNjQwNjIgQyAxMjIuMDcwMzEyIDE5My41NjI1IDEyNy40Njg3NSAxOTMuNTYyNSAxMjcuNDY4NzUgMTk3LjE2NDA2MiAiLz4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjc1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZT0icmdiKDAlLCAwJSwgMCUpIiBzdHJva2Utb3BhY2l0eT0iMSIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBkPSJNIDE1NS4zMjAzMTIgMTg2Ljk4MDQ2OSBDIDE1NS4zMjAzMTIgMTkwLjU4MjAzMSAxNDkuOTIxODc1IDE5MC41ODIwMzEgMTQ5LjkyMTg3NSAxODYuOTgwNDY5IEMgMTQ5LjkyMTg3NSAxODMuMzgyODEyIDE1NS4zMjAzMTIgMTgzLjM4MjgxMiAxNTUuMzIwMzEyIDE4Ni45ODA0NjkgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSAxODMuMTc1NzgxIDE3My44OTA2MjUgQyAxODMuMTc1NzgxIDE3Ny40OTIxODggMTc3Ljc3MzQzOCAxNzcuNDkyMTg4IDE3Ny43NzM0MzggMTczLjg5MDYyNSBDIDE3Ny43NzM0MzggMTcwLjI4OTA2MiAxODMuMTc1NzgxIDE3MC4yODkwNjIgMTgzLjE3NTc4MSAxNzMuODkwNjI1ICIvPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjAuNzUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSJyZ2IoMCUsIDAlLCAwJSkiIHN0cm9rZS1vcGFjaXR5PSIxIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIGQ9Ik0gMjExLjAyNzM0NCAxNTcuODkwNjI1IEMgMjExLjAyNzM0NCAxNjEuNDkyMTg4IDIwNS42MjUgMTYxLjQ5MjE4OCAyMDUuNjI1IDE1Ny44OTA2MjUgQyAyMDUuNjI1IDE1NC4yODkwNjIgMjExLjAyNzM0NCAxNTQuMjg5MDYyIDIxMS4wMjczNDQgMTU3Ljg5MDYyNSAiLz4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjc1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZT0icmdiKDAlLCAwJSwgMCUpIiBzdHJva2Utb3BhY2l0eT0iMSIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBkPSJNIDIzOC44Nzg5MDYgMTM4Ljk4MDQ2OSBDIDIzOC44Nzg5MDYgMTQyLjU4MjAzMSAyMzMuNDc2NTYyIDE0Mi41ODIwMzEgMjMzLjQ3NjU2MiAxMzguOTgwNDY5IEMgMjMzLjQ3NjU2MiAxMzUuMzgyODEyIDIzOC44Nzg5MDYgMTM1LjM4MjgxMiAyMzguODc4OTA2IDEzOC45ODA0NjkgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSAyNjYuNzMwNDY5IDExNy4xNjQwNjIgQyAyNjYuNzMwNDY5IDEyMC43NjE3MTkgMjYxLjMyODEyNSAxMjAuNzYxNzE5IDI2MS4zMjgxMjUgMTE3LjE2NDA2MiBDIDI2MS4zMjgxMjUgMTEzLjU2MjUgMjY2LjczMDQ2OSAxMTMuNTYyNSAyNjYuNzMwNDY5IDExNy4xNjQwNjIgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSAyOTQuNTgyMDMxIDkyLjQzNzUgQyAyOTQuNTgyMDMxIDk2LjAzNTE1NiAyODkuMTc5Njg4IDk2LjAzNTE1NiAyODkuMTc5Njg4IDkyLjQzNzUgQyAyODkuMTc5Njg4IDg4LjgzNTkzOCAyOTQuNTgyMDMxIDg4LjgzNTkzOCAyOTQuNTgyMDMxIDkyLjQzNzUgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSAzMjIuNDMzNTk0IDY0LjgwMDc4MSBDIDMyMi40MzM1OTQgNjguMzk4NDM4IDMxNy4wMzUxNTYgNjguMzk4NDM4IDMxNy4wMzUxNTYgNjQuODAwNzgxIEMgMzE3LjAzNTE1NiA2MS4xOTkyMTkgMzIyLjQzMzU5NCA2MS4xOTkyMTkgMzIyLjQzMzU5NCA2NC44MDA3ODEgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSA5Ni45MTc5NjkgMjE0LjU1ODU5NCBMIDMxOS43MzQzNzUgMjE0LjU1ODU5NCAiLz4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjc1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZT0icmdiKDAlLCAwJSwgMCUpIiBzdHJva2Utb3BhY2l0eT0iMSIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBkPSJNIDk2LjkxNzk2OSAyMTQuNTU4NTk0IEwgOTYuOTE3OTY5IDIyMS43NjE3MTkgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSAxNTIuNjIxMDk0IDIxNC41NTg1OTQgTCAxNTIuNjIxMDk0IDIyMS43NjE3MTkgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSAyMDguMzI0MjE5IDIxNC41NTg1OTQgTCAyMDguMzI0MjE5IDIyMS43NjE3MTkgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSAyNjQuMDMxMjUgMjE0LjU1ODU5NCBMIDI2NC4wMzEyNSAyMjEuNzYxNzE5ICIvPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjAuNzUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSJyZ2IoMCUsIDAlLCAwJSkiIHN0cm9rZS1vcGFjaXR5PSIxIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIGQ9Ik0gMzE5LjczNDM3NSAyMTQuNTU4NTk0IEwgMzE5LjczNDM3NSAyMjEuNzYxNzE5ICIvPgo8ZyBmaWxsPSJyZ2IoMCUsIDAlLCAwJSkiIGZpbGwtb3BhY2l0eT0iMSI+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTAtMCIgeD0iOTMuNDE3OTY5IiB5PSIyNDAuMjI4NTE2Ii8+CjwvZz4KPGcgZmlsbD0icmdiKDAlLCAwJSwgMCUpIiBmaWxsLW9wYWNpdHk9IjEiPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0wLTEiIHg9IjE0OS4xMjEwOTQiIHk9IjI0MC4yMjg1MTYiLz4KPC9nPgo8ZyBmaWxsPSJyZ2IoMCUsIDAlLCAwJSkiIGZpbGwtb3BhY2l0eT0iMSI+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTAtMiIgeD0iMjA0LjgyNDIxOSIgeT0iMjQwLjIyODUxNiIvPgo8L2c+CjxnIGZpbGw9InJnYigwJSwgMCUsIDAlKSIgZmlsbC1vcGFjaXR5PSIxIj4KPHVzZSB4bGluazpocmVmPSIjZ2x5cGgtMC0zIiB4PSIyNjAuNTMxMjUiIHk9IjI0MC4yMjg1MTYiLz4KPC9nPgo8ZyBmaWxsPSJyZ2IoMCUsIDAlLCAwJSkiIGZpbGwtb3BhY2l0eT0iMSI+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTAtNCIgeD0iMzEyLjczNDM3NSIgeT0iMjQwLjIyODUxNiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0wLTUiIHg9IjMxOS43MzQzNzUiIHk9IjI0MC4yMjg1MTYiLz4KPC9nPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjAuNzUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSJyZ2IoMCUsIDAlLCAwJSkiIHN0cm9rZS1vcGFjaXR5PSIxIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIGQ9Ik0gNTkuMDM5MDYyIDIxMC4yNTM5MDYgTCA1OS4wMzkwNjIgNjQuODAwNzgxICIvPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjAuNzUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSJyZ2IoMCUsIDAlLCAwJSkiIHN0cm9rZS1vcGFjaXR5PSIxIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIGQ9Ik0gNTkuMDM5MDYyIDIxMC4yNTM5MDYgTCA1MS44Mzk4NDQgMjEwLjI1MzkwNiAiLz4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjc1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZT0icmdiKDAlLCAwJSwgMCUpIiBzdHJva2Utb3BhY2l0eT0iMSIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBkPSJNIDU5LjAzOTA2MiAxODEuMTY0MDYyIEwgNTEuODM5ODQ0IDE4MS4xNjQwNjIgIi8+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC43NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2U9InJnYigwJSwgMCUsIDAlKSIgc3Ryb2tlLW9wYWNpdHk9IjEiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgZD0iTSA1OS4wMzkwNjIgMTUyLjA3NDIxOSBMIDUxLjgzOTg0NCAxNTIuMDc0MjE5ICIvPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjAuNzUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSJyZ2IoMCUsIDAlLCAwJSkiIHN0cm9rZS1vcGFjaXR5PSIxIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIGQ9Ik0gNTkuMDM5MDYyIDEyMi45ODA0NjkgTCA1MS44Mzk4NDQgMTIyLjk4MDQ2OSAiLz4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjc1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZT0icmdiKDAlLCAwJSwgMCUpIiBzdHJva2Utb3BhY2l0eT0iMSIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBkPSJNIDU5LjAzOTA2MiA5My44OTA2MjUgTCA1MS44Mzk4NDQgOTMuODkwNjI1ICIvPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjAuNzUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSJyZ2IoMCUsIDAlLCAwJSkiIHN0cm9rZS1vcGFjaXR5PSIxIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIGQ9Ik0gNTkuMDM5MDYyIDY0LjgwMDc4MSBMIDUxLjgzOTg0NCA2NC44MDA3ODEgIi8+CjxnIGZpbGw9InJnYigwJSwgMCUsIDAlKSIgZmlsbC1vcGFjaXR5PSIxIj4KPHVzZSB4bGluazpocmVmPSIjZ2x5cGgtMS0wIiB4PSI0MS41MDk3NjYiIHk9IjIxMy43NTM5MDYiLz4KPC9nPgo8ZyBmaWxsPSJyZ2IoMCUsIDAlLCAwJSkiIGZpbGwtb3BhY2l0eT0iMSI+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTEtMSIgeD0iNDEuNTA5NzY2IiB5PSIxODguMTY0MDYyIi8+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTEtMCIgeD0iNDEuNTA5NzY2IiB5PSIxODEuMTY0MDYyIi8+CjwvZz4KPGcgZmlsbD0icmdiKDAlLCAwJSwgMCUpIiBmaWxsLW9wYWNpdHk9IjEiPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0xLTIiIHg9IjQxLjUwOTc2NiIgeT0iMTU5LjA3NDIxOSIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0xLTAiIHg9IjQxLjUwOTc2NiIgeT0iMTUyLjA3NDIxOSIvPgo8L2c+CjxnIGZpbGw9InJnYigwJSwgMCUsIDAlKSIgZmlsbC1vcGFjaXR5PSIxIj4KPHVzZSB4bGluazpocmVmPSIjZ2x5cGgtMS0zIiB4PSI0MS41MDk3NjYiIHk9IjEyOS45ODA0NjkiLz4KPHVzZSB4bGluazpocmVmPSIjZ2x5cGgtMS0wIiB4PSI0MS41MDk3NjYiIHk9IjEyMi45ODA0NjkiLz4KPC9nPgo8ZyBmaWxsPSJyZ2IoMCUsIDAlLCAwJSkiIGZpbGwtb3BhY2l0eT0iMSI+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTEtNCIgeD0iNDEuNTA5NzY2IiB5PSIxMDAuODkwNjI1Ii8+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTEtMCIgeD0iNDEuNTA5NzY2IiB5PSI5My44OTA2MjUiLz4KPC9nPgo8ZyBmaWxsPSJyZ2IoMCUsIDAlLCAwJSkiIGZpbGwtb3BhY2l0eT0iMSI+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTEtNSIgeD0iNDEuNTA5NzY2IiB5PSI3NS4zMDA3ODEiLz4KPHVzZSB4bGluazpocmVmPSIjZ2x5cGgtMS0wIiB4PSI0MS41MDk3NjYiIHk9IjY4LjMwMDc4MSIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0xLTAiIHg9IjQxLjUwOTc2NiIgeT0iNjEuMzAwNzgxIi8+CjwvZz4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjc1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZT0icmdiKDAlLCAwJSwgMCUpIiBzdHJva2Utb3BhY2l0eT0iMSIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBkPSJNIDU5LjAzOTA2MiAyMTQuNTU4NTk0IEwgMzI5Ljc2MTcxOSAyMTQuNTU4NTk0IEwgMzI5Ljc2MTcxOSA1OS4wMzkwNjIgTCA1OS4wMzkwNjIgNTkuMDM5MDYyIFogTSA1OS4wMzkwNjIgMjE0LjU1ODU5NCAiLz4KPGcgZmlsbD0icmdiKDAlLCAwJSwgMCUpIiBmaWxsLW9wYWNpdHk9IjEiPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTAiIHg9IjEzNS4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTEiIHg9IjE0NS4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTIiIHg9IjE1NC4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTMiIHg9IjE2My4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTQiIHg9IjE3MS4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTUiIHg9IjE3Ny4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTYiIHg9IjE4NS4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTciIHg9IjE4OS4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTIiIHg9IjIwMC4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTgiIHg9IjIwOS4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTkiIHg9IjIyMi4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTUiIHg9IjIzMS4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTQiIHg9IjIzOS4zOTg0MzgiIHk9IjM0LjUxNjYwMiIvPgo8dXNlIHhsaW5rOmhyZWY9IiNnbHlwaC0yLTEwIiB4PSIyNDUuMzk4NDM4IiB5PSIzNC41MTY2MDIiLz4KPC9nPgo8ZyBmaWxsPSJyZ2IoMCUsIDAlLCAwJSkiIGZpbGwtb3BhY2l0eT0iMSI+Cjx1c2UgeGxpbms6aHJlZj0iI2dseXBoLTAtNiIgeD0iMTkxLjM5ODQzOCIgeT0iMjY5LjAyOTI5NyIvPgo8L2c+CjxnIGZpbGw9InJnYigwJSwgMCUsIDAlKSIgZmlsbC1vcGFjaXR5PSIxIj4KPHVzZSB4bGluazpocmVmPSIjZ2x5cGgtMS02IiB4PSIxMi43MDg5ODQiIHk9IjE0Ni4zMDA3ODEiLz4KPHVzZSB4bGluazpocmVmPSIjZ2x5cGgtMS03IiB4PSIxMi43MDg5ODQiIHk9IjE0MC4zMDA3ODEiLz4KPHVzZSB4bGluazpocmVmPSIjZ2x5cGgtMS0xIiB4PSIxMi43MDg5ODQiIHk9IjEzNC4zMDA3ODEiLz4KPC9nPgo8L3N2Zz4K" alt="" style="width:70%;max-width:70%"/><figcaption>A simple scatter plot</figcaption>
+</figure>
+
+<h2 id="cross-references">Cross-references</h2>
+<p><em>Calepin</em> resolves references to figures, sections, and theorem environments.</p>
+<ul>
+<li><a class="cross-ref-fig" href="#fig-scatter">Figure 1</a> renders as a linked reference
+</li>
+<li><a class="cross-ref-sec" href="#sec-figures">Section 5</a> links to the Figures section
+</li>
+<li><a class="cross-ref-fig" href="#fig-scatter">1</a> suppresses the type prefix
+</li>
+</ul>
+<p>Sections get automatic ids from their heading text.</p>
+<h2 id="math">Math</h2>
+<p>Inline math: $a^2 + b^2 = c^2$. Display math:</p>
+<p>$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$</p>
+
+
+<div class="theorem-env theorem" id="thm-pythagoras">
+<p class="thm-heading"><strong>Theorem 2.</strong></p>
+<div class="thm-body-italic">
+<p>In a right triangle, the square of the hypotenuse equals the sum of the squares of the other two sides: $a^2 + b^2 = c^2$.</p>
+
+</div>
+</div>
+
+<div class="theorem-env proof">
+<p class="thm-heading"><em>Proof.</em></p>
+<div class="thm-body-italic">
+<p>Let a right triangle have legs $a$, $b$ and hypotenuse $c$. By constructing squares on each side and comparing areas, we obtain $a^2 + b^2 = c^2$.</p>
+
+</div>
+<p class="qed">□</p>
+</div>
+
+<p>By <a class="cross-ref-thm" href="#thm-pythagoras">Theorem 2</a>, the relationship is fundamental to Euclidean geometry.</p>
+<h2 id="callouts">Callouts</h2>
+<p>Callout divs highlight important information. Five types are available: <code>callout-note</code>, <code>callout-warning</code>, <code>callout-tip</code>, <code>callout-caution</code>, and <code>callout-important</code>. They can be nested.</p>
+
+
+
+<div class="callout callout-note callout-default" role="note">
+<div class="callout-header">ℹ️ Note</div>
+<div class="callout-body">
+<p>This is a note callout. Use it for supplementary information.</p>
+
+
+
+<div class="callout callout-warning callout-default" role="note">
+<div class="callout-header">⚠️ Warning</div>
+<div class="callout-body">
+<p>Callouts can be nested. This warning appears inside the note above.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<h2 id="conditional-content">Conditional content</h2>
+<p>Fenced divs with <code>.content-visible</code> or <code>.content-hidden</code> classes control which content appears in each output format.</p>
+
+
+<div class="content-visible">
+<p>This paragraph only appears in HTML output.</p>
+
+</div>
+
+<div class="content-hidden">
+<p>This paragraph is hidden in LaTeX but visible in all other formats.</p>
+
+</div>
+
+<p>Format aliases are supported: <code>latex</code> and <code>pdf</code> both match LaTeX output, <code>markdown</code> and <code>md</code> both match Markdown.</p>
+<h2 id="raw-blocks">Raw blocks</h2>
+<p>Raw blocks inject format-specific markup that passes through verbatim when the output format matches and is dropped otherwise.</p>
+
+
+<details><summary>Click to expand</summary>
+<p>This raw HTML only appears in HTML output.</p>
+</details>
+
+<h2 id="tabsets">Tabsets</h2>
+<p>Tabsets organize content into switchable tabs. In HTML, readers click to switch tabs. In LaTeX and Typst, tabs render as regular sections.</p>
+
+
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-tab="r" role="tab" aria-selected="true" aria-controls="tabpanel-r">R</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-tab="python" role="tab" aria-selected="false" aria-controls="tabpanel-python">Python</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-tab="julia" role="tab" aria-selected="false" aria-controls="tabpanel-julia">Julia</button></li>
+
+</ul>
+<div class="tab-content">
+<div class="tab-pane active" id="tabpanel-r" data-tab="r" role="tabpanel">
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-r code"><span class="source r">x <span class="keyword operator assignment r">&lt;-</span> <span class="meta function-call r"><span class="support function r">c</span>(</span><span class="meta function-call r"><span class="meta function-call parameters r"><span class="constant numeric float decimal r">1</span><span class="punctuation separator parameters r">,</span> <span class="constant numeric float decimal r">2</span><span class="punctuation separator parameters r">,</span> <span class="constant numeric float decimal r">3</span></span><span class="punctuation section parens end r">)</span></span>
+<span class="meta function-call r"><span class="support function r">mean</span>(</span><span class="meta function-call r"><span class="meta function-call parameters r">x</span><span class="punctuation section parens end r">)</span></span></span></code></pre>
+
+<pre><code class="output">> [1] 2</code></pre>
+</div>
+<div class="tab-pane" id="tabpanel-python" data-tab="python" role="tabpanel" aria-hidden="true">
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-python code"><span class="source python"><span class="meta qualified-name python"><span class="meta generic-name python">x</span></span> <span class="keyword operator assignment python">=</span> <span class="meta structure list python"><span class="punctuation section list begin python">[</span><span class="constant numeric integer decimal python">1</span><span class="punctuation separator list python">,</span> <span class="constant numeric integer decimal python">2</span><span class="punctuation separator list python">,</span> <span class="constant numeric integer decimal python">3</span><span class="punctuation section list end python">]</span></span>
+<span class="meta function-call python"><span class="meta qualified-name python"><span class="support function builtin python">sum</span></span><span class="punctuation section arguments begin python">(</span><span class="meta function-call arguments python"><span class="meta qualified-name python"><span class="meta generic-name python">x</span></span></span><span class="punctuation section arguments end python">)</span></span> <span class="keyword operator arithmetic python">/</span> <span class="meta function-call python"><span class="meta qualified-name python"><span class="support function builtin python">len</span></span><span class="punctuation section arguments begin python">(</span><span class="meta function-call arguments python"><span class="meta qualified-name python"><span class="meta generic-name python">x</span></span></span><span class="punctuation section arguments end python">)</span></span></span></code></pre>
+</div>
+<div class="tab-pane" id="tabpanel-julia" data-tab="julia" role="tabpanel" aria-hidden="true">
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-julia code"><span class="text plain">x = [1, 2, 3]
+sum(x) / length(x)</span></code></pre>
+</div>
+
+</div>
+</div>
+
+<p>Tabsets with the same <code>group</code> attribute switch together:</p>
+
+
+<div class="panel-tabset" data-group="lang">
+<ul class="nav nav-tabs" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-tab="r" role="tab" aria-selected="true" aria-controls="tabpanel-r">R</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-tab="python" role="tab" aria-selected="false" aria-controls="tabpanel-python">Python</button></li>
+
+</ul>
+<div class="tab-content">
+<div class="tab-pane active" id="tabpanel-r" data-tab="r" role="tabpanel">
+<p>R version of example 2.</p>
+</div>
+<div class="tab-pane" id="tabpanel-python" data-tab="python" role="tabpanel" aria-hidden="true">
+<p>Python version of example 2.</p>
+</div>
+
+</div>
+</div>
+
+<div class="panel-tabset" data-group="lang">
+<ul class="nav nav-tabs" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-tab="r" role="tab" aria-selected="true" aria-controls="tabpanel-r">R</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-tab="python" role="tab" aria-selected="false" aria-controls="tabpanel-python">Python</button></li>
+
+</ul>
+<div class="tab-content">
+<div class="tab-pane active" id="tabpanel-r" data-tab="r" role="tabpanel">
+<p>R content stays synced with the tabset above.</p>
+</div>
+<div class="tab-pane" id="tabpanel-python" data-tab="python" role="tabpanel" aria-hidden="true">
+<p>Python content stays synced too.</p>
+</div>
+
+</div>
+</div>
+
+<h2 id="line-blocks">Line blocks</h2>
+<p>Line blocks preserve line breaks and leading spaces. Prefix each line with <code>|</code>.</p>
+<p>The limerick packs laughs anatomical<br />
+Into space that is quite economical.<br />
+   But the good ones I’ve seen<br />
+   So seldom are clean<br />
+And the clean ones so seldom are comical.</p>
+<h2 id="footnotes">Footnotes</h2>
+<p>There are two ways to create footnotes. Named references use <code>[^label]</code> at the point of reference and <code>[^label]: text</code> for the definition elsewhere in the document. Inline footnotes use <code>^[text]</code> directly without a separate definition.</p>
+<p>Named footnote<sup class="footnote-ref" id="fnref-2"><a href="#fn-2" data-footnote-ref>2</a></sup> and inline footnote<sup class="footnote-ref" id="fnref-3"><a href="#fn-3" data-footnote-ref>3</a></sup>.</p>
+<h2 id="numbered-sections">Numbered sections</h2>
+<p>Add <code>number-sections: true</code> to the YAML front matter to automatically number all section headings.</p>
+<h2 id="the-div">The <code>.hidden</code> div</h2>
+<p>The <code>.hidden</code> div executes its content but produces no output.</p>
+
+
+<p>The value computed silently: 42.</p>
+
+<section class="footnotes" data-footnotes>
+<ol>
+<li id="fn-1">
+<p>The motto was adopted in 1833 and appears on the city’s coat of arms. <a href="#fnref-1" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="1" aria-label="Back to reference 1">↩</a></p>
+
+</li>
+<li id="fn-2">
+<p>This is defined separately. <a href="#fnref-2" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="2" aria-label="Back to reference 2">↩</a></p>
+
+</li>
+<li id="fn-3">
+<p>This is defined right here. <a href="#fnref-3" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="3" aria-label="Back to reference 3">↩</a></p>
+
+</li>
+
+</ol>
+</section>
+  </div>
+  <div class="split-source" aria-live="polite">
+    <pre><code id="source-code">Loading source...</code></pre>
+  </div>
+</div>
+
+      </article>
+
+      
+
+
+    </main>
+
+    <aside class="sidebar-right" role="complementary" aria-label="Table of contents">
+  
+  <nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ul>
+<li><a href="#getting-started">Getting started</a></li>
+<li><a href="#markdown-basics">Markdown basics</a>
+<ul>
+<li><a href="#montréal">Montréal</a></li>
+</ul>
+</li>
+<li><a href="#code-chunks">Code chunks</a></li>
+<li><a href="#inline-code">Inline code</a></li>
+<li><a href="#figures">Figures</a></li>
+<li><a href="#cross-references">Cross-references</a></li>
+<li><a href="#math">Math</a></li>
+<li><a href="#callouts">Callouts</a></li>
+<li><a href="#conditional-content">Conditional content</a></li>
+<li><a href="#raw-blocks">Raw blocks</a></li>
+<li><a href="#tabsets">Tabsets</a></li>
+<li><a href="#line-blocks">Line blocks</a></li>
+<li><a href="#footnotes">Footnotes</a></li>
+<li><a href="#numbered-sections">Numbered sections</a></li>
+<li><a href="#the-div">The .hidden div</a></li>
+</ul>
+</nav>
+  
+</aside>
+  </div>
+
+  <footer class="site-footer">
+  <p>Built with <a href="https://vincentarelbundock.github.io/calepin">
+    
+    <span class="footer-logo nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg);"></span>
+    
+  </a></p>
+</footer>
+  <script>
+document.querySelectorAll('.code-copy-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    navigator.clipboard.writeText(code.textContent).then(function() {
+      var icon = btn.querySelector('.code-copy-icon');
+      btn.classList.add('copied');
+      icon.classList.add('checked');
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        icon.classList.remove('checked');
+      }, 1500);
+    });
+  });
+});
+</script>
+</body>
+</html>

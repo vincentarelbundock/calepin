@@ -1,0 +1,55 @@
+---
+title = "Installation"
+---
+
+# Install
+
+## Mac & Linux via shell script
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh
+```
+
+## Windows with via powershell script
+
+```sh
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/download/latest/calepin-installer.ps1 | iex"
+```
+
+# External tools
+
+*Calepin* can call external programs for code execution, PDF compilation, and diagram rendering. All are optional --- only install the ones you need.
+
+Code execution:
+
+- [R](https://cran.r-project.org/): R code chunks (`{r}`)
+- [python3](https://www.python.org/): Python code chunks (`{python}`), requires building with `cargo build --features python`
+
+PDF compilation:
+
+- [tectonic](https://tectonic-typesetting.github.io/): compile LaTeX to PDF (`calepin render -t pdf`)
+- [typst](https://typst.app/): compile Typst to PDF (`calepin render -t pdf --writer typst`)
+
+Diagrams:
+
+- [tectonic](https://tectonic-typesetting.github.io/): TikZ diagrams (`{tikz}`). PDF-to-SVG and SVG-to-PDF conversions are handled internally.
+- [mmdc](https://github.com/mermaid-js/mermaid-cli): Mermaid diagrams (`{mermaid}`)
+- [dot](https://graphviz.org/): Graphviz diagrams (`{dot}`)
+- [d2](https://d2lang.com/): D2 diagrams (`{d2}`)
+
+Website features:
+
+- [pagefind](https://pagefind.app/): static site search (optional)
+
+# Shell completions
+
+*Calepin* can generate shell completions for tab-completion of commands and options:
+
+```bash
+calepin extra completions bash > ~/.bash_completion.d/calepin
+calepin extra completions zsh > ~/.zfunc/_calepin
+calepin extra completions fish > ~/.config/fish/completions/calepin.fish
+```
+
+Restart your shell or source the file to activate completions.

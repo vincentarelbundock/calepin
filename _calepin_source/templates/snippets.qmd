@@ -1,0 +1,113 @@
+---
+title = "Snippets & Variables"
+sample_size = 10
+
+[urls]
+docs = "https://github.com/vincentarelbundock/calepin"
+---
+
+*Calepin* processes the body of every `.qmd` document through the Jinja2 template engine. This means you can insert variables, conditionals, and reusable snippets directly in your prose. Fenced code blocks and inline code are automatically protected from evaluation.
+
+
+# Variables
+
+## Front matter fields
+
+Access standard front matter fields via `meta`:
+
+```
+{{ meta.title }}
+{{ meta.author }}
+{{ meta.date }}
+```
+
+The title of this document is: {{ meta.title }}.
+
+## Custom fields
+
+Non-standard front matter fields are available under `var` with dot notation. This document's front matter contains:
+
+```toml
+sample_size = 10
+
+[urls]
+docs = "https://github.com/vincentarelbundock/calepin"
+```
+
+The syntax `{{ var.sample_size }}` inserts the value:
+
+* Sample size: {{ var.sample_size }}
+* Documentation URL: {{ var.urls.docs }}
+
+## Environment variables
+
+System environment variables are available under `env`:
+
+`{{ env.SHELL }}`: on this machine, {{ env.SHELL }}.
+
+## Format
+
+The current output format is available as `{{ writer }}` (`html`, `latex`, `typst`, or `markdown`). The target name is `{{ target }}`.
+
+
+# Conditional content
+
+Show content only for certain output formats:
+
+````
+{% if writer == "html" %}
+This paragraph only appears in HTML output.
+{% endif %}
+````
+
+
+# Reusable snippets
+
+Use `{% include %}` to insert the contents of one file inside another. This is a pre-parse directive: included content is parsed as blocks, so code chunks, fenced divs, and cross-references all work normally. Front matter in the included file is stripped automatically.
+
+## Including .qmd files
+
+To include a `.qmd` file, specify its path relative to the project root:
+
+```
+{% include "common/disclaimer.qmd" %}
+```
+
+This is useful for shared content that appears across multiple documents: disclaimers, author bios, methods sections, appendices, license text, etc. For example, a multi-chapter book might share a common methods section:
+
+```
+{% include "shared/methods.qmd" %}
+```
+
+The included file can contain anything a normal `.qmd` file can: prose, code chunks, figures, math, citations. It is spliced into the parent document before parsing, so it behaves as if you had written the content directly.
+
+## Including partials
+
+Without a file extension, `{% include %}` looks up a partial from `_calepin/partials/`:
+
+```
+{% include "source_tip" %}
+```
+
+This resolves to the appropriate format-specific partial (e.g., `_calepin/partials/html/source_tip.html`).
+
+
+# Jinja in code chunks
+
+Jinja expressions inside code blocks are not evaluated by default. To opt in, use the `#| jinja = true` chunk option:
+
+````
+```{r}
+#| jinja = true
+n <- {{ var.sample_size }}
+x <- rnorm(n)
+```
+````
+
+Which gets replaced by the value specified in the front matter:
+
+```{r}
+#| jinja = true
+n <- {{ var.sample_size }}
+rnorm(n)
+```

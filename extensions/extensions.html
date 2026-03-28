@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Extensions — Calepin</title>
+  
+  
+  
+  <link rel="stylesheet" href="/calepin/assets/calepin.css">
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false},
+      {left: '\\[', right: '\\]', display: true}
+    ],
+    ignoredClasses: ['nodollar']
+  });"></script>
+  
+</head>
+<body>
+  <a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+  <button class="navbar-btn navbar-toggle" id="sidebar-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar-nav">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+</button>
+  
+<ul class="navbar-nav left" id="navbar-left-menu">
+  
+  
+    
+  <li>
+    <a href="/calepin/index.html">
+      
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg); width: 104px; height: 36px;"></span>
+      
+    </a>
+  </li>
+    
+  
+  
+</ul>
+
+  
+<ul class="navbar-nav middle" id="navbar-menu">
+  
+  
+    
+  <li class="navbar-dropdown">
+    <button class="navbar-dropdown-toggle" aria-expanded="false">
+      Examples <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <ul class="navbar-dropdown-menu">
+      
+      <li><a href="https://arelbundock.com">
+        arelbundock.com
+      </a></li>
+      
+      <li><a href="https://vincentarelbundock.github.io/WDI">
+        WDI
+      </a></li>
+      
+      <li><a href="/calepin/pages/kitchen_sink.html">
+        Kitchen Sink
+      </a></li>
+      
+    </ul>
+  </li>
+    
+  
+  
+</ul>
+
+  <ul class="navbar-nav right">
+  
+  
+  <li>
+    <a href="https://github.com/vincentarelbundock/calepin">
+      <span class="nav-icon" style="-webkit-mask-image: url(/calepin/assets/fontawesome/brands/github.svg); mask-image: url(/calepin/assets/fontawesome/brands/github.svg); width: 20px; height: 20px;"></span>
+      
+      
+    </a>
+  </li>
+  
+  
+  
+  <li>
+  <button class="navbar-btn source-toggle" id="source-toggle" aria-label="Toggle source view" aria-expanded="false" aria-controls="source-code">
+    <span style="font-family:monospace;font-weight:700;font-size:0.85rem">&lt;/&gt;</span>
+  </button>
+</li>
+<script>
+(function() {
+  var btn = document.getElementById('source-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    document.body.classList.toggle('split-active');
+    btn.classList.toggle('active');
+    var isActive = btn.classList.contains('active');
+    btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    var code = document.getElementById('source-code');
+    if (code && code.textContent === 'Loading source...') {
+      fetch('/calepin/_calepin_source/extensions/extensions.qmd')
+        .then(function(r) { return r.text(); })
+        .then(function(t) { code.textContent = t; })
+        .catch(function() { code.textContent = 'Failed to load source.'; });
+    }
+  });
+})();
+</script>
+  
+  
+  
+  <li>
+  <button class="navbar-btn" data-search-toggle aria-label="Search (Ctrl+K)">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  </button>
+</li>
+<div class="search-overlay" role="dialog" aria-modal="true" aria-label="Search">
+  <div class="search-modal">
+    <div class="search-input-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="search-input" type="text" placeholder="Search..." aria-label="Search" aria-controls="search-results" aria-autocomplete="list" role="combobox" aria-expanded="false">
+      <span class="search-kbd">Esc</span>
+    </div>
+    <div id="search-results" class="search-results" role="listbox" aria-label="Search results">
+      <div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>
+    </div>
+    <div class="visually-hidden" aria-live="polite" id="search-status"></div>
+  </div>
+</div>
+<script type="module">
+  const overlay = document.querySelector('.search-overlay');
+  const toggle = document.querySelector('[data-search-toggle]');
+  const input = overlay.querySelector('.search-input');
+  const resultsEl = overlay.querySelector('.search-results');
+  let selectedIdx = -1;
+
+  // Preload pagefind immediately
+  const pagefind = await import('/calepin/pagefind/pagefind.js');
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  const statusEl = document.getElementById('search-status');
+
+  async function doSearch(query) {
+    if (!query.trim()) {
+      resultsEl.innerHTML = '<div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>';
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      statusEl.textContent = '';
+      selectedIdx = -1;
+      return;
+    }
+
+    const search = await pagefind.search(query);
+    const results = await Promise.all(search.results.slice(0, 15).map(r => r.data()));
+    selectedIdx = -1;
+    input.removeAttribute('aria-activedescendant');
+
+    if (results.length === 0) {
+      resultsEl.innerHTML = '<div class="search-hint">No results found.</div>';
+      input.setAttribute('aria-expanded', 'false');
+      statusEl.textContent = 'No results found.';
+      return;
+    }
+
+    input.setAttribute('aria-expanded', 'true');
+    statusEl.textContent = results.length + ' result' + (results.length === 1 ? '' : 's') + ' found.';
+    resultsEl.innerHTML = results.map((r, i) =>
+      '<a class="search-result" id="search-result-' + i + '" role="option" href="' + escHtml(r.url) + '">' +
+        '<div class="search-result-title">' + escHtml(r.meta.title || r.url) + '</div>' +
+        '<div class="search-result-text">' + (r.excerpt || '') + '</div>' +
+      '</a>'
+    ).join('');
+  }
+
+  function updateSelected() {
+    const items = resultsEl.querySelectorAll('.search-result');
+    items.forEach((el, i) => {
+      el.classList.toggle('selected', i === selectedIdx);
+      el.setAttribute('aria-selected', i === selectedIdx ? 'true' : 'false');
+    });
+    if (items[selectedIdx]) {
+      items[selectedIdx].scrollIntoView({ block: 'nearest' });
+      input.setAttribute('aria-activedescendant', 'search-result-' + selectedIdx);
+    }
+  }
+
+  function open() {
+    overlay.classList.add('active');
+    input.value = '';
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    resultsEl.innerHTML = '<div class="search-hint">Start typing to search... <span class="search-kbd">Ctrl</span>+<span class="search-kbd">K</span></div>';
+    statusEl.textContent = '';
+    selectedIdx = -1;
+    setTimeout(() => input.focus(), 50);
+  }
+  function close() {
+    overlay.classList.remove('active');
+    // Return focus to the toggle button
+    if (toggle) toggle.focus();
+  }
+
+  let debounce = null;
+  input.addEventListener('input', function() {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => doSearch(input.value), 100);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    const items = resultsEl.querySelectorAll('.search-result');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIdx = Math.min(selectedIdx + 1, items.length - 1);
+      updateSelected();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIdx = Math.max(selectedIdx - 1, 0);
+      updateSelected();
+    } else if (e.key === 'Enter' && items[selectedIdx]) {
+      e.preventDefault();
+      items[selectedIdx].click();
+    }
+  });
+
+  if (toggle) toggle.addEventListener('click', open);
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) close();
+  });
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); open(); }
+    if (e.key === 'Escape') close();
+  });
+</script>
+  
+  
+  
+  <li>
+  <button class="navbar-btn" id="theme-toggle" aria-label="Toggle dark mode" aria-pressed="false">
+    <span class="icon-sun" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span>
+    <span class="icon-moon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+  </button>
+</li>
+<script src="/calepin/assets/theme.js"></script>
+  
+  
+</ul>
+</nav>
+
+  <div class="site-container">
+    <aside id="sidebar-nav" class="sidebar-left" role="navigation" aria-label="Section navigation">
+  <div class="sidebar-header">
+    <a href="/calepin/index.html">
+      
+      <span class="sidebar-logo nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg); width: 104px; height: 36px;"></span>
+      
+    </a>
+  </div>
+  
+  <div class="sidebar-nav-links">
+    
+    
+    <span class="sidebar-nav-group">Examples</span>
+    
+    <a href="https://arelbundock.com">arelbundock.com</a>
+    
+    <a href="https://vincentarelbundock.github.io/WDI">WDI</a>
+    
+    <a href="/calepin/pages/kitchen_sink.html">Kitchen Sink</a>
+    
+    
+    
+  </div>
+  
+  <nav>
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/installation.html">Installation</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/getting_started.html">Getting Started</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/quarto.html">Calepin vs Quarto</a></li>
+        </ul>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Authoring</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/authoring/basics.html">Basics</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/bibliography.html">Bibliography</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/figures.html">Figures</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/math.html">Math</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/authoring/tables.html">Tables</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Code</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/code/code_execution.html">Code Execution</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/chunks.html">Chunks</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/inline.html">Inline</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/r.html">R</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/python.html">Python</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/sh.html">Shell</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/diagrams.html">Diagrams</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/cache.html">Cache</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/code/builtins.html">Built-in Functions</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Templates</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/templates/templates.html">Templates</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/templates/snippets.html">Snippets &amp; Variables</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/templates/reference.html">Reference</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Configuration</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/configuration/paths.html">Paths</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/configuration/structure.html">Project Structure</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/configuration/toml.html">Configuration</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Websites</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/websites/structure.html">Structure</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/websites/navigation.html">Navigation</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/websites/serve.html">Serve</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <details class="sidebar-section" name="sidebar-nav">
+          <summary class="sidebar-section-title">Extensions</summary>
+          <ul class="sidebar-children">
+            
+      
+        
+        <li><a href="/calepin/extensions/themes.html">Themes</a></li>
+        
+      
+    
+      
+        
+        <li><a href="/calepin/extensions/plugins.html">Plugins</a></li>
+        
+      
+    
+          </ul>
+        </details>
+        
+      
+    
+      
+        
+        <ul>
+          <li><a href="/calepin/pages/man.html">Software documentation</a></li>
+        </ul>
+        
+      
+    
+  </nav>
+</aside>
+
+    <main id="main-content" class="content-main">
+      <article>
+        
+
+<nav class="breadcrumbs" aria-label="Breadcrumbs">
+  
+  
+    <a href="/calepin/">Home</a>
+    <span class="separator">/</span>
+  
+  
+  
+    <span>Extensions</span>
+    <span class="separator">/</span>
+  
+  
+  
+    <span aria-current="page">Extensions</span>
+  
+  
+</nav>
+
+
+<header class="page-header">
+  <h1>Extensions</h1>
+  
+  
+  
+</header>
+
+<div class="split-wrapper">
+  <div class="split-rendered">
+    <style>
+@media (prefers-color-scheme: light) {
+/*
+ * theme "GitHub" generated by syntect
+ */
+
+.code {
+ color: #333333;
+ background-color: #ffffff;
+}
+
+.comment {
+ color: #969896;
+}
+.keyword.operator, .support.constant {
+ color: #a71d5d;
+}
+.constant.language {
+ color: #0086b3;
+}
+.keyword, .storage {
+ color: #a71d5d;
+}
+.storage.type {
+ color: #a71d5d;
+}
+.support.type {
+ color: #0086b3;
+}
+.variable {
+ color: #0086b3;
+}
+.variable.language {
+ color: #df5000;
+}
+.variable.parameter.function {
+ color: #030303;
+}
+.entity.name.function, .entity {
+ color: #795da3;
+}
+.support.function {
+ color: #0086b3;
+}
+.entity.name.type, .entity.other.inherited-class {
+ color: #000000;
+}
+.support.class {
+ color: #0086b3;
+}
+.entity.name.exception {
+ color: #f93232;
+}
+.entity.name.section {
+}
+.constant.numeric, .constant {
+ color: #0086b3;
+}
+.constant.character, .string, .string .punctuation {
+ color: #183691;
+}
+.string.regexp, .string.regexp .constant.character, .string.regexp .punctuation {
+ color: #009926;
+}
+.constant.other.symbol {
+ color: #990073;
+}
+.string .source, .text .source {
+ color: #333333;
+}
+.variable.other.property {
+ color: #030303;
+}
+.entity.name {
+ color: #333333;
+}
+.invalid {
+ color: #0f0000;
+}
+.entity.name.tag {
+ color: #63a35c;
+}
+.punctuation.definition.tag {
+ color: #030303;
+}
+.meta.tag .string .punctuation {
+ color: #183691;
+}
+.constant.character.entity {
+ color: #000000;
+}
+.entity.other.attribute-name {
+ color: #795da3;
+}
+.meta.tag .string.quoted, .meta.tag .string.quoted .constant.character.entity {
+ color: #183691;
+}
+.meta.selector, .meta.selector .entity, .meta.selector .entity .punctuation, .entity.name.tag.css, .entity.other.attribute-name.class, .keyword.control.html.sass {
+ color: #63a35c;
+}
+.entity.other.attribute-name.class, .constant.other.unit {
+ color: #795da3;
+}
+.support.type.property-name, .support.constant.property-value {
+ color: #0086b3;
+}
+.keyword.other.special-method.ruby.gem {
+ color: #0086b3;
+}
+.variable.other.block.ruby {
+ color: #000000;
+}
+.support.function.prelude, .variable.other.generic-type.haskell {
+ color: #000000;
+}
+.constant.other.haskell, .support.constant.haskell {
+ color: #445588;
+}
+.meta.diff, .meta.diff.header {
+ color: #75715e;
+}
+.markup.deleted {
+ color: #770000;
+ background-color: #ffdddd;
+}
+.markup.inserted {
+ color: #003300;
+ background-color: #ddffdd;
+}
+.markup.changed {
+ color: #ececec;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #ffffff; color: #333333; }
+}
+@media (prefers-color-scheme: dark) {
+/*
+ * theme "Nord" generated by syntect
+ */
+
+.code {
+ color: #d8dee9;
+ background-color: #2e3440;
+}
+
+.comment, .punctuation.definition.comment {
+ color: #616e88;
+}
+.constant.numeric {
+ color: #b48ead;
+}
+.constant.language {
+ color: #81a1c1;
+}
+.constant.character.escape {
+ color: #ebcb8b;
+}
+.constant.other.placeholder {
+ color: #ebcb8b;
+}
+.constant.other {
+ color: #d8dee9;
+}
+.entity.name.class {
+ color: #8fbcbb;
+}
+.entity.name.struct {
+ color: #8fbcbb;
+}
+.entity.name.enum {
+ color: #8fbcbb;
+}
+.entity.name.union {
+ color: #8fbcbb;
+}
+.entity.name.trait {
+ color: #8fbcbb;
+}
+.entity.name.interface {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.entity.name.type {
+ color: #81a1c1;
+}
+.entity.other.inherited-class {
+ color: #8fbcbb;
+}
+.entity.name.function {
+ color: #88c0d0;
+}
+.entity.name.function.constructor {
+ color: #88c0d0;
+}
+.entity.name.function.destructor {
+ color: #88c0d0;
+}
+.entity.name.namespace {
+ color: #8fbcbb;
+}
+.entity.name.constant {
+ color: #81a1c1;
+}
+.entity.name.label {
+ color: #5e81ac;
+}
+.entity.name.section {
+ color: #88c0d0;
+}
+.entity.name.tag {
+ color: #81a1c1;
+}
+.entity.other.attribute-name {
+ color: #8fbcbb;
+}
+.invalid.illegal {
+ color: #d8dee9;
+ background-color: #bf616a;
+}
+.invalid.deprecated {
+ color: #d8dee9;
+ background-color: #ebcb8b;
+}
+.keyword.control {
+ color: #81a1c1;
+}
+.keyword.control.conditional {
+ color: #81a1c1;
+}
+.keyword.control.import {
+ color: #81a1c1;
+}
+.punctuation.definition.keyword {
+ color: #81a1c1;
+}
+.keyword.other {
+ color: #81a1c1;
+}
+.keyword.operator, .keyword.operator.assignment, .keyword.operator.arithmetic, .keyword.operator.bitwise, .keyword.operator.logical, .keyword.operator.word {
+ color: #81a1c1;
+}
+.markup.heading {
+ color: #88c0d0;
+}
+.markup.list.unnumbered, .markup.list.numbered {
+ color: #d8dee9;
+}
+.markup.bold {
+font-weight: bold;
+}
+.markup.italic {
+font-style: italic;
+}
+.markup.inserted {
+ color: #a3be8c;
+}
+.markup.deleted {
+ color: #bf616a;
+}
+.markup.changed {
+ color: #ebcb8b;
+}
+.markup.quote {
+ color: #616e88;
+}
+.markup.raw.inline, .markup.raw.block {
+ color: #8fbcbb;
+}
+.markup.other {
+ background-color: #eceff4;
+}
+.punctuation.separator, .punctuation.terminator {
+ color: #eceff4;
+}
+.punctuation.separator.continuation, .punctuation.accessor {
+ color: #81a1c1;
+}
+.punctuation.definition.tag {
+ color: #81a1c1;
+}
+.storage.type, .storage.modifier {
+ color: #81a1c1;
+}
+.string.quoted.single, .string.quoted.double, .string.quoted.triple, .string.quoted.other, .string.unquoted {
+ color: #a3be8c;
+}
+.punctuation.definition.string.begin, .punctuation.definition.string.end {
+ color: #a3be8c;
+}
+.string.regexp {
+ color: #ebcb8b;
+}
+.support.constant {
+ color: #8fbcbb;
+}
+.support.function {
+ color: #88c0d0;
+}
+.support.module {
+ color: #8fbcbb;
+}
+.support.type {
+ color: #8fbcbb;
+}
+.support.class {
+ color: #8fbcbb;
+}
+.text.html.basic, .text.xml {
+ color: #eceff4;
+}
+.variable.other, .variable.other.readwrite {
+ color: #d8dee9;
+}
+.punctuation.definition.variable {
+ color: #81a1c1;
+}
+.variable.other.constant {
+ color: #81a1c1;
+}
+.variable.language {
+ color: #81a1c1;
+}
+.variable.parameter {
+ color: #d8dee9;
+}
+.variable.other.member {
+ color: #d8dee9;
+}
+.variable.function {
+ color: #88c0d0;
+}
+.constant.numeric.line-number.find-in-files {
+ color: #d8dee9;
+}
+.constant.numeric.line-number.match.find-in-files {
+ color: #88c0d0;
+}
+.entity.name.filename.find-in-files {
+ color: #8fbcbb;
+}
+.text.find-in-files {
+ color: #d8dee9;
+}
+.source.c .keyword.control.import.include.c, .source.c .meta.preprocessor.c .keyword.control.import.c, .source.c\2b \2b  .keyword.control.import.include.c\2b \2b , .source.c\2b \2b  .meta.preprocessor.c\2b \2b  .keyword.control.import.c\2b \2b  {
+ color: #5e81ac;
+}
+.source.c .keyword.operator.word.c, .source.c\2b \2b  .keyword.operator.word.c\2b \2b  {
+ color: #88c0d0;
+font-style: italic;
+}
+.source.css .support.type.property-name.css, .source.sass .support.type.property-name.sass, .source.css .support.type.vendor-prefix.css {
+ color: #d8dee9;
+}
+.source.css .constant.other.color.rgb-value.css, .source.sass .constant.other.rgb-value.sass {
+ color: #b48ead;
+}
+.source.css .support.constant.color.w3c-special-color-keyword.css, .source.css .support.constant.property-value.css, .source.sass .support.constant.property-value.sass {
+ color: #81a1c1;
+}
+.source.css .entity.other.pseudo-class.css {
+ color: #8fbcbb;
+}
+.source.css .keyword.control.at-rule.media.css, .source.css .punctuation.definition.keyword.css, .source.sass .keyword.control.at-rule.sass {
+ color: #d08770;
+}
+.source.css .support.constant.color.w3c-standard-color-name.css {
+ color: #81a1c1;
+font-style: italic;
+}
+.source.css .entity.other.attribute-name.id.css, .source.sass .entity.other.attribute-name.id.sass {
+font-weight: bold;
+}
+.source.diff .meta.diff.range.context {
+ color: #8fbcbb;
+}
+.source.diff .meta.diff.header.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.separator {
+ color: #81a1c1;
+}
+.source.go .support.function.builtin.go {
+font-style: italic;
+}
+.text.html.basic .constant.character.entity.html {
+ color: #ebcb8b;
+}
+.variable.annotation.java, .punctuation.definition.annotation.java {
+ color: #d08770;
+}
+.punctuation.accessor.dot.java {
+ color: #eceff4;
+}
+.support.other.package.java {
+ color: #8fbcbb;
+}
+.source.java .comment.block.documentation.javadoc .punctuation.definition.entity.html {
+ color: #81a1c1;
+}
+.source.java .entity.name.constant {
+ color: #d8dee9;
+}
+.source.java .keyword.other.documentation, .source.java .comment.block.documentation.javadoc .punctuation.definition.keyword.javadoc {
+ color: #8fbcbb;
+}
+.source.java .variable.parameter.type.java {
+ color: #8fbcbb;
+}
+.source.java .entity.other.inherited-class.java {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.java .keyword.declaration.implements.java {
+ color: #81a1c1;
+}
+.source.json .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json, .source.json.sublime .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json {
+ color: #8fbcbb;
+}
+.source.json .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json .meta.structure.dictionary.json .punctuation.definition.string.end.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.end.json {
+ color: #eceff4;
+}
+.text.html.markdown .punctuation.definition.raw.code-fence.begin.markdown, .text.html.markdown .punctuation.definition.raw.code-fence.end.markdown, .text.html.markdown .markup.raw.code-fence.markdown .constant.other.language-name.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .punctuation.definition.list_item.markdown, .text.html.markdown .markup.list.numbered.bullet.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .markup.quote.markdown .punctuation.definition.blockquote.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .meta.link.inline.description.markdown, .text.html.markdown .meta.image.inline.description.markdown, .text.html.markdown .meta.link.reference.description.markdown, .text.html.markdown .constant.other.reference.link.markdown, .text.html.markdown .entity.name.reference.link.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.link.begin.markdown, .text.html.markdown .punctuation.definition.link.end.markdown, .text.html.markdown .punctuation.definition.image.begin.markdown, .text.html.markdown .punctuation.definition.image.end.markdown, .text.html.markdown .punctuation.definition.constant.begin.markdown, .text.html.markdown .punctuation.definition.constant.end.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .punctuation.separator.table-cell.markdown, .text.html.markdown .punctuation.section.table-header.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .meta.table.header.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.thematic-break.markdown {
+ color: #81a1c1;
+font-weight: bold;
+}
+.embedding.php .text.html.basic .punctuation.section.embedded.begin.php, .embedding.php .text.html.basic .punctuation.section.embedded.end.php {
+ color: #5e81ac;
+}
+.embedding.php .text.html.basic .comment.block.documentation.phpdoc.php .keyword.other.phpdoc.php {
+ color: #8fbcbb;
+}
+.embedding.php .text.html.basic .support.other.namespace.php {
+ color: #8fbcbb;
+}
+.source.python .meta.annotation.python .meta.qualified-name.python .support.function.builtin.python, .source.python .punctuation.definition.annotation.python {
+ color: #d08770;
+}
+.support.function.builtin.python {
+font-style: italic;
+}
+.source.python .support.type.exception.python {
+ color: #8fbcbb;
+}
+.source.python .support.type.python {
+ color: #81a1c1;
+}
+.source.sass .variable.parameter.sass {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ruby .support.function.builtin.ruby {
+font-style: italic;
+}
+.source.shell .support.function.builtin.shell {
+font-style: italic;
+}
+.text.xml .entity.name.tag.namespace {
+ color: #8fbcbb;
+}
+.text.xml .meta.tag.sgml.doctype.xml, .text.xml .meta.tag.preprocessor .entity.name.tag, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.end.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.end.xml {
+ color: #5e81ac;
+}
+.text.xml .string.unquoted.cdata.xml .punctuation.definition.string.begin.xml, .text.xml .string.unquoted.cdata.xml .punctuation.definition.string.end.xml {
+ color: #d08770;
+font-style: italic;
+}
+.source.yaml .entity.name.tag {
+ color: #8fbcbb;
+}
+.sublimelinter.mark.warning {
+ color: #ebcb8b;
+}
+.sublimelinter.mark.error {
+ color: #bf616a;
+}
+.markup.ignored.git_gutter {
+ color: #616e88;
+}
+.markup.untracked.git_gutter {
+ color: #88c0d0;
+}
+.markup.inserted.git_gutter {
+ color: #a3be8c;
+}
+.markup.changed.git_gutter {
+ color: #ebcb8b;
+}
+.markup.deleted.git_gutter {
+ color: #bf616a;
+}
+.source.js .tag.decorator.js .entity.name.tag.js, .source.js .tag.decorator.js .punctuation.definition.tag.js {
+ color: #d08770;
+}
+.source.js .string.quoted.js, .source.js .string.quoted.jsx, .source.js .meta.class.js .meta.class.property.js .string.interpolated.js, .source.js .string.interpolated.js, .source.js .string.template.js {
+ color: #a3be8c;
+}
+.source.js .variable.other.constant.js {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.js .constant.other.object.key.js .string.unquoted.label.js, .source.js .variable.other.readwrite.js {
+ color: #d8dee9;
+}
+.source.js .meta.class.js .meta.class.property.js .variable.other.property.js {
+ color: #88c0d0;
+}
+.source.js .variable.other.property.static.js {
+font-style: italic;
+}
+.source.js .variable.other.class.js {
+ color: #8fbcbb;
+}
+.source.js .string.interpolated.js .keyword.other.substitution.begin.js, .source.js .string.interpolated.js .keyword.other.substitution.end.js, .source.js .punctuation.definition.template-expression.begin.js, .source.js .punctuation.definition.template-expression.end.js {
+ color: #5e81ac;
+}
+.source.js .keyword.operator.spread.js {
+ color: #81a1c1;
+}
+.source.js .meta.export.js .variable.other.readwrite.js {
+ color: #8fbcbb;
+}
+.source.ts .meta.class.ts .entity.other.inherited-class.ts {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.ts .entity.name.type.class.ts, .source.ts .entity.name.type.enum.ts {
+ color: #8fbcbb;
+}
+.source.ts .entity.name.type.ts {
+ color: #8fbcbb;
+}
+.source.ts .support.type.primitive.ts {
+ color: #81a1c1;
+}
+.source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .variable.other.readwrite.ts, .source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .punctuation.decorator.ts {
+ color: #d08770;
+}
+.source.ts .punctuation.definition.template-expression.begin.ts, .source.ts .punctuation.definition.template-expression.end.ts {
+ color: #5e81ac;
+}
+.source.ts .string.template.ts {
+ color: #a3be8c;
+}
+.source.ts .support.function.math.ts {
+font-style: italic;
+}
+.source.ts .variable.other.constant.property.ts, .source.ts .variable.other.enummember.ts, .source.ts .variable.other.constant.ts {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ts .comment.block.documentation.ts .storage.type.class.jsdoc {
+ color: #8fbcbb;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #2e3440; color: #d8dee9; }
+}
+[data-theme='light'] {
+/*
+ * theme "GitHub" generated by syntect
+ */
+
+.code {
+ color: #333333;
+ background-color: #ffffff;
+}
+
+.comment {
+ color: #969896;
+}
+.keyword.operator, .support.constant {
+ color: #a71d5d;
+}
+.constant.language {
+ color: #0086b3;
+}
+.keyword, .storage {
+ color: #a71d5d;
+}
+.storage.type {
+ color: #a71d5d;
+}
+.support.type {
+ color: #0086b3;
+}
+.variable {
+ color: #0086b3;
+}
+.variable.language {
+ color: #df5000;
+}
+.variable.parameter.function {
+ color: #030303;
+}
+.entity.name.function, .entity {
+ color: #795da3;
+}
+.support.function {
+ color: #0086b3;
+}
+.entity.name.type, .entity.other.inherited-class {
+ color: #000000;
+}
+.support.class {
+ color: #0086b3;
+}
+.entity.name.exception {
+ color: #f93232;
+}
+.entity.name.section {
+}
+.constant.numeric, .constant {
+ color: #0086b3;
+}
+.constant.character, .string, .string .punctuation {
+ color: #183691;
+}
+.string.regexp, .string.regexp .constant.character, .string.regexp .punctuation {
+ color: #009926;
+}
+.constant.other.symbol {
+ color: #990073;
+}
+.string .source, .text .source {
+ color: #333333;
+}
+.variable.other.property {
+ color: #030303;
+}
+.entity.name {
+ color: #333333;
+}
+.invalid {
+ color: #0f0000;
+}
+.entity.name.tag {
+ color: #63a35c;
+}
+.punctuation.definition.tag {
+ color: #030303;
+}
+.meta.tag .string .punctuation {
+ color: #183691;
+}
+.constant.character.entity {
+ color: #000000;
+}
+.entity.other.attribute-name {
+ color: #795da3;
+}
+.meta.tag .string.quoted, .meta.tag .string.quoted .constant.character.entity {
+ color: #183691;
+}
+.meta.selector, .meta.selector .entity, .meta.selector .entity .punctuation, .entity.name.tag.css, .entity.other.attribute-name.class, .keyword.control.html.sass {
+ color: #63a35c;
+}
+.entity.other.attribute-name.class, .constant.other.unit {
+ color: #795da3;
+}
+.support.type.property-name, .support.constant.property-value {
+ color: #0086b3;
+}
+.keyword.other.special-method.ruby.gem {
+ color: #0086b3;
+}
+.variable.other.block.ruby {
+ color: #000000;
+}
+.support.function.prelude, .variable.other.generic-type.haskell {
+ color: #000000;
+}
+.constant.other.haskell, .support.constant.haskell {
+ color: #445588;
+}
+.meta.diff, .meta.diff.header {
+ color: #75715e;
+}
+.markup.deleted {
+ color: #770000;
+ background-color: #ffdddd;
+}
+.markup.inserted {
+ color: #003300;
+ background-color: #ddffdd;
+}
+.markup.changed {
+ color: #ececec;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #ffffff; color: #333333; }
+}
+[data-theme='dark'] {
+/*
+ * theme "Nord" generated by syntect
+ */
+
+.code {
+ color: #d8dee9;
+ background-color: #2e3440;
+}
+
+.comment, .punctuation.definition.comment {
+ color: #616e88;
+}
+.constant.numeric {
+ color: #b48ead;
+}
+.constant.language {
+ color: #81a1c1;
+}
+.constant.character.escape {
+ color: #ebcb8b;
+}
+.constant.other.placeholder {
+ color: #ebcb8b;
+}
+.constant.other {
+ color: #d8dee9;
+}
+.entity.name.class {
+ color: #8fbcbb;
+}
+.entity.name.struct {
+ color: #8fbcbb;
+}
+.entity.name.enum {
+ color: #8fbcbb;
+}
+.entity.name.union {
+ color: #8fbcbb;
+}
+.entity.name.trait {
+ color: #8fbcbb;
+}
+.entity.name.interface {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.entity.name.type {
+ color: #81a1c1;
+}
+.entity.other.inherited-class {
+ color: #8fbcbb;
+}
+.entity.name.function {
+ color: #88c0d0;
+}
+.entity.name.function.constructor {
+ color: #88c0d0;
+}
+.entity.name.function.destructor {
+ color: #88c0d0;
+}
+.entity.name.namespace {
+ color: #8fbcbb;
+}
+.entity.name.constant {
+ color: #81a1c1;
+}
+.entity.name.label {
+ color: #5e81ac;
+}
+.entity.name.section {
+ color: #88c0d0;
+}
+.entity.name.tag {
+ color: #81a1c1;
+}
+.entity.other.attribute-name {
+ color: #8fbcbb;
+}
+.invalid.illegal {
+ color: #d8dee9;
+ background-color: #bf616a;
+}
+.invalid.deprecated {
+ color: #d8dee9;
+ background-color: #ebcb8b;
+}
+.keyword.control {
+ color: #81a1c1;
+}
+.keyword.control.conditional {
+ color: #81a1c1;
+}
+.keyword.control.import {
+ color: #81a1c1;
+}
+.punctuation.definition.keyword {
+ color: #81a1c1;
+}
+.keyword.other {
+ color: #81a1c1;
+}
+.keyword.operator, .keyword.operator.assignment, .keyword.operator.arithmetic, .keyword.operator.bitwise, .keyword.operator.logical, .keyword.operator.word {
+ color: #81a1c1;
+}
+.markup.heading {
+ color: #88c0d0;
+}
+.markup.list.unnumbered, .markup.list.numbered {
+ color: #d8dee9;
+}
+.markup.bold {
+font-weight: bold;
+}
+.markup.italic {
+font-style: italic;
+}
+.markup.inserted {
+ color: #a3be8c;
+}
+.markup.deleted {
+ color: #bf616a;
+}
+.markup.changed {
+ color: #ebcb8b;
+}
+.markup.quote {
+ color: #616e88;
+}
+.markup.raw.inline, .markup.raw.block {
+ color: #8fbcbb;
+}
+.markup.other {
+ background-color: #eceff4;
+}
+.punctuation.separator, .punctuation.terminator {
+ color: #eceff4;
+}
+.punctuation.separator.continuation, .punctuation.accessor {
+ color: #81a1c1;
+}
+.punctuation.definition.tag {
+ color: #81a1c1;
+}
+.storage.type, .storage.modifier {
+ color: #81a1c1;
+}
+.string.quoted.single, .string.quoted.double, .string.quoted.triple, .string.quoted.other, .string.unquoted {
+ color: #a3be8c;
+}
+.punctuation.definition.string.begin, .punctuation.definition.string.end {
+ color: #a3be8c;
+}
+.string.regexp {
+ color: #ebcb8b;
+}
+.support.constant {
+ color: #8fbcbb;
+}
+.support.function {
+ color: #88c0d0;
+}
+.support.module {
+ color: #8fbcbb;
+}
+.support.type {
+ color: #8fbcbb;
+}
+.support.class {
+ color: #8fbcbb;
+}
+.text.html.basic, .text.xml {
+ color: #eceff4;
+}
+.variable.other, .variable.other.readwrite {
+ color: #d8dee9;
+}
+.punctuation.definition.variable {
+ color: #81a1c1;
+}
+.variable.other.constant {
+ color: #81a1c1;
+}
+.variable.language {
+ color: #81a1c1;
+}
+.variable.parameter {
+ color: #d8dee9;
+}
+.variable.other.member {
+ color: #d8dee9;
+}
+.variable.function {
+ color: #88c0d0;
+}
+.constant.numeric.line-number.find-in-files {
+ color: #d8dee9;
+}
+.constant.numeric.line-number.match.find-in-files {
+ color: #88c0d0;
+}
+.entity.name.filename.find-in-files {
+ color: #8fbcbb;
+}
+.text.find-in-files {
+ color: #d8dee9;
+}
+.source.c .keyword.control.import.include.c, .source.c .meta.preprocessor.c .keyword.control.import.c, .source.c\2b \2b  .keyword.control.import.include.c\2b \2b , .source.c\2b \2b  .meta.preprocessor.c\2b \2b  .keyword.control.import.c\2b \2b  {
+ color: #5e81ac;
+}
+.source.c .keyword.operator.word.c, .source.c\2b \2b  .keyword.operator.word.c\2b \2b  {
+ color: #88c0d0;
+font-style: italic;
+}
+.source.css .support.type.property-name.css, .source.sass .support.type.property-name.sass, .source.css .support.type.vendor-prefix.css {
+ color: #d8dee9;
+}
+.source.css .constant.other.color.rgb-value.css, .source.sass .constant.other.rgb-value.sass {
+ color: #b48ead;
+}
+.source.css .support.constant.color.w3c-special-color-keyword.css, .source.css .support.constant.property-value.css, .source.sass .support.constant.property-value.sass {
+ color: #81a1c1;
+}
+.source.css .entity.other.pseudo-class.css {
+ color: #8fbcbb;
+}
+.source.css .keyword.control.at-rule.media.css, .source.css .punctuation.definition.keyword.css, .source.sass .keyword.control.at-rule.sass {
+ color: #d08770;
+}
+.source.css .support.constant.color.w3c-standard-color-name.css {
+ color: #81a1c1;
+font-style: italic;
+}
+.source.css .entity.other.attribute-name.id.css, .source.sass .entity.other.attribute-name.id.sass {
+font-weight: bold;
+}
+.source.diff .meta.diff.range.context {
+ color: #8fbcbb;
+}
+.source.diff .meta.diff.header.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.from-file {
+ color: #8fbcbb;
+}
+.source.diff .punctuation.definition.separator {
+ color: #81a1c1;
+}
+.source.go .support.function.builtin.go {
+font-style: italic;
+}
+.text.html.basic .constant.character.entity.html {
+ color: #ebcb8b;
+}
+.variable.annotation.java, .punctuation.definition.annotation.java {
+ color: #d08770;
+}
+.punctuation.accessor.dot.java {
+ color: #eceff4;
+}
+.support.other.package.java {
+ color: #8fbcbb;
+}
+.source.java .comment.block.documentation.javadoc .punctuation.definition.entity.html {
+ color: #81a1c1;
+}
+.source.java .entity.name.constant {
+ color: #d8dee9;
+}
+.source.java .keyword.other.documentation, .source.java .comment.block.documentation.javadoc .punctuation.definition.keyword.javadoc {
+ color: #8fbcbb;
+}
+.source.java .variable.parameter.type.java {
+ color: #8fbcbb;
+}
+.source.java .entity.other.inherited-class.java {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.java .keyword.declaration.implements.java {
+ color: #81a1c1;
+}
+.source.json .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json, .source.json.sublime .meta.structure.dictionary.json .meta.structure.dictionary.key.json .string.quoted.double.json {
+ color: #8fbcbb;
+}
+.source.json .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json .meta.structure.dictionary.json .punctuation.definition.string.end.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.begin.json, .source.json.sublime .meta.structure.dictionary.json .punctuation.definition.string.end.json {
+ color: #eceff4;
+}
+.text.html.markdown .punctuation.definition.raw.code-fence.begin.markdown, .text.html.markdown .punctuation.definition.raw.code-fence.end.markdown, .text.html.markdown .markup.raw.code-fence.markdown .constant.other.language-name.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .punctuation.definition.list_item.markdown, .text.html.markdown .markup.list.numbered.bullet.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .markup.quote.markdown .punctuation.definition.blockquote.markdown {
+ color: #8fbcbb;
+}
+.text.html.markdown .meta.link.inline.description.markdown, .text.html.markdown .meta.image.inline.description.markdown, .text.html.markdown .meta.link.reference.description.markdown, .text.html.markdown .constant.other.reference.link.markdown, .text.html.markdown .entity.name.reference.link.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.link.begin.markdown, .text.html.markdown .punctuation.definition.link.end.markdown, .text.html.markdown .punctuation.definition.image.begin.markdown, .text.html.markdown .punctuation.definition.image.end.markdown, .text.html.markdown .punctuation.definition.constant.begin.markdown, .text.html.markdown .punctuation.definition.constant.end.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .punctuation.separator.table-cell.markdown, .text.html.markdown .punctuation.section.table-header.markdown {
+ color: #81a1c1;
+}
+.text.html.markdown .meta.table.header.markdown {
+ color: #88c0d0;
+}
+.text.html.markdown .punctuation.definition.thematic-break.markdown {
+ color: #81a1c1;
+font-weight: bold;
+}
+.embedding.php .text.html.basic .punctuation.section.embedded.begin.php, .embedding.php .text.html.basic .punctuation.section.embedded.end.php {
+ color: #5e81ac;
+}
+.embedding.php .text.html.basic .comment.block.documentation.phpdoc.php .keyword.other.phpdoc.php {
+ color: #8fbcbb;
+}
+.embedding.php .text.html.basic .support.other.namespace.php {
+ color: #8fbcbb;
+}
+.source.python .meta.annotation.python .meta.qualified-name.python .support.function.builtin.python, .source.python .punctuation.definition.annotation.python {
+ color: #d08770;
+}
+.support.function.builtin.python {
+font-style: italic;
+}
+.source.python .support.type.exception.python {
+ color: #8fbcbb;
+}
+.source.python .support.type.python {
+ color: #81a1c1;
+}
+.source.sass .variable.parameter.sass {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ruby .support.function.builtin.ruby {
+font-style: italic;
+}
+.source.shell .support.function.builtin.shell {
+font-style: italic;
+}
+.text.xml .entity.name.tag.namespace {
+ color: #8fbcbb;
+}
+.text.xml .meta.tag.sgml.doctype.xml, .text.xml .meta.tag.preprocessor .entity.name.tag, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.preprocessor.xml .punctuation.definition.tag.end.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.begin.xml, .text.xml .meta.tag.sgml.doctype.xml .punctuation.definition.tag.end.xml {
+ color: #5e81ac;
+}
+.text.xml .string.unquoted.cdata.xml .punctuation.definition.string.begin.xml, .text.xml .string.unquoted.cdata.xml .punctuation.definition.string.end.xml {
+ color: #d08770;
+font-style: italic;
+}
+.source.yaml .entity.name.tag {
+ color: #8fbcbb;
+}
+.sublimelinter.mark.warning {
+ color: #ebcb8b;
+}
+.sublimelinter.mark.error {
+ color: #bf616a;
+}
+.markup.ignored.git_gutter {
+ color: #616e88;
+}
+.markup.untracked.git_gutter {
+ color: #88c0d0;
+}
+.markup.inserted.git_gutter {
+ color: #a3be8c;
+}
+.markup.changed.git_gutter {
+ color: #ebcb8b;
+}
+.markup.deleted.git_gutter {
+ color: #bf616a;
+}
+.source.js .tag.decorator.js .entity.name.tag.js, .source.js .tag.decorator.js .punctuation.definition.tag.js {
+ color: #d08770;
+}
+.source.js .string.quoted.js, .source.js .string.quoted.jsx, .source.js .meta.class.js .meta.class.property.js .string.interpolated.js, .source.js .string.interpolated.js, .source.js .string.template.js {
+ color: #a3be8c;
+}
+.source.js .variable.other.constant.js {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.js .constant.other.object.key.js .string.unquoted.label.js, .source.js .variable.other.readwrite.js {
+ color: #d8dee9;
+}
+.source.js .meta.class.js .meta.class.property.js .variable.other.property.js {
+ color: #88c0d0;
+}
+.source.js .variable.other.property.static.js {
+font-style: italic;
+}
+.source.js .variable.other.class.js {
+ color: #8fbcbb;
+}
+.source.js .string.interpolated.js .keyword.other.substitution.begin.js, .source.js .string.interpolated.js .keyword.other.substitution.end.js, .source.js .punctuation.definition.template-expression.begin.js, .source.js .punctuation.definition.template-expression.end.js {
+ color: #5e81ac;
+}
+.source.js .keyword.operator.spread.js {
+ color: #81a1c1;
+}
+.source.js .meta.export.js .variable.other.readwrite.js {
+ color: #8fbcbb;
+}
+.source.ts .meta.class.ts .entity.other.inherited-class.ts {
+ color: #8fbcbb;
+font-weight: bold;
+}
+.source.ts .entity.name.type.class.ts, .source.ts .entity.name.type.enum.ts {
+ color: #8fbcbb;
+}
+.source.ts .entity.name.type.ts {
+ color: #8fbcbb;
+}
+.source.ts .support.type.primitive.ts {
+ color: #81a1c1;
+}
+.source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .variable.other.readwrite.ts, .source.ts .meta.class.ts .meta.method.declaration.ts .meta.parameters.ts .meta.decorator.ts .punctuation.decorator.ts {
+ color: #d08770;
+}
+.source.ts .punctuation.definition.template-expression.begin.ts, .source.ts .punctuation.definition.template-expression.end.ts {
+ color: #5e81ac;
+}
+.source.ts .string.template.ts {
+ color: #a3be8c;
+}
+.source.ts .support.function.math.ts {
+font-style: italic;
+}
+.source.ts .variable.other.constant.property.ts, .source.ts .variable.other.enummember.ts, .source.ts .variable.other.constant.ts {
+ color: #d8dee9;
+font-weight: bold;
+}
+.source.ts .comment.block.documentation.ts .storage.type.class.jsdoc {
+ color: #8fbcbb;
+}
+
+pre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) { background-color: #2e3440; color: #d8dee9; }
+}
+</style>
+
+<div class="callout callout-warning callout-default" role="note">
+<div class="callout-header">⚠️ Warning</div>
+<div class="callout-body">
+<p>The extension interface is under active development and may change without warning. Do not rely on stability of manifest fields, module protocol, or resolution behavior until this warning is removed.</p>
+
+</div>
+</div>
+
+<h2 id="what-is-an-extension">What is an extension?</h2>
+<p>An extension is a directory with an <code>extension.toml</code> manifest. It is the single unit of distribution and customization in <em>Calepin</em>. An extension can bundle any combination of:</p>
+<ul>
+<li>A <strong>target</strong> definition (writer, modules, post-processing)
+</li>
+<li><strong>Partials</strong> (template overrides for elements and pages)
+</li>
+<li><strong>Modules</strong> (structural transforms, auto-numbering, external code)
+</li>
+<li><strong>Assets</strong> (CSS, JS, fonts, images, static files)
+</li>
+<li><strong>Vars</strong> (default variables available in templates, overridable by the user)
+</li>
+</ul>
+<p>An extension can be as small as a manifest plus one CSS file, or as large as a full presentation framework with custom templates, modules, and scripts.</p>
+<p>Built-in targets (<code>html</code>, <code>latex</code>, <code>typst</code>, <code>markdown</code>, <code>slides</code>, <code>website</code>, <code>book</code>) are also extensions internally. The same architecture applies everywhere.</p>
+<h2 id="key-concepts">Key concepts</h2>
+<ul>
+<li><strong>Extension</strong> – A directory with an <code>extension.toml</code> manifest. The unit of distribution.
+</li>
+<li><strong>Target</strong> – An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the <code>[target]</code> section of the manifest. Every target has a <code>type</code>: either <code>notebook</code> or <code>collection</code>.
+</li>
+<li><strong>Type</strong> – One of two fundamental target types:
+<ul>
+<li><code>notebook</code> – A single document rendered to one output file (<code>html</code>, <code>latex</code>, <code>typst</code>, <code>markdown</code>, <code>slides</code>).
+</li>
+<li><code>collection</code> – A multi-document project rendered to a directory of output files (<code>website</code>, <code>book</code>).
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Writer</strong> – One of the four rendering engines: <code>html</code>, <code>latex</code>, <code>typst</code>, <code>markdown</code>. Every target has exactly one writer. Writers are not user-extensible.</p>
+</li>
+<li>
+<p><strong>Partial</strong> – A Jinja template that renders a specific element or page component (e.g., <code>figure.html</code>, <code>page.tex</code>). Resolved by name through a layered chain. Adding a partial is enough to create a custom div style.</p>
+</li>
+<li>
+<p><strong>Module</strong> – A declared transform in the manifest. Only needed when partials alone are insufficient: structural transforms, match rules beyond class names, auto-numbering, or external code.</p>
+</li>
+<li>
+<p><strong>Asset</strong> – A CSS, JS, or static file declared in <code>[assets]</code>. CSS and JS are injected into the page template; static files are copied to the output directory.</p>
+</li>
+<li>
+<p><strong>Vars</strong> – Key-value pairs declared in <code>[vars]</code>. Namespaced by extension name in templates: <code>{{ vars.tufte.sidenote_style }}</code>. Users override them in front matter under <code>[vars.extension_name]</code>.</p>
+</li>
+</ul>
+<h2 id="directory-layout">Directory layout</h2>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">my-extension/
+  extension.toml        # Manifest (required)
+  partials/             # Template overrides
+    html/
+      page.html
+      figure.html
+    common/
+      note.jinja
+  assets/               # CSS, JS, images, fonts
+    tufte.css
+    tufte.js
+  scripts/              # External module executables (scripts, WASM)
+    postprocess.sh
+    transform.wasm</span></code></pre>
+
+<p>All subdirectories are optional. Module declarations live in <code>extension.toml</code> itself. There are no separate <code>module.toml</code> files. Module templates are resolved from <code>partials/</code> like any other partial (matched by class name). External executables live in <code>scripts/</code>.</p>
+<h2 id="the-manifest">The manifest</h2>
+<p>The manifest is the complete index of everything the extension provides. Nothing is discovered by directory scanning.</p>
+<h3 id="metadata-and-inheritance">Metadata and inheritance</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">name = &quot;tufte&quot;
+description = &quot;Tufte-style HTML with sidenotes and margin notes&quot;
+version = &quot;1.0.0&quot;
+author = &quot;Jane Doe&quot;
+license = &quot;MIT&quot;
+
+# Single-chain inheritance: exactly one parent.
+inherits = &quot;html&quot;</span></code></pre>
+
+<p>The <code>inherits</code> field names exactly one parent: a built-in target or another installed extension. Resolution is recursive with cycle detection. Fields in the child override fields in the parent. <code>Vec</code> fields (modules, post, fig_formats) use all-or-nothing: if the child specifies the field, it replaces the parent’s list entirely; if omitted, the parent’s list is inherited.</p>
+<h3 id="target-definition">Target definition</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">[target]
+writer = &quot;html&quot;                     # inherited if omitted
+extension = &quot;html&quot;                  # output file extension; inherited if omitted
+template = &quot;page&quot;                   # page template name; inherited if omitted
+fig_extension = &quot;svg&quot;               # default figure extension; inherited if omitted
+preview = &quot;serve&quot;                   # &quot;serve&quot;, &quot;open&quot;, or &quot;none&quot;; inherited if omitted
+embed_resources = true              # embed images as base64 (HTML only)
+crossref = &quot;html&quot;                   # &quot;html&quot;, &quot;latex&quot;, or &quot;plain&quot;; inherited if omitted
+toc_headings = true                 # pass headings to page template for TOC
+
+# Modules: full ordered list. Replaces parent&#39;s module list entirely.
+# Omit to inherit parent&#39;s modules unchanged.
+modules = [&quot;highlight&quot;, &quot;append_footnotes&quot;, &quot;sidenotes&quot;, &quot;embed_images&quot;]
+
+# Post-processing commands. Run in order after rendering.
+# {input} = rendered file, {output} = final output path.
+post = [&quot;pagefind --site {output}&quot;]
+
+# Preferred figure formats, in priority order.
+fig_formats = [&quot;svg&quot;, &quot;png&quot;, &quot;jpg&quot;]</span></code></pre>
+
+<h3 id="variables">Variables</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain"># Namespaced under the extension name in templates.
+# Available as {{ vars.tufte.sidenote_style }}.
+# Users override in front matter: [vars.tufte] sidenote_style = &quot;popup&quot;
+[vars]
+sidenote_style = &quot;margin&quot;
+cdn = &quot;https://cdn.example.com/tufte&quot;</span></code></pre>
+
+<h3 id="assets">Assets</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain"># Paths are relative to the extension directory.
+# CSS files are injected into the page template via {{ css }}.
+# JS files are injected via {{ js }}.
+# Static files are copied to assets/ in the output directory.
+[assets]
+css = [&quot;tufte.css&quot;]
+js = [&quot;tufte.js&quot;]
+static = [&quot;fonts/&quot;]</span></code></pre>
+
+<h3 id="modules">Modules</h3>
+<p>Most extensions do not need <code>[[modules]]</code> entries at all. If you just want a custom div style, add a partial to <code>partials/{writer}/</code> and use <code>::: {.my-class}</code>. The partial is resolved by class name automatically.</p>
+<p>Declare a <code>[[modules]]</code> entry only when you need capabilities beyond what a partial provides:</p>
+<ul>
+<li>Match by attribute, id prefix, or writer (not just class)
+</li>
+<li>Structural transforms (rewrite children before rendering)
+</li>
+<li>Auto-numbering (<code>number = true</code>)
+</li>
+<li>External code (<code>run = &quot;scripts/foo.sh&quot;</code> or <code>run = &quot;scripts/foo.wasm&quot;</code>)
+</li>
+</ul>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain"># Structural transform module
+[[modules]]
+name = &quot;sidenotes&quot;
+description = &quot;Convert footnotes to margin sidenotes&quot;
+kind = &quot;element_children&quot;
+contexts = [&quot;div&quot;]
+
+[modules.match]
+classes = [&quot;sidenote&quot;, &quot;margin-note&quot;]
+# attrs = [&quot;sidenote-ref&quot;]          # attribute names (OR&#39;d with classes)
+# id_prefix = &quot;sn-&quot;                 # ID prefix trigger
+# writers = [&quot;html&quot;]                # restrict to writers (omit = all)
+# number = true                     # auto-number matching divs
+
+# External module (script or WASM)
+# [[modules]]
+# name = &quot;rewrite-links&quot;
+# description = &quot;Rewrite external links to open in new tab&quot;
+# kind = &quot;document&quot;
+# run = &quot;scripts/rewrite-links.sh&quot;  # .wasm for WASM runtime</span></code></pre>
+
+<h2 id="module-kinds">Module kinds</h2>
+<table>
+<thead>
+<tr>
+<th><code>kind</code></th>
+<th>When it runs</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>span</code></td>
+<td>During render, per span</td>
+<td>Renders matching bracketed spans</td>
+</tr>
+<tr>
+<td><code>element_children</code></td>
+<td>During render, per div</td>
+<td>Rewrites div children (structural transforms)</td>
+</tr>
+<tr>
+<td><code>element</code></td>
+<td>Pre-render</td>
+<td>Mutates individual elements before rendering</td>
+</tr>
+<tr>
+<td><code>document</code></td>
+<td>Post-assembly</td>
+<td>Transforms the full document string</td>
+</tr>
+</table>
+<h2 id="partials-vs-modules">Partials vs. modules</h2>
+<p><strong>Partials alone</strong> handle most customization. Add <code>partials/html/note.html</code> to your extension and <code>::: {.note}</code> renders using that template. No module declaration needed. The partial receives standard variables (content, classes, attrs, id, etc.) and is overridable at every level of the resolution chain.</p>
+<p><strong>Modules</strong> add behavior that partials cannot express: structural transforms, match rules beyond class names, auto-numbering, and external code execution. A module that matches an element still resolves its template via the partial chain (by class name), unless it returns rendered output directly (external modules with <code>&quot;action&quot;: &quot;rendered&quot;</code>).</p>
+<h2 id="external-modules">External modules</h2>
+<p>Modules with a <code>run</code> field execute an external program. The runtime is determined by the file extension:</p>
+<ul>
+<li><code>.wasm</code> – executed in the Extism WASM runtime (sandboxed, portable)
+</li>
+<li>Anything else (<code>.sh</code>, <code>.py</code>, <code>.rb</code>, etc.) – executed as a subprocess
+</li>
+</ul>
+<h3 id="protocol">Protocol</h3>
+<p>External modules communicate via JSON on stdin/stdout.</p>
+<p><strong>Element modules</strong> (<code>span</code>, <code>element_children</code>, <code>element</code>) receive a JSON object describing the matched element:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-json code"><span class="source json"><span class="meta structure dictionary json"><span class="punctuation section dictionary begin json">{</span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>name<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>sidenote<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>kind<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>element_children<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>writer<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>html<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>context<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>div<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>content<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>&lt;p&gt;The rendered children...&lt;/p&gt;<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>classes<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="meta structure array json"><span class="punctuation section array begin json">[</span><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>sidenote<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation section array end json">]</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>id<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>sn-1<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>attrs<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="meta structure dictionary json"><span class="punctuation section dictionary begin json">{</span><span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>ref<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>fn1<span class="punctuation definition string end json">&quot;</span></span></span><span class="punctuation section dictionary end json">}</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>number<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="constant numeric json">3</span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>vars<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="meta structure dictionary json"><span class="punctuation section dictionary begin json">{</span><span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>sidenote_style<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>margin<span class="punctuation definition string end json">&quot;</span></span></span><span class="punctuation section dictionary end json">}</span></span>
+</span><span class="punctuation section dictionary end json">}</span></span></span></code></pre>
+
+<p>And return a JSON result:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-json code"><span class="source json"><span class="meta structure dictionary json"><span class="punctuation section dictionary begin json">{</span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>action<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>rendered<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>output<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>&lt;aside class=<span class="constant character escape json">\&quot;</span>sidenote<span class="constant character escape json">\&quot;</span>&gt;...&lt;/aside&gt;<span class="punctuation definition string end json">&quot;</span></span>
+</span><span class="punctuation section dictionary end json">}</span></span></span></code></pre>
+
+<p>The <code>action</code> field controls what happens next:</p>
+<table>
+<thead>
+<tr>
+<th><code>action</code></th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;rendered&quot;</code></td>
+<td>Use <code>output</code> as the final rendering. Stop further dispatch.</td>
+</tr>
+<tr>
+<td><code>&quot;pass&quot;</code></td>
+<td>This module declines. Continue to the next matching module or fallback template.</td>
+</tr>
+</table>
+<p><strong>Document modules</strong> (<code>document</code>) receive the full document:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-json code"><span class="source json"><span class="meta structure dictionary json"><span class="punctuation section dictionary begin json">{</span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>name<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>rewrite-links<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>kind<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>document<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>writer<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>html<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>body<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>&lt;!DOCTYPE html&gt;...<span class="punctuation definition string end json">&quot;</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">&quot;</span>vars<span class="punctuation definition string end json">&quot;</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="meta structure dictionary json"><span class="punctuation section dictionary begin json">{</span><span class="punctuation section dictionary end json">}</span></span>
+</span><span class="punctuation section dictionary end json">}</span></span></span></code></pre>
+
+<p>And return the transformed document in the same <code>action</code>/<code>output</code> structure.</p>
+<p>Document modules can also use a plain text protocol: raw document on stdin, transformed document on stdout (no JSON). Declare this in the manifest:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">[[modules]]
+name = &quot;rewrite-links&quot;
+kind = &quot;document&quot;
+run = &quot;scripts/rewrite-links.sh&quot;
+protocol = &quot;text&quot;                    # &quot;json&quot; (default) or &quot;text&quot;</span></code></pre>
+
+<h2 id="installation">Installation</h2>
+<p>Extensions live in <code>_calepin/extensions/{name}/</code>:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">project/
+  _calepin/
+    config.toml
+    extensions/
+      tufte/
+        extension.toml
+        partials/...
+        assets/...
+      lightbox/
+        extension.toml
+        assets/...</span></code></pre>
+
+<p>A future <code>calepin install</code> command could fetch extensions from a registry or git URL. For now, copy or clone the directory manually.</p>
+<h2 id="activation">Activation</h2>
+<p>An extension that defines a target is activated by using it as the target name:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain"># _calepin/config.toml or document front matter
+target = &quot;tufte&quot;</span></code></pre>
+
+<p>An extension that only provides modules or assets (no custom target) is activated by listing it:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">[calepin]
+extensions = [&quot;lightbox&quot;]</span></code></pre>
+
+<p>When <code>extensions</code> is set, those extensions’ assets are included and their modules are available (they run when they match elements by class/attr/id, or when listed in the active target’s <code>modules</code> field).</p>
+<h2 id="resolution-order">Resolution order</h2>
+<h3 id="partials">Partials</h3>
+<p>First match wins:</p>
+<ol>
+<li>Document sidecar: <code>{stem}_calepin/partials/{target|writer|common}/</code>
+</li>
+<li>Project overrides: <code>_calepin/partials/{target|writer|common}/</code>
+</li>
+<li>Active extension’s partials: <code>_calepin/extensions/{name}/partials/{writer|common}/</code>
+</li>
+<li>Parent extension’s partials (walking up the inheritance chain)
+</li>
+<li>Built-in partials (embedded in binary)
+</li>
+</ol>
+<p>At each level, the lookup order within the partials directory is:</p>
+<ol>
+<li><code>{target}/{name}.{ext}</code> (target-specific, e.g., <code>tufte/page.html</code>)
+</li>
+<li><code>{writer}/{name}.{ext}</code> (writer-specific, e.g., <code>html/page.html</code>)
+</li>
+<li><code>common/{name}.jinja</code> (writer-agnostic)
+</li>
+</ol>
+<h3 id="assets">Assets</h3>
+<p>Assets compose additively (all levels contribute):</p>
+<ol>
+<li>Project assets: <code>_calepin/assets/</code> (always included)
+</li>
+<li>Active extension’s assets (CSS/JS declared in manifest)
+</li>
+<li>Parent extension’s assets (walking up the inheritance chain)
+</li>
+<li>Built-in assets (embedded in binary, fill gaps)
+</li>
+</ol>
+<p>CSS and JS from multiple extensions are concatenated in inheritance order (parent first, child last), so the child’s styles override the parent’s. Static files from extensions are copied to <code>assets/</code> in the output directory. If two extensions provide a file at the same path, the child’s file wins.</p>
+<h3 id="modules">Modules</h3>
+<p>Modules are resolved from:</p>
+<ol>
+<li>Active extension’s <code>[[modules]]</code> entries (declared in its <code>extension.toml</code>)
+</li>
+<li>Parent extension’s <code>[[modules]]</code> entries (walking up the inheritance chain)
+</li>
+<li>Built-in modules (embedded in binary)
+</li>
+</ol>
+<p>Module templates are resolved via the standard partial resolution chain (see above). A module’s matched class name determines the partial lookup.</p>
+<p>A module must be listed in the active target’s <code>modules</code> field to run as a document/element transform. Modules that match by class/attr/id (span transforms, element children transforms) run whenever a matching element is encountered, regardless of the <code>modules</code> list.</p>
+<h2 id="built-in-targets">Built-in targets</h2>
+<p>Every target derives from one of two fundamental types:</p>
+<ul>
+<li><strong>Notebook</strong> – A single document rendered to one output file.
+</li>
+<li><strong>Collection</strong> – A multi-document project rendered to a directory of output files.
+</li>
+</ul>
+<p>The built-in targets form this inheritance tree:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">notebook (type)
+  html                  writer = &quot;html&quot;
+    slides              inherits = &quot;html&quot;
+  latex                 writer = &quot;latex&quot;
+  typst                 writer = &quot;typst&quot;
+  markdown              writer = &quot;markdown&quot;
+
+collection (type)
+  website               inherits = &quot;html&quot;
+  book                  inherits = &quot;html&quot;</span></code></pre>
+
+<p>The base notebook targets (<code>html</code>, <code>latex</code>, <code>typst</code>, <code>markdown</code>) each define a writer and a default set of modules, partials, and settings. The composed targets (<code>slides</code>, <code>website</code>, <code>book</code>) inherit from a base and override specific pieces.</p>
+<p>Internally, all built-in targets are structured as extensions:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">html/
+  extension.toml        # type = &quot;notebook&quot;, writer = &quot;html&quot;
+  partials/
+    html/
+      page.html
+      code_source.html
+      figure.html
+      ...
+
+latex/
+  extension.toml        # type = &quot;notebook&quot;, writer = &quot;latex&quot;
+  partials/
+    latex/
+      page.tex
+      ...
+
+slides/
+  extension.toml        # type = &quot;notebook&quot;, inherits = &quot;html&quot;
+  partials/
+    slides/
+      page.html         # overrides html/page.html
+
+website/
+  extension.toml        # type = &quot;collection&quot;, inherits = &quot;html&quot;
+  partials/
+    website/
+      base.html
+      navbar.html
+      sidebar.html
+  assets/
+    calepin.css
+    css/...
+    fontawesome/...</span></code></pre>
+
+<ul>
+<li><code>slides</code> inherits from <code>html</code>, overriding <code>page.html</code> and adding <code>split_slides</code> to modules.
+</li>
+<li><code>website</code> inherits from <code>html</code>, adding navbar/sidebar partials, CSS assets, and <code>document_listing</code> support.
+</li>
+<li>A user extension inherits from any of these and follows the same rules. The <code>type</code> is inherited from the parent and cannot be changed.
+</li>
+</ul>
+<h2 id="scaffolding">Scaffolding</h2>
+<p>Scaffold a new extension directory:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">calepin init extension sidenotes --inherits html</span></code></pre>
+
+<p>This creates:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">sidenotes/
+  extension.toml
+  partials/
+    html/
+      .gitkeep
+  assets/
+    .gitkeep</span></code></pre>
+
+<p>With a starter <code>extension.toml</code>:</p>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">name = &quot;sidenotes&quot;
+description = &quot;&quot;
+version = &quot;0.1.0&quot;
+inherits = &quot;html&quot;
+
+[target]
+# modules = [&quot;highlight&quot;, &quot;append_footnotes&quot;, &quot;embed_images&quot;]
+
+[assets]
+# css = []
+# js = []
+
+# Declare [[modules]] only if you need structural transforms,
+# match rules beyond class names, auto-numbering, or external code.
+# For simple div styles, just add a partial.</span></code></pre>
+
+<p>Then:</p>
+<ol>
+<li>Add partials to <code>partials/html/</code> to override page templates or add new div styles (e.g., <code>sidenote.html</code>).
+</li>
+<li>Declare modules in <code>extension.toml</code> under <code>[[modules]]</code>.
+</li>
+<li>Add CSS/JS to <code>assets/</code> and declare them in <code>extension.toml</code>.
+</li>
+<li>Copy the directory into a project’s <code>_calepin/extensions/</code> to install it.
+</li>
+</ol>
+<h2 id="examples">Examples</h2>
+<h3 id="visual-theme-css-only">Visual theme (CSS-only)</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">dark-academic/
+  extension.toml
+  assets/
+    dark-academic.css</span></code></pre>
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">name = &quot;dark-academic&quot;
+description = &quot;Dark color scheme with serif typography&quot;
+version = &quot;1.0.0&quot;
+inherits = &quot;html&quot;
+
+[assets]
+css = [&quot;dark-academic.css&quot;]</span></code></pre>
+
+<p>No partials, no modules, no target overrides. Activated with <code>target = &quot;dark-academic&quot;</code> or <code>calepin.extensions = [&quot;dark-academic&quot;]</code>.</p>
+<h3 id="presentation-target">Presentation target</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">slidev/
+  extension.toml
+  partials/
+    html/
+      page.html
+  assets/
+    slidev.css
+    slidev.js
+  scripts/
+    slidev.wasm</span></code></pre>
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">name = &quot;slidev&quot;
+description = &quot;Slidev-compatible HTML presentations&quot;
+version = &quot;0.2.0&quot;
+inherits = &quot;slides&quot;
+
+[target]
+modules = [&quot;highlight&quot;, &quot;append_footnotes&quot;, &quot;split_slides&quot;]
+embed_resources = false
+
+[vars]
+transition = &quot;slide&quot;    # {{ vars.slidev.transition }}
+
+[assets]
+css = [&quot;slidev.css&quot;]
+js = [&quot;slidev.js&quot;]</span></code></pre>
+
+<p>Inherits from <code>slides</code> (which inherits from <code>html</code>). Overrides <code>page.html</code> for its own slide shell. The inheritance chain is <code>slidev -&gt; slides -&gt; html</code>.</p>
+<h3 id="academic-journal-target">Academic journal target</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">jss/
+  extension.toml
+  partials/
+    latex/
+      page.tex
+      code_source.tex
+  assets/
+    jss.cls
+    jss.bst</span></code></pre>
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">name = &quot;jss&quot;
+description = &quot;Journal of Statistical Software article format&quot;
+version = &quot;1.0.0&quot;
+inherits = &quot;latex&quot;
+
+[target]
+modules = [&quot;highlight&quot;, &quot;convert_svg_pdf&quot;]
+fig_extension = &quot;pdf&quot;
+
+[vars]
+documentclass = &quot;jss&quot;   # {{ vars.jss.documentclass }}
+
+[assets]
+static = [&quot;jss.cls&quot;, &quot;jss.bst&quot;]</span></code></pre>
+
+<p>Overrides the LaTeX page template and code rendering. Copies <code>.cls</code> and <code>.bst</code> files alongside the output.</p>
+<h3 id="pdf-via-post-processing">PDF via post-processing</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">pdf/
+  extension.toml</span></code></pre>
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">name = &quot;pdf&quot;
+description = &quot;PDF output via Typst compilation&quot;
+version = &quot;1.0.0&quot;
+inherits = &quot;typst&quot;
+
+[target]
+extension = &quot;pdf&quot;
+post = [&quot;typst compile {input}&quot;]</span></code></pre>
+
+<p>No partials, no assets, no modules. Just inherits everything from <code>typst</code> and adds a post-processing step. A user who prefers LaTeX-based PDF would write <code>inherits = &quot;latex&quot;</code> and <code>post = [&quot;tectonic {input}&quot;]</code> instead.</p>
+<h3 id="structural-module">Structural module</h3>
+
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language- code"><span class="text plain">lightbox/
+  extension.toml
+  partials/
+    html/
+      lightbox.html
+  assets/
+    lightbox.css
+    lightbox.js</span></code></pre>
+
+
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-toml code"><span class="text plain">name = &quot;lightbox&quot;
+description = &quot;Click-to-zoom image lightbox for HTML figures&quot;
+version = &quot;1.0.0&quot;
+inherits = &quot;html&quot;
+
+[assets]
+css = [&quot;lightbox.css&quot;]
+js = [&quot;lightbox.js&quot;]
+
+[[modules]]
+name = &quot;lightbox&quot;
+description = &quot;Wrap figure images in click-to-zoom lightbox links&quot;
+kind = &quot;element_children&quot;
+contexts = [&quot;div&quot;]
+
+[modules.match]
+classes = [&quot;lightbox&quot;]
+writers = [&quot;html&quot;]</span></code></pre>
+
+<p>The template at <code>partials/html/lightbox.html</code> is resolved by class name through the standard partial chain. Activated with <code>calepin.extensions = [&quot;lightbox&quot;]</code>.</p>
+<h2 id="design-constraints">Design constraints</h2>
+<ul>
+<li><strong>Single inheritance only.</strong> One chain: child -&gt; parent -&gt; grandparent -&gt; built-in base target. No diamond inheritance, no multiple parents.
+</li>
+<li><strong>Full module list replacement.</strong> If an extension specifies <code>modules</code> in <code>[target]</code>, it replaces the parent’s list entirely. No <code>modules_add</code>, no ordering ambiguity.
+</li>
+<li><strong>Explicit everything.</strong> The manifest is the complete index. CSS, JS, static files, and modules must be declared in <code>extension.toml</code>. No implicit directory scanning.
+</li>
+<li><strong>No config fragments.</strong> An extension provides a target definition, partials, modules, and assets. Document-level config (title, author, bibliography, execute options) stays in the document or project config.
+</li>
+<li><strong>Additive partial chain.</strong> Each level in the chain can override partials from the level below. The user always has final say (project <code>_calepin/partials/</code> overrides everything).
+</li>
+<li><strong>Modules are for behavior, partials are for presentation.</strong> Adding a partial to <code>partials/</code> is enough for custom div/span styles. A <code>[[modules]]</code> declaration is only needed for structural transforms, advanced matching, auto-numbering, or external code.
+</li>
+</ul>
+<h2 id="open-question-partial-resolution-vs-wholesale-copy">Open question: partial resolution vs. wholesale copy</h2>
+
+
+
+<div class="callout callout-warning callout-default" role="note">
+<div class="callout-header">⚠️ Warning</div>
+<div class="callout-body">
+<p>This section describes an unresolved design question that affects the entire extension architecture.</p>
+
+</div>
+</div>
+
+<p>The spec above describes a layered partial resolution chain: user overrides &gt; extension &gt; parent extension &gt; built-in. Each level can override individual partials while inheriting the rest.</p>
+<p>But the current system does not work this way. Today, <code>calepin init website</code> copies <em>all</em> built-in partials into <code>_calepin/partials/</code>. The user gets a complete, self-contained set of templates. Resolution is flat: either everything comes from the filesystem, or everything comes from the built-ins. There is no mixing.</p>
+<h3 id="advantages-of-wholesale-copy">Advantages of wholesale copy</h3>
+<ul>
+<li><strong>Predictability.</strong> The user sees every template that will be used. No hidden inheritance, no wondering “which level is this partial coming from?”
+</li>
+<li><strong>Stability.</strong> When <em>Calepin</em> updates its built-in partials, the user’s project is unaffected. They opted into a specific version of the templates at scaffold time.
+</li>
+<li><strong>Debuggability.</strong> If output looks wrong, the user can inspect and edit the local file directly.
+</li>
+</ul>
+<h3 id="problems-with-wholesale-copy">Problems with wholesale copy</h3>
+<ul>
+<li><strong>An extension that overrides 3 partials must ship all ~50.</strong> Otherwise, the remaining partials have to come from somewhere, which requires the layered chain. With wholesale copy, every extension must be a complete fork of its parent’s template set.
+</li>
+<li><strong>Updates do not propagate.</strong> If the <code>html</code> extension fixes a bug in <code>code_source.html</code>, no child extension or user project picks it up unless they re-copy manually.
+</li>
+<li><strong>Extension authoring is heavy.</strong> Creating a “tufte” extension that only changes <code>page.html</code> and <code>figure.html</code> would require copying and maintaining 48 other files verbatim.
+</li>
+</ul>
+<h3 id="possible-approaches">Possible approaches</h3>
+<ol>
+<li>
+<p><strong>Layered resolution (as specced above).</strong> Extensions only ship the partials they override. Missing partials fall through to the parent. Accept the resolution complexity.</p>
+</li>
+<li>
+<p><strong>Wholesale copy with scaffolding.</strong> <code>calepin init extension --inherits html</code> copies all of the parent’s partials into the new extension. The extension is self-contained. Updates require re-scaffolding. Simple but heavy.</p>
+</li>
+<li>
+<p><strong>Hybrid: layered by default, <code>calepin eject</code> to flatten.</strong> Normal operation uses the layered chain. A <code>calepin eject</code> command copies all resolved partials into the project’s <code>_calepin/partials/</code>, switching to the flat model. Users who want full control can eject; extensions stay lightweight.</p>
+</li>
+<li>
+<p><strong>Layered resolution with <code>calepin info --partials</code> for debugging.</strong> Keep the layered chain, but provide a command that shows exactly where each partial is resolved from (extension name, file path). Makes the chain inspectable without flattening it.</p>
+</li>
+</ol>
+
+  </div>
+  <div class="split-source" aria-live="polite">
+    <pre><code id="source-code">Loading source...</code></pre>
+  </div>
+</div>
+
+      </article>
+
+      
+
+
+    </main>
+
+    <aside class="sidebar-right" role="complementary" aria-label="Table of contents">
+  
+  <nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ul>
+<li><a href="#what-is-an-extension">What is an extension?</a></li>
+<li><a href="#key-concepts">Key concepts</a></li>
+<li><a href="#directory-layout">Directory layout</a></li>
+<li><a href="#the-manifest">The manifest</a>
+<ul>
+<li><a href="#metadata-and-inheritance">Metadata and inheritance</a></li>
+<li><a href="#target-definition">Target definition</a></li>
+<li><a href="#variables">Variables</a></li>
+<li><a href="#assets">Assets</a></li>
+<li><a href="#modules">Modules</a></li>
+</ul>
+</li>
+<li><a href="#module-kinds">Module kinds</a></li>
+<li><a href="#partials-vs-modules">Partials vs. modules</a></li>
+<li><a href="#external-modules">External modules</a>
+<ul>
+<li><a href="#protocol">Protocol</a></li>
+</ul>
+</li>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#activation">Activation</a></li>
+<li><a href="#resolution-order">Resolution order</a>
+<ul>
+<li><a href="#partials">Partials</a></li>
+<li><a href="#assets">Assets</a></li>
+<li><a href="#modules">Modules</a></li>
+</ul>
+</li>
+<li><a href="#built-in-targets">Built-in targets</a></li>
+<li><a href="#scaffolding">Scaffolding</a></li>
+<li><a href="#examples">Examples</a>
+<ul>
+<li><a href="#visual-theme-css-only">Visual theme (CSS-only)</a></li>
+<li><a href="#presentation-target">Presentation target</a></li>
+<li><a href="#academic-journal-target">Academic journal target</a></li>
+<li><a href="#pdf-via-post-processing">PDF via post-processing</a></li>
+<li><a href="#structural-module">Structural module</a></li>
+</ul>
+</li>
+<li><a href="#design-constraints">Design constraints</a></li>
+<li><a href="#open-question-partial-resolution-vs-wholesale-copy">Open question: partial resolution vs. wholesale copy</a>
+<ul>
+<li><a href="#advantages-of-wholesale-copy">Advantages of wholesale copy</a></li>
+<li><a href="#problems-with-wholesale-copy">Problems with wholesale copy</a></li>
+<li><a href="#possible-approaches">Possible approaches</a></li>
+</ul>
+</li>
+</ul>
+</nav>
+  
+</aside>
+  </div>
+
+  <footer class="site-footer">
+  <p>Built with <a href="https://vincentarelbundock.github.io/calepin">
+    
+    <span class="footer-logo nav-icon" style="-webkit-mask-image: url(/calepin/assets/Calepin.svg); mask-image: url(/calepin/assets/Calepin.svg);"></span>
+    
+  </a></p>
+</footer>
+  <script>
+document.querySelectorAll('.code-copy-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    navigator.clipboard.writeText(code.textContent).then(function() {
+      var icon = btn.querySelector('.code-copy-icon');
+      btn.classList.add('copied');
+      icon.classList.add('checked');
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        icon.classList.remove('checked');
+      }, 1500);
+    });
+  });
+});
+</script>
+</body>
+</html>

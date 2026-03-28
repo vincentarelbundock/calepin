@@ -1,0 +1,132 @@
+---
+title = "Cache"
+---
+
+Documents with expensive code chunks (model fitting, simulations, large data imports) can take a long time to render. Since most edits only touch prose or a single chunk, re-executing every chunk from scratch is wasteful and slow. This is especially painful with `calepin --preview`, which watches the source file and re-renders on every save, ideally instantly, without waiting for expensive code chunks to run again.
+
+*Calepin* solves this by caching code chunk results. Unchanged chunks are skipped entirely on subsequent renders, reducing rebuild times from minutes to milliseconds. Caching is on by default.
+
+Disable caching for a single chunk with `#| cache = false`:
+
+````markdown
+```{r}
+#| cache = false
+slow_function()
+```
+````
+
+Disable caching for the entire document in YAML front matter:
+
+```yaml
+---
+execute:
+  cache: false
+---
+```
+
+Cached results are stored in `<stem>_cache/` next to the input file (see [Storage layout](#storage-layout) for details). Changing a chunk's source code, or any chunk above it, automatically invalidates the cache (see [Upstream digest chain](#upstream-digest-chain)).
+
+# Example
+
+The two chunks below each sleep for 2 seconds to simulate expensive computation. On first render, total execution takes about 4 seconds. On second render, both hit the cache and finish in under a second.
+
+```{r, slow-r}
+Sys.sleep(2)
+x <- sum(1:1000)
+x
+```
+
+```{python, slow-py}
+import time
+time.sleep(2)
+y = sum(range(1, 1001))
+print(y)
+```
+
+Render this document twice and compare timings:
+
+```bash
+time calepin cache.qmd     # first run: ~4s (both chunks execute)
+time calepin cache.qmd     # second run: <1s (both chunks cached)
+```
+
+# Design
+
+The caching design is inspired by the approach in [litedown](https://yihui.org/litedown/) by [Yihui Xie](https://yihui.org/), who pioneered chunk-level caching with upstream invalidation in R Markdown tooling. *Calepin* adapts that design to a Rust pipeline operating across both R and Python engines.
+
+## Cache level
+
+Caching operates at the `ChunkResult` level, after code execution but before results are converted into display elements. A `ChunkResult` is the raw engine output: printed text, warnings, messages, errors, and plot file paths. This is the natural seam because it captures everything the subprocess produced while remaining independent of display options. Changing `echo`, `include`, `results`, `warning`, `message`, or `comment` reuses the cache; changing source code, `fig.width`, or `dev` invalidates it.
+
+## Cache key
+
+Each chunk's cache key is a SHA-256 hash of:
+
+| Component | Rationale |
+|-----------|-----------|
+| Source code | Code changed means re-execute |
+| Engine name (`r` / `python`) | Same code, different engine = different result |
+| Execution-affecting options (`fig.width`, `fig.height`, `dev`, `dpi`) | These change what the subprocess produces |
+| `cache-extra` (user-supplied) | External dependencies like `file.mtime("data.csv")` |
+| Upstream digest | Cumulative hash of all prior chunk keys in document order |
+
+Display-only options (`echo`, `include`, `results`, `warning`, `message`, `comment`) are excluded because they control how results are shown, not what the engine produces.
+
+## Upstream digest chain
+
+R and Python sessions are stateful: each chunk can define variables, load libraries, or modify globals that later chunks depend on. If chunk 3 changes, chunks 4 and onward must re-execute even if their own source is unchanged.
+
+The upstream digest solves this. It is a rolling SHA-256 hash that incorporates every chunk's key in document order. Before computing its own key, each chunk mixes the current upstream digest into the hash. After computing the key, the chunk advances the digest:
+
+```
+for each chunk:
+    key = sha256(source, exec_options, upstream_digest)
+    upstream_digest = sha256(upstream_digest, key)
+```
+
+This means any upstream change, even in a non-cached chunk, cascades invalidation to all downstream cached chunks. Inline code expressions (`` `{r} expr` ``) also advance the digest, since they can mutate session state.
+
+Chunks with `eval: false` still contribute to the digest chain (based on their source and options) so that toggling `eval` correctly invalidates downstream caches.
+
+## Storage layout
+
+Cache files live in `<stem>_cache/<label>/`:
+
+```
+tutorial_cache/
+  slow-r/
+    meta.json          # {"hash": "<hex>", "plot_files": ["slow-r-1.png"]}
+    results.bincode    # serialized Vec<ChunkResult>
+    slow-r-1.png       # cached plot copy
+  slow-py/
+    meta.json
+    results.bincode
+```
+
+On a cache hit, plot files are copied back from the cache directory to the figure output directory so that downstream rendering finds them at the expected paths. On a miss, the chunk executes normally and results plus plots are written into the cache directory.
+
+## Session state on cache hit
+
+When a cached chunk is skipped, its code never runs in the R/Python subprocess, so variables it defines are not available to later chunks. For example:
+
+````markdown
+```{r, fit-model}
+model <- lm(mpg ~ wt, data = mtcars)
+summary(model)
+```
+
+```{r, use-model}
+#| cache = false
+predict(model, newdata = data.frame(wt = 3))
+```
+````
+
+On the first render, both chunks execute and everything works. On the second render, `fit-model` is cached and skipped, so `model` is never defined in the R session. The `use-model` chunk (which opted out of caching) will fail because `model` does not exist.
+
+This is typically not a problem when caching is left at its default (all chunks cached), since cached chunks only see cached output, not live session state. The issue arises when individual chunks opt out with `#| cache = false` and depend on variables from cached chunks above them.
+
+## Options
+
+- Caching is on by default for all chunks
+- `#| cache = false` to disable caching for a single chunk
+- `execute: { cache: false }` in YAML front matter to disable caching for the entire document

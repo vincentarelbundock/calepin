@@ -1,0 +1,332 @@
+---
+title = "Reference"
+---
+
+# Partials source
+
+All built-in partials are in the *Calepin* repository under [`calepin/src/partials/`](https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/partials). They are embedded in the binary at compile time.
+
+| Directory | Contents |
+|-----------|----------|
+| `html/` | HTML element and page templates (~49 files) |
+| `latex/` | LaTeX element and page templates (~47 files) |
+| `typst/` | Typst element and page templates (~44 files) |
+| `markdown/` | Markdown element templates (~34 files) |
+| `website/` | Website layout templates (navbar, sidebar, footer, etc.) |
+| `book/` | Book layout templates |
+| `revealjs/` | Reveal.js presentation template |
+| `common/` | Format-agnostic templates (`.jinja`) |
+
+
+# Override scheme
+
+If `_calepin/partials/` exists, *Calepin* uses only those files. Built-in templates are ignored entirely. If the directory does not exist, only built-in templates are used.
+
+Within the partials directory, resolution tries target-specific first, then engine-specific, then common:
+
+1. `_calepin/partials/{target}/{name}.{ext}` (e.g., `website/sidebar.html`)
+2. `_calepin/partials/{engine}/{name}.{ext}` (e.g., `html/figure.html`)
+3. `_calepin/partials/common/{name}.jinja`
+
+Per-document sidecar directories (`{stem}_calepin/partials/`) are checked before the project-level `_calepin/partials/`.
+
+
+# Element partial variables
+
+## Div variables
+
+Fenced divs (`::: {.classname #id key="value"} ... :::`) receive:
+
+| Variable | Description |
+|----------|-------------|
+| `children` | Recursively rendered content |
+| `classes` | Space-separated class list |
+| `id` | Element id (empty if none) |
+| `id_attr` | ` id="..."` attribute string (empty if none) |
+| `label` | Format-specific label (`\label{id}` in LaTeX, `<id>` in Typst) |
+| `format` | Current output format |
+| *user attrs* | Any `key="value"` pairs from the div header |
+
+Template lookup tries each class in order, then falls back to `div.{format}`.
+
+## Span variables
+
+Bracketed spans (`[text]{.class key="val"}`) receive:
+
+| Variable | Description |
+|----------|-------------|
+| `content` | Text inside the brackets (rendered as inline markdown) |
+| `class` | First class |
+| `classes` | Space-separated class list |
+| `id` / `id_attr` | Same as divs |
+| `format` | Current output format |
+| *user attrs* | Any key-value pairs |
+
+## Code block variables
+
+| Variable | Description |
+|----------|-------------|
+| `code` | Raw source code |
+| `lang` | Language identifier |
+| `label` | Chunk label |
+| `highlighted` | Syntax-highlighted code |
+| `filename` | Filename header (if `#| filename =` is set) |
+
+Templates: `code_source`, `code_output` (`output` variable), `code_diagnostic` (shared by warnings, messages, errors).
+
+## Figure variables
+
+| Variable | Description |
+|----------|-------------|
+| `src` | Resolved image file path |
+| `image` | Format-specific image tag |
+| `alt` | Alt text |
+| `caption` | Figure caption |
+| `label` | Figure label |
+| `number` | Auto-incremented figure number |
+| `width_attr` / `height_attr` | Format-specific dimension attributes |
+| `align` | Alignment: `left`, `center`, `right` |
+| `align_style` | Format-specific alignment markup |
+| `cap_location` | Caption position: `top`, `bottom`, `margin` |
+| `link` | Optional hyperlink wrapping the image |
+
+## Theorem variables
+
+| Variable | Description |
+|----------|-------------|
+| `type_name` | Capitalized type ("Theorem", "Lemma", "Definition", ...) |
+| `number` | Auto-incremented counter per type |
+| `type_class` | Original class name |
+
+Templates: `theorem_italic` (theorem, lemma, corollary, proposition, conjecture), `theorem_normal` (definition, example, exercise, solution, remark, algorithm).
+
+## Callout variables
+
+| Variable | Description |
+|----------|-------------|
+| `callout_type` | Type without prefix: `note`, `tip`, `warning`, `caution`, `important` |
+| `title` | Title text (default: capitalized type name) |
+| `icon` | Emoji icon |
+| `collapse` | `"true"` or `"false"` |
+| `appearance` | `"default"` or user-provided |
+
+
+# Page template variables
+
+## Content
+
+| Variable | Description |
+|----------|-------------|
+| `body` | Rendered document content |
+| `toc` | Table of contents |
+| `preamble` | Extra preamble content from code chunks |
+
+## Metadata
+
+| Variable | Description |
+|----------|-------------|
+| `plain_title` | Title as plain text (markdown stripped) |
+| `title` | Title with inline markdown rendered |
+| `author` | Author(s), comma-joined |
+| `date` | Date string |
+| `lang` | Language code (default: `"en"`) |
+| `generator` | `"calepin X.Y.Z"` |
+
+## Pre-rendered blocks
+
+Each produced through an overridable element template:
+
+| Variable | Description |
+|----------|-------------|
+| `title` | Title markup |
+| `subtitle` | Subtitle markup |
+| `authors` | Author metadata (names, affiliations, ORCID) |
+| `date` | Date markup |
+| `abstract` | Abstract text |
+| `keywords` | Keywords list |
+| `appendix` | License, citation, copyright, funding |
+| `bibliography` | Bibliography section |
+
+## Format-specific
+
+| Variable | Format | Description |
+|----------|--------|-------------|
+| `css` | HTML | `<style>` tag with default CSS |
+| `js` | HTML | JavaScript block |
+| `math` | HTML | KaTeX/MathJax script tags |
+| `bib_preamble` | LaTeX | Bibliography preamble commands |
+| `bib_end` | LaTeX | Bibliography end commands |
+
+## Custom fields
+
+Any non-standard front matter field is available as a template variable. A field `custom_footer = "Confidential"` becomes `{{custom_footer}}`.
+
+## Localization labels
+
+| Variable | Default |
+|----------|---------|
+| `label_abstract` | "Abstract" |
+| `label_keywords` | "Keywords" |
+| `label_appendix` | "Appendix" |
+| `label_citation` | "Citation" |
+| `label_reuse` | "Reuse" |
+| `label_funding` | "Funding" |
+| `label_copyright` | "Copyright" |
+| `label_listing` | "Listing" |
+| `label_proof` | "Proof" |
+| `label_contents` | "Contents" |
+
+## Literal braces
+
+Use `{{_lb}}` and `{{_rb}}` to insert literal `{` and `}` in templates.
+
+
+# Document body variables
+
+Available when writing Jinja expressions in `.qmd` files:
+
+| Variable | Description |
+|----------|-------------|
+| `meta.title`, `meta.author`, `meta.date`, ... | Front matter fields |
+| `var.key`, `var.key.subkey` | Custom front matter fields (with nesting) |
+| `env.HOME`, `env.USER`, ... | System environment variables |
+| `writer` | Current output format (`html`, `latex`, `typst`, `markdown`) |
+| `target` | Target name (defaults to writer) |
+
+
+# Website template variables
+
+Website templates (in `_calepin/partials/website/`) receive two context objects.
+
+## collection
+
+| Variable | Description |
+|----------|-------------|
+| `collection.title` | Site title |
+| `collection.subtitle` | Site subtitle |
+| `collection.url` | Site URL |
+| `collection.favicon` | Favicon path |
+| `collection.pages` | Navigation tree (with active page marked) |
+| `collection.navbar` | Navbar configuration (left, middle, right items) |
+| `collection.dark_mode` | Whether dark mode is enabled |
+| `collection.math` | Math library script tags |
+
+## document
+
+| Variable | Description |
+|----------|-------------|
+| `document.title` | Page title |
+| `document.subtitle` | Page subtitle |
+| `document.date` | Page date |
+| `document.body` | Rendered HTML content |
+| `document.toc` | Table of contents HTML |
+| `document.url` | Page URL path |
+| `document.source_url` | Path to `.qmd` source |
+| `document.listing` | Listing items (for listing pages) |
+| `document.breadcrumbs` | Breadcrumb trail |
+| `document.prev` | Previous page (`text`, `href`) |
+| `document.next` | Next page (`text`, `href`) |
+
+## var
+
+Variables from the `[var]` section of `_calepin/config.toml`:
+
+```toml
+[var]
+sidebar_collapse_level = 0
+```
+
+## Website layout templates
+
+| Template | Purpose |
+|----------|---------|
+| `base.html` | Root layout: `<head>`, scripts, structure |
+| `page.html` | Document page (extends `base.html`) |
+| `listing.html` | Listing page (extends `base.html`) |
+| `navbar.html` | Top navigation bar |
+| `navbar_left.html` | Logo area |
+| `navbar_middle.html` | Navigation links |
+| `navbar_right.html` | Widgets (search, dark mode, source viewer) |
+| `sidebar.html` | Left sidebar with document tree |
+| `toc.html` | Right sidebar with table of contents |
+| `footer.html` | Page footer |
+| `breadcrumbs.html` | Breadcrumb trail |
+| `page_nav.html` | Previous/next links |
+| `page_header.html` | Title, date, author block |
+| `split_view.html` | Source viewer panel |
+
+The base template provides blocks: `head_extra`, `content`, `page_nav`.
+
+
+# Listings
+
+A document can display a listing of other documents:
+
+```toml
+---
+title = "Blog"
+
+[listing]
+contents = "posts/*.qmd"
+type = "default"
+sort = "date desc"
+---
+```
+
+| Option | Description |
+|--------|-------------|
+| `contents` | Glob pattern for documents to list |
+| `type` | Layout: `default` (cards), `table`, or `grid` |
+| `sort` | Sort order: `"date desc"`, `"title asc"`, etc. |
+
+
+# Built-in element templates
+
+| Template | Used by |
+|----------|---------|
+| `div` | Generic fenced divs |
+| `span` | Generic bracketed spans |
+| `emphasis` | Emphasized text |
+| `superscript` | Superscript text |
+| `code_source` | Code chunks (source) |
+| `code_output` | Code chunks (output) |
+| `code_diagnostic` | Warnings, messages, errors |
+| `code_listing` | Code listing wrapper |
+| `figure` | Figures and images |
+| `figure_div` | Figure div wrapper |
+| `table_div` | Table div wrapper |
+| `callout` | All callout types |
+| `theorem_italic` | theorem, lemma, corollary, proposition, conjecture |
+| `theorem_normal` | definition, example, exercise, solution, remark, algorithm |
+| `proof` | Proof environments |
+| `landscape` | Landscape-oriented sections |
+| `layout` | Grid layout container |
+| `layout_row` | Grid layout row |
+| `layout_cell` | Grid layout cell |
+| `tabset` | Tab navigation |
+| `title` | Document title |
+| `subtitle` | Document subtitle |
+| `authors` | Author block |
+| `author_item` | Individual author |
+| `affiliation_item` | Individual affiliation |
+| `date` | Document date |
+| `abstract` | Abstract text |
+| `keywords` | Keywords list |
+| `bibliography` | Bibliography section |
+| `citation` | How-to-cite block |
+| `appendix` | Appendix wrapper |
+| `copyright` | Copyright notice |
+| `license` | License block |
+| `funding` | Funding block |
+| `funding_item` | Individual funding source |
+| `corresponding` | Corresponding author |
+| `preamble` | Format-specific preamble |
+| `toc` | Table of contents |
+| `footnotes` | Footnote section (HTML) |
+| `math` | Math library includes (HTML) |
+| `pagebreak` | Page break |
+| `video` | Video embed |
+| `placeholder` | Placeholder image |
+| `url` | URL formatting |
+| `equation_label` | Equation label |
+| `escaped_dollar` | Literal dollar sign |

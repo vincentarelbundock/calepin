@@ -1,0 +1,81 @@
+---
+title = "Paths"
+---
+
+Paths resolve from two locations:
+
+1. The project root, for configuration and content.
+2. The document directory, for code execution.
+
+# Project root
+
+The project root is:
+
+- Single document: the directory containing the `.qmd` file.
+- Collection: the directory containing `_calepin/config.toml`.
+
+The following resolve from the project root:
+
+- Front matter fields: `bibliography`, `csl`.
+- `{% include %}` directives.
+- Image paths in Markdown.
+- Template overrides in `_calepin/partials/`.
+
+In a collection, every page shares the same root, so a single path like `bibliography = "assets/library.bib"` works everywhere regardless of nesting.
+
+# Document directory
+
+The document directory is the parent directory of the `.qmd` file. The following resolve from there:
+
+- Code chunk working directory (R, Python, shell).
+- Generated figures: `{stem}_calepin/files/`.
+- Execution cache: `{stem}_calepin/cache/`.
+
+If `posts/analysis.qmd` calls `read.csv("data.csv")`, it finds `data.csv` next to the source file.
+
+# Output
+
+- Single document: output goes alongside the input, or where `-o` specifies.
+- Website: output goes to `_calepin_output/` by default (configurable via the `output` field in `config.toml`).
+
+# URL resolution {#url-resolution}
+
+Internal URLs in site templates are resolved through the `link()` function based on the `url` field in `config.toml` and the URL mode.
+
+## Site URL
+
+Set `url` in `_calepin/config.toml` to declare where your site is deployed:
+
+```toml
+url = "https://example.com/docs/"
+```
+
+*Calepin* extracts the path component (`/docs/`) and prepends it to all internal URLs. If your site is deployed at the root of a domain, set `url = "https://example.com"` or omit it entirely (the default base path is `/`).
+
+## URL modes
+
+*Calepin* supports two URL modes:
+
+- **Server-relative** (default): all internal links use absolute paths from the site root, e.g. `/docs/assets/calepin.css`. Works on any HTTP server.
+- **Relative** (`--portable`): all internal links use page-relative paths, e.g. `../../assets/calepin.css`. Works when opening HTML files directly from disk.
+
+To build a portable site:
+
+```bash
+calepin render _calepin/config.toml --portable
+```
+
+Preview mode (`calepin preview`) always uses server-relative URLs.
+
+## `link()` in templates
+
+In site templates, use the `link()` function instead of hardcoding paths:
+
+```html
+<link rel="stylesheet" href="{{ link('assets/calepin.css') }}">
+<a href="{{ link('index.html') }}">Home</a>
+```
+
+`link()` automatically resolves paths based on the active URL mode and the current page's nesting depth. External URLs (`https://...`), anchor links (`#...`), and data URIs pass through unchanged.
+
+Context variables like `{{ document.url }}`, `{{ document.prev.href }}`, and `{{ item.url }}` are pre-resolved -- they already include the correct base path and work in both URL modes without wrapping in `link()`.
