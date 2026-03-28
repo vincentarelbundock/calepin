@@ -23,7 +23,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            calepin/target
+            target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
@@ -31,7 +31,7 @@ jobs:
         run: cargo build --release --manifest-path calepin/Cargo.toml
 
       - name: Install calepin
-        run: cp calepin/target/release/calepin /usr/local/bin/
+        run: cp target/release/calepin /usr/local/bin/
 
       - name: Install R
         uses: r-lib/actions/setup-r@v2
