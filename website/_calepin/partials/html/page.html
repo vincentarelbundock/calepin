@@ -120,6 +120,23 @@ document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {
   headings.forEach(function(h) { observer.observe(h.el); });
 })();
 
+// Code copy buttons
+document.querySelectorAll('.code-copy-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    navigator.clipboard.writeText(code.textContent).then(function() {
+      var icon = btn.querySelector('.code-copy-icon');
+      btn.classList.add('copied');
+      icon.classList.add('checked');
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        icon.classList.remove('checked');
+      }, 1500);
+    });
+  });
+});
+
 // Footnote hover previews
 document.querySelectorAll('.footnote-ref a').forEach(function(a) {
   var id = a.getAttribute('href');

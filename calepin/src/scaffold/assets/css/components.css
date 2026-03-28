@@ -20,6 +20,20 @@ pre:has(> code.warning) { border-left: 4px solid var(--c-warning); }
 pre:has(> code.error)   { border-left: 4px solid var(--c-error); }
 pre:has(> code.message) { border-left: 4px solid var(--c-note); }
 
+/* --- Code copy button --- */
+pre:has(> code.code) { position: relative; }
+.code-copy-btn {
+  position: absolute; top: 0.4rem; right: 0.4rem; z-index: 1;
+  background: transparent; border: none; padding: 0.2rem; cursor: pointer;
+  color: var(--c-text-muted); opacity: 0; transition: opacity 0.15s;
+  line-height: 0;
+}
+pre:hover > .code-copy-btn { opacity: 0.6; }
+.code-copy-btn:hover { opacity: 1; color: var(--c-text); }
+.code-copy-btn.copied { opacity: 1; color: var(--c-tip, #28a745); }
+.code-copy-icon { -webkit-mask-image: url(/assets/fontawesome/regular/copy.svg); mask-image: url(/assets/fontawesome/regular/copy.svg); width: 1em; height: 1em; }
+.code-copy-icon.checked { -webkit-mask-image: url(/assets/fontawesome/regular/circle-check.svg); mask-image: url(/assets/fontawesome/regular/circle-check.svg); }
+
 .code-with-filename { margin: 1rem 0; border: 1px solid var(--c-border); border-radius: 4px; overflow: hidden; }
 .code-with-filename .code-filename { background: var(--c-bg-secondary); padding: 0.25rem 0.75rem; font-size: 0.85rem; border-bottom: 1px solid var(--c-border); }
 .code-with-filename pre { margin: 0; border: none; border-radius: 0; border-left: 4px solid var(--c-accent); }

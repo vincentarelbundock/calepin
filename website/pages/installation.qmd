@@ -2,18 +2,19 @@
 title = "Installation"
 ---
 
-# Install calepin 0.0.1-alpha.7
+# Install
 
-## Install prebuilt binaries via shell script
+## Mac & Linux via shell script
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/download/v0.0.1-alpha.7/calepin-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh
 ```
 
-## Install prebuilt binaries via powershell script
+## Windows with via powershell script
 
 ```sh
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/download/v0.0.1-alpha.7/calepin-installer.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/download/latest/calepin-installer.ps1 | iex"
 ```
 
 # External tools

@@ -1,0 +1,17 @@
+<script>
+document.querySelectorAll('.code-copy-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    navigator.clipboard.writeText(code.textContent).then(function() {
+      var icon = btn.querySelector('.code-copy-icon');
+      btn.classList.add('copied');
+      icon.classList.add('checked');
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        icon.classList.remove('checked');
+      }, 1500);
+    });
+  });
+});
+</script>

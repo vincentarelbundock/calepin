@@ -8,7 +8,6 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
     // Directory: check for project config inside, otherwise serve statically
     if args.input.is_dir() {
         if let Some(config) = crate::cli::find_project_config(&args.input) {
-            eprintln!("  \x1b[36mconfig:\x1b[0m {}", config.display());
             let args = PreviewArgs { input: config, ..args };
             return handle_preview(args);
         }
