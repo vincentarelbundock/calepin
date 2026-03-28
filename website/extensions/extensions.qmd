@@ -24,10 +24,7 @@ Built-in targets (`html`, `latex`, `typst`, `markdown`, `slides`, `website`, `bo
 # Key concepts
 
 - **Extension** -- A directory with an `extension.toml` manifest. The unit of distribution.
-- **Target** -- An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the `[target]` section of the manifest. Every target has a `type`: either `notebook` or `collection`.
-- **Type** -- One of two fundamental target types:
-  - `notebook` -- A single document rendered to one output file (`html`, `latex`, `typst`, `markdown`, `slides`).
-  - `collection` -- A multi-document project rendered to a directory of output files (`website`, `book`).
+- **Target** -- An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the `[target]` section of the manifest.
 - **Writer** -- One of the four rendering engines: `html`, `latex`, `typst`, `markdown`. Every target has exactly one writer. Writers are not user-extensible.
 - **Partial** -- A Jinja template that renders a specific element or page component (e.g., `figure.html`, `page.tex`). Resolved by name through a layered chain. Adding a partial is enough to create a custom div style.
 - **Module** -- A declared transform in the manifest. Only needed when partials alone are insufficient: structural transforms, match rules beyond class names, auto-numbering, or external code.
@@ -80,7 +77,6 @@ The `inherits` field names exactly one parent: a built-in target or another inst
 
 ```toml
 [target]
-type = "notebook"                   # "notebook" or "collection"; inherited, cannot be changed
 writer = "html"                     # inherited if omitted
 extension = "html"                  # output file extension; inherited if omitted
 template = "page"                   # page template name; inherited if omitted
