@@ -55,6 +55,21 @@ static HIGHLIGHT_CACHE: LazyLock<Mutex<HashMap<u64, String>>> =
 static LATEX_COLOR_REGISTRY: LazyLock<Mutex<LatexColorRegistry>> =
     LazyLock::new(|| Mutex::new(LatexColorRegistry::new()));
 
+/// Process-global theme cache. Themes are expensive to parse from XML (~40ms
+/// for bundled .tmTheme files). Since all documents in a batch typically use
+/// the same themes, caching them avoids redundant parsing across rayon threads.
+static THEME_CACHE: LazyLock<Mutex<HashMap<String, syntect::highlighting::Theme>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Process-global CSS cache. The CSS output is a pure function of the highlight
+/// config (theme names), so we cache it to avoid regenerating identical CSS for
+/// every file in a batch.
+static CSS_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+// Pre-generated CSS for all built-in themes (generated at build time).
+include!(concat!(env!("OUT_DIR"), "/theme_css.rs"));
+
 fn highlight_cache_key(code: &str, lang: &str, ext: &str) -> u64 {
     use xxhash_rust::xxh3::xxh3_64;
     let mut buf = Vec::with_capacity(code.len() + lang.len() + ext.len() + 2);
@@ -114,6 +129,23 @@ pub struct Highlighter {
 ///   2. Built-in: discovered from embedded project tree
 ///   3. Filesystem path (for absolute/relative .tmTheme file paths)
 fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {
+    // Check global cache first
+    if let Ok(cache) = THEME_CACHE.lock() {
+        if let Some(theme) = cache.get(name) {
+            return Some(theme.clone());
+        }
+    }
+
+    let theme = load_bundled_theme_uncached(name)?;
+
+    if let Ok(mut cache) = THEME_CACHE.lock() {
+        cache.insert(name.to_string(), theme.clone());
+    }
+
+    Some(theme)
+}
+
+fn load_bundled_theme_uncached(name: &str) -> Option<syntect::highlighting::Theme> {
     use std::io::Cursor;
 
     let filename = format!("{}.tmTheme", name);
@@ -323,19 +355,39 @@ impl Highlighter {
     /// For light/dark, wraps each theme's CSS in both `@media (prefers-color-scheme)`
     /// and `[data-theme]` selectors.
     pub fn syntax_css(&self) -> String {
+        let cache_key = match &self.config {
+            HighlightConfig::None => return String::new(),
+            HighlightConfig::Single(k) => k.clone(),
+            HighlightConfig::LightDark { light, dark } => format!("{}\0{}", light, dark),
+        };
+
+        if let Ok(cache) = CSS_CACHE.lock() {
+            if let Some(cached) = cache.get(&cache_key) {
+                return cached.clone();
+            }
+        }
+
+        let css = self.generate_syntax_css();
+
+        if let Ok(mut cache) = CSS_CACHE.lock() {
+            cache.insert(cache_key, css.clone());
+        }
+
+        css
+    }
+
+    fn generate_syntax_css(&self) -> String {
         match &self.config {
             HighlightConfig::None => String::new(),
             HighlightConfig::Single(key) => {
-                let mut css = css_for_theme_with_class_style(self.theme(key), ClassStyle::Spaced)
-                    .unwrap_or_default();
-                self.append_pre_overrides(&mut css, key);
-                css
+                let (css, bg, fg) = self.theme_css_and_colors(key);
+                let mut out = css;
+                Self::append_pre_overrides_static(&mut out, &bg, &fg);
+                out
             }
             HighlightConfig::LightDark { light, dark } => {
-                let light_css = css_for_theme_with_class_style(self.theme(light), ClassStyle::Spaced)
-                    .unwrap_or_default();
-                let dark_css = css_for_theme_with_class_style(self.theme(dark), ClassStyle::Spaced)
-                    .unwrap_or_default();
+                let (light_css, light_bg, light_fg) = self.theme_css_and_colors(light);
+                let (dark_css, dark_bg, dark_fg) = self.theme_css_and_colors(dark);
 
                 let mut css = String::new();
 
@@ -346,10 +398,10 @@ impl Highlighter {
 
                 for (light_wrap, dark_wrap) in &scopes {
                     write!(css, "{} {{\n{}", light_wrap, light_css).unwrap();
-                    self.append_pre_overrides(&mut css, light);
+                    Self::append_pre_overrides_static(&mut css, &light_bg, &light_fg);
                     css.push_str("\n}\n");
                     write!(css, "{} {{\n{}", dark_wrap, dark_css).unwrap();
-                    self.append_pre_overrides(&mut css, dark);
+                    Self::append_pre_overrides_static(&mut css, &dark_bg, &dark_fg);
                     css.push_str("\n}\n");
                 }
 
@@ -358,17 +410,30 @@ impl Highlighter {
         }
     }
 
-    /// Append pre background/foreground overrides for a theme.
-    fn append_pre_overrides(&self, css: &mut String, theme_key: &str) {
-        let theme = self.theme(theme_key);
+    /// Get CSS and bg/fg colors for a theme, using build-time pre-generated data
+    /// for built-in themes, falling back to runtime generation for custom themes.
+    fn theme_css_and_colors(&self, key: &str) -> (String, String, String) {
+        if let Some((css, bg, fg)) = builtin_theme_css(key) {
+            return (css.to_string(), bg.to_string(), fg.to_string());
+        }
+        // Custom theme: generate at runtime
+        let theme = self.theme(key);
+        let css = css_for_theme_with_class_style(theme, ClassStyle::Spaced)
+            .unwrap_or_default();
         let bg = theme.settings.background.unwrap_or(syntect::highlighting::Color::WHITE);
         let fg = theme.settings.foreground.unwrap_or(syntect::highlighting::Color::BLACK);
-        let bg_hex = format!("#{:02x}{:02x}{:02x}", bg.r, bg.g, bg.b);
-        let fg_hex = format!("#{:02x}{:02x}{:02x}", fg.r, fg.g, fg.b);
+        (
+            css,
+            format!("#{:02x}{:02x}{:02x}", bg.r, bg.g, bg.b),
+            format!("#{:02x}{:02x}{:02x}", fg.r, fg.g, fg.b),
+        )
+    }
+
+    fn append_pre_overrides_static(css: &mut String, bg: &str, fg: &str) {
         write!(
             css,
             "\npre:has(> code.code), pre:has(> code.output), pre:has(> code.warning), pre:has(> code.error), pre:has(> code.message) {{ background-color: {}; color: {}; }}",
-            bg_hex, fg_hex
+            bg, fg
         ).unwrap();
     }
 

@@ -14,17 +14,6 @@ height = "36px"
 text = "Documentation"
 href = "pages/installation.qmd"
 
-[[navbar.middle]]
-text = "Examples"
-[[navbar.middle.children]]
-text = "arelbundock.com"
-href = "https://arelbundock.com"
-[[navbar.middle.children]]
-text = "WDI"
-href = "https://vincentarelbundock.github.io/WDI"
-[[navbar.middle.children]]
-text = "Kitchen Sink"
-href = "pages/kitchen_sink.qmd"
 
 [[navbar.right]]
 icon = "assets/fontawesome/brands/github.svg"

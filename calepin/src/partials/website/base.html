@@ -15,7 +15,7 @@
   <a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
   {% include "navbar.html" %}
 
-  <div class="site-container{% if var.sidebar is defined and not var.sidebar %} no-sidebar{% endif %}">
+  <div class="site-container{% if var.sidebar is defined and not var.sidebar %} no-sidebar{% endif %}{% if var.toc is defined and not var.toc %} no-toc{% endif %}">
     {% if var.sidebar is not defined or var.sidebar %}{% include "sidebar.html" %}{% endif %}
 
     <main id="main-content" class="content-main">
@@ -26,7 +26,7 @@
       {% block page_nav %}{% endblock %}
     </main>
 
-    {% include "toc.html" %}
+    {% if var.toc is not defined or var.toc %}{% include "toc.html" %}{% endif %}
   </div>
 
   {% include "footer.html" %}

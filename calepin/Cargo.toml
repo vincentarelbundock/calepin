@@ -77,6 +77,10 @@ usvg = "0.45"
 hayro-svg = "0.3"
 
 indexmap = "2.13.0"
+mimalloc = "0.1"
+
+[build-dependencies]
+syntect = "5"
 
 [[bench]]
 name = "template_bench"
