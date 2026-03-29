@@ -233,10 +233,13 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "preview_port" => meta.preview_port = v.as_integer().map(|n| n as u16),
             "highlight" => meta.highlight = deserialize_section(v),
             "toc" => {
-                // "toc" can be a bool (in front matter) or a table (in config)
+                // "toc" can be a bool (in front matter) or a table (in config).
+                // When a bare bool, also propagate to var.toc so templates
+                // (e.g. website base.html) can use {{ var.toc }} consistently.
                 if let Some(b) = v.as_bool() {
                     let toc = meta.toc.get_or_insert_with(TocConfig::default);
                     toc.enabled = Some(b);
+                    meta.var.entry("toc".to_string()).or_insert(v.clone());
                 } else {
                     meta.toc = deserialize_section(v);
                 }

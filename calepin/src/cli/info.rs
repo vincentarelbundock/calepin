@@ -63,8 +63,8 @@ pub fn handle_extra(action: ExtraAction) -> Result<()> {
             show_partial_resolution(&target);
             Ok(())
         }
-        ExtraAction::Skill { project, claude, codex, opencode, pi } => {
-            crate::cli::skill::handle_skill(project, claude, codex, opencode, pi)
+        ExtraAction::Skill { project, claude, codex, opencode, pi, yes } => {
+            crate::cli::skill::handle_skill(project, claude, codex, opencode, pi, yes)
         }
     }
 }

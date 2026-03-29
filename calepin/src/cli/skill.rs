@@ -45,56 +45,90 @@ fn data_dir(home: &Path) -> PathBuf {
     { home.join(".local/share") }
 }
 
-pub fn handle_skill(project: bool, claude: bool, codex: bool, opencode: bool, pi: bool) -> Result<()> {
+pub fn handle_skill(project: bool, claude: bool, codex: bool, opencode: bool, pi: bool, yes: bool) -> Result<()> {
+    use std::io::Write;
+
     let home = home_dir()?;
-
-    // 1. Write skill files to canonical location
     let canonical = data_dir(&home).join("calepin").join("skill");
-    write_skill_files(&canonical)?;
-    eprintln!("Wrote skill files to {}", canonical.display());
 
-    // 2. Determine which tools to install for (none selected = all)
+    // Determine which tools to install for (none selected = all)
     let flags = [claude, codex, opencode, pi];
     let all = !flags.iter().any(|&f| f);
 
-    // 3. Link or copy into each tool's skill directory
+    // Build the list of target paths
+    let mut targets: Vec<(&Tool, PathBuf)> = Vec::new();
     for (tool, &selected) in TOOLS.iter().zip(flags.iter()) {
         if !all && !selected {
             continue;
         }
-
         let base = if project {
             std::env::current_dir().context("cannot determine current directory")?
         } else {
             home.clone()
         };
-
         let skill_dir = if project {
             base.join(tool.project_dir)
         } else {
             base.join(tool.personal_dir)
         };
+        targets.push((tool, skill_dir.join("calepin")));
+    }
 
-        let target_path = skill_dir.join("calepin");
+    // Describe what we will do
+    let mode = if project { "project" } else { "personal" };
+    eprintln!("Install the calepin agent skill ({} mode).\n", mode);
+    eprintln!("This will:");
+    eprintln!("  1. Write skill files (SKILL.md + reference) to:");
+    eprintln!("     {}\n", canonical.display());
 
+    #[cfg(unix)]
+    let verb = "Symlink";
+    #[cfg(not(unix))]
+    let verb = "Copy";
+
+    eprintln!("  2. {} into each tool's skill directory:", verb);
+    for (tool, path) in &targets {
+        let exists = path.is_symlink() || path.exists();
+        let note = if exists { " (overwrite)" } else { "" };
+        eprintln!("     {} -> {}{}", tool.name, path.display(), note);
+    }
+    eprintln!();
+
+    // Ask for confirmation
+    if !yes {
+        eprint!("Proceed? [y/N] ");
+        std::io::stderr().flush()?;
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        if !input.trim().eq_ignore_ascii_case("y") {
+            eprintln!("Cancelled.");
+            return Ok(());
+        }
+    }
+
+    // Write skill files to canonical location
+    write_skill_files(&canonical)?;
+
+    // Link or copy into each tool's skill directory
+    for (_tool, target_path) in &targets {
         // Remove existing entry
         if target_path.is_symlink() || target_path.exists() {
             if target_path.is_symlink() || target_path.is_file() {
-                std::fs::remove_file(&target_path).ok();
+                std::fs::remove_file(target_path).ok();
             } else {
-                std::fs::remove_dir_all(&target_path).ok();
+                std::fs::remove_dir_all(target_path).ok();
             }
         }
 
-        std::fs::create_dir_all(&skill_dir)
-            .with_context(|| format!("cannot create {}", skill_dir.display()))?;
+        if let Some(parent) = target_path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("cannot create {}", parent.display()))?;
+        }
 
-        link_or_copy(&canonical, &target_path)?;
-
-        let mode = if project { "project" } else { "personal" };
-        eprintln!("  {} {} -> {}", tool.name, mode, target_path.display());
+        link_or_copy(&canonical, target_path)?;
     }
 
+    eprintln!("Done.");
     Ok(())
 }
 

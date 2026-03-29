@@ -344,6 +344,10 @@ pub enum ExtraAction {
         /// Install for pi
         #[arg(long)]
         pi: bool,
+
+        /// Skip confirmation prompt
+        #[arg(short = 'y', long)]
+        yes: bool,
     },
 }
 

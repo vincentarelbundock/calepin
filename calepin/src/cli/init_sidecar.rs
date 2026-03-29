@@ -173,6 +173,7 @@ pub fn handle_init_sidecar(
     }
 
     // Create sidecar directory
+    let sidecar_existed = sidecar_dir.exists();
     std::fs::create_dir_all(&sidecar_dir)?;
 
     // Write config.toml
@@ -196,8 +197,10 @@ pub fn handle_init_sidecar(
         println!("Applied target assets: {}", target);
     }
 
-    // Back up and rewrite the .qmd only if we moved rendering keys out
-    if has_rendering {
+    // Back up and rewrite the .qmd only on first run (sidecar didn't exist before).
+    // With --force on an existing sidecar, only update config/partials, not the .qmd.
+    let is_fresh = !sidecar_existed;
+    if has_rendering && is_fresh {
         if !no_backup {
             let backup = parent.join(format!("{}.qmd.bak", stem));
             std::fs::copy(path, &backup)?;

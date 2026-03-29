@@ -90,16 +90,15 @@ prose + code + syntax highlighting + citations + cross-refs + footnotes + tables
 ::: {.landing-section}
 ## Built for AI agents
 
-*Calepin* is designed so that LLM agents can read,
-understand, and modify every part of the system
-without special tooling. The file formats are ones
-that language models already know well:
-Markdown, HTML, Jinja, TOML.
+*Calepin* is designed so that LLM agents can read, understand, and modify every part of the system without special tooling. The file formats are ones that language models already know well: Markdown, HTML, Jinja, TOML.
 
-There is no compiled CSS, no JavaScript build step,
-and no framework-specific class syntax to interpret.
-An agent that can read a plain HTML file
-can read a *Calepin* template.
+There is no compiled CSS, no JavaScript build step, and no framework-specific class syntax to interpret. An agent that can read a plain HTML file can read a *Calepin* template.
+
+Run `calepin extra skill` to install the *Calepin* "skill," then tell your agent what you need:
+
+> /calepin  Switch all the colors in my website to a muted pastel palette. Make the top navigation bar twice as wide. Align the footer text to the right. Remove the table of contents from the landing page but not the rest.
+
+:::
 
 ::: {.columns .landing-principles}
 
@@ -122,7 +121,6 @@ Markdown, HTML, CSS, Jinja, TOML. Every format has broad LLM training coverage.
 :::
 
 :::
-:::
 
 
 ::: {.landing-section}
@@ -133,20 +131,15 @@ Markdown, HTML, CSS, Jinja, TOML. Every format has broad LLM training coverage.
 ::: {.column width="50%"}
 **Everything is a template**
 
-Every piece of output is a plain text template.
-Change how figures look, how code blocks render,
-how the navbar is laid out. Edit a simple text file
-to modify callouts, footnotes, the title block,
-or the entire page wrapper.
+Every piece of output is a plain text template. Change how figures look, how code blocks render, how the navbar is laid out. Edit a simple text file to modify callouts, footnotes, the title block, or the entire page wrapper.
 :::
 
 ::: {.column width="50%"}
-**Modules in any language**
+**Extensions in any language**
 
-Write modules in Python, R, shell, or any language.
-*Calepin* sends your script the document content,
-and your script sends back the modified version.
-No need to learn Rust.
+Write extensions in Python, R, bash, or any language. *Calepin* sends your script the document content, and your script sends back the modified version. 
+
+Use what you know!
 :::
 
 :::
@@ -163,10 +156,9 @@ HTML, LaTeX, Typst, and Markdown.
 calepin notebook.qmd -t html
 calepin notebook.qmd -t latex
 calepin notebook.qmd -t typst
-calepin notebook.qmd -t markdown
-calepin notebook.qmd -t slides
-calepin notebook.qmd -t book
-calepin notebook.qmd -t website
+
+calepin init website new_project
+calepin preview new_project
 ```
 :::
 

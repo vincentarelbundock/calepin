@@ -250,9 +250,17 @@ pub fn collect_document_paths(meta: &Metadata, base_dir: &Path) -> Vec<String> {
                 crate::config::IncludeEntry::Item { href: Some(h), .. } => h.as_str(),
                 _ => continue,
             };
-            for path in super::contents::expand_glob(entry_path, base_dir) {
-                if path.ends_with(".qmd") {
+            // Directory includes: scan recursively for .qmd files
+            if base_dir.join(entry_path).is_dir() {
+                let pattern = format!("{}/**/*.qmd", entry_path);
+                for path in super::contents::expand_glob(&pattern, base_dir) {
                     paths.push(path);
+                }
+            } else {
+                for path in super::contents::expand_glob(entry_path, base_dir) {
+                    if path.ends_with(".qmd") {
+                        paths.push(path);
+                    }
                 }
             }
         }
