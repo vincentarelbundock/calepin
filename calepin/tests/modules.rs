@@ -115,6 +115,30 @@ fn renders_all_formats() {
 }
 
 // ---------------------------------------------------------------------------
+// R cat() output capture
+// ---------------------------------------------------------------------------
+
+#[test]
+fn r_cat_output_captured() {
+    let html = render(
+        "---\ntitle = \"Test\"\n---\n\n```{r}\ncat(\"hello from cat\\n\")\ncat(\"second line\\n\")\n1 + 1\n```\n",
+        "html",
+    );
+    assert!(html.contains("hello from cat"), "cat() output should be captured");
+    assert!(html.contains("second line"), "multiple cat() calls should be captured");
+    assert!(html.contains("[1] 2"), "visible return value should still appear");
+}
+
+#[test]
+fn r_cat_only_no_return_value() {
+    let html = render(
+        "---\ntitle = \"Test\"\n---\n\n```{r}\nx <- 5\ncat(\"only cat\\n\")\n```\n",
+        "html",
+    );
+    assert!(html.contains("only cat"), "cat() output should appear even with invisible assignment");
+}
+
+// ---------------------------------------------------------------------------
 // User-provided script modules
 // ---------------------------------------------------------------------------
 

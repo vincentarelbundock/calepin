@@ -150,13 +150,26 @@ calepin.preamble <- function(text) {
             src_buf <- c(src_buf, code_lines[(prev_end + 1L):last_line])
             prev_end <- last_line
 
-            .val <- withVisible(eval(exprs[[i]], envir = globalenv()))
+            # Capture stdout (cat() output) during eval
+            .cat_out <- capture.output(
+              .val <- withVisible(eval(exprs[[i]], envir = globalenv()))
+            )
+
+            has_output <- FALSE
+
+            # Emit cat() output first
+            if (length(.cat_out) > 0) {
+              parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
+              src_buf <- character(0)
+              has_output <- TRUE
+              parts <- c(parts, paste0(sentinel, "_OUTPUT:", paste(.cat_out, collapse = "\n")))
+            }
+
+            # Then emit visible return value
             if (.val$visible) {
               is_asis <- FALSE
               r <- character(0)
               if (.calepin_has_knitr) {
-                # capture.output() evaluates in its own environment, so <<-
-                # would skip the function scope. Use assign() instead.
                 r <- capture.output(assign("kp_val", knitr::knit_print(.val$value), envir = .calepin_env))
                 if (inherits(kp_val, "knit_asis")) {
                   is_asis <- TRUE
@@ -168,9 +181,10 @@ calepin.preamble <- function(text) {
                 r <- capture.output(print(.val$value))
               }
               if (length(r) > 0) {
-                # Flush accumulated source before output
-                parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
-                src_buf <- character(0)
+                if (!has_output) {
+                  parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
+                  src_buf <- character(0)
+                }
                 tag <- if (is_asis) "_ASIS:" else "_OUTPUT:"
                 parts <- c(parts, paste0(sentinel, tag, paste(r, collapse = "\n")))
               }
