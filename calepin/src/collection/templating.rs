@@ -153,6 +153,7 @@ pub(crate) fn apply_collection_partials(
             let mut resolved_navbar = collection_ctx.navbar.clone();
             context::resolve_navbar_urls(&mut resolved_navbar, &base_path, url_mode, page_depth);
             let collection_with_active = minijinja::context! {
+                css => crate::render::template::load_default_css(),
                 _page_depth => page_depth,
                 collection => context::CollectionContext {
                     title: collection_ctx.title.clone(),

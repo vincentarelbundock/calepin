@@ -29,3 +29,7 @@
 @media (max-width: 72rem) {
   .toc-sidebar { display: none; }
 }
+
+/* --- Columns layout --- */
+.columns { display: flex; gap: 1rem; flex-wrap: wrap; }
+.columns > .column { flex: 1; min-width: 0; }
