@@ -136,56 +136,47 @@ pub fn load_default_css() -> String {
         }
     }
 
-    // 2. Extension CSS: walk the active target's inheritance chain,
-    //    loading CSS from each extension's [assets] declaration.
-    let target_name = crate::paths::get_active_target().unwrap_or_default();
-    let ext_css = load_extension_css(&root, &target_name);
-    if !ext_css.is_empty() {
-        css.push_str(&ext_css);
-    }
-
-    // 3. Side-loaded extensions (calepin.extensions = [...])
-    for ext_name in crate::paths::get_sideloaded_extensions() {
-        let ext_css = load_extension_css(&root, &ext_name);
-        if !ext_css.is_empty() {
-            css.push_str(&ext_css);
-        }
-    }
+    // 2. Extension CSS (active target + side-loaded extensions)
+    css.push_str(&load_all_extension_assets(&root, |r, name| load_extension_css(r, name)));
 
     css
+}
+
+/// Load assets from the active target's extension chain plus all side-loaded extensions.
+fn load_all_extension_assets(
+    project_root: &std::path::Path,
+    loader: impl Fn(&std::path::Path, &str) -> String,
+) -> String {
+    let target = crate::paths::get_active_target().unwrap_or_default();
+    let mut result = loader(project_root, &target);
+    for ext_name in crate::paths::get_sideloaded_extensions() {
+        let ext = loader(project_root, &ext_name);
+        if !ext.is_empty() {
+            result.push_str(&ext);
+        }
+    }
+    result
 }
 
 /// Walk the extension inheritance chain and collect asset file contents.
 /// Returns concatenated content in parent-first order (so child overrides parent).
 fn load_extension_assets(project_root: &std::path::Path, target_name: &str, get_files: impl Fn(&crate::config::extension::ExtensionAssets) -> &[String]) -> String {
-    let extensions_dir = project_root.join("_calepin").join("extensions");
-    if !extensions_dir.is_dir() {
-        return String::new();
-    }
+    // Collect (extension_dir, file_list) in child-first order
+    let chain: Vec<(std::path::PathBuf, Vec<String>)> =
+        crate::config::extension::walk_chain(project_root, target_name, |_, ext_dir, manifest| {
+            let files = get_files(&manifest.assets).to_vec();
+            if files.is_empty() { None } else { Some((ext_dir.to_path_buf(), files)) }
+        });
 
-    // Build the chain from target up to root (child-first)
-    let mut chain: Vec<(std::path::PathBuf, Vec<String>)> = Vec::new();
-    let mut current = Some(target_name.to_string());
-    let mut visited = std::collections::HashSet::new();
-    while let Some(name) = current.take() {
-        if !visited.insert(name.clone()) { break; }
-        let ext_dir = extensions_dir.join(&name);
-        if ext_dir.join("extension.toml").exists() {
-            if let Ok(content) = std::fs::read_to_string(ext_dir.join("extension.toml")) {
-                if let Ok(manifest) = toml::from_str::<crate::config::extension::ExtensionManifest>(&content) {
-                    let files = get_files(&manifest.assets).to_vec();
-                    chain.push((ext_dir, files));
-                    current = manifest.inherits;
-                }
-            }
-        }
-    }
-
-    // Reverse to parent-first order
+    // Reverse to parent-first order, load file contents
     let mut result = String::new();
     for (ext_dir, files) in chain.iter().rev() {
+        let assets_base = ext_dir.join("assets");
         for file in files {
-            let path = ext_dir.join("assets").join(file);
+            let path = assets_base.join(file);
+            if let (Ok(canonical), Ok(base)) = (path.canonicalize(), assets_base.canonicalize()) {
+                if !canonical.starts_with(&base) { continue; }
+            }
             if let Ok(content) = std::fs::read_to_string(&path) {
                 result.push('\n');
                 result.push_str(&content);
@@ -450,14 +441,7 @@ pub fn build_template_vars_with_headings(
     vars.insert("css".to_string(), load_default_css());
     vars.insert("js".to_string(), {
         let root = crate::paths::get_project_root();
-        let mut js = load_extension_js(&root, &crate::paths::get_active_target().unwrap_or_default());
-        for ext_name in crate::paths::get_sideloaded_extensions() {
-            let ext_js = load_extension_js(&root, &ext_name);
-            if !ext_js.is_empty() {
-                js.push_str(&ext_js);
-            }
-        }
-        js
+        load_all_extension_assets(&root, |r, name| load_extension_js(r, name))
     });
     vars.insert("bib_preamble".to_string(), String::new());
     vars.insert("bib_end".to_string(), String::new());

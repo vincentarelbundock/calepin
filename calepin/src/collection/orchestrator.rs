@@ -26,7 +26,7 @@ struct OrchestratorNode {
 /// Render the orchestrator template with the document tree.
 /// Fragment files are already written; this produces the master file
 /// that references them via \include{} or equivalent.
-pub(super) fn render_orchestrator(
+pub(crate) fn render_orchestrator(
     meta: &crate::config::Metadata,
     pages: &[DocumentInfo],
     results: &HashMap<String, render::CollectionRenderResult>,

@@ -323,20 +323,21 @@ pub fn render_file(
     let (mut page, result) = render_page(input, &output_path, preliminary_format, overrides, None, &RenderCoreOptions::default(), project_metadata, target)?;
 
     // Run project-level modules from extensions (single-doc mode).
-    // For collections, this happens in build_collection instead.
     if let Some(t) = target {
         let pr = project_root.unwrap_or(Path::new("."));
         let registry = crate::registry::ModuleRegistry::load(&t.modules, pr);
-        let project_transforms = registry.resolve_project_transforms(&t.modules);
-        if !project_transforms.is_empty() {
-            let mut pages = vec![page];
-            for transform in &project_transforms {
-                if let Err(e) = transform.transform(&mut pages, &result.metadata, pipeline.writer()) {
-                    cwarn!("project module error: {}", e);
-                }
-            }
-            page = pages.into_iter().next().unwrap();
+        let ctx = crate::registry::ProjectTransformContext {
+            base_dir: pr.to_path_buf(),
+            output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+            target_name: format.unwrap_or("html").to_string(),
+            portable: false,
+            serve: false,
+        };
+        let mut pages = vec![page];
+        if let Err(e) = registry.run_project_transforms(&mut pages, &result.metadata, pipeline.writer(), &ctx, &t.modules) {
+            cwarn!("project module error: {}", e);
         }
+        page = pages.into_iter().next().unwrap();
     }
 
     Ok((output_path, page.body, pipeline))
@@ -356,29 +357,12 @@ fn inject_extension_vars(metadata: &mut config::Metadata, project_root: &Path) {
 
 /// Inject vars from a specific extension's inheritance chain into metadata.
 fn inject_extension_vars_for(metadata: &mut config::Metadata, project_root: &Path, start_name: &str) {
-    let extensions_dir = project_root.join("_calepin").join("extensions");
-    if !extensions_dir.is_dir() {
-        return;
-    }
-
-    // Walk the chain (child-first), collect vars
-    let mut chain: Vec<(String, std::collections::HashMap<String, toml::Value>)> = Vec::new();
-    let mut current = Some(start_name.to_string());
-    let mut visited = std::collections::HashSet::new();
-    while let Some(name) = current.take() {
-        if !visited.insert(name.clone()) { break; }
-        let ext_dir = extensions_dir.join(&name);
-        if ext_dir.join("extension.toml").exists() {
-            if let Ok(content) = std::fs::read_to_string(ext_dir.join("extension.toml")) {
-                if let Ok(manifest) = toml::from_str::<config::extension::ExtensionManifest>(&content) {
-                    if !manifest.vars.is_empty() {
-                        chain.push((name.clone(), manifest.vars.clone()));
-                    }
-                    current = manifest.inherits;
-                }
-            }
-        }
-    }
+    // Collect (ext_name, vars) in child-first order
+    let chain: Vec<(String, std::collections::HashMap<String, toml::Value>)> =
+        config::extension::walk_chain(project_root, start_name, |name, _, manifest| {
+            if manifest.vars.is_empty() { None }
+            else { Some((name.to_string(), manifest.vars.clone())) }
+        });
 
     // Apply parent-first (so child vars override parent)
     for (ext_name, vars) in chain.iter().rev() {

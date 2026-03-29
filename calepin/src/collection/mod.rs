@@ -2,10 +2,10 @@ mod assets;
 pub(crate) mod contents;
 mod context;
 pub(crate) mod discover;
-mod orchestrator;
+pub(crate) mod orchestrator;
 pub(crate) mod render;
 mod partials;
-mod templating;
+pub(crate) mod templating;
 
 use std::collections::HashMap;
 use std::fs;
@@ -193,54 +193,57 @@ pub fn build_collection(
         }
     }
 
-    // 9. Site-specific wrapping (HTML) or orchestrator assembly
-    if let Some(ref orchestrator_path) = orchestrator {
-        orchestrator::render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
-    } else {
-        let url_mode = if portable { crate::utils::links::UrlMode::Relative } else { crate::utils::links::UrlMode::ServerRelative };
-        templating::apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;
-    }
-
-    // 10. Run user-defined project modules (from extensions).
-    //     Built-in project modules (site_wrap, crossref_global, orchestrator) are
-    //     handled above by the collection pipeline. User-defined project modules
-    //     run here on the final output files.
+    // 9. Run project modules (built-in and user-defined).
     {
         let registry = crate::registry::ModuleRegistry::load(&collection_target.modules, &base_dir);
-        let project_transforms = registry.resolve_project_transforms(&collection_target.modules);
-        if !project_transforms.is_empty() {
-            // Build RenderedPage list from output files
-            let mut rendered_pages: Vec<crate::registry::RenderedPage> = Vec::new();
-            for page in &pages {
-                let output_path_full = output.join(&page.output);
-                let body = fs::read_to_string(&output_path_full).unwrap_or_default();
-                rendered_pages.push(crate::registry::RenderedPage {
-                    source: page.source.clone(),
-                    output: page.output.clone(),
-                    body,
-                    title: page.meta.title.clone(),
-                    date: page.meta.date.clone(),
-                    subtitle: page.meta.subtitle.clone(),
-                    abstract_text: page.meta.r#abstract.clone(),
-                    url: page.url.clone(),
-                    toc: None,
-                    lang: page.lang.clone(),
-                    metadata: crate::config::Metadata::default(),
-                });
-            }
+        let project_ctx = crate::registry::ProjectTransformContext {
+            base_dir: base_dir.clone(),
+            output_dir: output.to_path_buf(),
+            target_name: collection_target_name.clone(),
+            portable,
+            serve,
+        };
 
-            for transform in &project_transforms {
-                // Skip built-in project modules (they're already handled above)
-                transform.transform(&mut rendered_pages, &meta, format)?;
+        // Build RenderedPage list from render results
+        let mut rendered_pages: Vec<crate::registry::RenderedPage> = pages.iter().map(|page| {
+            let source_key = page.source.display().to_string();
+            let result = results.get(&source_key);
+            let body = result.map(|r| r.body.clone()).unwrap_or_else(|| {
+                fs::read_to_string(output.join(&page.output)).unwrap_or_default()
+            });
+            crate::registry::RenderedPage {
+                source: page.source.clone(),
+                output: page.output.clone(),
+                body,
+                title: result.and_then(|r| r.title.clone()).or_else(|| page.meta.title.clone()),
+                date: result.and_then(|r| r.date.clone()).or_else(|| page.meta.date.clone()),
+                subtitle: result.and_then(|r| r.subtitle.clone()).or_else(|| page.meta.subtitle.clone()),
+                abstract_text: result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone()),
+                url: page.url.clone(),
+                toc: result.and_then(|r| r.toc.clone()),
+                lang: page.lang.clone(),
+                metadata: meta.clone(),
             }
+        }).collect();
 
-            // Write back any pages modified by project modules
+        let ran = registry.run_project_transforms(&mut rendered_pages, &meta, format, &project_ctx, &collection_target.modules)?;
+
+        if ran {
+            // Write back pages modified by project modules
             for rp in &rendered_pages {
                 let out_path = output.join(&rp.output);
                 if let Some(parent) = out_path.parent() {
                     fs::create_dir_all(parent)?;
                 }
                 fs::write(&out_path, &rp.body)?;
+            }
+        } else {
+            // No project modules: use the legacy direct calls
+            if let Some(ref orchestrator_path) = orchestrator {
+                orchestrator::render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
+            } else {
+                let url_mode = if portable { crate::utils::links::UrlMode::Relative } else { crate::utils::links::UrlMode::ServerRelative };
+                templating::apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;
             }
         }
     }

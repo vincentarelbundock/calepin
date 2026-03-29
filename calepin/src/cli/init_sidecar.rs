@@ -94,8 +94,8 @@ pub fn handle_init_sidecar(
             if write_partials {
                 crate::paths::write_builtin_partials(&sidecar_dir.join("partials"));
             }
-            if let Some(name) = target_name {
-                apply_target_assets(name, path, &sidecar_dir)?;
+            if target_name.is_some() {
+                apply_target_assets(path, &sidecar_dir)?;
             }
             println!("Created: {}", sidecar_dir.display());
             return Ok(());
@@ -114,8 +114,8 @@ pub fn handle_init_sidecar(
             if write_partials {
                 crate::paths::write_builtin_partials(&sidecar_dir.join("partials"));
             }
-            if let Some(name) = target_name {
-                apply_target_assets(name, path, &sidecar_dir)?;
+            if target_name.is_some() {
+                apply_target_assets(path, &sidecar_dir)?;
             }
             println!("Created: {}", sidecar_dir.display());
             return Ok(());
@@ -191,9 +191,9 @@ pub fn handle_init_sidecar(
         println!("Wrote built-in partials.");
     }
 
-    if let Some(name) = target_name {
-        apply_target_assets(name, path, &sidecar_dir)?;
-        println!("Applied theme: {}", name);
+    if let Some(target) = target_name {
+        apply_target_assets(path, &sidecar_dir)?;
+        println!("Applied target assets: {}", target);
     }
 
     // Back up and rewrite the .qmd only if we moved rendering keys out
@@ -216,7 +216,7 @@ fn is_identity_key(key: &str) -> bool {
     IDENTITY_KEYS.iter().any(|k| k.replace('-', "_") == normalized)
 }
 
-fn apply_target_assets(_name: &str, qmd_path: &Path, sidecar: &Path) -> Result<()> {
+fn apply_target_assets(qmd_path: &Path, sidecar: &Path) -> Result<()> {
     use crate::paths::ProjectKind;
     // Apply assets only (partials come from built-in via layered resolution)
     let kind = ProjectKind::Document {

@@ -116,32 +116,10 @@ pub fn resolve_extension_partial_dirs_for(target_name: &str, project_root: &Path
 }
 
 fn resolve_extension_partial_dirs(target_name: &str, project_root: &Path) -> Vec<PathBuf> {
-    let mut dirs = Vec::new();
-    let extensions_dir = project_root.join("_calepin").join("extensions");
-
-    // Walk the inheritance chain: check if the target has an installed extension,
-    // then follow its `inherits` chain.
-    let mut current = Some(target_name.to_string());
-    let mut visited = std::collections::HashSet::new();
-
-    while let Some(name) = current.take() {
-        if !visited.insert(name.clone()) {
-            break; // cycle detection
-        }
-
-        let ext_partials = extensions_dir.join(&name).join("partials");
-        if ext_partials.is_dir() {
-            dirs.push(ext_partials);
-        }
-
-        // Check if this extension has a parent
-        let ext_toml = extensions_dir.join(&name).join("extension.toml");
-        if ext_toml.exists() {
-            if let Ok(manifest) = config::extension::ExtensionManifest::load(&extensions_dir.join(&name)) {
-                current = manifest.inherits;
-            }
-        }
-    }
+    let dirs = config::extension::walk_chain(project_root, target_name, |_, ext_dir, _| {
+        let partials = ext_dir.join("partials");
+        if partials.is_dir() { Some(partials) } else { None }
+    });
 
     dirs
 }

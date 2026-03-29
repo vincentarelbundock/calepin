@@ -13,7 +13,3 @@ static = ["css/", "fontawesome/"]
 [[modules]]
 name = "site_wrap"
 kind = "project"
-
-[[modules]]
-name = "crossref_global"
-kind = "project"

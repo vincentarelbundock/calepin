@@ -40,7 +40,7 @@ pub(super) fn build_listing_item(
 /// HTML collection path: wrap each document's body through Jinja site templates
 /// (page.html, listing.html with extends/includes).
 /// Overwrites the raw body files written in step 7 with fully templated HTML.
-pub(super) fn apply_collection_partials(
+pub(crate) fn apply_collection_partials(
     meta: &crate::config::Metadata,
     pages: &[DocumentInfo],
     results: &HashMap<String, render::CollectionRenderResult>,

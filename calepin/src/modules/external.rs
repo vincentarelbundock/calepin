@@ -226,6 +226,7 @@ impl TransformProject for ExternalProjectTransform {
         pages: &mut Vec<RenderedPage>,
         _config: &crate::config::Metadata,
         writer: &str,
+        _ctx: &crate::modules::registry::ProjectTransformContext,
     ) -> Result<()> {
         if self.protocol == "text" {
             // Text protocol: concatenate all page bodies, transform, split back
@@ -269,13 +270,13 @@ impl TransformProject for ExternalProjectTransform {
                         if result.action == "rendered" {
                             // Update pages from output
                             for page_output in &result.pages {
-                                if let Some(page) = pages.iter_mut().find(|p| p.output.to_string_lossy() == page_output.output) {
+                                if let Some(page) = pages.iter_mut().find(|p| p.output == PathBuf::from(&page_output.output)) {
                                     page.body = page_output.body.clone();
                                 }
                             }
                             // Add new pages (pagination, etc.)
                             for page_output in &result.pages {
-                                if !pages.iter().any(|p| p.output.to_string_lossy() == page_output.output) {
+                                if !pages.iter().any(|p| p.output == PathBuf::from(&page_output.output)) {
                                     pages.push(RenderedPage {
                                         source: PathBuf::new(),
                                         output: PathBuf::from(&page_output.output),

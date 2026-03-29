@@ -160,19 +160,19 @@ fn render_one_with_context(
     {
         let project_root = ctx.project_root.as_deref().unwrap_or(Path::new("."));
         let registry = crate::registry::ModuleRegistry::load(&ctx.target.modules, project_root);
-        let project_transforms = registry.resolve_project_transforms(&ctx.target.modules);
-        if !project_transforms.is_empty() {
-            let mut pages = vec![crate::registry::RenderedPage {
-                body: final_body,
-                ..page
-            }];
-            for transform in &project_transforms {
-                if let Err(e) = transform.transform(&mut pages, &ctx.project_metadata.clone().unwrap_or_default(), writer) {
-                    cwarn!("project module error: {}", e);
-                }
-            }
-            final_body = pages.into_iter().next().map(|p| p.body).unwrap_or_default();
+        let project_ctx = crate::registry::ProjectTransformContext {
+            base_dir: project_root.to_path_buf(),
+            output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+            target_name: ctx.target_name.clone(),
+            portable: false,
+            serve: false,
+        };
+        let meta = ctx.project_metadata.clone().unwrap_or_default();
+        let mut pages = vec![crate::registry::RenderedPage { body: final_body, ..page }];
+        if let Err(e) = registry.run_project_transforms(&mut pages, &meta, writer, &project_ctx, &ctx.target.modules) {
+            cwarn!("project module error: {}", e);
         }
+        final_body = pages.into_iter().next().map(|p| p.body).unwrap_or_default();
     }
 
     // Write output

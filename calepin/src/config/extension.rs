@@ -3,6 +3,7 @@
 //! An extension bundles a target definition, partials, modules, assets,
 //! and variables into a single distributable directory.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -186,7 +187,9 @@ pub fn discover_extensions(project_root: &Path) -> Vec<(String, PathBuf)> {
             let path = entry.path();
             if path.is_dir() && path.join("extension.toml").exists() {
                 if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    found.push((name.to_string(), path));
+                    if is_valid_extension_name(name) {
+                        found.push((name.to_string(), path));
+                    }
                 }
             }
         }
@@ -204,6 +207,77 @@ pub fn load_extensions(project_root: &Path) -> Result<HashMap<String, (Extension
         extensions.insert(name, (manifest, path));
     }
     Ok(extensions)
+}
+
+// ---------------------------------------------------------------------------
+// Cached manifest loading
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    static MANIFEST_CACHE: RefCell<HashMap<PathBuf, ExtensionManifest>> = RefCell::new(HashMap::new());
+}
+
+/// Load an extension manifest with caching. Parses once per path per thread.
+pub fn load_cached(dir: &Path) -> Option<ExtensionManifest> {
+    let toml_path = dir.join("extension.toml");
+    MANIFEST_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        if let Some(manifest) = cache.get(&toml_path) {
+            return Some(manifest.clone());
+        }
+        let content = std::fs::read_to_string(&toml_path).ok()?;
+        let manifest: ExtensionManifest = toml::from_str(&content).ok()?;
+        cache.insert(toml_path, manifest.clone());
+        Some(manifest)
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Extension chain walking
+// ---------------------------------------------------------------------------
+
+/// Walk the extension inheritance chain from `start_name` to root.
+/// Calls `visitor` for each extension in child-first order.
+/// Returns the collected results.
+pub fn walk_chain<T>(
+    project_root: &Path,
+    start_name: &str,
+    mut visitor: impl FnMut(&str, &Path, &ExtensionManifest) -> Option<T>,
+) -> Vec<T> {
+    let extensions_dir = project_root.join("_calepin").join("extensions");
+    if !extensions_dir.is_dir() {
+        return Vec::new();
+    }
+    let mut results = Vec::new();
+    let mut current = Some(start_name.to_string());
+    let mut visited = std::collections::HashSet::new();
+    while let Some(name) = current.take() {
+        if !visited.insert(name.clone()) { break; }
+        let extension_dir = extensions_dir.join(&name);
+        if let Some(manifest) = load_cached(&extension_dir) {
+            if let Some(result) = visitor(&name, &extension_dir, &manifest) {
+                results.push(result);
+            }
+            current = manifest.inherits.clone();
+        }
+    }
+    results
+}
+
+/// Walk the chain and return just the extension names (child-first).
+pub fn chain_names(project_root: &Path, start_name: &str) -> Vec<String> {
+    walk_chain(project_root, start_name, |name, _, _| Some(name.to_string()))
+}
+
+// ---------------------------------------------------------------------------
+// Extension name validation
+// ---------------------------------------------------------------------------
+
+/// Validate that an extension directory name is safe and well-formed.
+fn is_valid_extension_name(name: &str) -> bool {
+    !name.is_empty()
+        && !name.starts_with('.')
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
 // ---------------------------------------------------------------------------
@@ -274,7 +348,6 @@ mod tests {
             .map(|m| m.name.as_str())
             .collect();
         assert!(project_modules.contains(&"site_wrap"));
-        assert!(project_modules.contains(&"crossref_global"));
     }
 
     #[test]

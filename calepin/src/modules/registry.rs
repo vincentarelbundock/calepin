@@ -134,6 +134,55 @@ pub struct RenderedPage {
     pub metadata: crate::config::Metadata,
 }
 
+impl RenderedPage {
+    /// Convert to a DocumentInfo for collection functions that need it.
+    pub fn to_document_info(&self) -> crate::collection::discover::DocumentInfo {
+        crate::collection::discover::DocumentInfo {
+            source: self.source.clone(),
+            output: self.output.clone(),
+            url: self.url.clone(),
+            meta: crate::collection::discover::DocumentMeta {
+                title: self.title.clone(),
+                date: self.date.clone(),
+                subtitle: self.subtitle.clone(),
+                description: None,
+                image: None,
+                r#abstract: self.abstract_text.clone(),
+                listing: None,
+                lang: self.lang.clone(),
+                translations: None,
+            },
+            lang: self.lang.clone(),
+        }
+    }
+
+    /// Convert to a CollectionRenderResult.
+    pub fn to_render_result(&self) -> crate::collection::render::CollectionRenderResult {
+        crate::collection::render::CollectionRenderResult {
+            body: self.body.clone(),
+            toc: self.toc.clone(),
+            title: self.title.clone(),
+            date: self.date.clone(),
+            subtitle: self.subtitle.clone(),
+            abstract_text: self.abstract_text.clone(),
+        }
+    }
+}
+
+/// Runtime context for project-level transforms.
+pub struct ProjectTransformContext {
+    /// Project root directory.
+    pub base_dir: PathBuf,
+    /// Output directory.
+    pub output_dir: PathBuf,
+    /// Active target name (e.g., "website", "book").
+    pub target_name: String,
+    /// Whether to use portable (relative) URLs.
+    pub portable: bool,
+    /// Whether running in serve mode.
+    pub serve: bool,
+}
+
 /// Project-level transform. Operates on all rendered pages at once.
 /// Used for cross-page coordination: navigation, cross-references, site wrapping.
 pub trait TransformProject: Send + Sync {
@@ -142,6 +191,7 @@ pub trait TransformProject: Send + Sync {
         pages: &mut Vec<RenderedPage>,
         config: &crate::config::Metadata,
         writer: &str,
+        ctx: &ProjectTransformContext,
     ) -> anyhow::Result<()>;
 }
 
@@ -324,6 +374,26 @@ impl ModuleRegistry {
             }
         }
         result
+    }
+
+    /// Run all active project-level transforms on the given pages.
+    /// Returns true if any transforms ran.
+    pub fn run_project_transforms(
+        &self,
+        pages: &mut Vec<RenderedPage>,
+        metadata: &crate::config::Metadata,
+        writer: &str,
+        ctx: &ProjectTransformContext,
+        module_names: &[String],
+    ) -> anyhow::Result<bool> {
+        let transforms = self.resolve_project_transforms(module_names);
+        if transforms.is_empty() {
+            return Ok(false);
+        }
+        for transform in &transforms {
+            transform.transform(pages, metadata, writer, ctx)?;
+        }
+        Ok(true)
     }
 
 }
@@ -642,12 +712,10 @@ fn is_extension_module(name: &str, project_root: &Path) -> bool {
     if !extensions_dir.is_dir() { return false; }
     if let Ok(entries) = std::fs::read_dir(&extensions_dir) {
         for entry in entries.flatten() {
-            let manifest_path = entry.path().join("extension.toml");
-            if let Ok(content) = std::fs::read_to_string(&manifest_path) {
-                if let Ok(manifest) = toml::from_str::<crate::config::extension::ExtensionManifest>(&content) {
-                    if manifest.modules.iter().any(|m| m.name == name) {
-                        return true;
-                    }
+            let ext_dir = entry.path();
+            if let Some(manifest) = crate::config::extension::load_cached(&ext_dir) {
+                if manifest.modules.iter().any(|m| m.name == name) {
+                    return true;
                 }
             }
         }
@@ -666,23 +734,12 @@ fn load_extension_modules(modules: &mut Vec<LoadedModule>, project_root: &Path) 
         return;
     }
 
-    // Collect extension names to check: active target chain + side-loaded
-    let mut ext_names = Vec::new();
+    // Collect extension names: active target chain + side-loaded
     let target = crate::paths::get_active_target().unwrap_or_default();
-    let mut current = Some(target);
-    let mut visited = std::collections::HashSet::new();
-    while let Some(name) = current.take() {
-        if !visited.insert(name.clone()) { break; }
-        ext_names.push(name.clone());
-        let ext_dir = extensions_dir.join(&name);
-        if let Ok(content) = std::fs::read_to_string(ext_dir.join("extension.toml")) {
-            if let Ok(manifest) = toml::from_str::<crate::config::extension::ExtensionManifest>(&content) {
-                current = manifest.inherits;
-            }
-        }
-    }
+    let mut ext_names = crate::config::extension::chain_names(&project_root, &target);
+    let mut seen: std::collections::HashSet<String> = ext_names.iter().cloned().collect();
     for name in crate::paths::get_sideloaded_extensions() {
-        if !ext_names.contains(&name) {
+        if seen.insert(name.clone()) {
             ext_names.push(name);
         }
     }
@@ -690,15 +747,16 @@ fn load_extension_modules(modules: &mut Vec<LoadedModule>, project_root: &Path) 
     // Check each extension for modules with `run` fields
     for ext_name in &ext_names {
         let ext_dir = extensions_dir.join(ext_name);
-        let manifest_path = ext_dir.join("extension.toml");
-        if !manifest_path.exists() { continue; }
-        let content = match std::fs::read_to_string(&manifest_path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        let manifest: crate::config::extension::ExtensionManifest = match toml::from_str(&content) {
-            Ok(m) => m,
-            Err(_) => continue,
+        let ext_dir_ref = &ext_dir;
+        let manifest = match crate::config::extension::load_cached(ext_dir_ref) {
+            Some(m) => m,
+            None => {
+                let manifest_path = ext_dir.join("extension.toml");
+                if manifest_path.exists() {
+                    eprintln!("Warning: failed to read or parse {}", manifest_path.display());
+                }
+                continue;
+            }
         };
 
         // Build vars from extension manifest

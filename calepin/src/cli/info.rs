@@ -72,7 +72,13 @@ fn show_partial_resolution(target_name: &str) {
 
     // Determine writer from target
     let empty = std::collections::HashMap::new();
-    let target = crate::config::resolve_target(target_name, &empty).ok();
+    let target = match crate::config::resolve_target(target_name, &empty) {
+        Ok(t) => Some(t),
+        Err(_) => {
+            eprintln!("Note: target '{}' not found, showing writer-level partials", target_name);
+            None
+        }
+    };
     let writer = target.as_ref().map(|t| t.writer.as_str()).unwrap_or(target_name);
     let ext = crate::paths::resolve_extension(writer);
 
