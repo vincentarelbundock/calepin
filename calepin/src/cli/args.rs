@@ -317,6 +317,34 @@ pub enum ExtraAction {
         /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)
         shell: Shell,
     },
+
+    /// Install the calepin agent skill for coding assistants (Claude, Codex, opencode, pi)
+    #[command(after_help = "\
+\x1B[1;4mExamples:\x1B[0m
+  calepin extra skill                    # install for all tools (personal)
+  calepin extra skill --project          # install into current project
+  calepin extra skill --claude --codex   # specific tools only")]
+    Skill {
+        /// Install to current project directory instead of personal home directory
+        #[arg(long)]
+        project: bool,
+
+        /// Install for Claude Code
+        #[arg(long)]
+        claude: bool,
+
+        /// Install for OpenAI Codex CLI
+        #[arg(long)]
+        codex: bool,
+
+        /// Install for opencode
+        #[arg(long)]
+        opencode: bool,
+
+        /// Install for pi
+        #[arg(long)]
+        pi: bool,
+    },
 }
 
 /// Returns true if the input is a collection config file (_calepin/config.toml).

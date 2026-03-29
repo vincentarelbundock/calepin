@@ -42,7 +42,7 @@ _calepin/partials/
   common/       # Format-agnostic partials (.jinja)
 ```
 
-Override rules are simple: if `_calepin/partials/` exists, *Calepin* uses only those files. If it does not exist, *Calepin* uses only its built-in defaults. There is no merging or fallback chain. You either use the defaults, or you take full control.
+Resolution is layered per file: *Calepin* checks sidecar partials, then project partials (`_calepin/partials/`), then extension partials, then built-in defaults. You only need to override the specific files you want to change; everything else falls through to the built-in templates.
 
 
 # Element partials

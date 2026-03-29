@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **calepin** is a Rust CLI that renders `.qmd` (Quarto-compatible) documents to HTML, LaTeX, Typst, and Markdown. It runs R (via a persistent `Rscript` subprocess) and Python (via a persistent `python3` subprocess) to execute code chunks, processes citations with hayagriva, and resolves cross-references.
 
-The tutorial (`website/basics.qmd`) must be valid Quarto syntax so it can be benchmarked against Quarto and litedown. calepin-specific extensions (modules, `.hidden` divs, custom shortcodes) are documented in `website/templates.qmd`, `website/filters.qmd`, `website/shortcodes.qmd`, and `website/plugins.qmd`.
+The tutorial (`website/authoring/basics.qmd`) must be valid Quarto syntax so it can be benchmarked against Quarto and litedown. calepin-specific extensions (modules, custom partials, plugins) are documented in `website/templates/templates.qmd` and `website/extensions/plugins.qmd`.
 
 When referring to the software by name in documentation or notebooks, always write *Calepin* (italic, capital C).
 
@@ -47,7 +47,9 @@ make prof-batch     # Profile 1000 parallel files (gibberish)
 
 Run a single test: `cargo test test_name`
 
-CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--base FORMAT] [--completions SHELL]`
+CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--writer FORMAT] [--no-highlight] [--clean] [--portable]`
+
+Subcommands: `render` (default), `preview`, `init`, `flush`, `man`, `extra`. Shell completions: `calepin extra completions SHELL`.
 
 **Important**: website/ must be rendered with `cd website && ../calepin/target/debug/calepin file.qmd` so that `_calepin/` overrides are found relative to the working directory. `make docs` handles this.
 
@@ -58,7 +60,7 @@ CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--base 
 The pipeline transforms data through three representations:
 
 1. **`.qmd` text** -> **`Block`** (parse stage) -- Raw text, code chunks, fenced divs, raw blocks. Defined in `base/types.rs`.
-2. **`Block`** -> **`Element`** (evaluate stage) -- Code is executed, shortcodes expanded, conditional content filtered. Elements are: `Text`, `CodeSource`, `CodeOutput`, `Figure`, `Div`, `CodeAsis`. Defined in `base/types.rs`.
+2. **`Block`** -> **`Element`** (evaluate stage) -- Code is executed, shortcodes expanded, conditional content filtered. Elements are: `Text`, `CodeSource`, `CodeOutput`, `CodeWarning`, `CodeMessage`, `CodeError`, `Figure`, `CodeAsis`, `Div`. Defined in `types.rs`.
 3. **`Element`** -> **output string** (render stage) -- Each element passes through var builders and partials to produce HTML/LaTeX/Typst/Markdown.
 
 ### Pipeline stages
@@ -73,7 +75,7 @@ parse -> evaluate -> bibliography
   -> write
 ```
 
-1. **Parse** -- TOML front matter is parsed (`config/parse.rs`) into metadata; non-TOML front matter (e.g., YAML) is silently ignored. Recursive block parsing into `Block` enum (`parse/blocks.rs`).
+1. **Parse** -- TOML front matter is parsed (`config/parse.rs`) into metadata. Non-TOML front matter (e.g., YAML) falls back to a simple parser that extracts `title`, `author`, `date`, and `bibliography`. Recursive block parsing into `Block` enum (`parse/blocks.rs`).
 2. **Evaluate** (`engines/mod.rs`) -- Jinja body processing, code execution, blocks become `Element`s.
 3. **Bibliography** (`references/bibliography.rs`) -- Citation keys resolved via hayagriva.
 4. **TransformElement** -- Pre-render element mutations. Modules implementing `TransformElement` receive each element and can mutate it (e.g., `convert_svg_pdf` rewrites SVG figure paths to PDF).
@@ -141,7 +143,8 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 ### `cli/` -- CLI and command handlers
 
 - `args.rs` -- CLI argument parsing (clap) + `cwarn!` macro
-- `render.rs`, `preview.rs`, `info.rs`, `new.rs`, `flush.rs` -- Command handlers
+- `render.rs`, `preview.rs`, `info.rs`, `flush.rs` -- Command handlers
+- `init_sidecar.rs`, `new_notebook.rs`, `new_website.rs`, `new_book.rs`, `new_extension.rs`, `new_gibberish.rs`, `new_partials.rs` -- Init/scaffolding handlers
 
 ### `config/` -- Configuration and project context
 
@@ -268,9 +271,9 @@ Marker types (single-char prefix between delimiters):
 
 ## Configuration
 
-Documents can carry TOML front matter between `---` delimiters. Non-TOML front matter (e.g., YAML) is silently ignored.
+Documents can carry TOML front matter between `---` delimiters. Non-TOML front matter (e.g., YAML) falls back to a simple parser for basic fields (title, author, date, bibliography).
 
-**Merge order** (last wins): built-in defaults < `_calepin/calepin.toml` < `{stem}_calepin/calepin.toml` (sidecar) < TOML front matter < CLI (`-s`)
+**Merge order** (last wins): built-in defaults < `_calepin/config.toml` < `{stem}_calepin/config.toml` (sidecar) < TOML front matter < CLI (`-s`)
 
 **Sidecar directories**: Each document can have a `{stem}_calepin/` directory alongside it, mirroring the `_calepin/` structure (partials, modules, cache, files). For websites, `_calepin/` is the shared sidecar for all pages.
 
@@ -286,7 +289,7 @@ Standard fields (`title`, `author`, `bibliography`, `format`, etc.) are top-leve
 
 ## Chunk Options
 
-Both pipe syntax (`#| key: value`) and header key-value pairs (`{r, echo=FALSE}`) are accepted. Header options are converted internally to pipe-equivalent options; when both are present, pipe comments take precedence. Option names use dashes (`fig-width`), normalized to dots internally. `label` is rejected in pipe comments -- it must be in the header.
+Both pipe syntax (`#| key: value`) and header key-value pairs (`{r, echo=FALSE}`) are accepted. Header options are converted internally to pipe-equivalent options; when both are present, pipe comments take precedence. Option names use dashes (`fig-width`), normalized to underscores internally. `label` is rejected in pipe comments -- it must be in the header.
 
 ## Jinja Body Processing
 
@@ -296,7 +299,8 @@ Context variables:
 - `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. -- document metadata
 - `{{ var.key.subkey }}` -- non-standard front matter fields (with nesting)
 - `{{ env.HOME }}`, `{{ env.USER }}`, etc. -- system environment variables
-- `{{ format }}` -- current output format
+- `{{ writer }}` -- current output format (`html`, `latex`, `typst`, `markdown`)
+- `{{ target }}` -- current target name
 
 File inclusion: `{% include "file.qmd" %}` (pre-parse, runs before block parsing). Escaping: `{% raw %}...{% endraw %}`.
 
@@ -316,7 +320,7 @@ Bracketed spans `[content]{.class key=value}` are processed during rendering. Bu
 - `syntect` -- Syntax highlighting
 - `minijinja` -- Template engine for element/page partials and body processing
 - `clap` + `clap_complete` -- CLI and shell completions
-- `toml` + `serde` -- TOML config parsing (front matter, `_calepin.toml`, sidecar config)
+- `toml` + `serde` -- TOML config parsing (front matter, `_calepin/config.toml`, sidecar config)
 - `usvg` + `svg2pdf` -- SVG-to-PDF conversion for LaTeX targets
 
 ## Extensions

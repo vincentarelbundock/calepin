@@ -52,11 +52,9 @@ Beyond signaling, I just personally prefer working with TOML. It avoids the type
 
 # Customization philosophy
 
-Quarto provides extensive hard-coded settings in the YAML front matter: hundreds of keys that control layout, styling, and behavior. Changing the look of a Quarto document means finding the right YAML key and hoping it does what you want.
+Both Quarto and *Calepin* use partials (templates) to control output. In Quarto, partials are written in Pandoc's template language; in *Calepin*, they are Jinja2 templates, which are more expressive (conditionals, loops, filters, macros, template inheritance). Both systems let you override individual partials to customize the look of your documents.
 
-*Calepin* takes a different approach: every piece of output is controlled by a plain-text Jinja template (a "partial"). To change how something looks, you edit the template directly. There are no hidden settings or special YAML keys. The templates are simple HTML, LaTeX, or Typst files with `{{ variable }}` placeholders.
-
-Quarto also uses partials, but they are written in Pandoc's custom template language, which is far less expressive than Jinja2. The Quarto developers are also less committed to exposing users directly to those templates. This is a difference in emphasis, but it matters in the workflow: in *Calepin*, templates are the primary customization mechanism, not a hidden implementation detail.
+The difference is one of emphasis. Quarto offers hundreds of YAML front matter keys that control layout, styling, and behavior, and most users rely on those keys rather than editing partials directly. *Calepin* offers fewer configuration keys and instead encourages you to edit the templates themselves. The templates are simple HTML, LaTeX, or Typst files with `{{ variable }}` placeholders.
 
 This design is especially well-suited to working with LLMs. Since templates are just plain text in well-known formats, you can describe what you want and let your LLM agent customize your website, templates, and styles directly:
 

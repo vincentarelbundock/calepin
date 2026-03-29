@@ -409,14 +409,14 @@ The document title is: {{ meta.title }}.
 
 The sample size is: {{ var.sample_size }}.
 
-The current format is: {{ engine }}.
+The current format is: {{ writer }}.
 
 ## Conditionals
 
-{% if engine == "html" %}
+{% if writer == "html" %}
 Rendering to HTML.
 {% else %}
-Rendering to {{ engine }}.
+Rendering to {{ writer }}.
 {% endif %}
 
 ## Loops

@@ -20,7 +20,7 @@ All built-in partials are in the *Calepin* repository under [`calepin/src/partia
 
 # Override scheme
 
-If `_calepin/partials/` exists, *Calepin* uses only those files. Built-in templates are ignored entirely. If the directory does not exist, only built-in templates are used.
+Resolution is layered per file: sidecar partials, then project partials (`_calepin/partials/`), then extension partials, then built-in defaults. Override only the files you need to change.
 
 Within the partials directory, resolution tries target-specific first, then engine-specific, then common:
 

@@ -22,7 +22,7 @@ Third, extract the documentation from the package:
 calepin man r countrycode -o countrycode_docs/man
 ```
 
-Fourth, add the documentation to the website structure, by editing `_calepin/config.yml`:
+Fourth, add the documentation to the website structure, by editing `_calepin/config.toml`:
 
 ```toml
 [[contents]]

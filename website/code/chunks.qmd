@@ -131,7 +131,7 @@ highlight-style: solarized-dark
 The default is `inspired-github`. To list all built-in themes:
 
 ```
-calepin highlight list
+calepin extra highlight
 ```
 
 You can also point to a custom `.tmTheme` file:

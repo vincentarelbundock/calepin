@@ -2,7 +2,7 @@
 title = "R"
 ---
 
-*Calepin* embeds R via [extendr](https://extendr.github.io/extendr/extendr_api/), running code directly in process. Variables, loaded packages, and state persist across chunks.
+*Calepin* runs R via a persistent `Rscript` subprocess. Variables, loaded packages, and state persist across chunks.
 
 # Basic usage
 

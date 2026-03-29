@@ -67,7 +67,7 @@ Use `{% include %}` to insert the contents of one file inside another. This is a
 
 ## Including .qmd files
 
-To include a `.qmd` file, specify its path relative to the project root:
+To include a `.qmd` file, specify its path relative to the project root (the directory containing `_calepin/`):
 
 ```
 {% include "common/disclaimer.qmd" %}
@@ -94,11 +94,11 @@ This resolves to the appropriate format-specific partial (e.g., `_calepin/partia
 
 # Jinja in code chunks
 
-Jinja expressions inside code blocks are not evaluated by default. To opt in, use the `#| jinja = true` chunk option:
+Jinja expressions inside code blocks are not evaluated by default. To opt in, use the `#| jinja: true` chunk option:
 
 ````
 ```{r}
-#| jinja = true
+#| jinja: true
 n <- {{ var.sample_size }}
 x <- rnorm(n)
 ```
@@ -107,7 +107,7 @@ x <- rnorm(n)
 Which gets replaced by the value specified in the front matter:
 
 ```{r}
-#| jinja = true
+#| jinja: true
 n <- {{ var.sample_size }}
 rnorm(n)
 ```

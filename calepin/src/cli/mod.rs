@@ -12,5 +12,6 @@ pub mod new_partials;
 pub mod new_website;
 pub mod preview;
 pub mod render;
+pub mod skill;
 
 pub use args::*;

@@ -13,7 +13,7 @@ toc = false
 <div style="margin-bottom: 1.5rem;">
   <span class="nav-icon" style="-webkit-mask-image: url(assets/Calepin.svg); mask-image: url(assets/Calepin.svg); width: 22em; height: 8em;"></span>
 </div>
-<p class="landing-descriptor">Markdown <svg style="width:0.8em;height:0.8em;vertical-align:-0.05em;fill:currentColor" viewBox="0 0 512 512"><path d="M502.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L402.7 224H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h370.7L297.3 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"/></svg> HTML · <span class="latex-logo">L<sup>A</sup>T<sub>E</sub>X</span> · Typst<br>Notebooks · Websites · Docs · Reports · Books · Letters · Slides<br>Written in Rust</p>
+<p class="landing-descriptor">Markdown <svg style="width:0.8em;height:0.8em;vertical-align:-0.05em;fill:currentColor" viewBox="0 0 512 512"><path d="M502.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L402.7 224H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h370.7L297.3 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"/></svg> HTML · <span class="latex-logo">L<sup>A</sup>T<sub>E</sub>X</span> · Typst<br>Notebooks · Websites · Docs · Reports · Books · Letters · Slides</p>
 ```
 
 ::: {.landing-headline}
@@ -28,7 +28,7 @@ One binary. Sub-millisecond renders.
 ::: {.column width="50%"}
 ## 10,000 files in 1.8 seconds
 
-*Calepin* is written in Rust and renders a typical notebook in under a millisecond. Smart caching means unchanged documents and code cost nothing.
+*Calepin* is written in Rust and renders complex markdown documents in under a millisecond. Smart caching means unchanged documents and code cost nothing.
 :::
 
 ::: {.column width="50%"}

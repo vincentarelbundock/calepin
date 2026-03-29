@@ -42,7 +42,7 @@ paper_calepin/
   files/                 # generated figures
 ```
 
-When a sidecar `partials/` directory exists, *Calepin* uses only those templates. Built-in templates are ignored entirely. This gives you full control over every piece of output.
+Resolution is layered per file: sidecar partials are checked first, then project partials, then extension partials, then built-in defaults. You only need to override the specific files you want to change.
 
 # Websites
 
