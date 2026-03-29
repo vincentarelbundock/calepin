@@ -34,8 +34,8 @@ clean:  ## Remove build artifacts
 	cargo clean --manifest-path calepin/Cargo.toml
 
 flush:  ## Delete all *_cache and *_files directories recursively
-	find . -type d -name '*_cache' -exec rm -rf {} + 2>/dev/null; \
-	find . -type d -name '*_files' -exec rm -rf {} + 2>/dev/null; true
+	calepin flush -y
+	calepin flush website -y
 
 # ==============================================================================
 # Test targets
@@ -70,62 +70,31 @@ docs:  build ## Render all .qmd files in website/ to all formats
 	done
 
 # ==============================================================================
-# Plugins
-# ==============================================================================
-
-WASM_TARGET = wasm32-unknown-unknown
-
-plugins:  ## Build WASM plugins and install to plugins/ and website/_calepin/plugins/
-	@mkdir -p website/_calepin/plugins
-	@for plugin in plugins/*/; do \
-		name=$$(basename $$plugin); \
-		if [ -f "$$plugin/Cargo.toml" ]; then \
-			echo "Building plugin: $$name"; \
-			cargo build --release --target $(WASM_TARGET) --manifest-path "$$plugin/Cargo.toml" && \
-			cp "$$plugin/target/$(WASM_TARGET)/release/$${name}.wasm" "$$plugin/$${name}.wasm" && \
-			cp "$$plugin/$${name}.wasm" website/_calepin/plugins/ && \
-			echo "  → plugins/$${name}/$${name}.wasm, website/_calepin/plugins/$${name}.wasm"; \
-		fi; \
-	done
-
-# ==============================================================================
 # Profiling
 # ==============================================================================
 
 PROF_FILE ?= bench/text.qmd
-PROF_N ?= 100
 
 prof-build:  ## Build with profiling profile (release + debug symbols)
 	cargo build --manifest-path calepin/Cargo.toml --profile profiling
 
-prof: prof-build  ## Profile calepin with per-stage timing (set PROF_FILE=path/to/file.qmd)
-	@cd $$(dirname $(PROF_FILE)) && CALEPIN_TIMING=1 ../target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
-
-prof-samply: prof-build  ## Profile calepin with samply in browser (set PROF_FILE=path/to/file.qmd)
-	cd $$(dirname $(PROF_FILE)) && samply record -- ../target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
-
-prof-save: prof-build  ## Profile calepin and save to profile.json (for inspection)
-	cd $$(dirname $(PROF_FILE)) && samply record --save-only -o profile.json -- ../target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
+prof: prof-build  ## Profile single file (set PROF_FILE=bench/text.qmd)
+	cd $$(dirname $(PROF_FILE)) && samply record --save-only --unstable-presymbolicate -o profile.json -- ../target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
 	@echo "Profile saved to $$(dirname $(PROF_FILE))/profile.json"
+	bench/profile_summary.py $$(dirname $(PROF_FILE))/profile.json
 
-prof-batch: prof-build  ## Profile N iterations via batch mode (set PROF_N=100, PROF_FILE=bench/text.qmd)
-	cd $$(dirname $(PROF_FILE)) && python3 prof-manifest.py $(PROF_N) $$(basename $(PROF_FILE)) html | \
-		samply record -- ../target/profiling/calepin --batch - --batch-stdout -q
+prof-batch: prof-build  ## Profile 1000 parallel files (gibberish complexity 2)
+	bench/gibberish.sh --samply
 
 # ==============================================================================
 # Benchmarks
 # ==============================================================================
 
-bench:  release ## Benchmark calepin vs Quarto on bench/*.qmd (requires hyperfine)
-	@cd bench && for f in *.qmd; do \
-		base=$${f%.qmd}; \
-		echo "\n=== Benchmarking $$base ===\n"; \
-		hyperfine --warmup 1 \
-			-n "calepin $$base → HTML"  '../target/release/calepin '"$$f"' -o '"$$base"'.html -q' \
-			-n "calepin $$base → LaTeX" '../target/release/calepin '"$$f"' -o '"$$base"'.tex -q' \
-			--ignore-failure; \
-		rm -f "$$base".html "$$base".tex "$$base".pdf; \
-		rm -rf "$${base}_files"; \
-	done
-# -n "Quarto $$base → HTML"   'quarto render '"$$f"' --to html --quiet' \
-# -n "Quarto $$base → LaTeX"  'quarto render '"$$f"' --to latex --quiet' \
+bench: release  ## Time single file render (bench/text.qmd)
+	@cd bench && hyperfine --warmup 3 \
+		-n "calepin text → HTML"  '../target/release/calepin text.qmd -o /dev/null -q' \
+		-n "calepin text → LaTeX" '../target/release/calepin text.qmd -t latex -o /dev/null -q' \
+		--ignore-failure
+
+bench-batch: release  ## Time 1000 parallel files (gibberish complexity 2)
+	bench/gibberish.sh

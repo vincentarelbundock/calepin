@@ -35,13 +35,14 @@ make install        # Install to ~/.cargo/bin + shell completions
 make check          # Fast compile check (no linking)
 make test           # cargo test
 make docs           # Render all .qmd files in website/ to all formats
-make bench          # Benchmark vs Quarto on bench/*.qmd (requires hyperfine)
+make bench          # Time single file render (requires hyperfine)
+make bench-batch    # Time 1000 parallel files (gibberish)
 make plugins        # Build WASM plugins (requires wasm32-unknown-unknown target)
 make site           # Build debug + serve static site from website/
 make clean          # Remove build artifacts
 make flush          # Delete all *_cache and *_files directories
-make prof           # Profile with per-stage timing (set PROF_FILE=path/to/file.qmd)
-make prof-samply    # Profile with samply in browser
+make prof           # Profile single file and print bottlenecks
+make prof-batch     # Profile 1000 parallel files (gibberish)
 ```
 
 Run a single test: `cargo test test_name`
@@ -336,12 +337,11 @@ See `website/extensions/extensions.qmd` for the full specification.
 
 ## Profiling
 
-Build with `make prof-build` (release + debug symbols). Profile a specific file:
+Profile with samply and print bottleneck summary:
 
 ```
-make prof PROF_FILE=bench/text.qmd           # Per-stage timing (CALEPIN_TIMING=1)
-make prof-samply PROF_FILE=bench/text.qmd    # Open samply in browser
-make prof-batch PROF_N=100 PROF_FILE=bench/text.qmd  # Batch N iterations
+make prof PROF_FILE=bench/text.qmd    # Single file
+make prof-batch                       # 1000 parallel files (gibberish)
 ```
 
 ## Function Naming Convention

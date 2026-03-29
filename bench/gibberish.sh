@@ -5,7 +5,19 @@ N=10000
 P=50
 SECTIONS=5
 SUBSECTIONS=15
-CALEPIN="calepin"
+SAMPLY=false
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+if [[ "$1" == "--samply" ]]; then
+    SAMPLY=true
+    N=1000
+    CALEPIN="$ROOT_DIR/target/profiling/calepin"
+    echo "Building profiling target..."
+    (cd "$ROOT_DIR" && cargo build --profile profiling -q)
+else
+    CALEPIN="$ROOT_DIR/target/release/calepin"
+fi
 
 parse_time() {
     local real
@@ -34,49 +46,62 @@ run_bench() {
 
 echo "$N files, $P paragraphs each, $SECTIONS sections x $(( SUBSECTIONS / SECTIONS )) subsections per file"
 
-# --- Complexity 0 ---
-cd /tmp; rm -rf gibberish
-"$CALEPIN" init gibberish -n "$N" -p "$P" -c 0 -d gibberish 2>/dev/null
-cd gibberish
+if $SAMPLY; then
+    # --- Samply: only complexity 2 with highlighting ---
+    cd /tmp; rm -rf gibberish
+    "$CALEPIN" init gibberish -n "$N" -p "$P" -c 2 -d gibberish 2>/dev/null
+    cd gibberish
 
-run_bench "c0_no" "--no-highlight"
-run_bench "c0_hl" ""
-c0_ratio=$(printf "%.1f" "$(echo "scale=2; $total_c0_hl / $total_c0_no" | bc)")
+    echo ""
+    echo "Profiling complexity 2 with highlighting ($N files)..."
+    samply record --save-only --unstable-presymbolicate -o /tmp/gibberish-profile.json -- "$CALEPIN" render *.qmd -q
+    echo "Profile saved to /tmp/gibberish-profile.json"
+    "$SCRIPT_DIR/profile_summary.py" /tmp/gibberish-profile.json
+else
+    # --- Complexity 0 ---
+    cd /tmp; rm -rf gibberish
+    "$CALEPIN" init gibberish -n "$N" -p "$P" -c 0 -d gibberish 2>/dev/null
+    cd gibberish
 
-echo ""
-echo "  Complexity 0 -- prose only:"
-echo "    Without highlighting: ${total_c0_no}s total, ${ms_c0_no}ms/file"
-echo "    With highlighting:    ${total_c0_hl}s total, ${ms_c0_hl}ms/file"
-echo "    Ratio: ${c0_ratio}x"
+    run_bench "c0_no" "--no-highlight"
+    run_bench "c0_hl" ""
+    c0_ratio=$(printf "%.1f" "$(echo "scale=2; $total_c0_hl / $total_c0_no" | bc)")
 
-# --- Complexity 1 ---
-cd /tmp; rm -rf gibberish
-"$CALEPIN" init gibberish -n "$N" -p "$P" -c 1 -d gibberish 2>/dev/null
-cd gibberish
+    echo ""
+    echo "  Complexity 0 -- prose only:"
+    echo "    Without highlighting: ${total_c0_no}s total, ${ms_c0_no}ms/file"
+    echo "    With highlighting:    ${total_c0_hl}s total, ${ms_c0_hl}ms/file"
+    echo "    Ratio: ${c0_ratio}x"
 
-run_bench "c1_no" "--no-highlight"
-run_bench "c1_hl" ""
-c1_ratio=$(printf "%.1f" "$(echo "scale=2; $total_c1_hl / $total_c1_no" | bc)")
+    # --- Complexity 1 ---
+    cd /tmp; rm -rf gibberish
+    "$CALEPIN" init gibberish -n "$N" -p "$P" -c 1 -d gibberish 2>/dev/null
+    cd gibberish
 
-echo ""
-echo "  Complexity 1 -- prose + code chunks:"
-echo "    Without highlighting: ${total_c1_no}s total, ${ms_c1_no}ms/file"
-echo "    With highlighting:    ${total_c1_hl}s total, ${ms_c1_hl}ms/file"
-echo "    Ratio: ${c1_ratio}x"
+    run_bench "c1_no" "--no-highlight"
+    run_bench "c1_hl" ""
+    c1_ratio=$(printf "%.1f" "$(echo "scale=2; $total_c1_hl / $total_c1_no" | bc)")
 
-# --- Complexity 2 ---
-cd /tmp; rm -rf gibberish
-"$CALEPIN" init gibberish -n "$N" -p "$P" -c 2 -d gibberish 2>/dev/null
-cd gibberish
+    echo ""
+    echo "  Complexity 1 -- prose + code chunks:"
+    echo "    Without highlighting: ${total_c1_no}s total, ${ms_c1_no}ms/file"
+    echo "    With highlighting:    ${total_c1_hl}s total, ${ms_c1_hl}ms/file"
+    echo "    Ratio: ${c1_ratio}x"
 
-run_bench "c2_no" "--no-highlight"
-run_bench "c2_hl" ""
-c2_ratio=$(printf "%.1f" "$(echo "scale=2; $total_c2_hl / $total_c2_no" | bc)")
+    # --- Complexity 2 ---
+    cd /tmp; rm -rf gibberish
+    "$CALEPIN" init gibberish -n "$N" -p "$P" -c 2 -d gibberish 2>/dev/null
+    cd gibberish
 
-echo ""
-echo "  Complexity 2 -- prose + code + cross-refs/footnotes/citations/tables:"
-echo "    Without highlighting: ${total_c2_no}s total, ${ms_c2_no}ms/file"
-echo "    With highlighting:    ${total_c2_hl}s total, ${ms_c2_hl}ms/file"
-echo "    Ratio: ${c2_ratio}x"
+    run_bench "c2_no" "--no-highlight"
+    run_bench "c2_hl" ""
+    c2_ratio=$(printf "%.1f" "$(echo "scale=2; $total_c2_hl / $total_c2_no" | bc)")
+
+    echo ""
+    echo "  Complexity 2 -- prose + code + cross-refs/footnotes/citations/tables:"
+    echo "    Without highlighting: ${total_c2_no}s total, ${ms_c2_no}ms/file"
+    echo "    With highlighting:    ${total_c2_hl}s total, ${ms_c2_hl}ms/file"
+    echo "    Ratio: ${c2_ratio}x"
+fi
 
 echo ""

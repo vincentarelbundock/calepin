@@ -33,6 +33,19 @@ use crate::config::Metadata;
 static CSL_CACHE: LazyLock<Mutex<HashMap<String, IndependentStyle>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+static LOCALES: LazyLock<Vec<hayagriva::citationberg::Locale>> =
+    LazyLock::new(|| hayagriva::archive::locales());
+
+/// Cached rendered citation maps, keyed by (sorted citation keys, style name).
+/// Value: (paren_map, prose_map, year_map, bibliography_md).
+type CitationMaps = (HashMap<String, String>, HashMap<String, String>, HashMap<String, String>, Option<String>);
+static CITATION_CACHE: LazyLock<Mutex<HashMap<(Vec<String>, String), CitationMaps>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Cached parsed bibliography libraries, keyed by sorted bib file paths.
+static BIB_CACHE: LazyLock<Mutex<HashMap<Vec<String>, hayagriva::Library>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
 fn format_plain(elem: &impl std::fmt::Display) -> String {
     format!("{:#}", elem)
 }
@@ -52,21 +65,11 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
         return Ok(());
     }
 
-    let mut library = hayagriva::Library::new();
-    for bib_path in &metadata.bibliography {
-        let resolved = project_root.join(bib_path);
-        if !resolved.exists() {
-            cwarn!("bibliography '{}' not found, skipping", resolved.display());
-            continue;
-        }
-        let bib_src = fs::read_to_string(&resolved)
-            .with_context(|| format!("Failed to read bibliography: {}", resolved.display()))?;
-        let lib = hayagriva::io::from_biblatex_str(&bib_src)
-            .map_err(|e| anyhow::anyhow!("Failed to parse bibliography '{}': {:?}", bib_path, e))?;
-        for entry in lib.iter() {
-            library.push(entry);
-        }
-    }
+    let bib_paths: Vec<String> = metadata.bibliography.iter()
+        .map(|p| project_root.join(p).to_string_lossy().to_string())
+        .collect();
+
+    let library = load_bib_library(&bib_paths)?;
 
     // Collect cited keys before loading the CSL style. CSL deserialization is
     // expensive (~5ms), so we defer it until we know there are actual citations.
@@ -100,40 +103,20 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
         return Ok(());
     }
 
-    let style = load_csl_style(metadata.csl.as_deref(), metadata)?;
-    let locales = hayagriva::archive::locales();
+    let style_name = metadata.csl.as_deref().unwrap_or("__default__").to_string();
+    let cache_key = (all_keys.clone(), style_name.clone());
 
-    // Single driver call with all citations
-    let mut driver = BibliographyDriver::new();
-    for key in &all_keys {
-        if let Some(entry) = library.get(key) {
-            driver.citation(CitationRequest::from_items(
-                vec![CitationItem::with_entry(entry)],
-                &style,
-                &locales,
-            ));
+    // Check citation cache
+    let (paren_map, prose_map, year_map, bib_md) = if let Ok(cache) = CITATION_CACHE.lock() {
+        if let Some(cached) = cache.get(&cache_key) {
+            cached.clone()
+        } else {
+            drop(cache);
+            render_citations(&all_keys, &library, metadata, &style_name)?
         }
-    }
-    let rendered = driver.finish(BibliographyRequest {
-        style: &style,
-        locale: None,
-        locale_files: &locales,
-    });
-
-    // Build maps: parenthetical form, then derive narrative and year-only
-    let mut paren_map: HashMap<String, String> = HashMap::new();
-    let mut prose_map: HashMap<String, String> = HashMap::new();
-    let mut year_map: HashMap<String, String> = HashMap::new();
-
-    for (i, key) in all_keys.iter().enumerate() {
-        if let Some(c) = rendered.citations.get(i) {
-            let paren = format_plain(&c.citation); // e.g. "Arel-Bundock et al. 2026"
-
-            paren_map.insert(key.clone(), paren.clone());
-            prose_map.insert(key.clone(), format_narrative(&paren));
-            year_map.insert(key.clone(), extract_year(&paren));
-        }
-    }
+    } else {
+        render_citations(&all_keys, &library, metadata, &style_name)?
+    };
 
     // Replace citations in Text elements (order: [-@key], [@key], @key)
     static RE_SUPPRESS: LazyLock<Regex> = LazyLock::new(|| {
@@ -179,19 +162,105 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
     }
 
     // Append bibliography
-    if let Some(bib) = &rendered.bibliography {
-        let mut bib_md = String::from("\n# References\n\n");
-        for entry in &bib.items {
-            let text = format_plain(&entry.content);
-            if !text.is_empty() {
-                bib_md.push_str(&text);
-                bib_md.push_str("\n\n");
-            }
-        }
+    if let Some(bib_md) = bib_md {
         elements.push(Element::Text { content: bib_md });
     }
 
     Ok(())
+}
+
+fn load_bib_library(bib_paths: &[String]) -> Result<hayagriva::Library> {
+    // Check cache
+    let mut sorted = bib_paths.to_vec();
+    sorted.sort();
+    if let Ok(cache) = BIB_CACHE.lock() {
+        if let Some(lib) = cache.get(&sorted) {
+            return Ok(lib.clone());
+        }
+    }
+
+    let mut library = hayagriva::Library::new();
+    for path in bib_paths {
+        let resolved = Path::new(path);
+        if !resolved.exists() {
+            cwarn!("bibliography '{}' not found, skipping", resolved.display());
+            continue;
+        }
+        let bib_src = fs::read_to_string(resolved)
+            .with_context(|| format!("Failed to read bibliography: {}", resolved.display()))?;
+        let lib = hayagriva::io::from_biblatex_str(&bib_src)
+            .map_err(|e| anyhow::anyhow!("Failed to parse bibliography '{}': {:?}", path, e))?;
+        for entry in lib.iter() {
+            library.push(entry);
+        }
+    }
+
+    if let Ok(mut cache) = BIB_CACHE.lock() {
+        cache.insert(sorted, library.clone());
+    }
+
+    Ok(library)
+}
+
+fn render_citations(
+    all_keys: &[String],
+    library: &hayagriva::Library,
+    metadata: &Metadata,
+    style_name: &str,
+) -> Result<CitationMaps> {
+    let style = load_csl_style(metadata.csl.as_deref(), metadata)?;
+    let locales = &*LOCALES;
+
+    let mut driver = BibliographyDriver::new();
+    for key in all_keys {
+        if let Some(entry) = library.get(key) {
+            driver.citation(CitationRequest::from_items(
+                vec![CitationItem::with_entry(entry)],
+                &style,
+                locales,
+            ));
+        }
+    }
+    let rendered = driver.finish(BibliographyRequest {
+        style: &style,
+        locale: None,
+        locale_files: locales,
+    });
+
+    let mut paren_map: HashMap<String, String> = HashMap::new();
+    let mut prose_map: HashMap<String, String> = HashMap::new();
+    let mut year_map: HashMap<String, String> = HashMap::new();
+
+    for (i, key) in all_keys.iter().enumerate() {
+        if let Some(c) = rendered.citations.get(i) {
+            let paren = format_plain(&c.citation);
+            paren_map.insert(key.clone(), paren.clone());
+            prose_map.insert(key.clone(), format_narrative(&paren));
+            year_map.insert(key.clone(), extract_year(&paren));
+        }
+    }
+
+    let bib_md = rendered.bibliography.as_ref().map(|bib| {
+        let mut md = String::from("\n# References\n\n");
+        for entry in &bib.items {
+            let text = format_plain(&entry.content);
+            if !text.is_empty() {
+                md.push_str(&text);
+                md.push_str("\n\n");
+            }
+        }
+        md
+    });
+
+    let result = (paren_map, prose_map, year_map, bib_md);
+
+    // Store in cache
+    let cache_key = (all_keys.to_vec(), style_name.to_string());
+    if let Ok(mut cache) = CITATION_CACHE.lock() {
+        cache.insert(cache_key, result.clone());
+    }
+
+    Ok(result)
 }
 
 /// Regex matching a 4-digit year with optional letter suffix.
