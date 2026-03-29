@@ -1,0 +1,5 @@
+name = "tufte-latex"
+description = "Tufte-style LaTeX handouts and books using the tufte-latex classes"
+version = "0.1.0"
+license = "MIT"
+inherits = "latex"

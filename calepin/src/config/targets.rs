@@ -188,9 +188,18 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
         return Ok(merge_with_builtin(target));
     }
 
-    // 2. Installed extensions
+    // 2. Installed extensions (project _calepin/ or sidecar)
     let project_root = crate::paths::get_project_root();
-    let ext_dir = project_root.join("_calepin").join("extensions").join(name);
+    let ext_dir_project = project_root.join("_calepin").join("extensions").join(name);
+    let ext_dir_sidecar = crate::paths::get_sidecar_root()
+        .map(|s| s.join("extensions").join(name));
+    let ext_dir = if ext_dir_project.join("extension.toml").exists() {
+        ext_dir_project
+    } else if let Some(ref sd) = ext_dir_sidecar {
+        if sd.join("extension.toml").exists() { sd.clone() } else { ext_dir_project }
+    } else {
+        ext_dir_project
+    };
     if ext_dir.join("extension.toml").exists() {
         if let Ok(manifest) = super::extension::ExtensionManifest::load(&ext_dir) {
             let target = manifest.to_target();

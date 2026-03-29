@@ -1,0 +1,15 @@
+{%- set loc = cap_location | default("bottom") %}
+{%- set env = fig_env | default("figure") %}
+\begin{ {{-env-}} }{{fig_pos}}
+{{align_style}}
+{%- if loc == "top" and caption %}
+\caption{{short_caption}}{ {{-caption-}} }
+{%- endif %}
+{%- if link %}\href{ {{-link-}} }{ {%- endif %}
+\includegraphics[{{width_attr | default("width=\\linewidth")-}} ]{ {{-src-}} }
+{%- if link %}}{% endif %}
+{%- if loc != "top" and caption %}
+\caption{{short_caption}}{ {{-caption-}} }
+{%- endif %}
+{%- if label %}\label{ {{-label-}} }{%- endif %}
+\end{ {{-env-}} }

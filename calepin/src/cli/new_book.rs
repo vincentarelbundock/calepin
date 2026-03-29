@@ -9,7 +9,7 @@ static SCAFFOLD: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold/b
 
 pub fn handle_new_book(dir: &Path) -> Result<()> {
     if dir.exists() {
-        bail!("Directory already exists: {}", dir.display());
+        bail!("{} already exists", dir.display());
     }
     std::fs::create_dir_all(dir)
         .with_context(|| format!("Failed to create directory: {}", dir.display()))?;

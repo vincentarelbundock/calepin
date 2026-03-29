@@ -61,6 +61,15 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
         (default_format.clone(), false)
     };
 
+    // Set sidecar root early so resolve_target can find sidecar extensions.
+    let abs_input = if input.is_relative() {
+        std::env::current_dir().unwrap_or_default().join(input)
+    } else {
+        input.to_path_buf()
+    };
+    let sidecar = paths::resolve_sidecar_dir(&abs_input);
+    paths::set_sidecar_root(sidecar.as_deref());
+
     let empty_targets = std::collections::HashMap::new();
     let user_targets = project_metadata.as_ref().map(|m| &m.targets).unwrap_or(&empty_targets);
     let target = config::resolve_target(&target_name, user_targets)?;

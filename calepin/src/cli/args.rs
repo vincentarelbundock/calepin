@@ -156,7 +156,7 @@ pub enum InitAction {
     /// Scaffold a .qmd notebook with its sidecar directory
     Notebook {
         /// Path for the new .qmd file
-        #[arg(default_value = "my_calepin_notebook.qmd")]
+        #[arg(default_value = "notebook.qmd")]
         path: std::path::PathBuf,
 
         /// Target extension to apply (e.g., website, minimal)
@@ -167,7 +167,7 @@ pub enum InitAction {
     /// Scaffold a website project
     Website {
         /// Directory name for the new website
-        #[arg(default_value = "my_calepin_website")]
+        #[arg(default_value = "website")]
         dir: std::path::PathBuf,
 
         /// Target extension (e.g., website, minimal)
@@ -178,7 +178,7 @@ pub enum InitAction {
     /// Scaffold a book project
     Book {
         /// Directory name for the new book
-        #[arg(default_value = "my_calepin_book")]
+        #[arg(default_value = "book")]
         dir: std::path::PathBuf,
     },
 

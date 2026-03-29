@@ -244,16 +244,27 @@ pub fn walk_chain<T>(
     start_name: &str,
     mut visitor: impl FnMut(&str, &Path, &ExtensionManifest) -> Option<T>,
 ) -> Vec<T> {
-    let extensions_dir = project_root.join("_calepin").join("extensions");
-    if !extensions_dir.is_dir() {
+    let project_ext_dir = project_root.join("_calepin").join("extensions");
+    let sidecar_ext_dir = crate::paths::get_sidecar_root()
+        .map(|s| s.join("extensions"));
+
+    // Need at least one extensions directory to exist.
+    let has_project = project_ext_dir.is_dir();
+    let has_sidecar = sidecar_ext_dir.as_ref().map_or(false, |d| d.is_dir());
+    if !has_project && !has_sidecar {
         return Vec::new();
     }
+
     let mut results = Vec::new();
     let mut current = Some(start_name.to_string());
     let mut visited = std::collections::HashSet::new();
     while let Some(name) = current.take() {
         if !visited.insert(name.clone()) { break; }
-        let extension_dir = extensions_dir.join(&name);
+        // Check sidecar first, then project _calepin/
+        let extension_dir = sidecar_ext_dir.as_ref()
+            .map(|d| d.join(&name))
+            .filter(|d| d.join("extension.toml").exists())
+            .unwrap_or_else(|| project_ext_dir.join(&name));
         if let Some(manifest) = load_cached(&extension_dir) {
             if let Some(result) = visitor(&name, &extension_dir, &manifest) {
                 results.push(result);

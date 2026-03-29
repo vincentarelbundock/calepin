@@ -60,10 +60,30 @@ impl FootnoteState {
 
     /// Inject collected global footnote defs into a text block if it contains
     /// footnote references. Returns the (possibly augmented) text.
+    /// Defs already present in the text block are not duplicated.
     pub fn inject_defs<'a>(&self, text: &'a str) -> std::borrow::Cow<'a, str> {
         let defs = self.global_defs.borrow();
         if !defs.is_empty() && text.contains("[^") {
-            std::borrow::Cow::Owned(format!("{}{}", text, defs))
+            // Only inject defs whose names are not already defined in this block
+            let mut extra = String::new();
+            for m in RE_FN_DEF.find_iter(&defs) {
+                let def_text = m.as_str();
+                // Extract the name: `[^name]:` at the start
+                if let Some(name_end) = def_text.find("]:") {
+                    let name_with_prefix = &def_text[..name_end + 1]; // `[^name]`
+                    // Check if this def name already appears as a definition in the block
+                    let def_marker = format!("{}:", name_with_prefix);
+                    if !text.contains(&def_marker) {
+                        extra.push_str("\n\n");
+                        extra.push_str(def_text);
+                    }
+                }
+            }
+            if extra.is_empty() {
+                std::borrow::Cow::Borrowed(text)
+            } else {
+                std::borrow::Cow::Owned(format!("{}{}", text, extra))
+            }
         } else {
             std::borrow::Cow::Borrowed(text)
         }
