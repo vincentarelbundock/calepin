@@ -1,5 +1,4 @@
 # -- Site identity --
-target = "website"
 title = "My Website"
 
 # -- Navbar --

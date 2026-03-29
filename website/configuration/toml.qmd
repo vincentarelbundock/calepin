@@ -188,11 +188,18 @@ post = ["typst compile {input}"]
 
 # Collection config example
 
+The target is set in `index.qmd` front matter, not in `config.toml`:
+
+```toml
+# index.qmd front matter
+target = "website"
+title = "Home"
+```
+
 A typical `_calepin/config.toml`:
 
 ```toml
 title = "My Site"
-target = "website"
 output = "output"
 
 [[contents]]

@@ -311,10 +311,10 @@ A future `calepin install` command could fetch extensions from a registry or git
 
 # Activation
 
-An extension that defines a target is activated by using it as the target name:
+An extension that defines a target is activated by using it as the target name in document front matter or via CLI (`-t`):
 
 ```toml
-# _calepin/config.toml or document front matter
+# document front matter (e.g., index.qmd)
 target = "tufte"
 ```
 
@@ -521,7 +521,7 @@ inherits = "html"
 css = ["dark-academic.css"]
 ```
 
-No partials, no modules, no target overrides. Activated with `target = "dark-academic"` or `calepin.extensions = ["dark-academic"]`.
+No partials, no modules, no target overrides. Activated with `target = "dark-academic"` in document front matter, `-t dark-academic` on the CLI, or `calepin.extensions = ["dark-academic"]`.
 
 ## Presentation target
 

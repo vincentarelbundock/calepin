@@ -1,5 +1,6 @@
 ---
 title = "Preface"
+target = "book"
 ---
 
 This is the preface of your book. It appears before the numbered chapters.

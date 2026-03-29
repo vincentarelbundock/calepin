@@ -343,6 +343,16 @@ pub fn load_project_metadata(path: &Path) -> Result<super::Metadata> {
     let mut meta = super::parse_metadata(&table)?;
     let project_root = path.parent().unwrap_or(Path::new("."));
 
+    // Warn if `target` is set in config.toml (it should be in document front matter or CLI)
+    if meta.target.is_some() {
+        eprintln!(
+            "\x1b[33mWarning:\x1b[0m `target` in {} is ignored. \
+             Set `target` in document front matter or use `-t` on the command line.",
+            path.display()
+        );
+        meta.target = None;
+    }
+
     // Resolve target inheritance and validate
     resolve_inheritance(&mut meta.targets)
         .map_err(|e| anyhow::anyhow!("in {}: {}", path.display(), e))?;

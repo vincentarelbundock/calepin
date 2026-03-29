@@ -1,5 +1,6 @@
 ---
 title = "Home"
+target = "website"
 ---
 
 Welcome to your new *Calepin* website. Edit this file to get started.

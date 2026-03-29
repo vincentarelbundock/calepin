@@ -39,12 +39,13 @@ pub fn build_collection(
     }
 
     // 2. Resolve collection target (format and extension)
-    //    CLI -t flag takes precedence over `target` in config.toml.
+    //    Priority: CLI -t flag, then index.qmd front matter, then first
+    //    page in [[contents]], then error.
     let collection_target_name = cli_target.map(|s| s.to_string())
-        .or_else(|| meta.target.clone())
+        .or_else(|| read_target_from_index(&base_dir, &meta))
         .ok_or_else(|| anyhow::anyhow!(
-            "No target specified. Set `target = \"website\"` in your config.toml \
-             or pass `-t website` on the command line."
+            "No target specified. Set `target` in index.qmd front matter \
+             or pass `-t` on the command line."
         ))?;
     let collection_target = crate::config::resolve_target(&collection_target_name, &meta.targets)?;
     let format = &collection_target.writer;
@@ -315,6 +316,37 @@ fn run_post_commands(
         }
     }
     Ok(())
+}
+
+/// Read `target` from the front matter of index.qmd or the first page in [[contents]].
+fn read_target_from_index(base_dir: &Path, meta: &crate::config::Metadata) -> Option<String> {
+    // Try index.qmd at the project root
+    let index = base_dir.join("index.qmd");
+    if index.is_file() {
+        if let Some(target) = read_target_from_file(&index) {
+            return Some(target);
+        }
+    }
+
+    // Fall back to the first .qmd file listed in [[contents]]
+    let paths = discover::collect_document_paths(meta, base_dir);
+    for p in paths {
+        let qmd = base_dir.join(&p);
+        if qmd.is_file() {
+            if let Some(target) = read_target_from_file(&qmd) {
+                return Some(target);
+            }
+        }
+    }
+
+    None
+}
+
+/// Read the `target` field from a .qmd file's front matter.
+fn read_target_from_file(path: &Path) -> Option<String> {
+    let text = fs::read_to_string(path).ok()?;
+    let (fm, _) = crate::config::split_frontmatter(&text).ok()?;
+    fm.target
 }
 
 /// Serve a built site directory using the built-in HTTP server.

@@ -51,14 +51,13 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
         }
     };
 
-    // Target name: CLI flag -> default from config
-    let default_format = project_metadata.as_ref()
-        .and_then(|m| m.target.clone())
-        .unwrap_or_else(|| "html".to_string());
+    // Target name: CLI flag -> default "html".
+    // The document front matter `target` is resolved during metadata merge,
+    // not from project config. Use `-t` or set `target` in the .qmd preamble.
     let (target_name, explicit_target) = if let Some(name) = cli_target {
         (name.to_string(), true)
     } else {
-        (default_format.clone(), false)
+        ("html".to_string(), false)
     };
 
     // Set sidecar root early so resolve_target can find sidecar extensions.

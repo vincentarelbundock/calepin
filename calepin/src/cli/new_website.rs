@@ -17,6 +17,19 @@ pub fn handle_new_website(dir: &Path, target_name: &str) -> Result<()> {
     // Copy scaffold files
     crate::paths::write_embedded_dir(&SCAFFOLD, dir);
 
+    // Set the target in index.qmd front matter (website by default, or the extension name)
+    let target = if target_name == "default" { "website" } else { target_name };
+    if target != "website" {
+        let index_path = dir.join("index.qmd");
+        if let Ok(content) = std::fs::read_to_string(&index_path) {
+            let updated = content.replace(
+                "target = \"website\"",
+                &format!("target = \"{}\"", target),
+            );
+            let _ = std::fs::write(&index_path, updated);
+        }
+    }
+
     // Compose config.toml: scaffold project config + shared defaults + collection defaults
     let calepin_dir = crate::paths::calepin_dir(dir, &[]);
     std::fs::create_dir_all(&calepin_dir)?;
@@ -24,14 +37,9 @@ pub fn handle_new_website(dir: &Path, target_name: &str) -> Result<()> {
         .and_then(|f| f.contents_utf8())
         .unwrap_or("");
 
-    // Set the target (website by default, or the theme/extension name)
-    let target = if target_name == "default" { "website" } else { target_name };
-    let target_line = format!("\ntarget = \"{}\"\n", target);
-
     let composed = format!(
-        "{}{}\n\n# === Built-in defaults ===\n\n{}\n{}",
+        "{}\n\n# === Built-in defaults ===\n\n{}\n{}",
         project_config.trim(),
-        target_line,
         crate::config::SHARED_TOML,
         crate::config::COLLECTION_TOML,
     );

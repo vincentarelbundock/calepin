@@ -1,4 +1,6 @@
 ---
+target = "website"
+
 [var]
 sidebar = false
 toc = false

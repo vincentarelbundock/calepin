@@ -329,7 +329,7 @@ Extensions are the unit of distribution and customization. An extension is a dir
 
 **Installation**: `_calepin/extensions/{name}/extension.toml`
 
-**Activation**: Set `target = "name"` in config, or side-load with `[calepin] extensions = ["name"]`.
+**Activation**: Set `target = "name"` in document front matter or pass `-t name` on the CLI. Side-load with `[calepin] extensions = ["name"]`.
 
 **Scaffolding**: `calepin init extension myext --inherits html`
 
