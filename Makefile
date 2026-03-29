@@ -65,7 +65,7 @@ docs:  build ## Render all .qmd files in website/ to all formats
 				typst)    ext=typ  ;; \
 				markdown) ext=md   ;; \
 			esac; \
-			../calepin/target/debug/calepin "$$f" -t $$fmt -o "$${base}.$${ext}"; \
+			../target/debug/calepin "$$f" -t $$fmt -o "$${base}.$${ext}"; \
 		done; \
 	done
 
@@ -99,18 +99,18 @@ prof-build:  ## Build with profiling profile (release + debug symbols)
 	cargo build --manifest-path calepin/Cargo.toml --profile profiling
 
 prof: prof-build  ## Profile calepin with per-stage timing (set PROF_FILE=path/to/file.qmd)
-	@cd $$(dirname $(PROF_FILE)) && CALEPIN_TIMING=1 ../calepin/target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
+	@cd $$(dirname $(PROF_FILE)) && CALEPIN_TIMING=1 ../target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
 
 prof-samply: prof-build  ## Profile calepin with samply in browser (set PROF_FILE=path/to/file.qmd)
-	cd $$(dirname $(PROF_FILE)) && samply record -- ../calepin/target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
+	cd $$(dirname $(PROF_FILE)) && samply record -- ../target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
 
 prof-save: prof-build  ## Profile calepin and save to profile.json (for inspection)
-	cd $$(dirname $(PROF_FILE)) && samply record --save-only -o profile.json -- ../calepin/target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
+	cd $$(dirname $(PROF_FILE)) && samply record --save-only -o profile.json -- ../target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
 	@echo "Profile saved to $$(dirname $(PROF_FILE))/profile.json"
 
 prof-batch: prof-build  ## Profile N iterations via batch mode (set PROF_N=100, PROF_FILE=bench/text.qmd)
 	cd $$(dirname $(PROF_FILE)) && python3 prof-manifest.py $(PROF_N) $$(basename $(PROF_FILE)) html | \
-		samply record -- ../calepin/target/profiling/calepin --batch - --batch-stdout -q
+		samply record -- ../target/profiling/calepin --batch - --batch-stdout -q
 
 # ==============================================================================
 # Benchmarks
@@ -121,8 +121,8 @@ bench:  release ## Benchmark calepin vs Quarto on bench/*.qmd (requires hyperfin
 		base=$${f%.qmd}; \
 		echo "\n=== Benchmarking $$base ===\n"; \
 		hyperfine --warmup 1 \
-			-n "calepin $$base → HTML"  '../calepin/target/release/calepin '"$$f"' -o '"$$base"'.html -q' \
-			-n "calepin $$base → LaTeX" '../calepin/target/release/calepin '"$$f"' -o '"$$base"'.tex -q' \
+			-n "calepin $$base → HTML"  '../target/release/calepin '"$$f"' -o '"$$base"'.html -q' \
+			-n "calepin $$base → LaTeX" '../target/release/calepin '"$$f"' -o '"$$base"'.tex -q' \
 			--ignore-failure; \
 		rm -f "$$base".html "$$base".tex "$$base".pdf; \
 		rm -rf "$${base}_files"; \

@@ -36,7 +36,7 @@ echo "$N files, $P paragraphs each, $SECTIONS sections x $(( SUBSECTIONS / SECTI
 
 # --- Complexity 0 ---
 cd /tmp; rm -rf gibberish
-"$CALEPIN" new gibberish -n "$N" -p "$P" -c 0 2>/dev/null
+"$CALEPIN" init gibberish -n "$N" -p "$P" -c 0 -d gibberish 2>/dev/null
 cd gibberish
 
 run_bench "c0_no" "--no-highlight"
@@ -51,7 +51,7 @@ echo "    Ratio: ${c0_ratio}x"
 
 # --- Complexity 1 ---
 cd /tmp; rm -rf gibberish
-"$CALEPIN" new gibberish -n "$N" -p "$P" -c 1 2>/dev/null
+"$CALEPIN" init gibberish -n "$N" -p "$P" -c 1 -d gibberish 2>/dev/null
 cd gibberish
 
 run_bench "c1_no" "--no-highlight"
@@ -66,7 +66,7 @@ echo "    Ratio: ${c1_ratio}x"
 
 # --- Complexity 2 ---
 cd /tmp; rm -rf gibberish
-"$CALEPIN" new gibberish -n "$N" -p "$P" -c 2 2>/dev/null
+"$CALEPIN" init gibberish -n "$N" -p "$P" -c 2 -d gibberish 2>/dev/null
 cd gibberish
 
 run_bench "c2_no" "--no-highlight"
