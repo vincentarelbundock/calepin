@@ -152,6 +152,16 @@ pub(crate) fn apply_collection_partials(
             doc_ctx.resolve_urls(&base_path, url_mode, page_depth);
             let mut resolved_navbar = collection_ctx.navbar.clone();
             context::resolve_navbar_urls(&mut resolved_navbar, &base_path, url_mode, page_depth);
+
+            // Merge per-page var over collection-level var so pages can override.
+            let page_var_ctx = if page.meta.var.is_empty() {
+                var_ctx.clone()
+            } else {
+                let mut merged = meta.var.clone();
+                merged.extend(page.meta.var.clone());
+                crate::config::build_jinja_vars(&merged)
+            };
+
             let collection_with_active = minijinja::context! {
                 css => crate::render::template::load_default_css(),
                 _page_depth => page_depth,
@@ -168,7 +178,7 @@ pub(crate) fn apply_collection_partials(
                     math: collection_ctx.math.clone(),
                 },
                 document => doc_ctx,
-                var => var_ctx.clone(),
+                var => page_var_ctx,
             };
 
             let rendered = tpl.render(&collection_with_active)

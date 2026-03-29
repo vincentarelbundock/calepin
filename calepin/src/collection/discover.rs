@@ -23,6 +23,9 @@ pub struct DocumentMeta {
     /// Translation links: language code -> relative path to translated page.
     #[serde(default)]
     pub translations: Option<HashMap<String, String>>,
+    /// Non-standard front matter variables (the `var` map), available as `{{ var.* }}` in templates.
+    #[serde(skip)]
+    pub var: HashMap<String, crate::value::Value>,
 }
 
 /// Listing configuration in page frontmatter.
@@ -204,6 +207,7 @@ fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
         listing: None,
         lang: meta.lang,
         translations: meta.translations,
+        var: meta.var,
     })
 }
 

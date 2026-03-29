@@ -1,7 +1,6 @@
 ---
-bibliography = "_calepin/assets/library.bib"
-number-sections = true
-toc = true
+[var]
+sidebar = false
 ---
 
 ```{=html}

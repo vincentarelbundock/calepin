@@ -26,12 +26,12 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
         }
     }
 
-    // Copy base page.css as fallback (the website template links both page.css and calepin.css).
-    let page_css_dst = assets_dst.join("page.css");
-    if !page_css_dst.exists() {
+    // Write calepin.css from the built-in page CSS (single source of truth).
+    let calepin_css_dst = assets_dst.join("calepin.css");
+    if !calepin_css_dst.exists() {
         fs::create_dir_all(&assets_dst)?;
         let css = crate::render::template::load_default_css();
-        fs::write(&page_css_dst, css)?;
+        fs::write(&calepin_css_dst, css)?;
     }
 
     // Copy extension static assets (declared in [assets].static)

@@ -7,7 +7,7 @@ use crate::config::Metadata;
 /// Build the full Jinja context for body processing.
 pub(crate) fn build_context(metadata: &Metadata, format: &str) -> minijinja::Value {
     let meta_val = build_meta_map(metadata);
-    let var_val = build_variables_map(metadata);
+    let var_val = crate::config::build_jinja_vars(&metadata.var);
 
     minijinja::context! {
         writer => format,
@@ -41,15 +41,6 @@ fn build_meta_map(meta: &Metadata) -> serde_json::Value {
     }
     if !meta.keywords.is_empty() {
         map.insert("keywords".into(), serde_json::json!(meta.keywords));
-    }
-    serde_json::Value::Object(map)
-}
-
-/// Build the `var` context from extra front matter fields.
-fn build_variables_map(metadata: &Metadata) -> serde_json::Value {
-    let mut map = serde_json::Map::new();
-    for (key, value) in &metadata.var {
-        map.insert(key.clone(), crate::value::to_json(value));
     }
     serde_json::Value::Object(map)
 }

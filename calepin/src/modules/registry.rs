@@ -151,6 +151,7 @@ impl RenderedPage {
                 listing: None,
                 lang: self.lang.clone(),
                 translations: None,
+                var: std::collections::HashMap::new(),
             },
             lang: self.lang.clone(),
         }

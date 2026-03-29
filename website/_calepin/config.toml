@@ -11,6 +11,10 @@ width = "104px"
 height = "36px"
 
 [[navbar.middle]]
+text = "Documentation"
+href = "pages/installation.qmd"
+
+[[navbar.middle]]
 text = "Examples"
 [[navbar.middle.children]]
 text = "arelbundock.com"

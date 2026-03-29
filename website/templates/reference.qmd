@@ -229,12 +229,30 @@ Website templates (in `_calepin/partials/website/`) receive two context objects.
 
 ## var
 
-Variables from the `[var]` section of `_calepin/config.toml`:
+Custom variables accessible as `{{ var.key }}` in all templates and in the `.qmd` body. Declare them under the `[var]` table in front matter or in `_calepin/config.toml`:
 
 ```toml
 [var]
-sidebar_collapse_level = 0
+sidebar = false
+custom_key = "value"
+
+[var.nested]
+field = "nested value"
 ```
+
+Access in templates and body text:
+
+```
+{{ var.sidebar }}          # boolean false
+{{ var.custom_key }}       # "value"
+{{ var.nested.field }}     # "nested value"
+```
+
+Types are preserved: booleans, numbers, strings, arrays, and nested tables all work. Arrays can be iterated with `{% for item in var.items %}`.
+
+Resolution order (last wins): built-in defaults, `_calepin/config.toml`, front matter, CLI (`-s`). In websites, per-page `[var]` entries override collection-level values.
+
+Non-standard top-level front matter keys (keys not recognized by *Calepin*) are also available under `var`, but the explicit `[var]` table is preferred for clarity.
 
 ## Website layout templates
 

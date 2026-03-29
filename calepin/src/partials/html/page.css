@@ -201,8 +201,8 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
 }
 
 .navbar-nav { display: flex; align-items: center; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
-.navbar-nav.left { margin-right: auto; }
-.navbar-nav.middle { margin-right: auto; }
+.navbar-nav.left { width: calc(var(--c-sidebar-width) - 1rem); flex-shrink: 0; }
+.navbar-nav.middle { margin-right: auto; padding-left: 2rem; }
 .navbar-nav.right { margin-left: auto; }
 
 .navbar-nav a {

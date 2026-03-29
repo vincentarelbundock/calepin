@@ -7,8 +7,7 @@ embed_resources = false
 modules = ["highlight", "append_footnotes", "embed_images"]
 
 [assets]
-css = ["calepin.css"]
-static = ["css/", "fontawesome/"]
+static = ["fontawesome/"]
 
 [[modules]]
 name = "site_wrap"

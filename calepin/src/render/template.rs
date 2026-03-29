@@ -493,22 +493,6 @@ pub fn build_template_vars_with_headings(
     }
 
 
-    // Extra YAML fields override defaults (e.g., classoption, documentclass)
-    for (key, value) in &meta.var {
-        let s = if let Some(s) = value.as_str() {
-            s.to_string()
-        } else if let Some(b) = value.as_bool() {
-            b.to_string()
-        } else if let Some(n) = value.as_integer() {
-            n.to_string()
-        } else if let Some(f) = value.as_floating_point() {
-            f.to_string()
-        } else {
-            continue
-        };
-        vars.insert(key.clone(), s);
-    }
-
     vars
 }
 
@@ -569,7 +553,7 @@ pub fn assemble_page(
     inject_preamble(&mut vars, preamble);
     customize(&mut vars);
     let tpl = load_page_template("page", format);
-    render_page_template(&tpl, &vars, format)
+    render_page_template(&tpl, &vars, format, &meta.var)
 }
 
 /// Render a page template with {% include %} support.
@@ -588,6 +572,7 @@ pub fn render_page_template(
     page_template: &str,
     vars: &HashMap<String, String>,
     base: &str,
+    user_vars: &std::collections::HashMap<String, crate::value::Value>,
 ) -> String {
     // Collect all template sources into an owned map, then use set_loader
     // so minijinja takes ownership -- no Box::leak needed.
@@ -673,7 +658,10 @@ pub fn render_page_template(
         Ok(sources.get(name).cloned())
     });
 
-    let ctx = build_jinja_context(vars);
+    let mut ctx = build_jinja_context(vars);
+    if !user_vars.is_empty() {
+        ctx.insert("var", crate::config::build_jinja_vars(user_vars));
+    }
     let tpl = match env.get_template("__page__") {
         Ok(t) => t,
         Err(e) => {

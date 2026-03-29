@@ -292,7 +292,11 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             }
         }
     }
-    meta.var = extra;
+    // Extra top-level fields are accessible as {{ var.key }}; explicit [var]
+    // entries (already inserted above) take precedence.
+    for (k, v) in extra {
+        meta.var.entry(k).or_insert(v);
+    }
 
     Ok(meta)
 }
