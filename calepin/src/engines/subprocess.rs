@@ -155,7 +155,7 @@ impl SubprocessSession {
                     // Kill the hung subprocess
                     let _ = self.child.kill();
                     anyhow::bail!(
-                        "Code chunk timed out after {}s (set timeout in _calepin/config.toml or CALEPIN_TIMEOUT env var)",
+                        "Code chunk timed out after {}s (set timeout in sidecar config.toml or CALEPIN_TIMEOUT env var)",
                         timeout.unwrap().as_secs()
                     );
                 }

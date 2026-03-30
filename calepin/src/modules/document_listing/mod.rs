@@ -34,7 +34,7 @@ pub fn render(ctx: &ModuleContext) -> String {
         page_size: 0,
     };
 
-    let base_dir = crate::paths::get_project_root();
+    let base_dir = crate::paths::get_project_dir();
     let pages = match crate::collection::discover::discover_listing_documents(
         &listing_config, &base_dir, &[], "html",
     ) {

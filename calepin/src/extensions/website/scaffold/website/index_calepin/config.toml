@@ -1,4 +1,5 @@
-# -- Site identity --
+# -- Project --
+target = "website"
 title = "My Website"
 
 # -- Navbar --

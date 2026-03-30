@@ -1,8 +1,10 @@
 //! Centralized path resolution, validation, and context.
 //!
-//! All input paths resolve relative to the project root (the directory
-//! containing `_calepin/config.toml`). For document renders without a project
-//! config, the project root is the parent directory of the `.qmd` file.
+//! All input paths resolve relative to the project directory (the directory
+//! containing `.qmd` files). The root sidecar (`{stem}_calepin/`) holds
+//! project-wide config, partials, extensions, modules, and assets.
+//! For document renders without a sidecar config, the project directory
+//! is the parent directory of the `.qmd` file.
 //! The output directory is where finished files are written; no inputs
 //! resolve from it.
 
@@ -25,20 +27,24 @@ pub enum ProjectKind {
         qmd: PathBuf,
         sidecar: PathBuf,
     },
-    /// Collection (website/book) with a project `_calepin/` directory.
+    /// Collection (website/book) with a root sidecar.
     Collection {
-        root: PathBuf,
+        /// Directory containing `.qmd` files.
+        project_dir: PathBuf,
+        /// Path to the root sidecar's `config.toml`.
         config: PathBuf,
+        /// Root sidecar directory (e.g., `index_calepin/`).
+        root_sidecar: PathBuf,
     },
 }
 
 impl ProjectKind {
     /// Discover the project kind from a `.qmd` file or directory.
     ///
-    /// - `.qmd` file in a directory with `_calepin/config.toml` -> `Collection`
-    /// - `.qmd` file without -> `Document`
-    /// - Directory with `index.qmd` -> recurse
-    /// - Directory without `index.qmd` -> error
+    /// Detection order:
+    /// 1. `{stem}_calepin/config.toml` with a collection target -> `Collection`
+    /// 2. Legacy `_calepin/config.toml` with `[[contents]]` -> `Collection` (deprecated)
+    /// 3. Otherwise -> `Document`
     pub fn discover(path: &Path) -> Result<Self> {
         let path = if path.is_relative() {
             normalize_path(&std::env::current_dir()
@@ -69,34 +75,65 @@ impl ProjectKind {
         }
 
         let parent = path.parent().unwrap_or(Path::new("."));
+        let stem = path.file_stem().unwrap().to_string_lossy();
+        let sidecar = parent.join(format!("{}_calepin", stem));
 
-        // Collection: parent has _calepin/config.toml with [[contents]]
-        let config = calepin_dir(parent, &[]).join("config.toml");
-        if config.exists() {
-            if let Ok(text) = std::fs::read_to_string(&config) {
-                if text.contains("[[contents]]") {
+        // 1. New convention: {stem}_calepin/config.toml with a collection target
+        let sidecar_config = sidecar.join("config.toml");
+        if sidecar_config.exists() {
+            if let Some(target_name) = read_target_from_config(&sidecar_config) {
+                if crate::config::extension::is_collection_target(&target_name) {
                     return Ok(ProjectKind::Collection {
-                        root: parent.to_path_buf(),
-                        config,
+                        project_dir: parent.to_path_buf(),
+                        config: sidecar_config,
+                        root_sidecar: sidecar,
+                    });
+                }
+            }
+        }
+
+        // 2. Legacy: _calepin/config.toml with [[contents]]
+        let legacy_config = calepin_dir(parent, &[]).join("config.toml");
+        if legacy_config.exists() {
+            if let Ok(text) = std::fs::read_to_string(&legacy_config) {
+                if text.contains("[[contents]]") {
+                    eprintln!(
+                        "\x1b[33mWarning:\x1b[0m _calepin/config.toml is deprecated. \
+                         Move config to {}_calepin/config.toml with `target = \"website\"` \
+                         (or the appropriate collection target).",
+                        stem
+                    );
+                    return Ok(ProjectKind::Collection {
+                        project_dir: parent.to_path_buf(),
+                        config: legacy_config,
+                        root_sidecar: calepin_dir(parent, &[]),
                     });
                 }
             }
         }
 
         // Single document
-        let stem = path.file_stem().unwrap().to_string_lossy();
-        let sidecar = parent.join(format!("{}_calepin", stem));
         Ok(ProjectKind::Document { qmd: path, sidecar })
     }
 
-    /// The directory where `_calepin/` (collection) or sidecar lives.
+    /// The root sidecar directory.
     pub fn calepin_dir(&self) -> PathBuf {
         match self {
             ProjectKind::Document { sidecar, .. } => sidecar.clone(),
-            ProjectKind::Collection { root, .. } => root.join("_calepin"),
+            ProjectKind::Collection { root_sidecar, .. } => root_sidecar.clone(),
         }
     }
 
+}
+
+/// Read the `target` field from a TOML config file without full parsing.
+fn read_target_from_config(path: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(path).ok()?;
+    let table: toml::Value = toml::from_str(&text).ok()?;
+    table.get("target")
+        .or_else(|| table.get("format"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -108,8 +145,9 @@ thread_local! {
     /// Target inheritance chain (child-first), e.g. ["minimal", "website", "html"].
     /// Used by partial resolution to walk the chain instead of checking target/base.
     static ACTIVE_INHERITANCE_CHAIN: RefCell<Vec<String>> = RefCell::new(Vec::new());
-    static PROJECT_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
-    static SIDECAR_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
+    static PROJECT_DIR: RefCell<Option<PathBuf>> = RefCell::new(None);
+    static ROOT_SIDECAR: RefCell<Option<PathBuf>> = RefCell::new(None);
+    static PAGE_SIDECAR: RefCell<Option<PathBuf>> = RefCell::new(None);
     /// Extension partial directories to check, in inheritance order (child first).
     static EXTENSION_PARTIAL_DIRS: RefCell<Vec<PathBuf>> = RefCell::new(Vec::new());
     /// Side-loaded extension names (from calepin.extensions config).
@@ -146,28 +184,41 @@ pub fn set_active_target_with_chain(target: Option<&str>, chain: Vec<String>) {
     set_active_inheritance_chain(chain);
 }
 
-/// Set the project root for all path resolution.
-pub fn set_project_root(root: Option<&Path>) {
-    PROJECT_ROOT.with(|r| {
+/// Set the project directory (the directory containing .qmd files).
+pub fn set_project_dir(root: Option<&Path>) {
+    PROJECT_DIR.with(|r| {
         *r.borrow_mut() = root.map(|p| p.to_path_buf());
     });
 }
 
-pub fn get_project_root() -> PathBuf {
-    PROJECT_ROOT.with(|r| {
+pub fn get_project_dir() -> PathBuf {
+    PROJECT_DIR.with(|r| {
         r.borrow().clone().unwrap_or_else(|| PathBuf::from("."))
     })
 }
 
-/// Set the sidecar root for per-document partial/module resolution.
-pub fn set_sidecar_root(root: Option<&Path>) {
-    SIDECAR_ROOT.with(|r| {
+/// Set the root sidecar directory (project-wide config, partials, extensions).
+/// For collections, this is the entry point's sidecar (e.g., `index_calepin/`).
+/// For single documents, this equals the page sidecar.
+pub fn set_root_sidecar(root: Option<&Path>) {
+    ROOT_SIDECAR.with(|r| {
         *r.borrow_mut() = root.map(|p| p.to_path_buf());
     });
 }
 
-pub fn get_sidecar_root() -> Option<PathBuf> {
-    SIDECAR_ROOT.with(|r| r.borrow().clone())
+pub fn get_root_sidecar() -> Option<PathBuf> {
+    ROOT_SIDECAR.with(|r| r.borrow().clone())
+}
+
+/// Set the per-page sidecar directory for partial/module resolution.
+pub fn set_page_sidecar(root: Option<&Path>) {
+    PAGE_SIDECAR.with(|r| {
+        *r.borrow_mut() = root.map(|p| p.to_path_buf());
+    });
+}
+
+pub fn get_page_sidecar() -> Option<PathBuf> {
+    PAGE_SIDECAR.with(|r| r.borrow().clone())
 }
 
 /// Set extension partial directories (child-first order).
@@ -193,14 +244,18 @@ pub fn get_sideloaded_extensions() -> Vec<String> {
     SIDELOADED_EXTENSIONS.with(|e| e.borrow().clone())
 }
 
-/// Given the path to a config file (e.g. `<root>/_calepin/config.toml`),
-/// return the project root directory. If the config lives inside `_calepin/`,
-/// the root is its grandparent; otherwise fall back to the config's parent.
+/// Given the path to a sidecar config file (e.g. `<root>/index_calepin/config.toml`
+/// or legacy `<root>/_calepin/config.toml`), return the project root directory.
+/// The config's parent is a sidecar directory ending in `_calepin`; the project
+/// root is its grandparent.
 pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
     if let Some(parent) = config_path.parent() {
-        if parent.file_name().map(|n| n == "_calepin").unwrap_or(false) {
+        let is_sidecar = parent.file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.ends_with("_calepin"))
+            .unwrap_or(false);
+        if is_sidecar {
             let root = parent.parent().unwrap_or(fallback);
-            // parent.parent() of a relative "_calepin" is "" -- use fallback
             if root.as_os_str().is_empty() {
                 return fallback.to_path_buf();
             }
@@ -216,41 +271,20 @@ pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
 
 /// Resolve the sidecar directory for an input file.
 ///
-/// In collection mode (project root set), sidecars live inside `_calepin/`,
-/// preserving the input's subdirectory structure to avoid name collisions:
-///   `{project_root}/_calepin/{relative_parent}/{stem}_calepin/`
+/// Sidecars always live next to their `.qmd` file: `{parent}/{stem}_calepin/`.
 ///
-/// For example, `pages/top_link_1.qmd` resolves to
-///   `_calepin/pages/top_link_1_calepin/`
-/// while `index.qmd` at the root resolves to
-///   `_calepin/index_calepin/`
-///
-/// In document mode (no project root), sidecars live next to the file:
-///   `{parent}/{stem}_calepin/`
-///
-/// If the directory does not exist, creates it. In document mode, a default
-/// `config.toml` and built-in partials are scaffolded; in collection mode,
-/// only the directory is created (the root `_calepin/config.toml` suffices).
+/// If the directory does not exist, creates it. In document mode (no project
+/// root set), a default `config.toml` and built-in partials are scaffolded;
+/// in collection mode, only the directory is created.
 pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     let stem = input.file_stem()?.to_string_lossy();
     let sidecar_name = format!("{}_calepin", stem);
-    let project_root = PROJECT_ROOT.with(|r| r.borrow().clone());
-
-    let dir = if let Some(ref root) = project_root {
-        // Preserve subdirectory structure relative to project root
-        let cwd = std::env::current_dir().unwrap_or_default();
-        let abs_input = if input.is_relative() { cwd.join(input) } else { input.to_path_buf() };
-        let abs_root = if root.is_relative() { cwd.join(root) } else { root.clone() };
-        let relative = abs_input.strip_prefix(&abs_root).unwrap_or(&abs_input);
-        let relative_parent = relative.parent().unwrap_or(Path::new(""));
-        root.join("_calepin").join(relative_parent).join(&sidecar_name)
-    } else {
-        input.parent()?.join(&sidecar_name)
-    };
+    let dir = input.parent()?.join(&sidecar_name);
+    let project_dir = PROJECT_DIR.with(|r| r.borrow().clone());
 
     if !dir.is_dir() {
-        if project_root.is_some() {
-            // Collection mode: just create the directory, no config.toml or partials
+        if project_dir.is_some() {
+            // Collection mode: just create the directory
             std::fs::create_dir_all(&dir).ok();
         } else {
             // Document mode: full scaffold with config.toml and partials
@@ -327,7 +361,7 @@ impl PathContext {
     /// Resolve a subdirectory, checking the sidecar first then falling back
     /// to `_calepin/{subdir}/{stem}/` under `fallback_root`.
     fn sidecar_or_project_subdir(subdir: &str, stem: &str, fallback_root: &Path) -> PathBuf {
-        if let Some(sidecar) = get_sidecar_root() {
+        if let Some(sidecar) = get_page_sidecar() {
             sidecar.join(subdir)
         } else {
             calepin_dir(fallback_root, &[subdir, stem])
@@ -406,14 +440,31 @@ pub fn output_dir(project_root: &Path, config_output: Option<&str>) -> PathBuf {
     }
 }
 
-/// `{root}/_calepin/partials`
+/// Partials directory: root sidecar's `partials/`, or legacy `_calepin/partials`.
 pub fn partials_dir(project_root: &Path) -> PathBuf {
-    project_root.join("_calepin/partials")
+    if let Some(sidecar) = get_root_sidecar() {
+        sidecar.join("partials")
+    } else {
+        project_root.join("_calepin/partials")
+    }
 }
 
-/// `{root}/_calepin/assets`
+/// Assets directory: root sidecar's `assets/`, or legacy `_calepin/assets`.
 pub fn assets_dir(project_root: &Path) -> PathBuf {
-    project_root.join("_calepin/assets")
+    if let Some(sidecar) = get_root_sidecar() {
+        sidecar.join("assets")
+    } else {
+        project_root.join("_calepin/assets")
+    }
+}
+
+/// Extensions directory: root sidecar's `extensions/`, or legacy `_calepin/extensions`.
+pub fn extensions_dir(project_root: &Path) -> PathBuf {
+    if let Some(sidecar) = get_root_sidecar() {
+        sidecar.join("extensions")
+    } else {
+        project_root.join("_calepin").join("extensions")
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -471,10 +522,10 @@ pub fn resolve_partial(name: &str, writer: &str) -> Option<PathBuf> {
 
     // Check sidecar then project-level partials
     let mut dirs = Vec::with_capacity(2);
-    if let Some(sidecar) = get_sidecar_root() {
+    if let Some(sidecar) = get_page_sidecar() {
         dirs.push(sidecar.join("partials"));
     }
-    dirs.push(partials_dir(&get_project_root()));
+    dirs.push(partials_dir(&get_project_dir()));
 
     for tpl in &dirs {
         if let Some(p) = check_partials_dir(tpl, chain, &specific, &generic) {
@@ -496,7 +547,7 @@ pub fn resolve_partial(name: &str, writer: &str) -> Option<PathBuf> {
 /// Checks sidecar first, then project-level `_calepin/modules/{name}/`.
 pub fn resolve_module_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
     let candidates = [
-        get_sidecar_root().map(|s| s.join("modules").join(name)),
+        get_page_sidecar().map(|s| s.join("modules").join(name)),
         Some(calepin_dir(project_root, &["modules", name])),
     ];
     candidates.into_iter()

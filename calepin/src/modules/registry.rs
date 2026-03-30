@@ -709,7 +709,7 @@ fn register_builtins(modules: &mut Vec<LoadedModule>) {
 
 /// Check if a module name is declared in any installed extension.
 fn is_extension_module(name: &str, project_root: &Path) -> bool {
-    let extensions_dir = project_root.join("_calepin").join("extensions");
+    let extensions_dir = crate::paths::extensions_dir(project_root);
     if !extensions_dir.is_dir() { return false; }
     if let Ok(entries) = std::fs::read_dir(&extensions_dir) {
         for entry in entries.flatten() {
@@ -730,7 +730,7 @@ fn is_extension_module(name: &str, project_root: &Path) -> bool {
 /// for `[[modules]]` entries with `run` fields. Creates the appropriate
 /// external transform (script or WASM) for each.
 fn load_extension_modules(modules: &mut Vec<LoadedModule>, project_root: &Path) {
-    let extensions_dir = project_root.join("_calepin").join("extensions");
+    let extensions_dir = crate::paths::extensions_dir(project_root);
     if !extensions_dir.is_dir() {
         return;
     }

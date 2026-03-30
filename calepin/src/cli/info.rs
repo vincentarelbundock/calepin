@@ -14,7 +14,7 @@ pub fn handle_extra(action: ExtraAction) -> Result<()> {
             println!();
             println!("  https://www.zotero.org/styles");
             println!();
-            println!("Download a .csl file and set 'csl' to its path in _calepin/config.toml");
+            println!("Download a .csl file and set 'csl' to its path in your sidecar config.toml");
             println!("or in document front matter.");
             println!();
             println!("The following shortcuts are also available as built-in names");
@@ -87,7 +87,7 @@ fn show_partial_resolution(target_name: &str) {
 
     // Set active target and inheritance chain for resolution
     let empty_targets = std::collections::HashMap::new();
-    let project_root = crate::paths::get_project_root();
+    let project_root = crate::paths::get_project_dir();
     let chain = crate::config::extension::inheritance_chain(&project_root, target_name, &empty_targets);
     crate::paths::set_active_target_with_chain(Some(target_name), chain.clone());
 
@@ -108,7 +108,7 @@ fn show_partial_resolution(target_name: &str) {
 
     println!("Partial resolution for target '{}' (writer: {}):\n", target_name, writer);
 
-    let project_root = crate::paths::get_project_root();
+    let project_root = crate::paths::get_project_dir();
     let partials_dir = crate::paths::partials_dir(&project_root);
 
     for name in &names {

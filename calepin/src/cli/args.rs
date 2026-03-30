@@ -94,7 +94,7 @@ pub struct RenderArgs {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
-    /// Output format: a format name from _calepin/config.toml (e.g., web, article)
+    /// Output format: a target name from sidecar config.toml (e.g., web, article)
     /// or a base name (html, latex, typst, slides, website, markdown).
     /// If omitted, auto-detected from output extension or YAML front matter.
     #[arg(short = 't', long)]
@@ -344,14 +344,25 @@ pub enum ExtraAction {
 }
 
 /// Find the project config file in a directory.
-/// Checks `_calepin/config.toml`.
+/// Checks `{stem}_calepin/config.toml` for each .qmd file, then falls back
+/// to legacy `_calepin/config.toml`.
 pub fn find_project_config(dir: &std::path::Path) -> Option<std::path::PathBuf> {
-    let path = crate::paths::calepin_dir(dir, &[]).join("config.toml");
-    if path.exists() {
-        path.canonicalize().ok().or_else(|| Some(crate::paths::normalize_path(&path)))
-    } else {
-        None
+    // New convention: look for any {stem}_calepin/config.toml
+    // Prefer index_calepin/config.toml as the canonical entry point
+    let index_sidecar = dir.join("index_calepin").join("config.toml");
+    if index_sidecar.exists() {
+        return index_sidecar.canonicalize().ok()
+            .or_else(|| Some(crate::paths::normalize_path(&index_sidecar)));
     }
+
+    // Legacy fallback: _calepin/config.toml
+    let legacy = crate::paths::calepin_dir(dir, &[]).join("config.toml");
+    if legacy.exists() {
+        return legacy.canonicalize().ok()
+            .or_else(|| Some(crate::paths::normalize_path(&legacy)));
+    }
+
+    None
 }
 
 /// Print a yellow warning to stderr.

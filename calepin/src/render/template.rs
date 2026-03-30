@@ -119,7 +119,7 @@ pub fn load_default_css() -> String {
     let mut css = String::new();
 
     // 1. Base CSS: user override or built-in
-    let root = crate::paths::get_project_root();
+    let root = crate::paths::get_project_dir();
     let p = crate::paths::partials_dir(&root).join("html").join("page.css");
     if p.exists() {
         if let Ok(s) = std::fs::read_to_string(&p) {
@@ -500,7 +500,7 @@ pub fn build_template_vars_with_headings(
     // Default values for format-specific template variables (engine assets)
     vars.calepin.insert("css".to_string(), load_default_css());
     vars.calepin.insert("js".to_string(), {
-        let root = crate::paths::get_project_root();
+        let root = crate::paths::get_project_dir();
         load_all_extension_assets(&root, |r, name| load_extension_js(r, name))
     });
     vars.calepin.insert("bib_preamble".to_string(), String::new());
@@ -634,7 +634,7 @@ pub fn render_page_template(
     // so minijinja takes ownership -- no Box::leak needed.
     let mut templates = HashMap::new();
 
-    let root = crate::paths::get_project_root();
+    let root = crate::paths::get_project_dir();
     let active_target = crate::paths::get_active_target();
     let tpl_dir = crate::paths::partials_dir(&root);
 

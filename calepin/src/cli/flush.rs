@@ -15,15 +15,18 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
     let mut targets: Vec<PathBuf> = Vec::new();
     let latex_exts = ["aux", "log", "out", "toc", "fls", "fdb_latexmk", "synctex.gz", "xdv"];
 
-    // Find the _calepin/ directory to search in.
-    let calepin_dir = if root.file_name().unwrap_or_default().to_string_lossy().ends_with("_calepin") {
-        root.clone()
+    // Search for sidecar directories (*_calepin/) in the project tree.
+    // If the root itself is a sidecar, search within it directly.
+    if root.file_name().unwrap_or_default().to_string_lossy().ends_with("_calepin") {
+        find_targets_in_calepin(&root, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
     } else {
-        root.join("_calepin")
-    };
-
-    if calepin_dir.is_dir() {
-        find_targets_in_calepin(&calepin_dir, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
+        // Scan for all *_calepin/ directories (new convention)
+        find_sidecar_flush_targets(&root, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
+        // Legacy: also check _calepin/ directory
+        let legacy = root.join("_calepin");
+        if legacy.is_dir() {
+            find_targets_in_calepin(&legacy, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
+        }
     }
 
     if targets.is_empty() {
@@ -62,16 +65,44 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
         }
     }
 
-    // Second pass: remove any empty directories left behind under _calepin/
-    if calepin_dir.is_dir() {
-        remove_empty_dirs(&calepin_dir);
+    // Second pass: remove any empty sidecar directories left behind
+    if let Ok(entries) = std::fs::read_dir(&root) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            if name.to_string_lossy().ends_with("_calepin") && entry.path().is_dir() {
+                remove_empty_dirs(&entry.path());
+            }
+        }
     }
 
     eprintln!("Done.");
     Ok(())
 }
 
-/// Recursively search inside a _calepin/ directory for flush targets.
+/// Scan a project directory for *_calepin/ sidecar directories and collect flush targets.
+fn find_sidecar_flush_targets(dir: &Path, targets: &mut Vec<PathBuf>, latex_exts: &[&str],
+                              do_cache: bool, do_files: bool, do_compilation: bool,
+                              stem_filter: Option<&str>) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.is_dir() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str.ends_with("_calepin") {
+                find_targets_in_calepin(&p, targets, latex_exts, do_cache, do_files, do_compilation, stem_filter);
+            } else {
+                // Recurse into subdirectories to find deeper sidecars
+                find_sidecar_flush_targets(&p, targets, latex_exts, do_cache, do_files, do_compilation, stem_filter);
+            }
+        }
+    }
+}
+
+/// Recursively search inside a sidecar directory for flush targets.
 /// Looks for {stem}_calepin/cache/, {stem}_calepin/files/, and latex artifacts.
 fn find_targets_in_calepin(dir: &Path, targets: &mut Vec<PathBuf>, latex_exts: &[&str],
                            do_cache: bool, do_files: bool, do_compilation: bool,

@@ -1,6 +1,7 @@
 name = "book"
 description = "Multi-chapter book"
 inherits = "html"
+collection = true
 
 [scaffold.book]
 

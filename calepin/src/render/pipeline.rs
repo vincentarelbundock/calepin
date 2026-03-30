@@ -59,7 +59,7 @@ pub fn render_core(
 
     // Resolve sidecar directory ({stem}_calepin/) for per-document overrides
     let sidecar_dir = paths::resolve_sidecar_dir(input);
-    paths::set_sidecar_root(sidecar_dir.as_deref());
+    paths::set_page_sidecar(sidecar_dir.as_deref());
 
     // Merge: project < sidecar config < front matter < CLI
     // Clear document-identity fields from project config so they don't
@@ -116,7 +116,7 @@ pub fn render_core(
         let empty_targets = std::collections::HashMap::new();
         let user_targets = project_metadata.map(|m| &m.targets).unwrap_or(&empty_targets);
         let chain = crate::config::extension::inheritance_chain(
-            &paths::get_project_root(), &format_str, user_targets,
+            &paths::get_project_dir(), &format_str, user_targets,
         );
         paths::set_active_target_with_chain(Some(&format_str), chain);
     }
@@ -125,7 +125,7 @@ pub fn render_core(
     //     Walks the extension inheritance chain and merges [vars] from each.
     //     Also includes side-loaded extensions (calepin.extensions = [...]).
     //     User vars in front matter override extension defaults.
-    let project_root = paths::get_project_root();
+    let project_root = paths::get_project_dir();
     inject_extension_vars(&mut metadata, &project_root);
     for ext_name in paths::get_sideloaded_extensions() {
         inject_extension_vars_for(&mut metadata, &project_root, &ext_name);
@@ -292,7 +292,7 @@ pub fn render_file(
     let empty_targets = std::collections::HashMap::new();
     let user_targets_ref = project_metadata.map(|m| &m.targets).unwrap_or(&empty_targets);
     let chain = crate::config::extension::inheritance_chain(
-        &paths::get_project_root(), target_name, user_targets_ref,
+        &paths::get_project_dir(), target_name, user_targets_ref,
     );
     paths::set_active_target_with_chain(Some(target_name), chain);
     let pipeline = FormatPipeline::from_target_or_writer(target, preliminary_format)?;

@@ -52,7 +52,7 @@ pub fn render_documents(
     let results = render_parallel(pages, quiet, |page| {
         let key = page.source.display().to_string();
         crate::paths::set_active_target_with_chain(target_owned.as_deref(), chain.clone());
-        crate::paths::set_project_root(Some(base_dir));
+        crate::paths::set_project_dir(Some(base_dir));
         let result = render_one_document(page, &overrides, base_dir, output_dir, &format_owned, apply_page_template, Some(meta));
         (key, result)
     });
@@ -81,7 +81,7 @@ pub fn render_documents(
         }
         for page in &failed {
             crate::paths::set_active_target_with_chain(target_name.map(|s| s), chain.clone());
-            crate::paths::set_project_root(Some(base_dir));
+            crate::paths::set_project_dir(Some(base_dir));
             let key = page.source.display().to_string();
             match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template, Some(meta)) {
                 Ok(render_result) => {
@@ -198,7 +198,7 @@ pub fn render_documents_with_crossref(
         let key = page.source.display().to_string();
         let chapter = chapter_map.get(&key).copied();
         crate::paths::set_active_target_with_chain(target_owned.as_deref(), chain.clone());
-        crate::paths::set_project_root(Some(base_dir));
+        crate::paths::set_project_dir(Some(base_dir));
         let result = render_one_document_pass1(page, &overrides, base_dir, output_dir, chapter);
         (key, result)
     });

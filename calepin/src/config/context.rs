@@ -51,11 +51,15 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
         }
     };
 
-    // Target name: CLI flag -> default "html".
-    // The document front matter `target` is resolved during metadata merge,
-    // not from project config. Use `-t` or set `target` in the .qmd preamble.
+    // Target name: CLI flag -> sidecar config target -> default "html".
     let (target_name, explicit_target) = if let Some(name) = cli_target {
         (name.to_string(), true)
+    } else if let Some(ref meta) = project_metadata {
+        if let Some(ref t) = meta.target {
+            (t.clone(), true)
+        } else {
+            ("html".to_string(), false)
+        }
     } else {
         ("html".to_string(), false)
     };
@@ -67,7 +71,7 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
         input.to_path_buf()
     };
     let sidecar = paths::resolve_sidecar_dir(&abs_input);
-    paths::set_sidecar_root(sidecar.as_deref());
+    paths::set_page_sidecar(sidecar.as_deref());
 
     let empty_targets = std::collections::HashMap::new();
     let user_targets = project_metadata.as_ref().map(|m| &m.targets).unwrap_or(&empty_targets);
@@ -82,14 +86,15 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
         if let Ok(cwd) = std::env::current_dir() {
             if cwd != effective_root {
                 eprintln!(
-                    "Note: project root is {} (input file directory, no _calepin/config.toml found)",
+                    "Note: project root is {} (input file directory, no sidecar config found)",
                     effective_root.display()
                 );
             }
         }
     }
 
-    paths::set_project_root(Some(&effective_root));
+    paths::set_project_dir(Some(&effective_root));
+    paths::set_root_sidecar(sidecar.as_deref());
 
     // Set inheritance chain for partial resolution
     let chain = config::extension::inheritance_chain(&effective_root, &target_name, user_targets);

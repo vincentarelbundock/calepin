@@ -11,20 +11,14 @@ use crate::render::elements::BUILTIN_PARTIALS;
 pub fn handle_new_partials() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    // Collect all partial directories: _calepin/partials/ and {stem}_calepin/partials/
+    // Collect all partial directories: {stem}_calepin/partials/
     let mut partial_dirs: Vec<PathBuf> = Vec::new();
 
-    let main_partials = cwd.join("_calepin").join("partials");
-    if main_partials.is_dir() {
-        partial_dirs.push(main_partials);
-    }
-
-    // Find sidecar partial dirs: {stem}_calepin/partials/
     for entry in std::fs::read_dir(&cwd)? {
         let entry = entry?;
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
-        if name_str.ends_with("_calepin") && name_str != "_calepin" && entry.path().is_dir() {
+        if name_str.ends_with("_calepin") && entry.path().is_dir() {
             let sidecar_partials = entry.path().join("partials");
             if sidecar_partials.is_dir() {
                 partial_dirs.push(sidecar_partials);
@@ -34,7 +28,7 @@ pub fn handle_new_partials() -> Result<()> {
 
     if partial_dirs.is_empty() {
         eprintln!("No partial directories found in {}", cwd.display());
-        eprintln!("Expected: _calepin/partials/ or {{stem}}_calepin/partials/");
+        eprintln!("Expected: {{stem}}_calepin/partials/");
         return Ok(());
     }
 

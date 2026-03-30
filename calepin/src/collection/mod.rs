@@ -52,7 +52,11 @@ pub fn build_collection(
     // Set active target, inheritance chain, and project root for template/component resolution
     let chain = crate::config::extension::inheritance_chain(&base_dir, &collection_target_name, &meta.targets);
     crate::paths::set_active_target_with_chain(Some(&collection_target_name), chain);
-    crate::paths::set_project_root(Some(&base_dir));
+    crate::paths::set_project_dir(Some(&base_dir));
+
+    // Set root sidecar (the sidecar containing the collection config)
+    let root_sidecar = found_path.parent().map(|p| p.to_path_buf());
+    crate::paths::set_root_sidecar(root_sidecar.as_deref());
 
     // Set extension partial directories for layered resolution
     let mut ext_dirs = crate::config::context::resolve_extension_partial_dirs_for(&collection_target_name, &base_dir);

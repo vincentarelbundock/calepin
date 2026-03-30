@@ -18,10 +18,10 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
         let input = &args.input[0];
 
         match ProjectKind::discover(input)? {
-            ProjectKind::Collection { config, root } => {
+            ProjectKind::Collection { config, project_dir, .. } => {
                 let output = args.output.unwrap_or_else(|| {
                     let meta = crate::config::load_project_metadata(&config).ok();
-                    crate::paths::output_dir(&root, meta.as_ref().and_then(|m| m.output.as_deref()))
+                    crate::paths::output_dir(&project_dir, meta.as_ref().and_then(|m| m.output.as_deref()))
                 });
                 return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref(), args.portable, false);
             }
@@ -65,7 +65,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
     let errors: Vec<String> = args.input
         .par_iter()
         .filter_map(|input| {
-            crate::paths::set_project_root(ctx.project_root.as_deref());
+            crate::paths::set_project_dir(ctx.project_root.as_deref());
             let file_output = output_ext.as_ref().map(|(dir, ext)| {
                 dir.join(input.file_name().unwrap()).with_extension(ext)
             });

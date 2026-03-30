@@ -51,22 +51,31 @@ fn scaffold_collection(dir: &Path, scaffold: &ResolvedScaffold, scaffold_name: &
     copy_scaffold(scaffold, dir)?;
     install_extension(scaffold, dir)?;
 
-    // Compose config.toml: scaffold project config + shared defaults + collection defaults
-    let calepin_dir = crate::paths::calepin_dir(dir, &[]);
-    std::fs::create_dir_all(&calepin_dir)?;
-    let project_config = scaffold_file(scaffold, "_calepin/config.toml");
+    // Compose config.toml in the root sidecar (index_calepin/)
+    let root_sidecar = dir.join("index_calepin");
+    std::fs::create_dir_all(&root_sidecar)?;
+    // Try new convention first, then legacy scaffold path
+    let project_config = {
+        let new_path = scaffold_file(scaffold, "index_calepin/config.toml");
+        if new_path.is_empty() {
+            scaffold_file(scaffold, "_calepin/config.toml")
+        } else {
+            new_path
+        }
+    };
     let composed = format!(
         "{}\n\n# === Built-in defaults ===\n\n{}\n{}",
         project_config.trim(),
         crate::config::SHARED_TOML,
         crate::config::COLLECTION_TOML,
     );
-    std::fs::write(calepin_dir.join("config.toml"), composed)?;
+    std::fs::write(root_sidecar.join("config.toml"), composed)?;
 
     // Copy built-in assets (CSS, fonts, icons)
     let kind = crate::paths::ProjectKind::Collection {
-        root: dir.to_path_buf(),
-        config: calepin_dir.join("config.toml"),
+        project_dir: dir.to_path_buf(),
+        config: root_sidecar.join("config.toml"),
+        root_sidecar: root_sidecar.clone(),
     };
     crate::themes::copy_builtin_assets(&kind)?;
 
@@ -272,7 +281,7 @@ fn install_extension(scaffold: &ResolvedScaffold, project_dir: &Path) -> Result<
         None => return Ok(()),
     };
     let target = project_dir
-        .join("_calepin")
+        .join("index_calepin")
         .join("extensions")
         .join(&scaffold.manifest.name);
     std::fs::create_dir_all(&target)?;

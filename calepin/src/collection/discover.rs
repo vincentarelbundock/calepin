@@ -84,8 +84,11 @@ pub fn discover_documents(config: &Metadata, base_dir: &Path, output_ext: &str) 
             .to_path_buf();
         let rel_str = rel.display().to_string();
 
-        // Skip _calepin/ and output/ directories
-        if rel_str.starts_with("_calepin/") || rel_str.starts_with(&format!("{}/", output_name)) {
+        // Skip sidecar directories (*_calepin/), legacy _calepin/, and output/
+        if rel.components().any(|c| {
+            let s = c.as_os_str().to_string_lossy();
+            s.ends_with("_calepin")
+        }) || rel_str.starts_with(&format!("{}/", output_name)) {
             continue;
         }
 
@@ -229,7 +232,7 @@ pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(Metad
     }
 
     anyhow::bail!(
-        "No config found. Create _calepin/config.toml in {}",
+        "No config found. Create index_calepin/config.toml in {}",
         base_dir.display()
     )
 }

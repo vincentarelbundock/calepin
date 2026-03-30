@@ -56,6 +56,9 @@ pub struct ExtensionManifest {
     /// Scaffold declarations (document, website, book).
     #[serde(default)]
     pub scaffold: ExtensionScaffolds,
+    /// Whether this extension defines a collection target (website, book).
+    #[serde(default)]
+    pub collection: bool,
 }
 
 /// Scaffold declarations in an extension manifest.
@@ -64,6 +67,7 @@ pub type ExtensionScaffolds = HashMap<String, ScaffoldInfo>;
 
 /// Metadata for a scaffold declaration.
 #[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
 pub struct ScaffoldInfo {
     /// Project kind: "collection" (directory project) or "document" (single .qmd).
     #[serde(default = "default_scaffold_kind")]
@@ -100,6 +104,7 @@ pub struct ExtensionTarget {
 
 /// Asset declarations in an extension manifest.
 #[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
 pub struct ExtensionAssets {
     /// CSS files to inject into the page template.
     #[serde(default)]
@@ -242,10 +247,10 @@ impl ExtensionManifest {
 // Discovery
 // ---------------------------------------------------------------------------
 
-/// Discover installed extensions in `_calepin/extensions/`.
+/// Discover installed extensions in the root sidecar's `extensions/` directory.
 #[allow(dead_code)]
 pub fn discover_extensions(project_root: &Path) -> Vec<(String, PathBuf)> {
-    discover_extensions_in(&project_root.join("_calepin").join("extensions"))
+    discover_extensions_in(&crate::paths::extensions_dir(project_root))
 }
 
 /// Discover extensions in an arbitrary directory.
@@ -316,8 +321,8 @@ pub fn walk_chain<T>(
     start_name: &str,
     mut visitor: impl FnMut(&str, &Path, &ExtensionManifest) -> Option<T>,
 ) -> Vec<T> {
-    let project_ext_dir = project_root.join("_calepin").join("extensions");
-    let sidecar_ext_dir = crate::paths::get_sidecar_root()
+    let project_ext_dir = crate::paths::extensions_dir(project_root);
+    let sidecar_ext_dir = crate::paths::get_page_sidecar()
         .map(|s| s.join("extensions"));
 
     // Need at least one extensions directory to exist.
@@ -371,6 +376,34 @@ pub fn chain_names(project_root: &Path, start_name: &str) -> Vec<String> {
     walk_chain(project_root, start_name, |name, _, _| Some(name.to_string()))
 }
 
+/// Check whether a target name resolves to a collection type (website, book, etc.).
+/// Walks the extension inheritance chain and built-in manifests, returning true
+/// if any extension in the chain has `collection = true`.
+pub fn is_collection_target(target_name: &str) -> bool {
+    // Check installed extensions via walk_chain (checks sidecar, project, built-in)
+    let results = walk_chain(
+        &crate::paths::get_project_dir(),
+        target_name,
+        |_, _, manifest| {
+            if manifest.collection { Some(true) } else { None }
+        },
+    );
+    if results.contains(&true) {
+        return true;
+    }
+    // Walk built-in manifests directly for targets not found via walk_chain
+    let mut current = Some(target_name.to_string());
+    let mut visited = std::collections::HashSet::new();
+    while let Some(name) = current.take() {
+        if !visited.insert(name.clone()) { break; }
+        if let Some(manifest) = builtin_extension(&name) {
+            if manifest.collection { return true; }
+            current = manifest.inherits.clone();
+        }
+    }
+    false
+}
+
 /// Compute the full target inheritance chain (child-first).
 /// Checks installed extensions (sidecar/project), built-in extension manifests,
 /// and user target definitions for `inherits` fields.
@@ -382,8 +415,8 @@ pub fn inheritance_chain(
     start_name: &str,
     user_targets: &std::collections::HashMap<String, super::targets::Target>,
 ) -> Vec<String> {
-    let project_ext_dir = project_root.join("_calepin").join("extensions");
-    let sidecar_ext_dir = crate::paths::get_sidecar_root()
+    let project_ext_dir = crate::paths::extensions_dir(project_root);
+    let sidecar_ext_dir = crate::paths::get_page_sidecar()
         .map(|s| s.join("extensions"));
 
     let mut chain = Vec::new();
@@ -552,5 +585,23 @@ mod tests {
             .map(|m| m.name.as_str())
             .collect();
         assert!(project_modules.contains(&"orchestrator"));
+    }
+
+    #[test]
+    fn test_collection_field_on_builtins() {
+        assert!(builtin_extension("website").unwrap().collection);
+        assert!(builtin_extension("book").unwrap().collection);
+        assert!(!builtin_extension("html").unwrap().collection);
+        assert!(!builtin_extension("latex").unwrap().collection);
+        assert!(!builtin_extension("slides").unwrap().collection);
+    }
+
+    #[test]
+    fn test_is_collection_target() {
+        assert!(is_collection_target("website"));
+        assert!(is_collection_target("book"));
+        assert!(!is_collection_target("html"));
+        assert!(!is_collection_target("latex"));
+        assert!(!is_collection_target("typst"));
     }
 }

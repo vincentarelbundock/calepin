@@ -75,7 +75,7 @@ pub fn run_script(script_path: &Path, module_dir: &Path, input: &str, writer: &s
         .stderr(Stdio::piped())
         .current_dir(module_dir)
         .env("CALEPIN_FORMAT", writer)
-        .env("CALEPIN_ROOT", crate::paths::get_project_root().to_string_lossy().as_ref())
+        .env("CALEPIN_ROOT", crate::paths::get_project_dir().to_string_lossy().as_ref())
         .spawn()
         .and_then(|mut child| {
             if let Some(ref mut stdin) = child.stdin {

@@ -13,7 +13,7 @@ fn is_watched(p: &Path) -> bool {
         return true;
     }
     let s = p.to_string_lossy();
-    s.contains("/_calepin/partials/") || s.ends_with("/_calepin/config.toml")
+    s.contains("_calepin/partials/") || s.ends_with("_calepin/config.toml")
 }
 
 /// Returns true for events that indicate file content changed.

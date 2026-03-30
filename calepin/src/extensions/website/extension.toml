@@ -1,6 +1,7 @@
 name = "website"
 description = "Multi-page website"
 inherits = "html"
+collection = true
 
 [scaffold.website]
 

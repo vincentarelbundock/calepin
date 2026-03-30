@@ -12,9 +12,9 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
     use crate::paths::ProjectKind;
 
     match ProjectKind::discover(&args.input)? {
-        ProjectKind::Collection { config, root } => {
+        ProjectKind::Collection { config, project_dir, .. } => {
             let meta = crate::config::load_project_metadata(&config)?;
-            let output = crate::paths::output_dir(&root, meta.output.as_deref());
+            let output = crate::paths::output_dir(&project_dir, meta.output.as_deref());
 
             // Read target from the input .qmd front matter or CLI -t
             let target_name = args.format.clone()

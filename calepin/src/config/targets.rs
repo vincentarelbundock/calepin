@@ -200,8 +200,8 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
     }
 
     // 3. Named targets in installed extensions (sidecar then project)
-    let project_root = crate::paths::get_project_root();
-    let sidecar_extensions = crate::paths::get_sidecar_root()
+    let project_root = crate::paths::get_project_dir();
+    let sidecar_extensions = crate::paths::get_page_sidecar()
         .map(|s| super::extension::discover_extensions_in(&s.join("extensions")))
         .unwrap_or_default();
     let project_extensions = super::extension::discover_extensions(&project_root);
@@ -225,17 +225,17 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
     }
 
     bail!(
-        "Unknown target '{}'. Define it in _calepin/config.toml under [targets.{}].",
+        "Unknown target '{}'. Define it in your sidecar config.toml under [targets.{}].",
         name, name,
     )
 }
 
 /// Try to load an extension directory as a target (checks sidecar then project).
 fn resolve_extension_target(name: &str) -> Result<Option<Target>> {
-    let project_root = crate::paths::get_project_root();
+    let project_root = crate::paths::get_project_dir();
     let candidates = [
-        crate::paths::get_sidecar_root().map(|s| s.join("extensions").join(name)),
-        Some(project_root.join("_calepin").join("extensions").join(name)),
+        crate::paths::get_page_sidecar().map(|s| s.join("extensions").join(name)),
+        Some(crate::paths::extensions_dir(&project_root).join(name)),
     ];
     for dir in candidates.iter().flatten() {
         if dir.join("extension.toml").exists() {
