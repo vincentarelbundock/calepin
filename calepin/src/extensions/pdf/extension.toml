@@ -1,0 +1,7 @@
+name = "pdf"
+description = "PDF document output via Typst"
+inherits = "typst"
+
+[target]
+extension = "pdf"
+post = ["typst compile {input}"]

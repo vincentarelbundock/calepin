@@ -113,7 +113,12 @@ pub fn render_core(
     // Only set active target if not already set by the caller (render_file sets
     // it to the target name, which may differ from the writer/format name).
     if paths::get_active_target().is_none() {
-        paths::set_active_target(Some(&format_str));
+        let empty_targets = std::collections::HashMap::new();
+        let user_targets = project_metadata.map(|m| &m.targets).unwrap_or(&empty_targets);
+        let chain = crate::config::extension::inheritance_chain(
+            &paths::get_project_root(), &format_str, user_targets,
+        );
+        paths::set_active_target_with_chain(Some(&format_str), chain);
     }
 
     // 3b. Inject extension vars into metadata (namespaced by extension name).
@@ -288,8 +293,13 @@ pub fn render_file(
     // Build pipeline
     let preliminary_format = resolved_format.as_deref().unwrap_or("html");
     let target_name = format.unwrap_or(preliminary_format);
-    // Set active target so partial resolution can find target-specific templates
-    paths::set_active_target(Some(target_name));
+    // Set active target and inheritance chain for partial resolution
+    let empty_targets = std::collections::HashMap::new();
+    let user_targets_ref = project_metadata.map(|m| &m.targets).unwrap_or(&empty_targets);
+    let chain = crate::config::extension::inheritance_chain(
+        &paths::get_project_root(), target_name, user_targets_ref,
+    );
+    paths::set_active_target_with_chain(Some(target_name), chain);
     let pipeline = if let Some(t) = target {
         FormatPipeline::from_target(t)?
     } else {

@@ -57,7 +57,7 @@ pub fn render(
         .join("\n\n");
 
     let mut vars = HashMap::new();
-    build_div_vars(&mut vars, classes, id, attrs, &children_rendered, format);
+    build_div_vars(&mut vars, classes, id, attrs, &children_rendered);
 
     // Template lookup: explicit override -> class-based -> fallback
     let (tpl_name, tpl_source) = vars.get("template")
@@ -84,12 +84,10 @@ fn build_div_vars(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
     children_rendered: &str,
-    format: &str,
 ) {
     for (k, val) in attrs {
         vars.insert(k.clone(), val.clone());
     }
-    vars.insert("base".to_string(), format.to_string());
     vars.insert("children".to_string(), children_rendered.to_string());
     vars.insert("classes".to_string(), classes.join(" "));
 

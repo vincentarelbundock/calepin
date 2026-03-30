@@ -88,7 +88,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     let toc_list = build_toc_list_html(items);
     if toc_list.is_empty() { return String::new(); }
     let mut vars = HashMap::new();
-    vars.insert("base".to_string(), "html".to_string());
+
     vars.insert("writer".to_string(), "html".to_string());
     vars.insert("title".to_string(), title.to_string());
     vars.insert("toc_list".to_string(), toc_list);
@@ -336,7 +336,6 @@ pub fn render_element(name: &str, ext: &str, vars: &HashMap<String, String>) -> 
     use crate::render::elements::resolve_element_partial;
     if let Some(tpl) = resolve_element_partial(name, ext) {
         let mut vars = vars.clone();
-        vars.insert("base".to_string(), ext.to_string());
         vars.insert("writer".to_string(), ext.to_string());
         apply_template(&tpl, &vars)
     } else {
@@ -364,11 +363,9 @@ pub fn build_template_vars_with_headings(
     );
     vars.insert("preamble".to_string(), String::new());
 
-    // `base` = output writer (html, latex, typst, markdown)
-    // `target` = named output profile (defaults to base when no target specified)
-    vars.insert("base".to_string(), ext.to_string());
     vars.insert("writer".to_string(), ext.to_string());
-    vars.insert("target".to_string(), ext.to_string());
+    vars.insert("target".to_string(),
+        crate::paths::get_active_target().unwrap_or_else(|| ext.to_string()));
 
     // Language
     vars.insert("lang".to_string(), defs.lang.as_deref().unwrap_or("en").to_string());
@@ -478,7 +475,6 @@ pub fn build_template_vars_with_headings(
         } else {
             // LaTeX, Typst, others: use the toc template directly
             let mut toc_vars = HashMap::new();
-            toc_vars.insert("base".to_string(), ext.to_string());
             toc_vars.insert("writer".to_string(), ext.to_string());
             toc_vars.insert("title".to_string(), toc_title.to_string());
             toc_vars.insert("depth".to_string(), toc_depth.to_string());
@@ -571,7 +567,7 @@ pub fn assemble_page(
 pub fn render_page_template(
     page_template: &str,
     vars: &HashMap<String, String>,
-    base: &str,
+    writer: &str,
     user_vars: &std::collections::HashMap<String, crate::value::Value>,
 ) -> String {
     // Collect all template sources into an owned map, then use set_loader
@@ -579,27 +575,29 @@ pub fn render_page_template(
     let mut templates = HashMap::new();
 
     let root = crate::paths::get_project_root();
-    let active_target = crate::paths::get_active_target();
+    let chain = crate::paths::get_active_inheritance_chain();
+    // Fall back to writer as a single-element chain when no target is set.
+    let fallback;
+    let chain = if chain.is_empty() {
+        fallback = vec![writer.to_string()];
+        &fallback
+    } else {
+        &chain
+    };
     let tpl_dir = crate::paths::partials_dir(&root);
 
-    // Load templates from filesystem directories
+    // Load templates from filesystem directories, walking the inheritance chain
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();
-    if let Some(ref target) = active_target {
-        if target != base {
-            dirs.push(tpl_dir.join(target));
-        }
+    for target in chain {
+        dirs.push(tpl_dir.join(target));
     }
-    dirs.push(tpl_dir.join(base));
     dirs.push(tpl_dir.join("common"));
 
     // Also check extension partial directories (child-first order)
     for ext_dir in crate::paths::get_extension_partial_dirs() {
-        if let Some(ref target) = active_target {
-            if target != base {
-                dirs.push(ext_dir.join(target));
-            }
+        for target in chain {
+            dirs.push(ext_dir.join(target));
         }
-        dirs.push(ext_dir.join(base));
         dirs.push(ext_dir.join("common"));
     }
 
@@ -619,15 +617,17 @@ pub fn render_page_template(
         }
     }
 
-    // Load built-in base-specific templates as fallback
-    if let Some(base_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir(base) {
-        for entry in base_dir.files() {
-            if let Some(content) = entry.contents_utf8() {
-                let name = entry.path().file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
-                if !name.is_empty() {
-                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
+    // Load built-in templates as fallback, walking the inheritance chain
+    for target in chain {
+        if let Some(target_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir(target) {
+            for entry in target_dir.files() {
+                if let Some(content) = entry.contents_utf8() {
+                    let name = entry.path().file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("");
+                    if !name.is_empty() {
+                        templates.entry(name.to_string()).or_insert_with(|| content.to_string());
+                    }
                 }
             }
         }

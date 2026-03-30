@@ -1,0 +1,2 @@
+== {{label_citation}}
+{{content}}

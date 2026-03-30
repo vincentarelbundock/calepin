@@ -280,6 +280,55 @@ pub fn chain_names(project_root: &Path, start_name: &str) -> Vec<String> {
     walk_chain(project_root, start_name, |name, _, _| Some(name.to_string()))
 }
 
+/// Compute the full target inheritance chain (child-first).
+/// Checks installed extensions (sidecar/project), built-in extension manifests,
+/// and user target definitions for `inherits` fields.
+///
+/// Always includes `start_name`. Example: `inheritance_chain("minimal", ...)` ->
+/// `["minimal", "website", "html"]`.
+pub fn inheritance_chain(
+    project_root: &Path,
+    start_name: &str,
+    user_targets: &std::collections::HashMap<String, super::targets::Target>,
+) -> Vec<String> {
+    let project_ext_dir = project_root.join("_calepin").join("extensions");
+    let sidecar_ext_dir = crate::paths::get_sidecar_root()
+        .map(|s| s.join("extensions"));
+
+    let mut chain = Vec::new();
+    let mut current = Some(start_name.to_string());
+    let mut visited = std::collections::HashSet::new();
+
+    while let Some(name) = current.take() {
+        if !visited.insert(name.clone()) { break; }
+        chain.push(name.clone());
+
+        // 1. Check installed extension (sidecar then project)
+        let ext_dir = sidecar_ext_dir.as_ref()
+            .map(|d| d.join(&name))
+            .filter(|d| d.join("extension.toml").exists())
+            .unwrap_or_else(|| project_ext_dir.join(&name));
+        if let Some(manifest) = load_cached(&ext_dir) {
+            current = manifest.inherits.clone();
+            continue;
+        }
+
+        // 2. Check built-in extension manifest
+        if let Some(manifest) = builtin_extension(&name) {
+            current = manifest.inherits.clone();
+            continue;
+        }
+
+        // 3. Check user target definitions (pre-resolution, with inherits intact)
+        if let Some(target) = user_targets.get(&name) {
+            current = target.inherits.clone();
+            continue;
+        }
+    }
+
+    chain
+}
+
 // ---------------------------------------------------------------------------
 // Extension name validation
 // ---------------------------------------------------------------------------
@@ -301,6 +350,7 @@ pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
     ("latex", include_str!("../extensions/latex/extension.toml")),
     ("typst", include_str!("../extensions/typst/extension.toml")),
     ("markdown", include_str!("../extensions/markdown/extension.toml")),
+    ("pdf", include_str!("../extensions/pdf/extension.toml")),
     ("slides", include_str!("../extensions/slides/extension.toml")),
     ("website", include_str!("../extensions/website/extension.toml")),
     ("book", include_str!("../extensions/book/extension.toml")),

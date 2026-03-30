@@ -1,0 +1,12 @@
+{%- if filename %}
+\begin{codefilename}
+\codefilenameheader{ {{-filename-}} }
+{%- endif %}
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+{{highlighted}}
+\end{Verbatim}
+\end{srccode}
+{%- if filename %}
+\end{codefilename}
+{%- endif %}

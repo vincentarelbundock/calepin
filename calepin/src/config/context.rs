@@ -91,6 +91,10 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
 
     paths::set_project_root(Some(&effective_root));
 
+    // Set inheritance chain for partial resolution
+    let chain = config::extension::inheritance_chain(&effective_root, &target_name, user_targets);
+    paths::set_active_target_with_chain(Some(&target_name), chain);
+
     // Set extension partial directories for layered resolution
     let mut ext_dirs = resolve_extension_partial_dirs(&target_name, &effective_root);
 

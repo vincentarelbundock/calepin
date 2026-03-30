@@ -85,23 +85,16 @@ fn show_partial_resolution(target_name: &str) {
     let writer = target.as_ref().map(|t| t.writer.as_str()).unwrap_or(target_name);
     let ext = crate::paths::resolve_extension(writer);
 
-    // Set active target for resolution
-    crate::paths::set_active_target(Some(target_name));
+    // Set active target and inheritance chain for resolution
+    let empty_targets = std::collections::HashMap::new();
+    let project_root = crate::paths::get_project_root();
+    let chain = crate::config::extension::inheritance_chain(&project_root, target_name, &empty_targets);
+    crate::paths::set_active_target_with_chain(Some(target_name), chain.clone());
 
-    // Collect all known partial names from built-in
+    // Collect all known partial names from built-in, walking the inheritance chain
     let mut names: Vec<String> = Vec::new();
-    if let Some(dir) = BUILTIN_PARTIALS.get_dir(writer) {
-        for file in dir.files() {
-            if let Some(stem) = file.path().file_stem().and_then(|s| s.to_str()) {
-                if !names.contains(&stem.to_string()) {
-                    names.push(stem.to_string());
-                }
-            }
-        }
-    }
-    // Also check target-specific partials
-    if target_name != writer {
-        if let Some(dir) = BUILTIN_PARTIALS.get_dir(target_name) {
+    for chain_target in &chain {
+        if let Some(dir) = BUILTIN_PARTIALS.get_dir(chain_target.as_str()) {
             for file in dir.files() {
                 if let Some(stem) = file.path().file_stem().and_then(|s| s.to_str()) {
                     if !names.contains(&stem.to_string()) {

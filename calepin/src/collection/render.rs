@@ -45,10 +45,13 @@ pub fn render_documents(
 
     let format_owned = format.to_string();
     let target_owned = target_name.map(|s| s.to_string());
+    let chain = target_name.map(|tn| {
+        crate::config::extension::inheritance_chain(base_dir, tn, &meta.targets)
+    }).unwrap_or_default();
 
     let results = render_parallel(pages, quiet, |page| {
         let key = page.source.display().to_string();
-        crate::paths::set_active_target(target_owned.as_deref());
+        crate::paths::set_active_target_with_chain(target_owned.as_deref(), chain.clone());
         crate::paths::set_project_root(Some(base_dir));
         let result = render_one_document(page, &overrides, base_dir, output_dir, &format_owned, apply_page_template, Some(meta));
         (key, result)
@@ -77,7 +80,7 @@ pub fn render_documents(
             eprintln!("Retrying {} failed document(s) sequentially...", failed.len());
         }
         for page in &failed {
-            crate::paths::set_active_target(target_name.map(|s| s));
+            crate::paths::set_active_target_with_chain(target_name.map(|s| s), chain.clone());
             crate::paths::set_project_root(Some(base_dir));
             let key = page.source.display().to_string();
             match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template, Some(meta)) {
@@ -187,12 +190,15 @@ pub fn render_documents_with_crossref(
     let chapter_map = assign_chapter_numbers(meta);
 
     let target_owned = target_name.map(|s| s.to_string());
+    let chain = target_name.map(|tn| {
+        crate::config::extension::inheritance_chain(base_dir, tn, &meta.targets)
+    }).unwrap_or_default();
 
     // Pass 1: Render all pages in parallel with skip_crossref=true
     let pass1 = render_parallel(pages, quiet, |page| {
         let key = page.source.display().to_string();
         let chapter = chapter_map.get(&key).copied();
-        crate::paths::set_active_target(target_owned.as_deref());
+        crate::paths::set_active_target_with_chain(target_owned.as_deref(), chain.clone());
         crate::paths::set_project_root(Some(base_dir));
         let result = render_one_document_pass1(page, &overrides, base_dir, output_dir, chapter);
         (key, result)

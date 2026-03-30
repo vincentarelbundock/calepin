@@ -51,8 +51,9 @@ pub fn build_collection(
     let format = &collection_target.writer;
     let output_ext = collection_target.output_extension();
 
-    // Set active target and project root for template/component resolution
-    crate::paths::set_active_target(Some(&collection_target_name));
+    // Set active target, inheritance chain, and project root for template/component resolution
+    let chain = crate::config::extension::inheritance_chain(&base_dir, &collection_target_name, &meta.targets);
+    crate::paths::set_active_target_with_chain(Some(&collection_target_name), chain);
     crate::paths::set_project_root(Some(&base_dir));
 
     // Set extension partial directories for layered resolution

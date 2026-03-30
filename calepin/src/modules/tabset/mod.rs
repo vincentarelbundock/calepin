@@ -51,7 +51,6 @@ pub fn render(
 
     // Build template variables
     let mut vars = HashMap::new();
-    vars.insert("base".to_string(), format.to_string());
     vars.insert("writer".to_string(), format.to_string());
     vars.insert("group".to_string(), group.to_string());
 

@@ -154,7 +154,6 @@ pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
     }
 
     let mut vars = HashMap::new();
-    vars.insert("base".to_string(), "html".to_string());
     vars.insert("writer".to_string(), "html".to_string());
     vars.insert("footnotes".to_string(), "true".to_string());
     vars.insert("footnote_items".to_string(), footnote_items);

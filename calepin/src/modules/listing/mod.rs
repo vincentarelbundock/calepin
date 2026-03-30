@@ -24,7 +24,6 @@ pub fn wrap_listing(
 
     let label_defs = metadata.labels.clone();
     let mut vars = HashMap::new();
-    vars.insert("base".to_string(), format.to_string());
     vars.insert("writer".to_string(), format.to_string());
     vars.insert("label".to_string(), label.to_string());
     vars.insert("number".to_string(), num.to_string());

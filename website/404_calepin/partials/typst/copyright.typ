@@ -1,0 +1,2 @@
+== {{label_copyright}}
+{{content}}

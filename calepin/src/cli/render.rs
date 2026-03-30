@@ -136,8 +136,15 @@ fn render_one_with_context(
         input.with_extension(ext)
     };
 
-    // Set active target for partial/extension resolution
-    crate::paths::set_active_target(Some(&ctx.target_name));
+    // Set active target and inheritance chain for partial/extension resolution
+    let empty_targets = std::collections::HashMap::new();
+    let user_targets = ctx.project_metadata.as_ref().map(|m| &m.targets).unwrap_or(&empty_targets);
+    let chain = crate::config::extension::inheritance_chain(
+        ctx.project_root.as_deref().unwrap_or(std::path::Path::new(".")),
+        &ctx.target_name,
+        user_targets,
+    );
+    crate::paths::set_active_target_with_chain(Some(&ctx.target_name), chain);
 
     // Build overrides from project metadata
     let mut all_overrides: Vec<String> = overrides.to_vec();

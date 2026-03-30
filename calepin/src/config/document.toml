@@ -33,30 +33,6 @@ preview = "serve"
 modules = ["highlight"]
 crossref = "plain"
 
-[targets.pdf]
-writer = "typst"
-template = "page"
-extension = "pdf"
-fig_extension = "svg"
-fig_formats = ["svg", "png", "jpg"]
-post = ["typst compile {input}"]
-modules = ["highlight"]
-crossref = "plain"
-
-[targets.slides]
-writer = "html"
-template = "page"
-extension = "html"
-fig_extension = "svg"
-embed_resources = false
-preview = "serve"
-modules = ["highlight", "append_footnotes", "split_slides"]
-crossref = "html"
-toc_headings = false
-
-[targets.slides.page_vars]
-base = "html"
-
 [targets.markdown]
 writer = "markdown"
 extension = "md"

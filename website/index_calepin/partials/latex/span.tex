@@ -1,0 +1,5 @@
+{%- if class == "aside" %}
+\marginpar{\footnotesize {{content}}}
+{%- else %}
+\text{ {{-content-}} }
+{%- endif %}

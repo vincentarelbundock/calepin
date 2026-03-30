@@ -129,6 +129,9 @@ impl ProjectKind {
 
 thread_local! {
     static ACTIVE_TARGET: RefCell<Option<String>> = RefCell::new(None);
+    /// Target inheritance chain (child-first), e.g. ["minimal", "website", "html"].
+    /// Used by partial resolution to walk the chain instead of checking target/base.
+    static ACTIVE_INHERITANCE_CHAIN: RefCell<Vec<String>> = RefCell::new(Vec::new());
     static PROJECT_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
     static SIDECAR_ROOT: RefCell<Option<PathBuf>> = RefCell::new(None);
     /// Extension partial directories to check, in inheritance order (child first).
@@ -138,8 +141,6 @@ thread_local! {
 }
 
 /// Set the active target name for template resolution.
-/// When set, `resolve_template` checks `_calepin/templates/{target}/`
-/// before `_calepin/templates/{base}/`.
 pub fn set_active_target(target: Option<&str>) {
     ACTIVE_TARGET.with(|t| {
         *t.borrow_mut() = target.map(|s| s.to_string());
@@ -148,6 +149,25 @@ pub fn set_active_target(target: Option<&str>) {
 
 pub fn get_active_target() -> Option<String> {
     ACTIVE_TARGET.with(|t| t.borrow().clone())
+}
+
+/// Set the target inheritance chain for partial resolution.
+/// Chain is child-first, e.g. ["minimal", "website", "html"].
+pub fn set_active_inheritance_chain(chain: Vec<String>) {
+    ACTIVE_INHERITANCE_CHAIN.with(|c| {
+        *c.borrow_mut() = chain;
+    });
+}
+
+pub fn get_active_inheritance_chain() -> Vec<String> {
+    ACTIVE_INHERITANCE_CHAIN.with(|c| c.borrow().clone())
+}
+
+/// Set both the active target and its inheritance chain.
+/// Convenience wrapper that keeps the two in sync.
+pub fn set_active_target_with_chain(target: Option<&str>, chain: Vec<String>) {
+    set_active_target(target);
+    set_active_inheritance_chain(chain);
 }
 
 /// Set the project root for all path resolution.
@@ -434,22 +454,17 @@ pub fn resolve_extension(base: &str) -> &str {
 }
 
 /// Check a partials directory for a matching partial file.
-/// Tries target-specific, engine-specific, then format-agnostic paths.
+/// Walks the inheritance chain, then falls back to `common/`.
 fn check_partials_dir(
     tpl: &Path,
-    base: &str,
-    base_specific: &str,
+    chain: &[String],
+    specific: &str,
     generic: &str,
-    active_target: &Option<String>,
 ) -> Option<PathBuf> {
-    if let Some(ref target) = active_target {
-        if target != base {
-            let p = tpl.join(target).join(base_specific);
-            if p.exists() { return Some(p); }
-        }
+    for target in chain {
+        let p = tpl.join(target).join(specific);
+        if p.exists() { return Some(p); }
     }
-    let p = tpl.join(base).join(base_specific);
-    if p.exists() { return Some(p); }
     let p = tpl.join("common").join(generic);
     if p.exists() { return Some(p); }
     None
@@ -457,16 +472,26 @@ fn check_partials_dir(
 
 /// Resolve a partial (element or page).
 ///
-/// Lookup order (first match wins):
-///   1. Sidecar partials: `{stem}_calepin/partials/{target|base|common}/`
-///   2. Project partials: `_calepin/partials/{target|base|common}/`
+/// Lookup order (first match wins), walking the inheritance chain at each level:
+///   1. Sidecar partials: `{stem}_calepin/partials/{chain...}/` then `common/`
+///   2. Project partials: `_calepin/partials/{chain...}/` then `common/`
 ///   3. Extension partials (child-first inheritance chain)
 ///   4. (caller falls back to built-in)
-pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
-    let ext = resolve_extension(base);
-    let base_specific = format!("{}.{}", name, ext);
+///
+/// The `writer` parameter determines the file extension (html, tex, typ, md).
+pub fn resolve_partial(name: &str, writer: &str) -> Option<PathBuf> {
+    let ext = resolve_extension(writer);
+    let specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
-    let active_target = get_active_target();
+    let chain = get_active_inheritance_chain();
+    // Fall back to writer as a single-element chain when no target is set.
+    let fallback;
+    let chain = if chain.is_empty() {
+        fallback = vec![writer.to_string()];
+        &fallback
+    } else {
+        &chain
+    };
 
     // Check sidecar then project-level partials
     let mut dirs = Vec::with_capacity(2);
@@ -476,14 +501,14 @@ pub fn resolve_partial(name: &str, base: &str) -> Option<PathBuf> {
     dirs.push(partials_dir(&get_project_root()));
 
     for tpl in &dirs {
-        if let Some(p) = check_partials_dir(tpl, base, &base_specific, &generic, &active_target) {
+        if let Some(p) = check_partials_dir(tpl, chain, &specific, &generic) {
             return Some(p);
         }
     }
 
     // Check extension partials (child-first order)
     for ext_dir in get_extension_partial_dirs() {
-        if let Some(p) = check_partials_dir(&ext_dir, base, &base_specific, &generic, &active_target) {
+        if let Some(p) = check_partials_dir(&ext_dir, chain, &specific, &generic) {
             return Some(p);
         }
     }

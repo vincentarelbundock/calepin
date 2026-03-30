@@ -30,27 +30,30 @@ fn resolve_partial_alias(name: &str) -> &str {
     }
 }
 
-/// Look up a built-in template by name and base.
-/// Checks `partials/{target}/{name}.{ext}` (active target, if different from base),
-/// then `partials/{base}/{name}.{ext}`, then `templates/common/{name}.jinja`.
-pub fn resolve_builtin_partial(name: &str, base: &str) -> Option<&'static str> {
+/// Look up a built-in template by name and writer.
+/// Walks the inheritance chain, checking `partials/{target}/{name}.{ext}` for
+/// each target in the chain, then falls back to `common/{name}.jinja`.
+pub fn resolve_builtin_partial(name: &str, writer: &str) -> Option<&'static str> {
     let resolved = resolve_partial_alias(name);
-    let ext = crate::paths::resolve_extension(base);
+    let ext = crate::paths::resolve_extension(writer);
+    let chain = crate::paths::get_active_inheritance_chain();
+    // Fall back to writer as a single-element chain when no target is set
+    // (e.g., in tests or standalone calls without a full pipeline context).
+    let fallback;
+    let chain = if chain.is_empty() {
+        fallback = vec![writer.to_string()];
+        &fallback
+    } else {
+        &chain
+    };
 
-    // Target-specific (e.g., book/page.typ)
-    if let Some(target) = crate::paths::get_active_target() {
-        if target != base {
-            let target_path = format!("{}/{}.{}", target, resolved, ext);
-            if let Some(file) = BUILTIN_PARTIALS.get_file(&target_path) {
-                return file.contents_utf8();
+    for target in chain {
+        let path = format!("{}/{}.{}", target, resolved, ext);
+        if let Some(file) = BUILTIN_PARTIALS.get_file(&path) {
+            if let Some(content) = file.contents_utf8() {
+                return Some(content);
             }
         }
-    }
-
-    // Base-specific (e.g., html/figure.html)
-    let base_path = format!("{}/{}.{}", base, resolved, ext);
-    if let Some(file) = BUILTIN_PARTIALS.get_file(&base_path) {
-        return file.contents_utf8();
     }
 
     // Generic .jinja
@@ -305,7 +308,6 @@ impl ElementRenderer {
 
     fn build_template_output(&self, template_name: &str, element: &Element) -> String {
         let mut vars = HashMap::new();
-        vars.insert("base".to_string(), self.ext.clone());
         vars.insert("writer".to_string(), self.ext.clone());
 
         // Run element through pipeline filters

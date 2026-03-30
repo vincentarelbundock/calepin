@@ -80,7 +80,6 @@ pub fn strip_markdown_formatting(text: &str) -> String {
 fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, String)>) -> Option<String> {
     let tpl = resolve_element_partial(name, ext)?;
     let mut vars = HashMap::new();
-    vars.insert("base".to_string(), ext.to_string());
     vars.insert("writer".to_string(), ext.to_string());
     for (k, v) in extra_vars {
         vars.insert(k.to_string(), v);
@@ -293,7 +292,6 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
 
             if let Some(ref tpl) = author_tpl {
                 let mut vars = HashMap::new();
-                vars.insert("base".to_string(), ext.to_string());
                 vars.insert("writer".to_string(), ext.to_string());
                 vars.insert("name".to_string(), author.name.literal.clone());
                 vars.insert("superscripts".to_string(), superscripts);
@@ -319,7 +317,6 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             };
             if let Some(ref tpl) = aff_tpl {
                 let mut vars = HashMap::new();
-                vars.insert("base".to_string(), ext.to_string());
                 vars.insert("writer".to_string(), ext.to_string());
                 vars.insert("number".to_string(), number);
                 vars.insert("display".to_string(), display);
@@ -362,7 +359,6 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
 
         if let Some(tpl) = resolve_element_partial("authors", ext) {
             let mut vars = HashMap::new();
-            vars.insert("base".to_string(), ext.to_string());
             vars.insert("writer".to_string(), ext.to_string());
             vars.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
             vars.insert("authors".to_string(), authors_joined);
