@@ -26,19 +26,20 @@ pub struct CollectionContext {
     pub base_path: String,
     pub favicon: Option<String>,
     pub navbar: crate::config::NavbarConfig,
-    pub pages: Vec<NavNode>,
+    pub pages: Vec<PageNode>,
     pub languages: Vec<LanguageConfig>,
     pub dark_mode: bool,
     pub math: String,
 }
 
-/// A node in the navigation tree (for sidebar rendering).
+/// A node in the page tree, used by both website navigation and book orchestration.
 #[derive(Debug, Clone, Serialize)]
-pub struct NavNode {
-    pub text: String,
+pub struct PageNode {
+    pub title: String,
     pub href: Option<String>,
+    pub file: Option<String>,
     pub active: bool,
-    pub children: Vec<NavNode>,
+    pub children: Vec<PageNode>,
 }
 
 /// Per-document context available to templates as `{{ document.* }}`.
@@ -241,7 +242,7 @@ pub fn build_collection_context(
     // Build nav tree for the default language (or all content if no languages configured)
     let default_lang = meta.default_language();
     let document_nodes = expand_contents_for_lang(&meta.contents, base_dir, default_lang);
-    let nav_tree = build_nav_tree(&document_nodes, pages);
+    let nav_tree = build_page_tree(&document_nodes, pages);
 
     // Math block
     let html_math_method = "katex".to_string();
@@ -276,51 +277,54 @@ pub fn build_collection_context(
 }
 
 /// Build the nav tree for a specific language.
-pub fn build_nav_tree_for_lang(
+pub fn build_page_tree_for_lang(
     meta: &Metadata,
     pages: &[DocumentInfo],
     base_dir: &std::path::Path,
     lang: &str,
-) -> Vec<NavNode> {
+) -> Vec<PageNode> {
     let document_nodes = expand_contents_for_lang(&meta.contents, base_dir, Some(lang));
-    build_nav_tree(&document_nodes, pages)
+    build_page_tree(&document_nodes, pages)
 }
 
-/// Build the navigation tree from expanded DocumentNodes, resolving titles from page metadata.
-fn build_nav_tree(nodes: &[DocumentNode], pages: &[DocumentInfo]) -> Vec<NavNode> {
+/// Build the page tree from expanded DocumentNodes, resolving titles and paths from page metadata.
+/// Used by both website navigation (via `href`) and book orchestration (via `file`).
+pub fn build_page_tree(nodes: &[DocumentNode], pages: &[DocumentInfo]) -> Vec<PageNode> {
     let document_map = pages_to_map(pages);
 
     nodes.iter().map(|node| match node {
         DocumentNode::Document { path, title } => {
             let info = document_map.get(path.as_str());
-            let text = title.clone()
+            let resolved_title = title.clone()
                 .or_else(|| info.and_then(|p| p.meta.title.clone()))
                 .unwrap_or_else(|| path.clone());
             let href = info.map(|p| p.url.clone());
-            NavNode {
-                text: crate::render::convert::render_inline(&text, "html"),
+            let file = info.map(|p| p.output.display().to_string());
+            PageNode {
+                title: resolved_title,
                 href,
+                file,
                 active: false,
                 children: vec![],
             }
         }
         DocumentNode::Section { title, index, documents: children } => {
-            // Section header can be a link if it has an index page
             let href = index.as_ref().and_then(|idx| {
                 document_map.get(idx.as_str()).map(|p| p.url.clone())
             });
-            NavNode {
-                text: title.clone(),
+            PageNode {
+                title: title.clone(),
                 href,
+                file: None,
                 active: false,
-                children: build_nav_tree(children, pages),
+                children: build_page_tree(children, pages),
             }
         }
     }).collect()
 }
 
 /// Mark the active page in the nav tree.
-pub fn mark_active(nodes: &mut [NavNode], current_url: &str) -> bool {
+pub fn mark_active(nodes: &mut [PageNode], current_url: &str) -> bool {
     for node in nodes.iter_mut() {
         node.active = false;
         if let Some(ref href) = node.href {
@@ -513,7 +517,7 @@ pub fn resolve_navbar_urls(navbar: &mut crate::config::NavbarConfig, base_path: 
 }
 
 /// Rewrite all hrefs in a nav tree through `link()`.
-pub fn resolve_nav_urls(nodes: &mut [NavNode], base_path: &str, mode: crate::utils::links::UrlMode, depth: usize) {
+pub fn resolve_nav_urls(nodes: &mut [PageNode], base_path: &str, mode: crate::utils::links::UrlMode, depth: usize) {
     for node in nodes.iter_mut() {
         if let Some(ref mut href) = node.href {
             *href = crate::utils::links::link(href, base_path, mode, depth);

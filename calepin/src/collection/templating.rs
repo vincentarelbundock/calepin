@@ -6,7 +6,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 
-use super::context::{self, build_document_context, build_collection_context, build_nav_tree_for_lang, mark_active, ListingItem};
+use super::context::{self, build_document_context, build_collection_context, build_page_tree_for_lang, mark_active, ListingItem};
 use super::discover::DocumentInfo;
 use super::render;
 use super::templates;
@@ -124,7 +124,7 @@ pub(crate) fn apply_collection_templates(
         // Build language-specific nav tree
         let mut nav_tree = if !meta.languages.is_empty() {
             if let Some(ref lang) = page.lang {
-                build_nav_tree_for_lang(meta, pages, base_dir, lang)
+                build_page_tree_for_lang(meta, pages, base_dir, lang)
             } else {
                 collection_ctx.pages.clone()
             }

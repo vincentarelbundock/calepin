@@ -71,15 +71,13 @@ pub fn build_collection(
     crate::paths::set_extension_template_dirs(ext_dirs);
     crate::paths::set_sideloaded_extensions(meta.extensions.clone());
 
-    // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
+    // Detect book build: check for a book page template in the sidecar
     let ext = crate::paths::resolve_extension(format);
-    let orchestrator_filename = format!("orchestrator.{}", ext);
-    let orchestrator = meta.orchestrator.clone()
-        .or_else(|| {
-            let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
-                .join(&orchestrator_filename);
-            if p.exists() { Some(p.display().to_string()) } else { None }
-        });
+    let is_book = meta.orchestrator.is_some() || {
+        let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
+            .join(format!("page.{}", ext));
+        p.exists()
+    };
 
     // 3. Prepare output directory (relative to CWD, not project root)
     let output = if output.is_relative() {
@@ -118,7 +116,7 @@ pub fn build_collection(
     //    haven't changed since the last build. Read config content once for hashing.
     //    Disabled for crossref builds (they need ref_data from every page) and
     //    when clean=true (the output directory was just wiped).
-    let apply_page_template = orchestrator.is_some();
+    let apply_page_template = is_book;
     let use_crossref = format == "html" && !apply_page_template && meta.global_crossref;
     let use_page_cache = !clean && !use_crossref;
 
@@ -184,7 +182,7 @@ pub fn build_collection(
             if let Some(parent) = output_path.parent() {
                 fs::create_dir_all(parent)?;
             }
-            let body = if orchestrator.is_some() {
+            let body = if is_book {
                 result.body.replace(&output_prefix, "")
             } else {
                 result.body.clone()
@@ -238,9 +236,11 @@ pub fn build_collection(
                 fs::write(&out_path, &rp.body)?;
             }
         } else {
-            // No project modules: use the legacy direct calls
-            if let Some(ref orchestrator_path) = orchestrator {
-                orchestrator::render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
+            // No project modules: use the direct calls
+            if is_book {
+                let document_nodes = contents::expand_contents(&meta.contents, &base_dir);
+                let page_tree = context::build_page_tree(&document_nodes, &pages);
+                orchestrator::render_book(&meta, &page_tree, &base_dir, output, format, output_ext, &collection_target_name, quiet)?;
             } else {
                 let url_mode = if portable { crate::utils::links::UrlMode::Relative } else { crate::utils::links::UrlMode::ServerRelative };
                 templating::apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;

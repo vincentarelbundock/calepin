@@ -13,9 +13,16 @@ fig_extension = "svg"
 embed_resources = false
 preview = "serve"
 
-[targets.book]
+[targets.book-typst]
 writer = "typst"
-template = "page"
+template = "chapter"
 extension = "pdf"
 fig_extension = "svg"
 post = ["typst compile {input}"]
+
+[targets.book-latex]
+writer = "latex"
+template = "chapter"
+extension = "pdf"
+fig_extension = "pdf"
+post = ["latexmk -pdf -interaction=nonstopmode {input}"]

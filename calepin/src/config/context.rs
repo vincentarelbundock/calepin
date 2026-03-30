@@ -154,7 +154,8 @@ pub fn apply_writer_override(ctx: &mut ProjectContext, writer: Option<&str>) -> 
 
     let allowed: &[&str] = match ctx.target_name.as_str() {
         "pdf" => &["html", "latex", "typst", "markdown"],
-        "book" => &["latex", "typst"],
+        "book-typst" => &["typst"],
+        "book-latex" => &["latex"],
         other => anyhow::bail!(
             "--writer is only valid for pdf or book targets (got '{}')", other
         ),

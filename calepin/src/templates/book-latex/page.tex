@@ -5,8 +5,8 @@
 
 {% include "preamble.tex" %}
 
-\title{ {{cfg.title}} }
-\author{ {{cfg.author}} }
+{% if cfg.title %}\title{ {{cfg.title}} }{% endif %}
+{% if cfg.author %}\author{ {{cfg.author}} }{% endif %}
 \date{}
 
 \begin{document}
@@ -22,11 +22,11 @@
 \part{ {{node.title}} }
 {% for child in node.children %}
 \chapter{ {{child.title}} }
-\include{ {{child.path}} }
+\include{ {{child.file | replace(".tex", "")}} }
 {% endfor %}
 {% else %}
 \chapter{ {{node.title}} }
-\include{ {{node.path}} }
+\include{ {{node.file | replace(".tex", "")}} }
 {% endif %}
 {% endfor %}
 

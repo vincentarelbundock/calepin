@@ -38,7 +38,7 @@
       {% if node.children | length > 0 %}
         {% if loop.depth0 == 0 %}
         <details class="sidebar-section" name="sidebar-nav"{% if cfg.sidebar_collapse_level >= loop.depth or node.active %} open{% endif %}>
-          <summary class="sidebar-section-title">{{ node.text }}</summary>
+          <summary class="sidebar-section-title">{{ node.title }}</summary>
           <ul class="sidebar-children">
             {{ loop(node.children) }}
           </ul>
@@ -46,7 +46,7 @@
         {% else %}
         <li>
           <details class="sidebar-section"{% if cfg.sidebar_collapse_level >= loop.depth or node.active %} open{% endif %}>
-            <summary class="sidebar-section-title sidebar-section-nested">{{ node.text }}</summary>
+            <summary class="sidebar-section-title sidebar-section-nested">{{ node.title }}</summary>
             <ul class="sidebar-children">
               {{ loop(node.children) }}
             </ul>
@@ -56,10 +56,10 @@
       {% else %}
         {% if loop.depth0 == 0 %}
         <ul>
-          <li><a href="{{ node.href | default(value='#') }}"{% if node.active and node.href %} class="active" aria-current="page"{% endif %}>{{ node.text }}</a></li>
+          <li><a href="{{ node.href | default(value='#') }}"{% if node.active and node.href %} class="active" aria-current="page"{% endif %}>{{ node.title }}</a></li>
         </ul>
         {% else %}
-        <li><a href="{{ node.href | default(value='#') }}"{% if node.active and node.href %} class="active" aria-current="page"{% endif %}>{{ node.text }}</a></li>
+        <li><a href="{{ node.href | default(value='#') }}"{% if node.active and node.href %} class="active" aria-current="page"{% endif %}>{{ node.title }}</a></li>
         {% endif %}
       {% endif %}
     {% endfor %}

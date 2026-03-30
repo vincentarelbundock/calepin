@@ -1,6 +1,6 @@
 ---
 title = "Preface"
-target = "book"
+target = "book-typst"
 ---
 
 This is the preface of your book. It appears before the numbered chapters.

@@ -1,0 +1,6 @@
+name = "book-typst"
+description = "Multi-chapter book (Typst)"
+inherits = "typst"
+collection = true
+
+[scaffold.book]

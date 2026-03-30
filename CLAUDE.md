@@ -114,7 +114,7 @@ Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` t
 
 ### Extension system
 
-Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`. User extensions live in `{stem}_calepin/extensions/{name}/`.
+Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book-typst`, `book-latex`. User extensions live in `{stem}_calepin/extensions/{name}/`.
 
 An extension bundles a target definition, templates, modules, CSS/JS assets, and variables. Extensions inherit from a parent via `inherits`. Template resolution is layered: user overrides > extension templates > parent extension > built-in defaults.
 
@@ -207,7 +207,7 @@ Shared AST walker + format-specific implementations via `FormatEmitter` trait.
 ### `templates/` -- Built-in Jinja templates (embedded at compile time)
 
 Per-engine templates for elements, page templates, shortcodes:
-`templates/{html,latex,typst,markdown,slides,website,book}/`
+`templates/{html,latex,typst,markdown,slides,website,book-typst,book-latex}/`
 
 Website template icons live in `templates/website/icons/` (used via `{% include %}`).
 

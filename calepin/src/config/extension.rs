@@ -493,7 +493,8 @@ pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
     ("pdf", include_str!("../extensions/pdf/extension.toml")),
     ("slides", include_str!("../extensions/slides/extension.toml")),
     ("website", include_str!("../extensions/website/extension.toml")),
-    ("book", include_str!("../extensions/book/extension.toml")),
+    ("book-typst", include_str!("../extensions/book-typst/extension.toml")),
+    ("book-latex", include_str!("../extensions/book-latex/extension.toml")),
 ];
 
 /// Parse a built-in extension manifest by name.
@@ -513,12 +514,12 @@ use include_dir::{include_dir, Dir};
 /// Each entry is `(extension_name, scaffold_name, embedded_dir)`.
 pub static BUILTIN_SCAFFOLDS: &[(&str, &str, &Dir<'static>)] = &[
     ("website", "website", &SCAFFOLD_WEBSITE),
-    ("book", "book", &SCAFFOLD_BOOK),
+    ("book-typst", "book", &SCAFFOLD_BOOK),
     ("html", "document", &SCAFFOLD_DOCUMENT),
 ];
 
 static SCAFFOLD_WEBSITE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/website/scaffold/website");
-static SCAFFOLD_BOOK: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/book/scaffold/book");
+static SCAFFOLD_BOOK: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/book-typst/scaffold/book");
 static SCAFFOLD_DOCUMENT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/html/scaffold/document");
 
 /// Look up a built-in scaffold by name (e.g., "website", "book", "document").
@@ -577,19 +578,16 @@ mod tests {
     }
 
     #[test]
-    fn test_book_has_orchestrator() {
-        let manifest = builtin_extension("book").unwrap();
-        let project_modules: Vec<&str> = manifest.modules.iter()
-            .filter(|m| m.kind == "project")
-            .map(|m| m.name.as_str())
-            .collect();
-        assert!(project_modules.contains(&"orchestrator"));
+    fn test_book_is_collection() {
+        assert!(builtin_extension("book-typst").unwrap().collection);
+        assert!(builtin_extension("book-latex").unwrap().collection);
     }
 
     #[test]
     fn test_collection_field_on_builtins() {
         assert!(builtin_extension("website").unwrap().collection);
-        assert!(builtin_extension("book").unwrap().collection);
+        assert!(builtin_extension("book-typst").unwrap().collection);
+        assert!(builtin_extension("book-latex").unwrap().collection);
         assert!(!builtin_extension("html").unwrap().collection);
         assert!(!builtin_extension("latex").unwrap().collection);
         assert!(!builtin_extension("slides").unwrap().collection);
@@ -598,7 +596,8 @@ mod tests {
     #[test]
     fn test_is_collection_target() {
         assert!(is_collection_target("website"));
-        assert!(is_collection_target("book"));
+        assert!(is_collection_target("book-typst"));
+        assert!(is_collection_target("book-latex"));
         assert!(!is_collection_target("html"));
         assert!(!is_collection_target("latex"));
         assert!(!is_collection_target("typst"));

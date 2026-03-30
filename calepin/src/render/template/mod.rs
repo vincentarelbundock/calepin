@@ -608,7 +608,8 @@ pub fn assemble_page(
     let mut vars = build_template_vars_with_headings(meta, body, format, headings, target);
     inject_preamble(&mut vars, preamble);
     customize(&mut vars);
-    let tpl = load_page_template("page", format);
+    let template_name = target.map(|t| t.template_name()).unwrap_or("page");
+    let tpl = load_page_template(template_name, format);
     render_page_template(&tpl, &vars, format, &meta.var)
 }
 
