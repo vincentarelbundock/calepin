@@ -73,21 +73,23 @@ pub fn render(
         vars.config.insert(k.clone(), val.clone());
     }
 
-    // Auto-numbering (proof is not numbered)
+    // Auto-numbering (proof is not numbered).
+    // Uses module_ids with a synthetic key `__thm_count:{class}` to track
+    // per-class counters within a single render (resets per document).
     if theorem_class != "proof" {
-        static COUNTERS: std::sync::LazyLock<std::sync::Mutex<HashMap<String, usize>>> =
-            std::sync::LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
-        let mut counters = COUNTERS.lock().unwrap();
-        let count = counters.entry(theorem_class.clone()).or_insert(0);
-        *count += 1;
-        let num = count.to_string();
+        let counter_key = format!("__thm_count:{}", theorem_class);
+        let mut ids = module_ids.borrow_mut();
+        let prev = ids.get(&counter_key).and_then(|v| v.parse::<usize>().ok()).unwrap_or(0);
+        let num = prev + 1;
+        ids.insert(counter_key, num.to_string());
 
         // Register for crossref resolution
         if let Some(ref id_val) = id {
-            module_ids.borrow_mut().insert(id_val.clone(), num.clone());
+            ids.insert(id_val.clone(), num.to_string());
         }
+        drop(ids);
 
-        vars.calepin.insert("number".to_string(), num);
+        vars.calepin.insert("number".to_string(), num.to_string());
     }
 
     // Labels for localisable strings

@@ -142,14 +142,14 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "citation" => meta.citation = parse_citation(v),
             "funding" => meta.funding = parse_funding(v),
             "appendix_style" => meta.appendix_style = v.as_str().map(String::from),
-            "target" | "format" => {
-                let val = v.as_str().map(String::from).or_else(|| {
-                    // Support `target: { html: default }` or [target]\n html = "default"
-                    v.as_table()
-                        .and_then(|t| t.first())
-                        .map(|(k, _)| k.clone())
-                });
-                meta.target = val;
+            "target" => {
+                meta.target = v.as_str().map(String::from);
+            }
+            "format" => {
+                cwarn!("`format` is deprecated, use `target` instead");
+                if meta.target.is_none() {
+                    meta.target = v.as_str().map(String::from);
+                }
             }
             "number_sections" => meta.number_sections = v.as_bool().unwrap_or(false),
             "toc_depth" => {

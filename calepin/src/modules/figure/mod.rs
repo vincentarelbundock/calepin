@@ -175,14 +175,30 @@ fn build_figure_element_vars(
 /// Separate the caption from children in a figure div.
 /// The caption is the last Text element.
 pub fn separate_figure_caption(children: &[Element]) -> (Vec<Element>, String) {
+    separate_caption(children, |text| (text.to_string(), None))
+}
+
+/// Extract a caption from the last Text child element.
+/// `split_fn` receives the text content and returns (caption, optional remaining text).
+/// If remaining text is None, the element is removed entirely.
+pub fn separate_caption(
+    children: &[Element],
+    split_fn: impl Fn(&str) -> (String, Option<String>),
+) -> (Vec<Element>, String) {
     let mut content = children.to_vec();
     let mut caption = String::new();
     if let Some(last_idx) = content.iter().rposition(|e| matches!(e, Element::Text { .. })) {
         if let Element::Text { content: ref text } = content[last_idx] {
             let trimmed = text.trim();
             if !trimmed.is_empty() {
-                caption = trimmed.to_string();
-                content.remove(last_idx);
+                let (cap, remaining) = split_fn(trimmed);
+                if !cap.is_empty() {
+                    caption = cap;
+                    match remaining {
+                        Some(rest) => content[last_idx] = Element::Text { content: rest },
+                        None => { content.remove(last_idx); }
+                    }
+                }
             }
         }
     }

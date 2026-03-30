@@ -83,32 +83,22 @@ fn render_children(children: &[Element], render_element: &dyn Fn(&Element) -> St
 }
 
 // ---------------------------------------------------------------------------
-// Caption extraction (moved from render/table/)
+// Caption extraction
 // ---------------------------------------------------------------------------
 
 /// Separate the caption from a table div's children.
 /// The caption is the last paragraph that isn't part of a markdown table
 /// (i.e., doesn't start with `|`).
 pub fn separate_table_caption(children: &[Element]) -> (Vec<Element>, String) {
-    let mut content = children.to_vec();
-    let mut caption = String::new();
-
-    if let Some(last_idx) = content.iter().rposition(|e| matches!(e, Element::Text { .. })) {
-        if let Element::Text { content: ref text } = content[last_idx] {
-            let trimmed = text.trim();
-            if let Some(split_pos) = trimmed.rfind("\n\n") {
-                let last_para = trimmed[split_pos..].trim();
-                if !last_para.starts_with('|') && !last_para.is_empty() {
-                    caption = last_para.to_string();
-                    let remaining = trimmed[..split_pos].trim().to_string();
-                    content[last_idx] = Element::Text { content: remaining };
-                }
-            } else if !trimmed.starts_with('|') && !trimmed.is_empty() {
-                caption = trimmed.to_string();
-                content.remove(last_idx);
+    super::figure::separate_caption(children, |text| {
+        if let Some(split_pos) = text.rfind("\n\n") {
+            let last_para = text[split_pos..].trim();
+            if !last_para.starts_with('|') && !last_para.is_empty() {
+                return (last_para.to_string(), Some(text[..split_pos].trim().to_string()));
             }
+        } else if !text.starts_with('|') {
+            return (text.to_string(), None);
         }
-    }
-
-    (content, caption)
+        (String::new(), None)
+    })
 }

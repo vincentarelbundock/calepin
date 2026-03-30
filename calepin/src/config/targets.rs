@@ -181,87 +181,76 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
 /// Lookup order:
 ///   1. Project config (`config.toml` found on disk)
 ///   2. Installed extensions (`_calepin/extensions/{name}/`)
-///   3. Built-in config (embedded default `config.toml`)
+///   3. Named targets in installed extensions
+///   4. Built-in config (embedded default `config.toml`)
+///   5. Built-in extension manifests (embedded in binary)
 pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Target>) -> Result<Target> {
-    // 1. User targets -- merge with built-in defaults for this base
+    // 1. User targets
     if let Some(target) = targets.get(name) {
         return Ok(merge_with_builtin(target));
     }
 
-    // 2. Installed extensions (project _calepin/ or sidecar)
+    // 2. Installed extension as target
+    if let Some(target) = resolve_extension_target(name)? {
+        return Ok(merge_with_builtin(&target));
+    }
+
+    // 3. Named targets in installed extensions
     let project_root = crate::paths::get_project_root();
-    let ext_dir_project = project_root.join("_calepin").join("extensions").join(name);
-    let ext_dir_sidecar = crate::paths::get_sidecar_root()
-        .map(|s| s.join("extensions").join(name));
-    let ext_dir = if ext_dir_project.join("extension.toml").exists() {
-        ext_dir_project
-    } else if let Some(ref sd) = ext_dir_sidecar {
-        if sd.join("extension.toml").exists() { sd.clone() } else { ext_dir_project }
-    } else {
-        ext_dir_project
-    };
-    if ext_dir.join("extension.toml").exists() {
-        if let Ok(manifest) = super::extension::ExtensionManifest::load(&ext_dir) {
-            let target = manifest.to_target();
-            // Resolve inheritance if present
-            if target.inherits.is_some() {
-                let mut target_map = HashMap::new();
-                target_map.insert(name.to_string(), target);
-                resolve_inheritance(&mut target_map)?;
-                if let Some(resolved) = target_map.remove(name) {
-                    return Ok(merge_with_builtin(&resolved));
-                }
-            } else {
-                return Ok(merge_with_builtin(&target));
+    let extensions = super::extension::discover_extensions(&project_root);
+    for (_ext_name, ext_path) in &extensions {
+        if let Some(manifest) = super::extension::load_cached(ext_path) {
+            if let Some(target) = manifest.named_target(name) {
+                return Ok(merge_with_builtin(&resolve_with_inheritance(name, target)?));
             }
         }
     }
 
-    // 2b. Named targets in installed extensions ([targets.name] entries)
-    {
-        let extensions = super::extension::discover_extensions(&project_root);
-        for (_ext_name, ext_path) in &extensions {
-            if let Some(manifest) = super::extension::load_cached(ext_path) {
-                if let Some(target) = manifest.named_target(name) {
-                    if target.inherits.is_some() {
-                        let mut target_map = HashMap::new();
-                        target_map.insert(name.to_string(), target);
-                        resolve_inheritance(&mut target_map)?;
-                        if let Some(resolved) = target_map.remove(name) {
-                            return Ok(merge_with_builtin(&resolved));
-                        }
-                    } else {
-                        return Ok(merge_with_builtin(&target));
-                    }
-                }
-            }
-        }
-    }
-
-    // 3. Built-in config (from document.toml/collection.toml)
+    // 4. Built-in config (from document.toml/collection.toml)
     if let Some(target) = super::builtin_metadata().targets.get(name) {
         return Ok(target.clone());
     }
 
-    // 4. Built-in extension manifests (embedded in binary)
+    // 5. Built-in extension manifests (embedded in binary)
     if let Some(manifest) = super::extension::builtin_extension(name) {
         let target = manifest.to_target();
-        if target.inherits.is_some() {
-            let mut target_map = HashMap::new();
-            target_map.insert(name.to_string(), target);
-            resolve_inheritance(&mut target_map)?;
-            if let Some(resolved) = target_map.remove(name) {
-                return Ok(merge_with_builtin(&resolved));
-            }
-        } else {
-            return Ok(merge_with_builtin(&target));
-        }
+        return Ok(merge_with_builtin(&resolve_with_inheritance(name, target)?));
     }
 
     bail!(
         "Unknown target '{}'. Define it in _calepin/config.toml under [targets.{}].",
         name, name,
     )
+}
+
+/// Try to load an extension directory as a target (checks sidecar then project).
+fn resolve_extension_target(name: &str) -> Result<Option<Target>> {
+    let project_root = crate::paths::get_project_root();
+    let candidates = [
+        crate::paths::get_sidecar_root().map(|s| s.join("extensions").join(name)),
+        Some(project_root.join("_calepin").join("extensions").join(name)),
+    ];
+    for dir in candidates.iter().flatten() {
+        if dir.join("extension.toml").exists() {
+            if let Ok(manifest) = super::extension::ExtensionManifest::load(dir) {
+                let target = manifest.to_target();
+                return Ok(Some(resolve_with_inheritance(name, target)?));
+            }
+        }
+    }
+    Ok(None)
+}
+
+/// If a target has `inherits`, resolve the chain; otherwise return as-is.
+fn resolve_with_inheritance(name: &str, target: Target) -> Result<Target> {
+    if target.inherits.is_some() {
+        let mut target_map = HashMap::new();
+        target_map.insert(name.to_string(), target);
+        resolve_inheritance(&mut target_map)?;
+        Ok(target_map.remove(name).unwrap())
+    } else {
+        Ok(target)
+    }
 }
 
 /// Fill unset fields in a user target from the built-in target for the same base.

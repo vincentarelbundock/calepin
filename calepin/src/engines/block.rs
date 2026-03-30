@@ -41,23 +41,20 @@ pub fn evaluate_block(
     let lang = opts.engine();
     let mut elements = Vec::new();
 
-    // For fenced echo, merge interleaved per-expression sources back into a single block
-    // so the fenced header/pipe-comments wrap all source lines together.
     let echo_val = opts.get_string("echo", "true");
+
+    // For fenced echo, merge all Source results into one block up front
     let results = if echo_val == "fenced" {
-        let mut merged_lines: Vec<String> = Vec::new();
-        let mut non_source: Vec<ChunkResult> = Vec::new();
-        for r in results {
-            match r {
-                ChunkResult::Source(lines) => merged_lines.extend(lines),
-                other => non_source.push(other),
-            }
-        }
+        let (sources, rest): (Vec<_>, Vec<_>) = results.into_iter()
+            .partition(|r| matches!(r, ChunkResult::Source(_)));
+        let merged_lines: Vec<String> = sources.into_iter()
+            .flat_map(|r| match r { ChunkResult::Source(l) => l, _ => vec![] })
+            .collect();
         let mut merged = Vec::new();
         if !merged_lines.is_empty() {
             merged.push(ChunkResult::Source(merged_lines));
         }
-        merged.extend(non_source);
+        merged.extend(rest);
         merged
     } else {
         results
@@ -66,7 +63,6 @@ pub fn evaluate_block(
     for result in results {
         match result {
             ChunkResult::Source(lines) => {
-                let echo_val = opts.get_string("echo", "true");
                 if echo_val == "true" || echo_val == "fenced" {
                     let code = if echo_val == "fenced" {
                         let header = if chunk.label.is_empty() {

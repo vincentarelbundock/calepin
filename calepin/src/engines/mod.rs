@@ -496,19 +496,13 @@ pub fn is_content_visible(
     let when_meta = attrs.get("when_meta").map(|s| s.as_str());
     let unless_meta = attrs.get("unless_meta").map(|s| s.as_str());
 
-    if is_content_visible {
-        let when_ok = when_format.map_or(true, |f| format_matches(f, output_format));
-        let unless_ok = unless_format.map_or(true, |f| !format_matches(f, output_format));
-        let when_meta_ok = when_meta.map_or(true, |key| meta_is_truthy(meta_extra, key));
-        let unless_meta_ok = unless_meta.map_or(true, |key| !meta_is_truthy(meta_extra, key));
-        when_ok && unless_ok && when_meta_ok && unless_meta_ok
-    } else {
-        let when_ok = when_format.map_or(true, |f| format_matches(f, output_format));
-        let unless_ok = unless_format.map_or(true, |f| !format_matches(f, output_format));
-        let when_meta_ok = when_meta.map_or(true, |key| meta_is_truthy(meta_extra, key));
-        let unless_meta_ok = unless_meta.map_or(true, |key| !meta_is_truthy(meta_extra, key));
-        !(when_ok && unless_ok && when_meta_ok && unless_meta_ok)
-    }
+    let when_ok = when_format.map_or(true, |f| format_matches(f, output_format));
+    let unless_ok = unless_format.map_or(true, |f| !format_matches(f, output_format));
+    let when_meta_ok = when_meta.map_or(true, |key| meta_is_truthy(meta_extra, key));
+    let unless_meta_ok = unless_meta.map_or(true, |key| !meta_is_truthy(meta_extra, key));
+    let conditions_met = when_ok && unless_ok && when_meta_ok && unless_meta_ok;
+
+    if is_content_visible { conditions_met } else { !conditions_met }
 }
 
 fn meta_is_truthy(extra: Option<&HashMap<String, crate::value::Value>>, key: &str) -> bool {

@@ -82,22 +82,11 @@ fn highlight_cache_key(code: &str, lang: &str, ext: &str) -> u64 {
 }
 
 /// Resolve a user-facing theme name to an internal key.
-fn resolve_theme_name(name: &str) -> Option<&'static str> {
-    // Check if a .tmTheme file exists in the built-in highlighting themes
+fn resolve_theme_name(name: &str) -> Option<String> {
     let path = format!("{}.tmTheme", name);
     if crate::modules::highlight::BUILTIN_THEMES.get_file(&path).is_some() {
-        // Intern the name so we return &'static str without leaking duplicates.
-        static INTERNED: LazyLock<Mutex<std::collections::HashSet<&'static str>>> =
-            LazyLock::new(|| Mutex::new(std::collections::HashSet::new()));
-        let mut set = INTERNED.lock().unwrap();
-        if let Some(existing) = set.get(name) {
-            return Some(*existing);
-        }
-        let leaked: &'static str = Box::leak(name.to_string().into_boxed_str());
-        set.insert(leaked);
-        return Some(leaked);
+        return Some(name.to_string());
     }
-
     cwarn!("unknown highlight-style '{}'", name);
     None
 }
@@ -457,11 +446,8 @@ pub fn parse_highlight_config(yaml: &crate::value::Value) -> HighlightConfig {
             if let (Some(light_name), Some(dark_name)) = (light_val.as_str(), dark_val.as_str()) {
                 let light = resolve_theme_key(light_name);
                 let dark = resolve_theme_key(dark_name);
-                if let (Some(l), Some(d)) = (light, dark) {
-                    return HighlightConfig::LightDark {
-                        light: l.to_string(),
-                        dark: d.to_string(),
-                    };
+                if let (Some(light), Some(dark)) = (light, dark) {
+                    return HighlightConfig::LightDark { light, dark };
                 }
             }
         }
@@ -484,15 +470,14 @@ fn resolve_single_theme(name: &str) -> HighlightConfig {
         return HighlightConfig::Single(name.to_string());
     }
     match resolve_theme_name(name) {
-        Some(key) => HighlightConfig::Single(key.to_string()),
+        Some(key) => HighlightConfig::Single(key),
         None => HighlightConfig::None,
     }
 }
 
 /// Resolve a theme name to its internal key, loading custom .tmTheme files.
-fn resolve_theme_key(name: &str) -> Option<&'static str> {
+fn resolve_theme_key(name: &str) -> Option<String> {
     if name.ends_with(".tmTheme") || name.ends_with(".tmtheme") {
-        // Custom file themes need special handling — not supported in light/dark map for now
         cwarn!("custom .tmTheme files not supported in light/dark map");
         return None;
     }

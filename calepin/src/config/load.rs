@@ -106,15 +106,6 @@ pub struct ContentSection {
     #[serde(default)]
     pub standalone: bool,
 
-    // --- Backwards-compatible aliases (deprecated) ---
-
-    /// Alias for `include` with explicit paths (deprecated, use `include`).
-    #[serde(default)]
-    pub pages: Vec<DocumentEntry>,
-
-    /// Alias for `include` with a directory (deprecated, use `include`).
-    #[serde(default)]
-    pub dir: Option<String>,
 }
 
 impl ContentSection {
@@ -128,32 +119,9 @@ impl ContentSection {
         self.href.as_deref()
     }
 
-    /// Collect all include entries, merging `include`, `pages`, `dir`, and
-    /// `children` aliases into a single list.
+    /// Collect all include entries.
     pub fn resolved_include(&self) -> Vec<IncludeEntry> {
-        let mut result = self.include.clone();
-
-        // Merge `pages` (deprecated alias)
-        for entry in &self.pages {
-            match entry {
-                DocumentEntry::Path(p) => result.push(IncludeEntry::Path(p.clone())),
-                DocumentEntry::Named { title, page } => {
-                    result.push(IncludeEntry::Item {
-                        text: Some(title.clone()),
-                        href: Some(page.clone()),
-                        image: None,
-                        image_dark: None,
-                    });
-                }
-            }
-        }
-
-        // Merge `dir` (deprecated alias)
-        if let Some(ref dir) = self.dir {
-            result.push(IncludeEntry::Path(dir.clone()));
-        }
-
-        result
+        self.include.clone()
     }
 }
 
@@ -205,18 +173,14 @@ impl<'de> serde::Deserialize<'de> for IncludeEntry {
                 struct ItemFields {
                     text: Option<String>,
                     href: Option<String>,
-                    // Accept `page` as alias for `href`
-                    page: Option<String>,
                     image: Option<String>,
                     image_dark: Option<String>,
-                    // Accept `title` as alias for `text`
-                    title: Option<String>,
                 }
 
                 let fields = ItemFields::deserialize(de::value::MapAccessDeserializer::new(map))?;
                 Ok(IncludeEntry::Item {
-                    text: fields.text.or(fields.title),
-                    href: fields.href.or(fields.page),
+                    text: fields.text,
+                    href: fields.href,
                     image: fields.image,
                     image_dark: fields.image_dark,
                 })
@@ -260,37 +224,6 @@ where
     }
 
     deserializer.deserialize_any(IncludeVisitor)
-}
-
-/// A single document entry: either a bare path string or a `{title, page}` table.
-/// Kept for backwards compatibility with `pages` field.
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-#[serde(untagged)]
-pub enum DocumentEntry {
-    /// Bare string path (possibly a glob).
-    Path(String),
-    /// Explicit title override + path.
-    Named { title: String, page: String },
-}
-
-impl DocumentEntry {
-    /// The file path, regardless of variant.
-    #[allow(dead_code)]
-    pub fn path(&self) -> &str {
-        match self {
-            DocumentEntry::Path(p) => p,
-            DocumentEntry::Named { page, .. } => page,
-        }
-    }
-
-    /// The explicit title override, if any.
-    #[allow(dead_code)]
-    pub fn title(&self) -> Option<&str> {
-        match self {
-            DocumentEntry::Path(_) => None,
-            DocumentEntry::Named { title, .. } => Some(title),
-        }
-    }
 }
 
 /// Navbar configuration uses the same `ContentSection` type for items.
@@ -593,28 +526,6 @@ include = [
         assert_eq!(meta.contents[1].resolved_include().len(), 2);
     }
 
-    #[test]
-    fn test_contents_backwards_compat() {
-        let meta = parse_toml(r#"
-[[contents]]
-pages = ["install.qmd", "cli.qmd"]
-
-[[contents]]
-text = "Guide"
-href = "guide/index.qmd"
-pages = [
-  "guide/basics.qmd",
-  {title = "Figures & Images", page = "guide/figures.qmd"},
-]
-"#);
-        assert_eq!(meta.contents.len(), 2);
-        assert!(meta.contents[0].display_text().is_none());
-        assert_eq!(meta.contents[0].resolved_include().len(), 2);
-        assert_eq!(meta.contents[1].display_text(), Some("Guide"));
-        assert_eq!(meta.contents[1].display_href(), Some("guide/index.qmd"));
-        let includes = meta.contents[1].resolved_include();
-        assert_eq!(includes.len(), 2);
-    }
 
     #[test]
     fn test_include_single_string() {

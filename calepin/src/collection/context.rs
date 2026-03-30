@@ -186,8 +186,6 @@ fn resolve_navbar_includes(
             resolved.children = children;
             // Clear include so it doesn't get re-resolved
             resolved.include = Vec::new();
-            resolved.pages = Vec::new();
-            resolved.dir = None;
             resolved
         }).collect()
     }

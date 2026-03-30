@@ -32,7 +32,7 @@ pub fn parse_header_label(s: &str) -> (Option<String>, ChunkOptions) {
                 let key = crate::util::normalize_key(key.trim());
                 let value = value.trim();
                 let value = value.trim_matches('"').trim_matches('\'');
-                header_opts.push(format!("{} = {}", key, toml_quote(value)));
+                header_opts.push(format!("{} = {}", key, toml_ensure_valid(value)));
             }
         } else if label.is_none() {
             label = Some(part.to_string());
@@ -163,10 +163,6 @@ fn toml_ensure_valid(value: &str) -> String {
     format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
-/// Quote a value for TOML (used when converting header options).
-fn toml_quote(value: &str) -> String {
-    toml_ensure_valid(value)
-}
 
 /// Convert a `toml::Value` to our `OptionValue`.
 fn toml_to_option_value(v: toml::Value) -> OptionValue {

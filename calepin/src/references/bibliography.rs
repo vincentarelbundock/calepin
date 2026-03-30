@@ -36,10 +36,22 @@ static CSL_CACHE: LazyLock<Mutex<HashMap<String, IndependentStyle>>> =
 static LOCALES: LazyLock<Vec<hayagriva::citationberg::Locale>> =
     LazyLock::new(|| hayagriva::archive::locales());
 
-/// Cached rendered citation maps, keyed by (sorted citation keys, style name).
-/// Value: (paren_map, prose_map, year_map, bibliography_md).
-type CitationMaps = (HashMap<String, String>, HashMap<String, String>, HashMap<String, String>, Option<String>);
-static CITATION_CACHE: LazyLock<Mutex<HashMap<(Vec<String>, String), CitationMaps>>> =
+/// Rendered forms of a single citation key.
+#[derive(Clone)]
+struct CitationForms {
+    paren: String,
+    prose: String,
+    year: String,
+}
+
+/// Cached rendered citation data, keyed by (sorted citation keys, style name).
+#[derive(Clone)]
+struct CitationData {
+    citations: HashMap<String, CitationForms>,
+    bibliography_md: Option<String>,
+}
+
+static CITATION_CACHE: LazyLock<Mutex<HashMap<(Vec<String>, String), CitationData>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Cached parsed bibliography libraries, keyed by sorted bib file paths.
@@ -107,7 +119,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
     let cache_key = (all_keys.clone(), style_name.clone());
 
     // Check citation cache
-    let (paren_map, prose_map, year_map, bib_md) = if let Ok(cache) = CITATION_CACHE.lock() {
+    let cite_data = if let Ok(cache) = CITATION_CACHE.lock() {
         if let Some(cached) = cache.get(&cache_key) {
             cached.clone()
         } else {
@@ -140,14 +152,16 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
 
             *content = re_suppress
                 .replace_all(content, |caps: &regex::Captures| {
-                    year_map.get(&caps[1]).cloned().unwrap_or_else(|| caps[0].to_string())
+                    cite_data.citations.get(&caps[1])
+                        .map(|c| c.year.clone())
+                        .unwrap_or_else(|| caps[0].to_string())
                 })
                 .to_string();
 
             *content = re_bracket
                 .replace_all(content, |caps: &regex::Captures| {
-                    match paren_map.get(&caps[1]) {
-                        Some(cite) => format!("({})", cite),
+                    match cite_data.citations.get(&caps[1]) {
+                        Some(c) => format!("({})", c.paren),
                         None => caps[0].to_string(),
                     }
                 })
@@ -155,14 +169,16 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
 
             *content = re_bare
                 .replace_all(content, |caps: &regex::Captures| {
-                    prose_map.get(&caps[1]).cloned().unwrap_or_else(|| caps[0].to_string())
+                    cite_data.citations.get(&caps[1])
+                        .map(|c| c.prose.clone())
+                        .unwrap_or_else(|| caps[0].to_string())
                 })
                 .to_string();
         }
     }
 
     // Append bibliography
-    if let Some(bib_md) = bib_md {
+    if let Some(bib_md) = cite_data.bibliography_md {
         elements.push(Element::Text { content: bib_md });
     }
 
@@ -207,7 +223,7 @@ fn render_citations(
     library: &hayagriva::Library,
     metadata: &Metadata,
     style_name: &str,
-) -> Result<CitationMaps> {
+) -> Result<CitationData> {
     let style = load_csl_style(metadata.csl.as_deref(), metadata)?;
     let locales = &*LOCALES;
 
@@ -227,20 +243,19 @@ fn render_citations(
         locale_files: locales,
     });
 
-    let mut paren_map: HashMap<String, String> = HashMap::new();
-    let mut prose_map: HashMap<String, String> = HashMap::new();
-    let mut year_map: HashMap<String, String> = HashMap::new();
-
+    let mut citations: HashMap<String, CitationForms> = HashMap::new();
     for (i, key) in all_keys.iter().enumerate() {
         if let Some(c) = rendered.citations.get(i) {
             let paren = format_plain(&c.citation);
-            paren_map.insert(key.clone(), paren.clone());
-            prose_map.insert(key.clone(), format_narrative(&paren));
-            year_map.insert(key.clone(), extract_year(&paren));
+            citations.insert(key.clone(), CitationForms {
+                prose: format_narrative(&paren),
+                year: extract_year(&paren),
+                paren,
+            });
         }
     }
 
-    let bib_md = rendered.bibliography.as_ref().map(|bib| {
+    let bibliography_md = rendered.bibliography.as_ref().map(|bib| {
         let mut md = String::from("\n# References\n\n");
         for entry in &bib.items {
             let text = format_plain(&entry.content);
@@ -252,7 +267,7 @@ fn render_citations(
         md
     });
 
-    let result = (paren_map, prose_map, year_map, bib_md);
+    let result = CitationData { citations, bibliography_md };
 
     // Store in cache
     let cache_key = (all_keys.to_vec(), style_name.to_string());
@@ -311,48 +326,37 @@ fn load_csl_style(csl_path: Option<&str>, meta: &crate::config::Metadata) -> Res
 fn load_csl_style_uncached(csl_path: Option<&str>, meta: &crate::config::Metadata) -> Result<IndependentStyle> {
     use hayagriva::archive::ArchivedStyle;
 
-    // 1. Explicit CSL from front matter: file path or archive name
-    if let Some(name) = csl_path {
-        // Try as file path first
+    // Build candidate list: explicit name first, then default
+    let default_name = meta.csl.as_deref()
+        .or_else(|| crate::config::builtin_metadata().csl.as_deref())
+        .unwrap_or("chicago-author-date");
+    let candidates: Vec<&str> = match csl_path {
+        Some(name) => vec![name, default_name],
+        None => vec![default_name],
+    };
+
+    for name in &candidates {
+        // Try as file path
         let path = Path::new(name);
         if path.exists() {
             let xml = fs::read_to_string(path)
                 .with_context(|| format!("Failed to read CSL file: {}", name))?;
-            match IndependentStyle::from_xml(&xml) {
-                Ok(style) => return Ok(style),
-                Err(e) => {
-                    cwarn!("CSL '{}' not usable ({:?}), falling back", name, e);
-                }
+            if let Ok(style) = IndependentStyle::from_xml(&xml) {
+                return Ok(style);
             }
         }
         // Try as archive name
         if let Some(archived) = ArchivedStyle::by_name(name) {
-            match archived.get() {
-                citationberg::Style::Independent(style) => return Ok(style),
-                citationberg::Style::Dependent(_) => {
-                    cwarn!("CSL '{}' is a dependent style, falling back", name);
-                }
+            if let citationberg::Style::Independent(style) = archived.get() {
+                return Ok(style);
             }
         }
-        if path.extension().is_some() {
-            // Had an extension but file not found
-            cwarn!("CSL file '{}' not found, falling back to default", name);
-        } else {
-            cwarn!("unknown CSL style '{}', falling back to default", name);
-        }
     }
 
-    // 2. Default from config.toml
-    let default_name = meta.csl.as_deref()
-        .or_else(|| crate::config::builtin_metadata().csl.as_deref())
-        .unwrap_or("chicago-author-date");
-    if let Some(archived) = ArchivedStyle::by_name(default_name) {
-        match archived.get() {
-            citationberg::Style::Independent(style) => return Ok(style),
-            citationberg::Style::Dependent(_) => {}
-        }
+    // Only warn if an explicit CSL was given but not found
+    if let Some(name) = csl_path {
+        cwarn!("CSL '{}' not found or not usable, no fallback available", name);
     }
-
     anyhow::bail!("No usable CSL style found")
 }
 

@@ -66,7 +66,7 @@ struct PageOutput {
 // Script execution helper
 // ---------------------------------------------------------------------------
 
-fn run_script(script_path: &Path, module_dir: &Path, input: &str, writer: &str) -> Result<String> {
+pub fn run_script(script_path: &Path, module_dir: &Path, input: &str, writer: &str) -> Result<String> {
     let result = Command::new("sh")
         .arg("-c")
         .arg(script_path.to_string_lossy().as_ref())
