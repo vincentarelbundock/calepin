@@ -47,9 +47,13 @@ test:  ## Run unit tests
 check:  ## Run cargo check (fast compile check)
 	cargo check --manifest-path calepin/Cargo.toml
 
+CLP = target/debug/calepin
+
 site: build ## Build and serve static site from website/
-	calepin flush -y
-	uv run calepin preview website
+	$(CLP) flush website -y
+	$(CLP) flush website/index_calepin -y
+	$(CLP) templates eject website/index.qmd
+	uv run $(CLP) preview website
 
 # ==============================================================================
 # Render targets

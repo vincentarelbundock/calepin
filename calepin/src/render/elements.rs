@@ -30,18 +30,6 @@ fn resolve_template_alias(name: &str) -> &str {
     }
 }
 
-/// Look up a built-in file by filename, walking the inheritance chain.
-/// E.g., `resolve_builtin_file("main.css")` finds `html/main.css` for a website target.
-pub fn resolve_builtin_file(filename: &str) -> Option<&'static str> {
-    let chain = crate::paths::get_active_inheritance_chain();
-    for target in &chain {
-        let path = format!("{}/{}", target, filename);
-        if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
-            if let Some(s) = file.contents_utf8() { return Some(s); }
-        }
-    }
-    None
-}
 
 /// Look up a built-in template by name and base.
 /// Checks `templates/{target}/{name}.{ext}` (active target, if different from base),

@@ -123,16 +123,14 @@ pub fn load_page_template(template_name: &str, base: &str) -> String {
 pub fn load_default_css() -> String {
     let mut css = String::new();
 
-    // 1. Base CSS: sidecar override or built-in (walks inheritance chain)
+    // Base CSS from sidecar (walks inheritance chain)
     if let Some(content) = crate::paths::resolve_template("main", "css")
         .and_then(|path| std::fs::read_to_string(&path).ok())
     {
         css.push_str(&content);
-    } else if let Some(content) = crate::render::elements::resolve_builtin_file("main.css") {
-        css.push_str(content);
     }
 
-    // 2. Extension CSS (active target + side-loaded extensions)
+    // Extension CSS (active target + side-loaded extensions)
     let root = crate::paths::get_project_dir();
     css.push_str(&load_all_extension_assets(&root, |r, name| load_extension_css(r, name)));
 
