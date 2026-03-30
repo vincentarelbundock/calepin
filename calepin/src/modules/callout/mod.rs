@@ -35,11 +35,11 @@ pub fn render(
     let children_rendered = super::render_children(children, render_element);
 
     let mut vars = TemplateVars::with_writer(format);
-    vars.calepin.insert("children".to_string(), children_rendered);
-    vars.config.insert("classes".to_string(), classes.join(" "));
+    vars.clp.insert("children".to_string(), children_rendered);
+    vars.cfg.insert("classes".to_string(), classes.join(" "));
 
     if let Some(ref id_val) = id {
-        vars.config.insert("id".to_string(), id_val.clone());
+        vars.cfg.insert("id".to_string(), id_val.clone());
 
         // Register ID for cross-referencing (uses synthetic counter key)
         for cls in classes {
@@ -54,12 +54,12 @@ pub fn render(
             }
         }
     } else {
-        vars.config.insert("id".to_string(), String::new());
+        vars.cfg.insert("id".to_string(), String::new());
     }
 
     // Copy div attrs into vars (title, icon, collapse, appearance)
     for (k, val) in attrs {
-        vars.config.insert(k.clone(), val.clone());
+        vars.cfg.insert(k.clone(), val.clone());
     }
 
     let tpl = crate::render::elements::resolve_builtin_template("callout", format).unwrap_or("");

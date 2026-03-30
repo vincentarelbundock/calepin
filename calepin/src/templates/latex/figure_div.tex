@@ -1,0 +1,13 @@
+{%- set env = cfg.fig_env | default("figure") -%}
+{%- set loc = cfg.cap_location | default("bottom") -%}
+\begin{{clp._lb}}{{cfg.env}}{{clp._rb}}{{cfg.fig_pos}}
+{{clp.align_style}}
+{%- if loc == "top" and cfg.caption %}
+\caption{{cfg.short_caption}}{{clp._lb}}{{cfg.caption}}{{clp._rb}}
+{%- endif %}
+{{clp.children}}
+{%- if loc != "top" and cfg.caption %}
+\caption{{cfg.short_caption}}{{clp._lb}}{{cfg.caption}}{{clp._rb}}
+{%- endif %}
+\label{{clp._lb}}{{cfg.label}}{{clp._rb}}
+\end{{clp._lb}}{{cfg.env}}{{clp._rb}}

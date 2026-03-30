@@ -1,0 +1,1 @@
+#link("{{ cfg.src }}")[{{ cfg.title }}]

@@ -154,9 +154,9 @@ pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
     }
 
     let mut vars = TemplateVars::with_writer("html");
-    vars.calepin.insert("footnotes".to_string(), "true".to_string());
-    vars.calepin.insert("footnote_items".to_string(), footnote_items);
-    let tpl = include_str!("../../partials/html/footnotes.html");
+    vars.clp.insert("footnotes".to_string(), "true".to_string());
+    vars.clp.insert("footnote_items".to_string(), footnote_items);
+    let tpl = include_str!("../../templates/html/footnotes.html");
     crate::render::template::apply_template(tpl, &vars)
 }
 

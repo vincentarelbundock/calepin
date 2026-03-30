@@ -405,25 +405,25 @@ The hidden div executed: `{r} hidden_result`.
 
 ## Context variables
 
-The document title is: {{ config.title }}.
+The document title is: {{ cfg.title }}.
 
-The sample size is: {{ config.sample_size }}.
+The sample size is: {{ cfg.sample_size }}.
 
-The current format is: {{ calepin.writer }}.
+The current format is: {{ clp.writer }}.
 
 ## Conditionals
 
-{% if calepin.writer == "html" %}
+{% if clp.writer == "html" %}
 Rendering to HTML.
 {% else %}
-Rendering to {{ calepin.writer }}.
+Rendering to {{ clp.writer }}.
 {% endif %}
 
 ## Loops
 
 Features of this document:
 
-{% for item in config.features %}
+{% for item in cfg.features %}
 - {{ item }}
 {% endfor %}
 

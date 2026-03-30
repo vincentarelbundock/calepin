@@ -163,7 +163,7 @@ pub(crate) fn apply_collection_templates(
             };
 
             let collection_with_active = minijinja::context! {
-                calepin => minijinja::context! {
+                clp => minijinja::context! {
                     css => crate::render::template::load_default_css(),
                 },
                 _page_depth => page_depth,

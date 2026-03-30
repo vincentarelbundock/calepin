@@ -22,10 +22,10 @@ pub fn render(
         .unwrap_or_else(|| format!("{}\u{00d7}{}", width, height));
 
     let mut vars = TemplateVars::new();
-    vars.config.insert("width".to_string(), width.to_string());
-    vars.config.insert("height".to_string(), height.to_string());
-    vars.config.insert("color".to_string(), crate::util::escape_html(color));
-    vars.config.insert("text".to_string(), crate::util::escape_html(&text));
+    vars.cfg.insert("width".to_string(), width.to_string());
+    vars.cfg.insert("height".to_string(), height.to_string());
+    vars.cfg.insert("color".to_string(), crate::util::escape_html(color));
+    vars.cfg.insert("text".to_string(), crate::util::escape_html(&text));
 
     let fallback = format!("[{} ({}x{})]", text, width, height);
     match crate::render::elements::resolve_builtin_template("placeholder", format) {

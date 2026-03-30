@@ -57,19 +57,19 @@ pub fn render(
         .join("\n\n");
 
     let mut vars = TemplateVars::with_writer(format);
-    vars.calepin.insert("children".to_string(), children_rendered);
-    vars.config.insert("classes".to_string(), classes.join(" "));
-    vars.calepin.insert("type_class".to_string(), theorem_class.clone());
+    vars.clp.insert("children".to_string(), children_rendered);
+    vars.cfg.insert("classes".to_string(), classes.join(" "));
+    vars.clp.insert("type_class".to_string(), theorem_class.clone());
 
     if let Some(ref id_val) = id {
-        vars.config.insert("id".to_string(), id_val.clone());
+        vars.cfg.insert("id".to_string(), id_val.clone());
     } else {
-        vars.config.insert("id".to_string(), String::new());
+        vars.cfg.insert("id".to_string(), String::new());
     }
 
     // Copy div attrs into vars
     for (k, val) in attrs {
-        vars.config.insert(k.clone(), val.clone());
+        vars.cfg.insert(k.clone(), val.clone());
     }
 
     // Auto-numbering (proof is not numbered).
@@ -88,12 +88,12 @@ pub fn render(
         }
         drop(ids);
 
-        vars.calepin.insert("number".to_string(), num.to_string());
+        vars.clp.insert("number".to_string(), num.to_string());
     }
 
     // Labels for localisable strings
     let label_defs = defaults.labels.clone();
-    vars.calepin.insert("label_proof".to_string(),
+    vars.clp.insert("label_proof".to_string(),
         label_defs.as_ref().and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
 
     // Resolve template: proof -> "proof", italic types -> "theorem_italic", normal -> "theorem_normal"

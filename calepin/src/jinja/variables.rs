@@ -1,4 +1,4 @@
-//! Jinja template context construction: config, calepin, and env variables.
+//! Jinja template context construction: cfg, clp, tpl, and env variables.
 
 use minijinja::Value;
 
@@ -6,9 +6,9 @@ use crate::config::Metadata;
 
 /// Build the full Jinja context for body processing.
 ///
-/// - `config.*` -- user-authored: standard metadata fields (title, author, date,
+/// - `cfg.*` -- user-authored: standard metadata fields (title, author, date,
 ///   etc.) plus custom front matter keys, plus the selected target.
-/// - `calepin.*` -- engine-computed: the resolved writer format.
+/// - `clp.*` -- engine-computed: the resolved writer format.
 /// - `env.*` -- system environment variables (kept as a separate helper).
 pub(crate) fn build_context(metadata: &Metadata, format: &str) -> minijinja::Value {
     let config_val = build_config_map(metadata, format);
@@ -19,14 +19,14 @@ pub(crate) fn build_context(metadata: &Metadata, format: &str) -> minijinja::Val
     let tpl_val = Value::from_serialize(&metadata.tpl);
 
     minijinja::context! {
-        config => config_val,
-        calepin => calepin_val,
+        cfg => config_val,
+        clp => calepin_val,
         tpl => tpl_val,
         env => Value::from_object(LazyEnv),
     }
 }
 
-/// Build the `config` context object from metadata.
+/// Build the `cfg` context object from metadata.
 ///
 /// Merges standard metadata fields (title, author, date, etc.) with custom
 /// front matter keys from `metadata.var` into a single flat-ish object.

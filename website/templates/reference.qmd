@@ -4,7 +4,7 @@ title = "Reference"
 
 # Templates source
 
-All built-in templates are in the *Calepin* repository under [`calepin/src/partials/`](https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/partials). They are embedded in the binary at compile time.
+All built-in templates are in the *Calepin* repository under [`calepin/src/templates/`](https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/templates). They are embedded in the binary at compile time.
 
 | Directory | Contents |
 |-----------|----------|
@@ -178,7 +178,7 @@ Any non-standard front matter field is available as a template variable. A field
 
 ## Literal braces
 
-Use `{{calepin._lb}}` and `{{calepin._rb}}` to insert literal `{` and `}` in templates.
+Use `{{clp._lb}}` and `{{clp._rb}}` to insert literal `{` and `}` in templates.
 
 
 # Document body variables
@@ -187,10 +187,10 @@ Available when writing Jinja expressions in `.qmd` files:
 
 | Variable | Description |
 |----------|-------------|
-| `config.title`, `config.author`, `config.date`, ... | Front matter fields |
-| `config.key`, `config.key.subkey` | Custom front matter fields (with nesting) |
-| `config.target` | Target name (defaults to writer) |
-| `calepin.writer` | Current output format (`html`, `latex`, `typst`, `markdown`) |
+| `cfg.title`, `cfg.author`, `cfg.date`, ... | Front matter fields |
+| `cfg.key`, `cfg.key.subkey` | Custom front matter fields (with nesting) |
+| `cfg.target` | Target name (defaults to writer) |
+| `clp.writer` | Current output format (`html`, `latex`, `typst`, `markdown`) |
 | `env.HOME`, `env.USER`, ... | System environment variables |
 
 
@@ -229,7 +229,7 @@ Website templates (in `index_calepin/templates/website/`) receive two context ob
 
 ## Custom variables
 
-Custom variables are accessible as `{{ config.key }}` in all templates and in the `.qmd` body. Non-standard top-level front matter keys are automatically available under `config`:
+Custom variables are accessible as `{{ cfg.key }}` in all templates and in the `.qmd` body. Non-standard top-level front matter keys are automatically available under `cfg`:
 
 ```toml
 sidebar = false
@@ -242,12 +242,12 @@ field = "nested value"
 Access in templates and body text:
 
 ```
-{{ config.sidebar }}          # boolean false
-{{ config.custom_key }}       # "value"
-{{ config.nested.field }}     # "nested value"
+{{ cfg.sidebar }}          # boolean false
+{{ cfg.custom_key }}       # "value"
+{{ cfg.nested.field }}     # "nested value"
 ```
 
-Types are preserved: booleans, numbers, strings, arrays, and nested tables all work. Arrays can be iterated with `{% for item in config.items %}`.
+Types are preserved: booleans, numbers, strings, arrays, and nested tables all work. Arrays can be iterated with `{% for item in cfg.items %}`.
 
 Resolution order (last wins): built-in defaults, `{stem}_calepin/config.toml`, front matter, CLI (`-s`). In websites, per-page entries override collection-level values.
 

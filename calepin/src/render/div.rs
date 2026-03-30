@@ -61,7 +61,7 @@ pub fn render(
     build_div_vars(&mut vars, classes, id, attrs, &children_rendered, format);
 
     // Template lookup: explicit override -> class-based -> fallback
-    let (tpl_name, tpl_source) = vars.config.get("template")
+    let (tpl_name, tpl_source) = vars.cfg.get("template")
         .and_then(|name| resolve_partial(name).map(|t| (name.clone(), t)))
         .or_else(|| classes.iter().find_map(|cls| resolve_partial(cls).map(|t| (cls.clone(), t))))
         .or_else(|| resolve_partial("div").map(|t| ("div".to_string(), t)))
@@ -71,7 +71,7 @@ pub fn render(
         (Some(n), Some(s)) => (n, s),
         _ => {
             cwarn!("no template found for classes [{}]", classes.join(", "));
-            return vars.calepin.remove("children").unwrap_or_default();
+            return vars.clp.remove("children").unwrap_or_default();
         }
     };
 
@@ -89,16 +89,16 @@ fn build_div_vars(
 ) {
     // Div attributes are user-authored -> config
     for (k, val) in attrs {
-        vars.config.insert(k.clone(), val.clone());
+        vars.cfg.insert(k.clone(), val.clone());
     }
-    vars.calepin.insert("writer".to_string(), format.to_string());
-    vars.calepin.insert("children".to_string(), children_rendered.to_string());
-    vars.config.insert("classes".to_string(), classes.join(" "));
+    vars.clp.insert("writer".to_string(), format.to_string());
+    vars.clp.insert("children".to_string(), children_rendered.to_string());
+    vars.cfg.insert("classes".to_string(), classes.join(" "));
 
     if let Some(ref id_val) = id {
-        vars.config.insert("id".to_string(), id_val.clone());
+        vars.cfg.insert("id".to_string(), id_val.clone());
     } else {
-        vars.config.insert("id".to_string(), String::new());
+        vars.cfg.insert("id".to_string(), String::new());
     }
 }
 

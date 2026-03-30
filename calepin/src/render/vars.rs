@@ -37,27 +37,27 @@ impl<'a> BuildElementVars for BuildCodeVars<'a> {
                 let escaped = escape_code_for_format(code, format);
                 let highlighted = self.highlighter.highlight(code, lang, format);
                 if !filename.is_empty() {
-                    vars.config.insert("filename".to_string(), filename.clone());
+                    vars.cfg.insert("filename".to_string(), filename.clone());
                 }
-                vars.calepin.insert("code".to_string(), escaped);
-                vars.config.insert("lang".to_string(), lang.clone());
-                vars.config.insert("label".to_string(), label.clone());
-                vars.calepin.insert("highlighted".to_string(), highlighted);
+                vars.clp.insert("code".to_string(), escaped);
+                vars.cfg.insert("lang".to_string(), lang.clone());
+                vars.cfg.insert("label".to_string(), label.clone());
+                vars.clp.insert("highlighted".to_string(), highlighted);
             }
             Element::CodeOutput { text } => {
-                vars.calepin.insert("output".to_string(), escape_code_for_format(text, format));
+                vars.clp.insert("output".to_string(), escape_code_for_format(text, format));
             }
             Element::CodeWarning { text }
             | Element::CodeMessage { text }
             | Element::CodeError { text } => {
-                vars.calepin.insert("text".to_string(), escape_code_for_format(text, format));
+                vars.clp.insert("text".to_string(), escape_code_for_format(text, format));
                 let cls = match element {
                     Element::CodeWarning { .. } => "warning",
                     Element::CodeMessage { .. } => "message",
                     Element::CodeError { .. } => "error",
                     _ => unreachable!(),
                 };
-                vars.calepin.insert("diagnostic_class".to_string(), cls.to_string());
+                vars.clp.insert("diagnostic_class".to_string(), cls.to_string());
             }
             _ => {}
         }

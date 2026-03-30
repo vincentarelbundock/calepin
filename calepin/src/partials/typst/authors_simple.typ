@@ -1,1 +1,0 @@
-#text(size: 12pt)[{{ config.names }}]

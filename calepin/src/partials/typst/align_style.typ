@@ -1,1 +1,0 @@
-{% if config.align == "left" %}left{% elif config.align == "right" %}right{% else %}center{% endif %}

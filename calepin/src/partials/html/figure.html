@@ -1,8 +1,0 @@
-{%- set loc = config.cap_location | default("bottom") %}
-<figure{% if config.label %} id="{{config.label}}"{% endif %}{% if calepin.align_style %} style="{{calepin.align_style}}"{% endif %}>
-{%- if loc == "top" and config.caption %}<figcaption>{{config.caption}}</figcaption>{%- endif %}
-{%- if config.link %}<a href="{{config.link}}">{%- endif %}
-<img src="{{calepin.src}}" alt="{{config.alt}}"{% if calepin.width_attr %} style="width:{{calepin.width_attr}};max-width:{{calepin.width_attr}}"{% endif %}{% if calepin.height_attr %} style="height:{{calepin.height_attr}}"{% endif %}/>
-{%- if config.link %}</a>{%- endif %}
-{%- if loc != "top" and config.caption %}<figcaption>{{config.caption}}</figcaption>{%- endif %}
-</figure>

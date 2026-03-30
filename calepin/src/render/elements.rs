@@ -15,7 +15,7 @@ use crate::modules::Highlighter;
 // ---------------------------------------------------------------------------
 
 /// Built-in templates (element/page templates), embedded at compile time.
-pub static BUILTIN_TEMPLATES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/partials");
+pub static BUILTIN_TEMPLATES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/templates");
 
 /// Built-in assets (CSS, JS, scaffold files), embedded at compile time.
 pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold");
@@ -31,8 +31,8 @@ fn resolve_template_alias(name: &str) -> &str {
 }
 
 /// Look up a built-in template by name and base.
-/// Checks `partials/{target}/{name}.{ext}` (active target, if different from base),
-/// then `partials/{base}/{name}.{ext}`, then `templates/common/{name}.jinja`.
+/// Checks `templates/{target}/{name}.{ext}` (active target, if different from base),
+/// then `templates/{base}/{name}.{ext}`, then `templates/common/{name}.jinja`.
 pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> {
     let resolved = resolve_template_alias(name);
     let ext = crate::paths::resolve_extension(base);

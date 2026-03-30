@@ -1,7 +1,7 @@
 {# calepin:xxh3:65bb4288413d26c7 #}
 /* =================================================================
    1. Variables — Light
-   Override these to re-theme calepin. All rules reference only --c-*
+   Override these to re-theme clp. All rules reference only --c-*
    tokens, never raw color values.
    Default palette: Nord  https://www.nordtheme.com
    ================================================================= */

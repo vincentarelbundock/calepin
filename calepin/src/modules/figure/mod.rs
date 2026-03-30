@@ -54,19 +54,19 @@ pub fn render(
 
     // Build template vars
     let mut vars = crate::render::template::TemplateVars::with_writer(format);
-    vars.calepin.insert("children".to_string(), children_rendered);
-    vars.config.insert("label".to_string(), id_val.to_string());
-    vars.config.insert("id".to_string(), id_val.to_string());
+    vars.clp.insert("children".to_string(), children_rendered);
+    vars.cfg.insert("label".to_string(), id_val.to_string());
+    vars.cfg.insert("id".to_string(), id_val.to_string());
 
     // Copy div attrs into vars (user-authored -> config)
     for (k, val) in attrs {
-        vars.config.insert(k.clone(), val.clone());
+        vars.cfg.insert(k.clone(), val.clone());
     }
 
     // Render caption markdown to target format
     if !caption_text.is_empty() {
         let rendered_caption = crate::render::convert::render_inline(&caption_text, format);
-        vars.config.insert("caption".to_string(), rendered_caption);
+        vars.cfg.insert("caption".to_string(), rendered_caption);
     }
 
     // Figure wrapper vars (alignment, fig_env, fig_pos, short_caption, cap_location, link)
@@ -133,11 +133,11 @@ fn build_figure_element_vars(
     fig_formats: &[String],
 ) {
     // User-authored -> config
-    vars.config.insert("alt".to_string(), alt.to_string());
-    vars.config.insert("caption".to_string(), caption.unwrap_or("").to_string());
-    vars.config.insert("label".to_string(), label.to_string());
+    vars.cfg.insert("alt".to_string(), alt.to_string());
+    vars.cfg.insert("caption".to_string(), caption.unwrap_or("").to_string());
+    vars.cfg.insert("label".to_string(), label.to_string());
     // Engine-computed -> calepin
-    vars.calepin.insert("number".to_string(), number.unwrap_or("").to_string());
+    vars.clp.insert("number".to_string(), number.unwrap_or("").to_string());
 
     let resolved_path = select_image_variant_with_prefs(path, fig_formats);
     let display_path = resolved_path.to_string_lossy().to_string();
@@ -146,19 +146,19 @@ fn build_figure_element_vars(
     let embed = defaults.embed_resources.unwrap_or(true);
     if format == "html" && embed {
         if let Ok((mime, data)) = crate::util::base64_encode_image(&resolved_path) {
-            vars.calepin.insert("src".to_string(), format!("data:{};base64,{}", mime, data));
+            vars.clp.insert("src".to_string(), format!("data:{};base64,{}", mime, data));
         } else {
-            vars.calepin.insert("src".to_string(), crate::util::escape_html(&display_path));
+            vars.clp.insert("src".to_string(), crate::util::escape_html(&display_path));
         }
     } else if format == "html" {
-        vars.calepin.insert("src".to_string(), crate::util::escape_html(&display_path));
+        vars.clp.insert("src".to_string(), crate::util::escape_html(&display_path));
     } else {
         let rel = relative_figure_path(&resolved_path);
-        vars.calepin.insert("src".to_string(), rel);
+        vars.clp.insert("src".to_string(), rel);
     }
 
-    vars.calepin.insert("width_attr".to_string(), format_width(attrs, format));
-    vars.calepin.insert("height_attr".to_string(), format_height(attrs));
+    vars.clp.insert("width_attr".to_string(), format_width(attrs, format));
+    vars.clp.insert("height_attr".to_string(), format_height(attrs));
 
     build_figure_wrapper_vars(vars, attrs, format, default_cap_location, defaults);
 }
@@ -230,14 +230,14 @@ pub fn build_figure_wrapper_vars(
     let default_align = defaults.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
     let align = attrs.fig_align.as_deref().unwrap_or(default_align);
     // Engine-computed formatting -> calepin
-    vars.calepin.insert("align_style".to_string(), format_align(align, format));
-    vars.calepin.insert("align".to_string(), align.to_string());
+    vars.clp.insert("align_style".to_string(), format_align(align, format));
+    vars.clp.insert("align".to_string(), align.to_string());
 
     // User-authored figure attributes -> config
     if let Some(ref env) = attrs.fig_env {
-        vars.config.insert("fig_env".to_string(), env.clone());
+        vars.cfg.insert("fig_env".to_string(), env.clone());
     }
-    vars.config.insert("fig_pos".to_string(), match attrs.fig_pos.as_deref() {
+    vars.cfg.insert("fig_pos".to_string(), match attrs.fig_pos.as_deref() {
         Some(pos) => format!("[{}]", pos),
         None => String::new(),
     });
@@ -245,14 +245,14 @@ pub fn build_figure_wrapper_vars(
         Some(sc) => format!("[{}]", sc),
         None => String::new(),
     };
-    vars.config.insert("short_caption".to_string(), short_caption);
+    vars.cfg.insert("short_caption".to_string(), short_caption);
 
     if let Some(loc) = attrs.cap_location.as_deref().or(default_cap_location) {
-        vars.config.insert("cap_location".to_string(), loc.to_string());
+        vars.cfg.insert("cap_location".to_string(), loc.to_string());
     }
 
     if let Some(ref link) = attrs.link {
-        vars.config.insert("link".to_string(), link.clone());
+        vars.cfg.insert("link".to_string(), link.clone());
     }
 }
 
@@ -281,11 +281,11 @@ pub fn format_width(attrs: &crate::types::FigureAttrs, format: &str) -> String {
 
     if let Some(tpl) = resolve_element_template("format_width", format) {
         let mut vars = TemplateVars::new();
-        vars.config.insert("width".to_string(), width.to_string());
+        vars.cfg.insert("width".to_string(), width.to_string());
         if width.ends_with('%') {
             let pct: f64 = width.trim_end_matches('%').parse().unwrap_or(100.0);
-            vars.config.insert("width_pct".to_string(), "true".to_string());
-            vars.config.insert("width_frac".to_string(), format!("{:.2}", pct / 100.0));
+            vars.cfg.insert("width_pct".to_string(), "true".to_string());
+            vars.cfg.insert("width_frac".to_string(), format!("{:.2}", pct / 100.0));
         }
         apply_template(&tpl, &vars)
     } else {
@@ -303,7 +303,7 @@ pub fn format_align(align: &str, format: &str) -> String {
 
     if let Some(tpl) = resolve_element_template("align_style", format) {
         let mut vars = TemplateVars::new();
-        vars.config.insert("align".to_string(), align.to_string());
+        vars.cfg.insert("align".to_string(), align.to_string());
         apply_template(&tpl, &vars)
     } else {
         String::new()

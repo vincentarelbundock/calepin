@@ -1,0 +1,14 @@
+{%- set loc = cfg.cap_location | default("bottom") %}
+\begin{ {{-cfg.fig_env | default("figure")-}} }{{cfg.fig_pos}}
+{{clp.align_style}}
+{%- if loc == "top" and cfg.caption %}
+\caption{{cfg.short_caption}}{ {{-cfg.caption-}} }
+{%- endif %}
+{%- if cfg.link %}\href{ {{-cfg.link-}} }{ {%- endif %}
+\includegraphics[{{clp.width_attr | default("width=0.70\\textwidth")-}} ]{ {{-clp.src-}} }
+{%- if cfg.link %}}{% endif %}
+{%- if loc != "top" and cfg.caption %}
+\caption{{cfg.short_caption}}{ {{-cfg.caption-}} }
+{%- endif %}
+{%- if cfg.label %}\label{ {{-cfg.label-}} }{%- endif %}
+\end{ {{-cfg.fig_env | default("figure")-}} }

@@ -26,14 +26,14 @@ pub fn wrap_listing(
 
     let label_defs = metadata.labels.clone();
     let mut vars = TemplateVars::with_writer(format);
-    vars.calepin.insert("label".to_string(), label.to_string());
-    vars.calepin.insert("number".to_string(), num.to_string());
-    vars.calepin.insert("content".to_string(), rendered_code.to_string());
-    vars.calepin.insert("label_listing".to_string(),
+    vars.clp.insert("label".to_string(), label.to_string());
+    vars.clp.insert("number".to_string(), num.to_string());
+    vars.clp.insert("content".to_string(), rendered_code.to_string());
+    vars.clp.insert("label_listing".to_string(),
         label_defs.as_ref().and_then(|l| l.listing.clone())
             .unwrap_or_else(|| "Listing".to_string()));
     if let Some(cap) = lst_cap {
-        vars.config.insert("lst_cap".to_string(), cap.to_string());
+        vars.cfg.insert("lst_cap".to_string(), cap.to_string());
     }
 
     let tpl = resolve_template("code_listing")

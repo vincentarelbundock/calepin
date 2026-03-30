@@ -1,0 +1,8 @@
+{%- set loc = cfg.cap_location | default("bottom") %}
+<figure{% if cfg.label %} id="{{cfg.label}}"{% endif %}{% if clp.align_style %} style="{{clp.align_style}}"{% endif %}>
+{%- if loc == "top" and cfg.caption %}<figcaption>{{cfg.caption}}</figcaption>{%- endif %}
+{%- if cfg.link %}<a href="{{cfg.link}}">{%- endif %}
+<img src="{{clp.src}}" alt="{{cfg.alt}}"{% if clp.width_attr %} style="width:{{clp.width_attr}};max-width:{{clp.width_attr}}"{% endif %}{% if clp.height_attr %} style="height:{{clp.height_attr}}"{% endif %}/>
+{%- if cfg.link %}</a>{%- endif %}
+{%- if loc != "top" and cfg.caption %}<figcaption>{{cfg.caption}}</figcaption>{%- endif %}
+</figure>

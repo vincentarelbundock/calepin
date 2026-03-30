@@ -1,1 +1,0 @@
-[{{ config.text }} ({{ config.width }}x{{ config.height }})]

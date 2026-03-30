@@ -19,21 +19,21 @@ struct Fmt;
 impl Fmt {
     fn superscript(text: &str, ext: &str) -> String {
         let mut vars = TemplateVars::new();
-        vars.config.insert("text".to_string(), text.to_string());
+        vars.cfg.insert("text".to_string(), text.to_string());
         render_fmt_template("superscript", ext, &vars)
     }
 
     fn emphasis(text: &str, ext: &str) -> String {
         let mut vars = TemplateVars::new();
-        vars.config.insert("text".to_string(), text.to_string());
+        vars.cfg.insert("text".to_string(), text.to_string());
         render_fmt_template("emphasis", ext, &vars)
     }
 
     fn url(url: &str, label: Option<&str>, ext: &str) -> String {
         let label = label.unwrap_or(url);
         let mut vars = TemplateVars::new();
-        vars.config.insert("url".to_string(), url.to_string());
-        vars.config.insert("label".to_string(), label.to_string());
+        vars.cfg.insert("url".to_string(), url.to_string());
+        vars.cfg.insert("label".to_string(), label.to_string());
         render_fmt_template("url", ext, &vars)
     }
 }
@@ -80,7 +80,7 @@ fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, String)>) -> Opt
     let tpl = resolve_element_template(name, ext)?;
     let mut vars = TemplateVars::with_writer(ext);
     for (k, v) in extra_vars {
-        vars.config.insert(k.to_string(), v);
+        vars.cfg.insert(k.to_string(), v);
     }
     Some(apply_template(&tpl, &vars))
 }
@@ -246,7 +246,7 @@ fn build_funding_items(funding: &[crate::config::Funding], ext: &str) -> String 
             i.clone()
         };
         let mut vars = TemplateVars::new();
-        vars.config.insert("text".to_string(), text);
+        vars.cfg.insert("text".to_string(), text);
         render_fmt_template("funding_item", ext, &vars)
     }).collect::<Vec<_>>().join("\n")
 }
@@ -290,10 +290,10 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
 
             if let Some(ref tpl) = author_tpl {
                 let mut vars = TemplateVars::with_writer(ext);
-                vars.config.insert("name".to_string(), author.name.literal.clone());
-                vars.config.insert("superscripts".to_string(), superscripts);
-                vars.config.insert("corresponding".to_string(), corresponding);
-                vars.config.insert("orcid_url".to_string(), orcid_url);
+                vars.cfg.insert("name".to_string(), author.name.literal.clone());
+                vars.cfg.insert("superscripts".to_string(), superscripts);
+                vars.cfg.insert("corresponding".to_string(), corresponding);
+                vars.cfg.insert("orcid_url".to_string(), orcid_url);
                 apply_template(tpl, &vars)
             } else {
                 format!("{}{}{}", author.name.literal, superscripts, corresponding)
@@ -314,8 +314,8 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             };
             if let Some(ref tpl) = aff_tpl {
                 let mut vars = TemplateVars::with_writer(ext);
-                vars.config.insert("number".to_string(), number);
-                vars.config.insert("display".to_string(), display);
+                vars.cfg.insert("number".to_string(), number);
+                vars.cfg.insert("display".to_string(), display);
                 Some(apply_template(tpl, &vars))
             } else {
                 Some(format!("{}{}", number, display))
@@ -328,8 +328,8 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
                 if let Some(ref email) = author.email {
                     let mailto = format!("mailto:{}", email);
                     let mut vars = TemplateVars::new();
-                    vars.config.insert("email".to_string(), email.clone());
-                    vars.config.insert("mailto".to_string(), mailto);
+                    vars.cfg.insert("email".to_string(), email.clone());
+                    vars.cfg.insert("mailto".to_string(), mailto);
                     Some(render_fmt_template("corresponding", ext, &vars))
                 } else {
                     None
@@ -355,10 +355,10 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
 
         if let Some(tpl) = resolve_element_template("authors", ext) {
             let mut vars = TemplateVars::with_writer(ext);
-            vars.calepin.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
-            vars.calepin.insert("authors".to_string(), authors_joined);
-            vars.calepin.insert("affiliations_items".to_string(), affiliations_items);
-            vars.calepin.insert("corresponding_note".to_string(), corresponding_note);
+            vars.clp.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
+            vars.clp.insert("authors".to_string(), authors_joined);
+            vars.clp.insert("affiliations_items".to_string(), affiliations_items);
+            vars.clp.insert("corresponding_note".to_string(), corresponding_note);
             apply_template(&tpl, &vars)
         } else {
             format!("{}\n{}\n{}", authors_joined, affiliations_items, corresponding_note)
@@ -367,7 +367,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
         let names = meta.author_names();
         if !names.is_empty() {
             let mut vars = TemplateVars::new();
-            vars.config.insert("names".to_string(), names.join(", "));
+            vars.cfg.insert("names".to_string(), names.join(", "));
             render_fmt_template("authors_simple", ext, &vars)
         } else {
             String::new()

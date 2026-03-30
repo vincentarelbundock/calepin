@@ -44,12 +44,12 @@ pub fn render(
 
     let is_embed = embed_url.contains("youtube.com/embed") || embed_url.contains("player.vimeo.com");
     let mut vars = TemplateVars::new();
-    vars.config.insert("src".to_string(), url.to_string());
-    vars.calepin.insert("url".to_string(), embed_url);
-    vars.config.insert("width".to_string(), width.to_string());
-    vars.config.insert("height".to_string(), height.to_string());
-    vars.config.insert("title".to_string(), title.to_string());
-    vars.calepin.insert("is_embed".to_string(), is_embed.to_string());
+    vars.cfg.insert("src".to_string(), url.to_string());
+    vars.clp.insert("url".to_string(), embed_url);
+    vars.cfg.insert("width".to_string(), width.to_string());
+    vars.cfg.insert("height".to_string(), height.to_string());
+    vars.cfg.insert("title".to_string(), title.to_string());
+    vars.clp.insert("is_embed".to_string(), is_embed.to_string());
 
     let fallback = format!("[{}]({})", title, url);
     match crate::render::elements::resolve_builtin_template("video", format) {

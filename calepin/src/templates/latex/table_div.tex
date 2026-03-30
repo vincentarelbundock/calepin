@@ -1,0 +1,16 @@
+{%- set loc = cfg.cap_location | default("bottom") -%}
+{%- if loc == "bottom" %}
+\begin{{clp._lb}}table{{clp._rb}}{% if cfg.tbl_pos %}[{{cfg.tbl_pos}}]{% endif %}
+\centering
+{{clp.children}}
+{% if cfg.caption %}\caption{{clp._lb}}{{cfg.caption}}{{clp._rb}}{% endif %}
+\label{{clp._lb}}{{cfg.id}}{{clp._rb}}
+\end{{clp._lb}}table{{clp._rb}}
+{%- else %}
+\begin{{clp._lb}}table{{clp._rb}}{% if cfg.tbl_pos %}[{{cfg.tbl_pos}}]{% endif %}
+\centering
+{% if cfg.caption %}\caption{{clp._lb}}{{cfg.caption}}{{clp._rb}}{% endif %}
+\label{{clp._lb}}{{cfg.id}}{{clp._rb}}
+{{clp.children}}
+\end{{clp._lb}}table{{clp._rb}}
+{%- endif %}

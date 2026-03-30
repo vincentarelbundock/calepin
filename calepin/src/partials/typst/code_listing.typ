@@ -1,1 +1,0 @@
-{{calepin.content}} <{{calepin.label}}>

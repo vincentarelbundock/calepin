@@ -1,3 +1,0 @@
-  [
-{{ calepin.content }}
-  ],

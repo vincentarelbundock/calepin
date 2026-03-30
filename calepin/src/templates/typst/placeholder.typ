@@ -1,0 +1,1 @@
+#rect(width: {{ cfg.width }}pt, height: {{ cfg.height }}pt, fill: luma(200))[#align(center + horizon)[{{ cfg.text }}]]

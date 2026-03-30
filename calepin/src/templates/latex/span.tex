@@ -1,0 +1,5 @@
+{%- if cfg.class == "aside" %}
+\marginpar{\footnotesize {{clp.content}}}
+{%- else %}
+\text{ {{-clp.content-}} }
+{%- endif %}

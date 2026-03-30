@@ -1,0 +1,16 @@
+{%- set loc = cfg.cap_location | default("bottom") -%}
+{%- if loc == "bottom" %}
+<div class="table-div" id="{{cfg.id}}">
+{{clp.children}}
+{%- if cfg.caption %}
+<p class="table-caption">{{cfg.caption}}</p>
+{%- endif %}
+</div>
+{%- else %}
+<div class="table-div" id="{{cfg.id}}">
+{%- if cfg.caption %}
+<p class="table-caption">{{cfg.caption}}</p>
+{%- endif %}
+{{clp.children}}
+</div>
+{%- endif %}

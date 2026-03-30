@@ -1,6 +1,6 @@
 //! Extension manifest parsing (`extension.toml`).
 //!
-//! An extension bundles a target definition, partials, modules, assets,
+//! An extension bundles a target definition, templates, modules, assets,
 //! and variables into a single distributable directory.
 
 use std::cell::RefCell;
@@ -358,7 +358,7 @@ pub fn walk_chain<T>(
         for (_ext_name, ext_path) in all_extensions {
             if let Some(manifest) = load_cached(ext_path) {
                 if let Some(et) = manifest.targets.get(&name) {
-                    // Include the owning extension's partials/assets
+                    // Include the owning extension's templates/assets
                     if let Some(result) = visitor(&name, ext_path, &manifest) {
                         results.push(result);
                     }

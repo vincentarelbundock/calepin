@@ -132,7 +132,7 @@ User targets in `{stem}_calepin/config.toml` inherit from built-in targets via `
 
 ## Format Names
 
-Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markdown`. File extensions: `.html`, `.tex`, `.typ`, `.md`. Template resolution uses the writer name (e.g., `partials/html/figure.html`). Raw blocks use canonical names (```` ```{=latex} ````).
+Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markdown`. File extensions: `.html`, `.tex`, `.typ`, `.md`. Template resolution uses the writer name (e.g., `templates/html/figure.html`). Raw blocks use canonical names (```` ```{=latex} ````).
 
 ## Source Layout
 
@@ -204,12 +204,12 @@ Shared AST walker + format-specific implementations via `FormatEmitter` trait.
 - `cache.rs` -- Hash-based page cache for incremental builds
 - `date.rs` -- Date formatting and resolution helpers
 
-### `partials/` -- Built-in Jinja templates (embedded at compile time)
+### `templates/` -- Built-in Jinja templates (embedded at compile time)
 
 Per-engine templates for elements, page templates, shortcodes:
-`partials/{html,latex,typst,markdown,slides,minimal,website,book}/`
+`templates/{html,latex,typst,markdown,slides,minimal,website,book}/`
 
-Website template icons live in `partials/website/icons/` (used via `{% include %}`).
+Website template icons live in `templates/website/icons/` (used via `{% include %}`).
 
 User overrides: `{stem}_calepin/templates/{engine}/{name}.{ext}`
 
@@ -230,14 +230,14 @@ User overrides: `{stem}_calepin/templates/{engine}/{name}.{ext}`
 
 ## Templates and Module Resolution
 
-Templates use Jinja syntax (`{{config.variable}}`, `{{calepin.variable}}`, `{% if %}`, `{% for %}`). Variables are namespaced: `config.*` for user-authored values (front matter, attributes, labels), `calepin.*` for engine-computed values (rendered content, format, assets). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
+Templates use Jinja syntax (`{{cfg.variable}}`, `{{clp.variable}}`, `{% if %}`, `{% for %}`). Variables are namespaced: `cfg.*` for user-authored values (front matter, attributes, labels), `clp.*` for engine-computed values (rendered content, format, assets). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
 
 **Template resolution order** (first match wins, layered):
 1. Module element dirs (in registry order)
 2. Sidecar templates: `{stem}_calepin/templates/{target|writer|common}/`
 3. Project templates: `{stem}_calepin/templates/{target|writer|common}/` (root sidecar)
 4. Extension templates: `{stem}_calepin/extensions/{name}/templates/{writer|common}/` (child-first inheritance)
-5. Built-in `partials/{writer}/{name}.{ext}` (embedded in binary)
+5. Built-in `templates/{writer}/{name}.{ext}` (embedded in binary)
 
 Resolution is layered: individual files can be overridden at any level. Missing files fall through to the next level. `calepin init` does not copy templates; projects start clean and override only what they need.
 
@@ -297,17 +297,17 @@ Both pipe syntax (`#| key: value`) and header key-value pairs (`{r, echo=FALSE}`
 The `.qmd` body text is processed as a Jinja template during the evaluate stage (`jinja_engine.rs`). Code blocks and inline code are protected from Jinja evaluation. Use `#| jinja: true` chunk option to opt-in to Jinja processing inside a code chunk.
 
 Context variables:
-- `{{ config.title }}`, `{{ config.author }}`, `{{ config.date }}`, etc. -- document metadata
-- `{{ config.key.subkey }}` -- non-standard front matter fields (with nesting)
+- `{{ cfg.title }}`, `{{ cfg.author }}`, `{{ cfg.date }}`, etc. -- document metadata
+- `{{ cfg.key.subkey }}` -- non-standard front matter fields (with nesting)
 - `{{ env.HOME }}`, `{{ env.USER }}`, etc. -- system environment variables
-- `{{ calepin.writer }}` -- current output format (`html`, `latex`, `typst`, `markdown`)
-- `{{ config.target }}` -- current target name
+- `{{ clp.writer }}` -- current output format (`html`, `latex`, `typst`, `markdown`)
+- `{{ cfg.target }}` -- current target name
 
 File inclusion: `{% include "file.qmd" %}` (pre-parse, runs before block parsing). Escaping: `{% raw %}...{% endraw %}`.
 
 ## Built-in Spans
 
-Bracketed spans `[content]{.class key=value}` are processed during rendering. Built-in spans (output driven by per-engine templates in `partials/{engine}/`):
+Bracketed spans `[content]{.class key=value}` are processed during rendering. Built-in spans (output driven by per-engine templates in `templates/{engine}/`):
 
 - `[]{.pagebreak}` -- format-specific page break
 - `[]{.video url="..." width="..." height="..." title="..."}` -- video embed

@@ -1,1 +1,0 @@
-* Corresponding author: {{ config.email }}

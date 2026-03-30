@@ -109,7 +109,7 @@ mod tests {
     fn test_config_variable_access() {
         let mut meta = Metadata::default();
         meta.title = Some("My Title".to_string());
-        let result = process_body("Title: {{ config.title }}", "html", &meta);
+        let result = process_body("Title: {{ cfg.title }}", "html", &meta);
         assert_eq!(result.text, "Title: My Title");
     }
 
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_code_blocks_preserved() {
-        let text = "before {{ config.title }}\n```\n{{ not_a_var }}\n```\nafter";
+        let text = "before {{ cfg.title }}\n```\n{{ not_a_var }}\n```\nafter";
         let mut meta = Metadata::default();
         meta.title = Some("T".to_string());
         let result = process_body(text, "html", &meta);

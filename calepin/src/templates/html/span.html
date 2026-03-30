@@ -1,0 +1,5 @@
+{%- if cfg.class == "aside" %}
+<span{% if cfg.id %} id="{{cfg.id}}"{% endif %}{% if cfg.classes %} class="{{cfg.classes}}"{% endif %}>{{clp.content}}</span>
+{%- else %}
+<span{% if cfg.id %} id="{{cfg.id}}"{% endif %}{% if cfg.classes %} class="{{cfg.classes}}"{% endif %}>{{clp.content}}</span>
+{%- endif %}
