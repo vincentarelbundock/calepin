@@ -1,4 +1,4 @@
-{# calepin:xxh3:8e18dd484d256287 #}
+{# calepin:xxh3:d656179b1aa24fb8 #}
 /*
  * Calepin default stylesheet
  *
@@ -250,7 +250,6 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
 /* --- Site layout: sidebar + content + TOC --- */
 .site-body {
   display: flex; justify-content: center;
-  width: 100%; max-width: var(--c-site-width); margin-inline: auto;
   min-height: calc(100dvh - var(--c-navbar-height));
 }
 
