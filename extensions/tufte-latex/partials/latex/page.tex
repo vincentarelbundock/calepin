@@ -2,24 +2,24 @@
 \usepackage[T1]{fontenc}
 \usepackage{graphicx,hyperref}
 \usepackage{titling}
-{{bib_preamble}}
+{{calepin.bib_preamble}}
 {% include "preamble.tex" %}
-{{preamble}}
-{% if title %}{% include "title.tex" %}
+{{calepin.preamble}}
+{% if config.title %}{% include "title.tex" %}
 {% include "subtitle.tex" %}
 {% include "authors.tex" %}
 {% include "date.tex" %}{% else %}\date{}{% endif %}
 \begin{document}
-{% if title %}\maketitle
+{% if config.title %}\maketitle
 \ifdefined\affiliationblock\affiliationblock\fi{% endif %}
 
 {% include "abstract.tex" %}
 {% include "keywords.tex" %}
-{{toc}}
+{{calepin.toc}}
 
-{{body}}
+{{calepin.body}}
 
-{{appendix}}
-{{bibliography}}
-{{bib_end}}
+{{calepin.appendix}}
+{{calepin.bibliography}}
+{{calepin.bib_end}}
 \end{document}

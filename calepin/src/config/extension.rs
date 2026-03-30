@@ -34,11 +34,16 @@ pub struct ExtensionManifest {
     /// License identifier.
     #[serde(default)]
     pub license: String,
-    /// Parent extension name (single-chain inheritance).
+    /// Parent extension name (single-target shorthand).
+    /// When set, the extension defines a single target with this parent.
+    /// For multi-target extensions, use `[targets.*]` instead.
     pub inherits: Option<String>,
-    /// Target definition (overrides parent fields).
+    /// Single target definition (shorthand, used with top-level `inherits`).
     #[serde(default)]
     pub target: Option<ExtensionTarget>,
+    /// Named targets (multi-target extensions). Each target carries its own `inherits`.
+    #[serde(default)]
+    pub targets: HashMap<String, ExtensionTarget>,
     /// Extension variables, namespaced by extension name in templates.
     #[serde(default)]
     pub vars: HashMap<String, toml::Value>,
@@ -54,6 +59,8 @@ pub struct ExtensionManifest {
 /// Same fields as `Target` but all optional (inherited from parent).
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ExtensionTarget {
+    /// Parent target to inherit from (used in `[targets.*]` entries).
+    pub inherits: Option<String>,
     pub writer: Option<String>,
     pub template: Option<String>,
     pub extension: Option<String>,
@@ -107,6 +114,26 @@ pub struct ExtensionModule {
     pub protocol: String,
 }
 
+/// Convert an `ExtensionTarget` to a `Target`.
+fn extension_target_to_target(et: &ExtensionTarget) -> Target {
+    Target {
+        inherits: et.inherits.clone(),
+        writer: et.writer.clone().unwrap_or_default(),
+        template: et.template.clone(),
+        extension: et.extension.clone(),
+        fig_extension: et.fig_extension.clone(),
+        preview: et.preview.clone(),
+        embed_resources: et.embed_resources,
+        vars: et.vars.clone(),
+        post: et.post.clone().unwrap_or_default(),
+        modules: et.modules.clone().unwrap_or_default(),
+        crossref: et.crossref.clone(),
+        toc_headings: et.toc_headings,
+        page_vars: et.page_vars.clone().unwrap_or_default(),
+        fig_formats: et.fig_formats.clone().unwrap_or_default(),
+    }
+}
+
 fn default_protocol() -> String {
     "json".to_string()
 }
@@ -146,7 +173,8 @@ impl ExtensionManifest {
         Ok(manifest)
     }
 
-    /// Convert the extension's target definition to a `Target` struct.
+    /// Convert the extension's default target definition to a `Target` struct.
+    /// Uses the single-target shorthand (`inherits` + `[target]`).
     /// Fields not set in the extension are left as defaults (to be filled
     /// by inheritance resolution).
     pub fn to_target(&self) -> Target {
@@ -167,6 +195,20 @@ impl ExtensionManifest {
             page_vars: ext_target.and_then(|t| t.page_vars.clone()).unwrap_or_default(),
             fig_formats: ext_target.and_then(|t| t.fig_formats.clone()).unwrap_or_default(),
         }
+    }
+
+    /// Look up a named target from the `[targets.*]` table.
+    /// Returns a `Target` struct with the named target's `inherits` field.
+    pub fn named_target(&self, name: &str) -> Option<Target> {
+        let et = self.targets.get(name)?;
+        Some(extension_target_to_target(et))
+    }
+
+    /// Return all named targets defined by this extension.
+    pub fn named_targets(&self) -> Vec<(String, Target)> {
+        self.targets.iter()
+            .map(|(name, et)| (name.clone(), extension_target_to_target(et)))
+            .collect()
     }
 }
 
@@ -270,6 +312,21 @@ pub fn walk_chain<T>(
                 results.push(result);
             }
             current = manifest.inherits.clone();
+            continue;
+        }
+        // Check named targets in installed extensions
+        let extensions = discover_extensions(project_root);
+        for (_ext_name, ext_path) in &extensions {
+            if let Some(manifest) = load_cached(ext_path) {
+                if let Some(et) = manifest.targets.get(&name) {
+                    // Include the owning extension's partials/assets
+                    if let Some(result) = visitor(&name, ext_path, &manifest) {
+                        results.push(result);
+                    }
+                    current = et.inherits.clone();
+                    break;
+                }
+            }
         }
     }
     results
@@ -311,6 +368,22 @@ pub fn inheritance_chain(
         if let Some(manifest) = load_cached(&ext_dir) {
             current = manifest.inherits.clone();
             continue;
+        }
+
+        // 1b. Check named targets in installed extensions
+        {
+            let extensions = discover_extensions(project_root);
+            let mut found = false;
+            for (_ext_name, ext_path) in &extensions {
+                if let Some(manifest) = load_cached(ext_path) {
+                    if let Some(et) = manifest.targets.get(&name) {
+                        current = et.inherits.clone();
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if found { continue; }
         }
 
         // 2. Check built-in extension manifest

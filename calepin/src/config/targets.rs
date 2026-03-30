@@ -217,6 +217,27 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
         }
     }
 
+    // 2b. Named targets in installed extensions ([targets.name] entries)
+    {
+        let extensions = super::extension::discover_extensions(&project_root);
+        for (_ext_name, ext_path) in &extensions {
+            if let Some(manifest) = super::extension::load_cached(ext_path) {
+                if let Some(target) = manifest.named_target(name) {
+                    if target.inherits.is_some() {
+                        let mut target_map = HashMap::new();
+                        target_map.insert(name.to_string(), target);
+                        resolve_inheritance(&mut target_map)?;
+                        if let Some(resolved) = target_map.remove(name) {
+                            return Ok(merge_with_builtin(&resolved));
+                        }
+                    } else {
+                        return Ok(merge_with_builtin(&target));
+                    }
+                }
+            }
+        }
+    }
+
     // 3. Built-in config (from document.toml/collection.toml)
     if let Some(target) = super::builtin_metadata().targets.get(name) {
         return Ok(target.clone());
