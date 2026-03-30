@@ -1,1 +1,1 @@
-#block(width: 100%, above: 1em, below: 1em)[_{{label_proof}}._ {{children}} #h(1fr) □]{% if id %} <{{id}}>{% endif %}
+#block(width: 100%, above: 1em, below: 1em)[_{{calepin.label_proof}}._ {{calepin.children}} #h(1fr) □]{% if config.id %} <{{config.id}}>{% endif %}

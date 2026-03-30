@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 
 use crate::types::Element;
+use crate::render::template::TemplateVars;
 
 /// Render a table div: extract caption from children, build template
 /// vars, apply the `table_div` template.
@@ -46,28 +47,28 @@ pub fn render(
         .join("\n\n");
 
     // Build template vars
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), format.to_string());
-    vars.insert("children".to_string(), children_rendered);
-    vars.insert("label".to_string(), id_val.to_string());
-    vars.insert("id".to_string(), id_val.to_string());
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), format.to_string());
+    vars.calepin.insert("children".to_string(), children_rendered);
+    vars.config.insert("label".to_string(), id_val.to_string());
+    vars.config.insert("id".to_string(), id_val.to_string());
 
     // Copy div attrs into vars
     for (k, val) in attrs {
-        vars.insert(k.clone(), val.clone());
+        vars.config.insert(k.clone(), val.clone());
     }
 
     // Render caption markdown to target format
     if !caption_text.is_empty() {
         let rendered_caption = crate::render::convert::render_inline(&caption_text, format);
-        vars.insert("caption".to_string(), rendered_caption);
+        vars.config.insert("caption".to_string(), rendered_caption);
     }
 
     // Caption location (default: top for tables)
     let cap_loc = attrs.get("tbl_cap_location")
         .cloned()
         .unwrap_or_else(|| "top".to_string());
-    vars.insert("cap_location".to_string(), cap_loc);
+    vars.config.insert("cap_location".to_string(), cap_loc);
 
     let tpl = crate::render::elements::resolve_builtin_partial("table_div", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)

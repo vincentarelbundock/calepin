@@ -56,11 +56,11 @@ pub fn render(
         .collect::<Vec<_>>()
         .join("\n\n");
 
-    let mut vars = HashMap::new();
-    build_div_vars(&mut vars, classes, id, attrs, &children_rendered);
+    let mut vars = crate::render::template::TemplateVars::new();
+    build_div_vars(&mut vars, classes, id, attrs, &children_rendered, format);
 
     // Template lookup: explicit override -> class-based -> fallback
-    let (tpl_name, tpl_source) = vars.get("template")
+    let (tpl_name, tpl_source) = vars.config.get("template")
         .and_then(|name| resolve_partial(name).map(|t| (name.clone(), t)))
         .or_else(|| classes.iter().find_map(|cls| resolve_partial(cls).map(|t| (cls.clone(), t))))
         .or_else(|| resolve_partial("div").map(|t| ("div".to_string(), t)))
@@ -70,7 +70,7 @@ pub fn render(
         (Some(n), Some(s)) => (n, s),
         _ => {
             cwarn!("no partial found for classes [{}]", classes.join(", "));
-            return vars.remove("children").unwrap_or_default();
+            return vars.calepin.remove("children").unwrap_or_default();
         }
     };
 
@@ -79,24 +79,26 @@ pub fn render(
 
 /// Build the default template variables for a div.
 fn build_div_vars(
-    vars: &mut HashMap<String, String>,
+    vars: &mut crate::render::template::TemplateVars,
     classes: &[String],
     id: &Option<String>,
     attrs: &HashMap<String, String>,
     children_rendered: &str,
+    format: &str,
 ) {
+    // Div attributes are user-authored -> config
     for (k, val) in attrs {
-        vars.insert(k.clone(), val.clone());
+        vars.config.insert(k.clone(), val.clone());
     }
-    vars.insert("children".to_string(), children_rendered.to_string());
-    vars.insert("classes".to_string(), classes.join(" "));
+    vars.calepin.insert("writer".to_string(), format.to_string());
+    vars.calepin.insert("children".to_string(), children_rendered.to_string());
+    vars.config.insert("classes".to_string(), classes.join(" "));
 
     if let Some(ref id_val) = id {
-        vars.insert("id".to_string(), id_val.clone());
+        vars.config.insert("id".to_string(), id_val.clone());
     } else {
-        vars.insert("id".to_string(), String::new());
+        vars.config.insert("id".to_string(), String::new());
     }
-
 }
 
 // ---------------------------------------------------------------------------

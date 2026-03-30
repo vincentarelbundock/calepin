@@ -1,7 +1,7 @@
-<div class="theorem-env proof"{% if id %} id="{{id}}"{% endif %}>
-<p class="thm-heading"><em>{{label_proof}}.</em></p>
+<div class="theorem-env proof"{% if config.id %} id="{{config.id}}"{% endif %}>
+<p class="thm-heading"><em>{{calepin.label_proof}}.</em></p>
 <div class="thm-body-italic">
-{{children}}
+{{calepin.children}}
 </div>
 <p class="qed">□</p>
 </div>

@@ -1,10 +1,10 @@
-{%- set loc = cap_location | default("bottom") -%}
+{%- set loc = config.cap_location | default("bottom") -%}
 {%- if loc == "bottom" %}
-{{children}}
+{{calepin.children}}
 
-: {{caption}}
+: {{config.caption}}
 {%- else %}
-: {{caption}}
+: {{config.caption}}
 
-{{children}}
+{{calepin.children}}
 {%- endif %}

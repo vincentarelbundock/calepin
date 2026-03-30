@@ -1,1 +1,0 @@
-*{{label_proof}}.* {{children}} □

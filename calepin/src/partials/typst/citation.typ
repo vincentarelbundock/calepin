@@ -1,2 +1,2 @@
-== {{label_citation}}
-{{content}}
+== {{config.label_citation}}
+{{config.content}}

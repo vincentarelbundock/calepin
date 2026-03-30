@@ -7,10 +7,10 @@
 //! - HTML footnote section rendering with backref injection
 //! - Document injection (TransformDocument)
 
-use std::collections::HashMap;
-
 use regex::Regex;
 use std::sync::LazyLock;
+
+use crate::render::template::TemplateVars;
 
 use crate::types::Element;
 use crate::render::elements::ElementRenderer;
@@ -153,10 +153,10 @@ pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
         footnote_items.push_str(&format!("<li id=\"fn-{}\">\n{}\n</li>\n", id, body));
     }
 
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), "html".to_string());
-    vars.insert("footnotes".to_string(), "true".to_string());
-    vars.insert("footnote_items".to_string(), footnote_items);
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), "html".to_string());
+    vars.calepin.insert("footnotes".to_string(), "true".to_string());
+    vars.calepin.insert("footnote_items".to_string(), footnote_items);
     let tpl = include_str!("../../partials/html/footnotes.html");
     crate::render::template::apply_template(tpl, &vars)
 }

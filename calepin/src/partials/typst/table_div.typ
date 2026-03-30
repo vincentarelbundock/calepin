@@ -1,8 +1,8 @@
-{%- set loc = cap_location | default("bottom") -%}
-{%- if caption %}
+{%- set loc = config.cap_location | default("bottom") -%}
+{%- if config.caption %}
 #figure(kind: table, [
-{{children}}
-], caption: [{{caption}}]) <{{id}}>
+{{calepin.children}}
+], caption: [{{config.caption}}]) <{{config.id}}>
 {%- else %}
-{{children}} <{{id}}>
+{{calepin.children}} <{{config.id}}>
 {%- endif %}

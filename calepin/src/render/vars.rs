@@ -3,11 +3,10 @@
 // These run during element rendering in `ElementRenderer::render_templated()`,
 // not through the module registry.
 
-use std::collections::HashMap;
-
 use crate::types::Element;
 use crate::modules::Highlighter;
 use crate::utils::escape::escape_code_for_format;
+use crate::render::template::TemplateVars;
 
 /// Populates template variables for a specific element type.
 /// Each builder handles the element types it knows about and ignores the rest.
@@ -16,7 +15,7 @@ pub trait BuildElementVars {
         &self,
         element: &Element,
         format: &str,
-        vars: &mut HashMap<String, String>,
+        vars: &mut TemplateVars,
         defaults: &crate::config::Metadata,
     );
 }
@@ -32,33 +31,33 @@ impl<'a> BuildCodeVars<'a> {
 }
 
 impl<'a> BuildElementVars for BuildCodeVars<'a> {
-    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, _defaults: &crate::config::Metadata) {
+    fn apply(&self, element: &Element, format: &str, vars: &mut TemplateVars, _defaults: &crate::config::Metadata) {
         match element {
             Element::CodeSource { code, lang, label, filename, .. } => {
                 let escaped = escape_code_for_format(code, format);
                 let highlighted = self.highlighter.highlight(code, lang, format);
                 if !filename.is_empty() {
-                    vars.insert("filename".to_string(), filename.clone());
+                    vars.config.insert("filename".to_string(), filename.clone());
                 }
-                vars.insert("code".to_string(), escaped);
-                vars.insert("lang".to_string(), lang.clone());
-                vars.insert("label".to_string(), label.clone());
-                vars.insert("highlighted".to_string(), highlighted);
+                vars.calepin.insert("code".to_string(), escaped);
+                vars.config.insert("lang".to_string(), lang.clone());
+                vars.config.insert("label".to_string(), label.clone());
+                vars.calepin.insert("highlighted".to_string(), highlighted);
             }
             Element::CodeOutput { text } => {
-                vars.insert("output".to_string(), escape_code_for_format(text, format));
+                vars.calepin.insert("output".to_string(), escape_code_for_format(text, format));
             }
             Element::CodeWarning { text }
             | Element::CodeMessage { text }
             | Element::CodeError { text } => {
-                vars.insert("text".to_string(), escape_code_for_format(text, format));
+                vars.calepin.insert("text".to_string(), escape_code_for_format(text, format));
                 let cls = match element {
                     Element::CodeWarning { .. } => "warning",
                     Element::CodeMessage { .. } => "message",
                     Element::CodeError { .. } => "error",
                     _ => unreachable!(),
                 };
-                vars.insert("diagnostic_class".to_string(), cls.to_string());
+                vars.calepin.insert("diagnostic_class".to_string(), cls.to_string());
             }
             _ => {}
         }

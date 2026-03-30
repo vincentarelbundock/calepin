@@ -1,3 +1,3 @@
-# {{label_appendix}}
+# {{config.label_appendix}}
 
-{{sections}}
+{{config.sections}}

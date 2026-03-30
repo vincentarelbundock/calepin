@@ -1,1 +1,1 @@
-#bibliography("{{path}}")
+#bibliography("{{config.path}}")

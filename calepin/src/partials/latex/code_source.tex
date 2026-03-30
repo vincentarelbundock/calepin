@@ -1,12 +1,12 @@
-{%- if filename %}
+{%- if config.filename %}
 \begin{codefilename}
-\codefilenameheader{ {{-filename-}} }
+\codefilenameheader{ {{-config.filename-}} }
 {%- endif %}
 \begin{srccode}
 \begin{Verbatim}[commandchars=\\\{\}]
-{{highlighted}}
+{{calepin.highlighted}}
 \end{Verbatim}
 \end{srccode}
-{%- if filename %}
+{%- if config.filename %}
 \end{codefilename}
 {%- endif %}

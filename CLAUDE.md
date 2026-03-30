@@ -229,7 +229,7 @@ User overrides: `_calepin/partials/{engine}/{name}.{ext}`
 
 ## Partials and Module Resolution
 
-Partials use Jinja syntax (`{{variable}}`, `{% if %}`, `{% for %}`). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
+Partials use Jinja syntax (`{{config.variable}}`, `{{calepin.variable}}`, `{% if %}`, `{% for %}`). Variables are namespaced: `config.*` for user-authored values (front matter, attributes, labels), `calepin.*` for engine-computed values (rendered content, format, assets). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
 
 **Partial resolution order** (first match wins, layered):
 1. Module element dirs (in registry order)
@@ -296,11 +296,11 @@ Both pipe syntax (`#| key: value`) and header key-value pairs (`{r, echo=FALSE}`
 The `.qmd` body text is processed as a Jinja template during the evaluate stage (`jinja_engine.rs`). Code blocks and inline code are protected from Jinja evaluation. Use `#| jinja: true` chunk option to opt-in to Jinja processing inside a code chunk.
 
 Context variables:
-- `{{ meta.title }}`, `{{ meta.author }}`, `{{ meta.date }}`, etc. -- document metadata
-- `{{ var.key.subkey }}` -- non-standard front matter fields (with nesting)
+- `{{ config.title }}`, `{{ config.author }}`, `{{ config.date }}`, etc. -- document metadata
+- `{{ config.key.subkey }}` -- non-standard front matter fields (with nesting)
 - `{{ env.HOME }}`, `{{ env.USER }}`, etc. -- system environment variables
-- `{{ writer }}` -- current output format (`html`, `latex`, `typst`, `markdown`)
-- `{{ target }}` -- current target name
+- `{{ calepin.writer }}` -- current output format (`html`, `latex`, `typst`, `markdown`)
+- `{{ config.target }}` -- current target name
 
 File inclusion: `{% include "file.qmd" %}` (pre-parse, runs before block parsing). Escaping: `{% raw %}...{% endraw %}`.
 

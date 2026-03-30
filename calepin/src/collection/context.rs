@@ -246,9 +246,9 @@ pub fn build_collection_context(
     // Math block
     let html_math_method = "katex".to_string();
     let math = {
-        let mut vars = HashMap::new();
-        vars.insert("html_math_method".to_string(), html_math_method);
-        vars.insert("writer".to_string(), "html".to_string());
+        let mut vars = crate::render::template::TemplateVars::new();
+        vars.config.insert("html_math_method".to_string(), html_math_method);
+        vars.calepin.insert("writer".to_string(), "html".to_string());
         crate::render::template::render_element("math", "html", &vars)
     };
 

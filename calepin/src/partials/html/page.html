@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="{{lang}}">
+<html lang="{{config.lang}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="{{generator}}">
+<meta name="generator" content="{{calepin.generator}}">
 
-<title>{{plain_title}}</title>
+<title>{{config.plain_title}}</title>
 
 <script>
 // Apply saved theme immediately to prevent flash
@@ -13,10 +13,10 @@
 </script>
 
 {% include "preamble.html" %}
-{% if keywords %}<meta name="keywords" content="{{keywords}}">{% endif %}
+{% if config.keywords %}<meta name="keywords" content="{{config.keywords}}">{% endif %}
 
-{% if css %}<style>
-{{css}}
+{% if calepin.css %}<style>
+{{calepin.css}}
 </style>{% endif %}
 
 {% include "math.html" %}
@@ -40,15 +40,15 @@
 {% include "keywords.html" %}
 
 <article>
-{{body}}
+{{calepin.body}}
 </article>
 
-{{appendix}}
+{{calepin.appendix}}
 </main>
-{% if toc %}<aside class="toc-sidebar" role="complementary" aria-label="Table of contents">{{toc}}</aside>{% endif %}
+{% if calepin.toc %}<aside class="toc-sidebar" role="complementary" aria-label="Table of contents">{{calepin.toc}}</aside>{% endif %}
 </div>
 
-{{js}}
+{{calepin.js}}
 <script>
 // Tabset switching
 document.querySelectorAll('.panel-tabset .nav-link').forEach(function(btn) {

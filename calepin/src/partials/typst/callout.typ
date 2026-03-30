@@ -1,5 +1,8 @@
-{%- set callout_type = classes | replace("callout-", "") -%}
-{%- if not title -%}
+{%- set callout_type = config.classes | replace("callout-", "") -%}
+{%- set title = config.title -%}
+{%- set icon = config.icon -%}
+{%- set appearance = config.appearance -%}
+{%- if not config.title -%}
   {%- if callout_type == "note" -%}{%- set title = "Note" -%}
   {%- elif callout_type == "tip" -%}{%- set title = "Tip" -%}
   {%- elif callout_type == "warning" -%}{%- set title = "Warning" -%}
@@ -8,7 +11,7 @@
   {%- else -%}{%- set title = "Note" -%}
   {%- endif -%}
 {%- endif -%}
-{%- if not icon -%}
+{%- if not config.icon -%}
   {%- if callout_type == "tip" -%}{%- set icon = "💡" -%}
   {%- elif callout_type == "warning" -%}{%- set icon = "⚠️" -%}
   {%- elif callout_type == "caution" -%}{%- set icon = "🔥" -%}
@@ -16,7 +19,7 @@
   {%- else -%}{%- set icon = "ℹ️" -%}
   {%- endif -%}
 {%- endif -%}
-{%- if not appearance -%}{%- set appearance = "default" -%}{%- endif -%}
+{%- if not config.appearance -%}{%- set appearance = "default" -%}{%- endif -%}
 {%- if callout_type == "note" %}
 #block(fill: rgb("#dbeafe"), stroke: (left: 3pt + rgb("#3b82f6")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
 {%- elif callout_type == "tip" %}
@@ -31,5 +34,5 @@
 #block(fill: rgb("#dbeafe"), stroke: (left: 3pt + rgb("#3b82f6")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
 {%- endif %}
   #text(weight: "bold")[{{icon}} {{title}}] \
-  {{children}}
-]{% if id %} <{{id}}>{% endif %}
+  {{calepin.children}}
+]{% if config.id %} <{{config.id}}>{% endif %}

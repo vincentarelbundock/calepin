@@ -1,3 +1,3 @@
 #pagebreak()
-= {{label_appendix}}
-{{sections}}
+= {{config.label_appendix}}
+{{config.sections}}

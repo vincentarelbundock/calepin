@@ -6,7 +6,6 @@
 //! - `[]{.placeholder width=600 height=400}` — placeholder image
 //! - `[]{.lorem paragraphs=3}` — lorem ipsum text generation
 
-use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -44,7 +43,7 @@ pub fn render(
         // Module dispatch for spans (pagebreak, video, placeholder, lorem, etc.)
         {
             use crate::registry::ModuleKind;
-            let empty_attrs = HashMap::new();
+            let empty_attrs = std::collections::HashMap::new();
             let matching = registry.matching_modules(&classes, &empty_attrs, id.as_deref(), format, "span");
             for (plugin, _) in &matching {
                 if let ModuleKind::Span(ref handler) = plugin.kind {
@@ -58,18 +57,19 @@ pub fn render(
         // Render inline markdown in span content (e.g. **bold**, *italic*)
         let rendered_content = crate::render::convert::render_inline(content, format);
 
-        let mut vars = HashMap::new();
+        let mut vars = crate::render::template::TemplateVars::new();
+        // Span attributes are user-authored -> config
         for (k, v) in &kv {
-            vars.insert(k.clone(), v.clone());
+            vars.config.insert(k.clone(), v.clone());
         }
-        vars.insert("writer".to_string(), format.to_string());
-        vars.insert("content".to_string(), rendered_content.clone());
-        vars.insert("class".to_string(), first_class.to_string());
-        vars.insert("classes".to_string(), classes.join(" "));
+        vars.calepin.insert("writer".to_string(), format.to_string());
+        vars.calepin.insert("content".to_string(), rendered_content.clone());
+        vars.config.insert("class".to_string(), first_class.to_string());
+        vars.config.insert("classes".to_string(), classes.join(" "));
         if let Some(ref id_val) = id {
-            vars.insert("id".to_string(), id_val.clone());
+            vars.config.insert("id".to_string(), id_val.clone());
         } else {
-            vars.insert("id".to_string(), String::new());
+            vars.config.insert("id".to_string(), String::new());
         }
 
         // Template lookup

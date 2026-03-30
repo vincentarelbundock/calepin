@@ -1,6 +1,6 @@
-{%- if is_figure and id %}<div class="figure" id="{{id}}">
+{%- if calepin.calepin.is_figure and config.id %}<div class="figure" id="{{config.id}}">
 {% endif %}
-{{rows}}
-{%- if is_figure and caption %}<p class="caption">{{caption}}</p>
+{{calepin.rows}}
+{%- if calepin.calepin.is_figure and config.caption %}<p class="caption">{{config.caption}}</p>
 {% endif %}
-{%- if is_figure and id %}</div>{% endif %}
+{%- if calepin.calepin.is_figure and config.id %}</div>{% endif %}

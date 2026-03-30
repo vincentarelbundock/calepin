@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 
 use crate::types::Element;
+use crate::render::template::TemplateVars;
 
 /// Cross-reference prefix mapping (class -> short prefix).
 pub const CALLOUT_PREFIXES: &[(&str, &str)] = &[
@@ -37,13 +38,13 @@ pub fn render(
         .collect::<Vec<_>>()
         .join("\n\n");
 
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), format.to_string());
-    vars.insert("children".to_string(), children_rendered);
-    vars.insert("classes".to_string(), classes.join(" "));
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), format.to_string());
+    vars.calepin.insert("children".to_string(), children_rendered);
+    vars.config.insert("classes".to_string(), classes.join(" "));
 
     if let Some(ref id_val) = id {
-        vars.insert("id".to_string(), id_val.clone());
+        vars.config.insert("id".to_string(), id_val.clone());
 
         // Register ID for cross-referencing
         for cls in classes {
@@ -56,12 +57,12 @@ pub fn render(
             }
         }
     } else {
-        vars.insert("id".to_string(), String::new());
+        vars.config.insert("id".to_string(), String::new());
     }
 
     // Copy div attrs into vars (title, icon, collapse, appearance)
     for (k, val) in attrs {
-        vars.insert(k.clone(), val.clone());
+        vars.config.insert(k.clone(), val.clone());
     }
 
     let tpl = crate::render::elements::resolve_builtin_partial("callout", format).unwrap_or("");

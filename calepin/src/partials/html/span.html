@@ -1,5 +1,5 @@
-{%- if class == "aside" %}
-<span{% if id %} id="{{id}}"{% endif %}{% if classes %} class="{{classes}}"{% endif %}>{{content}}</span>
+{%- if config.class == "aside" %}
+<span{% if config.id %} id="{{config.id}}"{% endif %}{% if config.classes %} class="{{config.classes}}"{% endif %}>{{calepin.content}}</span>
 {%- else %}
-<span{% if id %} id="{{id}}"{% endif %}{% if classes %} class="{{classes}}"{% endif %}>{{content}}</span>
+<span{% if config.id %} id="{{config.id}}"{% endif %}{% if config.classes %} class="{{config.classes}}"{% endif %}>{{calepin.content}}</span>
 {%- endif %}

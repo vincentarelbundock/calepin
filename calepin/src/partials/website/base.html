@@ -7,7 +7,7 @@
   {% elif collection.title %}<title>{{ collection.title }}</title>{% endif %}
   {% if document.abstract %}<meta name="description" content="{{ document.abstract }}">{% endif %}
   {% if collection.favicon %}<link rel="icon" href="{{ link(collection.favicon) }}">{% endif %}
-  <style>{{ css }}</style>
+  <style>{{ calepin.css }}</style>
   {{ collection.math }}
   {% block head_extra %}{% endblock %}
 </head>

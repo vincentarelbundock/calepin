@@ -13,19 +13,19 @@ docs = "https://github.com/vincentarelbundock/calepin"
 
 ## Front matter fields
 
-Access standard front matter fields via `meta`:
+Access standard front matter fields via `config`:
 
 ```
-{{ meta.title }}
-{{ meta.author }}
-{{ meta.date }}
+{{ config.title }}
+{{ config.author }}
+{{ config.date }}
 ```
 
-The title of this document is: {{ meta.title }}.
+The title of this document is: {{ config.title }}.
 
 ## Custom fields
 
-Non-standard front matter fields are available under `var` with dot notation. This document's front matter contains:
+Non-standard front matter fields are also available under `config` with dot notation. This document's front matter contains:
 
 ```toml
 sample_size = 10
@@ -34,10 +34,10 @@ sample_size = 10
 docs = "https://github.com/vincentarelbundock/calepin"
 ```
 
-The syntax `{{ var.sample_size }}` inserts the value:
+The syntax `{{ config.sample_size }}` inserts the value:
 
-* Sample size: {{ var.sample_size }}
-* Documentation URL: {{ var.urls.docs }}
+* Sample size: {{ config.sample_size }}
+* Documentation URL: {{ config.urls.docs }}
 
 ## Environment variables
 
@@ -47,7 +47,7 @@ System environment variables are available under `env`:
 
 ## Format
 
-The current output format is available as `{{ writer }}` (`html`, `latex`, `typst`, or `markdown`). The target name is `{{ target }}`.
+The current output format is available as `{{ calepin.writer }}` (`html`, `latex`, `typst`, or `markdown`). The target name is `{{ config.target }}`.
 
 
 # Conditional content
@@ -55,7 +55,7 @@ The current output format is available as `{{ writer }}` (`html`, `latex`, `typs
 Show content only for certain output formats:
 
 ````
-{% if writer == "html" %}
+{% if calepin.writer == "html" %}
 This paragraph only appears in HTML output.
 {% endif %}
 ````
@@ -99,7 +99,7 @@ Jinja expressions inside code blocks are not evaluated by default. To opt in, us
 ````
 ```{r}
 #| jinja: true
-n <- {{ var.sample_size }}
+n <- {{ config.sample_size }}
 x <- rnorm(n)
 ```
 ````
@@ -108,6 +108,6 @@ Which gets replaced by the value specified in the front matter:
 
 ```{r}
 #| jinja: true
-n <- {{ var.sample_size }}
+n <- {{ config.sample_size }}
 rnorm(n)
 ```

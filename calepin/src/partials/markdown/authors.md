@@ -1,5 +1,5 @@
-{{authors}}
-{%- if affiliations_items %}
-{{affiliations_items}}
+{{calepin.authors}}
+{%- if calepin.affiliations_items %}
+{{calepin.affiliations_items}}
 {%- endif %}
-{{corresponding_note}}
+{{calepin.corresponding_note}}

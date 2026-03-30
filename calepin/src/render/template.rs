@@ -87,12 +87,11 @@ fn build_toc_list_html(items: &[(u8, &str, &str)]) -> String {
 fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String {
     let toc_list = build_toc_list_html(items);
     if toc_list.is_empty() { return String::new(); }
-    let mut vars = HashMap::new();
-
-    vars.insert("writer".to_string(), "html".to_string());
-    vars.insert("title".to_string(), title.to_string());
-    vars.insert("toc_list".to_string(), toc_list);
-    vars.insert("depth".to_string(), String::new());
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), "html".to_string());
+    vars.config.insert("title".to_string(), title.to_string());
+    vars.calepin.insert("toc_list".to_string(), toc_list);
+    vars.config.insert("depth".to_string(), String::new());
     let tpl = include_str!("../partials/html/toc.html");
     apply_template(tpl, &vars)
 }
@@ -196,15 +195,70 @@ fn load_extension_js(project_root: &std::path::Path, target_name: &str) -> Strin
     load_extension_assets(project_root, target_name, |a| &a.js)
 }
 
-/// Build a MiniJinja render context from a variable map.
-/// Inserts `_lb` and `_rb` helpers for literal braces in LaTeX templates.
-fn build_jinja_context<'a>(vars: &'a HashMap<String, String>) -> std::collections::BTreeMap<&'a str, minijinja::Value> {
-    let mut ctx = std::collections::BTreeMap::new();
-    for (key, value) in vars {
-        ctx.insert(key.as_str(), minijinja::Value::from(value.as_str()));
+/// Two-namespace template variable container.
+///
+/// - `config`: variables the user authored (front matter, config.toml, div/span
+///   attributes, CLI `-s`). Accessed in templates as `{{ config.title }}`.
+/// - `calepin`: variables the engine computed or resolved. Accessed in templates
+///   as `{{ calepin.body }}`.
+pub struct TemplateVars {
+    pub config: HashMap<String, String>,
+    pub calepin: HashMap<String, String>,
+}
+
+impl TemplateVars {
+    pub fn new() -> Self {
+        Self {
+            config: HashMap::new(),
+            calepin: HashMap::new(),
+        }
     }
-    ctx.insert("_lb", minijinja::Value::from("{"));
-    ctx.insert("_rb", minijinja::Value::from("}"));
+}
+
+/// Build a MiniJinja render context from namespaced template variables.
+///
+/// Produces a context with two top-level objects (`config` and `calepin`).
+/// When `user_vars` is provided, its entries are merged into the `config`
+/// object so custom front matter keys are accessible as `{{ config.key }}`.
+fn build_jinja_context(
+    vars: &TemplateVars,
+    user_vars: Option<&minijinja::Value>,
+) -> std::collections::BTreeMap<&'static str, minijinja::Value> {
+    let mut ctx = std::collections::BTreeMap::new();
+
+    // Build config object: flat string vars + nested user vars
+    let mut config_map = std::collections::BTreeMap::new();
+    for (key, value) in &vars.config {
+        config_map.insert(key.as_str(), minijinja::Value::from(value.as_str()));
+    }
+    // Merge user vars (custom front matter keys) into config
+    if let Some(uv) = user_vars {
+        if let Ok(iter) = uv.try_iter() {
+            for key in iter {
+                let key_str = key.to_string();
+                // Don't overwrite explicit config entries
+                if !config_map.contains_key(key_str.as_str()) {
+                    if let Ok(val) = uv.get_attr(&key_str) {
+                        config_map.insert(
+                            Box::leak(key_str.into_boxed_str()),
+                            val,
+                        );
+                    }
+                }
+            }
+        }
+    }
+    ctx.insert("config", minijinja::Value::from_serialize(&config_map));
+
+    // Build calepin object
+    let mut calepin_map = std::collections::BTreeMap::new();
+    for (key, value) in &vars.calepin {
+        calepin_map.insert(key.as_str(), minijinja::Value::from(value.as_str()));
+    }
+    calepin_map.insert("_lb", minijinja::Value::from("{"));
+    calepin_map.insert("_rb", minijinja::Value::from("}"));
+    ctx.insert("calepin", minijinja::Value::from_serialize(&calepin_map));
+
     ctx
 }
 
@@ -223,14 +277,14 @@ fn build_jinja_context<'a>(vars: &'a HashMap<String, String>) -> std::collection
 // render many times.
 
 #[inline(never)]
-pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String {
+pub fn apply_template(template: &str, vars: &TemplateVars) -> String {
     let mut env = minijinja::Environment::new();
     env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
     if let Err(e) = env.add_template("__tpl__", template) {
         cwarn!("template parse error: {}", e);
         return template.to_string();
     }
-    let ctx = build_jinja_context(vars);
+    let ctx = build_jinja_context(vars, None);
     let tpl = env.get_template("__tpl__").unwrap();
     match tpl.render(minijinja::Value::from_serialize(&ctx)) {
         Ok(rendered) => rendered,
@@ -257,8 +311,8 @@ pub fn apply_template(template: &str, vars: &HashMap<String, String>) -> String 
 pub struct TemplateEnv {
     env: minijinja::Environment<'static>,
     sources: std::sync::Arc<std::sync::Mutex<HashMap<String, String>>>,
-    /// Document-level vars (including extension vars), injected as `{{ var.key }}`.
-    var_context: Option<minijinja::Value>,
+    /// Document-level user vars (custom front matter keys), merged into `config`.
+    user_vars: Option<minijinja::Value>,
 }
 
 impl TemplateEnv {
@@ -270,15 +324,15 @@ impl TemplateEnv {
         env.set_loader(move |name: &str| {
             Ok(src.lock().unwrap().get(name).cloned())
         });
-        Self { env, sources, var_context: None }
+        Self { env, sources, user_vars: None }
     }
 
-    /// Set document-level vars for injection into all template renders.
-    pub fn set_var_context(&mut self, vars: &std::collections::HashMap<String, crate::value::Value>) {
+    /// Set document-level user vars for injection into the `config` namespace.
+    pub fn set_user_vars(&mut self, vars: &std::collections::HashMap<String, crate::value::Value>) {
         if vars.is_empty() {
             return;
         }
-        self.var_context = Some(crate::config::build_jinja_vars(vars));
+        self.user_vars = Some(crate::config::build_jinja_vars(vars));
     }
 
     /// Add a named template. Sources are owned by the loader and compiled
@@ -295,8 +349,7 @@ impl TemplateEnv {
     }
 
     /// Render a template by name, loading it dynamically if not already present.
-    /// Falls back to `apply_template` for one-off templates not in the env.
-    pub fn render_dynamic(&self, name: &str, template_source: &str, vars: &HashMap<String, String>) -> String {
+    pub fn render_dynamic(&self, name: &str, template_source: &str, vars: &TemplateVars) -> String {
         // Add the template if not already loaded
         {
             let sources = self.sources.lock().unwrap();
@@ -310,16 +363,12 @@ impl TemplateEnv {
 
     /// Render a pre-compiled template by name. Returns empty string if
     /// the template was never added.
-    pub fn render(&self, name: &str, vars: &HashMap<String, String>) -> String {
+    pub fn render(&self, name: &str, vars: &TemplateVars) -> String {
         let tpl = match self.env.get_template(name) {
             Ok(t) => t,
             Err(_) => return String::new(),
         };
-        let mut ctx = build_jinja_context(vars);
-        // Inject document-level vars (including extension vars) as {{ var.key }}
-        if let Some(ref var_val) = self.var_context {
-            ctx.insert("var", var_val.clone());
-        }
+        let ctx = build_jinja_context(vars, self.user_vars.as_ref());
         match tpl.render(minijinja::Value::from_serialize(&ctx)) {
             Ok(rendered) => rendered,
             Err(e) => {
@@ -332,11 +381,14 @@ impl TemplateEnv {
 
 /// Render a metadata field through an element template if available.
 /// Returns empty string if no template is found.
-pub fn render_element(name: &str, ext: &str, vars: &HashMap<String, String>) -> String {
+pub fn render_element(name: &str, ext: &str, vars: &TemplateVars) -> String {
     use crate::render::elements::resolve_element_partial;
     if let Some(tpl) = resolve_element_partial(name, ext) {
-        let mut vars = vars.clone();
-        vars.insert("writer".to_string(), ext.to_string());
+        let mut vars = TemplateVars {
+            config: vars.config.clone(),
+            calepin: vars.calepin.clone(),
+        };
+        vars.calepin.insert("writer".to_string(), ext.to_string());
         apply_template(&tpl, &vars)
     } else {
         String::new()
@@ -351,50 +403,51 @@ pub fn build_template_vars_with_headings(
     ext: &str,
     headings: &[crate::emit::TocEntry],
     _target: Option<&crate::config::Target>,
-) -> HashMap<String, String> {
-    let mut vars = HashMap::new();
+) -> TemplateVars {
+    let mut vars = TemplateVars::new();
 
     let defs = meta;
 
-    vars.insert("body".to_string(), body.to_string());
-    vars.insert(
+    // calepin.* (engine-computed)
+    vars.calepin.insert("body".to_string(), body.to_string());
+    vars.calepin.insert(
         "generator".to_string(),
         format!("calepin {}", env!("CARGO_PKG_VERSION")),
     );
-    vars.insert("preamble".to_string(), String::new());
+    vars.calepin.insert("preamble".to_string(), String::new());
+    vars.calepin.insert("writer".to_string(), ext.to_string());
 
-    vars.insert("writer".to_string(), ext.to_string());
-    vars.insert("target".to_string(),
-        crate::paths::get_active_target().unwrap_or_else(|| ext.to_string()));
+    // config.* (user-authored)
+    vars.config.insert("target".to_string(), ext.to_string());
 
     // Language
-    vars.insert("lang".to_string(), defs.lang.as_deref().unwrap_or("en").to_string());
+    vars.config.insert("lang".to_string(), defs.lang.as_deref().unwrap_or("en").to_string());
 
     // Labels (localisable strings)
     let labels = defs.labels.as_ref();
-    vars.insert("label_abstract".to_string(), labels.and_then(|l| l.abstract_title.clone()).unwrap_or_else(|| "Abstract".to_string()));
-    vars.insert("label_keywords".to_string(), labels.and_then(|l| l.keywords.clone()).unwrap_or_else(|| "Keywords".to_string()));
-    vars.insert("label_appendix".to_string(), labels.and_then(|l| l.appendix.clone()).unwrap_or_else(|| "Appendix".to_string()));
-    vars.insert("label_citation".to_string(), labels.and_then(|l| l.citation.clone()).unwrap_or_else(|| "Citation".to_string()));
-    vars.insert("label_reuse".to_string(), labels.and_then(|l| l.reuse.clone()).unwrap_or_else(|| "Reuse".to_string()));
-    vars.insert("label_funding".to_string(), labels.and_then(|l| l.funding.clone()).unwrap_or_else(|| "Funding".to_string()));
-    vars.insert("label_copyright".to_string(), labels.and_then(|l| l.copyright.clone()).unwrap_or_else(|| "Copyright".to_string()));
-    vars.insert("label_listing".to_string(), labels.and_then(|l| l.listing.clone()).unwrap_or_else(|| "Listing".to_string()));
-    vars.insert("label_proof".to_string(), labels.and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
-    vars.insert("label_contents".to_string(), labels.and_then(|l| l.contents.clone()).unwrap_or_else(|| "Contents".to_string()));
+    vars.config.insert("label_abstract".to_string(), labels.and_then(|l| l.abstract_title.clone()).unwrap_or_else(|| "Abstract".to_string()));
+    vars.config.insert("label_keywords".to_string(), labels.and_then(|l| l.keywords.clone()).unwrap_or_else(|| "Keywords".to_string()));
+    vars.config.insert("label_appendix".to_string(), labels.and_then(|l| l.appendix.clone()).unwrap_or_else(|| "Appendix".to_string()));
+    vars.config.insert("label_citation".to_string(), labels.and_then(|l| l.citation.clone()).unwrap_or_else(|| "Citation".to_string()));
+    vars.config.insert("label_reuse".to_string(), labels.and_then(|l| l.reuse.clone()).unwrap_or_else(|| "Reuse".to_string()));
+    vars.config.insert("label_funding".to_string(), labels.and_then(|l| l.funding.clone()).unwrap_or_else(|| "Funding".to_string()));
+    vars.config.insert("label_copyright".to_string(), labels.and_then(|l| l.copyright.clone()).unwrap_or_else(|| "Copyright".to_string()));
+    vars.config.insert("label_listing".to_string(), labels.and_then(|l| l.listing.clone()).unwrap_or_else(|| "Listing".to_string()));
+    vars.config.insert("label_proof".to_string(), labels.and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
+    vars.config.insert("label_contents".to_string(), labels.and_then(|l| l.contents.clone()).unwrap_or_else(|| "Contents".to_string()));
 
-    // Plain title (used in <title> etc.) — strip markdown image/link syntax
+    // Plain title (used in <title> etc.) -- strip markdown image/link syntax
     let plain_title = meta.title.as_deref().unwrap_or("Untitled");
     let plain_title = strip_markdown_formatting(plain_title);
-    vars.insert("plain_title".to_string(), plain_title);
-    vars.insert("title".to_string(),
+    vars.config.insert("plain_title".to_string(), plain_title);
+    vars.config.insert("title".to_string(),
         meta.title.as_deref()
             .map(|t| crate::render::convert::render_inline(t, ext))
             .unwrap_or_default(),
     );
     {
         let names = meta.author_names();
-        vars.insert(
+        vars.config.insert(
             "author".to_string(),
             if names.is_empty() {
                 String::new()
@@ -406,60 +459,58 @@ pub fn build_template_vars_with_headings(
             },
         );
     }
-    vars.insert("date".to_string(), meta.formatted_date().unwrap_or_default());
+    vars.config.insert("date".to_string(), meta.formatted_date().unwrap_or_default());
 
-
-    // Subtitle (already available as {{subtitle}} via vars set above)
+    // Subtitle
     if let Some(ref subtitle) = meta.subtitle {
-        vars.insert("subtitle".to_string(), crate::render::convert::render_inline(subtitle, ext));
+        vars.config.insert("subtitle".to_string(), crate::render::convert::render_inline(subtitle, ext));
     }
 
-    // Author block
-    vars.insert("authors".to_string(), build_authors(meta, ext));
-
+    // Author block (rendered by engine from user metadata)
+    vars.calepin.insert("authors".to_string(), build_authors(meta, ext));
 
     // Abstract block
     if let Some(ref abs) = meta.abstract_text {
-        vars.insert("abstract".to_string(), crate::render::convert::render_inline(abs, ext));
+        vars.config.insert("abstract".to_string(), crate::render::convert::render_inline(abs, ext));
     } else {
-        vars.insert("abstract".to_string(), String::new());
+        vars.config.insert("abstract".to_string(), String::new());
     }
 
     // Keywords
     if !meta.keywords.is_empty() {
         let joined = meta.keywords.join(", ");
-        vars.insert("keywords".to_string(), joined);
+        vars.config.insert("keywords".to_string(), joined);
     }
 
-    // Appendix
-    vars.insert("appendix".to_string(), build_appendix(meta, ext));
+    // Appendix (engine-rendered from user metadata)
+    vars.calepin.insert("appendix".to_string(), build_appendix(meta, ext));
 
-    // Default values for format-specific template variables.
-    vars.insert("css".to_string(), load_default_css());
-    vars.insert("js".to_string(), {
+    // Default values for format-specific template variables (engine assets)
+    vars.calepin.insert("css".to_string(), load_default_css());
+    vars.calepin.insert("js".to_string(), {
         let root = crate::paths::get_project_root();
         load_all_extension_assets(&root, |r, name| load_extension_js(r, name))
     });
-    vars.insert("bib_preamble".to_string(), String::new());
-    vars.insert("bib_end".to_string(), String::new());
+    vars.calepin.insert("bib_preamble".to_string(), String::new());
+    vars.calepin.insert("bib_end".to_string(), String::new());
 
     // Math include for html-writer targets
     if ext == "html" {
-        let mut math_vars = HashMap::new();
-        math_vars.insert("html_math_method".to_string(),
+        let mut math_vars = TemplateVars::new();
+        math_vars.config.insert("html_math_method".to_string(),
             meta.html_math_method.as_deref()
                 .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
-        vars.insert("math".to_string(), render_element("math", ext, &math_vars));
+        vars.calepin.insert("math".to_string(), render_element("math", ext, &math_vars));
     } else {
-        vars.insert("math".to_string(), String::new());
+        vars.calepin.insert("math".to_string(), String::new());
     }
 
     // Bibliography block (format-specific via element template)
     if !meta.bibliography.is_empty() {
         let bib_path = &meta.bibliography[0];
-        let mut bvars = HashMap::new();
-        bvars.insert("path".to_string(), bib_path.clone());
-        vars.insert("bibliography".to_string(),
+        let mut bvars = TemplateVars::new();
+        bvars.config.insert("path".to_string(), bib_path.clone());
+        vars.calepin.insert("bibliography".to_string(),
             render_element("bibliography", ext, &bvars));
     }
 
@@ -474,20 +525,19 @@ pub fn build_template_vars_with_headings(
             build_toc_html(headings, toc_depth, toc_title)
         } else {
             // LaTeX, Typst, others: use the toc template directly
-            let mut toc_vars = HashMap::new();
-            toc_vars.insert("writer".to_string(), ext.to_string());
-            toc_vars.insert("title".to_string(), toc_title.to_string());
-            toc_vars.insert("depth".to_string(), toc_depth.to_string());
-            toc_vars.insert("toc_list".to_string(), String::new());
+            let mut toc_vars = TemplateVars::new();
+            toc_vars.calepin.insert("writer".to_string(), ext.to_string());
+            toc_vars.config.insert("title".to_string(), toc_title.to_string());
+            toc_vars.config.insert("depth".to_string(), toc_depth.to_string());
+            toc_vars.calepin.insert("toc_list".to_string(), String::new());
             let tpl_owned = crate::render::elements::resolve_element_partial("toc", ext).unwrap_or_default();
             let tpl = tpl_owned.as_str();
             apply_template(tpl, &toc_vars)
         };
-        vars.insert("toc".to_string(), toc);
+        vars.calepin.insert("toc".to_string(), toc);
     } else {
-        vars.insert("toc".to_string(), String::new());
+        vars.calepin.insert("toc".to_string(), String::new());
     }
-
 
     vars
 }
@@ -514,11 +564,11 @@ pub fn deduplicate_preamble(lines: &[String]) -> String {
 ///
 /// Preamble lines from code chunks (e.g., `\usepackage{...}` for LaTeX,
 /// `<link>` tags for HTML) are deduplicated and merged into the `preamble`
-/// template variable.
-pub fn inject_preamble(vars: &mut HashMap<String, String>, preamble: &[String]) {
+/// template variable (in the `calepin` namespace).
+pub fn inject_preamble(vars: &mut TemplateVars, preamble: &[String]) {
     let content = deduplicate_preamble(preamble);
     if !content.is_empty() {
-        let entry = vars.entry("preamble".to_string()).or_default();
+        let entry = vars.calepin.entry("preamble".to_string()).or_default();
         if !entry.is_empty() { entry.push('\n'); }
         entry.push_str(&content);
     }
@@ -543,7 +593,7 @@ pub fn assemble_page(
     headings: &[crate::emit::TocEntry],
     preamble: &[String],
     target: Option<&crate::config::Target>,
-    customize: impl FnOnce(&mut HashMap<String, String>),
+    customize: impl FnOnce(&mut TemplateVars),
 ) -> String {
     let mut vars = build_template_vars_with_headings(meta, body, format, headings, target);
     inject_preamble(&mut vars, preamble);
@@ -566,8 +616,8 @@ pub fn assemble_page(
 /// access all variables (base, title, author, body, etc.).
 pub fn render_page_template(
     page_template: &str,
-    vars: &HashMap<String, String>,
-    writer: &str,
+    vars: &TemplateVars,
+    base: &str,
     user_vars: &std::collections::HashMap<String, crate::value::Value>,
 ) -> String {
     // Collect all template sources into an owned map, then use set_loader
@@ -575,29 +625,27 @@ pub fn render_page_template(
     let mut templates = HashMap::new();
 
     let root = crate::paths::get_project_root();
-    let chain = crate::paths::get_active_inheritance_chain();
-    // Fall back to writer as a single-element chain when no target is set.
-    let fallback;
-    let chain = if chain.is_empty() {
-        fallback = vec![writer.to_string()];
-        &fallback
-    } else {
-        &chain
-    };
+    let active_target = crate::paths::get_active_target();
     let tpl_dir = crate::paths::partials_dir(&root);
 
-    // Load templates from filesystem directories, walking the inheritance chain
+    // Load templates from filesystem directories
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();
-    for target in chain {
-        dirs.push(tpl_dir.join(target));
+    if let Some(ref target) = active_target {
+        if target != base {
+            dirs.push(tpl_dir.join(target));
+        }
     }
+    dirs.push(tpl_dir.join(base));
     dirs.push(tpl_dir.join("common"));
 
     // Also check extension partial directories (child-first order)
     for ext_dir in crate::paths::get_extension_partial_dirs() {
-        for target in chain {
-            dirs.push(ext_dir.join(target));
+        if let Some(ref target) = active_target {
+            if target != base {
+                dirs.push(ext_dir.join(target));
+            }
         }
+        dirs.push(ext_dir.join(base));
         dirs.push(ext_dir.join("common"));
     }
 
@@ -617,17 +665,15 @@ pub fn render_page_template(
         }
     }
 
-    // Load built-in templates as fallback, walking the inheritance chain
-    for target in chain {
-        if let Some(target_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir(target) {
-            for entry in target_dir.files() {
-                if let Some(content) = entry.contents_utf8() {
-                    let name = entry.path().file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("");
-                    if !name.is_empty() {
-                        templates.entry(name.to_string()).or_insert_with(|| content.to_string());
-                    }
+    // Load built-in base-specific templates as fallback
+    if let Some(base_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir(base) {
+        for entry in base_dir.files() {
+            if let Some(content) = entry.contents_utf8() {
+                let name = entry.path().file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                if !name.is_empty() {
+                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
                 }
             }
         }
@@ -658,10 +704,12 @@ pub fn render_page_template(
         Ok(sources.get(name).cloned())
     });
 
-    let mut ctx = build_jinja_context(vars);
-    if !user_vars.is_empty() {
-        ctx.insert("var", crate::config::build_jinja_vars(user_vars));
-    }
+    let uv = if !user_vars.is_empty() {
+        Some(crate::config::build_jinja_vars(user_vars))
+    } else {
+        None
+    };
+    let ctx = build_jinja_context(vars, uv.as_ref());
     let tpl = match env.get_template("__page__") {
         Ok(t) => t,
         Err(e) => {
@@ -684,19 +732,19 @@ mod tests {
 
     #[test]
     fn test_apply_template() {
-        let template = "<title>{{title}}</title>\n<body>{{body}}</body>";
-        let mut vars = HashMap::new();
-        vars.insert("title".to_string(), "Hello".to_string());
-        vars.insert("body".to_string(), "<p>World</p>".to_string());
+        let template = "<title>{{config.title}}</title>\n<body>{{calepin.body}}</body>";
+        let mut vars = TemplateVars::new();
+        vars.config.insert("title".to_string(), "Hello".to_string());
+        vars.calepin.insert("body".to_string(), "<p>World</p>".to_string());
         let result = apply_template(template, &vars);
         assert_eq!(result, "<title>Hello</title>\n<body><p>World</p></body>");
     }
 
     #[test]
     fn test_missing_vars_become_empty() {
-        let template = "{{title}}: {{missing}}";
-        let mut vars = HashMap::new();
-        vars.insert("title".to_string(), "Hello".to_string());
+        let template = "{{config.title}}: {{config.missing}}";
+        let mut vars = TemplateVars::new();
+        vars.config.insert("title".to_string(), "Hello".to_string());
         let result = apply_template(template, &vars);
         assert_eq!(result, "Hello: ");
     }

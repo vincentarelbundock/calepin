@@ -93,8 +93,8 @@ mod tests {
     fn test_inline_code_protected() {
         let mut meta = Metadata::default();
         meta.title = Some("T".to_string());
-        let result = process_body("version: `{{ meta.title }}`", "html", &meta);
-        assert!(result.text.contains("`{{ meta.title }}`"));
+        let result = process_body("version: `{{ config.title }}`", "html", &meta);
+        assert!(result.text.contains("`{{ config.title }}`"));
     }
 
     #[test]
@@ -106,10 +106,10 @@ mod tests {
     }
 
     #[test]
-    fn test_meta_variable_access() {
+    fn test_config_variable_access() {
         let mut meta = Metadata::default();
         meta.title = Some("My Title".to_string());
-        let result = process_body("Title: {{ meta.title }}", "html", &meta);
+        let result = process_body("Title: {{ config.title }}", "html", &meta);
         assert_eq!(result.text, "Title: My Title");
     }
 
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_code_blocks_preserved() {
-        let text = "before {{ meta.title }}\n```\n{{ not_a_var }}\n```\nafter";
+        let text = "before {{ config.title }}\n```\n{{ not_a_var }}\n```\nafter";
         let mut meta = Metadata::default();
         meta.title = Some("T".to_string());
         let result = process_body(text, "html", &meta);

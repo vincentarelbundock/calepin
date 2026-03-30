@@ -1,3 +1,3 @@
-#grid(columns: ({{ columns }}), gutter: 1em,
-{{ cells }}
+#grid(columns: ({{ calepin.columns }}), gutter: 1em,
+{{ calepin.cells }}
 )

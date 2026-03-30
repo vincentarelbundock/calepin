@@ -12,4 +12,4 @@
   body
 )
 
-{{body}}
+{{calepin.body}}

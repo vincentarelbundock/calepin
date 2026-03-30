@@ -1,8 +1,8 @@
-{%- set loc = cap_location | default("bottom") %}
-{%- if link %}[{%- endif %}
-![{{alt}}]({{src}})
-{%- if link %}]({{link}}){%- endif %}
-{%- if caption %}
+{%- set loc = config.cap_location | default("bottom") %}
+{%- if config.link %}[{%- endif %}
+![{{config.alt}}]({{calepin.src}})
+{%- if config.link %}]({{config.link}}){%- endif %}
+{%- if config.caption %}
 
-*{{caption}}*
+*{{config.caption}}*
 {%- endif %}

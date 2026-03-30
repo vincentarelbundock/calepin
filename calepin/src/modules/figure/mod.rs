@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::types::Element;
+use crate::render::template::TemplateVars;
 
 // ---------------------------------------------------------------------------
 // Figure div rendering (TransformElementChildren entry point)
@@ -52,21 +53,21 @@ pub fn render(
         .join("\n\n");
 
     // Build template vars
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), format.to_string());
-    vars.insert("children".to_string(), children_rendered);
-    vars.insert("label".to_string(), id_val.to_string());
-    vars.insert("id".to_string(), id_val.to_string());
+    let mut vars = crate::render::template::TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), format.to_string());
+    vars.calepin.insert("children".to_string(), children_rendered);
+    vars.config.insert("label".to_string(), id_val.to_string());
+    vars.config.insert("id".to_string(), id_val.to_string());
 
-    // Copy div attrs into vars
+    // Copy div attrs into vars (user-authored -> config)
     for (k, val) in attrs {
-        vars.insert(k.clone(), val.clone());
+        vars.config.insert(k.clone(), val.clone());
     }
 
     // Render caption markdown to target format
     if !caption_text.is_empty() {
         let rendered_caption = crate::render::convert::render_inline(&caption_text, format);
-        vars.insert("caption".to_string(), rendered_caption);
+        vars.config.insert("caption".to_string(), rendered_caption);
     }
 
     // Figure wrapper vars (alignment, fig_env, fig_pos, short_caption, cap_location, link)
@@ -110,7 +111,7 @@ impl BuildFigureVars {
 }
 
 impl crate::render::vars::BuildElementVars for BuildFigureVars {
-    fn apply(&self, element: &Element, format: &str, vars: &mut HashMap<String, String>, defaults: &crate::config::Metadata) {
+    fn apply(&self, element: &Element, format: &str, vars: &mut crate::render::template::TemplateVars, defaults: &crate::config::Metadata) {
         if let Element::Figure { path, alt, caption, label, number, attrs } = element {
             build_figure_element_vars(
                 vars, path, alt, caption.as_deref(), label,
@@ -124,7 +125,7 @@ impl crate::render::vars::BuildElementVars for BuildFigureVars {
 }
 
 fn build_figure_element_vars(
-    vars: &mut HashMap<String, String>,
+    vars: &mut crate::render::template::TemplateVars,
     path: &Path,
     alt: &str,
     caption: Option<&str>,
@@ -136,32 +137,33 @@ fn build_figure_element_vars(
     defaults: &crate::config::Metadata,
     fig_formats: &[String],
 ) {
-    vars.insert("alt".to_string(), alt.to_string());
-    vars.insert("caption".to_string(), caption.unwrap_or("").to_string());
-    vars.insert("label".to_string(), label.to_string());
-    vars.insert("number".to_string(), number.unwrap_or("").to_string());
+    // User-authored -> config
+    vars.config.insert("alt".to_string(), alt.to_string());
+    vars.config.insert("caption".to_string(), caption.unwrap_or("").to_string());
+    vars.config.insert("label".to_string(), label.to_string());
+    // Engine-computed -> calepin
+    vars.calepin.insert("number".to_string(), number.unwrap_or("").to_string());
 
     let resolved_path = select_image_variant_with_prefs(path, fig_formats);
     let display_path = resolved_path.to_string_lossy().to_string();
-    vars.insert("path".to_string(), display_path.clone());
 
-    // Image components for template
+    // Image components for template (engine-resolved -> calepin)
     let embed = defaults.embed_resources.unwrap_or(true);
     if format == "html" && embed {
         if let Ok((mime, data)) = crate::util::base64_encode_image(&resolved_path) {
-            vars.insert("src".to_string(), format!("data:{};base64,{}", mime, data));
+            vars.calepin.insert("src".to_string(), format!("data:{};base64,{}", mime, data));
         } else {
-            vars.insert("src".to_string(), crate::util::escape_html(&display_path));
+            vars.calepin.insert("src".to_string(), crate::util::escape_html(&display_path));
         }
     } else if format == "html" {
-        vars.insert("src".to_string(), crate::util::escape_html(&display_path));
+        vars.calepin.insert("src".to_string(), crate::util::escape_html(&display_path));
     } else {
         let rel = relative_figure_path(&resolved_path);
-        vars.insert("src".to_string(), rel);
+        vars.calepin.insert("src".to_string(), rel);
     }
 
-    vars.insert("width_attr".to_string(), format_width(attrs, format));
-    vars.insert("height_attr".to_string(), format_height(attrs));
+    vars.calepin.insert("width_attr".to_string(), format_width(attrs, format));
+    vars.calepin.insert("height_attr".to_string(), format_height(attrs));
 
     build_figure_wrapper_vars(vars, attrs, format, default_cap_location, defaults);
 }
@@ -208,7 +210,7 @@ pub fn build_figure_attrs(attrs: &HashMap<String, String>) -> crate::types::Figu
 /// Populate figure-wrapper template vars shared by both `Element::Figure` and
 /// figure divs: alignment, fig_env, fig_pos, short_caption, cap_location, link.
 pub fn build_figure_wrapper_vars(
-    vars: &mut HashMap<String, String>,
+    vars: &mut crate::render::template::TemplateVars,
     attrs: &crate::types::FigureAttrs,
     format: &str,
     default_cap_location: Option<&str>,
@@ -216,13 +218,15 @@ pub fn build_figure_wrapper_vars(
 ) {
     let default_align = defaults.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
     let align = attrs.fig_align.as_deref().unwrap_or(default_align);
-    vars.insert("align_style".to_string(), format_align(align, format));
-    vars.insert("align".to_string(), align.to_string());
+    // Engine-computed formatting -> calepin
+    vars.calepin.insert("align_style".to_string(), format_align(align, format));
+    vars.calepin.insert("align".to_string(), align.to_string());
 
+    // User-authored figure attributes -> config
     if let Some(ref env) = attrs.fig_env {
-        vars.insert("fig_env".to_string(), env.clone());
+        vars.config.insert("fig_env".to_string(), env.clone());
     }
-    vars.insert("fig_pos".to_string(), match attrs.fig_pos.as_deref() {
+    vars.config.insert("fig_pos".to_string(), match attrs.fig_pos.as_deref() {
         Some(pos) => format!("[{}]", pos),
         None => String::new(),
     });
@@ -230,14 +234,14 @@ pub fn build_figure_wrapper_vars(
         Some(sc) => format!("[{}]", sc),
         None => String::new(),
     };
-    vars.insert("short_caption".to_string(), short_caption);
+    vars.config.insert("short_caption".to_string(), short_caption);
 
     if let Some(loc) = attrs.cap_location.as_deref().or(default_cap_location) {
-        vars.insert("cap_location".to_string(), loc.to_string());
+        vars.config.insert("cap_location".to_string(), loc.to_string());
     }
 
     if let Some(ref link) = attrs.link {
-        vars.insert("link".to_string(), link.clone());
+        vars.config.insert("link".to_string(), link.clone());
     }
 }
 
@@ -265,12 +269,12 @@ pub fn format_width(attrs: &crate::types::FigureAttrs, format: &str) -> String {
     };
 
     if let Some(tpl) = resolve_element_partial("format_width", format) {
-        let mut vars = HashMap::new();
-        vars.insert("width".to_string(), width.to_string());
+        let mut vars = TemplateVars::new();
+        vars.config.insert("width".to_string(), width.to_string());
         if width.ends_with('%') {
             let pct: f64 = width.trim_end_matches('%').parse().unwrap_or(100.0);
-            vars.insert("width_pct".to_string(), "true".to_string());
-            vars.insert("width_frac".to_string(), format!("{:.2}", pct / 100.0));
+            vars.config.insert("width_pct".to_string(), "true".to_string());
+            vars.config.insert("width_frac".to_string(), format!("{:.2}", pct / 100.0));
         }
         apply_template(&tpl, &vars)
     } else {
@@ -287,8 +291,8 @@ pub fn format_align(align: &str, format: &str) -> String {
     use crate::render::template::apply_template;
 
     if let Some(tpl) = resolve_element_partial("align_style", format) {
-        let mut vars = HashMap::new();
-        vars.insert("align".to_string(), align.to_string());
+        let mut vars = TemplateVars::new();
+        vars.config.insert("align".to_string(), align.to_string());
         apply_template(&tpl, &vars)
     } else {
         String::new()

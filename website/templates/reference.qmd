@@ -178,7 +178,7 @@ Any non-standard front matter field is available as a template variable. A field
 
 ## Literal braces
 
-Use `{{_lb}}` and `{{_rb}}` to insert literal `{` and `}` in templates.
+Use `{{calepin._lb}}` and `{{calepin._rb}}` to insert literal `{` and `}` in templates.
 
 
 # Document body variables
@@ -187,11 +187,11 @@ Available when writing Jinja expressions in `.qmd` files:
 
 | Variable | Description |
 |----------|-------------|
-| `meta.title`, `meta.author`, `meta.date`, ... | Front matter fields |
-| `var.key`, `var.key.subkey` | Custom front matter fields (with nesting) |
+| `config.title`, `config.author`, `config.date`, ... | Front matter fields |
+| `config.key`, `config.key.subkey` | Custom front matter fields (with nesting) |
+| `config.target` | Target name (defaults to writer) |
+| `calepin.writer` | Current output format (`html`, `latex`, `typst`, `markdown`) |
 | `env.HOME`, `env.USER`, ... | System environment variables |
-| `writer` | Current output format (`html`, `latex`, `typst`, `markdown`) |
-| `target` | Target name (defaults to writer) |
 
 
 # Website template variables
@@ -227,32 +227,29 @@ Website templates (in `_calepin/partials/website/`) receive two context objects.
 | `document.prev` | Previous page (`text`, `href`) |
 | `document.next` | Next page (`text`, `href`) |
 
-## var
+## Custom variables
 
-Custom variables accessible as `{{ var.key }}` in all templates and in the `.qmd` body. Declare them under the `[var]` table in front matter or in `_calepin/config.toml`:
+Custom variables are accessible as `{{ config.key }}` in all templates and in the `.qmd` body. Non-standard top-level front matter keys are automatically available under `config`:
 
 ```toml
-[var]
 sidebar = false
 custom_key = "value"
 
-[var.nested]
+[nested]
 field = "nested value"
 ```
 
 Access in templates and body text:
 
 ```
-{{ var.sidebar }}          # boolean false
-{{ var.custom_key }}       # "value"
-{{ var.nested.field }}     # "nested value"
+{{ config.sidebar }}          # boolean false
+{{ config.custom_key }}       # "value"
+{{ config.nested.field }}     # "nested value"
 ```
 
-Types are preserved: booleans, numbers, strings, arrays, and nested tables all work. Arrays can be iterated with `{% for item in var.items %}`.
+Types are preserved: booleans, numbers, strings, arrays, and nested tables all work. Arrays can be iterated with `{% for item in config.items %}`.
 
-Resolution order (last wins): built-in defaults, `_calepin/config.toml`, front matter, CLI (`-s`). In websites, per-page `[var]` entries override collection-level values.
-
-Non-standard top-level front matter keys (keys not recognized by *Calepin*) are also available under `var`, but the explicit `[var]` table is preferred for clarity.
+Resolution order (last wins): built-in defaults, `_calepin/config.toml`, front matter, CLI (`-s`). In websites, per-page entries override collection-level values.
 
 ## Website layout templates
 

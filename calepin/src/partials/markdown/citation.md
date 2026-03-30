@@ -1,3 +1,3 @@
-## {{label_citation}}
+## {{config.label_citation}}
 
-{{content}}
+{{config.content}}

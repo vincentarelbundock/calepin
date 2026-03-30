@@ -1,4 +1,4 @@
-#set document(title: "{{plain_title}}", author: "{{author}}")
+#set document(title: "{{config.plain_title}}", author: "{{config.author}}")
 #set text(size: 11pt)
 #set par(justify: true, leading: 0.65em)
 #set heading(numbering: "1.1")

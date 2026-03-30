@@ -278,15 +278,14 @@ fn resolve_escaped_dollar_replacement(format: &str) -> String {
 
 /// Render an equation label using the format-specific template.
 fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> String {
-    use std::collections::HashMap;
     use crate::render::elements::resolve_element_partial;
-    use crate::render::template::apply_template;
+    use crate::render::template::{apply_template, TemplateVars};
 
     if let Some(tpl) = resolve_element_partial("equation_label", format) {
-        let mut vars = HashMap::new();
-        vars.insert("math".to_string(), math.to_string());
-        vars.insert("label".to_string(), label.to_string());
-        vars.insert("inner".to_string(), inner.to_string());
+        let mut vars = TemplateVars::new();
+        vars.config.insert("label".to_string(), label.to_string());
+        vars.calepin.insert("math".to_string(), math.to_string());
+        vars.calepin.insert("inner".to_string(), inner.to_string());
         apply_template(&tpl, &vars)
     } else {
         // Fallback: pass through the math expression unchanged

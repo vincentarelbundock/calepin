@@ -48,7 +48,7 @@ site_name = "Test Site"
     let partials_dir = ext_dir.join("partials").join("html");
     fs::create_dir_all(&partials_dir).unwrap();
     fs::write(partials_dir.join("banner.html"),
-        "<div class=\"myext-banner\">{{ children }}</div>\n"
+        "<div class=\"myext-banner\">{{ calepin.children }}</div>\n"
     ).unwrap();
 
     // Write the .qmd file
@@ -110,7 +110,7 @@ fn extension_css_injected_in_style_tag() {
 #[test]
 fn extension_vars_available_in_body() {
     let (dir, qmd) = setup_extension_project(
-        "---\ntitle = \"Vars Test\"\n---\n\nAccent is {{ var.myext.accent }} and site is {{ var.myext.site_name }}.\n",
+        "---\ntitle = \"Vars Test\"\n---\n\nAccent is {{ config.myext.accent }} and site is {{ config.myext.site_name }}.\n",
     );
     let html = render_in_project(dir.path(), &qmd, "myext");
 
@@ -180,7 +180,7 @@ fn user_vars_override_extension_vars() {
     // User sets [myext] table in front matter; unknown top-level keys become
     // metadata.var entries, which block extension var injection for that key.
     let (dir, qmd) = setup_extension_project(
-        "---\ntitle = \"Override Test\"\n\n[myext]\naccent = \"navy\"\n---\n\nAccent is {{ var.myext.accent }}.\n",
+        "---\ntitle = \"Override Test\"\n\n[myext]\naccent = \"navy\"\n---\n\nAccent is {{ config.myext.accent }}.\n",
     );
     let html = render_in_project(dir.path(), &qmd, "myext");
 
@@ -218,7 +218,7 @@ brand_color = "rebeccapurple"
     let partials_dir = ext_dir.join("partials").join("html");
     fs::create_dir_all(&partials_dir).unwrap();
     fs::write(partials_dir.join("note.html"),
-        "<div class=\"note\" style=\"border-color: {{ var.themed.brand_color }}\">{{ children }}</div>\n"
+        "<div class=\"note\" style=\"border-color: {{ config.themed.brand_color }}\">{{ calepin.children }}</div>\n"
     ).unwrap();
 
     let qmd = dir.path().join("test.qmd");

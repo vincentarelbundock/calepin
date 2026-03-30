@@ -1,1 +1,1 @@
-#outbox[#raw("{{text}}", block: true)]
+#outbox[#raw("{{calepin.text}}", block: true)]

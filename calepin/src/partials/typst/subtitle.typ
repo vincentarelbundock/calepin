@@ -1,1 +1,1 @@
-#text(size: 13pt)[{{subtitle}}]
+#text(size: 13pt)[{{config.subtitle}}]

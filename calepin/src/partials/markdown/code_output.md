@@ -1,3 +1,3 @@
 ```
-{{output}}
+{{calepin.output}}
 ```

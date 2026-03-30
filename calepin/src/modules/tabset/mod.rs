@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use regex::Regex;
 
 use crate::types::Element;
+use crate::render::template::TemplateVars;
 
 /// Render a `.panel-tabset` div as HTML tabs.
 /// Only called for HTML output (the plugin is registered with `formats: ["html"]`).
@@ -50,9 +51,9 @@ pub fn render(
     let group = attrs.get("group").map(|s| s.as_str()).unwrap_or("");
 
     // Build template variables
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), format.to_string());
-    vars.insert("group".to_string(), group.to_string());
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), format.to_string());
+    vars.config.insert("group".to_string(), group.to_string());
 
     // Pre-render nav items and tab panes as HTML strings
     let mut nav_items = String::new();
@@ -71,8 +72,8 @@ pub fn render(
             active, id, id, hidden, content
         ));
     }
-    vars.insert("nav_items".to_string(), nav_items);
-    vars.insert("tab_panes".to_string(), tab_panes);
+    vars.calepin.insert("nav_items".to_string(), nav_items);
+    vars.calepin.insert("tab_panes".to_string(), tab_panes);
 
     let tpl = crate::render::elements::resolve_builtin_partial("tabset", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)

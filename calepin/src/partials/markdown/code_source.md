@@ -1,7 +1,7 @@
-{%- if filename %}
-**{{filename}}**
+{%- if config.filename %}
+**{{config.filename}}**
 
 {%- endif %}
-``` {{lang}}
-{{code}}
+``` {{config.lang}}
+{{calepin.code}}
 ```

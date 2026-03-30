@@ -1,8 +1,8 @@
-<div class="code-listing" id="{{label}}">
-{%- if lst_cap %}
-<p class="listing-caption">{{label_listing}} {{number}}: {{lst_cap}}</p>
+<div class="code-listing" id="{{calepin.label}}">
+{%- if config.lst_cap %}
+<p class="listing-caption">{{calepin.label_listing}} {{calepin.number}}: {{config.lst_cap}}</p>
 {%- else %}
-<p class="listing-caption">{{label_listing}} {{number}}</p>
+<p class="listing-caption">{{calepin.label_listing}} {{calepin.number}}</p>
 {%- endif %}
-{{content}}
+{{calepin.content}}
 </div>

@@ -1,1 +1,1 @@
-*{{label_proof}}.* {{children}} □
+*{{calepin.label_proof}}.* {{calepin.children}} □

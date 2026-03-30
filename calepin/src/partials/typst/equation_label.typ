@@ -1,1 +1,1 @@
-$ {{ inner }} $ <{{ label }}>
+$ {{ calepin.inner }} $ <{{ config.label }}>

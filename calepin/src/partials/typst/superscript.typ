@@ -1,1 +1,1 @@
-#super[{{ text }}]
+#super[{{ config.text }}]

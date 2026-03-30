@@ -1,3 +1,3 @@
-## {{label_reuse}}
+## {{config.label_reuse}}
 
-{% if url %}[{{text}}]({{url}}){% else %}{{text}}{% endif %}
+{% if config.url %}[{{config.text}}]({{config.url}}){% else %}{{config.text}}{% endif %}

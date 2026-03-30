@@ -1,5 +1,5 @@
-{%- if class == "aside" %}
-\marginpar{\footnotesize {{content}}}
+{%- if config.class == "aside" %}
+\marginpar{\footnotesize {{calepin.content}}}
 {%- else %}
-\text{ {{-content-}} }
+\text{ {{-calepin.content-}} }
 {%- endif %}

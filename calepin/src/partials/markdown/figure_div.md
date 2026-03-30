@@ -1,6 +1,6 @@
-{%- set env = fig_env | default("figure") -%}
-{{children}}
-{%- if caption %}
+{%- set env = config.fig_env | default("figure") -%}
+{{calepin.children}}
+{%- if config.caption %}
 
-*{{caption}}*
+*{{config.caption}}*
 {%- endif %}

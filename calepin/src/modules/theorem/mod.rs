@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 
 use crate::types::Element;
+use crate::render::template::TemplateVars;
 
 /// Theorem class to template mapping.
 const ITALIC_TYPES: &[&str] = &["theorem", "lemma", "corollary", "conjecture", "proposition"];
@@ -55,21 +56,21 @@ pub fn render(
         .collect::<Vec<_>>()
         .join("\n\n");
 
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), format.to_string());
-    vars.insert("children".to_string(), children_rendered);
-    vars.insert("classes".to_string(), classes.join(" "));
-    vars.insert("type_class".to_string(), theorem_class.clone());
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), format.to_string());
+    vars.calepin.insert("children".to_string(), children_rendered);
+    vars.config.insert("classes".to_string(), classes.join(" "));
+    vars.calepin.insert("type_class".to_string(), theorem_class.clone());
 
     if let Some(ref id_val) = id {
-        vars.insert("id".to_string(), id_val.clone());
+        vars.config.insert("id".to_string(), id_val.clone());
     } else {
-        vars.insert("id".to_string(), String::new());
+        vars.config.insert("id".to_string(), String::new());
     }
 
     // Copy div attrs into vars
     for (k, val) in attrs {
-        vars.insert(k.clone(), val.clone());
+        vars.config.insert(k.clone(), val.clone());
     }
 
     // Auto-numbering (proof is not numbered)
@@ -86,12 +87,12 @@ pub fn render(
             module_ids.borrow_mut().insert(id_val.clone(), num.clone());
         }
 
-        vars.insert("number".to_string(), num);
+        vars.calepin.insert("number".to_string(), num);
     }
 
     // Labels for localisable strings
     let label_defs = defaults.labels.clone();
-    vars.insert("label_proof".to_string(),
+    vars.calepin.insert("label_proof".to_string(),
         label_defs.as_ref().and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
 
     // Resolve template: proof -> "proof", italic types -> "theorem_italic", normal -> "theorem_normal"

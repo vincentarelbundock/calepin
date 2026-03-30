@@ -1,3 +1,3 @@
 #page(flipped: true)[
-{{children}}
+{{calepin.children}}
 ]

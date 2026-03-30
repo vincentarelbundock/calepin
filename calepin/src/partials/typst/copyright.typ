@@ -1,2 +1,2 @@
-== {{label_copyright}}
-{{content}}
+== {{config.label_copyright}}
+{{config.content}}

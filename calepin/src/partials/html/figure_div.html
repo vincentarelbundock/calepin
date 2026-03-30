@@ -1,6 +1,6 @@
-{%- set loc = cap_location | default("bottom") %}
-<figure id="{{label}}"{% if align_style %} style="{{align_style}}"{% endif %}>
-{%- if loc == "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
-{{children}}
-{%- if loc != "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
+{%- set loc = config.cap_location | default("bottom") %}
+<figure id="{{config.label}}"{% if calepin.align_style %} style="{{calepin.align_style}}"{% endif %}>
+{%- if loc == "top" and config.caption %}<figcaption>{{config.caption}}</figcaption>{%- endif %}
+{{calepin.children}}
+{%- if loc != "top" and config.caption %}<figcaption>{{config.caption}}</figcaption>{%- endif %}
 </figure>

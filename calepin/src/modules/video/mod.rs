@@ -4,6 +4,8 @@
 
 use std::collections::HashMap;
 
+use crate::render::template::TemplateVars;
+
 pub fn render(
     kv: &HashMap<String, String>,
     format: &str,
@@ -41,13 +43,13 @@ pub fn render(
     };
 
     let is_embed = embed_url.contains("youtube.com/embed") || embed_url.contains("player.vimeo.com");
-    let mut vars = HashMap::new();
-    vars.insert("src".to_string(), url.to_string());
-    vars.insert("url".to_string(), embed_url);
-    vars.insert("width".to_string(), width.to_string());
-    vars.insert("height".to_string(), height.to_string());
-    vars.insert("title".to_string(), title.to_string());
-    vars.insert("is_embed".to_string(), is_embed.to_string());
+    let mut vars = TemplateVars::new();
+    vars.config.insert("src".to_string(), url.to_string());
+    vars.calepin.insert("url".to_string(), embed_url);
+    vars.config.insert("width".to_string(), width.to_string());
+    vars.config.insert("height".to_string(), height.to_string());
+    vars.config.insert("title".to_string(), title.to_string());
+    vars.calepin.insert("is_embed".to_string(), is_embed.to_string());
 
     let fallback = format!("[{}]({})", title, url);
     match crate::render::elements::resolve_builtin_partial("video", format) {

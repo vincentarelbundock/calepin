@@ -3,14 +3,13 @@
 //! Extracted from `template.rs` to separate domain-specific metadata rendering
 //! from the generic template engine machinery.
 
-use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use regex::Regex;
 
 use crate::config::Metadata;
 use crate::render::elements::resolve_element_partial;
-use crate::render::template::apply_template;
+use crate::render::template::{apply_template, TemplateVars};
 
 /// Format primitives driven by element templates.
 /// Each method renders the appropriate markup via `partials/{engine}/` templates,
@@ -19,28 +18,28 @@ struct Fmt;
 
 impl Fmt {
     fn superscript(text: &str, ext: &str) -> String {
-        let mut vars = HashMap::new();
-        vars.insert("text".to_string(), text.to_string());
+        let mut vars = TemplateVars::new();
+        vars.config.insert("text".to_string(), text.to_string());
         render_fmt_template("superscript", ext, &vars)
     }
 
     fn emphasis(text: &str, ext: &str) -> String {
-        let mut vars = HashMap::new();
-        vars.insert("text".to_string(), text.to_string());
+        let mut vars = TemplateVars::new();
+        vars.config.insert("text".to_string(), text.to_string());
         render_fmt_template("emphasis", ext, &vars)
     }
 
     fn url(url: &str, label: Option<&str>, ext: &str) -> String {
         let label = label.unwrap_or(url);
-        let mut vars = HashMap::new();
-        vars.insert("url".to_string(), url.to_string());
-        vars.insert("label".to_string(), label.to_string());
+        let mut vars = TemplateVars::new();
+        vars.config.insert("url".to_string(), url.to_string());
+        vars.config.insert("label".to_string(), label.to_string());
         render_fmt_template("url", ext, &vars)
     }
 }
 
 /// Render a format-primitive template. Falls back to empty string if not found.
-fn render_fmt_template(name: &str, ext: &str, vars: &HashMap<String, String>) -> String {
+fn render_fmt_template(name: &str, ext: &str, vars: &TemplateVars) -> String {
     if let Some(tpl) = resolve_element_partial(name, ext) {
         apply_template(&tpl, vars)
     } else {
@@ -79,10 +78,10 @@ pub fn strip_markdown_formatting(text: &str) -> String {
 /// partial does not exist.
 fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, String)>) -> Option<String> {
     let tpl = resolve_element_partial(name, ext)?;
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), ext.to_string());
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), ext.to_string());
     for (k, v) in extra_vars {
-        vars.insert(k.to_string(), v);
+        vars.config.insert(k.to_string(), v);
     }
     Some(apply_template(&tpl, &vars))
 }
@@ -247,8 +246,8 @@ fn build_funding_items(funding: &[crate::config::Funding], ext: &str) -> String 
         } else {
             i.clone()
         };
-        let mut vars = HashMap::new();
-        vars.insert("text".to_string(), text);
+        let mut vars = TemplateVars::new();
+        vars.config.insert("text".to_string(), text);
         render_fmt_template("funding_item", ext, &vars)
     }).collect::<Vec<_>>().join("\n")
 }
@@ -291,12 +290,12 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             };
 
             if let Some(ref tpl) = author_tpl {
-                let mut vars = HashMap::new();
-                vars.insert("writer".to_string(), ext.to_string());
-                vars.insert("name".to_string(), author.name.literal.clone());
-                vars.insert("superscripts".to_string(), superscripts);
-                vars.insert("corresponding".to_string(), corresponding);
-                vars.insert("orcid_url".to_string(), orcid_url);
+                let mut vars = TemplateVars::new();
+                vars.calepin.insert("writer".to_string(), ext.to_string());
+                vars.config.insert("name".to_string(), author.name.literal.clone());
+                vars.config.insert("superscripts".to_string(), superscripts);
+                vars.config.insert("corresponding".to_string(), corresponding);
+                vars.config.insert("orcid_url".to_string(), orcid_url);
                 apply_template(tpl, &vars)
             } else {
                 format!("{}{}{}", author.name.literal, superscripts, corresponding)
@@ -316,10 +315,10 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
                 String::new()
             };
             if let Some(ref tpl) = aff_tpl {
-                let mut vars = HashMap::new();
-                vars.insert("writer".to_string(), ext.to_string());
-                vars.insert("number".to_string(), number);
-                vars.insert("display".to_string(), display);
+                let mut vars = TemplateVars::new();
+                vars.calepin.insert("writer".to_string(), ext.to_string());
+                vars.config.insert("number".to_string(), number);
+                vars.config.insert("display".to_string(), display);
                 Some(apply_template(tpl, &vars))
             } else {
                 Some(format!("{}{}", number, display))
@@ -331,9 +330,9 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             if author.corresponding {
                 if let Some(ref email) = author.email {
                     let mailto = format!("mailto:{}", email);
-                    let mut vars = HashMap::new();
-                    vars.insert("email".to_string(), email.clone());
-                    vars.insert("mailto".to_string(), mailto);
+                    let mut vars = TemplateVars::new();
+                    vars.config.insert("email".to_string(), email.clone());
+                    vars.config.insert("mailto".to_string(), mailto);
                     Some(render_fmt_template("corresponding", ext, &vars))
                 } else {
                     None
@@ -358,12 +357,12 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
         };
 
         if let Some(tpl) = resolve_element_partial("authors", ext) {
-            let mut vars = HashMap::new();
-            vars.insert("writer".to_string(), ext.to_string());
-            vars.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
-            vars.insert("authors".to_string(), authors_joined);
-            vars.insert("affiliations_items".to_string(), affiliations_items);
-            vars.insert("corresponding_note".to_string(), corresponding_note);
+            let mut vars = TemplateVars::new();
+            vars.calepin.insert("writer".to_string(), ext.to_string());
+            vars.calepin.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
+            vars.calepin.insert("authors".to_string(), authors_joined);
+            vars.calepin.insert("affiliations_items".to_string(), affiliations_items);
+            vars.calepin.insert("corresponding_note".to_string(), corresponding_note);
             apply_template(&tpl, &vars)
         } else {
             format!("{}\n{}\n{}", authors_joined, affiliations_items, corresponding_note)
@@ -371,8 +370,8 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
     } else {
         let names = meta.author_names();
         if !names.is_empty() {
-            let mut vars = HashMap::new();
-            vars.insert("names".to_string(), names.join(", "));
+            let mut vars = TemplateVars::new();
+            vars.config.insert("names".to_string(), names.join(", "));
             render_fmt_template("authors_simple", ext, &vars)
         } else {
             String::new()

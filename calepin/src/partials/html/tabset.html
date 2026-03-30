@@ -1,8 +1,8 @@
-<div class="panel-tabset"{% if group %} data-group="{{group}}"{% endif %}>
+<div class="panel-tabset"{% if config.group %} data-group="{{config.group}}"{% endif %}>
 <ul class="nav nav-tabs" role="tablist">
-{{nav_items}}
+{{calepin.nav_items}}
 </ul>
 <div class="tab-content">
-{{tab_panes}}
+{{calepin.tab_panes}}
 </div>
 </div>

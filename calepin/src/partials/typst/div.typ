@@ -1,3 +1,3 @@
 #block(inset: 1em)[
-{{children}}
-]{% if id %} <{{id}}>{% endif %}
+{{calepin.children}}
+]{% if config.id %} <{{config.id}}>{% endif %}

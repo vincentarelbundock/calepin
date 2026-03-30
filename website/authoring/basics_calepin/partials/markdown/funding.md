@@ -1,3 +1,0 @@
-## {{label_funding}}
-
-{{items}}

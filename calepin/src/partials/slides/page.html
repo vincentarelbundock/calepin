@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="{{lang}}">
+<html lang="{{config.lang}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="{{generator}}">
-<title>{{plain_title}}</title>
+<meta name="generator" content="{{calepin.generator}}">
+<title>{{config.plain_title}}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/monokai.css">
-{% if syntax_css %}<style>
-{{syntax_css}}
+{% if calepin.syntax_css %}<style>
+{{calepin.syntax_css}}
 </style>{% endif %}
 <style>
 .reveal pre { font-size: 0.55em; }
@@ -26,12 +26,12 @@
 <div class="reveal">
 <div class="slides">
 <section>
-{% if title %}<h1>{{title}}</h1>{% endif %}
-{% if subtitle %}<p>{{subtitle}}</p>{% endif %}
-{% if author %}<p>{{author}}</p>{% endif %}
-{% if date %}<p><small>{{date}}</small></p>{% endif %}
+{% if config.title %}<h1>{{config.title}}</h1>{% endif %}
+{% if config.subtitle %}<p>{{config.subtitle}}</p>{% endif %}
+{% if config.author %}<p>{{config.author}}</p>{% endif %}
+{% if config.date %}<p><small>{{config.date}}</small></p>{% endif %}
 </section>
-{{body}}
+{{calepin.body}}
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>

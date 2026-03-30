@@ -1,8 +1,8 @@
-{%- set loc = cap_location | default("bottom") %}
-<figure{% if label %} id="{{label}}"{% endif %}{% if align_style %} style="{{align_style}}"{% endif %}>
-{%- if loc == "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
-{%- if link %}<a href="{{link}}">{%- endif %}
-<img src="{{src}}" alt="{{alt}}"{% if width_attr %} style="width:{{width_attr}};max-width:{{width_attr}}"{% endif %}{% if height_attr %} style="height:{{height_attr}}"{% endif %}/>
-{%- if link %}</a>{%- endif %}
-{%- if loc != "top" and caption %}<figcaption>{{caption}}</figcaption>{%- endif %}
+{%- set loc = config.cap_location | default("bottom") %}
+<figure{% if config.label %} id="{{config.label}}"{% endif %}{% if calepin.align_style %} style="{{calepin.align_style}}"{% endif %}>
+{%- if loc == "top" and config.caption %}<figcaption>{{config.caption}}</figcaption>{%- endif %}
+{%- if config.link %}<a href="{{config.link}}">{%- endif %}
+<img src="{{calepin.src}}" alt="{{config.alt}}"{% if calepin.width_attr %} style="width:{{calepin.width_attr}};max-width:{{calepin.width_attr}}"{% endif %}{% if calepin.height_attr %} style="height:{{calepin.height_attr}}"{% endif %}/>
+{%- if config.link %}</a>{%- endif %}
+{%- if loc != "top" and config.caption %}<figcaption>{{config.caption}}</figcaption>{%- endif %}
 </figure>

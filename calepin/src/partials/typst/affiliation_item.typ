@@ -1,1 +1,1 @@
-{{number}}{{display}}
+{{config.number}}{{config.display}}

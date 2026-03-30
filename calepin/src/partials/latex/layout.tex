@@ -1,10 +1,10 @@
-{%- if is_figure %}\begin{ {{-fig_env-}} }{{fig_pos}}
+{%- if calepin.is_figure %}\begin{ {{-config.fig_env-}} }{{config.fig_pos}}
 \centering
 {% endif %}
-{{rows}}
-{%- if is_figure and caption %}
-\caption{ {{-caption-}} }
+{{calepin.rows}}
+{%- if calepin.is_figure and config.caption %}
+\caption{ {{-config.caption-}} }
 {% endif %}
-{%- if is_figure and id %}\label{ {{-id-}} }
+{%- if calepin.is_figure and config.id %}\label{ {{-config.id-}} }
 {% endif %}
-{%- if is_figure %}\end{ {{-fig_env-}} }{% endif %}
+{%- if calepin.is_figure %}\end{ {{-config.fig_env-}} }{% endif %}

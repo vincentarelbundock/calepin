@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use crate::types::Element;
 use crate::modules::figure;
+use crate::render::template::TemplateVars;
 
 /// Render a layout div with grid-based layout.
 pub fn render(
@@ -57,22 +58,22 @@ pub fn render(
     let rows_content = render_rows_via_partials(&rows_rendered, valign, format);
 
     // Build template variables for the figure wrapper
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), format.to_string());
-    vars.insert("id".to_string(), id_str.to_string());
-    vars.insert("caption".to_string(), if !caption.is_empty() {
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), format.to_string());
+    vars.config.insert("id".to_string(), id_str.to_string());
+    vars.config.insert("caption".to_string(), if !caption.is_empty() {
         crate::render::convert::render_inline(&caption, format)
     } else {
         String::new()
     });
-    vars.insert("is_figure".to_string(), if is_figure { "true" } else { "" }.to_string());
-    vars.insert("rows".to_string(), rows_content);
+    vars.calepin.insert("is_figure".to_string(), if is_figure { "true" } else { "" }.to_string());
+    vars.calepin.insert("rows".to_string(), rows_content);
 
     // LaTeX-specific attrs
     let fig_env = attrs.get("fig_env").map(|s| s.as_str()).unwrap_or("figure");
     let fig_pos = attrs.get("fig_pos").map(|s| format!("[{}]", s)).unwrap_or_default();
-    vars.insert("fig_env".to_string(), fig_env.to_string());
-    vars.insert("fig_pos".to_string(), fig_pos);
+    vars.config.insert("fig_env".to_string(), fig_env.to_string());
+    vars.config.insert("fig_pos".to_string(), fig_pos);
 
     let tpl = crate::render::elements::resolve_builtin_partial("layout", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
@@ -120,10 +121,10 @@ fn render_rows_via_partials(
             // Format-specific content adjustments
             let content = adjust_cell_content(content, format);
 
-            let mut cell_vars = HashMap::new();
-            cell_vars.insert("content".to_string(), content);
-            cell_vars.insert("width".to_string(), format!("{:.3}", width));
-            cell_vars.insert("valign".to_string(), valign_char.to_string());
+            let mut cell_vars = TemplateVars::new();
+            cell_vars.calepin.insert("content".to_string(), content);
+            cell_vars.calepin.insert("width".to_string(), format!("{:.3}", width));
+            cell_vars.calepin.insert("valign".to_string(), valign_char.to_string());
             cells_rendered.push(apply_template(cell_tpl, &cell_vars));
 
             // LaTeX: add \hfill between cells
@@ -134,11 +135,11 @@ fn render_rows_via_partials(
 
         let cell_separator = if format == "latex" { "\n" } else { "\n" };
 
-        let mut row_vars = HashMap::new();
-        row_vars.insert("cells".to_string(), cells_rendered.join(cell_separator));
-        row_vars.insert("columns".to_string(), columns.join(" "));
-        row_vars.insert("align_items".to_string(), align_items.to_string());
-        row_vars.insert("valign".to_string(), valign_char.to_string());
+        let mut row_vars = TemplateVars::new();
+        row_vars.calepin.insert("cells".to_string(), cells_rendered.join(cell_separator));
+        row_vars.calepin.insert("columns".to_string(), columns.join(" "));
+        row_vars.calepin.insert("align_items".to_string(), align_items.to_string());
+        row_vars.calepin.insert("valign".to_string(), valign_char.to_string());
         output.push_str(&apply_template(row_tpl, &row_vars));
     }
 

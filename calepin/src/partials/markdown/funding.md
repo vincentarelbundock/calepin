@@ -1,3 +1,3 @@
-## {{label_funding}}
+## {{config.label_funding}}
 
-{{items}}
+{{config.items}}

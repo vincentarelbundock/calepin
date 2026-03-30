@@ -1,7 +1,7 @@
-{%- set loc = cap_location | default("bottom") %}
+{%- set loc = config.cap_location | default("bottom") %}
 #figure(
-{%- if link %}#link("{{link}}")[{%- endif %}
-  image("{{src}}", width: {{width_attr | default("70%")}}{% if height_attr %}, height: {{height_attr}}{% endif %})
-{%- if link %}]{%- endif %}
-{%- if caption %}, caption: [{{caption}}]{%- endif %}
-){% if label %} <{{label}}>{% endif %}
+{%- if config.link %}#link("{{config.link}}")[{%- endif %}
+  image("{{calepin.src}}", width: {{calepin.width_attr | default("70%")}}{% if calepin.height_attr %}, height: {{calepin.height_attr}}{% endif %})
+{%- if config.link %}]{%- endif %}
+{%- if config.caption %}, caption: [{{config.caption}}]{%- endif %}
+){% if config.label %} <{{config.label}}>{% endif %}

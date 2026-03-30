@@ -1,1 +1,1 @@
-#outline(depth: {{depth}})
+#outline(depth: {{config.depth}})

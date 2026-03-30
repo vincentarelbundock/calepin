@@ -1,21 +1,21 @@
 {% include "preamble.typ" %}
-{{preamble}}
+{{calepin.preamble}}
 
 #align(center)[
-  #text(size: 17pt)[{{title}}]
+  #text(size: 17pt)[{{config.title}}]
   #v(0.5em)
   {% include "subtitle.typ" %}
   #v(0.5em)
   {% include "authors.typ" %}
   #v(0.3em)
-  #text(size: 10pt)[{{date}}]
+  #text(size: 10pt)[{{config.date}}]
 ]
 
 {% include "abstract.typ" %}
 {% include "keywords.typ" %}
-{{toc}}
+{{calepin.toc}}
 
-{{body}}
+{{calepin.body}}
 
-{{bibliography}}
-{{appendix}}
+{{calepin.bibliography}}
+{{calepin.appendix}}

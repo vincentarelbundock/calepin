@@ -1,1 +1,1 @@
-*{{ text }}*
+*{{ config.text }}*

@@ -1,1 +1,1 @@
-* Corresponding author: {{ email }}
+* Corresponding author: {{ config.email }}

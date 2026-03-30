@@ -1,13 +1,13 @@
-{%- set env = fig_env | default("figure") -%}
-{%- set loc = cap_location | default("bottom") -%}
-\begin{{_lb}}{{env}}{{_rb}}{{fig_pos}}
-{{align_style}}
-{%- if loc == "top" and caption %}
-\caption{{short_caption}}{{_lb}}{{caption}}{{_rb}}
+{%- set env = config.fig_env | default("figure") -%}
+{%- set loc = config.cap_location | default("bottom") -%}
+\begin{{calepin._lb}}{{config.env}}{{calepin._rb}}{{config.fig_pos}}
+{{calepin.align_style}}
+{%- if loc == "top" and config.caption %}
+\caption{{config.short_caption}}{{calepin._lb}}{{config.caption}}{{calepin._rb}}
 {%- endif %}
-{{children}}
-{%- if loc != "top" and caption %}
-\caption{{short_caption}}{{_lb}}{{caption}}{{_rb}}
+{{calepin.children}}
+{%- if loc != "top" and config.caption %}
+\caption{{config.short_caption}}{{calepin._lb}}{{config.caption}}{{calepin._rb}}
 {%- endif %}
-\label{{_lb}}{{label}}{{_rb}}
-\end{{_lb}}{{env}}{{_rb}}
+\label{{calepin._lb}}{{config.label}}{{calepin._rb}}
+\end{{calepin._lb}}{{config.env}}{{calepin._rb}}

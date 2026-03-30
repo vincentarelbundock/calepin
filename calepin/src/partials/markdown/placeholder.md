@@ -1,1 +1,1 @@
-[{{ text }} ({{ width }}x{{ height }})]
+[{{ config.text }} ({{ config.width }}x{{ config.height }})]

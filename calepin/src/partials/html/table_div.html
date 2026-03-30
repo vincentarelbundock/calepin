@@ -1,16 +1,16 @@
-{%- set loc = cap_location | default("bottom") -%}
+{%- set loc = config.cap_location | default("bottom") -%}
 {%- if loc == "bottom" %}
-<div class="table-div" id="{{id}}">
-{{children}}
-{%- if caption %}
-<p class="table-caption">{{caption}}</p>
+<div class="table-div" id="{{config.id}}">
+{{calepin.children}}
+{%- if config.caption %}
+<p class="table-caption">{{config.caption}}</p>
 {%- endif %}
 </div>
 {%- else %}
-<div class="table-div" id="{{id}}">
-{%- if caption %}
-<p class="table-caption">{{caption}}</p>
+<div class="table-div" id="{{config.id}}">
+{%- if config.caption %}
+<p class="table-caption">{{config.caption}}</p>
 {%- endif %}
-{{children}}
+{{calepin.children}}
 </div>
 {%- endif %}

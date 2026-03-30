@@ -1,2 +1,0 @@
-== {{label_copyright}}
-{{content}}

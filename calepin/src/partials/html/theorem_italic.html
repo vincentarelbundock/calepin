@@ -1,6 +1,6 @@
-<div class="theorem-env {{type_class}}"{% if id %} id="{{id}}"{% endif %}>
-<p class="thm-heading"><strong>{{type_class | title}} {{number}}.</strong></p>
+<div class="theorem-env {{calepin.type_class}}"{% if config.id %} id="{{config.id}}"{% endif %}>
+<p class="thm-heading"><strong>{{calepin.type_class | title}} {{calepin.number}}.</strong></p>
 <div class="thm-body-italic">
-{{children}}
+{{calepin.children}}
 </div>
 </div>

@@ -1,8 +1,8 @@
-{%- set loc = cap_location | default("bottom") -%}
-{%- if caption %}
-#figure(placement: auto, caption: [{{caption}}]{% if loc == "top" %}, caption-pos: top{% endif %})[
-{{children}}
-] <{{label}}>
+{%- set loc = config.cap_location | default("bottom") -%}
+{%- if config.caption %}
+#figure(placement: auto, caption: [{{config.caption}}]{% if loc == "top" %}, caption-pos: top{% endif %})[
+{{calepin.children}}
+] <{{config.label}}>
 {%- else %}
-{{children}} <{{label}}>
+{{calepin.children}} <{{config.label}}>
 {%- endif %}

@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use crate::render::template::TemplateVars;
+
 pub fn render(
     kv: &HashMap<String, String>,
     format: &str,
@@ -19,11 +21,11 @@ pub fn render(
         .cloned()
         .unwrap_or_else(|| format!("{}\u{00d7}{}", width, height));
 
-    let mut vars = HashMap::new();
-    vars.insert("width".to_string(), width.to_string());
-    vars.insert("height".to_string(), height.to_string());
-    vars.insert("color".to_string(), crate::util::escape_html(color));
-    vars.insert("text".to_string(), crate::util::escape_html(&text));
+    let mut vars = TemplateVars::new();
+    vars.config.insert("width".to_string(), width.to_string());
+    vars.config.insert("height".to_string(), height.to_string());
+    vars.config.insert("color".to_string(), crate::util::escape_html(color));
+    vars.config.insert("text".to_string(), crate::util::escape_html(&text));
 
     let fallback = format!("[{} ({}x{})]", text, width, height);
     match crate::render::elements::resolve_builtin_partial("placeholder", format) {

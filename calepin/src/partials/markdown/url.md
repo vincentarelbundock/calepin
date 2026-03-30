@@ -1,1 +1,1 @@
-[{{ label }}]({{ url }})
+[{{ config.label }}]({{ config.url }})

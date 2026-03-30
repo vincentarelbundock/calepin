@@ -1,1 +1,1 @@
-[{{ title }}]({{ src }})
+[{{ config.title }}]({{ config.src }})

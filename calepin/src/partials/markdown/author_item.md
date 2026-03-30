@@ -1,1 +1,1 @@
-{{name}}
+{{config.name}}

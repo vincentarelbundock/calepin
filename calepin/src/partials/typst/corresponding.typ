@@ -1,1 +1,1 @@
-#super[\*] Corresponding author: #link("{{ mailto }}")
+#super[\*] Corresponding author: #link("{{ config.mailto }}")

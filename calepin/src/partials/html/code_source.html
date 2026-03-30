@@ -1,8 +1,8 @@
-{%- if filename %}
+{%- if config.filename %}
 <div class="code-with-filename">
-<div class="code-filename">{{filename}}</div>
+<div class="code-filename">{{config.filename}}</div>
 {%- endif %}
-<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-{{lang}} code">{{highlighted}}</code></pre>
-{%- if filename %}
+<pre><button class="code-copy-btn" aria-label="Copy code to clipboard" title="Copy"><span class="nav-icon code-copy-icon"></span></button><code class="language-{{config.lang}} code">{{calepin.highlighted}}</code></pre>
+{%- if config.filename %}
 </div>
 {%- endif %}

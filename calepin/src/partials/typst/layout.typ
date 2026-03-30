@@ -1,5 +1,5 @@
-{%- if is_figure %}#figure([
+{%- if calepin.is_figure %}#figure([
 {% endif %}
-{{rows}}
-{%- if is_figure %}]{%- if caption %}, caption: [{{caption}}]{% endif %}){% if id %} <{{id}}>{% endif %}
+{{calepin.rows}}
+{%- if calepin.is_figure %}]{%- if config.caption %}, caption: [{{config.caption}}]{% endif %}){% if config.id %} <{{config.id}}>{% endif %}
 {%- endif %}

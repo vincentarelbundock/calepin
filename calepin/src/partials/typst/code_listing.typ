@@ -1,1 +1,1 @@
-{{content}} <{{label}}>
+{{calepin.content}} <{{calepin.label}}>

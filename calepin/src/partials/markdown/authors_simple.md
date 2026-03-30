@@ -1,1 +1,1 @@
-{{ names }}
+{{ config.names }}

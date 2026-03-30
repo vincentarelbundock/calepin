@@ -1,2 +1,2 @@
-== {{label_funding}}
-{{items}}
+== {{config.label_funding}}
+{{config.items}}

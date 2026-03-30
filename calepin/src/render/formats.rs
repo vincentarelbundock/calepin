@@ -152,9 +152,9 @@ impl FormatPipeline {
             body, meta, &self.writer, headings, renderer.preamble(),
             renderer.target.as_ref(),
             |vars| {
-                // Apply page_vars from target config
+                // Apply page_vars from target config -> config namespace
                 for (k, v) in page_vars {
-                    vars.insert(k.clone(), v.clone());
+                    vars.config.insert(k.clone(), v.clone());
                 }
             },
         );

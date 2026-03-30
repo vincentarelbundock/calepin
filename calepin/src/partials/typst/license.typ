@@ -1,2 +1,2 @@
-== {{label_reuse}}
-{% if url %}#link("{{url}}")[{{text}}]{% else %}{{text}}{% endif %}
+== {{config.label_reuse}}
+{% if config.url %}#link("{{config.url}}")[{{config.text}}]{% else %}{{config.text}}{% endif %}

@@ -3,6 +3,8 @@
 
 use std::collections::HashMap;
 
+use crate::render::template::TemplateVars;
+
 /// Wrap a rendered code block in a listing div if it has a `lst-` label.
 /// Returns `None` if the element is not a listing, `Some(output)` if wrapped.
 pub fn wrap_listing(
@@ -23,16 +25,16 @@ pub fn wrap_listing(
     module_ids.borrow_mut().insert(label.to_string(), num.to_string());
 
     let label_defs = metadata.labels.clone();
-    let mut vars = HashMap::new();
-    vars.insert("writer".to_string(), format.to_string());
-    vars.insert("label".to_string(), label.to_string());
-    vars.insert("number".to_string(), num.to_string());
-    vars.insert("content".to_string(), rendered_code.to_string());
-    vars.insert("label_listing".to_string(),
+    let mut vars = TemplateVars::new();
+    vars.calepin.insert("writer".to_string(), format.to_string());
+    vars.calepin.insert("label".to_string(), label.to_string());
+    vars.calepin.insert("number".to_string(), num.to_string());
+    vars.calepin.insert("content".to_string(), rendered_code.to_string());
+    vars.calepin.insert("label_listing".to_string(),
         label_defs.as_ref().and_then(|l| l.listing.clone())
             .unwrap_or_else(|| "Listing".to_string()));
     if let Some(cap) = lst_cap {
-        vars.insert("lst_cap".to_string(), cap.to_string());
+        vars.config.insert("lst_cap".to_string(), cap.to_string());
     }
 
     let tpl = resolve_partial("code_listing")
