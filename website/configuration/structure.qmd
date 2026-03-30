@@ -52,11 +52,11 @@ To scaffold a website:
 calepin init website my_site
 ```
 
-This creates a directory with a `_calepin/config.toml` manifest, an `index.qmd`, and example pages:
+This creates a directory with an `index_calepin/config.toml` manifest, an `index.qmd`, and example pages:
 
 ```
 my_site/
-  _calepin/
+  index_calepin/
     config.toml          # project configuration
     templates/           # template overrides
       website/
@@ -83,9 +83,9 @@ calepin preview my_site
 
 | Path | Purpose |
 |------|---------|
-| `_calepin/config.toml` | Project configuration (targets, sidebar, navbar, etc.) |
-| `_calepin/templates/` | Template overrides. Drop a file here to replace any built-in template. |
-| `_calepin/assets/` | Static assets (CSS, images, logos) copied to output. |
+| `index_calepin/config.toml` | Project configuration (targets, sidebar, navbar, etc.) |
+| `index_calepin/templates/` | Template overrides. Drop a file here to replace any built-in template. |
+| `index_calepin/assets/` | Static assets (CSS, images, logos) copied to output. |
 | `{stem}_calepin/` | Per-document sidecar: configuration, cached code output, generated figures. |
 | `_calepin_output/` | Default output directory for websites (configurable in `config.toml`). |
 
@@ -101,7 +101,7 @@ calepin templates update            # update local templates to latest built-in 
 
 ## Updating templates
 
-When *Calepin* is updated, the built-in templates may change (new features, bug fixes, `link()` support). If your project has custom templates in `_calepin/templates/`, they won't pick up these changes automatically.
+When *Calepin* is updated, the built-in templates may change (new features, bug fixes, `link()` support). If your project has custom templates in `index_calepin/templates/`, they won't pick up these changes automatically.
 
 Run `calepin templates update` from your project root to overwrite all local templates that have a matching built-in template. The command lists the number of files and asks for confirmation before writing.
 

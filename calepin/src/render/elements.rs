@@ -37,6 +37,30 @@ pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> 
     let resolved = resolve_template_alias(name);
     let ext = crate::paths::resolve_extension(base);
 
+    // Check variant first (if tpl has a mapping for this template name)
+    let variant = crate::paths::get_active_tpl();
+    if let Some(v) = variant.get(resolved) {
+        // Target-specific variant
+        if let Some(target) = crate::paths::get_active_target() {
+            if target != base {
+                let path = format!("{}/{}.{}.{}", target, resolved, v, ext);
+                if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+                    if let Some(s) = file.contents_utf8() { return Some(s); }
+                }
+            }
+        }
+        // Base-specific variant
+        let path = format!("{}/{}.{}.{}", base, resolved, v, ext);
+        if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+            if let Some(s) = file.contents_utf8() { return Some(s); }
+        }
+        // Common variant
+        let path = format!("common/{}.{}.jinja", resolved, v);
+        if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+            if let Some(s) = file.contents_utf8() { return Some(s); }
+        }
+    }
+
     // Target-specific (e.g., book/page.typ)
     if let Some(target) = crate::paths::get_active_target() {
         if target != base {
@@ -305,6 +329,7 @@ impl ElementRenderer {
 
     fn build_template_output(&self, template_name: &str, element: &Element) -> String {
         let mut vars = crate::render::template::TemplateVars::with_writer(&self.ext);
+        vars.tpl = self.metadata.tpl.clone();
 
         // Run element through pipeline filters
         let code_filter = crate::render::vars::BuildCodeVars::new(&self.highlighter);

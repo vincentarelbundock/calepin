@@ -46,7 +46,7 @@ These are compatible with Quarto and Pandoc syntax.
 
 # CSL styles
 
-By default, *Calepin* uses the Chicago author-date style. To customize citation formatting, set the `csl` field in the front matter or in `_calepin/config.toml`. The value can be a built-in style name or a file path:
+By default, *Calepin* uses the Chicago author-date style. To customize citation formatting, set the `csl` field in the front matter or in `{stem}_calepin/config.toml`. The value can be a built-in style name or a file path:
 
 ```yaml
 ---

@@ -9,6 +9,7 @@
 //! resolve from it.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
@@ -41,10 +42,8 @@ pub enum ProjectKind {
 impl ProjectKind {
     /// Discover the project kind from a `.qmd` file or directory.
     ///
-    /// Detection order:
-    /// 1. `{stem}_calepin/config.toml` with a collection target -> `Collection`
-    /// 2. Legacy `_calepin/config.toml` with `[[contents]]` -> `Collection` (deprecated)
-    /// 3. Otherwise -> `Document`
+    /// Detection: `{stem}_calepin/config.toml` with a collection target -> `Collection`,
+    /// otherwise -> `Document`.
     pub fn discover(path: &Path) -> Result<Self> {
         let path = if path.is_relative() {
             normalize_path(&std::env::current_dir()
@@ -78,7 +77,7 @@ impl ProjectKind {
         let stem = path.file_stem().unwrap().to_string_lossy();
         let sidecar = parent.join(format!("{}_calepin", stem));
 
-        // 1. New convention: {stem}_calepin/config.toml with a collection target
+        // {stem}_calepin/config.toml with a collection target -> Collection
         let sidecar_config = sidecar.join("config.toml");
         if sidecar_config.exists() {
             if let Some(target_name) = read_target_from_config(&sidecar_config) {
@@ -87,26 +86,6 @@ impl ProjectKind {
                         project_dir: parent.to_path_buf(),
                         config: sidecar_config,
                         root_sidecar: sidecar,
-                    });
-                }
-            }
-        }
-
-        // 2. Legacy: _calepin/config.toml with [[contents]]
-        let legacy_config = calepin_dir(parent, &[]).join("config.toml");
-        if legacy_config.exists() {
-            if let Ok(text) = std::fs::read_to_string(&legacy_config) {
-                if text.contains("[[contents]]") {
-                    eprintln!(
-                        "\x1b[33mWarning:\x1b[0m _calepin/config.toml is deprecated. \
-                         Move config to {}_calepin/config.toml with `target = \"website\"` \
-                         (or the appropriate collection target).",
-                        stem
-                    );
-                    return Ok(ProjectKind::Collection {
-                        project_dir: parent.to_path_buf(),
-                        config: legacy_config,
-                        root_sidecar: calepin_dir(parent, &[]),
                     });
                 }
             }
@@ -152,6 +131,8 @@ thread_local! {
     static EXTENSION_TEMPLATE_DIRS: RefCell<Vec<PathBuf>> = RefCell::new(Vec::new());
     /// Side-loaded extension names (from calepin.extensions config).
     static SIDELOADED_EXTENSIONS: RefCell<Vec<String>> = RefCell::new(Vec::new());
+    /// Active template variant selections (from [tpl] config).
+    static ACTIVE_TPL: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
 }
 
 /// Set the active target name for template resolution.
@@ -244,10 +225,20 @@ pub fn get_sideloaded_extensions() -> Vec<String> {
     SIDELOADED_EXTENSIONS.with(|e| e.borrow().clone())
 }
 
-/// Given the path to a sidecar config file (e.g. `<root>/index_calepin/config.toml`
-/// or legacy `<root>/_calepin/config.toml`), return the project root directory.
-/// The config's parent is a sidecar directory ending in `_calepin`; the project
-/// root is its grandparent.
+/// Set the active template variant selections (from `[tpl]` config).
+pub fn set_active_tpl(tpl: HashMap<String, String>) {
+    ACTIVE_TPL.with(|t| {
+        *t.borrow_mut() = tpl;
+    });
+}
+
+pub fn get_active_tpl() -> HashMap<String, String> {
+    ACTIVE_TPL.with(|t| t.borrow().clone())
+}
+
+/// Given the path to a sidecar config file (e.g. `<root>/index_calepin/config.toml`),
+/// return the project root directory. The config's parent is a sidecar directory
+/// ending in `_calepin`; the project root is its grandparent.
 pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
     if let Some(parent) = config_path.parent() {
         let is_sidecar = parent.file_name()
@@ -381,13 +372,13 @@ pub fn write_embedded_dir(dir: &include_dir::Dir<'static>, dest: &Path) {
 
 /// Path context carried through the render pipeline.
 ///
-/// All input paths resolve relative to `project_root` (the directory
-/// containing `_calepin/config.toml`, or the `.qmd` parent in document mode).
-/// The output directory is only for writing; no input files resolve from it.
+/// All input paths resolve relative to `project_root` (the `.qmd` parent
+/// directory, or the collection root). The output directory is only for
+/// writing; no input files resolve from it.
 #[derive(Debug, Clone)]
 pub struct PathContext {
-    /// Project root: directory containing `_calepin/config.toml`, or `.qmd` parent
-    /// in document mode. All input paths resolve from here.
+    /// Project root: `.qmd` parent in document mode, or the collection root
+    /// directory. All input paths resolve from here.
     pub project_root: PathBuf,
     /// Where output files are written. No input files resolve from here.
     pub output_dir: PathBuf,
@@ -404,13 +395,13 @@ impl PathContext {
         Self { project_root, output_dir }
     }
 
-    /// Resolve a subdirectory, checking the sidecar first then falling back
-    /// to `_calepin/{subdir}/{stem}/` under `fallback_root`.
+    /// Resolve a subdirectory under the page sidecar (`{stem}_calepin/{subdir}/`).
+    /// Falls back to `{fallback_root}/{stem}_calepin/{subdir}/` if no sidecar is set.
     fn sidecar_or_project_subdir(subdir: &str, stem: &str, fallback_root: &Path) -> PathBuf {
         if let Some(sidecar) = get_page_sidecar() {
             sidecar.join(subdir)
         } else {
-            calepin_dir(fallback_root, &[subdir, stem])
+            fallback_root.join(format!("{}_calepin", stem)).join(subdir)
         }
     }
 
@@ -458,18 +449,6 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     out
 }
 
-/// Build a path under the project `_calepin/` directory.
-/// Does not check existence -- use `resolve_path` for that.
-///
-/// Example: `calepin_dir(root, &["templates", "html"])` -> `{root}/_calepin/templates/html`
-pub fn calepin_dir(project_root: &Path, segments: &[&str]) -> PathBuf {
-    let mut p = project_root.join("_calepin");
-    for s in segments {
-        p = p.join(s);
-    }
-    p
-}
-
 /// Default output directory name for collection builds.
 pub const DEFAULT_OUTPUT_DIR: &str = "_calepin_output";
 
@@ -486,31 +465,25 @@ pub fn output_dir(project_root: &Path, config_output: Option<&str>) -> PathBuf {
     }
 }
 
-/// Templates directory: root sidecar's `templates/`, or `_calepin/templates`.
+/// Templates directory: root sidecar's `templates/`.
 pub fn templates_dir(project_root: &Path) -> PathBuf {
-    if let Some(sidecar) = get_root_sidecar() {
-        sidecar.join("templates")
-    } else {
-        project_root.join("_calepin/templates")
-    }
+    get_root_sidecar()
+        .unwrap_or_else(|| get_page_sidecar().unwrap_or_else(|| project_root.to_path_buf()))
+        .join("templates")
 }
 
-/// Assets directory: root sidecar's `assets/`, or legacy `_calepin/assets`.
+/// Assets directory: root sidecar's `assets/`.
 pub fn assets_dir(project_root: &Path) -> PathBuf {
-    if let Some(sidecar) = get_root_sidecar() {
-        sidecar.join("assets")
-    } else {
-        project_root.join("_calepin/assets")
-    }
+    get_root_sidecar()
+        .unwrap_or_else(|| get_page_sidecar().unwrap_or_else(|| project_root.to_path_buf()))
+        .join("assets")
 }
 
-/// Extensions directory: root sidecar's `extensions/`, or legacy `_calepin/extensions`.
+/// Extensions directory: root sidecar's `extensions/`.
 pub fn extensions_dir(project_root: &Path) -> PathBuf {
-    if let Some(sidecar) = get_root_sidecar() {
-        sidecar.join("extensions")
-    } else {
-        project_root.join("_calepin").join("extensions")
-    }
+    get_root_sidecar()
+        .unwrap_or_else(|| get_page_sidecar().unwrap_or_else(|| project_root.to_path_buf()))
+        .join("extensions")
 }
 
 // ---------------------------------------------------------------------------
@@ -518,7 +491,7 @@ pub fn extensions_dir(project_root: &Path) -> PathBuf {
 // ---------------------------------------------------------------------------
 
 /// Map a base name to its file extension for template/component lookup.
-/// Derives the mapping from the built-in _calepin/config.toml.
+/// Derives the mapping from the built-in target configuration.
 pub fn resolve_extension(base: &str) -> &str {
     let target = crate::config::builtin_metadata().targets.get(base);
     target
@@ -532,13 +505,32 @@ pub fn resolve_extension(base: &str) -> &str {
 /// The `writer` parameter determines the file extension (html, tex, typ, md).
 pub fn resolve_template(name: &str, writer: &str) -> Option<PathBuf> {
     let ext = resolve_extension(writer);
-    let specific = format!("{}.{}", name, ext);
-    let generic = format!("{}.jinja", name);
-
     let chain = get_active_inheritance_chain();
     let target = chain.first().map(|s| s.as_str()).unwrap_or(writer);
-
     let tpl_dir = templates_dir(&get_project_dir()).join(target);
+
+    // Check variant first (if tpl has a mapping for this template name)
+    let variant = ACTIVE_TPL.with(|t| t.borrow().get(name).cloned());
+    if let Some(ref v) = variant {
+        let variant_specific = format!("{}.{}.{}", name, v, ext);
+        let variant_generic = format!("{}.{}.jinja", name, v);
+
+        let p = tpl_dir.join(&variant_specific);
+        if p.exists() { return Some(p); }
+        let p = tpl_dir.join(&variant_generic);
+        if p.exists() { return Some(p); }
+
+        for ext_dir in get_extension_template_dirs() {
+            let p = ext_dir.join(target).join(&variant_specific);
+            if p.exists() { return Some(p); }
+            let p = ext_dir.join(target).join(&variant_generic);
+            if p.exists() { return Some(p); }
+        }
+    }
+
+    // Base template (no variant)
+    let specific = format!("{}.{}", name, ext);
+    let generic = format!("{}.jinja", name);
 
     let p = tpl_dir.join(&specific);
     if p.exists() { return Some(p); }
@@ -557,11 +549,11 @@ pub fn resolve_template(name: &str, writer: &str) -> Option<PathBuf> {
 }
 
 /// Resolve a module directory by name.
-/// Checks sidecar first, then project-level `_calepin/modules/{name}/`.
-pub fn resolve_module_dir(name: &str, project_root: &Path) -> Option<PathBuf> {
+/// Checks page sidecar first, then root sidecar.
+pub fn resolve_module_dir(name: &str, _project_root: &Path) -> Option<PathBuf> {
     let candidates = [
         get_page_sidecar().map(|s| s.join("modules").join(name)),
-        Some(calepin_dir(project_root, &["modules", name])),
+        get_root_sidecar().map(|s| s.join("modules").join(name)),
     ];
     candidates.into_iter()
         .flatten()
@@ -634,11 +626,14 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
         }
         let found = resolve_module_dir(plugin, &ctx.project_root).is_some();
         if !found {
-            let local_path = calepin_dir(&ctx.project_root, &["modules", plugin]).join("module.toml");
+            let expected = get_root_sidecar()
+                .or_else(get_page_sidecar)
+                .unwrap_or_else(|| ctx.project_root.clone())
+                .join("modules").join(plugin).join("module.toml");
             errors.push(format!(
                 "  calepin.plugins: {}\n    -> not found: {}",
                 plugin,
-                local_path.display()
+                expected.display()
             ));
         }
     }

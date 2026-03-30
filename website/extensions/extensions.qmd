@@ -290,11 +290,11 @@ Project modules can add pages to the output (e.g., pagination pages) by includin
 
 # Installation
 
-Extensions live in `_calepin/extensions/{name}/`:
+Extensions live in `{stem}_calepin/extensions/{name}/`:
 
 ```
 project/
-  _calepin/
+  index_calepin/
     config.toml
     extensions/
       tufte/
@@ -335,8 +335,8 @@ When `extensions` is set, those extensions' assets are included and their module
 First match wins:
 
 1. Document sidecar: `{stem}_calepin/templates/{target|writer|common}/`
-2. Project overrides: `_calepin/templates/{target|writer|common}/`
-3. Active extension's templates: `_calepin/extensions/{name}/templates/{writer|common}/`
+2. Project overrides: `{stem}_calepin/templates/{target|writer|common}/`
+3. Active extension's templates: `{stem}_calepin/extensions/{name}/templates/{writer|common}/`
 4. Parent extension's templates (walking up the inheritance chain)
 5. Built-in templates (embedded in binary)
 
@@ -350,7 +350,7 @@ At each level, the lookup order within the templates directory is:
 
 Assets compose additively (all levels contribute):
 
-1. Project assets: `_calepin/assets/` (always included)
+1. Project assets: `{stem}_calepin/assets/` (always included)
 2. Active extension's assets (CSS/JS declared in manifest)
 3. Parent extension's assets (walking up the inheritance chain)
 4. Built-in assets (embedded in binary, fill gaps)
@@ -497,7 +497,7 @@ Then:
 1. Add templates to `templates/html/` to override page templates or add new div styles (e.g., `sidenote.html`).
 2. Declare modules in `extension.toml` under `[[modules]]`.
 3. Add CSS/JS to `assets/` and declare them in `extension.toml`.
-4. Copy the directory into a project's `_calepin/extensions/` to install it.
+4. Copy the directory into a project's `{stem}_calepin/extensions/` to install it.
 
 
 # Examples
@@ -654,7 +654,7 @@ The template at `templates/html/lightbox.html` is resolved by class name through
 - **Full module list replacement.** If an extension specifies `modules` in `[target]`, it replaces the parent's list entirely. No `modules_add`, no ordering ambiguity.
 - **Explicit everything.** The manifest is the complete index. CSS, JS, static files, and modules must be declared in `extension.toml`. No implicit directory scanning.
 - **No config fragments.** An extension provides a target definition, templates, modules, and assets. Document-level config (title, author, bibliography, execute options) stays in the document or project config.
-- **Additive template chain.** Each level in the chain can override templates from the level below. The user always has final say (project `_calepin/templates/` overrides everything).
+- **Additive template chain.** Each level in the chain can override templates from the level below. The user always has final say (project `{stem}_calepin/templates/` overrides everything).
 - **Modules are for behavior, templates are for presentation.** Adding a template to `templates/` is enough for custom div/span styles. A `[[modules]]` declaration is only needed for structural transforms, advanced matching, auto-numbering, or external code.
 - **One pipeline.** There is no separate "collection" or "notebook" mode. The same pipeline handles 1 page or 1000 pages. Multi-document features (navigation, cross-references, orchestrator assembly) are `project` modules declared by the extension, not a different code path.
 
@@ -669,7 +669,7 @@ Suppose you have a website and want to change how figures render. You do not nee
 
 ```
 my-site/
-  _calepin/
+  index_calepin/
     config.toml
     templates/
       html/
@@ -708,8 +708,8 @@ calepin templates list website
 This prints the full resolution chain, color-coded by source:
 
 ```
-page.html          _calepin/templates/website/page.html    (green = user override)
-figure.html        _calepin/templates/html/figure.html     (green = user override)
+page.html          index_calepin/templates/website/page.html    (green = user override)
+figure.html        index_calepin/templates/html/figure.html     (green = user override)
 code_source.html   built-in: html                         (cyan = built-in)
 callout.html       built-in: html                         (cyan = built-in)
 ...
@@ -717,4 +717,4 @@ callout.html       built-in: html                         (cyan = built-in)
 
 ## `calepin init` does not copy templates
 
-`calepin init website` creates a project config and starter pages. It does not copy built-in templates into `_calepin/templates/`. The project starts clean, inheriting everything from the extension. Users create individual template files only when they want to override something.
+`calepin init website` creates a project config and starter pages. It does not copy built-in templates into `index_calepin/templates/`. The project starts clean, inheriting everything from the extension. Users create individual template files only when they want to override something.

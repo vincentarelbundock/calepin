@@ -427,22 +427,12 @@ pub enum TemplatesAction {
 }
 
 /// Find the project config file in a directory.
-/// Checks `{stem}_calepin/config.toml` for each .qmd file, then falls back
-/// to legacy `_calepin/config.toml`.
+/// Checks `index_calepin/config.toml` as the canonical entry point.
 pub fn find_project_config(dir: &std::path::Path) -> Option<std::path::PathBuf> {
-    // New convention: look for any {stem}_calepin/config.toml
-    // Prefer index_calepin/config.toml as the canonical entry point
     let index_sidecar = dir.join("index_calepin").join("config.toml");
     if index_sidecar.exists() {
         return index_sidecar.canonicalize().ok()
             .or_else(|| Some(crate::paths::normalize_path(&index_sidecar)));
-    }
-
-    // Legacy fallback: _calepin/config.toml
-    let legacy = crate::paths::calepin_dir(dir, &[]).join("config.toml");
-    if legacy.exists() {
-        return legacy.canonicalize().ok()
-            .or_else(|| Some(crate::paths::normalize_path(&legacy)));
     }
 
     None

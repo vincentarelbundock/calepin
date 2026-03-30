@@ -188,7 +188,7 @@ pub struct CitationConfig {
 
 /// Unified document/project metadata.
 ///
-/// Both `_calepin/config.toml` (project config) and front matter (YAML/TOML preamble)
+/// Both `{stem}_calepin/config.toml` (project config) and front matter (YAML/TOML preamble)
 /// parse into this type. Document-level fields override project-level fields
 /// via `Metadata::merge()`.
 #[derive(Debug, Clone, Default)]
@@ -257,6 +257,9 @@ pub struct Metadata {
 
     // -- Extra variables (custom key-value pairs) --
     pub var: HashMap<String, MetaValue>,
+
+    // -- Template variant selections --
+    pub tpl: HashMap<String, String>,
 }
 
 impl Metadata {

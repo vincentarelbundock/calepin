@@ -4,7 +4,7 @@ title = "Navigation"
 
 # Prev / Next
 
-*Calepin* websites automatically display "Previous" and "Next" links at the bottom of each page. The order of these links is governed by the `[[contents]]` array in `_calepin/config.toml`.
+*Calepin* websites automatically display "Previous" and "Next" links at the bottom of each page. The order of these links is governed by the `[[contents]]` array in `index_calepin/config.toml`.
 
 Pages appear in the prev/next sequence in the same order they are listed in `[[contents]]`. For example, given this configuration:
 

@@ -20,15 +20,15 @@ All built-in templates are in the *Calepin* repository under [`calepin/src/parti
 
 # Override scheme
 
-Resolution is layered per file: sidecar templates, then project templates (`_calepin/templates/`), then extension templates, then built-in defaults. Override only the files you need to change.
+Resolution is layered per file: sidecar templates, then project templates (`{stem}_calepin/templates/`), then extension templates, then built-in defaults. Override only the files you need to change.
 
 Within the templates directory, resolution tries target-specific first, then engine-specific, then common:
 
-1. `_calepin/templates/{target}/{name}.{ext}` (e.g., `website/sidebar.html`)
-2. `_calepin/templates/{engine}/{name}.{ext}` (e.g., `html/figure.html`)
-3. `_calepin/templates/common/{name}.jinja`
+1. `{stem}_calepin/templates/{target}/{name}.{ext}` (e.g., `website/sidebar.html`)
+2. `{stem}_calepin/templates/{engine}/{name}.{ext}` (e.g., `html/figure.html`)
+3. `{stem}_calepin/templates/common/{name}.jinja`
 
-Per-document sidecar directories (`{stem}_calepin/templates/`) are checked before the project-level `_calepin/templates/`.
+Per-document sidecar directories (`{stem}_calepin/templates/`) are checked before the project-level `index_calepin/templates/`.
 
 
 # Element template variables
@@ -196,7 +196,7 @@ Available when writing Jinja expressions in `.qmd` files:
 
 # Website template variables
 
-Website templates (in `_calepin/templates/website/`) receive two context objects.
+Website templates (in `index_calepin/templates/website/`) receive two context objects.
 
 ## collection
 
@@ -249,7 +249,7 @@ Access in templates and body text:
 
 Types are preserved: booleans, numbers, strings, arrays, and nested tables all work. Arrays can be iterated with `{% for item in config.items %}`.
 
-Resolution order (last wins): built-in defaults, `_calepin/config.toml`, front matter, CLI (`-s`). In websites, per-page entries override collection-level values.
+Resolution order (last wins): built-in defaults, `{stem}_calepin/config.toml`, front matter, CLI (`-s`). In websites, per-page entries override collection-level values.
 
 ## Website layout templates
 

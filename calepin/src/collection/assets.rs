@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 
 use crate::paths::copy_dir_recursive;
 
-/// Copy `_calepin/assets/` directory to `assets/` in the output directory.
+/// Copy sidecar `assets/` directory to `assets/` in the output directory.
 /// Also copies built-in target-scoped assets as fallback for files not
 /// present in the project's assets/ directory.
 /// If `static_dirs` is non-empty, also copies those directories into output.
@@ -15,7 +15,7 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
     let calepin_assets = crate::paths::assets_dir(&base_dir);
     if calepin_assets.is_dir() {
         copy_dir_recursive(&calepin_assets, &assets_dst)
-            .context("Failed to copy _calepin/assets/ to output directory")?;
+            .context("Failed to copy sidecar assets/ to output directory")?;
     }
 
     // Copy built-in assets as fallback (recursively).

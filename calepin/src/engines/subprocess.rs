@@ -33,7 +33,7 @@ use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
 /// Chunk execution timeout. None means no timeout (wait forever).
-/// Override with CALEPIN_TIMEOUT env var or `timeout` in _calepin/config.toml [defaults].
+/// Override with CALEPIN_TIMEOUT env var or `timeout` in {stem}_calepin/config.toml [defaults].
 /// Resolve chunk timeout from env var or defaults.
 pub fn resolve_timeout(meta: &crate::config::Metadata) -> Option<Duration> {
     if let Some(secs) = std::env::var("CALEPIN_TIMEOUT").ok().and_then(|s| s.parse::<u64>().ok()) {

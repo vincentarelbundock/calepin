@@ -20,13 +20,8 @@ pub fn handle_flush(path: &Path, stem: Option<&str>, skip_confirm: bool, do_cach
     if root.file_name().unwrap_or_default().to_string_lossy().ends_with("_calepin") {
         find_targets_in_calepin(&root, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
     } else {
-        // Scan for all *_calepin/ directories (new convention)
+        // Scan for all *_calepin/ sidecar directories
         find_sidecar_flush_targets(&root, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
-        // Legacy: also check _calepin/ directory
-        let legacy = root.join("_calepin");
-        if legacy.is_dir() {
-            find_targets_in_calepin(&legacy, &mut targets, &latex_exts, do_cache, do_files, do_compilation, stem);
-        }
     }
 
     if targets.is_empty() {

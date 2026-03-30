@@ -12,14 +12,14 @@ Paths resolve from two locations:
 The project root is:
 
 - Single document: the directory containing the `.qmd` file.
-- Collection: the directory containing `_calepin/config.toml`.
+- Collection: the directory containing `index_calepin/config.toml`.
 
 The following resolve from the project root:
 
 - Front matter fields: `bibliography`, `csl`.
 - `{% include %}` directives.
 - Image paths in Markdown.
-- Template overrides in `_calepin/templates/`.
+- Template overrides in `{stem}_calepin/templates/`.
 
 In a collection, every page shares the same root, so a single path like `bibliography = "assets/library.bib"` works everywhere regardless of nesting.
 
@@ -44,7 +44,7 @@ Internal URLs in site templates are resolved through the `link()` function based
 
 ## Site URL
 
-Set `url` in `_calepin/config.toml` to declare where your site is deployed:
+Set `url` in `index_calepin/config.toml` to declare where your site is deployed:
 
 ```toml
 url = "https://example.com/docs/"
@@ -62,7 +62,7 @@ url = "https://example.com/docs/"
 To build a portable site:
 
 ```bash
-calepin render _calepin/config.toml --portable
+calepin render index_calepin/config.toml --portable
 ```
 
 Preview mode (`calepin preview`) always uses server-relative URLs.

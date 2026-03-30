@@ -184,7 +184,7 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
 ///
 /// Lookup order:
 ///   1. Project config (`config.toml` found on disk)
-///   2. Installed extensions (`_calepin/extensions/{name}/`)
+///   2. Installed extensions (`{stem}_calepin/extensions/{name}/`)
 ///   3. Named targets in installed extensions
 ///   4. Built-in config (embedded default `config.toml`)
 ///   5. Built-in extension manifests (embedded in binary)

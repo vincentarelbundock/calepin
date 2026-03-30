@@ -16,9 +16,12 @@ pub(crate) fn build_context(metadata: &Metadata, format: &str) -> minijinja::Val
         writer => format,
     };
 
+    let tpl_val = Value::from_serialize(&metadata.tpl);
+
     minijinja::context! {
         config => config_val,
         calepin => calepin_val,
+        tpl => tpl_val,
         env => Value::from_object(LazyEnv),
     }
 }

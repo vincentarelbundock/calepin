@@ -58,7 +58,7 @@ The difference is one of emphasis. Quarto offers hundreds of YAML front matter k
 
 This design is especially well-suited to working with LLMs. Since templates are just plain text in well-known formats, you can describe what you want and let your LLM agent customize your website, templates, and styles directly:
 
-> Go to the `_calepin/templates` folder. Switch all the colors to a pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
+> Go to the `index_calepin/templates` folder. Switch all the colors to a pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
 
 
 # Documentation extraction
@@ -96,4 +96,4 @@ In *Calepin*, chunk labels must be in the header. Using `#| label =` in a pipe c
 
 ## Extensions directory
 
-Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `_calepin/templates/` for template overrides and `_calepin/modules/` for custom modules.
+Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `{stem}_calepin/templates/` for template overrides and `{stem}_calepin/modules/` for custom modules.

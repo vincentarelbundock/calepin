@@ -2,11 +2,11 @@
 title = "Configuration"
 ---
 
-*Calepin* is configured through `_calepin/config.toml` and TOML front matter.
+*Calepin* is configured through `index_calepin/config.toml` and TOML front matter.
 
 ## Project config
 
-The `_calepin/config.toml` file controls site-wide settings:
+The `index_calepin/config.toml` file controls site-wide settings:
 
 ```toml
 title = "My Website"

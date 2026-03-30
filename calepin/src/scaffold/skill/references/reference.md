@@ -46,7 +46,7 @@ calepin render document.qmd -t html,latex,typst  # multiple formats
 calepin render document.qmd -o paper.tex         # explicit output path
 calepin render document.qmd -s title="Draft" number-sections=true
 calepin render document.qmd -q                   # quiet mode
-calepin render _calepin/config.toml --portable   # relative URLs for offline use
+calepin render index_calepin/config.toml --portable   # relative URLs for offline use
 ```
 
 ### preview
@@ -328,7 +328,7 @@ Multiple files: `bibliography = ["refs_theory.bib", "refs_empirical.bib"]`
 
 ### CSL Styles
 
-Default: `chicago-author-date`. Set `csl` in front matter or `_calepin/config.toml`.
+Default: `chicago-author-date`. Set `csl` in front matter or `{stem}_calepin/config.toml`.
 
 Resolution: file path > built-in name > default. Run `calepin extra csl` to list all built-in styles.
 
@@ -354,8 +354,8 @@ Suppress type prefix with `[-@fig-scatter]`.
 ### Merge Order (last wins)
 
 1. Built-in defaults
-2. Project config: `_calepin/config.toml`
-3. Sidecar config: `{stem}_calepin/config.toml`
+2. Project config: `{stem}_calepin/config.toml`
+3. Sidecar config: `{stem}_calepin/config.toml` (per-document)
 4. Document front matter (TOML between `---`)
 5. CLI overrides: `-s key=value`
 
@@ -414,10 +414,10 @@ Set theme: `highlight-style = "solarized-dark"` in front matter. List themes: `c
 
 | Path | Purpose |
 |------|---------|
-| `_calepin/config.toml` | Project configuration |
-| `_calepin/templates/` | Template overrides |
-| `_calepin/assets/` | Static assets (CSS, images) copied to output |
-| `_calepin/extensions/` | Installed extensions |
+| `{stem}_calepin/config.toml` | Project configuration |
+| `{stem}_calepin/templates/` | Template overrides |
+| `{stem}_calepin/assets/` | Static assets (CSS, images) copied to output |
+| `{stem}_calepin/extensions/` | Installed extensions |
 | `{stem}_calepin/` | Per-document sidecar (config, cache, files) |
 | `_calepin_output/` | Default website output directory |
 
@@ -450,7 +450,7 @@ Templates use Jinja2 (MiniJinja):
 ### Template Organization
 
 ```
-_calepin/templates/
+{stem}_calepin/templates/
   html/         # HTML element and page templates
   latex/        # LaTeX templates
   typst/        # Typst templates
@@ -461,7 +461,7 @@ _calepin/templates/
 ### Template Resolution Order (first match wins)
 
 1. Document sidecar: `{stem}_calepin/templates/{target|writer|common}/`
-2. Project overrides: `_calepin/templates/{target|writer|common}/`
+2. Project overrides: `{stem}_calepin/templates/{target|writer|common}/`
 3. Active extension's templates
 4. Parent extension's templates (walking inheritance chain)
 5. Built-in templates (embedded in binary)
@@ -542,7 +542,7 @@ Include `.qmd` files (path relative to project root):
 {% include "common/disclaimer.qmd" %}
 ```
 
-Include templates (no extension, resolved from `_calepin/templates/`):
+Include templates (no extension, resolved from `{stem}_calepin/templates/`):
 
 ```
 {% include "source_tip" %}
@@ -600,7 +600,7 @@ Format-specific markup, passed through when format matches:
 
 ## Websites
 
-### Manifest (`_calepin/config.toml`)
+### Manifest (`{stem}_calepin/config.toml`)
 
 ```toml
 title = "My Site"
@@ -687,6 +687,6 @@ Side-loading (modules/assets only):
 extensions = ["lightbox"]
 ```
 
-Installation: copy to `_calepin/extensions/{name}/`.
+Installation: copy to `{stem}_calepin/extensions/{name}/`.
 
 Scaffolding: `calepin init extension myext --inherits html`.

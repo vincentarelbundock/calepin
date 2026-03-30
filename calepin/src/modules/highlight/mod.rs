@@ -114,7 +114,7 @@ pub struct Highlighter {
 /// Load a .tmTheme by name.
 ///
 /// Resolution order:
-///   1. Project filesystem: `_calepin/assets/highlighting/{name}.tmTheme`
+///   1. Project filesystem: `{stem}_calepin/assets/highlighting/{name}.tmTheme`
 ///   2. Built-in: discovered from embedded project tree
 ///   3. Filesystem path (for absolute/relative .tmTheme file paths)
 fn load_bundled_theme(name: &str) -> Option<syntect::highlighting::Theme> {

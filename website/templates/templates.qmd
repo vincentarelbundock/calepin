@@ -10,7 +10,7 @@ This means customization is always the same operation: find the template, edit i
 
 It also means that *Calepin* projects are super LLM-friendly. Just ask your agent what you need, and it will almost certainly get it right:
 
-> Go to the `_calepin/templates` folder. Switch all the colors to a Studio Ghibli inspired pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
+> Go to the `index_calepin/templates` folder. Switch all the colors to a Studio Ghibli inspired pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
 
 {% include "assets/source_tip.html" %}
 
@@ -31,10 +31,10 @@ For a thorough introduction, see the [Jinja2 Template Designer Documentation](ht
 
 # Templates
 
-Each template file controls one piece of output. They live in `_calepin/templates/`, organized by format:
+Each template file controls one piece of output. They live in `{stem}_calepin/templates/`, organized by format:
 
 ```
-_calepin/templates/
+{stem}_calepin/templates/
   html/         # HTML templates (figure.html, callout.html, page.html, ...)
   latex/        # LaTeX templates (figure.tex, page.tex, ...)
   typst/        # Typst templates (figure.typ, page.typ, ...)
@@ -42,7 +42,7 @@ _calepin/templates/
   common/       # Format-agnostic templates (.jinja)
 ```
 
-Resolution is layered per file: *Calepin* checks sidecar templates, then project templates (`_calepin/templates/`), then extension templates, then built-in defaults. You only need to override the specific files you want to change; everything else falls through to the built-in templates.
+Resolution is layered per file: *Calepin* checks sidecar templates, then project templates (`{stem}_calepin/templates/`), then extension templates, then built-in defaults. You only need to override the specific files you want to change; everything else falls through to the built-in templates.
 
 
 # Element templates

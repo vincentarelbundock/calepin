@@ -15,15 +15,16 @@ use xxhash_rust::xxh3::xxh3_128;
 const AUX_EXTENSIONS: &[&str] = &["css", "js", "html", "tex", "md", "typ"];
 
 /// Collect content of all auxiliary files (.css, .js, .html, .tex, .md, .typ)
-/// in `base_dir` and its `_calepin/` subdirectory into a byte buffer.
+/// in `base_dir` and the root sidecar directory into a byte buffer.
 /// Append this to `config_bytes` so that partial/stylesheet/template changes
 /// invalidate the cache for every page.
 pub fn collect_auxiliary_bytes(base_dir: &Path) -> Vec<u8> {
     let mut buf = Vec::new();
     collect_from_dir(&mut buf, base_dir);
-    let calepin_dir = crate::paths::calepin_dir(base_dir, &[]);
-    if calepin_dir.is_dir() {
-        collect_from_dir(&mut buf, &calepin_dir);
+    if let Some(sidecar) = crate::paths::get_root_sidecar() {
+        if sidecar.is_dir() {
+            collect_from_dir(&mut buf, &sidecar);
+        }
     }
     buf
 }

@@ -274,7 +274,7 @@ pub fn discover_extensions_in(extensions_dir: &Path) -> Vec<(String, PathBuf)> {
     found
 }
 
-/// Load all installed extensions from `_calepin/extensions/`.
+/// Load all installed extensions from sidecar `extensions/`.
 #[allow(dead_code)]
 pub fn load_extensions(project_root: &Path) -> Result<HashMap<String, (ExtensionManifest, PathBuf)>> {
     let mut extensions = HashMap::new();

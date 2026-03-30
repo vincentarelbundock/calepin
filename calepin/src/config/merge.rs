@@ -100,6 +100,11 @@ impl Metadata {
             self.var.insert(k, v);
         }
 
+        // Template variant selections: overlay keys win
+        for (k, v) in overlay.tpl {
+            self.tpl.insert(k, v);
+        }
+
         self
     }
 
@@ -143,6 +148,11 @@ impl Metadata {
                 "toc" => self.toc = Some(TocConfig { enabled: Some(value::coerce_value(value).as_bool() == Some(true)), ..Default::default() }),
                 "bibliography" => self.bibliography = vec![value.to_string()],
                 "csl" => self.csl = Some(value.to_string()),
+                _ if key.starts_with("tpl.") => {
+                    if let Some(suffix) = key.strip_prefix("tpl.") {
+                        self.tpl.insert(suffix.to_string(), value.to_string());
+                    }
+                }
                 _ => {
                     // Support dot-notation for nested keys: "a.b.c=val"
                     let parts: Vec<&str> = key.split('.').collect();

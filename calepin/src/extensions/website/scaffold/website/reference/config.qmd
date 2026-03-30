@@ -2,11 +2,11 @@
 title = "Configuration Reference"
 ---
 
-*Calepin* is configured through `_calepin/config.toml` and TOML front matter.
+*Calepin* is configured through `index_calepin/config.toml` and TOML front matter.
 
 ## Project config
 
-The `_calepin/config.toml` file controls site-wide settings like title, navbar,
+The `index_calepin/config.toml` file controls site-wide settings like title, navbar,
 sidebar contents, and output targets.
 
 ## Front matter

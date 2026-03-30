@@ -67,7 +67,7 @@ Use `{% include %}` to insert the contents of one file inside another. This is a
 
 ## Including .qmd files
 
-To include a `.qmd` file, specify its path relative to the project root (the directory containing `_calepin/`):
+To include a `.qmd` file, specify its path relative to the project root (the directory containing `{stem}_calepin/`):
 
 ```
 {% include "common/disclaimer.qmd" %}
@@ -89,7 +89,7 @@ With a file extension, `{% include %}` resolves relative to the project root:
 {% include "assets/source_tip.html" %}
 ```
 
-Without a file extension, it looks up a template from `_calepin/templates/` using format-aware resolution (e.g., `_calepin/templates/html/source_tip.html`).
+Without a file extension, it looks up a template from `{stem}_calepin/templates/` using format-aware resolution (e.g., `{stem}_calepin/templates/html/source_tip.html`).
 
 
 # Jinja in code chunks

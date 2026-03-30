@@ -196,6 +196,7 @@ fn load_extension_js(project_root: &std::path::Path, target_name: &str) -> Strin
 pub struct TemplateVars {
     pub config: HashMap<String, String>,
     pub calepin: HashMap<String, String>,
+    pub tpl: HashMap<String, String>,
 }
 
 impl TemplateVars {
@@ -203,6 +204,7 @@ impl TemplateVars {
         Self {
             config: HashMap::new(),
             calepin: HashMap::new(),
+            tpl: HashMap::new(),
         }
     }
 
@@ -257,6 +259,15 @@ fn build_jinja_context(
     calepin_map.insert("_lb", minijinja::Value::from("{"));
     calepin_map.insert("_rb", minijinja::Value::from("}"));
     ctx.insert("calepin", minijinja::Value::from_serialize(&calepin_map));
+
+    // Build tpl object (template variant selections)
+    if !vars.tpl.is_empty() {
+        let mut tpl_map = std::collections::BTreeMap::new();
+        for (key, value) in &vars.tpl {
+            tpl_map.insert(key.as_str(), minijinja::Value::from(value.as_str()));
+        }
+        ctx.insert("tpl", minijinja::Value::from_serialize(&tpl_map));
+    }
 
     ctx
 }
@@ -386,6 +397,7 @@ pub fn render_element(name: &str, ext: &str, vars: &TemplateVars) -> String {
         let mut vars = TemplateVars {
             config: vars.config.clone(),
             calepin: vars.calepin.clone(),
+            tpl: vars.tpl.clone(),
         };
         vars.calepin.insert("writer".to_string(), ext.to_string());
         apply_template(&tpl, &vars)
@@ -404,6 +416,9 @@ pub fn build_template_vars_with_headings(
     _target: Option<&crate::config::Target>,
 ) -> TemplateVars {
     let mut vars = TemplateVars::new();
+
+    // tpl.* (template variant selections)
+    vars.tpl = meta.tpl.clone();
 
     let defs = meta;
 

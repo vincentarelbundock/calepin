@@ -70,7 +70,7 @@ inherits = "{inherits}"
     eprintln!("  |   `-- {}/", writer);
     eprintln!("  `-- assets/");
     eprintln!();
-    eprintln!("To install: copy this directory to your project's _calepin/extensions/");
+    eprintln!("To install: copy this directory to your project's {{stem}}_calepin/extensions/");
 
     Ok(())
 }

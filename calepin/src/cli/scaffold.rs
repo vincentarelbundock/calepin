@@ -2,7 +2,7 @@
 //!
 //! The scaffold kind ("collection" or "document") is declared in the extension
 //! manifest's `[scaffold.*]` table. Collections create a directory project with
-//! `_calepin/config.toml`; documents create a single `.qmd` with a sidecar.
+//! `{stem}_calepin/config.toml`; documents create a single `.qmd` with a sidecar.
 
 use std::path::{Path, PathBuf};
 
@@ -54,15 +54,7 @@ fn scaffold_collection(dir: &Path, scaffold: &ResolvedScaffold, scaffold_name: &
     // Compose config.toml in the root sidecar (index_calepin/)
     let root_sidecar = dir.join("index_calepin");
     std::fs::create_dir_all(&root_sidecar)?;
-    // Try new convention first, then legacy scaffold path
-    let project_config = {
-        let new_path = scaffold_file(scaffold, "index_calepin/config.toml");
-        if new_path.is_empty() {
-            scaffold_file(scaffold, "_calepin/config.toml")
-        } else {
-            new_path
-        }
-    };
+    let project_config = scaffold_file(scaffold, "index_calepin/config.toml");
     let composed = format!(
         "{}\n\n# === Built-in defaults ===\n\n{}\n{}",
         project_config.trim(),
@@ -274,7 +266,7 @@ fn scaffold_file(scaffold: &ResolvedScaffold, rel_path: &str) -> String {
     }
 }
 
-/// Install an external extension into `_calepin/extensions/`. No-op for built-in.
+/// Install an external extension into `{stem}_calepin/extensions/`. No-op for built-in.
 fn install_extension(scaffold: &ResolvedScaffold, project_dir: &Path) -> Result<()> {
     let ext_dir = match &scaffold.ext_dir {
         Some(dir) => dir,

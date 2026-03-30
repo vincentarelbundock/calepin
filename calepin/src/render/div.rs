@@ -57,6 +57,7 @@ pub fn render(
         .join("\n\n");
 
     let mut vars = crate::render::template::TemplateVars::new();
+    vars.tpl = defaults.tpl.clone();
     build_div_vars(&mut vars, classes, id, attrs, &children_rendered, format);
 
     // Template lookup: explicit override -> class-based -> fallback

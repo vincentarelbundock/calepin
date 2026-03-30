@@ -58,6 +58,7 @@ pub fn render(
         let rendered_content = crate::render::convert::render_inline(content, format);
 
         let mut vars = crate::render::template::TemplateVars::new();
+        vars.tpl = defaults.tpl.clone();
         // Span attributes are user-authored -> config
         for (k, v) in &kv {
             vars.config.insert(k.clone(), v.clone());

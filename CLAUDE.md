@@ -51,7 +51,7 @@ CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--write
 
 Subcommands: `render` (default), `preview`, `init`, `flush`, `man`, `extra`. Shell completions: `calepin extra completions SHELL`.
 
-**Important**: website/ must be rendered with `cd website && ../calepin/target/debug/calepin file.qmd` so that `_calepin/` overrides are found relative to the working directory. `make docs` handles this.
+**Important**: website/ must be rendered with `cd website && ../calepin/target/debug/calepin file.qmd` so that sidecar overrides are found relative to the working directory. `make docs` handles this.
 
 ## Architecture
 
@@ -114,7 +114,7 @@ Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` t
 
 ### Extension system
 
-Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`, `minimal`. User extensions live in `_calepin/extensions/{name}/`.
+Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`, `minimal`. User extensions live in `{stem}_calepin/extensions/{name}/`.
 
 An extension bundles a target definition, templates, modules, CSS/JS assets, and variables. Extensions inherit from a parent via `inherits`. Template resolution is layered: user overrides > extension templates > parent extension > built-in defaults.
 
@@ -124,7 +124,7 @@ Extension manifests are parsed by `config/extension.rs` (`ExtensionManifest` str
 
 Targets are defined in `config/document.toml` (document targets) and `config/collection.toml` (collection targets), with built-in extension manifests as an additional source. Resolved by `config/targets.rs::resolve_target()`.
 
-User targets in `_calepin/config.toml` inherit from built-in targets via `inherits`.
+User targets in `{stem}_calepin/config.toml` inherit from built-in targets via `inherits`.
 
 ### FormatPipeline
 
@@ -211,7 +211,7 @@ Per-engine templates for elements, page templates, shortcodes:
 
 Website template icons live in `partials/website/icons/` (used via `{% include %}`).
 
-User overrides: `_calepin/templates/{engine}/{name}.{ext}`
+User overrides: `{stem}_calepin/templates/{engine}/{name}.{ext}`
 
 ### `scaffold/` -- Project scaffolding and shared assets
 
@@ -235,13 +235,13 @@ Templates use Jinja syntax (`{{config.variable}}`, `{{calepin.variable}}`, `{% i
 **Template resolution order** (first match wins, layered):
 1. Module element dirs (in registry order)
 2. Sidecar templates: `{stem}_calepin/templates/{target|writer|common}/`
-3. Project templates: `_calepin/templates/{target|writer|common}/`
-4. Extension templates: `_calepin/extensions/{name}/templates/{writer|common}/` (child-first inheritance)
+3. Project templates: `{stem}_calepin/templates/{target|writer|common}/` (root sidecar)
+4. Extension templates: `{stem}_calepin/extensions/{name}/templates/{writer|common}/` (child-first inheritance)
 5. Built-in `partials/{writer}/{name}.{ext}` (embedded in binary)
 
 Resolution is layered: individual files can be overridden at any level. Missing files fall through to the next level. `calepin init` does not copy templates; projects start clean and override only what they need.
 
-**Module resolution**: `_calepin/modules/{name}/module.toml`
+**Module resolution**: `{stem}_calepin/modules/{name}/module.toml`
 
 **module.toml manifest**:
 
@@ -274,9 +274,9 @@ Marker types (single-char prefix between delimiters):
 
 Documents can carry TOML front matter between `---` delimiters. Non-TOML front matter (e.g., YAML) falls back to a simple parser for basic fields (title, author, date, bibliography).
 
-**Merge order** (last wins): built-in defaults < `_calepin/config.toml` < `{stem}_calepin/config.toml` (sidecar) < TOML front matter < CLI (`-s`)
+**Merge order** (last wins): built-in defaults < `{stem}_calepin/config.toml` (root sidecar) < `{stem}_calepin/config.toml` (page sidecar) < TOML front matter < CLI (`-s`)
 
-**Sidecar directories**: Each document can have a `{stem}_calepin/` directory alongside it, mirroring the `_calepin/` structure (templates, modules, cache, files). For websites, `_calepin/` is the shared sidecar for all pages.
+**Sidecar directories**: Each document has a `{stem}_calepin/` directory alongside it (e.g., `paper_calepin/` for `paper.qmd`). For websites, `index_calepin/` is the shared root sidecar for all pages.
 
 calepin-specific settings are nested under the `[calepin]` table:
 
@@ -321,14 +321,14 @@ Bracketed spans `[content]{.class key=value}` are processed during rendering. Bu
 - `syntect` -- Syntax highlighting
 - `minijinja` -- Template engine for element/page templates and body processing
 - `clap` + `clap_complete` -- CLI and shell completions
-- `toml` + `serde` -- TOML config parsing (front matter, `_calepin/config.toml`, sidecar config)
+- `toml` + `serde` -- TOML config parsing (front matter, sidecar `config.toml`)
 - `usvg` + `svg2pdf` -- SVG-to-PDF conversion for LaTeX targets
 
 ## Extensions
 
 Extensions are the unit of distribution and customization. An extension is a directory with an `extension.toml` manifest that can provide templates, CSS/JS assets, modules, and variables.
 
-**Installation**: `_calepin/extensions/{name}/extension.toml`
+**Installation**: `{stem}_calepin/extensions/{name}/extension.toml`
 
 **Activation**: Set `target = "name"` in document front matter or pass `-t name` on the CLI. Side-load with `[calepin] extensions = ["name"]`.
 

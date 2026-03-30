@@ -289,6 +289,15 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
                     }
                 }
             }
+            "tpl" => {
+                if let Some(t) = v.as_table() {
+                    for (k, val) in t {
+                        if let Some(s) = val.as_str() {
+                            meta.tpl.insert(k.clone(), s.to_string());
+                        }
+                    }
+                }
+            }
 
             _ => {
                 extra.insert(key.to_string(), v.clone());

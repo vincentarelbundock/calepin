@@ -56,7 +56,7 @@ pub fn handle_extra(action: ExtraAction) -> Result<()> {
                 println!("  {}", name);
             }
             println!("\n{} themes available.", names.len());
-            println!("Custom themes: place a .tmTheme file in _calepin/assets/highlighting/");
+            println!("Custom themes: place a .tmTheme file in {{stem}}_calepin/assets/highlighting/");
             Ok(())
         }
         ExtraAction::Skill { project, claude, codex, opencode, pi, yes } => {

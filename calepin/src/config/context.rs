@@ -77,7 +77,7 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
     let user_targets = project_metadata.as_ref().map(|m| &m.targets).unwrap_or(&empty_targets);
     let target = config::resolve_target(&target_name, user_targets)?;
 
-    // In document mode (no _calepin/config.toml), the project root is the
+    // In document mode (no {stem}_calepin/config.toml), the project root is the
     // input file's parent directory so that all paths resolve relative to it.
     let effective_root = project_root.clone().unwrap_or_else(|| abs_input_dir.clone());
 
@@ -129,7 +129,7 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
 
 /// Build the list of extension template directories for layered resolution.
 /// Walks the inheritance chain from the active target up to the root,
-/// collecting `_calepin/extensions/{name}/templates/` directories.
+/// collecting `{stem}_calepin/extensions/{name}/templates/` directories.
 ///
 /// Public alias for use from the collection pipeline.
 pub fn resolve_extension_template_dirs_for(target_name: &str, project_root: &Path) -> Vec<PathBuf> {

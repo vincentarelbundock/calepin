@@ -55,6 +55,6 @@ calepin preview document.qmd          # live reload
 - Chunk options use `#| key = value` (TOML) or `#| key: value` (Quarto-compatible). Names use dashes: `fig-width`, not `fig.width`.
 - Chunk labels go in the header: `{r, my-label}`, never in `#|` comments.
 - Cross-reference prefixes: `@fig-`, `@tbl-`, `@eq-`, `@thm-`, `@sec-`.
-- Templates are Jinja2 files in `_calepin/templates/{writer}/`. Override only what you need; unoverridden files fall through to built-in defaults.
+- Templates are Jinja2 files in `{stem}_calepin/templates/{writer}/`. Override only what you need; unoverridden files fall through to built-in defaults.
 - When referring to the software by name, write *Calepin* (italic, capital C).
 - Never use em or en dashes in documentation or prose.

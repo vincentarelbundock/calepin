@@ -65,7 +65,7 @@ Insert a placeholder image for layout prototyping. Produces an inline SVG in HTM
 
 # Custom functions
 
-Create your own bracketed span functions by adding a template in `_calepin/templates/{engine}/`. For example, to create a `[text]{.highlight}` function, add `_calepin/templates/html/highlight.html`:
+Create your own bracketed span functions by adding a template in `{stem}_calepin/templates/{engine}/`. For example, to create a `[text]{.highlight}` function, add `{stem}_calepin/templates/html/highlight.html`:
 
 ```html
 <mark class="highlight">{{ content }}</mark>

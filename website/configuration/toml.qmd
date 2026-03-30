@@ -4,7 +4,7 @@ title = "Configuration"
 
 *Calepin* keeps configuration minimal. The TOML file handles what needs to be structured data: targets, navigation, and rendering defaults. Everything else (navigation bars, table of contents, font sizes, colors, page layout) is controlled by editing templates and CSS directly. See [Templates](../templates/templates.html) for details.
 
-*Calepin* uses [TOML](https://toml.io) for all configuration. Settings can appear in document front matter (between `---` delimiters) or in `_calepin/config.toml` for collections. Settings are resolved in order, with later values winning: built-in defaults, then `config.toml`, then front matter, then CLI (`-s key=value`).
+*Calepin* uses [TOML](https://toml.io) for all configuration. Settings can appear in document front matter (between `---` delimiters) or in `index_calepin/config.toml` for collections. Settings are resolved in order, with later values winning: built-in defaults, then `config.toml`, then front matter, then CLI (`-s key=value`).
 
 # TOML basics
 
@@ -58,7 +58,7 @@ Settings are resolved in order, with later values overriding earlier ones:
    - `src/config/document.toml`: single-document targets (html, latex, typst, pdf, etc.).
    - `src/config/collection.toml`: collection targets (website, book).
 2. Project config
-   - `_calepin/config.toml`: project-level settings for collections.
+   - `index_calepin/config.toml`: project-level settings for collections.
 3. Sidecar config
    - `{stem}_calepin/config.toml`: per-document overrides.
 4. Document front matter
@@ -196,7 +196,7 @@ target = "website"
 title = "Home"
 ```
 
-A typical `_calepin/config.toml`:
+A typical `index_calepin/config.toml`:
 
 ```toml
 title = "My Site"

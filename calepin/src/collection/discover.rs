@@ -64,7 +64,7 @@ pub struct DocumentInfo {
 
 /// Discover all .qmd documents in the project directory.
 /// Finds every .qmd file under `base_dir`, excluding files matching `config.exclude` patterns
-/// and files inside `_calepin/` or the output directory.
+/// and files inside sidecar directories or the output directory.
 pub fn discover_documents(config: &Metadata, base_dir: &Path, output_ext: &str) -> Result<Vec<DocumentInfo>> {
     let default_lang = config.default_language().map(|s| s.to_string());
     let output_name = config.output.as_deref().unwrap_or(crate::paths::DEFAULT_OUTPUT_DIR);
@@ -84,7 +84,7 @@ pub fn discover_documents(config: &Metadata, base_dir: &Path, output_ext: &str) 
             .to_path_buf();
         let rel_str = rel.display().to_string();
 
-        // Skip sidecar directories (*_calepin/), legacy _calepin/, and output/
+        // Skip sidecar directories (*_calepin/) and output/
         if rel.components().any(|c| {
             let s = c.as_os_str().to_string_lossy();
             s.ends_with("_calepin")
@@ -219,7 +219,7 @@ fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
 // ---------------------------------------------------------------------------
 
 /// Load and validate a project config, returning it as `Metadata`.
-/// Looks for `_calepin/config.toml` in `base_dir`.
+/// Looks for `{stem}_calepin/config.toml` in `base_dir`.
 pub fn load_config(config_path: Option<&Path>, base_dir: &Path) -> Result<(Metadata, PathBuf)> {
     if let Some(path) = config_path {
         let config = crate::config::load_project_metadata(path)?;

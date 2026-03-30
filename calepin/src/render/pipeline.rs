@@ -131,6 +131,9 @@ pub fn render_core(
         inject_extension_vars_for(&mut metadata, &project_root, &ext_name);
     }
 
+    // 3c. Set active template variant selections for template resolution.
+    paths::set_active_tpl(metadata.tpl.clone());
+
     // 4. Expand includes before block parsing (so included code chunks are parsed)
     let body = jinja::expand_includes(&body, &path_ctx.project_root, &format_str);
 
