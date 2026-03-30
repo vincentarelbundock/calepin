@@ -40,11 +40,10 @@
       });
     }
 
-    // Mobile sidebar toggle (falls back to navbar left/middle menu when no sidebar)
+    // Mobile sidebar toggle (falls back to navbar menu when no sidebar)
     var menuBtn = document.getElementById('sidebar-toggle');
     var sidebar = document.querySelector('.sidebar-left');
     var navMenu = document.getElementById('navbar-menu');
-    var navLeft = document.getElementById('navbar-left-menu');
     if (menuBtn) {
       menuBtn.addEventListener('click', function() {
         if (sidebar) {
@@ -54,10 +53,6 @@
         } else if (navMenu) {
           navMenu.classList.toggle('open');
           var isOpen = navMenu.classList.contains('open');
-          menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        } else if (navLeft) {
-          navLeft.classList.toggle('open');
-          var isOpen = navLeft.classList.contains('open');
           menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         }
       });
@@ -115,31 +110,31 @@
       });
     });
 
-    // Navbar auto-hide: disappears on scroll down, reappears on mouse move
-    var navbar = document.querySelector('.navbar');
-    if (navbar) {
+    // Header auto-hide: disappears on scroll down, reappears on mouse move
+    var header = document.querySelector('.site-header');
+    if (header) {
       var lastScroll = 0;
       var hideTimer = null;
-      var navbarHeight = navbar.offsetHeight;
+      var headerHeight = header.offsetHeight;
 
       window.addEventListener('scroll', function() {
         var current = window.scrollY;
-        if (current > navbarHeight && current > lastScroll) {
-          navbar.classList.add('hidden');
+        if (current > headerHeight && current > lastScroll) {
+          header.classList.add('hidden');
         }
         lastScroll = current;
-        if (current <= navbarHeight) {
-          navbar.classList.remove('hidden');
+        if (current <= headerHeight) {
+          header.classList.remove('hidden');
         }
       }, { passive: true });
 
       document.addEventListener('mousemove', function(e) {
-        if (e.clientY < navbarHeight * 2) {
-          navbar.classList.remove('hidden');
+        if (e.clientY < headerHeight * 2) {
+          header.classList.remove('hidden');
           clearTimeout(hideTimer);
           hideTimer = setTimeout(function() {
-            if (window.scrollY > navbarHeight) {
-              navbar.classList.add('hidden');
+            if (window.scrollY > headerHeight) {
+              header.classList.add('hidden');
             }
           }, 1500);
         }

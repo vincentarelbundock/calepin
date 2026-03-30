@@ -288,6 +288,7 @@ impl TransformProject for ExternalProjectTransform {
                                         url: String::new(),
                                         toc: None,
                                         lang: None,
+                                        doc_meta: Default::default(),
                                         metadata: crate::config::Metadata::default(),
                                     });
                                 }

@@ -13,9 +13,15 @@
 </head>
 <body>
   <a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
-  {% include "navbar.html" %}
 
-  <div class="site-container{% if cfg.sidebar is defined and not cfg.sidebar %} no-sidebar{% endif %}{% if cfg.toc is defined and not cfg.toc %} no-toc{% endif %}">
+  <header class="site-header">
+    <div class="site-frame site-topbar">
+      {% include "navbar.html" %}
+    </div>
+    {% block hero %}{% endblock %}
+  </header>
+
+  <div class="site-frame site-body{% if cfg.sidebar is defined and not cfg.sidebar %} no-sidebar{% endif %}{% if cfg.toc is defined and not cfg.toc %} no-toc{% endif %}">
     {% if cfg.sidebar is not defined or cfg.sidebar %}{% include "sidebar.html" %}{% endif %}
 
     <main id="main-content" class="content-main">

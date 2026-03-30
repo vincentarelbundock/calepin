@@ -136,12 +136,14 @@ pub(crate) fn apply_collection_templates(
         let page_depth = crate::utils::links::path_depth(&page.url);
         context::resolve_nav_urls(&mut nav_tree, &base_path, url_mode, page_depth);
 
-        let template_name = if page.meta.listing.is_some() {
-            format!("listing.{}", tpl_ext)
+        let base_name = if page.meta.listing.is_some() { "listing" } else { "main" };
+        let template_name = if let Some(variant) = page.meta.tpl.get(base_name) {
+            format!("{}.{}.{}", base_name, variant, tpl_ext)
         } else {
-            format!("main.{}", tpl_ext)
+            format!("{}.{}", base_name, tpl_ext)
         };
         let tpl = env.get_template(&template_name)
+            .or_else(|_| env.get_template(&format!("{}.{}", base_name, tpl_ext)))
             .with_context(|| format!("Failed to get template {} for {}", template_name, source_key))?;
 
         for (page_idx, (items, pagination)) in paginated.iter().enumerate() {

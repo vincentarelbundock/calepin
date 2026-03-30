@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block hero %}
+<div class="site-frame site-hero">
+  {% if clp.navbar.left and clp.navbar.left[0].icon %}
+  {% elif clp.navbar.left and clp.navbar.left[0].image %}
+    {% if clp.navbar.left[0].image_dark == "invert" %}
+  <img class="invert-dark" src="{{ link(clp.navbar.left[0].image) }}" alt="{{ clp.title or 'Home' }}">
+    {% elif clp.navbar.left[0].image_dark %}
+  <img class="logo-light" src="{{ link(clp.navbar.left[0].image) }}" alt="{{ clp.title or 'Home' }}">
+  <img class="logo-dark" src="{{ link(clp.navbar.left[0].image_dark) }}" alt="{{ clp.title or 'Home' }}">
+    {% else %}
+  <img src="{{ link(clp.navbar.left[0].image) }}" alt="{{ clp.title or 'Home' }}">
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+{{ clp.body | safe }}
+{% endblock %}

@@ -329,26 +329,59 @@ pub fn ensure_chain_templates(dest: &Path) {
     }
 }
 
-/// Flatten a built-in directory into dest, skipping files that already exist.
+/// Flatten a built-in directory into dest.
+///
+/// New files are written. Existing files are updated only if they carry a
+/// hash marker that matches their body (i.e., the user has not edited them).
+/// Modified or marker-less files are left untouched.
 fn flatten_dir_into(dir: &include_dir::Dir<'static>, prefix: &str, dest: &Path) {
     let prefix_path = std::path::Path::new(prefix);
     for file in dir.files() {
         let rel = file.path().strip_prefix(prefix_path).unwrap_or(file.path());
         let out = dest.join(rel);
-        if out.exists() { continue; }
-        if let Some(parent) = out.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        if let Some(content) = file.contents_utf8() {
-            let _ = std::fs::write(&out, prepend_hash_marker(content));
+        let Some(content) = file.contents_utf8() else {
+            // Binary file: write only if missing
+            if !out.exists() {
+                if let Some(parent) = out.parent() { let _ = std::fs::create_dir_all(parent); }
+                let _ = std::fs::write(&out, file.contents());
+            }
+            continue;
+        };
+        let new_marked = prepend_hash_marker(content);
+        if out.exists() {
+            // Check if the local copy is an unmodified built-in
+            if let Ok(local) = std::fs::read_to_string(&out) {
+                if is_unmodified_builtin(&local) {
+                    // Safe to overwrite: update to new built-in version
+                    if local != new_marked {
+                        let _ = std::fs::write(&out, &new_marked);
+                    }
+                }
+                // else: user-modified or no marker -- leave it alone
+            }
         } else {
-            let _ = std::fs::write(&out, file.contents());
+            if let Some(parent) = out.parent() { let _ = std::fs::create_dir_all(parent); }
+            let _ = std::fs::write(&out, &new_marked);
         }
     }
     for subdir in dir.dirs() {
         let sub_rel = subdir.path().strip_prefix(prefix_path).unwrap_or(subdir.path());
         flatten_dir_into(subdir, &subdir.path().display().to_string(), &dest.join(sub_rel));
     }
+}
+
+/// Check whether a local template file is an unmodified copy of a built-in.
+///
+/// Returns true if the file starts with a `{# calepin:xxh3:HASH #}` marker
+/// and the hash matches the body content below it.
+fn is_unmodified_builtin(content: &str) -> bool {
+    use xxhash_rust::xxh3::xxh3_64;
+    let Some(first_line) = content.lines().next() else { return false; };
+    let Some(rest) = first_line.strip_prefix("{# calepin:xxh3:") else { return false; };
+    let Some(marker_hash) = rest.strip_suffix(" #}") else { return false; };
+    let body = content.find('\n').map(|i| &content[i + 1..]).unwrap_or("");
+    let actual_hash = format!("{:016x}", xxh3_64(body.as_bytes()));
+    actual_hash == marker_hash
 }
 
 /// Write an embedded `include_dir::Dir` to disk, preserving subdirectory structure.

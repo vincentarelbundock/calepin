@@ -216,6 +216,7 @@ pub fn build_collection(
                 url: page.url.clone(),
                 toc: result.and_then(|r| r.toc.clone()),
                 lang: page.lang.clone(),
+                doc_meta: page.meta.clone(),
                 metadata: meta.clone(),
             }
         }).collect();

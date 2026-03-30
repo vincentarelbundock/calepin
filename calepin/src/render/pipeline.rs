@@ -257,6 +257,7 @@ pub fn render_page(
         url: String::new(),
         toc,
         lang: None,
+        doc_meta: Default::default(),
         metadata: result.metadata.clone(),
     };
 

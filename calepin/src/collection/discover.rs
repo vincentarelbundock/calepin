@@ -23,6 +23,9 @@ pub struct DocumentMeta {
     /// Non-standard front matter variables (the `var` map), available as `{{ var.* }}` in templates.
     #[serde(skip)]
     pub var: HashMap<String, crate::value::Value>,
+    /// Template variant selections (the `[tpl]` table).
+    #[serde(skip)]
+    pub tpl: HashMap<String, String>,
 }
 
 /// Listing configuration in page frontmatter.
@@ -235,6 +238,7 @@ fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
         listing: None,
         lang: meta.lang,
         var: meta.var,
+        tpl: meta.tpl,
     })
 }
 

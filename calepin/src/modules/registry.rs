@@ -130,29 +130,30 @@ pub struct RenderedPage {
     pub toc: Option<String>,
     /// Page language (for multilingual sites).
     pub lang: Option<String>,
-    /// Full page metadata.
+    /// Per-page document metadata (from frontmatter discovery).
+    pub doc_meta: crate::collection::discover::DocumentMeta,
+    /// Full page metadata (collection-level config merged with per-page).
     pub metadata: crate::config::Metadata,
 }
 
 impl RenderedPage {
     /// Convert to a DocumentInfo for collection functions that need it.
+    ///
+    /// Uses the original per-page DocumentMeta, with title/date/subtitle
+    /// updated from the render result (which may resolve them from headings, etc.).
     pub fn to_document_info(&self) -> crate::collection::discover::DocumentInfo {
+        let mut meta = self.doc_meta.clone();
+        // Render results may update these (e.g., title from first heading)
+        if self.title.is_some() { meta.title = self.title.clone(); }
+        if self.date.is_some() { meta.date = self.date.clone(); }
+        if self.subtitle.is_some() { meta.subtitle = self.subtitle.clone(); }
+        if self.abstract_text.is_some() { meta.r#abstract = self.abstract_text.clone(); }
         crate::collection::discover::DocumentInfo {
             source: self.source.clone(),
             output: self.output.clone(),
             url: self.url.clone(),
-            meta: crate::collection::discover::DocumentMeta {
-                title: self.title.clone(),
-                date: self.date.clone(),
-                subtitle: self.subtitle.clone(),
-                description: None,
-                image: None,
-                r#abstract: self.abstract_text.clone(),
-                listing: None,
-                lang: self.lang.clone(),
-                var: std::collections::HashMap::new(),
-            },
             lang: self.lang.clone(),
+            meta,
         }
     }
 
