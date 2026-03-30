@@ -82,20 +82,6 @@ pub struct LayoutConfig {
     pub rows: Option<usize>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct LabelsConfig {
-    pub abstract_title: Option<String>,
-    pub keywords: Option<String>,
-    pub appendix: Option<String>,
-    pub citation: Option<String>,
-    pub reuse: Option<String>,
-    pub funding: Option<String>,
-    pub copyright: Option<String>,
-    pub listing: Option<String>,
-    pub proof: Option<String>,
-    pub contents: Option<String>,
-}
-
 
 // ---------------------------------------------------------------------------
 // Scholarly front matter: authors & affiliations
@@ -245,7 +231,6 @@ pub struct Metadata {
     pub placeholder: Option<PlaceholderConfig>,
     pub lipsum: Option<LipsumConfig>,
     pub layout: Option<LayoutConfig>,
-    pub labels: Option<LabelsConfig>,
 
     // -- Collection structure --
     pub contents: Vec<super::ContentSection>,

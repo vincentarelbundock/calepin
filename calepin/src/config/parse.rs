@@ -244,7 +244,6 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
                     meta.toc = deserialize_section(v);
                 }
             }
-            "labels" => meta.labels = deserialize_section(v),
             "execute" => meta.execute = deserialize_section(v),
             "figure" => meta.figure = deserialize_section(v),
             "layout" => meta.layout = deserialize_section(v),

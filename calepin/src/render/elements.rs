@@ -309,7 +309,7 @@ impl ElementRenderer {
             if label.starts_with("lst-") {
                 return crate::modules::wrap_listing(
                     label, lst_cap.as_deref(), &rendered, &self.ext,
-                    &self.module_ids, &self.metadata, &self.template_env,
+                    &self.module_ids, &self.template_env,
                     &|name| self.resolve_element_template(name),
                 );
             }
@@ -383,11 +383,12 @@ impl ElementRenderer {
 
 }
 
-/// Resolve an element template from the filesystem.
+/// Resolve an element template from the filesystem, then built-in.
 /// Template names use underscores internally; hyphens are normalized.
-/// Checks sidecar, then project-level templates directory.
+/// Checks sidecar, then project-level templates directory, then built-in.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
     crate::paths::resolve_template(&canonical, ext)
         .and_then(|path| std::fs::read_to_string(&path).ok())
+        .or_else(|| resolve_builtin_template(&canonical, ext).map(|s| s.to_string()))
 }

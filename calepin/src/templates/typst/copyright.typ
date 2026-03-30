@@ -1,2 +1,2 @@
-== {{cfg.label_copyright}}
+== Copyright
 {{cfg.content}}

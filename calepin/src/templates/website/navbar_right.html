@@ -1,5 +1,5 @@
 <ul class="navbar-nav right">
-  {% for item in collection.navbar.right %}
+  {% for item in clp.navbar.right %}
   {% if item.widget == "search" %}
   {% include "widget_search.html" %}
   {% elif item.widget == "source" %}
@@ -7,8 +7,8 @@
   {% elif item.widget == "dark" %}
   {% include "widget_dark.html" %}
   {% elif item.widget == "language" %}
-  {% if document.translations %}
-  {% for t in document.translations %}
+  {% if clp.translations %}
+  {% for t in clp.translations %}
   <li><a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" style="font-size:1.4em;line-height:1">{{ t.flag }}</a></li>
   {% endfor %}
   {% endif %}

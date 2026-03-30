@@ -95,13 +95,6 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     }
 
     let mut sections: Vec<String> = Vec::new();
-    let label_defs = meta.labels.clone();
-    let label = |getter: fn(&crate::config::LabelsConfig) -> Option<String>, default: &str| -> String {
-        label_defs
-            .as_ref()
-            .and_then(|l| getter(l))
-            .unwrap_or_else(|| default.to_string())
-    };
 
     // License
     if let Some(ref lic) = meta.license {
@@ -109,7 +102,6 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
             if let Some(s) = render_section("license", ext, vec![
                 ("text", text.clone()),
                 ("url", lic.url.as_deref().unwrap_or("").to_string()),
-                ("label_reuse", label(|l| l.reuse.clone(), "Reuse")),
             ]) {
                 sections.push(s);
             }
@@ -120,7 +112,6 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref cite) = meta.citation {
         if let Some(s) = render_section("citation", ext, vec![
             ("content", build_citation_text(meta, cite, ext)),
-            ("label_citation", label(|l| l.citation.clone(), "Citation")),
         ]) {
             sections.push(s);
         }
@@ -132,7 +123,6 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         if !text.is_empty() {
             if let Some(s) = render_section("copyright", ext, vec![
                 ("content", text),
-                ("label_copyright", label(|l| l.copyright.clone(), "Copyright")),
             ]) {
                 sections.push(s);
             }
@@ -145,7 +135,6 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         if !items.is_empty() {
             if let Some(s) = render_section("funding", ext, vec![
                 ("items", items),
-                ("label_funding", label(|l| l.funding.clone(), "Funding")),
             ]) {
                 sections.push(s);
             }
@@ -156,7 +145,6 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         String::new()
     } else if let Some(s) = render_section("appendix", ext, vec![
         ("sections", sections.join("\n")),
-        ("label_appendix", label(|l| l.appendix.clone(), "Appendix")),
     ]) {
         s
     } else {

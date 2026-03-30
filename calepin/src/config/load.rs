@@ -571,8 +571,6 @@ writer = "latex"
 [targets.test_typst]
 writer = "typst"
 
-[labels]
-abstract_title = "Summary"
 "#);
         assert_eq!(meta.target.as_deref(), Some("html"));
         assert_eq!(meta.csl.as_deref(), Some("apa"));
@@ -585,7 +583,6 @@ abstract_title = "Summary"
         assert_eq!(meta.layout.as_ref().and_then(|l| l.valign.as_deref()), Some("center"));
         assert_eq!(meta.video.as_ref().and_then(|v| v.width.as_deref()), Some("80%"));
         assert_eq!(meta.lipsum.as_ref().and_then(|l| l.paragraphs), Some(3));
-        assert_eq!(meta.labels.as_ref().and_then(|l| l.abstract_title.as_deref()), Some("Summary"));
         assert_eq!(meta.lang.as_deref(), Some("en"));
         assert_eq!(meta.csl.as_deref(), Some("apa"));
     }

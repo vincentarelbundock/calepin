@@ -86,7 +86,6 @@ impl Metadata {
         self.placeholder = merge_option_struct!(overlay.placeholder, self.placeholder, { width, height, color });
         self.lipsum = merge_option_struct!(overlay.lipsum, self.lipsum, { paragraphs });
         self.layout = merge_option_struct!(overlay.layout, self.layout, { valign, columns, rows });
-        self.labels = merge_option_struct!(overlay.labels, self.labels, { abstract_title, keywords, appendix, citation, reuse, funding, copyright, listing, proof, contents });
 
         // Collection structure
         merge_vec!(contents);

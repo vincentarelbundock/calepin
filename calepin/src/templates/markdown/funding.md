@@ -1,3 +1,3 @@
-## {{cfg.label_funding}}
+## Funding
 
 {{cfg.items}}

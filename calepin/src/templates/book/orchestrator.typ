@@ -1,15 +1,15 @@
 {% include "preamble.typ" %}
 
 #align(center + horizon)[
-  #text(size: 24pt, weight: "bold")[{{meta.title}}]
-  {% if meta.subtitle %}#v(0.8em)
-  #text(size: 14pt)[{{meta.subtitle}}]{% endif %}
+  #text(size: 24pt, weight: "bold")[{{cfg.title}}]
+  {% if cfg.subtitle %}#v(0.8em)
+  #text(size: 14pt)[{{cfg.subtitle}}]{% endif %}
   #v(1em)
-  #text(size: 14pt)[{{meta.author}}]
+  #text(size: 14pt)[{{cfg.author}}]
 ]
 #pagebreak()
 
-#outline(title: "{{cfg.label_contents}}", indent: auto, depth: 2)
+#outline(title: "Contents", indent: auto, depth: 2)
 
 #set page(numbering: "1")
 #counter(page).update(1)

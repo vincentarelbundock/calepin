@@ -1,1 +1,1 @@
-*{{clp.label_proof}}.* {{clp.children}} □
+*Proof.* {{clp.children}} □

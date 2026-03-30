@@ -34,7 +34,6 @@ pub fn render(
     children: &[Element],
     format: &str,
     render_element: &dyn Fn(&Element) -> String,
-    defaults: &crate::config::Metadata,
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
 ) -> String {
     // Find the matching theorem class
@@ -90,11 +89,6 @@ pub fn render(
 
         vars.clp.insert("number".to_string(), num.to_string());
     }
-
-    // Labels for localisable strings
-    let label_defs = defaults.labels.clone();
-    vars.clp.insert("label_proof".to_string(),
-        label_defs.as_ref().and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
 
     // Resolve template: proof -> "proof", italic types -> "theorem_italic", normal -> "theorem_normal"
     let template_name = if theorem_class == "proof" {

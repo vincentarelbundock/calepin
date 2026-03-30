@@ -628,7 +628,7 @@ mod builtin_element_children_fn {
     pub fn theorem(ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::theorem::render(
             ctx.classes, ctx.id, ctx.attrs, ctx.children(), ctx.format,
-            &|el| ctx.render_child(el), ctx.defaults, ctx.module_ids(),
+            &|el| ctx.render_child(el), ctx.module_ids(),
         );
         ModuleResult::Rendered(output)
     }

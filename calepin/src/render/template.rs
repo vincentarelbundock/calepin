@@ -437,25 +437,6 @@ pub fn build_template_vars_with_headings(
     // Language
     vars.cfg.insert("lang".to_string(), defs.lang.as_deref().unwrap_or("en").to_string());
 
-    // Labels (localisable strings)
-    let labels = defs.labels.as_ref();
-    let label_defs: &[(&str, fn(&crate::config::LabelsConfig) -> &Option<String>, &str)] = &[
-        ("label_abstract",  |l| &l.abstract_title, "Abstract"),
-        ("label_keywords",  |l| &l.keywords,       "Keywords"),
-        ("label_appendix",  |l| &l.appendix,       "Appendix"),
-        ("label_citation",  |l| &l.citation,       "Citation"),
-        ("label_reuse",     |l| &l.reuse,          "Reuse"),
-        ("label_funding",   |l| &l.funding,        "Funding"),
-        ("label_copyright", |l| &l.copyright,      "Copyright"),
-        ("label_listing",   |l| &l.listing,        "Listing"),
-        ("label_proof",     |l| &l.proof,          "Proof"),
-        ("label_contents",  |l| &l.contents,       "Contents"),
-    ];
-    for (key, getter, default) in label_defs {
-        let val = labels.and_then(|l| getter(l).clone()).unwrap_or_else(|| default.to_string());
-        vars.cfg.insert(key.to_string(), val);
-    }
-
     // Plain title (used in <title> etc.) -- strip markdown image/link syntax
     let plain_title = meta.title.as_deref().unwrap_or("Untitled");
     let plain_title = strip_markdown_formatting(plain_title);

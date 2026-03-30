@@ -1,7 +1,7 @@
-{% if collection.navbar.left %}
+{% if clp.navbar.left %}
 <ul class="navbar-nav left" id="navbar-left-menu">
-  {% for item in collection.navbar.left %}
-  {% if not item.lang or item.lang == document.lang %}
+  {% for item in clp.navbar.left %}
+  {% if not item.lang or item.lang == clp.lang %}
     {% if item.children %}
       {% for child in item.children %}
   <li>

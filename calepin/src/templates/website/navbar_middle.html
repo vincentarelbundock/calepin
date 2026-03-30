@@ -1,7 +1,7 @@
-{% if collection.navbar.middle %}
+{% if clp.navbar.middle %}
 <ul class="navbar-nav middle" id="navbar-menu">
-  {% for item in collection.navbar.middle %}
-  {% if not item.lang or item.lang == document.lang %}
+  {% for item in clp.navbar.middle %}
+  {% if not item.lang or item.lang == clp.lang %}
     {% if item.children and item.text %}
   <li class="navbar-dropdown">
     <button class="navbar-dropdown-toggle" aria-expanded="false">

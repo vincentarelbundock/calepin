@@ -1,3 +1,3 @@
 {%- if cfg.keywords %}
-#text(weight: "bold")[{{cfg.label_keywords}}:] {{cfg.keywords}}
+#text(weight: "bold")[Keywords:] {{cfg.keywords}}
 {%- endif %}

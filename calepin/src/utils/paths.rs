@@ -537,12 +537,19 @@ pub fn resolve_template(name: &str, writer: &str) -> Option<PathBuf> {
     let p = tpl_dir.join(&generic);
     if p.exists() { return Some(p); }
 
-    // Check extension templates
+    // Check extension templates (target name, then writer name)
     for ext_dir in get_extension_template_dirs() {
         let p = ext_dir.join(target).join(&specific);
         if p.exists() { return Some(p); }
         let p = ext_dir.join(target).join(&generic);
         if p.exists() { return Some(p); }
+        // Also check writer subdirectory (e.g., html/) when target differs
+        if target != writer {
+            let p = ext_dir.join(writer).join(&specific);
+            if p.exists() { return Some(p); }
+            let p = ext_dir.join(writer).join(&generic);
+            if p.exists() { return Some(p); }
+        }
     }
 
     None

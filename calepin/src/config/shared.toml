@@ -65,15 +65,3 @@ valign = "top"
 columns = 1
 rows = 1
 
-[labels]
-abstract_title = "Abstract"
-keywords = "Keywords"
-appendix = "Appendix"
-citation = "Citation"
-reuse = "Reuse"
-funding = "Funding"
-copyright = "Copyright"
-listing = "Listing"
-proof = "Proof"
-contents = "Contents"
-

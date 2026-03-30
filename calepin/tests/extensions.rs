@@ -1,5 +1,5 @@
 //! Integration tests for the extension system.
-//! Verifies that user-installed extensions provide partials, CSS assets,
+//! Verifies that user-installed extensions provide templates, CSS assets,
 //! and vars to the render pipeline.
 
 use std::fs;
@@ -15,13 +15,13 @@ fn calepin_bin() -> &'static Path {
 fn setup_extension_project(qmd_content: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     let dir = tempfile::tempdir().unwrap();
 
-    // _calepin/config.toml -- set the default target to the extension name
-    let calepin_dir = dir.path().join("_calepin");
-    fs::create_dir_all(&calepin_dir).unwrap();
-    fs::write(calepin_dir.join("config.toml"), "target = \"myext\"\n").unwrap();
+    // test_calepin/config.toml -- set the default target to the extension name
+    let sidecar = dir.path().join("test_calepin");
+    fs::create_dir_all(&sidecar).unwrap();
+    fs::write(sidecar.join("config.toml"), "target = \"myext\"\n").unwrap();
 
-    // _calepin/extensions/myext/extension.toml
-    let ext_dir = calepin_dir.join("extensions").join("myext");
+    // test_calepin/extensions/myext/extension.toml
+    let ext_dir = sidecar.join("extensions").join("myext");
     fs::create_dir_all(&ext_dir).unwrap();
     fs::write(ext_dir.join("extension.toml"), r#"
 name = "myext"
@@ -36,7 +36,7 @@ accent = "coral"
 site_name = "Test Site"
 "#).unwrap();
 
-    // _calepin/extensions/myext/assets/custom.css
+    // test_calepin/extensions/myext/assets/custom.css
     let assets_dir = ext_dir.join("assets");
     fs::create_dir_all(&assets_dir).unwrap();
     fs::write(assets_dir.join("custom.css"), r#"
@@ -44,11 +44,11 @@ site_name = "Test Site"
 .myext-footer { border-top: 2px solid coral; }
 "#).unwrap();
 
-    // _calepin/extensions/myext/partials/html/banner.html
-    let partials_dir = ext_dir.join("partials").join("html");
-    fs::create_dir_all(&partials_dir).unwrap();
-    fs::write(partials_dir.join("banner.html"),
-        "<div class=\"myext-banner\">{{ calepin.children }}</div>\n"
+    // test_calepin/extensions/myext/templates/html/banner.html
+    let tpl_dir = ext_dir.join("templates").join("html");
+    fs::create_dir_all(&tpl_dir).unwrap();
+    fs::write(tpl_dir.join("banner.html"),
+        "<div class=\"myext-banner\">{{ clp.children }}</div>\n"
     ).unwrap();
 
     // Write the .qmd file
@@ -110,7 +110,7 @@ fn extension_css_injected_in_style_tag() {
 #[test]
 fn extension_vars_available_in_body() {
     let (dir, qmd) = setup_extension_project(
-        "---\ntitle = \"Vars Test\"\n---\n\nAccent is {{ config.myext.accent }} and site is {{ config.myext.site_name }}.\n",
+        "---\ntitle = \"Vars Test\"\n---\n\nAccent is {{ cfg.myext.accent }} and site is {{ cfg.myext.site_name }}.\n",
     );
     let html = render_in_project(dir.path(), &qmd, "myext");
 
@@ -127,7 +127,7 @@ fn extension_vars_available_in_body() {
 }
 
 // ---------------------------------------------------------------------------
-// Extension custom partial
+// Extension custom template
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -139,7 +139,7 @@ fn extension_partial_used_for_div() {
 
     assert!(
         html.contains("myext-banner"),
-        "extension partial should produce .myext-banner class in output: {}",
+        "extension template should produce .myext-banner class in output: {}",
         html
     );
     assert!(
@@ -180,7 +180,7 @@ fn user_vars_override_extension_vars() {
     // User sets [myext] table in front matter; unknown top-level keys become
     // metadata.var entries, which block extension var injection for that key.
     let (dir, qmd) = setup_extension_project(
-        "---\ntitle = \"Override Test\"\n\n[myext]\naccent = \"navy\"\n---\n\nAccent is {{ config.myext.accent }}.\n",
+        "---\ntitle = \"Override Test\"\n\n[myext]\naccent = \"navy\"\n---\n\nAccent is {{ cfg.myext.accent }}.\n",
     );
     let html = render_in_project(dir.path(), &qmd, "myext");
 
@@ -192,19 +192,19 @@ fn user_vars_override_extension_vars() {
 }
 
 // ---------------------------------------------------------------------------
-// Extension with vars used in custom partial
+// Extension with vars used in custom template
 // ---------------------------------------------------------------------------
 
 #[test]
 fn extension_vars_available_in_partial() {
     let dir = tempfile::tempdir().unwrap();
 
-    // Set up extension with a partial that references a var
-    let calepin_dir = dir.path().join("_calepin");
-    fs::create_dir_all(&calepin_dir).unwrap();
-    fs::write(calepin_dir.join("config.toml"), "target = \"themed\"\n").unwrap();
+    // Set up extension with a template that references a var
+    let sidecar = dir.path().join("test_calepin");
+    fs::create_dir_all(&sidecar).unwrap();
+    fs::write(sidecar.join("config.toml"), "target = \"themed\"\n").unwrap();
 
-    let ext_dir = calepin_dir.join("extensions").join("themed");
+    let ext_dir = sidecar.join("extensions").join("themed");
     fs::create_dir_all(&ext_dir).unwrap();
     fs::write(ext_dir.join("extension.toml"), r#"
 name = "themed"
@@ -215,10 +215,10 @@ inherits = "html"
 brand_color = "rebeccapurple"
 "#).unwrap();
 
-    let partials_dir = ext_dir.join("partials").join("html");
-    fs::create_dir_all(&partials_dir).unwrap();
-    fs::write(partials_dir.join("note.html"),
-        "<div class=\"note\" style=\"border-color: {{ config.themed.brand_color }}\">{{ calepin.children }}</div>\n"
+    let tpl_dir = ext_dir.join("templates").join("html");
+    fs::create_dir_all(&tpl_dir).unwrap();
+    fs::write(tpl_dir.join("note.html"),
+        "<div class=\"note\" style=\"border-color: {{ cfg.themed.brand_color }}\">{{ clp.children }}</div>\n"
     ).unwrap();
 
     let qmd = dir.path().join("test.qmd");
@@ -228,7 +228,7 @@ brand_color = "rebeccapurple"
 
     assert!(
         html.contains("rebeccapurple"),
-        "extension var should be available in extension partial: {}",
+        "extension var should be available in extension template: {}",
         html
     );
     assert!(
@@ -245,11 +245,11 @@ brand_color = "rebeccapurple"
 fn extension_multiple_css_files() {
     let dir = tempfile::tempdir().unwrap();
 
-    let calepin_dir = dir.path().join("_calepin");
-    fs::create_dir_all(&calepin_dir).unwrap();
-    fs::write(calepin_dir.join("config.toml"), "target = \"multicss\"\n").unwrap();
+    let sidecar = dir.path().join("test_calepin");
+    fs::create_dir_all(&sidecar).unwrap();
+    fs::write(sidecar.join("config.toml"), "target = \"multicss\"\n").unwrap();
 
-    let ext_dir = calepin_dir.join("extensions").join("multicss");
+    let ext_dir = sidecar.join("extensions").join("multicss");
     fs::create_dir_all(&ext_dir).unwrap();
     fs::write(ext_dir.join("extension.toml"), r#"
 name = "multicss"

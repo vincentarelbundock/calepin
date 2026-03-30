@@ -13,7 +13,6 @@ pub fn wrap_listing(
     rendered_code: &str,
     format: &str,
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
-    metadata: &crate::config::Metadata,
     template_env: &crate::render::template::TemplateEnv,
     resolve_template: &dyn Fn(&str) -> Option<String>,
 ) -> String {
@@ -24,14 +23,10 @@ pub fn wrap_listing(
     let num = count + 1;
     module_ids.borrow_mut().insert(label.to_string(), num.to_string());
 
-    let label_defs = metadata.labels.clone();
     let mut vars = TemplateVars::with_writer(format);
     vars.clp.insert("label".to_string(), label.to_string());
     vars.clp.insert("number".to_string(), num.to_string());
     vars.clp.insert("content".to_string(), rendered_code.to_string());
-    vars.clp.insert("label_listing".to_string(),
-        label_defs.as_ref().and_then(|l| l.listing.clone())
-            .unwrap_or_else(|| "Listing".to_string()));
     if let Some(cap) = lst_cap {
         vars.cfg.insert("lst_cap".to_string(), cap.to_string());
     }

@@ -162,25 +162,36 @@ pub(crate) fn apply_collection_templates(
                 crate::config::build_jinja_vars(&merged)
             };
 
+            // Build a merged `clp` namespace from collection + document + engine vars.
+            let mut clp_map = serde_json::Map::new();
+            // Collection-level fields
+            if let Ok(serde_json::Value::Object(m)) = serde_json::to_value(&context::CollectionContext {
+                title: collection_ctx.title.clone(),
+                subtitle: collection_ctx.subtitle.clone(),
+                url: collection_ctx.url.clone(),
+                base_path: collection_ctx.base_path.clone(),
+                favicon: collection_ctx.favicon.clone(),
+                navbar: resolved_navbar,
+                pages: nav_tree.clone(),
+                languages: collection_ctx.languages.clone(),
+                dark_mode: collection_ctx.dark_mode,
+                math: collection_ctx.math.clone(),
+            }) {
+                clp_map.extend(m);
+            }
+            // Document-level fields (override collection where names collide)
+            if let Ok(serde_json::Value::Object(m)) = serde_json::to_value(&doc_ctx) {
+                clp_map.extend(m);
+            }
+            // Engine-computed
+            clp_map.insert("css".to_string(), serde_json::Value::String(
+                crate::render::template::load_default_css(),
+            ));
+            let clp_val = minijinja::Value::from_serialize(&clp_map);
             let collection_with_active = minijinja::context! {
-                clp => minijinja::context! {
-                    css => crate::render::template::load_default_css(),
-                },
+                clp => clp_val,
                 _page_depth => page_depth,
-                collection => context::CollectionContext {
-                    title: collection_ctx.title.clone(),
-                    subtitle: collection_ctx.subtitle.clone(),
-                    url: collection_ctx.url.clone(),
-                    base_path: collection_ctx.base_path.clone(),
-                    favicon: collection_ctx.favicon.clone(),
-                    navbar: resolved_navbar,
-                    pages: nav_tree.clone(),
-                    languages: collection_ctx.languages.clone(),
-                    dark_mode: collection_ctx.dark_mode,
-                    math: collection_ctx.math.clone(),
-                },
-                document => doc_ctx,
-                var => page_var_ctx,
+                cfg => page_var_ctx,
             };
 
             let rendered = tpl.render(&collection_with_active)

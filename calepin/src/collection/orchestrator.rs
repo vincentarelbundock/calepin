@@ -57,15 +57,12 @@ pub(crate) fn render_orchestrator(
 
     let var_ctx = crate::config::build_jinja_vars(&meta.var);
 
-    let label_defs = meta.labels.as_ref();
-
     let ctx = minijinja::context! {
         meta => meta_ctx,
         var => var_ctx,
         pages => nav_nodes,
         format => format,
         base => format,
-        label_contents => label_defs.and_then(|l| l.contents.as_deref()).unwrap_or("Contents"),
     };
 
     // Collect all template sources into an owned map for the loader.

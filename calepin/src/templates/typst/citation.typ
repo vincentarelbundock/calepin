@@ -1,2 +1,2 @@
-== {{cfg.label_citation}}
+== Citation
 {{cfg.content}}

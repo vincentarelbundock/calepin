@@ -1,3 +1,3 @@
-## {{cfg.label_reuse}}
+## Reuse
 
 {% if cfg.url %}[{{cfg.text}}]({{cfg.url}}){% else %}{{cfg.text}}{% endif %}
