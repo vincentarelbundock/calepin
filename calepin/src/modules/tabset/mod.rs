@@ -51,8 +51,7 @@ pub fn render(
     let group = attrs.get("group").map(|s| s.as_str()).unwrap_or("");
 
     // Build template variables
-    let mut vars = TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), format.to_string());
+    let mut vars = TemplateVars::with_writer(format);
     vars.config.insert("group".to_string(), group.to_string());
 
     // Pre-render nav items and tab panes as HTML strings

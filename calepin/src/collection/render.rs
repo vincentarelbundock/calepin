@@ -145,8 +145,7 @@ fn render_one_document(
         let pipeline = crate::render::formats::FormatPipeline::from_writer(format)?;
         let body = pipeline.transform_document(&result.rendered, &result.element_renderer);
         let toc = if format == "html" && result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
-            let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;
-            let title = result.metadata.toc.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents");
+            let (depth, title) = result.metadata.toc_depth_title();
             let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
             if toc_html.is_empty() { None } else { Some(toc_html) }
         } else {
@@ -312,8 +311,7 @@ fn render_one_document_pass1(
     let body = pipeline.transform_document(&result.rendered, &result.element_renderer);
 
     let toc = if result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
-        let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;
-        let title = result.metadata.toc.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents");
+        let (depth, title) = result.metadata.toc_depth_title();
         let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
         if toc_html.is_empty() { None } else { Some(toc_html) }
     } else {

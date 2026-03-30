@@ -112,7 +112,7 @@ impl FormatEmitter for LatexEmitter {
         rendered_content: &str,
         _section_number: Option<&str>,
     ) -> String {
-        let is_unnumbered = attrs.classes.iter().any(|c| c == "unnumbered" || c == "unlisted");
+        let is_unnumbered = attrs.is_unnumbered();
 
         let mut out = rendered_content.to_string();
 

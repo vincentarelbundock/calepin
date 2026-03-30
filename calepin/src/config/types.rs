@@ -51,6 +51,11 @@ pub struct TocConfig {
     pub title: Option<String>,
 }
 
+impl TocConfig {
+    pub fn depth_or_default(&self) -> u32 { self.depth.unwrap_or(3) }
+    pub fn title_or_default(&self) -> &str { self.title.as_deref().unwrap_or("Contents") }
+}
+
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct VideoConfig {
     pub width: Option<String>,
@@ -278,6 +283,14 @@ impl Metadata {
                 self.date = Some(resolved);
             }
         }
+    }
+
+    /// Return TOC depth and title with defaults applied.
+    pub fn toc_depth_title(&self) -> (u8, &str) {
+        let toc = self.toc.as_ref();
+        let depth = toc.map(|t| t.depth_or_default()).unwrap_or(3) as u8;
+        let title = toc.map(|t| t.title_or_default()).unwrap_or("Contents");
+        (depth, title)
     }
 
     /// Return the date formatted for display, applying `date_format` if set

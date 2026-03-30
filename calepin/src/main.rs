@@ -85,9 +85,7 @@ fn main() -> Result<()> {
             cli::flush::handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
         }
         Command::Init { action } => match action {
-            cli::InitAction::Notebook { path, target } => cli::new_notebook::handle_new_notebook(&path, target.as_deref()),
-            cli::InitAction::Website { dir, target } => cli::new_website::handle_new_website(&dir, &target),
-            cli::InitAction::Book { dir } => cli::new_book::handle_new_book(&dir),
+            cli::InitAction::New { path, scaffold, extension } => cli::scaffold::handle_init_new(&path, scaffold.as_deref(), extension.as_deref()),
             cli::InitAction::Extension { name, inherits } => cli::new_extension::handle_new_extension(&name, &inherits),
             cli::InitAction::Sidecar { path, force, partials, target, dry_run, no_backup } => {
                 cli::init_sidecar::handle_init_sidecar(&path, force, partials, target.as_deref(), dry_run, no_backup)

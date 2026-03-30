@@ -4,14 +4,13 @@ pub mod args;
 pub mod flush;
 pub mod info;
 pub mod init_sidecar;
-pub mod new_book;
 pub mod new_extension;
 pub mod new_gibberish;
-pub mod new_notebook;
 pub mod new_partials;
-pub mod new_website;
 pub mod preview;
 pub mod render;
+pub mod scaffold;
 pub mod skill;
+pub mod tree;
 
 pub use args::*;

@@ -12,7 +12,7 @@ It also means that *Calepin* projects are super LLM-friendly. Just ask your agen
 
 > Go to the `_calepin/partials` folder. Switch all the colors to a Studio Ghibli inspired pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
 
-{% include "source_tip" %}
+{% include "assets/source_tip.html" %}
 
 # Jinja2
 

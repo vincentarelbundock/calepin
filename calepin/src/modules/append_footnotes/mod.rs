@@ -153,8 +153,7 @@ pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
         footnote_items.push_str(&format!("<li id=\"fn-{}\">\n{}\n</li>\n", id, body));
     }
 
-    let mut vars = TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), "html".to_string());
+    let mut vars = TemplateVars::with_writer("html");
     vars.calepin.insert("footnotes".to_string(), "true".to_string());
     vars.calepin.insert("footnote_items".to_string(), footnote_items);
     let tpl = include_str!("../../partials/html/footnotes.html");
@@ -165,6 +164,16 @@ pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
 // TransformDocument: inject footnote section into assembled page
 // ---------------------------------------------------------------------------
 
+/// Insert `content` before the first matching tag, or append at end.
+fn insert_before_tag(document: &str, content: &str, tags: &[&str]) -> String {
+    for tag in tags {
+        if let Some(pos) = document.find(tag) {
+            return format!("{}{}\n{}", &document[..pos], content, &document[pos..]);
+        }
+    }
+    format!("{}{}", document, content)
+}
+
 pub struct AppendFootnotes;
 
 impl TransformDocument for AppendFootnotes {
@@ -173,13 +182,6 @@ impl TransformDocument for AppendFootnotes {
         if footnotes.is_empty() {
             return document.to_string();
         }
-        // Insert before </main> or </body> or append at end
-        if let Some(pos) = document.find("</main>") {
-            format!("{}{}\n{}", &document[..pos], footnotes, &document[pos..])
-        } else if let Some(pos) = document.find("</body>") {
-            format!("{}{}\n{}", &document[..pos], footnotes, &document[pos..])
-        } else {
-            format!("{}{}", document, footnotes)
-        }
+        insert_before_tag(document, &footnotes, &["</main>", "</body>"])
     }
 }

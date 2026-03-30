@@ -6,6 +6,20 @@ use anyhow::Context;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 
+/// Run a glob pattern, returning matching paths. Logs a warning and returns
+/// an empty iterator on pattern compilation error.
+pub fn safe_glob(pattern: &str) -> glob::Paths {
+    glob::glob(pattern).unwrap_or_else(|e| {
+        cwarn!("invalid glob pattern '{}': {}", pattern, e);
+        glob::glob("").unwrap()
+    })
+}
+
+/// Canonicalize a path, falling back to the original path on error.
+pub fn try_canonicalize(path: &Path) -> std::path::PathBuf {
+    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
 /// HTML-escape the minimal set of characters for safe embedding.
 pub fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")

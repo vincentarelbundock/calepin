@@ -53,6 +53,28 @@ pub struct ExtensionManifest {
     /// Module declarations.
     #[serde(default)]
     pub modules: Vec<ExtensionModule>,
+    /// Scaffold declarations (document, website, book).
+    #[serde(default)]
+    pub scaffold: ExtensionScaffolds,
+}
+
+/// Scaffold declarations in an extension manifest.
+/// Keys are scaffold names (e.g., "website", "book", "document").
+pub type ExtensionScaffolds = HashMap<String, ScaffoldInfo>;
+
+/// Metadata for a scaffold declaration.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ScaffoldInfo {
+    /// Project kind: "collection" (directory project) or "document" (single .qmd).
+    #[serde(default = "default_scaffold_kind")]
+    pub kind: String,
+    /// Short description of what this scaffold creates.
+    #[serde(default)]
+    pub description: String,
+}
+
+fn default_scaffold_kind() -> String {
+    "collection".to_string()
 }
 
 /// Target definition within an extension manifest.
@@ -204,12 +226,16 @@ impl ExtensionManifest {
         Some(extension_target_to_target(et))
     }
 
-    /// Return all named targets defined by this extension.
-    pub fn named_targets(&self) -> Vec<(String, Target)> {
-        self.targets.iter()
-            .map(|(name, et)| (name.clone(), extension_target_to_target(et)))
-            .collect()
+    /// Check if this extension provides a scaffold with the given name.
+    pub fn has_scaffold(&self, name: &str) -> bool {
+        self.scaffold.contains_key(name)
     }
+
+    /// Get scaffold info by name.
+    pub fn get_scaffold(&self, name: &str) -> Option<&ScaffoldInfo> {
+        self.scaffold.get(name)
+    }
+
 }
 
 // ---------------------------------------------------------------------------
@@ -219,12 +245,16 @@ impl ExtensionManifest {
 /// Discover installed extensions in `_calepin/extensions/`.
 #[allow(dead_code)]
 pub fn discover_extensions(project_root: &Path) -> Vec<(String, PathBuf)> {
-    let extensions_dir = project_root.join("_calepin").join("extensions");
+    discover_extensions_in(&project_root.join("_calepin").join("extensions"))
+}
+
+/// Discover extensions in an arbitrary directory.
+pub fn discover_extensions_in(extensions_dir: &Path) -> Vec<(String, PathBuf)> {
     if !extensions_dir.is_dir() {
         return Vec::new();
     }
     let mut found = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(&extensions_dir) {
+    if let Ok(entries) = std::fs::read_dir(extensions_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() && path.join("extension.toml").exists() {
@@ -314,9 +344,13 @@ pub fn walk_chain<T>(
             current = manifest.inherits.clone();
             continue;
         }
-        // Check named targets in installed extensions
-        let extensions = discover_extensions(project_root);
-        for (_ext_name, ext_path) in &extensions {
+        // Check named targets in installed extensions (sidecar then project)
+        let sidecar_exts = sidecar_ext_dir.as_ref()
+            .map(|d| discover_extensions_in(d))
+            .unwrap_or_default();
+        let project_exts = discover_extensions(project_root);
+        let all_extensions: Vec<_> = sidecar_exts.iter().chain(project_exts.iter()).collect();
+        for (_ext_name, ext_path) in all_extensions {
             if let Some(manifest) = load_cached(ext_path) {
                 if let Some(et) = manifest.targets.get(&name) {
                     // Include the owning extension's partials/assets
@@ -435,6 +469,32 @@ pub fn builtin_extension(name: &str) -> Option<ExtensionManifest> {
     BUILTIN_EXTENSIONS.iter()
         .find(|(n, _)| *n == name)
         .and_then(|(_, content)| toml::from_str(content).ok())
+}
+
+// ---------------------------------------------------------------------------
+// Built-in scaffolds (embedded at compile time)
+// ---------------------------------------------------------------------------
+
+use include_dir::{include_dir, Dir};
+
+/// Built-in scaffold directories, embedded from extensions that declare scaffolds.
+/// Each entry is `(extension_name, scaffold_name, embedded_dir)`.
+pub static BUILTIN_SCAFFOLDS: &[(&str, &str, &Dir<'static>)] = &[
+    ("website", "website", &SCAFFOLD_WEBSITE),
+    ("book", "book", &SCAFFOLD_BOOK),
+    ("html", "document", &SCAFFOLD_DOCUMENT),
+];
+
+static SCAFFOLD_WEBSITE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/website/scaffold/website");
+static SCAFFOLD_BOOK: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/book/scaffold/book");
+static SCAFFOLD_DOCUMENT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/html/scaffold/document");
+
+/// Look up a built-in scaffold by name (e.g., "website", "book", "document").
+/// Returns the extension name and the embedded directory.
+pub fn builtin_scaffold(name: &str) -> Option<(&'static str, &'static Dir<'static>)> {
+    BUILTIN_SCAFFOLDS.iter()
+        .find(|(_, n, _)| *n == name)
+        .map(|(ext, _, dir)| (*ext, *dir))
 }
 
 // ---------------------------------------------------------------------------

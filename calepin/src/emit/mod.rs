@@ -49,6 +49,13 @@ pub struct HeadingAttrs {
     pub classes: Vec<String>,
 }
 
+impl HeadingAttrs {
+    /// Whether this heading has the `unnumbered` or `unlisted` class.
+    pub fn is_unnumbered(&self) -> bool {
+        self.classes.iter().any(|c| c == "unnumbered" || c == "unlisted")
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Structured metadata collected during the AST walk
 // ---------------------------------------------------------------------------
@@ -271,6 +278,15 @@ pub fn walk_and_render_with_metadata(
 // Walker state
 // ---------------------------------------------------------------------------
 
+/// State for an in-progress footnote definition being collected.
+#[derive(Default)]
+struct FootnoteDefState {
+    active: bool,
+    buf: String,
+    id: usize,
+    name: String,
+}
+
 struct WalkState {
     heading_content_start: Option<usize>,
     heading_level: u8,
@@ -293,10 +309,8 @@ struct WalkState {
     footnote_text: HashMap<String, String>,
     /// Collected rendered footnote defs (for CollectToSection strategy).
     footnote_defs: Vec<(usize, String)>,
-    in_footnote_def: bool,
-    footnote_def_buf: String,
-    footnote_def_id: usize,
-    footnote_def_name: String,
+    /// Active footnote definition being collected.
+    footnote_def: FootnoteDefState,
 
     skip_image_text: bool,
     image_alt: String,
@@ -410,10 +424,7 @@ fn walk_ast(emitter: &dyn FormatEmitter, markdown: &str, options: &WalkOptions) 
         footnote_ref_names,
         footnote_text,
         footnote_defs: Vec::new(),
-        in_footnote_def: false,
-        footnote_def_buf: String::new(),
-        footnote_def_id: 0,
-        footnote_def_name: String::new(),
+        footnote_def: FootnoteDefState::default(),
         skip_image_text: false,
         image_alt: String::new(),
         pending_image: None,
@@ -480,13 +491,13 @@ fn emit_entering(
         if let Some(img) = s.pending_image.take() {
             let empty_attrs = ImageAttrs::empty();
             let rendered = e.image(&img.url, &img.alt, &empty_attrs);
-            if s.in_footnote_def { s.footnote_def_buf.push_str(&rendered); }
+            if s.footnote_def.active { s.footnote_def.buf.push_str(&rendered); }
             else { out.push_str(&rendered); }
         }
     }
 
     // Route output to footnote buffer if collecting a def
-    let buf = if s.in_footnote_def { &mut s.footnote_def_buf } else { out };
+    let buf = if s.footnote_def.active { &mut s.footnote_def.buf } else { out };
 
     match val {
         NodeValue::Document => {}
@@ -597,15 +608,15 @@ fn emit_entering(
                 }
                 FootnoteStrategy::CollectToSection => {
                     let id = s.footnote_ids.get(&def.name).copied().unwrap_or(0);
-                    s.in_footnote_def = true;
-                    s.footnote_def_buf.clear();
-                    s.footnote_def_id = id;
-                    s.footnote_def_name = def.name.clone();
+                    s.footnote_def.active = true;
+                    s.footnote_def.buf.clear();
+                    s.footnote_def.id = id;
+                    s.footnote_def.name = def.name.clone();
                 }
                 FootnoteStrategy::InlineAtRef => {
                     // Skip def entirely; content was pre-collected
-                    s.in_footnote_def = true;
-                    s.footnote_def_buf.clear();
+                    s.footnote_def.active = true;
+                    s.footnote_def.buf.clear();
                 }
             }
         }
@@ -635,7 +646,7 @@ fn emit_leaving(
     out: &mut String,
     s: &mut WalkState,
 ) {
-    let buf = if s.in_footnote_def { &mut s.footnote_def_buf } else { out };
+    let buf = if s.footnote_def.active { &mut s.footnote_def.buf } else { out };
 
     match val {
         NodeValue::BlockQuote => buf.push_str(e.blockquote_close()),
@@ -664,8 +675,7 @@ fn emit_leaving(
                 let (attrs, clean_content) = parse_heading_attrs(raw, &rendered);
 
                 // Section numbering
-                let section_number = if s.number_sections
-                    && !attrs.classes.iter().any(|c| c == "unnumbered" || c == "unlisted")
+                let section_number = if s.number_sections && !attrs.is_unnumbered()
                 {
                     let depth = (level as usize).saturating_sub(s.min_heading_level);
                     if depth < 6 {
@@ -753,19 +763,19 @@ fn emit_leaving(
                     // in this Text block (not globally-appended defs from other blocks).
                     // Deduplicate by ID to avoid double-collecting when global defs
                     // duplicate a def already present in this block.
-                    let id = s.footnote_def_id;
-                    if s.footnote_ref_names.contains(&s.footnote_def_name)
+                    let id = s.footnote_def.id;
+                    if s.footnote_ref_names.contains(&s.footnote_def.name)
                         && !s.footnote_defs.iter().any(|(existing_id, _)| *existing_id == id)
                     {
-                        let content = s.footnote_def_buf.clone();
+                        let content = s.footnote_def.buf.clone();
                         s.footnote_defs.push((id, content));
                     }
-                    s.in_footnote_def = false;
-                    s.footnote_def_buf.clear();
+                    s.footnote_def.active = false;
+                    s.footnote_def.buf.clear();
                 }
                 FootnoteStrategy::InlineAtRef => {
-                    s.in_footnote_def = false;
-                    s.footnote_def_buf.clear();
+                    s.footnote_def.active = false;
+                    s.footnote_def.buf.clear();
                 }
             }
         }

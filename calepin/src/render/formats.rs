@@ -68,6 +68,15 @@ impl FormatPipeline {
         })
     }
 
+    /// Build a pipeline from a target (if available) or a writer name.
+    pub fn from_target_or_writer(target: Option<&Target>, writer: &str) -> Result<Self> {
+        if let Some(t) = target {
+            Self::from_target(t)
+        } else {
+            Self::from_writer(writer)
+        }
+    }
+
     /// Build a pipeline from just a writer name, using built-in target defaults.
     pub fn from_writer(writer: &str) -> Result<Self> {
         let target = crate::config::resolve_target(writer, &std::collections::HashMap::new())?;

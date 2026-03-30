@@ -32,27 +32,24 @@ pub fn render(
     render_element: &dyn Fn(&Element) -> String,
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
 ) -> String {
-    let children_rendered: String = children.iter()
-        .map(render_element)
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("\n\n");
+    let children_rendered = super::render_children(children, render_element);
 
-    let mut vars = TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), format.to_string());
+    let mut vars = TemplateVars::with_writer(format);
     vars.calepin.insert("children".to_string(), children_rendered);
     vars.config.insert("classes".to_string(), classes.join(" "));
 
     if let Some(ref id_val) = id {
         vars.config.insert("id".to_string(), id_val.clone());
 
-        // Register ID for cross-referencing
+        // Register ID for cross-referencing (uses synthetic counter key)
         for cls in classes {
             if let Some(prefix) = callout_prefix(cls) {
-                let ids = module_ids.borrow();
-                let count = ids.keys().filter(|k| k.starts_with(prefix)).count();
-                drop(ids);
-                module_ids.borrow_mut().insert(id_val.clone(), (count + 1).to_string());
+                let counter_key = format!("__callout_count:{}", prefix);
+                let mut ids = module_ids.borrow_mut();
+                let prev = ids.get(&counter_key).and_then(|v| v.parse::<usize>().ok()).unwrap_or(0);
+                let num = prev + 1;
+                ids.insert(counter_key, num.to_string());
+                ids.insert(id_val.clone(), num.to_string());
                 break;
             }
         }

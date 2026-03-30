@@ -87,8 +87,7 @@ fn build_toc_list_html(items: &[(u8, &str, &str)]) -> String {
 fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String {
     let toc_list = build_toc_list_html(items);
     if toc_list.is_empty() { return String::new(); }
-    let mut vars = TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), "html".to_string());
+    let mut vars = TemplateVars::with_writer("html");
     vars.config.insert("title".to_string(), title.to_string());
     vars.calepin.insert("toc_list".to_string(), toc_list);
     vars.config.insert("depth".to_string(), String::new());
@@ -212,6 +211,13 @@ impl TemplateVars {
             config: HashMap::new(),
             calepin: HashMap::new(),
         }
+    }
+
+    /// Create a new TemplateVars with the writer already set.
+    pub fn with_writer(writer: &str) -> Self {
+        let mut vars = Self::new();
+        vars.calepin.insert("writer".to_string(), writer.to_string());
+        vars
     }
 }
 
@@ -425,16 +431,22 @@ pub fn build_template_vars_with_headings(
 
     // Labels (localisable strings)
     let labels = defs.labels.as_ref();
-    vars.config.insert("label_abstract".to_string(), labels.and_then(|l| l.abstract_title.clone()).unwrap_or_else(|| "Abstract".to_string()));
-    vars.config.insert("label_keywords".to_string(), labels.and_then(|l| l.keywords.clone()).unwrap_or_else(|| "Keywords".to_string()));
-    vars.config.insert("label_appendix".to_string(), labels.and_then(|l| l.appendix.clone()).unwrap_or_else(|| "Appendix".to_string()));
-    vars.config.insert("label_citation".to_string(), labels.and_then(|l| l.citation.clone()).unwrap_or_else(|| "Citation".to_string()));
-    vars.config.insert("label_reuse".to_string(), labels.and_then(|l| l.reuse.clone()).unwrap_or_else(|| "Reuse".to_string()));
-    vars.config.insert("label_funding".to_string(), labels.and_then(|l| l.funding.clone()).unwrap_or_else(|| "Funding".to_string()));
-    vars.config.insert("label_copyright".to_string(), labels.and_then(|l| l.copyright.clone()).unwrap_or_else(|| "Copyright".to_string()));
-    vars.config.insert("label_listing".to_string(), labels.and_then(|l| l.listing.clone()).unwrap_or_else(|| "Listing".to_string()));
-    vars.config.insert("label_proof".to_string(), labels.and_then(|l| l.proof.clone()).unwrap_or_else(|| "Proof".to_string()));
-    vars.config.insert("label_contents".to_string(), labels.and_then(|l| l.contents.clone()).unwrap_or_else(|| "Contents".to_string()));
+    let label_defs: &[(&str, fn(&crate::config::LabelsConfig) -> &Option<String>, &str)] = &[
+        ("label_abstract",  |l| &l.abstract_title, "Abstract"),
+        ("label_keywords",  |l| &l.keywords,       "Keywords"),
+        ("label_appendix",  |l| &l.appendix,       "Appendix"),
+        ("label_citation",  |l| &l.citation,       "Citation"),
+        ("label_reuse",     |l| &l.reuse,          "Reuse"),
+        ("label_funding",   |l| &l.funding,        "Funding"),
+        ("label_copyright", |l| &l.copyright,      "Copyright"),
+        ("label_listing",   |l| &l.listing,        "Listing"),
+        ("label_proof",     |l| &l.proof,          "Proof"),
+        ("label_contents",  |l| &l.contents,       "Contents"),
+    ];
+    for (key, getter, default) in label_defs {
+        let val = labels.and_then(|l| getter(l).clone()).unwrap_or_else(|| default.to_string());
+        vars.config.insert(key.to_string(), val);
+    }
 
     // Plain title (used in <title> etc.) -- strip markdown image/link syntax
     let plain_title = meta.title.as_deref().unwrap_or("Untitled");
@@ -518,15 +530,13 @@ pub fn build_template_vars_with_headings(
     let toc_cfg = meta.toc.as_ref();
     let toc_enabled = toc_cfg.and_then(|t| t.enabled).unwrap_or(ext == "html");
     if toc_enabled {
-        let toc_depth = toc_cfg.and_then(|t| t.depth).unwrap_or(3) as u8;
-        let toc_title = toc_cfg.and_then(|t| t.title.as_deref()).unwrap_or("Contents");
+        let (toc_depth, toc_title) = meta.toc_depth_title();
         let toc = if ext == "html" {
             // HTML: build nested list in Rust, wrap with template
             build_toc_html(headings, toc_depth, toc_title)
         } else {
             // LaTeX, Typst, others: use the toc template directly
-            let mut toc_vars = TemplateVars::new();
-            toc_vars.calepin.insert("writer".to_string(), ext.to_string());
+            let mut toc_vars = TemplateVars::with_writer(ext);
             toc_vars.config.insert("title".to_string(), toc_title.to_string());
             toc_vars.config.insert("depth".to_string(), toc_depth.to_string());
             toc_vars.calepin.insert("toc_list".to_string(), String::new());
@@ -653,7 +663,7 @@ pub fn render_page_template(
         if !dir.is_dir() { continue; }
         let pattern = dir.join("**").join("*.*");
         let pattern_str = pattern.display().to_string();
-        for entry in glob::glob(&pattern_str).unwrap_or_else(|_| glob::glob("").unwrap()) {
+        for entry in crate::util::safe_glob(&pattern_str) {
             if let Ok(path) = entry {
                 if !path.is_file() { continue; }
                 if let Ok(content) = std::fs::read_to_string(&path) {

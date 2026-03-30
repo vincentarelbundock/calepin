@@ -53,8 +53,7 @@ pub fn render(
         .join("\n\n");
 
     // Build template vars
-    let mut vars = crate::render::template::TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), format.to_string());
+    let mut vars = crate::render::template::TemplateVars::with_writer(format);
     vars.calepin.insert("children".to_string(), children_rendered);
     vars.config.insert("label".to_string(), id_val.to_string());
     vars.config.insert("id".to_string(), id_val.to_string());
@@ -79,11 +78,7 @@ pub fn render(
 }
 
 fn render_children(children: &[Element], render_element: &dyn Fn(&Element) -> String) -> String {
-    children.iter()
-        .map(render_element)
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("\n\n")
+    super::render_children(children, render_element)
 }
 
 // ---------------------------------------------------------------------------

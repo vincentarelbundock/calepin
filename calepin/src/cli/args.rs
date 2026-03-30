@@ -153,33 +153,25 @@ pub struct PreviewArgs {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum InitAction {
-    /// Scaffold a .qmd notebook with its sidecar directory
-    Notebook {
-        /// Path for the new .qmd file
-        #[arg(default_value = "notebook.qmd")]
+    /// Create a new project or document from a scaffold
+    #[command(after_help = "\
+\x1B[1;4mExamples:\x1B[0m
+  calepin init new my-site                          # website (default)
+  calepin init new my-site --scaffold book          # book project
+  calepin init new handout.qmd                      # single document
+  calepin init new my-site --extension ./tufte      # from extension scaffold")]
+    New {
+        /// Project directory or .qmd file path
+        #[arg(default_value = "website")]
         path: std::path::PathBuf,
 
-        /// Target extension to apply (e.g., website, minimal)
+        /// Scaffold name (default: inferred from path -- "website" for directories, "document" for .qmd files)
         #[arg(long)]
-        target: Option<String>,
-    },
+        scaffold: Option<String>,
 
-    /// Scaffold a website project
-    Website {
-        /// Directory name for the new website
-        #[arg(default_value = "website")]
-        dir: std::path::PathBuf,
-
-        /// Target extension (e.g., website, minimal)
-        #[arg(long, default_value = "default")]
-        target: String,
-    },
-
-    /// Scaffold a book project
-    Book {
-        /// Directory name for the new book
-        #[arg(default_value = "book")]
-        dir: std::path::PathBuf,
+        /// Use scaffold from an extension directory
+        #[arg(long)]
+        extension: Option<String>,
     },
 
     /// Scaffold a new extension
@@ -349,17 +341,6 @@ pub enum ExtraAction {
         #[arg(short = 'y', long)]
         yes: bool,
     },
-}
-
-/// Returns true if the input is a collection config file (_calepin/config.toml).
-pub fn is_collection_config(path: &std::path::Path) -> bool {
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if name == "config.toml" {
-        if let Some(parent) = path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()) {
-            return parent == "_calepin";
-        }
-    }
-    false
 }
 
 /// Find the project config file in a directory.

@@ -2,6 +2,8 @@ name = "website"
 description = "Multi-page website"
 inherits = "html"
 
+[scaffold.website]
+
 [target]
 embed_resources = false
 modules = ["highlight", "append_footnotes", "embed_images"]

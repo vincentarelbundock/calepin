@@ -152,33 +152,13 @@ pub fn evaluate(
             Block::Code(chunk) => {
                 // Merge document-level defaults from front matter var into chunk options.
                 // Resolution order: chunk #| options > front matter var > _calepin/config.toml defaults.
-                // Only merge keys that look like chunk options (contain a dot or match known names).
-                static CHUNK_OPT_PREFIXES: &[&str] = &[
-                    "echo", "eval", "include", "warning", "message", "results", "cache",
-                    "fig_", "out_", "comment", "dev", "dpi", "label",
-                ];
                 let mut merged_chunk = chunk.clone();
                 merged_chunk.options.metadata = metadata.clone();
                 for (key, val) in &metadata.var {
                     let opt_key = crate::util::normalize_key(key);
-                    let is_chunk_opt = CHUNK_OPT_PREFIXES.iter().any(|p| opt_key.starts_with(p));
-                    if is_chunk_opt && !merged_chunk.options.inner.contains_key(&opt_key) {
-                        let inserted = if let Some(s) = val.as_str() {
-                            merged_chunk.options.inner.insert(opt_key.clone(), OptionValue::String(s.to_string()));
-                            true
-                        } else if let Some(b) = val.as_bool() {
-                            merged_chunk.options.inner.insert(opt_key.clone(), OptionValue::Bool(b));
-                            true
-                        } else if let Some(n) = val.as_floating_point() {
-                            merged_chunk.options.inner.insert(opt_key.clone(), OptionValue::String(n.to_string()));
-                            true
-                        } else if let Some(n) = val.as_integer() {
-                            merged_chunk.options.inner.insert(opt_key.clone(), OptionValue::String(n.to_string()));
-                            true
-                        } else {
-                            false
-                        };
-                        if inserted {
+                    if !merged_chunk.options.inner.contains_key(&opt_key) {
+                        if let Some(ov) = value_to_option_value(val) {
+                            merged_chunk.options.inner.insert(opt_key.clone(), ov);
                             merged_chunk.options.defaults_keys.insert(opt_key);
                         }
                     }
@@ -385,6 +365,21 @@ pub fn evaluate_inline(engine: &str, expr: &str, ctx: &mut EngineContext) -> Res
             session.evaluate_inline(expr)
         }
         _ => Err(anyhow::anyhow!("Unknown inline engine: {}", engine)),
+    }
+}
+
+/// Convert a metadata Value to a ChunkOptions OptionValue, if possible.
+fn value_to_option_value(val: &crate::value::Value) -> Option<OptionValue> {
+    if let Some(s) = val.as_str() {
+        Some(OptionValue::String(s.to_string()))
+    } else if let Some(b) = val.as_bool() {
+        Some(OptionValue::Bool(b))
+    } else if let Some(n) = val.as_floating_point() {
+        Some(OptionValue::String(n.to_string()))
+    } else if let Some(n) = val.as_integer() {
+        Some(OptionValue::String(n.to_string()))
+    } else {
+        None
     }
 }
 

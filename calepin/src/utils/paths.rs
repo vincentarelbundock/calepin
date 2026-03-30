@@ -33,13 +33,12 @@ pub enum ProjectKind {
 }
 
 impl ProjectKind {
-    /// Discover the project kind from a path.
+    /// Discover the project kind from a `.qmd` file or directory.
     ///
-    /// Accepted inputs:
-    /// - A `.qmd` file -> `Document`
-    /// - A sidecar `{stem}_calepin/config.toml` (with a sibling `{stem}.qmd`) -> `Document`
-    /// - A directory containing `_calepin/config.toml` -> `Collection`
-    /// - A bare `_calepin/config.toml` path -> `Collection`
+    /// - `.qmd` file in a directory with `_calepin/config.toml` -> `Collection`
+    /// - `.qmd` file without -> `Document`
+    /// - Directory with `index.qmd` -> recurse
+    /// - Directory without `index.qmd` -> error
     pub fn discover(path: &Path) -> Result<Self> {
         let path = if path.is_relative() {
             normalize_path(&std::env::current_dir()
@@ -49,68 +48,45 @@ impl ProjectKind {
             normalize_path(path)
         };
 
-        // Case 1: .qmd file
-        if path.extension().and_then(|e| e.to_str()) == Some("qmd") {
-            if !path.exists() {
-                bail!("File not found: {}", path.display());
-            }
-            let stem = path.file_stem().unwrap().to_string_lossy();
-            let parent = path.parent().unwrap_or(Path::new("."));
-            let sidecar = parent.join(format!("{}_calepin", stem));
-            return Ok(ProjectKind::Document { qmd: path, sidecar });
-        }
-
-        // Case 2: config.toml file -- could be sidecar or collection
-        if path.file_name().and_then(|n| n.to_str()) == Some("config.toml") {
-            if let Some(parent) = path.parent() {
-                let parent_name = parent.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
-
-                // Collection: parent is _calepin
-                if parent_name == "_calepin" {
-                    let root = parent.parent().unwrap_or(Path::new("."));
-                    return Ok(ProjectKind::Collection {
-                        root: root.to_path_buf(),
-                        config: path.to_path_buf(),
-                    });
-                }
-
-                // Sidecar: parent is {stem}_calepin
-                if let Some(stem) = parent_name.strip_suffix("_calepin") {
-                    let grandparent = parent.parent().unwrap_or(Path::new("."));
-                    let qmd = grandparent.join(format!("{}.qmd", stem));
-                    if qmd.exists() {
-                        return Ok(ProjectKind::Document {
-                            qmd,
-                            sidecar: parent.to_path_buf(),
-                        });
-                    }
-                    bail!(
-                        "Sidecar config found at {} but no matching {}.qmd",
-                        path.display(), stem
-                    );
-                }
-            }
-            bail!("Unexpected config.toml location: {}", path.display());
-        }
-
-        // Case 3: directory
+        // Directory: look for index.qmd
         if path.is_dir() {
-            let config = calepin_dir(&path, &[]).join("config.toml");
-            if config.exists() {
-                return Ok(ProjectKind::Collection {
-                    root: path.to_path_buf(),
-                    config,
-                });
+            let index = path.join("index.qmd");
+            if index.exists() {
+                return Self::discover(&index);
             }
             bail!(
-                "No calepin project found at {}. Run `calepin init` first or specify a .qmd file.",
+                "No index.qmd found in {}. Create one or specify a .qmd file.",
                 path.display()
             );
         }
 
-        bail!("Cannot determine project kind for: {}", path.display());
+        // Must be a .qmd file
+        if path.extension().and_then(|e| e.to_str()) != Some("qmd") {
+            bail!("Expected a .qmd file, got: {}", path.display());
+        }
+        if !path.exists() {
+            bail!("File not found: {}", path.display());
+        }
+
+        let parent = path.parent().unwrap_or(Path::new("."));
+
+        // Collection: parent has _calepin/config.toml with [[contents]]
+        let config = calepin_dir(parent, &[]).join("config.toml");
+        if config.exists() {
+            if let Ok(text) = std::fs::read_to_string(&config) {
+                if text.contains("[[contents]]") {
+                    return Ok(ProjectKind::Collection {
+                        root: parent.to_path_buf(),
+                        config,
+                    });
+                }
+            }
+        }
+
+        // Single document
+        let stem = path.file_stem().unwrap().to_string_lossy();
+        let sidecar = parent.join(format!("{}_calepin", stem));
+        Ok(ProjectKind::Document { qmd: path, sidecar })
     }
 
     /// The directory where `_calepin/` (collection) or sidecar lives.

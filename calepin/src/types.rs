@@ -74,6 +74,13 @@ pub enum OptionValue {
     Null,
 }
 
+/// Generate `pub fn name(&self) -> Option<String>` accessors that delegate to `get_opt_string`.
+macro_rules! chunk_opt_string {
+    ($($name:ident),+ $(,)?) => {
+        $(pub fn $name(&self) -> Option<String> { self.get_opt_string(stringify!($name)) })+
+    };
+}
+
 impl ChunkOptions {
     pub fn get_bool(&self, key: &str, default: bool) -> bool {
         match self.inner.get(key) {
@@ -205,22 +212,12 @@ impl ChunkOptions {
             if v > 0.0 && v <= 1.0 { Some(v) } else { None }
         }
     }
-    pub fn fig_cap(&self) -> Option<String> { self.get_opt_string("fig_cap") }
-    pub fn tbl_cap(&self) -> Option<String> { self.get_opt_string("tbl_cap") }
-    pub fn lst_cap(&self) -> Option<String> { self.get_opt_string("lst_cap") }
-    pub fn fig_alt(&self) -> Option<String> { self.get_opt_string("fig_alt") }
+    chunk_opt_string!(fig_cap, tbl_cap, lst_cap, fig_alt);
     pub fn dev(&self) -> String {
         let default = self.metadata.figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
         self.get_string("dev", &default)
     }
-    pub fn fig_align(&self) -> Option<String> { self.get_opt_string("fig_align") }
-    pub fn fig_scap(&self) -> Option<String> { self.get_opt_string("fig_scap") }
-    pub fn fig_env(&self) -> Option<String> { self.get_opt_string("fig_env") }
-    pub fn fig_pos(&self) -> Option<String> { self.get_opt_string("fig_pos") }
-    pub fn fig_cap_location(&self) -> Option<String> { self.get_opt_string("fig_cap_location") }
-    pub fn out_width(&self) -> Option<String> { self.get_opt_string("out_width") }
-    pub fn out_height(&self) -> Option<String> { self.get_opt_string("out_height") }
-    pub fn fig_link(&self) -> Option<String> { self.get_opt_string("fig_link") }
+    chunk_opt_string!(fig_align, fig_scap, fig_env, fig_pos, fig_cap_location, out_width, out_height, fig_link);
 
     /// Build figure rendering attributes from chunk options.
     pub fn to_figure_attrs(&self) -> FigureAttrs {

@@ -78,12 +78,14 @@ impl Target {
 // Validation
 // ---------------------------------------------------------------------------
 
+/// Valid writer names.
+pub const VALID_WRITERS: &[&str] = &["html", "latex", "typst", "markdown"];
+
 impl Target {
     /// Validate a target's fields. Returns a descriptive error on failure.
     pub fn validate(&self) -> Result<()> {
-        match self.writer.as_str() {
-            "html" | "latex" | "typst" | "markdown" => {}
-            other => bail!("writer must be one of: html, latex, typst, markdown (got '{}')", other),
+        if !VALID_WRITERS.contains(&self.writer.as_str()) {
+            bail!("writer must be one of: {} (got '{}')", VALID_WRITERS.join(", "), self.writer);
         }
         if let Some(ref ext) = self.extension {
             validate_extension(ext, "extension")?;
@@ -135,12 +137,14 @@ fn resolve_one(
     }
 
     let target = targets.get(name)
-        .or_else(|| super::builtin_metadata().targets.get(name))
+        .cloned()
+        .or_else(|| super::builtin_metadata().targets.get(name).cloned())
+        .or_else(|| resolve_extension_target(name).ok().flatten())
+        .or_else(|| super::extension::builtin_extension(name).map(|m| m.to_target()))
         .ok_or_else(|| anyhow::anyhow!(
             "target '{}' not found (referenced in inherits chain: {})",
             name, chain.join(" -> "),
-        ))?
-        .clone();
+        ))?;
 
     if let Some(ref parent_name) = target.inherits {
         chain.push(name.to_string());
@@ -195,10 +199,13 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
         return Ok(merge_with_builtin(&target));
     }
 
-    // 3. Named targets in installed extensions
+    // 3. Named targets in installed extensions (sidecar then project)
     let project_root = crate::paths::get_project_root();
-    let extensions = super::extension::discover_extensions(&project_root);
-    for (_ext_name, ext_path) in &extensions {
+    let sidecar_extensions = crate::paths::get_sidecar_root()
+        .map(|s| super::extension::discover_extensions_in(&s.join("extensions")))
+        .unwrap_or_default();
+    let project_extensions = super::extension::discover_extensions(&project_root);
+    for (_ext_name, ext_path) in sidecar_extensions.iter().chain(project_extensions.iter()) {
         if let Some(manifest) = super::extension::load_cached(ext_path) {
             if let Some(target) = manifest.named_target(name) {
                 return Ok(merge_with_builtin(&resolve_with_inheritance(name, target)?));

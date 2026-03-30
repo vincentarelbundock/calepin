@@ -36,7 +36,7 @@ pub fn watch(path: &Path, stop: Arc<AtomicBool>, on_change: impl Fn()) -> Result
     debouncer.watch(watch_dir, RecursiveMode::NonRecursive)
         .with_context(|| format!("Failed to watch {}", watch_dir.display()))?;
 
-    let watch_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let watch_path = crate::util::try_canonicalize(path);
 
     loop {
         match rx.recv_timeout(Duration::from_millis(200)) {

@@ -25,7 +25,7 @@ pub fn load_templates_with_url(base_dir: &Path, target_name: &str, base_path: &s
     if dir.is_dir() {
         let pattern = dir.join("**").join("*.*");
         let pattern_str = pattern.display().to_string();
-        for entry in glob::glob(&pattern_str).unwrap_or_else(|_| glob::glob("").unwrap()) {
+        for entry in crate::util::safe_glob(&pattern_str) {
             if let Ok(path) = entry {
                 if !path.is_file() { continue; }
                 if let Ok(content) = std::fs::read_to_string(&path) {

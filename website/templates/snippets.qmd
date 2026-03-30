@@ -83,13 +83,13 @@ The included file can contain anything a normal `.qmd` file can: prose, code chu
 
 ## Including partials
 
-Without a file extension, `{% include %}` looks up a partial from `_calepin/partials/`:
+With a file extension, `{% include %}` resolves relative to the project root:
 
 ```
-{% include "source_tip" %}
+{% include "assets/source_tip.html" %}
 ```
 
-This resolves to the appropriate format-specific partial (e.g., `_calepin/partials/html/source_tip.html`).
+Without a file extension, it looks up a partial from `_calepin/partials/` using format-aware resolution (e.g., `_calepin/partials/html/source_tip.html`).
 
 
 # Jinja in code chunks

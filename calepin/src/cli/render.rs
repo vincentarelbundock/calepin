@@ -12,53 +12,37 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
         overrides.push("highlight-style=none".to_string());
     }
 
-    // Single input: use ProjectKind discovery for directories and config files
+    // Single input: discover project kind
     if args.input.len() == 1 {
         use crate::paths::ProjectKind;
         let input = &args.input[0];
 
-        // Try ProjectKind discovery for directories and config.toml paths
-        if input.is_dir() || input.file_name().and_then(|n| n.to_str()) == Some("config.toml") {
-            if let Ok(kind) = ProjectKind::discover(input) {
-                match kind {
-                    ProjectKind::Collection { config, root } => {
-                        if !args.quiet {
-                            eprintln!("  \x1b[36mconfig:\x1b[0m {}", config.display());
+        match ProjectKind::discover(input)? {
+            ProjectKind::Collection { config, root } => {
+                let output = args.output.unwrap_or_else(|| {
+                    let meta = crate::config::load_project_metadata(&config).ok();
+                    crate::paths::output_dir(&root, meta.as_ref().and_then(|m| m.output.as_deref()))
+                });
+                return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref(), args.portable, false);
+            }
+            ProjectKind::Document { qmd, .. } => {
+                // Multi-format: split comma-separated formats and render each
+                if let Some(ref fmt_str) = args.format {
+                    if fmt_str.contains(',') {
+                        let formats: Vec<&str> = fmt_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+                        for f in &formats {
+                            let mut ctx = crate::resolve_context(&qmd, Some(f))?;
+                            crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
+                            render_one_with_context(&qmd, None, &ctx, &overrides, args.quiet)?;
                         }
-                        let output = args.output.unwrap_or_else(|| {
-                            let meta = crate::config::load_project_metadata(&config).ok();
-                            crate::paths::output_dir(&root, meta.as_ref().and_then(|m| m.output.as_deref()))
-                        });
-                        return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref(), args.portable, false);
-                    }
-                    ProjectKind::Document { qmd, .. } => {
-                        // Sidecar config.toml: render the discovered .qmd
-                        let mut ctx = crate::resolve_context(&qmd, args.format.as_deref())?;
-                        crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
-                        return render_one_with_context(&qmd, args.output.as_deref(), &ctx, &overrides, args.quiet);
+                        return Ok(());
                     }
                 }
+                let mut ctx = crate::resolve_context(&qmd, args.format.as_deref())?;
+                crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
+                return render_one_with_context(&qmd, args.output.as_deref(), &ctx, &overrides, args.quiet);
             }
         }
-    }
-
-    // Single .qmd file: may use -o as output file path
-    if args.input.len() == 1 {
-        // Multi-format: split comma-separated formats and render each
-        if let Some(ref fmt_str) = args.format {
-            if fmt_str.contains(',') {
-                let formats: Vec<&str> = fmt_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
-                for f in &formats {
-                    let mut ctx = crate::resolve_context(&args.input[0], Some(f))?;
-                    crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
-                    render_one_with_context(&args.input[0], None, &ctx, &overrides, args.quiet)?;
-                }
-                return Ok(());
-            }
-        }
-        let mut ctx = crate::resolve_context(&args.input[0], args.format.as_deref())?;
-        crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
-        return render_one_with_context(&args.input[0], args.output.as_deref(), &ctx, &overrides, args.quiet);
     }
 
     // Multiple files: render in parallel.
@@ -219,31 +203,28 @@ pub fn run_target_post_commands(
             .replace("{input}", &output.display().to_string())
             .replace("{output}", &output.display().to_string())
             .replace("{root}", &project_root.display().to_string());
-
-        if !quiet {
-            eprintln!("  \x1b[36mpost:\x1b[0m {}", cmd);
-        }
-
-        let result = std::process::Command::new("sh")
-            .arg("-c")
-            .arg(&cmd)
-            .current_dir(project_root)
-            .output();
-
-        match result {
-            Ok(out) => {
-                if !out.status.success() {
-                    let stderr = String::from_utf8_lossy(&out.stderr);
-                    cwarn!("post command failed: {}", cmd);
-                    if !stderr.trim().is_empty() {
-                        eprintln!("  {}", stderr.trim());
-                    }
-                }
-            }
-            Err(e) => {
-                cwarn!("failed to run post command: {}: {}", cmd, e);
-            }
-        }
+        run_shell_command(&cmd, project_root, quiet);
     }
     Ok(())
+}
+
+/// Run a single shell command, printing status and warnings.
+pub fn run_shell_command(cmd: &str, working_dir: &Path, quiet: bool) {
+    if !quiet {
+        eprintln!("  \x1b[36mpost:\x1b[0m {}", cmd);
+    }
+    match std::process::Command::new("sh").arg("-c").arg(cmd).current_dir(working_dir).output() {
+        Ok(out) => {
+            if !out.status.success() {
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                cwarn!("post command failed: {}", cmd);
+                if !stderr.trim().is_empty() {
+                    eprintln!("  {}", stderr.trim());
+                }
+            }
+        }
+        Err(e) => {
+            cwarn!("failed to run post command: {}: {}", cmd, e);
+        }
+    }
 }

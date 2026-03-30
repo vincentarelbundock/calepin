@@ -163,7 +163,9 @@ pub(crate) fn apply_collection_partials(
             };
 
             let collection_with_active = minijinja::context! {
-                css => crate::render::template::load_default_css(),
+                calepin => minijinja::context! {
+                    css => crate::render::template::load_default_css(),
+                },
                 _page_depth => page_depth,
                 collection => context::CollectionContext {
                     title: collection_ctx.title.clone(),

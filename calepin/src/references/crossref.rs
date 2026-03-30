@@ -95,24 +95,29 @@ fn renumber_with_chapter(local_num: &str, chapter: usize) -> String {
 /// All cross-referenceable prefixes (used in regex patterns).
 const REF_PREFIXES: &str = "fig|sec|tbl|eq|thm|lem|cor|prp|cnj|def|exm|exr|sol|rem|alg|lst|tip|nte|wrn|imp|cau";
 
+/// A reference ID pattern: one of the known prefixes followed by `-` and an identifier.
+/// Reused across all crossref regex patterns to avoid repeating the prefix list.
+static REF_ID: LazyLock<String> = LazyLock::new(|| {
+    format!(r"(?:{})-[-a-zA-Z0-9_]+", REF_PREFIXES)
+});
+
 // Cached regex patterns for cross-reference resolution.
 // References use @prefix-label syntax (Quarto-compatible).
-// The prefix is captured separately from the label.
 static RE_REF_SUPPRESS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"\[-@((?:{})-[-a-zA-Z0-9_]+)\]", REF_PREFIXES)).unwrap()
+    Regex::new(&format!(r"\[-@({})\]", *REF_ID)).unwrap()
 });
 static RE_REF_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"\[@((?:{})-[-a-zA-Z0-9_]+)\]", REF_PREFIXES)).unwrap()
+    Regex::new(&format!(r"\[@({})\]", *REF_ID)).unwrap()
 });
 /// Grouped bracketed references: [@fig-one; @fig-two; @fig-three]
 static RE_REF_GROUPED: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"\[(@(?:{})-[-a-zA-Z0-9_]+(?:\s*;\s*@(?:{})-[-a-zA-Z0-9_]+)+)\]",
-        REF_PREFIXES, REF_PREFIXES
+        r"\[(@{}(?:\s*;\s*@{})+)\]",
+        *REF_ID, *REF_ID
     )).unwrap()
 });
 static RE_REF_BARE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"@((?:{})-[-a-zA-Z0-9_]+)", REF_PREFIXES)).unwrap()
+    Regex::new(&format!(r"@({})", *REF_ID)).unwrap()
 });
 // HTML-specific
 static RE_HTML_HEADING: LazyLock<Regex> = LazyLock::new(|| {
@@ -138,10 +143,10 @@ static RE_LATEX_FIG: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\\label\{fig-([^}]+)\}").unwrap()
 });
 static RE_LATEX_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"\{{(\[)\}}(-?@(?:{})-[-a-zA-Z0-9_]+)\{{(\])\}}", REF_PREFIXES)).unwrap()
+    Regex::new(&format!(r"\{{(\[)\}}(-?@{})\{{(\])\}}", *REF_ID)).unwrap()
 });
 static RE_LATEX_SUPPRESS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"\[-@((?:{})-[-a-zA-Z0-9_]+)\]", REF_PREFIXES)).unwrap()
+    Regex::new(&format!(r"\[-@({})\]", *REF_ID)).unwrap()
 });
 // Plain/Typst-specific
 static RE_PLAIN_FIG_TYPST: LazyLock<Regex> = LazyLock::new(|| {
@@ -160,10 +165,10 @@ static RE_PLAIN_HEADING: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?m)^(=+|#+)\s+(.+?)(?:\s+<([^>]+)>)?$").unwrap()
 });
 static RE_PLAIN_SUPPRESS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"\\?\[-@((?:{})-[-a-zA-Z0-9_]+)\\?\]", REF_PREFIXES)).unwrap()
+    Regex::new(&format!(r"\\?\[-@({})\\?\]", *REF_ID)).unwrap()
 });
 static RE_PLAIN_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"\\?\[@((?:{})-[-a-zA-Z0-9_]+)\\?\]", REF_PREFIXES)).unwrap()
+    Regex::new(&format!(r"\\?\[@({})\\?\]", *REF_ID)).unwrap()
 });
 
 /// Compute hierarchical section number from counters.

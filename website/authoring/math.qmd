@@ -6,7 +6,7 @@ title = "Math"
 
 # Inline and display math
 
-{% include "source_tip" %}
+{% include "assets/source_tip.html" %}
 
 Inline math is enclosed in single dollar signs: $a^2 + b^2 = c^2$.
 

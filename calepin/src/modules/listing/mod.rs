@@ -25,8 +25,7 @@ pub fn wrap_listing(
     module_ids.borrow_mut().insert(label.to_string(), num.to_string());
 
     let label_defs = metadata.labels.clone();
-    let mut vars = TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), format.to_string());
+    let mut vars = TemplateVars::with_writer(format);
     vars.calepin.insert("label".to_string(), label.to_string());
     vars.calepin.insert("number".to_string(), num.to_string());
     vars.calepin.insert("content".to_string(), rendered_code.to_string());

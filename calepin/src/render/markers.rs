@@ -231,15 +231,20 @@ pub fn protect_math(text: &str) -> (String, Vec<String>) {
     (protected, expressions)
 }
 
-/// Restore math expressions from markers.
-pub fn restore_math(text: &str, expressions: &[String]) -> String {
+/// Restore indexed markers using a regex and a fragment list.
+fn restore_indexed_markers(text: &str, re: &Regex, fragments: &[String]) -> String {
     if !text.contains(MS) {
         return text.to_string();
     }
-    RE_MATH.replace_all(text, |caps: &regex::Captures| {
+    re.replace_all(text, |caps: &regex::Captures| {
         let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
-        expressions.get(idx).cloned().unwrap_or_default()
+        fragments.get(idx).cloned().unwrap_or_default()
     }).to_string()
+}
+
+/// Restore math expressions from markers.
+pub fn restore_math(text: &str, expressions: &[String]) -> String {
+    restore_indexed_markers(text, &RE_MATH, expressions)
 }
 
 /// Resolve equation labels: wrap display math + label in format-specific containers.
@@ -299,13 +304,7 @@ fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> 
 
 /// Resolve raw span markers (`R` type) to their content.
 pub fn resolve_raw(text: &str, fragments: &[String]) -> String {
-    if !text.contains(MS) {
-        return text.to_string();
-    }
-    RE_RAW.replace_all(text, |caps: &regex::Captures| {
-        let idx: usize = caps[1].parse().unwrap_or(usize::MAX);
-        fragments.get(idx).cloned().unwrap_or_default()
-    }).to_string()
+    restore_indexed_markers(text, &RE_RAW, fragments)
 }
 
 // ---------------------------------------------------------------------------

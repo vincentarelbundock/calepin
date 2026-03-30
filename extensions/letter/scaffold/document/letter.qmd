@@ -1,0 +1,30 @@
+---
+target = "letter-pdf-typst"
+
+from_name = "Prof. Jane Doe"
+from_address = """
+Department of Statistics
+University of Anytown
+123 Main Street
+Anytown, ST 12345"""
+to_name = "Dr. John Smith"
+to_address = """
+Department of Biostatistics
+Institute of Public Health
+456 Oak Avenue
+Othertown, ST 67890"""
+date = "March 29, 2026"
+salutation = "Dear Dr. Smith,"
+subject = "Letter of recommendation for Ms. Alice Martin"
+closing = "Sincerely,"
+signature_name = "Jane Doe"
+signature_title = "Professor of Statistics"
+---
+
+I am writing to recommend Ms. Alice Martin for the position of Research Scientist in your laboratory. I have known Alice for over three years, first as her instructor in Advanced Statistical Methods and subsequently as her doctoral thesis supervisor.
+
+During her time in our program, Alice demonstrated an exceptional ability to formulate research questions, design rigorous experiments, and communicate findings clearly to both specialist and general audiences. Her thesis on causal inference in observational studies was among the strongest I have supervised in the past decade.
+
+Beyond her technical skills, Alice is a generous collaborator who contributed meaningfully to the work of several other students in the lab. She organized our weekly reading group and mentored two incoming graduate students through their first year.
+
+I recommend her without reservation. Please feel free to contact me if you require any additional information.

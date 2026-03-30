@@ -1,6 +1,9 @@
 name = "html"
 description = "HTML document output"
 
+[scaffold.document]
+kind = "document"
+
 [target]
 writer = "html"
 template = "page"

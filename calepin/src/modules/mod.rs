@@ -66,6 +66,15 @@ pub fn prefix_for_class(class: &str) -> Option<&'static str> {
         .or_else(|| callout::callout_prefix(class))
 }
 
+/// Render child elements, joining non-empty results with double newlines.
+pub fn render_children(children: &[crate::types::Element], render_element: &dyn Fn(&crate::types::Element) -> String) -> String {
+    children.iter()
+        .map(render_element)
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
 /// List all built-in syntax highlighting theme names.
 pub fn list_builtin_themes() -> Vec<&'static str> {
     let mut names: Vec<&str> = highlight::BUILTIN_THEMES.files()

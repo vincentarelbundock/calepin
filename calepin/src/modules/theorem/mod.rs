@@ -56,8 +56,7 @@ pub fn render(
         .collect::<Vec<_>>()
         .join("\n\n");
 
-    let mut vars = TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), format.to_string());
+    let mut vars = TemplateVars::with_writer(format);
     vars.calepin.insert("children".to_string(), children_rendered);
     vars.config.insert("classes".to_string(), classes.join(" "));
     vars.calepin.insert("type_class".to_string(), theorem_class.clone());
@@ -111,9 +110,5 @@ pub fn render(
 }
 
 fn render_children(children: &[Element], render_element: &dyn Fn(&Element) -> String) -> String {
-    children.iter()
-        .map(render_element)
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("\n\n")
+    super::render_children(children, render_element)
 }

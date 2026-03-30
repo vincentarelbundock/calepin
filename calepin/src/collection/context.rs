@@ -12,6 +12,11 @@ use super::render::CollectionRenderResult;
 use super::contents::{DocumentNode, expand_contents_for_lang, expand_includes};
 use crate::config::{ContentSection, Metadata, LanguageConfig, NavbarConfig};
 
+/// Build a lookup map from source path string to DocumentInfo.
+fn pages_to_map(pages: &[DocumentInfo]) -> HashMap<String, &DocumentInfo> {
+    pages.iter().map(|p| (p.source.display().to_string(), p)).collect()
+}
+
 /// Collection-level context available to all templates as `{{ collection.* }}`.
 #[derive(Debug, Serialize)]
 pub struct CollectionContext {
@@ -152,10 +157,7 @@ fn resolve_navbar_includes(
     pages: &[DocumentInfo],
     base_dir: &std::path::Path,
 ) -> NavbarConfig {
-    let document_map: std::collections::HashMap<String, &DocumentInfo> = pages
-        .iter()
-        .map(|p| (p.source.display().to_string(), p))
-        .collect();
+    let document_map = pages_to_map(pages);
 
     fn resolve_items(
         items: &[ContentSection],
@@ -286,10 +288,7 @@ pub fn build_nav_tree_for_lang(
 
 /// Build the navigation tree from expanded DocumentNodes, resolving titles from page metadata.
 fn build_nav_tree(nodes: &[DocumentNode], pages: &[DocumentInfo]) -> Vec<NavNode> {
-    let document_map: HashMap<String, &DocumentInfo> = pages
-        .iter()
-        .map(|p| (p.source.display().to_string(), p))
-        .collect();
+    let document_map = pages_to_map(pages);
 
     nodes.iter().map(|node| match node {
         DocumentNode::Document { path, title } => {
@@ -358,9 +357,7 @@ pub fn build_document_context(
 
     // Prev/next navigation: pages in [[contents]] order, matching language
     let nav_paths = super::discover::collect_document_paths(meta, base_dir);
-    let pages_by_source: std::collections::HashMap<String, &DocumentInfo> = pages.iter()
-        .map(|p| (p.source.display().to_string(), p))
-        .collect();
+    let pages_by_source = pages_to_map(pages);
     let nav_documents: Vec<&DocumentInfo> = nav_paths.iter()
         .filter_map(|path| pages_by_source.get(path.as_str()).copied())
         .filter(|p| p.lang == page.lang)
@@ -418,9 +415,7 @@ fn resolve_translations(
         _ => return Vec::new(),
     };
 
-    let document_map: HashMap<String, &DocumentInfo> = pages.iter()
-        .map(|p| (p.source.display().to_string(), p))
-        .collect();
+    let document_map = pages_to_map(pages);
 
     let lang_names: HashMap<&str, &str> = languages.iter()
         .map(|l| (l.abbreviation.as_str(), l.language.as_str()))

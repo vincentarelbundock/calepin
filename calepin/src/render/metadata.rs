@@ -78,8 +78,7 @@ pub fn strip_markdown_formatting(text: &str) -> String {
 /// partial does not exist.
 fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, String)>) -> Option<String> {
     let tpl = resolve_element_partial(name, ext)?;
-    let mut vars = TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), ext.to_string());
+    let mut vars = TemplateVars::with_writer(ext);
     for (k, v) in extra_vars {
         vars.config.insert(k.to_string(), v);
     }
@@ -290,8 +289,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             };
 
             if let Some(ref tpl) = author_tpl {
-                let mut vars = TemplateVars::new();
-                vars.calepin.insert("writer".to_string(), ext.to_string());
+                let mut vars = TemplateVars::with_writer(ext);
                 vars.config.insert("name".to_string(), author.name.literal.clone());
                 vars.config.insert("superscripts".to_string(), superscripts);
                 vars.config.insert("corresponding".to_string(), corresponding);
@@ -315,8 +313,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
                 String::new()
             };
             if let Some(ref tpl) = aff_tpl {
-                let mut vars = TemplateVars::new();
-                vars.calepin.insert("writer".to_string(), ext.to_string());
+                let mut vars = TemplateVars::with_writer(ext);
                 vars.config.insert("number".to_string(), number);
                 vars.config.insert("display".to_string(), display);
                 Some(apply_template(tpl, &vars))
@@ -357,8 +354,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
         };
 
         if let Some(tpl) = resolve_element_partial("authors", ext) {
-            let mut vars = TemplateVars::new();
-            vars.calepin.insert("writer".to_string(), ext.to_string());
+            let mut vars = TemplateVars::with_writer(ext);
             vars.calepin.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
             vars.calepin.insert("authors".to_string(), authors_joined);
             vars.calepin.insert("affiliations_items".to_string(), affiliations_items);

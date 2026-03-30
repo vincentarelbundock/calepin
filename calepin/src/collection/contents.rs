@@ -109,7 +109,7 @@ fn is_excluded(rel_path: &str, exclude: &[String], base_dir: &Path) -> bool {
     let abs_path = base_dir.join(rel_path);
     let abs_str = abs_path.display().to_string();
     for pattern in exclude {
-        let abs_base = std::fs::canonicalize(base_dir).unwrap_or_else(|_| base_dir.to_path_buf());
+        let abs_base = crate::util::try_canonicalize(base_dir);
         let full = abs_base.join(pattern).display().to_string();
         if let Ok(entries) = glob::glob(&full) {
             for entry in entries.flatten() {
@@ -155,8 +155,8 @@ fn expand_directory(
     exclude: &[String],
 ) -> Vec<DocumentNode> {
     // Canonicalize to avoid `./ ` prefix issues with the glob crate
-    let abs_dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
-    let abs_base = std::fs::canonicalize(base_dir).unwrap_or_else(|_| base_dir.to_path_buf());
+    let abs_dir = crate::util::try_canonicalize(dir);
+    let abs_base = crate::util::try_canonicalize(base_dir);
 
     // Collect all .qmd files under this directory
     let include = vec!["**/*.qmd".to_string()];

@@ -2,6 +2,8 @@ name = "book"
 description = "Multi-chapter book"
 inherits = "html"
 
+[scaffold.book]
+
 [target]
 modules = ["highlight", "append_footnotes"]
 

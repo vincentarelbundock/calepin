@@ -304,8 +304,7 @@ impl ElementRenderer {
     }
 
     fn build_template_output(&self, template_name: &str, element: &Element) -> String {
-        let mut vars = crate::render::template::TemplateVars::new();
-        vars.calepin.insert("writer".to_string(), self.ext.clone());
+        let mut vars = crate::render::template::TemplateVars::with_writer(&self.ext);
 
         // Run element through pipeline filters
         let code_filter = crate::render::vars::BuildCodeVars::new(&self.highlighter);

@@ -58,8 +58,7 @@ pub fn render(
     let rows_content = render_rows_via_partials(&rows_rendered, valign, format);
 
     // Build template variables for the figure wrapper
-    let mut vars = TemplateVars::new();
-    vars.calepin.insert("writer".to_string(), format.to_string());
+    let mut vars = TemplateVars::with_writer(format);
     vars.config.insert("id".to_string(), id_str.to_string());
     vars.config.insert("caption".to_string(), if !caption.is_empty() {
         crate::render::convert::render_inline(&caption, format)
@@ -133,7 +132,7 @@ fn render_rows_via_partials(
             }
         }
 
-        let cell_separator = if format == "latex" { "\n" } else { "\n" };
+        let cell_separator = "\n";
 
         let mut row_vars = TemplateVars::new();
         row_vars.calepin.insert("cells".to_string(), cells_rendered.join(cell_separator));
@@ -196,36 +195,30 @@ pub fn parse_spec(attrs: &HashMap<String, String>, num_children: usize) -> Vec<V
 
     if let Some(ncol_str) = attrs.get("layout_ncol") {
         let ncol: usize = ncol_str.parse().unwrap_or(1).max(1);
-        let width = 1.0 / ncol as f64;
-        let mut rows = Vec::new();
-        let mut row = Vec::new();
-        for i in 0..num_children {
-            row.push(width);
-            if row.len() == ncol || i == num_children - 1 {
-                rows.push(row);
-                row = Vec::new();
-            }
-        }
-        return rows;
+        return build_uniform_rows(num_children, ncol);
     }
 
     if let Some(nrow_str) = attrs.get("layout_nrow") {
         let nrow: usize = nrow_str.parse().unwrap_or(1).max(1);
         let ncol = (num_children + nrow - 1) / nrow;
-        let width = 1.0 / ncol as f64;
-        let mut rows = Vec::new();
-        let mut row = Vec::new();
-        for i in 0..num_children {
-            row.push(width);
-            if row.len() == ncol || i == num_children - 1 {
-                rows.push(row);
-                row = Vec::new();
-            }
-        }
-        return rows;
+        return build_uniform_rows(num_children, ncol);
     }
 
     vec![vec![1.0]; num_children]
+}
+
+/// Build uniform rows of `ncol` columns from `num_children` items.
+fn build_uniform_rows(num_children: usize, ncol: usize) -> Vec<Vec<f64>> {
+    let width = 1.0 / ncol as f64;
+    let mut rows = Vec::new();
+    let mut row = Vec::new();
+    for i in 0..num_children {
+        row.push(width);
+        if row.len() == ncol || i == num_children - 1 {
+            rows.push(std::mem::take(&mut row));
+        }
+    }
+    rows
 }
 
 /// Parse a custom layout string like `[[1,1],[1]]` or `[[40,-20,40],[100]]`.

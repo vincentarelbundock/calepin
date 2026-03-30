@@ -77,30 +77,21 @@ struct ListingItemHtml {
 }
 
 fn render_default(items: &[ListingItemHtml]) -> String {
-    let mut out = String::from("<div class=\"listing-default\">\n");
-    for item in items {
-        out.push_str(&format!("  <a href=\"{}\" class=\"listing-item\">\n", item.url));
-        out.push_str("    <div class=\"listing-item-content\">\n");
-        out.push_str(&format!("      <h3>{}</h3>\n", item.title));
-        if let Some(ref date) = item.date {
-            out.push_str(&format!("      <div class=\"date\">{}</div>\n", date));
-        }
-        if let Some(ref desc) = item.description {
-            out.push_str(&format!("      <div class=\"description\">{}</div>\n", desc));
-        }
-        out.push_str("    </div>\n");
-        out.push_str("  </a>\n");
-    }
-    out.push_str("</div>");
-    out
+    render_card_listing(items, "listing-default", false)
 }
 
 fn render_grid(items: &[ListingItemHtml]) -> String {
-    let mut out = String::from("<div class=\"listing-grid\">\n");
+    render_card_listing(items, "listing-grid", true)
+}
+
+fn render_card_listing(items: &[ListingItemHtml], class: &str, show_image: bool) -> String {
+    let mut out = format!("<div class=\"{}\">\n", class);
     for item in items {
         out.push_str(&format!("  <a href=\"{}\" class=\"listing-item\">\n", item.url));
-        if let Some(ref img) = item.image {
-            out.push_str(&format!("    <img class=\"listing-item-image\" src=\"{}\" alt=\"\">\n", img));
+        if show_image {
+            if let Some(ref img) = item.image {
+                out.push_str(&format!("    <img class=\"listing-item-image\" src=\"{}\" alt=\"\">\n", img));
+            }
         }
         out.push_str("    <div class=\"listing-item-content\">\n");
         out.push_str(&format!("      <h3>{}</h3>\n", item.title));

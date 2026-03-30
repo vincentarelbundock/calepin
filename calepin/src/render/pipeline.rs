@@ -224,11 +224,7 @@ pub fn render_page(
 ) -> Result<(crate::registry::RenderedPage, RenderResult)> {
     let result = render_core(input, output_path, Some(format), overrides, project_root, options, project_metadata, target)?;
 
-    let pipeline = if let Some(t) = target {
-        FormatPipeline::from_target(t)?
-    } else {
-        FormatPipeline::from_writer(format)?
-    };
+    let pipeline = FormatPipeline::from_target_or_writer(target, format)?;
 
     // Assemble page (page template wrapping)
     let assembled = pipeline
@@ -240,8 +236,7 @@ pub fn render_page(
 
     // Build TOC
     let toc = if format == "html" && result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
-        let depth = result.metadata.toc.as_ref().and_then(|t| t.depth).unwrap_or(3) as u8;
-        let title = result.metadata.toc.as_ref().and_then(|t| t.title.as_deref()).unwrap_or("Contents");
+        let (depth, title) = result.metadata.toc_depth_title();
         let toc_html = crate::render::template::build_toc_html_from_body(&final_output, depth, title);
         if toc_html.is_empty() { None } else { Some(toc_html) }
     } else {
@@ -300,11 +295,7 @@ pub fn render_file(
         &paths::get_project_root(), target_name, user_targets_ref,
     );
     paths::set_active_target_with_chain(Some(target_name), chain);
-    let pipeline = if let Some(t) = target {
-        FormatPipeline::from_target(t)?
-    } else {
-        FormatPipeline::from_writer(preliminary_format)?
-    };
+    let pipeline = FormatPipeline::from_target_or_writer(target, preliminary_format)?;
     // When the target's writer extension differs from the output extension
     // (e.g., typst writer -> .typ but target wants .pdf), use the writer's
     // native extension for the rendered file. Post commands handle conversion.

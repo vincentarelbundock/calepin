@@ -39,8 +39,6 @@ pub fn build_collection(
     }
 
     // 2. Resolve collection target (format and extension)
-    //    Priority: CLI -t flag, then index.qmd front matter, then first
-    //    page in [[contents]], then error.
     let collection_target_name = cli_target.map(|s| s.to_string())
         .or_else(|| read_target_from_index(&base_dir, &meta))
         .ok_or_else(|| anyhow::anyhow!(
@@ -284,37 +282,11 @@ fn run_post_commands(
         if !post.targets.is_empty() && !post.targets.iter().any(|t| t == target) {
             continue;
         }
-
-        let relative_output = output.strip_prefix(project_root)
-            .unwrap_or(output);
+        let relative_output = output.strip_prefix(project_root).unwrap_or(output);
         let cmd = post.command
             .replace("{output}", &relative_output.display().to_string())
             .replace("{root}", &project_root.display().to_string());
-
-        if !quiet {
-            eprintln!("  \x1b[36mpost:\x1b[0m {}", cmd);
-        }
-
-        let result = std::process::Command::new("sh")
-            .arg("-c")
-            .arg(&cmd)
-            .current_dir(project_root)
-            .output();
-
-        match result {
-            Ok(out) => {
-                if !out.status.success() {
-                    let stderr = String::from_utf8_lossy(&out.stderr);
-                    cwarn!("post command failed: {}", cmd);
-                    if !stderr.trim().is_empty() {
-                        eprintln!("  {}", stderr.trim());
-                    }
-                }
-            }
-            Err(e) => {
-                cwarn!("failed to run post command: {}: {}", cmd, e);
-            }
-        }
+        crate::cli::render::run_shell_command(&cmd, project_root, quiet);
     }
     Ok(())
 }
@@ -350,56 +322,3 @@ fn read_target_from_file(path: &Path) -> Option<String> {
     fm.target
 }
 
-/// Serve a built site directory using the built-in HTTP server.
-pub fn serve(output: &std::path::Path, port: u16) -> anyhow::Result<()> {
-    use tiny_http::{Header, Response, StatusCode};
-
-    let output = output.canonicalize()
-        .with_context(|| format!("Site directory not found: {}", output.display()))?;
-
-    let (server, actual_port) = crate::preview::server::try_bind(port)?;
-
-    eprintln!("Serving at http://localhost:{}", actual_port);
-    let _ = open::that(format!("http://localhost:{}", actual_port));
-
-    let respond_404 = |request: tiny_http::Request, output: &std::path::Path| {
-        let page_404 = output.join("404.html");
-        if let Ok(body) = fs::read(&page_404) {
-            let header = Header::from_bytes("Content-Type", "text/html; charset=utf-8").unwrap();
-            let _ = request.respond(Response::from_data(body).with_header(header).with_status_code(StatusCode(404)));
-        } else {
-            let _ = request.respond(Response::from_string("Not found").with_status_code(StatusCode(404)));
-        }
-    };
-
-    for request in server.incoming_requests() {
-        let url = request.url().to_string();
-        let rel = url.split('?').next().unwrap_or(&url).trim_start_matches('/');
-
-        let mut file_path = output.join(rel);
-        if file_path.is_dir() {
-            file_path = file_path.join("index.html");
-        }
-
-        // Prevent path traversal
-        if !file_path.starts_with(&output) {
-            let _ = request.respond(Response::from_string("Forbidden").with_status_code(StatusCode(403)));
-            continue;
-        }
-
-        if file_path.is_file() {
-            match fs::read(&file_path) {
-                Ok(data) => {
-                    let mime = crate::preview::server::resolve_mime(&file_path);
-                    let header = Header::from_bytes("Content-Type", mime).unwrap();
-                    let _ = request.respond(Response::from_data(data).with_header(header));
-                }
-                Err(_) => respond_404(request, &output),
-            }
-        } else {
-            respond_404(request, &output);
-        }
-    }
-
-    Ok(())
-}
