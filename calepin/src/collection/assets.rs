@@ -34,35 +34,25 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
         fs::write(&calepin_css_dst, css)?;
     }
 
-    // Copy extension static assets (declared in [assets].static)
+    // Copy extension assets to assets/{ext_name}/
+    // Each extension's assets/ directory is copied wholesale under its name,
+    // so paths are predictable and collision-free.
     {
         let target_name = crate::paths::get_active_target().unwrap_or_default();
-        let chain: Vec<(std::path::PathBuf, Vec<String>)> =
-            crate::config::extension::walk_chain(base_dir, &target_name, |_, ext_dir, manifest| {
-                let files = manifest.assets.static_files.clone();
-                if files.is_empty() { None } else { Some((ext_dir.to_path_buf(), files)) }
+        let chain: Vec<(String, std::path::PathBuf)> =
+            crate::config::extension::walk_chain(base_dir, &target_name, |name, ext_dir, _manifest| {
+                let assets_dir = ext_dir.join("assets");
+                if assets_dir.is_dir() {
+                    Some((name.to_string(), assets_dir))
+                } else {
+                    None
+                }
             });
-        for (ext_dir, static_files) in chain.iter().rev() {
-            let assets_base = ext_dir.join("assets");
-            for entry in static_files {
-                let src = assets_base.join(entry);
-                if let (Ok(canonical), Ok(base)) = (src.canonicalize(), assets_base.canonicalize()) {
-                    if !canonical.starts_with(&base) { continue; }
-                }
-                let dst = assets_dst.join(entry);
-                if src.is_dir() {
-                    copy_dir_recursive(&src, &dst)
-                        .with_context(|| format!("Failed to copy extension static dir '{}'", entry))?;
-                } else if src.is_file() {
-                    if let Some(parent) = dst.parent() {
-                        fs::create_dir_all(parent)?;
-                    }
-                    if !dst.exists() {
-                        fs::copy(&src, &dst)
-                            .with_context(|| format!("Failed to copy extension static file '{}'", entry))?;
-                    }
-                }
-            }
+        // Parent-first order so child extensions override parent files
+        for (ext_name, src_assets) in chain.iter().rev() {
+            let ext_dst = assets_dst.join(ext_name);
+            copy_dir_recursive(&src_assets, &ext_dst)
+                .with_context(|| format!("Failed to copy extension '{}' assets", ext_name))?;
         }
     }
 
