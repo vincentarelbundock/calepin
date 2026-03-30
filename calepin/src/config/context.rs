@@ -96,22 +96,22 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
     paths::set_project_dir(Some(&effective_root));
     paths::set_root_sidecar(sidecar.as_deref());
 
-    // Set inheritance chain for partial resolution
+    // Set inheritance chain for template resolution
     let chain = config::extension::inheritance_chain(&effective_root, &target_name, user_targets);
     paths::set_active_target_with_chain(Some(&target_name), chain);
 
-    // Set extension partial directories for layered resolution
-    let mut ext_dirs = resolve_extension_partial_dirs(&target_name, &effective_root);
+    // Set extension template directories for layered resolution
+    let mut ext_dirs = resolve_extension_template_dirs(&target_name, &effective_root);
 
-    // Add side-loaded extensions' partial directories
+    // Add side-loaded extensions' template directories
     let sideloaded = project_metadata.as_ref()
         .map(|m| m.extensions.clone())
         .unwrap_or_default();
     for ext_name in &sideloaded {
-        let mut more = resolve_extension_partial_dirs(ext_name, &effective_root);
+        let mut more = resolve_extension_template_dirs(ext_name, &effective_root);
         ext_dirs.append(&mut more);
     }
-    paths::set_extension_partial_dirs(ext_dirs);
+    paths::set_extension_template_dirs(ext_dirs);
     paths::set_sideloaded_extensions(sideloaded);
 
     Ok(ProjectContext {
@@ -123,22 +123,20 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
     })
 }
 
-/// Build the list of extension partial directories for layered resolution.
+/// Build the list of extension template directories for layered resolution.
 /// Walks the inheritance chain from the active target up to the root,
-/// collecting `_calepin/extensions/{name}/partials/` directories.
+/// collecting `_calepin/extensions/{name}/templates/` directories.
 ///
 /// Public alias for use from the collection pipeline.
-pub fn resolve_extension_partial_dirs_for(target_name: &str, project_root: &Path) -> Vec<PathBuf> {
-    resolve_extension_partial_dirs(target_name, project_root)
+pub fn resolve_extension_template_dirs_for(target_name: &str, project_root: &Path) -> Vec<PathBuf> {
+    resolve_extension_template_dirs(target_name, project_root)
 }
 
-fn resolve_extension_partial_dirs(target_name: &str, project_root: &Path) -> Vec<PathBuf> {
-    let dirs = config::extension::walk_chain(project_root, target_name, |_, ext_dir, _| {
-        let partials = ext_dir.join("partials");
-        if partials.is_dir() { Some(partials) } else { None }
-    });
-
-    dirs
+fn resolve_extension_template_dirs(target_name: &str, project_root: &Path) -> Vec<PathBuf> {
+    config::extension::walk_chain(project_root, target_name, |_, ext_dir, _| {
+        let templates = ext_dir.join("templates");
+        if templates.is_dir() { Some(templates) } else { None }
+    })
 }
 
 /// Apply `--writer` override to a resolved project context.

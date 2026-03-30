@@ -136,7 +136,7 @@ fn render_one_document(
         });
     } else {
         // Site mode: render_core + transform_document (no assemble_page --
-        // the site template wraps pages later in apply_collection_partials)
+        // the site template wraps pages later in apply_collection_templates)
         let result = crate::render::pipeline::render_core(
             &input, &output_path, Some(format), overrides, Some(base_dir),
             &crate::render::pipeline::RenderCoreOptions::default(),

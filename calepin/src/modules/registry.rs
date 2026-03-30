@@ -307,7 +307,7 @@ impl ModuleRegistry {
         result
     }
 
-    pub fn resolve_element_partial(&self, name: &str, format: &str) -> Option<String> {
+    pub fn resolve_element_template(&self, name: &str, format: &str) -> Option<String> {
         let canonical = name.replace('-', "_");
         let filename = format!("{}.{}", canonical, format);
 
@@ -322,7 +322,7 @@ impl ModuleRegistry {
             }
         }
 
-        crate::paths::resolve_partial(&canonical, format)
+        crate::paths::resolve_template(&canonical, format)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 
@@ -575,7 +575,7 @@ fn resolve_builtin_kind(name: &str, kind_str: &str) -> ModuleKind {
             }
         }
 
-        // Noop / partial-only
+        // Noop / template-only
         (_, "noop") => ModuleKind::Noop,
 
         (name, kind) => {

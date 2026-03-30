@@ -2,9 +2,9 @@
 title = "Reference"
 ---
 
-# Partials source
+# Templates source
 
-All built-in partials are in the *Calepin* repository under [`calepin/src/partials/`](https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/partials). They are embedded in the binary at compile time.
+All built-in templates are in the *Calepin* repository under [`calepin/src/partials/`](https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/partials). They are embedded in the binary at compile time.
 
 | Directory | Contents |
 |-----------|----------|
@@ -20,18 +20,18 @@ All built-in partials are in the *Calepin* repository under [`calepin/src/partia
 
 # Override scheme
 
-Resolution is layered per file: sidecar partials, then project partials (`_calepin/partials/`), then extension partials, then built-in defaults. Override only the files you need to change.
+Resolution is layered per file: sidecar templates, then project templates (`_calepin/templates/`), then extension templates, then built-in defaults. Override only the files you need to change.
 
-Within the partials directory, resolution tries target-specific first, then engine-specific, then common:
+Within the templates directory, resolution tries target-specific first, then engine-specific, then common:
 
-1. `_calepin/partials/{target}/{name}.{ext}` (e.g., `website/sidebar.html`)
-2. `_calepin/partials/{engine}/{name}.{ext}` (e.g., `html/figure.html`)
-3. `_calepin/partials/common/{name}.jinja`
+1. `_calepin/templates/{target}/{name}.{ext}` (e.g., `website/sidebar.html`)
+2. `_calepin/templates/{engine}/{name}.{ext}` (e.g., `html/figure.html`)
+3. `_calepin/templates/common/{name}.jinja`
 
-Per-document sidecar directories (`{stem}_calepin/partials/`) are checked before the project-level `_calepin/partials/`.
+Per-document sidecar directories (`{stem}_calepin/templates/`) are checked before the project-level `_calepin/templates/`.
 
 
-# Element partial variables
+# Element template variables
 
 ## Div variables
 
@@ -196,7 +196,7 @@ Available when writing Jinja expressions in `.qmd` files:
 
 # Website template variables
 
-Website templates (in `_calepin/partials/website/`) receive two context objects.
+Website templates (in `_calepin/templates/website/`) receive two context objects.
 
 ## collection
 

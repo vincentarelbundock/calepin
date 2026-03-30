@@ -11,12 +11,12 @@ The extension interface is under active development and may change without warni
 An extension is a directory with an `extension.toml` manifest. It is the single unit of distribution and customization in *Calepin*. An extension can bundle any combination of:
 
 - A **target** definition (writer, modules, post-processing)
-- **Partials** (template overrides for elements and pages)
+- **Templates** (template overrides for elements and pages)
 - **Modules** (structural transforms, auto-numbering, external code)
 - **Assets** (CSS, JS, fonts, images, static files)
 - **Vars** (default variables available in templates, overridable by the user)
 
-An extension can be as small as a manifest plus one CSS file, or as large as a full presentation framework with custom templates, modules, and scripts.
+An extension can be as small as a manifest plus one CSS file, or as large as a full presentation framework with templates, modules, and scripts.
 
 Built-in targets (`html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`) are also extensions internally. The same architecture applies everywhere.
 
@@ -26,8 +26,8 @@ Built-in targets (`html`, `latex`, `typst`, `markdown`, `slides`, `website`, `bo
 - **Extension** -- A directory with an `extension.toml` manifest. The unit of distribution.
 - **Target** -- An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the `[target]` section of the manifest.
 - **Writer** -- One of the four rendering engines: `html`, `latex`, `typst`, `markdown`. Every target has exactly one writer. Writers are not user-extensible.
-- **Partial** -- A Jinja template that renders a specific element or page component (e.g., `figure.html`, `page.tex`). Resolved by name through a layered chain. Adding a partial is enough to create a custom div style.
-- **Module** -- A declared transform in the manifest. Only needed when partials alone are insufficient: structural transforms, match rules beyond class names, auto-numbering, or external code.
+- **Template** -- A Jinja template that renders a specific element or page component (e.g., `figure.html`, `page.tex`). Resolved by name through a layered chain. Adding a template is enough to create a custom div style.
+- **Module** -- A declared transform in the manifest. Only needed when templates alone are insufficient: structural transforms, match rules beyond class names, auto-numbering, or external code.
 - **Asset** -- A CSS, JS, or static file declared in `[assets]`. CSS and JS are injected into the page template; static files are copied to the output directory.
 - **Vars** -- Key-value pairs declared in `[vars]`. Namespaced by extension name in templates: `{{ vars.tufte.sidenote_style }}`. Users override them in front matter under `[vars.extension_name]`.
 
@@ -37,7 +37,7 @@ Built-in targets (`html`, `latex`, `typst`, `markdown`, `slides`, `website`, `bo
 ```
 my-extension/
   extension.toml        # Manifest (required)
-  partials/             # Template overrides
+  templates/            # Template overrides
     html/
       page.html
       figure.html
@@ -51,7 +51,7 @@ my-extension/
     transform.wasm
 ```
 
-All subdirectories are optional. Module declarations live in `extension.toml` itself. There are no separate `module.toml` files. Module templates are resolved from `partials/` like any other partial (matched by class name). External executables live in `scripts/`.
+All subdirectories are optional. Module declarations live in `extension.toml` itself. There are no separate `module.toml` files. Module templates are resolved from `templates/` like any other template (matched by class name). External executables live in `scripts/`.
 
 
 # The manifest
@@ -124,9 +124,9 @@ static = ["fonts/"]
 
 ## Modules {#modules}
 
-Most extensions do not need `[[modules]]` entries at all. If you just want a custom div style, add a partial to `partials/{writer}/` and use `::: {.my-class}`. The partial is resolved by class name automatically.
+Most extensions do not need `[[modules]]` entries at all. If you just want a custom div style, add a template to `templates/{writer}/` and use `::: {.my-class}`. The template is resolved by class name automatically.
 
-Declare a `[[modules]]` entry only when you need capabilities beyond what a partial provides:
+Declare a `[[modules]]` entry only when you need capabilities beyond what a template provides:
 
 - Match by attribute, id prefix, or writer (not just class)
 - Structural transforms (rewrite children before rendering)
@@ -178,11 +178,11 @@ The first four kinds operate on a single page. The `project` kind operates on th
 For single documents, the pipeline renders one page and no `project` modules run. For multi-document projects (when `[[contents]]` is present in config), pages are discovered and rendered in parallel, then `project` modules coordinate across them.
 
 
-# Partials vs. modules
+# Templates vs. modules
 
-**Partials alone** handle most customization. Add `partials/html/note.html` to your extension and `::: {.note}` renders using that template. No module declaration needed. The partial receives standard variables (content, classes, attrs, id, etc.) and is overridable at every level of the resolution chain.
+**Templates alone** handle most customization. Add `templates/html/note.html` to your extension and `::: {.note}` renders using that template. No module declaration needed. The template receives standard variables (content, classes, attrs, id, etc.) and is overridable at every level of the resolution chain.
 
-**Modules** add behavior that partials cannot express: structural transforms, match rules beyond class names, auto-numbering, and external code execution. A module that matches an element still resolves its template via the partial chain (by class name), unless it returns rendered output directly (external modules with `"action": "rendered"`).
+**Modules** add behavior that templates cannot express: structural transforms, match rules beyond class names, auto-numbering, and external code execution. A module that matches an element still resolves its template via the template chain (by class name), unless it returns rendered output directly (external modules with `"action": "rendered"`).
 
 
 # External modules
@@ -299,7 +299,7 @@ project/
     extensions/
       tufte/
         extension.toml
-        partials/...
+        templates/...
         assets/...
       lightbox/
         extension.toml
@@ -330,17 +330,17 @@ When `extensions` is set, those extensions' assets are included and their module
 
 # Resolution order
 
-## Partials
+## Templates
 
 First match wins:
 
-1. Document sidecar: `{stem}_calepin/partials/{target|writer|common}/`
-2. Project overrides: `_calepin/partials/{target|writer|common}/`
-3. Active extension's partials: `_calepin/extensions/{name}/partials/{writer|common}/`
-4. Parent extension's partials (walking up the inheritance chain)
-5. Built-in partials (embedded in binary)
+1. Document sidecar: `{stem}_calepin/templates/{target|writer|common}/`
+2. Project overrides: `_calepin/templates/{target|writer|common}/`
+3. Active extension's templates: `_calepin/extensions/{name}/templates/{writer|common}/`
+4. Parent extension's templates (walking up the inheritance chain)
+5. Built-in templates (embedded in binary)
 
-At each level, the lookup order within the partials directory is:
+At each level, the lookup order within the templates directory is:
 
 1. `{target}/{name}.{ext}` (target-specific, e.g., `tufte/page.html`)
 2. `{writer}/{name}.{ext}` (writer-specific, e.g., `html/page.html`)
@@ -365,7 +365,7 @@ Modules are resolved from:
 2. Parent extension's `[[modules]]` entries (walking up the inheritance chain)
 3. Built-in modules (embedded in binary)
 
-Module templates are resolved via the standard partial resolution chain (see above). A module's matched class name determines the partial lookup.
+Module templates are resolved via the standard template resolution chain (see above). A module's matched class name determines the template lookup.
 
 A module must be listed in the active target's `modules` field to run as a document/element transform. Modules that match by class/attr/id (span transforms, element children transforms) run whenever a matching element is encountered, regardless of the `modules` list.
 
@@ -384,7 +384,7 @@ typst                   writer = "typst"
 markdown                writer = "markdown"
 ```
 
-The base targets (`html`, `latex`, `typst`, `markdown`) each define a writer and a default set of modules, partials, and settings. The composed targets (`slides`, `website`, `book`) inherit from a base and add behavior through modules.
+The base targets (`html`, `latex`, `typst`, `markdown`) each define a writer and a default set of modules, templates, and settings. The composed targets (`slides`, `website`, `book`) inherit from a base and add behavior through modules.
 
 There is no separate "notebook" vs. "collection" type. The pipeline is always the same:
 
@@ -405,7 +405,7 @@ Internally, all built-in targets are structured as extensions:
 ```
 html/
   extension.toml        # writer = "html"
-  partials/
+  templates/
     html/
       page.html
       code_source.html
@@ -414,20 +414,20 @@ html/
 
 latex/
   extension.toml        # writer = "latex"
-  partials/
+  templates/
     latex/
       page.tex
       ...
 
 slides/
   extension.toml        # inherits = "html"
-  partials/
+  templates/
     slides/
       page.html         # overrides html/page.html
 
 website/
   extension.toml        # inherits = "html"
-  partials/
+  templates/
     website/
       base.html
       navbar.html
@@ -439,7 +439,7 @@ website/
 
 book/
   extension.toml        # inherits = "html"
-  partials/
+  templates/
     book/
       orchestrator.typ
 ```
@@ -465,7 +465,7 @@ This creates:
 ```
 sidenotes/
   extension.toml
-  partials/
+  templates/
     html/
       .gitkeep
   assets/
@@ -489,12 +489,12 @@ inherits = "html"
 
 # Declare [[modules]] only if you need structural transforms,
 # match rules beyond class names, auto-numbering, or external code.
-# For simple div styles, just add a partial.
+# For simple div styles, just add a template.
 ```
 
 Then:
 
-1. Add partials to `partials/html/` to override page templates or add new div styles (e.g., `sidenote.html`).
+1. Add templates to `templates/html/` to override page templates or add new div styles (e.g., `sidenote.html`).
 2. Declare modules in `extension.toml` under `[[modules]]`.
 3. Add CSS/JS to `assets/` and declare them in `extension.toml`.
 4. Copy the directory into a project's `_calepin/extensions/` to install it.
@@ -521,14 +521,14 @@ inherits = "html"
 css = ["dark-academic.css"]
 ```
 
-No partials, no modules, no target overrides. Activated with `target = "dark-academic"` in document front matter, `-t dark-academic` on the CLI, or `calepin.extensions = ["dark-academic"]`.
+No templates, no modules, no target overrides. Activated with `target = "dark-academic"` in document front matter, `-t dark-academic` on the CLI, or `calepin.extensions = ["dark-academic"]`.
 
 ## Presentation target
 
 ```
 slidev/
   extension.toml
-  partials/
+  templates/
     html/
       page.html
   assets/
@@ -563,7 +563,7 @@ Inherits from `slides` (which inherits from `html`). Overrides `page.html` for i
 ```
 jss/
   extension.toml
-  partials/
+  templates/
     latex/
       page.tex
       code_source.tex
@@ -609,14 +609,14 @@ extension = "pdf"
 post = ["typst compile {input}"]
 ```
 
-No partials, no assets, no modules. Just inherits everything from `typst` and adds a post-processing step. A user who prefers LaTeX-based PDF would write `inherits = "latex"` and `post = ["tectonic {input}"]` instead.
+No templates, no assets, no modules. Just inherits everything from `typst` and adds a post-processing step. A user who prefers LaTeX-based PDF would write `inherits = "latex"` and `post = ["tectonic {input}"]` instead.
 
 ## Structural module
 
 ```
 lightbox/
   extension.toml
-  partials/
+  templates/
     html/
       lightbox.html
   assets/
@@ -645,7 +645,7 @@ classes = ["lightbox"]
 writers = ["html"]
 ```
 
-The template at `partials/html/lightbox.html` is resolved by class name through the standard partial chain. Activated with `calepin.extensions = ["lightbox"]`.
+The template at `templates/html/lightbox.html` is resolved by class name through the standard template chain. Activated with `calepin.extensions = ["lightbox"]`.
 
 
 # Design constraints
@@ -653,25 +653,25 @@ The template at `partials/html/lightbox.html` is resolved by class name through 
 - **Single inheritance only.** One chain: child -> parent -> grandparent -> built-in base target. No diamond inheritance, no multiple parents.
 - **Full module list replacement.** If an extension specifies `modules` in `[target]`, it replaces the parent's list entirely. No `modules_add`, no ordering ambiguity.
 - **Explicit everything.** The manifest is the complete index. CSS, JS, static files, and modules must be declared in `extension.toml`. No implicit directory scanning.
-- **No config fragments.** An extension provides a target definition, partials, modules, and assets. Document-level config (title, author, bibliography, execute options) stays in the document or project config.
-- **Additive partial chain.** Each level in the chain can override partials from the level below. The user always has final say (project `_calepin/partials/` overrides everything).
-- **Modules are for behavior, partials are for presentation.** Adding a partial to `partials/` is enough for custom div/span styles. A `[[modules]]` declaration is only needed for structural transforms, advanced matching, auto-numbering, or external code.
+- **No config fragments.** An extension provides a target definition, templates, modules, and assets. Document-level config (title, author, bibliography, execute options) stays in the document or project config.
+- **Additive template chain.** Each level in the chain can override templates from the level below. The user always has final say (project `_calepin/templates/` overrides everything).
+- **Modules are for behavior, templates are for presentation.** Adding a template to `templates/` is enough for custom div/span styles. A `[[modules]]` declaration is only needed for structural transforms, advanced matching, auto-numbering, or external code.
 - **One pipeline.** There is no separate "collection" or "notebook" mode. The same pipeline handles 1 page or 1000 pages. Multi-document features (navigation, cross-references, orchestrator assembly) are `project` modules declared by the extension, not a different code path.
 
 
-# Partial resolution in practice
+# Template resolution in practice
 
-Partials use layered resolution. You only create the files you want to change. Everything else falls through to the extension, its parent, and ultimately the built-in defaults.
+Templates use layered resolution. You only create the files you want to change. Everything else falls through to the extension, its parent, and ultimately the built-in defaults.
 
 ## Example: customizing figures
 
-Suppose you have a website and want to change how figures render. You do not need to copy or even know about the other ~50 partials. Create one file:
+Suppose you have a website and want to change how figures render. You do not need to copy or even know about the other ~50 templates. Create one file:
 
 ```
 my-site/
   _calepin/
     config.toml
-    partials/
+    templates/
       html/
         figure.html       # just this file
   index.qmd
@@ -687,34 +687,34 @@ Your `figure.html`:
 </figure>
 ```
 
-All other partials (`page.html`, `code_source.html`, `callout.html`, etc.) come from the built-in `website` extension. Your override applies only to figures.
+All other templates (`page.html`, `code_source.html`, `callout.html`, etc.) come from the built-in `website` extension. Your override applies only to figures.
 
-The same principle applies to extensions. A "tufte" extension that changes `page.html` and `figure.html` ships only those two files. The remaining partials come from its parent (`html`).
+The same principle applies to extensions. A "tufte" extension that changes `page.html` and `figure.html` ships only those two files. The remaining templates come from its parent (`html`).
 
 ## Debugging resolution
 
-To see where each partial is resolved from, run:
+To see where each template is resolved from, run:
 
 ```
-calepin extra partials html
+calepin templates list html
 ```
 
 Or for a specific target:
 
 ```
-calepin extra partials website
+calepin templates list website
 ```
 
 This prints the full resolution chain, color-coded by source:
 
 ```
-page.html          _calepin/partials/website/page.html    (green = user override)
-figure.html        _calepin/partials/html/figure.html     (green = user override)
+page.html          _calepin/templates/website/page.html    (green = user override)
+figure.html        _calepin/templates/html/figure.html     (green = user override)
 code_source.html   built-in: html                         (cyan = built-in)
 callout.html       built-in: html                         (cyan = built-in)
 ...
 ```
 
-## `calepin init` does not copy partials
+## `calepin init` does not copy templates
 
-`calepin init website` creates a project config and starter pages. It does not copy built-in partials into `_calepin/partials/`. The project starts clean, inheriting everything from the extension. Users create individual partial files only when they want to override something.
+`calepin init website` creates a project config and starter pages. It does not copy built-in templates into `_calepin/templates/`. The project starts clean, inheriting everything from the extension. Users create individual template files only when they want to override something.

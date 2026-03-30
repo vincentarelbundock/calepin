@@ -37,7 +37,7 @@ use cli::{Cli, Command};
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "flush", "init", "man", "extra"];
+    let known = ["render", "preview", "flush", "init", "man", "extra", "templates"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -87,10 +87,9 @@ fn main() -> Result<()> {
         Command::Init { action } => match action {
             cli::InitAction::New { path, scaffold, extension } => cli::scaffold::handle_init_new(&path, scaffold.as_deref(), extension.as_deref()),
             cli::InitAction::Extension { name, inherits } => cli::new_extension::handle_new_extension(&name, &inherits),
-            cli::InitAction::Sidecar { path, force, partials, target, dry_run, no_backup } => {
-                cli::init_sidecar::handle_init_sidecar(&path, force, partials, target.as_deref(), dry_run, no_backup)
+            cli::InitAction::Sidecar { path, force, templates, target, dry_run, no_backup } => {
+                cli::init_sidecar::handle_init_sidecar(&path, force, templates, target.as_deref(), dry_run, no_backup)
             }
-            cli::InitAction::Partials => cli::new_partials::handle_new_partials(),
             cli::InitAction::Gibberish { files, paragraphs, dir, complexity } => {
                 cli::new_gibberish::handle_new_gibberish(&dir, files, paragraphs, complexity)
             }
@@ -109,5 +108,6 @@ fn main() -> Result<()> {
             }
         },
         Command::Extra { action } => cli::info::handle_extra(action),
+        Command::Templates { action } => cli::templates::handle_templates(action),
     }
 }

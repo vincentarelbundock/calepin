@@ -52,13 +52,13 @@ Beyond signaling, I just personally prefer working with TOML. It avoids the type
 
 # Customization philosophy
 
-Both Quarto and *Calepin* use partials (templates) to control output. In Quarto, partials are written in Pandoc's template language; in *Calepin*, they are Jinja2 templates, which are more expressive (conditionals, loops, filters, macros, template inheritance). Both systems let you override individual partials to customize the look of your documents.
+Both Quarto and *Calepin* use templates to control output. In Quarto, templates are written in Pandoc's template language; in *Calepin*, they are Jinja2 templates, which are more expressive (conditionals, loops, filters, macros, template inheritance). Both systems let you override individual templates to customize the look of your documents.
 
-The difference is one of emphasis. Quarto offers hundreds of YAML front matter keys that control layout, styling, and behavior, and most users rely on those keys rather than editing partials directly. *Calepin* offers fewer configuration keys and instead encourages you to edit the templates themselves. The templates are simple HTML, LaTeX, or Typst files with `{{ variable }}` placeholders.
+The difference is one of emphasis. Quarto offers hundreds of YAML front matter keys that control layout, styling, and behavior, and most users rely on those keys rather than editing templates directly. *Calepin* offers fewer configuration keys and instead encourages you to edit the templates themselves. The templates are simple HTML, LaTeX, or Typst files with `{{ variable }}` placeholders.
 
 This design is especially well-suited to working with LLMs. Since templates are just plain text in well-known formats, you can describe what you want and let your LLM agent customize your website, templates, and styles directly:
 
-> Go to the `_calepin/partials` folder. Switch all the colors to a pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
+> Go to the `_calepin/templates` folder. Switch all the colors to a pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
 
 
 # Documentation extraction
@@ -96,4 +96,4 @@ In *Calepin*, chunk labels must be in the header. Using `#| label =` in a pipe c
 
 ## Extensions directory
 
-Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `_calepin/partials/` for template overrides and `_calepin/modules/` for custom modules.
+Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `_calepin/templates/` for template overrides and `_calepin/modules/` for custom modules.

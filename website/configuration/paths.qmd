@@ -19,7 +19,7 @@ The following resolve from the project root:
 - Front matter fields: `bibliography`, `csl`.
 - `{% include %}` directives.
 - Image paths in Markdown.
-- Template overrides in `_calepin/partials/`.
+- Template overrides in `_calepin/templates/`.
 
 In a collection, every page shares the same root, so a single path like `bibliography = "assets/library.bib"` works everywhere regardless of nesting.
 

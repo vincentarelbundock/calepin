@@ -1,7 +1,7 @@
 //! Asset bundling for project scaffolding.
 //!
 //! Provides built-in assets (CSS, fonts, icons) for new projects.
-//! Partials are no longer bundled -- they come from built-in defaults
+//! Templates are no longer bundled -- they come from built-in defaults
 //! via layered resolution.
 
 use std::collections::BTreeMap;

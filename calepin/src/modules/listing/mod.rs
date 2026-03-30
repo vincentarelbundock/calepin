@@ -15,7 +15,7 @@ pub fn wrap_listing(
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
     metadata: &crate::config::Metadata,
     template_env: &crate::render::template::TemplateEnv,
-    resolve_partial: &dyn Fn(&str) -> Option<String>,
+    resolve_template: &dyn Fn(&str) -> Option<String>,
 ) -> String {
     // Track listing ID for cross-references
     let ids = module_ids.borrow();
@@ -36,8 +36,8 @@ pub fn wrap_listing(
         vars.config.insert("lst_cap".to_string(), cap.to_string());
     }
 
-    let tpl = resolve_partial("code_listing")
-        .unwrap_or_else(|| crate::render::elements::resolve_builtin_partial("code_listing", format)
+    let tpl = resolve_template("code_listing")
+        .unwrap_or_else(|| crate::render::elements::resolve_builtin_template("code_listing", format)
             .unwrap_or("").to_string());
     template_env.render_dynamic("code_listing", &tpl, &vars)
 }

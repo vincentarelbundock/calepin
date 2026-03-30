@@ -7,21 +7,21 @@ use minijinja::Environment;
 
 use crate::utils::links::UrlMode;
 
-/// Initialize MiniJinja by loading template files from `partials/{target_name}/`.
+/// Initialize MiniJinja by loading template files from `templates/{target_name}/`.
 ///
 /// Files use flat namespacing: `{% extends "base.html" %}`
 /// and `{% include "search.html" %}` work by filename alone.
 ///
-/// Uses layered resolution: user partials override built-in templates.
-/// Missing user partials fall through to built-in defaults.
+/// Uses layered resolution: user templates override built-in templates.
+/// Missing user templates fall through to built-in defaults.
 ///
 /// Returns Ok(None) if no templates are found at all (triggers orchestrator path).
 pub fn load_templates_with_url(base_dir: &Path, target_name: &str, base_path: &str, url_mode: UrlMode) -> Result<Option<Environment<'static>>> {
     let mut templates: HashMap<String, String> = HashMap::new();
 
-    // 1. Load user partials (take priority)
-    let user_partials_dir = crate::paths::partials_dir(base_dir);
-    let dir = user_partials_dir.join(target_name);
+    // 1. Load user templates (take priority)
+    let user_templates_dir = crate::paths::templates_dir(base_dir);
+    let dir = user_templates_dir.join(target_name);
     if dir.is_dir() {
         let pattern = dir.join("**").join("*.*");
         let pattern_str = pattern.display().to_string();
@@ -37,9 +37,9 @@ pub fn load_templates_with_url(base_dir: &Path, target_name: &str, base_path: &s
         }
     }
 
-    // 2. Load built-in templates as fallback (entry() won't overwrite user partials)
+    // 2. Load built-in templates as fallback (entry() won't overwrite user templates)
     let builtin_path = target_name.to_string();
-    if let Some(builtin_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir(&builtin_path) {
+    if let Some(builtin_dir) = crate::render::elements::BUILTIN_TEMPLATES.get_dir(&builtin_path) {
         let prefix = std::path::Path::new(&builtin_path);
         load_builtin_dir_recursive(builtin_dir, prefix, &mut templates);
     }

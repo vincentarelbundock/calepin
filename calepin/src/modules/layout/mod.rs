@@ -74,7 +74,7 @@ pub fn render(
     vars.config.insert("fig_env".to_string(), fig_env.to_string());
     vars.config.insert("fig_pos".to_string(), fig_pos);
 
-    let tpl = crate::render::elements::resolve_builtin_partial("layout", format).unwrap_or("");
+    let tpl = crate::render::elements::resolve_builtin_template("layout", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }
 
@@ -84,11 +84,11 @@ fn render_rows_via_partials(
     valign: &str,
     format: &str,
 ) -> String {
-    use crate::render::elements::resolve_builtin_partial;
+    use crate::render::elements::resolve_builtin_template;
     use crate::render::template::apply_template;
 
-    let cell_tpl = resolve_builtin_partial("layout_cell", format).unwrap_or("{{ content }}");
-    let row_tpl = resolve_builtin_partial("layout_row", format).unwrap_or("{{ cells }}");
+    let cell_tpl = resolve_builtin_template("layout_cell", format).unwrap_or("{{ content }}");
+    let row_tpl = resolve_builtin_template("layout_row", format).unwrap_or("{{ cells }}");
 
     let valign_char = match valign {
         "center" => "c",

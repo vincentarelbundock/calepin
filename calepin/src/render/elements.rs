@@ -14,14 +14,14 @@ use crate::modules::Highlighter;
 // Built-in project tree (embedded at compile time)
 // ---------------------------------------------------------------------------
 
-/// Built-in partials (element/page templates), embedded at compile time.
-pub static BUILTIN_PARTIALS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/partials");
+/// Built-in templates (element/page templates), embedded at compile time.
+pub static BUILTIN_TEMPLATES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/partials");
 
 /// Built-in assets (CSS, JS, scaffold files), embedded at compile time.
 pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold");
 
 /// Template name aliases: multiple names can map to the same template file.
-fn resolve_partial_alias(name: &str) -> &str {
+fn resolve_template_alias(name: &str) -> &str {
     match name {
         // Code diagnostics share one template
         "code_error" | "code_warning" | "code_message" => "code_diagnostic",
@@ -33,15 +33,15 @@ fn resolve_partial_alias(name: &str) -> &str {
 /// Look up a built-in template by name and base.
 /// Checks `partials/{target}/{name}.{ext}` (active target, if different from base),
 /// then `partials/{base}/{name}.{ext}`, then `templates/common/{name}.jinja`.
-pub fn resolve_builtin_partial(name: &str, base: &str) -> Option<&'static str> {
-    let resolved = resolve_partial_alias(name);
+pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> {
+    let resolved = resolve_template_alias(name);
     let ext = crate::paths::resolve_extension(base);
 
     // Target-specific (e.g., book/page.typ)
     if let Some(target) = crate::paths::get_active_target() {
         if target != base {
             let target_path = format!("{}/{}.{}", target, resolved, ext);
-            if let Some(file) = BUILTIN_PARTIALS.get_file(&target_path) {
+            if let Some(file) = BUILTIN_TEMPLATES.get_file(&target_path) {
                 return file.contents_utf8();
             }
         }
@@ -49,13 +49,13 @@ pub fn resolve_builtin_partial(name: &str, base: &str) -> Option<&'static str> {
 
     // Base-specific (e.g., html/figure.html)
     let base_path = format!("{}/{}.{}", base, resolved, ext);
-    if let Some(file) = BUILTIN_PARTIALS.get_file(&base_path) {
+    if let Some(file) = BUILTIN_TEMPLATES.get_file(&base_path) {
         return file.contents_utf8();
     }
 
     // Generic .jinja
     let common_path = format!("common/{}.jinja", resolved);
-    BUILTIN_PARTIALS.get_file(&common_path).and_then(|f| f.contents_utf8())
+    BUILTIN_TEMPLATES.get_file(&common_path).and_then(|f| f.contents_utf8())
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ pub struct ElementRenderer {
     /// Minimum heading level chained across Text elements.
     min_heading_level: std::cell::Cell<Option<usize>>,
     /// Cache for resolved element templates (avoids repeated filesystem lookups).
-    partial_cache: std::cell::RefCell<HashMap<String, Option<String>>>,
+    template_cache: std::cell::RefCell<HashMap<String, Option<String>>>,
     /// Whether any code blocks were rendered (gates syntax CSS generation).
     has_code: std::cell::Cell<bool>,
     /// The resolved target.
@@ -113,7 +113,7 @@ impl ElementRenderer {
         ];
 
         for name in element_names {
-            if let Some(tpl) = resolve_element_partial(name, ext) {
+            if let Some(tpl) = resolve_element_template(name, ext) {
                 template_env.add(name, tpl);
             }
         }
@@ -136,7 +136,7 @@ impl ElementRenderer {
             footnotes: crate::modules::FootnoteState::new(),
             section_counters: std::cell::Cell::new(None),
             min_heading_level: std::cell::Cell::new(None),
-            partial_cache: std::cell::RefCell::new(HashMap::new()),
+            template_cache: std::cell::RefCell::new(HashMap::new()),
             has_code: std::cell::Cell::new(false),
             target: None,
         }
@@ -263,7 +263,7 @@ impl ElementRenderer {
             classes, id, attrs, children, &self.ext,
             &self.registry,
             &|e| self.render(e),
-            &|name| self.resolve_element_partial(name),
+            &|name| self.resolve_element_template(name),
             &self.raw_fragments,
             &self.module_ids,
             &self.template_env,
@@ -286,7 +286,7 @@ impl ElementRenderer {
                 return crate::modules::wrap_listing(
                     label, lst_cap.as_deref(), &rendered, &self.ext,
                     &self.module_ids, &self.metadata, &self.template_env,
-                    &|name| self.resolve_element_partial(name),
+                    &|name| self.resolve_element_template(name),
                 );
             }
         }
@@ -298,7 +298,7 @@ impl ElementRenderer {
         crate::render::span::render(
             text, &self.ext, &self.registry, &self.raw_fragments,
             &self.metadata,
-            &|name| self.resolve_element_partial(name),
+            &|name| self.resolve_element_template(name),
             &self.template_env,
         )
     }
@@ -321,14 +321,14 @@ impl ElementRenderer {
         self.template_env.render(template_name, &vars)
     }
 
-    fn resolve_element_partial(&self, name: &str) -> Option<String> {
+    fn resolve_element_template(&self, name: &str) -> Option<String> {
         // Check cache first to avoid repeated filesystem lookups
-        if let Some(cached) = self.partial_cache.borrow().get(name) {
+        if let Some(cached) = self.template_cache.borrow().get(name) {
             return cached.clone();
         }
-        let result = self.registry.resolve_element_partial(name, &self.ext)
-            .or_else(|| resolve_element_partial(name, &self.ext));
-        self.partial_cache.borrow_mut().insert(name.to_string(), result.clone());
+        let result = self.registry.resolve_element_template(name, &self.ext)
+            .or_else(|| resolve_element_template(name, &self.ext));
+        self.template_cache.borrow_mut().insert(name.to_string(), result.clone());
         result
     }
 
@@ -360,16 +360,16 @@ impl ElementRenderer {
 
 /// Resolve an element template: filesystem → built-in (layered).
 /// Template names use underscores internally; hyphens are normalized.
-/// Checks user partials first (sidecar, then project-level), then falls
-/// through to built-in partials embedded in the binary.
-pub fn resolve_element_partial(name: &str, ext: &str) -> Option<String> {
+/// Checks user templates first (sidecar, then project-level), then falls
+/// through to built-in templates embedded in the binary.
+pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
     // Try filesystem first (sidecar → project)
-    if let Some(content) = crate::paths::resolve_partial(&canonical, ext)
+    if let Some(content) = crate::paths::resolve_template(&canonical, ext)
         .and_then(|path| std::fs::read_to_string(&path).ok())
     {
         return Some(content);
     }
     // Fall through to built-in
-    resolve_builtin_partial(&canonical, ext).map(|s| s.to_string())
+    resolve_builtin_template(&canonical, ext).map(|s| s.to_string())
 }

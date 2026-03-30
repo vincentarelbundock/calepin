@@ -8,11 +8,11 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::config::Metadata;
-use crate::render::elements::resolve_element_partial;
+use crate::render::elements::resolve_element_template;
 use crate::render::template::{apply_template, TemplateVars};
 
 /// Format primitives driven by element templates.
-/// Each method renders the appropriate markup via `partials/{engine}/` templates,
+/// Each method renders the appropriate markup via `templates/{engine}/` templates,
 /// making output user-overridable.
 struct Fmt;
 
@@ -40,7 +40,7 @@ impl Fmt {
 
 /// Render a format-primitive template. Falls back to empty string if not found.
 fn render_fmt_template(name: &str, ext: &str, vars: &TemplateVars) -> String {
-    if let Some(tpl) = resolve_element_partial(name, ext) {
+    if let Some(tpl) = resolve_element_template(name, ext) {
         apply_template(&tpl, vars)
     } else {
         String::new()
@@ -73,11 +73,11 @@ pub fn strip_markdown_formatting(text: &str) -> String {
     result.trim().to_string()
 }
 
-/// Resolve an element partial and render it with the given extra vars,
+/// Resolve an element template and render it with the given extra vars,
 /// automatically injecting `base` and `writer`. Returns `None` if the
-/// partial does not exist.
+/// template does not exist.
 fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, String)>) -> Option<String> {
-    let tpl = resolve_element_partial(name, ext)?;
+    let tpl = resolve_element_template(name, ext)?;
     let mut vars = TemplateVars::with_writer(ext);
     for (k, v) in extra_vars {
         vars.config.insert(k.to_string(), v);
@@ -265,7 +265,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
 
     if has_rich {
         // Render each author through the author-item template
-        let author_tpl = resolve_element_partial("author_item", ext);
+        let author_tpl = resolve_element_template("author_item", ext);
         let authors_rendered: Vec<String> = meta.authors.iter().map(|author| {
             let superscripts = if !author.affiliation_ids.is_empty() && meta.affiliations.len() > 1 {
                 let sups: Vec<String> = author.affiliation_ids.iter()
@@ -301,7 +301,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
         }).collect();
 
         // Render each affiliation through the affiliation-item template
-        let aff_tpl = resolve_element_partial("affiliation_item", ext);
+        let aff_tpl = resolve_element_template("affiliation_item", ext);
         let affs_rendered: Vec<String> = meta.affiliations.iter().filter_map(|aff| {
             let display = aff.display();
             if display.is_empty() {
@@ -353,7 +353,7 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
             _ => affs_rendered.join(", "),
         };
 
-        if let Some(tpl) = resolve_element_partial("authors", ext) {
+        if let Some(tpl) = resolve_element_template("authors", ext) {
             let mut vars = TemplateVars::with_writer(ext);
             vars.calepin.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
             vars.calepin.insert("authors".to_string(), authors_joined);

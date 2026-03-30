@@ -4,9 +4,9 @@ description: >
   Create and render documents, websites, and books with the Calepin CLI.
   Covers .qmd authoring (TOML front matter, code chunks, citations,
   cross-references, figures, tables, math), project scaffolding,
-  configuration, templates, and Jinja2 partials. Use when writing or
+  configuration, and Jinja2 templates. Use when writing or
   editing .qmd files, configuring _calepin/ projects, customizing
-  partials, or running calepin commands.
+  templates, or running calepin commands.
 ---
 
 # Calepin
@@ -23,7 +23,7 @@ Calepin renders `.qmd` (Quarto-compatible) documents to HTML, LaTeX, Typst, and 
 | Citations and bibliography | [reference.md](references/reference.md) > "Citations and Bibliography" |
 | Cross-references (@fig-, @tbl-, @eq-, @thm-) | [reference.md](references/reference.md) > "Cross-references" |
 | Configuration and project structure | [reference.md](references/reference.md) > "Configuration", "Project Structure" |
-| Templates, partials, customization | [reference.md](references/reference.md) > "Templates and Partials" |
+| Templates and customization | [reference.md](references/reference.md) > "Templates" |
 | Jinja variables, conditionals, includes | [reference.md](references/reference.md) > "Jinja Body Processing" |
 | Websites and navigation | [reference.md](references/reference.md) > "Websites" |
 | Extensions and plugins | [reference.md](references/reference.md) > "Extensions" |
@@ -55,6 +55,6 @@ calepin preview document.qmd          # live reload
 - Chunk options use `#| key = value` (TOML) or `#| key: value` (Quarto-compatible). Names use dashes: `fig-width`, not `fig.width`.
 - Chunk labels go in the header: `{r, my-label}`, never in `#|` comments.
 - Cross-reference prefixes: `@fig-`, `@tbl-`, `@eq-`, `@thm-`, `@sec-`.
-- Templates are Jinja2 files in `_calepin/partials/{writer}/`. Override only what you need; unoverridden files fall through to built-in defaults.
+- Templates are Jinja2 files in `_calepin/templates/{writer}/`. Override only what you need; unoverridden files fall through to built-in defaults.
 - When referring to the software by name, write *Calepin* (italic, capital C).
 - Never use em or en dashes in documentation or prose.

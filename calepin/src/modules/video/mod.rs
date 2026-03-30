@@ -52,7 +52,7 @@ pub fn render(
     vars.calepin.insert("is_embed".to_string(), is_embed.to_string());
 
     let fallback = format!("[{}]({})", title, url);
-    match crate::render::elements::resolve_builtin_partial("video", format) {
+    match crate::render::elements::resolve_builtin_template("video", format) {
         Some(tpl) => crate::render::template::apply_template(tpl, &vars),
         None => fallback,
     }

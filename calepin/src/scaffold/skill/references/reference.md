@@ -64,8 +64,8 @@ calepin init notebook my-paper
 calepin init website my-site
 calepin init book my-book
 calepin init sidecar paper.qmd          # per-document sidecar
-calepin init sidecar paper.qmd --partials
-calepin init partials                    # update local partials to latest built-ins
+calepin init sidecar paper.qmd --templates
+calepin templates update                 # update local templates to latest built-ins
 calepin init extension myext --inherits html
 ```
 
@@ -75,7 +75,7 @@ calepin init extension myext --inherits html
 calepin extra csl                  # list CSL citation styles
 calepin extra themes               # list syntax highlighting themes
 calepin extra highlight            # list syntax highlighting themes
-calepin extra partials html        # show partial resolution chain
+calepin templates list html         # show template resolution chain
 calepin extra completions bash     # shell completions (bash/zsh/fish)
 ```
 
@@ -415,7 +415,7 @@ Set theme: `highlight-style = "solarized-dark"` in front matter. List themes: `c
 | Path | Purpose |
 |------|---------|
 | `_calepin/config.toml` | Project configuration |
-| `_calepin/partials/` | Template overrides |
+| `_calepin/templates/` | Template overrides |
 | `_calepin/assets/` | Static assets (CSS, images) copied to output |
 | `_calepin/extensions/` | Installed extensions |
 | `{stem}_calepin/` | Per-document sidecar (config, cache, files) |
@@ -428,13 +428,13 @@ Created with `calepin init sidecar paper.qmd`. Structure:
 ```
 paper_calepin/
   config.toml
-  partials/
+  templates/
   cache/
   files/
 ```
 
 
-## Templates and Partials
+## Templates
 
 ### Jinja2 Syntax
 
@@ -447,10 +447,10 @@ Templates use Jinja2 (MiniJinja):
 {% for item in keywords %}\keyword{ {{- item -}} }{% endfor %}
 ```
 
-### Partial Organization
+### Template Organization
 
 ```
-_calepin/partials/
+_calepin/templates/
   html/         # HTML element and page templates
   latex/        # LaTeX templates
   typst/        # Typst templates
@@ -458,17 +458,17 @@ _calepin/partials/
   common/       # Format-agnostic (.jinja)
 ```
 
-### Partial Resolution Order (first match wins)
+### Template Resolution Order (first match wins)
 
-1. Document sidecar: `{stem}_calepin/partials/{target|writer|common}/`
-2. Project overrides: `_calepin/partials/{target|writer|common}/`
-3. Active extension's partials
-4. Parent extension's partials (walking inheritance chain)
-5. Built-in partials (embedded in binary)
+1. Document sidecar: `{stem}_calepin/templates/{target|writer|common}/`
+2. Project overrides: `_calepin/templates/{target|writer|common}/`
+3. Active extension's templates
+4. Parent extension's templates (walking inheritance chain)
+5. Built-in templates (embedded in binary)
 
 Override only the files you need to change; everything else falls through to the built-in defaults.
 
-### Key Element Partials
+### Key Element Templates
 
 | Template | Used by |
 |----------|---------|
@@ -542,7 +542,7 @@ Include `.qmd` files (path relative to project root):
 {% include "common/disclaimer.qmd" %}
 ```
 
-Include partials (no extension, resolved from `_calepin/partials/`):
+Include templates (no extension, resolved from `_calepin/templates/`):
 
 ```
 {% include "source_tip" %}
@@ -655,7 +655,7 @@ include = ["index.qmd", "404.qmd"]
 ```
 my-extension/
   extension.toml      # manifest (required)
-  partials/            # template overrides
+  templates/           # template overrides
   assets/              # CSS, JS, images
   scripts/             # external module executables
 ```

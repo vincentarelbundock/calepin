@@ -73,8 +73,8 @@ pub(crate) fn render_orchestrator(
 
     // Load templates from templates/{target}/ and templates/common/
     let dirs = [
-        crate::paths::partials_dir(&base_dir).join(target_name),
-        crate::paths::partials_dir(&base_dir).join("common"),
+        crate::paths::templates_dir(&base_dir).join(target_name),
+        crate::paths::templates_dir(&base_dir).join("common"),
     ];
     for dir in &dirs {
         if !dir.is_dir() { continue; }
@@ -95,7 +95,7 @@ pub(crate) fn render_orchestrator(
 
     // Also load built-in templates as fallback (target-specific + common)
     for builtin_dir_name in &[format!("partials/{}", target_name), "common".to_string()] {
-        for entry in crate::render::elements::BUILTIN_PARTIALS.get_dir(builtin_dir_name.as_str()).into_iter().flat_map(|d| d.files()) {
+        for entry in crate::render::elements::BUILTIN_TEMPLATES.get_dir(builtin_dir_name.as_str()).into_iter().flat_map(|d| d.files()) {
             if let Some(content) = entry.contents_utf8() {
                 let name = entry.path().file_name()
                     .and_then(|n| n.to_str())
@@ -109,7 +109,7 @@ pub(crate) fn render_orchestrator(
 
     // Load the orchestrator template itself
     let tpl_source = if let Some(builtin_path) = orchestrator_path.strip_prefix("__builtin__:") {
-        crate::render::elements::BUILTIN_PARTIALS.get_file(builtin_path)
+        crate::render::elements::BUILTIN_TEMPLATES.get_file(builtin_path)
             .and_then(|f| f.contents_utf8())
             .map(|s| s.to_string())
             .ok_or_else(|| anyhow::anyhow!("Built-in orchestrator template not found: {}", builtin_path))?

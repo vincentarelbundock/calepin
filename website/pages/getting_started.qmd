@@ -124,8 +124,8 @@ calepin extra csl
 # List available syntax highlighting themes
 calepin extra themes
 
-# Show partial resolution chain for a target
-calepin extra partials html
+# Show template resolution chain for a target
+calepin templates list html
 ```
 
 ### man

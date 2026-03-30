@@ -4,7 +4,7 @@
 //! (code chunks, divs, etc.) rather than inline text.
 //!
 //! When an include path has no file extension, format-aware resolution is used
-//! (target-specific -> engine-specific -> common), looking in `_calepin/partials/`.
+//! (target-specific -> engine-specific -> common), looking in `_calepin/templates/`.
 
 use std::sync::LazyLock;
 use regex::Regex;
@@ -37,7 +37,7 @@ pub fn expand_includes(text: &str, project_root: &std::path::Path, format: &str)
 
     // Expand includes (resolve relative to project root).
     // When the path has no extension, use format-aware resolution via
-    // `resolve_partial()` (target -> engine -> common under `_calepin/partials/`).
+    // `resolve_template()` (target -> engine -> common under `_calepin/templates/`).
     let text = INCLUDE_RE.replace_all(&text, |caps: &regex::Captures| {
         let path = caps[1].trim();
         if std::path::Path::new(path).extension().is_some() {
@@ -46,7 +46,7 @@ pub fn expand_includes(text: &str, project_root: &std::path::Path, format: &str)
             include_file(&resolved.to_string_lossy())
         } else {
             // No extension: format-aware resolution
-            match crate::paths::resolve_partial(path, format) {
+            match crate::paths::resolve_template(path, format) {
                 Some(resolved) => match std::fs::read_to_string(&resolved) {
                     Ok(content) => content,
                     Err(e) => {

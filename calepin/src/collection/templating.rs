@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use super::context::{self, build_document_context, build_collection_context, build_nav_tree_for_lang, mark_active, ListingItem};
 use super::discover::DocumentInfo;
 use super::render;
-use super::partials;
+use super::templates;
 
 /// Extract the first <img> src from rendered HTML.
 fn extract_first_image(html: &str) -> Option<String> {
@@ -40,7 +40,7 @@ pub(super) fn build_listing_item(
 /// HTML collection path: wrap each document's body through Jinja site templates
 /// (page.html, listing.html with extends/includes).
 /// Overwrites the raw body files written in step 7 with fully templated HTML.
-pub(crate) fn apply_collection_partials(
+pub(crate) fn apply_collection_templates(
     meta: &crate::config::Metadata,
     pages: &[DocumentInfo],
     results: &HashMap<String, render::CollectionRenderResult>,
@@ -61,7 +61,7 @@ pub(crate) fn apply_collection_partials(
     };
 
     // Initialize MiniJinja from templates/{target}/
-    let env = partials::load_templates_with_url(base_dir, target_name, &base_path, url_mode)?
+    let env = templates::load_templates_with_url(base_dir, target_name, &base_path, url_mode)?
         .ok_or_else(|| anyhow::anyhow!(
             "No template files found in templates/{}/. \
              At least base and page templates are required for multi-file collection mode.",

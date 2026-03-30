@@ -273,8 +273,8 @@ pub fn resolve_escaped_dollars(text: &str, format: &str) -> String {
 
 /// Get the escaped dollar replacement for the given format, via template or fallback.
 fn resolve_escaped_dollar_replacement(format: &str) -> String {
-    use crate::render::elements::resolve_element_partial;
-    if let Some(tpl) = resolve_element_partial("escaped_dollar", format) {
+    use crate::render::elements::resolve_element_template;
+    if let Some(tpl) = resolve_element_template("escaped_dollar", format) {
         tpl.trim().to_string()
     } else {
         "\\$".to_string()
@@ -283,10 +283,10 @@ fn resolve_escaped_dollar_replacement(format: &str) -> String {
 
 /// Render an equation label using the format-specific template.
 fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> String {
-    use crate::render::elements::resolve_element_partial;
+    use crate::render::elements::resolve_element_template;
     use crate::render::template::{apply_template, TemplateVars};
 
-    if let Some(tpl) = resolve_element_partial("equation_label", format) {
+    if let Some(tpl) = resolve_element_template("equation_label", format) {
         let mut vars = TemplateVars::new();
         vars.config.insert("label".to_string(), label.to_string());
         vars.calepin.insert("math".to_string(), math.to_string());

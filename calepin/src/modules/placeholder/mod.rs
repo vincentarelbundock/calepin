@@ -28,7 +28,7 @@ pub fn render(
     vars.config.insert("text".to_string(), crate::util::escape_html(&text));
 
     let fallback = format!("[{} ({}x{})]", text, width, height);
-    match crate::render::elements::resolve_builtin_partial("placeholder", format) {
+    match crate::render::elements::resolve_builtin_template("placeholder", format) {
         Some(tpl) => crate::render::template::apply_template(tpl, &vars),
         None => fallback,
     }

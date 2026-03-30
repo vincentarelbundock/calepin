@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **calepin** is a Rust CLI that renders `.qmd` (Quarto-compatible) documents to HTML, LaTeX, Typst, and Markdown. It runs R (via a persistent `Rscript` subprocess) and Python (via a persistent `python3` subprocess) to execute code chunks, processes citations with hayagriva, and resolves cross-references.
 
-The tutorial (`website/authoring/basics.qmd`) must be valid Quarto syntax so it can be benchmarked against Quarto and litedown. calepin-specific extensions (modules, custom partials, plugins) are documented in `website/templates/templates.qmd` and `website/extensions/plugins.qmd`.
+The tutorial (`website/authoring/basics.qmd`) must be valid Quarto syntax so it can be benchmarked against Quarto and litedown. calepin-specific extensions (modules, custom templates, plugins) are documented in `website/templates/templates.qmd` and `website/extensions/plugins.qmd`.
 
 When referring to the software by name in documentation or notebooks, always write *Calepin* (italic, capital C).
 
@@ -61,7 +61,7 @@ The pipeline transforms data through three representations:
 
 1. **`.qmd` text** -> **`Block`** (parse stage) -- Raw text, code chunks, fenced divs, raw blocks. Defined in `base/types.rs`.
 2. **`Block`** -> **`Element`** (evaluate stage) -- Code is executed, shortcodes expanded, conditional content filtered. Elements are: `Text`, `CodeSource`, `CodeOutput`, `CodeWarning`, `CodeMessage`, `CodeError`, `Figure`, `CodeAsis`, `Div`. Defined in `types.rs`.
-3. **`Element`** -> **output string** (render stage) -- Each element passes through var builders and partials to produce HTML/LaTeX/Typst/Markdown.
+3. **`Element`** -> **output string** (render stage) -- Each element passes through var builders and templates to produce HTML/LaTeX/Typst/Markdown.
 
 ### Pipeline stages
 
@@ -79,7 +79,7 @@ parse -> evaluate -> bibliography
 2. **Evaluate** (`engines/mod.rs`) -- Jinja body processing, code execution, blocks become `Element`s.
 3. **Bibliography** (`references/bibliography.rs`) -- Citation keys resolved via hayagriva.
 4. **TransformElement** -- Pre-render element mutations. Modules implementing `TransformElement` receive each element and can mutate it (e.g., `convert_svg_pdf` rewrites SVG figure paths to PDF).
-5. **Render** -- `ElementRenderer` dispatches each element. Divs go through the module registry (`TransformElementChildren` for structural rewriting, then partial lookup). Code/figure elements go through `BuildElementVars` then partials.
+5. **Render** -- `ElementRenderer` dispatches each element. Divs go through the module registry (`TransformElementChildren` for structural rewriting, then template lookup). Code/figure elements go through `BuildElementVars` then templates.
 6. **Cross-ref resolution** (`references/crossref.rs`) -- `@fig-x` references resolved to links/numbers.
 7. **Assemble page** -- MiniJinja page template wrapping (`render/template.rs`).
 8. **TransformDocument** -- Post-assembly document transforms. Modules receive the full document string and can modify it (highlight CSS injection, footnote appending, slide splitting, image embedding).
@@ -95,7 +95,7 @@ All extensibility flows through the `ModuleRegistry` (`modules/registry.rs`). Fi
 | `TransformElementChildren` | `ElementChildren` | During render, per div | Rewrite div children (tabset, layout) |
 | `TransformDocument` | `Document` | Post-assembly | Transform the full document string |
 | `TransformProject` | `Project` | After all pages rendered | Cross-page coordination (navigation, cross-refs) |
-| -- | `Noop` | -- | Partial/template providers only |
+| -- | `Noop` | -- | Template providers only |
 
 Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` to inject `{{ number }}` and `{{ type_class }}` vars.
 
@@ -116,7 +116,7 @@ Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` t
 
 Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`, `minimal`. User extensions live in `_calepin/extensions/{name}/`.
 
-An extension bundles a target definition, partials, modules, CSS/JS assets, and variables. Extensions inherit from a parent via `inherits`. Partial resolution is layered: user overrides > extension partials > parent extension > built-in defaults.
+An extension bundles a target definition, templates, modules, CSS/JS assets, and variables. Extensions inherit from a parent via `inherits`. Template resolution is layered: user overrides > extension templates > parent extension > built-in defaults.
 
 Extension manifests are parsed by `config/extension.rs` (`ExtensionManifest` struct). Built-in manifests are embedded at compile time via `include_str!`.
 
@@ -132,7 +132,7 @@ User targets in `_calepin/config.toml` inherit from built-in targets via `inheri
 
 ## Format Names
 
-Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markdown`. File extensions: `.html`, `.tex`, `.typ`, `.md`. Partial resolution uses the writer name (e.g., `partials/html/figure.html`). Raw blocks use canonical names (```` ```{=latex} ````).
+Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markdown`. File extensions: `.html`, `.tex`, `.typ`, `.md`. Template resolution uses the writer name (e.g., `partials/html/figure.html`). Raw blocks use canonical names (```` ```{=latex} ````).
 
 ## Source Layout
 
@@ -144,7 +144,7 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 
 - `args.rs` -- CLI argument parsing (clap) + `cwarn!` macro
 - `render.rs`, `preview.rs`, `info.rs`, `flush.rs` -- Command handlers
-- `init_sidecar.rs`, `new_notebook.rs`, `new_website.rs`, `new_book.rs`, `new_extension.rs`, `new_gibberish.rs`, `new_partials.rs` -- Init/scaffolding handlers
+- `init_sidecar.rs`, `new_notebook.rs`, `new_website.rs`, `new_book.rs`, `new_extension.rs`, `new_gibberish.rs`, `templates.rs` -- Init/scaffolding handlers
 
 ### `config/` -- Configuration and project context
 
@@ -161,14 +161,14 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 
 - `pipeline.rs` -- Core render pipeline orchestrator: parse, evaluate, render
 - `formats.rs` -- `FormatPipeline`: dispatches modules at each pipeline stage
-- `elements.rs` -- `ElementRenderer`: dispatches each element, holds pre-compiled template env
-- `div.rs` -- Div rendering pipeline: module dispatch, auto-numbering, partial lookup
+- `elements.rs` -- `ElementRenderer`: dispatches each element, holds pre-compiled template env. Key functions: `BUILTIN_TEMPLATES`, `resolve_builtin_template`, `resolve_element_template`
+- `div.rs` -- Div rendering pipeline: module dispatch, auto-numbering, template lookup
 - `span.rs` -- Span rendering pipeline
 - `vars.rs` -- `BuildElementVars` trait + `BuildCodeVars`: per-element template var builders
 - `convert.rs` -- Comrak options, `ImageAttrs`, `render_inline()` entry points
 - `template.rs` -- MiniJinja template engine: `apply_template()`, page template loading, `build_template_vars()`
 - `markers.rs` -- Unicode marker system for protecting content through conversion
-- `metadata.rs` -- Author/citation/appendix formatting via partials
+- `metadata.rs` -- Author/citation/appendix formatting via templates
 
 ### `modules/` -- Module system and built-in modules
 
@@ -198,6 +198,7 @@ Shared AST walker + format-specific implementations via `FormatEmitter` trait.
 ### `utils/` -- Shared utilities
 
 - `tools.rs` -- External tool availability checks and error messages
+- `paths.rs` -- Path utilities: `templates_dir`, `resolve_template`
 - `escape.rs` -- Format-specific code escaping
 - `lipsum.rs` -- Lorem ipsum text generation
 - `cache.rs` -- Hash-based page cache for incremental builds
@@ -205,12 +206,12 @@ Shared AST walker + format-specific implementations via `FormatEmitter` trait.
 
 ### `partials/` -- Built-in Jinja templates (embedded at compile time)
 
-Per-engine partials for elements, page templates, shortcodes:
+Per-engine templates for elements, page templates, shortcodes:
 `partials/{html,latex,typst,markdown,slides,minimal,website,book}/`
 
 Website template icons live in `partials/website/icons/` (used via `{% include %}`).
 
-User overrides: `_calepin/partials/{engine}/{name}.{ext}`
+User overrides: `_calepin/templates/{engine}/{name}.{ext}`
 
 ### `scaffold/` -- Project scaffolding and shared assets
 
@@ -224,21 +225,21 @@ User overrides: `_calepin/partials/{engine}/{name}.{ext}`
 - `references/` -- Bibliography (`bibliography.rs`) + cross-references (`crossref.rs`)
 - `jinja/` -- Jinja body processing: `{% include %}` expansion, code block protection, template context
 - `base/` -- Core types (`types.rs`), paths (`paths.rs`), utilities (`util.rs`, `value.rs`)
-- `collection/` -- Multi-document builds (site/book rendering)
+- `collection/` -- Multi-document builds (site/book rendering), includes `templates.rs` for template resolution
 - `preview/` -- Live preview server with hot reload
 
-## Partials and Module Resolution
+## Templates and Module Resolution
 
-Partials use Jinja syntax (`{{config.variable}}`, `{{calepin.variable}}`, `{% if %}`, `{% for %}`). Variables are namespaced: `config.*` for user-authored values (front matter, attributes, labels), `calepin.*` for engine-computed values (rendered content, format, assets). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
+Templates use Jinja syntax (`{{config.variable}}`, `{{calepin.variable}}`, `{% if %}`, `{% for %}`). Variables are namespaced: `config.*` for user-authored values (front matter, attributes, labels), `calepin.*` for engine-computed values (rendered content, format, assets). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
 
-**Partial resolution order** (first match wins, layered):
+**Template resolution order** (first match wins, layered):
 1. Module element dirs (in registry order)
-2. Sidecar partials: `{stem}_calepin/partials/{target|writer|common}/`
-3. Project partials: `_calepin/partials/{target|writer|common}/`
-4. Extension partials: `_calepin/extensions/{name}/partials/{writer|common}/` (child-first inheritance order)
+2. Sidecar templates: `{stem}_calepin/templates/{target|writer|common}/`
+3. Project templates: `_calepin/templates/{target|writer|common}/`
+4. Extension templates: `_calepin/extensions/{name}/templates/{writer|common}/` (child-first inheritance)
 5. Built-in `partials/{writer}/{name}.{ext}` (embedded in binary)
 
-Resolution is layered: individual files can be overridden at any level. Missing files fall through to the next level. `calepin init` does not copy partials; projects start clean and override only what they need.
+Resolution is layered: individual files can be overridden at any level. Missing files fall through to the next level. `calepin init` does not copy templates; projects start clean and override only what they need.
 
 **Module resolution**: `_calepin/modules/{name}/module.toml`
 
@@ -260,14 +261,14 @@ run = "postprocess.sh"          # Script: stdin=document, stdout=transformed
 
 ## Raw Output Protection
 
-Format-specific output from span partials must survive markdown-to-format conversion without being re-escaped. All markers use Unicode noncharacters (`\u{FFFF}` start, `\u{FFFE}` end) as delimiters. Input is sanitized by `markers::sanitize()` at the start of the pipeline.
+Format-specific output from span templates must survive markdown-to-format conversion without being re-escaped. All markers use Unicode noncharacters (`\u{FFFF}` start, `\u{FFFE}` end) as delimiters. Input is sanitized by `markers::sanitize()` at the start of the pipeline.
 
 Marker types (single-char prefix between delimiters):
 
 - **`M`** -- Math expressions (`$...$` and `$$...$$`). Use `\$` for a literal dollar sign.
 - **`D`** -- Escaped dollar signs. Resolved per-format by `markers::resolve_escaped_dollars()`.
 - **`L`** -- Equation labels (`{#eq-...}` after display math).
-- **`R`** -- Raw span/partial output (including built-in spans like pagebreak, video, placeholder).
+- **`R`** -- Raw span/template output (including built-in spans like pagebreak, video, placeholder).
 
 ## Configuration
 
@@ -275,7 +276,7 @@ Documents can carry TOML front matter between `---` delimiters. Non-TOML front m
 
 **Merge order** (last wins): built-in defaults < `_calepin/config.toml` < `{stem}_calepin/config.toml` (sidecar) < TOML front matter < CLI (`-s`)
 
-**Sidecar directories**: Each document can have a `{stem}_calepin/` directory alongside it, mirroring the `_calepin/` structure (partials, modules, cache, files). For websites, `_calepin/` is the shared sidecar for all pages.
+**Sidecar directories**: Each document can have a `{stem}_calepin/` directory alongside it, mirroring the `_calepin/` structure (templates, modules, cache, files). For websites, `_calepin/` is the shared sidecar for all pages.
 
 calepin-specific settings are nested under the `[calepin]` table:
 
@@ -306,7 +307,7 @@ File inclusion: `{% include "file.qmd" %}` (pre-parse, runs before block parsing
 
 ## Built-in Spans
 
-Bracketed spans `[content]{.class key=value}` are processed during rendering. Built-in spans (output driven by per-engine partials in `partials/{engine}/`):
+Bracketed spans `[content]{.class key=value}` are processed during rendering. Built-in spans (output driven by per-engine templates in `partials/{engine}/`):
 
 - `[]{.pagebreak}` -- format-specific page break
 - `[]{.video url="..." width="..." height="..." title="..."}` -- video embed
@@ -318,14 +319,14 @@ Bracketed spans `[content]{.class key=value}` are processed during rendering. Bu
 - `comrak` -- CommonMark + GFM markdown parsing/rendering
 - `hayagriva` -- Citation/bibliography processing
 - `syntect` -- Syntax highlighting
-- `minijinja` -- Template engine for element/page partials and body processing
+- `minijinja` -- Template engine for element/page templates and body processing
 - `clap` + `clap_complete` -- CLI and shell completions
 - `toml` + `serde` -- TOML config parsing (front matter, `_calepin/config.toml`, sidecar config)
 - `usvg` + `svg2pdf` -- SVG-to-PDF conversion for LaTeX targets
 
 ## Extensions
 
-Extensions are the unit of distribution and customization. An extension is a directory with an `extension.toml` manifest that can provide partials, CSS/JS assets, modules, and variables.
+Extensions are the unit of distribution and customization. An extension is a directory with an `extension.toml` manifest that can provide templates, CSS/JS assets, modules, and variables.
 
 **Installation**: `_calepin/extensions/{name}/extension.toml`
 
@@ -333,7 +334,7 @@ Extensions are the unit of distribution and customization. An extension is a dir
 
 **Scaffolding**: `calepin init extension myext --inherits html`
 
-**Debugging**: `calepin extra partials html` shows the full resolution chain.
+**Debugging**: `calepin templates list html` shows the full resolution chain.
 
 **External modules**: Extensions can declare modules with `run = "scripts/foo.sh"` that execute via stdin/stdout (text or JSON protocol).
 
@@ -354,7 +355,7 @@ Use `verb_noun` or `verb_noun_qualifier` format. Consistent verbs for similar op
 
 - **`parse_*`** -- Convert text/input into structured data (`parse_body`, `parse_metadata`, `parse_attributes`)
 - **`render_*`** -- Produce output strings from structured data (`render_html`, `render_div`, `render_image`)
-- **`resolve_*`** -- Look up a resource/path or infer a value from context (`resolve_partial`, `resolve_module_dir`, `resolve_format`)
+- **`resolve_*`** -- Look up a resource/path or infer a value from context (`resolve_template`, `resolve_module_dir`, `resolve_format`)
 - **`load_*`** -- Read and parse file contents (`load_page_template`, `load_csl_style`)
 - **`build_*`** -- Assemble compound data structures or template variable maps (`build_template_vars`, `build_figure_vars`, `build_author_block`)
 - **`apply_*`** -- Transform input by applying something to it (`apply_template`, `apply_overrides`)

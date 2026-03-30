@@ -17,10 +17,10 @@ No configuration, no scaffolding. *Calepin* uses built-in templates and writes t
 To customize the appearance of a single document, scaffold a sidecar directory:
 
 ```
-calepin init sidecar paper.qmd --partials
+calepin init sidecar paper.qmd --templates
 ```
 
-This creates a `paper_calepin/` directory next to your file, containing a `config.toml` and all built-in partials (templates). Edit the partials to change how your document looks, then render as usual:
+This creates a `paper_calepin/` directory next to your file, containing a `config.toml` and all built-in templates. Edit the templates to change how your document looks, then render as usual:
 
 ```
 calepin render paper.qmd
@@ -32,7 +32,7 @@ The sidecar directory structure:
 paper.qmd
 paper_calepin/
   config.toml            # per-document configuration
-  partials/              # template overrides
+  templates/             # template overrides
     html/
       page.html
       figure.html
@@ -42,7 +42,7 @@ paper_calepin/
   files/                 # generated figures
 ```
 
-Resolution is layered per file: sidecar partials are checked first, then project partials, then extension partials, then built-in defaults. You only need to override the specific files you want to change.
+Resolution is layered per file: sidecar templates are checked first, then project templates, then extension templates, then built-in defaults. You only need to override the specific files you want to change.
 
 # Websites
 
@@ -58,7 +58,7 @@ This creates a directory with a `_calepin/config.toml` manifest, an `index.qmd`,
 my_site/
   _calepin/
     config.toml          # project configuration
-    partials/            # template overrides
+    templates/           # template overrides
       website/
         page.html
         navbar.html
@@ -84,7 +84,7 @@ calepin preview my_site
 | Path | Purpose |
 |------|---------|
 | `_calepin/config.toml` | Project configuration (targets, sidebar, navbar, etc.) |
-| `_calepin/partials/` | Template overrides. Drop a file here to replace any built-in template. |
+| `_calepin/templates/` | Template overrides. Drop a file here to replace any built-in template. |
 | `_calepin/assets/` | Static assets (CSS, images, logos) copied to output. |
 | `{stem}_calepin/` | Per-document sidecar: configuration, cached code output, generated figures. |
 | `_calepin_output/` | Default output directory for websites (configurable in `config.toml`). |
@@ -96,15 +96,15 @@ calepin init sidecar paper.qmd     # sidecar for a single document
 calepin init notebook my-paper     # notebook project
 calepin init website my-site       # website project
 calepin init book my-book          # book project
-calepin init partials              # update local partials to latest built-in templates
+calepin templates update            # update local templates to latest built-in versions
 ```
 
-## Updating partials
+## Updating templates
 
-When *Calepin* is updated, the built-in templates may change (new features, bug fixes, `link()` support). If your project has custom partials in `_calepin/partials/`, they won't pick up these changes automatically.
+When *Calepin* is updated, the built-in templates may change (new features, bug fixes, `link()` support). If your project has custom templates in `_calepin/templates/`, they won't pick up these changes automatically.
 
-Run `calepin init partials` from your project root to overwrite all local partials that have a matching built-in template. The command lists the number of files and asks for confirmation before writing.
+Run `calepin templates update` from your project root to overwrite all local templates that have a matching built-in template. The command lists the number of files and asks for confirmation before writing.
 
 ::: {.callout-warning}
-This is destructive: any customizations you made to local partials will be lost. Commit or back up your partials before running this command.
+This is destructive: any customizations you made to local templates will be lost. Commit or back up your templates before running this command.
 :::

@@ -130,7 +130,7 @@ Markdown, HTML, CSS, Jinja, TOML. Every format has broad LLM training coverage.
 ::: {.columns}
 
 ::: {.column width="50%"}
-**Everything is a template**
+**Templates everywhere**
 
 Every piece of output is a plain text template. Change how figures look, how code blocks render, how the navbar is laid out. Edit a simple text file to modify callouts, footnotes, the title block, or the entire page wrapper.
 :::

@@ -69,7 +69,7 @@ pub fn render(
     let (tpl_name, tpl_source) = match (tpl_name, tpl_source) {
         (Some(n), Some(s)) => (n, s),
         _ => {
-            cwarn!("no partial found for classes [{}]", classes.join(", "));
+            cwarn!("no template found for classes [{}]", classes.join(", "));
             return vars.calepin.remove("children").unwrap_or_default();
         }
     };

@@ -81,7 +81,7 @@ This is useful for shared content that appears across multiple documents: discla
 
 The included file can contain anything a normal `.qmd` file can: prose, code chunks, figures, math, citations. It is spliced into the parent document before parsing, so it behaves as if you had written the content directly.
 
-## Including partials
+## Including templates
 
 With a file extension, `{% include %}` resolves relative to the project root:
 
@@ -89,7 +89,7 @@ With a file extension, `{% include %}` resolves relative to the project root:
 {% include "assets/source_tip.html" %}
 ```
 
-Without a file extension, it looks up a partial from `_calepin/partials/` using format-aware resolution (e.g., `_calepin/partials/html/source_tip.html`).
+Without a file extension, it looks up a template from `_calepin/templates/` using format-aware resolution (e.g., `_calepin/templates/html/source_tip.html`).
 
 
 # Jinja in code chunks

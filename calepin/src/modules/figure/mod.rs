@@ -73,7 +73,7 @@ pub fn render(
     let fig_attrs = build_figure_attrs(attrs);
     build_figure_wrapper_vars(&mut vars, &fig_attrs, format, None, defaults);
 
-    let tpl = crate::render::elements::resolve_builtin_partial("figure_div", format).unwrap_or("");
+    let tpl = crate::render::elements::resolve_builtin_template("figure_div", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }
 
@@ -271,7 +271,7 @@ fn relative_figure_path(path: &Path) -> String {
 }
 
 pub fn format_width(attrs: &crate::types::FigureAttrs, format: &str) -> String {
-    use crate::render::elements::resolve_element_partial;
+    use crate::render::elements::resolve_element_template;
     use crate::render::template::apply_template;
 
     let width = match attrs.width.as_deref() {
@@ -279,7 +279,7 @@ pub fn format_width(attrs: &crate::types::FigureAttrs, format: &str) -> String {
         None => return String::new(),
     };
 
-    if let Some(tpl) = resolve_element_partial("format_width", format) {
+    if let Some(tpl) = resolve_element_template("format_width", format) {
         let mut vars = TemplateVars::new();
         vars.config.insert("width".to_string(), width.to_string());
         if width.ends_with('%') {
@@ -298,10 +298,10 @@ pub fn format_height(attrs: &crate::types::FigureAttrs) -> String {
 }
 
 pub fn format_align(align: &str, format: &str) -> String {
-    use crate::render::elements::resolve_element_partial;
+    use crate::render::elements::resolve_element_template;
     use crate::render::template::apply_template;
 
-    if let Some(tpl) = resolve_element_partial("align_style", format) {
+    if let Some(tpl) = resolve_element_template("align_style", format) {
         let mut vars = TemplateVars::new();
         vars.config.insert("align".to_string(), align.to_string());
         apply_template(&tpl, &vars)

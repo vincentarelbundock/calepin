@@ -2,12 +2,14 @@
 title = "Customization"
 ---
 
-Customize your *Calepin* website with partials, modules, and themes.
+Customize your *Calepin* website with templates, modules, and themes.
 
-## Partials
+## Templates
 
 Override any built-in template by placing a file in
-`_calepin/partials/{engine}/{name}.{ext}`.
+`_calepin/templates/{engine}/{name}.{ext}`.
+
+Run `calepin templates eject` to copy all built-in templates into your project for customization.
 
 ## Modules
 

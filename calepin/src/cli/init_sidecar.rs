@@ -57,7 +57,7 @@ fn split_raw(text: &str) -> Option<(String, String, &'static str)> {
 pub fn handle_init_sidecar(
     path: &Path,
     force: bool,
-    write_partials: bool,
+    write_templates: bool,
     target_name: Option<&str>,
     dry_run: bool,
     no_backup: bool,
@@ -91,8 +91,8 @@ pub fn handle_init_sidecar(
             }
             println!("No TOML front matter found. Creating sidecar with defaults.");
             crate::paths::create_sidecar(&sidecar_dir);
-            if write_partials {
-                crate::paths::write_builtin_partials(&sidecar_dir.join("partials"));
+            if write_templates {
+                crate::paths::write_builtin_templates(&sidecar_dir.join("templates"));
             }
             if target_name.is_some() {
                 apply_target_assets(path, &sidecar_dir)?;
@@ -111,8 +111,8 @@ pub fn handle_init_sidecar(
             }
             println!("Front matter is not valid TOML. Creating sidecar with defaults.");
             crate::paths::create_sidecar(&sidecar_dir);
-            if write_partials {
-                crate::paths::write_builtin_partials(&sidecar_dir.join("partials"));
+            if write_templates {
+                crate::paths::write_builtin_templates(&sidecar_dir.join("templates"));
             }
             if target_name.is_some() {
                 apply_target_assets(path, &sidecar_dir)?;
@@ -187,9 +187,9 @@ pub fn handle_init_sidecar(
         println!("No rendering keys in front matter. Wrote defaults to: {}", config_path.display());
     }
 
-    if write_partials {
-        crate::paths::write_builtin_partials(&sidecar_dir.join("partials"));
-        println!("Wrote built-in partials.");
+    if write_templates {
+        crate::paths::write_builtin_templates(&sidecar_dir.join("templates"));
+        println!("Wrote built-in templates.");
     }
 
     if let Some(target) = target_name {
@@ -198,7 +198,7 @@ pub fn handle_init_sidecar(
     }
 
     // Back up and rewrite the .qmd only on first run (sidecar didn't exist before).
-    // With --force on an existing sidecar, only update config/partials, not the .qmd.
+    // With --force on an existing sidecar, only update config/templates, not the .qmd.
     let is_fresh = !sidecar_existed;
     if has_rendering && is_fresh {
         if !no_backup {

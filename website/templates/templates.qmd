@@ -10,7 +10,7 @@ This means customization is always the same operation: find the template, edit i
 
 It also means that *Calepin* projects are super LLM-friendly. Just ask your agent what you need, and it will almost certainly get it right:
 
-> Go to the `_calepin/partials` folder. Switch all the colors to a Studio Ghibli inspired pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
+> Go to the `_calepin/templates` folder. Switch all the colors to a Studio Ghibli inspired pastel theme. Make the top navigation bar twice as wide. Align the footer text to the right.
 
 {% include "assets/source_tip.html" %}
 
@@ -29,25 +29,25 @@ When the template is rendered with `name = "World"`, the output is `Hello, World
 For a thorough introduction, see the [Jinja2 Template Designer Documentation](https://jinja.palletsprojects.com/en/3.1.x/templates/).
 
 
-# Partials
+# Templates
 
-In *Calepin*, individual template files are called "partials." Each partial controls one piece of output. They live in `_calepin/partials/`, organized by format:
+Each template file controls one piece of output. They live in `_calepin/templates/`, organized by format:
 
 ```
-_calepin/partials/
-  html/         # HTML partials (figure.html, callout.html, page.html, ...)
-  latex/        # LaTeX partials (figure.tex, page.tex, ...)
-  typst/        # Typst partials (figure.typ, page.typ, ...)
-  website/      # Website layout partials (navbar.html, sidebar.html, ...)
-  common/       # Format-agnostic partials (.jinja)
+_calepin/templates/
+  html/         # HTML templates (figure.html, callout.html, page.html, ...)
+  latex/        # LaTeX templates (figure.tex, page.tex, ...)
+  typst/        # Typst templates (figure.typ, page.typ, ...)
+  website/      # Website layout templates (navbar.html, sidebar.html, ...)
+  common/       # Format-agnostic templates (.jinja)
 ```
 
-Resolution is layered per file: *Calepin* checks sidecar partials, then project partials (`_calepin/partials/`), then extension partials, then built-in defaults. You only need to override the specific files you want to change; everything else falls through to the built-in templates.
+Resolution is layered per file: *Calepin* checks sidecar templates, then project templates (`_calepin/templates/`), then extension templates, then built-in defaults. You only need to override the specific files you want to change; everything else falls through to the built-in templates.
 
 
-# Element partials
+# Element templates
 
-Element partials control small, self-contained components. Here is the built-in emphasis template for HTML:
+Element templates control small, self-contained components. Here is the built-in emphasis template for HTML:
 
 `html/emphasis.html`:
 
@@ -66,7 +66,7 @@ And for LaTeX:
 That is the entire file. One line, one element. Every emphasis in the output passes through this template.
 
 
-# Div partials
+# Div templates
 
 Fenced divs (`::: {.classname} ... :::`) use templates for larger structures like figures, callouts, theorems, and code blocks. These templates receive richer variables.
 

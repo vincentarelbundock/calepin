@@ -4,7 +4,7 @@ mod context;
 pub(crate) mod discover;
 pub(crate) mod orchestrator;
 pub(crate) mod render;
-mod partials;
+mod templates;
 pub(crate) mod templating;
 
 use std::collections::HashMap;
@@ -58,13 +58,13 @@ pub fn build_collection(
     let root_sidecar = found_path.parent().map(|p| p.to_path_buf());
     crate::paths::set_root_sidecar(root_sidecar.as_deref());
 
-    // Set extension partial directories for layered resolution
-    let mut ext_dirs = crate::config::context::resolve_extension_partial_dirs_for(&collection_target_name, &base_dir);
+    // Set extension template directories for layered resolution
+    let mut ext_dirs = crate::config::context::resolve_extension_template_dirs_for(&collection_target_name, &base_dir);
     for ext_name in &meta.extensions {
-        let mut more = crate::config::context::resolve_extension_partial_dirs_for(ext_name, &base_dir);
+        let mut more = crate::config::context::resolve_extension_template_dirs_for(ext_name, &base_dir);
         ext_dirs.append(&mut more);
     }
-    crate::paths::set_extension_partial_dirs(ext_dirs);
+    crate::paths::set_extension_template_dirs(ext_dirs);
     crate::paths::set_sideloaded_extensions(meta.extensions.clone());
 
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
@@ -73,12 +73,12 @@ pub fn build_collection(
     let orchestrator_filename = format!("orchestrator.{}", ext);
     let orchestrator = meta.orchestrator.clone()
         .or_else(|| {
-            let p = crate::paths::partials_dir(&base_dir).join(&collection_target_name)
+            let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
                 .join(&orchestrator_filename);
             if p.exists() { return Some(p.display().to_string()); }
             // Check built-in templates
             let builtin_path = format!("{}/{}", collection_target_name, orchestrator_filename);
-            if crate::render::elements::BUILTIN_PARTIALS.get_file(&builtin_path).is_some() {
+            if crate::render::elements::BUILTIN_TEMPLATES.get_file(&builtin_path).is_some() {
                 Some(format!("__builtin__:{}", builtin_path))
             } else {
                 None
@@ -247,7 +247,7 @@ pub fn build_collection(
                 orchestrator::render_orchestrator(&meta, &pages, &results, &base_dir, output, orchestrator_path, format, output_ext, &collection_target_name, quiet)?;
             } else {
                 let url_mode = if portable { crate::utils::links::UrlMode::Relative } else { crate::utils::links::UrlMode::ServerRelative };
-                templating::apply_collection_partials(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;
+                templating::apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;
             }
         }
     }

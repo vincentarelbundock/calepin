@@ -69,7 +69,7 @@ pub fn render(
         .unwrap_or_else(|| "top".to_string());
     vars.config.insert("cap_location".to_string(), cap_loc);
 
-    let tpl = crate::render::elements::resolve_builtin_partial("table_div", format).unwrap_or("");
+    let tpl = crate::render::elements::resolve_builtin_template("table_div", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }
 

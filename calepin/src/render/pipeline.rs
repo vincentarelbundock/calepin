@@ -288,7 +288,7 @@ pub fn render_file(
     // Build pipeline
     let preliminary_format = resolved_format.as_deref().unwrap_or("html");
     let target_name = format.unwrap_or(preliminary_format);
-    // Set active target and inheritance chain for partial resolution
+    // Set active target and inheritance chain for template resolution
     let empty_targets = std::collections::HashMap::new();
     let user_targets_ref = project_metadata.map(|m| &m.targets).unwrap_or(&empty_targets);
     let chain = crate::config::extension::inheritance_chain(

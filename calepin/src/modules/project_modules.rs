@@ -41,7 +41,7 @@ impl TransformProject for SiteWrapModule {
             crate::utils::links::UrlMode::ServerRelative
         };
 
-        crate::collection::templating::apply_collection_partials(
+        crate::collection::templating::apply_collection_templates(
             config,
             &doc_infos,
             &results,
@@ -54,7 +54,7 @@ impl TransformProject for SiteWrapModule {
             ctx.serve,
         )?;
 
-        // Re-read the wrapped pages from disk (apply_collection_partials
+        // Re-read the wrapped pages from disk (apply_collection_templates
         // overwrites the output files with the site-wrapped versions).
         for page in pages.iter_mut() {
             let path = ctx.output_dir.join(&page.output);
@@ -93,12 +93,12 @@ impl TransformProject for OrchestratorModule {
         let orchestrator_filename = format!("orchestrator.{}", ext);
         let orchestrator_path = config.orchestrator.clone()
             .or_else(|| {
-                let p = crate::paths::partials_dir(&ctx.base_dir)
+                let p = crate::paths::templates_dir(&ctx.base_dir)
                     .join(&ctx.target_name)
                     .join(&orchestrator_filename);
                 if p.exists() { return Some(p.display().to_string()); }
                 let builtin_path = format!("{}/{}", ctx.target_name, orchestrator_filename);
-                if crate::render::elements::BUILTIN_PARTIALS.get_file(&builtin_path).is_some() {
+                if crate::render::elements::BUILTIN_TEMPLATES.get_file(&builtin_path).is_some() {
                     Some(format!("__builtin__:{}", builtin_path))
                 } else {
                     None

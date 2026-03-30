@@ -2,7 +2,7 @@
 //!
 //! All input paths resolve relative to the project directory (the directory
 //! containing `.qmd` files). The root sidecar (`{stem}_calepin/`) holds
-//! project-wide config, partials, extensions, modules, and assets.
+//! project-wide config, templates, extensions, modules, and assets.
 //! For document renders without a sidecar config, the project directory
 //! is the parent directory of the `.qmd` file.
 //! The output directory is where finished files are written; no inputs
@@ -143,13 +143,13 @@ fn read_target_from_config(path: &Path) -> Option<String> {
 thread_local! {
     static ACTIVE_TARGET: RefCell<Option<String>> = RefCell::new(None);
     /// Target inheritance chain (child-first), e.g. ["minimal", "website", "html"].
-    /// Used by partial resolution to walk the chain instead of checking target/base.
+    /// Used by template resolution to walk the chain instead of checking target/base.
     static ACTIVE_INHERITANCE_CHAIN: RefCell<Vec<String>> = RefCell::new(Vec::new());
     static PROJECT_DIR: RefCell<Option<PathBuf>> = RefCell::new(None);
     static ROOT_SIDECAR: RefCell<Option<PathBuf>> = RefCell::new(None);
     static PAGE_SIDECAR: RefCell<Option<PathBuf>> = RefCell::new(None);
-    /// Extension partial directories to check, in inheritance order (child first).
-    static EXTENSION_PARTIAL_DIRS: RefCell<Vec<PathBuf>> = RefCell::new(Vec::new());
+    /// Extension template directories to check, in inheritance order (child first).
+    static EXTENSION_TEMPLATE_DIRS: RefCell<Vec<PathBuf>> = RefCell::new(Vec::new());
     /// Side-loaded extension names (from calepin.extensions config).
     static SIDELOADED_EXTENSIONS: RefCell<Vec<String>> = RefCell::new(Vec::new());
 }
@@ -165,7 +165,7 @@ pub fn get_active_target() -> Option<String> {
     ACTIVE_TARGET.with(|t| t.borrow().clone())
 }
 
-/// Set the target inheritance chain for partial resolution.
+/// Set the target inheritance chain for template resolution.
 /// Chain is child-first, e.g. ["minimal", "website", "html"].
 pub fn set_active_inheritance_chain(chain: Vec<String>) {
     ACTIVE_INHERITANCE_CHAIN.with(|c| {
@@ -197,7 +197,7 @@ pub fn get_project_dir() -> PathBuf {
     })
 }
 
-/// Set the root sidecar directory (project-wide config, partials, extensions).
+/// Set the root sidecar directory (project-wide config, templates, extensions).
 /// For collections, this is the entry point's sidecar (e.g., `index_calepin/`).
 /// For single documents, this equals the page sidecar.
 pub fn set_root_sidecar(root: Option<&Path>) {
@@ -210,7 +210,7 @@ pub fn get_root_sidecar() -> Option<PathBuf> {
     ROOT_SIDECAR.with(|r| r.borrow().clone())
 }
 
-/// Set the per-page sidecar directory for partial/module resolution.
+/// Set the per-page sidecar directory for template/module resolution.
 pub fn set_page_sidecar(root: Option<&Path>) {
     PAGE_SIDECAR.with(|r| {
         *r.borrow_mut() = root.map(|p| p.to_path_buf());
@@ -221,16 +221,16 @@ pub fn get_page_sidecar() -> Option<PathBuf> {
     PAGE_SIDECAR.with(|r| r.borrow().clone())
 }
 
-/// Set extension partial directories (child-first order).
+/// Set extension template directories (child-first order).
 /// Called once during target resolution to establish the extension chain.
-pub fn set_extension_partial_dirs(dirs: Vec<PathBuf>) {
-    EXTENSION_PARTIAL_DIRS.with(|d| {
+pub fn set_extension_template_dirs(dirs: Vec<PathBuf>) {
+    EXTENSION_TEMPLATE_DIRS.with(|d| {
         *d.borrow_mut() = dirs;
     });
 }
 
-pub fn get_extension_partial_dirs() -> Vec<PathBuf> {
-    EXTENSION_PARTIAL_DIRS.with(|d| d.borrow().clone())
+pub fn get_extension_template_dirs() -> Vec<PathBuf> {
+    EXTENSION_TEMPLATE_DIRS.with(|d| d.borrow().clone())
 }
 
 /// Set side-loaded extension names (from `[calepin] extensions = [...]`).
@@ -274,7 +274,7 @@ pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
 /// Sidecars always live next to their `.qmd` file: `{parent}/{stem}_calepin/`.
 ///
 /// If the directory does not exist, creates it. In document mode (no project
-/// root set), a default `config.toml` and built-in partials are scaffolded;
+/// root set), a default `config.toml` and built-in templates are scaffolded;
 /// in collection mode, only the directory is created.
 pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     let stem = input.file_stem()?.to_string_lossy();
@@ -287,14 +287,14 @@ pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
             // Collection mode: just create the directory
             std::fs::create_dir_all(&dir).ok();
         } else {
-            // Document mode: full scaffold with config.toml and partials
+            // Document mode: full scaffold with config.toml and templates
             create_sidecar(&dir);
         }
     }
     Some(dir)
 }
 
-/// Create a sidecar directory with a default `config.toml` and all built-in partials.
+/// Create a sidecar directory with a default `config.toml` and all built-in templates.
 pub fn create_sidecar(dir: &Path) {
     if let Err(e) = std::fs::create_dir_all(dir) {
         eprintln!("Warning: could not create sidecar directory {}: {}", dir.display(), e);
@@ -304,14 +304,14 @@ pub fn create_sidecar(dir: &Path) {
     if let Err(e) = std::fs::write(dir.join("config.toml"), &config) {
         eprintln!("Warning: could not write sidecar config: {}", e);
     }
-    // Write all built-in partials so users can customize them.
-    write_builtin_partials(&dir.join("partials"));
+    // Write all built-in templates so users can customize them.
+    write_builtin_templates(&dir.join("templates"));
 }
 
-/// Write all built-in partials into the given directory, preserving subdirectory structure.
-pub fn write_builtin_partials(dest: &Path) {
-    use crate::render::elements::BUILTIN_PARTIALS;
-    write_embedded_dir(&BUILTIN_PARTIALS, dest);
+/// Write all built-in templates into the given directory, preserving subdirectory structure.
+pub fn write_builtin_templates(dest: &Path) {
+    use crate::render::elements::BUILTIN_TEMPLATES;
+    write_embedded_dir(&BUILTIN_TEMPLATES, dest);
 }
 
 /// Write an embedded `include_dir::Dir` to disk, preserving subdirectory structure.
@@ -440,12 +440,12 @@ pub fn output_dir(project_root: &Path, config_output: Option<&str>) -> PathBuf {
     }
 }
 
-/// Partials directory: root sidecar's `partials/`, or legacy `_calepin/partials`.
-pub fn partials_dir(project_root: &Path) -> PathBuf {
+/// Templates directory: root sidecar's `templates/`, or `_calepin/templates`.
+pub fn templates_dir(project_root: &Path) -> PathBuf {
     if let Some(sidecar) = get_root_sidecar() {
-        sidecar.join("partials")
+        sidecar.join("templates")
     } else {
-        project_root.join("_calepin/partials")
+        project_root.join("_calepin/templates")
     }
 }
 
@@ -468,7 +468,7 @@ pub fn extensions_dir(project_root: &Path) -> PathBuf {
 }
 
 // ---------------------------------------------------------------------------
-// Template, partial, and plugin resolution
+// Template and plugin resolution
 // ---------------------------------------------------------------------------
 
 /// Map a base name to its file extension for template/component lookup.
@@ -480,9 +480,9 @@ pub fn resolve_extension(base: &str) -> &str {
         .unwrap_or(base)
 }
 
-/// Check a partials directory for a matching partial file.
+/// Check a templates directory for a matching template file.
 /// Walks the inheritance chain, then falls back to `common/`.
-fn check_partials_dir(
+fn check_templates_dir(
     tpl: &Path,
     chain: &[String],
     specific: &str,
@@ -497,16 +497,16 @@ fn check_partials_dir(
     None
 }
 
-/// Resolve a partial (element or page).
+/// Resolve a template (element or page).
 ///
 /// Lookup order (first match wins), walking the inheritance chain at each level:
-///   1. Sidecar partials: `{stem}_calepin/partials/{chain...}/` then `common/`
-///   2. Project partials: `_calepin/partials/{chain...}/` then `common/`
-///   3. Extension partials (child-first inheritance chain)
+///   1. Sidecar templates: `{stem}_calepin/templates/{chain...}/` then `common/`
+///   2. Project templates: `_calepin/templates/{chain...}/` then `common/`
+///   3. Extension templates (child-first inheritance chain)
 ///   4. (caller falls back to built-in)
 ///
 /// The `writer` parameter determines the file extension (html, tex, typ, md).
-pub fn resolve_partial(name: &str, writer: &str) -> Option<PathBuf> {
+pub fn resolve_template(name: &str, writer: &str) -> Option<PathBuf> {
     let ext = resolve_extension(writer);
     let specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
@@ -520,22 +520,22 @@ pub fn resolve_partial(name: &str, writer: &str) -> Option<PathBuf> {
         &chain
     };
 
-    // Check sidecar then project-level partials
+    // Check sidecar then project-level templates
     let mut dirs = Vec::with_capacity(2);
     if let Some(sidecar) = get_page_sidecar() {
-        dirs.push(sidecar.join("partials"));
+        dirs.push(sidecar.join("templates"));
     }
-    dirs.push(partials_dir(&get_project_dir()));
+    dirs.push(templates_dir(&get_project_dir()));
 
     for tpl in &dirs {
-        if let Some(p) = check_partials_dir(tpl, chain, &specific, &generic) {
+        if let Some(p) = check_templates_dir(tpl, chain, &specific, &generic) {
             return Some(p);
         }
     }
 
-    // Check extension partials (child-first order)
-    for ext_dir in get_extension_partial_dirs() {
-        if let Some(p) = check_partials_dir(&ext_dir, chain, &specific, &generic) {
+    // Check extension templates (child-first order)
+    for ext_dir in get_extension_template_dirs() {
+        if let Some(p) = check_templates_dir(&ext_dir, chain, &specific, &generic) {
             return Some(p);
         }
     }

@@ -74,6 +74,6 @@ pub fn render(
     vars.calepin.insert("nav_items".to_string(), nav_items);
     vars.calepin.insert("tab_panes".to_string(), tab_panes);
 
-    let tpl = crate::render::elements::resolve_builtin_partial("tabset", format).unwrap_or("");
+    let tpl = crate::render::elements::resolve_builtin_template("tabset", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }

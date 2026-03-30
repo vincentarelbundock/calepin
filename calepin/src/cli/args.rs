@@ -79,6 +79,12 @@ pub enum Command {
         #[command(subcommand)]
         action: ExtraAction,
     },
+
+    /// Manage templates (list, eject, diff, update, reset)
+    Templates {
+        #[command(subcommand)]
+        action: TemplatesAction,
+    },
 }
 
 #[derive(clap::Args, Debug)]
@@ -193,9 +199,9 @@ pub enum InitAction {
         #[arg(long)]
         force: bool,
 
-        /// Also scaffold built-in partials into the sidecar
+        /// Also scaffold built-in templates into the sidecar
         #[arg(long)]
-        partials: bool,
+        templates: bool,
 
         /// Target extension to apply to the new sidecar
         #[arg(long)]
@@ -209,9 +215,6 @@ pub enum InitAction {
         #[arg(long)]
         no_backup: bool,
     },
-
-    /// Overwrite local partials with the latest built-in templates
-    Partials,
 
     /// Generate .qmd files filled with lorem ipsum text
     Gibberish {
@@ -293,12 +296,6 @@ pub enum ExtraAction {
     Csl,
     /// List available syntax highlighting themes
     Highlight,
-    /// Show where each partial is resolved from for a target
-    Partials {
-        /// Target to inspect (default: html)
-        #[arg(default_value = "html")]
-        target: String,
-    },
     /// Print shell completions
     #[command(arg_required_else_help = true, after_help = "\
 \x1B[1;4mExamples:\x1B[0m
@@ -340,6 +337,74 @@ pub enum ExtraAction {
         /// Skip confirmation prompt
         #[arg(short = 'y', long)]
         yes: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+pub enum TemplatesAction {
+    /// Show all templates with their resolution source
+    List {
+        /// Target to inspect (default: html)
+        #[arg(default_value = "html")]
+        target: String,
+    },
+
+    /// Copy built-in templates to _calepin/templates/ for customization
+    Eject {
+        /// Target to eject (default: html)
+        #[arg(default_value = "html")]
+        target: String,
+
+        /// Overwrite existing local templates
+        #[arg(long)]
+        force: bool,
+
+        /// Show what would be written without writing anything
+        #[arg(long)]
+        dry_run: bool,
+    },
+
+    /// Print a template's resolved content
+    Show {
+        /// Template name (e.g., figure, code_source, page)
+        name: String,
+
+        /// Target to resolve against (default: html)
+        #[arg(default_value = "html")]
+        target: String,
+    },
+
+    /// Compare local template overrides against built-in defaults
+    Diff {
+        /// Target to compare (default: html)
+        #[arg(default_value = "html")]
+        target: String,
+    },
+
+    /// Refresh unmodified templates after a Calepin upgrade
+    Update {
+        /// Target to update (default: html)
+        #[arg(default_value = "html")]
+        target: String,
+
+        /// Overwrite even modified templates
+        #[arg(long)]
+        force: bool,
+
+        /// Show what would be changed without writing anything
+        #[arg(long)]
+        dry_run: bool,
+    },
+
+    /// Remove a local template override, reverting to built-in
+    Reset {
+        /// Template name (e.g., figure, code_source, page)
+        name: String,
+
+        /// Target to resolve against (default: html)
+        #[arg(default_value = "html")]
+        target: String,
     },
 }
 

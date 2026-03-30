@@ -62,6 +62,6 @@ pub fn render(
         vars.config.insert(k.clone(), val.clone());
     }
 
-    let tpl = crate::render::elements::resolve_builtin_partial("callout", format).unwrap_or("");
+    let tpl = crate::render::elements::resolve_builtin_template("callout", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }

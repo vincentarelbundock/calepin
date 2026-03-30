@@ -120,7 +120,7 @@ fn render_one_with_context(
         input.with_extension(ext)
     };
 
-    // Set active target and inheritance chain for partial/extension resolution
+    // Set active target and inheritance chain for template/extension resolution
     let empty_targets = std::collections::HashMap::new();
     let user_targets = ctx.project_metadata.as_ref().map(|m| &m.targets).unwrap_or(&empty_targets);
     let chain = crate::config::extension::inheritance_chain(

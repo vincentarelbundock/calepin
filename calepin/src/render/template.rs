@@ -99,17 +99,17 @@ use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_a
 
 /// Load a page template by name and base (layered resolution).
 ///
-/// Checks user partials first (sidecar, then project-level), then falls
+/// Checks user templates first (sidecar, then project-level), then falls
 /// through to built-in templates embedded in the binary.
 pub fn load_page_template(template_name: &str, base: &str) -> String {
     // Try filesystem first (sidecar → project)
-    if let Some(content) = crate::paths::resolve_partial(template_name, base)
+    if let Some(content) = crate::paths::resolve_template(template_name, base)
         .and_then(|path| std::fs::read_to_string(&path).ok())
     {
         return content;
     }
     // Fall through to built-in
-    crate::render::elements::resolve_builtin_partial(template_name, base)
+    crate::render::elements::resolve_builtin_template(template_name, base)
         .unwrap_or("")
         .to_string()
 }
@@ -120,13 +120,13 @@ pub fn load_default_css() -> String {
 
     // 1. Base CSS: user override or built-in
     let root = crate::paths::get_project_dir();
-    let p = crate::paths::partials_dir(&root).join("html").join("page.css");
+    let p = crate::paths::templates_dir(&root).join("html").join("page.css");
     if p.exists() {
         if let Ok(s) = std::fs::read_to_string(&p) {
             css.push_str(&s);
         }
     } else {
-        if let Some(builtin) = crate::render::elements::BUILTIN_PARTIALS
+        if let Some(builtin) = crate::render::elements::BUILTIN_TEMPLATES
             .get_file("html/page.css")
             .and_then(|f| f.contents_utf8())
         {
@@ -388,8 +388,8 @@ impl TemplateEnv {
 /// Render a metadata field through an element template if available.
 /// Returns empty string if no template is found.
 pub fn render_element(name: &str, ext: &str, vars: &TemplateVars) -> String {
-    use crate::render::elements::resolve_element_partial;
-    if let Some(tpl) = resolve_element_partial(name, ext) {
+    use crate::render::elements::resolve_element_template;
+    if let Some(tpl) = resolve_element_template(name, ext) {
         let mut vars = TemplateVars {
             config: vars.config.clone(),
             calepin: vars.calepin.clone(),
@@ -540,7 +540,7 @@ pub fn build_template_vars_with_headings(
             toc_vars.config.insert("title".to_string(), toc_title.to_string());
             toc_vars.config.insert("depth".to_string(), toc_depth.to_string());
             toc_vars.calepin.insert("toc_list".to_string(), String::new());
-            let tpl_owned = crate::render::elements::resolve_element_partial("toc", ext).unwrap_or_default();
+            let tpl_owned = crate::render::elements::resolve_element_template("toc", ext).unwrap_or_default();
             let tpl = tpl_owned.as_str();
             apply_template(tpl, &toc_vars)
         };
@@ -615,10 +615,10 @@ pub fn assemble_page(
 /// Render a page template with {% include %} support.
 ///
 /// Sets up a MiniJinja environment with:
-///   1. partials/{target}/ (target-specific, from active target)
-///   2. partials/{base}/ (base-specific)
+///   1. templates/{target}/ (target-specific, from active target)
+///   2. templates/{base}/ (base-specific)
 ///   3. templates/common/ (format-agnostic fallback)
-///   4. Built-in partials/{base}/ (embedded in binary)
+///   4. Built-in templates/{base}/ (embedded in binary)
 ///   5. Built-in templates/common/ (embedded in binary)
 ///
 /// The page template and all included component templates share the same
@@ -636,7 +636,7 @@ pub fn render_page_template(
 
     let root = crate::paths::get_project_dir();
     let active_target = crate::paths::get_active_target();
-    let tpl_dir = crate::paths::partials_dir(&root);
+    let tpl_dir = crate::paths::templates_dir(&root);
 
     // Load templates from filesystem directories
     let mut dirs: Vec<std::path::PathBuf> = Vec::new();
@@ -648,8 +648,8 @@ pub fn render_page_template(
     dirs.push(tpl_dir.join(base));
     dirs.push(tpl_dir.join("common"));
 
-    // Also check extension partial directories (child-first order)
-    for ext_dir in crate::paths::get_extension_partial_dirs() {
+    // Also check extension template directories (child-first order)
+    for ext_dir in crate::paths::get_extension_template_dirs() {
         if let Some(ref target) = active_target {
             if target != base {
                 dirs.push(ext_dir.join(target));
@@ -676,7 +676,7 @@ pub fn render_page_template(
     }
 
     // Load built-in base-specific templates as fallback
-    if let Some(base_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir(base) {
+    if let Some(base_dir) = crate::render::elements::BUILTIN_TEMPLATES.get_dir(base) {
         for entry in base_dir.files() {
             if let Some(content) = entry.contents_utf8() {
                 let name = entry.path().file_name()
@@ -690,7 +690,7 @@ pub fn render_page_template(
     }
 
     // Load built-in common templates as fallback
-    if let Some(common_dir) = crate::render::elements::BUILTIN_PARTIALS.get_dir("common") {
+    if let Some(common_dir) = crate::render::elements::BUILTIN_TEMPLATES.get_dir("common") {
         for entry in common_dir.files() {
             if let Some(content) = entry.contents_utf8() {
                 let name = entry.path().file_name()

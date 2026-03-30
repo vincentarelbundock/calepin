@@ -105,7 +105,7 @@ pub fn render(
         "theorem_normal"
     };
 
-    let tpl = crate::render::elements::resolve_builtin_partial(template_name, format).unwrap_or("");
+    let tpl = crate::render::elements::resolve_builtin_template(template_name, format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }
 

@@ -32,9 +32,9 @@ pub fn handle_new_extension(name: &str, inherits: &str) -> Result<()> {
 
     // Create directory structure
     std::fs::create_dir_all(dir)?;
-    let partials_dir = dir.join("partials").join(writer);
-    std::fs::create_dir_all(&partials_dir)?;
-    std::fs::write(partials_dir.join(".gitkeep"), "")?;
+    let templates_dir = dir.join("templates").join(writer);
+    std::fs::create_dir_all(&templates_dir)?;
+    std::fs::write(templates_dir.join(".gitkeep"), "")?;
     let assets_dir = dir.join("assets");
     std::fs::create_dir_all(&assets_dir)?;
     std::fs::write(assets_dir.join(".gitkeep"), "")?;
@@ -66,7 +66,7 @@ inherits = "{inherits}"
     eprintln!();
     eprintln!("  {}/", name);
     eprintln!("  |-- extension.toml");
-    eprintln!("  |-- partials/");
+    eprintln!("  |-- templates/");
     eprintln!("  |   `-- {}/", writer);
     eprintln!("  `-- assets/");
     eprintln!();
