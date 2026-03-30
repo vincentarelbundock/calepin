@@ -345,16 +345,22 @@ pub enum ExtraAction {
 pub enum TemplatesAction {
     /// Show all templates with their resolution source
     List {
-        /// Target to inspect (default: html)
-        #[arg(default_value = "html")]
-        target: String,
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
     },
 
-    /// Copy built-in templates to _calepin/templates/ for customization
+    /// Eject built-in templates into the sidecar for customization
     Eject {
-        /// Target to eject (default: html)
-        #[arg(default_value = "html")]
-        target: String,
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
 
         /// Overwrite existing local templates
         #[arg(long)]
@@ -370,23 +376,32 @@ pub enum TemplatesAction {
         /// Template name (e.g., figure, code_source, page)
         name: String,
 
-        /// Target to resolve against (default: html)
-        #[arg(default_value = "html")]
-        target: String,
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
     },
 
     /// Compare local template overrides against built-in defaults
     Diff {
-        /// Target to compare (default: html)
-        #[arg(default_value = "html")]
-        target: String,
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
     },
 
     /// Refresh unmodified templates after a Calepin upgrade
     Update {
-        /// Target to update (default: html)
-        #[arg(default_value = "html")]
-        target: String,
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
 
         /// Overwrite even modified templates
         #[arg(long)]
@@ -402,9 +417,12 @@ pub enum TemplatesAction {
         /// Template name (e.g., figure, code_source, page)
         name: String,
 
-        /// Target to resolve against (default: html)
-        #[arg(default_value = "html")]
-        target: String,
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
     },
 }
 

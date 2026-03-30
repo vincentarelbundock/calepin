@@ -92,7 +92,7 @@ pub fn handle_init_sidecar(
             println!("No TOML front matter found. Creating sidecar with defaults.");
             crate::paths::create_sidecar(&sidecar_dir);
             if write_templates {
-                crate::paths::write_builtin_templates(&sidecar_dir.join("templates"));
+                eject_for_target(&sidecar_dir, target_name);
             }
             if target_name.is_some() {
                 apply_target_assets(path, &sidecar_dir)?;
@@ -112,7 +112,7 @@ pub fn handle_init_sidecar(
             println!("Front matter is not valid TOML. Creating sidecar with defaults.");
             crate::paths::create_sidecar(&sidecar_dir);
             if write_templates {
-                crate::paths::write_builtin_templates(&sidecar_dir.join("templates"));
+                eject_for_target(&sidecar_dir, target_name);
             }
             if target_name.is_some() {
                 apply_target_assets(path, &sidecar_dir)?;
@@ -188,7 +188,7 @@ pub fn handle_init_sidecar(
     }
 
     if write_templates {
-        crate::paths::write_builtin_templates(&sidecar_dir.join("templates"));
+        eject_for_target(&sidecar_dir, target_name);
         println!("Wrote built-in templates.");
     }
 
@@ -221,10 +221,20 @@ fn is_identity_key(key: &str) -> bool {
 
 fn apply_target_assets(qmd_path: &Path, sidecar: &Path) -> Result<()> {
     use crate::paths::ProjectKind;
-    // Apply assets only (partials come from built-in via layered resolution)
+    // Apply assets only (templates are ejected separately)
     let kind = ProjectKind::Document {
         qmd: qmd_path.to_path_buf(),
         sidecar: sidecar.to_path_buf(),
     };
     crate::themes::copy_builtin_assets(&kind)
+}
+
+/// Eject templates for a target into the sidecar's templates/ directory.
+fn eject_for_target(sidecar: &Path, target_name: Option<&str>) {
+    let target = target_name.unwrap_or("html");
+    let empty = std::collections::HashMap::new();
+    let project_root = sidecar.parent().unwrap_or(Path::new("."));
+    let chain = crate::config::extension::inheritance_chain(project_root, target, &empty);
+    crate::paths::set_active_target_with_chain(Some(target), chain);
+    crate::paths::ensure_chain_templates(&sidecar.join("templates"));
 }

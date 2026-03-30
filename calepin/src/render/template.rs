@@ -118,20 +118,13 @@ pub fn load_page_template(template_name: &str, base: &str) -> String {
 pub fn load_default_css() -> String {
     let mut css = String::new();
 
-    // 1. Base CSS: user override or built-in
+    // 1. Base CSS from templates directory
     let root = crate::paths::get_project_dir();
-    let p = crate::paths::templates_dir(&root).join("html").join("page.css");
-    if p.exists() {
-        if let Ok(s) = std::fs::read_to_string(&p) {
-            css.push_str(&s);
-        }
-    } else {
-        if let Some(builtin) = crate::render::elements::BUILTIN_TEMPLATES
-            .get_file("html/page.css")
-            .and_then(|f| f.contents_utf8())
-        {
-            css.push_str(builtin);
-        }
+    let chain = crate::paths::get_active_inheritance_chain();
+    let target = chain.first().map(|s| s.as_str()).unwrap_or("html");
+    let p = crate::paths::templates_dir(&root).join(target).join("page.css");
+    if let Ok(s) = std::fs::read_to_string(&p) {
+        css.push_str(&s);
     }
 
     // 2. Extension CSS (active target + side-loaded extensions)
@@ -618,8 +611,6 @@ pub fn assemble_page(
 ///   1. templates/{target}/ (target-specific, from active target)
 ///   2. templates/{base}/ (base-specific)
 ///   3. templates/common/ (format-agnostic fallback)
-///   4. Built-in templates/{base}/ (embedded in binary)
-///   5. Built-in templates/common/ (embedded in binary)
 ///
 /// The page template and all included component templates share the same
 /// context, so `{% include "preamble.html" %}` in the page template can
@@ -638,26 +629,10 @@ pub fn render_page_template(
     let active_target = crate::paths::get_active_target();
     let tpl_dir = crate::paths::templates_dir(&root);
 
-    // Load templates from filesystem directories
-    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
-    if let Some(ref target) = active_target {
-        if target != base {
-            dirs.push(tpl_dir.join(target));
-        }
-    }
-    dirs.push(tpl_dir.join(base));
-    dirs.push(tpl_dir.join("common"));
-
-    // Also check extension template directories (child-first order)
-    for ext_dir in crate::paths::get_extension_template_dirs() {
-        if let Some(ref target) = active_target {
-            if target != base {
-                dirs.push(ext_dir.join(target));
-            }
-        }
-        dirs.push(ext_dir.join(base));
-        dirs.push(ext_dir.join("common"));
-    }
+    // Load templates from the flat target directory
+    let target = active_target.as_deref().unwrap_or(base);
+    let dir = tpl_dir.join(target);
+    let dirs = [dir];
 
     for dir in &dirs {
         if !dir.is_dir() { continue; }
@@ -670,34 +645,6 @@ pub fn render_page_template(
                     let rel = path.strip_prefix(dir).unwrap_or(&path);
                     let name = rel.display().to_string();
                     templates.entry(name).or_insert(content);
-                }
-            }
-        }
-    }
-
-    // Load built-in base-specific templates as fallback
-    if let Some(base_dir) = crate::render::elements::BUILTIN_TEMPLATES.get_dir(base) {
-        for entry in base_dir.files() {
-            if let Some(content) = entry.contents_utf8() {
-                let name = entry.path().file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
-                if !name.is_empty() {
-                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
-                }
-            }
-        }
-    }
-
-    // Load built-in common templates as fallback
-    if let Some(common_dir) = crate::render::elements::BUILTIN_TEMPLATES.get_dir("common") {
-        for entry in common_dir.files() {
-            if let Some(content) = entry.contents_utf8() {
-                let name = entry.path().file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
-                if !name.is_empty() {
-                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
                 }
             }
         }

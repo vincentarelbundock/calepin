@@ -96,13 +96,7 @@ impl TransformProject for OrchestratorModule {
                 let p = crate::paths::templates_dir(&ctx.base_dir)
                     .join(&ctx.target_name)
                     .join(&orchestrator_filename);
-                if p.exists() { return Some(p.display().to_string()); }
-                let builtin_path = format!("{}/{}", ctx.target_name, orchestrator_filename);
-                if crate::render::elements::BUILTIN_TEMPLATES.get_file(&builtin_path).is_some() {
-                    Some(format!("__builtin__:{}", builtin_path))
-                } else {
-                    None
-                }
+                if p.exists() { Some(p.display().to_string()) } else { None }
             });
 
         if let Some(ref orch_path) = orchestrator_path {

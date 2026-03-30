@@ -71,12 +71,9 @@ pub(crate) fn render_orchestrator(
     // Collect all template sources into an owned map for the loader.
     let mut templates = std::collections::HashMap::new();
 
-    // Load templates from templates/{target}/ and templates/common/
-    let dirs = [
-        crate::paths::templates_dir(&base_dir).join(target_name),
-        crate::paths::templates_dir(&base_dir).join("common"),
-    ];
-    for dir in &dirs {
+    // Load templates from the flat templates/{target}/ directory
+    let dir = crate::paths::templates_dir(&base_dir).join(target_name);
+    for dir in &[dir] {
         if !dir.is_dir() { continue; }
         let pattern = dir.join("**").join("*.*");
         let pattern_str = pattern.display().to_string();
@@ -93,31 +90,10 @@ pub(crate) fn render_orchestrator(
         }
     }
 
-    // Also load built-in templates as fallback (target-specific + common)
-    for builtin_dir_name in &[format!("partials/{}", target_name), "common".to_string()] {
-        for entry in crate::render::elements::BUILTIN_TEMPLATES.get_dir(builtin_dir_name.as_str()).into_iter().flat_map(|d| d.files()) {
-            if let Some(content) = entry.contents_utf8() {
-                let name = entry.path().file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
-                if !name.is_empty() {
-                    templates.entry(name.to_string()).or_insert_with(|| content.to_string());
-                }
-            }
-        }
-    }
-
     // Load the orchestrator template itself
-    let tpl_source = if let Some(builtin_path) = orchestrator_path.strip_prefix("__builtin__:") {
-        crate::render::elements::BUILTIN_TEMPLATES.get_file(builtin_path)
-            .and_then(|f| f.contents_utf8())
-            .map(|s| s.to_string())
-            .ok_or_else(|| anyhow::anyhow!("Built-in orchestrator template not found: {}", builtin_path))?
-    } else {
-        let tpl_path = base_dir.join(orchestrator_path);
-        fs::read_to_string(&tpl_path)
-            .with_context(|| format!("Failed to read orchestrator template: {}", tpl_path.display()))?
-    };
+    let tpl_path = base_dir.join(orchestrator_path);
+    let tpl_source = fs::read_to_string(&tpl_path)
+        .with_context(|| format!("Failed to read orchestrator template: {}", tpl_path.display()))?;
     templates.insert("orchestrator".to_string(), tpl_source);
 
     let mut env = minijinja::Environment::new();

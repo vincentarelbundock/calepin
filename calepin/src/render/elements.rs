@@ -358,18 +358,11 @@ impl ElementRenderer {
 
 }
 
-/// Resolve an element template: filesystem → built-in (layered).
+/// Resolve an element template from the filesystem.
 /// Template names use underscores internally; hyphens are normalized.
-/// Checks user templates first (sidecar, then project-level), then falls
-/// through to built-in templates embedded in the binary.
+/// Checks sidecar, then project-level templates directory.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
-    // Try filesystem first (sidecar → project)
-    if let Some(content) = crate::paths::resolve_template(&canonical, ext)
+    crate::paths::resolve_template(&canonical, ext)
         .and_then(|path| std::fs::read_to_string(&path).ok())
-    {
-        return Some(content);
-    }
-    // Fall through to built-in
-    resolve_builtin_template(&canonical, ext).map(|s| s.to_string())
 }

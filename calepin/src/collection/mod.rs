@@ -58,6 +58,10 @@ pub fn build_collection(
     let root_sidecar = found_path.parent().map(|p| p.to_path_buf());
     crate::paths::set_root_sidecar(root_sidecar.as_deref());
 
+    // Ensure templates for the active chain are on disk
+    let tpl_dir = crate::paths::templates_dir(&base_dir);
+    crate::paths::ensure_chain_templates(&tpl_dir);
+
     // Set extension template directories for layered resolution
     let mut ext_dirs = crate::config::context::resolve_extension_template_dirs_for(&collection_target_name, &base_dir);
     for ext_name in &meta.extensions {
@@ -68,21 +72,13 @@ pub fn build_collection(
     crate::paths::set_sideloaded_extensions(meta.extensions.clone());
 
     // Auto-detect orchestrator: check templates/{target}/orchestrator.{ext}
-    // Falls back to built-in templates if not found on filesystem.
     let ext = crate::paths::resolve_extension(format);
     let orchestrator_filename = format!("orchestrator.{}", ext);
     let orchestrator = meta.orchestrator.clone()
         .or_else(|| {
             let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
                 .join(&orchestrator_filename);
-            if p.exists() { return Some(p.display().to_string()); }
-            // Check built-in templates
-            let builtin_path = format!("{}/{}", collection_target_name, orchestrator_filename);
-            if crate::render::elements::BUILTIN_TEMPLATES.get_file(&builtin_path).is_some() {
-                Some(format!("__builtin__:{}", builtin_path))
-            } else {
-                None
-            }
+            if p.exists() { Some(p.display().to_string()) } else { None }
         });
 
     // 3. Prepare output directory (relative to CWD, not project root)

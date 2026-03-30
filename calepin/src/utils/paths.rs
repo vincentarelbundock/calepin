@@ -294,7 +294,8 @@ pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     Some(dir)
 }
 
-/// Create a sidecar directory with a default `config.toml` and all built-in templates.
+/// Create a sidecar directory with a default `config.toml`.
+/// Templates are ejected later by `ensure_chain_templates` once the target is known.
 pub fn create_sidecar(dir: &Path) {
     if let Err(e) = std::fs::create_dir_all(dir) {
         eprintln!("Warning: could not create sidecar directory {}: {}", dir.display(), e);
@@ -304,14 +305,59 @@ pub fn create_sidecar(dir: &Path) {
     if let Err(e) = std::fs::write(dir.join("config.toml"), &config) {
         eprintln!("Warning: could not write sidecar config: {}", e);
     }
-    // Write all built-in templates so users can customize them.
-    write_builtin_templates(&dir.join("templates"));
 }
 
-/// Write all built-in templates into the given directory, preserving subdirectory structure.
-pub fn write_builtin_templates(dest: &Path) {
+/// Prepend an xxh3 hash marker to template content.
+pub fn prepend_hash_marker(content: &str) -> String {
+    use xxhash_rust::xxh3::xxh3_64;
+    let hash = format!("{:016x}", xxh3_64(content.as_bytes()));
+    format!("{{# calepin:xxh3:{} #}}\n{}", hash, content)
+}
+
+/// Ensure built-in templates for the active target exist on disk.
+///
+/// Creates a flat `templates/{target}/` directory by walking the inheritance
+/// chain from parent to child: parent templates are written first, then child
+/// templates overwrite them. Files already on disk are never overwritten, so
+/// user edits are preserved across renders and upgrades.
+pub fn ensure_chain_templates(dest: &Path) {
     use crate::render::elements::BUILTIN_TEMPLATES;
-    write_embedded_dir(&BUILTIN_TEMPLATES, dest);
+    let chain = get_active_inheritance_chain();
+    if chain.is_empty() { return; }
+
+    // Target name is the first element (child-first chain)
+    let target_name = &chain[0];
+    let target_dest = dest.join(target_name);
+
+    // Walk child-first: child templates are written first, parent templates
+    // fill in the gaps. Files already on disk are never overwritten.
+    for chain_target in chain.iter() {
+        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
+            flatten_dir_into(dir, chain_target, &target_dest);
+        }
+    }
+}
+
+/// Flatten a built-in directory into dest, skipping files that already exist.
+fn flatten_dir_into(dir: &include_dir::Dir<'static>, prefix: &str, dest: &Path) {
+    let prefix_path = std::path::Path::new(prefix);
+    for file in dir.files() {
+        let rel = file.path().strip_prefix(prefix_path).unwrap_or(file.path());
+        let out = dest.join(rel);
+        if out.exists() { continue; }
+        if let Some(parent) = out.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Some(content) = file.contents_utf8() {
+            let _ = std::fs::write(&out, prepend_hash_marker(content));
+        } else {
+            let _ = std::fs::write(&out, file.contents());
+        }
+    }
+    for subdir in dir.dirs() {
+        let sub_rel = subdir.path().strip_prefix(prefix_path).unwrap_or(subdir.path());
+        flatten_dir_into(subdir, &subdir.path().display().to_string(), &dest.join(sub_rel));
+    }
 }
 
 /// Write an embedded `include_dir::Dir` to disk, preserving subdirectory structure.
@@ -480,64 +526,31 @@ pub fn resolve_extension(base: &str) -> &str {
         .unwrap_or(base)
 }
 
-/// Check a templates directory for a matching template file.
-/// Walks the inheritance chain, then falls back to `common/`.
-fn check_templates_dir(
-    tpl: &Path,
-    chain: &[String],
-    specific: &str,
-    generic: &str,
-) -> Option<PathBuf> {
-    for target in chain {
-        let p = tpl.join(target).join(specific);
-        if p.exists() { return Some(p); }
-    }
-    let p = tpl.join("common").join(generic);
-    if p.exists() { return Some(p); }
-    None
-}
-
 /// Resolve a template (element or page).
 ///
-/// Lookup order (first match wins), walking the inheritance chain at each level:
-///   1. Sidecar templates: `{stem}_calepin/templates/{chain...}/` then `common/`
-///   2. Project templates: `_calepin/templates/{chain...}/` then `common/`
-///   3. Extension templates (child-first inheritance chain)
-///   4. (caller falls back to built-in)
-///
+/// Checks `{stem}_calepin/templates/{target}/{name}.{ext}`.
 /// The `writer` parameter determines the file extension (html, tex, typ, md).
 pub fn resolve_template(name: &str, writer: &str) -> Option<PathBuf> {
     let ext = resolve_extension(writer);
     let specific = format!("{}.{}", name, ext);
     let generic = format!("{}.jinja", name);
+
     let chain = get_active_inheritance_chain();
-    // Fall back to writer as a single-element chain when no target is set.
-    let fallback;
-    let chain = if chain.is_empty() {
-        fallback = vec![writer.to_string()];
-        &fallback
-    } else {
-        &chain
-    };
+    let target = chain.first().map(|s| s.as_str()).unwrap_or(writer);
 
-    // Check sidecar then project-level templates
-    let mut dirs = Vec::with_capacity(2);
-    if let Some(sidecar) = get_page_sidecar() {
-        dirs.push(sidecar.join("templates"));
-    }
-    dirs.push(templates_dir(&get_project_dir()));
+    let tpl_dir = templates_dir(&get_project_dir()).join(target);
 
-    for tpl in &dirs {
-        if let Some(p) = check_templates_dir(tpl, chain, &specific, &generic) {
-            return Some(p);
-        }
-    }
+    let p = tpl_dir.join(&specific);
+    if p.exists() { return Some(p); }
+    let p = tpl_dir.join(&generic);
+    if p.exists() { return Some(p); }
 
-    // Check extension templates (child-first order)
+    // Check extension templates
     for ext_dir in get_extension_template_dirs() {
-        if let Some(p) = check_templates_dir(&ext_dir, chain, &specific, &generic) {
-            return Some(p);
-        }
+        let p = ext_dir.join(target).join(&specific);
+        if p.exists() { return Some(p); }
+        let p = ext_dir.join(target).join(&generic);
+        if p.exists() { return Some(p); }
     }
 
     None

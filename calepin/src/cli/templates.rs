@@ -1,6 +1,8 @@
 //! `calepin templates` subcommand: list, eject, show, diff, update, reset.
+//!
+//! All subcommands operate on a specific sidecar identified by the input .qmd file.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 use xxhash_rust::xxh3::xxh3_64;
@@ -12,22 +14,13 @@ use crate::render::elements::{BUILTIN_TEMPLATES, resolve_builtin_template};
 // Hash utilities
 // ---------------------------------------------------------------------------
 
-/// Compute xxh3_64 hash of content, formatted as hex.
 fn compute_hash(content: &[u8]) -> String {
     format!("{:016x}", xxh3_64(content))
 }
 
-/// Format: `{# calepin:xxh3:HASH #}\n`
 const MARKER_PREFIX: &str = "{# calepin:xxh3:";
 const MARKER_SUFFIX: &str = " #}";
 
-/// Prepend a hash marker to template content.
-fn prepend_hash_marker(content: &str) -> String {
-    let hash = compute_hash(content.as_bytes());
-    format!("{}{}{}\n{}", MARKER_PREFIX, hash, MARKER_SUFFIX, content)
-}
-
-/// Parse the hash from the first line of a file, if it has a marker.
 fn parse_hash_marker(text: &str) -> Option<String> {
     let first_line = text.lines().next()?;
     let rest = first_line.strip_prefix(MARKER_PREFIX)?;
@@ -35,27 +28,20 @@ fn parse_hash_marker(text: &str) -> Option<String> {
     Some(hash.to_string())
 }
 
-/// Strip the hash marker line from file content.
 fn strip_hash_marker(text: &str) -> &str {
     if text.starts_with(MARKER_PREFIX) {
-        // Skip first line (marker) + newline
         text.find('\n').map(|i| &text[i + 1..]).unwrap_or("")
     } else {
         text
     }
 }
 
-/// Template modification state.
 enum TemplateState {
-    /// Local content matches the ejected built-in (hash matches).
     Unmodified,
-    /// User has customized the template.
     Modified,
-    /// No hash marker found (manually created or old-style override).
     NoMarker,
 }
 
-/// Check whether a local template file has been modified relative to its marker hash.
 fn check_template_state(local_content: &str) -> TemplateState {
     match parse_hash_marker(local_content) {
         Some(marker_hash) => {
@@ -72,20 +58,53 @@ fn check_template_state(local_content: &str) -> TemplateState {
 }
 
 // ---------------------------------------------------------------------------
-// Target resolution helpers
+// Context: resolve sidecar + target from input .qmd
 // ---------------------------------------------------------------------------
 
-/// Resolve target, writer, extension, and inheritance chain for a target name.
-fn resolve_target_info(target_name: &str) -> (Option<crate::config::Target>, String, String, Vec<String>) {
+struct TemplateContext {
+    /// The flat templates directory: {stem}_calepin/templates/{target}/
+    tpl_dir: PathBuf,
+    /// Sidecar root: {stem}_calepin/
+    sidecar: PathBuf,
+    target_name: String,
+    writer: String,
+    ext: String,
+    chain: Vec<String>,
+}
+
+/// Resolve the sidecar and target from an input .qmd file.
+fn resolve_context(input: &Path, target_override: Option<&str>) -> Result<TemplateContext> {
+    if !input.exists() {
+        bail!("File not found: {}", input.display());
+    }
+    let stem = input.file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| anyhow::anyhow!("Cannot determine stem for: {}", input.display()))?;
+    let parent = input.parent().unwrap_or(Path::new("."));
+    let sidecar = parent.join(format!("{}_calepin", stem));
+
+    // Read target from front matter if not overridden
+    let target_name = if let Some(t) = target_override {
+        t.to_string()
+    } else {
+        let text = std::fs::read_to_string(input)?;
+        crate::config::split_frontmatter(&text)
+            .ok()
+            .and_then(|(fm, _)| fm.target)
+            .unwrap_or_else(|| "html".to_string())
+    };
+
     let empty = std::collections::HashMap::new();
-    let target = crate::config::resolve_target(target_name, &empty).ok();
-    let writer = target.as_ref().map(|t| t.writer.as_str()).unwrap_or(target_name).to_string();
+    let target = crate::config::resolve_target(&target_name, &empty).ok();
+    let writer = target.as_ref().map(|t| t.writer.as_str()).unwrap_or(&target_name).to_string();
     let ext = crate::paths::resolve_extension(&writer).to_string();
-    let project_root = crate::paths::get_project_dir();
-    let empty_targets = std::collections::HashMap::new();
-    let chain = crate::config::extension::inheritance_chain(&project_root, target_name, &empty_targets);
-    crate::paths::set_active_target_with_chain(Some(target_name), chain.clone());
-    (target, writer, ext, chain)
+    let project_root = parent.to_path_buf();
+    let chain = crate::config::extension::inheritance_chain(&project_root, &target_name, &empty);
+    crate::paths::set_active_target_with_chain(Some(&target_name), chain.clone());
+
+    let tpl_dir = sidecar.join("templates").join(&target_name);
+
+    Ok(TemplateContext { tpl_dir, sidecar, target_name, writer, ext, chain })
 }
 
 /// Collect all template names from built-in templates for the given inheritance chain.
@@ -112,12 +131,12 @@ fn collect_builtin_names(chain: &[String]) -> Vec<String> {
 
 pub fn handle_templates(action: TemplatesAction) -> Result<()> {
     match action {
-        TemplatesAction::List { target } => handle_list(&target),
-        TemplatesAction::Eject { target, force, dry_run } => handle_eject(&target, force, dry_run),
-        TemplatesAction::Show { name, target } => handle_show(&name, &target),
-        TemplatesAction::Diff { target } => handle_diff(&target),
-        TemplatesAction::Update { target, force, dry_run } => handle_update(&target, force, dry_run),
-        TemplatesAction::Reset { name, target } => handle_reset(&name, &target),
+        TemplatesAction::List { input, target } => handle_list(&input, target.as_deref()),
+        TemplatesAction::Eject { input, target, force, dry_run } => handle_eject(&input, target.as_deref(), force, dry_run),
+        TemplatesAction::Show { name, input, target } => handle_show(&name, &input, target.as_deref()),
+        TemplatesAction::Diff { input, target } => handle_diff(&input, target.as_deref()),
+        TemplatesAction::Update { input, target, force, dry_run } => handle_update(&input, target.as_deref(), force, dry_run),
+        TemplatesAction::Reset { name, input, target } => handle_reset(&name, &input, target.as_deref()),
     }
 }
 
@@ -125,21 +144,18 @@ pub fn handle_templates(action: TemplatesAction) -> Result<()> {
 // list
 // ---------------------------------------------------------------------------
 
-fn handle_list(target_name: &str) -> Result<()> {
-    let (target, writer, ext, chain) = resolve_target_info(target_name);
-    if target.is_none() {
-        eprintln!("Note: target '{}' not found, showing writer-level templates", target_name);
-    }
+fn handle_list(input: &Path, target: Option<&str>) -> Result<()> {
+    let ctx = resolve_context(input, target)?;
+    let names = collect_builtin_names(&ctx.chain);
 
-    let names = collect_builtin_names(&chain);
-    let project_root = crate::paths::get_project_dir();
-
-    println!("Template resolution for target '{}' (writer: {}):\n", target_name, writer);
+    println!("Templates for '{}' (target: {}, writer: {}):\n",
+        input.display(), ctx.target_name, ctx.writer);
 
     for name in &names {
-        if let Some(path) = crate::paths::resolve_template(name, &writer) {
-            let rel = path.strip_prefix(&project_root).unwrap_or(&path);
-            // Check modification state
+        let specific = format!("{}.{}", name, ctx.ext);
+        let path = ctx.tpl_dir.join(&specific);
+        if path.exists() {
+            let rel = path.strip_prefix(&ctx.sidecar).unwrap_or(&path);
             let state_label = match std::fs::read_to_string(&path) {
                 Ok(content) => match check_template_state(&content) {
                     TemplateState::Unmodified => "\x1b[32mlocal\x1b[0m",
@@ -148,19 +164,16 @@ fn handle_list(target_name: &str) -> Result<()> {
                 },
                 Err(_) => "\x1b[31merror\x1b[0m",
             };
-            println!("  {}.{}  {}  {}", name, ext, state_label, rel.display());
-        } else if resolve_builtin_template(name, &writer).is_some() {
-            println!("  {}.{}  \x1b[36mbuilt-in\x1b[0m", name, ext);
-        } else {
-            println!("  {}.{}  \x1b[31mnot found\x1b[0m", name, ext);
+            println!("  {}  {}  {}", specific, state_label, rel.display());
+        } else if resolve_builtin_template(name, &ctx.writer).is_some() {
+            println!("  {}  \x1b[36mnot ejected\x1b[0m", specific);
         }
     }
 
-    let templates_dir = crate::paths::templates_dir(&project_root);
-    if templates_dir.is_dir() {
-        println!("\nUser templates: {}", templates_dir.display());
+    if ctx.tpl_dir.is_dir() {
+        println!("\nTemplates: {}", ctx.tpl_dir.display());
     } else {
-        println!("\nNo user templates directory.");
+        println!("\nNo templates directory yet. Run `calepin templates eject` to create it.");
     }
 
     Ok(())
@@ -170,18 +183,21 @@ fn handle_list(target_name: &str) -> Result<()> {
 // eject
 // ---------------------------------------------------------------------------
 
-/// Eject built-in templates for a target's inheritance chain into `_calepin/templates/`.
-fn handle_eject(target_name: &str, force: bool, dry_run: bool) -> Result<()> {
-    let (_target, _writer, _ext, chain) = resolve_target_info(target_name);
-    let project_root = crate::paths::get_project_dir();
-    let dest = crate::paths::templates_dir(&project_root);
+fn handle_eject(input: &Path, target: Option<&str>, force: bool, dry_run: bool) -> Result<()> {
+    let ctx = resolve_context(input, target)?;
 
-    let written = eject_templates(&dest, &chain, force, dry_run)?;
+    let mut written = 0;
+    // Child-first: child templates take priority, parents fill gaps
+    for chain_target in &ctx.chain {
+        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
+            written += eject_dir_flat(dir, chain_target, &ctx.tpl_dir, force, dry_run)?;
+        }
+    }
 
     if dry_run {
-        eprintln!("Dry run: would write {} file(s) to {}", written, dest.display());
+        eprintln!("Dry run: would write {} file(s) to {}", written, ctx.tpl_dir.display());
     } else if written > 0 {
-        eprintln!("Ejected {} template(s) to {}", written, dest.display());
+        eprintln!("Ejected {} template(s) to {}", written, ctx.tpl_dir.display());
     } else {
         eprintln!("All templates already exist (use --force to overwrite).");
     }
@@ -189,72 +205,45 @@ fn handle_eject(target_name: &str, force: bool, dry_run: bool) -> Result<()> {
     Ok(())
 }
 
-/// Core eject logic, shared by `handle_eject` and init integration.
-pub fn eject_templates(dest: &Path, chain: &[String], force: bool, dry_run: bool) -> Result<usize> {
-    let mut written = 0;
-
-    for chain_target in chain {
-        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
-            let target_dest = dest.join(chain_target);
-            written += eject_dir_recursive(dir, chain_target, &target_dest, force, dry_run)?;
-        }
-    }
-
-    // Write README
-    if !dry_run && written > 0 {
-        let readme_path = dest.join("README.md");
-        if !readme_path.exists() || force {
-            write_readme(&readme_path, chain)?;
-        }
-    }
-
-    Ok(written)
-}
-
-/// Recursively eject files from a built-in directory.
-fn eject_dir_recursive(
+/// Eject files from a built-in directory into a flat destination.
+fn eject_dir_flat(
     dir: &include_dir::Dir<'static>,
-    chain_target: &str,
+    prefix: &str,
     dest: &Path,
     force: bool,
     dry_run: bool,
 ) -> Result<usize> {
     let mut written = 0;
-    let prefix = std::path::Path::new(chain_target);
+    let prefix_path = std::path::Path::new(prefix);
 
     for file in dir.files() {
-        let rel = file.path().strip_prefix(prefix).unwrap_or(file.path());
+        let rel = file.path().strip_prefix(prefix_path).unwrap_or(file.path());
         let out = dest.join(rel);
         if out.exists() && !force {
             continue;
         }
         if let Some(content) = file.contents_utf8() {
             if dry_run {
-                let rel_display = dest.file_name().unwrap_or_default().to_string_lossy();
-                eprintln!("  would write: {}/{}", rel_display, rel.display());
+                eprintln!("  would write: {}", rel.display());
             } else {
                 if let Some(parent) = out.parent() {
                     std::fs::create_dir_all(parent)?;
                 }
-                let marked = prepend_hash_marker(content);
-                std::fs::write(&out, &marked)?;
+                std::fs::write(&out, crate::paths::prepend_hash_marker(content))?;
             }
             written += 1;
         }
     }
 
     for subdir in dir.dirs() {
-        let sub_dest = dest.join(
-            subdir.path().strip_prefix(prefix).unwrap_or(subdir.path())
-        );
-        written += eject_dir_recursive_inner(subdir, &sub_dest, force, dry_run)?;
+        let sub_rel = subdir.path().strip_prefix(prefix_path).unwrap_or(subdir.path());
+        written += eject_subdir_flat(subdir, &dest.join(sub_rel), force, dry_run)?;
     }
 
     Ok(written)
 }
 
-/// Inner recursive helper (no prefix stripping needed).
-fn eject_dir_recursive_inner(
+fn eject_subdir_flat(
     dir: &include_dir::Dir<'static>,
     dest: &Path,
     force: bool,
@@ -273,8 +262,7 @@ fn eject_dir_recursive_inner(
                 if let Some(parent) = out.parent() {
                     std::fs::create_dir_all(parent)?;
                 }
-                let marked = prepend_hash_marker(content);
-                std::fs::write(&out, &marked)?;
+                std::fs::write(&out, crate::paths::prepend_hash_marker(content))?;
             }
             written += 1;
         }
@@ -282,7 +270,7 @@ fn eject_dir_recursive_inner(
 
     for subdir in dir.dirs() {
         let sub_name = subdir.path().file_name().unwrap_or_default();
-        written += eject_dir_recursive_inner(subdir, &dest.join(sub_name), force, dry_run)?;
+        written += eject_subdir_flat(subdir, &dest.join(sub_name), force, dry_run)?;
     }
 
     Ok(written)
@@ -292,77 +280,78 @@ fn eject_dir_recursive_inner(
 // show
 // ---------------------------------------------------------------------------
 
-fn handle_show(name: &str, target_name: &str) -> Result<()> {
-    let (_target, writer, _ext, _chain) = resolve_target_info(target_name);
+fn handle_show(name: &str, input: &Path, target: Option<&str>) -> Result<()> {
+    let ctx = resolve_context(input, target)?;
+    let specific = format!("{}.{}", name, ctx.ext);
+    let path = ctx.tpl_dir.join(&specific);
 
-    // Try filesystem first
-    if let Some(path) = crate::paths::resolve_template(name, &writer) {
+    if path.exists() {
         let content = std::fs::read_to_string(&path)?;
         print!("{}", strip_hash_marker(&content));
         return Ok(());
     }
 
-    // Fall back to built-in
-    if let Some(content) = resolve_builtin_template(name, &writer) {
+    // Show the built-in version if not ejected
+    if let Some(content) = resolve_builtin_template(name, &ctx.writer) {
         print!("{}", content);
         return Ok(());
     }
 
-    bail!("Template '{}' not found for target '{}'", name, target_name);
+    bail!("Template '{}' not found for target '{}'", name, ctx.target_name);
 }
 
 // ---------------------------------------------------------------------------
 // diff
 // ---------------------------------------------------------------------------
 
-fn handle_diff(target_name: &str) -> Result<()> {
-    let (_target, writer, ext, chain) = resolve_target_info(target_name);
-    let names = collect_builtin_names(&chain);
+fn handle_diff(input: &Path, target: Option<&str>) -> Result<()> {
+    let ctx = resolve_context(input, target)?;
+    let names = collect_builtin_names(&ctx.chain);
     let mut found_diff = false;
 
     for name in &names {
-        if let Some(path) = crate::paths::resolve_template(name, &writer) {
-            let local_content = match std::fs::read_to_string(&path) {
-                Ok(c) => c,
-                Err(_) => continue,
-            };
-            let local_body = strip_hash_marker(&local_content);
+        let specific = format!("{}.{}", name, ctx.ext);
+        let path = ctx.tpl_dir.join(&specific);
+        if !path.exists() { continue; }
 
-            let builtin = match resolve_builtin_template(name, &writer) {
-                Some(b) => b,
-                None => continue,
-            };
+        let local_content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let local_body = strip_hash_marker(&local_content);
 
-            if local_body == builtin {
-                continue;
-            }
+        let builtin = match resolve_builtin_template(name, &ctx.writer) {
+            Some(b) => b,
+            None => continue,
+        };
 
-            found_diff = true;
-            println!("\x1b[1m--- built-in: {}.{}\x1b[0m", name, ext);
-            println!("\x1b[1m+++ local:    {}.{}\x1b[0m", name, ext);
+        if local_body == builtin { continue; }
 
-            let builtin_lines: Vec<&str> = builtin.lines().collect();
-            let local_lines: Vec<&str> = local_body.lines().collect();
-            let max = builtin_lines.len().max(local_lines.len());
+        found_diff = true;
+        println!("\x1b[1m--- built-in: {}\x1b[0m", specific);
+        println!("\x1b[1m+++ local:    {}\x1b[0m", specific);
 
-            for i in 0..max {
-                match (builtin_lines.get(i), local_lines.get(i)) {
-                    (Some(b), Some(l)) if b == l => println!(" {}", b),
-                    (Some(b), Some(l)) => {
-                        println!("\x1b[31m-{}\x1b[0m", b);
-                        println!("\x1b[32m+{}\x1b[0m", l);
-                    }
-                    (Some(b), None) => println!("\x1b[31m-{}\x1b[0m", b),
-                    (None, Some(l)) => println!("\x1b[32m+{}\x1b[0m", l),
-                    (None, None) => {}
+        let builtin_lines: Vec<&str> = builtin.lines().collect();
+        let local_lines: Vec<&str> = local_body.lines().collect();
+        let max = builtin_lines.len().max(local_lines.len());
+
+        for i in 0..max {
+            match (builtin_lines.get(i), local_lines.get(i)) {
+                (Some(b), Some(l)) if b == l => println!(" {}", b),
+                (Some(b), Some(l)) => {
+                    println!("\x1b[31m-{}\x1b[0m", b);
+                    println!("\x1b[32m+{}\x1b[0m", l);
                 }
+                (Some(b), None) => println!("\x1b[31m-{}\x1b[0m", b),
+                (None, Some(l)) => println!("\x1b[32m+{}\x1b[0m", l),
+                (None, None) => {}
             }
-            println!();
         }
+        println!();
     }
 
     if !found_diff {
-        eprintln!("No differences found. All local templates match their built-in defaults.");
+        eprintln!("No differences found.");
     }
 
     Ok(())
@@ -372,61 +361,53 @@ fn handle_diff(target_name: &str) -> Result<()> {
 // update
 // ---------------------------------------------------------------------------
 
-fn handle_update(target_name: &str, force: bool, dry_run: bool) -> Result<()> {
-    let (_target, writer, _ext, chain) = resolve_target_info(target_name);
-    let names = collect_builtin_names(&chain);
-    let project_root = crate::paths::get_project_dir();
+fn handle_update(input: &Path, target: Option<&str>, force: bool, dry_run: bool) -> Result<()> {
+    let ctx = resolve_context(input, target)?;
+    let names = collect_builtin_names(&ctx.chain);
     let mut updated = 0;
     let mut skipped = 0;
 
     for name in &names {
-        if let Some(path) = crate::paths::resolve_template(name, &writer) {
-            let local_content = match std::fs::read_to_string(&path) {
-                Ok(c) => c,
-                Err(_) => continue,
-            };
+        let specific = format!("{}.{}", name, ctx.ext);
+        let path = ctx.tpl_dir.join(&specific);
+        if !path.exists() { continue; }
 
-            let builtin = match resolve_builtin_template(name, &writer) {
-                Some(b) => b,
-                None => continue,
-            };
+        let local_content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
 
-            let local_body = strip_hash_marker(&local_content);
-            if local_body == builtin {
-                // Already up to date
-                continue;
+        let builtin = match resolve_builtin_template(name, &ctx.writer) {
+            Some(b) => b,
+            None => continue,
+        };
+
+        let local_body = strip_hash_marker(&local_content);
+        if local_body == builtin { continue; }
+
+        let state = check_template_state(&local_content);
+        match state {
+            TemplateState::Unmodified => {
+                if dry_run {
+                    eprintln!("  would update: {}", specific);
+                } else {
+                    std::fs::write(&path, crate::paths::prepend_hash_marker(builtin))?;
+                    eprintln!("  updated: {}", specific);
+                }
+                updated += 1;
             }
-
-            let state = check_template_state(&local_content);
-            match state {
-                TemplateState::Unmodified => {
-                    // Safe to update: user hasn't touched it
-                    let rel = path.strip_prefix(&project_root).unwrap_or(&path);
+            TemplateState::Modified | TemplateState::NoMarker => {
+                if force {
                     if dry_run {
-                        eprintln!("  would update: {}", rel.display());
+                        eprintln!("  would overwrite (modified): {}", specific);
                     } else {
-                        let marked = prepend_hash_marker(builtin);
-                        std::fs::write(&path, &marked)?;
-                        eprintln!("  updated: {}", rel.display());
+                        std::fs::write(&path, crate::paths::prepend_hash_marker(builtin))?;
+                        eprintln!("  overwritten: {}", specific);
                     }
                     updated += 1;
-                }
-                TemplateState::Modified | TemplateState::NoMarker => {
-                    if force {
-                        let rel = path.strip_prefix(&project_root).unwrap_or(&path);
-                        if dry_run {
-                            eprintln!("  would overwrite (modified): {}", rel.display());
-                        } else {
-                            let marked = prepend_hash_marker(builtin);
-                            std::fs::write(&path, &marked)?;
-                            eprintln!("  overwritten: {}", rel.display());
-                        }
-                        updated += 1;
-                    } else {
-                        let rel = path.strip_prefix(&project_root).unwrap_or(&path);
-                        eprintln!("  \x1b[33mskipped (modified):\x1b[0m {}", rel.display());
-                        skipped += 1;
-                    }
+                } else {
+                    eprintln!("  \x1b[33mskipped (modified):\x1b[0m {}", specific);
+                    skipped += 1;
                 }
             }
         }
@@ -451,97 +432,22 @@ fn handle_update(target_name: &str, force: bool, dry_run: bool) -> Result<()> {
 // reset
 // ---------------------------------------------------------------------------
 
-fn handle_reset(name: &str, target_name: &str) -> Result<()> {
-    let (_target, writer, _ext, _chain) = resolve_target_info(target_name);
+fn handle_reset(name: &str, input: &Path, target: Option<&str>) -> Result<()> {
+    let ctx = resolve_context(input, target)?;
+    let specific = format!("{}.{}", name, ctx.ext);
+    let path = ctx.tpl_dir.join(&specific);
 
-    let path = match crate::paths::resolve_template(name, &writer) {
-        Some(p) => p,
-        None => bail!("No local override found for template '{}' (target: '{}')", name, target_name),
-    };
-
-    // Verify there's a built-in to fall back to
-    if resolve_builtin_template(name, &writer).is_none() {
-        bail!("No built-in template '{}' exists for writer '{}'. Cannot reset.", name, writer);
+    if !path.exists() {
+        bail!("No local template '{}' found in {}", specific, ctx.tpl_dir.display());
     }
 
-    std::fs::remove_file(&path)?;
-    let project_root = crate::paths::get_project_dir();
-    let rel = path.strip_prefix(&project_root).unwrap_or(&path);
-    eprintln!("Removed local override: {}", rel.display());
-    eprintln!("Template '{}' now resolves from built-in.", name);
+    // Verify there's a built-in to replace it with
+    let builtin = resolve_builtin_template(name, &ctx.writer)
+        .ok_or_else(|| anyhow::anyhow!("No built-in template '{}' for writer '{}'", name, ctx.writer))?;
 
-    // Clean up empty parent directories
-    if let Some(parent) = path.parent() {
-        remove_empty_dirs(parent, &project_root);
-    }
+    // Replace with the built-in version (with hash marker)
+    std::fs::write(&path, crate::paths::prepend_hash_marker(builtin))?;
+    eprintln!("Reset {} to built-in default.", specific);
 
-    Ok(())
-}
-
-fn remove_empty_dirs(dir: &Path, stop_at: &Path) {
-    let mut current = dir.to_path_buf();
-    while current.starts_with(stop_at) && current != *stop_at {
-        if std::fs::read_dir(&current).map(|mut d| d.next().is_none()).unwrap_or(true) {
-            let _ = std::fs::remove_dir(&current);
-            current = match current.parent() {
-                Some(p) => p.to_path_buf(),
-                None => break,
-            };
-        } else {
-            break;
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// README generation
-// ---------------------------------------------------------------------------
-
-fn write_readme(path: &Path, chain: &[String]) -> Result<()> {
-    let chain_display = chain.join(" -> ");
-    let content = format!(
-r#"# Calepin Templates
-
-These templates control how Calepin renders your documents. They were
-ejected from Calepin's built-in defaults and can be customized freely.
-
-Inheritance chain: {chain_display}
-
-## Directory structure
-
-Each subdirectory corresponds to a target or writer in the inheritance
-chain. Templates in more specific directories (e.g., `website/`)
-override those in parent directories (e.g., `html/`).
-
-## Resolution order
-
-1. `_calepin/templates/{{target}}/` (most specific)
-2. `_calepin/templates/{{parent}}/` (inherited)
-3. Built-in defaults (compiled into the binary)
-
-## Template variables
-
-Templates use Jinja syntax. Two namespaces are available:
-- `config.*` -- user-authored values (front matter, attributes, labels)
-- `calepin.*` -- engine-computed values (rendered content, format, paths)
-
-## Hash tracking
-
-Each file's first line contains a hash marker like:
-
-    {{{{# calepin:xxh3:abc123... #}}}}
-
-This lets `calepin templates update` detect whether you have customized
-a template. Do not remove or edit this line manually.
-
-## Common tasks
-
-    calepin templates list [target]     Show resolution status
-    calepin templates diff [target]     Compare local vs built-in
-    calepin templates update [target]   Refresh unmodified templates
-    calepin templates reset NAME        Remove a local override
-    calepin templates show NAME         Print a template's content
-"#);
-    std::fs::write(path, &content)?;
     Ok(())
 }
