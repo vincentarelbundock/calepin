@@ -128,7 +128,7 @@ pub fn load_default_css() -> String {
     let root = crate::paths::get_project_dir();
     let chain = crate::paths::get_active_inheritance_chain();
     let target = chain.first().map(|s| s.as_str()).unwrap_or("html");
-    let p = crate::paths::templates_dir(&root).join(target).join("page.css");
+    let p = crate::paths::templates_dir(&root).join(target).join("main.css");
     if let Ok(s) = std::fs::read_to_string(&p) {
         css.push_str(&s);
     }
@@ -608,7 +608,7 @@ pub fn assemble_page(
     let mut vars = build_template_vars_with_headings(meta, body, format, headings, target);
     inject_preamble(&mut vars, preamble);
     customize(&mut vars);
-    let template_name = target.map(|t| t.template_name()).unwrap_or("page");
+    let template_name = target.map(|t| t.template_name()).unwrap_or("main");
     let tpl = load_page_template(template_name, format);
     render_page_template(&tpl, &vars, format, &meta.var)
 }

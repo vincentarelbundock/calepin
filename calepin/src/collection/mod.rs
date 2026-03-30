@@ -71,11 +71,11 @@ pub fn build_collection(
     crate::paths::set_extension_template_dirs(ext_dirs);
     crate::paths::set_sideloaded_extensions(meta.extensions.clone());
 
-    // Detect book build: check for a book page template in the sidecar
+    // Detect book build: check for a book main template in the sidecar
     let ext = crate::paths::resolve_extension(format);
     let is_book = meta.orchestrator.is_some() || {
         let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
-            .join(format!("page.{}", ext));
+            .join(format!("main.{}", ext));
         p.exists()
     };
 

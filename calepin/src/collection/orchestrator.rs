@@ -58,15 +58,15 @@ pub(crate) fn render_book(
         }
     }
 
-    // Load the book page template (built-in or sidecar override)
+    // Load the book main template (built-in or sidecar override)
     let ext = crate::paths::resolve_extension(format);
-    let page_tpl_name = format!("page.{}", ext);
-    if !templates.contains_key(&page_tpl_name) {
-        // Fall back to built-in {target}/page template
-        let builtin_path = format!("{}/page.{}", target_name, ext);
+    let main_tpl_name = format!("main.{}", ext);
+    if !templates.contains_key(&main_tpl_name) {
+        // Fall back to built-in {target}/main template
+        let builtin_path = format!("{}/main.{}", target_name, ext);
         if let Some(file) = crate::render::elements::BUILTIN_TEMPLATES.get_file(&builtin_path) {
             if let Some(s) = file.contents_utf8() {
-                templates.insert(page_tpl_name.clone(), s.to_string());
+                templates.insert(main_tpl_name.clone(), s.to_string());
             }
         }
     }
@@ -89,7 +89,7 @@ pub(crate) fn render_book(
         Ok(sources.get(name).cloned())
     });
 
-    let tpl = env.get_template(&page_tpl_name)?;
+    let tpl = env.get_template(&main_tpl_name)?;
     let rendered = tpl.render(&ctx)
         .with_context(|| format!("Failed to render book template for target {}", target_name))?;
 

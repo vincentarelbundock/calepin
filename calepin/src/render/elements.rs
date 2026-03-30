@@ -61,7 +61,7 @@ pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> 
         }
     }
 
-    // Target-specific (e.g., book/page.typ)
+    // Target-specific (e.g., book-typst/chapter.typ)
     if let Some(target) = crate::paths::get_active_target() {
         if target != base {
             let target_path = format!("{}/{}.{}", target, resolved, ext);

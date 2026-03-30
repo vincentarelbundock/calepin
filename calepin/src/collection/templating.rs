@@ -139,7 +139,7 @@ pub(crate) fn apply_collection_templates(
         let template_name = if page.meta.listing.is_some() {
             format!("listing.{}", tpl_ext)
         } else {
-            format!("page.{}", tpl_ext)
+            format!("main.{}", tpl_ext)
         };
         let tpl = env.get_template(&template_name)
             .with_context(|| format!("Failed to get template {} for {}", template_name, source_key))?;

@@ -18,7 +18,7 @@ pub struct Target {
     /// Output writer: html, latex, typst, or markdown.
     #[serde(default)]
     pub writer: String,
-    /// Document template name (default: "page").
+    /// Document template name (default: "main").
     pub template: Option<String>,
     /// Output file extension (no dot).
     pub extension: Option<String>,
@@ -58,7 +58,7 @@ impl Target {
     /// Template name. Always set after resolution against the built-in config.
     #[allow(dead_code)]
     pub fn template_name(&self) -> &str {
-        self.template.as_deref().unwrap_or("page")
+        self.template.as_deref().unwrap_or("main")
     }
 
     /// Output file extension. Always set after resolution against the built-in config.

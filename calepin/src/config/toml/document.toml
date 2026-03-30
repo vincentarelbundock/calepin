@@ -4,7 +4,7 @@
 # -- Document targets --
 [targets.html]
 writer = "html"
-template = "page"
+template = "main"
 extension = "html"
 fig_extension = "svg"
 fig_formats = ["svg", "png", "jpg", "webp", "gif"]
@@ -14,7 +14,7 @@ crossref = "html"
 
 [targets.latex]
 writer = "latex"
-template = "page"
+template = "main"
 extension = "tex"
 fig_extension = "pdf"
 fig_formats = ["pdf", "eps", "svg", "png", "jpg"]
@@ -25,7 +25,7 @@ toc_headings = false
 
 [targets.typst]
 writer = "typst"
-template = "page"
+template = "main"
 extension = "typ"
 fig_extension = "svg"
 fig_formats = ["svg", "png", "jpg"]

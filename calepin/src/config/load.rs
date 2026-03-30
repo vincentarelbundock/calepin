@@ -367,7 +367,7 @@ writer = "html"
         assert_eq!(meta.targets.len(), 1);
         let web = &meta.targets["web"];
         assert_eq!(web.writer, "html");
-        assert_eq!(web.template_name(), "page");
+        assert_eq!(web.template_name(), "main");
         assert_eq!(web.output_extension(), "html");
     }
 
@@ -408,7 +408,7 @@ writer = "word"
     fn test_implicit_target_resolution() {
         let target = super::super::resolve_target("html", &HashMap::new()).unwrap();
         assert_eq!(target.writer, "html");
-        assert_eq!(target.template_name(), "page");
+        assert_eq!(target.template_name(), "main");
 
         let target = super::super::resolve_target("latex", &HashMap::new()).unwrap();
         assert_eq!(target.writer, "latex");
