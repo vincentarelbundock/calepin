@@ -97,7 +97,7 @@ pub struct ElementRenderer {
     registry: Rc<ModuleRegistry>,
     raw_fragments: std::cell::RefCell<Vec<String>>,
     preamble: Vec<String>,
-    /// Resolved rendering metadata (highlight, figure, callout, labels, etc.).
+    /// Resolved rendering metadata (highlight, figure, labels, etc.).
     pub metadata: crate::config::Metadata,
     pub number_sections: bool,
     pub shift_headings: bool,

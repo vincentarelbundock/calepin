@@ -6,7 +6,7 @@
 //!   - `span` — span rendering pipeline
 //!
 //! Per-element transforms:
-//!   - `transform_element/` — callout, theorem, code, figure enrichment
+//!   - `transform_element/` — theorem, code, figure enrichment
 //!
 //! AST emitters:
 //!   - `emit/` — shared walker + html/latex/typst/markdown emitters

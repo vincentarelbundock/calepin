@@ -389,7 +389,7 @@ pub fn collect_ids_html(
         data.ids.insert(format!("tbl-{}", &caps[1]), data.tbl_count.to_string());
     }
 
-    // Module-registered IDs (theorems, figures, tables, callouts, listings)
+    // Module-registered IDs (theorems, figures, tables, listings)
     for (k, v) in module_ids {
         data.ids.insert(k.clone(), v.clone());
     }
@@ -434,7 +434,7 @@ pub fn resolve_html_global(
 
 /// Patch in-page display numbers in rendered HTML to use chapter-prefixed numbers.
 /// Replaces "Figure N" in figcaptions, "Table N" in table captions,
-/// equation numbers in eq-number spans, and theorem/callout headers.
+/// equation numbers in eq-number spans, and theorem headers.
 pub fn renumber_display_html(html: &str, registry: &CrossRefRegistry) -> String {
     let mut result = html.to_string();
 
@@ -842,47 +842,6 @@ mod tests {
         assert!(result.contains("Section 1</a>]"), "result: {}", result);
     }
 
-    #[test]
-    fn test_resolve_callout_tip() {
-        let mut nums = HashMap::new();
-        nums.insert("tip-example".to_string(), "1".to_string());
-        let html = "<div class=\"callout\" id=\"tip-example\"></div>\n\
-                     <p>See @tip-example</p>";
-        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
-        assert!(result.contains("Tip 1"), "result: {}", result);
-        assert!(result.contains("href=\"#tip-example\""), "result: {}", result);
-    }
-
-    #[test]
-    fn test_resolve_callout_note() {
-        let mut nums = HashMap::new();
-        nums.insert("nte-important-info".to_string(), "1".to_string());
-        let html = "<div class=\"callout\" id=\"nte-important-info\"></div>\n\
-                     <p>See @nte-important-info</p>";
-        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
-        assert!(result.contains("Note 1"), "result: {}", result);
-    }
-
-    #[test]
-    fn test_resolve_callout_warning() {
-        let mut nums = HashMap::new();
-        nums.insert("wrn-danger".to_string(), "1".to_string());
-        let html = "<div class=\"callout\" id=\"wrn-danger\"></div>\n\
-                     <p>See @wrn-danger</p>";
-        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
-        assert!(result.contains("Warning 1"), "result: {}", result);
-    }
-
-    #[test]
-    fn test_resolve_callout_suppress() {
-        let mut nums = HashMap::new();
-        nums.insert("tip-example".to_string(), "1".to_string());
-        let html = "<div class=\"callout\" id=\"tip-example\"></div>\n\
-                     <p>number [-@tip-example]</p>";
-        let result = resolve_html_with_ids(html, &nums, &HashMap::new());
-        assert!(result.contains(">1<"), "result: {}", result);
-        assert!(!result.contains("Tip"), "result: {}", result);
-    }
 
     #[test]
     fn test_resolve_listing() {

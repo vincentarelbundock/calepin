@@ -22,7 +22,6 @@ pub mod external;
 
 // Built-in modules (private -- external access via re-exports below)
 mod append_footnotes;
-mod callout;
 mod convert_math;
 mod convert_svg_pdf;
 mod document_listing;
@@ -60,10 +59,8 @@ pub use append_footnotes::{FootnoteState, render_footnote_section};
 pub use convert_math::{convert_math_for_typst, strip_math_for_typst};
 
 /// Return the cross-reference prefix for a class name, if any.
-/// Combines theorem and callout prefix lookups.
 pub fn prefix_for_class(class: &str) -> Option<&'static str> {
     theorem::theorem_prefix(class)
-        .or_else(|| callout::callout_prefix(class))
 }
 
 /// Render child elements, joining non-empty results with double newlines.

@@ -702,7 +702,7 @@ mod tests {
     #[test]
     fn test_builtin_plugin_not_validated() {
         let mut meta = Metadata::default();
-        meta.plugins = vec!["tabset".to_string(), "callout".to_string()];
+        meta.plugins = vec!["tabset".to_string(), "theorem".to_string()];
         assert!(validate_paths(&meta, &test_ctx(), "test.qmd").is_ok());
     }
 

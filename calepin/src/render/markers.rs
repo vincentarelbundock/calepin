@@ -286,7 +286,7 @@ fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> 
     use crate::render::elements::resolve_element_template;
     use crate::render::template::{apply_template, TemplateVars};
 
-    if let Some(tpl) = resolve_element_template("equation_label", format) {
+    if let Some(tpl) = resolve_element_template("equation", format) {
         let mut vars = TemplateVars::new();
         vars.cfg.insert("label".to_string(), label.to_string());
         vars.clp.insert("math".to_string(), math.to_string());

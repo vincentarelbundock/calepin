@@ -426,15 +426,6 @@ pub fn all_crossref_prefixes() -> Vec<(&'static str, &'static str)> {
         };
         prefixes.push((prefix, label));
     }
-    // Callout module
-    for &(_, prefix) in crate::modules::callout::CALLOUT_PREFIXES {
-        let label = match prefix {
-            "tip" => "Tip", "nte" => "Note", "wrn" => "Warning",
-            "imp" => "Important", "cau" => "Caution",
-            _ => "",
-        };
-        prefixes.push((prefix, label));
-    }
     prefixes
 }
 
@@ -538,8 +529,6 @@ fn resolve_builtin_kind(name: &str, kind_str: &str) -> ModuleKind {
             Box::new(BuiltinElementChildren(builtin_element_children_fn::table))),
         ("theorem", "element_children") => ModuleKind::ElementChildren(
             Box::new(BuiltinElementChildren(builtin_element_children_fn::theorem))),
-        ("callout", "element_children") => ModuleKind::ElementChildren(
-            Box::new(BuiltinElementChildren(builtin_element_children_fn::callout))),
 
         // Span transforms
         ("pagebreak", "span") => ModuleKind::Span(
@@ -641,13 +630,6 @@ mod builtin_element_children_fn {
         ModuleResult::Rendered(output)
     }
 
-    pub fn callout(ctx: &mut ModuleContext) -> ModuleResult {
-        let output = crate::modules::callout::render(
-            ctx.classes, ctx.id, ctx.attrs, ctx.children(), ctx.format,
-            &|el| ctx.render_child(el), ctx.module_ids(),
-        );
-        ModuleResult::Rendered(output)
-    }
 }
 
 // Generic wrapper for span transforms via function pointer.

@@ -1,17 +1,19 @@
 //! Theorem module: handles theorem-type divs (.theorem, .lemma, .proof, etc.)
 //!
-//! Auto-numbers matching divs and renders them with the appropriate template
-//! (theorem_italic, theorem_normal, or proof). Registered as a
-//! TransformElementChildren module matching theorem classes.
+//! Auto-numbers matching divs and renders them with the theorem or proof
+//! template. Registered as a TransformElementChildren module matching
+//! theorem classes.
 
 use std::collections::HashMap;
 
 use crate::types::Element;
 use crate::render::template::TemplateVars;
 
-/// Theorem class to template mapping.
-const ITALIC_TYPES: &[&str] = &["theorem", "lemma", "corollary", "conjecture", "proposition"];
-const NORMAL_TYPES: &[&str] = &["definition", "example", "exercise", "solution", "remark", "algorithm"];
+/// All numbered theorem-type classes (excludes proof).
+const THEOREM_TYPES: &[&str] = &[
+    "theorem", "lemma", "corollary", "conjecture", "proposition",
+    "definition", "example", "exercise", "solution", "remark", "algorithm",
+];
 
 /// Cross-reference prefix mapping (class -> short prefix).
 pub const THEOREM_PREFIXES: &[(&str, &str)] = &[
@@ -38,9 +40,7 @@ pub fn render(
 ) -> String {
     // Find the matching theorem class
     let theorem_class = classes.iter().find(|c| {
-        ITALIC_TYPES.contains(&c.as_str())
-            || NORMAL_TYPES.contains(&c.as_str())
-            || c.as_str() == "proof"
+        THEOREM_TYPES.contains(&c.as_str()) || c.as_str() == "proof"
     });
 
     let theorem_class = match theorem_class {
@@ -90,13 +90,10 @@ pub fn render(
         vars.clp.insert("number".to_string(), num.to_string());
     }
 
-    // Resolve template: proof -> "proof", italic types -> "theorem_italic", normal -> "theorem_normal"
     let template_name = if theorem_class == "proof" {
         "proof"
-    } else if ITALIC_TYPES.contains(&theorem_class.as_str()) {
-        "theorem_italic"
     } else {
-        "theorem_normal"
+        "theorem"
     };
 
     let tpl = crate::render::elements::resolve_builtin_template(template_name, format).unwrap_or("");

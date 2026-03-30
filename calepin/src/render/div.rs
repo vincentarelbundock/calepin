@@ -87,7 +87,11 @@ fn build_div_vars(
     children_rendered: &str,
     format: &str,
 ) {
-    // Div attributes are user-authored -> config
+    // Div attributes are user-authored -> config.
+    // Set title explicitly so document metadata doesn't leak into div templates.
+    if !attrs.contains_key("title") {
+        vars.cfg.insert("title".to_string(), String::new());
+    }
     for (k, val) in attrs {
         vars.cfg.insert(k.clone(), val.clone());
     }

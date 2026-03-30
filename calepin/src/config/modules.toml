@@ -89,17 +89,6 @@ contexts = ["div"]
 id_prefix = "tbl-"
 
 [[modules]]
-name = "callout"
-kind = "element_children"
-contexts = ["div"]
-
-[modules.match]
-classes = [
-    "callout-note", "callout-tip", "callout-warning",
-    "callout-caution", "callout-important",
-]
-
-[[modules]]
 name = "theorem"
 kind = "element_children"
 contexts = ["div"]
