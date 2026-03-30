@@ -1,9 +1,13 @@
 <div class="authors">
-{{clp.authors}}
-{%- if clp.affiliations_items %}
-  <div class="affiliations">
-{{clp.affiliations_items}}
-  </div>
+{% for a in cfg.authors %}
+<p class="author">{{ a.name }}{%- if a.superscripts %}<sup>{{ a.superscripts }}</sup>{% endif %}{%- if a.corresponding %}<sup>*</sup>{% endif %}{%- if a.orcid_url %} <a href="{{ a.orcid_url }}" class="orcid">ORCID</a>{% endif %}</p>
+{% endfor %}
+{%- if cfg.affiliations %}
+<div class="affiliations">
+{% for a in cfg.affiliations %}<p class="affiliation">{%- if a.number %}<sup>{{ a.number }}</sup> {% endif %}{{ a.display }}</p>
+{% endfor %}</div>
 {%- endif %}
-{{clp.corresponding_note}}
+{%- for c in cfg.corresponding %}
+<p class="corresponding">* Corresponding author: <a href="{{ c.mailto }}">{{ c.email }}</a></p>
+{%- endfor %}
 </div>

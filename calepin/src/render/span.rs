@@ -61,16 +61,16 @@ pub fn render(
         vars.tpl = defaults.tpl.clone();
         // Span attributes are user-authored -> config
         for (k, v) in &kv {
-            vars.cfg.insert(k.clone(), v.clone());
+            vars.cfg.insert(k.clone(), minijinja::Value::from(v.clone()));
         }
-        vars.clp.insert("writer".to_string(), format.to_string());
-        vars.clp.insert("content".to_string(), rendered_content.clone());
-        vars.cfg.insert("class".to_string(), first_class.to_string());
-        vars.cfg.insert("classes".to_string(), classes.join(" "));
+        vars.clp.insert("writer".to_string(), minijinja::Value::from(format.to_string()));
+        vars.clp.insert("content".to_string(), minijinja::Value::from(rendered_content.clone()));
+        vars.cfg.insert("class".to_string(), minijinja::Value::from(first_class.to_string()));
+        vars.cfg.insert("classes".to_string(), minijinja::Value::from(classes.join(" ")));
         if let Some(ref id_val) = id {
-            vars.cfg.insert("id".to_string(), id_val.clone());
+            vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.clone()));
         } else {
-            vars.cfg.insert("id".to_string(), String::new());
+            vars.cfg.insert("id".to_string(), minijinja::Value::from(String::new()));
         }
 
         // Template lookup

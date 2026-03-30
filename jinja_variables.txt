@@ -1,296 +1,256 @@
 
+  cfg.* (user-authored values from front matter, attributes, labels) -- 43 variables
+
   ┌─────────────────────┬─────────────────────────────────────────────────────────────────────┐
   │      Variable       │                               Used in                               │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.abstract        │ latex/abstract, typst/abstract                                      │
+  │ cfg.abstract        │ html/abstract, latex/abstract, typst/abstract                       │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.align           │ html/align_style, latex/align_style, typst/align_style              │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.alt             │ html/figure, markdown/figure                                        │
+  │ cfg.alt             │ (removed -- rendered in Rust into clp.children)                     │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.appearance      │ callout templates (all formats)                                     │
+  │ cfg.author          │ slides/page, book/orchestrator, book/preamble, typst/preamble       │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.author          │ slides/page                                                         │
+  │ cfg.cap_location    │ figure, table (all formats)                         │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.caption         │ figure, figure_div, layout, table_div (all formats)                 │
+  │ cfg.caption         │ figure, layout, table (all formats)                 │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.classes         │ callout, div, span templates                                        │
+  │ cfg.class           │ html/span, latex/span, typst/span                                   │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.collapse        │ html/callout                                                        │
+  │ cfg.classes         │ html/div, html/span                                                 │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.color           │ html/placeholder                                                    │
+  │ cfg.color           │ (removed -- hard-coded #cccccc in html/placeholder)                  │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.content         │ copyright, citation templates                                       │
+  │ cfg.content         │ copyright, citation templates (all formats)                         │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.corresponding   │ author_item templates                                               │
+  │ cfg.corresponding   │ authors templates (list of {email, mailto} objects)                 │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.date            │ slides/page, latex/date, typst/page                                 │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.depth           │ latex/toc, typst/toc                                                │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.display         │ affiliation_item templates                                          │
+  │ cfg.display         │ (removed -- now a field inside cfg.affiliations list objects)        │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.email           │ html/corresponding, latex/corresponding                             │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.env             │ latex/figure_div                                                    │
+  │ cfg.env             │ (removed -- was a bug; latex/figure now uses local var from       │
+  │                     │ cfg.fig_env)                                                     │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.fig_env         │ latex/figure, latex/layout                                          │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.fig_pos         │ latex/figure, latex/figure_div, latex/layout                        │
+  │ cfg.fig_pos         │ latex/figure, latex/figure, latex/layout                        │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.filename        │ code_source templates                                               │
+  │ cfg.filename        │ code_source templates (html, latex, typst, markdown)                │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.group           │ html/tabset                                                         │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.height          │ placeholder, video templates                                        │
+  │ cfg.height          │ html/placeholder, html/video, typst/placeholder, latex/placeholder  │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.icon            │ callout templates                                                   │
+  │ cfg.html_math_method│ html/math                                                           │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.id              │ callout, div, landscape, proof, span, theorem templates             │
+  │ cfg.id              │ callout, div, landscape, proof, span, theorem (html, latex, typst)  │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.items           │ funding templates                                                   │
+  │ cfg.items           │ funding templates (all formats)                                     │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.keywords        │ html/page, keywords templates                                       │
+  │ cfg.keywords        │ html/page, html/keywords, latex/keywords, typst/keywords            │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label           │ equation_label, figure, figure_div, url templates                   │
+  │ cfg.label           │ equation, figure, url templates                         │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_abstract  │ typst/abstract                                                      │
+  │ cfg.lang            │ html/page, slides/page, code_source templates                       │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_appendix  │ appendix templates                                                  │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_citation  │ citation templates                                                  │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_contents  │ book/orchestrator                                                   │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_copyright │ copyright templates                                                 │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_funding   │ funding templates                                                   │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_keywords  │ keywords templates                                                  │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_proof     │ latex/proof                                                         │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.label_reuse     │ license templates                                                   │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.lang            │ code_source, page templates                                         │
-  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.link            │ figure templates                                                    │
+  │ cfg.link            │ figure templates (all formats)                                      │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.lst_cap         │ html/code_listing                                                   │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.mailto          │ corresponding templates                                             │
+  │ cfg.mailto          │ (removed -- now a field inside cfg.corresponding list objects)       │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.name            │ author_item templates                                               │
+  │ cfg.name            │ (removed -- now a field inside cfg.authors list objects)             │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.names           │ authors_simple templates                                            │
+  │ cfg.names           │ (removed -- cfg.authors list replaces this)                         │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.number          │ affiliation_item templates                                          │
+  │ cfg.number          │ (removed -- now a field inside cfg.affiliations list objects)        │
+  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ cfg.orcid_url       │ (removed -- now a field inside cfg.authors list objects)             │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.path            │ latex/bibliography, typst/bibliography                              │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.plain_title     │ page templates, typst/preamble                                      │
+  │ cfg.plain_title     │ html/page, slides/page, typst/preamble, book/preamble              │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.sections        │ appendix templates                                                  │
+  │ cfg.sections        │ appendix templates (all formats)                                    │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.short_caption   │ latex/figure, latex/figure_div                                      │
+  │ cfg.short_caption   │ latex/figure, latex/figure                                      │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.src             │ video templates                                                     │
+  │ cfg.sidebar                                                                               │
+  │ cfg.sidebar_collapse_level │ website/base, website/sidebar                                │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.subtitle        │ latex/subtitle, slides/page, typst/subtitle                         │
+  │ cfg.video_url       │ video templates (html, latex, typst, markdown)                      │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.superscripts    │ author_item templates                                               │
+  │ cfg.subtitle        │ slides/page, html/subtitle, latex/subtitle, typst/subtitle,         │
+  │                     │ book/orchestrator                                                   │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.tbl_pos         │ latex/table_div                                                     │
+  │ cfg.superscripts    │ (removed -- now a field inside cfg.authors list objects)             │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.text            │ emphasis, license, placeholder, superscript, funding_item templates │
+  │ cfg.tbl_pos         │ latex/table                                                     │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.title           │ page, toc, title templates                                          │
+  │ cfg.text            │ emphasis, license, placeholder, superscript templates               │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.url             │ license, url templates                                              │
+  │ cfg.title           │ callout, page, toc, title, video templates                          │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ cfg.width           │ placeholder, video templates                                        │
+  │ cfg.toc             │ website/base                                                        │
+  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ cfg.url             │ license, url templates (all formats)                                │
+  ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ cfg.width           │ html/placeholder, html/video, typst/placeholder, latex/placeholder, │
+  │                     │ markdown/placeholder                                                │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.width_frac      │ latex/format_width                                                  │
   ├─────────────────────┼─────────────────────────────────────────────────────────────────────┤
   │ cfg.width_pct       │ latex/format_width                                                  │
   └─────────────────────┴─────────────────────────────────────────────────────────────────────┘
 
-  clp.* (engine-computed values) -- 42 variables
+  clp.* (engine-computed values) -- 46 variables
+
+  All document, collection, and page context now flows through the clp namespace.
 
   ┌───────────────────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────┐
   │           Variable            │                                                Used in                                                 │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp._lb, clp._rb              │ latex templates (literal braces)                                                                       │
+  │ clp._lb, clp._rb              │ latex templates (literal braces for \cmd{...})                                                         │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.affiliations_items        │ authors templates                                                                                      │
+  │ clp.abstract                  │ website/base, website/listing, website/page_header                                       │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.align_style               │ figure, figure_div templates                                                                           │
+  │ clp.affiliations_items        │ authors templates (html, latex, typst, markdown)                                                       │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.appendix                  │ page templates                                                                                         │
+  │ clp.align_items               │ html/layout_row                                                                                        │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.authors, clp.authors_cmd  │ authors templates                                                                                      │
+  │ clp.align_style               │ html/figure, html/figure, latex/figure, latex/figure                                           │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.bib_end, clp.bib_preamble │ latex/page                                                                                             │
+  │ clp.appendix                  │ html/page, latex/page, typst/page                                                                      │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.authors, clp.authors_cmd  │ authors templates (html/latex/typst/markdown); authors_cmd is latex-only                               │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.bib_end, clp.bib_preamble │ (removed -- were always empty)                                                                       │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.bibliography              │ latex/page, typst/page                                                                                 │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.body                      │ page templates                                                                                         │
+  │ clp.body                      │ page templates (html, latex, typst, slides, website/listing, website/split_view, book/page)             │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.cells                     │ layout_row templates                                                                                   │
+  │ clp.breadcrumbs               │ website/breadcrumbs                                                                                    │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.children                  │ callout, div, figure_div, layout, proof, tabset, theorem, table_div, landscape, panel_tabset templates │
+  │ clp.cells                     │ layout_row templates (html, latex, typst, markdown)                                                    │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.code                      │ markdown/code_source, typst/code_source                                                                │
+  │ clp.children                  │ callout, div, figure, layout, proof, tabset, theorem, table, landscape, panel_tabset templates │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.columns                   │ typst/layout_row                                                                                       │
+  │ clp.code                      │ typst/code_source, markdown/code_source                                                                │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.columns                   │ html/layout_row, typst/layout_row                                                                      │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.content                   │ code_listing, span, layout_cell templates                                                              │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.corresponding_note        │ authors templates                                                                                      │
+  │ clp.corresponding_note        │ authors templates (html, latex, markdown)                                                              │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.css                       │ html/page, website/base                                                                                │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.dark_mode                 │ website/base                                                                             │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.date                      │ website/page_header                                                                                    │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.diagnostic_class          │ html/code_diagnostic                                                                                   │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.favicon                   │ website/base                                                                             │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.footnote_items            │ html/footnotes                                                                                         │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.footnotes                 │ html/footnotes                                                                                         │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.generator                 │ html/page, slides/page                                                                                 │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.height_attr               │ html/figure, typst/figure                                                                              │
+  │ clp.height_attr               │ (removed from templates -- rendered in Rust)                                                            │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.highlighted               │ html/code_source, latex/code_source                                                                    │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.inner                     │ latex/equation_label, typst/equation_label                                                             │
+  │ clp.inner                     │ latex/equation, typst/equation                                                                         │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.is_embed                  │ html/video                                                                                             │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.is_figure                 │ layout templates                                                                                       │
+  │ clp.is_figure                 │ html/layout, latex/layout, typst/layout                                                                │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.js                        │ html/page                                                                                              │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.label                     │ code_listing templates                                                                                 │
+  │ clp.label                     │ code_listing templates (html, latex, typst)                                                            │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.label_listing             │ html/code_listing                                                                                      │
+  │ clp.lang                      │ website/base, website/navbar_left, website/navbar_middle                                 │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.label_proof               │ proof templates                                                                                        │
+  │ clp.languages                 │ website/base                                                                             │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.math                      │ html/equation_label                                                                                    │
+  │ clp.listing                   │ website/listing                                                                                        │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.listing_type              │ website/listing                                                                                        │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.math                      │ html/equation, website/base                                                              │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.navbar (.left, .middle,   │ website/footer, sidebar, navbar_left, navbar_middle, navbar_right                                      │
+  │   .right)                     │                                                                                                        │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.nav_items, clp.tab_panes  │ html/tabset                                                                                            │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.next (.href, .text)       │ website/page_nav                                                                                       │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.number                    │ code_listing, theorem templates                                                                        │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.output                    │ code_output templates                                                                                  │
+  │ clp.output                    │ code_output templates (all formats)                                                                    │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.pages                     │ website/sidebar                                                                                        │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.pagination (.current,     │ website/listing                                                                                        │
+  │   .prev_url, .next_url,       │                                                                                                        │
+  │   .total)                     │                                                                                                        │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.preamble                  │ latex/page, typst/page                                                                                 │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.rows                      │ layout templates                                                                                       │
+  │ clp.prev (.href, .text)       │ website/page_nav                                                                                       │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.src                       │ figure templates                                                                                       │
+  │ clp.rows                      │ layout templates (all formats)                                                                         │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.source_url                │ website/widget_source                                                                                  │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.src                       │ (removed -- rendered in Rust into clp.children)                                                        │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.subtitle                  │ website/listing, website/page_header                                                                   │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.syntax_css                │ slides/page                                                                                            │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.text                      │ code_diagnostic templates                                                                              │
+  │ clp.text                      │ code_diagnostic templates (all formats)                                                                │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.toc, clp.toc_list         │ page, toc templates                                                                                    │
+  │ clp.title                     │ website/base, website/listing, website/page_header, website/sidebar                      │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.type_class                │ theorem templates                                                                                      │
+  │ clp.toc                       │ html/page, typst/page, latex/page, website/toc                                                         │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.toc_list                  │ html/toc                                                                                               │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.translations              │ website/navbar_right                                                                                   │
+  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ clp.type_class                │ theorem templates (html, latex, typst, markdown)                                                       │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.url                       │ html/video                                                                                             │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ clp.valign, clp.width         │ latex/layout_cell                                                                                      │
   ├───────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ clp.width_attr                │ figure templates                                                                                       │
+  │ clp.width_attr                │ (removed from templates -- rendered in Rust)                                                            │
   └───────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-  document.* (website/collection page context) -- 18 variables
-
-  ┌──────────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────┐
-  │                           Variable                           │                        Used in                         │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.abstract                                            │ minimal/base, website/base, listing, page_header       │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.body                                                │ website/listing, split_view                            │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.breadcrumbs                                         │ website/breadcrumbs                                    │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.date                                                │ website/page_header                                    │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.lang                                                │ minimal/base, website/base, navbar_left, navbar_middle │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.listing, document.listing_type                      │ website/listing                                        │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.next (.href, .text)                                 │ website/page_nav                                       │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.pagination (.current, .next_url, .prev_url, .total) │ website/listing                                        │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.prev (.href, .text)                                 │ website/page_nav                                       │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.source_url                                          │ website/widget_source                                  │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.subtitle                                            │ website/listing, page_header                           │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.title                                               │ minimal/base, website/base, listing, page_header       │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.toc                                                 │ website/toc                                            │
-  ├──────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
-  │ document.translations                                        │ website/navbar_right                                   │
-  └──────────────────────────────────────────────────────────────┴────────────────────────────────────────────────────────┘
-
-  collection.* (site/book collection context) -- 10 variables
-
-  ┌──────────────────────────────────────────────────────────────────────┬──────────────────────────────────────┐
-  │                               Variable                               │               Used in                │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.dark_mode                                                 │ minimal/base, website/base           │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.favicon                                                   │ minimal/base, website/base           │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.languages (.abbreviation)                                 │ minimal/base, website/base           │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.math                                                      │ minimal/base, website/base           │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.navbar.left (.icon, .image, .image_dark, .height, .width) │ website/footer, navbar_left, sidebar │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.navbar.middle                                             │ website/navbar_middle, sidebar       │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.navbar.right                                              │ website/navbar_right                 │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.pages                                                     │ website/sidebar                      │
-  ├──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────┤
-  │ collection.title                                                     │ minimal/base, website/base, sidebar  │
-  └──────────────────────────────────────────────────────────────────────┴──────────────────────────────────────┘
-
-  var.* (extension/module variables) -- 3 variables
-
-  ┌────────────────────────────┬─────────────────┐
-  │          Variable          │     Used in     │
-  ├────────────────────────────┼─────────────────┤
-  │ var.sidebar                │ website/base    │
-  ├────────────────────────────┼─────────────────┤
-  │ var.sidebar_collapse_level │ website/sidebar │
-  ├────────────────────────────┼─────────────────┤
-  │ var.toc                    │ website/base    │
-  └────────────────────────────┴─────────────────┘
-
-  meta.* (book orchestrator context) -- 3 variables
-
-  ┌───────────────┬─────────────────────────────────────────────────────────────────┐
-  │   Variable    │                             Used in                             │
-  ├───────────────┼─────────────────────────────────────────────────────────────────┤
-  │ meta.author   │ book/orchestrator.tex, book/orchestrator.typ, book/preamble.typ │
-  ├───────────────┼─────────────────────────────────────────────────────────────────┤
-  │ meta.subtitle │ book/orchestrator.typ                                           │
-  ├───────────────┼─────────────────────────────────────────────────────────────────┤
-  │ meta.title    │ book/orchestrator.tex, book/orchestrator.typ, book/preamble.typ │
-  └───────────────┴─────────────────────────────────────────────────────────────────┘
 
   Other
 
-  - loc -- local variable set inside figure templates (html/figure, latex/figure, typst/figure_div)
-  - pages -- list iterated in book/orchestrator templates
-  - Filters: default(), length, replace(), safe, title
-  - Functions: link() (used in website/minimal templates for URL resolution)
-  - Loop variables: item, child, node, crumb, t (with sub-properties like .active, .children, .date, .description, .href, .icon, .image, .name, .path, .text, .title,
-  .url, .widget)
+  - Local variables ({% set %}): title (callouts), loc (figure/table cap_location), env (latex/figure), italic (theorem), listing_type (website/listing)
+  - Filters: default(), length, replace(), safe, title, first, last
+  - Functions: link() (website/minimal templates for URL resolution)
+  - Loop variables: item, child, node, crumb, t (with sub-properties like .active, .children, .date, .description, .href, .icon, .image, .image_dark, .height, .width, .name, .path, .text, .title, .url, .lang, .flag)
+  - Loop helpers: loop.first, loop.last, loop.depth, loop.depth0, loop.index
 
-✻ Cooked for 2m 56s
+  Removed variables (no longer in any template)
 
+  - cfg.appearance, cfg.collapse, cfg.icon -- removed from callout templates
+  - cfg.label_abstract, cfg.label_appendix, cfg.label_citation, cfg.label_contents, cfg.label_copyright, cfg.label_funding, cfg.label_keywords, cfg.label_proof, cfg.label_reuse -- label_* variables removed
+  - clp.label_listing, clp.label_proof -- removed
+  - document.*, collection.*, var.*, meta.* namespaces -- consolidated into cfg.* and clp.*

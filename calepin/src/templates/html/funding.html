@@ -1,6 +1,7 @@
 <section class="appendix-section">
 <h2>Funding</h2>
 <ul>
-{{cfg.items}}
+{% for item in cfg.items %}<li>{{ item }}</li>
+{% endfor %}
 </ul>
 </section>

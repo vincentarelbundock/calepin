@@ -288,9 +288,9 @@ fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> 
 
     if let Some(tpl) = resolve_element_template("equation", format) {
         let mut vars = TemplateVars::new();
-        vars.cfg.insert("label".to_string(), label.to_string());
-        vars.clp.insert("math".to_string(), math.to_string());
-        vars.clp.insert("inner".to_string(), inner.to_string());
+        vars.cfg.insert("label".to_string(), minijinja::Value::from(label.to_string()));
+        vars.clp.insert("math".to_string(), minijinja::Value::from(math.to_string()));
+        vars.clp.insert("inner".to_string(), minijinja::Value::from(inner.to_string()));
         apply_template(&tpl, &vars)
     } else {
         // Fallback: pass through the math expression unchanged

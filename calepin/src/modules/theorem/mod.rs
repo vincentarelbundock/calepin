@@ -56,19 +56,19 @@ pub fn render(
         .join("\n\n");
 
     let mut vars = TemplateVars::with_writer(format);
-    vars.clp.insert("children".to_string(), children_rendered);
-    vars.cfg.insert("classes".to_string(), classes.join(" "));
-    vars.clp.insert("type_class".to_string(), theorem_class.clone());
+    vars.clp.insert("children".to_string(), minijinja::Value::from(children_rendered));
+    vars.cfg.insert("classes".to_string(), minijinja::Value::from(classes.join(" ")));
+    vars.clp.insert("type_class".to_string(), minijinja::Value::from(theorem_class.clone()));
 
     if let Some(ref id_val) = id {
-        vars.cfg.insert("id".to_string(), id_val.clone());
+        vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.clone()));
     } else {
-        vars.cfg.insert("id".to_string(), String::new());
+        vars.cfg.insert("id".to_string(), minijinja::Value::from(String::new()));
     }
 
     // Copy div attrs into vars
     for (k, val) in attrs {
-        vars.cfg.insert(k.clone(), val.clone());
+        vars.cfg.insert(k.clone(), minijinja::Value::from(val.clone()));
     }
 
     // Auto-numbering (proof is not numbered).
@@ -87,7 +87,7 @@ pub fn render(
         }
         drop(ids);
 
-        vars.clp.insert("number".to_string(), num.to_string());
+        vars.clp.insert("number".to_string(), minijinja::Value::from(num.to_string()));
     }
 
     let template_name = if theorem_class == "proof" {

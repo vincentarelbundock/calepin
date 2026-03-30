@@ -1,1 +1,1 @@
-#link("{{ cfg.src }}")[{{ cfg.title }}]
+#link("{{ cfg.video_url }}")[{{ cfg.title }}]

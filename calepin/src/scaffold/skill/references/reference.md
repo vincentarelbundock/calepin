@@ -472,8 +472,8 @@ Override only the files you need to change; everything else falls through to the
 
 | Template | Used by |
 |----------|---------|
-| `figure` / `figure_div` | Figures and images |
-| `table_div` | Table div wrappers |
+| `figure` | Figures, images, and figure divs |
+| `table` | Table div wrappers |
 | `code_source` | Code chunks (source) |
 | `code_output` | Code chunks (output) |
 | `callout` | All callout types |

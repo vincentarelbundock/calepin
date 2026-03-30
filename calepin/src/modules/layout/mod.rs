@@ -59,20 +59,20 @@ pub fn render(
 
     // Build template variables for the figure wrapper
     let mut vars = TemplateVars::with_writer(format);
-    vars.cfg.insert("id".to_string(), id_str.to_string());
-    vars.cfg.insert("caption".to_string(), if !caption.is_empty() {
+    vars.cfg.insert("id".to_string(), minijinja::Value::from(id_str.to_string()));
+    vars.cfg.insert("caption".to_string(), minijinja::Value::from(if !caption.is_empty() {
         crate::render::convert::render_inline(&caption, format)
     } else {
         String::new()
-    });
-    vars.clp.insert("is_figure".to_string(), if is_figure { "true" } else { "" }.to_string());
-    vars.clp.insert("rows".to_string(), rows_content);
+    }));
+    vars.clp.insert("is_figure".to_string(), minijinja::Value::from(if is_figure { "true" } else { "" }.to_string()));
+    vars.clp.insert("rows".to_string(), minijinja::Value::from(rows_content));
 
     // LaTeX-specific attrs
     let fig_env = attrs.get("fig_env").map(|s| s.as_str()).unwrap_or("figure");
     let fig_pos = attrs.get("fig_pos").map(|s| format!("[{}]", s)).unwrap_or_default();
-    vars.cfg.insert("fig_env".to_string(), fig_env.to_string());
-    vars.cfg.insert("fig_pos".to_string(), fig_pos);
+    vars.cfg.insert("fig_env".to_string(), minijinja::Value::from(fig_env.to_string()));
+    vars.cfg.insert("fig_pos".to_string(), minijinja::Value::from(fig_pos));
 
     let tpl = crate::render::elements::resolve_builtin_template("layout", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
@@ -121,9 +121,9 @@ fn render_rows_via_templates(
             let content = adjust_cell_content(content, format);
 
             let mut cell_vars = TemplateVars::new();
-            cell_vars.clp.insert("content".to_string(), content);
-            cell_vars.clp.insert("width".to_string(), format!("{:.3}", width));
-            cell_vars.clp.insert("valign".to_string(), valign_char.to_string());
+            cell_vars.clp.insert("content".to_string(), minijinja::Value::from(content));
+            cell_vars.clp.insert("width".to_string(), minijinja::Value::from(format!("{:.3}", width)));
+            cell_vars.clp.insert("valign".to_string(), minijinja::Value::from(valign_char.to_string()));
             cells_rendered.push(apply_template(cell_tpl, &cell_vars));
 
             // LaTeX: add \hfill between cells
@@ -135,10 +135,10 @@ fn render_rows_via_templates(
         let cell_separator = "\n";
 
         let mut row_vars = TemplateVars::new();
-        row_vars.clp.insert("cells".to_string(), cells_rendered.join(cell_separator));
-        row_vars.clp.insert("columns".to_string(), columns.join(" "));
-        row_vars.clp.insert("align_items".to_string(), align_items.to_string());
-        row_vars.clp.insert("valign".to_string(), valign_char.to_string());
+        row_vars.clp.insert("cells".to_string(), minijinja::Value::from(cells_rendered.join(cell_separator)));
+        row_vars.clp.insert("columns".to_string(), minijinja::Value::from(columns.join(" ")));
+        row_vars.clp.insert("align_items".to_string(), minijinja::Value::from(align_items.to_string()));
+        row_vars.clp.insert("valign".to_string(), minijinja::Value::from(valign_char.to_string()));
         output.push_str(&apply_template(row_tpl, &row_vars));
     }
 

@@ -83,7 +83,7 @@ impl Metadata {
         self.execute = merge_option_struct!(overlay.execute, self.execute, { cache, eval, echo, include, warning, message, error, comment, results, timeout });
         self.toc = merge_option_struct!(overlay.toc, self.toc, { enabled, depth, title });
         self.video = merge_option_struct!(overlay.video, self.video, { width, height, title });
-        self.placeholder = merge_option_struct!(overlay.placeholder, self.placeholder, { width, height, color });
+        self.placeholder = merge_option_struct!(overlay.placeholder, self.placeholder, { width, height });
         self.lipsum = merge_option_struct!(overlay.lipsum, self.lipsum, { paragraphs });
         self.layout = merge_option_struct!(overlay.layout, self.layout, { valign, columns, rows });
 

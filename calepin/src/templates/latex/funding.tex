@@ -1,4 +1,5 @@
 \subsection*{ Funding }
 \begin{itemize}
-{{cfg.items}}
+{% for item in cfg.items %}\item {{ item }}
+{% endfor %}
 \end{itemize}

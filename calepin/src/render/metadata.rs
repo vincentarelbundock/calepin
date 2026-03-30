@@ -17,23 +17,17 @@ use crate::render::template::{apply_template, TemplateVars};
 struct Fmt;
 
 impl Fmt {
-    fn superscript(text: &str, ext: &str) -> String {
-        let mut vars = TemplateVars::new();
-        vars.cfg.insert("text".to_string(), text.to_string());
-        render_fmt_template("superscript", ext, &vars)
-    }
-
     fn emphasis(text: &str, ext: &str) -> String {
         let mut vars = TemplateVars::new();
-        vars.cfg.insert("text".to_string(), text.to_string());
+        vars.cfg.insert("text".to_string(), minijinja::Value::from(text.to_string()));
         render_fmt_template("emphasis", ext, &vars)
     }
 
     fn url(url: &str, label: Option<&str>, ext: &str) -> String {
         let label = label.unwrap_or(url);
         let mut vars = TemplateVars::new();
-        vars.cfg.insert("url".to_string(), url.to_string());
-        vars.cfg.insert("label".to_string(), label.to_string());
+        vars.cfg.insert("url".to_string(), minijinja::Value::from(url.to_string()));
+        vars.cfg.insert("label".to_string(), minijinja::Value::from(label.to_string()));
         render_fmt_template("url", ext, &vars)
     }
 }
@@ -76,7 +70,7 @@ pub fn strip_markdown_formatting(text: &str) -> String {
 /// Resolve an element template and render it with the given extra vars,
 /// automatically injecting `base` and `writer`. Returns `None` if the
 /// template does not exist.
-fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, String)>) -> Option<String> {
+fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, minijinja::Value)>) -> Option<String> {
     let tpl = resolve_element_template(name, ext)?;
     let mut vars = TemplateVars::with_writer(ext);
     for (k, v) in extra_vars {
@@ -100,8 +94,8 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
             if let Some(s) = render_section("license", ext, vec![
-                ("text", text.clone()),
-                ("url", lic.url.as_deref().unwrap_or("").to_string()),
+                ("text", minijinja::Value::from(text.clone())),
+                ("url", minijinja::Value::from(lic.url.as_deref().unwrap_or("").to_string())),
             ]) {
                 sections.push(s);
             }
@@ -111,7 +105,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     // Citation
     if let Some(ref cite) = meta.citation {
         if let Some(s) = render_section("citation", ext, vec![
-            ("content", build_citation_text(meta, cite, ext)),
+            ("content", minijinja::Value::from(build_citation_text(meta, cite, ext))),
         ]) {
             sections.push(s);
         }
@@ -122,7 +116,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         let text = build_copyright_text(cr);
         if !text.is_empty() {
             if let Some(s) = render_section("copyright", ext, vec![
-                ("content", text),
+                ("content", minijinja::Value::from(text)),
             ]) {
                 sections.push(s);
             }
@@ -134,7 +128,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
         let items = build_funding_items(&meta.funding, ext);
         if !items.is_empty() {
             if let Some(s) = render_section("funding", ext, vec![
-                ("items", items),
+                ("items", minijinja::Value::from_iter(items)),
             ]) {
                 sections.push(s);
             }
@@ -144,7 +138,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if sections.is_empty() {
         String::new()
     } else if let Some(s) = render_section("appendix", ext, vec![
-        ("sections", sections.join("\n")),
+        ("sections", minijinja::Value::from(sections.join("\n"))),
     ]) {
         s
     } else {
@@ -211,154 +205,91 @@ fn build_citation_text(meta: &Metadata, cite: &crate::config::CitationConfig, ex
     citation
 }
 
-/// Build funding items as a pre-formatted list string.
-fn build_funding_items(funding: &[crate::config::Funding], ext: &str) -> String {
-    let items: Vec<String> = funding.iter().filter_map(|f| {
-        if let Some(ref stmt) = f.statement {
-            Some(stmt.clone())
+/// Build funding items as a list of display strings.
+fn build_funding_items(funding: &[crate::config::Funding], ext: &str) -> Vec<String> {
+    funding.iter().filter_map(|f| {
+        let text = if let Some(ref stmt) = f.statement {
+            stmt.clone()
         } else {
             let mut parts = Vec::new();
             if let Some(ref src) = f.source { parts.push(src.as_str()); }
             if let Some(ref award) = f.award { parts.push(award.as_str()); }
             if let Some(ref recip) = f.recipient { parts.push(recip.as_str()); }
-            if parts.is_empty() { None } else { Some(parts.join(", ")) }
-        }
-    }).collect();
-    if items.is_empty() {
-        return String::new();
-    }
-    items.iter().map(|i| {
-        let text = if ext == "latex" {
-            i.replace('#', "\\#").replace('%', "\\%").replace('&', "\\&").replace('_', "\\_")
-        } else {
-            i.clone()
+            if parts.is_empty() { return None; }
+            parts.join(", ")
         };
-        let mut vars = TemplateVars::new();
-        vars.cfg.insert("text".to_string(), text);
-        render_fmt_template("funding_item", ext, &vars)
-    }).collect::<Vec<_>>().join("\n")
+        if ext == "latex" {
+            Some(text.replace('#', "\\#").replace('%', "\\%").replace('&', "\\&").replace('_', "\\_"))
+        } else {
+            Some(text)
+        }
+    }).collect()
 }
 
 /// Build the author block for any format using element templates.
-/// Rich metadata (affiliations, ORCID, etc.) renders through author-item and
-/// affiliation-item sub-templates; simple author lists use a plain fallback.
+/// Passes structured data (authors, affiliations, corresponding) to the
+/// `authors` template, which handles iteration and formatting via Jinja.
 pub fn build_authors(meta: &Metadata, ext: &str) -> String {
-    let has_rich = !meta.authors.is_empty()
-        && meta.authors.iter().any(|a| {
-            !a.affiliation_ids.is_empty()
-                || a.email.is_some()
-                || a.orcid.is_some()
-                || a.corresponding
-        });
+    if meta.authors.is_empty() {
+        return String::new();
+    }
 
-    if has_rich {
-        // Render each author through the author-item template
-        let author_tpl = resolve_element_template("author_item", ext);
-        let authors_rendered: Vec<String> = meta.authors.iter().map(|author| {
-            let superscripts = if !author.affiliation_ids.is_empty() && meta.affiliations.len() > 1 {
-                let sups: Vec<String> = author.affiliation_ids.iter()
-                    .filter_map(|&i| meta.affiliations.get(i).map(|a| a.number.to_string()))
-                    .collect();
-                Fmt::superscript(&sups.join(","), ext)
-            } else {
-                String::new()
-            };
+    let tpl = match resolve_element_template("authors", ext) {
+        Some(t) => t,
+        None => return meta.author_names().join(", "),
+    };
 
-            let corresponding = if author.corresponding {
-                Fmt::superscript("*", ext)
-            } else {
-                String::new()
-            };
+    let mut vars = TemplateVars::with_writer(ext);
 
-            let orcid_url = if let Some(ref orcid) = author.orcid {
-                if orcid.starts_with("http") { orcid.clone() } else { format!("https://orcid.org/{}", orcid) }
-            } else {
-                String::new()
-            };
-
-            if let Some(ref tpl) = author_tpl {
-                let mut vars = TemplateVars::with_writer(ext);
-                vars.cfg.insert("name".to_string(), author.name.literal.clone());
-                vars.cfg.insert("superscripts".to_string(), superscripts);
-                vars.cfg.insert("corresponding".to_string(), corresponding);
-                vars.cfg.insert("orcid_url".to_string(), orcid_url);
-                apply_template(tpl, &vars)
-            } else {
-                format!("{}{}{}", author.name.literal, superscripts, corresponding)
-            }
-        }).collect();
-
-        // Render each affiliation through the affiliation-item template
-        let aff_tpl = resolve_element_template("affiliation_item", ext);
-        let affs_rendered: Vec<String> = meta.affiliations.iter().filter_map(|aff| {
-            let display = aff.display();
-            if display.is_empty() {
-                return None;
-            }
-            let number = if meta.affiliations.len() > 1 {
-                format!("{} ", Fmt::superscript(&aff.number.to_string(), ext))
-            } else {
-                String::new()
-            };
-            if let Some(ref tpl) = aff_tpl {
-                let mut vars = TemplateVars::with_writer(ext);
-                vars.cfg.insert("number".to_string(), number);
-                vars.cfg.insert("display".to_string(), display);
-                Some(apply_template(tpl, &vars))
-            } else {
-                Some(format!("{}{}", number, display))
-            }
-        }).collect();
-
-        // Corresponding author note
-        let corresponding_note = meta.authors.iter().filter_map(|author| {
-            if author.corresponding {
-                if let Some(ref email) = author.email {
-                    let mailto = format!("mailto:{}", email);
-                    let mut vars = TemplateVars::new();
-                    vars.cfg.insert("email".to_string(), email.clone());
-                    vars.cfg.insert("mailto".to_string(), mailto);
-                    Some(render_fmt_template("corresponding", ext, &vars))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        }).collect::<Vec<_>>().join("\n");
-
-        // Join authors and affiliations with format-appropriate separators
-        let authors_joined = match ext {
-            "latex" => authors_rendered.join(" \\and "),
-            "typst" => authors_rendered.join(", "),
-            _ => authors_rendered.join("\n"),
-        };
-
-        let affiliations_items = match ext {
-            "latex" => affs_rendered.join(" \\\\\n"),
-            "typst" => affs_rendered.join(" \\\n"),
-            "html" => affs_rendered.join("\n"),
-            _ => affs_rendered.join(", "),
-        };
-
-        if let Some(tpl) = resolve_element_template("authors", ext) {
-            let mut vars = TemplateVars::with_writer(ext);
-            vars.clp.insert("authors_cmd".to_string(), format!("\\author{{{}}}", authors_joined));
-            vars.clp.insert("authors".to_string(), authors_joined);
-            vars.clp.insert("affiliations_items".to_string(), affiliations_items);
-            vars.clp.insert("corresponding_note".to_string(), corresponding_note);
-            apply_template(&tpl, &vars)
-        } else {
-            format!("{}\n{}\n{}", authors_joined, affiliations_items, corresponding_note)
-        }
-    } else {
-        let names = meta.author_names();
-        if !names.is_empty() {
-            let mut vars = TemplateVars::new();
-            vars.cfg.insert("names".to_string(), names.join(", "));
-            render_fmt_template("authors_simple", ext, &vars)
+    // Build structured author list
+    let multi_aff = meta.affiliations.len() > 1;
+    let authors: Vec<minijinja::Value> = meta.authors.iter().map(|author| {
+        let sups = if !author.affiliation_ids.is_empty() && multi_aff {
+            author.affiliation_ids.iter()
+                .filter_map(|&i| meta.affiliations.get(i).map(|a| a.number.to_string()))
+                .collect::<Vec<_>>().join(",")
         } else {
             String::new()
+        };
+        let orcid_url = author.orcid.as_ref().map(|o| {
+            if o.starts_with("http") { o.clone() } else { format!("https://orcid.org/{}", o) }
+        }).unwrap_or_default();
+
+        minijinja::Value::from_serialize(&std::collections::BTreeMap::from([
+            ("name", author.name.literal.as_str()),
+            ("superscripts", &sups),
+            ("corresponding", if author.corresponding { "true" } else { "" }),
+            ("orcid_url", &orcid_url),
+        ]))
+    }).collect();
+    vars.cfg.insert("authors".to_string(), minijinja::Value::from_iter(authors));
+
+    // Build structured affiliation list
+    let affiliations: Vec<minijinja::Value> = meta.affiliations.iter().filter_map(|aff| {
+        let display = aff.display();
+        if display.is_empty() { return None; }
+        let number = if multi_aff { aff.number.to_string() } else { String::new() };
+        Some(minijinja::Value::from_serialize(&std::collections::BTreeMap::from([
+            ("number".to_string(), number),
+            ("display".to_string(), display),
+        ])))
+    }).collect();
+    vars.cfg.insert("affiliations".to_string(), minijinja::Value::from_iter(affiliations));
+
+    // Corresponding author info
+    let corresponding: Vec<minijinja::Value> = meta.authors.iter().filter_map(|author| {
+        if author.corresponding {
+            author.email.as_ref().map(|email| {
+                minijinja::Value::from_serialize(&std::collections::BTreeMap::from([
+                    ("email", email.as_str()),
+                    ("mailto", &format!("mailto:{}", email)),
+                ]))
+            })
+        } else {
+            None
         }
-    }
+    }).collect();
+    vars.cfg.insert("corresponding".to_string(), minijinja::Value::from_iter(corresponding));
+
+    apply_template(&tpl, &vars)
 }

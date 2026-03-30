@@ -1,1 +1,0 @@
-{{cfg.number}}{{cfg.display}}

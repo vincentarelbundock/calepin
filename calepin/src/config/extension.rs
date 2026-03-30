@@ -494,7 +494,6 @@ pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
     ("slides", include_str!("../extensions/slides/extension.toml")),
     ("website", include_str!("../extensions/website/extension.toml")),
     ("book", include_str!("../extensions/book/extension.toml")),
-    ("minimal", include_str!("../extensions/minimal/extension.toml")),
 ];
 
 /// Parse a built-in extension manifest by name.

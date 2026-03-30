@@ -52,7 +52,7 @@ pub fn render(
 
     // Build template variables
     let mut vars = TemplateVars::with_writer(format);
-    vars.cfg.insert("group".to_string(), group.to_string());
+    vars.cfg.insert("group".to_string(), minijinja::Value::from(group.to_string()));
 
     // Pre-render nav items and tab panes as HTML strings
     let mut nav_items = String::new();
@@ -71,8 +71,8 @@ pub fn render(
             active, id, id, hidden, content
         ));
     }
-    vars.clp.insert("nav_items".to_string(), nav_items);
-    vars.clp.insert("tab_panes".to_string(), tab_panes);
+    vars.clp.insert("nav_items".to_string(), minijinja::Value::from(nav_items));
+    vars.clp.insert("tab_panes".to_string(), minijinja::Value::from(tab_panes));
 
     let tpl = crate::render::elements::resolve_builtin_template("tabset", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)

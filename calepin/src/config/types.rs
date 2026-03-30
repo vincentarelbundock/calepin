@@ -67,7 +67,6 @@ pub struct VideoConfig {
 pub struct PlaceholderConfig {
     pub width: Option<String>,
     pub height: Option<String>,
-    pub color: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]

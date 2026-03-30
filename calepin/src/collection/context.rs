@@ -247,8 +247,8 @@ pub fn build_collection_context(
     let html_math_method = "katex".to_string();
     let math = {
         let mut vars = crate::render::template::TemplateVars::new();
-        vars.cfg.insert("html_math_method".to_string(), html_math_method);
-        vars.clp.insert("writer".to_string(), "html".to_string());
+        vars.cfg.insert("html_math_method".to_string(), minijinja::Value::from(html_math_method));
+        vars.clp.insert("writer".to_string(), minijinja::Value::from("html"));
         crate::render::template::render_element("math", "html", &vars)
     };
 

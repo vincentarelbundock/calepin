@@ -81,7 +81,7 @@ parse -> evaluate -> bibliography
 4. **TransformElement** -- Pre-render element mutations. Modules implementing `TransformElement` receive each element and can mutate it (e.g., `convert_svg_pdf` rewrites SVG figure paths to PDF).
 5. **Render** -- `ElementRenderer` dispatches each element. Divs go through the module registry (`TransformElementChildren` for structural rewriting, then template lookup). Code/figure elements go through `BuildElementVars` then templates.
 6. **Cross-ref resolution** (`references/crossref.rs`) -- `@fig-x` references resolved to links/numbers.
-7. **Assemble page** -- MiniJinja page template wrapping (`render/template.rs`).
+7. **Assemble page** -- MiniJinja page template wrapping (`render/template/`).
 8. **TransformDocument** -- Post-assembly document transforms. Modules receive the full document string and can modify it (highlight CSS injection, footnote appending, slide splitting, image embedding).
 9. **Write** -- File output or pandoc conversion.
 
@@ -114,7 +114,7 @@ Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` t
 
 ### Extension system
 
-Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`, `minimal`. User extensions live in `{stem}_calepin/extensions/{name}/`.
+Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book`. User extensions live in `{stem}_calepin/extensions/{name}/`.
 
 An extension bundles a target definition, templates, modules, CSS/JS assets, and variables. Extensions inherit from a parent via `inherits`. Template resolution is layered: user overrides > extension templates > parent extension > built-in defaults.
 
@@ -155,7 +155,7 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 - `extension.rs` -- `ExtensionManifest` parsing, built-in extension embedding, discovery
 - `load.rs` -- Project config loading, `LanguageConfig`, `ContentSection`
 - `context.rs` -- `ProjectContext`: resolves project config and target for a render
-- `document.toml`, `shared.toml`, `collection.toml`, `modules.toml` -- Embedded default configs
+- `toml/` -- Embedded default configs: `document.toml`, `shared.toml`, `collection.toml`, `modules.toml`
 
 ### `render/` -- Element rendering and pipeline
 
@@ -166,7 +166,7 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 - `span.rs` -- Span rendering pipeline
 - `vars.rs` -- `BuildElementVars` trait + `BuildCodeVars`: per-element template var builders
 - `convert.rs` -- Comrak options, `ImageAttrs`, `render_inline()` entry points
-- `template.rs` -- MiniJinja template engine: `apply_template()`, page template loading, `build_template_vars()`
+- `template/` -- MiniJinja template engine: `apply_template()`, page template loading, `build_template_vars()`, Jinja body processing (`{% include %}` expansion, code block protection, template context)
 - `markers.rs` -- Unicode marker system for protecting content through conversion
 - `metadata.rs` -- Author/citation/appendix formatting via templates
 
@@ -207,7 +207,7 @@ Shared AST walker + format-specific implementations via `FormatEmitter` trait.
 ### `templates/` -- Built-in Jinja templates (embedded at compile time)
 
 Per-engine templates for elements, page templates, shortcodes:
-`templates/{html,latex,typst,markdown,slides,minimal,website,book}/`
+`templates/{html,latex,typst,markdown,slides,website,book}/`
 
 Website template icons live in `templates/website/icons/` (used via `{% include %}`).
 
@@ -223,7 +223,6 @@ User overrides: `{stem}_calepin/templates/{engine}/{name}.{ext}`
 - `engines/` -- Code execution: R, Python, shell subprocess management
 - `parse/` -- Block parsing: `.qmd` text -> `Block` enum
 - `references/` -- Bibliography (`bibliography.rs`) + cross-references (`crossref.rs`)
-- `jinja/` -- Jinja body processing: `{% include %}` expansion, code block protection, template context
 - `base/` -- Core types (`types.rs`), paths (`paths.rs`), utilities (`util.rs`, `value.rs`)
 - `collection/` -- Multi-document builds (site/book rendering), includes `templates.rs` for template resolution
 - `preview/` -- Live preview server with hot reload

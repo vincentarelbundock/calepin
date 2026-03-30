@@ -1,14 +1,13 @@
-{%- set loc = cfg.cap_location | default("bottom") %}
-\begin{ {{-cfg.fig_env | default("figure")-}} }{{cfg.fig_pos}}
+{%- set env = cfg.fig_env | default("figure") -%}
+{%- set loc = cfg.cap_location | default("bottom") -%}
+\begin{{clp._lb}}{{env}}{{clp._rb}}{{cfg.fig_pos}}
 {{clp.align_style}}
 {%- if loc == "top" and cfg.caption %}
-\caption{{cfg.short_caption}}{ {{-cfg.caption-}} }
+\caption{{cfg.short_caption}}{{clp._lb}}{{cfg.caption}}{{clp._rb}}
 {%- endif %}
-{%- if cfg.link %}\href{ {{-cfg.link-}} }{ {%- endif %}
-\includegraphics[{{clp.width_attr | default("width=0.70\\textwidth")-}} ]{ {{-clp.src-}} }
-{%- if cfg.link %}}{% endif %}
+{{clp.children}}
 {%- if loc != "top" and cfg.caption %}
-\caption{{cfg.short_caption}}{ {{-cfg.caption-}} }
+\caption{{cfg.short_caption}}{{clp._lb}}{{cfg.caption}}{{clp._rb}}
 {%- endif %}
-{%- if cfg.label %}\label{ {{-cfg.label-}} }{%- endif %}
-\end{ {{-cfg.fig_env | default("figure")-}} }
+\label{{clp._lb}}{{cfg.label}}{{clp._rb}}
+\end{{clp._lb}}{{env}}{{clp._rb}}

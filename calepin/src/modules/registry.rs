@@ -439,7 +439,7 @@ pub fn builtin_module_names() -> Vec<String> {
 // Built-in module config (parsed from embedded TOML)
 // ---------------------------------------------------------------------------
 
-const MODULES_TOML: &str = include_str!("../config/modules.toml");
+const MODULES_TOML: &str = include_str!("../config/toml/modules.toml");
 
 /// Parsed entry from modules.toml.
 struct BuiltinEntry {

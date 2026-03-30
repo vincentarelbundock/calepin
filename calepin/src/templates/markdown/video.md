@@ -1,1 +1,1 @@
-[{{ cfg.title }}]({{ cfg.src }})
+[{{ cfg.title }}]({{ cfg.video_url }})

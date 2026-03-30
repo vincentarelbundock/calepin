@@ -1,3 +1,9 @@
+mod includes;
+mod protection;
+mod variables;
+
+pub use includes::expand_includes;
+
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -88,10 +94,10 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     let toc_list = build_toc_list_html(items);
     if toc_list.is_empty() { return String::new(); }
     let mut vars = TemplateVars::with_writer("html");
-    vars.cfg.insert("title".to_string(), title.to_string());
-    vars.clp.insert("toc_list".to_string(), toc_list);
-    vars.cfg.insert("depth".to_string(), String::new());
-    let tpl = include_str!("../templates/html/toc.html");
+    vars.cfg.insert("title".to_string(), minijinja::Value::from(title.to_string()));
+    vars.clp.insert("toc_list".to_string(), minijinja::Value::from(toc_list));
+    vars.cfg.insert("depth".to_string(), minijinja::Value::from(String::new()));
+    let tpl = include_str!("../../templates/html/toc.html");
     apply_template(tpl, &vars)
 }
 
@@ -194,8 +200,8 @@ fn load_extension_js(project_root: &std::path::Path, target_name: &str) -> Strin
 /// - `calepin`: variables the engine computed or resolved. Accessed in templates
 ///   as `{{ calepin.body }}`.
 pub struct TemplateVars {
-    pub cfg: HashMap<String, String>,
-    pub clp: HashMap<String, String>,
+    pub cfg: HashMap<String, minijinja::Value>,
+    pub clp: HashMap<String, minijinja::Value>,
     pub tpl: HashMap<String, String>,
 }
 
@@ -211,9 +217,10 @@ impl TemplateVars {
     /// Create a new TemplateVars with the writer already set.
     pub fn with_writer(writer: &str) -> Self {
         let mut vars = Self::new();
-        vars.clp.insert("writer".to_string(), writer.to_string());
+        vars.clp.insert("writer".to_string(), minijinja::Value::from(writer));
         vars
     }
+
 }
 
 /// Build a MiniJinja render context from namespaced template variables.
@@ -227,10 +234,10 @@ fn build_jinja_context(
 ) -> std::collections::BTreeMap<&'static str, minijinja::Value> {
     let mut ctx = std::collections::BTreeMap::new();
 
-    // Build cfg object: flat string vars + nested user vars
+    // Build cfg object: vars + nested user vars
     let mut config_map = std::collections::BTreeMap::new();
     for (key, value) in &vars.cfg {
-        config_map.insert(key.as_str(), minijinja::Value::from(value.as_str()));
+        config_map.insert(key.as_str(), value.clone());
     }
     // Merge user vars (custom front matter keys) into cfg
     if let Some(uv) = user_vars {
@@ -254,7 +261,7 @@ fn build_jinja_context(
     // Build clp object
     let mut calepin_map = std::collections::BTreeMap::new();
     for (key, value) in &vars.clp {
-        calepin_map.insert(key.as_str(), minijinja::Value::from(value.as_str()));
+        calepin_map.insert(key.as_str(), value.clone());
     }
     calepin_map.insert("_lb", minijinja::Value::from("{"));
     calepin_map.insert("_rb", minijinja::Value::from("}"));
@@ -399,7 +406,7 @@ pub fn render_element(name: &str, ext: &str, vars: &TemplateVars) -> String {
             clp: vars.clp.clone(),
             tpl: vars.tpl.clone(),
         };
-        vars.clp.insert("writer".to_string(), ext.to_string());
+        vars.clp.insert("writer".to_string(), minijinja::Value::from(ext.to_string()));
         apply_template(&tpl, &vars)
     } else {
         String::new()
@@ -423,96 +430,94 @@ pub fn build_template_vars_with_headings(
     let defs = meta;
 
     // calepin.* (engine-computed)
-    vars.clp.insert("body".to_string(), body.to_string());
+    vars.clp.insert("body".to_string(), minijinja::Value::from(body.to_string()));
     vars.clp.insert(
         "generator".to_string(),
-        format!("calepin {}", env!("CARGO_PKG_VERSION")),
+        minijinja::Value::from(format!("calepin {}", env!("CARGO_PKG_VERSION"))),
     );
-    vars.clp.insert("preamble".to_string(), String::new());
-    vars.clp.insert("writer".to_string(), ext.to_string());
+    vars.clp.insert("preamble".to_string(), minijinja::Value::from(String::new()));
+    vars.clp.insert("writer".to_string(), minijinja::Value::from(ext.to_string()));
 
     // config.* (user-authored)
-    vars.cfg.insert("target".to_string(), ext.to_string());
+    vars.cfg.insert("target".to_string(), minijinja::Value::from(ext.to_string()));
 
     // Language
-    vars.cfg.insert("lang".to_string(), defs.lang.as_deref().unwrap_or("en").to_string());
+    vars.cfg.insert("lang".to_string(), minijinja::Value::from(defs.lang.as_deref().unwrap_or("en").to_string()));
 
     // Plain title (used in <title> etc.) -- strip markdown image/link syntax
     let plain_title = meta.title.as_deref().unwrap_or("Untitled");
     let plain_title = strip_markdown_formatting(plain_title);
-    vars.cfg.insert("plain_title".to_string(), plain_title);
+    vars.cfg.insert("plain_title".to_string(), minijinja::Value::from(plain_title));
     vars.cfg.insert("title".to_string(),
-        meta.title.as_deref()
+        minijinja::Value::from(meta.title.as_deref()
             .map(|t| crate::render::convert::render_inline(t, ext))
-            .unwrap_or_default(),
+            .unwrap_or_default()),
     );
     {
         let names = meta.author_names();
         vars.cfg.insert(
             "author".to_string(),
-            if names.is_empty() {
+            minijinja::Value::from(if names.is_empty() {
                 String::new()
             } else {
                 names.iter()
                     .map(|name| crate::render::convert::render_inline(name, ext))
                     .collect::<Vec<_>>()
                     .join(", ")
-            },
+            }),
         );
     }
-    vars.cfg.insert("date".to_string(), meta.formatted_date().unwrap_or_default());
+    vars.cfg.insert("date".to_string(), minijinja::Value::from(meta.formatted_date().unwrap_or_default()));
 
     // Subtitle
     if let Some(ref subtitle) = meta.subtitle {
-        vars.cfg.insert("subtitle".to_string(), crate::render::convert::render_inline(subtitle, ext));
+        vars.cfg.insert("subtitle".to_string(), minijinja::Value::from(crate::render::convert::render_inline(subtitle, ext)));
     }
 
     // Author block (rendered by engine from user metadata)
-    vars.clp.insert("authors".to_string(), build_authors(meta, ext));
+    vars.clp.insert("authors".to_string(), minijinja::Value::from(build_authors(meta, ext)));
 
     // Abstract block
     if let Some(ref abs) = meta.abstract_text {
-        vars.cfg.insert("abstract".to_string(), crate::render::convert::render_inline(abs, ext));
+        vars.cfg.insert("abstract".to_string(), minijinja::Value::from(crate::render::convert::render_inline(abs, ext)));
     } else {
-        vars.cfg.insert("abstract".to_string(), String::new());
+        vars.cfg.insert("abstract".to_string(), minijinja::Value::from(String::new()));
     }
 
     // Keywords
     if !meta.keywords.is_empty() {
         let joined = meta.keywords.join(", ");
-        vars.cfg.insert("keywords".to_string(), joined);
+        vars.cfg.insert("keywords".to_string(), minijinja::Value::from(joined));
     }
 
     // Appendix (engine-rendered from user metadata)
-    vars.clp.insert("appendix".to_string(), build_appendix(meta, ext));
+    vars.clp.insert("appendix".to_string(), minijinja::Value::from(build_appendix(meta, ext)));
 
     // Default values for format-specific template variables (engine assets)
-    vars.clp.insert("css".to_string(), load_default_css());
-    vars.clp.insert("js".to_string(), {
+    vars.clp.insert("css".to_string(), minijinja::Value::from(load_default_css()));
+    vars.clp.insert("js".to_string(), minijinja::Value::from({
         let root = crate::paths::get_project_dir();
         load_all_extension_assets(&root, |r, name| load_extension_js(r, name))
-    });
-    vars.clp.insert("bib_preamble".to_string(), String::new());
-    vars.clp.insert("bib_end".to_string(), String::new());
+    }));
 
     // Math include for html-writer targets
     if ext == "html" {
         let mut math_vars = TemplateVars::new();
         math_vars.cfg.insert("html_math_method".to_string(),
-            meta.html_math_method.as_deref()
-                .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string());
-        vars.clp.insert("math".to_string(), render_element("math", ext, &math_vars));
+            minijinja::Value::from(meta.html_math_method.as_deref()
+                .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string()));
+        vars.clp.insert("math".to_string(), minijinja::Value::from(render_element("math", ext, &math_vars)));
     } else {
-        vars.clp.insert("math".to_string(), String::new());
+        vars.clp.insert("math".to_string(), minijinja::Value::from(String::new()));
     }
 
     // Bibliography block (format-specific via element template)
     if !meta.bibliography.is_empty() {
         let bib_path = &meta.bibliography[0];
         let mut bvars = TemplateVars::new();
-        bvars.cfg.insert("path".to_string(), bib_path.clone());
+        bvars.cfg.insert("path".to_string(), minijinja::Value::from(bib_path.clone()));
         vars.clp.insert("bibliography".to_string(),
-            render_element("bibliography", ext, &bvars));
+            minijinja::Value::from(render_element("bibliography", ext, &bvars)));
     }
 
     // Table of contents
@@ -526,16 +531,16 @@ pub fn build_template_vars_with_headings(
         } else {
             // LaTeX, Typst, others: use the toc template directly
             let mut toc_vars = TemplateVars::with_writer(ext);
-            toc_vars.cfg.insert("title".to_string(), toc_title.to_string());
-            toc_vars.cfg.insert("depth".to_string(), toc_depth.to_string());
-            toc_vars.clp.insert("toc_list".to_string(), String::new());
+            toc_vars.cfg.insert("title".to_string(), minijinja::Value::from(toc_title.to_string()));
+            toc_vars.cfg.insert("depth".to_string(), minijinja::Value::from(toc_depth.to_string()));
+            toc_vars.clp.insert("toc_list".to_string(), minijinja::Value::from(String::new()));
             let tpl_owned = crate::render::elements::resolve_element_template("toc", ext).unwrap_or_default();
             let tpl = tpl_owned.as_str();
             apply_template(tpl, &toc_vars)
         };
-        vars.clp.insert("toc".to_string(), toc);
+        vars.clp.insert("toc".to_string(), minijinja::Value::from(toc));
     } else {
-        vars.clp.insert("toc".to_string(), String::new());
+        vars.clp.insert("toc".to_string(), minijinja::Value::from(String::new()));
     }
 
     vars
@@ -567,9 +572,15 @@ pub fn deduplicate_preamble(lines: &[String]) -> String {
 pub fn inject_preamble(vars: &mut TemplateVars, preamble: &[String]) {
     let content = deduplicate_preamble(preamble);
     if !content.is_empty() {
-        let entry = vars.clp.entry("preamble".to_string()).or_default();
-        if !entry.is_empty() { entry.push('\n'); }
-        entry.push_str(&content);
+        let existing = vars.clp.get("preamble")
+            .map(|v| v.to_string())
+            .unwrap_or_default();
+        let new_val = if existing.is_empty() {
+            content
+        } else {
+            format!("{}\n{}", existing, content)
+        };
+        vars.clp.insert("preamble".to_string(), minijinja::Value::from(new_val));
     }
 }
 
@@ -679,6 +690,70 @@ pub fn render_page_template(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Body processing (Jinja evaluation of .qmd body text)
+// ---------------------------------------------------------------------------
+
+use protection::{protect_code_blocks, protect_inline_code, restore_code_blocks};
+
+/// Result of Jinja body processing.
+pub struct BodyResult {
+    pub text: String,
+}
+
+/// Process a text block through MiniJinja, evaluating functions and variable references.
+#[inline(never)]
+pub fn process_body(
+    text: &str,
+    format: &str,
+    metadata: &Metadata,
+) -> BodyResult {
+    // 1. Protect fenced code blocks and inline code from Jinja
+    let (protected, mut code_blocks) = protect_code_blocks(text);
+    let protected = protect_inline_code(&protected, &mut code_blocks);
+
+    // 1b. Escape heading attribute syntax {#id .class} which Jinja
+    //     interprets as comment openers ({# ... #}).
+    static RE_HEADING_ATTR: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\{(#[a-zA-Z][a-zA-Z0-9_-]*(?:\s+\.[a-zA-Z][a-zA-Z0-9_-]*)*)\}").unwrap()
+    });
+    let protected = RE_HEADING_ATTR.replace_all(&protected, "\u{FDD2}$1\u{FDD3}").to_string();
+
+    // Quick exit: if no Jinja syntax found, skip processing
+    if !protected.contains("{{") && !protected.contains("{%") {
+        return BodyResult {
+            text: text.to_string(),
+        };
+    }
+
+    // 2. Build MiniJinja environment
+    let mut env = minijinja::Environment::new();
+    env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
+
+    // 3. Build context with metadata, variables, and environment
+    let context = variables::build_context(metadata, format);
+
+    // 4. Render through MiniJinja (on error, fall back to protected text so that
+    //    restore_code_blocks can still recover code block placeholders)
+    let rendered = match env.render_str(&protected, &context) {
+        Ok(r) => r,
+        Err(e) => {
+            cwarn!("body template error: {}", e);
+            protected.clone()
+        }
+    };
+
+    // 5. Restore protected content
+    let rendered = rendered.replace('\u{FDD2}', "{").replace('\u{FDD3}', "}");
+    let text = restore_code_blocks(&rendered, &code_blocks);
+
+    BodyResult { text }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -687,8 +762,8 @@ mod tests {
     fn test_apply_template() {
         let template = "<title>{{cfg.title}}</title>\n<body>{{clp.body}}</body>";
         let mut vars = TemplateVars::new();
-        vars.cfg.insert("title".to_string(), "Hello".to_string());
-        vars.clp.insert("body".to_string(), "<p>World</p>".to_string());
+        vars.cfg.insert("title".to_string(), minijinja::Value::from("Hello".to_string()));
+        vars.clp.insert("body".to_string(), minijinja::Value::from("<p>World</p>".to_string()));
         let result = apply_template(template, &vars);
         assert_eq!(result, "<title>Hello</title>\n<body><p>World</p></body>");
     }
@@ -697,8 +772,61 @@ mod tests {
     fn test_missing_vars_become_empty() {
         let template = "{{cfg.title}}: {{cfg.missing}}";
         let mut vars = TemplateVars::new();
-        vars.cfg.insert("title".to_string(), "Hello".to_string());
+        vars.cfg.insert("title".to_string(), minijinja::Value::from("Hello".to_string()));
         let result = apply_template(template, &vars);
         assert_eq!(result, "Hello: ");
+    }
+
+    #[test]
+    fn test_protect_restore_fenced_code() {
+        let text = "before\n```python\nx = {{ hello }}\n```\nafter";
+        let (protected, blocks) = protect_code_blocks(text);
+        assert!(!protected.contains("{{ hello }}"));
+        assert_eq!(blocks.len(), 1);
+        let restored = restore_code_blocks(&protected, &blocks);
+        assert_eq!(restored, text);
+    }
+
+    #[test]
+    fn test_inline_code_protected() {
+        let mut meta = Metadata::default();
+        meta.title = Some("T".to_string());
+        let result = process_body("version: `{{ config.title }}`", "html", &meta);
+        assert!(result.text.contains("`{{ config.title }}`"));
+    }
+
+    #[test]
+    fn test_no_jinja_syntax_passthrough() {
+        let text = "plain text with no template syntax";
+        let meta = Metadata::default();
+        let result = process_body(text, "html", &meta);
+        assert_eq!(result.text, text);
+    }
+
+    #[test]
+    fn test_config_variable_access() {
+        let mut meta = Metadata::default();
+        meta.title = Some("My Title".to_string());
+        let result = process_body("Title: {{ cfg.title }}", "html", &meta);
+        assert_eq!(result.text, "Title: My Title");
+    }
+
+    #[test]
+    fn test_env_context_variable() {
+        std::env::set_var("CALEPIN_TEST_VAR", "hello_jinja");
+        let meta = Metadata::default();
+        let result = process_body("{{ env.CALEPIN_TEST_VAR }}", "html", &meta);
+        assert_eq!(result.text, "hello_jinja");
+        std::env::remove_var("CALEPIN_TEST_VAR");
+    }
+
+    #[test]
+    fn test_code_blocks_preserved() {
+        let text = "before {{ cfg.title }}\n```\n{{ not_a_var }}\n```\nafter";
+        let mut meta = Metadata::default();
+        meta.title = Some("T".to_string());
+        let result = process_body(text, "html", &meta);
+        assert!(result.text.contains("before T"));
+        assert!(result.text.contains("{{ not_a_var }}"));
     }
 }

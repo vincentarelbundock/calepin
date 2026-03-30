@@ -1,4 +1,6 @@
 //! Lorem ipsum text generation.
+//!
+//! Shared by `modules/lorem/` (the `[]{.lorem}` span) and `cli/new_gibberish.rs`.
 
 const LIPSUM_WORDS: &[&str] = &[
     "lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing",

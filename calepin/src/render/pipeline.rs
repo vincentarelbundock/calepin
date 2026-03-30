@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 use crate::engines;
 use super::formats;
 use super::formats::FormatPipeline;
-use crate::jinja;
+use super::template;
 use crate::parse;
 use crate::paths;
 use crate::config;
@@ -135,7 +135,7 @@ pub fn render_core(
     paths::set_active_tpl(metadata.tpl.clone());
 
     // 4. Expand includes before block parsing (so included code chunks are parsed)
-    let body = jinja::expand_includes(&body, &path_ctx.project_root, &format_str);
+    let body = template::expand_includes(&body, &path_ctx.project_root, &format_str);
 
     // 4a. Parse body into blocks
     let blocks = parse::blocks::parse_body(&body)?;

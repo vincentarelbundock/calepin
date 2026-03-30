@@ -8,7 +8,6 @@ mod types;
 mod config;
 mod emit;
 mod engines;
-mod jinja;
 mod modules;
 mod parse;
 mod preview;

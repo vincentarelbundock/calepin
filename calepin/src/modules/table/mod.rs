@@ -10,7 +10,7 @@ use crate::types::Element;
 use crate::render::template::TemplateVars;
 
 /// Render a table div: extract caption from children, build template
-/// vars, apply the `table_div` template.
+/// vars, apply the `table` template.
 pub fn render(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
@@ -48,28 +48,28 @@ pub fn render(
 
     // Build template vars
     let mut vars = TemplateVars::with_writer(format);
-    vars.clp.insert("children".to_string(), children_rendered);
-    vars.cfg.insert("label".to_string(), id_val.to_string());
-    vars.cfg.insert("id".to_string(), id_val.to_string());
+    vars.clp.insert("children".to_string(), minijinja::Value::from(children_rendered));
+    vars.cfg.insert("label".to_string(), minijinja::Value::from(id_val.to_string()));
+    vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.to_string()));
 
     // Copy div attrs into vars
     for (k, val) in attrs {
-        vars.cfg.insert(k.clone(), val.clone());
+        vars.cfg.insert(k.clone(), minijinja::Value::from(val.clone()));
     }
 
     // Render caption markdown to target format
     if !caption_text.is_empty() {
         let rendered_caption = crate::render::convert::render_inline(&caption_text, format);
-        vars.cfg.insert("caption".to_string(), rendered_caption);
+        vars.cfg.insert("caption".to_string(), minijinja::Value::from(rendered_caption));
     }
 
     // Caption location (default: top for tables)
     let cap_loc = attrs.get("tbl_cap_location")
         .cloned()
         .unwrap_or_else(|| "top".to_string());
-    vars.cfg.insert("cap_location".to_string(), cap_loc);
+    vars.cfg.insert("cap_location".to_string(), minijinja::Value::from(cap_loc));
 
-    let tpl = crate::render::elements::resolve_builtin_template("table_div", format).unwrap_or("");
+    let tpl = crate::render::elements::resolve_builtin_template("table", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }
 

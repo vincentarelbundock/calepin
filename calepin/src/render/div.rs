@@ -62,7 +62,10 @@ pub fn render(
 
     // Template lookup: explicit override -> class-based -> fallback
     let (tpl_name, tpl_source) = vars.cfg.get("template")
-        .and_then(|name| resolve_partial(name).map(|t| (name.clone(), t)))
+        .and_then(|name| {
+            let s = name.to_string();
+            resolve_partial(&s).map(|t| (s, t))
+        })
         .or_else(|| classes.iter().find_map(|cls| resolve_partial(cls).map(|t| (cls.clone(), t))))
         .or_else(|| resolve_partial("div").map(|t| ("div".to_string(), t)))
         .unzip();
@@ -71,7 +74,7 @@ pub fn render(
         (Some(n), Some(s)) => (n, s),
         _ => {
             cwarn!("no template found for classes [{}]", classes.join(", "));
-            return vars.clp.remove("children").unwrap_or_default();
+            return vars.clp.remove("children").map(|v| v.to_string()).unwrap_or_default();
         }
     };
 
@@ -90,19 +93,19 @@ fn build_div_vars(
     // Div attributes are user-authored -> config.
     // Set title explicitly so document metadata doesn't leak into div templates.
     if !attrs.contains_key("title") {
-        vars.cfg.insert("title".to_string(), String::new());
+        vars.cfg.insert("title".to_string(), minijinja::Value::from(String::new()));
     }
     for (k, val) in attrs {
-        vars.cfg.insert(k.clone(), val.clone());
+        vars.cfg.insert(k.clone(), minijinja::Value::from(val.clone()));
     }
-    vars.clp.insert("writer".to_string(), format.to_string());
-    vars.clp.insert("children".to_string(), children_rendered.to_string());
-    vars.cfg.insert("classes".to_string(), classes.join(" "));
+    vars.clp.insert("writer".to_string(), minijinja::Value::from(format.to_string()));
+    vars.clp.insert("children".to_string(), minijinja::Value::from(children_rendered.to_string()));
+    vars.cfg.insert("classes".to_string(), minijinja::Value::from(classes.join(" ")));
 
     if let Some(ref id_val) = id {
-        vars.cfg.insert("id".to_string(), id_val.clone());
+        vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.clone()));
     } else {
-        vars.cfg.insert("id".to_string(), String::new());
+        vars.cfg.insert("id".to_string(), minijinja::Value::from(String::new()));
     }
 }
 

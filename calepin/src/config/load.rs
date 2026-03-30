@@ -252,9 +252,9 @@ pub struct PostCommand {
 // Built-in TOML constants
 // ---------------------------------------------------------------------------
 
-pub const SHARED_TOML: &str = include_str!("shared.toml");
-pub const DOCUMENT_TOML: &str = include_str!("document.toml");
-pub const COLLECTION_TOML: &str = include_str!("collection.toml");
+pub const SHARED_TOML: &str = include_str!("toml/shared.toml");
+pub const DOCUMENT_TOML: &str = include_str!("toml/document.toml");
+pub const COLLECTION_TOML: &str = include_str!("toml/collection.toml");
 
 // ---------------------------------------------------------------------------
 // Config loading

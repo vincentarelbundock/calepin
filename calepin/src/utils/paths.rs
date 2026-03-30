@@ -121,7 +121,7 @@ fn read_target_from_config(path: &Path) -> Option<String> {
 
 thread_local! {
     static ACTIVE_TARGET: RefCell<Option<String>> = RefCell::new(None);
-    /// Target inheritance chain (child-first), e.g. ["minimal", "website", "html"].
+    /// Target inheritance chain (child-first), e.g. ["slides", "html"].
     /// Used by template resolution to walk the chain instead of checking target/base.
     static ACTIVE_INHERITANCE_CHAIN: RefCell<Vec<String>> = RefCell::new(Vec::new());
     static PROJECT_DIR: RefCell<Option<PathBuf>> = RefCell::new(None);
@@ -147,7 +147,7 @@ pub fn get_active_target() -> Option<String> {
 }
 
 /// Set the target inheritance chain for template resolution.
-/// Chain is child-first, e.g. ["minimal", "website", "html"].
+/// Chain is child-first, e.g. ["slides", "html"].
 pub fn set_active_inheritance_chain(chain: Vec<String>) {
     ACTIVE_INHERITANCE_CHAIN.with(|c| {
         *c.borrow_mut() = chain;

@@ -307,9 +307,8 @@ sort = "date desc"
 | `code_output` | Code chunks (output) |
 | `code_diagnostic` | Warnings, messages, errors |
 | `code_listing` | Code listing wrapper |
-| `figure` | Figures and images |
-| `figure_div` | Figure div wrapper |
-| `table_div` | Table div wrapper |
+| `figure` | Figures, images, and figure divs |
+| `table` | Table div wrapper |
 | `callout` | All callout types |
 | `theorem_italic` | theorem, lemma, corollary, proposition, conjecture |
 | `theorem_normal` | definition, example, exercise, solution, remark, algorithm |
@@ -321,9 +320,7 @@ sort = "date desc"
 | `tabset` | Tab navigation |
 | `title` | Document title |
 | `subtitle` | Document subtitle |
-| `authors` | Author block |
-| `author_item` | Individual author |
-| `affiliation_item` | Individual affiliation |
+| `authors` | Author block (iterates cfg.authors, cfg.affiliations, cfg.corresponding) |
 | `date` | Document date |
 | `abstract` | Abstract text |
 | `keywords` | Keywords list |
@@ -332,9 +329,7 @@ sort = "date desc"
 | `appendix` | Appendix wrapper |
 | `copyright` | Copyright notice |
 | `license` | License block |
-| `funding` | Funding block |
-| `funding_item` | Individual funding source |
-| `corresponding` | Corresponding author |
+| `funding` | Funding block (iterates cfg.items) |
 | `preamble` | Format-specific preamble |
 | `toc` | Table of contents |
 | `footnotes` | Footnote section (HTML) |

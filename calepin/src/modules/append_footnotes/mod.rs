@@ -154,8 +154,8 @@ pub fn render_footnote_section(defs: &[(usize, String)]) -> String {
     }
 
     let mut vars = TemplateVars::with_writer("html");
-    vars.clp.insert("footnotes".to_string(), "true".to_string());
-    vars.clp.insert("footnote_items".to_string(), footnote_items);
+    vars.clp.insert("footnotes".to_string(), minijinja::Value::from("true".to_string()));
+    vars.clp.insert("footnote_items".to_string(), minijinja::Value::from(footnote_items));
     let tpl = include_str!("../../templates/html/footnotes.html");
     crate::render::template::apply_template(tpl, &vars)
 }

@@ -1,4 +1,5 @@
-{{clp.authors_cmd}}
-{%- if clp.affiliations_items %}
-\newcommand{\affiliationblock}{\begin{center}\small {{clp.affiliations_items}}\end{center}}
+\author{ {%- for a in cfg.authors %}{{ a.name }}{%- if a.superscripts %}\textsuperscript{ {{- a.superscripts -}} }{% endif %}{%- if a.corresponding %}\textsuperscript{*}{% endif %}{%- if not loop.last %} \and {% endif %}{%- endfor %} }
+{%- if cfg.affiliations %}
+\newcommand{\affiliationblock}{\begin{center}\small {% for a in cfg.affiliations %}{%- if a.number %}\textsuperscript{ {{- a.number -}} } {% endif %}{{ a.display }}{%- if not loop.last %} \\
+{% endif %}{%- endfor %}\end{center}}
 {%- endif %}

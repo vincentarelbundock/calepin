@@ -15,7 +15,7 @@ use crate::render::template::TemplateVars;
 // ---------------------------------------------------------------------------
 
 /// Render a figure div: extract caption from children, build template
-/// vars, apply the `figure_div` template.
+/// vars, apply the `figure` template.
 pub fn render(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
@@ -54,26 +54,26 @@ pub fn render(
 
     // Build template vars
     let mut vars = crate::render::template::TemplateVars::with_writer(format);
-    vars.clp.insert("children".to_string(), children_rendered);
-    vars.cfg.insert("label".to_string(), id_val.to_string());
-    vars.cfg.insert("id".to_string(), id_val.to_string());
+    vars.clp.insert("children".to_string(), minijinja::Value::from(children_rendered));
+    vars.cfg.insert("label".to_string(), minijinja::Value::from(id_val.to_string()));
+    vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.to_string()));
 
     // Copy div attrs into vars (user-authored -> config)
     for (k, val) in attrs {
-        vars.cfg.insert(k.clone(), val.clone());
+        vars.cfg.insert(k.clone(), minijinja::Value::from(val.clone()));
     }
 
     // Render caption markdown to target format
     if !caption_text.is_empty() {
         let rendered_caption = crate::render::convert::render_inline(&caption_text, format);
-        vars.cfg.insert("caption".to_string(), rendered_caption);
+        vars.cfg.insert("caption".to_string(), minijinja::Value::from(rendered_caption));
     }
 
     // Figure wrapper vars (alignment, fig_env, fig_pos, short_caption, cap_location, link)
     let fig_attrs = build_figure_attrs(attrs);
     build_figure_wrapper_vars(&mut vars, &fig_attrs, format, None, defaults);
 
-    let tpl = crate::render::elements::resolve_builtin_template("figure_div", format).unwrap_or("");
+    let tpl = crate::render::elements::resolve_builtin_template("figure", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
 }
 
@@ -133,34 +133,83 @@ fn build_figure_element_vars(
     fig_formats: &[String],
 ) {
     // User-authored -> config
-    vars.cfg.insert("alt".to_string(), alt.to_string());
-    vars.cfg.insert("caption".to_string(), caption.unwrap_or("").to_string());
-    vars.cfg.insert("label".to_string(), label.to_string());
+    vars.cfg.insert("caption".to_string(), minijinja::Value::from(caption.unwrap_or("").to_string()));
+    vars.cfg.insert("label".to_string(), minijinja::Value::from(label.to_string()));
+    vars.cfg.insert("id".to_string(), minijinja::Value::from(label.to_string()));
     // Engine-computed -> calepin
-    vars.clp.insert("number".to_string(), number.unwrap_or("").to_string());
+    vars.clp.insert("number".to_string(), minijinja::Value::from(number.unwrap_or("").to_string()));
 
+    // Resolve image path
     let resolved_path = select_image_variant_with_prefs(path, fig_formats);
     let display_path = resolved_path.to_string_lossy().to_string();
 
-    // Image components for template (engine-resolved -> calepin)
-    let embed = defaults.embed_resources.unwrap_or(true);
-    if format == "html" && embed {
-        if let Ok((mime, data)) = crate::util::base64_encode_image(&resolved_path) {
-            vars.clp.insert("src".to_string(), format!("data:{};base64,{}", mime, data));
+    let src = if format == "html" {
+        let embed = defaults.embed_resources.unwrap_or(true);
+        if embed {
+            if let Ok((mime, data)) = crate::util::base64_encode_image(&resolved_path) {
+                format!("data:{};base64,{}", mime, data)
+            } else {
+                crate::util::escape_html(&display_path)
+            }
         } else {
-            vars.clp.insert("src".to_string(), crate::util::escape_html(&display_path));
+            crate::util::escape_html(&display_path)
         }
-    } else if format == "html" {
-        vars.clp.insert("src".to_string(), crate::util::escape_html(&display_path));
     } else {
-        let rel = relative_figure_path(&resolved_path);
-        vars.clp.insert("src".to_string(), rel);
-    }
+        relative_figure_path(&resolved_path)
+    };
 
-    vars.clp.insert("width_attr".to_string(), format_width(attrs, format));
-    vars.clp.insert("height_attr".to_string(), format_height(attrs));
+    let width_attr = format_width(attrs, format);
+    let height_attr = format_height(attrs);
+    let link = attrs.link.as_deref().unwrap_or("");
+
+    // Render image tag into clp.children so the unified figure template handles it
+    let children = render_image_tag(&src, alt, &width_attr, &height_attr, link, format);
+    vars.clp.insert("children".to_string(), minijinja::Value::from(children));
 
     build_figure_wrapper_vars(vars, attrs, format, default_cap_location, defaults);
+}
+
+/// Render a format-specific image tag string.
+fn render_image_tag(src: &str, alt: &str, width: &str, height: &str, link: &str, format: &str) -> String {
+    let img = match format {
+        "html" => {
+            let mut s = format!("<img src=\"{}\" alt=\"{}\"", src, alt);
+            if !width.is_empty() {
+                s.push_str(&format!(" style=\"width:{};max-width:{}\"", width, width));
+            } else if !height.is_empty() {
+                s.push_str(&format!(" style=\"height:{}\"", height));
+            }
+            s.push_str("/>");
+            s
+        }
+        "latex" => {
+            let w = if width.is_empty() { "width=0.70\\textwidth".to_string() } else { width.to_string() };
+            format!("\\includegraphics[{}]{{{}}}", w, src)
+        }
+        "typst" => {
+            let mut s = format!("image(\"{}\", width: {}", src, if width.is_empty() { "70%" } else { width });
+            if !height.is_empty() {
+                s.push_str(&format!(", height: {}", height));
+            }
+            s.push(')');
+            s
+        }
+        _ => {
+            // markdown
+            format!("![{}]({})", alt, src)
+        }
+    };
+
+    // Wrap in link if present
+    if link.is_empty() {
+        return img;
+    }
+    match format {
+        "html" => format!("<a href=\"{}\">{}</a>", link, img),
+        "latex" => format!("\\href{{{}}}{{{}}}", link, img),
+        "typst" => format!("#link(\"{}\")[{}]", link, img),
+        _ => format!("[{}]({})", img, link),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -230,29 +279,29 @@ pub fn build_figure_wrapper_vars(
     let default_align = defaults.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
     let align = attrs.fig_align.as_deref().unwrap_or(default_align);
     // Engine-computed formatting -> calepin
-    vars.clp.insert("align_style".to_string(), format_align(align, format));
-    vars.clp.insert("align".to_string(), align.to_string());
+    vars.clp.insert("align_style".to_string(), minijinja::Value::from(format_align(align, format)));
+    vars.clp.insert("align".to_string(), minijinja::Value::from(align.to_string()));
 
     // User-authored figure attributes -> config
     if let Some(ref env) = attrs.fig_env {
-        vars.cfg.insert("fig_env".to_string(), env.clone());
+        vars.cfg.insert("fig_env".to_string(), minijinja::Value::from(env.clone()));
     }
-    vars.cfg.insert("fig_pos".to_string(), match attrs.fig_pos.as_deref() {
+    vars.cfg.insert("fig_pos".to_string(), minijinja::Value::from(match attrs.fig_pos.as_deref() {
         Some(pos) => format!("[{}]", pos),
         None => String::new(),
-    });
+    }));
     let short_caption = match attrs.fig_scap.as_deref() {
         Some(sc) => format!("[{}]", sc),
         None => String::new(),
     };
-    vars.cfg.insert("short_caption".to_string(), short_caption);
+    vars.cfg.insert("short_caption".to_string(), minijinja::Value::from(short_caption));
 
     if let Some(loc) = attrs.cap_location.as_deref().or(default_cap_location) {
-        vars.cfg.insert("cap_location".to_string(), loc.to_string());
+        vars.cfg.insert("cap_location".to_string(), minijinja::Value::from(loc.to_string()));
     }
 
     if let Some(ref link) = attrs.link {
-        vars.cfg.insert("link".to_string(), link.clone());
+        vars.cfg.insert("link".to_string(), minijinja::Value::from(link.clone()));
     }
 }
 
@@ -281,11 +330,11 @@ pub fn format_width(attrs: &crate::types::FigureAttrs, format: &str) -> String {
 
     if let Some(tpl) = resolve_element_template("format_width", format) {
         let mut vars = TemplateVars::new();
-        vars.cfg.insert("width".to_string(), width.to_string());
+        vars.cfg.insert("width".to_string(), minijinja::Value::from(width.to_string()));
         if width.ends_with('%') {
             let pct: f64 = width.trim_end_matches('%').parse().unwrap_or(100.0);
-            vars.cfg.insert("width_pct".to_string(), "true".to_string());
-            vars.cfg.insert("width_frac".to_string(), format!("{:.2}", pct / 100.0));
+            vars.cfg.insert("width_pct".to_string(), minijinja::Value::from("true".to_string()));
+            vars.cfg.insert("width_frac".to_string(), minijinja::Value::from(format!("{:.2}", pct / 100.0)));
         }
         apply_template(&tpl, &vars)
     } else {
@@ -303,7 +352,7 @@ pub fn format_align(align: &str, format: &str) -> String {
 
     if let Some(tpl) = resolve_element_template("align_style", format) {
         let mut vars = TemplateVars::new();
-        vars.cfg.insert("align".to_string(), align.to_string());
+        vars.cfg.insert("align".to_string(), minijinja::Value::from(align.to_string()));
         apply_template(&tpl, &vars)
     } else {
         String::new()

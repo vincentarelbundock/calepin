@@ -138,7 +138,7 @@ pub fn evaluate(
     for block in blocks {
         match block {
             Block::Text(text) => {
-                let jinja_result = crate::jinja::process_body(
+                let jinja_result = crate::render::template::process_body(
                     &text.content, output_ext, metadata,
                 );
                 // Only hash inline code expressions into the upstream digest,
@@ -169,7 +169,7 @@ pub fn evaluate(
                 let chunk_ref = if merged_chunk.options.get_bool("jinja", false)
                 {
                     let joined = merged_chunk.source.join("\n");
-                    let jinja_result = crate::jinja::process_body(
+                    let jinja_result = crate::render::template::process_body(
                         &joined, output_ext, metadata,
                     );
                     jinja_chunk = CodeChunk {

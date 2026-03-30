@@ -163,7 +163,7 @@ impl FormatPipeline {
             |vars| {
                 // Apply page_vars from target config -> config namespace
                 for (k, v) in page_vars {
-                    vars.cfg.insert(k.clone(), v.clone());
+                    vars.cfg.insert(k.clone(), minijinja::Value::from(v.clone()));
                 }
             },
         );

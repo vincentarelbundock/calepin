@@ -1,7 +1,5 @@
-{%- set loc = cfg.cap_location | default("bottom") %}
-{%- if cfg.link %}[{%- endif %}
-![{{cfg.alt}}]({{clp.src}})
-{%- if cfg.link %}]({{cfg.link}}){%- endif %}
+{%- set env = cfg.fig_env | default("figure") -%}
+{{clp.children}}
 {%- if cfg.caption %}
 
 *{{cfg.caption}}*
