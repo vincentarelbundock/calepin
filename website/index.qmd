@@ -2,6 +2,7 @@
 target = "website"
 sidebar = false
 toc = false
+title = ""
 ---
 
 ```{=html}
