@@ -71,13 +71,9 @@ pub fn build_collection(
     crate::paths::set_extension_template_dirs(ext_dirs);
     crate::paths::set_sideloaded_extensions(meta.extensions.clone());
 
-    // Detect book build: check for a book main template in the sidecar
-    let ext = crate::paths::resolve_extension(format);
-    let is_book = meta.orchestrator.is_some() || {
-        let p = crate::paths::templates_dir(&base_dir).join(&collection_target_name)
-            .join(format!("main.{}", ext));
-        p.exists()
-    };
+    // Detect book build: targets named book-* or with an explicit orchestrator
+    let is_book = meta.orchestrator.is_some()
+        || collection_target_name.starts_with("book");
 
     // 3. Prepare output directory (relative to CWD, not project root)
     let output = if output.is_relative() {

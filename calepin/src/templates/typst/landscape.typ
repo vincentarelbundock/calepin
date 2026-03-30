@@ -1,3 +1,3 @@
 #page(flipped: true)[
-{{clp.children}}
+{{clp.content}}
 ]

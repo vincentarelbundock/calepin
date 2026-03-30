@@ -39,25 +39,26 @@ impl<'a> BuildElementVars for BuildCodeVars<'a> {
                 if !filename.is_empty() {
                     vars.cfg.insert("filename".to_string(), minijinja::Value::from(filename.clone()));
                 }
-                vars.clp.insert("code".to_string(), minijinja::Value::from(escaped));
+                vars.clp.insert("content".to_string(), minijinja::Value::from(
+                    if format == "html" || format == "latex" { highlighted } else { escaped }
+                ));
                 vars.cfg.insert("lang".to_string(), minijinja::Value::from(lang.clone()));
                 vars.cfg.insert("label".to_string(), minijinja::Value::from(label.clone()));
-                vars.clp.insert("highlighted".to_string(), minijinja::Value::from(highlighted));
             }
             Element::CodeOutput { text } => {
-                vars.clp.insert("output".to_string(), minijinja::Value::from(escape_code_for_format(text, format)));
+                vars.clp.insert("content".to_string(), minijinja::Value::from(escape_code_for_format(text, format)));
             }
             Element::CodeWarning { text }
             | Element::CodeMessage { text }
             | Element::CodeError { text } => {
-                vars.clp.insert("text".to_string(), minijinja::Value::from(escape_code_for_format(text, format)));
+                vars.clp.insert("content".to_string(), minijinja::Value::from(escape_code_for_format(text, format)));
                 let cls = match element {
                     Element::CodeWarning { .. } => "warning",
                     Element::CodeMessage { .. } => "message",
                     Element::CodeError { .. } => "error",
                     _ => unreachable!(),
                 };
-                vars.clp.insert("diagnostic_class".to_string(), minijinja::Value::from(cls.to_string()));
+                vars.cfg.insert("type".to_string(), minijinja::Value::from(cls.to_string()));
             }
             _ => {}
         }

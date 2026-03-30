@@ -1,3 +1,3 @@
 # Appendix
 
-{{cfg.sections}}
+{{clp.content}}

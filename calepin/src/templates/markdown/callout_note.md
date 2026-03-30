@@ -2,4 +2,4 @@
 {%- if not title -%}{%- set title = "Note" -%}{%- endif %}
 > **ℹ️ {{title}}**
 >
-> {{clp.children}}
+> {{clp.content}}

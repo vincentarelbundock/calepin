@@ -21,10 +21,13 @@ pub(crate) fn render_book(
     quiet: bool,
 ) -> Result<()> {
     // Build template context
+    let authors: Vec<std::collections::BTreeMap<&str, &str>> = meta.authors.iter()
+        .map(|a| std::collections::BTreeMap::from([("name", a.name.literal.as_str())]))
+        .collect();
     let cfg_ctx = minijinja::context! {
         title => meta.title.clone(),
         subtitle => meta.subtitle.clone(),
-        author => { let names = meta.author_names(); if names.is_empty() { None } else { Some(names.join(", ")) } },
+        authors => authors,
         url => meta.url.clone(),
     };
 

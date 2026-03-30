@@ -1,5 +1,4 @@
-{%- set env = cfg.fig_env | default("figure") -%}
-{{clp.children}}
+{{clp.content}}
 {%- if cfg.caption %}
 
 *{{cfg.caption}}*

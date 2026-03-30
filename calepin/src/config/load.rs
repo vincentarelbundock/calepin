@@ -18,6 +18,10 @@ pub struct LanguageConfig {
     pub language: String,
     /// Language code / abbreviation (e.g., "en", "fr").
     pub abbreviation: String,
+    /// Directory path for this language's content (e.g., ".", "fr", "es").
+    /// Used for auto-detecting page language and discovering translations.
+    #[serde(default)]
+    pub path: Option<String>,
     /// Whether this is the default language.
     #[serde(default)]
     pub default: bool,

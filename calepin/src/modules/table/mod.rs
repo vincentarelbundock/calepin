@@ -48,7 +48,7 @@ pub fn render(
 
     // Build template vars
     let mut vars = TemplateVars::with_writer(format);
-    vars.clp.insert("children".to_string(), minijinja::Value::from(children_rendered));
+    vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered));
     vars.cfg.insert("label".to_string(), minijinja::Value::from(id_val.to_string()));
     vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.to_string()));
 

@@ -37,7 +37,7 @@
     {% for node in clp.pages recursive %}
       {% if node.children | length > 0 %}
         {% if loop.depth0 == 0 %}
-        <details class="sidebar-section" name="sidebar-nav"{% if cfg.sidebar_collapse_level >= loop.depth or node.active %} open{% endif %}>
+        <details class="sidebar-section" name="sidebar-nav"{% if loop.depth <= 1 or node.active %} open{% endif %}>
           <summary class="sidebar-section-title">{{ node.title }}</summary>
           <ul class="sidebar-children">
             {{ loop(node.children) }}
@@ -45,7 +45,7 @@
         </details>
         {% else %}
         <li>
-          <details class="sidebar-section"{% if cfg.sidebar_collapse_level >= loop.depth or node.active %} open{% endif %}>
+          <details class="sidebar-section"{% if loop.depth <= 1 or node.active %} open{% endif %}>
             <summary class="sidebar-section-title sidebar-section-nested">{{ node.title }}</summary>
             <ul class="sidebar-children">
               {{ loop(node.children) }}

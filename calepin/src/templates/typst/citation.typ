@@ -1,2 +1,2 @@
 == Citation
-{{cfg.content}}
+{{clp.content}}

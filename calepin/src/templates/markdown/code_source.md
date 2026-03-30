@@ -3,5 +3,5 @@
 
 {%- endif %}
 ``` {{cfg.lang}}
-{{clp.code}}
+{{clp.content}}
 ```

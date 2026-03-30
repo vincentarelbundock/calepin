@@ -1,2 +1,2 @@
 == Reuse
-{% if cfg.url %}#link("{{cfg.url}}")[{{cfg.text}}]{% else %}{{cfg.text}}{% endif %}
+{% if clp.url %}#link("{{clp.url}}")[{{clp.content}}]{% else %}{{clp.content}}{% endif %}

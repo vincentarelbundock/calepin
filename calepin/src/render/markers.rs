@@ -288,9 +288,11 @@ fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> 
 
     if let Some(tpl) = resolve_element_template("equation", format) {
         let mut vars = TemplateVars::new();
-        vars.cfg.insert("label".to_string(), minijinja::Value::from(label.to_string()));
-        vars.clp.insert("math".to_string(), minijinja::Value::from(math.to_string()));
-        vars.clp.insert("inner".to_string(), minijinja::Value::from(inner.to_string()));
+        vars.cfg.insert("id".to_string(), minijinja::Value::from(label.to_string()));
+        // HTML gets the full $$...$$ expression (for KaTeX rendering);
+        // LaTeX/Typst/Markdown get the inner expression (wrapped by format syntax).
+        let content = if format == "html" { math.to_string() } else { inner.to_string() };
+        vars.clp.insert("content".to_string(), minijinja::Value::from(content));
         apply_template(&tpl, &vars)
     } else {
         // Fallback: pass through the math expression unchanged

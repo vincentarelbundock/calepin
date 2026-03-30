@@ -74,7 +74,7 @@ fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, minijinja::Value
     let tpl = resolve_element_template(name, ext)?;
     let mut vars = TemplateVars::with_writer(ext);
     for (k, v) in extra_vars {
-        vars.cfg.insert(k.to_string(), v);
+        vars.clp.insert(k.to_string(), v);
     }
     Some(apply_template(&tpl, &vars))
 }
@@ -94,7 +94,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
             if let Some(s) = render_section("license", ext, vec![
-                ("text", minijinja::Value::from(text.clone())),
+                ("content", minijinja::Value::from(text.clone())),
                 ("url", minijinja::Value::from(lic.url.as_deref().unwrap_or("").to_string())),
             ]) {
                 sections.push(s);
@@ -138,7 +138,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if sections.is_empty() {
         String::new()
     } else if let Some(s) = render_section("appendix", ext, vec![
-        ("sections", minijinja::Value::from(sections.join("\n"))),
+        ("content", minijinja::Value::from(sections.join("\n"))),
     ]) {
         s
     } else {
@@ -254,12 +254,16 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
         let orcid_url = author.orcid.as_ref().map(|o| {
             if o.starts_with("http") { o.clone() } else { format!("https://orcid.org/{}", o) }
         }).unwrap_or_default();
+        let email = author.email.clone().unwrap_or_default();
+        let mailto = if email.is_empty() { String::new() } else { format!("mailto:{}", email) };
 
         minijinja::Value::from_serialize(&std::collections::BTreeMap::from([
             ("name", author.name.literal.as_str()),
             ("superscripts", &sups),
             ("corresponding", if author.corresponding { "true" } else { "" }),
             ("orcid_url", &orcid_url),
+            ("email", &email),
+            ("mailto", &mailto),
         ]))
     }).collect();
     vars.cfg.insert("authors".to_string(), minijinja::Value::from_iter(authors));
@@ -275,21 +279,6 @@ pub fn build_authors(meta: &Metadata, ext: &str) -> String {
         ])))
     }).collect();
     vars.cfg.insert("affiliations".to_string(), minijinja::Value::from_iter(affiliations));
-
-    // Corresponding author info
-    let corresponding: Vec<minijinja::Value> = meta.authors.iter().filter_map(|author| {
-        if author.corresponding {
-            author.email.as_ref().map(|email| {
-                minijinja::Value::from_serialize(&std::collections::BTreeMap::from([
-                    ("email", email.as_str()),
-                    ("mailto", &format!("mailto:{}", email)),
-                ]))
-            })
-        } else {
-            None
-        }
-    }).collect();
-    vars.cfg.insert("corresponding".to_string(), minijinja::Value::from_iter(corresponding));
 
     apply_template(&tpl, &vars)
 }

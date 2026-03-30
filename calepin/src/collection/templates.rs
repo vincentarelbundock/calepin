@@ -33,6 +33,20 @@ pub fn load_templates_with_url(base_dir: &Path, target_name: &str, base_path: &s
         }
     }
 
+    // Fall back to built-in templates for any files not overridden by sidecar
+    let builtin_dir = format!("{}/", target_name);
+    if let Some(dir) = crate::render::elements::BUILTIN_TEMPLATES.get_dir(&builtin_dir.trim_end_matches('/')) {
+        for file in dir.files() {
+            if let Some(name) = file.path().file_name().and_then(|n| n.to_str()) {
+                if !templates.contains_key(name) {
+                    if let Some(content) = file.contents_utf8() {
+                        templates.insert(name.to_string(), content.to_string());
+                    }
+                }
+            }
+        }
+    }
+
     if templates.is_empty() {
         return Ok(None);
     }

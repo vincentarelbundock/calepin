@@ -245,11 +245,8 @@ pub fn build_collection_context(
     let nav_tree = build_page_tree(&document_nodes, pages);
 
     // Math block
-    let html_math_method = "katex".to_string();
     let math = {
-        let mut vars = crate::render::template::TemplateVars::new();
-        vars.cfg.insert("html_math_method".to_string(), minijinja::Value::from(html_math_method));
-        vars.clp.insert("writer".to_string(), minijinja::Value::from("html"));
+        let vars = crate::render::template::TemplateVars::new();
         crate::render::template::render_element("math", "html", &vars)
     };
 
@@ -408,39 +405,59 @@ pub fn build_document_context(
     }
 }
 
-/// Resolve translation paths from frontmatter to URLs.
+/// Resolve translations for a page.
+///
+/// Priority:
+/// 1. Explicit `translations` in front matter (language code -> path)
+/// 2. Auto-discovery via `[[languages]]` path prefixes: if page is at `fr/guide.qmd`
+///    and another language has `path = "en"`, looks for `en/guide.qmd` in pages.
 fn resolve_translations(
     page: &DocumentInfo,
     pages: &[DocumentInfo],
     languages: &[LanguageConfig],
 ) -> Vec<Translation> {
-    let translations = match &page.meta.translations {
-        Some(t) if !t.is_empty() => t,
-        _ => return Vec::new(),
-    };
-
     let document_map = pages_to_map(pages);
 
-    let lang_names: HashMap<&str, &str> = languages.iter()
-        .map(|l| (l.abbreviation.as_str(), l.language.as_str()))
-        .collect();
+    // Auto-discover from [[languages]] path prefixes
+    let page_lang = page.lang.as_deref().unwrap_or("");
+    let page_source = page.source.display().to_string();
 
-    let mut result = Vec::new();
-    for (lang_code, path) in translations {
-        if let Some(info) = document_map.get(path.as_str()) {
-            result.push(Translation {
-                flag: lang_to_flag(lang_code),
-                lang: lang_code.clone(),
-                name: lang_names.get(lang_code.as_str())
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| lang_code.clone()),
-                url: info.url.clone(),
-            });
+    // Find this page's language config and strip its path prefix to get the relative filename
+    let page_lang_config = languages.iter().find(|l| l.abbreviation == page_lang);
+    let relative = if let Some(cfg) = page_lang_config {
+        if let Some(ref lang_path) = cfg.path {
+            if lang_path == "." {
+                page_source.as_str()
+            } else if page_source.starts_with(lang_path.as_str()) {
+                page_source[lang_path.len()..].trim_start_matches('/')
+            } else {
+                return Vec::new();
+            }
         } else {
-            eprintln!(
-                "Warning: translation '{}' -> '{}' not found in site pages (referenced from {})",
-                lang_code, path, page.source.display()
-            );
+            return Vec::new();
+        }
+    } else {
+        return Vec::new();
+    };
+
+    // Look for the same relative path under each other language's path prefix
+    let mut result = Vec::new();
+    for lang in languages {
+        if lang.abbreviation == page_lang { continue; }
+        if let Some(ref lang_path) = lang.path {
+            let candidate = if lang_path == "." {
+                relative.to_string()
+            } else {
+                format!("{}/{}", lang_path, relative)
+            };
+            if let Some(info) = document_map.get(candidate.as_str()) {
+                result.push(Translation {
+                    flag: lang_to_flag(&lang.abbreviation),
+                    lang: lang.abbreviation.clone(),
+                    name: lang.language.clone(),
+                    url: info.url.clone(),
+                });
+            }
         }
     }
     result

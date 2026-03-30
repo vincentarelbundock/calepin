@@ -74,7 +74,7 @@ pub fn render(
         (Some(n), Some(s)) => (n, s),
         _ => {
             cwarn!("no template found for classes [{}]", classes.join(", "));
-            return vars.clp.remove("children").map(|v| v.to_string()).unwrap_or_default();
+            return vars.clp.remove("content").map(|v| v.to_string()).unwrap_or_default();
         }
     };
 
@@ -99,7 +99,7 @@ fn build_div_vars(
         vars.cfg.insert(k.clone(), minijinja::Value::from(val.clone()));
     }
     vars.clp.insert("writer".to_string(), minijinja::Value::from(format.to_string()));
-    vars.clp.insert("children".to_string(), minijinja::Value::from(children_rendered.to_string()));
+    vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered.to_string()));
     vars.cfg.insert("classes".to_string(), minijinja::Value::from(classes.join(" ")));
 
     if let Some(ref id_val) = id {

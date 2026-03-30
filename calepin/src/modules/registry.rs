@@ -150,7 +150,6 @@ impl RenderedPage {
                 r#abstract: self.abstract_text.clone(),
                 listing: None,
                 lang: self.lang.clone(),
-                translations: None,
                 var: std::collections::HashMap::new(),
             },
             lang: self.lang.clone(),

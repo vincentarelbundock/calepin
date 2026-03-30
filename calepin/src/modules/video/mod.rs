@@ -44,7 +44,7 @@ pub fn render(
 
     let is_embed = embed_url.contains("youtube.com/embed") || embed_url.contains("player.vimeo.com");
     let mut vars = TemplateVars::new();
-    vars.cfg.insert("video_url".to_string(), minijinja::Value::from(url.to_string()));
+    vars.cfg.insert("url".to_string(), minijinja::Value::from(url.to_string()));
     vars.clp.insert("url".to_string(), minijinja::Value::from(embed_url));
     vars.cfg.insert("width".to_string(), minijinja::Value::from(width.to_string()));
     vars.cfg.insert("height".to_string(), minijinja::Value::from(height.to_string()));

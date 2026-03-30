@@ -1,6 +1,6 @@
 <div class="theorem-env {{clp.type_class}}"{% if cfg.id %} id="{{cfg.id}}"{% endif %}>
 <p class="thm-heading"><strong>{{clp.type_class | title}} {{clp.number}}.</strong></p>
 <div class="thm-body{% if clp.type_class in ["theorem", "lemma", "corollary", "conjecture", "proposition"] %}-italic{% endif %}">
-{{clp.children}}
+{{clp.content}}
 </div>
 </div>

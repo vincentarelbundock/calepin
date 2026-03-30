@@ -3,14 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="{{clp.generator}}">
-<title>{{cfg.plain_title}}</title>
+<meta name="generator" content="Calepin">
+<title>{{cfg.title_plain}}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/monokai.css">
-{% if clp.syntax_css %}<style>
-{{clp.syntax_css}}
-</style>{% endif %}
 <style>
 .reveal pre { font-size: 0.55em; }
 .reveal code { font-size: 0.9em; }
@@ -28,7 +25,7 @@
 <section>
 {% if cfg.title %}<h1>{{cfg.title}}</h1>{% endif %}
 {% if cfg.subtitle %}<p>{{cfg.subtitle}}</p>{% endif %}
-{% if cfg.author %}<p>{{cfg.author}}</p>{% endif %}
+{% if cfg.authors %}<p>{% for a in cfg.authors %}{{ a.name }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
 {% if cfg.date %}<p><small>{{cfg.date}}</small></p>{% endif %}
 </section>
 {{clp.body}}

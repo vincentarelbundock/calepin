@@ -1,1 +1,0 @@
-{% if cfg.align == "left" %}left{% elif cfg.align == "right" %}right{% else %}center{% endif %}

@@ -1,1 +1,1 @@
-#outbox[#raw("{{clp.text}}", block: true)]
+#outbox[#raw("{{clp.content}}", block: true)]

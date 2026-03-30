@@ -204,12 +204,10 @@ pub struct Metadata {
     /// Side-loaded extensions (activated without being the target).
     pub extensions: Vec<String>,
     pub convert_math: bool,
-    pub html_math_method: Option<String>,
 
     // -- Project-level fields (also settable in front matter) --
     pub output: Option<String>,
     pub lang: Option<String>,
-    pub translations: Option<std::collections::HashMap<String, String>>,
     pub url: Option<String>,
     pub favicon: Option<String>,
     pub navbar: Option<super::NavbarConfig>,

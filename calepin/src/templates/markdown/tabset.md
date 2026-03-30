@@ -1,1 +1,1 @@
-{{clp.children}}
+{{clp.content}}

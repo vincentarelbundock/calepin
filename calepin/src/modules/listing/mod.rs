@@ -24,11 +24,11 @@ pub fn wrap_listing(
     module_ids.borrow_mut().insert(label.to_string(), num.to_string());
 
     let mut vars = TemplateVars::with_writer(format);
-    vars.clp.insert("label".to_string(), minijinja::Value::from(label.to_string()));
+    vars.cfg.insert("id".to_string(), minijinja::Value::from(label.to_string()));
     vars.clp.insert("number".to_string(), minijinja::Value::from(num.to_string()));
     vars.clp.insert("content".to_string(), minijinja::Value::from(rendered_code.to_string()));
     if let Some(cap) = lst_cap {
-        vars.cfg.insert("lst_cap".to_string(), minijinja::Value::from(cap.to_string()));
+        vars.cfg.insert("caption".to_string(), minijinja::Value::from(cap.to_string()));
     }
 
     let tpl = resolve_template("code_listing")

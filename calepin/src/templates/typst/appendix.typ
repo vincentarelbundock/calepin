@@ -1,3 +1,3 @@
 #pagebreak()
 = Appendix
-{{cfg.sections}}
+{{clp.content}}

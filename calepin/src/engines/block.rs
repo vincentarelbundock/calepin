@@ -126,6 +126,15 @@ pub fn evaluate_block(
                 elements.push(Element::CodeError { text });
             }
             ChunkResult::Plot(path) => {
+                let figure_options: HashMap<String, String> = opts.inner.iter()
+                    .filter(|(k, _)| k.starts_with("fig_"))
+                    .filter_map(|(k, v)| match v {
+                        crate::types::OptionValue::String(s) => Some((k.clone(), s.clone())),
+                        crate::types::OptionValue::Number(n) => Some((k.clone(), n.to_string())),
+                        crate::types::OptionValue::Bool(b) => Some((k.clone(), b.to_string())),
+                        _ => None,
+                    })
+                    .collect();
                 elements.push(Element::Figure {
                     path,
                     alt: opts.fig_alt().unwrap_or_default(),
@@ -133,6 +142,7 @@ pub fn evaluate_block(
                     label: chunk.label.clone(),
                     number: None,
                     attrs: opts.to_figure_attrs(),
+                    options: figure_options,
                 });
             }
             ChunkResult::Preamble(_) => {} // already extracted above

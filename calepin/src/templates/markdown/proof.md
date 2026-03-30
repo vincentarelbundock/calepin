@@ -1,1 +1,1 @@
-*Proof.* {{clp.children}} □
+*Proof.* {{clp.content}} □

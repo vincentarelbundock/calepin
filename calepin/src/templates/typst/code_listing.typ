@@ -1,1 +1,1 @@
-{{clp.content}} <{{clp.label}}>
+{{clp.content}} <{{cfg.id}}>

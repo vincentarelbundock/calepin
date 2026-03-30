@@ -48,7 +48,7 @@ site_name = "Test Site"
     let tpl_dir = ext_dir.join("templates").join("html");
     fs::create_dir_all(&tpl_dir).unwrap();
     fs::write(tpl_dir.join("banner.html"),
-        "<div class=\"myext-banner\">{{ clp.children }}</div>\n"
+        "<div class=\"myext-banner\">{{ clp.content }}</div>\n"
     ).unwrap();
 
     // Write the .qmd file
@@ -218,7 +218,7 @@ brand_color = "rebeccapurple"
     let tpl_dir = ext_dir.join("templates").join("html");
     fs::create_dir_all(&tpl_dir).unwrap();
     fs::write(tpl_dir.join("note.html"),
-        "<div class=\"note\" style=\"border-color: {{ cfg.themed.brand_color }}\">{{ clp.children }}</div>\n"
+        "<div class=\"note\" style=\"border-color: {{ cfg.themed.brand_color }}\">{{ clp.content }}</div>\n"
     ).unwrap();
 
     let qmd = dir.path().join("test.qmd");

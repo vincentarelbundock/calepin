@@ -1,3 +1,3 @@
 #block(inset: 1em)[
-{{clp.children}}
+{{clp.content}}
 ]{% if cfg.id %} <{{cfg.id}}>{% endif %}

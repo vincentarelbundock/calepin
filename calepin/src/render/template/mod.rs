@@ -95,8 +95,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     if toc_list.is_empty() { return String::new(); }
     let mut vars = TemplateVars::with_writer("html");
     vars.cfg.insert("title".to_string(), minijinja::Value::from(title.to_string()));
-    vars.clp.insert("toc_list".to_string(), minijinja::Value::from(toc_list));
-    vars.cfg.insert("depth".to_string(), minijinja::Value::from(String::new()));
+    vars.clp.insert("content".to_string(), minijinja::Value::from(toc_list));
     let tpl = include_str!("../../templates/html/toc.html");
     apply_template(tpl, &vars)
 }
@@ -124,16 +123,17 @@ pub fn load_page_template(template_name: &str, base: &str) -> String {
 pub fn load_default_css() -> String {
     let mut css = String::new();
 
-    // 1. Base CSS from templates directory
-    let root = crate::paths::get_project_dir();
-    let chain = crate::paths::get_active_inheritance_chain();
-    let target = chain.first().map(|s| s.as_str()).unwrap_or("html");
-    let p = crate::paths::templates_dir(&root).join(target).join("main.css");
-    if let Ok(s) = std::fs::read_to_string(&p) {
-        css.push_str(&s);
+    // 1. Base CSS: sidecar override or built-in (walks inheritance chain)
+    if let Some(content) = crate::paths::resolve_template("main", "css")
+        .and_then(|path| std::fs::read_to_string(&path).ok())
+    {
+        css.push_str(&content);
+    } else if let Some(content) = crate::render::elements::resolve_builtin_file("main.css") {
+        css.push_str(content);
     }
 
     // 2. Extension CSS (active target + side-loaded extensions)
+    let root = crate::paths::get_project_dir();
     css.push_str(&load_all_extension_assets(&root, |r, name| load_extension_css(r, name)));
 
     css
@@ -263,8 +263,6 @@ fn build_jinja_context(
     for (key, value) in &vars.clp {
         calepin_map.insert(key.as_str(), value.clone());
     }
-    calepin_map.insert("_lb", minijinja::Value::from("{"));
-    calepin_map.insert("_rb", minijinja::Value::from("}"));
     ctx.insert("clp", minijinja::Value::from_serialize(&calepin_map));
 
     // Build tpl object (template variant selections)
@@ -431,10 +429,6 @@ pub fn build_template_vars_with_headings(
 
     // calepin.* (engine-computed)
     vars.clp.insert("body".to_string(), minijinja::Value::from(body.to_string()));
-    vars.clp.insert(
-        "generator".to_string(),
-        minijinja::Value::from(format!("calepin {}", env!("CARGO_PKG_VERSION"))),
-    );
     vars.clp.insert("preamble".to_string(), minijinja::Value::from(String::new()));
     vars.clp.insert("writer".to_string(), minijinja::Value::from(ext.to_string()));
 
@@ -447,26 +441,12 @@ pub fn build_template_vars_with_headings(
     // Plain title (used in <title> etc.) -- strip markdown image/link syntax
     let plain_title = meta.title.as_deref().unwrap_or("Untitled");
     let plain_title = strip_markdown_formatting(plain_title);
-    vars.cfg.insert("plain_title".to_string(), minijinja::Value::from(plain_title));
+    vars.cfg.insert("title_plain".to_string(), minijinja::Value::from(plain_title));
     vars.cfg.insert("title".to_string(),
         minijinja::Value::from(meta.title.as_deref()
             .map(|t| crate::render::convert::render_inline(t, ext))
             .unwrap_or_default()),
     );
-    {
-        let names = meta.author_names();
-        vars.cfg.insert(
-            "author".to_string(),
-            minijinja::Value::from(if names.is_empty() {
-                String::new()
-            } else {
-                names.iter()
-                    .map(|name| crate::render::convert::render_inline(name, ext))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            }),
-        );
-    }
     vars.cfg.insert("date".to_string(), minijinja::Value::from(meta.formatted_date().unwrap_or_default()));
 
     // Subtitle
@@ -502,10 +482,7 @@ pub fn build_template_vars_with_headings(
 
     // Math include for html-writer targets
     if ext == "html" {
-        let mut math_vars = TemplateVars::new();
-        math_vars.cfg.insert("html_math_method".to_string(),
-            minijinja::Value::from(meta.html_math_method.as_deref()
-                .unwrap_or_else(|| defs.math.as_deref().unwrap_or("katex")).to_string()));
+        let math_vars = TemplateVars::new();
         vars.clp.insert("math".to_string(), minijinja::Value::from(render_element("math", ext, &math_vars)));
     } else {
         vars.clp.insert("math".to_string(), minijinja::Value::from(String::new()));
@@ -532,8 +509,6 @@ pub fn build_template_vars_with_headings(
             // LaTeX, Typst, others: use the toc template directly
             let mut toc_vars = TemplateVars::with_writer(ext);
             toc_vars.cfg.insert("title".to_string(), minijinja::Value::from(toc_title.to_string()));
-            toc_vars.cfg.insert("depth".to_string(), minijinja::Value::from(toc_depth.to_string()));
-            toc_vars.clp.insert("toc_list".to_string(), minijinja::Value::from(String::new()));
             let tpl_owned = crate::render::elements::resolve_element_template("toc", ext).unwrap_or_default();
             let tpl = tpl_owned.as_str();
             apply_template(tpl, &toc_vars)

@@ -30,6 +30,19 @@ fn resolve_template_alias(name: &str) -> &str {
     }
 }
 
+/// Look up a built-in file by filename, walking the inheritance chain.
+/// E.g., `resolve_builtin_file("main.css")` finds `html/main.css` for a website target.
+pub fn resolve_builtin_file(filename: &str) -> Option<&'static str> {
+    let chain = crate::paths::get_active_inheritance_chain();
+    for target in &chain {
+        let path = format!("{}/{}", target, filename);
+        if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+            if let Some(s) = file.contents_utf8() { return Some(s); }
+        }
+    }
+    None
+}
+
 /// Look up a built-in template by name and base.
 /// Checks `templates/{target}/{name}.{ext}` (active target, if different from base),
 /// then `templates/{base}/{name}.{ext}`, then `templates/common/{name}.jinja`.
@@ -102,7 +115,6 @@ pub struct ElementRenderer {
     pub number_sections: bool,
     pub shift_headings: bool,
     pub convert_math: bool,
-    pub default_fig_cap_location: Option<String>,
     /// Chapter number for collection pages. When set, section counters start
     /// at [chapter, 0, 0, 0, 0, 0] so sections get chapter-prefixed numbers.
     pub chapter_number: Option<usize>,
@@ -153,7 +165,6 @@ impl ElementRenderer {
             number_sections: false,
             shift_headings: false,
             convert_math: false,
-            default_fig_cap_location: None,
             chapter_number: None,
             module_ids: std::cell::RefCell::new(HashMap::new()),
             walk_metadata: std::cell::RefCell::new(crate::emit::WalkMetadata::default()),
@@ -185,8 +196,6 @@ impl ElementRenderer {
             counters[0] = ch;
             er.set_section_counters(counters);
         }
-        er.default_fig_cap_location = metadata.var.get("fig_cap_location")
-            .and_then(|v| v.as_str()).map(|s| s.to_string());
         // Set document-level user vars for injection into config namespace
         er.template_env.set_user_vars(&metadata.var);
         er
@@ -336,7 +345,6 @@ impl ElementRenderer {
         let figure_filter = crate::modules::BuildFigureVars::new(
             &self.ext,
             self.target.as_ref(),
-            self.default_fig_cap_location.clone(),
         );
 
         for builder in [&code_filter as &dyn BuildElementVars, &figure_filter as &dyn BuildElementVars] {

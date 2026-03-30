@@ -1,4 +1,4 @@
-#set document(title: "{{cfg.plain_title}}", author: "{{cfg.author}}")
+#set document(title: "{{cfg.title_plain}}", author: ({% for a in cfg.authors %}"{{ a.name }}"{% if not loop.last %}, {% endif %}{% endfor %}))
 #set text(size: 11pt)
 #set par(justify: true, leading: 0.65em)
 #set heading(numbering: "1.1")

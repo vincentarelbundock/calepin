@@ -1,13 +1,3 @@
-{%- if cfg.html_math_method == "mathjax" %}
-<script>
-MathJax = {
-  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
-  options: { ignoreHtmlClass: 'nodollar' },
-  svg: { fontCache: 'global' }
-};
-</script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-svg.js"></script>
-{%- elif cfg.html_math_method != "none" %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"
@@ -20,4 +10,13 @@ MathJax = {
     ],
     ignoredClasses: ['nodollar']
   });"></script>
-{%- endif %}
+{# To use MathJax instead of KaTeX, replace the above with:
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+  options: { ignoreHtmlClass: 'nodollar' },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-svg.js"></script>
+#}

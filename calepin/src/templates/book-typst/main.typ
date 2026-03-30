@@ -5,7 +5,7 @@
   {% if cfg.subtitle %}#v(0.8em)
   #text(size: 14pt)[{{cfg.subtitle}}]{% endif %}
   #v(1em)
-  #text(size: 14pt)[{{cfg.author}}]
+  {% if cfg.authors %}#text(size: 14pt)[{% for a in cfg.authors %}{{ a.name }}{% if not loop.last %}, {% endif %}{% endfor %}]{% endif %}
 ]
 #pagebreak()
 

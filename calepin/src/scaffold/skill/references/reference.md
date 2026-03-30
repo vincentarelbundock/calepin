@@ -489,7 +489,7 @@ Override only the files you need to change; everything else falls through to the
 
 **Code**: `code`, `lang`, `label`, `highlighted`, `filename`.
 
-**Page**: `body`, `toc`, `preamble`, `plain_title`, `title`, `author`, `date`, `lang`, `css`, `js`, `math`.
+**Page**: `body`, `toc`, `preamble`, `title_plain`, `title`, `authors`, `date`, `lang`, `css`, `js`, `math`.
 
 
 ## Jinja Body Processing

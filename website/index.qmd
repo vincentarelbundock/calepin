@@ -89,7 +89,7 @@ prose + code + syntax highlighting + citations + cross-refs + footnotes + tables
 
 
 ::: {.landing-section}
-## Built for AI agents
+## Built for humans, with AI agents in mind
 
 *Calepin* is designed so that LLM agents can read, understand, and modify every part of the system without special tooling. The file formats are ones that language models already know well: Markdown, HTML, Jinja, TOML.
 
@@ -138,7 +138,7 @@ Every piece of output is a plain text template. Change how figures look, how cod
 ::: {.column width="50%"}
 **Extensions in any language**
 
-Write extensions in Python, R, bash, or any language. *Calepin* sends your script the document content, and your script sends back the modified version. 
+Write extensions in Python, R, bash, or any language you like. *Calepin* sends your script the document content, and your script sends back the modified version. 
 
 Use what you know!
 :::

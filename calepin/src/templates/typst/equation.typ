@@ -1,1 +1,1 @@
-$ {{ clp.inner }} $ <{{ cfg.label }}>
+$ {{ clp.content }} $ <{{ cfg.id }}>

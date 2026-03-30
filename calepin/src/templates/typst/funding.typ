@@ -1,3 +1,3 @@
 == Funding
-{% for item in cfg.items %}- {{ item }}
+{% for item in clp.items %}- {{ item }}
 {% endfor %}

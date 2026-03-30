@@ -6,7 +6,7 @@
 {% include "preamble.tex" %}
 
 {% if cfg.title %}\title{ {{cfg.title}} }{% endif %}
-{% if cfg.author %}\author{ {{cfg.author}} }{% endif %}
+{% if cfg.authors %}\author{ {% for a in cfg.authors %}{{ a.name }}{% if not loop.last %} \and {% endif %}{% endfor %} }{% endif %}
 \date{}
 
 \begin{document}

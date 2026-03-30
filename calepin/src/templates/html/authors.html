@@ -7,7 +7,7 @@
 {% for a in cfg.affiliations %}<p class="affiliation">{%- if a.number %}<sup>{{ a.number }}</sup> {% endif %}{{ a.display }}</p>
 {% endfor %}</div>
 {%- endif %}
-{%- for c in cfg.corresponding %}
-<p class="corresponding">* Corresponding author: <a href="{{ c.mailto }}">{{ c.email }}</a></p>
-{%- endfor %}
+{%- for a in cfg.authors %}{% if a.corresponding and a.email %}
+<p class="corresponding">* Corresponding author: <a href="{{ a.mailto }}">{{ a.email }}</a></p>
+{%- endif %}{% endfor %}
 </div>

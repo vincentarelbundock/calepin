@@ -1,8 +1,7 @@
-{%- set loc = cfg.cap_location | default("bottom") -%}
 {%- if cfg.caption %}
-#figure(placement: auto, caption: [{{cfg.caption}}]{% if loc == "top" %}, caption-pos: top{% endif %})[
-{{clp.children}}
-] <{{cfg.label}}>
+#figure(placement: auto, caption: [{{cfg.caption}}])[
+{{clp.content}}
+] <{{cfg.id}}>
 {%- else %}
-{{clp.children}} <{{cfg.label}}>
+{{clp.content}} <{{cfg.id}}>
 {%- endif %}

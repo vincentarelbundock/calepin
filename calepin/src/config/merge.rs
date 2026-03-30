@@ -61,7 +61,6 @@ impl Metadata {
         merge_opt!(csl);
         merge_vec!(plugins);
         if overlay.convert_math { self.convert_math = true; }
-        merge_opt!(html_math_method);
 
         // Project-level
         merge_opt!(output);

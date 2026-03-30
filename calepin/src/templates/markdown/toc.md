@@ -1,1 +1,1 @@
-{{clp.toc_list}}
+{{clp.content}}

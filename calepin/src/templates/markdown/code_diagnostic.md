@@ -1,3 +1,3 @@
 ```
-{{clp.text}}
+{{clp.content}}
 ```

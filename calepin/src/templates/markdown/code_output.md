@@ -1,3 +1,3 @@
 ```
-{{clp.output}}
+{{clp.content}}
 ```

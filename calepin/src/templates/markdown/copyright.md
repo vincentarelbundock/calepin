@@ -1,3 +1,3 @@
 ## Copyright
 
-{{cfg.content}}
+{{clp.content}}

@@ -56,7 +56,7 @@ pub fn render(
         .join("\n\n");
 
     let mut vars = TemplateVars::with_writer(format);
-    vars.clp.insert("children".to_string(), minijinja::Value::from(children_rendered));
+    vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered));
     vars.cfg.insert("classes".to_string(), minijinja::Value::from(classes.join(" ")));
     vars.clp.insert("type_class".to_string(), minijinja::Value::from(theorem_class.clone()));
 

@@ -1,3 +1,3 @@
 ## Reuse
 
-{% if cfg.url %}[{{cfg.text}}]({{cfg.url}}){% else %}{{cfg.text}}{% endif %}
+{% if clp.url %}[{{clp.content}}]({{clp.url}}){% else %}{{clp.content}}{% endif %}

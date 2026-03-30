@@ -217,7 +217,7 @@ impl ChunkOptions {
         let default = self.metadata.figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
         self.get_string("dev", &default)
     }
-    chunk_opt_string!(fig_align, fig_scap, fig_env, fig_pos, fig_cap_location, out_width, out_height, fig_link);
+    chunk_opt_string!(out_width, out_height, fig_link);
 
     /// Build figure rendering attributes from chunk options.
     pub fn to_figure_attrs(&self) -> FigureAttrs {
@@ -225,11 +225,6 @@ impl ChunkOptions {
         FigureAttrs {
             width: self.out_width().or_else(|| Some(default_out_width)),
             height: self.out_height(),
-            fig_align: self.fig_align(),
-            fig_scap: self.fig_scap(),
-            fig_env: self.fig_env(),
-            fig_pos: self.fig_pos(),
-            cap_location: self.fig_cap_location(),
             link: self.fig_link(),
         }
     }
@@ -264,16 +259,6 @@ pub struct FigureAttrs {
     pub width: Option<String>,
     /// Output height.
     pub height: Option<String>,
-    /// Alignment: "left", "center", "right", "default".
-    pub fig_align: Option<String>,
-    /// Short caption for List of Figures (LaTeX).
-    pub fig_scap: Option<String>,
-    /// LaTeX figure environment override (e.g. "figure*").
-    pub fig_env: Option<String>,
-    /// LaTeX figure position specifier (e.g. "htbp", "H").
-    pub fig_pos: Option<String>,
-    /// Caption location: "top", "bottom", "margin".
-    pub cap_location: Option<String>,
     /// URL for linked figure.
     pub link: Option<String>,
 }
@@ -304,6 +289,8 @@ pub enum Element {
         label: String,
         number: Option<String>,
         attrs: FigureAttrs,
+        /// Raw chunk options passed through to templates as cfg.*.
+        options: HashMap<String, String>,
     },
     CodeAsis { text: String },
     Div {

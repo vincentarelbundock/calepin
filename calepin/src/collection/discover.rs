@@ -20,9 +20,6 @@ pub struct DocumentMeta {
     /// Language code for this page (e.g., "en", "fr").
     #[serde(default)]
     pub lang: Option<String>,
-    /// Translation links: language code -> relative path to translated page.
-    #[serde(default)]
-    pub translations: Option<HashMap<String, String>>,
     /// Non-standard front matter variables (the `var` map), available as `{{ var.* }}` in templates.
     #[serde(skip)]
     pub var: HashMap<String, crate::value::Value>,
@@ -104,7 +101,9 @@ pub fn discover_documents(config: &Metadata, base_dir: &Path, output_ext: &str) 
         let meta = extract_frontmatter(&abs_path)
             .with_context(|| format!("Failed to read frontmatter: {}", rel_str))?;
 
-        let lang = meta.lang.clone().or_else(|| default_lang.clone());
+        let lang = meta.lang.clone()
+            .or_else(|| detect_lang_from_path(&rel_str, &config.languages))
+            .or_else(|| default_lang.clone());
         let output = rel.with_extension(output_ext);
         let url = format!("/{}", output.display());
 
@@ -118,6 +117,32 @@ pub fn discover_documents(config: &Metadata, base_dir: &Path, output_ext: &str) 
     }
 
     Ok(pages)
+}
+
+/// Detect language from directory path by matching against `[[languages]]` path prefixes.
+/// E.g., `fr/guide.qmd` matches a language with `path = "fr"`.
+fn detect_lang_from_path(rel_path: &str, languages: &[crate::config::LanguageConfig]) -> Option<String> {
+    for lang in languages {
+        if let Some(ref lang_path) = lang.path {
+            let prefix = if lang_path == "." { "" } else { lang_path.as_str() };
+            if prefix.is_empty() {
+                // Root path: only match files not under any other language's path
+                continue;
+            }
+            if rel_path.starts_with(prefix) && rel_path.as_bytes().get(prefix.len()) == Some(&b'/') {
+                return Some(lang.abbreviation.clone());
+            }
+        }
+    }
+    // Check root-path languages last (path = "." matches anything not claimed above)
+    for lang in languages {
+        if let Some(ref lang_path) = lang.path {
+            if lang_path == "." {
+                return Some(lang.abbreviation.clone());
+            }
+        }
+    }
+    None
 }
 
 /// Check if a relative path matches any exclude glob pattern.
@@ -209,7 +234,6 @@ fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
         r#abstract: None,
         listing: None,
         lang: meta.lang,
-        translations: meta.translations,
         var: meta.var,
     })
 }

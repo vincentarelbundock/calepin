@@ -22,7 +22,7 @@ pub fn render(
     children: &[Element],
     format: &str,
     render_element: &dyn Fn(&Element) -> String,
-    defaults: &crate::config::Metadata,
+    _defaults: &crate::config::Metadata,
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
 ) -> String {
     let id_val = match id.as_deref() {
@@ -54,8 +54,7 @@ pub fn render(
 
     // Build template vars
     let mut vars = crate::render::template::TemplateVars::with_writer(format);
-    vars.clp.insert("children".to_string(), minijinja::Value::from(children_rendered));
-    vars.cfg.insert("label".to_string(), minijinja::Value::from(id_val.to_string()));
+    vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered));
     vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.to_string()));
 
     // Copy div attrs into vars (user-authored -> config)
@@ -68,10 +67,6 @@ pub fn render(
         let rendered_caption = crate::render::convert::render_inline(&caption_text, format);
         vars.cfg.insert("caption".to_string(), minijinja::Value::from(rendered_caption));
     }
-
-    // Figure wrapper vars (alignment, fig_env, fig_pos, short_caption, cap_location, link)
-    let fig_attrs = build_figure_attrs(attrs);
-    build_figure_wrapper_vars(&mut vars, &fig_attrs, format, None, defaults);
 
     let tpl = crate::render::elements::resolve_builtin_template("figure", format).unwrap_or("");
     crate::render::template::apply_template(tpl, &vars)
@@ -86,7 +81,6 @@ fn render_children(children: &[Element], render_element: &dyn Fn(&Element) -> St
 // ---------------------------------------------------------------------------
 
 pub struct BuildFigureVars {
-    default_cap_location: Option<String>,
     /// Preferred image formats for variant selection, in priority order.
     fig_formats: Vec<String>,
 }
@@ -95,23 +89,21 @@ impl BuildFigureVars {
     pub fn new(
         ext: &str,
         target: Option<&crate::config::Target>,
-        default_cap_location: Option<String>,
     ) -> Self {
         let fig_formats = target
             .map(|t| t.fig_formats.clone())
             .filter(|f| !f.is_empty())
             .unwrap_or_else(|| default_fig_formats(ext));
-        Self { default_cap_location, fig_formats }
+        Self { fig_formats }
     }
 }
 
 impl crate::render::vars::BuildElementVars for BuildFigureVars {
     fn apply(&self, element: &Element, format: &str, vars: &mut crate::render::template::TemplateVars, defaults: &crate::config::Metadata) {
-        if let Element::Figure { path, alt, caption, label, number, attrs } = element {
+        if let Element::Figure { path, alt, caption, label, number, attrs, options } = element {
             build_figure_element_vars(
                 vars, path, alt, caption.as_deref(), label,
-                number.as_deref(), attrs, format,
-                self.default_cap_location.as_deref(),
+                number.as_deref(), attrs, options, format,
                 defaults,
                 &self.fig_formats,
             );
@@ -127,14 +119,13 @@ fn build_figure_element_vars(
     label: &str,
     number: Option<&str>,
     attrs: &crate::types::FigureAttrs,
+    options: &HashMap<String, String>,
     format: &str,
-    default_cap_location: Option<&str>,
     defaults: &crate::config::Metadata,
     fig_formats: &[String],
 ) {
     // User-authored -> config
     vars.cfg.insert("caption".to_string(), minijinja::Value::from(caption.unwrap_or("").to_string()));
-    vars.cfg.insert("label".to_string(), minijinja::Value::from(label.to_string()));
     vars.cfg.insert("id".to_string(), minijinja::Value::from(label.to_string()));
     // Engine-computed -> calepin
     vars.clp.insert("number".to_string(), minijinja::Value::from(number.unwrap_or("").to_string()));
@@ -162,11 +153,14 @@ fn build_figure_element_vars(
     let height_attr = format_height(attrs);
     let link = attrs.link.as_deref().unwrap_or("");
 
-    // Render image tag into clp.children so the unified figure template handles it
+    // Render image tag into clp.content so the unified figure template handles it
     let children = render_image_tag(&src, alt, &width_attr, &height_attr, link, format);
-    vars.clp.insert("children".to_string(), minijinja::Value::from(children));
+    vars.clp.insert("content".to_string(), minijinja::Value::from(children));
 
-    build_figure_wrapper_vars(vars, attrs, format, default_cap_location, defaults);
+    // Pass raw chunk options through to templates as cfg.*
+    for (k, v) in options {
+        vars.cfg.insert(k.clone(), minijinja::Value::from(v.clone()));
+    }
 }
 
 /// Render a format-specific image tag string.
@@ -254,57 +248,6 @@ pub fn separate_caption(
 // ---------------------------------------------------------------------------
 
 /// Build a `FigureAttrs` from div attribute key-value pairs.
-pub fn build_figure_attrs(attrs: &HashMap<String, String>) -> crate::types::FigureAttrs {
-    crate::types::FigureAttrs {
-        width: attrs.get("fig_width").cloned(),
-        height: attrs.get("fig_height").cloned(),
-        fig_align: attrs.get("fig_align").cloned(),
-        fig_scap: attrs.get("fig_scap").cloned(),
-        fig_env: attrs.get("fig_env").cloned(),
-        fig_pos: attrs.get("fig_pos").cloned(),
-        cap_location: attrs.get("fig_cap_location").or_else(|| attrs.get("cap_location")).cloned(),
-        link: attrs.get("fig_link").or_else(|| attrs.get("link")).cloned(),
-    }
-}
-
-/// Populate figure-wrapper template vars shared by both `Element::Figure` and
-/// figure divs: alignment, fig_env, fig_pos, short_caption, cap_location, link.
-pub fn build_figure_wrapper_vars(
-    vars: &mut crate::render::template::TemplateVars,
-    attrs: &crate::types::FigureAttrs,
-    format: &str,
-    default_cap_location: Option<&str>,
-    defaults: &crate::config::Metadata,
-) {
-    let default_align = defaults.figure.as_ref().and_then(|f| f.alignment.as_deref()).unwrap_or("center");
-    let align = attrs.fig_align.as_deref().unwrap_or(default_align);
-    // Engine-computed formatting -> calepin
-    vars.clp.insert("align_style".to_string(), minijinja::Value::from(format_align(align, format)));
-    vars.clp.insert("align".to_string(), minijinja::Value::from(align.to_string()));
-
-    // User-authored figure attributes -> config
-    if let Some(ref env) = attrs.fig_env {
-        vars.cfg.insert("fig_env".to_string(), minijinja::Value::from(env.clone()));
-    }
-    vars.cfg.insert("fig_pos".to_string(), minijinja::Value::from(match attrs.fig_pos.as_deref() {
-        Some(pos) => format!("[{}]", pos),
-        None => String::new(),
-    }));
-    let short_caption = match attrs.fig_scap.as_deref() {
-        Some(sc) => format!("[{}]", sc),
-        None => String::new(),
-    };
-    vars.cfg.insert("short_caption".to_string(), minijinja::Value::from(short_caption));
-
-    if let Some(loc) = attrs.cap_location.as_deref().or(default_cap_location) {
-        vars.cfg.insert("cap_location".to_string(), minijinja::Value::from(loc.to_string()));
-    }
-
-    if let Some(ref link) = attrs.link {
-        vars.cfg.insert("link".to_string(), minijinja::Value::from(link.clone()));
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Image helpers
 // ---------------------------------------------------------------------------
@@ -346,18 +289,6 @@ pub fn format_height(attrs: &crate::types::FigureAttrs) -> String {
     attrs.height.clone().unwrap_or_default()
 }
 
-pub fn format_align(align: &str, format: &str) -> String {
-    use crate::render::elements::resolve_element_template;
-    use crate::render::template::apply_template;
-
-    if let Some(tpl) = resolve_element_template("align_style", format) {
-        let mut vars = TemplateVars::new();
-        vars.cfg.insert("align".to_string(), minijinja::Value::from(align.to_string()));
-        apply_template(&tpl, &vars)
-    } else {
-        String::new()
-    }
-}
 
 /// Find the preferred image format variant for the output format.
 pub fn select_image_variant(path: &Path, format: &str) -> PathBuf {

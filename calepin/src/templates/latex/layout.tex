@@ -1,4 +1,4 @@
-{%- if clp.is_figure %}\begin{ {{-cfg.fig_env-}} }{{cfg.fig_pos}}
+{%- if clp.is_figure %}\begin{figure}{{cfg.fig_pos}}
 \centering
 {% endif %}
 {{clp.rows}}
@@ -7,4 +7,4 @@
 {% endif %}
 {%- if clp.is_figure and cfg.id %}\label{ {{-cfg.id-}} }
 {% endif %}
-{%- if clp.is_figure %}\end{ {{-cfg.fig_env-}} }{% endif %}
+{%- if clp.is_figure %}\end{figure}{% endif %}

@@ -65,7 +65,6 @@ pub fn render(
         }
         vars.clp.insert("writer".to_string(), minijinja::Value::from(format.to_string()));
         vars.clp.insert("content".to_string(), minijinja::Value::from(rendered_content.clone()));
-        vars.cfg.insert("class".to_string(), minijinja::Value::from(first_class.to_string()));
         vars.cfg.insert("classes".to_string(), minijinja::Value::from(classes.join(" ")));
         if let Some(ref id_val) = id {
             vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.clone()));
