@@ -1,0 +1,34 @@
+/* Responsive */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .sidebar-right { display: none; }
+}
+
+@media (max-width: 768px) {
+  .navbar-toggle { display: flex; }
+  .site-nav-links { display: none; }
+  .site-nav-links.open {
+    display: flex; flex-direction: column;
+    position: absolute; top: var(--c-navbar-height); left: 0; right: 0;
+    background: var(--c-bg); border-bottom: 1px solid var(--c-border);
+    padding: 0.5rem 0; z-index: var(--z-dropdown); align-items: flex-start;
+  }
+  .no-sidebar .site-brand { display: none; }
+  .sidebar-left {
+    position: fixed; top: var(--c-navbar-height); left: 0; bottom: 0;
+    transform: translateX(-100%); transition: transform 0.2s ease;
+  }
+  .sidebar-left.open { transform: translateX(0); }
+  .content-main { padding: 1.5rem 1rem; }
+  .site-footer { padding: 1.5rem 1rem; }
+  .page-nav a { max-width: 50%; }
+}

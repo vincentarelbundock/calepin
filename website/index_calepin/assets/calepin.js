@@ -55,6 +55,29 @@ if (menuBtn) {
   });
 }
 
+// Sidebar section persistence
+{
+  const KEY = 'calepin-sidebar-section';
+  const sections = document.querySelectorAll('details.sidebar-section[name="sidebar-nav"]');
+  if (sections.length) {
+    const saved = localStorage.getItem(KEY);
+    if (saved !== null) {
+      sections.forEach(d => {
+        const title = d.querySelector('.sidebar-section-title');
+        d.open = (title && title.textContent.trim() === saved);
+      });
+    }
+    sections.forEach(d => {
+      d.addEventListener('toggle', () => {
+        if (d.open) {
+          const title = d.querySelector('.sidebar-section-title');
+          if (title) localStorage.setItem(KEY, title.textContent.trim());
+        }
+      });
+    });
+  }
+}
+
 // Navbar dropdown toggle
 document.querySelectorAll('.navbar-dropdown-toggle').forEach(function(btn) {
   btn.addEventListener('click', function(e) {

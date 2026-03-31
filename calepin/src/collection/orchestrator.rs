@@ -61,29 +61,9 @@ pub(crate) fn render_book(
         }
     }
 
-    // Load the book main template (built-in or sidecar override)
+    // Templates are loaded from the sidecar (always populated)
     let ext = crate::paths::resolve_extension(format);
     let main_tpl_name = format!("main.{}", ext);
-    if !templates.contains_key(&main_tpl_name) {
-        // Fall back to built-in {target}/main template
-        let builtin_path = format!("{}/main.{}", target_name, ext);
-        if let Some(file) = crate::render::elements::BUILTIN_TEMPLATES.get_file(&builtin_path) {
-            if let Some(s) = file.contents_utf8() {
-                templates.insert(main_tpl_name.clone(), s.to_string());
-            }
-        }
-    }
-
-    // Load built-in preamble if not overridden
-    let preamble_name = format!("preamble.{}", ext);
-    if !templates.contains_key(&preamble_name) {
-        let builtin_path = format!("{}/preamble.{}", target_name, ext);
-        if let Some(file) = crate::render::elements::BUILTIN_TEMPLATES.get_file(&builtin_path) {
-            if let Some(s) = file.contents_utf8() {
-                templates.insert(preamble_name, s.to_string());
-            }
-        }
-    }
 
     let mut env = minijinja::Environment::new();
     env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);

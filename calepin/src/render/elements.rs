@@ -17,8 +17,8 @@ use crate::modules::Highlighter;
 /// Built-in templates (element/page templates), embedded at compile time.
 pub static BUILTIN_TEMPLATES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/templates");
 
-/// Built-in assets (CSS, JS, scaffold files), embedded at compile time.
-pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold");
+/// Built-in assets (CSS, JS, icons, fonts), embedded at compile time.
+pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/assets");
 
 /// Template name aliases: multiple names can map to the same template file.
 fn resolve_template_alias(name: &str) -> &str {
@@ -379,27 +379,13 @@ impl ElementRenderer {
 
 }
 
-/// Resolve an element template from the filesystem or built-in.
+/// Resolve an element template from the filesystem.
 /// Template names use underscores internally; hyphens are normalized.
 ///
-/// If a sidecar exists and has a templates directory, tries filesystem first
-/// (sidecar + extensions). Falls back to built-in only when no sidecar
-/// templates directory exists.
+/// Looks up templates from the sidecar's templates directory and extension
+/// template directories. No built-in fallback; sidecars are always populated.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
-    if has_sidecar_templates() {
-        crate::paths::resolve_template(&canonical, ext)
-            .and_then(|path| std::fs::read_to_string(&path).ok())
-    } else {
-        resolve_builtin_template(&canonical, ext).map(|s| s.to_string())
-    }
-}
-
-/// Check whether the active sidecar has a templates directory for the current target.
-fn has_sidecar_templates() -> bool {
-    let chain = crate::paths::get_active_inheritance_chain();
-    let target = chain.first().map(|s| s.as_str()).unwrap_or("html");
-    let project_dir = crate::paths::get_project_dir();
-    let tpl_dir = crate::paths::templates_dir(&project_dir).join(target);
-    tpl_dir.is_dir()
+    crate::paths::resolve_template(&canonical, ext)
+        .and_then(|path| std::fs::read_to_string(&path).ok())
 }

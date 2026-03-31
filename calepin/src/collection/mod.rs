@@ -56,6 +56,11 @@ pub fn build_collection(
     let root_sidecar = found_path.parent().map(|p| p.to_path_buf());
     crate::paths::set_root_sidecar(root_sidecar.as_deref());
 
+    // Ensure root sidecar is populated with templates and assets for the target
+    if let Some(ref sc) = root_sidecar {
+        crate::paths::ensure_sidecar_populated(sc, &collection_target_name);
+    }
+
     // Set extension template directories for layered resolution
     let mut ext_dirs = crate::config::context::resolve_extension_template_dirs_for(&collection_target_name, &base_dir);
     for ext_name in &meta.extensions {

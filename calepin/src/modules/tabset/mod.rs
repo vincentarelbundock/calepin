@@ -74,6 +74,6 @@ pub fn render(
     vars.clp.insert("nav_items".to_string(), minijinja::Value::from(nav_items));
     vars.clp.insert("tab_panes".to_string(), minijinja::Value::from(tab_panes));
 
-    let tpl = crate::render::elements::resolve_builtin_template("tabset", format).unwrap_or("");
-    crate::render::template::apply_template(tpl, &vars)
+    let tpl = crate::render::elements::resolve_element_template("tabset", format).unwrap_or_default();
+    crate::render::template::apply_template(&tpl, &vars)
 }

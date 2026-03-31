@@ -715,6 +715,6 @@ callout.html       built-in: html                         (cyan = built-in)
 ...
 ```
 
-## `calepin init` does not copy templates
+## Template resolution
 
-`calepin init website` creates a project config and starter pages. It does not copy built-in templates into `index_calepin/templates/`. The project starts clean, inheriting everything from the extension. Users create individual template files only when they want to override something.
+`calepin init my-site -t website` creates a project config, starter pages, and all templates in `index_calepin/templates/`. When a sidecar exists with templates, only the sidecar templates are used. When no sidecar exists, only the built-in templates are used. There is no mixing between the two sources.

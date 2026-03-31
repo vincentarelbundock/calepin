@@ -24,8 +24,6 @@ pub(crate) use utils::paths;
 pub(crate) use modules::{registry, manifest as module_manifest};
 pub(crate) use references::{bibliography, crossref};
 pub(crate) use utils::util;
-use std::path::PathBuf;
-
 use anyhow::Result;
 use clap::Parser;
 

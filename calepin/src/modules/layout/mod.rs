@@ -74,8 +74,8 @@ pub fn render(
     vars.cfg.insert("fig_env".to_string(), minijinja::Value::from(fig_env.to_string()));
     vars.cfg.insert("fig_pos".to_string(), minijinja::Value::from(fig_pos));
 
-    let tpl = crate::render::elements::resolve_builtin_template("layout", format).unwrap_or("");
-    crate::render::template::apply_template(tpl, &vars)
+    let tpl = crate::render::elements::resolve_element_template("layout", format).unwrap_or_default();
+    crate::render::template::apply_template(&tpl, &vars)
 }
 
 /// Render rows through format-specific layout_row and layout_cell templates.
@@ -84,11 +84,13 @@ fn render_rows_via_templates(
     valign: &str,
     format: &str,
 ) -> String {
-    use crate::render::elements::resolve_builtin_template;
+    use crate::render::elements::resolve_element_template;
     use crate::render::template::apply_template;
 
-    let cell_tpl = resolve_builtin_template("layout_cell", format).unwrap_or("{{ content }}");
-    let row_tpl = resolve_builtin_template("layout_row", format).unwrap_or("{{ cells }}");
+    let cell_tpl_owned = resolve_element_template("layout_cell", format).unwrap_or_else(|| "{{ clp.content }}".to_string());
+    let row_tpl_owned = resolve_element_template("layout_row", format).unwrap_or_else(|| "{{ clp.cells }}".to_string());
+    let cell_tpl = cell_tpl_owned.as_str();
+    let row_tpl = row_tpl_owned.as_str();
 
     let valign_char = match valign {
         "center" => "c",

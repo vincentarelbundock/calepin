@@ -34,7 +34,7 @@ comment = "> "
 results = "markup"
 
 [toc]
-enabled = false
+enabled = true
 depth = 3
 title = "Contents"
 

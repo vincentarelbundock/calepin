@@ -154,7 +154,7 @@ calepin notebook.qmd -t html
 calepin notebook.qmd -t latex
 calepin notebook.qmd -t typst
 
-calepin init website new_project
+calepin init new_project -t website
 calepin preview new_project
 ```
 :::

@@ -16,11 +16,8 @@ use crate::render::elements::{BUILTIN_TEMPLATES, resolve_builtin_template};
 struct TemplateContext {
     /// The flat templates directory: {stem}_calepin/templates/{target}/
     tpl_dir: PathBuf,
-    /// Sidecar root: {stem}_calepin/
-    sidecar: PathBuf,
     target_name: String,
     writer: String,
-    ext: String,
     chain: Vec<String>,
 }
 
@@ -48,18 +45,17 @@ fn resolve_context(input: &Path, target_override: Option<&str>) -> Result<Templa
     let empty = std::collections::HashMap::new();
     let target = crate::config::resolve_target(&target_name, &empty).ok();
     let writer = target.as_ref().map(|t| t.writer.as_str()).unwrap_or(&target_name).to_string();
-    let ext = crate::paths::resolve_extension(&writer).to_string();
     let project_root = parent.to_path_buf();
     let chain = crate::config::extension::inheritance_chain(&project_root, &target_name, &empty);
     crate::paths::set_active_target_with_chain(Some(&target_name), chain.clone());
 
     let tpl_dir = sidecar.join("templates").join(&target_name);
 
-    Ok(TemplateContext { tpl_dir, sidecar, target_name, writer, ext, chain })
+    Ok(TemplateContext { tpl_dir, target_name, writer, chain })
 }
 
 /// Collect all built-in template filenames for the given inheritance chain.
-fn collect_builtin_files(chain: &[String], ext: &str) -> Vec<String> {
+fn collect_builtin_files(chain: &[String]) -> Vec<String> {
     let mut names: Vec<String> = Vec::new();
     for chain_target in chain {
         if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
@@ -117,7 +113,7 @@ pub fn handle_templates(action: TemplatesAction) -> Result<()> {
 
 fn handle_list(input: &Path, target: Option<&str>) -> Result<()> {
     let ctx = resolve_context(input, target)?;
-    let builtin_files = collect_builtin_files(&ctx.chain, &ctx.ext);
+    let builtin_files = collect_builtin_files(&ctx.chain);
 
     println!("Templates for '{}' (target: {}):\n", input.display(), ctx.target_name);
 
@@ -176,7 +172,7 @@ fn handle_show(name: &str, input: &Path, target: Option<&str>) -> Result<()> {
     let ctx = resolve_context(input, target)?;
 
     // Try local file first
-    let specific = format!("{}.{}", name, ctx.ext);
+    let specific = format!("{}.{}", name, crate::paths::resolve_extension(&ctx.writer));
     let path = ctx.tpl_dir.join(&specific);
     if path.exists() {
         print!("{}", std::fs::read_to_string(&path)?);
@@ -222,7 +218,7 @@ fn handle_diff(input: &Path, name: Option<&str>, target: Option<&str>) -> Result
         if path.exists() {
             vec![name.to_string()]
         } else {
-            let specific = format!("{}.{}", name, ctx.ext);
+            let specific = format!("{}.{}", name, crate::paths::resolve_extension(&ctx.writer));
             let path = ctx.tpl_dir.join(&specific);
             if path.exists() {
                 vec![specific]
@@ -231,7 +227,7 @@ fn handle_diff(input: &Path, name: Option<&str>, target: Option<&str>) -> Result
             }
         }
     } else {
-        collect_builtin_files(&ctx.chain, &ctx.ext)
+        collect_builtin_files(&ctx.chain)
     };
 
     let mut found_diff = false;
@@ -294,7 +290,7 @@ fn handle_reset(input: &Path, name: Option<&str>, target: Option<&str>, force: b
     if let Some(name) = name {
         // Reset single template
         let path = ctx.tpl_dir.join(name);
-        let specific = format!("{}.{}", name, ctx.ext);
+        let specific = format!("{}.{}", name, crate::paths::resolve_extension(&ctx.writer));
         let path = if path.exists() { path } else { ctx.tpl_dir.join(&specific) };
         let filename = if ctx.tpl_dir.join(name).exists() { name.to_string() } else { specific };
 
@@ -315,7 +311,7 @@ fn handle_reset(input: &Path, name: Option<&str>, target: Option<&str>, force: b
             }
         }
 
-        let files = collect_builtin_files(&ctx.chain, &ctx.ext);
+        let files = collect_builtin_files(&ctx.chain);
         let mut count = 0;
         for filename in &files {
             if let Some(builtin) = get_builtin_content(&ctx.chain, filename) {

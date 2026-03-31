@@ -101,9 +101,9 @@ Scaffold new projects or generate shell completions.
 
 ```bash
 # Scaffold a new project
-calepin init notebook
-calepin init website
-calepin init book
+calepin init paper.qmd
+calepin init my-site -t website
+calepin init my-book -t book-typst
 
 # Generate shell completions
 calepin extra completions bash

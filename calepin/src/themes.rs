@@ -14,9 +14,7 @@ pub use crate::render::elements::BUILTIN_ASSETS;
 /// Copy built-in assets (CSS, fonts, icons) into a project's sidecar directory.
 pub fn copy_builtin_assets(kind: &ProjectKind) -> anyhow::Result<()> {
     let mut files = BTreeMap::new();
-    if let Some(assets_dir) = BUILTIN_ASSETS.get_dir("assets") {
-        collect_embedded_dir(assets_dir, Path::new("assets"), Path::new("assets"), &mut files);
-    }
+    collect_embedded_dir(&BUILTIN_ASSETS, Path::new("assets"), Path::new(""), &mut files);
 
     let base = kind.calepin_dir();
     for (rel, content) in &files {

@@ -32,7 +32,7 @@ pub fn wrap_listing(
     }
 
     let tpl = resolve_template("code_listing")
-        .unwrap_or_else(|| crate::render::elements::resolve_builtin_template("code_listing", format)
-            .unwrap_or("").to_string());
+        .or_else(|| crate::render::elements::resolve_element_template("code_listing", format))
+        .unwrap_or_default();
     template_env.render_dynamic("code_listing", &tpl, &vars)
 }

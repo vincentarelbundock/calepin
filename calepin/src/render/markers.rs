@@ -271,13 +271,13 @@ pub fn resolve_escaped_dollars(text: &str, format: &str) -> String {
     text.replace(&marker, &replacement)
 }
 
-/// Get the escaped dollar replacement for the given format, via template or fallback.
+/// Get the escaped dollar replacement for the given format.
 fn resolve_escaped_dollar_replacement(format: &str) -> String {
-    use crate::render::elements::resolve_element_template;
-    if let Some(tpl) = resolve_element_template("escaped_dollar", format) {
-        tpl.trim().to_string()
-    } else {
-        "\\$".to_string()
+    match format {
+        "html" => "<span class=\"nodollar\">$</span>".to_string(),
+        "latex" => "\\$".to_string(),
+        "typst" => "\\$".to_string(),
+        _ => "$".to_string(),
     }
 }
 
@@ -286,17 +286,22 @@ fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> 
     use crate::render::elements::resolve_element_template;
     use crate::render::template::{apply_template, TemplateVars};
 
-    if let Some(tpl) = resolve_element_template("equation", format) {
-        let mut vars = TemplateVars::new();
-        vars.cfg.insert("id".to_string(), minijinja::Value::from(label.to_string()));
-        // HTML gets the full $$...$$ expression (for KaTeX rendering);
-        // LaTeX/Typst/Markdown get the inner expression (wrapped by format syntax).
-        let content = if format == "html" { math.to_string() } else { inner.to_string() };
-        vars.clp.insert("content".to_string(), minijinja::Value::from(content));
-        apply_template(&tpl, &vars)
-    } else {
-        // Fallback: pass through the math expression unchanged
-        math.to_string()
+    let tpl = resolve_element_template("equation", format)
+        .unwrap_or_else(|| builtin_equation_template(format).to_string());
+
+    let mut vars = TemplateVars::new();
+    vars.cfg.insert("id".to_string(), minijinja::Value::from(label.to_string()));
+    let content = if format == "html" { math.to_string() } else { inner.to_string() };
+    vars.clp.insert("content".to_string(), minijinja::Value::from(content));
+    apply_template(&tpl, &vars)
+}
+
+fn builtin_equation_template(format: &str) -> &'static str {
+    match format {
+        "html" => "<div class=\"equation\" id=\"{{ cfg.id }}\">\n{{ clp.content }}\n</div>",
+        "latex" => "\\begin{equation}\n{{ clp.content }}\n\\label{{{ cfg.id }}}\n\\end{equation}",
+        "typst" => "$ {{ clp.content }} $ <{{ cfg.id }}>",
+        _ => "{{ clp.content }}",
     }
 }
 

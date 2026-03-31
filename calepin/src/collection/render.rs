@@ -424,6 +424,15 @@ where
         pb.set_message(format!("{}{}", names.join(", "), suffix));
     };
 
+    // Capture thread-local state from the main thread to propagate to workers
+    let tl_root_sidecar = crate::paths::get_root_sidecar();
+    let tl_page_sidecar = crate::paths::get_page_sidecar();
+    let tl_active_target = crate::paths::get_active_target();
+    let tl_chain = crate::paths::get_active_inheritance_chain();
+    let tl_project_dir = crate::paths::get_project_dir();
+    let tl_ext_dirs = crate::paths::get_extension_template_dirs();
+    let tl_sideloaded = crate::paths::get_sideloaded_extensions();
+
     let results = std::thread::scope(|s| {
         let handles: Vec<_> = pages
             .iter()
@@ -431,7 +440,24 @@ where
             .map(|(idx, page)| {
                 let render_fn = &render_fn;
                 let update_message = &update_message;
+                let tl_root_sidecar = &tl_root_sidecar;
+                let tl_page_sidecar = &tl_page_sidecar;
+                let tl_active_target = &tl_active_target;
+                let tl_chain = &tl_chain;
+                let tl_project_dir = &tl_project_dir;
+                let tl_ext_dirs = &tl_ext_dirs;
+                let tl_sideloaded = &tl_sideloaded;
                 s.spawn(move || {
+                    // Restore thread-local state in worker thread
+                    crate::paths::set_root_sidecar(tl_root_sidecar.as_deref());
+                    crate::paths::set_page_sidecar(tl_page_sidecar.as_deref());
+                    crate::paths::set_active_target_with_chain(
+                        tl_active_target.as_deref(),
+                        tl_chain.clone(),
+                    );
+                    crate::paths::set_project_dir(Some(&tl_project_dir));
+                    crate::paths::set_extension_template_dirs(tl_ext_dirs.clone());
+                    crate::paths::set_sideloaded_extensions(tl_sideloaded.clone());
                     let result = render_fn(page);
                     match &result.1 {
                         Ok(_) => update_message(idx, None),

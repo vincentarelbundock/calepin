@@ -264,8 +264,7 @@ pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
 ///
 /// Sidecars always live next to their `.qmd` file: `{parent}/{stem}_calepin/`.
 ///
-/// Returns `None` if the directory does not exist. Sidecars are never
-/// auto-created; use `calepin init sidecar` to scaffold one explicitly.
+/// Returns `None` if the directory does not exist.
 pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     let stem = input.file_stem()?.to_string_lossy();
     let sidecar_name = format!("{}_calepin", stem);
@@ -274,6 +273,82 @@ pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
         Some(dir)
     } else {
         None
+    }
+}
+
+/// Resolve the sidecar directory for an input file, creating it if it
+/// does not exist. Use this only for top-level entry points (document mode
+/// via `resolve_context`), not for per-page sidecars in collection mode.
+pub fn resolve_or_create_sidecar_dir(input: &Path) -> Option<PathBuf> {
+    let stem = input.file_stem()?.to_string_lossy();
+    let sidecar_name = format!("{}_calepin", stem);
+    let dir = input.parent()?.join(&sidecar_name);
+    if !dir.is_dir() {
+        let _ = std::fs::create_dir_all(&dir);
+    }
+    if dir.is_dir() {
+        Some(dir)
+    } else {
+        None
+    }
+}
+
+/// Ensure a sidecar directory is populated with templates and assets for the
+/// given target. Idempotent: only writes files that do not already exist.
+///
+/// Call this after the target has been resolved (i.e., after `resolve_context`).
+pub fn ensure_sidecar_populated(sidecar: &Path, target: &str) {
+    use crate::render::elements::{BUILTIN_TEMPLATES, BUILTIN_ASSETS};
+
+    // Write templates for the target (parent-first so child overrides parent)
+    let empty = std::collections::HashMap::new();
+    let project_root = sidecar.parent().unwrap_or(std::path::Path::new("."));
+    let chain = crate::config::extension::inheritance_chain(project_root, target, &empty);
+    let dest = sidecar.join("templates").join(target);
+    for chain_target in chain.iter().rev() {
+        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
+            write_builtin_dir_if_missing(dir, chain_target, &dest);
+        }
+    }
+
+    // Write built-in assets
+    let assets_dest = sidecar.join("assets");
+    let _ = std::fs::create_dir_all(&assets_dest);
+    write_embedded_dir_if_missing(&BUILTIN_ASSETS, &assets_dest);
+}
+
+/// Recursively write files from a built-in directory, stripping the prefix.
+/// Only writes files that do not already exist (sidecar overrides are preserved).
+fn write_builtin_dir_if_missing(dir: &include_dir::Dir<'static>, prefix: &str, dest: &std::path::Path) {
+    let prefix_path = std::path::Path::new(prefix);
+    for file in dir.files() {
+        let rel = file.path().strip_prefix(prefix_path).unwrap_or(file.path());
+        let out = dest.join(rel);
+        if out.exists() { continue; }
+        if let Some(parent) = out.parent() { let _ = std::fs::create_dir_all(parent); }
+        if let Some(content) = file.contents_utf8() {
+            let _ = std::fs::write(&out, content);
+        } else {
+            let _ = std::fs::write(&out, file.contents());
+        }
+    }
+    for subdir in dir.dirs() {
+        write_builtin_dir_if_missing(subdir, &subdir.path().display().to_string(), dest);
+    }
+}
+
+/// Write an embedded directory to disk, only writing files that don't already exist.
+fn write_embedded_dir_if_missing(dir: &include_dir::Dir<'static>, dest: &Path) {
+    for file in dir.files() {
+        let target = dest.join(file.path());
+        if target.exists() { continue; }
+        if let Some(parent) = target.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&target, file.contents());
+    }
+    for subdir in dir.dirs() {
+        write_embedded_dir_if_missing(subdir, dest);
     }
 }
 

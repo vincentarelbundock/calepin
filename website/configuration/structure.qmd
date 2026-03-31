@@ -14,16 +14,22 @@ No configuration, no scaffolding. *Calepin* uses built-in templates and writes t
 
 # Customizing a document
 
-To customize the appearance of a single document, scaffold a sidecar directory:
+To customize templates or configuration, create a sidecar:
 
 ```
-calepin init sidecar paper.qmd --templates
+calepin init paper.qmd
 ```
 
-This creates a `paper_calepin/` directory next to your file, containing a `config.toml` and all built-in templates. Edit the templates to change how your document looks, then render as usual:
+This creates `paper.qmd` (if it does not exist) and a `paper_calepin/` directory next to it, containing a `config.toml` and all built-in templates for the target. Edit the templates to change how your document looks, then render as usual:
 
 ```
 calepin render paper.qmd
+```
+
+To target a specific format:
+
+```
+calepin init paper.qmd -t latex
 ```
 
 The sidecar directory structure:
@@ -32,24 +38,23 @@ The sidecar directory structure:
 paper.qmd
 paper_calepin/
   config.toml            # per-document configuration
-  templates/             # template overrides
-    html/
-      page.html
-      figure.html
-    latex/
-      page.tex
-  cache/                 # code chunk cache
-  files/                 # generated figures
+  templates/html/        # template overrides (target-specific)
+    main.html
+    figure.html
+    ...
+  assets/                # static assets (CSS, JS, images)
+_calepin/                # build artifacts (gitignored)
+  cache/paper/           # code chunk cache
 ```
 
-Resolution is layered per file: sidecar templates are checked first, then project templates, then extension templates, then built-in defaults. You only need to override the specific files you want to change.
+When a sidecar exists, *Calepin* uses only the sidecar templates. When there is no sidecar, it uses only the built-in templates. There is no mixing or layering between the two.
 
 # Websites
 
 To scaffold a website:
 
 ```
-calepin init website my_site
+calepin init my_site -t website
 ```
 
 This creates a directory with an `index_calepin/config.toml` manifest, an `index.qmd`, and example pages:
@@ -58,19 +63,16 @@ This creates a directory with an `index_calepin/config.toml` manifest, an `index
 my_site/
   index_calepin/
     config.toml          # project configuration
-    templates/           # template overrides
-      website/
-        page.html
-        navbar.html
-      html/
-        figure.html
-    assets/              # CSS, images, logos
+    templates/website/   # template overrides
+    assets/              # CSS, JS, images, logos
   index.qmd
   about.qmd
   guide/
     intro.qmd
     advanced.qmd
-  _calepin/              # cache and output (should be in .gitignore)
+  _calepin/              # build artifacts (gitignored)
+    cache/               # code execution cache
+    output/              # rendered site
 ```
 
 Preview immediately:
@@ -84,27 +86,33 @@ calepin preview my_site
 | Path | Purpose |
 |------|---------|
 | `index_calepin/config.toml` | Project configuration (targets, sidebar, navbar, etc.) |
-| `index_calepin/templates/` | Template overrides. Drop a file here to replace any built-in template. |
+| `index_calepin/templates/` | Template overrides. All templates for the active target. |
 | `index_calepin/assets/` | Static assets (CSS, images, logos) copied to output. |
 | `_calepin/output/` | Default output directory for websites (configurable in `config.toml`). |
 | `_calepin/cache/` | Execution cache (per-document). |
 
-# Scaffolding commands
+# Managing templates
+
+To compare your templates against the built-in defaults:
 
 ```
-calepin init sidecar paper.qmd     # sidecar for a single document
-calepin init notebook my-paper     # notebook project
-calepin init website my-site       # website project
-calepin init book my-book          # book project
-calepin templates update            # update local templates to latest built-in versions
+calepin templates diff index.qmd
 ```
 
-## Updating templates
+To see the status of all templates:
 
-When *Calepin* is updated, the built-in templates may change (new features, bug fixes, `link()` support). If your project has custom templates in `index_calepin/templates/`, they won't pick up these changes automatically.
+```
+calepin templates list index.qmd
+```
 
-Run `calepin templates update` from your project root to overwrite all local templates that have a matching built-in template. The command lists the number of files and asks for confirmation before writing.
+To revert a specific template to the built-in version:
 
-::: {.callout-warning}
-This is destructive: any customizations you made to local templates will be lost. Commit or back up your templates before running this command.
-:::
+```
+calepin templates reset index.qmd base.html
+```
+
+To revert all templates:
+
+```
+calepin templates reset index.qmd --force
+```

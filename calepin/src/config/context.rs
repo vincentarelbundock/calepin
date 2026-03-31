@@ -70,7 +70,7 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
     } else {
         input.to_path_buf()
     };
-    let sidecar = paths::resolve_sidecar_dir(&abs_input);
+    let sidecar = paths::resolve_or_create_sidecar_dir(&abs_input);
     paths::set_page_sidecar(sidecar.as_deref());
 
     let empty_targets = std::collections::HashMap::new();
@@ -95,6 +95,11 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
 
     paths::set_project_dir(Some(&effective_root));
     paths::set_root_sidecar(sidecar.as_deref());
+
+    // Ensure sidecar is populated with templates and assets for the target
+    if let Some(ref sc) = sidecar {
+        paths::ensure_sidecar_populated(sc, &target_name);
+    }
 
     // Set inheritance chain for template resolution
     let chain = config::extension::inheritance_chain(&effective_root, &target_name, user_targets);

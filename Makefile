@@ -33,9 +33,8 @@ install: ## Build release binary, install to ~/.cargo/bin, and set up shell comp
 clean:  ## Remove build artifacts
 	cargo clean --manifest-path calepin/Cargo.toml
 
-flush:  ## Delete all *_cache and *_files directories recursively
-	calepin flush -y
-	calepin flush website -y
+flush:  ## Delete build artifacts (_calepin/ directories)
+	rm -rf _calepin website/_calepin
 
 # ==============================================================================
 # Test targets
@@ -50,9 +49,7 @@ check:  ## Run cargo check (fast compile check)
 CLP = target/debug/calepin
 
 site: build ## Build and serve static site from website/
-	$(CLP) flush website -y
-	$(CLP) flush website/index_calepin -y
-	$(CLP) templates eject website/index.qmd
+	rm -rf website/_calepin
 	uv run $(CLP) preview website
 
 # ==============================================================================

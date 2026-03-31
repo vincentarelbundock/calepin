@@ -104,52 +104,26 @@ use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_a
 
 /// Load a page template by name and base.
 ///
-/// If the sidecar has a templates directory, loads ONLY from the filesystem.
-/// Otherwise, loads ONLY from built-in templates.
+/// Loads from the sidecar's filesystem templates. No built-in fallback;
+/// sidecars are always populated with templates.
 pub fn load_page_template(template_name: &str, base: &str) -> String {
-    if has_sidecar_templates(base) {
-        crate::paths::resolve_template(template_name, base)
-            .and_then(|path| std::fs::read_to_string(&path).ok())
-            .unwrap_or_default()
-    } else {
-        crate::render::elements::resolve_builtin_template(template_name, base)
-            .unwrap_or("")
-            .to_string()
-    }
+    crate::paths::resolve_template(template_name, base)
+        .and_then(|path| std::fs::read_to_string(&path).ok())
+        .unwrap_or_default()
 }
-
-/// Check whether the active sidecar has a templates directory for the given base.
-fn has_sidecar_templates(base: &str) -> bool {
-    let chain = crate::paths::get_active_inheritance_chain();
-    let target = chain.first().map(|s| s.as_str()).unwrap_or(base);
-    let project_dir = crate::paths::get_project_dir();
-    let tpl_dir = crate::paths::templates_dir(&project_dir).join(target);
-    tpl_dir.is_dir()
-}
-
 
 pub fn load_default_css() -> String {
     let mut css = String::new();
 
-    if has_sidecar_templates("html") {
-        // Sidecar has templates: load ONLY from filesystem
-        if let Some(content) = crate::paths::resolve_template("main", "css")
-            .and_then(|path| std::fs::read_to_string(&path).ok())
-        {
-            css.push_str(&content);
-        }
-    } else {
-        // No sidecar templates: load ONLY from built-in
-        let chain = crate::paths::get_active_inheritance_chain();
-        for chain_target in &chain {
-            let path = format!("{}/main.css", chain_target);
-            if let Some(file) = crate::render::elements::BUILTIN_TEMPLATES.get_file(&path) {
-                if let Some(content) = file.contents_utf8() {
-                    css.push_str(content);
-                    break;
-                }
-            }
-        }
+    // Load from sidecar assets (always populated)
+    let sidecar_css = crate::paths::get_root_sidecar()
+        .or_else(|| crate::paths::get_page_sidecar())
+        .map(|s| s.join("assets").join("calepin.css"))
+        .filter(|p| p.exists())
+        .and_then(|p| std::fs::read_to_string(&p).ok());
+
+    if let Some(content) = sidecar_css {
+        css.push_str(&content);
     }
 
     // Extension CSS (active target + side-loaded extensions)
@@ -213,6 +187,29 @@ fn load_extension_js(project_root: &std::path::Path, target_name: &str) -> Strin
     load_extension_assets(project_root, target_name, |a| &a.js)
 }
 
+/// Load the default JS: core.js from sidecar assets + extension JS.
+/// This is inlined in document templates via `{{clp.js}}`.
+pub fn load_default_js() -> String {
+    let mut js = String::new();
+
+    // Core JS from sidecar assets (always populated)
+    let sidecar_js = crate::paths::get_root_sidecar()
+        .or_else(|| crate::paths::get_page_sidecar())
+        .map(|s| s.join("assets").join("core.js"))
+        .filter(|p| p.exists())
+        .and_then(|p| std::fs::read_to_string(&p).ok());
+
+    if let Some(content) = sidecar_js {
+        js.push_str(&content);
+    }
+
+    // Extension JS (active target + side-loaded extensions)
+    let root = crate::paths::get_project_dir();
+    js.push_str(&load_all_extension_assets(&root, |r, name| load_extension_js(r, name)));
+
+    js
+}
+
 /// Two-namespace template variable container.
 ///
 /// - `config`: variables the user authored (front matter, config.toml, div/span
@@ -241,25 +238,6 @@ impl TemplateVars {
         vars
     }
 
-}
-
-/// Recursively load templates from a built-in include_dir, stripping the prefix.
-/// Used to populate the page template environment with built-in includes.
-fn load_builtin_templates(
-    dir: &include_dir::Dir<'static>,
-    prefix: &std::path::Path,
-    templates: &mut HashMap<String, String>,
-) {
-    for file in dir.files() {
-        let rel = file.path().strip_prefix(prefix).unwrap_or(file.path());
-        let name = rel.display().to_string();
-        if let Some(content) = file.contents_utf8() {
-            templates.entry(name).or_insert_with(|| content.to_string());
-        }
-    }
-    for subdir in dir.dirs() {
-        load_builtin_templates(subdir, prefix, templates);
-    }
 }
 
 /// Build a MiniJinja render context from namespaced template variables.
@@ -514,10 +492,7 @@ pub fn build_template_vars_with_headings(
 
     // Default values for format-specific template variables (engine assets)
     vars.clp.insert("css".to_string(), minijinja::Value::from(load_default_css()));
-    vars.clp.insert("js".to_string(), minijinja::Value::from({
-        let root = crate::paths::get_project_dir();
-        load_all_extension_assets(&root, |r, name| load_extension_js(r, name))
-    }));
+    vars.clp.insert("js".to_string(), minijinja::Value::from(load_default_js()));
 
     // Math include for html-writer targets
     if ext == "html" {
@@ -651,8 +626,8 @@ pub fn render_page_template(
     let active_target = crate::paths::get_active_target();
     let target = active_target.as_deref().unwrap_or(base);
 
-    if has_sidecar_templates(base) {
-        // Sidecar has templates: load ONLY from filesystem
+    // Load templates from the sidecar's filesystem (always populated)
+    {
         let tpl_dir = crate::paths::templates_dir(&root);
         let dir = tpl_dir.join(target);
         if dir.is_dir() {
@@ -667,15 +642,6 @@ pub fn render_page_template(
                         templates.entry(name).or_insert(content);
                     }
                 }
-            }
-        }
-    } else {
-        // No sidecar templates: load from built-in (parent-first, child overrides)
-        let chain = crate::paths::get_active_inheritance_chain();
-        for chain_target in chain.iter().rev() {
-            if let Some(dir) = crate::render::elements::BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
-                let prefix = std::path::Path::new(chain_target.as_str());
-                load_builtin_templates(dir, prefix, &mut templates);
             }
         }
     }

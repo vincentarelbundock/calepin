@@ -68,8 +68,8 @@ pub fn render(
         vars.cfg.insert("caption".to_string(), minijinja::Value::from(rendered_caption));
     }
 
-    let tpl = crate::render::elements::resolve_builtin_template("figure", format).unwrap_or("");
-    crate::render::template::apply_template(tpl, &vars)
+    let tpl = crate::render::elements::resolve_element_template("figure", format).unwrap_or_default();
+    crate::render::template::apply_template(&tpl, &vars)
 }
 
 fn render_children(children: &[Element], render_element: &dyn Fn(&Element) -> String) -> String {

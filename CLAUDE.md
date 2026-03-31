@@ -40,7 +40,6 @@ make bench-batch    # Time 1000 parallel files (gibberish)
 make plugins        # Build WASM plugins (requires wasm32-unknown-unknown target)
 make site           # Build debug + serve static site from website/
 make clean          # Remove build artifacts
-make flush          # Delete all *_cache and *_files directories
 make prof           # Profile single file and print bottlenecks
 make prof-batch     # Profile 1000 parallel files (gibberish)
 ```
@@ -49,7 +48,7 @@ Run a single test: `cargo test test_name`
 
 CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--writer FORMAT] [--no-highlight] [--clean]`
 
-Subcommands: `render` (default), `preview`, `init`, `flush`, `man`, `extra`. Shell completions: `calepin extra completions SHELL`.
+Subcommands: `render` (default), `preview`, `init`, `man`, `extra`, `templates`. Shell completions: `calepin extra completions SHELL`.
 
 **Important**: website/ must be rendered with `cd website && ../calepin/target/debug/calepin file.qmd` so that sidecar overrides are found relative to the working directory. `make docs` handles this.
 
@@ -116,7 +115,7 @@ Auto-numbering is declarative: `number = true` on a `MatchRule` tells `div.rs` t
 
 Each output format is defined as an extension (`extensions/{name}/extension.toml`). Built-in extensions: `html`, `latex`, `typst`, `markdown`, `slides`, `website`, `book-typst`, `book-latex`. User extensions live in `{stem}_calepin/extensions/{name}/`.
 
-An extension bundles a target definition, templates, modules, CSS/JS assets, and variables. Extensions inherit from a parent via `inherits`. Template resolution is layered: user overrides > extension templates > parent extension > built-in defaults.
+An extension bundles a target definition, templates, modules, CSS/JS assets, and variables. Extensions inherit from a parent via `inherits`.
 
 Extension manifests are parsed by `config/extension.rs` (`ExtensionManifest` struct). Built-in manifests are embedded at compile time via `include_str!`.
 
@@ -143,8 +142,8 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 ### `cli/` -- CLI and command handlers
 
 - `args.rs` -- CLI argument parsing (clap) + `cwarn!` macro
-- `render.rs`, `preview.rs`, `info.rs`, `flush.rs` -- Command handlers
-- `init_sidecar.rs`, `new_notebook.rs`, `new_website.rs`, `new_book.rs`, `new_extension.rs`, `new_gibberish.rs`, `templates.rs` -- Init/scaffolding handlers
+- `render.rs`, `preview.rs`, `info.rs` -- Command handlers
+- `init_sidecar.rs`, `new_extension.rs`, `new_gibberish.rs`, `templates.rs`, `scaffold.rs` -- Init/scaffolding handlers
 
 ### `config/` -- Configuration and project context
 
@@ -198,11 +197,12 @@ Shared AST walker + format-specific implementations via `FormatEmitter` trait.
 ### `utils/` -- Shared utilities
 
 - `tools.rs` -- External tool availability checks and error messages
-- `paths.rs` -- Path utilities: `templates_dir`, `resolve_template`
+- `paths.rs` -- Path utilities: `templates_dir`, `resolve_template`, `PathContext`
 - `escape.rs` -- Format-specific code escaping
 - `lipsum.rs` -- Lorem ipsum text generation
 - `cache.rs` -- Hash-based page cache for incremental builds
 - `date.rs` -- Date formatting and resolution helpers
+- `links.rs` -- URL resolution: `link()` (always page-relative), `canonical_url()`, `path_depth()`
 
 ### `templates/` -- Built-in Jinja templates (embedded at compile time)
 
@@ -211,7 +211,7 @@ Per-engine templates for elements, page templates, shortcodes:
 
 Website template icons live in `templates/website/icons/` (used via `{% include %}`).
 
-User overrides: `{stem}_calepin/templates/{engine}/{name}.{ext}`
+User overrides: `{stem}_calepin/templates/{target}/{name}.{ext}`
 
 ### `scaffold/` -- Project scaffolding and shared assets
 
@@ -227,16 +227,29 @@ User overrides: `{stem}_calepin/templates/{engine}/{name}.{ext}`
 - `collection/` -- Multi-document builds (site/book rendering), includes `templates.rs` for template resolution
 - `preview/` -- Live preview server with hot reload
 
+## Sidecar Directories
+
+The sidecar (`{stem}_calepin/`) is user-owned and version-controlled. It contains configuration, template overrides, assets, modules, and extensions. The build system never writes to it.
+
+Build artifacts (cache, output) go in `_calepin/` at the project root:
+
+- `_calepin/cache/{stem}/` -- code execution cache
+- `_calepin/output/` -- rendered site (collections only)
+
+`_calepin/` should be in `.gitignore`. To clear: `rm -rf _calepin/`.
+
+**Sidecar creation**: Only via `calepin init`. The build system never auto-creates sidecars or writes `config.toml`.
+
+**No per-page sidecars in collections**: In a website, only `index_calepin/` exists. Individual pages use front matter for per-page overrides.
+
 ## Templates and Module Resolution
 
 Templates use Jinja syntax (`{{cfg.variable}}`, `{{clp.variable}}`, `{% if %}`, `{% for %}`). Variables are namespaced: `cfg.*` for user-authored values (front matter, attributes, labels), `clp.*` for engine-computed values (rendered content, format, assets). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
 
 **Template resolution** (no mixing/layering):
-- If a sidecar (`{stem}_calepin/`) exists: use ONLY filesystem templates from the sidecar
+- If a sidecar (`{stem}_calepin/`) exists with a `templates/` directory: use ONLY sidecar templates
 - If no sidecar exists: use ONLY built-in templates embedded in the binary
 - Module element dirs (in registry order) are always checked first
-
-Resolution is layered: individual files can be overridden at any level. Missing files fall through to the next level. `calepin init` does not copy templates; projects start clean and override only what they need.
 
 **Module resolution**: `{stem}_calepin/modules/{name}/module.toml`
 
@@ -256,6 +269,23 @@ match.number = true             # Auto-number matching divs
 run = "postprocess.sh"          # Script: stdin=document, stdout=transformed
 ```
 
+## URL Resolution
+
+All internal URLs are page-relative. The `link()` function in templates computes the correct `./` or `../` prefix based on the current page's nesting depth. No base path, no URL modes. Preview and render produce identical output.
+
+The `url` config field is only used for `canonical_url()` (meta tags, sitemaps, feeds).
+
+## Website CSS and JS
+
+For collection builds (websites), CSS and JS are served as external files:
+
+- `<link rel="stylesheet" href="{{ link('assets/calepin.css') }}">`
+- `<script type="module" src="{{ link('assets/calepin.js') }}">`
+
+CSS is split into modules in `assets/css/` and loaded via `@import` from `assets/calepin.css`. All widget JS (theme toggle, search, source viewer, code copy, tabsets, TOC tracking, footnotes) is in `assets/calepin.js`.
+
+For single-document renders, CSS is inlined in `<style>` tags (no external assets).
+
 ## Raw Output Protection
 
 Format-specific output from span templates must survive markdown-to-format conversion without being re-escaped. All markers use Unicode noncharacters (`\u{FFFF}` start, `\u{FFFE}` end) as delimiters. Input is sanitized by `markers::sanitize()` at the start of the pipeline.
@@ -271,9 +301,9 @@ Marker types (single-char prefix between delimiters):
 
 Documents can carry TOML front matter between `---` delimiters. Non-TOML front matter (e.g., YAML) falls back to a simple parser for basic fields (title, author, date, bibliography).
 
-**Merge order** (last wins): built-in defaults < `{stem}_calepin/config.toml` (root sidecar) < `{stem}_calepin/config.toml` (page sidecar) < TOML front matter < CLI (`-s`)
+**Merge order** (last wins): built-in defaults < `{stem}_calepin/config.toml` (root sidecar) < TOML front matter < CLI (`-s`)
 
-**Sidecar directories**: Each document has a `{stem}_calepin/` directory alongside it (e.g., `paper_calepin/` for `paper.qmd`). For websites, `index_calepin/` is the shared root sidecar for all pages.
+**Sidecar directories**: Only `{stem}_calepin/` for the root document (or `index_calepin/` for collections). No per-page sidecars in collections.
 
 calepin-specific settings are nested under the `[calepin]` table:
 
@@ -329,9 +359,7 @@ Extensions are the unit of distribution and customization. An extension is a dir
 
 **Activation**: Set `target = "name"` in document front matter or pass `-t name` on the CLI. Side-load with `[calepin] extensions = ["name"]`.
 
-**Scaffolding**: `calepin init extension myext --inherits html`
-
-**Debugging**: `calepin templates list html` shows the full resolution chain.
+**Debugging**: `calepin templates list index.qmd` shows all templates with their status.
 
 **External modules**: Extensions can declare modules with `run = "scripts/foo.sh"` that execute via stdin/stdout (text or JSON protocol).
 

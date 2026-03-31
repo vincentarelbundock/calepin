@@ -24,8 +24,8 @@ pub fn render(
     vars.cfg.insert("text".to_string(), minijinja::Value::from(crate::util::escape_html(&text)));
 
     let fallback = format!("[{} ({}x{})]", text, width, height);
-    match crate::render::elements::resolve_builtin_template("placeholder", format) {
-        Some(tpl) => crate::render::template::apply_template(tpl, &vars),
+    match crate::render::elements::resolve_element_template("placeholder", format) {
+        Some(tpl) => crate::render::template::apply_template(&tpl, &vars),
         None => fallback,
     }
 }

@@ -5,6 +5,7 @@ use std::path::Path;
 use anyhow::{bail, Result};
 
 /// Scaffold a new extension directory.
+#[allow(dead_code)]
 pub fn handle_new_extension(name: &str, inherits: &str) -> Result<()> {
     let dir = Path::new(name);
     if dir.exists() {

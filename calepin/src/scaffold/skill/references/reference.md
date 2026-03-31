@@ -59,13 +59,10 @@ calepin preview my_website/
 ### init
 
 ```
-calepin init notebook my-paper
-calepin init website my-site
-calepin init book my-book
-calepin init sidecar paper.qmd          # per-document sidecar
-calepin init sidecar paper.qmd --templates
-calepin templates update                 # update local templates to latest built-ins
-calepin init extension myext --inherits html
+calepin init paper.qmd                  # document with sidecar (html target)
+calepin init paper.qmd -t latex         # document with sidecar (latex target)
+calepin init my-site -t website         # website project
+calepin init my-book -t book-typst      # book project
 ```
 
 ### extra

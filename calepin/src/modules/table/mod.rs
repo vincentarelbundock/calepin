@@ -69,8 +69,8 @@ pub fn render(
         .unwrap_or_else(|| "top".to_string());
     vars.cfg.insert("cap_location".to_string(), minijinja::Value::from(cap_loc));
 
-    let tpl = crate::render::elements::resolve_builtin_template("table", format).unwrap_or("");
-    crate::render::template::apply_template(tpl, &vars)
+    let tpl = crate::render::elements::resolve_element_template("table", format).unwrap_or_default();
+    crate::render::template::apply_template(&tpl, &vars)
 }
 
 fn render_children(children: &[Element], render_element: &dyn Fn(&Element) -> String) -> String {
