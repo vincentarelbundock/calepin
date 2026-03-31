@@ -7,7 +7,7 @@
   {% elif clp.title %}<title>{{ clp.title }}</title>{% endif %}
   {% if clp.abstract %}<meta name="description" content="{{ clp.abstract }}">{% endif %}
   {% if clp.favicon %}<link rel="icon" href="{{ link(clp.favicon) }}">{% endif %}
-  <style>{{ clp.css }}</style>
+  <link rel="stylesheet" href="{{ link('assets/calepin.css') }}">
   {{ clp.math }}
   {% block head_extra %}{% endblock %}
 </head>
@@ -36,6 +36,6 @@
   </div>
 
   {% include "footer.html" %}
-  {% include "widget_code_copy.html" %}
+  <script type="module" src="{{ link('assets/calepin.js') }}"></script>
 </body>
 </html>
