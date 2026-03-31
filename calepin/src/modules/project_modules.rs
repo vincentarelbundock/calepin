@@ -35,12 +35,6 @@ impl TransformProject for SiteWrapModule {
         // during the collection pipeline and passed to the module via pages).
         let empty_listings = HashMap::new();
 
-        let url_mode = if ctx.portable {
-            crate::utils::links::UrlMode::Relative
-        } else {
-            crate::utils::links::UrlMode::ServerRelative
-        };
-
         crate::collection::templating::apply_collection_templates(
             config,
             &doc_infos,
@@ -50,8 +44,6 @@ impl TransformProject for SiteWrapModule {
             &ctx.output_dir,
             "html",
             &ctx.target_name,
-            url_mode,
-            ctx.serve,
         )?;
 
         // Re-read the wrapped pages from disk (apply_collection_templates

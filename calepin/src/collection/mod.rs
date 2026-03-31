@@ -25,8 +25,6 @@ pub fn build_collection(
     clean: bool,
     quiet: bool,
     cli_target: Option<&str>,
-    portable: bool,
-    serve: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -194,8 +192,6 @@ pub fn build_collection(
             base_dir: base_dir.clone(),
             output_dir: output.to_path_buf(),
             target_name: collection_target_name.clone(),
-            portable,
-            serve,
         };
 
         // Build RenderedPage list from render results
@@ -239,8 +235,7 @@ pub fn build_collection(
                 let page_tree = context::build_page_tree(&document_nodes, &pages);
                 orchestrator::render_book(&meta, &page_tree, &base_dir, output, format, output_ext, &collection_target_name, quiet)?;
             } else {
-                let url_mode = if portable { crate::utils::links::UrlMode::Relative } else { crate::utils::links::UrlMode::ServerRelative };
-                templating::apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name, url_mode, serve)?;
+                templating::apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
             }
         }
     }

@@ -178,10 +178,6 @@ pub struct ProjectTransformContext {
     pub output_dir: PathBuf,
     /// Active target name (e.g., "website", "book").
     pub target_name: String,
-    /// Whether to use portable (relative) URLs.
-    pub portable: bool,
-    /// Whether running in serve mode.
-    pub serve: bool,
 }
 
 /// Project-level transform. Operates on all rendered pages at once.

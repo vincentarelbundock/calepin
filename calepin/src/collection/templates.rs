@@ -5,15 +5,13 @@ use std::sync::Arc;
 use anyhow::Result;
 use minijinja::Environment;
 
-use crate::utils::links::UrlMode;
-
 /// Initialize MiniJinja by loading template files from `templates/{target_name}/`.
 ///
 /// Files use flat namespacing: `{% extends "base.html" %}`
 /// and `{% include "search.html" %}` work by filename alone.
 ///
 /// Returns Ok(None) if no templates are found at all (triggers orchestrator path).
-pub fn load_templates_with_url(base_dir: &Path, target_name: &str, base_path: &str, url_mode: UrlMode) -> Result<Option<Environment<'static>>> {
+pub fn load_templates(base_dir: &Path, target_name: &str) -> Result<Option<Environment<'static>>> {
     let mut templates: HashMap<String, String> = HashMap::new();
 
     let templates_dir = crate::paths::templates_dir(base_dir);
@@ -48,16 +46,14 @@ pub fn load_templates_with_url(base_dir: &Path, target_name: &str, base_path: &s
     });
 
     // Register link(path) function for templates.
-    // The base_path and url_mode are captured at load time; current_depth
-    // is injected per-page via the `_page_depth` context variable.
-    let bp = base_path.to_string();
-    env.add_function("link", move |path: String, state: &minijinja::State| -> String {
+    // Always produces page-relative paths. current_depth is injected
+    // per-page via the `_page_depth` context variable.
+    env.add_function("link", |path: String, state: &minijinja::State| -> String {
         let depth: usize = state.lookup("_page_depth")
             .and_then(|v| v.as_usize())
             .unwrap_or(0);
-        crate::utils::links::link(&path, &bp, url_mode, depth)
+        crate::utils::links::link(&path, depth)
     });
 
     Ok(Some(env))
 }
-

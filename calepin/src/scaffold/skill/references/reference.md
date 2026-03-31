@@ -46,7 +46,6 @@ calepin render document.qmd -t html,latex,typst  # multiple formats
 calepin render document.qmd -o paper.tex         # explicit output path
 calepin render document.qmd -s title="Draft" number-sections=true
 calepin render document.qmd -q                   # quiet mode
-calepin render index_calepin/config.toml --portable   # relative URLs for offline use
 ```
 
 ### preview

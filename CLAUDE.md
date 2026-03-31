@@ -47,7 +47,7 @@ make prof-batch     # Profile 1000 parallel files (gibberish)
 
 Run a single test: `cargo test test_name`
 
-CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--writer FORMAT] [--no-highlight] [--clean] [--portable]`
+CLI: `calepin <input.qmd> [-o PATH] [-t TARGET] [-s KEY=VALUE ...] [-q] [--writer FORMAT] [--no-highlight] [--clean]`
 
 Subcommands: `render` (default), `preview`, `init`, `flush`, `man`, `extra`. Shell completions: `calepin extra completions SHELL`.
 

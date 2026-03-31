@@ -49,19 +49,9 @@ pub(crate) fn apply_collection_templates(
     output: &Path,
     format: &str,
     target_name: &str,
-    url_mode: crate::utils::links::UrlMode,
-    serve: bool,
 ) -> Result<()> {
-    // In serve mode, ignore the deploy base path and use "/" so the local server works.
-    let base_path = if serve {
-        "/".to_string()
-    } else {
-        let raw_base = crate::utils::links::extract_base_path(meta.url.as_deref());
-        crate::utils::links::normalize_base_path(raw_base)
-    };
-
     // Initialize MiniJinja from templates/{target}/
-    let env = templates::load_templates_with_url(base_dir, target_name, &base_path, url_mode)?
+    let env = templates::load_templates(base_dir, target_name)?
         .ok_or_else(|| anyhow::anyhow!(
             "No template files found in templates/{}/. \
              At least base and page templates are required for multi-file collection mode.",
@@ -134,7 +124,7 @@ pub(crate) fn apply_collection_templates(
         mark_active(&mut nav_tree, &page.url);
 
         let page_depth = crate::utils::links::path_depth(&page.url);
-        context::resolve_nav_urls(&mut nav_tree, &base_path, url_mode, page_depth);
+        context::resolve_nav_urls(&mut nav_tree, page_depth);
 
         let base_name = if page.meta.listing.is_some() { "listing" } else { "main" };
         let template_name = if let Some(variant) = page.meta.tpl.get(base_name) {
@@ -151,9 +141,9 @@ pub(crate) fn apply_collection_templates(
             let mut doc_ctx = build_document_context(page, Some(result), pages, listing, &meta.languages, meta, base_dir);
             doc_ctx.pagination = pagination.clone();
 
-            doc_ctx.resolve_urls(&base_path, url_mode, page_depth);
+            doc_ctx.resolve_urls(page_depth);
             let mut resolved_navbar = collection_ctx.navbar.clone();
-            context::resolve_navbar_urls(&mut resolved_navbar, &base_path, url_mode, page_depth);
+            context::resolve_navbar_urls(&mut resolved_navbar, page_depth);
 
             // Merge per-page var over collection-level var so pages can override.
             let page_var_ctx = if page.meta.var.is_empty() {

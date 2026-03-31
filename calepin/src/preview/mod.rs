@@ -47,8 +47,6 @@ pub fn run_collection(
         true,
         false,
         args.format.as_deref(),
-        false,
-        true,
     )?;
     spinner.reset();
     spinner.enable_steady_tick(Duration::from_millis(80));
@@ -96,8 +94,6 @@ pub fn run_collection(
             false,
             true,
             target.as_deref(),
-            false,
-            true,
         );
         match result {
             Ok(()) => {

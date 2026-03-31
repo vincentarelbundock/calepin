@@ -1,18 +1,8 @@
 //! URL resolution helpers for site builds.
 //!
-//! All internal URLs flow through `link()` which applies the base path
-//! derived from the project `url` config field. `canonical_url()` produces
+//! All internal URLs flow through `link()` which produces page-relative
+//! paths (`../` prefixed based on page depth). `canonical_url()` produces
 //! absolute URLs for meta tags and feeds.
-
-/// URL generation mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum UrlMode {
-    /// Root-relative paths with base_path prefix: `/docs/assets/style.css`
-    #[default]
-    ServerRelative,
-    /// Page-relative paths for file:// browsing: `../../assets/style.css`
-    Relative,
-}
 
 /// Extract the path component from a site URL.
 ///
@@ -55,15 +45,13 @@ pub fn normalize_base_path(path: &str) -> String {
     }
 }
 
-/// Resolve an internal site path using the given mode and base path.
+/// Resolve an internal site path to a page-relative path.
 ///
-/// - `path`: site-root-relative path without leading `/` (e.g., `assets/calepin.css`)
-/// - `base_path`: normalized base path (e.g., `/docs/` or `/`)
-/// - `mode`: ServerRelative or Relative
+/// - `path`: site-root-relative path (e.g., `assets/calepin.css`, `/guide/intro.html`)
 /// - `current_depth`: nesting depth of the current page (0 = root, 1 = one dir deep, etc.)
 ///
 /// External URLs (http://, https://, #, data:, mailto:) pass through unchanged.
-pub fn link(path: &str, base_path: &str, mode: UrlMode, current_depth: usize) -> String {
+pub fn link(path: &str, current_depth: usize) -> String {
     if path.starts_with("http://") || path.starts_with("https://")
         || path.starts_with('#') || path.starts_with("data:")
         || path.starts_with("mailto:")
@@ -73,20 +61,14 @@ pub fn link(path: &str, base_path: &str, mode: UrlMode, current_depth: usize) ->
 
     let path = path.strip_prefix('/').unwrap_or(path);
 
-    match mode {
-        // base_path is normalized to always end with `/` (including "/" itself)
-        UrlMode::ServerRelative => format!("{}{}", base_path, path),
-        UrlMode::Relative => {
-            if current_depth == 0 {
-                if path.is_empty() { ".".to_string() } else { path.to_string() }
-            } else {
-                let prefix = "../".repeat(current_depth);
-                if path.is_empty() {
-                    prefix.trim_end_matches('/').to_string()
-                } else {
-                    format!("{}{}", prefix, path)
-                }
-            }
+    if current_depth == 0 {
+        if path.is_empty() { ".".to_string() } else { format!("./{}", path) }
+    } else {
+        let prefix = "../".repeat(current_depth);
+        if path.is_empty() {
+            prefix.trim_end_matches('/').to_string()
+        } else {
+            format!("{}{}", prefix, path)
         }
     }
 }
@@ -138,30 +120,20 @@ mod tests {
     }
 
     #[test]
-    fn test_link_server_relative() {
-        let sr = UrlMode::ServerRelative;
-        assert_eq!(link("assets/calepin.css", "/", sr, 0), "/assets/calepin.css");
-        assert_eq!(link("assets/calepin.css", "/docs/", sr, 0), "/docs/assets/calepin.css");
-        assert_eq!(link("guide/intro.html", "/docs/", sr, 0), "/docs/guide/intro.html");
-        assert_eq!(link("/guide/intro.html", "/docs/", sr, 0), "/docs/guide/intro.html");
-        assert_eq!(link("index.html", "/", sr, 0), "/index.html");
-    }
-
-    #[test]
     fn test_link_relative() {
-        let rel = UrlMode::Relative;
-        assert_eq!(link("assets/calepin.css", "/", rel, 0), "assets/calepin.css");
-        assert_eq!(link("assets/calepin.css", "/", rel, 1), "../assets/calepin.css");
-        assert_eq!(link("assets/calepin.css", "/", rel, 2), "../../assets/calepin.css");
-        assert_eq!(link("guide/intro.html", "/", rel, 1), "../guide/intro.html");
+        assert_eq!(link("assets/calepin.css", 0), "./assets/calepin.css");
+        assert_eq!(link("assets/calepin.css", 1), "../assets/calepin.css");
+        assert_eq!(link("assets/calepin.css", 2), "../../assets/calepin.css");
+        assert_eq!(link("guide/intro.html", 1), "../guide/intro.html");
+        assert_eq!(link("/guide/intro.html", 0), "./guide/intro.html");
+        assert_eq!(link("index.html", 0), "./index.html");
     }
 
     #[test]
     fn test_link_passthrough() {
-        let sr = UrlMode::ServerRelative;
-        assert_eq!(link("https://cdn.example.com/lib.js", "/", sr, 0), "https://cdn.example.com/lib.js");
-        assert_eq!(link("#section", "/", sr, 0), "#section");
-        assert_eq!(link("data:image/png;base64,abc", "/", sr, 0), "data:image/png;base64,abc");
+        assert_eq!(link("https://cdn.example.com/lib.js", 0), "https://cdn.example.com/lib.js");
+        assert_eq!(link("#section", 0), "#section");
+        assert_eq!(link("data:image/png;base64,abc", 0), "data:image/png;base64,abc");
     }
 
     #[test]
@@ -181,9 +153,7 @@ mod tests {
 
     #[test]
     fn test_link_empty_path() {
-        assert_eq!(link("", "/", UrlMode::ServerRelative, 0), "/");
-        assert_eq!(link("", "/docs/", UrlMode::ServerRelative, 0), "/docs/");
-        assert_eq!(link("", "/", UrlMode::Relative, 0), ".");
-        assert_eq!(link("", "/", UrlMode::Relative, 2), "../..");
+        assert_eq!(link("", 0), ".");
+        assert_eq!(link("", 2), "../..");
     }
 }

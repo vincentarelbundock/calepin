@@ -240,6 +240,7 @@ pub(crate) fn resolve_mime(path: &std::path::Path) -> &'static str {
         Some("pdf") => "application/pdf",
         Some("woff2") => "font/woff2",
         Some("woff") => "font/woff",
+        Some("wasm") => "application/wasm",
         Some("qmd") => "text/plain; charset=utf-8",
         _ => "application/octet-stream",
     }

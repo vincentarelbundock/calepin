@@ -200,18 +200,6 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
 .frontmatter .authors { margin-top: 0.8rem; }
 
 /* --- Page layout with TOC sidebar --- */
-.page-layout { display: flex; justify-content: center; }
-.page-layout > .container { max-width: 48rem; min-width: 0; padding: 2rem 1.5rem; }
-.toc-sidebar {
-  position: sticky; top: 2rem; align-self: flex-start;
-  width: 13rem; flex-shrink: 0;
-  max-height: calc(100dvh - 4rem); overflow-y: auto;
-  padding: 2rem 1rem 2rem 0;
-  border-inline-start: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
-}
-@media (max-width: 72rem) {
-  .toc-sidebar { display: none; }
-}
 
 /* --- Columns layout --- */
 .columns { display: flex; gap: 1rem; flex-wrap: wrap; }
@@ -265,12 +253,12 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
   border-inline-end: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
   overflow-y: auto; padding: 1rem 0; z-index: 100; font-size: var(--font-sm);
 }
-.sidebar-left nav { padding: 0 0.75rem; }
+.sidebar-left nav { padding: 0; }
 .sidebar-left ul { list-style: none; margin: 0; padding: 0; }
 .sidebar-left li { margin: 0; }
 
 .sidebar-left a {
-  display: block; padding: 0.35rem 0.75rem;
+  display: block; padding: 0.35rem 0.75rem 0.35rem 0;
   color: var(--c-text); border-radius: 4px; line-height: 1.4;
 }
 .sidebar-left a:hover { color: var(--c-text); background: color-mix(in srgb, var(--c-bg) 85%, var(--c-text) 5%); text-decoration: none; }
@@ -282,7 +270,7 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
 .sidebar-section-title {
   font-weight: 700; font-size: 0.8rem;
   letter-spacing: 0.05em; color: var(--c-text-muted);
-  padding: 0.75rem 0.75rem 0.35rem; margin-top: 0.5rem;
+  padding: 0.75rem 0.75rem 0.35rem 0; margin-top: 0.5rem;
   cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.3rem;
 }
 .sidebar-section-title::-webkit-details-marker { display: none; }
@@ -351,9 +339,7 @@ details.sidebar-section[open] > .sidebar-section-title::before { transform: rota
 
 body.split-active .sidebar-left { display: none; }
 body.split-active .sidebar-right { display: none; }
-body.split-active .content-main { padding: 2rem 2.5rem; padding-bottom: 0; overflow: hidden; }
-body.split-active .content-main > article { max-width: none; }
-body.split-active .site-body { max-width: none; }
+body.split-active .content-main { max-width: none; padding: 0; overflow: hidden; }
 
 body.split-active .split-wrapper {
   display: grid; grid-template-columns: 1fr 1fr; gap: 0;
@@ -756,10 +742,6 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: var(--fo
    10. Landing page
    ================================================================= */
 
-/* Hero sits inside the header band */
-.site-hero {
-  padding: 2rem 0 2.5rem;
-}
 
 /* Landing page removes the site-body since content is in the hero/main flow */
 .landing-descriptor {

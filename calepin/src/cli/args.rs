@@ -128,10 +128,6 @@ pub struct RenderArgs {
     /// Remove output directory before building (project manifests only)
     #[arg(long)]
     pub clean: bool,
-
-    /// Generate page-relative URLs for file:// browsing (no server needed)
-    #[arg(long)]
-    pub portable: bool,
 }
 
 #[derive(clap::Args, Debug)]

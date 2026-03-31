@@ -23,7 +23,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                     let meta = crate::config::load_project_metadata(&config).ok();
                     crate::paths::output_dir(&project_dir, meta.as_ref().and_then(|m| m.output.as_deref()))
                 });
-                return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref(), args.portable, false);
+                return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
             }
             ProjectKind::Document { qmd, .. } => {
                 // Multi-format: split comma-separated formats and render each
@@ -155,8 +155,6 @@ fn render_one_with_context(
             base_dir: project_root.to_path_buf(),
             output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
             target_name: ctx.target_name.clone(),
-            portable: false,
-            serve: false,
         };
         let meta = ctx.project_metadata.clone().unwrap_or_default();
         let mut pages = vec![crate::registry::RenderedPage { body: final_body, ..page }];

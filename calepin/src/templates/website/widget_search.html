@@ -21,16 +21,24 @@
   const toggle = document.querySelector('[data-search-toggle]');
   const input = overlay.querySelector('.search-input');
   const resultsEl = overlay.querySelector('.search-results');
+  const statusEl = document.getElementById('search-status');
   let selectedIdx = -1;
+  let pagefind = null;
 
-  // Preload pagefind immediately
-  const pagefind = await import('{{ link("pagefind/pagefind.js") }}');
+  async function loadPagefind() {
+    if (pagefind) return pagefind;
+    try {
+      pagefind = await import('{{ link("pagefind/pagefind.js") }}');
+    } catch (e) {
+      console.error('Pagefind load error:', e);
+      resultsEl.innerHTML = '<div class="search-hint">Search index not available.</div>';
+    }
+    return pagefind;
+  }
 
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
-
-  const statusEl = document.getElementById('search-status');
 
   async function doSearch(query) {
     if (!query.trim()) {
@@ -42,8 +50,18 @@
       return;
     }
 
-    const search = await pagefind.search(query);
-    const results = await Promise.all(search.results.slice(0, 15).map(r => r.data()));
+    const pf = await loadPagefind();
+    if (!pf) return;
+
+    let search, results;
+    try {
+      search = await pf.search(query);
+      results = await Promise.all(search.results.slice(0, 15).map(r => r.data()));
+    } catch (e) {
+      console.error('Pagefind search error:', e);
+      resultsEl.innerHTML = '<div class="search-hint">Search error. Try rebuilding the index.</div>';
+      return;
+    }
     selectedIdx = -1;
     input.removeAttribute('aria-activedescendant');
 
@@ -88,7 +106,6 @@
   }
   function close() {
     overlay.classList.remove('active');
-    // Return focus to the toggle button
     if (toggle) toggle.focus();
   }
 

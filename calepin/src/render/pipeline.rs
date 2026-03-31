@@ -335,8 +335,6 @@ pub fn render_file(
             base_dir: pr.to_path_buf(),
             output_dir: output_path.parent().unwrap_or(Path::new(".")).to_path_buf(),
             target_name: format.unwrap_or("html").to_string(),
-            portable: false,
-            serve: false,
         };
         let mut pages = vec![page];
         if let Err(e) = registry.run_project_transforms(&mut pages, &result.metadata, pipeline.writer(), &ctx, &t.modules) {

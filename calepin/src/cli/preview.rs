@@ -9,6 +9,17 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
         return kill_preview_servers();
     }
 
+    // Static directory: serve as-is if it contains index.html but no index.qmd
+    if args.input.is_dir() && args.input.join("index.html").exists() && !args.input.join("index.qmd").exists() {
+        return serve_static_dir(&args);
+    }
+    // HTML file: serve its parent directory
+    if args.input.extension().and_then(|e| e.to_str()) == Some("html") && args.input.exists() {
+        let dir = args.input.parent().unwrap_or(std::path::Path::new("."));
+        let args = PreviewArgs { input: dir.to_path_buf(), ..args };
+        return serve_static_dir(&args);
+    }
+
     use crate::paths::ProjectKind;
 
     match ProjectKind::discover(&args.input)? {
@@ -24,7 +35,7 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
 
             // Non-HTML targets: one-shot build and open
             if target.writer != "html" {
-                crate::collection::build_collection(Some(config.as_path()), &output, true, false, Some(&target_name), false, true)?;
+                crate::collection::build_collection(Some(config.as_path()), &output, true, false, Some(&target_name))?;
                 let pdf = output.join("book.pdf");
                 if pdf.exists() {
                     eprintln!("Opening {}", pdf.display());
@@ -40,6 +51,32 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
             crate::preview::run(&qmd, &args, &ctx.target_name, &ctx.target)
         }
     }
+}
+
+/// Serve a static directory (no build step).
+fn serve_static_dir(args: &PreviewArgs) -> Result<()> {
+    use std::sync::atomic::{AtomicU64, AtomicBool, Ordering};
+    use std::sync::Arc;
+
+    let dir = args.input.canonicalize()?;
+    let version = Arc::new(AtomicU64::new(1));
+    let (_handle, port) = crate::preview::server::start_collection(
+        args.port,
+        Arc::clone(&version),
+        dir.clone(),
+    )?;
+
+    let url = format!("http://localhost:{}", port);
+    eprintln!("  \x1b[36mserving:\x1b[0m {} at {}", dir.display(), url);
+    let _ = open::that(&url);
+
+    let stop = Arc::new(AtomicBool::new(false));
+    let stop_clone = Arc::clone(&stop);
+    ctrlc::set_handler(move || { stop_clone.store(true, Ordering::Relaxed); }).ok();
+    while !stop.load(Ordering::Relaxed) {
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    Ok(())
 }
 
 /// Read the `target` field from a .qmd file's TOML front matter.

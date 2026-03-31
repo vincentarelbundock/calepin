@@ -519,34 +519,34 @@ fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcr
 }
 
 /// Rewrite all hrefs in a navbar config through `link()`.
-pub fn resolve_navbar_urls(navbar: &mut crate::config::NavbarConfig, base_path: &str, mode: crate::utils::links::UrlMode, depth: usize) {
-    fn resolve_items(items: &mut [crate::config::ContentSection], base_path: &str, mode: crate::utils::links::UrlMode, depth: usize) {
+pub fn resolve_navbar_urls(navbar: &mut crate::config::NavbarConfig, depth: usize) {
+    fn resolve_items(items: &mut [crate::config::ContentSection], depth: usize) {
         for item in items.iter_mut() {
             if let Some(ref mut href) = item.href {
-                *href = crate::utils::links::link(href, base_path, mode, depth);
+                *href = crate::utils::links::link(href, depth);
             }
-            resolve_items(&mut item.children, base_path, mode, depth);
+            resolve_items(&mut item.children, depth);
         }
     }
-    resolve_items(&mut navbar.left, base_path, mode, depth);
-    resolve_items(&mut navbar.middle, base_path, mode, depth);
-    resolve_items(&mut navbar.right, base_path, mode, depth);
+    resolve_items(&mut navbar.left, depth);
+    resolve_items(&mut navbar.middle, depth);
+    resolve_items(&mut navbar.right, depth);
 }
 
 /// Rewrite all hrefs in a nav tree through `link()`.
-pub fn resolve_nav_urls(nodes: &mut [PageNode], base_path: &str, mode: crate::utils::links::UrlMode, depth: usize) {
+pub fn resolve_nav_urls(nodes: &mut [PageNode], depth: usize) {
     for node in nodes.iter_mut() {
         if let Some(ref mut href) = node.href {
-            *href = crate::utils::links::link(href, base_path, mode, depth);
+            *href = crate::utils::links::link(href, depth);
         }
-        resolve_nav_urls(&mut node.children, base_path, mode, depth);
+        resolve_nav_urls(&mut node.children, depth);
     }
 }
 
 impl DocumentContext {
-    /// Rewrite all internal URLs through `link()` for the given mode and base path.
-    pub fn resolve_urls(&mut self, base_path: &str, mode: crate::utils::links::UrlMode, depth: usize) {
-        let resolve = |path: &str| crate::utils::links::link(path, base_path, mode, depth);
+    /// Rewrite all internal URLs through `link()` to page-relative paths.
+    pub fn resolve_urls(&mut self, depth: usize) {
+        let resolve = |path: &str| crate::utils::links::link(path, depth);
 
         self.url = resolve(&self.url);
         self.source_url = resolve(&self.source_url);
