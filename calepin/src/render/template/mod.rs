@@ -102,32 +102,54 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
 
 use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_authors};
 
-/// Load a page template by name and base (layered resolution).
+/// Load a page template by name and base.
 ///
-/// Checks user templates first (sidecar, then project-level), then falls
-/// through to built-in templates embedded in the binary.
+/// If the sidecar has a templates directory, loads ONLY from the filesystem.
+/// Otherwise, loads ONLY from built-in templates.
 pub fn load_page_template(template_name: &str, base: &str) -> String {
-    // Try filesystem first (sidecar → project)
-    if let Some(content) = crate::paths::resolve_template(template_name, base)
-        .and_then(|path| std::fs::read_to_string(&path).ok())
-    {
-        return content;
+    if has_sidecar_templates(base) {
+        crate::paths::resolve_template(template_name, base)
+            .and_then(|path| std::fs::read_to_string(&path).ok())
+            .unwrap_or_default()
+    } else {
+        crate::render::elements::resolve_builtin_template(template_name, base)
+            .unwrap_or("")
+            .to_string()
     }
-    // Fall through to built-in
-    crate::render::elements::resolve_builtin_template(template_name, base)
-        .unwrap_or("")
-        .to_string()
+}
+
+/// Check whether the active sidecar has a templates directory for the given base.
+fn has_sidecar_templates(base: &str) -> bool {
+    let chain = crate::paths::get_active_inheritance_chain();
+    let target = chain.first().map(|s| s.as_str()).unwrap_or(base);
+    let project_dir = crate::paths::get_project_dir();
+    let tpl_dir = crate::paths::templates_dir(&project_dir).join(target);
+    tpl_dir.is_dir()
 }
 
 
 pub fn load_default_css() -> String {
     let mut css = String::new();
 
-    // Base CSS from sidecar (walks inheritance chain)
-    if let Some(content) = crate::paths::resolve_template("main", "css")
-        .and_then(|path| std::fs::read_to_string(&path).ok())
-    {
-        css.push_str(&content);
+    if has_sidecar_templates("html") {
+        // Sidecar has templates: load ONLY from filesystem
+        if let Some(content) = crate::paths::resolve_template("main", "css")
+            .and_then(|path| std::fs::read_to_string(&path).ok())
+        {
+            css.push_str(&content);
+        }
+    } else {
+        // No sidecar templates: load ONLY from built-in
+        let chain = crate::paths::get_active_inheritance_chain();
+        for chain_target in &chain {
+            let path = format!("{}/main.css", chain_target);
+            if let Some(file) = crate::render::elements::BUILTIN_TEMPLATES.get_file(&path) {
+                if let Some(content) = file.contents_utf8() {
+                    css.push_str(content);
+                    break;
+                }
+            }
+        }
     }
 
     // Extension CSS (active target + side-loaded extensions)
@@ -219,6 +241,25 @@ impl TemplateVars {
         vars
     }
 
+}
+
+/// Recursively load templates from a built-in include_dir, stripping the prefix.
+/// Used to populate the page template environment with built-in includes.
+fn load_builtin_templates(
+    dir: &include_dir::Dir<'static>,
+    prefix: &std::path::Path,
+    templates: &mut HashMap<String, String>,
+) {
+    for file in dir.files() {
+        let rel = file.path().strip_prefix(prefix).unwrap_or(file.path());
+        let name = rel.display().to_string();
+        if let Some(content) = file.contents_utf8() {
+            templates.entry(name).or_insert_with(|| content.to_string());
+        }
+    }
+    for subdir in dir.dirs() {
+        load_builtin_templates(subdir, prefix, templates);
+    }
 }
 
 /// Build a MiniJinja render context from namespaced template variables.
@@ -608,25 +649,33 @@ pub fn render_page_template(
 
     let root = crate::paths::get_project_dir();
     let active_target = crate::paths::get_active_target();
-    let tpl_dir = crate::paths::templates_dir(&root);
-
-    // Load templates from the flat target directory
     let target = active_target.as_deref().unwrap_or(base);
-    let dir = tpl_dir.join(target);
-    let dirs = [dir];
 
-    for dir in &dirs {
-        if !dir.is_dir() { continue; }
-        let pattern = dir.join("**").join("*.*");
-        let pattern_str = pattern.display().to_string();
-        for entry in crate::util::safe_glob(&pattern_str) {
-            if let Ok(path) = entry {
-                if !path.is_file() { continue; }
-                if let Ok(content) = std::fs::read_to_string(&path) {
-                    let rel = path.strip_prefix(dir).unwrap_or(&path);
-                    let name = rel.display().to_string();
-                    templates.entry(name).or_insert(content);
+    if has_sidecar_templates(base) {
+        // Sidecar has templates: load ONLY from filesystem
+        let tpl_dir = crate::paths::templates_dir(&root);
+        let dir = tpl_dir.join(target);
+        if dir.is_dir() {
+            let pattern = dir.join("**").join("*.*");
+            let pattern_str = pattern.display().to_string();
+            for entry in crate::util::safe_glob(&pattern_str) {
+                if let Ok(path) = entry {
+                    if !path.is_file() { continue; }
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        let rel = path.strip_prefix(&dir).unwrap_or(&path);
+                        let name = rel.display().to_string();
+                        templates.entry(name).or_insert(content);
+                    }
                 }
+            }
+        }
+    } else {
+        // No sidecar templates: load from built-in (parent-first, child overrides)
+        let chain = crate::paths::get_active_inheritance_chain();
+        for chain_target in chain.iter().rev() {
+            if let Some(dir) = crate::render::elements::BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
+                let prefix = std::path::Path::new(chain_target.as_str());
+                load_builtin_templates(dir, prefix, &mut templates);
             }
         }
     }

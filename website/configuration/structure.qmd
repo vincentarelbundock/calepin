@@ -70,7 +70,7 @@ my_site/
   guide/
     intro.qmd
     advanced.qmd
-  _calepin_output/       # generated output (should be in .gitignore)
+  _calepin/              # cache and output (should be in .gitignore)
 ```
 
 Preview immediately:
@@ -86,8 +86,8 @@ calepin preview my_site
 | `index_calepin/config.toml` | Project configuration (targets, sidebar, navbar, etc.) |
 | `index_calepin/templates/` | Template overrides. Drop a file here to replace any built-in template. |
 | `index_calepin/assets/` | Static assets (CSS, images, logos) copied to output. |
-| `{stem}_calepin/` | Per-document sidecar: configuration, cached code output, generated figures. |
-| `_calepin_output/` | Default output directory for websites (configurable in `config.toml`). |
+| `_calepin/output/` | Default output directory for websites (configurable in `config.toml`). |
+| `_calepin/cache/` | Execution cache (per-document). |
 
 # Scaffolding commands
 

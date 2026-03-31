@@ -56,10 +56,6 @@ pub fn build_collection(
     let root_sidecar = found_path.parent().map(|p| p.to_path_buf());
     crate::paths::set_root_sidecar(root_sidecar.as_deref());
 
-    // Ensure templates for the active chain are on disk
-    let tpl_dir = crate::paths::templates_dir(&base_dir);
-    crate::paths::ensure_chain_templates(&tpl_dir);
-
     // Set extension template directories for layered resolution
     let mut ext_dirs = crate::config::context::resolve_extension_template_dirs_for(&collection_target_name, &base_dir);
     for ext_name in &meta.extensions {

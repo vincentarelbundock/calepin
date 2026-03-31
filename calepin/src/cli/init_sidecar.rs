@@ -1,75 +1,52 @@
-//! `calepin init sidecar` -- extract a sidecar directory from an existing .qmd document.
+//! `calepin init` -- create documents, websites, books, and extensions.
 //!
-//! Splits TOML front matter into identity fields (kept in the .qmd) and rendering
-//! fields (moved to `{stem}_calepin/config.toml`). Backs up the original file
-//! before rewriting.
+//! Usage:
+//!   calepin init paper.qmd              # new document (html target)
+//!   calepin init paper.qmd -t latex     # new document (latex target)
+//!   calepin init mysite -t website      # new website project
+//!   calepin init mybook -t book-typst   # new book project
+//!   calepin init extension myext        # new extension (inherits html)
 
 use std::path::Path;
 use anyhow::{bail, Result};
-use toml_edit::DocumentMut;
 
-/// Top-level TOML keys that describe document identity and stay in the front matter.
-const IDENTITY_KEYS: &[&str] = &[
-    "title",
-    "subtitle",
-    "author",
-    "authors",
-    "date",
-    "abstract",
-    "keywords",
-    "copyright",
-    "license",
-    "citation",
-    "funding",
-    "appendix-style",
-    "appendix_style",
-    "var",
-];
+use crate::cli::InitArgs;
 
-/// Extract the raw TOML front matter string and the body from a .qmd file.
-/// Returns `(front_matter_string, body_string, closing_delimiter)`.
-fn split_raw(text: &str) -> Option<(String, String, &'static str)> {
-    let lines: Vec<&str> = text.lines().collect();
-    if lines.is_empty() || lines[0].trim() != "---" {
-        return None;
+pub fn handle_init(args: InitArgs) -> Result<()> {
+    let path = &args.path;
+    let path_str = path.to_string_lossy();
+
+    // Special case: `calepin init extension <name>`
+    if path_str == "extension" {
+        // The target field doubles as the extension name for this case.
+        // Usage: calepin init extension -t html  (but really we need a name)
+        // Better: detect next positional somehow. For now, require -t as inherits.
+        bail!("Usage: calepin init extension <name> [--inherits TARGET]\n\
+               Use `calepin extra` subcommands for other utilities.");
     }
-    let mut end = None;
-    let mut closer = "---";
-    for (i, line) in lines.iter().enumerate().skip(1) {
-        let trimmed = line.trim_end();
-        if trimmed == "---" || trimmed == "..." {
-            end = Some(i);
-            if trimmed == "..." {
-                closer = "...";
-            }
-            break;
-        }
+
+    let is_qmd = path.extension().and_then(|e| e.to_str()) == Some("qmd");
+    let target = args.target.as_deref().unwrap_or(if is_qmd { "html" } else { "website" });
+
+    // Determine if this is a collection target
+    let is_collection = crate::config::extension::is_collection_target(target);
+
+    if is_collection {
+        // Collection: delegate to scaffold
+        let scaffold_name = if target.starts_with("book") { "book" } else { "website" };
+        crate::cli::scaffold::handle_init_new(path, Some(scaffold_name), None)
+    } else if is_qmd {
+        // Document: create .qmd (if needed) + sidecar with templates
+        init_document(path, target, args.force)
+    } else {
+        // Bare directory name without collection target -- assume website
+        crate::cli::scaffold::handle_init_new(path, Some("website"), None)
     }
-    let end = end?;
-    let raw = lines[1..end].join("\n");
-    let body = lines[end + 1..].join("\n");
-    if raw.trim().is_empty() {
-        return None;
-    }
-    Some((raw, body, closer))
 }
 
-pub fn handle_init_sidecar(
-    path: &Path,
-    force: bool,
-    write_templates: bool,
-    target_name: Option<&str>,
-    dry_run: bool,
-    no_backup: bool,
-) -> Result<()> {
-    if !path.exists() {
-        bail!("File not found: {}", path.display());
-    }
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-    if ext != "qmd" {
-        bail!("Expected a .qmd file, got: {}", path.display());
-    }
-
+/// Initialize a document: create the .qmd file if it doesn't exist,
+/// then create the sidecar with config.toml and all templates for the target.
+fn init_document(path: &Path, target: &str, force: bool) -> Result<()> {
     let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("doc");
     let parent = path.parent().unwrap_or(Path::new("."));
     let sidecar_dir = parent.join(format!("{}_calepin", stem));
@@ -81,160 +58,72 @@ pub fn handle_init_sidecar(
         );
     }
 
-    let text = std::fs::read_to_string(path)?;
-    let (raw_toml, body, closer) = match split_raw(&text) {
-        Some(parts) => parts,
-        None => {
-            if dry_run {
-                println!("No TOML front matter found. Would create sidecar with defaults at: {}", sidecar_dir.display());
-                return Ok(());
-            }
-            println!("No TOML front matter found. Creating sidecar with defaults.");
-            crate::paths::create_sidecar(&sidecar_dir);
-            if write_templates {
-                eject_for_target(&sidecar_dir, target_name);
-            }
-            if target_name.is_some() {
-                apply_target_assets(path, &sidecar_dir)?;
-            }
-            println!("Created: {}", sidecar_dir.display());
-            return Ok(());
+    // Create the .qmd file if it doesn't exist
+    if !path.exists() {
+        let content = format!("---\ntarget = \"{}\"\ntitle = \"{}\"\n---\n\n", target, stem);
+        if let Some(p) = path.parent() {
+            std::fs::create_dir_all(p)?;
         }
-    };
-
-    let doc: DocumentMut = match raw_toml.parse() {
-        Ok(d) => d,
-        Err(_) => {
-            if dry_run {
-                println!("Front matter is not valid TOML. Would create sidecar with defaults at: {}", sidecar_dir.display());
-                return Ok(());
-            }
-            println!("Front matter is not valid TOML. Creating sidecar with defaults.");
-            crate::paths::create_sidecar(&sidecar_dir);
-            if write_templates {
-                eject_for_target(&sidecar_dir, target_name);
-            }
-            if target_name.is_some() {
-                apply_target_assets(path, &sidecar_dir)?;
-            }
-            println!("Created: {}", sidecar_dir.display());
-            return Ok(());
-        }
-    };
-
-    // Partition keys into identity (stays) and rendering (moves to sidecar)
-    let mut identity_doc = DocumentMut::new();
-    let mut rendering_doc = DocumentMut::new();
-    let mut moved_keys: Vec<String> = Vec::new();
-    let mut kept_keys: Vec<String> = Vec::new();
-
-    for (key, item) in doc.iter() {
-        if is_identity_key(key) {
-            identity_doc[key] = item.clone();
-            kept_keys.push(key.to_string());
-        } else {
-            rendering_doc[key] = item.clone();
-            moved_keys.push(key.to_string());
-        }
-    }
-
-    let identity_toml = identity_doc.to_string();
-    let rendering_toml = rendering_doc.to_string();
-    let has_rendering = !rendering_toml.trim().is_empty();
-    let has_identity = !identity_toml.trim().is_empty();
-
-    // Build the new .qmd content
-    let new_qmd = if has_identity {
-        format!("---\n{}\n{}\n{}", identity_toml.trim_end(), closer, body)
-    } else {
-        body.clone()
-    };
-
-    if dry_run {
-        println!("Sidecar directory: {}", sidecar_dir.display());
-        if has_rendering {
-            println!("\nRendering keys to move to config.toml:");
-            for key in &moved_keys {
-                println!("  {}", key);
-            }
-        } else {
-            println!("\nNo rendering keys found in front matter.");
-        }
-        if has_identity {
-            println!("\nIdentity keys staying in front matter:");
-            for key in &kept_keys {
-                println!("  {}", key);
-            }
-        }
-        if has_rendering && !no_backup {
-            println!("\nWould back up {} to {}.bak", path.display(), path.display());
-        }
-        return Ok(());
+        std::fs::write(path, &content)?;
+        eprintln!("  Created: {}", path.display());
     }
 
     // Create sidecar directory
-    let sidecar_existed = sidecar_dir.exists();
     std::fs::create_dir_all(&sidecar_dir)?;
 
-    // Write config.toml
+    // Write config.toml with target and defaults
     let config_path = sidecar_dir.join("config.toml");
-    if has_rendering {
-        std::fs::write(&config_path, rendering_toml.trim_end().to_string() + "\n")?;
-        println!("Wrote rendering config to: {}", config_path.display());
-    } else {
-        let defaults = format!("{}\n{}", crate::config::SHARED_TOML, crate::config::DOCUMENT_TOML);
-        std::fs::write(&config_path, &defaults)?;
-        println!("No rendering keys in front matter. Wrote defaults to: {}", config_path.display());
-    }
+    let config = format!("target = \"{}\"\n\n{}\n{}", target, crate::config::SHARED_TOML, crate::config::DOCUMENT_TOML);
+    std::fs::write(&config_path, &config)?;
+    eprintln!("  Wrote: {}", config_path.display());
 
-    if write_templates {
-        eject_for_target(&sidecar_dir, target_name);
-        println!("Wrote built-in templates.");
-    }
+    // Write all templates for the target
+    eject_templates(&sidecar_dir, target);
+    eprintln!("  Wrote templates to: {}/templates/{}/", sidecar_dir.display(), target);
 
-    if let Some(target) = target_name {
-        apply_target_assets(path, &sidecar_dir)?;
-        println!("Applied target assets: {}", target);
-    }
+    // Copy built-in assets
+    let kind = crate::paths::ProjectKind::Document {
+        qmd: path.to_path_buf(),
+        sidecar: sidecar_dir.clone(),
+    };
+    crate::themes::copy_builtin_assets(&kind)?;
 
-    // Back up and rewrite the .qmd only on first run (sidecar didn't exist before).
-    // With --force on an existing sidecar, only update config/templates, not the .qmd.
-    let is_fresh = !sidecar_existed;
-    if has_rendering && is_fresh {
-        if !no_backup {
-            let backup = parent.join(format!("{}.qmd.bak", stem));
-            std::fs::copy(path, &backup)?;
-            println!("Backed up original to: {}", backup.display());
-        }
-        std::fs::write(path, &new_qmd)?;
-        println!("Rewrote front matter in: {}", path.display());
-    }
-
-    println!("Done.");
+    eprintln!("  Done: {}", sidecar_dir.display());
     Ok(())
 }
 
-fn is_identity_key(key: &str) -> bool {
-    let normalized = key.replace('-', "_");
-    IDENTITY_KEYS.iter().any(|k| k.replace('-', "_") == normalized)
-}
-
-fn apply_target_assets(qmd_path: &Path, sidecar: &Path) -> Result<()> {
-    use crate::paths::ProjectKind;
-    // Apply assets only (templates are ejected separately)
-    let kind = ProjectKind::Document {
-        qmd: qmd_path.to_path_buf(),
-        sidecar: sidecar.to_path_buf(),
-    };
-    crate::themes::copy_builtin_assets(&kind)
-}
-
-/// Eject templates for a target into the sidecar's templates/ directory.
-fn eject_for_target(sidecar: &Path, target_name: Option<&str>) {
-    let target = target_name.unwrap_or("html");
+/// Write all built-in templates for a target into the sidecar's templates/ directory.
+fn eject_templates(sidecar: &Path, target: &str) {
+    use crate::render::elements::BUILTIN_TEMPLATES;
     let empty = std::collections::HashMap::new();
     let project_root = sidecar.parent().unwrap_or(Path::new("."));
     let chain = crate::config::extension::inheritance_chain(project_root, target, &empty);
-    crate::paths::set_active_target_with_chain(Some(target), chain);
-    crate::paths::ensure_chain_templates(&sidecar.join("templates"));
+    crate::paths::set_active_target_with_chain(Some(target), chain.clone());
+    let dest = sidecar.join("templates").join(target);
+    // Parent-first so child overrides parent
+    for chain_target in chain.iter().rev() {
+        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
+            write_builtin_dir(dir, chain_target, &dest);
+        }
+    }
+}
+
+/// Recursively write files from a built-in directory, stripping the prefix.
+fn write_builtin_dir(dir: &include_dir::Dir<'static>, prefix: &str, dest: &std::path::Path) {
+    let prefix_path = std::path::Path::new(prefix);
+    for file in dir.files() {
+        let rel = file.path().strip_prefix(prefix_path).unwrap_or(file.path());
+        let out = dest.join(rel);
+        if let Some(content) = file.contents_utf8() {
+            if let Some(parent) = out.parent() { let _ = std::fs::create_dir_all(parent); }
+            let _ = std::fs::write(&out, content);
+        } else if !out.exists() {
+            // Binary files (icons, etc.)
+            if let Some(parent) = out.parent() { let _ = std::fs::create_dir_all(parent); }
+            let _ = std::fs::write(&out, file.contents());
+        }
+    }
+    for subdir in dir.dirs() {
+        write_builtin_dir(subdir, &subdir.path().display().to_string(), dest);
+    }
 }

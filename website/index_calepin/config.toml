@@ -4,6 +4,98 @@ target = "website"
 title = "Calepin"
 url = "https://vincentarelbundock.github.io/calepin"
 
+# -- Rendering --
+csl = "chicago-author-date"
+math = "katex"
+lang = "en"
+embed_resources = true
+dpi = 150.0
+
+[highlight]
+light = "github"
+dark = "nord"
+
+[figure]
+fig_width = 6.0
+fig_asp = 0.618
+out_width = 0.70
+device = "png"
+alignment = "center"
+
+[execute]
+cache = true
+eval = true
+echo = true
+include = true
+warning = true
+message = true
+error = true
+comment = "> "
+results = "markup"
+
+[toc]
+enabled = false
+depth = 3
+title = "Contents"
+
+[video]
+width = "100%"
+height = "400"
+title = "Video"
+
+[placeholder]
+width = "600"
+height = "400"
+color = "#cccccc"
+
+[lipsum]
+paragraphs = 1
+
+[layout]
+valign = "top"
+columns = 1
+rows = 1
+
+# -- Document targets --
+[targets.html]
+writer = "html"
+template = "main"
+extension = "html"
+fig_extension = "svg"
+fig_formats = ["svg", "png", "jpg", "webp", "gif"]
+preview = "serve"
+modules = ["highlight", "append_footnotes", "embed_images"]
+crossref = "html"
+
+[targets.latex]
+writer = "latex"
+template = "main"
+extension = "tex"
+fig_extension = "pdf"
+fig_formats = ["pdf", "eps", "svg", "png", "jpg"]
+preview = "serve"
+modules = ["highlight", "convert_svg_pdf"]
+crossref = "latex"
+toc_headings = false
+
+[targets.typst]
+writer = "typst"
+template = "main"
+extension = "typ"
+fig_extension = "svg"
+fig_formats = ["svg", "png", "jpg"]
+preview = "serve"
+modules = ["highlight"]
+crossref = "plain"
+
+[targets.markdown]
+writer = "markdown"
+extension = "md"
+fig_extension = "png"
+preview = "none"
+modules = ["highlight"]
+crossref = "plain"
+
 # -- Navbar --
 [[navbar.left]]
 icon = "assets/Calepin.svg"
@@ -14,7 +106,6 @@ height = "36px"
 [[navbar.middle]]
 text = "Documentation"
 href = "pages/installation.qmd"
-
 
 [[navbar.right]]
 icon = "assets/fontawesome/brands/github.svg"

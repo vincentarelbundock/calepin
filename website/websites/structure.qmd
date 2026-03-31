@@ -21,7 +21,7 @@ calepin preview my_website
 A *Calepin* website is a directory containing an `index_calepin/config.toml` manifest and `.qmd` source files. Here is the structure of the *Calepin* documentation website itself:
 
 ```{sh}
-tree .. -I '_site|_calepin_output|_calepin' --dirsfirst -L 2
+tree .. -I '_site|_calepin' --dirsfirst -L 2
 ```
 
 # Key components
@@ -30,9 +30,8 @@ tree .. -I '_site|_calepin_output|_calepin' --dirsfirst -L 2
 |------|---------|
 | `index_calepin/config.toml` | Website manifest: metadata, navbar, sidebar, documents, brand, format options |
 | `index_calepin/` | Project-level overrides for templates, elements, and assets |
-| `_calepin_output/` | Default output directory (generated, should be in `.gitignore`) |
-| `_calepin_files/` | Generated figures and supporting files (per-document) |
-| `_calepin_cache/` | Execution cache (per-document) |
+| `_calepin/output/` | Default output directory (generated, should be in `.gitignore`) |
+| `_calepin/cache/` | Execution cache (per-document) |
 
 # Manifest
 

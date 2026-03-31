@@ -100,10 +100,6 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
     let chain = config::extension::inheritance_chain(&effective_root, &target_name, user_targets);
     paths::set_active_target_with_chain(Some(&target_name), chain);
 
-    // Ensure templates for the active chain are on disk
-    let tpl_dir = paths::templates_dir(&effective_root);
-    paths::ensure_chain_templates(&tpl_dir);
-
     // Set extension template directories for layered resolution
     let mut ext_dirs = resolve_extension_template_dirs(&target_name, &effective_root);
 

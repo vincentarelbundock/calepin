@@ -1,61 +1,13 @@
-//! `calepin templates` subcommand: list, eject, show, diff, update, reset.
+//! `calepin templates` subcommand: list, show, diff, reset.
 //!
 //! All subcommands operate on a specific sidecar identified by the input .qmd file.
 
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
-use xxhash_rust::xxh3::xxh3_64;
 
 use crate::cli::TemplatesAction;
 use crate::render::elements::{BUILTIN_TEMPLATES, resolve_builtin_template};
-
-// ---------------------------------------------------------------------------
-// Hash utilities
-// ---------------------------------------------------------------------------
-
-fn compute_hash(content: &[u8]) -> String {
-    format!("{:016x}", xxh3_64(content))
-}
-
-const MARKER_PREFIX: &str = "{# calepin:xxh3:";
-const MARKER_SUFFIX: &str = " #}";
-
-fn parse_hash_marker(text: &str) -> Option<String> {
-    let first_line = text.lines().next()?;
-    let rest = first_line.strip_prefix(MARKER_PREFIX)?;
-    let hash = rest.strip_suffix(MARKER_SUFFIX)?;
-    Some(hash.to_string())
-}
-
-fn strip_hash_marker(text: &str) -> &str {
-    if text.starts_with(MARKER_PREFIX) {
-        text.find('\n').map(|i| &text[i + 1..]).unwrap_or("")
-    } else {
-        text
-    }
-}
-
-enum TemplateState {
-    Unmodified,
-    Modified,
-    NoMarker,
-}
-
-fn check_template_state(local_content: &str) -> TemplateState {
-    match parse_hash_marker(local_content) {
-        Some(marker_hash) => {
-            let body = strip_hash_marker(local_content);
-            let current_hash = compute_hash(body.as_bytes());
-            if current_hash == marker_hash {
-                TemplateState::Unmodified
-            } else {
-                TemplateState::Modified
-            }
-        }
-        None => TemplateState::NoMarker,
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Context: resolve sidecar + target from input .qmd
@@ -83,7 +35,6 @@ fn resolve_context(input: &Path, target_override: Option<&str>) -> Result<Templa
     let parent = input.parent().unwrap_or(Path::new("."));
     let sidecar = parent.join(format!("{}_calepin", stem));
 
-    // Read target from front matter if not overridden
     let target_name = if let Some(t) = target_override {
         t.to_string()
     } else {
@@ -107,22 +58,44 @@ fn resolve_context(input: &Path, target_override: Option<&str>) -> Result<Templa
     Ok(TemplateContext { tpl_dir, sidecar, target_name, writer, ext, chain })
 }
 
-/// Collect all template names from built-in templates for the given inheritance chain.
-fn collect_builtin_names(chain: &[String]) -> Vec<String> {
+/// Collect all built-in template filenames for the given inheritance chain.
+fn collect_builtin_files(chain: &[String], ext: &str) -> Vec<String> {
     let mut names: Vec<String> = Vec::new();
     for chain_target in chain {
         if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
-            for file in dir.files() {
-                if let Some(stem) = file.path().file_stem().and_then(|s| s.to_str()) {
-                    if !names.contains(&stem.to_string()) {
-                        names.push(stem.to_string());
-                    }
-                }
-            }
+            let prefix = std::path::Path::new(chain_target.as_str());
+            collect_dir_files(dir, prefix, &mut names);
         }
     }
     names.sort();
+    names.dedup();
     names
+}
+
+fn collect_dir_files(dir: &include_dir::Dir<'static>, prefix: &Path, names: &mut Vec<String>) {
+    for file in dir.files() {
+        let rel = file.path().strip_prefix(prefix).unwrap_or(file.path());
+        let name = rel.display().to_string();
+        if !names.contains(&name) {
+            names.push(name);
+        }
+    }
+    for subdir in dir.dirs() {
+        collect_dir_files(subdir, prefix, names);
+    }
+}
+
+/// Get built-in template content by filename, walking the chain (child-first).
+fn get_builtin_content(chain: &[String], filename: &str) -> Option<String> {
+    for chain_target in chain {
+        let path = format!("{}/{}", chain_target, filename);
+        if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+            if let Some(content) = file.contents_utf8() {
+                return Some(content.to_string());
+            }
+        }
+    }
+    None
 }
 
 // ---------------------------------------------------------------------------
@@ -132,11 +105,9 @@ fn collect_builtin_names(chain: &[String]) -> Vec<String> {
 pub fn handle_templates(action: TemplatesAction) -> Result<()> {
     match action {
         TemplatesAction::List { input, target } => handle_list(&input, target.as_deref()),
-        TemplatesAction::Eject { input, target, force, dry_run } => handle_eject(&input, target.as_deref(), force, dry_run),
         TemplatesAction::Show { name, input, target } => handle_show(&name, &input, target.as_deref()),
-        TemplatesAction::Diff { input, target } => handle_diff(&input, target.as_deref()),
-        TemplatesAction::Update { input, target, force, dry_run } => handle_update(&input, target.as_deref(), force, dry_run),
-        TemplatesAction::Reset { name, input, target } => handle_reset(&name, &input, target.as_deref()),
+        TemplatesAction::Diff { input, name, target } => handle_diff(&input, name.as_deref(), target.as_deref()),
+        TemplatesAction::Reset { input, name, target, force } => handle_reset(&input, name.as_deref(), target.as_deref(), force),
     }
 }
 
@@ -146,134 +117,55 @@ pub fn handle_templates(action: TemplatesAction) -> Result<()> {
 
 fn handle_list(input: &Path, target: Option<&str>) -> Result<()> {
     let ctx = resolve_context(input, target)?;
-    let names = collect_builtin_names(&ctx.chain);
+    let builtin_files = collect_builtin_files(&ctx.chain, &ctx.ext);
 
-    println!("Templates for '{}' (target: {}, writer: {}):\n",
-        input.display(), ctx.target_name, ctx.writer);
+    println!("Templates for '{}' (target: {}):\n", input.display(), ctx.target_name);
 
-    for name in &names {
-        let specific = format!("{}.{}", name, ctx.ext);
-        let path = ctx.tpl_dir.join(&specific);
+    // Collect local files
+    let mut local_files: Vec<String> = Vec::new();
+    if ctx.tpl_dir.is_dir() {
+        let pattern = ctx.tpl_dir.join("**").join("*.*");
+        for entry in crate::util::safe_glob(&pattern.display().to_string()) {
+            if let Ok(path) = entry {
+                if path.is_file() {
+                    let rel = path.strip_prefix(&ctx.tpl_dir).unwrap_or(&path);
+                    local_files.push(rel.display().to_string());
+                }
+            }
+        }
+        local_files.sort();
+    }
+
+    // Show built-in templates with status
+    for name in &builtin_files {
+        let path = ctx.tpl_dir.join(name);
         if path.exists() {
-            let rel = path.strip_prefix(&ctx.sidecar).unwrap_or(&path);
-            let state_label = match std::fs::read_to_string(&path) {
-                Ok(content) => match check_template_state(&content) {
-                    TemplateState::Unmodified => "\x1b[32mlocal\x1b[0m",
-                    TemplateState::Modified => "\x1b[33mmodified\x1b[0m",
-                    TemplateState::NoMarker => "\x1b[33mlocal (no marker)\x1b[0m",
-                },
-                Err(_) => "\x1b[31merror\x1b[0m",
-            };
-            println!("  {}  {}  {}", specific, state_label, rel.display());
-        } else if resolve_builtin_template(name, &ctx.writer).is_some() {
-            println!("  {}  \x1b[36mnot ejected\x1b[0m", specific);
+            let local = std::fs::read_to_string(&path).unwrap_or_default();
+            let builtin = get_builtin_content(&ctx.chain, name).unwrap_or_default();
+            if local == builtin {
+                println!("  {}  \x1b[36mdefault\x1b[0m", name);
+            } else {
+                println!("  {}  \x1b[33mmodified\x1b[0m", name);
+            }
+        } else {
+            println!("  {}  \x1b[90mmissing\x1b[0m", name);
+        }
+    }
+
+    // Show custom templates (in sidecar but not in built-in)
+    for name in &local_files {
+        if !builtin_files.contains(name) {
+            println!("  {}  \x1b[32mcustom\x1b[0m", name);
         }
     }
 
     if ctx.tpl_dir.is_dir() {
         println!("\nTemplates: {}", ctx.tpl_dir.display());
     } else {
-        println!("\nNo templates directory yet. Run `calepin templates eject` to create it.");
+        println!("\nNo sidecar. Run `calepin init {}` to create one.", input.display());
     }
 
     Ok(())
-}
-
-// ---------------------------------------------------------------------------
-// eject
-// ---------------------------------------------------------------------------
-
-fn handle_eject(input: &Path, target: Option<&str>, force: bool, dry_run: bool) -> Result<()> {
-    let ctx = resolve_context(input, target)?;
-
-    let mut written = 0;
-    // Child-first: child templates take priority, parents fill gaps
-    for chain_target in &ctx.chain {
-        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
-            written += eject_dir_flat(dir, chain_target, &ctx.tpl_dir, force, dry_run)?;
-        }
-    }
-
-    if dry_run {
-        eprintln!("Dry run: would write {} file(s) to {}", written, ctx.tpl_dir.display());
-    } else if written > 0 {
-        eprintln!("Ejected {} template(s) to {}", written, ctx.tpl_dir.display());
-    } else {
-        eprintln!("All templates already exist (use --force to overwrite).");
-    }
-
-    Ok(())
-}
-
-/// Eject files from a built-in directory into a flat destination.
-fn eject_dir_flat(
-    dir: &include_dir::Dir<'static>,
-    prefix: &str,
-    dest: &Path,
-    force: bool,
-    dry_run: bool,
-) -> Result<usize> {
-    let mut written = 0;
-    let prefix_path = std::path::Path::new(prefix);
-
-    for file in dir.files() {
-        let rel = file.path().strip_prefix(prefix_path).unwrap_or(file.path());
-        let out = dest.join(rel);
-        if out.exists() && !force {
-            continue;
-        }
-        if let Some(content) = file.contents_utf8() {
-            if dry_run {
-                eprintln!("  would write: {}", rel.display());
-            } else {
-                if let Some(parent) = out.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                std::fs::write(&out, crate::paths::prepend_hash_marker(content))?;
-            }
-            written += 1;
-        }
-    }
-
-    for subdir in dir.dirs() {
-        let sub_rel = subdir.path().strip_prefix(prefix_path).unwrap_or(subdir.path());
-        written += eject_subdir_flat(subdir, &dest.join(sub_rel), force, dry_run)?;
-    }
-
-    Ok(written)
-}
-
-fn eject_subdir_flat(
-    dir: &include_dir::Dir<'static>,
-    dest: &Path,
-    force: bool,
-    dry_run: bool,
-) -> Result<usize> {
-    let mut written = 0;
-
-    for file in dir.files() {
-        let name = file.path().file_name().unwrap_or_default();
-        let out = dest.join(name);
-        if out.exists() && !force {
-            continue;
-        }
-        if let Some(content) = file.contents_utf8() {
-            if !dry_run {
-                if let Some(parent) = out.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                std::fs::write(&out, crate::paths::prepend_hash_marker(content))?;
-            }
-            written += 1;
-        }
-    }
-
-    for subdir in dir.dirs() {
-        let sub_name = subdir.path().file_name().unwrap_or_default();
-        written += eject_subdir_flat(subdir, &dest.join(sub_name), force, dry_run)?;
-    }
-
-    Ok(written)
 }
 
 // ---------------------------------------------------------------------------
@@ -282,17 +174,30 @@ fn eject_subdir_flat(
 
 fn handle_show(name: &str, input: &Path, target: Option<&str>) -> Result<()> {
     let ctx = resolve_context(input, target)?;
+
+    // Try local file first
     let specific = format!("{}.{}", name, ctx.ext);
     let path = ctx.tpl_dir.join(&specific);
-
     if path.exists() {
-        let content = std::fs::read_to_string(&path)?;
-        print!("{}", strip_hash_marker(&content));
+        print!("{}", std::fs::read_to_string(&path)?);
         return Ok(());
     }
 
-    // Show the built-in version if not ejected
+    // Try exact filename (e.g., "base.html")
+    let path = ctx.tpl_dir.join(name);
+    if path.exists() {
+        print!("{}", std::fs::read_to_string(&path)?);
+        return Ok(());
+    }
+
+    // Fall back to built-in
     if let Some(content) = resolve_builtin_template(name, &ctx.writer) {
+        print!("{}", content);
+        return Ok(());
+    }
+
+    // Try by full filename in chain
+    if let Some(content) = get_builtin_content(&ctx.chain, name) {
         print!("{}", content);
         return Ok(());
     }
@@ -304,37 +209,55 @@ fn handle_show(name: &str, input: &Path, target: Option<&str>) -> Result<()> {
 // diff
 // ---------------------------------------------------------------------------
 
-fn handle_diff(input: &Path, target: Option<&str>) -> Result<()> {
+fn handle_diff(input: &Path, name: Option<&str>, target: Option<&str>) -> Result<()> {
     let ctx = resolve_context(input, target)?;
-    let names = collect_builtin_names(&ctx.chain);
-    let mut found_diff = false;
 
-    for name in &names {
-        let specific = format!("{}.{}", name, ctx.ext);
-        let path = ctx.tpl_dir.join(&specific);
+    if !ctx.tpl_dir.is_dir() {
+        bail!("No sidecar templates at {}. Run `calepin init {}` first.", ctx.tpl_dir.display(), input.display());
+    }
+
+    let files: Vec<String> = if let Some(name) = name {
+        // Single file: try exact name, then name.ext
+        let path = ctx.tpl_dir.join(name);
+        if path.exists() {
+            vec![name.to_string()]
+        } else {
+            let specific = format!("{}.{}", name, ctx.ext);
+            let path = ctx.tpl_dir.join(&specific);
+            if path.exists() {
+                vec![specific]
+            } else {
+                bail!("Template '{}' not found in {}", name, ctx.tpl_dir.display());
+            }
+        }
+    } else {
+        collect_builtin_files(&ctx.chain, &ctx.ext)
+    };
+
+    let mut found_diff = false;
+    for filename in &files {
+        let path = ctx.tpl_dir.join(filename);
         if !path.exists() { continue; }
 
-        let local_content = match std::fs::read_to_string(&path) {
+        let local = match std::fs::read_to_string(&path) {
             Ok(c) => c,
             Err(_) => continue,
         };
-        let local_body = strip_hash_marker(&local_content);
 
-        let builtin = match resolve_builtin_template(name, &ctx.writer) {
+        let builtin = match get_builtin_content(&ctx.chain, filename) {
             Some(b) => b,
             None => continue,
         };
 
-        if local_body == builtin { continue; }
+        if local == builtin { continue; }
 
         found_diff = true;
-        println!("\x1b[1m--- built-in: {}\x1b[0m", specific);
-        println!("\x1b[1m+++ local:    {}\x1b[0m", specific);
+        println!("\x1b[1m--- built-in: {}\x1b[0m", filename);
+        println!("\x1b[1m+++ local:    {}\x1b[0m", filename);
 
         let builtin_lines: Vec<&str> = builtin.lines().collect();
-        let local_lines: Vec<&str> = local_body.lines().collect();
+        let local_lines: Vec<&str> = local.lines().collect();
         let max = builtin_lines.len().max(local_lines.len());
-
         for i in 0..max {
             match (builtin_lines.get(i), local_lines.get(i)) {
                 (Some(b), Some(l)) if b == l => println!(" {}", b),
@@ -358,96 +281,54 @@ fn handle_diff(input: &Path, target: Option<&str>) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// update
-// ---------------------------------------------------------------------------
-
-fn handle_update(input: &Path, target: Option<&str>, force: bool, dry_run: bool) -> Result<()> {
-    let ctx = resolve_context(input, target)?;
-    let names = collect_builtin_names(&ctx.chain);
-    let mut updated = 0;
-    let mut skipped = 0;
-
-    for name in &names {
-        let specific = format!("{}.{}", name, ctx.ext);
-        let path = ctx.tpl_dir.join(&specific);
-        if !path.exists() { continue; }
-
-        let local_content = match std::fs::read_to_string(&path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-
-        let builtin = match resolve_builtin_template(name, &ctx.writer) {
-            Some(b) => b,
-            None => continue,
-        };
-
-        let local_body = strip_hash_marker(&local_content);
-        if local_body == builtin { continue; }
-
-        let state = check_template_state(&local_content);
-        match state {
-            TemplateState::Unmodified => {
-                if dry_run {
-                    eprintln!("  would update: {}", specific);
-                } else {
-                    std::fs::write(&path, crate::paths::prepend_hash_marker(builtin))?;
-                    eprintln!("  updated: {}", specific);
-                }
-                updated += 1;
-            }
-            TemplateState::Modified | TemplateState::NoMarker => {
-                if force {
-                    if dry_run {
-                        eprintln!("  would overwrite (modified): {}", specific);
-                    } else {
-                        std::fs::write(&path, crate::paths::prepend_hash_marker(builtin))?;
-                        eprintln!("  overwritten: {}", specific);
-                    }
-                    updated += 1;
-                } else {
-                    eprintln!("  \x1b[33mskipped (modified):\x1b[0m {}", specific);
-                    skipped += 1;
-                }
-            }
-        }
-    }
-
-    if updated == 0 && skipped == 0 {
-        eprintln!("All templates are up to date.");
-    } else {
-        if updated > 0 {
-            let verb = if dry_run { "would update" } else { "updated" };
-            eprintln!("\n{} {} template(s).", verb, updated);
-        }
-        if skipped > 0 {
-            eprintln!("{} modified template(s) skipped (use --force to overwrite).", skipped);
-        }
-    }
-
-    Ok(())
-}
-
-// ---------------------------------------------------------------------------
 // reset
 // ---------------------------------------------------------------------------
 
-fn handle_reset(name: &str, input: &Path, target: Option<&str>) -> Result<()> {
+fn handle_reset(input: &Path, name: Option<&str>, target: Option<&str>, force: bool) -> Result<()> {
     let ctx = resolve_context(input, target)?;
-    let specific = format!("{}.{}", name, ctx.ext);
-    let path = ctx.tpl_dir.join(&specific);
 
-    if !path.exists() {
-        bail!("No local template '{}' found in {}", specific, ctx.tpl_dir.display());
+    if !ctx.tpl_dir.is_dir() {
+        bail!("No sidecar templates at {}. Nothing to reset.", ctx.tpl_dir.display());
     }
 
-    // Verify there's a built-in to replace it with
-    let builtin = resolve_builtin_template(name, &ctx.writer)
-        .ok_or_else(|| anyhow::anyhow!("No built-in template '{}' for writer '{}'", name, ctx.writer))?;
+    if let Some(name) = name {
+        // Reset single template
+        let path = ctx.tpl_dir.join(name);
+        let specific = format!("{}.{}", name, ctx.ext);
+        let path = if path.exists() { path } else { ctx.tpl_dir.join(&specific) };
+        let filename = if ctx.tpl_dir.join(name).exists() { name.to_string() } else { specific };
 
-    // Replace with the built-in version (with hash marker)
-    std::fs::write(&path, crate::paths::prepend_hash_marker(builtin))?;
-    eprintln!("Reset {} to built-in default.", specific);
+        let builtin = get_builtin_content(&ctx.chain, &filename)
+            .ok_or_else(|| anyhow::anyhow!("No built-in template '{}' for target '{}'", filename, ctx.target_name))?;
+
+        std::fs::write(&path, &builtin)?;
+        eprintln!("Reset {} to built-in.", filename);
+    } else {
+        // Reset all templates
+        if !force {
+            eprint!("Reset all templates in {} to built-in defaults? [y/N] ", ctx.tpl_dir.display());
+            let mut answer = String::new();
+            std::io::stdin().read_line(&mut answer)?;
+            if !answer.trim().eq_ignore_ascii_case("y") {
+                eprintln!("Aborted.");
+                return Ok(());
+            }
+        }
+
+        let files = collect_builtin_files(&ctx.chain, &ctx.ext);
+        let mut count = 0;
+        for filename in &files {
+            if let Some(builtin) = get_builtin_content(&ctx.chain, filename) {
+                let path = ctx.tpl_dir.join(filename);
+                if let Some(parent) = path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                std::fs::write(&path, &builtin)?;
+                count += 1;
+            }
+        }
+        eprintln!("Reset {} template(s) to built-in defaults.", count);
+    }
 
     Ok(())
 }

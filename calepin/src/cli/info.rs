@@ -62,5 +62,8 @@ pub fn handle_extra(action: ExtraAction) -> Result<()> {
         ExtraAction::Skill { project, claude, codex, opencode, pi, yes } => {
             crate::cli::skill::handle_skill(project, claude, codex, opencode, pi, yes)
         }
+        ExtraAction::Gibberish { files, paragraphs, dir, complexity } => {
+            crate::cli::new_gibberish::handle_new_gibberish(&dir, files, paragraphs, complexity)
+        }
     }
 }

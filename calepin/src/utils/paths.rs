@@ -264,125 +264,20 @@ pub fn resolve_project_root(config_path: &Path, fallback: &Path) -> PathBuf {
 ///
 /// Sidecars always live next to their `.qmd` file: `{parent}/{stem}_calepin/`.
 ///
-/// If the directory does not exist, creates it. In document mode (no project
-/// root set), a default `config.toml` and built-in templates are scaffolded;
-/// in collection mode, only the directory is created.
+/// Returns `None` if the directory does not exist. Sidecars are never
+/// auto-created; use `calepin init sidecar` to scaffold one explicitly.
 pub fn resolve_sidecar_dir(input: &Path) -> Option<PathBuf> {
     let stem = input.file_stem()?.to_string_lossy();
     let sidecar_name = format!("{}_calepin", stem);
     let dir = input.parent()?.join(&sidecar_name);
-    let project_dir = PROJECT_DIR.with(|r| r.borrow().clone());
-
-    if !dir.is_dir() {
-        if project_dir.is_some() {
-            // Collection mode: just create the directory
-            std::fs::create_dir_all(&dir).ok();
-        } else {
-            // Document mode: full scaffold with config.toml and templates
-            create_sidecar(&dir);
-        }
-    }
-    Some(dir)
-}
-
-/// Create a sidecar directory with a default `config.toml`.
-/// Templates are ejected later by `ensure_chain_templates` once the target is known.
-pub fn create_sidecar(dir: &Path) {
-    if let Err(e) = std::fs::create_dir_all(dir) {
-        eprintln!("Warning: could not create sidecar directory {}: {}", dir.display(), e);
-        return;
-    }
-    let config = format!("{}\n{}", crate::config::SHARED_TOML, crate::config::DOCUMENT_TOML);
-    if let Err(e) = std::fs::write(dir.join("config.toml"), &config) {
-        eprintln!("Warning: could not write sidecar config: {}", e);
+    if dir.is_dir() {
+        Some(dir)
+    } else {
+        None
     }
 }
 
-/// Prepend an xxh3 hash marker to template content.
-pub fn prepend_hash_marker(content: &str) -> String {
-    use xxhash_rust::xxh3::xxh3_64;
-    let hash = format!("{:016x}", xxh3_64(content.as_bytes()));
-    format!("{{# calepin:xxh3:{} #}}\n{}", hash, content)
-}
 
-/// Ensure built-in templates for the active target exist on disk.
-///
-/// Creates a flat `templates/{target}/` directory by walking the inheritance
-/// chain from parent to child: parent templates are written first, then child
-/// templates overwrite them. Files already on disk are never overwritten, so
-/// user edits are preserved across renders and upgrades.
-pub fn ensure_chain_templates(dest: &Path) {
-    use crate::render::elements::BUILTIN_TEMPLATES;
-    let chain = get_active_inheritance_chain();
-    if chain.is_empty() { return; }
-
-    // Target name is the first element (child-first chain)
-    let target_name = &chain[0];
-    let target_dest = dest.join(target_name);
-
-    // Walk child-first: child templates are written first, parent templates
-    // fill in the gaps. Files already on disk are never overwritten.
-    for chain_target in chain.iter() {
-        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
-            flatten_dir_into(dir, chain_target, &target_dest);
-        }
-    }
-}
-
-/// Flatten a built-in directory into dest.
-///
-/// New files are written. Existing files are updated only if they carry a
-/// hash marker that matches their body (i.e., the user has not edited them).
-/// Modified or marker-less files are left untouched.
-fn flatten_dir_into(dir: &include_dir::Dir<'static>, prefix: &str, dest: &Path) {
-    let prefix_path = std::path::Path::new(prefix);
-    for file in dir.files() {
-        let rel = file.path().strip_prefix(prefix_path).unwrap_or(file.path());
-        let out = dest.join(rel);
-        let Some(content) = file.contents_utf8() else {
-            // Binary file: write only if missing
-            if !out.exists() {
-                if let Some(parent) = out.parent() { let _ = std::fs::create_dir_all(parent); }
-                let _ = std::fs::write(&out, file.contents());
-            }
-            continue;
-        };
-        let new_marked = prepend_hash_marker(content);
-        if out.exists() {
-            // Check if the local copy is an unmodified built-in
-            if let Ok(local) = std::fs::read_to_string(&out) {
-                if is_unmodified_builtin(&local) {
-                    // Safe to overwrite: update to new built-in version
-                    if local != new_marked {
-                        let _ = std::fs::write(&out, &new_marked);
-                    }
-                }
-                // else: user-modified or no marker -- leave it alone
-            }
-        } else {
-            if let Some(parent) = out.parent() { let _ = std::fs::create_dir_all(parent); }
-            let _ = std::fs::write(&out, &new_marked);
-        }
-    }
-    for subdir in dir.dirs() {
-        let sub_rel = subdir.path().strip_prefix(prefix_path).unwrap_or(subdir.path());
-        flatten_dir_into(subdir, &subdir.path().display().to_string(), &dest.join(sub_rel));
-    }
-}
-
-/// Check whether a local template file is an unmodified copy of a built-in.
-///
-/// Returns true if the file starts with a `{# calepin:xxh3:HASH #}` marker
-/// and the hash matches the body content below it.
-fn is_unmodified_builtin(content: &str) -> bool {
-    use xxhash_rust::xxh3::xxh3_64;
-    let Some(first_line) = content.lines().next() else { return false; };
-    let Some(rest) = first_line.strip_prefix("{# calepin:xxh3:") else { return false; };
-    let Some(marker_hash) = rest.strip_suffix(" #}") else { return false; };
-    let body = content.find('\n').map(|i| &content[i + 1..]).unwrap_or("");
-    let actual_hash = format!("{:016x}", xxh3_64(body.as_bytes()));
-    actual_hash == marker_hash
-}
 
 /// Write an embedded `include_dir::Dir` to disk, preserving subdirectory structure.
 /// Silently skips files that fail to write.
@@ -428,24 +323,20 @@ impl PathContext {
         Self { project_root, output_dir }
     }
 
-    /// Resolve a subdirectory under the page sidecar (`{stem}_calepin/{subdir}/`).
-    /// Falls back to `{fallback_root}/{stem}_calepin/{subdir}/` if no sidecar is set.
-    fn sidecar_or_project_subdir(subdir: &str, stem: &str, fallback_root: &Path) -> PathBuf {
-        if let Some(sidecar) = get_page_sidecar() {
-            sidecar.join(subdir)
-        } else {
-            fallback_root.join(format!("{}_calepin", stem)).join(subdir)
-        }
-    }
-
     /// Resolve the figure output directory for a given document stem.
+    /// Places `{leaf_stem}_files/` next to the output file.
     pub fn figures_dir(&self, stem: &str) -> PathBuf {
-        Self::sidecar_or_project_subdir("files", stem, &self.output_dir)
+        // Use only the filename part of the stem (no directory components)
+        let leaf = std::path::Path::new(stem).file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(stem);
+        self.output_dir.join(format!("{}_files", leaf))
     }
 
     /// Resolve the cache directory for a given document stem.
+    /// Cache lives at `{project_root}/_calepin/cache/{stem}/`.
     pub fn cache_dir(&self, stem: &str) -> PathBuf {
-        Self::sidecar_or_project_subdir("cache", stem, &self.project_root)
+        self.project_root.join("_calepin").join("cache").join(stem)
     }
 
     /// Compute a relative stem from input path, for use as cache/figure key.
@@ -483,7 +374,7 @@ pub fn normalize_path(path: &Path) -> PathBuf {
 }
 
 /// Default output directory name for collection builds.
-pub const DEFAULT_OUTPUT_DIR: &str = "_calepin_output";
+pub const DEFAULT_OUTPUT_DIR: &str = "_calepin/output";
 
 /// Resolve the output directory for a collection build.
 /// Uses the config `output` field if set, otherwise `DEFAULT_OUTPUT_DIR`.

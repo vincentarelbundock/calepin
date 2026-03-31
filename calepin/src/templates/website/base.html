@@ -18,7 +18,6 @@
     <div class="site-frame site-topbar">
       {% include "navbar.html" %}
     </div>
-    {% block hero %}{% endblock %}
   </header>
 
   <div class="site-frame site-body{% if cfg.sidebar is defined and not cfg.sidebar %} no-sidebar{% endif %}{% if cfg.toc is defined and not cfg.toc %} no-toc{% endif %}">

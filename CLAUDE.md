@@ -231,12 +231,10 @@ User overrides: `{stem}_calepin/templates/{engine}/{name}.{ext}`
 
 Templates use Jinja syntax (`{{cfg.variable}}`, `{{clp.variable}}`, `{% if %}`, `{% for %}`). Variables are namespaced: `cfg.*` for user-authored values (front matter, attributes, labels), `clp.*` for engine-computed values (rendered content, format, assets). Variable names use underscores. CSS class names in source documents keep dashes; the resolver normalizes dashes to underscores for lookup.
 
-**Template resolution order** (first match wins, layered):
-1. Module element dirs (in registry order)
-2. Sidecar templates: `{stem}_calepin/templates/{target|writer|common}/`
-3. Project templates: `{stem}_calepin/templates/{target|writer|common}/` (root sidecar)
-4. Extension templates: `{stem}_calepin/extensions/{name}/templates/{writer|common}/` (child-first inheritance)
-5. Built-in `templates/{writer}/{name}.{ext}` (embedded in binary)
+**Template resolution** (no mixing/layering):
+- If a sidecar (`{stem}_calepin/`) exists: use ONLY filesystem templates from the sidecar
+- If no sidecar exists: use ONLY built-in templates embedded in the binary
+- Module element dirs (in registry order) are always checked first
 
 Resolution is layered: individual files can be overridden at any level. Missing files fall through to the next level. `calepin init` does not copy templates; projects start clean and override only what they need.
 

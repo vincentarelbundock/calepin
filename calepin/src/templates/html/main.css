@@ -14,25 +14,27 @@
    Override these to re-theme clp. All rules reference only --c-*
    tokens, never raw color values.
    Default palette: Nord  https://www.nordtheme.com
+   Dark values are defined once via light-dark(); the active mode
+   is controlled by color-scheme on <html>.
    ================================================================= */
 
 :root {
   color-scheme: light;
 
   /* Surface & text */
-  --c-bg:           #fafbfc;
-  --c-bg-secondary: #f3f5f7;
-  --c-bg-tertiary:  #ebeef1;
-  --c-text:         #2e3440;
-  --c-text-muted:   #616e7c;
-  --c-text-secondary: #525d6e;
-  --c-link:         #5e81ac;
-  --c-border:       #e0e4e8;
-  --c-code-bg:      #f3f5f7;
-  --c-accent:       #5e81ac;
+  --c-bg:             light-dark(#fafbfc, #2f3643);
+  --c-bg-secondary:   light-dark(#f3f5f7, #353d4c);
+  --c-bg-tertiary:    light-dark(#ebeef1, #3b4454);
+  --c-text:           light-dark(#2e3440, #e5e9f0);
+  --c-text-muted:     light-dark(#616e7c, #9aa3b0);
+  --c-text-secondary: light-dark(#525d6e, #b8bfc9);
+  --c-link:           light-dark(#5e81ac, #88c0d0);
+  --c-border:         light-dark(#e0e4e8, #4a5568);
+  --c-code-bg:        light-dark(#f3f5f7, #343c4b);
+  --c-accent:         light-dark(#5e81ac, #88c0d0);
   --c-accent-contrast: #ffffff;
 
-  /* Component accents — semantic meaning */
+  /* Component accents -- semantic meaning */
   --c-note:         #5e81ac;
   --c-tip:          #a3be8c;
   --c-warning:      #ebcb8b;
@@ -41,11 +43,11 @@
   --c-success:      #2e7d32;
 
   /* Depth */
-  --c-shadow:       rgba(46, 52, 64, 0.08);
+  --c-shadow:       light-dark(rgba(46, 52, 64, 0.08), rgba(0, 0, 0, 0.3));
   --c-shadow-soft:  0 4px 12px var(--c-shadow);
   --c-shadow-pop:   0 2px 8px var(--c-shadow);
   --c-shadow-modal: 0 16px 48px var(--c-shadow);
-  --c-overlay-bg:   rgba(46, 52, 64, 0.5);
+  --c-overlay-bg:   light-dark(rgba(46, 52, 64, 0.5), rgba(0, 0, 0, 0.7));
 
   /* Site layout dimensions (used only when site chrome is present) */
   --c-sidebar-width: 280px;
@@ -53,46 +55,25 @@
   --c-navbar-height: 52px;
   --c-content-max-width: 900px;
   --c-site-width: 1500px;
+  --c-gutter: 1.25rem;
+
+  /* Z-index scale */
+  --z-sidebar: 100;
+  --z-theme-toggle: 200;
+  --z-header: 1000;
+  --z-dropdown: 1000;
+  --z-overlay: 2000;
+  --z-skip-link: 10000;
 
   /* Font sizes */
   --font-xs: 0.75rem;
   --font-sm: 0.875rem;
 }
 
-/* --- Dark theme --- */
-
-html[data-theme="dark"] {
-  color-scheme: dark;
-  --c-bg:           #2f3643;
-  --c-bg-secondary: #353d4c;
-  --c-bg-tertiary:  #3b4454;
-  --c-text:         #e5e9f0;
-  --c-text-muted:   #9aa3b0;
-  --c-text-secondary: #b8bfc9;
-  --c-link:         #88c0d0;
-  --c-border:       #4a5568;
-  --c-code-bg:      #343c4b;
-  --c-accent:       #88c0d0;
-  --c-shadow:       rgba(0, 0, 0, 0.3);
-  --c-overlay-bg:   rgba(0, 0, 0, 0.7);
-}
-
+/* --- Dark theme: flip color-scheme, light-dark() handles the rest --- */
+html[data-theme="dark"] { color-scheme: dark; }
 @media (prefers-color-scheme: dark) {
-  html:not([data-theme="light"]) {
-    color-scheme: dark;
-    --c-bg:           #2f3643;
-    --c-bg-secondary: #353d4c;
-    --c-bg-tertiary:  #3b4454;
-    --c-text:         #e5e9f0;
-    --c-text-muted:   #9aa3b0;
-    --c-text-secondary: #b8bfc9;
-    --c-link:         #88c0d0;
-    --c-border:       #4a5568;
-    --c-code-bg:      #343c4b;
-    --c-accent:       #88c0d0;
-    --c-shadow:       rgba(0, 0, 0, 0.3);
-    --c-overlay-bg:   rgba(0, 0, 0, 0.7);
-  }
+  html:not([data-theme="light"]) { color-scheme: dark; }
 }
 
 /* --- Logo switching (dark theme) --- */
@@ -183,7 +164,7 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
 /* --- Standalone document layout --- */
 
 /* --- Theme toggle --- */
-.theme-toggle { position: fixed; top: 0.75rem; right: 0.75rem; z-index: 200; margin: 0; padding: 0; }
+.theme-toggle { position: fixed; top: 0.75rem; right: 0.75rem; z-index: var(--z-theme-toggle); margin: 0; padding: 0; }
 .theme-toggle button { all: unset; cursor: pointer; font-size: 1.2rem; opacity: 0.5; }
 .theme-toggle button:hover { opacity: 1; }
 .theme-toggle button:focus-visible {
@@ -220,13 +201,13 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
 .site-frame {
   width: min(100%, var(--c-site-width));
   margin: 0 auto;
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
+  padding-left: var(--c-gutter);
+  padding-right: var(--c-gutter);
 }
 
 /* --- Site header: sticky, in document flow --- */
 .site-header {
-  position: sticky; top: 0; z-index: 1000;
+  position: sticky; top: 0; z-index: var(--z-header);
   background: var(--c-bg);
   border-bottom: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
   transition: transform 0.3s ease;
@@ -253,7 +234,7 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
 }
 
 .content-main {
-  flex: 1; min-width: 0; max-width: var(--c-content-max-width); padding: 2rem 2.5rem;
+  flex: 1; min-width: 0; max-width: var(--c-content-max-width); padding: 2rem var(--c-gutter);
 }
 
 .sidebar-left {
@@ -262,9 +243,9 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
   width: var(--c-sidebar-width); min-width: 200px; flex-shrink: 0;
   background: var(--c-bg);
   border-inline-end: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
-  overflow-y: auto; padding: 1rem 0; z-index: 100; font-size: var(--font-sm);
+  overflow-y: auto; padding: 1rem 0; z-index: var(--z-sidebar); font-size: var(--font-sm);
 }
-.sidebar-left nav { padding: 0 0.75rem; }
+.sidebar-left nav { padding: 0 var(--c-gutter); }
 .sidebar-left ul { list-style: none; margin: 0; padding: 0; }
 .sidebar-left li { margin: 0; }
 
@@ -318,7 +299,7 @@ details.sidebar-section[open] > .sidebar-section-title::before { transform: rota
   position: sticky; top: var(--c-navbar-height); align-self: flex-start;
   height: calc(100dvh - var(--c-navbar-height));
   width: var(--c-toc-width); overflow-y: auto;
-  padding: 1.5rem 1rem; font-size: 0.8rem; z-index: 100;
+  padding: 1.5rem 1rem; font-size: 0.8rem; z-index: var(--z-sidebar);
 }
 .sidebar-right .toc-title {
   font-weight: 700; font-size: var(--font-xs); text-transform: uppercase;
@@ -350,7 +331,7 @@ details.sidebar-section[open] > .sidebar-section-title::before { transform: rota
 
 body.split-active .sidebar-left { display: none; }
 body.split-active .sidebar-right { display: none; }
-body.split-active .content-main { padding: 2rem 2.5rem; padding-bottom: 0; overflow: hidden; }
+body.split-active .content-main { padding: 2rem var(--c-gutter); padding-bottom: 0; overflow: hidden; }
 body.split-active .content-main > article { max-width: none; }
 body.split-active .site-body { max-width: none; }
 
@@ -487,7 +468,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: var(--fo
   display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
   background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 0.25rem;
   padding: 0.5rem 0.75rem; font-size: 0.85rem; line-height: 1.4;
-  max-width: 300px; width: max-content; box-shadow: var(--c-shadow-pop); z-index: 100;
+  max-width: 300px; width: max-content; box-shadow: var(--c-shadow-pop); z-index: var(--z-sidebar);
 }
 .footnote-ref:hover .fn-preview { display: block; }
 .footnote-ref:focus-within .fn-preview { display: block; }
@@ -565,7 +546,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: var(--fo
 .navbar-dropdown-toggle svg { flex-shrink: 0; transition: transform 0.15s; }
 .navbar-dropdown.open > .navbar-dropdown-toggle svg { transform: rotate(90deg); }
 .navbar-dropdown-menu {
-  display: none; position: absolute; top: 100%; left: 0; z-index: 1000;
+  display: none; position: absolute; top: 100%; left: 0; z-index: var(--z-dropdown);
   min-width: 10rem; padding: 0.35rem 0; margin: 0.25rem 0 0;
   list-style: none; background: var(--c-bg); border: 1px solid var(--c-border);
   border-radius: 6px; box-shadow: var(--c-shadow-soft);
@@ -614,7 +595,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: var(--fo
 /* --- Search modal --- */
 .search-overlay {
   position: fixed; inset: 0; background: var(--c-overlay-bg);
-  z-index: 2000; display: none; align-items: flex-start;
+  z-index: var(--z-overlay); display: none; align-items: flex-start;
   justify-content: center; padding-top: 10vh;
 }
 .search-overlay.active { display: flex; }
@@ -680,7 +661,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: var(--fo
 
 /* --- Footer --- */
 .site-footer {
-  padding: 2rem 2.5rem; border-top: 1px solid var(--c-border);
+  padding: 2rem var(--c-gutter); border-top: 1px solid var(--c-border);
   font-size: 0.8rem; color: var(--c-text-muted); text-align: center;
 }
 .footer-logo { height: 2em; width: auto; vertical-align: middle; }
@@ -695,7 +676,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: var(--fo
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 .visually-hidden.focusable:focus {
-  position: fixed; top: 0; left: 0; z-index: 10000;
+  position: fixed; top: 0; left: 0; z-index: var(--z-skip-link);
   width: auto; height: auto; padding: 0.75em 1.5em; margin: 0;
   overflow: visible; clip: auto; white-space: normal;
   background: var(--c-bg); color: var(--c-text); font-weight: bold;
@@ -726,7 +707,7 @@ details.callout[open] > summary::before { content: "\25bc "; font-size: var(--fo
     display: flex; flex-direction: column;
     position: absolute; top: var(--c-navbar-height); left: 0; right: 0;
     background: var(--c-bg); border-bottom: 1px solid var(--c-border);
-    padding: 0.5rem 0; z-index: 999; align-items: flex-start;
+    padding: 0.5rem 0; z-index: var(--z-dropdown); align-items: flex-start;
   }
   .no-sidebar .site-brand { display: none; }
   .sidebar-left {

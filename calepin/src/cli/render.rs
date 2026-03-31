@@ -23,11 +23,11 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                     let meta = crate::config::load_project_metadata(&config).ok();
                     crate::paths::output_dir(&project_dir, meta.as_ref().and_then(|m| m.output.as_deref()))
                 });
-                return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.format.as_deref());
+                return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.target.as_deref());
             }
             ProjectKind::Document { qmd, .. } => {
                 // Multi-format: split comma-separated formats and render each
-                if let Some(ref fmt_str) = args.format {
+                if let Some(ref fmt_str) = args.target {
                     if fmt_str.contains(',') {
                         let formats: Vec<&str> = fmt_str.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
                         for f in &formats {
@@ -38,7 +38,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
                         return Ok(());
                     }
                 }
-                let mut ctx = crate::resolve_context(&qmd, args.format.as_deref())?;
+                let mut ctx = crate::resolve_context(&qmd, args.target.as_deref())?;
                 crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
                 return render_one_with_context(&qmd, args.output.as_deref(), &ctx, &overrides, args.quiet);
             }
@@ -53,7 +53,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
     }
 
     // Resolve project context once and share it across all files.
-    let mut ctx = crate::resolve_context(&args.input[0], args.format.as_deref())?;
+    let mut ctx = crate::resolve_context(&args.input[0], args.target.as_deref())?;
     crate::apply_writer_override(&mut ctx, args.writer.as_deref())?;
 
     let output_ext = args.output.as_ref().map(|dir| {

@@ -46,7 +46,7 @@ pub fn run_collection(
         &output,
         true,
         false,
-        args.format.as_deref(),
+        args.target.as_deref(),
     )?;
     spinner.reset();
     spinner.enable_steady_tick(Duration::from_millis(80));
@@ -79,7 +79,7 @@ pub fn run_collection(
     let watch_dir = base_dir.clone();
 
     let config_path = config_path.to_path_buf();
-    let target = args.format.clone();
+    let target = args.target.clone();
     let quiet = args.quiet;
     watcher::watch_dir(&watch_dir, Arc::clone(&stop), Some(output.as_path()), |changed_paths| {
         let names: Vec<_> = changed_paths.iter()

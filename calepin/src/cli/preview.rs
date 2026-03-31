@@ -28,7 +28,7 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
             let output = crate::paths::output_dir(&project_dir, meta.output.as_deref());
 
             // Read target from the input .qmd front matter or CLI -t
-            let target_name = args.format.clone()
+            let target_name = args.target.clone()
                 .or_else(|| read_target_from_qmd(&args.input))
                 .unwrap_or_else(|| "html".to_string());
             let target = crate::config::resolve_target(&target_name, &meta.targets)?;
@@ -47,7 +47,7 @@ pub fn handle_preview(args: PreviewArgs) -> Result<()> {
             crate::preview::run_collection(&config, &args)
         }
         ProjectKind::Document { qmd, .. } => {
-            let ctx = crate::resolve_context(&qmd, args.format.as_deref())?;
+            let ctx = crate::resolve_context(&qmd, args.target.as_deref())?;
             crate::preview::run(&qmd, &args, &ctx.target_name, &ctx.target)
         }
     }

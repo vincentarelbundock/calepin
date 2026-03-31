@@ -379,12 +379,27 @@ impl ElementRenderer {
 
 }
 
-/// Resolve an element template from the filesystem, then built-in.
+/// Resolve an element template from the filesystem or built-in.
 /// Template names use underscores internally; hyphens are normalized.
-/// Checks sidecar, then project-level templates directory, then built-in.
+///
+/// If a sidecar exists and has a templates directory, tries filesystem first
+/// (sidecar + extensions). Falls back to built-in only when no sidecar
+/// templates directory exists.
 pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
-    crate::paths::resolve_template(&canonical, ext)
-        .and_then(|path| std::fs::read_to_string(&path).ok())
-        .or_else(|| resolve_builtin_template(&canonical, ext).map(|s| s.to_string()))
+    if has_sidecar_templates() {
+        crate::paths::resolve_template(&canonical, ext)
+            .and_then(|path| std::fs::read_to_string(&path).ok())
+    } else {
+        resolve_builtin_template(&canonical, ext).map(|s| s.to_string())
+    }
+}
+
+/// Check whether the active sidecar has a templates directory for the current target.
+fn has_sidecar_templates() -> bool {
+    let chain = crate::paths::get_active_inheritance_chain();
+    let target = chain.first().map(|s| s.as_str()).unwrap_or("html");
+    let project_dir = crate::paths::get_project_dir();
+    let tpl_dir = crate::paths::templates_dir(&project_dir).join(target);
+    tpl_dir.is_dir()
 }

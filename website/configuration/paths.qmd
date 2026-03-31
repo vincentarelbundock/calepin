@@ -28,15 +28,15 @@ In a collection, every page shares the same root, so a single path like `bibliog
 The document directory is the parent directory of the `.qmd` file. The following resolve from there:
 
 - Code chunk working directory (R, Python, shell).
-- Generated figures: `{stem}_calepin/files/`.
-- Execution cache: `{stem}_calepin/cache/`.
+- Generated figures: `{stem}_files/`.
+- Execution cache: `_calepin/cache/{stem}/`.
 
 If `posts/analysis.qmd` calls `read.csv("data.csv")`, it finds `data.csv` next to the source file.
 
 # Output
 
 - Single document: output goes alongside the input, or where `-o` specifies.
-- Website: output goes to `_calepin_output/` by default (configurable via the `output` field in `config.toml`).
+- Website: output goes to `_calepin/output/` by default (configurable via the `output` field in `config.toml`).
 
 # URL resolution {#url-resolution}
 

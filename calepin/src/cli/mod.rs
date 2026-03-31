@@ -1,7 +1,6 @@
 #[macro_use]
 pub mod args;
 
-pub mod flush;
 pub mod info;
 pub mod init_sidecar;
 pub mod new_extension;

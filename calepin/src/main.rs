@@ -36,7 +36,7 @@ use cli::{Cli, Command};
 fn parse_cli() -> Cli {
     let args: Vec<String> = std::env::args().collect();
 
-    let known = ["render", "preview", "flush", "init", "man", "extra", "templates"];
+    let known = ["render", "preview", "init", "man", "extra", "templates"];
 
     let needs_inject = args.get(1).map_or(false, |arg| {
         // Don't inject for flags (--help, -v, etc.)
@@ -62,37 +62,7 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Render(args) => cli::render::handle_render(args),
         Command::Preview(args) => cli::preview::handle_preview(args),
-        Command::Flush { path, yes, cache, files, compilation, all } => {
-            // Default to --all when no category flag is given
-            let (do_cache, do_files, do_compilation) = if all || (!cache && !files && !compilation) {
-                (true, true, true)
-            } else {
-                (cache, files, compilation)
-            };
-            // When no path is given, auto-discover _calepin/ and *_calepin/
-            // sidecar directories in the current directory.
-            let (root, stem) = if let Some(path) = path {
-                if path.is_dir() {
-                    (path, None)
-                } else {
-                    let name = path.to_string_lossy().to_string();
-                    (PathBuf::from("."), Some(name))
-                }
-            } else {
-                (PathBuf::from("."), None)
-            };
-            cli::flush::handle_flush(&root, stem.as_deref(), yes, do_cache, do_files, do_compilation)
-        }
-        Command::Init { action } => match action {
-            cli::InitAction::New { path, scaffold, extension } => cli::scaffold::handle_init_new(&path, scaffold.as_deref(), extension.as_deref()),
-            cli::InitAction::Extension { name, inherits } => cli::new_extension::handle_new_extension(&name, &inherits),
-            cli::InitAction::Sidecar { path, force, templates, target, dry_run, no_backup } => {
-                cli::init_sidecar::handle_init_sidecar(&path, force, templates, target.as_deref(), dry_run, no_backup)
-            }
-            cli::InitAction::Gibberish { files, paragraphs, dir, complexity } => {
-                cli::new_gibberish::handle_new_gibberish(&dir, files, paragraphs, complexity)
-            }
-        },
+        Command::Init(args) => cli::init_sidecar::handle_init(args),
         Command::Man { action } => match action {
             cli::ManAction::R { package, output, quiet } => man::handle_man_r(&package, &output, quiet),
             cli::ManAction::Python { package, output, quiet, style, exports_only, imports, include_tests, include_private } => {

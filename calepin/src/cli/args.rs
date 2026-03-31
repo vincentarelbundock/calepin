@@ -36,37 +36,8 @@ pub enum Command {
     /// Preview a file, project, or directory with live-reload
     Preview(PreviewArgs),
 
-    /// Delete cache, generated files, and build artefacts
-    Flush {
-        /// Directory or stem name (e.g., "index") to flush selectively
-        path: Option<PathBuf>,
-
-        /// Skip confirmation
-        #[arg(short = 'y', long)]
-        yes: bool,
-
-        /// Cache only
-        #[arg(long)]
-        cache: bool,
-
-        /// Generated files only
-        #[arg(long)]
-        files: bool,
-
-        /// LaTeX artefacts only (.aux, .log, etc.)
-        #[arg(long)]
-        compilation: bool,
-
-        /// Everything (default)
-        #[arg(long)]
-        all: bool,
-    },
-
-    /// Initialize projects, notebooks, and sidecars
-    Init {
-        #[command(subcommand)]
-        action: InitAction,
-    },
+    /// Initialize a new document, website, or book
+    Init(InitArgs),
 
     /// Extract package documentation as .qmd files
     Man {
@@ -80,7 +51,7 @@ pub enum Command {
         action: ExtraAction,
     },
 
-    /// Manage templates (list, eject, diff, update, reset)
+    /// Manage templates (list, show, diff, reset)
     Templates {
         #[command(subcommand)]
         action: TemplatesAction,
@@ -100,11 +71,11 @@ pub struct RenderArgs {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
-    /// Output format: a target name from sidecar config.toml (e.g., web, article)
+    /// Target: a target name from sidecar config.toml (e.g., web, article)
     /// or a base name (html, latex, typst, slides, website, markdown).
-    /// If omitted, auto-detected from output extension or YAML front matter.
+    /// If omitted, auto-detected from output extension or front matter.
     #[arg(short = 't', long)]
-    pub format: Option<String>,
+    pub target: Option<String>,
 
     /// Quiet mode (suppress progress messages)
     #[arg(short, long)]
@@ -139,9 +110,9 @@ pub struct PreviewArgs {
     #[arg(short, long, default_value = "3456")]
     pub port: u16,
 
-    /// Output format: a format name or base name
+    /// Target: a target name or base name (html, latex, typst, website)
     #[arg(short = 't', long)]
-    pub format: Option<String>,
+    pub target: Option<String>,
 
     /// Override YAML metadata fields
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
@@ -152,85 +123,26 @@ pub struct PreviewArgs {
     pub quiet: bool,
 }
 
-#[derive(Subcommand, Debug)]
-#[command(arg_required_else_help = true)]
-pub enum InitAction {
-    /// Create a new project or document from a scaffold
-    #[command(after_help = "\
+/// Arguments for `calepin init`.
+#[derive(clap::Args, Debug)]
+#[command(after_help = "\
 \x1B[1;4mExamples:\x1B[0m
-  calepin init new my-site                          # website (default)
-  calepin init new my-site --scaffold book          # book project
-  calepin init new handout.qmd                      # single document
-  calepin init new my-site --extension ./tufte      # from extension scaffold")]
-    New {
-        /// Project directory or .qmd file path
-        #[arg(default_value = "website")]
-        path: std::path::PathBuf,
+  calepin init paper.qmd                  # new document (html target)
+  calepin init paper.qmd -t latex         # new document (latex target)
+  calepin init mysite -t website          # new website project
+  calepin init mybook -t book-typst       # new book project
+  calepin init extension myext            # new extension")]
+pub struct InitArgs {
+    /// Path to create (directory for collections, .qmd for documents)
+    pub path: std::path::PathBuf,
 
-        /// Scaffold name (default: inferred from path -- "website" for directories, "document" for .qmd files)
-        #[arg(long)]
-        scaffold: Option<String>,
+    /// Target (html, latex, typst, website, book-typst, book-latex)
+    #[arg(short = 't', long)]
+    pub target: Option<String>,
 
-        /// Use scaffold from an extension directory
-        #[arg(long)]
-        extension: Option<String>,
-    },
-
-    /// Scaffold a new extension
-    Extension {
-        /// Extension name (creates a directory with this name)
-        name: String,
-
-        /// Parent target to inherit from (e.g., html, latex, website)
-        #[arg(long, default_value = "html")]
-        inherits: String,
-    },
-
-    /// Extract a sidecar directory from an existing .qmd document
-    Sidecar {
-        /// Path to the existing .qmd file
-        path: std::path::PathBuf,
-
-        /// Overwrite an existing sidecar directory
-        #[arg(long)]
-        force: bool,
-
-        /// Also scaffold built-in templates into the sidecar
-        #[arg(long)]
-        templates: bool,
-
-        /// Target extension to apply to the new sidecar
-        #[arg(long)]
-        target: Option<String>,
-
-        /// Print what would happen without writing anything
-        #[arg(long)]
-        dry_run: bool,
-
-        /// Skip creating the .qmd.bak backup file
-        #[arg(long)]
-        no_backup: bool,
-    },
-
-    /// Generate .qmd files filled with lorem ipsum text
-    Gibberish {
-        /// Number of .qmd files to generate
-        #[arg(short = 'n', long, default_value = "50")]
-        files: usize,
-
-        /// Number of paragraphs per file
-        #[arg(short, long, default_value = "50")]
-        paragraphs: usize,
-
-        /// Output directory
-        #[arg(short, long, default_value = "gibberish")]
-        dir: std::path::PathBuf,
-
-        /// Complexity level: 0 = prose only, 1 = + code chunks,
-        /// 2 = + cross-references, footnotes, citations, and tables
-        #[arg(short, long, default_value = "1", value_parser = clap::value_parser!(u8).range(0..=2))]
-        complexity: u8,
-    },
+    /// Overwrite existing sidecar
+    #[arg(long)]
+    pub force: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -334,12 +246,32 @@ pub enum ExtraAction {
         #[arg(short = 'y', long)]
         yes: bool,
     },
+
+    /// Generate .qmd files filled with lorem ipsum text (for benchmarking)
+    Gibberish {
+        /// Number of .qmd files to generate
+        #[arg(short = 'n', long, default_value = "50")]
+        files: usize,
+
+        /// Number of paragraphs per file
+        #[arg(short, long, default_value = "50")]
+        paragraphs: usize,
+
+        /// Output directory
+        #[arg(short, long, default_value = "gibberish")]
+        dir: std::path::PathBuf,
+
+        /// Complexity level: 0 = prose only, 1 = + code chunks,
+        /// 2 = + cross-references, footnotes, citations, and tables
+        #[arg(short, long, default_value = "1", value_parser = clap::value_parser!(u8).range(0..=2))]
+        complexity: u8,
+    },
 }
 
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum TemplatesAction {
-    /// Show all templates with their resolution source
+    /// Show all templates with status (modified, default, custom, missing)
     List {
         /// Input .qmd file (determines the sidecar)
         input: PathBuf,
@@ -349,27 +281,9 @@ pub enum TemplatesAction {
         target: Option<String>,
     },
 
-    /// Eject built-in templates into the sidecar for customization
-    Eject {
-        /// Input .qmd file (determines the sidecar)
-        input: PathBuf,
-
-        /// Override the target (default: read from front matter)
-        #[arg(short = 't', long)]
-        target: Option<String>,
-
-        /// Overwrite existing local templates
-        #[arg(long)]
-        force: bool,
-
-        /// Show what would be written without writing anything
-        #[arg(long)]
-        dry_run: bool,
-    },
-
     /// Print a template's resolved content
     Show {
-        /// Template name (e.g., figure, code_source, page)
+        /// Template name (e.g., figure, code_source, base)
         name: String,
 
         /// Input .qmd file (determines the sidecar)
@@ -380,45 +294,34 @@ pub enum TemplatesAction {
         target: Option<String>,
     },
 
-    /// Compare local template overrides against built-in defaults
+    /// Compare sidecar templates against built-in defaults
     Diff {
         /// Input .qmd file (determines the sidecar)
         input: PathBuf,
 
+        /// Template name (show diff for one template only)
+        name: Option<String>,
+
         /// Override the target (default: read from front matter)
         #[arg(short = 't', long)]
         target: Option<String>,
     },
 
-    /// Refresh unmodified templates after a Calepin upgrade
-    Update {
+    /// Revert sidecar template(s) to the built-in version
+    Reset {
         /// Input .qmd file (determines the sidecar)
         input: PathBuf,
+
+        /// Template name (reset one template; omit to reset all)
+        name: Option<String>,
 
         /// Override the target (default: read from front matter)
         #[arg(short = 't', long)]
         target: Option<String>,
 
-        /// Overwrite even modified templates
+        /// Reset without confirmation
         #[arg(long)]
         force: bool,
-
-        /// Show what would be changed without writing anything
-        #[arg(long)]
-        dry_run: bool,
-    },
-
-    /// Remove a local template override, reverting to built-in
-    Reset {
-        /// Template name (e.g., figure, code_source, page)
-        name: String,
-
-        /// Input .qmd file (determines the sidecar)
-        input: PathBuf,
-
-        /// Override the target (default: read from front matter)
-        #[arg(short = 't', long)]
-        target: Option<String>,
     },
 }
 
