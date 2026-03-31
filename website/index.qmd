@@ -3,9 +3,6 @@ target = "website"
 sidebar = false
 toc = false
 title = ""
-
-[tpl]
-main = "landing"
 ---
 
 ```{=html}

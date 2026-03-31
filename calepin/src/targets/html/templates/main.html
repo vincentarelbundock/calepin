@@ -1,61 +1,16 @@
 <!doctype html>
-<html lang="{{cfg.lang}}">
+<html lang="{{cfg.lang}}" data-theme="light">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="Calepin">
-
-<title>{{cfg.title_plain}}</title>
-
-<script>
-// Apply saved theme immediately to prevent flash
-(function(){var t=localStorage.getItem('calepin-theme');if(t)document.documentElement.setAttribute('data-theme',t)})();
-</script>
-
-{% include "preamble.html" %}
-{% if cfg.keywords %}<meta name="keywords" content="{{cfg.keywords}}">{% endif %}
-
-{% if clp.css_path %}<link rel="stylesheet" href="{{clp.css_path}}">
-{% if clp.ext_css %}<style>
-{{clp.ext_css}}
-</style>{% endif %}
-{% elif clp.css %}<style>
-{{clp.css}}
-</style>{% endif %}
-
-{% include "math.html" %}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{cfg.title_plain}}</title>
+  {% if clp.css_path %}<link rel="stylesheet" href="{{clp.css_path}}">
+  {% elif clp.css %}<style>{{clp.css}}</style>{% endif %}
+  {% include "math.html" %}
 </head>
-
 <body>
-<a href="#main-content" class="visually-hidden focusable">Skip to main content</a>
-<nav class="theme-toggle" aria-label="Theme">
-  <button id="theme-toggle" aria-label="Toggle dark mode" aria-pressed="false"></button>
-</nav>
-<div class="page-layout">
-<main id="main-content" class="container">
-<header class="frontmatter">
-{% include "title.html" %}
-{% include "subtitle.html" %}
-{% include "authors.html" %}
-{% include "date.html" %}
-</header>
-
-{% include "abstract.html" %}
-{% include "keywords.html" %}
-
-<article>
-{{clp.body}}
-</article>
-
-{{clp.appendix}}
-</main>
-{% if clp.toc %}<aside class="toc-sidebar" role="complementary" aria-label="Table of contents">{{clp.toc}}</aside>{% endif %}
-</div>
-
-{% if clp.js_path %}<script type="module" src="{{clp.js_path}}"></script>
-{% elif clp.js %}<script>
-{{clp.js}}
-</script>{% endif %}
+  <main class="container">
+    {{clp.body}}
+  </main>
 </body>
-
 </html>
