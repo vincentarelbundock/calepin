@@ -30,7 +30,6 @@ mod highlight;
 mod layout;
 mod listing;
 mod lorem;
-mod pagebreak;
 mod placeholder;
 mod split_slides;
 mod table;

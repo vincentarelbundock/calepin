@@ -1,0 +1,77 @@
+/*
+ * Theme tokens
+ * Override these to re-theme clp. All rules reference only --c-*
+ * tokens, never raw color values.
+ * Default palette: Nord  https://www.nordtheme.com
+ * Dark values are defined once via light-dark(); the active mode
+ * is controlled by color-scheme on <html>.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Surface & text */
+  --c-bg:             light-dark(#fafbfc, #2f3643);
+  --c-bg-secondary:   light-dark(#f3f5f7, #353d4c);
+  --c-bg-tertiary:    light-dark(#ebeef1, #3b4454);
+  --c-text:           light-dark(#2e3440, #e5e9f0);
+  --c-text-muted:     light-dark(#616e7c, #9aa3b0);
+  --c-text-secondary: light-dark(#525d6e, #b8bfc9);
+  --c-link:           light-dark(#5e81ac, #88c0d0);
+  --c-border:         light-dark(#e0e4e8, #4a5568);
+  --c-code-bg:        light-dark(#f3f5f7, #343c4b);
+  --c-accent:         light-dark(#5e81ac, #88c0d0);
+  --c-accent-contrast: #ffffff;
+
+  /* Component accents -- semantic meaning */
+  --c-note:         #5e81ac;
+  --c-tip:          #a3be8c;
+  --c-warning:      #ebcb8b;
+  --c-error:        #bf616a;
+  --c-important:    #b48ead;
+  --c-success:      #2e7d32;
+
+  /* Depth */
+  --c-shadow:       light-dark(rgba(46, 52, 64, 0.08), rgba(0, 0, 0, 0.3));
+  --c-shadow-soft:  0 4px 12px var(--c-shadow);
+  --c-shadow-pop:   0 2px 8px var(--c-shadow);
+  --c-shadow-modal: 0 16px 48px var(--c-shadow);
+  --c-overlay-bg:   light-dark(rgba(46, 52, 64, 0.5), rgba(0, 0, 0, 0.7));
+
+  /* Site layout dimensions (used only when site chrome is present) */
+  --c-sidebar-width: 280px;
+  --c-toc-width: 240px;
+  --c-navbar-height: 52px;
+  --c-content-max-width: 900px;
+  --c-site-width: calc(var(--c-sidebar-width) + var(--c-content-max-width) + var(--c-toc-width) + var(--c-gutter) * 2);
+  --c-gutter: 1.25rem;
+
+  /* Z-index scale */
+  --z-sidebar: 100;
+  --z-theme-toggle: 200;
+  --z-header: 1000;
+  --z-dropdown: 1000;
+  --z-overlay: 2000;
+  --z-skip-link: 10000;
+
+  /* Font sizes */
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+}
+
+/* --- Dark theme: flip color-scheme, light-dark() handles the rest --- */
+html[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) { color-scheme: dark; }
+}
+
+/* --- Logo switching (dark theme) --- */
+.logo-dark { display: none; }
+html[data-theme="dark"] .logo-light { display: none; }
+html[data-theme="dark"] .logo-dark { display: inline; }
+html[data-theme="dark"] .invert-dark { filter: brightness(0) invert(1); }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .logo-light { display: none; }
+  html:not([data-theme="light"]) .logo-dark { display: inline; }
+  html:not([data-theme="light"]) .invert-dark { filter: brightness(0) invert(1); }
+}

@@ -228,7 +228,7 @@ impl ElementRenderer {
         let processed = self.footnotes.inject_defs(&processed);
         let fragments = self.raw_fragments.borrow();
         let config = crate::registry::EmitterConfig {
-            embed_resources: self.metadata.embed_resources.unwrap_or(true),
+            standalone: self.metadata.standalone.unwrap_or(true),
             number_sections: self.number_sections,
         };
         let emitter = self.registry.resolve_emitter(&self.ext, &config)

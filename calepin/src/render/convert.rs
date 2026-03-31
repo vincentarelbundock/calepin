@@ -29,8 +29,8 @@ pub use markers::wrap_raw;
 
 /// Render markdown to HTML via AST walk.
 #[cfg(test)]
-pub fn render_html(markdown: &str, raw_fragments: &[String], embed_resources: bool) -> String {
-    crate::emit::html::markdown_to_html_ast(markdown, raw_fragments, false, false, embed_resources)
+pub fn render_html(markdown: &str, raw_fragments: &[String], standalone: bool) -> String {
+    crate::emit::html::markdown_to_html_ast(markdown, raw_fragments, false, false, standalone)
 }
 
 /// Render markdown to Typst via AST walk.

@@ -10,7 +10,7 @@ writer = "html"
 template = "main"
 extension = "html"
 fig_extension = "svg"
-embed_resources = false
+standalone = false
 preview = "serve"
 
 [targets.book]

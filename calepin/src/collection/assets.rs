@@ -6,7 +6,8 @@ use anyhow::{Context, Result};
 use crate::paths::copy_dir_recursive;
 
 /// Copy sidecar `assets/` directory to `assets/` in the output directory.
-/// Sidecar assets are always populated, so no built-in fallback is needed.
+/// CSS and JS files from `assets/css/` and `assets/js/` are concatenated
+/// (alphabetically by filename) into `assets/calepin.css` and `assets/calepin.js`.
 /// If `static_dirs` is non-empty, also copies those directories into output.
 pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -> Result<()> {
     let assets_dst = output_dir.join("assets");
@@ -18,6 +19,13 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
         copy_dir_recursive(&calepin_assets, &assets_dst)
             .context("Failed to copy sidecar assets/ to output directory")?;
     }
+
+    // Concatenate css/*.css -> calepin.css and js/*.js -> calepin.js in output,
+    // then remove the source subdirectories (only the concatenated files are served).
+    concatenate_and_write(&assets_dst, "css", "css", "calepin.css")?;
+    concatenate_and_write(&assets_dst, "js", "js", "calepin.js")?;
+    let _ = fs::remove_dir_all(assets_dst.join("css"));
+    let _ = fs::remove_dir_all(assets_dst.join("js"));
 
     // Copy extension assets to assets/{ext_name}/
     // Each extension's assets/ directory is copied wholesale under its name,
@@ -57,5 +65,31 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
         }
     }
 
+    Ok(())
+}
+
+/// Concatenate all files with the given extension from a subdirectory,
+/// sorted alphabetically by filename, and write to a single output file.
+fn concatenate_and_write(
+    assets_dir: &Path,
+    subdir: &str,
+    ext: &str,
+    output_name: &str,
+) -> Result<()> {
+    let dir = assets_dir.join(subdir);
+    if !dir.is_dir() {
+        return Ok(());
+    }
+    let mut files: Vec<_> = fs::read_dir(&dir)?
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().is_some_and(|x| x == ext))
+        .collect();
+    files.sort_by_key(|e| e.file_name());
+    let content: String = files
+        .iter()
+        .filter_map(|e| fs::read_to_string(e.path()).ok())
+        .collect::<Vec<_>>()
+        .join("\n");
+    fs::write(assets_dir.join(output_name), content)?;
     Ok(())
 }

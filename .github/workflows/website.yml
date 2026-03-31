@@ -54,11 +54,11 @@
 #       - name: Build website
 #         run: |
 #           source .venv/bin/activate
-#           cd website && calepin render _calepin/config.toml
+#           cd website && calepin render index_calepin/config.toml
 #
 #       - name: Deploy to gh-pages
 #         uses: peaceiris/actions-gh-pages@v4
 #         with:
 #           github_token: ${{ secrets.GITHUB_TOKEN }}
-#           publish_dir: website/_calepin_output
+#           publish_dir: website/index_output
 #           force_orphan: true

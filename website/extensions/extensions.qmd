@@ -82,7 +82,7 @@ extension = "html"                  # output file extension; inherited if omitte
 template = "page"                   # page template name; inherited if omitted
 fig_extension = "svg"               # default figure extension; inherited if omitted
 preview = "serve"                   # "serve", "open", or "none"; inherited if omitted
-embed_resources = true              # embed images as base64 (HTML only)
+standalone = true                   # self-contained file (inline CSS/JS, base64 images)
 crossref = "html"                   # "html", "latex", or "plain"; inherited if omitted
 toc_headings = true                 # pass headings to page template for TOC
 
@@ -546,7 +546,7 @@ inherits = "slides"
 
 [target]
 modules = ["highlight", "append_footnotes", "split_slides"]
-embed_resources = false
+standalone = false
 
 [vars]
 transition = "slide"    # {{ vars.slidev.transition }}

@@ -66,7 +66,7 @@ fn collect_paths_recursive(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
 /// - source file content (the .qmd body)
 /// - config content (config file + auxiliary file bytes)
 /// - target name (html vs latex produce different output)
-/// - overrides (embed-resources, highlight style, etc.)
+/// - overrides (standalone, highlight style, etc.)
 pub fn page_hash(
     source_content: &[u8],
     config_content: &[u8],

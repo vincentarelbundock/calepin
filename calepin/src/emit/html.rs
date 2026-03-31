@@ -8,7 +8,7 @@ use crate::emit::{WalkOptions, WalkResult, walk_and_render_with_metadata};
 use crate::render::convert::ImageAttrs;
 
 pub struct HtmlEmitter {
-    pub embed_resources: bool,
+    pub standalone: bool,
 }
 
 /// Convert markdown to HTML via the shared AST walker.
@@ -18,10 +18,10 @@ pub fn markdown_to_html_ast(
     raw_fragments: &[String],
     number_sections: bool,
     shift_headings: bool,
-    embed_resources: bool,
+    standalone: bool,
 ) -> String {
     let options = WalkOptions { number_sections, shift_headings, ..WalkOptions::default() };
-    markdown_to_html_ast_with_metadata(markdown, raw_fragments, &options, embed_resources).output
+    markdown_to_html_ast_with_metadata(markdown, raw_fragments, &options, standalone).output
 }
 
 /// Convert markdown to HTML and return collected metadata (headings, IDs).
@@ -30,9 +30,9 @@ pub fn markdown_to_html_ast_with_metadata(
     markdown: &str,
     raw_fragments: &[String],
     options: &WalkOptions,
-    embed_resources: bool,
+    standalone: bool,
 ) -> WalkResult {
-    let emitter = HtmlEmitter { embed_resources };
+    let emitter = HtmlEmitter { standalone };
     walk_and_render_with_metadata(&emitter, markdown, raw_fragments, options)
 }
 
@@ -146,7 +146,7 @@ impl FormatEmitter for HtmlEmitter {
         let resolved = crate::modules::select_image_variant(
             std::path::Path::new(url), "html",
         );
-        let embed = self.embed_resources;
+        let embed = self.standalone;
         let src = if embed && !url.starts_with("http://") && !url.starts_with("https://") {
             crate::util::base64_encode_image(&resolved)
                 .map(|(mime, data)| format!("data:{};base64,{}", mime, data))

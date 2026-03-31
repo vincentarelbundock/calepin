@@ -18,11 +18,13 @@ pub fn handle_init(args: InitArgs) -> Result<()> {
 
     // Special case: `calepin init extension <name>`
     if path_str == "extension" {
-        // The target field doubles as the extension name for this case.
-        // Usage: calepin init extension -t html  (but really we need a name)
-        // Better: detect next positional somehow. For now, require -t as inherits.
         bail!("Usage: calepin init extension <name> [--inherits TARGET]\n\
                Use `calepin extra` subcommands for other utilities.");
+    }
+
+    // --extension: scaffold from (or install into) an extension
+    if let Some(ref ext) = args.extension {
+        return handle_extension_init(path, args.target.as_deref(), ext);
     }
 
     let is_qmd = path.extension().and_then(|e| e.to_str()) == Some("qmd");
@@ -40,6 +42,29 @@ pub fn handle_init(args: InitArgs) -> Result<()> {
     } else {
         // Bare directory name without collection target -- assume website
         crate::cli::scaffold::handle_init_new(path, Some("website"), None)
+    }
+}
+
+/// Handle `calepin init <path> --extension <dir>`.
+///
+/// If the path and sidecar already exist, installs the extension into the
+/// existing sidecar. Otherwise, scaffolds a new project from the extension.
+fn handle_extension_init(path: &Path, target: Option<&str>, extension: &str) -> Result<()> {
+    let is_qmd = path.extension().and_then(|e| e.to_str()) == Some("qmd");
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("doc");
+    let parent = path.parent().unwrap_or(Path::new("."));
+    let sidecar = if is_qmd {
+        parent.join(format!("{}_calepin", stem))
+    } else {
+        path.join("index_calepin")
+    };
+
+    if sidecar.exists() {
+        // Existing project: just install the extension into the sidecar
+        crate::cli::scaffold::install_extension_from_path(extension, &sidecar)
+    } else {
+        // New project: scaffold from the extension
+        crate::cli::scaffold::handle_init_new(path, target, Some(extension))
     }
 }
 

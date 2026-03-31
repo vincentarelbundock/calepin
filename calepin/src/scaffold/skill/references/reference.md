@@ -415,7 +415,7 @@ Set theme: `highlight-style = "solarized-dark"` in front matter. List themes: `c
 | `{stem}_calepin/assets/` | Static assets (CSS, images) copied to output |
 | `{stem}_calepin/extensions/` | Installed extensions |
 | `{stem}_calepin/` | Per-document sidecar (config, cache, files) |
-| `_calepin/output/` | Default website output directory |
+| `{stem}_output/` | Default website output directory |
 
 ### Sidecar Directory
 

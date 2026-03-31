@@ -183,8 +183,8 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "navbar" => meta.navbar = deserialize_section(v),
             "orchestrator" => meta.orchestrator = v.as_str().map(String::from),
             "global_crossref" => meta.global_crossref = v.as_bool().unwrap_or(false),
-            "embed_resources" => {
-                meta.embed_resources = Some(v.as_bool().unwrap_or(false));
+            "standalone" => {
+                meta.standalone = Some(v.as_bool().unwrap_or(false));
             }
             "number_offset" => {} // accepted but handled elsewhere
             "calepin" => {

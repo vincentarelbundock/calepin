@@ -3,6 +3,6 @@ description = "Slide presentations"
 inherits = "html"
 
 [target]
-embed_resources = false
+standalone = false
 toc_headings = false
 modules = ["highlight", "append_footnotes", "split_slides"]

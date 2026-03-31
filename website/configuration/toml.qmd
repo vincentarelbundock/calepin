@@ -74,7 +74,7 @@ These apply to both single documents and collections:
 csl = "chicago-author-date"
 math = "katex"
 lang = "en"
-embed_resources = true
+standalone = true
 dpi = 150.0
 
 [highlight]
@@ -164,7 +164,7 @@ writer = "html"
 template = "page"
 extension = "html"
 fig_extension = "svg"
-embed_resources = false
+standalone = false
 preview = "serve"
 
 [targets.book]

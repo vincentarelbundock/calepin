@@ -4,7 +4,7 @@
 csl = "chicago-author-date"
 math = "katex"
 lang = "en"
-embed_resources = true
+standalone = true
 dpi = 150.0
 
 [highlight]

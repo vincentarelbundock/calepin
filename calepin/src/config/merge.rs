@@ -71,7 +71,7 @@ impl Metadata {
         merge_opt!(orchestrator);
         if overlay.global_crossref { self.global_crossref = true; }
         merge_vec!(static_dirs);
-        merge_opt!(embed_resources);
+        merge_opt!(standalone);
 
         // Config sections: merge field-by-field within each struct
         self.preview_port = overlay.preview_port.or(self.preview_port);

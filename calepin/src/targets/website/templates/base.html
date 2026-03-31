@@ -7,6 +7,7 @@
   {% elif clp.title %}<title>{{ clp.title }}</title>{% endif %}
   {% if clp.abstract %}<meta name="description" content="{{ clp.abstract }}">{% endif %}
   {% if clp.favicon %}<link rel="icon" href="{{ link(clp.favicon) }}">{% endif %}
+  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('calepin-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))</script>
   <link rel="stylesheet" href="{{ link('assets/calepin.css') }}">
   {{ clp.math }}
   {% block head_extra %}{% endblock %}
@@ -31,7 +32,7 @@
       {% block page_nav %}{% endblock %}
     </main>
 
-    {% if cfg.toc is not defined or cfg.toc %}{% include "toc.html" %}{% endif %}
+    {% if cfg.toc is not defined or cfg.toc %}<aside class="sidebar-right">{% include "toc.html" %}</aside>{% endif %}
   </div>
 
   {% include "footer.html" %}

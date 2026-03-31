@@ -131,7 +131,8 @@ pub struct PreviewArgs {
   calepin init paper.qmd -t latex         # new document (latex target)
   calepin init mysite -t website          # new website project
   calepin init mybook -t book             # new book project
-  calepin init extension myext            # new extension")]
+  calepin init extension myext            # new extension
+  calepin init letter.qmd --extension ./extensions/letter  # from extension")]
 pub struct InitArgs {
     /// Path to create (directory for collections, .qmd for documents)
     pub path: std::path::PathBuf,
@@ -139,6 +140,10 @@ pub struct InitArgs {
     /// Target (html, latex, typst, website, book, book-latex)
     #[arg(short = 't', long)]
     pub target: Option<String>,
+
+    /// Path to an extension directory to scaffold from and install
+    #[arg(short = 'e', long)]
+    pub extension: Option<String>,
 
     /// Overwrite existing sidecar
     #[arg(long)]

@@ -33,17 +33,17 @@ If `posts/analysis.qmd` calls `read.csv("data.csv")`, it finds `data.csv` next t
 
 # Build artifacts
 
-All build artifacts go in `_calepin/` at the project root:
+Build artifacts are split into two directories at the project root:
 
-- `_calepin/cache/{stem}/` -- code execution cache
-- `_calepin/output/` -- rendered site (collections only)
+- `.calepin/cache/{stem}/` -- code execution cache
+- `{stem}_output/` -- rendered site (collections only)
 
-This directory should be in `.gitignore`. To clear it: `rm -rf _calepin/`.
+Both directories should be in `.gitignore`. To clear them: `rm -rf .calepin/ *_output`.
 
 # Output
 
 - Single document: output goes alongside the input, or where `-o` specifies.
-- Website: output goes to `_calepin/output/` by default (configurable via the `output` field in `config.toml`).
+- Website: output goes to `{stem}_output/` by default (e.g., `index_output/` for a project with `index.qmd`). Configurable via the `output` field in `config.toml`.
 
 # URL resolution {#url-resolution}
 

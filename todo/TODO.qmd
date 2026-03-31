@@ -8,6 +8,6 @@ Questions to resolve:
 
 - Should `page.css` live in `scaffold/assets/` (with other static assets) instead of `partials/html/`?
 - If so, `load_default_css()` should read from `BUILTIN_ASSETS` instead of `BUILTIN_PARTIALS`.
-- The user override path changes: currently `_calepin/partials/html/page.css`, would become `_calepin/assets/page.css`. Which is more intuitive?
+- The user override path changes: currently `.calepin/partials/html/page.css`, would become `.calepin/assets/page.css`. Which is more intuitive?
 - Should users be able to override individual CSS sections (variables, navbar, layout) without replacing the entire file? If so, we need a mechanism for layered CSS (e.g. extension CSS that appends rather than replaces).
 - How does this interact with extension CSS (`[assets] css = [...]` in `extension.toml`)? Currently extension CSS is appended after the base CSS. Is that sufficient?

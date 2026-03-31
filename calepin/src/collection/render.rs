@@ -480,10 +480,10 @@ where
 pub fn build_overrides(meta: &crate::config::Metadata, target: Option<&config::Target>) -> Vec<String> {
     let mut overrides = Vec::new();
 
-    // embed-resources override from target
+    // standalone override from target
     if let Some(t) = target {
-        if let Some(embed) = t.embed_resources {
-            overrides.push(format!("embed-resources={}", embed));
+        if let Some(standalone) = t.standalone {
+            overrides.push(format!("standalone={}", standalone));
         }
     }
 

@@ -214,7 +214,7 @@ pub struct Metadata {
     pub orchestrator: Option<String>,
     pub global_crossref: bool,
     pub static_dirs: Vec<String>,
-    pub embed_resources: Option<bool>,
+    pub standalone: Option<bool>,
 
     // -- Rendering defaults (figures, code execution, etc.) --
     pub preview_port: Option<u16>,

@@ -26,8 +26,8 @@ pub struct Target {
     pub fig_extension: Option<String>,
     /// Preview behavior: "serve", "open", or "none".
     pub preview: Option<String>,
-    /// Whether to embed images as base64 data URIs (HTML only).
-    pub embed_resources: Option<bool>,
+    /// Whether to produce a self-contained file (inline CSS/JS, base64 images).
+    pub standalone: Option<bool>,
     /// Arbitrary key-value pairs passed to templates as target_vars.
     pub vars: Option<toml::Value>,
     /// Post-processing commands run after rendering.
@@ -165,7 +165,7 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
         extension: child.extension.clone().or_else(|| parent.extension.clone()),
         fig_extension: child.fig_extension.clone().or_else(|| parent.fig_extension.clone()),
         preview: child.preview.clone().or_else(|| parent.preview.clone()),
-        embed_resources: child.embed_resources.or(parent.embed_resources),
+        standalone: child.standalone.or(parent.standalone),
         vars: child.vars.clone().or_else(|| parent.vars.clone()),
         post: if child.post.is_empty() { parent.post.clone() } else { child.post.clone() },
         modules: if child.modules.is_empty() { parent.modules.clone() } else { child.modules.clone() },
@@ -270,7 +270,7 @@ fn merge_with_builtin(user: &Target) -> Target {
         extension: user.extension.clone().or_else(|| builtin.and_then(|b| b.extension.clone())),
         fig_extension: user.fig_extension.clone().or_else(|| builtin.and_then(|b| b.fig_extension.clone())),
         preview: user.preview.clone().or_else(|| builtin.and_then(|b| b.preview.clone())),
-        embed_resources: user.embed_resources.or(builtin.and_then(|b| b.embed_resources)),
+        standalone: user.standalone.or(builtin.and_then(|b| b.standalone)),
         vars: user.vars.clone(),
         post: user.post.clone(),
         modules: if user.modules.is_empty() {

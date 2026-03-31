@@ -113,18 +113,7 @@ pub fn load_page_template(template_name: &str, base: &str) -> String {
 }
 
 pub fn load_default_css() -> String {
-    let mut css = String::new();
-
-    // Load from sidecar assets (always populated)
-    let sidecar_css = crate::paths::get_root_sidecar()
-        .or_else(|| crate::paths::get_page_sidecar())
-        .map(|s| s.join("assets").join("calepin.css"))
-        .filter(|p| p.exists())
-        .and_then(|p| std::fs::read_to_string(&p).ok());
-
-    if let Some(content) = sidecar_css {
-        css.push_str(&content);
-    }
+    let mut css = concatenate_asset_dir("css", "css");
 
     // Extension CSS (active target + side-loaded extensions)
     let root = crate::paths::get_project_dir();
@@ -206,27 +195,37 @@ fn load_extension_js(project_root: &std::path::Path, target_name: &str) -> Strin
     load_extension_assets(project_root, target_name, |a| &a.js)
 }
 
-/// Load the default JS: core.js from sidecar assets + extension JS.
+/// Load the default JS: assets/js/*.js from sidecar + extension JS.
 /// This is inlined in document templates via `{{clp.js}}`.
 pub fn load_default_js() -> String {
-    let mut js = String::new();
-
-    // Core JS from sidecar assets (always populated)
-    let sidecar_js = crate::paths::get_root_sidecar()
-        .or_else(|| crate::paths::get_page_sidecar())
-        .map(|s| s.join("assets").join("core.js"))
-        .filter(|p| p.exists())
-        .and_then(|p| std::fs::read_to_string(&p).ok());
-
-    if let Some(content) = sidecar_js {
-        js.push_str(&content);
-    }
+    let mut js = concatenate_asset_dir("js", "js");
 
     // Extension JS (active target + side-loaded extensions)
     let root = crate::paths::get_project_dir();
     js.push_str(&load_all_extension_assets(&root, |r, name| load_extension_js(r, name)));
 
     js
+}
+
+/// Concatenate all files with the given extension from a sidecar assets subdirectory,
+/// sorted alphabetically by filename. Used for `assets/css/*.css` and `assets/js/*.js`.
+pub fn concatenate_asset_dir(dir_name: &str, extension: &str) -> String {
+    let dir = crate::paths::get_root_sidecar()
+        .or_else(|| crate::paths::get_page_sidecar())
+        .map(|s| s.join("assets").join(dir_name));
+    let Some(dir) = dir.filter(|d| d.is_dir()) else { return String::new() };
+    let mut files: Vec<_> = std::fs::read_dir(&dir)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().is_some_and(|x| x == extension))
+        .collect();
+    files.sort_by_key(|e| e.file_name());
+    files
+        .iter()
+        .filter_map(|e| std::fs::read_to_string(e.path()).ok())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Two-namespace template variable container.
@@ -509,13 +508,15 @@ pub fn build_template_vars_with_headings(
     // Appendix (engine-rendered from user metadata)
     vars.clp.insert("appendix".to_string(), minijinja::Value::from(build_appendix(meta, ext)));
 
-    // CSS and JS asset paths (relative to output file) for <link>/<script src>.
-    let css_path = sidecar_asset_path("calepin.css");
-    vars.clp.insert("css_path".to_string(), minijinja::Value::from(css_path.unwrap_or_default()));
-    let js_path = sidecar_asset_path("calepin.js");
-    vars.clp.insert("js_path".to_string(), minijinja::Value::from(js_path.unwrap_or_default()));
-
-    // Inline CSS/JS (used when css_path/js_path are not set)
+    // CSS and JS: standalone mode inlines everything, non-standalone links external files.
+    // Target-level standalone (e.g., website sets false) takes precedence over metadata.
+    let standalone = _target.and_then(|t| t.standalone).or(meta.standalone).unwrap_or(true);
+    if !standalone {
+        let css_path = sidecar_asset_path("calepin.css");
+        vars.clp.insert("css_path".to_string(), minijinja::Value::from(css_path.unwrap_or_default()));
+        let js_path = sidecar_asset_path("calepin.js");
+        vars.clp.insert("js_path".to_string(), minijinja::Value::from(js_path.unwrap_or_default()));
+    }
     vars.clp.insert("css".to_string(), minijinja::Value::from(load_default_css()));
     vars.clp.insert("js".to_string(), minijinja::Value::from(load_default_js()));
 

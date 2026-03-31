@@ -23,7 +23,7 @@ pub fn run_collection(
     let base_dir = crate::paths::resolve_project_root(&config_abs, &cwd);
 
     let meta = crate::config::load_project_metadata(&config_abs)?;
-    let output = crate::paths::output_dir(&base_dir, meta.output.as_deref());
+    let output = crate::paths::output_dir(&base_dir, meta.output.as_deref(), "index");
 
     let version = Arc::new(AtomicU64::new(1));
 

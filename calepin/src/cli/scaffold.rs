@@ -295,6 +295,21 @@ fn install_extension_into_sidecar(scaffold: &ResolvedScaffold, sidecar_dir: &Pat
         .with_context(|| format!("Failed to install extension '{}' into sidecar", scaffold.manifest.name))
 }
 
+/// Install an extension from a directory path into an existing sidecar.
+pub fn install_extension_from_path(extension: &str, sidecar: &Path) -> Result<()> {
+    let (ext_dir, manifest) = resolve_extension(extension)?;
+    let target = sidecar.join("extensions").join(&manifest.name);
+    std::fs::create_dir_all(&target)?;
+    copy_dir_filtered(&ext_dir, &target)
+        .with_context(|| format!("Failed to install extension '{}' into sidecar", manifest.name))?;
+
+    // Overlay extension templates into the sidecar
+    crate::paths::ensure_sidecar_populated(sidecar, &manifest.name);
+
+    eprintln!("Installed extension '{}' into {}/extensions/{}/", manifest.name, sidecar.display(), manifest.name);
+    Ok(())
+}
+
 /// Copy a directory tree, skipping the `scaffold/` subdirectory.
 fn copy_dir_filtered(src: &Path, dst: &Path) -> Result<()> {
     use walkdir::WalkDir;

@@ -4,14 +4,6 @@ description = "Built-in modules"
 # -- Span transforms --
 
 [[modules]]
-name = "pagebreak"
-kind = "span"
-contexts = ["span"]
-
-[modules.match]
-classes = ["pagebreak"]
-
-[[modules]]
 name = "video"
 kind = "span"
 contexts = ["span"]

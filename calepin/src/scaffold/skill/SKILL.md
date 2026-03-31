@@ -5,7 +5,7 @@ description: >
   Covers .qmd authoring (TOML front matter, code chunks, citations,
   cross-references, figures, tables, math), project scaffolding,
   configuration, and Jinja2 templates. Use when writing or
-  editing .qmd files, configuring _calepin/ projects, customizing
+  editing .qmd files, configuring .calepin/ projects, customizing
   templates, or running calepin commands.
 ---
 

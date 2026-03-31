@@ -6,7 +6,7 @@ collection = true
 [scaffold.website]
 
 [target]
-embed_resources = false
+standalone = false
 modules = ["highlight", "append_footnotes", "embed_images"]
 
 [assets]

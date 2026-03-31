@@ -135,7 +135,7 @@ fn build_figure_element_vars(
     let display_path = resolved_path.to_string_lossy().to_string();
 
     let src = if format == "html" {
-        let embed = defaults.embed_resources.unwrap_or(true);
+        let embed = defaults.standalone.unwrap_or(true);
         if embed {
             if let Ok((mime, data)) = crate::util::base64_encode_image(&resolved_path) {
                 format!("data:{};base64,{}", mime, data)

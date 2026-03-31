@@ -43,7 +43,7 @@ paper_calepin/
     figure.html
     ...
   assets/                # static assets (CSS, JS, images)
-_calepin/                # build artifacts (gitignored)
+.calepin/                # code execution cache (gitignored)
   cache/paper/           # code chunk cache
 ```
 
@@ -70,9 +70,9 @@ my_site/
   guide/
     intro.qmd
     advanced.qmd
-  _calepin/              # build artifacts (gitignored)
+  .calepin/              # code execution cache (gitignored)
     cache/               # code execution cache
-    output/              # rendered site
+  index_output/           # rendered site (gitignored)
 ```
 
 Preview immediately:
@@ -88,8 +88,8 @@ calepin preview my_site
 | `index_calepin/config.toml` | Project configuration (targets, sidebar, navbar, etc.) |
 | `index_calepin/templates/` | Template overrides. All templates for the active target. |
 | `index_calepin/assets/` | Static assets (CSS, images, logos) copied to output. |
-| `_calepin/output/` | Default output directory for websites (configurable in `config.toml`). |
-| `_calepin/cache/` | Execution cache (per-document). |
+| `index_output/` | Default output directory for websites (configurable in `config.toml`). |
+| `.calepin/cache/` | Execution cache (per-document). |
 
 # Managing templates
 

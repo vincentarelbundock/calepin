@@ -312,6 +312,10 @@ pub fn ensure_sidecar_populated(sidecar: &Path, target: &str) {
         }
     }
 
+    // Overlay templates from installed extensions (child-first).
+    // Extension templates override auto-populated built-in copies.
+    overlay_extension_templates(sidecar, target, &chain, &dest);
+
     // Write built-in assets (from html extension, the base for all HTML-derived targets)
     let assets_dest = sidecar.join("assets");
     let _ = std::fs::create_dir_all(&assets_dest);
@@ -336,10 +340,60 @@ fn write_builtin_dir_if_missing(dir: &include_dir::Dir<'static>, prefix: &str, d
         }
     }
     for subdir in dir.dirs() {
-        write_builtin_dir_if_missing(subdir, &subdir.path().display().to_string(), dest);
+        let subdir_name = subdir.path().strip_prefix(prefix_path)
+            .unwrap_or(subdir.path());
+        write_builtin_dir_if_missing(subdir, &subdir.path().display().to_string(), &dest.join(subdir_name));
     }
 }
 
+/// Copy templates from installed extensions into the sidecar templates directory.
+/// Installed extension templates override auto-populated built-in copies.
+/// Walks the inheritance chain child-first: each extension in the chain contributes
+/// templates from its `templates/{target}/` or `templates/{writer}/` subdirectory.
+fn overlay_extension_templates(sidecar: &Path, target: &str, chain: &[String], dest: &Path) {
+    let ext_dirs = [
+        Some(sidecar.join("extensions")),
+    ];
+    // Walk chain child-first so the most specific extension wins
+    for chain_name in chain {
+        for ext_base in ext_dirs.iter().flatten() {
+            let ext_dir = ext_base.join(chain_name);
+            if !ext_dir.join("extension.toml").exists() { continue; }
+            let tpl_base = ext_dir.join("templates");
+            if !tpl_base.is_dir() { continue; }
+            // Check target-named subdir first, then each chain name as writer fallback
+            let mut candidates: Vec<std::path::PathBuf> = vec![tpl_base.join(target)];
+            for name in chain {
+                let p = tpl_base.join(name);
+                if !candidates.contains(&p) { candidates.push(p); }
+            }
+            for src_dir in &candidates {
+                if !src_dir.is_dir() { continue; }
+                copy_dir_overwrite(src_dir, dest);
+                break; // use first matching subdir
+            }
+        }
+    }
+}
+
+/// Copy files from src to dest, overwriting existing files.
+fn copy_dir_overwrite(src: &Path, dest: &Path) {
+    let entries = match std::fs::read_dir(src) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    let _ = std::fs::create_dir_all(dest);
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let file_name = entry.file_name();
+        let out = dest.join(&file_name);
+        if path.is_file() {
+            let _ = std::fs::copy(&path, &out);
+        } else if path.is_dir() {
+            copy_dir_overwrite(&path, &out);
+        }
+    }
+}
 
 
 
@@ -398,9 +452,9 @@ impl PathContext {
     }
 
     /// Resolve the cache directory for a given document stem.
-    /// Cache lives at `{project_root}/_calepin/cache/{stem}/`.
+    /// Cache lives at `{project_root}/.calepin/cache/{stem}/`.
     pub fn cache_dir(&self, stem: &str) -> PathBuf {
-        self.project_root.join("_calepin").join("cache").join(stem)
+        self.project_root.join(".calepin").join("cache").join(stem)
     }
 
     /// Compute a relative stem from input path, for use as cache/figure key.
@@ -437,19 +491,22 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     out
 }
 
-/// Default output directory name for collection builds.
-pub const DEFAULT_OUTPUT_DIR: &str = "_calepin/output";
+/// Default output directory suffix for collection builds: `{stem}_output`.
+pub const DEFAULT_OUTPUT_SUFFIX: &str = "_output";
 
 /// Resolve the output directory for a collection build.
-/// Uses the config `output` field if set, otherwise `DEFAULT_OUTPUT_DIR`.
+/// Uses the config `output` field if set, otherwise `{stem}_output`
+/// (where `stem` is the entry-point filename without extension, typically `index`).
 /// The result is always absolute (joined to `project_root`).
-pub fn output_dir(project_root: &Path, config_output: Option<&str>) -> PathBuf {
-    let name = config_output.unwrap_or(DEFAULT_OUTPUT_DIR);
-    let p = PathBuf::from(name);
+pub fn output_dir(project_root: &Path, config_output: Option<&str>, stem: &str) -> PathBuf {
+    let p = match config_output {
+        Some(name) => PathBuf::from(name),
+        None => PathBuf::from(format!("{}{}", stem, DEFAULT_OUTPUT_SUFFIX)),
+    };
     if p.is_absolute() {
         p
     } else {
-        project_root.join(name)
+        project_root.join(p)
     }
 }
 

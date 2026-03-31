@@ -1,0 +1,108 @@
+---
+target = "cv"
+name = "Jane Doe"
+address = "Chicago IL, US"
+contacts = [
+  '#link("mailto:jdoe@university.edu")[jdoe\@university.edu]',
+  '#link("https://janedoe.com")[janedoe.com]',
+  '#link("https://github.com/jdoe")[gh/jdoe]',
+]
+---
+
+= Education
+
+```{=typst}
+#edu(
+  institution: "Harvard University",
+  location: "Cambridge MA, US",
+  gpa: "3.97",
+  degrees: ([Ph.D. Physics],),
+  date: datetime(year: 2023, month: 4, day: 28),
+)
+
+#edu(
+  institution: "Wellesley College",
+  location: "Wellesley MA, US",
+  gpa: "4.00",
+  degrees: ([B.A. Psychology & Physics],),
+  date: datetime(year: 2017, month: 5, day: 14),
+)
+```
+
+= Research Experience
+
+```{=typst}
+#exp(
+  role: "Postdoctoral Researcher",
+  org: "University of Chicago, Kadanoff Center for Theoretical Physics",
+  location: "Chicago IL, US",
+  start: datetime(year: 2023, month: 10, day: 11),
+  end: "Present",
+  details: [
+    - Led and mentored a subgroup of 3 graduate students in quantum field theory.
+    - Organized weekly meetings and curated papers for the journal club.
+    - Developed an original research project on electron waveform deconvolution.
+  ],
+)
+
+#exp(
+  role: "Research Assistant",
+  org: "Harvard University, Department of Physics",
+  location: "Cambridge MA, US",
+  start: datetime(year: 2017, month: 10, day: 11),
+  end: datetime(year: 2023, month: 5, day: 20),
+  details: [
+    - Developed a signal processing pipeline to analyze ECG data from thousands of patients.
+    - Translated three signal processing tools from MATLAB to Python.
+    - Developed an image processing package for fluorescence microscopy signals.
+  ],
+)
+```
+
+= Awards
+
+```{=typst}
+#award(
+  date: datetime(year: 2023, month: 12, day: 5),
+  name: "MPS-Ascend Postdoctoral Research Fellowship",
+  from: "National Science Foundation",
+)
+
+#award(
+  date: datetime(year: 2017, month: 3, day: 4),
+  name: "NSF Graduate Research Fellowship Program",
+  from: "National Science Foundation",
+)
+```
+
+= Publications
+
+```{=typst}
+#paper(
+  authors: ([*Doe J*], [Smith A]),
+  title: "Beyond the Quantum Manifold",
+  journal: "Physics Letters B",
+  published: datetime(year: 2025, month: 03, day: 17),
+  vol: 862,
+  pages: 139301,
+)
+
+#paper(
+  authors: ([*Doe J*], [Lee K], [Park M]),
+  title: "A method for time-aware deconvolution of brainwaves",
+  journal: "Signal Processing",
+  published: datetime(year: 2017, month: 6, day: 3),
+  vol: 212,
+  pages: 109153,
+)
+```
+
+= Skills
+
+```{=typst}
+#skills((
+  ("Expertise", ([Systems Biology], [Signal Processing], [Quantum Field Theory])),
+  ("Software", ([Python], [MATLAB], [Docker], [git], [Typst])),
+  ("Languages", ([English (native)], [Mandarin (fluent)])),
+))
+```

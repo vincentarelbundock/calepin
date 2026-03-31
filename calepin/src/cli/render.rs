@@ -21,7 +21,7 @@ pub fn handle_render(args: RenderArgs) -> Result<()> {
             ProjectKind::Collection { config, project_dir, .. } => {
                 let output = args.output.unwrap_or_else(|| {
                     let meta = crate::config::load_project_metadata(&config).ok();
-                    crate::paths::output_dir(&project_dir, meta.as_ref().and_then(|m| m.output.as_deref()))
+                    crate::paths::output_dir(&project_dir, meta.as_ref().and_then(|m| m.output.as_deref()), "index")
                 });
                 return crate::collection::build_collection(Some(config.as_path()), &output, args.clean, args.quiet, args.target.as_deref());
             }

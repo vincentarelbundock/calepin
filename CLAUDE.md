@@ -231,12 +231,12 @@ User overrides: `{stem}_calepin/templates/{target}/{name}.{ext}`
 
 The sidecar (`{stem}_calepin/`) is user-owned and version-controlled. It contains configuration, template overrides, assets, modules, and extensions. The build system never writes to it.
 
-Build artifacts (cache, output) go in `_calepin/` at the project root:
+Build artifacts go in two directories at the project root:
 
-- `_calepin/cache/{stem}/` -- code execution cache
-- `_calepin/output/` -- rendered site (collections only)
+- `.calepin/cache/{stem}/` -- code execution cache (hidden)
+- `{stem}_output/` -- rendered site (collections only, e.g. `index_output/`)
 
-`_calepin/` should be in `.gitignore`. To clear: `rm -rf _calepin/`.
+Both should be in `.gitignore`. To clear: `rm -rf .calepin/ *_output/`.
 
 **Sidecar creation**: Only via `calepin init`. The build system never auto-creates sidecars or writes `config.toml`.
 

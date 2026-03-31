@@ -203,14 +203,14 @@ pub trait TransformProject: Send + Sync {
 // ---------------------------------------------------------------------------
 
 /// Factory that creates a configured FormatEmitter at render time.
-/// Emitter configuration (embed_resources, number_sections, etc.) varies
+/// Emitter configuration (standalone, number_sections, etc.) varies
 /// per document, so the registry stores a factory rather than an instance.
 pub type EmitterFactory = fn(&EmitterConfig) -> Box<dyn FormatEmitter>;
 
 /// Per-render emitter configuration, derived from document metadata.
 #[derive(Default)]
 pub struct EmitterConfig {
-    pub embed_resources: bool,
+    pub standalone: bool,
     pub number_sections: bool,
 }
 
@@ -389,7 +389,7 @@ fn resolve_builtin_kind(name: &str, kind_str: &str) -> ModuleKind {
     match (name, kind_str) {
         // Emitters (AST -> format output)
         ("html", "emitter") => ModuleKind::Emitter(|cfg| {
-            Box::new(crate::emit::html::HtmlEmitter { embed_resources: cfg.embed_resources })
+            Box::new(crate::emit::html::HtmlEmitter { standalone: cfg.standalone })
         }),
         ("latex", "emitter") => ModuleKind::Emitter(|cfg| {
             Box::new(crate::emit::latex::LatexEmitter { number_sections: cfg.number_sections })
@@ -416,8 +416,6 @@ fn resolve_builtin_kind(name: &str, kind_str: &str) -> ModuleKind {
             Box::new(BuiltinElementChildren(builtin_element_children_fn::theorem))),
 
         // Span transforms
-        ("pagebreak", "span") => ModuleKind::Span(
-            Box::new(BuiltinSpan(builtin_span_fn::pagebreak))),
         ("video", "span") => ModuleKind::Span(
             Box::new(BuiltinSpan(builtin_span_fn::video))),
         ("placeholder", "span") => ModuleKind::Span(
@@ -529,11 +527,6 @@ impl TransformSpan for BuiltinSpan {
 
 mod builtin_span_fn {
     use std::collections::HashMap;
-
-    pub fn pagebreak(_attrs: &HashMap<String, String>, _content: &str, format: &str,
-                     _defaults: &crate::config::Metadata) -> Option<String> {
-        Some(crate::modules::pagebreak::render(format))
-    }
 
     pub fn video(attrs: &HashMap<String, String>, _content: &str, format: &str,
                  defaults: &crate::config::Metadata) -> Option<String> {
