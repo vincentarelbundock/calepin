@@ -31,6 +31,10 @@
   --c-important:    #b48ead;
   --c-success:      #2e7d32;
 
+  /* Interactive surfaces */
+  --c-hover-bg:     color-mix(in srgb, var(--c-bg) 85%, var(--c-text) 5%);
+  --c-border-soft:  color-mix(in srgb, var(--c-border) 40%, transparent);
+
   /* Depth */
   --c-shadow:       light-dark(rgba(46, 52, 64, 0.08), rgba(0, 0, 0, 0.3));
   --c-shadow-soft:  0 4px 12px var(--c-shadow);

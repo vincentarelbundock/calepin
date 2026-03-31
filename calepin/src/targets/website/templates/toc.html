@@ -1,5 +1,3 @@
-<aside class="sidebar-right" role="complementary" aria-label="Table of contents">
-  {% if clp.toc %}
-  {{ clp.toc | safe }}
-  {% endif %}
-</aside>
+{% if clp.toc %}
+{{ clp.toc | safe }}
+{% endif %}

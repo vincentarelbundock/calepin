@@ -411,13 +411,25 @@ async function navigateTo(url) {
     const resp = await fetch(url);
     if (!resp.ok) { location.href = url; return; }
     const html = await resp.text();
+
+    // Resolve relative URLs in inline styles against the target URL
+    const baseUrl = new URL(url, location.href);
+    const baseDir = baseUrl.href.replace(/[^/]*$/, '');
+    function resolveHtml(raw) {
+      return raw.replace(/url\(([^)]+)\)/g, function(m, p) {
+        p = p.trim().replace(/^['"]|['"]$/g, '');
+        if (/^(https?:|data:|\/)/i.test(p)) return m;
+        return 'url(' + new URL(p, baseDir).href + ')';
+      });
+    }
+
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
     // Swap main content
     const newMain = doc.getElementById('main-content');
     const oldMain = document.getElementById('main-content');
     if (!newMain || !oldMain) { location.href = url; return; }
-    oldMain.innerHTML = newMain.innerHTML;
+    oldMain.innerHTML = resolveHtml(newMain.innerHTML);
 
     // Swap TOC
     const oldToc = document.querySelector('.sidebar-right');

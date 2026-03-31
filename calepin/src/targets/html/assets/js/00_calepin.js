@@ -419,13 +419,24 @@ _clpInitPage();
     return fetch(url).then(function(resp) {
       if (!resp.ok) { location.href = url; return; }
       return resp.text().then(function(html) {
+        // Resolve relative URLs in inline styles against the target URL
+        var baseUrl = new URL(url, location.href);
+        var baseDir = baseUrl.href.replace(/[^/]*$/, '');
+        function resolveHtml(raw) {
+          return raw.replace(/url\(([^)]+)\)/g, function(m, p) {
+            p = p.trim().replace(/^['"]|['"]$/g, '');
+            if (/^(https?:|data:|\/)/i.test(p)) return m;
+            return 'url(' + new URL(p, baseDir).href + ')';
+          });
+        }
+
         var doc = new DOMParser().parseFromString(html, 'text/html');
 
         // Swap main content
         var newMain = doc.getElementById('main-content');
         var oldMain = document.getElementById('main-content');
         if (!newMain || !oldMain) { location.href = url; return; }
-        oldMain.innerHTML = newMain.innerHTML;
+        oldMain.innerHTML = resolveHtml(newMain.innerHTML);
 
         // Swap TOC
         var oldToc = document.querySelector('.sidebar-right');
