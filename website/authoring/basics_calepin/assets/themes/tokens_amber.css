@@ -1,0 +1,28 @@
+/*
+ * Retro Revival tokens
+ * 70s poster palette: coral, tan, gold, navy.
+ * Load after tokens.css to override the defaults.
+ */
+
+:root {
+  /* Surface & text */
+  --c-bg:              light-dark(#faf5ee, #1c1f30);
+  --c-bg-secondary:    light-dark(#f0e8db, #252840);
+  --c-bg-tertiary:     light-dark(#e5dace, #2e324a);
+  --c-text:            light-dark(#2c3050, #f0e6d8);
+  --c-text-muted:      light-dark(#7a7060, #a09888);
+  --c-text-secondary:  light-dark(#6a6258, #c0b8a8);
+  --c-link:            light-dark(#cc4a48, #ff5e5b);
+  --c-border:          light-dark(#ddd5c8, #3a3e55);
+  --c-code-bg:         light-dark(#f0e8db, #252840);
+  --c-accent:          light-dark(#d09520, #ffc145);
+  --c-accent-contrast: light-dark(#ffffff, #1c1f30);
+
+  /* Component accents */
+  --c-note:            light-dark(#40476d, #6e78b0);
+  --c-tip:             light-dark(#8a9a5c, #a3be8c);
+  --c-warning:         light-dark(#d8a47f, #ffc145);
+  --c-error:           light-dark(#cc4a48, #ff5e5b);
+  --c-important:       light-dark(#7a5a8a, #b48ead);
+  --c-success:         #2e7d32;
+}
