@@ -96,7 +96,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     let mut vars = TemplateVars::with_writer("html");
     vars.cfg.insert("title".to_string(), minijinja::Value::from(title.to_string()));
     vars.clp.insert("content".to_string(), minijinja::Value::from(toc_list));
-    let tpl = include_str!("../../templates/html/toc.html");
+    let tpl = include_str!("../../targets/html/templates/toc.html");
     apply_template(tpl, &vars)
 }
 
@@ -131,6 +131,25 @@ pub fn load_default_css() -> String {
     css.push_str(&load_all_extension_assets(&root, |r, name| load_extension_css(r, name)));
 
     css
+}
+
+/// Load only extension CSS (not the base sidecar calepin.css).
+/// Used when the base CSS is linked via `<link>` but extension CSS must be inlined.
+pub fn load_extension_css_only() -> String {
+    let root = crate::paths::get_project_dir();
+    load_all_extension_assets(&root, |r, name| load_extension_css(r, name))
+}
+
+/// Return the relative path from the output file to a sidecar asset file,
+/// e.g. `my_doc_calepin/assets/calepin.css`. Returns None if no sidecar or
+/// the asset file does not exist.
+fn sidecar_asset_path(filename: &str) -> Option<String> {
+    let sidecar = crate::paths::get_page_sidecar()
+        .or_else(|| crate::paths::get_root_sidecar())?;
+    let asset = sidecar.join("assets").join(filename);
+    if !asset.exists() { return None; }
+    let sidecar_name = sidecar.file_name()?;
+    Some(format!("{}/assets/{}", sidecar_name.to_string_lossy(), filename))
 }
 
 /// Load assets from the active target's extension chain plus all side-loaded extensions.
@@ -490,9 +509,18 @@ pub fn build_template_vars_with_headings(
     // Appendix (engine-rendered from user metadata)
     vars.clp.insert("appendix".to_string(), minijinja::Value::from(build_appendix(meta, ext)));
 
-    // Default values for format-specific template variables (engine assets)
+    // CSS and JS asset paths (relative to output file) for <link>/<script src>.
+    let css_path = sidecar_asset_path("calepin.css");
+    vars.clp.insert("css_path".to_string(), minijinja::Value::from(css_path.unwrap_or_default()));
+    let js_path = sidecar_asset_path("calepin.js");
+    vars.clp.insert("js_path".to_string(), minijinja::Value::from(js_path.unwrap_or_default()));
+
+    // Inline CSS/JS (used when css_path/js_path are not set)
     vars.clp.insert("css".to_string(), minijinja::Value::from(load_default_css()));
     vars.clp.insert("js".to_string(), minijinja::Value::from(load_default_js()));
+
+    // Extension-only CSS (inlined even when base CSS is linked via <link>)
+    vars.clp.insert("ext_css".to_string(), minijinja::Value::from(load_extension_css_only()));
 
     // Math include for html-writer targets
     if ext == "html" {

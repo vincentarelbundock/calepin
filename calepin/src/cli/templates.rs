@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Result};
 
 use crate::cli::TemplatesAction;
-use crate::render::elements::{BUILTIN_TEMPLATES, resolve_builtin_template};
+use crate::render::elements::{BUILTIN_EXTENSIONS, resolve_builtin_template};
 
 // ---------------------------------------------------------------------------
 // Context: resolve sidecar + target from input .qmd
@@ -58,8 +58,9 @@ fn resolve_context(input: &Path, target_override: Option<&str>) -> Result<Templa
 fn collect_builtin_files(chain: &[String]) -> Vec<String> {
     let mut names: Vec<String> = Vec::new();
     for chain_target in chain {
-        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
-            let prefix = std::path::Path::new(chain_target.as_str());
+        let tpl_path = format!("{}/templates", chain_target);
+        if let Some(dir) = BUILTIN_EXTENSIONS.get_dir(&tpl_path) {
+            let prefix = std::path::Path::new(&tpl_path);
             collect_dir_files(dir, prefix, &mut names);
         }
     }
@@ -84,8 +85,8 @@ fn collect_dir_files(dir: &include_dir::Dir<'static>, prefix: &Path, names: &mut
 /// Get built-in template content by filename, walking the chain (child-first).
 fn get_builtin_content(chain: &[String], filename: &str) -> Option<String> {
     for chain_target in chain {
-        let path = format!("{}/{}", chain_target, filename);
-        if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+        let path = format!("{}/templates/{}", chain_target, filename);
+        if let Some(file) = BUILTIN_EXTENSIONS.get_file(&path) {
             if let Some(content) = file.contents_utf8() {
                 return Some(content.to_string());
             }

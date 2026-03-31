@@ -1,0 +1,7 @@
+name = "pdf-latex"
+description = "PDF document output via LaTeX"
+inherits = "latex"
+
+[target]
+extension = "pdf"
+post = ["latexmk -pdf -interaction=nonstopmode {input}"]

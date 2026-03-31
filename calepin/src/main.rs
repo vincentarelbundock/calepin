@@ -21,7 +21,7 @@ mod utils;
 pub(crate) use config::{ProjectContext, resolve_context, apply_writer_override};
 pub(crate) use config::value;
 pub(crate) use utils::paths;
-pub(crate) use modules::{registry, manifest as module_manifest};
+pub(crate) use modules::registry;
 pub(crate) use references::{bibliography, crossref};
 pub(crate) use utils::util;
 use anyhow::Result;

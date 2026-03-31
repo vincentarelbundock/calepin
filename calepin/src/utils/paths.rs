@@ -298,7 +298,7 @@ pub fn resolve_or_create_sidecar_dir(input: &Path) -> Option<PathBuf> {
 ///
 /// Call this after the target has been resolved (i.e., after `resolve_context`).
 pub fn ensure_sidecar_populated(sidecar: &Path, target: &str) {
-    use crate::render::elements::{BUILTIN_TEMPLATES, BUILTIN_ASSETS};
+    use crate::render::elements::BUILTIN_EXTENSIONS;
 
     // Write templates for the target (parent-first so child overrides parent)
     let empty = std::collections::HashMap::new();
@@ -306,15 +306,18 @@ pub fn ensure_sidecar_populated(sidecar: &Path, target: &str) {
     let chain = crate::config::extension::inheritance_chain(project_root, target, &empty);
     let dest = sidecar.join("templates").join(target);
     for chain_target in chain.iter().rev() {
-        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
-            write_builtin_dir_if_missing(dir, chain_target, &dest);
+        let tpl_path = format!("{}/templates", chain_target);
+        if let Some(dir) = BUILTIN_EXTENSIONS.get_dir(&tpl_path) {
+            write_builtin_dir_if_missing(dir, &tpl_path, &dest);
         }
     }
 
-    // Write built-in assets
+    // Write built-in assets (from html extension, the base for all HTML-derived targets)
     let assets_dest = sidecar.join("assets");
     let _ = std::fs::create_dir_all(&assets_dest);
-    write_embedded_dir_if_missing(&BUILTIN_ASSETS, &assets_dest);
+    if let Some(assets_dir) = BUILTIN_EXTENSIONS.get_dir("html/assets") {
+        write_builtin_dir_if_missing(assets_dir, "html/assets", &assets_dest);
+    }
 }
 
 /// Recursively write files from a built-in directory, stripping the prefix.
@@ -337,20 +340,6 @@ fn write_builtin_dir_if_missing(dir: &include_dir::Dir<'static>, prefix: &str, d
     }
 }
 
-/// Write an embedded directory to disk, only writing files that don't already exist.
-fn write_embedded_dir_if_missing(dir: &include_dir::Dir<'static>, dest: &Path) {
-    for file in dir.files() {
-        let target = dest.join(file.path());
-        if target.exists() { continue; }
-        if let Some(parent) = target.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let _ = std::fs::write(&target, file.contents());
-    }
-    for subdir in dir.dirs() {
-        write_embedded_dir_if_missing(subdir, dest);
-    }
-}
 
 
 
@@ -556,6 +545,7 @@ pub fn resolve_template(name: &str, writer: &str) -> Option<PathBuf> {
 
 /// Resolve a module directory by name.
 /// Checks page sidecar first, then root sidecar.
+/// Modules use extension.toml as their manifest.
 pub fn resolve_module_dir(name: &str, _project_root: &Path) -> Option<PathBuf> {
     let candidates = [
         get_page_sidecar().map(|s| s.join("modules").join(name)),
@@ -563,7 +553,7 @@ pub fn resolve_module_dir(name: &str, _project_root: &Path) -> Option<PathBuf> {
     ];
     candidates.into_iter()
         .flatten()
-        .find(|dir| dir.join("module.toml").exists())
+        .find(|dir| dir.join("extension.toml").exists())
 }
 
 // ---------------------------------------------------------------------------
@@ -635,7 +625,7 @@ pub fn validate_paths(meta: &Metadata, ctx: &PathContext, input_name: &str) -> R
             let expected = get_root_sidecar()
                 .or_else(get_page_sidecar)
                 .unwrap_or_else(|| ctx.project_root.clone())
-                .join("modules").join(plugin).join("module.toml");
+                .join("modules").join(plugin).join("extension.toml");
             errors.push(format!(
                 "  calepin.plugins: {}\n    -> not found: {}",
                 plugin,

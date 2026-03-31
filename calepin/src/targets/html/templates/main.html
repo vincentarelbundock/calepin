@@ -15,7 +15,11 @@
 {% include "preamble.html" %}
 {% if cfg.keywords %}<meta name="keywords" content="{{cfg.keywords}}">{% endif %}
 
-{% if clp.css %}<style>
+{% if clp.css_path %}<link rel="stylesheet" href="{{clp.css_path}}">
+{% if clp.ext_css %}<style>
+{{clp.ext_css}}
+</style>{% endif %}
+{% elif clp.css %}<style>
 {{clp.css}}
 </style>{% endif %}
 
@@ -48,7 +52,8 @@
 {% if clp.toc %}<aside class="toc-sidebar" role="complementary" aria-label="Table of contents">{{clp.toc}}</aside>{% endif %}
 </div>
 
-{% if clp.js %}<script>
+{% if clp.js_path %}<script type="module" src="{{clp.js_path}}"></script>
+{% elif clp.js %}<script>
 {{clp.js}}
 </script>{% endif %}
 </body>

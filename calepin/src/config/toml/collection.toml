@@ -13,7 +13,7 @@ fig_extension = "svg"
 embed_resources = false
 preview = "serve"
 
-[targets.book-typst]
+[targets.book]
 writer = "typst"
 template = "chapter"
 extension = "pdf"

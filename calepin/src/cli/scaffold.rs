@@ -206,7 +206,7 @@ fn resolve_scaffold(scaffold_name: &str, extension: Option<&str>) -> Result<Reso
         })
     } else {
         let (ext_name, dir) = crate::config::extension::builtin_scaffold(scaffold_name)
-            .ok_or_else(|| anyhow::anyhow!("No built-in scaffold named '{}'. Available: website, book, document", scaffold_name))?;
+            .ok_or_else(|| anyhow::anyhow!("No built-in scaffold named '{}'. Available: website, book, book-latex, document", scaffold_name))?;
         let manifest = crate::config::extension::builtin_extension(ext_name)
             .ok_or_else(|| anyhow::anyhow!("Built-in extension '{}' not found", ext_name))?;
         Ok(ResolvedScaffold {

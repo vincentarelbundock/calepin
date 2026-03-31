@@ -1,14 +1,5 @@
-# Built-in module declarations.
-#
-# Each module declares its match rules and kind. The Rust implementation
-# is resolved by name via `resolve_builtin_kind()` in registry.rs.
-#
-# kind:
-#   "element"          -- TransformElement (pre-render element mutation)
-#   "element_children" -- TransformElementChildren (structural div rewriting)
-#   "document"         -- TransformDocument (post-assembly full document)
-#   "span"             -- TransformSpan (span-level rendering)
-#   "noop"             -- No transform logic (partial/template provider only)
+name = "core"
+description = "Built-in modules"
 
 # -- Span transforms --
 
@@ -44,7 +35,7 @@ contexts = ["span"]
 [modules.match]
 classes = ["lorem"]
 
-# -- Element children transforms (per-div structural rewriting) --
+# -- Element children transforms --
 
 [[modules]]
 name = "document_listing"
@@ -53,7 +44,7 @@ contexts = ["div"]
 
 [modules.match]
 classes = ["listing"]
-formats = ["html"]
+writers = ["html"]
 
 [[modules]]
 name = "tabset"
@@ -62,7 +53,7 @@ contexts = ["div"]
 
 [modules.match]
 classes = ["panel-tabset"]
-formats = ["html"]
+writers = ["html"]
 
 [[modules]]
 name = "layout"
@@ -100,31 +91,13 @@ classes = [
     "algorithm", "proof",
 ]
 
-# -- Emitters (AST -> format output) --
-
-[[modules]]
-name = "html"
-kind = "emitter"
-
-[[modules]]
-name = "latex"
-kind = "emitter"
-
-[[modules]]
-name = "typst"
-kind = "emitter"
-
-[[modules]]
-name = "markdown"
-kind = "emitter"
-
-# -- Element transforms (pre-render mutations) --
+# -- Element transforms --
 
 [[modules]]
 name = "convert_svg_pdf"
 kind = "element"
 
-# -- Document transforms (post-assembly) --
+# -- Document transforms --
 
 [[modules]]
 name = "append_footnotes"

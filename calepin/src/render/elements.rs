@@ -14,11 +14,8 @@ use crate::modules::Highlighter;
 // Built-in project tree (embedded at compile time)
 // ---------------------------------------------------------------------------
 
-/// Built-in templates (element/page templates), embedded at compile time.
-pub static BUILTIN_TEMPLATES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/templates");
-
-/// Built-in assets (CSS, JS, icons, fonts), embedded at compile time.
-pub static BUILTIN_ASSETS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/assets");
+/// All built-in targets (templates, assets, scaffolds), embedded at compile time.
+pub static BUILTIN_EXTENSIONS: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets");
 
 /// Template name aliases: multiple names can map to the same template file.
 fn resolve_template_alias(name: &str) -> &str {
@@ -44,43 +41,43 @@ pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> 
         // Target-specific variant
         if let Some(target) = crate::paths::get_active_target() {
             if target != base {
-                let path = format!("{}/{}.{}.{}", target, resolved, v, ext);
-                if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+                let path = format!("{}/templates/{}.{}.{}", target, resolved, v, ext);
+                if let Some(file) = BUILTIN_EXTENSIONS.get_file(&path) {
                     if let Some(s) = file.contents_utf8() { return Some(s); }
                 }
             }
         }
         // Base-specific variant
-        let path = format!("{}/{}.{}.{}", base, resolved, v, ext);
-        if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+        let path = format!("{}/templates/{}.{}.{}", base, resolved, v, ext);
+        if let Some(file) = BUILTIN_EXTENSIONS.get_file(&path) {
             if let Some(s) = file.contents_utf8() { return Some(s); }
         }
         // Common variant
-        let path = format!("common/{}.{}.jinja", resolved, v);
-        if let Some(file) = BUILTIN_TEMPLATES.get_file(&path) {
+        let path = format!("common/templates/{}.{}.jinja", resolved, v);
+        if let Some(file) = BUILTIN_EXTENSIONS.get_file(&path) {
             if let Some(s) = file.contents_utf8() { return Some(s); }
         }
     }
 
-    // Target-specific (e.g., book-typst/chapter.typ)
+    // Target-specific (e.g., book/templates/chapter.typ)
     if let Some(target) = crate::paths::get_active_target() {
         if target != base {
-            let target_path = format!("{}/{}.{}", target, resolved, ext);
-            if let Some(file) = BUILTIN_TEMPLATES.get_file(&target_path) {
+            let target_path = format!("{}/templates/{}.{}", target, resolved, ext);
+            if let Some(file) = BUILTIN_EXTENSIONS.get_file(&target_path) {
                 return file.contents_utf8();
             }
         }
     }
 
-    // Base-specific (e.g., html/figure.html)
-    let base_path = format!("{}/{}.{}", base, resolved, ext);
-    if let Some(file) = BUILTIN_TEMPLATES.get_file(&base_path) {
+    // Base-specific (e.g., html/templates/figure.html)
+    let base_path = format!("{}/templates/{}.{}", base, resolved, ext);
+    if let Some(file) = BUILTIN_EXTENSIONS.get_file(&base_path) {
         return file.contents_utf8();
     }
 
     // Generic .jinja
-    let common_path = format!("common/{}.jinja", resolved);
-    BUILTIN_TEMPLATES.get_file(&common_path).and_then(|f| f.contents_utf8())
+    let common_path = format!("common/templates/{}.jinja", resolved);
+    BUILTIN_EXTENSIONS.get_file(&common_path).and_then(|f| f.contents_utf8())
 }
 
 // ---------------------------------------------------------------------------

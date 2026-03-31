@@ -167,7 +167,6 @@ fn default_protocol() -> String {
 
 /// Match rules for element-level modules.
 #[derive(Debug, Clone, Default, Deserialize)]
-#[allow(dead_code)]
 pub struct ExtensionMatchRule {
     /// CSS classes that trigger this module (OR'd).
     #[serde(default)]
@@ -182,7 +181,35 @@ pub struct ExtensionMatchRule {
     pub writers: Vec<String>,
     /// Auto-number matching elements.
     #[serde(default)]
+    #[allow(dead_code)]
     pub number: bool,
+}
+
+impl ExtensionMatchRule {
+    /// Check if this match rule applies to the given element properties.
+    pub fn matches(
+        &self,
+        classes: &[String],
+        attrs: &std::collections::HashMap<String, String>,
+        id: Option<&str>,
+        format: &str,
+    ) -> bool {
+        if !self.writers.is_empty() && !self.writers.iter().any(|f| f == format) {
+            return false;
+        }
+        if self.classes.iter().any(|c| classes.iter().any(|cls| cls == c)) {
+            return true;
+        }
+        if self.attrs.iter().any(|a| attrs.contains_key(a)) {
+            return true;
+        }
+        if let (Some(prefix), Some(id_val)) = (&self.id_prefix, id) {
+            if id_val.starts_with(prefix.as_str()) {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -486,15 +513,16 @@ fn is_valid_extension_name(name: &str) -> bool {
 
 /// Built-in extension manifest sources, embedded at compile time.
 pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
-    ("html", include_str!("../extensions/html/extension.toml")),
-    ("latex", include_str!("../extensions/latex/extension.toml")),
-    ("typst", include_str!("../extensions/typst/extension.toml")),
-    ("markdown", include_str!("../extensions/markdown/extension.toml")),
-    ("pdf", include_str!("../extensions/pdf/extension.toml")),
-    ("slides", include_str!("../extensions/slides/extension.toml")),
-    ("website", include_str!("../extensions/website/extension.toml")),
-    ("book-typst", include_str!("../extensions/book-typst/extension.toml")),
-    ("book-latex", include_str!("../extensions/book-latex/extension.toml")),
+    ("html", include_str!("../targets/html/extension.toml")),
+    ("latex", include_str!("../targets/latex/extension.toml")),
+    ("typst", include_str!("../targets/typst/extension.toml")),
+    ("markdown", include_str!("../targets/markdown/extension.toml")),
+    ("pdf", include_str!("../targets/pdf/extension.toml")),
+    ("pdf-latex", include_str!("../targets/pdf-latex/extension.toml")),
+    ("slides", include_str!("../targets/slides/extension.toml")),
+    ("website", include_str!("../targets/website/extension.toml")),
+    ("book", include_str!("../targets/book/extension.toml")),
+    ("book-latex", include_str!("../targets/book-latex/extension.toml")),
 ];
 
 /// Parse a built-in extension manifest by name.
@@ -514,13 +542,15 @@ use include_dir::{include_dir, Dir};
 /// Each entry is `(extension_name, scaffold_name, embedded_dir)`.
 pub static BUILTIN_SCAFFOLDS: &[(&str, &str, &Dir<'static>)] = &[
     ("website", "website", &SCAFFOLD_WEBSITE),
-    ("book-typst", "book", &SCAFFOLD_BOOK),
+    ("book", "book", &SCAFFOLD_BOOK),
+    ("book-latex", "book-latex", &SCAFFOLD_BOOK_LATEX),
     ("html", "document", &SCAFFOLD_DOCUMENT),
 ];
 
-static SCAFFOLD_WEBSITE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/website/scaffold/website");
-static SCAFFOLD_BOOK: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/book-typst/scaffold/book");
-static SCAFFOLD_DOCUMENT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/extensions/html/scaffold/document");
+static SCAFFOLD_WEBSITE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/website/scaffold/website");
+static SCAFFOLD_BOOK: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/book/scaffold/book");
+static SCAFFOLD_BOOK_LATEX: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/book-latex/scaffold/book-latex");
+static SCAFFOLD_DOCUMENT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/html/scaffold/document");
 
 /// Look up a built-in scaffold by name (e.g., "website", "book", "document").
 /// Returns the extension name and the embedded directory.
@@ -579,14 +609,14 @@ mod tests {
 
     #[test]
     fn test_book_is_collection() {
-        assert!(builtin_extension("book-typst").unwrap().collection);
+        assert!(builtin_extension("book").unwrap().collection);
         assert!(builtin_extension("book-latex").unwrap().collection);
     }
 
     #[test]
     fn test_collection_field_on_builtins() {
         assert!(builtin_extension("website").unwrap().collection);
-        assert!(builtin_extension("book-typst").unwrap().collection);
+        assert!(builtin_extension("book").unwrap().collection);
         assert!(builtin_extension("book-latex").unwrap().collection);
         assert!(!builtin_extension("html").unwrap().collection);
         assert!(!builtin_extension("latex").unwrap().collection);
@@ -596,7 +626,7 @@ mod tests {
     #[test]
     fn test_is_collection_target() {
         assert!(is_collection_target("website"));
-        assert!(is_collection_target("book-typst"));
+        assert!(is_collection_target("book"));
         assert!(is_collection_target("book-latex"));
         assert!(!is_collection_target("html"));
         assert!(!is_collection_target("latex"));

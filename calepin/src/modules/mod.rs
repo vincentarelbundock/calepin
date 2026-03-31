@@ -11,7 +11,6 @@
 //! External code should import from `crate::modules::` (this file),
 //! never from individual submodules like `crate::modules::highlight::`.
 
-pub mod manifest;
 pub mod registry;
 
 // Transform traits

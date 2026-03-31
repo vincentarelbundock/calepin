@@ -62,7 +62,7 @@ calepin preview my_website/
 calepin init paper.qmd                  # document with sidecar (html target)
 calepin init paper.qmd -t latex         # document with sidecar (latex target)
 calepin init my-site -t website         # website project
-calepin init my-book -t book-typst      # book project
+calepin init my-book -t book            # book project
 ```
 
 ### extra

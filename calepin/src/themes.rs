@@ -8,13 +8,16 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::paths::ProjectKind;
-
-pub use crate::render::elements::BUILTIN_ASSETS;
+use crate::render::elements::BUILTIN_EXTENSIONS;
 
 /// Copy built-in assets (CSS, fonts, icons) into a project's sidecar directory.
 pub fn copy_builtin_assets(kind: &ProjectKind) -> anyhow::Result<()> {
+    let assets_dir = BUILTIN_EXTENSIONS.get_dir("html/assets")
+        .ok_or_else(|| anyhow::anyhow!("Built-in html/assets not found"))?;
+
     let mut files = BTreeMap::new();
-    collect_embedded_dir(&BUILTIN_ASSETS, Path::new("assets"), Path::new(""), &mut files);
+    let strip = Path::new("html/assets");
+    collect_embedded_dir(assets_dir, Path::new("assets"), strip, &mut files);
 
     let base = kind.calepin_dir();
     for (rel, content) in &files {

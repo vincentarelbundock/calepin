@@ -2,3 +2,5 @@ name = "book-latex"
 description = "Multi-chapter book (LaTeX)"
 inherits = "latex"
 collection = true
+
+[scaffold.book-latex]

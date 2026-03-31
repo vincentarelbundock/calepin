@@ -284,7 +284,7 @@ For collection builds (websites), CSS and JS are served as external files:
 
 CSS is split into modules in `assets/css/` and loaded via `@import` from `assets/calepin.css`. All widget JS (theme toggle, search, source viewer, code copy, tabsets, TOC tracking, footnotes) is in `assets/calepin.js`.
 
-For single-document renders, CSS is inlined in `<style>` tags (no external assets).
+For single-document renders, CSS and JS are linked from the sidecar (`{stem}_calepin/assets/`).
 
 ## Raw Output Protection
 

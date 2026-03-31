@@ -4,7 +4,7 @@
 //!   calepin init paper.qmd              # new document (html target)
 //!   calepin init paper.qmd -t latex     # new document (latex target)
 //!   calepin init mysite -t website      # new website project
-//!   calepin init mybook -t book-typst   # new book project
+//!   calepin init mybook -t book         # new book project
 //!   calepin init extension myext        # new extension (inherits html)
 
 use std::path::Path;
@@ -32,9 +32,8 @@ pub fn handle_init(args: InitArgs) -> Result<()> {
     let is_collection = crate::config::extension::is_collection_target(target);
 
     if is_collection {
-        // Collection: delegate to scaffold
-        let scaffold_name = if target.starts_with("book") { "book" } else { "website" };
-        crate::cli::scaffold::handle_init_new(path, Some(scaffold_name), None)
+        // Collection: delegate to scaffold (scaffold name matches target name)
+        crate::cli::scaffold::handle_init_new(path, Some(target), None)
     } else if is_qmd {
         // Document: create .qmd (if needed) + sidecar with templates
         init_document(path, target, args.force)
@@ -94,7 +93,7 @@ fn init_document(path: &Path, target: &str, force: bool) -> Result<()> {
 
 /// Write all built-in templates for a target into the sidecar's templates/ directory.
 fn eject_templates(sidecar: &Path, target: &str) {
-    use crate::render::elements::BUILTIN_TEMPLATES;
+    use crate::render::elements::BUILTIN_EXTENSIONS;
     let empty = std::collections::HashMap::new();
     let project_root = sidecar.parent().unwrap_or(Path::new("."));
     let chain = crate::config::extension::inheritance_chain(project_root, target, &empty);
@@ -102,8 +101,9 @@ fn eject_templates(sidecar: &Path, target: &str) {
     let dest = sidecar.join("templates").join(target);
     // Parent-first so child overrides parent
     for chain_target in chain.iter().rev() {
-        if let Some(dir) = BUILTIN_TEMPLATES.get_dir(chain_target.as_str()) {
-            write_builtin_dir(dir, chain_target, &dest);
+        let tpl_path = format!("{}/templates", chain_target);
+        if let Some(dir) = BUILTIN_EXTENSIONS.get_dir(&tpl_path) {
+            write_builtin_dir(dir, &tpl_path, &dest);
         }
     }
 }

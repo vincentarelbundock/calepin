@@ -1,0 +1,7 @@
+# -- Project --
+target = "book"
+title = "My Book"
+
+# -- Contents (chapter order) --
+[[contents]]
+include = "chapters"

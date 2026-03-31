@@ -130,13 +130,13 @@ pub struct PreviewArgs {
   calepin init paper.qmd                  # new document (html target)
   calepin init paper.qmd -t latex         # new document (latex target)
   calepin init mysite -t website          # new website project
-  calepin init mybook -t book-typst       # new book project
+  calepin init mybook -t book             # new book project
   calepin init extension myext            # new extension")]
 pub struct InitArgs {
     /// Path to create (directory for collections, .qmd for documents)
     pub path: std::path::PathBuf,
 
-    /// Target (html, latex, typst, website, book-typst, book-latex)
+    /// Target (html, latex, typst, website, book, book-latex)
     #[arg(short = 't', long)]
     pub target: Option<String>,
 

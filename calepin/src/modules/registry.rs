@@ -12,9 +12,15 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::modules::transform_document::TransformDocument;
-use crate::module_manifest::{MatchRule, MatchSpec, ModuleManifest, ModuleProvides};
+use crate::config::extension::ExtensionMatchRule;
 use crate::emit::FormatEmitter;
 use crate::types::Element;
+
+/// A module's match rule paired with its contexts.
+pub struct ModuleMatcher {
+    pub match_rule: ExtensionMatchRule,
+    pub contexts: Vec<String>,
+}
 
 // ---------------------------------------------------------------------------
 // Element transform traits
@@ -223,12 +229,13 @@ pub enum ModuleKind {
 // ---------------------------------------------------------------------------
 
 pub struct LoadedModule {
-    pub manifest: ModuleManifest,
+    pub name: String,
+    pub matchers: Vec<ModuleMatcher>,
     pub kind: ModuleKind,
 }
 
 // ---------------------------------------------------------------------------
-// Plugin registry
+// Module registry
 // ---------------------------------------------------------------------------
 
 pub struct ModuleRegistry {
@@ -237,49 +244,25 @@ pub struct ModuleRegistry {
 
 impl ModuleRegistry {
     pub fn load(names: &[String], project_root: &Path) -> Self {
-        let mut modules = Vec::new();
-
-        for name in names {
-            match crate::paths::resolve_module_dir(name, project_root) {
-                Some(dir) => match ModuleManifest::load(&dir) {
-                    Ok(manifest) => {
-                        let kind = if let Some(ref script) = manifest.provides.document_script {
-                            ModuleKind::Document(Box::new(
-                                crate::modules::transform_document::ScriptTransformDocument {
-                                    script_path: script.clone(),
-                                    module_dir: manifest.module_dir.clone(),
-                                }
-                            ))
-                        } else {
-                            ModuleKind::Noop
-                        };
-                        modules.push(LoadedModule { manifest, kind });
-                    }
-                    Err(e) => eprintln!("Warning: failed to load module '{}': {}", name, e),
-                },
-                None => {
-                    // Don't warn for built-in modules or extension-declared modules
-                    let builtin_names = builtin_module_names();
-                    let is_builtin = builtin_names.iter().any(|b| b == name);
-                    let is_extension = is_extension_module(name, project_root);
-                    if !is_builtin && !is_extension {
-                        eprintln!("Warning: module '{}' not found", name);
-                    }
-                }
-            }
-        }
+        let mut modules = register_builtins();
 
         // Load external modules from installed extensions
         load_extension_modules(&mut modules, project_root);
 
-        register_builtins(&mut modules);
+        // Warn about unknown module names
+        for name in names {
+            let known = modules.iter().any(|m| m.name == *name)
+                || is_extension_module(name, project_root);
+            if !known {
+                eprintln!("Warning: module '{}' not found", name);
+            }
+        }
+
         ModuleRegistry { modules }
     }
 
     pub fn empty() -> Self {
-        let mut modules = Vec::new();
-        register_builtins(&mut modules);
-        ModuleRegistry { modules }
+        ModuleRegistry { modules: register_builtins() }
     }
 
     pub fn matching_modules<'a>(
@@ -289,14 +272,14 @@ impl ModuleRegistry {
         id: Option<&str>,
         format: &str,
         context: &str,
-    ) -> Vec<(&'a LoadedModule, &'a MatchSpec)> {
+    ) -> Vec<(&'a LoadedModule, &'a ModuleMatcher)> {
         let mut result = Vec::new();
-        for plugin in &self.modules {
-            for spec in &plugin.manifest.provides.matchers {
-                if spec.contexts.iter().any(|c| c == context)
-                    && spec.match_rule.matches(classes, attrs, id, format)
+        for module in &self.modules {
+            for matcher in &module.matchers {
+                if matcher.contexts.iter().any(|c| c == context)
+                    && matcher.match_rule.matches(classes, attrs, id, format)
                 {
-                    result.push((plugin, spec));
+                    result.push((module, matcher));
                 }
             }
         }
@@ -305,40 +288,13 @@ impl ModuleRegistry {
 
     pub fn resolve_element_template(&self, name: &str, format: &str) -> Option<String> {
         let canonical = name.replace('-', "_");
-        let filename = format!("{}.{}", canonical, format);
-
-        for plugin in &self.modules {
-            if let Some(ref spec) = plugin.manifest.provides.elements {
-                let path = plugin.manifest.module_dir.join(&spec.dir).join(&filename);
-                if path.exists() {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        return Some(content);
-                    }
-                }
-            }
-        }
-
         crate::paths::resolve_template(&canonical, format)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 
-    /// Collect all element preparers from active modules.
-    pub fn resolve_transform_element(&self, active: &[String]) -> Vec<&dyn TransformElement> {
-        let mut result = Vec::new();
-        for m in &self.modules {
-            if active.contains(&m.manifest.name) {
-                if let ModuleKind::Element(ref t) = m.kind {
-                    result.push(t.as_ref());
-                }
-            }
-        }
-        result
-    }
-
-    /// Resolve the emitter (FormatEmitter) for the given format name.
     pub fn resolve_emitter(&self, name: &str, config: &EmitterConfig) -> Option<Box<dyn FormatEmitter>> {
         for m in &self.modules {
-            if m.manifest.name == name {
+            if m.name == name {
                 if let ModuleKind::Emitter(factory) = &m.kind {
                     return Some(factory(config));
                 }
@@ -347,34 +303,20 @@ impl ModuleRegistry {
         None
     }
 
-    /// Collect all document transforms from active modules.
+    pub fn resolve_transform_element(&self, active: &[String]) -> Vec<&dyn TransformElement> {
+        self.modules.iter()
+            .filter(|m| active.contains(&m.name))
+            .filter_map(|m| match &m.kind { ModuleKind::Element(t) => Some(t.as_ref()), _ => None })
+            .collect()
+    }
+
     pub fn resolve_document_transforms(&self, active: &[String]) -> Vec<&dyn TransformDocument> {
-        let mut result = Vec::new();
-        for m in &self.modules {
-            if active.contains(&m.manifest.name) {
-                if let ModuleKind::Document(ref t) = m.kind {
-                    result.push(t.as_ref());
-                }
-            }
-        }
-        result
+        self.modules.iter()
+            .filter(|m| active.contains(&m.name))
+            .filter_map(|m| match &m.kind { ModuleKind::Document(t) => Some(t.as_ref()), _ => None })
+            .collect()
     }
 
-    /// Resolve all project-level transforms from the active module list.
-    pub fn resolve_project_transforms(&self, active: &[String]) -> Vec<&dyn TransformProject> {
-        let mut result = Vec::new();
-        for m in &self.modules {
-            if active.contains(&m.manifest.name) {
-                if let ModuleKind::Project(ref t) = m.kind {
-                    result.push(t.as_ref());
-                }
-            }
-        }
-        result
-    }
-
-    /// Run all active project-level transforms on the given pages.
-    /// Returns true if any transforms ran.
     pub fn run_project_transforms(
         &self,
         pages: &mut Vec<RenderedPage>,
@@ -383,16 +325,14 @@ impl ModuleRegistry {
         ctx: &ProjectTransformContext,
         module_names: &[String],
     ) -> anyhow::Result<bool> {
-        let transforms = self.resolve_project_transforms(module_names);
-        if transforms.is_empty() {
-            return Ok(false);
-        }
-        for transform in &transforms {
-            transform.transform(pages, metadata, writer, ctx)?;
-        }
+        let transforms: Vec<_> = self.modules.iter()
+            .filter(|m| module_names.contains(&m.name))
+            .filter_map(|m| match &m.kind { ModuleKind::Project(t) => Some(t.as_ref()), _ => None })
+            .collect();
+        if transforms.is_empty() { return Ok(false); }
+        for t in &transforms { t.transform(pages, metadata, writer, ctx)?; }
         Ok(true)
     }
-
 }
 
 // ---------------------------------------------------------------------------
@@ -425,70 +365,19 @@ pub fn all_crossref_prefixes() -> Vec<(&'static str, &'static str)> {
     prefixes
 }
 
-/// All built-in module names (from modules.toml). Used for path validation
-/// to skip filesystem checks for built-in modules.
+// ---------------------------------------------------------------------------
+// Built-in module registration (from extension.toml manifest)
+// ---------------------------------------------------------------------------
+
+const MODULES_MANIFEST: &str = include_str!("extension.toml");
+
+/// All built-in module names. Used for path validation.
 pub fn builtin_module_names() -> Vec<String> {
-    parse_builtin_entries().into_iter().map(|e| e.name).collect()
-}
-
-// ---------------------------------------------------------------------------
-// Built-in module config (parsed from embedded TOML)
-// ---------------------------------------------------------------------------
-
-const MODULES_TOML: &str = include_str!("../config/toml/modules.toml");
-
-/// Parsed entry from modules.toml.
-struct BuiltinEntry {
-    name: String,
-    kind: String,
-    matchers: Vec<MatchSpec>,
-}
-
-fn parse_builtin_entries() -> Vec<BuiltinEntry> {
-    let root: toml::Value = toml::from_str(MODULES_TOML)
-        .expect("Failed to parse built-in modules.toml");
-
-    let modules = root.get("modules")
-        .and_then(|v| v.as_array())
-        .expect("modules.toml must contain [[modules]]");
-
-    modules.iter().map(|entry| {
-        let name = entry.get("name").and_then(|v| v.as_str())
-            .expect("module entry missing 'name'").to_string();
-        let kind = entry.get("kind").and_then(|v| v.as_str())
-            .expect("module entry missing 'kind'").to_string();
-
-        let matchers = parse_entry_matchers(entry);
-
-        BuiltinEntry { name, kind, matchers }
-    }).collect()
-}
-
-fn parse_entry_matchers(entry: &toml::Value) -> Vec<MatchSpec> {
-    let match_rule = match entry.get("match") {
-        Some(m) => MatchRule {
-            classes: toml_str_vec(m, "classes"),
-            attrs: toml_str_vec(m, "attrs"),
-            id_prefix: m.get("id_prefix").and_then(|v| v.as_str()).map(String::from),
-            formats: toml_str_vec(m, "formats"),
-        },
-        None => MatchRule::default(),
-    };
-
-    let contexts = {
-        let v = toml_str_vec(entry, "contexts");
-        if v.is_empty() { return Vec::new(); }
-        v
-    };
-
-    vec![MatchSpec { run: None, match_rule, contexts }]
-}
-
-fn toml_str_vec(node: &toml::Value, key: &str) -> Vec<String> {
-    node.get(key)
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-        .unwrap_or_default()
+    let manifest: crate::config::extension::ExtensionManifest =
+        toml::from_str(MODULES_MANIFEST).expect("Failed to parse modules extension.toml");
+    let mut names: Vec<String> = manifest.modules.into_iter().map(|m| m.name).collect();
+    names.extend(["html", "latex", "typst", "markdown"].iter().map(|s| s.to_string()));
+    names
 }
 
 // ---------------------------------------------------------------------------
@@ -666,23 +555,32 @@ mod builtin_span_fn {
 // Built-in registration
 // ---------------------------------------------------------------------------
 
-fn register_builtins(modules: &mut Vec<LoadedModule>) {
-    for entry in parse_builtin_entries() {
-        let kind = resolve_builtin_kind(&entry.name, &entry.kind);
-        modules.push(LoadedModule {
-            manifest: ModuleManifest {
-                name: entry.name,
-                version: None,
-                description: None,
-                provides: ModuleProvides {
-                    matchers: entry.matchers,
-                    ..Default::default()
-                },
-                module_dir: PathBuf::new(),
-            },
-            kind,
-        });
+fn register_builtins() -> Vec<LoadedModule> {
+    use crate::config::extension::ExtensionManifest;
+
+    let manifest: ExtensionManifest = toml::from_str(MODULES_MANIFEST)
+        .expect("Failed to parse built-in modules extension.toml");
+
+    let mut modules: Vec<LoadedModule> = manifest.modules.into_iter().map(|m| {
+        let matchers = if m.contexts.is_empty() {
+            Vec::new()
+        } else {
+            vec![ModuleMatcher {
+                match_rule: m.match_rule.unwrap_or_default(),
+                contexts: m.contexts,
+            }]
+        };
+        let kind = resolve_builtin_kind(&m.name, &m.kind);
+        LoadedModule { name: m.name, matchers, kind }
+    }).collect();
+
+    // Emitters are format-specific, not user-facing modules.
+    for name in ["html", "latex", "typst", "markdown"] {
+        let kind = resolve_builtin_kind(name, "emitter");
+        modules.push(LoadedModule { name: name.to_string(), matchers: Vec::new(), kind });
     }
+
+    modules
 }
 
 /// Check if a module name is declared in any installed extension.
@@ -820,32 +718,19 @@ fn load_extension_modules(modules: &mut Vec<LoadedModule>, project_root: &Path) 
                 _ => continue, // span/element not yet supported as external
             };
 
-            // Create manifest with match rules from extension declaration
             let matchers = if let Some(ref rule) = module_decl.match_rule {
-                vec![crate::module_manifest::MatchSpec {
-                    run: None,
-                    match_rule: crate::module_manifest::MatchRule {
-                        classes: rule.classes.clone(),
-                        attrs: rule.attrs.clone(),
-                        id_prefix: rule.id_prefix.clone(),
-                        formats: rule.writers.clone(),
-                    },
+                vec![ModuleMatcher {
+                    match_rule: rule.clone(),
                     contexts: module_decl.contexts.clone(),
                 }]
             } else {
                 Vec::new()
             };
-            let mod_manifest = ModuleManifest {
+            modules.push(LoadedModule {
                 name: module_decl.name.clone(),
-                version: None,
-                description: Some(module_decl.description.clone()),
-                provides: crate::module_manifest::ModuleProvides {
-                    matchers,
-                    ..Default::default()
-                },
-                module_dir: ext_dir_abs.clone(),
-            };
-            modules.push(LoadedModule { manifest: mod_manifest, kind });
+                matchers,
+                kind,
+            });
         }
     }
 }
