@@ -35,9 +35,9 @@ Each template file controls one piece of output. They live in `{stem}_calepin/te
 
 ```
 {stem}_calepin/templates/
-  html/         # HTML templates (figure.html, callout.html, page.html, ...)
-  latex/        # LaTeX templates (figure.tex, page.tex, ...)
-  typst/        # Typst templates (figure.typ, page.typ, ...)
+  html/         # HTML templates (figure.html, callout.html, main.html, ...)
+  latex/        # LaTeX templates (figure.tex, main.tex, ...)
+  typst/        # Typst templates (figure.typ, main.typ, ...)
   website/      # Website layout templates (navbar.html, sidebar.html, ...)
   common/       # Format-agnostic templates (.jinja)
 ```
@@ -89,31 +89,31 @@ The template receives variables like `src`, `caption`, `label`, `width_attr`, an
 
 The page template wraps the entire rendered body in a complete document. Here is a simplified version of the built-in LaTeX page template:
 
-`latex/page.tex`:
+`latex/main.tex`:
 
 ```latex
 \documentclass[11pt]{article}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx,hyperref}
-{{bib_preamble}}
-{{preamble}}
+{{clp.bib_preamble}}
+{{clp.preamble}}
 
-{% if title %}\title{ {{-title-}} }{% endif %}
-{% if author %}\author{ {{-author-}} }{% endif %}
+{% if cfg.title %}\title{ {{-cfg.title-}} }{% endif %}
+{% if clp.authors %}\author{ {{-clp.authors-}} }{% endif %}
 
 \begin{document}
-{% if title %}\maketitle{% endif %}
+{% if cfg.title %}\maketitle{% endif %}
 
-{{abstract}}
-{{toc}}
-{{body}}
-{{appendix}}
-{{bibliography}}
-{{bib_end}}
+{{cfg.abstract}}
+{{clp.toc}}
+{{clp.body}}
+{{clp.appendix}}
+{{clp.bibliography}}
+{{clp.bib_end}}
 \end{document}
 ```
 
-Variables like `body`, `title`, `preamble`, `bibliography`, and `toc` are populated by *Calepin* before the template is rendered. Custom front matter fields are also available: a field `custom_footer = "Confidential"` in your document becomes `{{custom_footer}}` in the page template.
+Variables are namespaced: `clp.*` for engine-computed values (`clp.body`, `clp.toc`, `clp.preamble`, `clp.bibliography`) and `cfg.*` for user-authored values (`cfg.title`, `cfg.abstract`). Custom front matter fields are also available: a field `custom_footer = "Confidential"` in your document becomes `{{cfg.custom_footer}}` in the page template.
 
 
 # More powerful features

@@ -19,9 +19,9 @@ number-sections = true
 Tables group related settings under a header:
 
 ```toml
-[highlight]
-light = "github"
-dark = "nord"
+[toc]
+enabled = true
+depth = 3
 ```
 
 Arrays of tables use double brackets. Each `[[contents]]` block adds one section to the sidebar:
@@ -29,24 +29,24 @@ Arrays of tables use double brackets. Each `[[contents]]` block adds one section
 ```toml
 [[contents]]
 title = "Guide"
-pages = ["intro.qmd", "advanced.qmd"]
+include = ["intro.qmd", "advanced.qmd"]
 
 [[contents]]
 title = "Reference"
-pages = ["api.qmd"]
+include = ["api.qmd"]
 ```
 
 Inline tables work for simple cases:
 
 ```toml
-highlight = {light = "github", dark = "nord"}
+figure = {fig_width = 6.0, fig_asp = 0.618}
 ```
 
 Lists use square brackets:
 
 ```toml
 bibliography = ["refs.bib", "extra.bib"]
-pages = ["chapter1.qmd", "chapter2.qmd", "appendix/*.qmd"]
+include = ["chapter1.qmd", "chapter2.qmd", "appendix/*.qmd"]
 ```
 
 # Config resolution
@@ -76,10 +76,6 @@ math = "katex"
 lang = "en"
 standalone = true
 dpi = 150.0
-
-[highlight]
-light = "github"
-dark = "nord"
 
 [figure]
 fig_width = 6.0
@@ -192,11 +188,11 @@ title = "My Site"
 output = "output"
 
 [[contents]]
-pages = ["index.qmd", "about.qmd"]
+include = ["index.qmd", "about.qmd"]
 
 [[contents]]
 title = "Guide"
-pages = ["guide/*.qmd"]
+include = ["guide/*.qmd"]
 
 [[navbar.left]]
 text = "My Site"

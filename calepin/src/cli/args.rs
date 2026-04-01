@@ -81,7 +81,7 @@ pub struct RenderArgs {
     #[arg(short, long)]
     pub quiet: bool,
 
-    /// Override YAML metadata fields. Accepts multiple values per flag.
+    /// Override metadata fields. Accepts multiple values per flag.
     /// Example: --set title="My Title" bibliography=refs.bib toc=true
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
@@ -111,7 +111,7 @@ pub struct PreviewArgs {
     #[arg(short = 't', long)]
     pub target: Option<String>,
 
-    /// Override YAML metadata fields
+    /// Override metadata fields
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
 

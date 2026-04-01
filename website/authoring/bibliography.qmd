@@ -9,21 +9,19 @@ title = "Bibliography"
 
 The `bibliography` field accepts a single path or a list. The optional `csl` field points to a [Citation Style Language](https://citationstyles.org/) file.
 
-```yaml
+```toml
 ---
-title: My Document
-bibliography: references.bib
-csl: apa.csl
+title = "My Document"
+bibliography = "references.bib"
+csl = "apa"
 ---
 ```
 
 Multiple bibliography files are merged into a single library:
 
-```yaml
+```toml
 ---
-bibliography:
-  - refs_theory.bib
-  - refs_empirical.bib
+bibliography = ["refs_theory.bib", "refs_empirical.bib"]
 ---
 ```
 
@@ -48,10 +46,10 @@ These are compatible with Quarto and Pandoc syntax.
 
 By default, *Calepin* uses the Chicago author-date style. To customize citation formatting, set the `csl` field in the front matter or in `{stem}_calepin/config.toml`. The value can be a built-in style name or a file path:
 
-```yaml
+```toml
 ---
-csl: apa                          # built-in name (no .csl extension)
-csl: styles/my-journal.csl       # file path
+csl = "apa"                          # built-in name (no .csl extension)
+csl = "styles/my-journal.csl"       # file path
 ---
 ```
 

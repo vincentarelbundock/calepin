@@ -73,4 +73,4 @@ Create your own bracketed span functions by adding a template in `{stem}_calepin
 
 Then use it in your document: `[important text]{.highlight}`.
 
-The template receives all span attributes as variables, plus `content`, `class`, `classes`, `id`, and `format`.
+The template receives all span attributes as `cfg.*` variables, plus `clp.content`, `cfg.classes`, `cfg.id`, and `clp.writer`.

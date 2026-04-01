@@ -41,7 +41,7 @@ include = ["index.qmd", "404.qmd"]
 
 In collection templates, the prev/next links are available as:
 
-- `{{ document.prev.text }}` and `{{ document.prev.href }}`
-- `{{ document.next.text }}` and `{{ document.next.href }}`
+- `{{ clp.prev.text }}` and `{{ clp.prev.href }}`
+- `{{ clp.next.text }}` and `{{ clp.next.href }}`
 
 Both are empty when there is no previous or next page.

@@ -140,8 +140,8 @@ cat("Line 2\n")
 | `results` | `markup` | Output handling: `markup`, `asis`, or `hide` |
 | `warning` | `true` | Display warnings |
 | `message` | `true` | Display messages |
-| `fig-width` | 7 | Figure width in inches (see [Figures](../authoring/figures.qmd)) |
-| `fig-height` | 5 | Figure height in inches (see [Figures](../authoring/figures.qmd)) |
+| `fig-width` | 6 | Figure width in inches (see [Figures](../authoring/figures.qmd)) |
+| `fig-height` | derived | Derived from `fig-width * fig-asp` (see [Figures](../authoring/figures.qmd)) |
 | `fig-cap` | | Figure caption (see [Figures](../authoring/figures.qmd)) |
 | `fig-alt` | | Figure alt text (see [Figures](../authoring/figures.qmd)) |
 | `dev` | `png` | Graphics device (see [Figures](../authoring/figures.qmd)) |
@@ -149,26 +149,20 @@ cat("Line 2\n")
 
 # Syntax highlighting
 
-*Calepin* uses [syntect](https://github.com/trishume/syntect) for syntax highlighting. Set the theme with `highlight-style` in the front matter (Quarto-compatible key name):
+*Calepin* uses [syntect](https://github.com/trishume/syntect) for syntax highlighting. Themes are controlled by color schemes, not a standalone setting. Each color scheme bundles a light and dark syntax theme pair.
 
-```yaml
----
-highlight-style: solarized-dark
----
+Set the color scheme in `config.toml` or front matter:
+
+```toml
+colors = ["nord", "ayu", "catppuccin-mocha"]
 ```
 
-The default is `inspired-github`. To list all built-in themes:
+The first entry is the default. All entries populate the color picker widget on websites. Built-in schemes: `nord` (default), `ayu`, `black`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`.
+
+To list all built-in color schemes:
 
 ```
-calepin extra highlight
-```
-
-You can also point to a custom `.tmTheme` file:
-
-```yaml
----
-highlight-style: mytheme.tmTheme
----
+calepin extra colors
 ```
 
 For HTML output, highlighting produces CSS classes, so the theme controls only the generated stylesheet. For LaTeX, colors are inlined via `\textcolor`. Typst and Markdown output receive no highlighting.

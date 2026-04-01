@@ -2,7 +2,7 @@
 title = "Chunks"
 ---
 
-*Calepin* embeds R, Python, and shell runtimes directly in the binary, so code chunks are executed during rendering without spawning external processes. Variables persist across chunks within the same language, plots are captured automatically, and results are woven into the final document.
+*Calepin* runs R, Python, and shell code via persistent subprocesses (`Rscript`, `python3`, `/bin/sh`). Variables persist across chunks within the same language, plots are captured automatically, and results are woven into the final document.
 
 {% include "assets/source_tip.html" %}
 
@@ -111,8 +111,8 @@ log(-1)
 | `results` | `markup` | Output handling: `markup`, `asis`, or `hide` |
 | `warning` | `true` | Display warnings |
 | `message` | `true` | Display messages |
-| `fig-width` | 7 | Figure width in inches (see [Figures](../authoring/figures.qmd)) |
-| `fig-height` | 5 | Figure height in inches (see [Figures](../authoring/figures.qmd)) |
+| `fig-width` | 6 | Figure width in inches (see [Figures](../authoring/figures.qmd)) |
+| `fig-height` | derived | Derived from `fig-width * fig-asp` (see [Figures](../authoring/figures.qmd)) |
 | `fig-cap` | | Figure caption (see [Figures](../authoring/figures.qmd)) |
 | `fig-alt` | | Figure alt text (see [Figures](../authoring/figures.qmd)) |
 | `dev` | `png` | Graphics device (see [Figures](../authoring/figures.qmd)) |

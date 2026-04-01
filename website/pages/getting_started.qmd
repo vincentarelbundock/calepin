@@ -95,20 +95,14 @@ calepin preview document.qmd --port 8080
 calepin preview my_website/
 ```
 
-### new
+### init
 
-Scaffold new projects or generate shell completions.
+Scaffold new projects.
 
 ```bash
-# Scaffold a new project
 calepin init paper.qmd
 calepin init my-site -t website
-calepin init my-book -t book-typst
-
-# Generate shell completions
-calepin extra completions bash
-calepin extra completions zsh
-calepin extra completions fish
+calepin init my-book -t book
 ```
 
 A scaffolded website includes an `index_calepin/config.toml` with navbar, sidebar, and post-processing configuration, plus example pages in several directories.
@@ -124,8 +118,10 @@ calepin extra csl
 # List available color schemes
 calepin extra colors
 
-# Show template resolution chain for a target
-calepin templates list html
+# Generate shell completions
+calepin extra completions bash
+calepin extra completions zsh
+calepin extra completions fish
 ```
 
 ### man

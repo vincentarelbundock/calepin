@@ -254,7 +254,7 @@ Named footnote[^3] and inline footnote^[This is defined right here.].
 
 # Numbered sections
 
-Add `number-sections: true` to the YAML front matter to automatically number all section headings.
+Add `number-sections = true` to the front matter to automatically number all section headings.
 
 
 # The `.hidden` div

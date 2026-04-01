@@ -27,7 +27,7 @@ calepin preview file.qmd -p 8080
 |------|-------------|
 | `-p`, `--port` | Server port (default: 3456) |
 | `-t`, `--target` | Output target |
-| `-s`, `--set` | Override YAML metadata fields |
+| `-s`, `--set` | Override metadata fields |
 | `-q`, `--quiet` | Suppress progress messages |
 
 # Static file server

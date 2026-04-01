@@ -35,7 +35,7 @@ tree .. -I '_site|.calepin|*_output' --dirsfirst -L 2
 
 # Manifest
 
-The `index_calepin/config.toml` file configures the website. See [Templates](../templates/sites.qmd) for the full reference. The main sections are:
+The `index_calepin/config.toml` file configures the website. See [Templates](../templates/templates.qmd) for the full reference. The main sections are:
 
 | Section | Controls |
 |---------|----------|

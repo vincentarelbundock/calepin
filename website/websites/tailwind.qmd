@@ -2,7 +2,7 @@
 title = "Tailwind CSS"
 ---
 
-The `tailwind` and `website-tailwind` targets style all output with [Tailwind CSS](https://tailwindcss.com/) utility classes. The full Tailwind CSS library is loaded from a CDN, so every utility class is available in your documents without any build step or configuration.
+All HTML templates use [Tailwind CSS](https://tailwindcss.com/) utility classes. The full Tailwind CSS library is loaded from a CDN, so every utility class is available in your documents without any build step or configuration.
 
 ## How it works
 

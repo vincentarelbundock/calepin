@@ -26,7 +26,7 @@ Built-in targets (`html`, `latex`, `typst`, `markdown`, `slides`, `website`, `bo
 - **Extension** -- A directory with an `extension.toml` manifest. The unit of distribution.
 - **Target** -- An output profile: which writer to use, which modules to run, which file extension to produce. Defined in the `[target]` section of the manifest.
 - **Writer** -- One of the four rendering engines: `html`, `latex`, `typst`, `markdown`. Every target has exactly one writer. Writers are not user-extensible.
-- **Template** -- A Jinja template that renders a specific element or page component (e.g., `figure.html`, `page.tex`). Resolved by name through a layered chain. Adding a template is enough to create a custom div style.
+- **Template** -- A Jinja template that renders a specific element or page component (e.g., `figure.html`, `main.tex`). Resolved by name through a layered chain. Adding a template is enough to create a custom div style.
 - **Module** -- A declared transform in the manifest. Only needed when templates alone are insufficient: structural transforms, match rules beyond class names, auto-numbering, or external code.
 - **Asset** -- A CSS, JS, or static file declared in `[assets]`. CSS and JS are injected into the page template; static files are copied to the output directory.
 - **Vars** -- Key-value pairs declared in `[vars]`. Namespaced by extension name in templates: `{{ vars.tufte.sidenote_style }}`. Users override them in front matter under `[vars.extension_name]`.
@@ -39,7 +39,7 @@ my-extension/
   extension.toml        # Manifest (required)
   templates/            # Template overrides
     html/
-      page.html
+      main.html
       figure.html
     common/
       note.jinja
@@ -342,8 +342,8 @@ First match wins:
 
 At each level, the lookup order within the templates directory is:
 
-1. `{target}/{name}.{ext}` (target-specific, e.g., `tufte/page.html`)
-2. `{writer}/{name}.{ext}` (writer-specific, e.g., `html/page.html`)
+1. `{target}/{name}.{ext}` (target-specific, e.g., `tufte/main.html`)
+2. `{writer}/{name}.{ext}` (writer-specific, e.g., `html/main.html`)
 3. `common/{name}.jinja` (writer-agnostic)
 
 ## Assets
@@ -407,7 +407,7 @@ html/
   extension.toml        # writer = "html"
   templates/
     html/
-      page.html
+      main.html
       code_source.html
       figure.html
       ...
@@ -416,14 +416,14 @@ latex/
   extension.toml        # writer = "latex"
   templates/
     latex/
-      page.tex
+      main.tex
       ...
 
 slides/
   extension.toml        # inherits = "html"
   templates/
     slides/
-      page.html         # overrides html/page.html
+      main.html         # overrides html/main.html
 
 website/
   extension.toml        # inherits = "html"
@@ -438,17 +438,19 @@ website/
     fontawesome/...
 
 book/
-  extension.toml        # inherits = "html"
+  extension.toml        # inherits = "typst"
   templates/
     book/
-      orchestrator.typ
+      main.typ
+      chapter.typ
+      preamble.typ
 ```
 
 What makes `website` and `book` different from `html` is not a type flag -- it is the project modules they declare:
 
 - **`website`** declares `site_wrap` (wraps each page in the site template with navbar, sidebar, prev/next, breadcrumbs) and `crossref_global` (resolves cross-references across pages with chapter-qualified numbering).
 - **`book`** declares `orchestrator` (assembles chapter fragments into a master file for PDF compilation).
-- **`slides`** has no project modules. It just overrides `page.html` and adds `split_slides` to the per-page document modules.
+- **`slides`** has no project modules. It just overrides `main.html` and adds `split_slides` to the per-page document modules.
 - A user extension inherits from any of these and follows the same rules.
 
 
@@ -530,7 +532,7 @@ slidev/
   extension.toml
   templates/
     html/
-      page.html
+      main.html
   assets/
     slidev.css
     slidev.js
@@ -556,7 +558,7 @@ css = ["slidev.css"]
 js = ["slidev.js"]
 ```
 
-Inherits from `slides` (which inherits from `html`). Overrides `page.html` for its own slide shell. The inheritance chain is `slidev -> slides -> html`.
+Inherits from `slides` (which inherits from `html`). Overrides `main.html` for its own slide shell. The inheritance chain is `slidev -> slides -> html`.
 
 ## Academic journal target
 
@@ -565,7 +567,7 @@ jss/
   extension.toml
   templates/
     latex/
-      page.tex
+      main.tex
       code_source.tex
   assets/
     jss.cls
@@ -687,9 +689,9 @@ Your `figure.html`:
 </figure>
 ```
 
-All other templates (`page.html`, `code_source.html`, `callout.html`, etc.) come from the built-in `website` extension. Your override applies only to figures.
+All other templates (`main.html`, `code_source.html`, `callout.html`, etc.) come from the built-in `website` extension. Your override applies only to figures.
 
-The same principle applies to extensions. A "tufte" extension that changes `page.html` and `figure.html` ships only those two files. The remaining templates come from its parent (`html`).
+The same principle applies to extensions. A "tufte" extension that changes `main.html` and `figure.html` ships only those two files. The remaining templates come from its parent (`html`).
 
 ## Debugging resolution
 
@@ -708,7 +710,7 @@ calepin templates list website
 This prints the full resolution chain, color-coded by source:
 
 ```
-page.html          index_calepin/templates/website/page.html    (green = user override)
+main.html          index_calepin/templates/website/main.html    (green = user override)
 figure.html        index_calepin/templates/html/figure.html     (green = user override)
 code_source.html   built-in: html                         (cyan = built-in)
 callout.html       built-in: html                         (cyan = built-in)

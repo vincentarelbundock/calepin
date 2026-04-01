@@ -15,16 +15,16 @@ slow_function()
 ```
 ````
 
-Disable caching for the entire document in YAML front matter:
+Disable caching for the entire document in TOML front matter:
 
-```yaml
+```toml
 ---
-execute:
-  cache: false
+[execute]
+cache = false
 ---
 ```
 
-Cached results are stored in `<stem>_cache/` next to the input file (see [Storage layout](#storage-layout) for details). Changing a chunk's source code, or any chunk above it, automatically invalidates the cache (see [Upstream digest chain](#upstream-digest-chain)).
+Cached results are stored in `.calepin/cache/{stem}/` (see [Storage layout](#storage-layout) for details). Changing a chunk's source code, or any chunk above it, automatically invalidates the cache (see [Upstream digest chain](#upstream-digest-chain)).
 
 # Example
 
@@ -90,10 +90,10 @@ Chunks with `eval: false` still contribute to the digest chain (based on their s
 
 ## Storage layout
 
-Cache files live in `<stem>_cache/<label>/`:
+Cache files live in `.calepin/cache/{stem}/{label}/`:
 
 ```
-tutorial_cache/
+.calepin/cache/tutorial/
   slow-r/
     meta.json          # {"hash": "<hex>", "plot_files": ["slow-r-1.png"]}
     results.bincode    # serialized Vec<ChunkResult>
@@ -129,4 +129,4 @@ This is typically not a problem when caching is left at its default (all chunks 
 
 - Caching is on by default for all chunks
 - `#| cache = false` to disable caching for a single chunk
-- `execute: { cache: false }` in YAML front matter to disable caching for the entire document
+- `[execute] cache = false` in TOML front matter to disable caching for the entire document
