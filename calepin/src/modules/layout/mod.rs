@@ -11,7 +11,7 @@ pub fn render(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
     children: &[Element],
-    format: &str,
+    writer: &str,
     render_element: &dyn Fn(&Element) -> String,
     _raw_fragments: &std::cell::RefCell<Vec<String>>,
     defaults: &crate::config::Metadata,
@@ -55,13 +55,13 @@ pub fn render(
     let id_str = id.as_deref().unwrap_or("");
 
     // Render the inner rows through format-specific templates
-    let rows_content = render_rows_via_templates(&rows_rendered, valign, format);
+    let rows_content = render_rows_via_templates(&rows_rendered, valign, writer);
 
     // Build template variables for the figure wrapper
-    let mut vars = TemplateVars::with_writer(format);
+    let mut vars = TemplateVars::with_writer(writer);
     vars.cfg.insert("id".to_string(), minijinja::Value::from(id_str.to_string()));
     vars.cfg.insert("caption".to_string(), minijinja::Value::from(if !caption.is_empty() {
-        crate::render::convert::render_inline(&caption, format)
+        crate::render::convert::render_inline(&caption, writer)
     } else {
         String::new()
     }));
@@ -74,7 +74,7 @@ pub fn render(
     vars.cfg.insert("fig_env".to_string(), minijinja::Value::from(fig_env.to_string()));
     vars.cfg.insert("fig_pos".to_string(), minijinja::Value::from(fig_pos));
 
-    let tpl = crate::render::elements::resolve_element_template("layout", format).unwrap_or_default();
+    let tpl = crate::render::elements::resolve_element_template("layout", writer).unwrap_or_default();
     crate::render::template::apply_template(&tpl, &vars)
 }
 
@@ -82,13 +82,13 @@ pub fn render(
 fn render_rows_via_templates(
     rows: &[Vec<(String, f64)>],
     valign: &str,
-    format: &str,
+    writer: &str,
 ) -> String {
     use crate::render::elements::resolve_element_template;
     use crate::render::template::apply_template;
 
-    let cell_tpl_owned = resolve_element_template("layout_cell", format).unwrap_or_else(|| "{{ clp.content }}".to_string());
-    let row_tpl_owned = resolve_element_template("layout_row", format).unwrap_or_else(|| "{{ clp.cells }}".to_string());
+    let cell_tpl_owned = resolve_element_template("layout_cell", writer).unwrap_or_else(|| "{{ clp.content }}".to_string());
+    let row_tpl_owned = resolve_element_template("layout_row", writer).unwrap_or_else(|| "{{ clp.cells }}".to_string());
     let cell_tpl = cell_tpl_owned.as_str();
     let row_tpl = row_tpl_owned.as_str();
 
@@ -120,7 +120,7 @@ fn render_rows_via_templates(
             let width = w / total * (1.0 - gap * (positive_cells.len() as f64 - 1.0));
 
             // Format-specific content adjustments
-            let content = adjust_cell_content(content, format);
+            let content = adjust_cell_content(content, writer);
 
             let mut cell_vars = TemplateVars::new();
             cell_vars.clp.insert("content".to_string(), minijinja::Value::from(content));
@@ -129,7 +129,7 @@ fn render_rows_via_templates(
             cells_rendered.push(apply_template(cell_tpl, &cell_vars));
 
             // LaTeX: add \hfill between cells
-            if format == "latex" && i < positive_cells.len() - 1 {
+            if writer == "latex" && i < positive_cells.len() - 1 {
                 cells_rendered.push("\\hfill".to_string());
             }
         }
@@ -149,8 +149,8 @@ fn render_rows_via_templates(
 
 /// Adjust cell content for the target format (e.g. expand images to fill cells,
 /// strip nested figure floats for LaTeX).
-fn adjust_cell_content(content: &str, format: &str) -> String {
-    match format {
+fn adjust_cell_content(content: &str, writer: &str) -> String {
+    match writer {
         "html" => content.replace("max-width: 60%", "max-width: 100%"),
         "latex" => {
             let inner = unwrap_latex_figure(content);

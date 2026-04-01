@@ -8,7 +8,7 @@ use crate::render::template::TemplateVars;
 
 pub fn render(
     kv: &HashMap<String, String>,
-    format: &str,
+    writer: &str,
     defaults: &crate::config::Metadata,
 ) -> String {
     let url = match kv.get("url") {
@@ -52,7 +52,7 @@ pub fn render(
     vars.clp.insert("is_embed".to_string(), minijinja::Value::from(is_embed.to_string()));
 
     let fallback = format!("[{}]({})", title, url);
-    match crate::render::elements::resolve_element_template("video", format) {
+    match crate::render::elements::resolve_element_template("video", writer) {
         Some(tpl) => crate::render::template::apply_template(&tpl, &vars),
         None => fallback,
     }

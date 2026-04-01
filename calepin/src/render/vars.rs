@@ -14,7 +14,7 @@ pub trait BuildElementVars {
     fn apply(
         &self,
         element: &Element,
-        format: &str,
+        writer: &str,
         vars: &mut TemplateVars,
         defaults: &crate::config::Metadata,
     );
@@ -31,27 +31,27 @@ impl<'a> BuildCodeVars<'a> {
 }
 
 impl<'a> BuildElementVars for BuildCodeVars<'a> {
-    fn apply(&self, element: &Element, format: &str, vars: &mut TemplateVars, _defaults: &crate::config::Metadata) {
+    fn apply(&self, element: &Element, writer: &str, vars: &mut TemplateVars, _defaults: &crate::config::Metadata) {
         match element {
             Element::CodeSource { code, lang, label, filename, .. } => {
-                let escaped = escape_code_for_format(code, format);
-                let highlighted = self.highlighter.highlight(code, lang, format);
+                let escaped = escape_code_for_format(code, writer);
+                let highlighted = self.highlighter.highlight(code, lang, writer);
                 if !filename.is_empty() {
                     vars.cfg.insert("filename".to_string(), minijinja::Value::from(filename.clone()));
                 }
                 vars.clp.insert("content".to_string(), minijinja::Value::from(
-                    if format == "html" || format == "latex" { highlighted } else { escaped }
+                    if writer == "html" || writer == "latex" { highlighted } else { escaped }
                 ));
                 vars.cfg.insert("lang".to_string(), minijinja::Value::from(lang.clone()));
                 vars.cfg.insert("label".to_string(), minijinja::Value::from(label.clone()));
             }
             Element::CodeOutput { text } => {
-                vars.clp.insert("content".to_string(), minijinja::Value::from(escape_code_for_format(text, format)));
+                vars.clp.insert("content".to_string(), minijinja::Value::from(escape_code_for_format(text, writer)));
             }
             Element::CodeWarning { text }
             | Element::CodeMessage { text }
             | Element::CodeError { text } => {
-                vars.clp.insert("content".to_string(), minijinja::Value::from(escape_code_for_format(text, format)));
+                vars.clp.insert("content".to_string(), minijinja::Value::from(escape_code_for_format(text, writer)));
                 let cls = match element {
                     Element::CodeWarning { .. } => "warning",
                     Element::CodeMessage { .. } => "message",

@@ -447,15 +447,15 @@ impl TemplateEnv {
 
 /// Render a metadata field through an element template if available.
 /// Returns empty string if no template is found.
-pub fn render_element(name: &str, ext: &str, vars: &TemplateVars) -> String {
+pub fn render_element(name: &str, writer: &str, vars: &TemplateVars) -> String {
     use crate::render::elements::resolve_element_template;
-    if let Some(tpl) = resolve_element_template(name, ext) {
+    if let Some(tpl) = resolve_element_template(name, writer) {
         let mut vars = TemplateVars {
             cfg: vars.cfg.clone(),
             clp: vars.clp.clone(),
             tpl: vars.tpl.clone(),
         };
-        vars.clp.insert("writer".to_string(), minijinja::Value::from(ext.to_string()));
+        vars.clp.insert("writer".to_string(), minijinja::Value::from(writer.to_string()));
         apply_template(&tpl, &vars)
     } else {
         String::new()
@@ -467,7 +467,7 @@ pub fn render_element(name: &str, ext: &str, vars: &TemplateVars) -> String {
 pub fn build_template_vars_with_headings(
     meta: &Metadata,
     body: &str,
-    ext: &str,
+    writer: &str,
     headings: &[crate::emit::TocEntry],
     _target: Option<&crate::config::Target>,
 ) -> TemplateVars {
@@ -481,10 +481,10 @@ pub fn build_template_vars_with_headings(
     // calepin.* (engine-computed)
     vars.clp.insert("body".to_string(), minijinja::Value::from(body.to_string()));
     vars.clp.insert("preamble".to_string(), minijinja::Value::from(String::new()));
-    vars.clp.insert("writer".to_string(), minijinja::Value::from(ext.to_string()));
+    vars.clp.insert("writer".to_string(), minijinja::Value::from(writer.to_string()));
 
     // config.* (user-authored)
-    vars.cfg.insert("target".to_string(), minijinja::Value::from(ext.to_string()));
+    vars.cfg.insert("target".to_string(), minijinja::Value::from(writer.to_string()));
 
     // Language
     vars.cfg.insert("lang".to_string(), minijinja::Value::from(defs.lang.as_deref().unwrap_or("en").to_string()));
@@ -495,22 +495,22 @@ pub fn build_template_vars_with_headings(
     vars.cfg.insert("title_plain".to_string(), minijinja::Value::from(plain_title));
     vars.cfg.insert("title".to_string(),
         minijinja::Value::from(meta.title.as_deref()
-            .map(|t| crate::render::convert::render_inline(t, ext))
+            .map(|t| crate::render::convert::render_inline(t, writer))
             .unwrap_or_default()),
     );
     vars.cfg.insert("date".to_string(), minijinja::Value::from(meta.formatted_date().unwrap_or_default()));
 
     // Subtitle
     if let Some(ref subtitle) = meta.subtitle {
-        vars.cfg.insert("subtitle".to_string(), minijinja::Value::from(crate::render::convert::render_inline(subtitle, ext)));
+        vars.cfg.insert("subtitle".to_string(), minijinja::Value::from(crate::render::convert::render_inline(subtitle, writer)));
     }
 
     // Author block (rendered by engine from user metadata)
-    vars.clp.insert("authors".to_string(), minijinja::Value::from(build_authors(meta, ext)));
+    vars.clp.insert("authors".to_string(), minijinja::Value::from(build_authors(meta, writer)));
 
     // Abstract block
     if let Some(ref abs) = meta.abstract_text {
-        vars.cfg.insert("abstract".to_string(), minijinja::Value::from(crate::render::convert::render_inline(abs, ext)));
+        vars.cfg.insert("abstract".to_string(), minijinja::Value::from(crate::render::convert::render_inline(abs, writer)));
     } else {
         vars.cfg.insert("abstract".to_string(), minijinja::Value::from(String::new()));
     }
@@ -522,7 +522,7 @@ pub fn build_template_vars_with_headings(
     }
 
     // Appendix (engine-rendered from user metadata)
-    vars.clp.insert("appendix".to_string(), minijinja::Value::from(build_appendix(meta, ext)));
+    vars.clp.insert("appendix".to_string(), minijinja::Value::from(build_appendix(meta, writer)));
 
     // CSS and JS: standalone mode inlines everything, non-standalone links external files.
     // Target-level standalone (e.g., website sets false) takes precedence over metadata.
@@ -539,10 +539,29 @@ pub fn build_template_vars_with_headings(
     // Extension-only CSS (inlined even when base CSS is linked via <link>)
     vars.clp.insert("ext_css".to_string(), minijinja::Value::from(load_extension_css_only()));
 
+    // Color scheme CSS and Tailwind colors.
+    // Priority: first entry in cfg.colors > extension default_colors > nord fallback.
+    if writer == "html" {
+        let target_name = crate::paths::get_active_target().unwrap_or_else(|| writer.to_string());
+
+        let colors = crate::config::extension::resolve_active_colors(&meta.cfg, &target_name);
+
+        let colors_css = colors.as_ref()
+            .map(|c| c.generate_color_css())
+            .unwrap_or_default();
+        vars.clp.insert("colors_css".to_string(), minijinja::Value::from(colors_css));
+
+        // Tailwind color config generated from color token keys
+        let tailwind_colors = colors.as_ref()
+            .map(|c| c.generate_tailwind_colors())
+            .unwrap_or_default();
+        vars.clp.insert("tailwind_colors".to_string(), minijinja::Value::from(tailwind_colors));
+    }
+
     // Math include for html-writer targets
-    if ext == "html" {
+    if writer == "html" {
         let math_vars = TemplateVars::new();
-        vars.clp.insert("math".to_string(), minijinja::Value::from(render_element("math", ext, &math_vars)));
+        vars.clp.insert("math".to_string(), minijinja::Value::from(render_element("math", writer, &math_vars)));
     } else {
         vars.clp.insert("math".to_string(), minijinja::Value::from(String::new()));
     }
@@ -553,22 +572,22 @@ pub fn build_template_vars_with_headings(
         let mut bvars = TemplateVars::new();
         bvars.cfg.insert("path".to_string(), minijinja::Value::from(bib_path.clone()));
         vars.clp.insert("bibliography".to_string(),
-            minijinja::Value::from(render_element("bibliography", ext, &bvars)));
+            minijinja::Value::from(render_element("bibliography", writer, &bvars)));
     }
 
     // Table of contents
     let toc_cfg = meta.toc.as_ref();
-    let toc_enabled = toc_cfg.and_then(|t| t.enabled).unwrap_or(ext == "html");
+    let toc_enabled = toc_cfg.and_then(|t| t.enabled).unwrap_or(writer == "html");
     if toc_enabled {
         let (toc_depth, toc_title) = meta.toc_depth_title();
-        let toc = if ext == "html" {
+        let toc = if writer == "html" {
             // HTML: build nested list in Rust, wrap with template
             build_toc_html(headings, toc_depth, toc_title)
         } else {
             // LaTeX, Typst, others: use the toc template directly
-            let mut toc_vars = TemplateVars::with_writer(ext);
+            let mut toc_vars = TemplateVars::with_writer(writer);
             toc_vars.cfg.insert("title".to_string(), minijinja::Value::from(toc_title.to_string()));
-            let tpl_owned = crate::render::elements::resolve_element_template("toc", ext).unwrap_or_default();
+            let tpl_owned = crate::render::elements::resolve_element_template("toc", writer).unwrap_or_default();
             let tpl = tpl_owned.as_str();
             apply_template(tpl, &toc_vars)
         };
@@ -648,18 +667,18 @@ pub fn inject_preamble(vars: &mut TemplateVars, preamble: &[String]) {
 pub fn assemble_page(
     body: &str,
     meta: &Metadata,
-    format: &str,
+    writer: &str,
     headings: &[crate::emit::TocEntry],
     preamble: &[String],
     target: Option<&crate::config::Target>,
     customize: impl FnOnce(&mut TemplateVars),
 ) -> String {
-    let mut vars = build_template_vars_with_headings(meta, body, format, headings, target);
+    let mut vars = build_template_vars_with_headings(meta, body, writer, headings, target);
     inject_preamble(&mut vars, preamble);
     customize(&mut vars);
     let template_name = target.map(|t| t.template_name()).unwrap_or("main");
-    let tpl = load_page_template(template_name, format);
-    render_page_template(&tpl, &vars, format, &meta.cfg)
+    let tpl = load_page_template(template_name, writer);
+    render_page_template(&tpl, &vars, writer, &meta.cfg)
 }
 
 /// Render a page template with {% include %} support.
@@ -754,7 +773,7 @@ pub struct BodyResult {
 #[inline(never)]
 pub fn process_body(
     text: &str,
-    format: &str,
+    writer: &str,
     metadata: &Metadata,
 ) -> BodyResult {
     // 1. Protect fenced code blocks and inline code from Jinja
@@ -780,7 +799,7 @@ pub fn process_body(
     env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
 
     // 3. Build context with metadata, variables, and environment
-    let context = variables::build_context(metadata, format);
+    let context = variables::build_context(metadata, writer);
 
     // 4. Render through MiniJinja (on error, fall back to protected text so that
     //    restore_code_blocks can still recover code block placeholders)

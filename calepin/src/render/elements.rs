@@ -89,7 +89,7 @@ pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> 
 // ---------------------------------------------------------------------------
 
 pub struct ElementRenderer {
-    ext: String,
+    writer: String,
     /// Pre-compiled template environment. Element templates are parsed and
     /// compiled once at construction time rather than on every render() call.
     /// This avoids repeated parsing overhead (~3 us/call) for templates that
@@ -127,7 +127,7 @@ pub struct ElementRenderer {
 }
 
 impl ElementRenderer {
-    pub fn new(ext: &str, highlighter: Highlighter) -> Self {
+    pub fn new(writer: &str, highlighter: Highlighter) -> Self {
         // Pre-compile all known element templates into a single minijinja
         // environment. This pays the parse cost once; each subsequent
         // render() call just executes the compiled template.
@@ -138,13 +138,13 @@ impl ElementRenderer {
         ];
 
         for name in element_names {
-            if let Some(tpl) = resolve_element_template(name, ext) {
+            if let Some(tpl) = resolve_element_template(name, writer) {
                 template_env.add(name, tpl);
             }
         }
 
         Self {
-            ext: ext.to_string(),
+            writer: writer.to_string(),
             template_env,
             highlighter,
             registry: Rc::new(ModuleRegistry::empty()),
@@ -235,7 +235,7 @@ impl ElementRenderer {
             standalone: self.metadata.standalone.unwrap_or(true),
             number_sections: self.number_sections,
         };
-        let emitter = self.registry.resolve_emitter(&self.ext, &config)
+        let emitter = self.registry.resolve_emitter(&self.writer, &config)
             .expect("no writer registered for format");
         let options = crate::emit::WalkOptions {
             number_sections: self.number_sections,
@@ -250,7 +250,7 @@ impl ElementRenderer {
         );
         self.footnotes.set_counter(result.metadata.footnote_counter_end);
         // Typst math conversion post-pass
-        let output = if self.ext == "typst" {
+        let output = if self.writer == "typst" {
             if self.convert_math {
                 crate::modules::convert_math_for_typst(&result.output)
             } else {
@@ -282,7 +282,7 @@ impl ElementRenderer {
         children: &[Element],
     ) -> String {
         crate::render::div::render(
-            classes, id, attrs, children, &self.ext,
+            classes, id, attrs, children, &self.writer,
             &self.registry,
             &|e| self.render(e),
             &|name| self.resolve_element_template(name),
@@ -306,7 +306,7 @@ impl ElementRenderer {
         if let Element::CodeSource { label, lst_cap, .. } = element {
             if label.starts_with("lst-") {
                 return crate::modules::wrap_listing(
-                    label, lst_cap.as_deref(), &rendered, &self.ext,
+                    label, lst_cap.as_deref(), &rendered, &self.writer,
                     &self.module_ids, &self.template_env,
                     &|name| self.resolve_element_template(name),
                 );
@@ -318,7 +318,7 @@ impl ElementRenderer {
 
     fn render_bracketed_spans(&self, text: &str) -> String {
         crate::render::span::render(
-            text, &self.ext, &self.registry, &self.raw_fragments,
+            text, &self.writer, &self.registry, &self.raw_fragments,
             &self.metadata,
             &|name| self.resolve_element_template(name),
             &self.template_env,
@@ -326,18 +326,18 @@ impl ElementRenderer {
     }
 
     fn build_template_output(&self, template_name: &str, element: &Element) -> String {
-        let mut vars = crate::render::template::TemplateVars::with_writer(&self.ext);
+        let mut vars = crate::render::template::TemplateVars::with_writer(&self.writer);
         vars.tpl = self.metadata.tpl.clone();
 
         // Run element through pipeline filters
         let code_filter = crate::render::vars::BuildCodeVars::new(&self.highlighter);
         let figure_filter = crate::modules::BuildFigureVars::new(
-            &self.ext,
+            &self.writer,
             self.target.as_ref(),
         );
 
         for builder in [&code_filter as &dyn BuildElementVars, &figure_filter as &dyn BuildElementVars] {
-            builder.apply(element, &self.ext, &mut vars, &self.metadata);
+            builder.apply(element, &self.writer, &mut vars, &self.metadata);
         }
 
         self.template_env.render(template_name, &vars)
@@ -348,8 +348,8 @@ impl ElementRenderer {
         if let Some(cached) = self.template_cache.borrow().get(name) {
             return cached.clone();
         }
-        let result = self.registry.resolve_element_template(name, &self.ext)
-            .or_else(|| resolve_element_template(name, &self.ext));
+        let result = self.registry.resolve_element_template(name, &self.writer)
+            .or_else(|| resolve_element_template(name, &self.writer));
         self.template_cache.borrow_mut().insert(name.to_string(), result.clone());
         result
     }
@@ -364,7 +364,7 @@ impl ElementRenderer {
     }
 
     pub fn syntax_css(&self) -> String {
-        if self.ext != "html" || !self.has_code.get() { return String::new(); }
+        if self.writer != "html" || !self.has_code.get() { return String::new(); }
         self.highlighter.syntax_css()
     }
 
@@ -385,8 +385,8 @@ impl ElementRenderer {
 ///
 /// Looks up templates from the sidecar's templates directory and extension
 /// template directories. No built-in fallback; sidecars are always populated.
-pub fn resolve_element_template(name: &str, ext: &str) -> Option<String> {
+pub fn resolve_element_template(name: &str, writer: &str) -> Option<String> {
     let canonical = name.replace('-', "_");
-    crate::paths::resolve_template(&canonical, ext)
+    crate::paths::resolve_template(&canonical, writer)
         .and_then(|path| std::fs::read_to_string(&path).ok())
 }

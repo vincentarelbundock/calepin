@@ -14,7 +14,7 @@ use super::protection::{protect_code_blocks, restore_code_blocks};
 /// Expand `{% include "file" %}` directives before block parsing.
 /// Paths are resolved relative to `project_root`.
 #[inline(never)]
-pub fn expand_includes(text: &str, project_root: &std::path::Path, format: &str) -> String {
+pub fn expand_includes(text: &str, project_root: &std::path::Path, writer: &str) -> String {
     // {% include "file" %} or {% include 'file' %}
     static INCLUDE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r#"\{%[-\s]\s*include\s+["'](.+?)["']\s*[-\s]?%\}"#).unwrap()
@@ -46,7 +46,7 @@ pub fn expand_includes(text: &str, project_root: &std::path::Path, format: &str)
             include_file(&resolved.to_string_lossy())
         } else {
             // No extension: format-aware resolution
-            match crate::paths::resolve_template(path, format) {
+            match crate::paths::resolve_template(path, writer) {
                 Some(resolved) => match std::fs::read_to_string(&resolved) {
                     Ok(content) => content,
                     Err(e) => {

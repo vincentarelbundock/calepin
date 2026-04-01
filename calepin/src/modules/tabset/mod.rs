@@ -10,7 +10,7 @@ use crate::render::template::TemplateVars;
 /// Render a `.panel-tabset` div as HTML tabs.
 /// Only called for HTML output (the plugin is registered with `formats: ["html"]`).
 pub fn render(
-    format: &str,
+    writer: &str,
     attrs: &HashMap<String, String>,
     children: &[Element],
     render_element: &dyn Fn(&Element) -> String,
@@ -51,7 +51,7 @@ pub fn render(
     let group = attrs.get("group").map(|s| s.as_str()).unwrap_or("");
 
     // Build template variables
-    let mut vars = TemplateVars::with_writer(format);
+    let mut vars = TemplateVars::with_writer(writer);
     vars.cfg.insert("group".to_string(), minijinja::Value::from(group.to_string()));
 
     // Pre-render nav items and tab panes as HTML strings
@@ -74,6 +74,6 @@ pub fn render(
     vars.clp.insert("nav_items".to_string(), minijinja::Value::from(nav_items));
     vars.clp.insert("tab_panes".to_string(), minijinja::Value::from(tab_panes));
 
-    let tpl = crate::render::elements::resolve_element_template("tabset", format).unwrap_or_default();
+    let tpl = crate::render::elements::resolve_element_template("tabset", writer).unwrap_or_default();
     crate::render::template::apply_template(&tpl, &vars)
 }

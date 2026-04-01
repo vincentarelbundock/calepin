@@ -252,7 +252,7 @@ pub fn restore_math(text: &str, expressions: &[String]) -> String {
 
 /// Resolve equation labels: wrap display math + label in format-specific containers.
 /// Must be called after `restore_math`.
-pub fn resolve_equation_labels(text: &str, format: &str) -> String {
+pub fn resolve_equation_labels(text: &str, writer: &str) -> String {
     if !text.contains(MS) {
         return text.to_string();
     }
@@ -260,23 +260,23 @@ pub fn resolve_equation_labels(text: &str, format: &str) -> String {
         let math = &caps[2];
         let label = &caps[3];
         let inner = &math[2..math.len() - 2];
-        render_equation_label(format, math, label, inner.trim())
+        render_equation_label(writer, math, label, inner.trim())
     }).to_string()
 }
 
 /// Resolve escaped dollar signs for the given output format.
-pub fn resolve_escaped_dollars(text: &str, format: &str) -> String {
+pub fn resolve_escaped_dollars(text: &str, writer: &str) -> String {
     if !text.contains(MS) {
         return text.to_string();
     }
     let marker = esc_dollar_marker();
-    let replacement = resolve_escaped_dollar_replacement(format);
+    let replacement = resolve_escaped_dollar_replacement(writer);
     text.replace(&marker, &replacement)
 }
 
 /// Get the escaped dollar replacement for the given format.
-fn resolve_escaped_dollar_replacement(format: &str) -> String {
-    match format {
+fn resolve_escaped_dollar_replacement(writer: &str) -> String {
+    match writer {
         "html" => "<span class=\"nodollar\">$</span>".to_string(),
         "latex" => "\\$".to_string(),
         "typst" => "\\$".to_string(),
@@ -285,22 +285,22 @@ fn resolve_escaped_dollar_replacement(format: &str) -> String {
 }
 
 /// Render an equation label using the format-specific template.
-fn render_equation_label(format: &str, math: &str, label: &str, inner: &str) -> String {
+fn render_equation_label(writer: &str, math: &str, label: &str, inner: &str) -> String {
     use crate::render::elements::resolve_element_template;
     use crate::render::template::{apply_template, TemplateVars};
 
-    let tpl = resolve_element_template("equation", format)
-        .unwrap_or_else(|| builtin_equation_template(format).to_string());
+    let tpl = resolve_element_template("equation", writer)
+        .unwrap_or_else(|| builtin_equation_template(writer).to_string());
 
     let mut vars = TemplateVars::new();
     vars.cfg.insert("id".to_string(), minijinja::Value::from(label.to_string()));
-    let content = if format == "html" { math.to_string() } else { inner.to_string() };
+    let content = if writer == "html" { math.to_string() } else { inner.to_string() };
     vars.clp.insert("content".to_string(), minijinja::Value::from(content));
     apply_template(&tpl, &vars)
 }
 
-fn builtin_equation_template(format: &str) -> &'static str {
-    match format {
+fn builtin_equation_template(writer: &str) -> &'static str {
+    match writer {
         "html" => "<div class=\"equation\" id=\"{{ cfg.id }}\">\n{{ clp.content }}\n</div>",
         "latex" => "\\begin{equation}\n{{ clp.content }}\n\\label{{{ cfg.id }}}\n\\end{equation}",
         "typst" => "$ {{ clp.content }} $ <{{ cfg.id }}>",

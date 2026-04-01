@@ -1,5 +1,5 @@
 target = "website"
-themes = ["ayu", "black", "frappe", "macchiato", "mocha", "tokyo-night"]
+colors = ["nord", "ayu", "black", "catppuccin-frappe", "catppuccin-macchiato", "catppuccin-mocha"]
 
 # -- Site identity --
 title = "Calepin"
@@ -12,9 +12,6 @@ lang = "en"
 standalone = true
 dpi = 150.0
 
-[highlight]
-light = "ayu-light"
-dark = "ayu-dark"
 
 [figure]
 fig_width = 6.0
@@ -125,7 +122,7 @@ widget = "search"
 widget = "dark"
 
 [[navbar.right]]
-widget = "theme"
+widget = "colors"
 
 # -- Contents (sidebar navigation) --
 [[contents]]
@@ -174,4 +171,4 @@ include = ["pages/man.qmd"]
 
 # -- Post-processing --
 [[post]]
-command = "pagefind --site {output}"
+command = "pagefind --site {output} --glob '**/*.html'"

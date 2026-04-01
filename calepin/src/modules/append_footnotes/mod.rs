@@ -102,8 +102,8 @@ impl FootnoteState {
 
     /// Render the combined footnote section (HTML only).
     /// Returns empty string if no footnotes accumulated.
-    pub fn render_section(&self, format: &str) -> String {
-        if format != "html" { return String::new(); }
+    pub fn render_section(&self, writer: &str) -> String {
+        if writer != "html" { return String::new(); }
         let defs = self.accumulated_defs.borrow();
         if defs.is_empty() { return String::new(); }
         render_footnote_section(&defs)

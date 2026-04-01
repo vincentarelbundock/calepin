@@ -9,51 +9,7 @@
 <script>
 (function(){if(localStorage.getItem('calepin-theme')==='dark')document.documentElement.classList.add('dark')})();
 </script>
-<style>
-:root {
-  --c-page: #fafbfc;
-  --c-text: #2e3440;
-  --c-muted: #616e7c;
-  --c-faint: #525d6e;
-  --c-link: #5e81ac;
-  --c-border: #e0e4e8;
-  --c-border-strong: #d0d5db;
-  --c-code-bg: #f3f5f7;
-  --c-hover: #eef0f3;
-  --c-note: #5e81ac;
-  --c-note-bg: rgba(94,129,172,0.08);
-  --c-tip: #a3be8c;
-  --c-tip-bg: rgba(163,190,140,0.08);
-  --c-warn: #ebcb8b;
-  --c-warn-bg: rgba(235,203,139,0.08);
-  --c-caution: #bf616a;
-  --c-caution-bg: rgba(191,97,106,0.08);
-  --c-important: #b48ead;
-  --c-important-bg: rgba(180,142,173,0.08);
-}
-.dark {
-  --c-page: #2f3643;
-  --c-text: #e5e9f0;
-  --c-muted: #9aa3b0;
-  --c-faint: #b8bfc9;
-  --c-link: #88c0d0;
-  --c-border: #4a5568;
-  --c-border-strong: #5a6577;
-  --c-code-bg: #343c4b;
-  --c-hover: #353d4c;
-  --c-note: #5e81ac;
-  --c-note-bg: rgba(94,129,172,0.15);
-  --c-tip: #a3be8c;
-  --c-tip-bg: rgba(163,190,140,0.15);
-  --c-warn: #ebcb8b;
-  --c-warn-bg: rgba(235,203,139,0.15);
-  --c-caution: #bf616a;
-  --c-caution-bg: rgba(191,97,106,0.15);
-  --c-important: #b48ead;
-  --c-important-bg: rgba(180,142,173,0.15);
-  color-scheme: dark;
-}
-</style>
+{% if clp.colors_css %}<style>{{ clp.colors_css }}</style>{% endif %}
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 <script>
 tailwind.config = {
@@ -61,24 +17,7 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        page: 'var(--c-page)',
-        muted: 'var(--c-muted)',
-        faint: 'var(--c-faint)',
-        link: 'var(--c-link)',
-        brd: 'var(--c-border)',
-        'brd-strong': 'var(--c-border-strong)',
-        'code-bg': 'var(--c-code-bg)',
-        hover: 'var(--c-hover)',
-        note: 'var(--c-note)',
-        'note-bg': 'var(--c-note-bg)',
-        tip: 'var(--c-tip)',
-        'tip-bg': 'var(--c-tip-bg)',
-        warn: 'var(--c-warn)',
-        'warn-bg': 'var(--c-warn-bg)',
-        caution: 'var(--c-caution)',
-        'caution-bg': 'var(--c-caution-bg)',
-        important: 'var(--c-important)',
-        'important-bg': 'var(--c-important-bg)',
+{{ clp.tailwind_colors }}
       },
     }
   }

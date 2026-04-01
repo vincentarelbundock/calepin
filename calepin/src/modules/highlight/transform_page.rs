@@ -16,7 +16,7 @@ impl TransformDocument for InjectHighlightMarkup {
                 if css.is_empty() {
                     return document.to_string();
                 }
-                let style_tag = format!("<style>\n{}</style>", css);
+                let style_tag = format!("<style id=\"calepin-highlight-style\">\n{}</style>", css);
                 if let Some(pos) = document.find("</head>") {
                     format!("{}{}\n{}", &document[..pos], style_tag, &document[pos..])
                 } else {

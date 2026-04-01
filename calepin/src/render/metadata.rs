@@ -17,24 +17,24 @@ use crate::render::template::{apply_template, TemplateVars};
 struct Fmt;
 
 impl Fmt {
-    fn emphasis(text: &str, ext: &str) -> String {
+    fn emphasis(text: &str, writer: &str) -> String {
         let mut vars = TemplateVars::new();
         vars.cfg.insert("text".to_string(), minijinja::Value::from(text.to_string()));
-        render_fmt_template("emphasis", ext, &vars)
+        render_fmt_template("emphasis", writer, &vars)
     }
 
-    fn url(url: &str, label: Option<&str>, ext: &str) -> String {
+    fn url(url: &str, label: Option<&str>, writer: &str) -> String {
         let label = label.unwrap_or(url);
         let mut vars = TemplateVars::new();
         vars.cfg.insert("url".to_string(), minijinja::Value::from(url.to_string()));
         vars.cfg.insert("label".to_string(), minijinja::Value::from(label.to_string()));
-        render_fmt_template("url", ext, &vars)
+        render_fmt_template("url", writer, &vars)
     }
 }
 
 /// Render a format-primitive template. Falls back to empty string if not found.
-fn render_fmt_template(name: &str, ext: &str, vars: &TemplateVars) -> String {
-    if let Some(tpl) = resolve_element_template(name, ext) {
+fn render_fmt_template(name: &str, writer: &str, vars: &TemplateVars) -> String {
+    if let Some(tpl) = resolve_element_template(name, writer) {
         apply_template(&tpl, vars)
     } else {
         String::new()
@@ -70,9 +70,9 @@ pub fn strip_markdown_formatting(text: &str) -> String {
 /// Resolve an element template and render it with the given extra vars,
 /// automatically injecting `base` and `writer`. Returns `None` if the
 /// template does not exist.
-fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, minijinja::Value)>) -> Option<String> {
-    let tpl = resolve_element_template(name, ext)?;
-    let mut vars = TemplateVars::with_writer(ext);
+fn render_section(name: &str, writer: &str, extra_vars: Vec<(&str, minijinja::Value)>) -> Option<String> {
+    let tpl = resolve_element_template(name, writer)?;
+    let mut vars = TemplateVars::with_writer(writer);
     for (k, v) in extra_vars {
         vars.clp.insert(k.to_string(), v);
     }
@@ -82,7 +82,7 @@ fn render_section(name: &str, ext: &str, extra_vars: Vec<(&str, minijinja::Value
 /// Build the appendix block for any format using element templates.
 /// Format-specific content (links, lists) is computed in Rust;
 /// structural markup comes from overridable templates.
-pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
+pub fn build_appendix(meta: &Metadata, writer: &str) -> String {
     let style = meta.appendix_style.as_deref().unwrap_or("default");
     if style == "none" {
         return String::new();
@@ -93,7 +93,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     // License
     if let Some(ref lic) = meta.license {
         if let Some(ref text) = lic.text {
-            if let Some(s) = render_section("license", ext, vec![
+            if let Some(s) = render_section("license", writer, vec![
                 ("content", minijinja::Value::from(text.clone())),
                 ("url", minijinja::Value::from(lic.url.as_deref().unwrap_or("").to_string())),
             ]) {
@@ -104,8 +104,8 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
 
     // Citation
     if let Some(ref cite) = meta.citation {
-        if let Some(s) = render_section("citation", ext, vec![
-            ("content", minijinja::Value::from(build_citation_text(meta, cite, ext))),
+        if let Some(s) = render_section("citation", writer, vec![
+            ("content", minijinja::Value::from(build_citation_text(meta, cite, writer))),
         ]) {
             sections.push(s);
         }
@@ -115,7 +115,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
     if let Some(ref cr) = meta.copyright {
         let text = build_copyright_text(cr);
         if !text.is_empty() {
-            if let Some(s) = render_section("copyright", ext, vec![
+            if let Some(s) = render_section("copyright", writer, vec![
                 ("content", minijinja::Value::from(text)),
             ]) {
                 sections.push(s);
@@ -125,9 +125,9 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
 
     // Funding
     if !meta.funding.is_empty() {
-        let items = build_funding_items(&meta.funding, ext);
+        let items = build_funding_items(&meta.funding, writer);
         if !items.is_empty() {
-            if let Some(s) = render_section("funding", ext, vec![
+            if let Some(s) = render_section("funding", writer, vec![
                 ("items", minijinja::Value::from_iter(items)),
             ]) {
                 sections.push(s);
@@ -137,7 +137,7 @@ pub fn build_appendix(meta: &Metadata, ext: &str) -> String {
 
     if sections.is_empty() {
         String::new()
-    } else if let Some(s) = render_section("appendix", ext, vec![
+    } else if let Some(s) = render_section("appendix", writer, vec![
         ("content", minijinja::Value::from(sections.join("\n"))),
     ]) {
         s
@@ -163,7 +163,7 @@ fn build_copyright_text(cr: &crate::config::Copyright) -> String {
 }
 
 /// Build the citation text from metadata and citation info.
-fn build_citation_text(meta: &Metadata, cite: &crate::config::CitationConfig, ext: &str) -> String {
+fn build_citation_text(meta: &Metadata, cite: &crate::config::CitationConfig, writer: &str) -> String {
     let mut parts: Vec<String> = Vec::new();
     {
         let names = meta.author_names();
@@ -175,7 +175,7 @@ fn build_citation_text(meta: &Metadata, cite: &crate::config::CitationConfig, ex
         parts.push(format!("\"{}\"", t));
     }
     if let Some(ref ct) = cite.container_title {
-        parts.push(Fmt::emphasis(ct, ext));
+        parts.push(Fmt::emphasis(ct, writer));
     }
     if let Some(ref vol) = cite.volume {
         let vol_str = if let Some(ref iss) = cite.issue {
@@ -197,16 +197,16 @@ fn build_citation_text(meta: &Metadata, cite: &crate::config::CitationConfig, ex
     }
     if let Some(ref doi) = cite.doi {
         let doi_url = if doi.starts_with("http") { doi.clone() } else { format!("https://doi.org/{}", doi) };
-        citation.push_str(&format!(" DOI: {}", Fmt::url(&doi_url, Some(doi), ext)));
+        citation.push_str(&format!(" DOI: {}", Fmt::url(&doi_url, Some(doi), writer)));
     }
     if let Some(ref url) = cite.url {
-        citation.push_str(&format!(" URL: {}", Fmt::url(url, None, ext)));
+        citation.push_str(&format!(" URL: {}", Fmt::url(url, None, writer)));
     }
     citation
 }
 
 /// Build funding items as a list of display strings.
-fn build_funding_items(funding: &[crate::config::Funding], ext: &str) -> Vec<String> {
+fn build_funding_items(funding: &[crate::config::Funding], writer: &str) -> Vec<String> {
     funding.iter().filter_map(|f| {
         let text = if let Some(ref stmt) = f.statement {
             stmt.clone()
@@ -218,7 +218,7 @@ fn build_funding_items(funding: &[crate::config::Funding], ext: &str) -> Vec<Str
             if parts.is_empty() { return None; }
             parts.join(", ")
         };
-        if ext == "latex" {
+        if writer == "latex" {
             Some(text.replace('#', "\\#").replace('%', "\\%").replace('&', "\\&").replace('_', "\\_"))
         } else {
             Some(text)
@@ -229,17 +229,17 @@ fn build_funding_items(funding: &[crate::config::Funding], ext: &str) -> Vec<Str
 /// Build the author block for any format using element templates.
 /// Passes structured data (authors, affiliations, corresponding) to the
 /// `authors` template, which handles iteration and formatting via Jinja.
-pub fn build_authors(meta: &Metadata, ext: &str) -> String {
+pub fn build_authors(meta: &Metadata, writer: &str) -> String {
     if meta.authors.is_empty() {
         return String::new();
     }
 
-    let tpl = match resolve_element_template("authors", ext) {
+    let tpl = match resolve_element_template("authors", writer) {
         Some(t) => t,
         None => return meta.author_names().join(", "),
     };
 
-    let mut vars = TemplateVars::with_writer(ext);
+    let mut vars = TemplateVars::with_writer(writer);
 
     // Build structured author list
     let multi_aff = meta.affiliations.len() > 1;

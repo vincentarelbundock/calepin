@@ -54,6 +54,8 @@
   {% include "widget_source.html" %}
   {% elif item.widget == "dark" %}
   {% include "widget_dark.html" %}
+  {% elif item.widget == "colors" %}
+  {% include "widget_colors.html" %}
   {% elif item.widget == "language" %}
   {% if clp.translations %}{% for t in clp.translations %}<a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" class="text-2xl leading-none no-underline">{{ t.flag }}</a>{% endfor %}{% endif %}
   {% else %}

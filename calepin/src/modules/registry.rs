@@ -43,7 +43,7 @@ pub struct ModuleContext<'a> {
     pub classes: &'a [String],
     pub id: &'a Option<String>,
     pub attrs: &'a HashMap<String, String>,
-    pub format: &'a str,
+    pub writer: &'a str,
     pub defaults: &'a crate::config::Metadata,
     pub vars: HashMap<String, String>,
 
@@ -59,14 +59,14 @@ impl<'a> ModuleContext<'a> {
         id: &'a Option<String>,
         attrs: &'a HashMap<String, String>,
         children: &'a [Element],
-        format: &'a str,
+        writer: &'a str,
         defaults: &'a crate::config::Metadata,
         render_fn: &'a dyn Fn(&Element) -> String,
         raw_fragments: &'a RefCell<Vec<String>>,
         module_ids: &'a RefCell<HashMap<String, String>>,
     ) -> Self {
         Self {
-            classes, id, attrs, format, defaults,
+            classes, id, attrs, writer, defaults,
             vars: HashMap::new(),
             children, render_fn, raw_fragments, module_ids,
         }
@@ -104,7 +104,7 @@ pub trait TransformSpan: Send + Sync {
         &self,
         attrs: &HashMap<String, String>,
         content: &str,
-        format: &str,
+        writer: &str,
         defaults: &crate::config::Metadata,
     ) -> Option<String>;
 }
@@ -270,14 +270,14 @@ impl ModuleRegistry {
         classes: &[String],
         attrs: &HashMap<String, String>,
         id: Option<&str>,
-        format: &str,
+        writer: &str,
         context: &str,
     ) -> Vec<(&'a LoadedModule, &'a ModuleMatcher)> {
         let mut result = Vec::new();
         for module in &self.modules {
             for matcher in &module.matchers {
                 if matcher.contexts.iter().any(|c| c == context)
-                    && matcher.match_rule.matches(classes, attrs, id, format)
+                    && matcher.match_rule.matches(classes, attrs, id, writer)
                 {
                     result.push((module, matcher));
                 }
@@ -286,9 +286,9 @@ impl ModuleRegistry {
         result
     }
 
-    pub fn resolve_element_template(&self, name: &str, format: &str) -> Option<String> {
+    pub fn resolve_element_template(&self, name: &str, writer: &str) -> Option<String> {
         let canonical = name.replace('-', "_");
-        crate::paths::resolve_template(&canonical, format)
+        crate::paths::resolve_template(&canonical, writer)
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 
@@ -476,14 +476,14 @@ mod builtin_element_children_fn {
 
     pub fn tabset(ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::tabset::render(
-            ctx.format, ctx.attrs, ctx.children(), &|el| ctx.render_child(el),
+            ctx.writer, ctx.attrs, ctx.children(), &|el| ctx.render_child(el),
         );
         ModuleResult::Rendered(output)
     }
 
     pub fn layout(ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::layout::render(
-            ctx.id, ctx.attrs, ctx.children(), ctx.format,
+            ctx.id, ctx.attrs, ctx.children(), ctx.writer,
             &|el| ctx.render_child(el), ctx.raw_fragments(), ctx.defaults,
         );
         ModuleResult::Rendered(output)
@@ -491,7 +491,7 @@ mod builtin_element_children_fn {
 
     pub fn figure(ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::figure::render(
-            ctx.id, ctx.attrs, ctx.children(), ctx.format,
+            ctx.id, ctx.attrs, ctx.children(), ctx.writer,
             &|el| ctx.render_child(el), ctx.defaults, ctx.module_ids(),
         );
         ModuleResult::Rendered(output)
@@ -499,7 +499,7 @@ mod builtin_element_children_fn {
 
     pub fn theorem(ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::theorem::render(
-            ctx.classes, ctx.id, ctx.attrs, ctx.children(), ctx.format,
+            ctx.classes, ctx.id, ctx.attrs, ctx.children(), ctx.writer,
             &|el| ctx.render_child(el), ctx.module_ids(),
         );
         ModuleResult::Rendered(output)
@@ -507,7 +507,7 @@ mod builtin_element_children_fn {
 
     pub fn table(ctx: &mut ModuleContext) -> ModuleResult {
         let output = crate::modules::table::render(
-            ctx.id, ctx.attrs, ctx.children(), ctx.format,
+            ctx.id, ctx.attrs, ctx.children(), ctx.writer,
             &|el| ctx.render_child(el), ctx.module_ids(),
         );
         ModuleResult::Rendered(output)
@@ -519,26 +519,26 @@ mod builtin_element_children_fn {
 struct BuiltinSpan(fn(&HashMap<String, String>, &str, &str, &crate::config::Metadata) -> Option<String>);
 
 impl TransformSpan for BuiltinSpan {
-    fn render(&self, attrs: &HashMap<String, String>, content: &str, format: &str,
+    fn render(&self, attrs: &HashMap<String, String>, content: &str, writer: &str,
               defaults: &crate::config::Metadata) -> Option<String> {
-        (self.0)(attrs, content, format, defaults)
+        (self.0)(attrs, content, writer, defaults)
     }
 }
 
 mod builtin_span_fn {
     use std::collections::HashMap;
 
-    pub fn video(attrs: &HashMap<String, String>, _content: &str, format: &str,
+    pub fn video(attrs: &HashMap<String, String>, _content: &str, writer: &str,
                  defaults: &crate::config::Metadata) -> Option<String> {
-        Some(crate::modules::video::render(attrs, format, defaults))
+        Some(crate::modules::video::render(attrs, writer, defaults))
     }
 
-    pub fn placeholder(attrs: &HashMap<String, String>, _content: &str, format: &str,
+    pub fn placeholder(attrs: &HashMap<String, String>, _content: &str, writer: &str,
                        defaults: &crate::config::Metadata) -> Option<String> {
-        Some(crate::modules::placeholder::render(attrs, format, defaults))
+        Some(crate::modules::placeholder::render(attrs, writer, defaults))
     }
 
-    pub fn lorem(attrs: &HashMap<String, String>, _content: &str, _format: &str,
+    pub fn lorem(attrs: &HashMap<String, String>, _content: &str, _writer: &str,
                  defaults: &crate::config::Metadata) -> Option<String> {
         Some(crate::modules::lorem::render(attrs, defaults))
     }

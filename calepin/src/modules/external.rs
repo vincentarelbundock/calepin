@@ -129,7 +129,7 @@ impl crate::modules::registry::TransformElementChildren for ExternalElementChild
         let input = ElementModuleInput {
             name: &self.name,
             kind: "element_children",
-            writer: ctx.format,
+            writer: ctx.writer,
             context: "div",
             content: &children_html,
             classes: ctx.classes,
@@ -142,7 +142,7 @@ impl crate::modules::registry::TransformElementChildren for ExternalElementChild
             Err(_) => return crate::modules::registry::ModuleResult::Pass,
         };
 
-        match run_script(&self.script_path, &self.module_dir, &json_input, ctx.format) {
+        match run_script(&self.script_path, &self.module_dir, &json_input, ctx.writer) {
             Ok(output) => {
                 match serde_json::from_str::<ModuleOutput>(&output) {
                     Ok(result) if result.action == "rendered" => {

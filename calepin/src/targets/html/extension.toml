@@ -1,5 +1,6 @@
 name = "html"
 description = "HTML document output styled with Tailwind CSS utility classes"
+default_colors = "nord"
 
 [target]
 writer = "html"
@@ -10,3 +11,7 @@ fig_formats = ["svg", "png", "jpg", "webp", "gif"]
 preview = "serve"
 crossref = "html"
 modules = ["highlight", "append_footnotes", "embed_images"]
+
+[scaffold.document]
+kind = "document"
+description = "Single HTML document"

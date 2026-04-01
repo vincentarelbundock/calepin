@@ -11,7 +11,7 @@ pub fn wrap_listing(
     label: &str,
     lst_cap: Option<&str>,
     rendered_code: &str,
-    format: &str,
+    writer: &str,
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
     template_env: &crate::render::template::TemplateEnv,
     resolve_template: &dyn Fn(&str) -> Option<String>,
@@ -23,7 +23,7 @@ pub fn wrap_listing(
     let num = count + 1;
     module_ids.borrow_mut().insert(label.to_string(), num.to_string());
 
-    let mut vars = TemplateVars::with_writer(format);
+    let mut vars = TemplateVars::with_writer(writer);
     vars.cfg.insert("id".to_string(), minijinja::Value::from(label.to_string()));
     vars.clp.insert("number".to_string(), minijinja::Value::from(num.to_string()));
     vars.clp.insert("content".to_string(), minijinja::Value::from(rendered_code.to_string()));
@@ -32,7 +32,7 @@ pub fn wrap_listing(
     }
 
     let tpl = resolve_template("code_listing")
-        .or_else(|| crate::render::elements::resolve_element_template("code_listing", format))
+        .or_else(|| crate::render::elements::resolve_element_template("code_listing", writer))
         .unwrap_or_default();
     template_env.render_dynamic("code_listing", &tpl, &vars)
 }

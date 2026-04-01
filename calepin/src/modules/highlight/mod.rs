@@ -8,11 +8,6 @@
 
 pub mod transform_page;
 
-use include_dir::{include_dir, Dir};
-
-/// Built-in syntax highlighting themes (`.tmTheme` files), embedded at compile time.
-pub static BUILTIN_THEMES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/modules/highlight/themes");
-
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::sync::{LazyLock, Mutex};
@@ -67,36 +62,21 @@ static THEME_CACHE: LazyLock<Mutex<HashMap<String, syntect::highlighting::Theme>
 static CSS_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-// Pre-generated CSS for all built-in themes (generated at build time).
-include!(concat!(env!("OUT_DIR"), "/theme_css.rs"));
-
-fn highlight_cache_key(code: &str, lang: &str, ext: &str) -> u64 {
+fn highlight_cache_key(code: &str, lang: &str, writer: &str) -> u64 {
     use xxhash_rust::xxh3::xxh3_64;
-    let mut buf = Vec::with_capacity(code.len() + lang.len() + ext.len() + 2);
+    let mut buf = Vec::with_capacity(code.len() + lang.len() + writer.len() + 2);
     buf.extend_from_slice(code.as_bytes());
     buf.push(0);
     buf.extend_from_slice(lang.as_bytes());
     buf.push(0);
-    buf.extend_from_slice(ext.as_bytes());
+    buf.extend_from_slice(writer.as_bytes());
     xxh3_64(&buf)
 }
 
-/// Resolve a user-facing theme name to an internal key.
-fn resolve_theme_name(name: &str) -> Option<String> {
-    let path = format!("{}.tmTheme", name);
-    if crate::modules::highlight::BUILTIN_THEMES.get_file(&path).is_some() {
-        return Some(name.to_string());
-    }
-    cwarn!("unknown highlight-style '{}'", name);
-    None
-}
-
-/// User-facing highlight configuration parsed from YAML front matter.
+/// Highlight configuration: either disabled or a light/dark theme pair.
 pub enum HighlightConfig {
-    /// No highlighting (default, or unrecognized style).
+    /// No highlighting.
     None,
-    /// Single theme for all modes.
-    Single(String),
     /// Separate themes for light and dark modes.
     LightDark { light: String, dark: String },
 }
@@ -148,9 +128,9 @@ fn load_bundled_theme_uncached(name: &str) -> Option<syntect::highlighting::Them
         }
     }
 
-    // 2. Built-in: embedded highlighting themes
-    if let Some(file) = crate::modules::highlight::BUILTIN_THEMES.get_file(&filename) {
-        return ThemeSet::load_from_reader(&mut Cursor::new(file.contents())).ok();
+    // 2. Built-in theme extension directories (src/themes/{name}/*.tmTheme)
+    if let Some(contents) = crate::config::extension::builtin_colors_tmtheme(&filename) {
+        return ThemeSet::load_from_reader(&mut Cursor::new(contents)).ok();
     }
 
     // 3. Direct filesystem path (user-provided .tmTheme path)
@@ -162,34 +142,22 @@ fn load_bundled_theme_uncached(name: &str) -> Option<syntect::highlighting::Them
     None
 }
 
-/// Check whether a theme key refers to a syntect built-in (not a bundled .tmTheme).
-fn is_syntect_builtin(key: &str) -> bool {
-    matches!(key,
-        "base16-ocean.dark" | "base16-ocean.light" |
-        "base16-eighties.dark" | "base16-mocha.dark" |
-        "Solarized (dark)" | "Solarized (light)"
-    )
-}
-
 impl Highlighter {
-    /// Create a highlighter from document metadata.
-    /// Reads `highlight-style` from metadata vars and `highlight.light`/`highlight.dark`
-    /// from the highlight config, falling back to built-in defaults.
+    /// Create a highlighter from the active color scheme.
+    /// Priority: first entry in cfg.colors > extension default_colors > nord fallback.
     pub fn from_metadata(metadata: &crate::config::Metadata) -> Self {
-        let hl = metadata.highlight.as_ref();
-        let builtin_hl = crate::config::builtin_metadata().highlight.as_ref();
-        let config = metadata.cfg.get("highlight-style")
-            .map(|v| parse_highlight_config(v))
-            .unwrap_or_else(|| {
-                HighlightConfig::LightDark {
-                    light: hl.and_then(|h| h.light.clone())
-                        .or_else(|| builtin_hl.and_then(|h| h.light.clone()))
-                        .unwrap_or_else(|| "github".to_string()),
-                    dark: hl.and_then(|h| h.dark.clone())
-                        .or_else(|| builtin_hl.and_then(|h| h.dark.clone()))
-                        .unwrap_or_else(|| "nord".to_string()),
-                }
-            });
+        let target_name = crate::paths::get_active_target().unwrap_or_default();
+        let colors = crate::config::extension::resolve_active_colors(&metadata.cfg, &target_name);
+        let hl = colors.as_ref().and_then(|c| c.highlight.as_ref());
+        let config = HighlightConfig::LightDark {
+            light: hl.and_then(|h| h.light.clone()).unwrap_or_else(|| "github".to_string()),
+            dark: hl.and_then(|h| h.dark.clone()).unwrap_or_else(|| "nord".to_string()),
+        };
+        Self::new(config)
+    }
+
+    /// Create a highlighter from a given highlight config (for theme CSS generation).
+    pub fn from_config(config: HighlightConfig) -> Self {
         Self::new(config)
     }
 
@@ -200,33 +168,6 @@ impl Highlighter {
     }
 
     fn new(config: HighlightConfig) -> Self {
-        // Handle custom .tmTheme file path in config — resolve it eagerly so we
-        // can report errors early and normalise the config to "_custom".
-        let config = if let HighlightConfig::Single(ref key) = config {
-            if key.ends_with(".tmTheme") || key.ends_with(".tmtheme") {
-                match ThemeSet::get_theme(std::path::Path::new(key)) {
-                    Ok(t) => {
-                        let ts_cell = std::cell::OnceCell::new();
-                        let mut ts = ThemeSet { themes: std::collections::BTreeMap::new() };
-                        ts.themes.insert("_custom".to_string(), t);
-                        let _ = ts_cell.set(ts);
-                        return Self {
-                            ts: ts_cell,
-                            config: HighlightConfig::Single("_custom".to_string()),
-                        };
-                    }
-                    Err(e) => {
-                        cwarn!("highlight-style '{}': failed to parse: {}", key, e);
-                        HighlightConfig::None
-                    }
-                }
-            } else {
-                config
-            }
-        } else {
-            config
-        };
-
         Self {
             ts: std::cell::OnceCell::new(),
             config,
@@ -244,20 +185,13 @@ impl Highlighter {
             let mut ts = ThemeSet { themes: std::collections::BTreeMap::new() };
             let keys: Vec<&str> = match &self.config {
                 HighlightConfig::None => vec![],
-                HighlightConfig::Single(k) => vec![k.as_str()],
                 HighlightConfig::LightDark { light, dark } => vec![light.as_str(), dark.as_str()],
             };
             for key in keys {
                 if ts.themes.contains_key(key) {
                     continue;
                 }
-                if is_syntect_builtin(key) {
-                    // Load only the syntect defaults to get this theme
-                    let defaults = ThemeSet::load_defaults();
-                    if let Some(theme) = defaults.themes.into_iter().find(|(n, _)| n == key) {
-                        ts.themes.insert(theme.0, theme.1);
-                    }
-                } else if let Some(theme) = load_bundled_theme(key) {
+                if let Some(theme) = load_bundled_theme(key) {
                     ts.themes.insert(key.to_string(), theme);
                 } else {
                     cwarn!("theme '{}' not found", key);
@@ -270,15 +204,14 @@ impl Highlighter {
     /// Syntax-highlight code for the given output format extension.
     /// Results are cached by (code, lang, format) hash so unchanged code blocks
     /// skip syntect on re-render in preview mode.
-    pub fn highlight(&self, code: &str, lang: &str, ext: &str) -> String {
+    pub fn highlight(&self, code: &str, lang: &str, writer: &str) -> String {
         let theme_key = match &self.config {
             HighlightConfig::None => return crate::util::escape_html(code),
-            HighlightConfig::Single(k) => k,
             HighlightConfig::LightDark { light, .. } => light,
         };
 
         // Check cache (lock is held briefly -- just a HashMap lookup)
-        let key = highlight_cache_key(code, lang, ext);
+        let key = highlight_cache_key(code, lang, writer);
         if let Ok(cache) = HIGHLIGHT_CACHE.lock() {
             if let Some(cached) = cache.get(&key) {
                 return cached.clone();
@@ -291,7 +224,7 @@ impl Highlighter {
             .or_else(|| ss.find_syntax_by_name(lang))
             .unwrap_or_else(|| ss.find_syntax_plain_text());
 
-        let result = match ext {
+        let result = match writer {
             "html" => self.highlight_html(code, syntax),
             "latex" => self.highlight_latex(code, syntax, theme_key),
             _ => crate::util::escape_html(code),
@@ -346,7 +279,6 @@ impl Highlighter {
     pub fn syntax_css(&self) -> String {
         let cache_key = match &self.config {
             HighlightConfig::None => return String::new(),
-            HighlightConfig::Single(k) => k.clone(),
             HighlightConfig::LightDark { light, dark } => format!("{}\0{}", light, dark),
         };
 
@@ -368,12 +300,6 @@ impl Highlighter {
     fn generate_syntax_css(&self) -> String {
         match &self.config {
             HighlightConfig::None => String::new(),
-            HighlightConfig::Single(key) => {
-                let (css, bg, fg) = self.theme_css_and_colors(key);
-                let mut out = css;
-                Self::append_pre_overrides_static(&mut out, &bg, &fg);
-                out
-            }
             HighlightConfig::LightDark { light, dark } => {
                 let (light_css, light_bg, light_fg) = self.theme_css_and_colors(light);
                 let (dark_css, dark_bg, dark_fg) = self.theme_css_and_colors(dark);
@@ -400,13 +326,8 @@ impl Highlighter {
         }
     }
 
-    /// Get CSS and bg/fg colors for a theme, using build-time pre-generated data
-    /// for built-in themes, falling back to runtime generation for custom themes.
+    /// Get CSS and bg/fg colors for a theme (generated at runtime, cached globally).
     fn theme_css_and_colors(&self, key: &str) -> (String, String, String) {
-        if let Some((css, bg, fg)) = builtin_theme_css(key) {
-            return (css.to_string(), bg.to_string(), fg.to_string());
-        }
-        // Custom theme: generate at runtime
         let theme = self.theme(key);
         let css = css_for_theme_with_class_style(theme, ClassStyle::Spaced)
             .unwrap_or_default();
@@ -431,58 +352,6 @@ impl Highlighter {
     pub fn latex_color_definitions(&self) -> String {
         LATEX_COLOR_REGISTRY.lock().unwrap().emit_definitions()
     }
-}
-
-/// Parse the YAML `highlight-style` value into a HighlightConfig.
-/// Accepts a string or a map with `light` and `dark` keys.
-pub fn parse_highlight_config(yaml: &crate::value::Value) -> HighlightConfig {
-    // String value: single theme
-    if let Some(name) = yaml.as_str() {
-        return resolve_single_theme(name);
-    }
-
-    // Map value: light/dark
-    if let Some(light_val) = yaml.get("light") {
-        if let Some(dark_val) = yaml.get("dark") {
-            if let (Some(light_name), Some(dark_name)) = (light_val.as_str(), dark_val.as_str()) {
-                let light = resolve_theme_key(light_name);
-                let dark = resolve_theme_key(dark_name);
-                if let (Some(light), Some(dark)) = (light, dark) {
-                    return HighlightConfig::LightDark { light, dark };
-                }
-            }
-        }
-    }
-
-    HighlightConfig::None
-}
-
-/// Resolve a single theme name to a HighlightConfig.
-fn resolve_single_theme(name: &str) -> HighlightConfig {
-    if name == "none" || name == "false" {
-        return HighlightConfig::None;
-    }
-    if name.ends_with(".tmTheme") || name.ends_with(".tmtheme") {
-        let path = std::path::Path::new(name);
-        if !path.exists() {
-            cwarn!("highlight-style '{}': file not found", name);
-            return HighlightConfig::None;
-        }
-        return HighlightConfig::Single(name.to_string());
-    }
-    match resolve_theme_name(name) {
-        Some(key) => HighlightConfig::Single(key),
-        None => HighlightConfig::None,
-    }
-}
-
-/// Resolve a theme name to its internal key, loading custom .tmTheme files.
-fn resolve_theme_key(name: &str) -> Option<String> {
-    if name.ends_with(".tmTheme") || name.ends_with(".tmtheme") {
-        cwarn!("custom .tmTheme files not supported in light/dark map");
-        return None;
-    }
-    resolve_theme_name(name)
 }
 
 // ---------------------------------------------------------------------------

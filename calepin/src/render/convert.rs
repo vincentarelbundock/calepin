@@ -41,10 +41,10 @@ pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
 
 /// Render a short inline markdown string (e.g., title) to the target format.
 /// Strips the wrapping <p> tags that comrak adds.
-pub fn render_inline(text: &str, format: &str) -> String {
+pub fn render_inline(text: &str, writer: &str) -> String {
     let registry = crate::registry::ModuleRegistry::empty();
     let config = crate::registry::EmitterConfig::default();
-    let emitter = registry.resolve_emitter(format, &config)
+    let emitter = registry.resolve_emitter(writer, &config)
         .expect("no writer registered for format");
     let options = crate::emit::WalkOptions::default();
     let result = crate::emit::walk_and_render_with_metadata(

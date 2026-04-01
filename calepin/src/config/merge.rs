@@ -77,7 +77,7 @@ impl Metadata {
         self.preview_port = overlay.preview_port.or(self.preview_port);
         self.dpi = overlay.dpi.or(self.dpi);
         self.math = overlay.math.or(self.math);
-        self.highlight = merge_option_struct!(overlay.highlight, self.highlight, { light, dark });
+
         self.figure = merge_option_struct!(overlay.figure, self.figure, { fig_width, fig_height, out_width, out_height, fig_asp, device, alignment });
         self.execute = merge_option_struct!(overlay.execute, self.execute, { cache, eval, echo, include, warning, message, error, comment, results, timeout });
         self.toc = merge_option_struct!(overlay.toc, self.toc, { enabled, depth, title });

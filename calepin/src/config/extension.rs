@@ -59,6 +59,15 @@ pub struct ExtensionManifest {
     /// Whether this extension defines a collection target (website, book).
     #[serde(default)]
     pub collection: bool,
+    /// Name of the default color scheme (looked up from built-in or installed schemes).
+    #[serde(default)]
+    pub default_colors: Option<String>,
+    /// Single color scheme definition (used by color scheme extensions in `src/themes/`).
+    #[serde(default)]
+    pub colors: Option<ColorsDef>,
+    /// Inline named color schemes (for bundling multiple schemes).
+    #[serde(default)]
+    pub themes: HashMap<String, ColorsDef>,
 }
 
 /// Scaffold declarations in an extension manifest.
@@ -209,6 +218,107 @@ impl ExtensionMatchRule {
             }
         }
         false
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Theme definitions
+// ---------------------------------------------------------------------------
+
+/// A color scheme definition bundling CSS color tokens and syntax highlighting themes.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ColorsDef {
+    /// Syntax highlighting theme names (light/dark).
+    #[serde(default)]
+    pub highlight: Option<ColorsHighlight>,
+    /// CSS custom property color tokens (light/dark).
+    #[serde(default)]
+    pub tokens: Option<ColorTokens>,
+}
+
+/// Syntax highlighting theme pair for a color scheme.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ColorsHighlight {
+    /// Light-mode `.tmTheme` name.
+    pub light: Option<String>,
+    /// Dark-mode `.tmTheme` name.
+    pub dark: Option<String>,
+}
+
+/// CSS custom property color tokens for light and dark modes.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ColorTokens {
+    /// Light-mode color values keyed by token name (e.g., "page" -> "#fafbfc").
+    #[serde(default)]
+    pub light: HashMap<String, String>,
+    /// Dark-mode color values keyed by token name (e.g., "page" -> "#2f3643").
+    #[serde(default)]
+    pub dark: HashMap<String, String>,
+}
+
+impl ColorsDef {
+    /// Generate CSS custom property declarations from this theme's colors.
+    /// Returns a string like `:root { --c-page: #fff; ... } .dark { --c-page: #111; ... }`
+    pub fn generate_color_css(&self) -> String {
+        let colors = match &self.tokens {
+            Some(c) if !c.light.is_empty() || !c.dark.is_empty() => c,
+            _ => return String::new(),
+        };
+        let mut css = String::new();
+        if !colors.light.is_empty() {
+            css.push_str(":root {\n");
+            let mut keys: Vec<&String> = colors.light.keys().collect();
+            keys.sort();
+            for key in keys {
+                css.push_str(&format!("  --c-{}: {};\n", key, colors.light[key]));
+            }
+            css.push_str("}\n");
+        }
+        if !colors.dark.is_empty() {
+            css.push_str(".dark {\n");
+            let mut keys: Vec<&String> = colors.dark.keys().collect();
+            keys.sort();
+            for key in keys {
+                css.push_str(&format!("  --c-{}: {};\n", key, colors.dark[key]));
+            }
+            css.push_str("  color-scheme: dark;\n");
+            css.push_str("}\n");
+        }
+        css
+    }
+
+    /// Generate the Tailwind CSS `theme.extend.colors` JS object body from this theme's
+    /// token keys. Each token `foo` becomes `foo: 'var(--c-foo)'`. The `border` token is
+    /// aliased to `brd` to avoid colliding with Tailwind's built-in `border` utility.
+    /// Returns the inner content of the JS object (no surrounding braces).
+    pub fn generate_tailwind_colors(&self) -> String {
+        let colors = match &self.tokens {
+            Some(c) => c,
+            None => return String::new(),
+        };
+        // Collect all unique token names from light and dark
+        let mut keys: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+        for k in colors.light.keys() { keys.insert(k.as_str()); }
+        for k in colors.dark.keys() { keys.insert(k.as_str()); }
+
+        let mut lines = Vec::new();
+        for key in &keys {
+            // Tailwind class name: alias "border*" to "brd*" to avoid collision
+            let tw_name = if *key == "border" {
+                "brd".to_string()
+            } else if let Some(suffix) = key.strip_prefix("border-") {
+                format!("brd-{}", suffix)
+            } else {
+                key.to_string()
+            };
+            // Quote names with dashes
+            if tw_name.contains('-') {
+                lines.push(format!("        '{}': 'var(--c-{})'", tw_name, key));
+            } else {
+                lines.push(format!("        {}: 'var(--c-{})'", tw_name, key));
+            }
+        }
+        lines.join(",\n")
     }
 }
 
@@ -497,6 +607,131 @@ pub fn inheritance_chain(
 }
 
 // ---------------------------------------------------------------------------
+// Theme resolution
+// ---------------------------------------------------------------------------
+
+/// Resolve the default color scheme for a target by walking the extension inheritance chain.
+/// Finds the first `default_colors` field, then looks up the scheme by name from
+/// installed color extensions, built-in registry, or inline `[themes.*]`.
+pub fn resolve_default_colors(target_name: &str) -> Option<ColorsDef> {
+    let project_root = crate::paths::get_project_dir();
+
+    // Find the default_colors name from the extension chain
+    let default_name = {
+        // 1. Installed extensions (child-first)
+        let results = walk_chain(&project_root, target_name, |_, _, manifest| {
+            manifest.default_colors.clone()
+        });
+        if let Some(name) = results.into_iter().next() {
+            Some(name)
+        } else {
+            // 2. Built-in extension manifests
+            let mut current = Some(target_name.to_string());
+            let mut visited = std::collections::HashSet::new();
+            let mut found = None;
+            while let Some(name) = current.take() {
+                if !visited.insert(name.clone()) { break; }
+                if let Some(manifest) = builtin_extension(&name) {
+                    if manifest.default_colors.is_some() {
+                        found = manifest.default_colors;
+                        break;
+                    }
+                    current = manifest.inherits;
+                }
+            }
+            found
+        }
+    };
+
+    // Look up the color scheme by name
+    let default_name = default_name?;
+    resolve_colors_by_name(&default_name)
+}
+
+/// Look up a color scheme by name: user-installed extensions, then built-in schemes.
+pub fn resolve_colors_by_name(name: &str) -> Option<ColorsDef> {
+    // 1. User-installed color extension in sidecar or project
+    let project_root = crate::paths::get_project_dir();
+    let ext_dir = crate::paths::extensions_dir(&project_root).join(name);
+    if let Some(manifest) = load_cached(&ext_dir) {
+        if manifest.colors.is_some() {
+            return manifest.colors;
+        }
+    }
+
+    // 2. Built-in color scheme registry
+    builtin_colors(name)
+}
+
+/// Collect all available color schemes for a target (for the theme picker).
+/// Gathers schemes from user-installed extensions and built-in schemes,
+/// deduplicated by name.
+pub fn collect_color_schemes(target_name: &str) -> Vec<(String, ColorsDef)> {
+    let project_root = crate::paths::get_project_dir();
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::new();
+
+    // 1. User-installed color extensions (sidecar/project)
+    let extensions_dir = crate::paths::extensions_dir(&project_root);
+    if extensions_dir.is_dir() {
+        for (name, path) in discover_extensions_in(&extensions_dir) {
+            if let Some(manifest) = load_cached(&path) {
+                if let Some(colors) = manifest.colors {
+                    if seen.insert(name.clone()) {
+                        result.push((name, colors));
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Inline [themes.*] from extension chain
+    let chain_themes = walk_chain(&project_root, target_name, |_, _, manifest| {
+        if manifest.themes.is_empty() { None } else { Some(manifest.themes.clone()) }
+    });
+    for themes_map in chain_themes {
+        for (name, def) in themes_map {
+            if seen.insert(name.clone()) {
+                result.push((name, def));
+            }
+        }
+    }
+
+    // 3. Built-in color schemes
+    for (name, content) in BUILTIN_COLOR_EXTENSIONS {
+        if seen.insert(name.to_string()) {
+            if let Ok(manifest) = toml::from_str::<ExtensionManifest>(content) {
+                if let Some(colors) = manifest.colors {
+                    result.push((name.to_string(), colors));
+                }
+            }
+        }
+    }
+
+    result.sort_by(|a, b| a.0.cmp(&b.0));
+    result
+}
+
+/// Resolve the active color scheme for a document.
+/// Priority: first entry in `cfg.colors` > extension `default_colors` > nord fallback.
+pub fn resolve_active_colors(
+    cfg: &std::collections::HashMap<String, crate::value::Value>,
+    target_name: &str,
+) -> Option<ColorsDef> {
+    let user_default = cfg.get("colors")
+        .and_then(|v| v.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    if let Some(ref name) = user_default {
+        resolve_colors_by_name(name)
+    } else {
+        resolve_default_colors(target_name)
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Extension name validation
 // ---------------------------------------------------------------------------
 
@@ -525,11 +760,62 @@ pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
     ("website", include_str!("../targets/website/extension.toml")),
 ];
 
+/// Built-in color scheme manifest sources, embedded at compile time.
+/// Each is a standalone extension with a `[colors]` section.
+pub const BUILTIN_COLOR_EXTENSIONS: &[(&str, &str)] = &[
+    ("nord", include_str!("../themes/nord/extension.toml")),
+    ("ayu", include_str!("../themes/ayu/extension.toml")),
+
+
+    ("catppuccin-frappe", include_str!("../themes/catppuccin-frappe/extension.toml")),
+    ("catppuccin-macchiato", include_str!("../themes/catppuccin-macchiato/extension.toml")),
+    ("catppuccin-mocha", include_str!("../themes/catppuccin-mocha/extension.toml")),
+    ("black", include_str!("../themes/black/extension.toml")),
+];
+
+/// Built-in color scheme directories, embedded at compile time.
+/// Each contains an extension.toml and .tmTheme files.
+pub static BUILTIN_COLOR_DIRS: &[(&str, &Dir<'static>)] = &[
+    ("nord", &COLOR_DIR_NORD),
+    ("ayu", &COLOR_DIR_AYU),
+
+
+    ("catppuccin-frappe", &COLOR_DIR_CATPPUCCIN_FRAPPE),
+    ("catppuccin-macchiato", &COLOR_DIR_CATPPUCCIN_MACCHIATO),
+    ("catppuccin-mocha", &COLOR_DIR_CATPPUCCIN_MOCHA),
+    ("black", &COLOR_DIR_BLACK),
+];
+
 /// Parse a built-in extension manifest by name.
 pub fn builtin_extension(name: &str) -> Option<ExtensionManifest> {
     BUILTIN_EXTENSIONS.iter()
         .find(|(n, _)| *n == name)
         .and_then(|(_, content)| toml::from_str(content).ok())
+}
+
+/// Parse a built-in color scheme by name.
+/// Returns the `ColorsDef` from the color extension's `[colors]` section.
+pub fn builtin_colors(name: &str) -> Option<ColorsDef> {
+    BUILTIN_COLOR_EXTENSIONS.iter()
+        .find(|(n, _)| *n == name)
+        .and_then(|(_, content)| toml::from_str::<ExtensionManifest>(content).ok())
+        .and_then(|m| m.colors)
+}
+
+/// Return names of all built-in color schemes.
+pub fn builtin_color_names() -> Vec<&'static str> {
+    BUILTIN_COLOR_EXTENSIONS.iter().map(|(n, _)| *n).collect()
+}
+
+/// Look up a `.tmTheme` file from built-in color scheme extension directories.
+/// Returns the raw bytes if found.
+pub fn builtin_colors_tmtheme(filename: &str) -> Option<&'static [u8]> {
+    for (_name, dir) in BUILTIN_COLOR_DIRS {
+        if let Some(file) = dir.get_file(filename) {
+            return Some(file.contents());
+        }
+    }
+    None
 }
 
 // ---------------------------------------------------------------------------
@@ -546,6 +832,15 @@ pub static BUILTIN_SCAFFOLDS: &[(&str, &str, &Dir<'static>)] = &[
     ("book-latex", "book-latex", &SCAFFOLD_BOOK_LATEX),
     ("html", "document", &SCAFFOLD_DOCUMENT),
 ];
+
+static COLOR_DIR_NORD: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/nord");
+static COLOR_DIR_AYU: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/ayu");
+
+
+static COLOR_DIR_CATPPUCCIN_FRAPPE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/catppuccin-frappe");
+static COLOR_DIR_CATPPUCCIN_MACCHIATO: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/catppuccin-macchiato");
+static COLOR_DIR_CATPPUCCIN_MOCHA: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/catppuccin-mocha");
+static COLOR_DIR_BLACK: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/black");
 
 static SCAFFOLD_WEBSITE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/website/scaffold/website");
 static SCAFFOLD_BOOK: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/book/scaffold/book");

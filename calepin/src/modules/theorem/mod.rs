@@ -34,7 +34,7 @@ pub fn render(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
     children: &[Element],
-    format: &str,
+    writer: &str,
     render_element: &dyn Fn(&Element) -> String,
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
 ) -> String {
@@ -55,7 +55,7 @@ pub fn render(
         .collect::<Vec<_>>()
         .join("\n\n");
 
-    let mut vars = TemplateVars::with_writer(format);
+    let mut vars = TemplateVars::with_writer(writer);
     vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered));
     vars.cfg.insert("classes".to_string(), minijinja::Value::from(classes.join(" ")));
     vars.clp.insert("type_class".to_string(), minijinja::Value::from(theorem_class.clone()));
@@ -96,7 +96,7 @@ pub fn render(
         "theorem"
     };
 
-    let tpl = crate::render::elements::resolve_element_template(template_name, format).unwrap_or_default();
+    let tpl = crate::render::elements::resolve_element_template(template_name, writer).unwrap_or_default();
     crate::render::template::apply_template(&tpl, &vars)
 }
 

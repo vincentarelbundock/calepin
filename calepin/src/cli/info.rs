@@ -51,7 +51,7 @@ pub fn handle_extra(action: ExtraAction) -> Result<()> {
         }
         ExtraAction::Highlight => {
             println!("Built-in syntax highlighting themes:\n");
-            let names = crate::modules::list_builtin_themes();
+            let names = crate::modules::list_builtin_color_schemes();
             for name in &names {
                 println!("  {}", name);
             }

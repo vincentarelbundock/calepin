@@ -47,7 +47,7 @@ pub(crate) fn apply_collection_templates(
     all_listing_documents: &HashMap<String, Vec<DocumentInfo>>,
     base_dir: &Path,
     output: &Path,
-    format: &str,
+    writer: &str,
     target_name: &str,
 ) -> Result<()> {
     // Initialize MiniJinja from templates/{target}/
@@ -65,11 +65,11 @@ pub(crate) fn apply_collection_templates(
     let cfg_ctx = crate::config::build_jinja_vars(&meta.cfg);
 
     // Determine template extension
-    let tpl_ext = match format {
+    let tpl_ext = match writer {
         "latex" => "tex",
         "typst" => "typ",
         "markdown" => "md",
-        _ => format,
+        _ => writer,
     };
 
     // Render each page through MiniJinja, overwriting the raw body files
@@ -179,6 +179,14 @@ pub(crate) fn apply_collection_templates(
             clp_map.insert("css".to_string(), serde_json::Value::String(
                 crate::render::template::load_default_css(),
             ));
+
+            // Color scheme CSS and Tailwind colors
+            if writer == "html" {
+                if let Some(ref c) = crate::config::extension::resolve_active_colors(&meta.cfg, target_name) {
+                    clp_map.insert("colors_css".to_string(), serde_json::Value::String(c.generate_color_css()));
+                    clp_map.insert("tailwind_colors".to_string(), serde_json::Value::String(c.generate_tailwind_colors()));
+                }
+            }
             let clp_val = minijinja::Value::from_serialize(&clp_map);
             let collection_with_active = minijinja::context! {
                 clp => clp_val,
@@ -204,7 +212,7 @@ pub(crate) fn apply_collection_templates(
         }
     }
 
-    if format == "html" {
+    if writer == "html" {
         // Create .nojekyll so GitHub Pages serves _-prefixed directories
         let nojekyll = output.join(".nojekyll");
         if !nojekyll.exists() {

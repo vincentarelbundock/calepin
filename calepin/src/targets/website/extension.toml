@@ -2,6 +2,7 @@ name = "website"
 description = "Multi-page website styled with Tailwind CSS"
 inherits = "html"
 collection = true
+default_colors = "nord"
 
 [target]
 standalone = false

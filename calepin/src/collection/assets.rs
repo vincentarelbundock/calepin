@@ -49,6 +49,9 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
         }
     }
 
+    // Generate theme CSS files from extension [themes.*] declarations
+    generate_color_assets(&assets_dst)?;
+
     // Copy user-specified static paths (files or directories) into output
     for entry in static_dirs {
         let src = base_dir.join(entry);
@@ -62,6 +65,45 @@ pub fn copy_assets(base_dir: &Path, output_dir: &Path, static_dirs: &[String]) -
             }
             fs::copy(&src, &dst)
                 .with_context(|| format!("Failed to copy static file '{}' to output", entry))?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Generate CSS files for each named color scheme declared in the extension chain.
+/// Creates `themes/{name}.css` (color tokens) and `themes/{name}-highlight.css`
+/// (syntax highlighting) in the assets directory.
+fn generate_color_assets(assets_dir: &Path) -> Result<()> {
+    let target_name = crate::paths::get_active_target().unwrap_or_default();
+    let themes = crate::config::extension::collect_color_schemes(&target_name);
+    if themes.is_empty() {
+        return Ok(());
+    }
+
+    let themes_dir = assets_dir.join("themes");
+    fs::create_dir_all(&themes_dir)?;
+
+    for (name, theme_def) in &themes {
+        // 1. Color token CSS
+        let color_css = theme_def.generate_color_css();
+        if !color_css.is_empty() {
+            fs::write(themes_dir.join(format!("{}.css", name)), &color_css)?;
+        }
+
+        // 2. Syntax highlight CSS
+        if let Some(ref hl) = theme_def.highlight {
+            let light = hl.light.as_deref().unwrap_or("github");
+            let dark = hl.dark.as_deref().unwrap_or("nord");
+            let config = crate::modules::HighlightConfig::LightDark {
+                light: light.to_string(),
+                dark: dark.to_string(),
+            };
+            let highlighter = crate::modules::Highlighter::from_config(config);
+            let css = highlighter.syntax_css();
+            if !css.is_empty() {
+                fs::write(themes_dir.join(format!("{}-highlight.css", name)), &css)?;
+            }
         }
     }
 

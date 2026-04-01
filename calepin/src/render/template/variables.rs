@@ -10,10 +10,10 @@ use crate::config::Metadata;
 ///   etc.) plus custom front matter keys, plus the selected target.
 /// - `clp.*` -- engine-computed: the resolved writer format.
 /// - `env.*` -- system environment variables (kept as a separate helper).
-pub(crate) fn build_context(metadata: &Metadata, format: &str) -> minijinja::Value {
-    let config_val = build_config_map(metadata, format);
+pub(crate) fn build_context(metadata: &Metadata, writer: &str) -> minijinja::Value {
+    let config_val = build_config_map(metadata, writer);
     let calepin_val = minijinja::context! {
-        writer => format,
+        writer => writer,
     };
 
     let tpl_val = Value::from_serialize(&metadata.tpl);
@@ -30,11 +30,11 @@ pub(crate) fn build_context(metadata: &Metadata, format: &str) -> minijinja::Val
 ///
 /// Merges standard metadata fields (title, author, date, etc.) with custom
 /// front matter keys from `metadata.var` into a single flat-ish object.
-fn build_config_map(meta: &Metadata, format: &str) -> Value {
+fn build_config_map(meta: &Metadata, writer: &str) -> Value {
     let mut map = serde_json::Map::new();
 
-    // User-selected target (defaults to format when no explicit target)
-    let target = crate::paths::get_active_target().unwrap_or_else(|| format.to_string());
+    // User-selected target (defaults to writer when no explicit target)
+    let target = crate::paths::get_active_target().unwrap_or_else(|| writer.to_string());
     map.insert("target".into(), serde_json::Value::String(target));
 
     // Standard metadata fields

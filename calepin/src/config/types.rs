@@ -10,14 +10,6 @@ use crate::value::Value as MetaValue;
 // Defaults sub-types (rendering defaults for figures, code execution, etc.)
 // ---------------------------------------------------------------------------
 
-/// Default syntax highlighting theme configuration.
-#[derive(Debug, Clone, Deserialize)]
-pub struct Highlight {
-    /// Theme for light mode.
-    pub light: Option<String>,
-    /// Theme for dark mode.
-    pub dark: Option<String>,
-}
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct FigureConfig {
@@ -220,7 +212,6 @@ pub struct Metadata {
     pub preview_port: Option<u16>,
     pub dpi: Option<f64>,
     pub math: Option<String>,
-    pub highlight: Option<Highlight>,
     pub figure: Option<FigureConfig>,
     pub execute: Option<ExecuteConfig>,
     pub toc: Option<TocConfig>,

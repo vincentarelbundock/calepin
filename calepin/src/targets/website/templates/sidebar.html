@@ -4,7 +4,7 @@
       {% if node.children | length > 0 %}
         {% if loop.depth0 == 0 %}
         <details class="mb-1"{% if node.active %} open{% endif %}>
-          <summary class="font-semibold text-[11px] uppercase tracking-wider text-faint px-3 pt-3 pb-1 cursor-pointer list-none flex items-center gap-1">{{ node.title }}</summary>
+          <summary class="font-semibold text-[11px] uppercase tracking-wider text-faint px-3 pt-3 pb-1 cursor-pointer marker:text-faint">{{ node.title }}</summary>
           <ul class="list-none m-0 p-0 pl-2">
             {{ loop(node.children) }}
           </ul>
@@ -12,7 +12,7 @@
         {% else %}
         <li>
           <details{% if node.active %} open{% endif %}>
-            <summary class="font-semibold text-xs text-faint px-3 py-0.5 cursor-pointer list-none">{{ node.title }}</summary>
+            <summary class="font-semibold text-xs text-faint px-3 py-0.5 cursor-pointer marker:text-faint">{{ node.title }}</summary>
             <ul class="list-none m-0 p-0 pl-2">
               {{ loop(node.children) }}
             </ul>

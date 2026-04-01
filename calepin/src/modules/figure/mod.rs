@@ -20,7 +20,7 @@ pub fn render(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
     children: &[Element],
-    format: &str,
+    writer: &str,
     render_element: &dyn Fn(&Element) -> String,
     _defaults: &crate::config::Metadata,
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
@@ -53,7 +53,7 @@ pub fn render(
         .join("\n\n");
 
     // Build template vars
-    let mut vars = crate::render::template::TemplateVars::with_writer(format);
+    let mut vars = crate::render::template::TemplateVars::with_writer(writer);
     vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered));
     vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.to_string()));
 
@@ -64,11 +64,11 @@ pub fn render(
 
     // Render caption markdown to target format
     if !caption_text.is_empty() {
-        let rendered_caption = crate::render::convert::render_inline(&caption_text, format);
+        let rendered_caption = crate::render::convert::render_inline(&caption_text, writer);
         vars.cfg.insert("caption".to_string(), minijinja::Value::from(rendered_caption));
     }
 
-    let tpl = crate::render::elements::resolve_element_template("figure", format).unwrap_or_default();
+    let tpl = crate::render::elements::resolve_element_template("figure", writer).unwrap_or_default();
     crate::render::template::apply_template(&tpl, &vars)
 }
 
@@ -87,23 +87,23 @@ pub struct BuildFigureVars {
 
 impl BuildFigureVars {
     pub fn new(
-        ext: &str,
+        writer: &str,
         target: Option<&crate::config::Target>,
     ) -> Self {
         let fig_formats = target
             .map(|t| t.fig_formats.clone())
             .filter(|f| !f.is_empty())
-            .unwrap_or_else(|| default_fig_formats(ext));
+            .unwrap_or_else(|| default_fig_formats(writer));
         Self { fig_formats }
     }
 }
 
 impl crate::render::vars::BuildElementVars for BuildFigureVars {
-    fn apply(&self, element: &Element, format: &str, vars: &mut crate::render::template::TemplateVars, defaults: &crate::config::Metadata) {
+    fn apply(&self, element: &Element, writer: &str, vars: &mut crate::render::template::TemplateVars, defaults: &crate::config::Metadata) {
         if let Element::Figure { path, alt, caption, label, number, attrs, options } = element {
             build_figure_element_vars(
                 vars, path, alt, caption.as_deref(), label,
-                number.as_deref(), attrs, options, format,
+                number.as_deref(), attrs, options, writer,
                 defaults,
                 &self.fig_formats,
             );
@@ -120,7 +120,7 @@ fn build_figure_element_vars(
     number: Option<&str>,
     attrs: &crate::types::FigureAttrs,
     options: &HashMap<String, String>,
-    format: &str,
+    writer: &str,
     defaults: &crate::config::Metadata,
     fig_formats: &[String],
 ) {
@@ -134,7 +134,7 @@ fn build_figure_element_vars(
     let resolved_path = select_image_variant_with_prefs(path, fig_formats);
     let display_path = resolved_path.to_string_lossy().to_string();
 
-    let src = if format == "html" {
+    let src = if writer == "html" {
         let embed = defaults.standalone.unwrap_or(true);
         if embed {
             if let Ok((mime, data)) = crate::util::base64_encode_image(&resolved_path) {
@@ -149,12 +149,12 @@ fn build_figure_element_vars(
         relative_figure_path(&resolved_path)
     };
 
-    let width_attr = format_width(attrs, format);
+    let width_attr = format_width(attrs, writer);
     let height_attr = format_height(attrs);
     let link = attrs.link.as_deref().unwrap_or("");
 
     // Render image tag into clp.content so the unified figure template handles it
-    let children = render_image_tag(&src, alt, &width_attr, &height_attr, link, format);
+    let children = render_image_tag(&src, alt, &width_attr, &height_attr, link, writer);
     vars.clp.insert("content".to_string(), minijinja::Value::from(children));
 
     // Pass raw chunk options through to templates as cfg.*
@@ -164,8 +164,8 @@ fn build_figure_element_vars(
 }
 
 /// Render a format-specific image tag string.
-fn render_image_tag(src: &str, alt: &str, width: &str, height: &str, link: &str, format: &str) -> String {
-    let img = match format {
+fn render_image_tag(src: &str, alt: &str, width: &str, height: &str, link: &str, writer: &str) -> String {
+    let img = match writer {
         "html" => {
             let mut s = format!("<img src=\"{}\" alt=\"{}\"", src, alt);
             if !width.is_empty() {
@@ -198,7 +198,7 @@ fn render_image_tag(src: &str, alt: &str, width: &str, height: &str, link: &str,
     if link.is_empty() {
         return img;
     }
-    match format {
+    match writer {
         "html" => format!("<a href=\"{}\">{}</a>", link, img),
         "latex" => format!("\\href{{{}}}{{{}}}", link, img),
         "typst" => format!("#link(\"{}\")[{}]", link, img),
@@ -262,7 +262,7 @@ fn relative_figure_path(path: &Path) -> String {
     }
 }
 
-pub fn format_width(attrs: &crate::types::FigureAttrs, format: &str) -> String {
+pub fn format_width(attrs: &crate::types::FigureAttrs, writer: &str) -> String {
     use crate::render::elements::resolve_element_template;
     use crate::render::template::apply_template;
 
@@ -271,7 +271,7 @@ pub fn format_width(attrs: &crate::types::FigureAttrs, format: &str) -> String {
         None => return String::new(),
     };
 
-    if let Some(tpl) = resolve_element_template("format_width", format) {
+    if let Some(tpl) = resolve_element_template("format_width", writer) {
         let mut vars = TemplateVars::new();
         vars.cfg.insert("width".to_string(), minijinja::Value::from(width.to_string()));
         if width.ends_with('%') {
@@ -291,14 +291,14 @@ pub fn format_height(attrs: &crate::types::FigureAttrs) -> String {
 
 
 /// Find the preferred image format variant for the output format.
-pub fn select_image_variant(path: &Path, format: &str) -> PathBuf {
-    let preferred = default_fig_formats(format);
+pub fn select_image_variant(path: &Path, writer: &str) -> PathBuf {
+    let preferred = default_fig_formats(writer);
     select_image_variant_with_prefs(path, &preferred)
 }
 
 /// Engine-appropriate default image format preferences.
-fn default_fig_formats(format: &str) -> Vec<String> {
-    match format {
+fn default_fig_formats(writer: &str) -> Vec<String> {
+    match writer {
         "latex" => vec!["pdf", "eps", "svg", "png", "jpg"],
         "typst" => vec!["svg", "png", "jpg"],
         "html" => vec!["svg", "png", "jpg", "webp", "gif"],

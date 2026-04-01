@@ -36,7 +36,7 @@ pub fn build_collection(
         eprintln!("  \x1b[36mconfig:\x1b[0m {}", found_path.display());
     }
 
-    // 2. Resolve collection target (format and extension)
+    // 2. Resolve collection target (writer and extension)
     let collection_target_name = cli_target.map(|s| s.to_string())
         .or_else(|| read_target_from_index(&base_dir, &meta))
         .ok_or_else(|| anyhow::anyhow!(
@@ -44,7 +44,7 @@ pub fn build_collection(
              or pass `-t` on the command line."
         ))?;
     let collection_target = crate::config::resolve_target(&collection_target_name, &meta.targets)?;
-    let format = &collection_target.writer;
+    let writer = &collection_target.writer;
     let output_ext = collection_target.output_extension();
 
     // Set active target, inheritance chain, and project root for template/component resolution
@@ -112,7 +112,7 @@ pub fn build_collection(
     //    Disabled for crossref builds (they need ref_data from every page) and
     //    when clean=true (the output directory was just wiped).
     let apply_page_template = is_book;
-    let use_crossref = format == "html" && !apply_page_template && meta.global_crossref;
+    let use_crossref = writer == "html" && !apply_page_template && meta.global_crossref;
     let use_page_cache = !clean && !use_crossref;
 
     let mut config_bytes = fs::read(&found_path).unwrap_or_default();
@@ -154,7 +154,7 @@ pub fn build_collection(
     } else {
         // Render only stale pages
         let stale_owned: Vec<DocumentInfo> = stale_pages.into_iter().cloned().collect();
-        render::render_documents(&stale_owned, &meta, &base_dir, output, format, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
+        render::render_documents(&stale_owned, &meta, &base_dir, output, writer, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
     };
 
     if !quiet && skipped > 0 {
@@ -218,7 +218,7 @@ pub fn build_collection(
             }
         }).collect();
 
-        let ran = registry.run_project_transforms(&mut rendered_pages, &meta, format, &project_ctx, &collection_target.modules)?;
+        let ran = registry.run_project_transforms(&mut rendered_pages, &meta, writer, &project_ctx, &collection_target.modules)?;
 
         if ran {
             // Write back pages modified by project modules
@@ -234,9 +234,9 @@ pub fn build_collection(
             if is_book {
                 let document_nodes = contents::expand_contents(&meta.contents, &base_dir);
                 let page_tree = context::build_page_tree(&document_nodes, &pages);
-                orchestrator::render_book(&meta, &page_tree, &base_dir, output, format, output_ext, &collection_target_name, quiet)?;
+                orchestrator::render_book(&meta, &page_tree, &base_dir, output, writer, output_ext, &collection_target_name, quiet)?;
             } else {
-                templating::apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, format, &collection_target_name)?;
+                templating::apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, writer, &collection_target_name)?;
             }
         }
     }

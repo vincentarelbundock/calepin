@@ -7,10 +7,6 @@ lang = "en"
 standalone = true
 dpi = 150.0
 
-[highlight]
-light = "github"
-dark = "nord"
-
 [figure]
 fig_width = 6.0
 fig_asp = 0.618

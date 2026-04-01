@@ -31,7 +31,7 @@ pub fn render_documents(
     meta: &crate::config::Metadata,
     base_dir: &Path,
     output_dir: &Path,
-    format: &str,
+    writer: &str,
     apply_page_template: bool,
     target_name: Option<&str>,
     target: Option<&config::Target>,
@@ -43,7 +43,7 @@ pub fn render_documents(
 
     let overrides = build_overrides(meta, target);
 
-    let format_owned = format.to_string();
+    let writer_owned = writer.to_string();
     let target_owned = target_name.map(|s| s.to_string());
     let chain = target_name.map(|tn| {
         crate::config::extension::inheritance_chain(base_dir, tn, &meta.targets)
@@ -54,7 +54,7 @@ pub fn render_documents(
         crate::paths::set_active_target_with_chain(target_owned.as_deref(), chain.clone());
         crate::paths::set_active_tpl(meta.tpl.clone());
         crate::paths::set_project_dir(Some(base_dir));
-        let result = render_one_document(page, &overrides, base_dir, output_dir, &format_owned, apply_page_template, Some(meta));
+        let result = render_one_document(page, &overrides, base_dir, output_dir, &writer_owned, apply_page_template, Some(meta));
         (key, result)
     });
 
@@ -85,7 +85,7 @@ pub fn render_documents(
             crate::paths::set_active_tpl(meta.tpl.clone());
             crate::paths::set_project_dir(Some(base_dir));
             let key = page.source.display().to_string();
-            match render_one_document(page, &overrides, base_dir, output_dir, format, apply_page_template, Some(meta)) {
+            match render_one_document(page, &overrides, base_dir, output_dir, writer, apply_page_template, Some(meta)) {
                 Ok(render_result) => {
                     if !quiet {
                         eprintln!("  [ok] {}", key);
@@ -107,7 +107,7 @@ fn render_one_document(
     overrides: &[String],
     base_dir: &Path,
     output_dir: &Path,
-    format: &str,
+    writer: &str,
     apply_page_template: bool,
     project_metadata: Option<&crate::config::Metadata>,
 ) -> Result<CollectionRenderResult> {
@@ -124,7 +124,7 @@ fn render_one_document(
         // Orchestrator mode: use the shared render_page pipeline
         // (render_core + assemble_page + transform_document)
         let (page, _result) = crate::render::pipeline::render_page(
-            &input, &output_path, format, overrides, Some(base_dir),
+            &input, &output_path, writer, overrides, Some(base_dir),
             &crate::render::pipeline::RenderCoreOptions::default(),
             project_metadata, None,
         )?;
@@ -140,13 +140,13 @@ fn render_one_document(
         // Site mode: render_core + transform_document (no assemble_page --
         // the site template wraps pages later in apply_collection_templates)
         let result = crate::render::pipeline::render_core(
-            &input, &output_path, Some(format), overrides, Some(base_dir),
+            &input, &output_path, Some(writer), overrides, Some(base_dir),
             &crate::render::pipeline::RenderCoreOptions::default(),
             project_metadata, None,
         )?;
-        let pipeline = crate::render::formats::FormatPipeline::from_writer(format)?;
+        let pipeline = crate::render::formats::FormatPipeline::from_writer(writer)?;
         let body = pipeline.transform_document(&result.rendered, &result.element_renderer);
-        let toc = if format == "html" && result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
+        let toc = if writer == "html" && result.metadata.toc.as_ref().and_then(|t| t.enabled).unwrap_or(true) {
             let (depth, title) = result.metadata.toc_depth_title();
             let toc_html = crate::render::template::build_toc_html_from_body(&body, depth, title);
             if toc_html.is_empty() { None } else { Some(toc_html) }
@@ -156,9 +156,9 @@ fn render_one_document(
         return Ok(CollectionRenderResult {
             body,
             toc,
-            title: result.metadata.title.map(|t| crate::render::convert::render_inline(&t, format)),
+            title: result.metadata.title.map(|t| crate::render::convert::render_inline(&t, writer)),
             date: result.metadata.date,
-            subtitle: result.metadata.subtitle.map(|t| crate::render::convert::render_inline(&t, format)),
+            subtitle: result.metadata.subtitle.map(|t| crate::render::convert::render_inline(&t, writer)),
             abstract_text: result.metadata.abstract_text,
         });
     }
@@ -477,7 +477,7 @@ where
     results
 }
 
-pub fn build_overrides(meta: &crate::config::Metadata, target: Option<&config::Target>) -> Vec<String> {
+pub fn build_overrides(_meta: &crate::config::Metadata, target: Option<&config::Target>) -> Vec<String> {
     let mut overrides = Vec::new();
 
     // standalone override from target
@@ -487,15 +487,7 @@ pub fn build_overrides(meta: &crate::config::Metadata, target: Option<&config::T
         }
     }
 
-    // Highlight style from metadata
-    if let Some(ref hl) = meta.highlight {
-        if let Some(ref light) = hl.light {
-            overrides.push(format!("highlight-style.light={}", light));
-        }
-        if let Some(ref dark) = hl.dark {
-            overrides.push(format!("highlight-style.dark={}", dark));
-        }
-    }
+
 
     overrides
 }

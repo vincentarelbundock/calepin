@@ -579,7 +579,7 @@ writer = "typst"
         assert_eq!(meta.target.as_deref(), Some("html"));
         assert_eq!(meta.csl.as_deref(), Some("apa"));
         assert_eq!(meta.dpi, Some(300.0));
-        assert_eq!(meta.highlight.as_ref().and_then(|h| h.light.as_deref()), Some("github"));
+
         assert_eq!(meta.toc.as_ref().and_then(|t| t.enabled), Some(true));
         assert_eq!(meta.toc.as_ref().and_then(|t| t.depth), Some(4));
         assert_eq!(meta.execute.as_ref().and_then(|e| e.cache), Some(false));

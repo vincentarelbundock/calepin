@@ -42,7 +42,7 @@ mod video;
 // ---------------------------------------------------------------------------
 
 // Syntax highlighting engine (config parsing is internal to the module)
-pub use highlight::Highlighter;
+pub use highlight::{Highlighter, HighlightConfig};
 
 // Figure utilities: image variant selection and element var building
 pub use figure::{select_image_variant, BuildFigureVars};
@@ -70,17 +70,7 @@ pub fn render_children(children: &[crate::types::Element], render_element: &dyn 
         .join("\n\n")
 }
 
-/// List all built-in syntax highlighting theme names.
-pub fn list_builtin_themes() -> Vec<&'static str> {
-    let mut names: Vec<&str> = highlight::BUILTIN_THEMES.files()
-        .filter_map(|f| {
-            if f.path().extension()?.to_str()? == "tmTheme" {
-                f.path().file_stem()?.to_str()
-            } else {
-                None
-            }
-        })
-        .collect();
-    names.sort();
-    names
+/// List all built-in color scheme names.
+pub fn list_builtin_color_schemes() -> Vec<&'static str> {
+    crate::config::extension::builtin_color_names()
 }

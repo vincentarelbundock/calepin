@@ -219,7 +219,7 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             "dpi" => meta.dpi = v.as_floating_point(),
             "math" => meta.math = v.as_str().map(String::from),
             "preview_port" => meta.preview_port = v.as_integer().map(|n| n as u16),
-            "highlight" => meta.highlight = deserialize_section(v),
+
             "toc" => {
                 // "toc" can be a bool (in front matter) or a table (in config).
                 // When a bare bool, also propagate to var.toc so templates

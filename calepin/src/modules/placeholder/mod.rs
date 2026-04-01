@@ -6,7 +6,7 @@ use crate::render::template::TemplateVars;
 
 pub fn render(
     kv: &HashMap<String, String>,
-    format: &str,
+    writer: &str,
     defaults: &crate::config::Metadata,
 ) -> String {
     let pdefs = defaults.placeholder.as_ref();
@@ -24,7 +24,7 @@ pub fn render(
     vars.cfg.insert("text".to_string(), minijinja::Value::from(crate::util::escape_html(&text)));
 
     let fallback = format!("[{} ({}x{})]", text, width, height);
-    match crate::render::elements::resolve_element_template("placeholder", format) {
+    match crate::render::elements::resolve_element_template("placeholder", writer) {
         Some(tpl) => crate::render::template::apply_template(&tpl, &vars),
         None => fallback,
     }

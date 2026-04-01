@@ -15,7 +15,7 @@ pub fn render(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
     children: &[Element],
-    format: &str,
+    writer: &str,
     render_element: &dyn Fn(&Element) -> String,
     module_ids: &std::cell::RefCell<HashMap<String, String>>,
 ) -> String {
@@ -47,7 +47,7 @@ pub fn render(
         .join("\n\n");
 
     // Build template vars
-    let mut vars = TemplateVars::with_writer(format);
+    let mut vars = TemplateVars::with_writer(writer);
     vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered));
     vars.cfg.insert("label".to_string(), minijinja::Value::from(id_val.to_string()));
     vars.cfg.insert("id".to_string(), minijinja::Value::from(id_val.to_string()));
@@ -59,7 +59,7 @@ pub fn render(
 
     // Render caption markdown to target format
     if !caption_text.is_empty() {
-        let rendered_caption = crate::render::convert::render_inline(&caption_text, format);
+        let rendered_caption = crate::render::convert::render_inline(&caption_text, writer);
         vars.cfg.insert("caption".to_string(), minijinja::Value::from(rendered_caption));
     }
 
@@ -69,7 +69,7 @@ pub fn render(
         .unwrap_or_else(|| "top".to_string());
     vars.cfg.insert("cap_location".to_string(), minijinja::Value::from(cap_loc));
 
-    let tpl = crate::render::elements::resolve_element_template("table", format).unwrap_or_default();
+    let tpl = crate::render::elements::resolve_element_template("table", writer).unwrap_or_default();
     crate::render::template::apply_template(&tpl, &vars)
 }
 

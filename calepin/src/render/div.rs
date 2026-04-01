@@ -17,7 +17,7 @@ pub fn render(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
     children: &[Element],
-    format: &str,
+    writer: &str,
     registry: &ModuleRegistry,
     render_element: &dyn Fn(&Element) -> String,
     resolve_partial: &dyn Fn(&str) -> Option<String>,
@@ -26,13 +26,13 @@ pub fn render(
     template_env: &crate::render::template::TemplateEnv,
     defaults: &crate::config::Metadata,
 ) -> String {
-    let matching = registry.matching_modules(classes, attrs, id.as_deref(), format, "div");
+    let matching = registry.matching_modules(classes, attrs, id.as_deref(), writer, "div");
 
     // Phase 1: Element children transforms (structural rewriting)
     for (plugin, _filter_spec) in &matching {
         if let ModuleKind::ElementChildren(ref p) = plugin.kind {
             let mut ctx = ModuleContext::new(
-                classes, id, attrs, children, format, defaults,
+                classes, id, attrs, children, writer, defaults,
                 render_element, raw_fragments, module_ids,
             );
             match p.apply(&mut ctx) {
@@ -58,7 +58,7 @@ pub fn render(
 
     let mut vars = crate::render::template::TemplateVars::new();
     vars.tpl = defaults.tpl.clone();
-    build_div_vars(&mut vars, classes, id, attrs, &children_rendered, format);
+    build_div_vars(&mut vars, classes, id, attrs, &children_rendered, writer);
 
     // Template lookup: explicit override -> class-based -> fallback
     let (tpl_name, tpl_source) = vars.cfg.get("template")
@@ -88,7 +88,7 @@ fn build_div_vars(
     id: &Option<String>,
     attrs: &HashMap<String, String>,
     children_rendered: &str,
-    format: &str,
+    writer: &str,
 ) {
     // Div attributes are user-authored -> config.
     // Set title explicitly so document metadata doesn't leak into div templates.
@@ -98,7 +98,7 @@ fn build_div_vars(
     for (k, val) in attrs {
         vars.cfg.insert(k.clone(), minijinja::Value::from(val.clone()));
     }
-    vars.clp.insert("writer".to_string(), minijinja::Value::from(format.to_string()));
+    vars.clp.insert("writer".to_string(), minijinja::Value::from(writer.to_string()));
     vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered.to_string()));
     vars.cfg.insert("classes".to_string(), minijinja::Value::from(classes.join(" ")));
 
