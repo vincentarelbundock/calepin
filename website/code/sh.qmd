@@ -32,5 +32,5 @@ The current user is `{sh} whoami`.
 Standard shell constructs work as expected:
 
 ```{sh}
-seq 1 5 | paste -sd+ | bc
+echo "one two three" | wc -w
 ```

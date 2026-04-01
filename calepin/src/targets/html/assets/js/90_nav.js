@@ -4,6 +4,9 @@
   // Only activate if there is a sidebar (i.e., this is a multi-page site)
   if (!document.getElementById('sidebar-nav')) return;
 
+  // Disable browser's automatic scroll restoration for SPA navigation
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
   function isInternalLink(a) {
     if (a.hostname !== location.hostname) return false;
     if (a.getAttribute('target') === '_blank') return false;
@@ -122,13 +125,20 @@
         history.pushState(null, '', url);
         _lastPath = new URL(url, location.href).pathname;
         var hash = new URL(url, location.href).hash;
+        window.scrollTo(0, 0);
         if (hash) {
           var target = document.getElementById(hash.slice(1));
-          if (target) { target.scrollIntoView(); }
-          else { window.scrollTo(0, 0); }
-        } else {
-          window.scrollTo(0, 0);
+          if (target) target.scrollIntoView();
         }
+        // Ensure scroll sticks after layout recalculation (e.g., Tailwind CDN)
+        setTimeout(function() {
+          if (hash) {
+            var target = document.getElementById(hash.slice(1));
+            if (target) target.scrollIntoView();
+          } else {
+            window.scrollTo(0, 0);
+          }
+        }, 50);
 
         // Update sidebar active state
         updateSidebarActive(url);
