@@ -1,0 +1,45 @@
+/* Catppuccin Latte (light) / Mocha (dark) */
+/* https://github.com/catppuccin/catppuccin */
+:root {
+  --c-page: #eff1f5;       /* base */
+  --c-text: #4c4f69;       /* text */
+  --c-muted: #6c6f85;      /* subtext0 */
+  --c-faint: #7c7f93;      /* overlay1 */
+  --c-link: #1e66f5;       /* blue */
+  --c-border: #ccd0da;     /* surface0 */
+  --c-border-strong: #bcc0cc; /* surface1 */
+  --c-code-bg: #e6e9ef;    /* mantle */
+  --c-hover: #dce0e8;      /* crust */
+  --c-note: #1e66f5;       /* blue */
+  --c-note-bg: rgba(30,102,245,0.08);
+  --c-tip: #40a02b;        /* green */
+  --c-tip-bg: rgba(64,160,43,0.08);
+  --c-warn: #df8e1d;       /* yellow */
+  --c-warn-bg: rgba(223,142,29,0.08);
+  --c-caution: #d20f39;    /* red */
+  --c-caution-bg: rgba(210,15,57,0.08);
+  --c-important: #8839ef;  /* mauve */
+  --c-important-bg: rgba(136,57,239,0.08);
+}
+.dark {
+  --c-page: #1e1e2e;       /* base */
+  --c-text: #cdd6f4;       /* text */
+  --c-muted: #a6adc8;      /* subtext0 */
+  --c-faint: #bac2de;      /* subtext1 */
+  --c-link: #89b4fa;       /* blue */
+  --c-border: #313244;     /* surface0 */
+  --c-border-strong: #45475a; /* surface1 */
+  --c-code-bg: #181825;    /* mantle */
+  --c-hover: #11111b;      /* crust */
+  --c-note: #89b4fa;       /* blue */
+  --c-note-bg: rgba(137,180,250,0.15);
+  --c-tip: #a6e3a1;        /* green */
+  --c-tip-bg: rgba(166,227,161,0.15);
+  --c-warn: #f9e2af;       /* yellow */
+  --c-warn-bg: rgba(249,226,175,0.15);
+  --c-caution: #f38ba8;    /* red */
+  --c-caution-bg: rgba(243,139,168,0.15);
+  --c-important: #cba6f7;  /* mauve */
+  --c-important-bg: rgba(203,166,247,0.15);
+  color-scheme: dark;
+}

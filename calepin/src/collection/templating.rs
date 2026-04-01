@@ -62,7 +62,7 @@ pub(crate) fn apply_collection_templates(
     let collection_ctx = build_collection_context(meta, pages, base_dir);
 
     // Convert var to minijinja Value for template access
-    let var_ctx = crate::config::build_jinja_vars(&meta.var);
+    let cfg_ctx = crate::config::build_jinja_vars(&meta.cfg);
 
     // Determine template extension
     let tpl_ext = match format {
@@ -146,11 +146,11 @@ pub(crate) fn apply_collection_templates(
             context::resolve_navbar_urls(&mut resolved_navbar, page_depth);
 
             // Merge per-page var over collection-level var so pages can override.
-            let page_var_ctx = if page.meta.var.is_empty() {
-                var_ctx.clone()
+            let page_cfg_ctx = if page.meta.cfg.is_empty() {
+                cfg_ctx.clone()
             } else {
-                let mut merged = meta.var.clone();
-                merged.extend(page.meta.var.clone());
+                let mut merged = meta.cfg.clone();
+                merged.extend(page.meta.cfg.clone());
                 crate::config::build_jinja_vars(&merged)
             };
 
@@ -183,7 +183,7 @@ pub(crate) fn apply_collection_templates(
             let collection_with_active = minijinja::context! {
                 clp => clp_val,
                 _page_depth => page_depth,
-                cfg => page_var_ctx,
+                cfg => page_cfg_ctx,
             };
 
             let rendered = tpl.render(&collection_with_active)

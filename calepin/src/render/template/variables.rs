@@ -64,9 +64,9 @@ fn build_config_map(meta: &Metadata, format: &str) -> Value {
     // Target is set separately in the context; standard fields above suffice here.
 
     // Custom front matter keys (formerly `var.*`)
-    if !meta.var.is_empty() {
+    if !meta.cfg.is_empty() {
         let json = crate::value::to_json(&crate::value::Value::Table(
-            meta.var.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+            meta.cfg.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
         ));
         if let serde_json::Value::Object(custom) = json {
             for (k, v) in custom {

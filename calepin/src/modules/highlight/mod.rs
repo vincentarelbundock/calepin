@@ -178,7 +178,7 @@ impl Highlighter {
     pub fn from_metadata(metadata: &crate::config::Metadata) -> Self {
         let hl = metadata.highlight.as_ref();
         let builtin_hl = crate::config::builtin_metadata().highlight.as_ref();
-        let config = metadata.var.get("highlight-style")
+        let config = metadata.cfg.get("highlight-style")
             .map(|v| parse_highlight_config(v))
             .unwrap_or_else(|| {
                 HighlightConfig::LightDark {

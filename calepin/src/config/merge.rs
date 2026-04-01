@@ -94,8 +94,8 @@ impl Metadata {
         merge_vec!(exclude);
 
         // Extra variables: overlay keys win
-        for (k, v) in overlay.var {
-            self.var.insert(k, v);
+        for (k, v) in overlay.cfg {
+            self.cfg.insert(k, v);
         }
 
         // Template variant selections: overlay keys win
@@ -156,11 +156,11 @@ impl Metadata {
                     let parts: Vec<&str> = key.split('.').collect();
                     let coerced = value::coerce_value(value);
                     if parts.len() == 1 {
-                        self.var.insert(key.to_string(), coerced);
+                        self.cfg.insert(key.to_string(), coerced);
                     } else {
                         let leaf = coerced;
                         let nested = value::build_nested_value(&parts, leaf);
-                        value::merge_value(&mut self.var, parts[0], nested);
+                        value::merge_value(&mut self.cfg, parts[0], nested);
                     }
                 }
             }

@@ -1,0 +1,212 @@
+---
+title = "Tailwind CSS"
+---
+
+The `tailwind` and `website-tailwind` targets style all output with [Tailwind CSS](https://tailwindcss.com/) utility classes. The full Tailwind CSS library is loaded from a CDN, so every utility class is available in your documents without any build step or configuration.
+
+## How it works
+
+Every HTML element template uses Tailwind utility classes instead of custom CSS. Colors are controlled through CSS custom properties defined once in the page template, then mapped to Tailwind color names via the config. This means you can re-theme an entire site by changing a few lines in `main.html` or `base.html`.
+
+## Using Tailwind classes in documents
+
+You can use any Tailwind class directly in fenced divs and spans. Each class gets its own `.` prefix, separated by spaces:
+
+```markdown
+::: {.bg-blue-100 .p-2 .rounded-lg .text-blue-900}
+This box has a blue background, padding, rounded corners,
+and dark blue text.
+:::
+```
+
+::: {.bg-blue-100 .p-3 .rounded-lg .text-blue-900 .dark:bg-blue-900 .dark:text-blue-100}
+This box has a blue background, padding, rounded corners, and dark blue text.
+:::
+
+For inline styling, use bracketed spans:
+
+```markdown
+This text has a [highlighted word]{.bg-yellow-200 .dark:bg-yellow-800 .px-1 .rounded} in the middle. You can also make [bold red text]{.text-red-600 .dark:text-red-400 .font-bold} or [small muted labels]{.text-xs .text-gray-400 .uppercase .tracking-wider}.
+```
+
+This text has a [highlighted word]{.bg-yellow-200 .dark:bg-yellow-800 .px-1 .rounded} in the middle. You can also make [bold red text]{.text-red-600 .dark:text-red-400 .font-bold} or [small muted labels]{.text-xs .text-gray-400 .uppercase .tracking-wider}.
+
+## Grid layouts
+
+Tailwind's grid utilities work naturally with fenced divs:
+
+```markdown
+::: {.grid .grid-cols-2 .gap-4}
+
+::: {.bg-amber-50 .p-4 .rounded .dark:bg-amber-900/30}
+First column content.
+:::
+
+::: {.bg-amber-50 .p-4 .rounded .dark:bg-amber-900/30}
+Second column content.
+:::
+
+:::
+```
+
+::: {.grid .grid-cols-2 .gap-4}
+
+::: {.bg-amber-50 .p-4 .rounded .dark:bg-amber-900/30}
+First column. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat.
+:::
+
+::: {.bg-amber-50 .p-4 .rounded .dark:bg-amber-900/30}
+Second column. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor.
+:::
+
+:::
+
+Three columns with different colors:
+
+````
+::: {.grid .grid-cols-3 .gap-4 .text-sm}
+
+::: {.bg-rose-100 .p-4 .rounded-lg .dark:bg-rose-900/30}
+**Rose.** Pulvinar vivamus fringilla lacus nec metus bibendum egestas.
+:::
+
+::: {.bg-sky-100 .p-4 .rounded-lg .dark:bg-sky-900/30}
+**Sky.** Iaculis massa nisl malesuada lacinia integer nunc posuere.
+:::
+
+::: {.bg-emerald-100 .p-4 .rounded-lg .dark:bg-emerald-900/30}
+**Emerald.** Ut hendrerit semper vel class aptent taciti sociosqu.
+:::
+
+:::
+````
+
+::: {.grid .grid-cols-3 .gap-4 .text-sm}
+
+::: {.bg-rose-100 .p-4 .rounded-lg .dark:bg-rose-900/30}
+**Rose.** Pulvinar vivamus fringilla lacus nec metus bibendum egestas.
+:::
+
+::: {.bg-sky-100 .p-4 .rounded-lg .dark:bg-sky-900/30}
+**Sky.** Iaculis massa nisl malesuada lacinia integer nunc posuere.
+:::
+
+::: {.bg-emerald-100 .p-4 .rounded-lg .dark:bg-emerald-900/30}
+**Emerald.** Ut hendrerit semper vel class aptent taciti sociosqu.
+:::
+
+:::
+
+## Cards
+
+::: {.grid .grid-cols-2 .gap-6}
+
+::: {.border .border-gray-200 .dark:border-gray-700 .rounded-xl .overflow-hidden .shadow-sm}
+::: {.bg-gradient-to-r .from-indigo-500 .to-purple-500 .h-24}
+:::
+::: {.p-5}
+**Getting started**
+
+Install *Calepin* and create your first document in under a minute.
+
+[Read more &rarr;]{.text-indigo-500 .dark:text-indigo-400 .font-medium .no-underline}
+:::
+:::
+
+::: {.border .border-gray-200 .dark:border-gray-700 .rounded-xl .overflow-hidden .shadow-sm}
+::: {.bg-gradient-to-r .from-emerald-500 .to-teal-500 .h-24}
+:::
+::: {.p-5}
+**Templates**
+
+Customize every element with Jinja templates and Tailwind classes.
+
+[Read more &rarr;]{.text-emerald-500 .dark:text-emerald-400 .font-medium .no-underline}
+:::
+:::
+
+:::
+
+## Typography
+
+````
+::: {.space-y-4}
+
+::: {.text-4xl .font-bold .tracking-tight}
+Large bold heading
+:::
+
+::: {.text-lg .text-gray-500 .dark:text-gray-400 .leading-relaxed}
+A subtitle with muted color and relaxed line height. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+:::
+
+::: {.text-sm .font-mono .bg-gray-100 .dark:bg-gray-800 .p-3 .rounded}
+Monospace text in a code-like box.
+:::
+
+:::
+````
+
+::: {.space-y-4}
+
+::: {.text-4xl .font-bold .tracking-tight}
+Large bold heading
+:::
+
+::: {.text-lg .text-gray-500 .dark:text-gray-400 .leading-relaxed}
+A subtitle with muted color and relaxed line height. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+:::
+
+::: {.text-sm .font-mono .bg-gray-100 .dark:bg-gray-800 .p-3 .rounded}
+Monospace text in a code-like box.
+:::
+
+:::
+
+## Badges and pills
+
+::: {}
+[New]{.inline-block .bg-blue-100 .text-blue-800 .dark:bg-blue-900 .dark:text-blue-200 .text-xs .font-semibold .px-2.5 .py-0.5 .rounded-full}
+[Beta]{.inline-block .bg-amber-100 .text-amber-800 .dark:bg-amber-900 .dark:text-amber-200 .text-xs .font-semibold .px-2.5 .py-0.5 .rounded-full}
+[Stable]{.inline-block .bg-green-100 .text-green-800 .dark:bg-green-900 .dark:text-green-200 .text-xs .font-semibold .px-2.5 .py-0.5 .rounded-full}
+[Deprecated]{.inline-block .bg-red-100 .text-red-800 .dark:bg-red-900 .dark:text-red-200 .text-xs .font-semibold .px-2.5 .py-0.5 .rounded-full}
+:::
+
+## Alerts
+
+::: {.bg-blue-50 .dark:bg-blue-900/20 .border-l-4 .border-blue-400 .p-4 .rounded-r .mb-4}
+**Info.** This is a custom info box styled entirely with Tailwind utilities.
+:::
+
+::: {.bg-green-50 .dark:bg-green-900/20 .border-l-4 .border-green-400 .p-4 .rounded-r .mb-4}
+**Success.** Operation completed successfully.
+:::
+
+::: {.bg-red-50 .dark:bg-red-900/20 .border-l-4 .border-red-400 .p-4 .rounded-r .mb-4}
+**Error.** Something went wrong. Please try again.
+:::
+
+## Color tokens
+
+The `tailwind` and `website-tailwind` targets define semantic color tokens as CSS custom properties. These are mapped to Tailwind color names in the config, so templates use names like `text-muted`, `bg-code-bg`, `border-brd` instead of raw color values.
+
+To re-theme a site, override the CSS custom properties in `base.html` or `main.html`:
+
+```css
+:root {
+  --c-page: #ffffff;
+  --c-text: #1a1a1a;
+  --c-muted: #6b7280;
+  --c-link: #3b82f6;
+  --c-border: #e5e7eb;
+  --c-code-bg: #f9fafb;
+  /* ... */
+}
+.dark {
+  --c-page: #111827;
+  --c-text: #f3f4f6;
+  /* ... */
+}
+```
+
+All templates reference these tokens, so changing one value updates the entire site.

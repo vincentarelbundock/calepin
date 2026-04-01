@@ -1,6 +1,6 @@
-name = "website-tailwind"
+name = "website"
 description = "Multi-page website styled with Tailwind CSS"
-inherits = "tailwind"
+inherits = "html"
 collection = true
 
 [target]

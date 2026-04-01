@@ -24,18 +24,25 @@ pub(crate) fn render_book(
     let authors: Vec<std::collections::BTreeMap<&str, &str>> = meta.authors.iter()
         .map(|a| std::collections::BTreeMap::from([("name", a.name.literal.as_str())]))
         .collect();
-    let cfg_ctx = minijinja::context! {
-        title => meta.title.clone(),
-        subtitle => meta.subtitle.clone(),
-        authors => authors,
-        url => meta.url.clone(),
-    };
-
-    let var_ctx = crate::config::build_jinja_vars(&meta.var);
+    let mut cfg_map: std::collections::BTreeMap<String, minijinja::Value> = std::collections::BTreeMap::new();
+    // All config.toml keys
+    let all_cfg = crate::config::build_jinja_vars(&meta.cfg);
+    if let Ok(iter) = all_cfg.try_iter() {
+        for key in iter {
+            let key_str = key.to_string();
+            if let Ok(val) = all_cfg.get_attr(&key_str) {
+                cfg_map.insert(key_str, val);
+            }
+        }
+    }
+    // Standard fields (override if present)
+    if let Some(ref t) = meta.title { cfg_map.insert("title".into(), minijinja::Value::from(t.clone())); }
+    if let Some(ref s) = meta.subtitle { cfg_map.insert("subtitle".into(), minijinja::Value::from(s.clone())); }
+    if let Some(ref u) = meta.url { cfg_map.insert("url".into(), minijinja::Value::from(u.clone())); }
+    cfg_map.insert("authors".into(), minijinja::Value::from_serialize(&authors));
 
     let ctx = minijinja::context! {
-        cfg => cfg_ctx,
-        var => var_ctx,
+        cfg => minijinja::Value::from_serialize(&cfg_map),
         pages => page_tree,
         format => format,
         base => format,

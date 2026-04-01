@@ -50,7 +50,7 @@ CLP = target/debug/calepin
 
 site: build ## Build and serve static site from website/
 	rm -rf website/.calepin website/*_output
-	uv run $(CLP) preview website
+	$(CLP) preview website
 
 # ==============================================================================
 # Render targets
@@ -86,6 +86,11 @@ prof: prof-build  ## Profile single file (set PROF_FILE=bench/text.qmd)
 
 prof-batch: prof-build  ## Profile 1000 parallel files (gibberish complexity 2)
 	bench/gibberish.sh --samply
+
+prof-website: prof-build  ## Profile rendering the website/ collection
+	cd website && samply record --save-only --unstable-presymbolicate -o profile.json -- ../target/profiling/calepin *.qmd -q
+	@echo "Profile saved to website/profile.json"
+	bench/profile_summary.py website/profile.json
 
 # ==============================================================================
 # Benchmarks

@@ -186,7 +186,7 @@ impl ElementRenderer {
             er.set_section_counters(counters);
         }
         // Set document-level user vars for injection into config namespace
-        er.template_env.set_user_vars(&metadata.var);
+        er.template_env.set_user_vars(&metadata.cfg);
         er
     }
 

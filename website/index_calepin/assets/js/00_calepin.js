@@ -34,6 +34,68 @@
   });
 })();
 
+// --- Color theme picker ---
+
+(function() {
+  var picker = document.getElementById('theme-picker');
+  var menu = document.getElementById('theme-menu');
+  if (!picker || !menu) return;
+
+  var cache = {};
+
+  function applyCSS(css) {
+    var s = document.getElementById('calepin-color-theme-style');
+    if (!s) { s = document.createElement('style'); s.id = 'calepin-color-theme-style'; document.head.appendChild(s); }
+    s.textContent = css;
+  }
+
+  function clearTheme() {
+    var s = document.getElementById('calepin-color-theme-style');
+    if (s) s.remove();
+  }
+
+  function applyTheme(name, url) {
+    if (!name || !url) { clearTheme(); return; }
+    if (cache[name]) { applyCSS(cache[name]); return; }
+    fetch(url).then(function(r) { return r.text(); }).then(function(css) {
+      cache[name] = css;
+      applyCSS(css);
+    });
+  }
+
+  // Restore saved theme
+  var saved = localStorage.getItem('calepin-color-theme');
+  if (saved) {
+    var btn = menu.querySelector('[data-theme="' + saved + '"]');
+    if (btn) applyTheme(saved, btn.getAttribute('data-theme-file'));
+  }
+
+  picker.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var isHidden = menu.style.display === 'none' || menu.style.display === '';
+    menu.style.display = isHidden ? 'block' : 'none';
+  });
+
+  menu.querySelectorAll('.theme-option').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var name = btn.getAttribute('data-theme');
+      var url = btn.getAttribute('data-theme-file');
+      applyTheme(name, url);
+      if (name) {
+        localStorage.setItem('calepin-color-theme', name);
+      } else {
+        localStorage.removeItem('calepin-color-theme');
+      }
+      menu.style.display = 'none';
+    });
+  });
+
+  document.addEventListener('click', function() {
+    menu.style.display = 'none';
+  });
+})();
+
 // --- Mobile sidebar toggle ---
 
 (function() {

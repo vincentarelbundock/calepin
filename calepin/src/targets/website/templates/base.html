@@ -105,20 +105,30 @@ tailwind.config = {
   </div>
 </header>
 
-<div class="max-w-7xl mx-auto px-5 flex min-h-[calc(100dvh-52px)]">
+<div id="site-body" class="max-w-7xl mx-auto px-5 flex min-h-[calc(100dvh-52px)]">
   {% if cfg.sidebar is not defined or cfg.sidebar %}{% include "sidebar.html" %}{% endif %}
 
-  <main id="main-content" class="min-w-0 flex-1 max-w-prose py-8 px-5">
-    <article class="prose dark:prose-invert max-w-none prose-a:text-link">
+  <main id="main-content" class="min-w-0 flex-1 py-8 px-5">
+  <div class="max-w-prose mx-auto">
+    <article class="prose dark:prose-invert max-w-none prose-a:text-link prose-code:before:content-none prose-code:after:content-none">
       {% block content %}{% endblock %}
     </article>
 
     {% block page_nav %}{% endblock %}
+  </div>
   </main>
 
   {% if cfg.toc is not defined or cfg.toc %}<aside class="hidden xl:block w-56 shrink-0 sticky top-[52px] self-start max-h-[calc(100dvh-52px)] overflow-y-auto py-8 pl-6">{% if clp.toc %}{{ clp.toc | safe }}{% endif %}</aside>{% endif %}
 </div>
 
+<div id="split-overlay" class="fixed inset-0 top-[52px] z-30 bg-page" style="display:none">
+  <div class="grid grid-cols-2 h-full">
+    <div id="split-left" class="overflow-y-auto p-6 prose dark:prose-invert max-w-none prose-a:text-link prose-code:before:content-none prose-code:after:content-none"></div>
+    <div id="split-right" class="overflow-y-auto p-6 border-l border-brd">
+      <pre class="m-0 whitespace-pre-wrap break-words text-xs leading-relaxed"><code id="source-code">Loading source...</code></pre>
+    </div>
+  </div>
+</div>
 {% include "footer.html" %}
 <script type="module" src="{{ link('assets/calepin.js') }}"></script>
 <script>
@@ -139,6 +149,34 @@ tailwind.config = {
   }
   btn.addEventListener('click',function(e){e.stopPropagation();toggle(!open)});
   document.addEventListener('click',function(e){if(open&&(sb?!sb.contains(e.target):nav?!nav.contains(e.target):true)&&!btn.contains(e.target))toggle(false)});
+})();
+(function(){
+  var btn=document.getElementById('source-toggle');
+  var overlay=document.getElementById('split-overlay');
+  var left=document.getElementById('split-left');
+  var code=document.getElementById('source-code');
+  var siteBody=document.getElementById('site-body');
+  var footer=document.querySelector('footer');
+  if(!btn||!overlay)return;
+  var active=false;
+  btn.addEventListener('click',function(){
+    active=!active;
+    if(active){
+      var article=document.querySelector('article');
+      if(article&&left)left.innerHTML=article.innerHTML;
+      if(code&&code.textContent==='Loading source...'){
+        var url=btn.getAttribute('data-source');
+        if(url)fetch(url).then(function(r){return r.text()}).then(function(t){code.textContent=t}).catch(function(){code.textContent='Failed to load source.'});
+      }
+      overlay.style.display='block';
+      if(siteBody)siteBody.style.display='none';
+      if(footer)footer.style.display='none';
+    }else{
+      overlay.style.display='none';
+      if(siteBody)siteBody.style.display='';
+      if(footer)footer.style.display='';
+    }
+  });
 })();
 </script>
 </body>

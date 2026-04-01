@@ -1,0 +1,44 @@
+/* Ayu Light / Dark */
+:root {
+  --c-page: #fafafa;
+  --c-text: #575f66;
+  --c-muted: #828c99;
+  --c-faint: #8a9199;
+  --c-link: #399ee6;
+  --c-border: #e7e8e9;
+  --c-border-strong: #d8d9da;
+  --c-code-bg: #f0f0f0;
+  --c-hover: #ecedef;
+  --c-note: #399ee6;
+  --c-note-bg: rgba(57,158,230,0.08);
+  --c-tip: #86b300;
+  --c-tip-bg: rgba(134,179,0,0.08);
+  --c-warn: #f29718;
+  --c-warn-bg: rgba(242,151,24,0.08);
+  --c-caution: #f07171;
+  --c-caution-bg: rgba(240,113,113,0.08);
+  --c-important: #a37acc;
+  --c-important-bg: rgba(163,122,204,0.08);
+}
+.dark {
+  --c-page: #0b0e14;
+  --c-text: #bfbdb6;
+  --c-muted: #636a72;
+  --c-faint: #8b9199;
+  --c-link: #39bae6;
+  --c-border: #1c1f25;
+  --c-border-strong: #2a2d35;
+  --c-code-bg: #070a0f;
+  --c-hover: #131720;
+  --c-note: #39bae6;
+  --c-note-bg: rgba(57,186,230,0.15);
+  --c-tip: #7fd962;
+  --c-tip-bg: rgba(127,217,98,0.15);
+  --c-warn: #e6b450;
+  --c-warn-bg: rgba(230,180,80,0.15);
+  --c-caution: #d95757;
+  --c-caution-bg: rgba(217,87,87,0.15);
+  --c-important: #d2a6ff;
+  --c-important-bg: rgba(210,166,255,0.15);
+  color-scheme: dark;
+}

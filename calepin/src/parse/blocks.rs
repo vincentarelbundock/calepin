@@ -139,6 +139,12 @@ fn parse_blocks(
             continue;
         }
 
+        // Orphaned div closer at top level: skip it to avoid infinite loop
+        if closer_min == 0 && is_div_close(lines[i], 3) {
+            i += 1;
+            continue;
+        }
+
         // Text block: collect lines until a fence opens or a div closes
         let start_line = i;
         let mut text = String::new();

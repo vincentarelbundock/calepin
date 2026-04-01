@@ -112,7 +112,7 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     vars.clp.insert("items".to_string(), minijinja::Value::from(structured));
 
     let tpl_owned = crate::render::elements::resolve_element_template("toc", "html")
-        .unwrap_or_else(|| include_str!("../../targets/tailwind/templates/toc.html").to_string());
+        .unwrap_or_else(|| include_str!("../../targets/html/templates/toc.html").to_string());
     apply_template(&tpl_owned, &vars)
 }
 
@@ -577,6 +577,21 @@ pub fn build_template_vars_with_headings(
         vars.clp.insert("toc".to_string(), minijinja::Value::from(String::new()));
     }
 
+    // Merge custom front matter keys into cfg (non-standard keys from config/front matter)
+    if !meta.cfg.is_empty() {
+        let jinja_vars = crate::config::build_jinja_vars(&meta.cfg);
+        if let Ok(iter) = jinja_vars.try_iter() {
+            for key in iter {
+                let key_str = key.to_string();
+                if !vars.cfg.contains_key(&key_str) {
+                    if let Ok(val) = jinja_vars.get_attr(&key_str) {
+                        vars.cfg.insert(key_str, val);
+                    }
+                }
+            }
+        }
+    }
+
     vars
 }
 
@@ -644,7 +659,7 @@ pub fn assemble_page(
     customize(&mut vars);
     let template_name = target.map(|t| t.template_name()).unwrap_or("main");
     let tpl = load_page_template(template_name, format);
-    render_page_template(&tpl, &vars, format, &meta.var)
+    render_page_template(&tpl, &vars, format, &meta.cfg)
 }
 
 /// Render a page template with {% include %} support.

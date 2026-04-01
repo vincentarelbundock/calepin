@@ -237,8 +237,8 @@ pub struct Metadata {
     /// Glob patterns for .qmd files to exclude from rendering.
     pub exclude: Vec<String>,
 
-    // -- Extra variables (custom key-value pairs) --
-    pub var: HashMap<String, MetaValue>,
+    // -- Template variables (all config keys, accessible as cfg.* in templates) --
+    pub cfg: HashMap<String, MetaValue>,
 
     // -- Template variant selections --
     pub tpl: HashMap<String, String>,

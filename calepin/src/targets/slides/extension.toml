@@ -1,6 +1,6 @@
 name = "slides"
 description = "Slide presentations"
-inherits = "tailwind"
+inherits = "html"
 
 [target]
 standalone = false

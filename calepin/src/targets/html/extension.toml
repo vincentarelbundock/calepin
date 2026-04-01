@@ -1,4 +1,4 @@
-name = "tailwind"
+name = "html"
 description = "HTML document output styled with Tailwind CSS utility classes"
 
 [target]

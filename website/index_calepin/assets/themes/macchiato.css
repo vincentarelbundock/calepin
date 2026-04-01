@@ -1,0 +1,44 @@
+/* Catppuccin Latte (light) / Macchiato (dark) */
+:root {
+  --c-page: #eff1f5;
+  --c-text: #4c4f69;
+  --c-muted: #6c6f85;
+  --c-faint: #7c7f93;
+  --c-link: #1e66f5;
+  --c-border: #ccd0da;
+  --c-border-strong: #bcc0cc;
+  --c-code-bg: #e6e9ef;
+  --c-hover: #dce0e8;
+  --c-note: #1e66f5;
+  --c-note-bg: rgba(30,102,245,0.08);
+  --c-tip: #40a02b;
+  --c-tip-bg: rgba(64,160,43,0.08);
+  --c-warn: #df8e1d;
+  --c-warn-bg: rgba(223,142,29,0.08);
+  --c-caution: #d20f39;
+  --c-caution-bg: rgba(210,15,57,0.08);
+  --c-important: #8839ef;
+  --c-important-bg: rgba(136,57,239,0.08);
+}
+.dark {
+  --c-page: #24273a;
+  --c-text: #cad3f5;
+  --c-muted: #a5adcb;
+  --c-faint: #b8c0e0;
+  --c-link: #8aadf4;
+  --c-border: #363a4f;
+  --c-border-strong: #494d64;
+  --c-code-bg: #1e2030;
+  --c-hover: #181926;
+  --c-note: #8aadf4;
+  --c-note-bg: rgba(138,173,244,0.15);
+  --c-tip: #a6da95;
+  --c-tip-bg: rgba(166,218,149,0.15);
+  --c-warn: #eed49f;
+  --c-warn-bg: rgba(238,212,159,0.15);
+  --c-caution: #ed8796;
+  --c-caution-bg: rgba(237,135,150,0.15);
+  --c-important: #c6a0f6;
+  --c-important-bg: rgba(198,160,246,0.15);
+  color-scheme: dark;
+}

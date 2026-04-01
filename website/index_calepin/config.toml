@@ -1,4 +1,5 @@
 target = "website"
+themes = ["ayu", "black", "frappe", "macchiato", "mocha", "tokyo-night"]
 
 # -- Site identity --
 title = "Calepin"
@@ -12,8 +13,8 @@ standalone = true
 dpi = 150.0
 
 [highlight]
-light = "github"
-dark = "nord"
+light = "ayu-light"
+dark = "ayu-dark"
 
 [figure]
 fig_width = 6.0
@@ -123,6 +124,9 @@ widget = "search"
 [[navbar.right]]
 widget = "dark"
 
+[[navbar.right]]
+widget = "theme"
+
 # -- Contents (sidebar navigation) --
 [[contents]]
 include = ["pages/inst*tion.qmd", "pages/*started.qmd", "pages/quarto.qmd"]
@@ -159,7 +163,7 @@ include = "configuration"
 
 [[contents]]
 text = "Websites"
-include = ["websites/structure.qmd", "websites/navigation.qmd", "websites/serve.qmd"]
+include = ["websites/structure.qmd", "websites/navigation.qmd", "websites/tailwind.qmd", "websites/serve.qmd"]
 
 [[contents]]
 text = "Extensions"

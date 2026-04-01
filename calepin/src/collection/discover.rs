@@ -20,9 +20,9 @@ pub struct DocumentMeta {
     /// Language code for this page (e.g., "en", "fr").
     #[serde(default)]
     pub lang: Option<String>,
-    /// Non-standard front matter variables (the `var` map), available as `{{ var.* }}` in templates.
+    /// Config variables, available as `{{ cfg.* }}` in templates.
     #[serde(skip)]
-    pub var: HashMap<String, crate::value::Value>,
+    pub cfg: HashMap<String, crate::value::Value>,
     /// Template variant selections (the `[tpl]` table).
     #[serde(skip)]
     pub tpl: HashMap<String, String>,
@@ -237,7 +237,7 @@ fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
         r#abstract: None,
         listing: None,
         lang: meta.lang,
-        var: meta.var,
+        cfg: meta.cfg,
         tpl: meta.tpl,
     })
 }

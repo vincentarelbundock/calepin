@@ -349,10 +349,10 @@ pub fn render_file(
 /// Inject extension vars into metadata, namespaced by extension name.
 ///
 /// Walks the active target's extension inheritance chain and merges each
-/// extension's `[vars]` into `metadata.var` as a nested table:
-/// `metadata.var["ext_name"] = Table { key: value, ... }`
+/// extension's `[vars]` into `metadata.cfg` as a nested table:
+/// `metadata.cfg["ext_name"] = Table { key: value, ... }`
 ///
-/// User vars in front matter take precedence (they're already in metadata.var).
+/// User vars in front matter take precedence (they're already in metadata.cfg).
 fn inject_extension_vars(metadata: &mut config::Metadata, project_root: &Path) {
     let target_name = paths::get_active_target().unwrap_or_default();
     inject_extension_vars_for(metadata, project_root, &target_name);
@@ -370,14 +370,14 @@ fn inject_extension_vars_for(metadata: &mut config::Metadata, project_root: &Pat
     // Apply parent-first (so child vars override parent)
     for (ext_name, vars) in chain.iter().rev() {
         // Only inject if the user hasn't already set vars for this extension
-        if metadata.var.contains_key(ext_name) {
+        if metadata.cfg.contains_key(ext_name) {
             continue;
         }
         let mut table = indexmap::IndexMap::new();
         for (k, v) in vars {
             table.insert(k.clone(), crate::value::from_toml(v.clone()));
         }
-        metadata.var.insert(ext_name.clone(), crate::value::Value::Table(table));
+        metadata.cfg.insert(ext_name.clone(), crate::value::Value::Table(table));
     }
 }
 

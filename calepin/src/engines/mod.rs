@@ -103,7 +103,7 @@ pub fn evaluate_document(
     let rel_stem = path_ctx.relative_stem(input);
     let fig_dir = path_ctx.figures_dir(&rel_stem);
     let cache_dir = path_ctx.cache_dir(&rel_stem);
-    let cache_enabled = metadata.var.get("execute")
+    let cache_enabled = metadata.cfg.get("execute")
         .and_then(|v| v.get("cache"))
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
@@ -154,7 +154,7 @@ pub fn evaluate(
                 // Resolution order: chunk #| options > front matter var > {stem}_calepin/config.toml defaults.
                 let mut merged_chunk = chunk.clone();
                 merged_chunk.options.metadata = metadata.clone();
-                for (key, val) in &metadata.var {
+                for (key, val) in &metadata.cfg {
                     let opt_key = crate::util::normalize_key(key);
                     if !merged_chunk.options.inner.contains_key(&opt_key) {
                         if let Some(ov) = value_to_option_value(val) {
@@ -194,7 +194,7 @@ pub fn evaluate(
                 });
             }
             Block::Div(div) => {
-                if !div_is_visible(&div.classes, &div.attrs, output_ext, &metadata.var) {
+                if !div_is_visible(&div.classes, &div.attrs, output_ext, &metadata.cfg) {
                     continue;
                 }
                 if div.classes.iter().any(|c| c == "hidden") {
