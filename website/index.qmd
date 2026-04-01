@@ -94,9 +94,9 @@ All styling via utility classes. Any Tailwind class works in fenced divs and spa
 
 ::: {.text-center}
 ::: {.font-mono .text-xs .font-bold .tracking-wider .text-faint .mb-1}
-NO BUILD STEP
+BUILD OPTIONAL
 :::
-No Node, no bundler, no compiled CSS pipeline to reproduce.
+No Node, no bundler, no compiled CSS pipeline to reproduce. Use external tools to optimize.
 :::
 
 ::: {.text-center}
@@ -141,8 +141,8 @@ The same `.qmd` source renders to HTML, LaTeX, Typst, and Markdown.
 
 ```
 calepin notebook.qmd -t html
-calepin notebook.qmd -t latex
-calepin notebook.qmd -t typst
+calepin notebook.qmd -t pdf
+calepin notebook.qmd -t latex,typst
 
 calepin init new_project -t website
 calepin preview new_project

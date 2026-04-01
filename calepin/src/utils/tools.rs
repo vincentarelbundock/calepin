@@ -51,6 +51,11 @@ pub const D2: Tool = Tool {
     install_hint: "install from https://d2lang.com/",
 };
 
+pub const TAILWINDCSS: Tool = Tool {
+    cmd: "tailwindcss",
+    install_hint: "install from https://tailwindcss.com/docs/installation",
+};
+
 // ---------------------------------------------------------------------------
 // Checks
 // ---------------------------------------------------------------------------
@@ -58,4 +63,14 @@ pub const D2: Tool = Tool {
 /// Format a "not found" error message for a tool.
 pub fn not_found_message(tool: &Tool) -> String {
     format!("{} not found on PATH. {}", tool.cmd, tool.install_hint)
+}
+
+/// Check whether a tool is available on PATH.
+pub fn is_available(tool: &Tool) -> bool {
+    std::process::Command::new(tool.cmd)
+        .arg("--help")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok()
 }

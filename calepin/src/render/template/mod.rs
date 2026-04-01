@@ -212,15 +212,55 @@ fn load_extension_js(project_root: &std::path::Path, target_name: &str) -> Strin
 }
 
 /// Load the default JS: assets/js/*.js from sidecar + extension JS.
+/// Falls back to built-in embedded JS when no sidecar JS exists.
 /// This is inlined in document templates via `{{clp.js}}`.
 pub fn load_default_js() -> String {
     let mut js = concatenate_asset_dir("js", "js");
+
+    // If no sidecar JS, load from built-in embedded extension assets
+    if js.is_empty() {
+        js = load_builtin_js();
+    }
 
     // Extension JS (active target + side-loaded extensions)
     let root = crate::paths::get_project_dir();
     js.push_str(&load_all_extension_assets(&root, |r, name| load_extension_js(r, name)));
 
     js
+}
+
+/// Load JS files from built-in embedded extension assets for the active target.
+/// Walks the inheritance chain (e.g., website -> html) and concatenates all
+/// `assets/js/*.js` files in alphabetical order.
+fn load_builtin_js() -> String {
+    use crate::render::elements::BUILTIN_EXTENSIONS;
+
+    let target = crate::paths::get_active_target().unwrap_or_default();
+    let empty = std::collections::HashMap::new();
+    let root = crate::paths::get_project_dir();
+    let chain = crate::config::extension::inheritance_chain(&root, &target, &empty);
+
+    let mut all_files: std::collections::BTreeMap<String, &str> = std::collections::BTreeMap::new();
+
+    // Parent-first so child files override parent files with the same name
+    for chain_target in chain.iter().rev() {
+        let dir_name = crate::paths::resolve_embedded_dir_name(chain_target);
+        let js_path = format!("{}/assets/js", dir_name);
+        if let Some(dir) = BUILTIN_EXTENSIONS.get_dir(&js_path) {
+            for file in dir.files() {
+                if file.path().extension().is_some_and(|e| e == "js") {
+                    let name = file.path().file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("");
+                    if let Some(content) = file.contents_utf8() {
+                        all_files.insert(name.to_string(), content);
+                    }
+                }
+            }
+        }
+    }
+
+    all_files.values().copied().collect::<Vec<_>>().join("\n")
 }
 
 /// Concatenate all files with the given extension from a sidecar assets subdirectory,
@@ -346,6 +386,13 @@ fn build_jinja_context(
 pub fn apply_template(template: &str, vars: &TemplateVars) -> String {
     let mut env = minijinja::Environment::new();
     env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
+    // Support {% extends "builtin:..." %} in one-shot templates
+    env.set_loader(|name: &str| {
+        if let Some(builtin_name) = name.strip_prefix("builtin:") {
+            return Ok(resolve_builtin_loader(builtin_name));
+        }
+        Ok(None)
+    });
     if let Err(e) = env.add_template("__tpl__", template) {
         cwarn!("template parse error: {}", e);
         return template.to_string();
@@ -388,6 +435,10 @@ impl TemplateEnv {
         env.set_undefined_behavior(minijinja::UndefinedBehavior::Lenient);
         let src = std::sync::Arc::clone(&sources);
         env.set_loader(move |name: &str| {
+            // Support {% extends "builtin:figure.html" %} syntax
+            if let Some(builtin_name) = name.strip_prefix("builtin:") {
+                return Ok(resolve_builtin_loader(builtin_name));
+            }
             Ok(src.lock().unwrap().get(name).cloned())
         });
         Self { env, sources, user_vars: None }
@@ -436,13 +487,80 @@ impl TemplateEnv {
         };
         let ctx = build_jinja_context(vars, self.user_vars.as_ref());
         match tpl.render(minijinja::Value::from_serialize(&ctx)) {
-            Ok(rendered) => rendered,
+            Ok(rendered) => wrap_debug_template(name, &rendered),
             Err(e) => {
                 cwarn!("template render error for '{}': {}", name, e);
                 String::new()
             }
         }
     }
+}
+
+/// Wrap rendered output with HTML debug comments when `--debug-templates` is active.
+/// Only wraps element templates (not page templates) and only for HTML output.
+fn wrap_debug_template(name: &str, rendered: &str) -> String {
+    if !crate::cli::is_debug_templates() || rendered.is_empty() {
+        return rendered.to_string();
+    }
+    // Resolve where the template came from
+    let source = crate::paths::get_root_sidecar()
+        .map(|s| {
+            let target = crate::paths::get_active_target().unwrap_or_default();
+            let chain = crate::paths::get_active_inheritance_chain();
+            let writer = chain.first().map(|s| s.as_str()).unwrap_or("html");
+            let ext = crate::paths::resolve_extension(writer);
+            let path = s.join("templates").join(&target).join(format!("{}.{}", name, ext));
+            if path.exists() { "sidecar" } else { "built-in" }
+        })
+        .unwrap_or("built-in");
+    format!(
+        "<!-- template:{} ({}) -->\n{}\n<!-- /template:{} -->",
+        name, source, rendered, name
+    )
+}
+
+/// Resolve a `builtin:` prefixed template name to its embedded content.
+///
+/// Supports `{% extends "builtin:figure.html" %}` in sidecar templates,
+/// allowing users to make surgical overrides via Jinja block inheritance
+/// without copying the entire template. The built-in template is resolved
+/// from the active target's inheritance chain.
+fn resolve_builtin_loader(name: &str) -> Option<String> {
+    // Try resolving as "template_name.ext" by splitting on the last dot
+    let (stem, _ext) = name.rsplit_once('.').unwrap_or((name, ""));
+    let writer = crate::paths::get_active_target()
+        .and_then(|t| {
+            let empty = std::collections::HashMap::new();
+            crate::config::resolve_target(&t, &empty).ok()
+        })
+        .map(|t| t.writer)
+        .unwrap_or_else(|| {
+            // Infer writer from file extension
+            match _ext {
+                "html" => "html".to_string(),
+                "tex" => "latex".to_string(),
+                "typ" => "typst".to_string(),
+                "md" => "markdown".to_string(),
+                _ => "html".to_string(),
+            }
+        });
+
+    // Try the template name as-is first (resolve_builtin_template uses the stem)
+    crate::render::elements::resolve_builtin_template(stem, &writer)
+        .map(|s| s.to_string())
+        .or_else(|| {
+            // Fall back to exact filename lookup in the chain
+            let chain = crate::paths::get_active_inheritance_chain();
+            for chain_target in &chain {
+                let path = format!("{}/templates/{}", chain_target, name);
+                if let Some(file) = crate::render::elements::BUILTIN_EXTENSIONS.get_file(&path) {
+                    if let Some(content) = file.contents_utf8() {
+                        return Some(content.to_string());
+                    }
+                }
+            }
+            None
+        })
 }
 
 /// Render a metadata field through an element template if available.
@@ -551,11 +669,19 @@ pub fn build_template_vars_with_headings(
             .unwrap_or_default();
         vars.clp.insert("colors_css".to_string(), minijinja::Value::from(colors_css));
 
-        // Tailwind color config generated from color token keys
+        // Tailwind v3 JS color config (CDN fallback) and v4 @theme CSS (CLI mode)
         let tailwind_colors = colors.as_ref()
             .map(|c| c.generate_tailwind_colors())
             .unwrap_or_default();
         vars.clp.insert("tailwind_colors".to_string(), minijinja::Value::from(tailwind_colors));
+
+        let tailwind_theme_css = colors.as_ref()
+            .map(|c| c.generate_tailwind_theme_css())
+            .unwrap_or_default();
+        vars.clp.insert("tailwind_theme_css".to_string(), minijinja::Value::from(tailwind_theme_css));
+
+        // Standalone documents always use CDN mode
+        vars.clp.insert("tailwind_mode".to_string(), minijinja::Value::from("cdn"));
     }
 
     // Math include for html-writer targets
@@ -733,6 +859,10 @@ pub fn render_page_template(
     env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
     let sources = std::sync::Arc::new(templates);
     env.set_loader(move |name: &str| {
+        // Support {% extends "builtin:base.html" %} in page templates
+        if let Some(builtin_name) = name.strip_prefix("builtin:") {
+            return Ok(resolve_builtin_loader(builtin_name));
+        }
         Ok(sources.get(name).cloned())
     });
 

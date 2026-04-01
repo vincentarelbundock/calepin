@@ -49,7 +49,10 @@ check:  ## Run cargo check (fast compile check)
 CLP = target/debug/calepin
 
 site: build ## Build and serve static site from website/
-	rm -rf website/.calepin website/*_output website/index_calepin/templates/
+	rm -rf website/.calepin 
+	rm -rf website/*_output 
+	rm -rf website/index_calepin/templates/
+	rm -rf website/index_calepin/assets
 	$(CLP) preview website
 
 # ==============================================================================

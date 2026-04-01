@@ -137,7 +137,9 @@ Built-in color schemes: `nord` (default), `ayu`, `black`, `catppuccin-frappe`, `
 
 **Template variables** generated from the active color scheme:
 - `clp.colors_css` -- CSS custom properties (`:root { --c-*: ... } .dark { ... }`)
-- `clp.tailwind_colors` -- JS object body for `tailwind.config.theme.extend.colors`, auto-generated from token keys. The `border` token is aliased to `brd` to avoid collision with Tailwind's built-in `border` utility.
+- `clp.tailwind_colors` -- JS object body for Tailwind v3 CDN `tailwind.config.theme.extend.colors`. The `border` token is aliased to `brd` to avoid collision with Tailwind's built-in `border` utility.
+- `clp.tailwind_theme_css` -- Tailwind v4 CSS `@theme` block mapping token keys to `var(--c-*)`, plus `@custom-variant dark` for class-based dark mode. Used by CLI mode only.
+- `clp.tailwind_mode` -- `"cli"` when `tailwindcss` CLI is on PATH (collection builds only), `"cdn"` otherwise.
 
 **Runtime color picker**: The `widget = "colors"` navbar widget renders a dropdown populated from `cfg.colors`. The JS fetches `assets/themes/{name}.css` (color tokens) and `assets/themes/{name}-highlight.css` (syntax CSS) and swaps them at runtime. The default highlight `<style>` has `id="calepin-highlight-style"` so the JS can replace its content directly.
 
@@ -256,7 +258,7 @@ Each contains `extension.toml` (color tokens + highlight config), `.tmTheme` fil
 - `parse/` -- Block parsing: `.qmd` text -> `Block` enum
 - `references/` -- Bibliography (`bibliography.rs`) + cross-references (`crossref.rs`)
 - `base/` -- Core types (`types.rs`), paths (`paths.rs`), utilities (`util.rs`, `value.rs`)
-- `collection/` -- Multi-document builds (site/book rendering), includes `templates.rs` for template resolution
+- `collection/` -- Multi-document builds (site/book rendering), includes `templates.rs` for template resolution, `tailwind.rs` for build-time Tailwind CSS compilation
 - `preview/` -- Live preview server with hot reload
 
 ## Sidecar Directories
@@ -314,11 +316,30 @@ For collection builds (websites), CSS and JS are served as external files:
 - `<link rel="stylesheet" href="{{ link('assets/calepin.css') }}">`
 - `<script type="module" src="{{ link('assets/calepin.js') }}">`
 
-CSS is split into modules in `assets/css/` and loaded via `@import` from `assets/calepin.css`. All widget JS (dark mode toggle, color picker, search, source viewer, code copy, tabsets, TOC tracking, footnotes) is in `assets/calepin.js`. Built-in JS lives in `targets/html/assets/js/00_calepin.js`.
+CSS files in `assets/css/` are concatenated alphabetically into `assets/calepin.css`. JS files in `assets/js/` are concatenated alphabetically into `assets/calepin.js`. Built-in JS is split into focused modules in `targets/html/assets/js/`:
 
-For single-document renders, CSS and JS are linked from the sidecar (`{stem}_calepin/assets/`).
+- `10_theme.js` -- Theme toggle (light/dark)
+- `20_colors.js` -- Color scheme picker widget
+- `30_sidebar.js` -- Mobile sidebar toggle + section persistence
+- `40_navbar.js` -- Navbar dropdown toggle
+- `50_header.js` -- Header auto-hide on scroll
+- `60_source.js` -- Source toggle (split view)
+- `70_search.js` -- Pagefind search integration
+- `80_page.js` -- Per-page init: tabsets, code copy, TOC tracking, footnotes, KaTeX
+- `90_nav.js` -- Client-side SPA navigation (website-only)
 
-All HTML templates use Tailwind CSS utility classes. Color tokens (`--c-*` custom properties) are defined by the active color scheme and mapped to Tailwind color names via `clp.tailwind_colors` in the template. Templates never define color values directly.
+For single-document renders, JS is inlined via `{{ clp.js }}` which loads from the sidecar `assets/js/` or falls back to built-in embedded JS from the extension chain.
+
+All HTML templates use Tailwind CSS utility classes. Color tokens (`--c-*` custom properties) are defined by the active color scheme and mapped to Tailwind color names via `clp.tailwind_colors` (JS object for CDN mode) or `clp.tailwind_theme_css` (CSS `@theme` block for CLI mode). Templates never define color values directly.
+
+### Tailwind CSS compilation
+
+Templates support two Tailwind modes, selected automatically via `clp.tailwind_mode`:
+
+- **`cdn`** (default): Loads the Tailwind v3 CDN (`cdn.tailwindcss.com?plugins=typography`) with a runtime JS config mapping color tokens. Color CSS custom properties are inlined in a `<style>` tag.
+- **`cli`**: When the `tailwindcss` v4 CLI is on PATH, collection builds compile utility classes from rendered HTML into a static `assets/calepin-tw.css` using CSS-native `@theme` directives. The CDN script is replaced with a `<link>` to this file. Color tokens are inlined separately for runtime theme switching.
+
+The Tailwind compilation step runs after asset copying in `collection/tailwind.rs`.
 
 ## Raw Output Protection
 

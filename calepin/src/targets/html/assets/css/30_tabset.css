@@ -1,0 +1,2 @@
+/* Active tab indicator */
+.nav-link.active { border-bottom: 2px solid currentColor; color: var(--c-text); }

@@ -58,17 +58,18 @@ pub fn render(
     let mut nav_items = String::new();
     let mut tab_panes = String::new();
     for (i, (title, content)) in tabs.iter().enumerate() {
-        let active = if i == 0 { " active" } else { "" };
+        let active_class = if i == 0 { " active" } else { "" };
+        let pane_class = if i == 0 { "" } else { " hidden" };
         let selected = if i == 0 { "true" } else { "false" };
-        let hidden = if i == 0 { "" } else { " aria-hidden=\"true\"" };
+        let hidden_attr = if i == 0 { "" } else { " aria-hidden=\"true\"" };
         let id = crate::util::slugify(title);
         nav_items.push_str(&format!(
-            "  <li class=\"nav-item\" role=\"presentation\"><button class=\"nav-link{}\" data-tab=\"{}\" role=\"tab\" aria-selected=\"{}\" aria-controls=\"tabpanel-{}\">{}</button></li>\n",
-            active, id, selected, id, title
+            "  <li class=\"nav-item\" role=\"presentation\"><button class=\"nav-link px-3 py-1.5 text-sm text-muted hover:text-[color:var(--c-text)] bg-transparent border-none cursor-pointer{}\" data-tab=\"{}\" role=\"tab\" aria-selected=\"{}\" aria-controls=\"tabpanel-{}\">{}</button></li>\n",
+            active_class, id, selected, id, title
         ));
         tab_panes.push_str(&format!(
             "<div class=\"tab-pane{}\" id=\"tabpanel-{}\" data-tab=\"{}\" role=\"tabpanel\"{}>\n{}\n</div>\n",
-            active, id, id, hidden, content
+            pane_class, id, id, hidden_attr, content
         ));
     }
     vars.clp.insert("nav_items".to_string(), minijinja::Value::from(nav_items));

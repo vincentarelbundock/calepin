@@ -4,6 +4,7 @@ mod context;
 pub(crate) mod discover;
 pub(crate) mod orchestrator;
 pub(crate) mod render;
+pub(crate) mod tailwind;
 mod templates;
 pub(crate) mod templating;
 
@@ -243,6 +244,12 @@ pub fn build_collection(
 
     // 10. Copy assets/ and static directories to output
     assets::copy_assets(&base_dir, output, &meta.static_dirs)?;
+
+    // 10b. Run Tailwind CSS CLI if available (compiles utility classes from rendered HTML)
+    let tailwind_available = writer == "html" && tailwind::is_available();
+    if tailwind_available {
+        tailwind::compile(output, &collection_target_name, &meta.cfg, quiet)?;
+    }
 
     // 11. Run user-configured post-processing commands
     run_post_commands(&meta, &collection_target_name, &base_dir, output, quiet)?;

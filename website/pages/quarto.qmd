@@ -49,6 +49,7 @@ This is an intentional break from Quarto. Not all of the hundreds of configurati
 
 Beyond signaling, I just personally prefer working with TOML. It avoids the type, structure, and white-space related headaches that YAML is notorious for, and it has become the standard configuration format in the Python and Rust ecosystems (for good reasons).
 
+In future versions of *Calepin*, we may (or may not) add a compatibility layer with support for YAML front matter.
 
 # Customization philosophy
 
@@ -63,37 +64,14 @@ This design is especially well-suited to working with LLMs. Since templates are 
 
 # Documentation extraction
 
-*Calepin* includes built-in documentation extraction for R and Python packages via the `calepin man` command. It parses R help files (Rd) and Python docstrings (Google, NumPy, Sphinx, and Markdown styles) and generates `.qmd` reference pages automatically. This makes *Calepin* a natural choice for software documentation websites.
+*Calepin* includes built-in documentation extraction for R and Python packages via the `calepin man` command. It parses R help files (Rd) and Python docstrings (Google, NumPy, Sphinx, and Markdown styles) and generates `.qmd` reference pages automatically. This means *Calepin* can act as a replacement for dedicated documentation tools like [pkgdown](https://pkgdown.r-lib.org/) (R) or [MkDocs](https://www.mkdocs.org/) (Python), while also supporting executable code chunks, cross-references, and citations in the same project.
 
 
-# Syntax differences
+# Bootstrap vs. Tailwind CSS
 
-## Chunk options
+Quarto's HTML output is built on [Bootstrap 5](https://getbootstrap.com/), with an SCSS theming system for overriding variables. *Calepin* uses [Tailwind CSS](https://tailwindcss.com/) utility classes instead. All styling lives directly in the HTML templates, so customization means editing templates rather than writing SCSS. The framework is very easy to learn and extremely flexible, as demonstrated in the [Tailwind CSS](../websites/tailwind.qmd) section. This works especially well with LLM assistants, since the agent can read a single HTML file and understand exactly how it is styled.
 
-Chunk options are parsed as TOML. *Calepin* accepts both Quarto's header syntax and `#|` pipe comments. Header key-value pairs are converted internally to pipe-equivalent options:
 
-````
-```{r, scatter, echo=FALSE, fig.width=5}
-plot(1:10)
-````
+# Extensions directory
 
-is equivalent to:
-
-````
-```{r, scatter}
-#| echo = false
-#| fig-width = 5
-plot(1:10)
-````
-
-For Quarto compatibility, `key: value` syntax is automatically converted to `key = value` before parsing. This may change in a future version.
-
-When both header and pipe options are present, pipe comments take precedence. Option names with dots (e.g., `fig.width`) are normalized to dashes (`fig-width`). Boolean values like `TRUE`/`FALSE` are normalized to `true`/`false`.
-
-## Labels
-
-In *Calepin*, chunk labels must be in the header. Using `#| label =` in a pipe comment produces an error directing you to move it to the header.
-
-## Extensions directory
-
-Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `{stem}_calepin/templates/` for template overrides and `{stem}_calepin/modules/` for custom modules.
+Quarto uses `_extensions/` for custom formats and filters. *Calepin* uses `{stem}_calepin/templates/` for template overrides and `{stem}_calepin/extensions/` for custom [extensions](../extensions/extensions.qmd). The two extension systems are incompatible.

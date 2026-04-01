@@ -7,6 +7,7 @@ use crate::render::pipeline;
 
 pub fn handle_render(args: RenderArgs) -> Result<()> {
     crate::cli::set_quiet(args.quiet);
+    crate::cli::set_debug_templates(args.debug_templates);
     let overrides = args.overrides;
 
     // Single input: discover project kind

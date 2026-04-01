@@ -144,3 +144,96 @@ Filters transform values inline. Jinja2 provides `upper`, `lower`, `trim`, `repl
 ```
 
 Again, see the [Jinja2 documentation](https://jinja.palletsprojects.com/en/3.1.x/templates/) for the full syntax.
+
+
+# Template management
+
+*Calepin* provides several commands to inspect, override, and validate templates.
+
+## Ejecting a single template
+
+Instead of overriding all templates at once, you can eject just the one you need:
+
+```bash
+calepin templates eject figure doc.qmd
+calepin templates eject main doc.qmd -t latex
+```
+
+This copies the built-in template into your sidecar so you can edit it. The rest of your templates continue to use built-in defaults. Use `--force` to overwrite an existing sidecar copy.
+
+## Extending built-in templates
+
+When you only want to change a small part of a template, copying the entire file means your override may become stale after a *Calepin* upgrade. Template inheritance solves this.
+
+Use `{% extends "builtin:filename" %}` in your sidecar template to inherit from the built-in version and override only specific blocks:
+
+```html
+{% extends "builtin:figure.html" %}
+
+{% block caption %}
+<figcaption class="custom-caption">{{ cfg.caption }}</figcaption>
+{% endblock %}
+```
+
+The `builtin:` prefix tells the template engine to load the original built-in template, regardless of any sidecar overrides. Your template inherits all blocks from the built-in and you only redefine the ones you need.
+
+This works for both element templates (figure, div, code_source, etc.) and page templates (main, base). For this to work, the built-in template must define `{% block %}` regions. Check the built-in source with `calepin templates show` to see available blocks.
+
+## Checking for outdated templates
+
+After upgrading *Calepin*, your sidecar templates may no longer match the new built-in defaults:
+
+```bash
+calepin templates outdated doc.qmd
+```
+
+This lists every sidecar template that differs from its current built-in version. Use `calepin templates diff` to inspect the differences and `calepin templates reset <name>` to revert individual files.
+
+## Inspecting template variables
+
+To see which variables are available in a given template:
+
+```bash
+calepin templates vars figure doc.qmd
+calepin templates vars main doc.qmd
+```
+
+Variables are namespaced: `cfg.*` for user-authored values (front matter, attributes), `clp.*` for engine-computed values (rendered content, format, assets), and `tpl.*` for template variant selections.
+
+## Previewing a template
+
+Test a template in isolation with sample data:
+
+```bash
+calepin templates preview figure doc.qmd
+calepin templates preview code_source doc.qmd
+```
+
+This renders the template with representative sample variables and prints the output, useful for rapid iteration on template changes.
+
+## Linting templates
+
+Validate your sidecar templates for common issues:
+
+```bash
+calepin templates lint doc.qmd
+calepin templates lint doc.qmd code_source
+```
+
+The linter checks for parse errors, unknown variable namespaces, deprecated patterns, mismatched block tags, and HTML in non-HTML templates.
+
+## Debugging template provenance
+
+When building, pass `--debug-templates` to annotate the HTML output with comments showing which template produced each element and whether it came from the sidecar or from built-in:
+
+```bash
+calepin render doc.qmd --debug-templates
+```
+
+The output will contain comments like:
+
+```html
+<!-- template:figure (sidecar) -->
+<figure id="fig-example">...</figure>
+<!-- /template:figure -->
+```

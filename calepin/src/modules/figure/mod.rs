@@ -62,10 +62,17 @@ pub fn render(
         vars.cfg.insert(k.clone(), minijinja::Value::from(val.clone()));
     }
 
-    // Render caption markdown to target format
+    // Render caption through the full element pipeline (processes spans, markdown)
     if !caption_text.is_empty() {
-        let rendered_caption = crate::render::convert::render_inline(&caption_text, writer);
-        vars.cfg.insert("caption".to_string(), minijinja::Value::from(rendered_caption));
+        let caption_el = Element::Text { content: caption_text };
+        let rendered_caption = render_element(&caption_el);
+        // Strip wrapping <p>...</p> tags to get inline content
+        let rendered_caption = rendered_caption.trim();
+        let rendered_caption = rendered_caption
+            .strip_prefix("<p>").unwrap_or(rendered_caption);
+        let rendered_caption = rendered_caption
+            .strip_suffix("</p>").unwrap_or(rendered_caption);
+        vars.cfg.insert("caption".to_string(), minijinja::Value::from(rendered_caption.to_string()));
     }
 
     let tpl = crate::render::elements::resolve_element_template("figure", writer).unwrap_or_default();
@@ -211,9 +218,22 @@ fn render_image_tag(src: &str, alt: &str, width: &str, height: &str, link: &str,
 // ---------------------------------------------------------------------------
 
 /// Separate the caption from children in a figure div.
-/// The caption is the last Text element.
+/// The caption is the last paragraph of the last Text element.
 pub fn separate_figure_caption(children: &[Element]) -> (Vec<Element>, String) {
-    separate_caption(children, |text| (text.to_string(), None))
+    separate_caption(children, |text| {
+        // Split on double newline to find the last paragraph
+        if let Some(pos) = text.rfind("\n\n") {
+            let remaining = text[..pos].trim().to_string();
+            let caption = text[pos+2..].trim().to_string();
+            if remaining.is_empty() {
+                (caption, None)
+            } else {
+                (caption, Some(remaining))
+            }
+        } else {
+            (text.to_string(), None)
+        }
+    })
 }
 
 /// Extract a caption from the last Text child element.

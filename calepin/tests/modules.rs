@@ -37,7 +37,7 @@ fn render(input: &str, target: &str) -> String {
 #[test]
 fn highlight_html_injects_syntax_css() {
     let html = render("---\ntitle: Test\n---\n\n```python\nx = 1\n```\n", "html");
-    assert!(html.contains("<style>"), "should contain a <style> tag for syntax CSS");
+    assert!(html.contains("<style"), "should contain a <style> tag for syntax CSS");
     assert!(html.contains(".source"), "should contain syntax highlighting CSS classes");
 }
 

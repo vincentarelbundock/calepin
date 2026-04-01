@@ -3,9 +3,8 @@ title = "Installation"
 ---
 
 ::: {.callout-warning}
-*Calepin* is alpha software. Please report bugs and
-feature requests at
-[github.com/vincentarelbundock/calepin](https://github.com/vincentarelbundock/calepin).
+*Calepin* is alpha software. Please report bugs and feature requests at:  
+[github.com/vincentarelbundock/calepin](https://github.com/vincentarelbundock/calepin)
 :::
 
 # Install

@@ -17,20 +17,20 @@
   }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 })();
 </script>
+{% if clp.tailwind_mode == "cli" %}
+<link rel="stylesheet" href="{{ link('assets/calepin-tw.css') }}">
+{% if clp.colors_css %}<style>{{ clp.colors_css }}</style>{% endif %}
+{% else %}
 {% if clp.colors_css %}<style>{{ clp.colors_css }}</style>{% endif %}
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 <script>
 tailwind.config = {
   darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-{{ clp.tailwind_colors }}
-      },
-    }
-  }
+  theme: { extend: { colors: { {{ clp.tailwind_colors }} } } }
 }
 </script>
+{% endif %}
+<link rel="stylesheet" href="{{ link('assets/calepin.css') }}">
 {{ clp.math }}
 {% block head_extra %}{% endblock %}
 </head>
@@ -56,10 +56,10 @@ tailwind.config = {
   </div>
   </main>
 
-  {% if cfg.toc is not defined or cfg.toc %}<aside class="hidden xl:block w-56 shrink-0 sticky top-[52px] self-start max-h-[calc(100dvh-52px)] overflow-y-auto py-8 pl-6">{% if clp.toc %}{{ clp.toc | safe }}{% endif %}</aside>{% endif %}
+  {% if cfg.toc is not defined or cfg.toc %}<aside id="sidebar-toc" class="hidden xl:block w-56 shrink-0 sticky top-[52px] self-start max-h-[calc(100dvh-52px)] overflow-y-auto py-8 pl-6">{% if clp.toc %}{{ clp.toc | safe }}{% endif %}</aside>{% endif %}
 </div>
 
-<div id="split-overlay" class="fixed inset-0 top-[52px] z-30 bg-page" style="display:none">
+<div id="split-overlay" class="hidden fixed inset-0 top-[52px] z-30 bg-page">
   <div class="grid grid-cols-2 h-full">
     <div id="split-left" class="overflow-y-auto p-6 prose dark:prose-invert max-w-none prose-a:text-link prose-code:before:content-none prose-code:after:content-none"></div>
     <div id="split-right" class="overflow-y-auto p-6 border-l border-brd">

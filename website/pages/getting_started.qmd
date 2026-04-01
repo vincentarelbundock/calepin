@@ -13,9 +13,6 @@ Here is a minimal example:
 title = "My First Notebook"
 date = "today"
 bibliography = "references.bib"
-
-[toc]
-enabled = true
 ---
 
 ## Introduction
@@ -38,7 +35,8 @@ See @knuth1984 for details.
 Render it with:
 
 ```bash
-calepin render notebook.qmd
+calepin render notebook.qmd -t html
+calepin render notebook.qmd -t pdf
 ```
 
 ## Commands
@@ -49,7 +47,7 @@ calepin render notebook.qmd
 - `preview`: start a live-reloading server.
 - `init`: scaffold projects, sidecars, and extensions.
 - `man`: extract package documentation as `.qmd` files.
-- `extra`: show available CSL styles, color schemes, and shell completions.
+- `extra`: show available LLM skills, CSL styles, color schemes, and shell completions.
 - `templates`: inspect and manage template overrides.
 
 Run `calepin --help` or `calepin <command> --help` for full option details.
@@ -93,6 +91,9 @@ calepin preview document.qmd --port 8080
 
 # Preview a website project
 calepin preview my_website/
+
+# Kill stale preview servers
+calepin preview kill
 ```
 
 ### init
@@ -109,7 +110,7 @@ A scaffolded website includes an `index_calepin/config.toml` with navbar, sideba
 
 ### extra
 
-Query built-in resources.
+Query built-in resources and install helpers.
 
 ```bash
 # List available CSL citation styles
@@ -118,10 +119,14 @@ calepin extra csl
 # List available color schemes
 calepin extra colors
 
-# Generate shell completions
-calepin extra completions bash
-calepin extra completions zsh
-calepin extra completions fish
+# Generate shell completions (bash, zsh, fish, elvish, powershell)
+calepin extra completions zsh > ~/.zfunc/_calepin
+
+# Install the agent skill for coding assistants (Claude Code, Codex, etc.)
+calepin extra skill
+
+# Generate lorem ipsum .qmd files for benchmarking
+calepin extra gibberish
 ```
 
 ### man

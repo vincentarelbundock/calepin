@@ -287,11 +287,42 @@ impl ColorsDef {
         css
     }
 
-    /// Generate the Tailwind CSS `theme.extend.colors` JS object body from this theme's
+    /// Generate the Tailwind v3 `theme.extend.colors` JS object body from this theme's
     /// token keys. Each token `foo` becomes `foo: 'var(--c-foo)'`. The `border` token is
     /// aliased to `brd` to avoid colliding with Tailwind's built-in `border` utility.
-    /// Returns the inner content of the JS object (no surrounding braces).
+    /// Used by the CDN fallback path.
     pub fn generate_tailwind_colors(&self) -> String {
+        let colors = match &self.tokens {
+            Some(c) => c,
+            None => return String::new(),
+        };
+        let mut keys: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+        for k in colors.light.keys() { keys.insert(k.as_str()); }
+        for k in colors.dark.keys() { keys.insert(k.as_str()); }
+
+        let mut lines = Vec::new();
+        for key in &keys {
+            let tw_name = if *key == "border" {
+                "brd".to_string()
+            } else if let Some(suffix) = key.strip_prefix("border-") {
+                format!("brd-{}", suffix)
+            } else {
+                key.to_string()
+            };
+            if tw_name.contains('-') {
+                lines.push(format!("        '{}': 'var(--c-{})'", tw_name, key));
+            } else {
+                lines.push(format!("        {}: 'var(--c-{})'", tw_name, key));
+            }
+        }
+        lines.join(",\n")
+    }
+
+    /// Generate a Tailwind v4 CSS `@theme` block mapping token names to CSS custom
+    /// properties. Each token `foo` becomes `--color-foo: var(--c-foo)`. The `border`
+    /// token is aliased to `brd` to avoid colliding with Tailwind's built-in `border`
+    /// utility.
+    pub fn generate_tailwind_theme_css(&self) -> String {
         let colors = match &self.tokens {
             Some(c) => c,
             None => return String::new(),
@@ -302,6 +333,9 @@ impl ColorsDef {
         for k in colors.dark.keys() { keys.insert(k.as_str()); }
 
         let mut lines = Vec::new();
+        // Dark mode via .dark class instead of prefers-color-scheme
+        lines.push("@custom-variant dark (&:where(.dark, .dark *));".to_string());
+        lines.push("@theme {".to_string());
         for key in &keys {
             // Tailwind class name: alias "border*" to "brd*" to avoid collision
             let tw_name = if *key == "border" {
@@ -311,14 +345,21 @@ impl ColorsDef {
             } else {
                 key.to_string()
             };
-            // Quote names with dashes
-            if tw_name.contains('-') {
-                lines.push(format!("        '{}': 'var(--c-{})'", tw_name, key));
-            } else {
-                lines.push(format!("        {}: 'var(--c-{})'", tw_name, key));
-            }
+            lines.push(format!("  --color-{}: var(--c-{});", tw_name, key));
         }
-        lines.join(",\n")
+        lines.push("}".to_string());
+        lines.join("\n")
+    }
+
+    /// Generate combined CSS: color tokens (`:root`/`.dark`) plus Tailwind `@theme` block.
+    /// This is the complete input for the Tailwind CLI.
+    pub fn generate_combined_css(&self) -> String {
+        let color_css = self.generate_color_css();
+        let theme_css = self.generate_tailwind_theme_css();
+        if color_css.is_empty() && theme_css.is_empty() {
+            return String::new();
+        }
+        format!("{}\n{}", color_css, theme_css)
     }
 }
 

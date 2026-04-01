@@ -14,13 +14,7 @@
 <script>
 tailwind.config = {
   darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-{{ clp.tailwind_colors }}
-      },
-    }
-  }
+  theme: { extend: { colors: { {{ clp.tailwind_colors }} } } }
 }
 </script>
 {% include "preamble.html" %}
@@ -58,30 +52,7 @@ tailwind.config = {
 </div>
 
 <script>
-(function(){
-  var b=document.getElementById('theme-toggle');if(!b)return;
-  function d(){return document.documentElement.classList.contains('dark')}
-  var sun=b.querySelector('.icon-sun'),moon=b.querySelector('.icon-moon');
-  function u(v){document.documentElement.classList.toggle('dark',v);localStorage.setItem('calepin-theme',v?'dark':'light');if(sun&&moon){sun.classList.toggle('hidden',!v);moon.classList.toggle('hidden',v)}}
-  var s=localStorage.getItem('calepin-theme');u(s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches);
-  b.addEventListener('click',function(){u(!d())});
-})();
-document.querySelectorAll('.code-copy-btn').forEach(function(b){b.addEventListener('click',function(){var c=b.parentElement.querySelector('code');if(c)navigator.clipboard.writeText(c.textContent)})});
-(function(){
-  var links=document.querySelectorAll('.toc a');if(!links.length)return;
-  var ids=Array.from(links).map(function(a){return a.getAttribute('href').slice(1)});
-  var observer=new IntersectionObserver(function(entries){
-    entries.forEach(function(e){if(e.isIntersecting){
-      links.forEach(function(a){
-        var active=a.getAttribute('href')==='#'+e.target.id;
-        a.classList.toggle('!text-link',active);
-        a.classList.toggle('!border-link',active);
-        a.classList.toggle('font-medium',active);
-      });
-    }});
-  },{rootMargin:'-80px 0px -60% 0px',threshold:0});
-  ids.forEach(function(id){var el=document.getElementById(id);if(el)observer.observe(el)});
-})();
+{{ clp.js }}
 </script>
 </body>
 </html>

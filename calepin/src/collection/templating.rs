@@ -183,12 +183,16 @@ pub(crate) fn apply_collection_templates(
                 crate::render::template::load_default_css(),
             ));
 
-            // Color scheme CSS and Tailwind colors
+            // Color scheme CSS and Tailwind config
             if writer == "html" {
                 if let Some(ref c) = crate::config::extension::resolve_active_colors(&meta.cfg, target_name) {
                     clp_map.insert("colors_css".to_string(), serde_json::Value::String(c.generate_color_css()));
                     clp_map.insert("tailwind_colors".to_string(), serde_json::Value::String(c.generate_tailwind_colors()));
+                    clp_map.insert("tailwind_theme_css".to_string(), serde_json::Value::String(c.generate_tailwind_theme_css()));
                 }
+                // "cli" when tailwindcss is on PATH, "cdn" otherwise
+                let tw_mode = if super::tailwind::is_available() { "cli" } else { "cdn" };
+                clp_map.insert("tailwind_mode".to_string(), serde_json::Value::String(tw_mode.to_string()));
             }
             let clp_val = minijinja::Value::from_serialize(&clp_map);
             let collection_with_active = minijinja::context! {

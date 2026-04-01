@@ -9,6 +9,12 @@ pub static QUIET: AtomicBool = AtomicBool::new(false);
 pub fn set_quiet(q: bool) { QUIET.store(q, Ordering::Relaxed); }
 pub fn is_quiet() -> bool { QUIET.load(Ordering::Relaxed) }
 
+/// Global debug-templates flag: annotate HTML output with template provenance comments.
+pub static DEBUG_TEMPLATES: AtomicBool = AtomicBool::new(false);
+
+pub fn set_debug_templates(d: bool) { DEBUG_TEMPLATES.store(d, Ordering::Relaxed); }
+pub fn is_debug_templates() -> bool { DEBUG_TEMPLATES.load(Ordering::Relaxed) }
+
 #[derive(Parser, Debug)]
 #[command(
     name = "calepin",
@@ -96,6 +102,10 @@ pub struct RenderArgs {
     /// Remove output directory before building (project manifests only)
     #[arg(long)]
     pub clean: bool,
+
+    /// Annotate HTML output with comments showing template provenance
+    #[arg(long)]
+    pub debug_templates: bool,
 }
 
 #[derive(clap::Args, Debug)]
@@ -324,6 +334,82 @@ pub enum TemplatesAction {
         /// Reset without confirmation
         #[arg(long)]
         force: bool,
+    },
+
+    /// Copy a single built-in template into the sidecar for editing
+    #[command(after_help = "\
+\x1B[1;4mExamples:\x1B[0m
+  calepin templates eject figure doc.qmd
+  calepin templates eject main doc.qmd -t latex
+  calepin templates eject code_source doc.qmd")]
+    Eject {
+        /// Template name (e.g., figure, code_source, main, div)
+        name: String,
+
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
+
+        /// Overwrite existing sidecar template
+        #[arg(long)]
+        force: bool,
+    },
+
+    /// Show templates that have diverged from current built-in (after an upgrade)
+    Outdated {
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
+    },
+
+    /// Show available template variables for a given template
+    #[command(after_help = "\
+\x1B[1;4mExamples:\x1B[0m
+  calepin templates vars figure doc.qmd
+  calepin templates vars code_source doc.qmd
+  calepin templates vars main doc.qmd")]
+    Vars {
+        /// Template name (e.g., figure, code_source, main, div)
+        name: String,
+
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
+    },
+
+    /// Render a sample element through a template (dry-run)
+    Preview {
+        /// Template name (e.g., figure, code_source, div)
+        name: String,
+
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
+    },
+
+    /// Validate templates for undefined variable references
+    Lint {
+        /// Input .qmd file (determines the sidecar)
+        input: PathBuf,
+
+        /// Template name (lint one template; omit to lint all)
+        name: Option<String>,
+
+        /// Override the target (default: read from front matter)
+        #[arg(short = 't', long)]
+        target: Option<String>,
     },
 }
 
