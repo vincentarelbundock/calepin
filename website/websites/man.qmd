@@ -1,5 +1,5 @@
 ---
-title = "Software documentation"
+title = "Software docs"
 ---
 
 *Calepin* can automatically extract documentation from `R` or `Python` code files and create a nice website to host your documentation. The steps are as follows.

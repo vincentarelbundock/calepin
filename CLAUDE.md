@@ -119,6 +119,30 @@ An extension bundles a target definition, templates, modules, CSS/JS assets, and
 
 Extension manifests are parsed by `config/extension.rs` (`ExtensionManifest` struct). Built-in manifests are embedded at compile time via `include_str!`.
 
+### Color scheme system
+
+Color schemes define CSS custom property tokens (light/dark) and syntax highlighting theme pairs. Each color scheme is a standalone extension in `src/themes/{name}/` containing:
+
+- `extension.toml` -- `[colors.highlight]` (light/dark `.tmTheme` names), `[colors.tokens.light]` and `[colors.tokens.dark]` (CSS custom property values)
+- `.tmTheme` files -- Syntax highlighting themes (embedded at compile time)
+- `LICENSE` -- License file for third-party themes
+
+Built-in color schemes: `nord` (default), `ayu`, `black`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`. Embedded via `BUILTIN_COLOR_EXTENSIONS` and `BUILTIN_COLOR_DIRS` in `config/extension.rs`.
+
+**Resolution priority** (`resolve_active_colors()`): first entry in `cfg.colors` array > extension `default_colors` field > nord fallback.
+
+**Target extensions** reference the default color scheme via `default_colors = "nord"` in their `extension.toml`. Users override this with `colors = ["scheme1", "scheme2", ...]` in `config.toml`, where the first entry becomes the default and all entries populate the color picker widget.
+
+**Syntax highlighting** themes are exclusively provided by color scheme extensions. There is no separate `[highlight]` config option. The `Highlighter` reads highlight theme names from the active color scheme's `[colors.highlight]` section.
+
+**Template variables** generated from the active color scheme:
+- `clp.colors_css` -- CSS custom properties (`:root { --c-*: ... } .dark { ... }`)
+- `clp.tailwind_colors` -- JS object body for `tailwind.config.theme.extend.colors`, auto-generated from token keys. The `border` token is aliased to `brd` to avoid collision with Tailwind's built-in `border` utility.
+
+**Runtime color picker**: The `widget = "colors"` navbar widget renders a dropdown populated from `cfg.colors`. The JS fetches `assets/themes/{name}.css` (color tokens) and `assets/themes/{name}-highlight.css` (syntax CSS) and swaps them at runtime. The default highlight `<style>` has `id="calepin-highlight-style"` so the JS can replace its content directly.
+
+**Asset generation**: During collection builds, `generate_color_assets()` in `collection/assets.rs` writes `{name}.css` and `{name}-highlight.css` for each color scheme in the `cfg.colors` list (plus all built-in schemes) to `output/assets/themes/`.
+
 ### Target configuration
 
 Targets are defined in `config/document.toml` (document targets) and `config/collection.toml` (collection targets), with built-in extension manifests as an additional source. Resolved by `config/targets.rs::resolve_target()`.
@@ -132,6 +156,8 @@ User targets in `{stem}_calepin/config.toml` inherit from built-in targets via `
 ## Format Names
 
 Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markdown`. File extensions: `.html`, `.tex`, `.typ`, `.md`. Template resolution uses the writer name (e.g., `templates/html/figure.html`). Raw blocks use canonical names (```` ```{=latex} ````).
+
+**Naming convention**: Function parameters and struct fields that hold a writer name must be called `writer`, not `format` or `ext`. The `format` name is reserved for `format!` macros. The `ext` name is reserved for file extensions (`.html`, `.tex`). The `ElementRenderer.writer` field holds the writer name.
 
 ## Source Layout
 
@@ -147,11 +173,11 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 
 ### `config/` -- Configuration and project context
 
-- `types.rs` -- `Metadata`, `Author`, `Target` structs
+- `types.rs` -- `Metadata`, `Author`, `Target` structs (no `Highlight` struct; highlighting is controlled by color schemes)
 - `parse.rs` -- TOML front matter parsing: `split_frontmatter()`, `parse_metadata()`
 - `merge.rs` -- Metadata merge logic (last wins)
 - `targets.rs` -- Target resolution and inheritance
-- `extension.rs` -- `ExtensionManifest` parsing, built-in extension embedding, discovery
+- `extension.rs` -- `ExtensionManifest` parsing, built-in extension embedding, discovery, color scheme resolution (`ColorsDef`, `resolve_active_colors`, `collect_color_schemes`)
 - `load.rs` -- Project config loading, `LanguageConfig`, `ContentSection`
 - `context.rs` -- `ProjectContext`: resolves project config and target for a render
 - `toml/` -- Embedded default configs: `document.toml`, `shared.toml`, `collection.toml`, `modules.toml`
@@ -176,7 +202,7 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 - `transform_document.rs` -- `TransformDocument` trait + `ScriptTransformDocument` (user script execution)
 - `project_modules.rs` -- Built-in `TransformProject` implementations (site_wrap, crossref_global, orchestrator)
 - `external.rs` -- External module execution via JSON/text protocol (scripts, WASM)
-- `highlight/` -- Syntax highlighting: `Highlighter`, themes, CSS/LaTeX color generation
+- `highlight/` -- Syntax highlighting: `Highlighter`, CSS/LaTeX color generation (`.tmTheme` files come from color scheme extensions, not this directory)
 - `convert_svg_pdf/` -- `TransformElement`: SVG-to-PDF figure conversion
 - `convert_math/` -- LaTeX-to-Typst math converter (parser, AST, emitter, symbols)
 - `tabset/` -- `TransformElementChildren`: panel-tabset -> HTML tabs
@@ -217,6 +243,13 @@ User overrides: `{stem}_calepin/templates/{target}/{name}.{ext}`
 
 - `website/`, `book/`, `notebook/` -- Starter project templates for `calepin init`
 - `assets/` -- Shared website assets (CSS, JS, social icons) copied to output at build time
+
+### `themes/` -- Built-in color schemes (embedded at compile time)
+
+Each subdirectory is a self-contained color scheme extension:
+`themes/{nord,ayu,black,catppuccin-frappe,catppuccin-macchiato,catppuccin-mocha}/`
+
+Each contains `extension.toml` (color tokens + highlight config), `.tmTheme` files, and a `LICENSE`.
 
 ### Other directories
 
@@ -282,9 +315,11 @@ For collection builds (websites), CSS and JS are served as external files:
 - `<link rel="stylesheet" href="{{ link('assets/calepin.css') }}">`
 - `<script type="module" src="{{ link('assets/calepin.js') }}">`
 
-CSS is split into modules in `assets/css/` and loaded via `@import` from `assets/calepin.css`. All widget JS (theme toggle, search, source viewer, code copy, tabsets, TOC tracking, footnotes) is in `assets/calepin.js`.
+CSS is split into modules in `assets/css/` and loaded via `@import` from `assets/calepin.css`. All widget JS (dark mode toggle, color picker, search, source viewer, code copy, tabsets, TOC tracking, footnotes) is in `assets/calepin.js`. Built-in JS lives in `targets/html/assets/js/00_calepin.js`.
 
 For single-document renders, CSS and JS are linked from the sidecar (`{stem}_calepin/assets/`).
+
+All HTML templates use Tailwind CSS utility classes. Color tokens (`--c-*` custom properties) are defined by the active color scheme and mapped to Tailwind color names via `clp.tailwind_colors` in the template. Templates never define color values directly.
 
 ## Raw Output Protection
 
@@ -303,6 +338,8 @@ Documents can carry TOML front matter between `---` delimiters. Non-TOML front m
 
 **Merge order** (last wins): built-in defaults < `{stem}_calepin/config.toml` (root sidecar) < TOML front matter < CLI (`-s`)
 
+Color schemes are configured via `colors = ["nord", "ayu", ...]` in `config.toml`. The first entry is the default. There is no `[highlight]` config section; syntax highlighting themes come exclusively from color scheme extensions.
+
 **Sidecar directories**: Only `{stem}_calepin/` for the root document (or `index_calepin/` for collections). No per-page sidecars in collections.
 
 calepin-specific settings are nested under the `[calepin]` table:
@@ -313,7 +350,7 @@ plugins = ["txtfmt"]
 extensions = ["lightbox"]
 ```
 
-Standard fields (`title`, `author`, `bibliography`, `format`, etc.) are top-level keys.
+Standard fields (`title`, `author`, `bibliography`, etc.) are top-level keys. The `colors` field is a top-level array of color scheme names for the theme picker.
 
 ## Chunk Options
 
@@ -353,7 +390,7 @@ Bracketed spans `[content]{.class key=value}` are processed during rendering. Bu
 
 ## Extensions
 
-Extensions are the unit of distribution and customization. An extension is a directory with an `extension.toml` manifest that can provide templates, CSS/JS assets, modules, and variables.
+Extensions are the unit of distribution and customization. An extension is a directory with an `extension.toml` manifest that can provide templates, CSS/JS assets, modules, variables, and color schemes.
 
 **Installation**: `{stem}_calepin/extensions/{name}/extension.toml`
 
@@ -362,6 +399,10 @@ Extensions are the unit of distribution and customization. An extension is a dir
 **Debugging**: `calepin templates list index.qmd` shows all templates with their status.
 
 **External modules**: Extensions can declare modules with `run = "scripts/foo.sh"` that execute via stdin/stdout (text or JSON protocol).
+
+**Color schemes**: Extensions can include a `[colors]` section with `[colors.highlight]` (syntax theme pair), `[colors.tokens.light]` and `[colors.tokens.dark]` (CSS custom properties). Color scheme extensions also bundle `.tmTheme` files. Target extensions reference the default via `default_colors = "name"`.
+
+**Navbar widgets**: Built-in widgets activated via `widget = "..."` in `[[navbar.right]]`: `dark` (dark mode toggle), `colors` (color scheme picker), `search` (pagefind), `source` (split-view source viewer), `language` (language switcher).
 
 See `website/extensions/extensions.qmd` for the full specification.
 

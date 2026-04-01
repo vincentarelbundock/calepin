@@ -22,6 +22,8 @@ website/*.typ
 website/*.md
 website/*.pdf
 website/*_files/
+website/**/*.css
+website/**/*.js
 bench/*.html
 bench/*.tex
 bench/*.typ

@@ -88,6 +88,7 @@ prof-batch: prof-build  ## Profile 1000 parallel files (gibberish complexity 2)
 	bench/gibberish.sh --samply
 
 prof-website: prof-build  ## Profile rendering the website/ collection
+	rm -rf website/.calepin
 	cd website && samply record --save-only --unstable-presymbolicate -o profile.json -- ../target/profiling/calepin *.qmd -q
 	@echo "Profile saved to website/profile.json"
 	bench/profile_summary.py website/profile.json
