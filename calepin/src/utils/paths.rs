@@ -297,16 +297,27 @@ pub fn resolve_or_create_sidecar_dir(input: &Path) -> Option<PathBuf> {
 /// given target. Idempotent: only writes files that do not already exist.
 ///
 /// Call this after the target has been resolved (i.e., after `resolve_context`).
+/// Resolve a target name to its embedded directory name.
+/// Handles aliases (e.g., "html" -> "tailwind") by checking the builtin
+/// extension manifest's actual name, which matches the directory in targets/.
+pub fn resolve_embedded_dir_name(name: &str) -> String {
+    crate::config::extension::builtin_extension(name)
+        .map(|m| m.name)
+        .unwrap_or_else(|| name.to_string())
+}
+
 pub fn ensure_sidecar_populated(sidecar: &Path, target: &str) {
     use crate::render::elements::BUILTIN_EXTENSIONS;
 
-    // Write templates for the target (parent-first so child overrides parent)
+    // Write templates for the target (child-first so child templates take priority,
+    // then parent fills in any missing templates as fallback)
     let empty = std::collections::HashMap::new();
     let project_root = sidecar.parent().unwrap_or(std::path::Path::new("."));
     let chain = crate::config::extension::inheritance_chain(project_root, target, &empty);
     let dest = sidecar.join("templates").join(target);
-    for chain_target in chain.iter().rev() {
-        let tpl_path = format!("{}/templates", chain_target);
+    for chain_target in &chain {
+        let dir_name = resolve_embedded_dir_name(chain_target);
+        let tpl_path = format!("{}/templates", dir_name);
         if let Some(dir) = BUILTIN_EXTENSIONS.get_dir(&tpl_path) {
             write_builtin_dir_if_missing(dir, &tpl_path, &dest);
         }
@@ -316,11 +327,15 @@ pub fn ensure_sidecar_populated(sidecar: &Path, target: &str) {
     // Extension templates override auto-populated built-in copies.
     overlay_extension_templates(sidecar, target, &chain, &dest);
 
-    // Write built-in assets (from html extension, the base for all HTML-derived targets)
+    // Write built-in assets from the inheritance chain (child-first, then parent fills gaps)
     let assets_dest = sidecar.join("assets");
     let _ = std::fs::create_dir_all(&assets_dest);
-    if let Some(assets_dir) = BUILTIN_EXTENSIONS.get_dir("html/assets") {
-        write_builtin_dir_if_missing(assets_dir, "html/assets", &assets_dest);
+    for chain_target in &chain {
+        let dir_name = resolve_embedded_dir_name(chain_target);
+        let assets_path = format!("{}/assets", dir_name);
+        if let Some(assets_dir) = BUILTIN_EXTENSIONS.get_dir(&assets_path) {
+            write_builtin_dir_if_missing(assets_dir, &assets_path, &assets_dest);
+        }
     }
 }
 

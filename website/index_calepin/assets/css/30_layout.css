@@ -152,7 +152,6 @@ details.sidebar-section[open] > .sidebar-section-title::before { transform: rota
 .sidebar-right { padding: 1.5rem 1rem; }
 
 /* --- Source viewer (split view) --- */
-
 .source-toggle.active { color: var(--c-accent); }
 .split-source { display: none; }
 
@@ -161,6 +160,7 @@ body.split-active .sidebar-right { display: none; }
 body.split-active .site-body { grid-template-columns: 1fr; justify-content: stretch; }
 body.split-active .content-main { max-width: none; padding: 0; overflow: hidden; }
 body.split-active .content-main > article { max-width: none; }
+
 body.split-active .split-wrapper {
   display: grid; grid-template-columns: 1fr 1fr; gap: 0;
   height: var(--_body-height);

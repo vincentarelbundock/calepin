@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if clp.title %}
+<header class="mb-8 pb-4 border-b border-brd">
+  <h1 class="text-2xl font-bold m-0 mb-1">{{ clp.title }}</h1>
+  {% if clp.subtitle %}<p class="text-lg text-muted mt-1">{{ clp.subtitle }}</p>{% endif %}
+  {% if clp.abstract %}<div class="mt-4 p-4 bg-hover rounded-md border-l-4 border-link italic text-muted">{{ clp.abstract }}</div>{% endif %}
+</header>
+{% endif %}
+
+{{ clp.body | safe }}
+
+{% if clp.listing %}
+{% set listing_type = clp.listing_type | default("default") %}
+
+{% if listing_type == "table" %}
+<table class="w-full border-collapse">
+  <thead>
+    <tr>
+      <th class="text-left font-semibold py-2 px-2 border-b-2 border-brd text-xs text-faint uppercase tracking-wider">Title</th>
+      <th class="text-left font-semibold py-2 px-2 border-b-2 border-brd text-xs text-faint uppercase tracking-wider">Date</th>
+      <th class="text-left font-semibold py-2 px-2 border-b-2 border-brd text-xs text-faint uppercase tracking-wider">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in clp.listing %}
+    <tr>
+      <td class="py-2 px-2 border-b border-brd"><a href="{{ item.url }}" class="text-link no-underline hover:underline">{{ item.title | default("Untitled") | safe }}</a></td>
+      <td class="py-2 px-2 border-b border-brd text-sm text-faint">{{ item.date | default("") }}</td>
+      <td class="py-2 px-2 border-b border-brd text-sm text-muted">{{ item.description | default("") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% elif listing_type == "grid" %}
+<div class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
+  {% for item in clp.listing %}
+  <a href="{{ item.url }}" class="flex flex-col border border-brd rounded-lg hover:border-link transition-colors no-underline overflow-hidden">
+    {% if item.image %}<img class="w-full h-40 object-cover" src="{{ item.image }}" alt="">{% endif %}
+    <div class="p-4">
+      <h3 class="text-base font-semibold m-0 text-[color:var(--c-text)]">{{ item.title | default("Untitled") | safe }}</h3>
+      {% if item.date %}<div class="text-xs text-faint mt-1">{{ item.date }}</div>{% endif %}
+      {% if item.description %}<div class="text-sm text-muted mt-1.5">{{ item.description }}</div>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="flex flex-col gap-4">
+  {% for item in clp.listing %}
+  <a href="{{ item.url }}" class="flex gap-4 p-4 border border-brd rounded-lg hover:border-link transition-colors no-underline">
+    <div>
+      <h3 class="text-base font-semibold m-0 text-[color:var(--c-text)]">{{ item.title | default("Untitled") | safe }}</h3>
+      {% if item.date %}<div class="text-xs text-faint mt-0.5">{{ item.date }}</div>{% endif %}
+      {% if item.description %}<div class="text-sm text-muted mt-1.5">{{ item.description }}</div>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if clp.pagination %}
+<nav class="flex items-center justify-between mt-8 text-sm" aria-label="Pagination">
+  {% if clp.pagination.prev_url %}
+    <a href="{{ clp.pagination.prev_url }}" class="text-link no-underline hover:underline">&larr; Previous</a>
+  {% else %}
+    <span class="text-faint">&larr; Previous</span>
+  {% endif %}
+  <span class="text-faint">Page {{ clp.pagination.current }} of {{ clp.pagination.total }}</span>
+  {% if clp.pagination.next_url %}
+    <a href="{{ clp.pagination.next_url }}" class="text-link no-underline hover:underline">Next &rarr;</a>
+  {% else %}
+    <span class="text-faint">Next &rarr;</span>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% endif %}
+{% endblock %}

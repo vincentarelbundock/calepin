@@ -95,9 +95,25 @@ fn build_toc_html_from_items(items: &[(u8, &str, &str)], title: &str) -> String 
     if toc_list.is_empty() { return String::new(); }
     let mut vars = TemplateVars::with_writer("html");
     vars.cfg.insert("title".to_string(), minijinja::Value::from(title.to_string()));
-    vars.clp.insert("content".to_string(), minijinja::Value::from(toc_list));
-    let tpl = include_str!("../../targets/html/templates/toc.html");
-    apply_template(tpl, &vars)
+    vars.clp.insert("content".to_string(), minijinja::Value::from(toc_list.clone()));
+
+    // Build structured items list for templates that use {% for %}
+    let min_level = items.iter().map(|(l, _, _)| *l).min().unwrap_or(1);
+    let structured: Vec<minijinja::Value> = items.iter()
+        .map(|(level, id, text)| {
+            let mut map = std::collections::BTreeMap::new();
+            map.insert("id".to_string(), minijinja::Value::from(id.to_string()));
+            map.insert("text".to_string(), minijinja::Value::from(text.to_string()));
+            map.insert("level".to_string(), minijinja::Value::from(*level as i64));
+            map.insert("depth".to_string(), minijinja::Value::from((*level - min_level) as i64));
+            minijinja::Value::from(map)
+        })
+        .collect();
+    vars.clp.insert("items".to_string(), minijinja::Value::from(structured));
+
+    let tpl_owned = crate::render::elements::resolve_element_template("toc", "html")
+        .unwrap_or_else(|| include_str!("../../targets/tailwind/templates/toc.html").to_string());
+    apply_template(&tpl_owned, &vars)
 }
 
 use crate::render::metadata::{strip_markdown_formatting, build_appendix, build_authors};

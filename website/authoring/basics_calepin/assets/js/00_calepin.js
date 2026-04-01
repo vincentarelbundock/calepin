@@ -467,7 +467,15 @@ _clpInitPage();
 
         // Update URL and scroll
         history.pushState(null, '', url);
-        window.scrollTo(0, 0);
+        _lastPath = new URL(url, location.href).pathname;
+        var hash = new URL(url, location.href).hash;
+        if (hash) {
+          var target = document.getElementById(hash.slice(1));
+          if (target) { target.scrollIntoView(); }
+          else { window.scrollTo(0, 0); }
+        } else {
+          window.scrollTo(0, 0);
+        }
 
         // Update sidebar active state
         updateSidebarActive(url);
@@ -498,7 +506,13 @@ _clpInitPage();
   });
 
   // Handle back/forward
+  var _lastPath = location.pathname;
   window.addEventListener('popstate', function() {
+    if (location.pathname === _lastPath) {
+      // Same page, just a hash change -- let the browser handle it
+      return;
+    }
+    _lastPath = location.pathname;
     navigateTo(location.href);
   });
 })();

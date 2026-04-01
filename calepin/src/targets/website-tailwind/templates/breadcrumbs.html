@@ -1,0 +1,12 @@
+{% if clp.breadcrumbs | length > 2 %}
+<nav class="flex items-center gap-1 text-xs text-faint mb-4" aria-label="Breadcrumbs">
+  {% for crumb in clp.breadcrumbs %}
+  {% if not loop.last %}
+    {% if crumb.href %}<a href="{{ crumb.href }}" class="text-faint hover:text-link no-underline">{{ crumb.text }}</a>{% else %}<span>{{ crumb.text }}</span>{% endif %}
+    <span class="mx-0.5">/</span>
+  {% else %}
+    <span aria-current="page">{{ crumb.text }}</span>
+  {% endif %}
+  {% endfor %}
+</nav>
+{% endif %}

@@ -17,7 +17,6 @@ main = "landing"
 One binary. Sub-millisecond renders.
 :::
 
-
 ::: {.landing-section}
 
 ::: {.columns}
@@ -157,6 +156,22 @@ calepin notebook.qmd -t typst
 calepin init new_project -t website
 calepin preview new_project
 ```
+:::
+
+## Tailwind
+
+````
+::: {.grid .grid-cols-2 .gap-4 .bg-pink-100 .p-4 .text-black}
+ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque accumsan ipsum sed massa iaculis tincidunt sit amet nec nulla. Phasellus malesuada dolor sed pellentesque scelerisque. Proin tempor, tellus eget condimentum tempus, orci nibh viverra augue, a rutrum risus nulla vitae libero. Duis tincidunt sem et lorem tincidunt, eu ultrices purus finibus. Donec in urna vitae urna imperdiet laoreet. Nulla at dui aliquet massa lobortis porttitor. Aliquam sodales quam sit amet sapien dignissim sollicitudin.
+
+Phasellus sit amet egestas mi. Aliquam urna ex, pellentesque in dignissim at, aliquet non quam. Maecenas in nunc venenatis, efficitur elit non, maximus lectus. Curabitur eu volutpat tortor. Nullam convallis dui eros, sed sollicitudin ante auctor a. Praesent vulputate sem et metus mollis efficitur. Ut sodales neque at lectus aliquam, sit amet scelerisque lectus suscipit. Aenean hendrerit nibh a tempor elementum. Vivamus at lacinia quam.
+:::
+````
+
+::: {.grid .grid-cols-2 .gap-4 .bg-pink-100 .p-4 .text-black}
+ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque accumsan ipsum sed massa iaculis tincidunt sit amet nec nulla. Phasellus malesuada dolor sed pellentesque scelerisque. Proin tempor, tellus eget condimentum tempus, orci nibh viverra augue, a rutrum risus nulla vitae libero. Duis tincidunt sem et lorem tincidunt, eu ultrices purus finibus. Donec in urna vitae urna imperdiet laoreet. Nulla at dui aliquet massa lobortis porttitor. Aliquam sodales quam sit amet sapien dignissim sollicitudin.
+
+Phasellus sit amet egestas mi. Aliquam urna ex, pellentesque in dignissim at, aliquet non quam. Maecenas in nunc venenatis, efficitur elit non, maximus lectus. Curabitur eu volutpat tortor. Nullam convallis dui eros, sed sollicitudin ante auctor a. Praesent vulputate sem et metus mollis efficitur. Ut sodales neque at lectus aliquam, sit amet scelerisque lectus suscipit. Aenean hendrerit nibh a tempor elementum. Vivamus at lacinia quam. 
 :::
 
 

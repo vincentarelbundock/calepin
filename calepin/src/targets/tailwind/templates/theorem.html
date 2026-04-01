@@ -1,0 +1,6 @@
+<div class="my-4 {{clp.type_class}}"{% if cfg.id %} id="{{cfg.id}}"{% endif %}>
+<p class="font-bold">{{clp.type_class | title}} {{clp.number}}.</p>
+<div class="{% if clp.type_class in ['theorem', 'lemma', 'corollary', 'conjecture', 'proposition'] %}italic{% endif %}">
+{{clp.content}}
+</div>
+</div>

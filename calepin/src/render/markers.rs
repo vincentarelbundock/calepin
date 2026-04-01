@@ -45,9 +45,12 @@ const TY_RAW: char = 'R';
 // ---------------------------------------------------------------------------
 
 /// Matches equation label markers adjacent to restored display math.
+/// Uses a negative lookahead to avoid matching across `$$` boundaries.
+/// Optionally captures a surrounding `<p>...</p>` wrapper so the replacement
+/// can strip it (block-level equation divs must not be inside `<p>`).
 static RE_EQ_LABEL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"(?s)(\$\$.*?\$\$)\s*{}{}(eq-[a-zA-Z0-9_-]+){}",
+        r"(?s)(<p>\s*)?(\$\$[^$]*\$\$)\s*{}{}(eq-[a-zA-Z0-9_-]+){}(\s*</p>)?",
         MS, TY_EQ_LABEL, ME
     )).unwrap()
 });
@@ -254,8 +257,8 @@ pub fn resolve_equation_labels(text: &str, format: &str) -> String {
         return text.to_string();
     }
     RE_EQ_LABEL.replace_all(text, |caps: &regex::Captures| {
-        let math = &caps[1];
-        let label = &caps[2];
+        let math = &caps[2];
+        let label = &caps[3];
         let inner = &math[2..math.len() - 2];
         render_equation_label(format, math, label, inner.trim())
     }).to_string()

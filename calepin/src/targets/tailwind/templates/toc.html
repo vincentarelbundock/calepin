@@ -1,0 +1,10 @@
+<nav class="toc" aria-label="{{cfg.title}}">
+<p class="text-[11px] font-semibold uppercase tracking-widest text-faint mb-4">{{cfg.title}}</p>
+<ul class="space-y-1">
+{%- for item in clp.items %}
+<li style="padding-left: {{ item.depth * 12 }}px">
+<a href="#{{ item.id }}" class="block text-[13px] leading-snug py-1 text-muted hover:text-link transition-colors border-l-2 border-transparent hover:border-link pl-3 -ml-px">{{ item.text }}</a>
+</li>
+{%- endfor %}
+</ul>
+</nav>

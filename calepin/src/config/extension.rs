@@ -513,16 +513,19 @@ fn is_valid_extension_name(name: &str) -> bool {
 
 /// Built-in extension manifest sources, embedded at compile time.
 pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
-    ("html", include_str!("../targets/html/extension.toml")),
     ("latex", include_str!("../targets/latex/extension.toml")),
     ("typst", include_str!("../targets/typst/extension.toml")),
     ("markdown", include_str!("../targets/markdown/extension.toml")),
     ("pdf", include_str!("../targets/pdf/extension.toml")),
     ("pdf-latex", include_str!("../targets/pdf-latex/extension.toml")),
     ("slides", include_str!("../targets/slides/extension.toml")),
-    ("website", include_str!("../targets/website/extension.toml")),
     ("book", include_str!("../targets/book/extension.toml")),
     ("book-latex", include_str!("../targets/book-latex/extension.toml")),
+    ("html", include_str!("../targets/tailwind/extension.toml")),
+    ("tailwind", include_str!("../targets/tailwind/extension.toml")),
+    ("website", include_str!("../targets/website-tailwind/extension.toml")),
+    ("website-tailwind", include_str!("../targets/website-tailwind/extension.toml")),
+    ("website-html", include_str!("../targets/website-tailwind/extension.toml")),
 ];
 
 /// Parse a built-in extension manifest by name.
@@ -545,12 +548,13 @@ pub static BUILTIN_SCAFFOLDS: &[(&str, &str, &Dir<'static>)] = &[
     ("book", "book", &SCAFFOLD_BOOK),
     ("book-latex", "book-latex", &SCAFFOLD_BOOK_LATEX),
     ("html", "document", &SCAFFOLD_DOCUMENT),
+    ("tailwind", "document", &SCAFFOLD_DOCUMENT),
 ];
 
-static SCAFFOLD_WEBSITE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/website/scaffold/website");
+static SCAFFOLD_WEBSITE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/website-tailwind/scaffold/website");
 static SCAFFOLD_BOOK: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/book/scaffold/book");
 static SCAFFOLD_BOOK_LATEX: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/book-latex/scaffold/book-latex");
-static SCAFFOLD_DOCUMENT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/html/scaffold/document");
+static SCAFFOLD_DOCUMENT: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/targets/tailwind/scaffold/document");
 
 /// Look up a built-in scaffold by name (e.g., "website", "book", "document").
 /// Returns the extension name and the embedded directory.
@@ -573,6 +577,8 @@ mod tests {
         for (name, content) in BUILTIN_EXTENSIONS {
             let manifest: ExtensionManifest = toml::from_str(content)
                 .unwrap_or_else(|e| panic!("Failed to parse {}/extension.toml: {}", name, e));
+            // aliases: html->tailwind, website/website-html->website-tailwind
+            if *name == "html" || *name == "website" || *name == "website-html" { continue; }
             assert_eq!(manifest.name, *name, "Extension name mismatch for {}", name);
         }
     }
@@ -588,9 +594,9 @@ mod tests {
     }
 
     #[test]
-    fn test_slides_inherits_html() {
+    fn test_slides_inherits_tailwind() {
         let manifest = builtin_extension("slides").unwrap();
-        assert_eq!(manifest.inherits.as_deref(), Some("html"));
+        assert_eq!(manifest.inherits.as_deref(), Some("tailwind"));
         let target = manifest.to_target();
         assert!(target.modules.contains(&"split_slides".to_string()));
         assert!(!target.modules.contains(&"embed_images".to_string()));
@@ -599,7 +605,7 @@ mod tests {
     #[test]
     fn test_website_has_project_modules() {
         let manifest = builtin_extension("website").unwrap();
-        assert_eq!(manifest.inherits.as_deref(), Some("html"));
+        assert_eq!(manifest.inherits.as_deref(), Some("tailwind"));
         let project_modules: Vec<&str> = manifest.modules.iter()
             .filter(|m| m.kind == "project")
             .map(|m| m.name.as_str())

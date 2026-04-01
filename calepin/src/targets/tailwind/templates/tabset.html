@@ -1,0 +1,8 @@
+<div class="panel-tabset my-6"{% if cfg.group %} data-group="{{cfg.group}}"{% endif %}>
+<ul class="nav nav-tabs list-none p-0 m-0 flex gap-0 border-b border-brd" role="tablist">
+{{clp.nav_items}}
+</ul>
+<div class="tab-content px-2 py-4">
+{{clp.tab_panes}}
+</div>
+</div>

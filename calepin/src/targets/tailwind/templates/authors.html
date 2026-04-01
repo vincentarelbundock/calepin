@@ -1,0 +1,13 @@
+<div class="mt-2 mb-1">
+{% for a in cfg.authors %}
+<p class="my-0.5">{{ a.name }}{%- if a.superscripts %}<sup>{{ a.superscripts }}</sup>{% endif %}{%- if a.corresponding %}<sup>*</sup>{% endif %}{%- if a.orcid_url %} <a href="{{ a.orcid_url }}" class="text-link no-underline text-sm">ORCID</a>{% endif %}</p>
+{% endfor %}
+{%- if cfg.affiliations %}
+<div class="mt-1">
+{% for a in cfg.affiliations %}<p class="m-0 text-sm text-muted">{%- if a.number %}<sup>{{ a.number }}</sup> {% endif %}{{ a.display }}</p>
+{% endfor %}</div>
+{%- endif %}
+{%- for a in cfg.authors %}{% if a.corresponding and a.email %}
+<p class="text-sm text-muted mt-1">* Corresponding author: <a href="{{ a.mailto }}" class="text-link">{{ a.email }}</a></p>
+{%- endif %}{% endfor %}
+</div>

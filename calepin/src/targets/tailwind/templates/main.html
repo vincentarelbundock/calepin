@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="{{cfg.lang}}" class="scroll-smooth">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Calepin">
+<title>{{cfg.title_plain}}</title>
+{% if cfg.keywords %}<meta name="keywords" content="{{cfg.keywords}}">{% endif %}
+<script>
+(function(){if(localStorage.getItem('calepin-theme')==='dark')document.documentElement.classList.add('dark')})();
+</script>
+<style>
+:root {
+  --c-page: #fafbfc;
+  --c-text: #2e3440;
+  --c-muted: #616e7c;
+  --c-faint: #525d6e;
+  --c-link: #5e81ac;
+  --c-border: #e0e4e8;
+  --c-border-strong: #d0d5db;
+  --c-code-bg: #f3f5f7;
+  --c-hover: #eef0f3;
+  --c-note: #5e81ac;
+  --c-note-bg: rgba(94,129,172,0.08);
+  --c-tip: #a3be8c;
+  --c-tip-bg: rgba(163,190,140,0.08);
+  --c-warn: #ebcb8b;
+  --c-warn-bg: rgba(235,203,139,0.08);
+  --c-caution: #bf616a;
+  --c-caution-bg: rgba(191,97,106,0.08);
+  --c-important: #b48ead;
+  --c-important-bg: rgba(180,142,173,0.08);
+}
+.dark {
+  --c-page: #2f3643;
+  --c-text: #e5e9f0;
+  --c-muted: #9aa3b0;
+  --c-faint: #b8bfc9;
+  --c-link: #88c0d0;
+  --c-border: #4a5568;
+  --c-border-strong: #5a6577;
+  --c-code-bg: #343c4b;
+  --c-hover: #353d4c;
+  --c-note: #5e81ac;
+  --c-note-bg: rgba(94,129,172,0.15);
+  --c-tip: #a3be8c;
+  --c-tip-bg: rgba(163,190,140,0.15);
+  --c-warn: #ebcb8b;
+  --c-warn-bg: rgba(235,203,139,0.15);
+  --c-caution: #bf616a;
+  --c-caution-bg: rgba(191,97,106,0.15);
+  --c-important: #b48ead;
+  --c-important-bg: rgba(180,142,173,0.15);
+  color-scheme: dark;
+}
+</style>
+<script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        page: 'var(--c-page)',
+        muted: 'var(--c-muted)',
+        faint: 'var(--c-faint)',
+        link: 'var(--c-link)',
+        brd: 'var(--c-border)',
+        'brd-strong': 'var(--c-border-strong)',
+        'code-bg': 'var(--c-code-bg)',
+        hover: 'var(--c-hover)',
+        note: 'var(--c-note)',
+        'note-bg': 'var(--c-note-bg)',
+        tip: 'var(--c-tip)',
+        'tip-bg': 'var(--c-tip-bg)',
+        warn: 'var(--c-warn)',
+        'warn-bg': 'var(--c-warn-bg)',
+        caution: 'var(--c-caution)',
+        'caution-bg': 'var(--c-caution-bg)',
+        important: 'var(--c-important)',
+        'important-bg': 'var(--c-important-bg)',
+      },
+    }
+  }
+}
+</script>
+{% include "preamble.html" %}
+{% if clp.ext_css %}<style>{{clp.ext_css}}</style>{% endif %}
+{% include "math.html" %}
+</head>
+<body class="bg-page text-[color:var(--c-text)] min-h-screen transition-colors">
+<a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-0 focus:left-0 focus:z-50 focus:p-3 focus:bg-page focus:font-bold focus:outline-2 focus:outline-link">Skip to main content</a>
+<div class="flex justify-center">
+<div class="max-w-prose min-w-0 px-6 py-10">
+
+<div class="flex justify-between items-start mb-8">
+<header>
+{% include "title.html" %}
+{% include "subtitle.html" %}
+{% include "authors.html" %}
+{% include "date.html" %}
+</header>
+<button id="theme-toggle" class="p-2 rounded-lg hover:bg-hover" aria-label="Toggle dark mode">
+<svg class="icon-sun hidden w-5 h-5 fill-current text-faint" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M375.7 19.7c-1.5-8-6.9-14.7-14.4-17.8s-16.1-2.2-22.8 2.4L256 61.1 173.5 4.2c-6.7-4.6-15.3-5.5-22.8-2.4s-12.9 9.8-14.4 17.8l-18.1 98.5L19.7 136.3c-8 1.5-14.7 6.9-17.8 14.4s-2.2 16.1 2.4 22.8L61.1 256 4.2 338.5c-4.6 6.7-5.5 15.3-2.4 22.8s9.8 12.9 17.8 14.4l98.5 18.1 18.1 98.5c1.5 8 6.9 14.7 14.4 17.8s16.1 2.2 22.8-2.4L256 450.9l82.5 56.9c6.7 4.6 15.3 5.5 22.8 2.4s12.9-9.8 14.4-17.8l18.1-98.5 98.5-18.1c8-1.5 14.7-6.9 17.8-14.4s2.2-16.1-2.4-22.8L450.9 256l56.9-82.5c4.6-6.7 5.5-15.3 2.4-22.8s-9.8-12.9-17.8-14.4l-98.5-18.1L375.7 19.7zM269.6 110l65.6-45.2 14.4 78.3c1.8 9.8 9.5 17.5 19.3 19.3l78.3 14.4L402 242.4c-5.7 8.2-5.7 19 0 27.2l45.2 65.6-78.3 14.4c-9.8 1.8-17.5 9.5-19.3 19.3l-14.4 78.3L269.6 402c-8.2-5.7-19-5.7-27.2 0l-65.6 45.2-14.4-78.3c-1.8-9.8-9.5-17.5-19.3-19.3L65 335.2 110 269.6c5.7-8.2 5.7-19 0-27.2L65 176.8l78.3-14.4c9.8-1.8 17.5-9.5 19.3-19.3l14.4-78.3L242.4 110c8.2 5.7 19 5.7 27.2 0zM256 368a112 112 0 1 0 0-224 112 112 0 1 0 0 224zM192 256a64 64 0 1 1 128 0 64 64 0 1 1-128 0z"/></svg>
+<svg class="icon-moon hidden w-5 h-5 fill-current text-faint" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M223.5 32C100 32 0 132.3 0 256S100 480 223.5 480c60.6 0 115.5-24.2 155.8-63.4c5-4.9 6.3-12.5 3.1-18.7s-10.1-9.7-17-8.5c-9.8 1.7-19.8 2.6-30.1 2.6c-96.9 0-175.5-78.8-175.5-176c0-65.8 36-123.1 89.3-153.3c6.1-3.5 9.2-10.5 7.7-17.3s-7.3-11.9-14.3-12.5c-6.3-.5-12.6-.8-19-.8z"/></svg>
+</button>
+</div>
+
+{% include "abstract.html" %}
+{% include "keywords.html" %}
+
+<article id="main-content" class="prose dark:prose-invert max-w-none prose-a:text-link">
+{{clp.body}}
+</article>
+
+{{clp.appendix}}
+</div>
+{% if clp.toc %}<aside class="sticky top-8 self-start w-56 shrink-0 max-h-[calc(100dvh-4rem)] overflow-y-auto py-10 pl-6 hidden xl:block">{{clp.toc}}</aside>{% endif %}
+</div>
+
+<script>
+(function(){
+  var b=document.getElementById('theme-toggle');if(!b)return;
+  function d(){return document.documentElement.classList.contains('dark')}
+  var sun=b.querySelector('.icon-sun'),moon=b.querySelector('.icon-moon');
+  function u(v){document.documentElement.classList.toggle('dark',v);localStorage.setItem('calepin-theme',v?'dark':'light');if(sun&&moon){sun.classList.toggle('hidden',!v);moon.classList.toggle('hidden',v)}}
+  var s=localStorage.getItem('calepin-theme');u(s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches);
+  b.addEventListener('click',function(){u(!d())});
+})();
+document.querySelectorAll('.code-copy-btn').forEach(function(b){b.addEventListener('click',function(){var c=b.parentElement.querySelector('code');if(c)navigator.clipboard.writeText(c.textContent)})});
+(function(){
+  var links=document.querySelectorAll('.toc a');if(!links.length)return;
+  var ids=Array.from(links).map(function(a){return a.getAttribute('href').slice(1)});
+  var observer=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting){
+      links.forEach(function(a){
+        var active=a.getAttribute('href')==='#'+e.target.id;
+        a.classList.toggle('!text-link',active);
+        a.classList.toggle('!border-link',active);
+        a.classList.toggle('font-medium',active);
+      });
+    }});
+  },{rootMargin:'-80px 0px -60% 0px',threshold:0});
+  ids.forEach(function(id){var el=document.getElementById(id);if(el)observer.observe(el)});
+})();
+</script>
+</body>
+</html>

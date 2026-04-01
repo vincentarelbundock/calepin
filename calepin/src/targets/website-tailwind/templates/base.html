@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="{% if clp.lang %}{{ clp.lang }}{% elif clp.languages %}{{ clp.languages[0].abbreviation }}{% else %}en{% endif %}" class="scroll-smooth">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Calepin">
+{% if clp.title %}<title>{{ clp.title }}{% if clp.title %} — {{ clp.title }}{% endif %}</title>
+{% elif clp.title %}<title>{{ clp.title }}</title>{% endif %}
+{% if clp.abstract %}<meta name="description" content="{{ clp.abstract }}">{% endif %}
+{% if clp.favicon %}<link rel="icon" href="{{ link(clp.favicon) }}">{% endif %}
+<script>
+(function(){
+  var t=localStorage.getItem('calepin-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  document.documentElement.setAttribute('data-theme',t);
+  if(t==='dark')document.documentElement.classList.add('dark');
+  new MutationObserver(function(){
+    document.documentElement.classList.toggle('dark',document.documentElement.getAttribute('data-theme')==='dark');
+  }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>
+<style>
+:root {
+  --c-page: #fafbfc;
+  --c-text: #2e3440;
+  --c-muted: #616e7c;
+  --c-faint: #525d6e;
+  --c-link: #5e81ac;
+  --c-border: #e0e4e8;
+  --c-border-strong: #d0d5db;
+  --c-code-bg: #f3f5f7;
+  --c-hover: #eef0f3;
+  --c-note: #5e81ac;
+  --c-note-bg: rgba(94,129,172,0.08);
+  --c-tip: #a3be8c;
+  --c-tip-bg: rgba(163,190,140,0.08);
+  --c-warn: #ebcb8b;
+  --c-warn-bg: rgba(235,203,139,0.08);
+  --c-caution: #bf616a;
+  --c-caution-bg: rgba(191,97,106,0.08);
+  --c-important: #b48ead;
+  --c-important-bg: rgba(180,142,173,0.08);
+}
+.dark {
+  --c-page: #2f3643;
+  --c-text: #e5e9f0;
+  --c-muted: #9aa3b0;
+  --c-faint: #b8bfc9;
+  --c-link: #88c0d0;
+  --c-border: #4a5568;
+  --c-border-strong: #5a6577;
+  --c-code-bg: #343c4b;
+  --c-hover: #353d4c;
+  --c-note: #5e81ac;
+  --c-note-bg: rgba(94,129,172,0.15);
+  --c-tip: #a3be8c;
+  --c-tip-bg: rgba(163,190,140,0.15);
+  --c-warn: #ebcb8b;
+  --c-warn-bg: rgba(235,203,139,0.15);
+  --c-caution: #bf616a;
+  --c-caution-bg: rgba(191,97,106,0.15);
+  --c-important: #b48ead;
+  --c-important-bg: rgba(180,142,173,0.15);
+  color-scheme: dark;
+}
+</style>
+<script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        page: 'var(--c-page)',
+        muted: 'var(--c-muted)',
+        faint: 'var(--c-faint)',
+        link: 'var(--c-link)',
+        brd: 'var(--c-border)',
+        'brd-strong': 'var(--c-border-strong)',
+        'code-bg': 'var(--c-code-bg)',
+        hover: 'var(--c-hover)',
+        note: 'var(--c-note)',
+        'note-bg': 'var(--c-note-bg)',
+        tip: 'var(--c-tip)',
+        'tip-bg': 'var(--c-tip-bg)',
+        warn: 'var(--c-warn)',
+        'warn-bg': 'var(--c-warn-bg)',
+        caution: 'var(--c-caution)',
+        'caution-bg': 'var(--c-caution-bg)',
+        important: 'var(--c-important)',
+        'important-bg': 'var(--c-important-bg)',
+      },
+    }
+  }
+}
+</script>
+{{ clp.math }}
+{% block head_extra %}{% endblock %}
+</head>
+<body class="bg-page text-[color:var(--c-text)] min-h-screen">
+<a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-0 focus:left-0 focus:z-50 focus:p-3 focus:bg-page focus:font-bold focus:outline-2 focus:outline-link">Skip to main content</a>
+
+<header class="sticky top-0 z-40 bg-page border-b border-brd transition-transform duration-300">
+  <div class="max-w-7xl mx-auto px-5 flex items-center min-h-[52px]">
+    {% include "navbar.html" %}
+  </div>
+</header>
+
+<div class="max-w-7xl mx-auto px-5 flex min-h-[calc(100dvh-52px)]">
+  {% if cfg.sidebar is not defined or cfg.sidebar %}{% include "sidebar.html" %}{% endif %}
+
+  <main id="main-content" class="min-w-0 flex-1 max-w-prose py-8 px-5">
+    <article class="prose dark:prose-invert max-w-none prose-a:text-link">
+      {% block content %}{% endblock %}
+    </article>
+
+    {% block page_nav %}{% endblock %}
+  </main>
+
+  {% if cfg.toc is not defined or cfg.toc %}<aside class="hidden xl:block w-56 shrink-0 sticky top-[52px] self-start max-h-[calc(100dvh-52px)] overflow-y-auto py-8 pl-6">{% if clp.toc %}{{ clp.toc | safe }}{% endif %}</aside>{% endif %}
+</div>
+
+{% include "footer.html" %}
+<script type="module" src="{{ link('assets/calepin.js') }}"></script>
+<script>
+(function(){
+  var btn=document.getElementById('sidebar-toggle');
+  var sb=document.getElementById('sidebar-nav');
+  var nav=document.getElementById('navbar-menu');
+  if(!btn)return;
+  var open=false;
+  function toggle(v){
+    open=v;
+    btn.setAttribute('aria-expanded',v?'true':'false');
+    if(sb){sb.style.transform=v?'translateX(0)':''}
+    else if(nav){
+      if(v){nav.classList.remove('hidden');nav.classList.add('flex','flex-col','absolute','top-full','left-0','right-0','bg-page','border-b','border-brd','p-4','gap-2','z-40','shadow-lg')}
+      else{nav.classList.add('hidden');nav.classList.remove('flex','flex-col','absolute','top-full','left-0','right-0','bg-page','border-b','border-brd','p-4','gap-2','z-40','shadow-lg')}
+    }
+  }
+  btn.addEventListener('click',function(e){e.stopPropagation();toggle(!open)});
+  document.addEventListener('click',function(e){if(open&&(sb?!sb.contains(e.target):nav?!nav.contains(e.target):true)&&!btn.contains(e.target))toggle(false)});
+})();
+</script>
+</body>
+</html>

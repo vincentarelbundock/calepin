@@ -1,0 +1,15 @@
+name = "website-tailwind"
+description = "Multi-page website styled with Tailwind CSS"
+inherits = "tailwind"
+collection = true
+
+[target]
+standalone = false
+modules = ["highlight", "append_footnotes", "embed_images"]
+
+[assets]
+static = ["fontawesome/"]
+
+[[modules]]
+name = "site_wrap"
+kind = "project"

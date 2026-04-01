@@ -126,7 +126,7 @@ pub fn run(
 
     match target.writer.as_str() {
         "latex" | "typst" => run_preview(input, &input_abs, args, PreviewMode::Pdf(target_name)),
-        _ => run_preview(input, &input_abs, args, PreviewMode::Html),
+        _ => run_preview(input, &input_abs, args, PreviewMode::Html(target_name, target)),
     }
 }
 
@@ -135,7 +135,7 @@ pub fn run(
 // ---------------------------------------------------------------------------
 
 enum PreviewMode<'a> {
-    Html,
+    Html(&'a str, &'a crate::config::Target),
     Pdf(&'a str),
 }
 
@@ -159,10 +159,10 @@ fn run_preview(input: &Path, input_abs: &Path, args: &PreviewArgs, mode: Preview
     // Initial render
     spinner.set_message("rendering...");
     let (html, rebuild_state) = match mode {
-        PreviewMode::Html => {
-            let html = render_file_html(input, &args.overrides)?;
+        PreviewMode::Html(target_name, target) => {
+            let html = render_file_with_target(input, target_name, target, &args.overrides)?;
             let html = reload::inject_reload_script(&html, version.load(Ordering::Relaxed));
-            (html, RebuildState::Html)
+            (html, RebuildState::Html { target_name: target_name.to_string() })
         }
         PreviewMode::Pdf(target_name) => {
             let pdf_path = render_and_compile(input, target_name, &args.overrides)?;
@@ -209,8 +209,9 @@ fn run_preview(input: &Path, input_abs: &Path, args: &PreviewArgs, mode: Preview
         spinner.set_message("rebuilding...");
         let start = std::time::Instant::now();
         let result = match &rebuild_state {
-            RebuildState::Html => {
-                render_file_html(input, &overrides).map(|html| {
+            RebuildState::Html { target_name } => {
+                let target = crate::config::resolve_target(target_name, &std::collections::HashMap::new()).unwrap();
+                render_file_with_target(input, target_name, &target, &overrides).map(|html| {
                     let v = version.fetch_add(1, Ordering::Relaxed) + 1;
                     *content.write().unwrap() = reload::inject_reload_script(&html, v);
                 })
@@ -243,7 +244,7 @@ fn run_preview(input: &Path, input_abs: &Path, args: &PreviewArgs, mode: Preview
 
 /// State needed to rebuild on file change, captured once at startup.
 enum RebuildState {
-    Html,
+    Html { target_name: String },
     Pdf { target_name: String, pdf_filename: String },
 }
 
@@ -251,8 +252,8 @@ enum RebuildState {
 // Rendering helpers
 // ---------------------------------------------------------------------------
 
-fn render_file_html(input: &Path, overrides: &[String]) -> Result<String> {
-    let (_path, html, _renderer) = crate::render::pipeline::render_file(input, None, Some("html"), overrides, None, None, None, None)?;
+fn render_file_with_target(input: &Path, target_name: &str, target: &crate::config::Target, overrides: &[String]) -> Result<String> {
+    let (_path, html, _renderer) = crate::render::pipeline::render_file(input, None, Some(target_name), overrides, Some(target), None, None, None)?;
     Ok(html)
 }
 

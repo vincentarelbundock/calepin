@@ -38,7 +38,7 @@ table:not(.tinytable) th { font-weight: 600; }
 .table-div { margin: 1.5rem 0; }
 .table-caption, .figure .caption { text-align: center; font-size: 0.9rem; color: color-mix(in srgb, var(--c-text) 70%, var(--c-text-muted)); }
 
-h1, h2, h3, h4, h5, h6 { font-weight: normal; line-height: 1.25; margin: 1.5em 0 0.5em; color: var(--c-text); }
+h1, h2, h3, h4, h5, h6 { font-weight: normal; line-height: 1.25; margin: 1.5em 0 0.5em; color: var(--c-text); scroll-margin-top: calc(var(--c-navbar-height, 0px) + 1rem); }
 h1 { font-size: 1.8rem; }
 h2 { font-size: 1.4rem; }
 h3 { font-size: 1.15rem; }

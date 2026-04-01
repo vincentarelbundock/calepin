@@ -302,7 +302,7 @@ mod tests {
         let md = "Text[^1].\n\n[^1]: A note.";
         let html = markdown_to_html_ast(md, &[], false, false, false);
         assert!(html.contains("footnote-ref"), "html: {}", html);
-        assert!(html.contains("class=\"footnotes\""), "html: {}", html);
+        assert!(html.contains("data-footnotes"), "html: {}", html);
         assert!(html.contains("A note."), "html: {}", html);
     }
 
@@ -376,7 +376,7 @@ mod tests {
         let opts = WalkOptions { suppress_footnote_section: true, ..WalkOptions::default() };
         let result = markdown_to_html_ast_with_metadata(md, &[], &opts, false);
         // Footnote section should NOT be in the output
-        assert!(!result.output.contains("class=\"footnotes\""), "should suppress: {}", result.output);
+        assert!(!result.output.contains("data-footnotes"), "should suppress: {}", result.output);
         // But defs should be returned in metadata
         assert_eq!(result.metadata.footnote_defs.len(), 1);
         assert_eq!(result.metadata.footnote_defs[0].0, 1); // ID = 1

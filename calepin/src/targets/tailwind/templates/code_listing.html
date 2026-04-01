@@ -1,0 +1,8 @@
+<div id="{{cfg.id}}" class="my-4">
+{%- if cfg.caption %}
+<p class="text-sm text-muted mb-1">Listing {{clp.number}}: {{cfg.caption}}</p>
+{%- else %}
+<p class="text-sm text-muted mb-1">Listing {{clp.number}}</p>
+{%- endif %}
+{{clp.content}}
+</div>

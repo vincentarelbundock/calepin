@@ -1,0 +1,1 @@
+{% if clp.is_embed %}<iframe class="rounded-lg" src="{{ clp.url }}" width="{{ cfg.width }}" height="{{ cfg.height }}" title="{{ cfg.title }}" frameborder="0" allowfullscreen></iframe>{% else %}<video class="rounded-lg" controls width="{{ cfg.width }}"><source src="{{ clp.url }}">Your browser does not support the video tag.</video>{% endif %}

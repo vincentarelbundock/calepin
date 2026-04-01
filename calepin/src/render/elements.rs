@@ -41,14 +41,16 @@ pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> 
         // Target-specific variant
         if let Some(target) = crate::paths::get_active_target() {
             if target != base {
-                let path = format!("{}/templates/{}.{}.{}", target, resolved, v, ext);
+                let dir_name = crate::paths::resolve_embedded_dir_name(&target);
+                let path = format!("{}/templates/{}.{}.{}", dir_name, resolved, v, ext);
                 if let Some(file) = BUILTIN_EXTENSIONS.get_file(&path) {
                     if let Some(s) = file.contents_utf8() { return Some(s); }
                 }
             }
         }
         // Base-specific variant
-        let path = format!("{}/templates/{}.{}.{}", base, resolved, v, ext);
+        let base_dir = crate::paths::resolve_embedded_dir_name(base);
+        let path = format!("{}/templates/{}.{}.{}", base_dir, resolved, v, ext);
         if let Some(file) = BUILTIN_EXTENSIONS.get_file(&path) {
             if let Some(s) = file.contents_utf8() { return Some(s); }
         }
@@ -62,15 +64,17 @@ pub fn resolve_builtin_template(name: &str, base: &str) -> Option<&'static str> 
     // Target-specific (e.g., book/templates/chapter.typ)
     if let Some(target) = crate::paths::get_active_target() {
         if target != base {
-            let target_path = format!("{}/templates/{}.{}", target, resolved, ext);
+            let dir_name = crate::paths::resolve_embedded_dir_name(&target);
+            let target_path = format!("{}/templates/{}.{}", dir_name, resolved, ext);
             if let Some(file) = BUILTIN_EXTENSIONS.get_file(&target_path) {
                 return file.contents_utf8();
             }
         }
     }
 
-    // Base-specific (e.g., html/templates/figure.html)
-    let base_path = format!("{}/templates/{}.{}", base, resolved, ext);
+    // Base-specific (e.g., tailwind/templates/figure.html)
+    let base_dir = crate::paths::resolve_embedded_dir_name(base);
+    let base_path = format!("{}/templates/{}.{}", base_dir, resolved, ext);
     if let Some(file) = BUILTIN_EXTENSIONS.get_file(&base_path) {
         return file.contents_utf8();
     }

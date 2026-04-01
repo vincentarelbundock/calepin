@@ -383,6 +383,7 @@ impl Highlighter {
                 let scopes = [
                     ("@media (prefers-color-scheme: light)", "@media (prefers-color-scheme: dark)"),
                     ("[data-theme='light']", "[data-theme='dark']"),
+                    ("html:not(.dark)", "html.dark"),
                 ];
 
                 for (light_wrap, dark_wrap) in &scopes {

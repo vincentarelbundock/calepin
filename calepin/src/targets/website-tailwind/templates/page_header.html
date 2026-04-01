@@ -1,0 +1,8 @@
+{% if clp.title or clp.subtitle or clp.date or clp.abstract %}
+<header class="mb-8 pb-4 border-b border-brd">
+  {% if clp.title %}<h1 class="text-2xl font-bold m-0 mb-1 leading-tight">{{ clp.title }}</h1>{% endif %}
+  {% if clp.subtitle %}<p class="text-lg text-muted mt-1 mb-0">{{ clp.subtitle }}</p>{% endif %}
+  {% if clp.date %}<p class="text-sm text-faint mt-2 mb-0">{{ clp.date }}</p>{% endif %}
+  {% if clp.abstract %}<div class="mt-4 p-4 bg-hover rounded-md border-l-4 border-link italic text-muted">{{ clp.abstract }}</div>{% endif %}
+</header>
+{% endif %}

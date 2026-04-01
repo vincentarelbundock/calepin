@@ -1,0 +1,22 @@
+{% if clp.prev or clp.next %}
+<nav class="flex justify-between mt-12 pt-6 border-t border-brd gap-4" aria-label="Page navigation">
+  {% if clp.prev %}
+  <a href="{{ clp.prev.href }}" class="flex items-center gap-2 px-4 py-3 border border-brd rounded-lg text-muted hover:border-link hover:text-link no-underline max-w-[50%] text-sm">
+    {% include "icons/arrow-left.svg" %}
+    <span>
+      <span class="text-xs uppercase tracking-wider text-faint">Previous</span><br>
+      {{ clp.prev.text }}
+    </span>
+  </a>
+  {% endif %}
+  {% if clp.next %}
+  <a href="{{ clp.next.href }}" class="flex items-center gap-2 px-4 py-3 border border-brd rounded-lg text-muted hover:border-link hover:text-link no-underline max-w-[50%] text-sm ml-auto">
+    <span>
+      <span class="text-xs uppercase tracking-wider text-faint">Next</span><br>
+      {{ clp.next.text }}
+    </span>
+    {% include "icons/arrow-right.svg" %}
+  </a>
+  {% endif %}
+</nav>
+{% endif %}

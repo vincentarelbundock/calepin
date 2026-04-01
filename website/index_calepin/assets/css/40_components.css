@@ -16,7 +16,8 @@ pre:has(> code.error)   { border-inline-start: 4px solid var(--c-error); }
 pre:has(> code.message) { border-inline-start: 4px solid var(--c-note); }
 
 /* --- Code copy button --- */
-pre:has(> code.code) { position: relative; }
+pre:has(> code.code),
+pre:has(> code.output) { position: relative; }
 .code-copy-btn {
   position: absolute; top: 0.4rem; right: 0.4rem; z-index: 1;
   background: transparent; border: none; padding: 0.2rem; cursor: pointer;

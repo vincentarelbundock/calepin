@@ -1,0 +1,5 @@
+{%- set title = cfg.title -%}{%- if not title -%}{%- set title = "Note" -%}{%- endif -%}
+<div class="border-l-4 border-note bg-note-bg p-4 my-4 rounded-r"{% if cfg.id %} id="{{cfg.id}}"{% endif %} role="note">
+<p class="font-medium mb-1">ℹ️ {{title}}</p>
+{{clp.content}}
+</div>

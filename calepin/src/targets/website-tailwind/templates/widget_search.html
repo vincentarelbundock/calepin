@@ -1,0 +1,23 @@
+<button class="flex items-center justify-center p-1.5 text-muted rounded-md hover:bg-hover bg-transparent border-none cursor-pointer" data-search-toggle aria-label="Search (Ctrl+K)">
+  {% include "icons/search.svg" %}
+</button>
+<div class="search-overlay fixed inset-0 bg-black/50 z-50 hidden items-start justify-center pt-[10vh]" role="dialog" aria-modal="true" aria-label="Search">
+  <div class="bg-page border border-brd rounded-xl w-[90%] max-w-[600px] max-h-[70vh] flex flex-col shadow-2xl">
+    <div class="flex items-center px-4 py-3 gap-2 border-b border-brd">
+      {% include "icons/search.svg" %}
+      <input class="search-input flex-1 border-none outline-none text-base bg-transparent text-[color:var(--c-text)]" type="text" placeholder="Search..." aria-label="Search">
+      <kbd class="px-1.5 py-0.5 text-xs bg-hover border border-brd rounded text-faint">Esc</kbd>
+    </div>
+    <div class="search-results overflow-y-auto p-2" role="listbox" aria-label="Search results">
+      <div class="search-hint p-4 text-center text-muted text-sm">Start typing to search...</div>
+    </div>
+  </div>
+</div>
+<style>
+.search-overlay.active { display: flex; }
+.search-result { display: block; padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; text-decoration: none; color: inherit; }
+.search-result:hover, .search-result.selected { background: var(--c-hover); }
+.search-result-title { font-weight: 600; font-size: 0.95rem; }
+.search-result-text { font-size: 0.825rem; color: var(--c-muted); margin-top: 0.2rem; }
+.search-result mark { background: color-mix(in srgb, var(--c-link) 25%, var(--c-page)); border-radius: 2px; padding: 0 1px; }
+</style>

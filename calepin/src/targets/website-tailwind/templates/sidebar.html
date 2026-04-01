@@ -1,0 +1,33 @@
+<aside id="sidebar-nav" class="w-64 shrink-0 sticky top-[52px] self-start h-[calc(100dvh-52px)] overflow-y-auto border-r border-brd py-4 text-sm md:block max-md:fixed max-md:top-[52px] max-md:left-0 max-md:bottom-0 max-md:z-30 max-md:bg-page max-md:-translate-x-full max-md:transition-transform max-md:duration-200 max-md:w-64 max-md:border-r max-md:shadow-lg" role="navigation" aria-label="Section navigation">
+  <nav class="px-3">
+    {% for node in clp.pages recursive %}
+      {% if node.children | length > 0 %}
+        {% if loop.depth0 == 0 %}
+        <details class="mb-1"{% if node.active %} open{% endif %}>
+          <summary class="font-semibold text-[11px] uppercase tracking-wider text-faint px-3 pt-3 pb-1 cursor-pointer list-none flex items-center gap-1">{{ node.title }}</summary>
+          <ul class="list-none m-0 p-0 pl-2">
+            {{ loop(node.children) }}
+          </ul>
+        </details>
+        {% else %}
+        <li>
+          <details{% if node.active %} open{% endif %}>
+            <summary class="font-semibold text-xs text-faint px-3 py-0.5 cursor-pointer list-none">{{ node.title }}</summary>
+            <ul class="list-none m-0 p-0 pl-2">
+              {{ loop(node.children) }}
+            </ul>
+          </details>
+        </li>
+        {% endif %}
+      {% else %}
+        {% if loop.depth0 == 0 %}
+        <ul class="list-none m-0 p-0">
+          <li><a href="{{ node.href | default(value='#') }}" class="block px-3 py-1 rounded-md text-[color:var(--c-text)] no-underline hover:bg-hover{% if node.active and node.href %} text-link font-semibold{% endif %}"{% if node.active and node.href %} aria-current="page"{% endif %}>{{ node.title }}</a></li>
+        </ul>
+        {% else %}
+        <li><a href="{{ node.href | default(value='#') }}" class="block px-3 py-1 rounded-md text-[color:var(--c-text)] no-underline hover:bg-hover{% if node.active and node.href %} text-link font-semibold{% endif %}"{% if node.active and node.href %} aria-current="page"{% endif %}>{{ node.title }}</a></li>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  </nav>
+</aside>
