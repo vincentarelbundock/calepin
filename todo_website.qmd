@@ -1,0 +1,5 @@
+- [ ] search sometimes does not work the first time I click on it. No results come, or incomplete ones.
+- [ ] Add tailwind cli to the list of external tools to install. Mention it is optional but makes web pages smaller and more performant.
+- [ ] review what assets should be copied to a default sidecar. I see github icon and calepin logo, for example.
+- [ ] Why do i get a 404_calepin sidecar when rendering the website/index.qmd?
+- [ ] Shoudl there be navbar.middle and navbar.right and navbar.middle, now that we don't really have centered things?
