@@ -1,0 +1,13 @@
+name = "imgur"
+description = "Upload local images to imgur and replace paths with public URLs"
+version = "0.1.0"
+license = "MIT"
+
+[[modules]]
+name = "imgur"
+kind = "span"
+contexts = ["span"]
+run = "imgur.sh"
+
+[modules.match]
+classes = ["imgur"]

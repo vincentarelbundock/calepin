@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use crate::modules::transform_document::TransformDocument;
 use crate::config::extension::ExtensionMatchRule;
-use crate::emit::FormatEmitter;
+use crate::writers::FormatWriter;
 use crate::types::Element;
 
 /// A module's match rule paired with its contexts.
@@ -202,14 +202,14 @@ pub trait TransformProject: Send + Sync {
 // Module kind
 // ---------------------------------------------------------------------------
 
-/// Factory that creates a configured FormatEmitter at render time.
-/// Emitter configuration (standalone, number_sections, etc.) varies
+/// Factory that creates a configured FormatWriter at render time.
+/// Writer configuration (standalone, number_sections, etc.) varies
 /// per document, so the registry stores a factory rather than an instance.
-pub type EmitterFactory = fn(&EmitterConfig) -> Box<dyn FormatEmitter>;
+pub type WriterFactory = fn(&WriterConfig) -> Box<dyn FormatWriter>;
 
-/// Per-render emitter configuration, derived from document metadata.
+/// Per-render writer configuration, derived from document metadata.
 #[derive(Default)]
-pub struct EmitterConfig {
+pub struct WriterConfig {
     pub standalone: bool,
     pub number_sections: bool,
 }
@@ -220,7 +220,7 @@ pub enum ModuleKind {
     Span(Box<dyn TransformSpan>),
     Document(Box<dyn TransformDocument>),
     Project(Box<dyn TransformProject>),
-    Emitter(EmitterFactory),
+    Writer(WriterFactory),
     Noop,
 }
 
@@ -292,10 +292,10 @@ impl ModuleRegistry {
             .and_then(|p| std::fs::read_to_string(p).ok())
     }
 
-    pub fn resolve_emitter(&self, name: &str, config: &EmitterConfig) -> Option<Box<dyn FormatEmitter>> {
+    pub fn resolve_writer(&self, name: &str, config: &WriterConfig) -> Option<Box<dyn FormatWriter>> {
         for m in &self.modules {
             if m.name == name {
-                if let ModuleKind::Emitter(factory) = &m.kind {
+                if let ModuleKind::Writer(factory) = &m.kind {
                     return Some(factory(config));
                 }
             }
@@ -342,27 +342,38 @@ impl ModuleRegistry {
 /// All cross-reference prefix-to-label mappings, collected from modules.
 /// Used by bibliography (to exclude from citation lookup), crossref (to
 /// resolve/renumber), and div validation (to check prefix ownership).
-pub fn all_crossref_prefixes() -> Vec<(&'static str, &'static str)> {
-    let mut prefixes = vec![
-        // Core (not module-owned)
-        ("fig", "Figure"),
-        ("tbl", "Table"),
-        ("eq", "Equation"),
-        ("sec", "Section"),
-        ("lst", "Listing"),
-    ];
-    // Theorem module
-    for &(_, prefix) in crate::modules::theorem::THEOREM_PREFIXES {
-        let label = match prefix {
-            "thm" => "Theorem", "lem" => "Lemma", "cor" => "Corollary",
-            "prp" => "Proposition", "cnj" => "Conjecture", "def" => "Definition",
-            "exm" => "Example", "exr" => "Exercise", "sol" => "Solution",
-            "rem" => "Remark", "alg" => "Algorithm",
-            _ => "",
-        };
-        prefixes.push((prefix, label));
-    }
-    prefixes
+/// All cross-reference prefix-to-label mappings.
+/// This is the single source of truth for cross-ref prefixes. The crossref
+/// module derives its regex patterns from this list.
+pub const CROSSREF_PREFIXES: &[(&str, &str)] = &[
+    // Core
+    ("fig", "Figure"),
+    ("tbl", "Table"),
+    ("eq", "Equation"),
+    ("sec", "Section"),
+    ("lst", "Listing"),
+    // Callouts
+    ("tip", "Tip"),
+    ("nte", "Note"),
+    ("wrn", "Warning"),
+    ("imp", "Important"),
+    ("cau", "Caution"),
+    // Theorems
+    ("thm", "Theorem"),
+    ("lem", "Lemma"),
+    ("cor", "Corollary"),
+    ("prp", "Proposition"),
+    ("cnj", "Conjecture"),
+    ("def", "Definition"),
+    ("exm", "Example"),
+    ("exr", "Exercise"),
+    ("sol", "Solution"),
+    ("rem", "Remark"),
+    ("alg", "Algorithm"),
+];
+
+pub fn all_crossref_prefixes() -> &'static [(&'static str, &'static str)] {
+    CROSSREF_PREFIXES
 }
 
 // ---------------------------------------------------------------------------
@@ -387,18 +398,18 @@ pub fn builtin_module_names() -> Vec<String> {
 /// Resolve a built-in module name to its Rust implementation.
 fn resolve_builtin_kind(name: &str, kind_str: &str) -> ModuleKind {
     match (name, kind_str) {
-        // Emitters (AST -> format output)
-        ("html", "emitter") => ModuleKind::Emitter(|cfg| {
-            Box::new(crate::emit::html::HtmlEmitter { standalone: cfg.standalone })
+        // Writers (AST -> format output)
+        ("html", "writer") => ModuleKind::Writer(|cfg| {
+            Box::new(crate::writers::html::HtmlWriter { standalone: cfg.standalone })
         }),
-        ("latex", "emitter") => ModuleKind::Emitter(|cfg| {
-            Box::new(crate::emit::latex::LatexEmitter { number_sections: cfg.number_sections })
+        ("latex", "writer") => ModuleKind::Writer(|cfg| {
+            Box::new(crate::writers::latex::LatexWriter { number_sections: cfg.number_sections })
         }),
-        ("typst", "emitter") => ModuleKind::Emitter(|_| {
-            Box::new(crate::emit::typst::TypstEmitter)
+        ("typst", "writer") => ModuleKind::Writer(|_| {
+            Box::new(crate::writers::typst::TypstWriter)
         }),
-        ("markdown", "emitter") => ModuleKind::Emitter(|_| {
-            Box::new(crate::emit::markdown::MarkdownEmitter)
+        ("markdown", "writer") => ModuleKind::Writer(|_| {
+            Box::new(crate::writers::markdown::MarkdownWriter)
         }),
 
         // Element children transforms
@@ -567,9 +578,9 @@ fn register_builtins() -> Vec<LoadedModule> {
         LoadedModule { name: m.name, matchers, kind }
     }).collect();
 
-    // Emitters are format-specific, not user-facing modules.
+    // Writers are format-specific, not user-facing modules.
     for name in ["html", "latex", "typst", "markdown"] {
-        let kind = resolve_builtin_kind(name, "emitter");
+        let kind = resolve_builtin_kind(name, "writer");
         modules.push(LoadedModule { name: name.to_string(), matchers: Vec::new(), kind });
     }
 
@@ -708,7 +719,17 @@ fn load_extension_modules(modules: &mut Vec<LoadedModule>, project_root: &Path) 
                         }
                     ))
                 }
-                _ => continue, // span/element not yet supported as external
+                "span" => {
+                    ModuleKind::Span(Box::new(
+                        crate::modules::external::ExternalSpanTransform {
+                            name: module_decl.name.clone(),
+                            script_path: script_path.clone(),
+                            module_dir: ext_dir_abs.clone(),
+                            vars: vars_json.clone(),
+                        }
+                    ))
+                }
+                _ => continue, // element not yet supported as external
             };
 
             let matchers = if let Some(ref rule) = module_decl.match_rule {

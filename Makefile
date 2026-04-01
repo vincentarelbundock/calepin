@@ -1,4 +1,4 @@
-.PHONY: help docs plugins site
+.PHONY: help docs site
 
 help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m\n"
@@ -71,37 +71,32 @@ docs:  build ## Render all .qmd files in website/ to all formats
 	done
 
 # ==============================================================================
-# Profiling
+# Benchmarks & Profiling
 # ==============================================================================
 
 PROF_FILE ?= bench/text.qmd
 
-prof-build:  ## Build with profiling profile (release + debug symbols)
+bench: release  ## Time single file render (hyperfine)
+	@cd bench && hyperfine --warmup 3 \
+		-n "text -> HTML"  '../target/release/calepin text.qmd -o /dev/null -q' \
+		-n "text -> LaTeX" '../target/release/calepin text.qmd -t latex -o /dev/null -q' \
+		--ignore-failure
+
+bench-batch: release  ## Time 1000 parallel files
+	bench/gibberish.sh
+
+prof-build:
 	cargo build --manifest-path calepin/Cargo.toml --profile profiling
 
-prof: prof-build  ## Profile single file (set PROF_FILE=bench/text.qmd)
+prof: prof-build  ## Profile single file (PROF_FILE=bench/text.qmd)
 	cd $$(dirname $(PROF_FILE)) && samply record --save-only --unstable-presymbolicate -o profile.json -- ../target/profiling/calepin $$(basename $(PROF_FILE)) -o /dev/null -q
 	@echo "Profile saved to $$(dirname $(PROF_FILE))/profile.json"
 	bench/profile_summary.py $$(dirname $(PROF_FILE))/profile.json
 
-prof-batch: prof-build  ## Profile 1000 parallel files (gibberish complexity 2)
+prof-batch: prof-build  ## Profile 1000 parallel files
 	bench/gibberish.sh --samply
 
-prof-website: prof-build  ## Profile rendering the website/ collection
+prof-website: prof-build  ## Profile website/ collection
 	rm -rf website/.calepin
 	cd website && samply record --save-only --unstable-presymbolicate -o profile.json -- ../target/profiling/calepin *.qmd -q
-	@echo "Profile saved to website/profile.json"
 	bench/profile_summary.py website/profile.json
-
-# ==============================================================================
-# Benchmarks
-# ==============================================================================
-
-bench: release  ## Time single file render (bench/text.qmd)
-	@cd bench && hyperfine --warmup 3 \
-		-n "calepin text → HTML"  '../target/release/calepin text.qmd -o /dev/null -q' \
-		-n "calepin text → LaTeX" '../target/release/calepin text.qmd -t latex -o /dev/null -q' \
-		--ignore-failure
-
-bench-batch: release  ## Time 1000 parallel files (gibberish complexity 2)
-	bench/gibberish.sh

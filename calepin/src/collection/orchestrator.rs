@@ -15,7 +15,7 @@ pub(crate) fn render_book(
     page_tree: &[PageNode],
     base_dir: &Path,
     output: &Path,
-    format: &str,
+    writer: &str,
     output_ext: &str,
     target_name: &str,
     quiet: bool,
@@ -25,7 +25,6 @@ pub(crate) fn render_book(
         .map(|a| std::collections::BTreeMap::from([("name", a.name.literal.as_str())]))
         .collect();
     let mut cfg_map: std::collections::BTreeMap<String, minijinja::Value> = std::collections::BTreeMap::new();
-    // All config.toml keys
     let all_cfg = crate::config::build_jinja_vars(&meta.cfg);
     if let Ok(iter) = all_cfg.try_iter() {
         for key in iter {
@@ -35,7 +34,6 @@ pub(crate) fn render_book(
             }
         }
     }
-    // Standard fields (override if present)
     if let Some(ref t) = meta.title { cfg_map.insert("title".into(), minijinja::Value::from(t.clone())); }
     if let Some(ref s) = meta.subtitle { cfg_map.insert("subtitle".into(), minijinja::Value::from(s.clone())); }
     if let Some(ref u) = meta.url { cfg_map.insert("url".into(), minijinja::Value::from(u.clone())); }
@@ -44,41 +42,19 @@ pub(crate) fn render_book(
     let ctx = minijinja::context! {
         cfg => minijinja::Value::from_serialize(&cfg_map),
         pages => page_tree,
-        format => format,
-        base => format,
+        writer => writer,
+        base => writer,
     };
 
-    // Collect template sources for the loader
-    let mut templates = std::collections::HashMap::new();
+    // Load templates (reuse shared loader)
+    let env = super::templates::load_templates(base_dir, target_name)?
+        .ok_or_else(|| anyhow::anyhow!(
+            "No template files found for target '{}'. Book builds require a main template.",
+            target_name
+        ))?;
 
-    let dir = crate::paths::templates_dir(&base_dir).join(target_name);
-    for dir in &[dir] {
-        if !dir.is_dir() { continue; }
-        let pattern = dir.join("**").join("*.*");
-        let pattern_str = pattern.display().to_string();
-        for entry in crate::util::safe_glob(&pattern_str) {
-            if let Ok(path) = entry {
-                if !path.is_file() { continue; }
-                if let Ok(content) = std::fs::read_to_string(&path) {
-                    let rel = path.strip_prefix(dir).unwrap_or(&path);
-                    let name = rel.display().to_string();
-                    templates.entry(name).or_insert(content);
-                }
-            }
-        }
-    }
-
-    // Templates are loaded from the sidecar (always populated)
-    let ext = crate::paths::resolve_extension(format);
+    let ext = crate::paths::resolve_extension(writer);
     let main_tpl_name = format!("main.{}", ext);
-
-    let mut env = minijinja::Environment::new();
-    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
-    let sources = std::sync::Arc::new(templates);
-    env.set_loader(move |name: &str| {
-        Ok(sources.get(name).cloned())
-    });
-
     let tpl = env.get_template(&main_tpl_name)?;
     let rendered = tpl.render(&ctx)
         .with_context(|| format!("Failed to render book template for target {}", target_name))?;
@@ -94,9 +70,7 @@ pub(crate) fn render_book(
 
     // Run post commands if configured (e.g., "typst compile {input}")
     let target_def = meta.targets.get(target_name);
-    let post_cmds = target_def.map(|t| &t.post);
-
-    if let Some(cmds) = post_cmds {
+    if let Some(cmds) = target_def.map(|t| &t.post) {
         if !cmds.is_empty() {
             let target_ext = target_def.map(|t| t.output_extension()).unwrap_or("pdf");
             let output_filename = format!("book.{}", target_ext);
@@ -111,11 +85,7 @@ pub(crate) fn render_book(
                     eprintln!("  \x1b[36mpost:\x1b[0m {}", expanded);
                 }
 
-                let texinputs = format!(
-                    "{}:{}:",
-                    output.display(),
-                    base_dir.display(),
-                );
+                let texinputs = format!("{}:{}:", output.display(), base_dir.display());
                 let status = std::process::Command::new("sh")
                     .arg("-c")
                     .arg(&expanded)

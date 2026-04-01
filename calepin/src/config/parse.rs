@@ -284,8 +284,7 @@ pub fn parse_metadata(table: &Table) -> Result<Metadata> {
             }
         }
     }
-    // Extra top-level fields are accessible as {{ cfg.key }}; explicit [var]
-    // entries (already inserted above) take precedence.
+    // Extra top-level fields are accessible as {{ cfg.key }}.
     for (k, v) in extra {
         meta.cfg.entry(k).or_insert(v);
     }

@@ -150,8 +150,8 @@ pub fn evaluate(
                 elements.push(Element::Text { content: processed });
             }
             Block::Code(chunk) => {
-                // Merge document-level defaults from front matter var into chunk options.
-                // Resolution order: chunk #| options > front matter var > {stem}_calepin/config.toml defaults.
+                // Merge document-level defaults from front matter cfg into chunk options.
+                // Resolution order: chunk #| options > front matter cfg > {stem}_calepin/config.toml defaults.
                 let mut merged_chunk = chunk.clone();
                 merged_chunk.options.metadata = metadata.clone();
                 for (key, val) in &metadata.cfg {

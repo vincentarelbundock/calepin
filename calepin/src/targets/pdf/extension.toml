@@ -4,4 +4,5 @@ inherits = "typst"
 
 [target]
 extension = "pdf"
+preview = "open"
 post = ["typst compile {input}"]

@@ -41,7 +41,7 @@ pub fn render_documents(
         return Ok(HashMap::new());
     }
 
-    let overrides = build_overrides(meta, target);
+    let overrides = build_overrides(target);
 
     let writer_owned = writer.to_string();
     let target_owned = target_name.map(|s| s.to_string());
@@ -185,7 +185,7 @@ pub fn render_documents_with_crossref(
         return Ok(HashMap::new());
     }
 
-    let overrides = build_overrides(meta, target);
+    let overrides = build_overrides(target);
 
     // Assign chapter numbers based on [[contents]] ordering
     let chapter_map = assign_chapter_numbers(meta);
@@ -477,17 +477,12 @@ where
     results
 }
 
-pub fn build_overrides(_meta: &crate::config::Metadata, target: Option<&config::Target>) -> Vec<String> {
+pub fn build_overrides(target: Option<&config::Target>) -> Vec<String> {
     let mut overrides = Vec::new();
-
-    // standalone override from target
     if let Some(t) = target {
         if let Some(standalone) = t.standalone {
             overrides.push(format!("standalone={}", standalone));
         }
     }
-
-
-
     overrides
 }

@@ -30,25 +30,25 @@ pub use markers::wrap_raw;
 /// Render markdown to HTML via AST walk.
 #[cfg(test)]
 pub fn render_html(markdown: &str, raw_fragments: &[String], standalone: bool) -> String {
-    crate::emit::html::markdown_to_html_ast(markdown, raw_fragments, false, false, standalone)
+    crate::writers::html::markdown_to_html_ast(markdown, raw_fragments, false, false, standalone)
 }
 
 /// Render markdown to Typst via AST walk.
 #[cfg(test)]
 pub fn render_typst(markdown: &str, raw_fragments: &[String]) -> String {
-    crate::emit::typst::markdown_to_typst_ast(markdown, raw_fragments, false)
+    crate::writers::typst::markdown_to_typst_ast(markdown, raw_fragments, false)
 }
 
 /// Render a short inline markdown string (e.g., title) to the target format.
 /// Strips the wrapping <p> tags that comrak adds.
 pub fn render_inline(text: &str, writer: &str) -> String {
     let registry = crate::registry::ModuleRegistry::empty();
-    let config = crate::registry::EmitterConfig::default();
-    let emitter = registry.resolve_emitter(writer, &config)
+    let config = crate::registry::WriterConfig::default();
+    let fmt_writer = registry.resolve_writer(writer, &config)
         .expect("no writer registered for format");
-    let options = crate::emit::WalkOptions::default();
-    let result = crate::emit::walk_and_render_with_metadata(
-        emitter.as_ref(), text, &[], &options,
+    let options = crate::writers::WalkOptions::default();
+    let result = crate::writers::walk_and_render_with_metadata(
+        fmt_writer.as_ref(), text, &[], &options,
     );
     // Strip wrapping paragraph tags
     let trimmed = result.output.trim();
@@ -235,7 +235,7 @@ mod tests {
     // -----------------------------------------------------------------------
 
     fn latex(md: &str) -> String {
-        crate::emit::latex::markdown_to_latex(md, &[], false)
+        crate::writers::latex::markdown_to_latex(md, &[], false)
     }
 
     // -- Inline formatting --

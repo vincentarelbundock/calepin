@@ -111,7 +111,7 @@ pub struct ElementRenderer {
     /// Used by the cross-ref system to resolve `@id` references.
     pub module_ids: std::cell::RefCell<HashMap<String, String>>,
     /// Accumulated walk metadata (headings, IDs) from all Text element renders.
-    pub walk_metadata: std::cell::RefCell<crate::emit::WalkMetadata>,
+    pub walk_metadata: std::cell::RefCell<crate::writers::WalkMetadata>,
     /// Footnote state: counter, accumulated defs, cross-block defs.
     pub footnotes: crate::modules::FootnoteState,
     /// Section counters chained across Text elements.
@@ -156,7 +156,7 @@ impl ElementRenderer {
             convert_math: false,
             chapter_number: None,
             module_ids: std::cell::RefCell::new(HashMap::new()),
-            walk_metadata: std::cell::RefCell::new(crate::emit::WalkMetadata::default()),
+            walk_metadata: std::cell::RefCell::new(crate::writers::WalkMetadata::default()),
             footnotes: crate::modules::FootnoteState::new(),
             section_counters: std::cell::Cell::new(None),
             min_heading_level: std::cell::Cell::new(None),
@@ -231,13 +231,13 @@ impl ElementRenderer {
         // Inject cross-block footnote definitions so comrak can resolve them
         let processed = self.footnotes.inject_defs(&processed);
         let fragments = self.raw_fragments.borrow();
-        let config = crate::registry::EmitterConfig {
+        let config = crate::registry::WriterConfig {
             standalone: self.metadata.standalone.unwrap_or(true),
             number_sections: self.number_sections,
         };
-        let emitter = self.registry.resolve_emitter(&self.writer, &config)
+        let fmt_writer = self.registry.resolve_writer(&self.writer, &config)
             .expect("no writer registered for format");
-        let options = crate::emit::WalkOptions {
+        let options = crate::writers::WalkOptions {
             number_sections: self.number_sections,
             shift_headings: self.shift_headings,
             footnote_counter_start: self.footnotes.counter(),
@@ -245,8 +245,8 @@ impl ElementRenderer {
             min_heading_level: self.min_heading_level.get(),
             suppress_footnote_section: true,
         };
-        let result = crate::emit::walk_and_render_with_metadata(
-            emitter.as_ref(), &processed, &fragments, &options,
+        let result = crate::writers::walk_and_render_with_metadata(
+            fmt_writer.as_ref(), &processed, &fragments, &options,
         );
         self.footnotes.set_counter(result.metadata.footnote_counter_end);
         // Typst math conversion post-pass
@@ -374,7 +374,7 @@ impl ElementRenderer {
     }
 
     /// Return the accumulated walk metadata (headings for TOC, IDs for cross-refs).
-    pub fn walk_metadata(&self) -> crate::emit::WalkMetadata {
+    pub fn walk_metadata(&self) -> crate::writers::WalkMetadata {
         self.walk_metadata.borrow().clone()
     }
 

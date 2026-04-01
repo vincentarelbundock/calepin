@@ -2,13 +2,12 @@
 title: Page Not Found
 ---
 
-<div style="text-align: center; padding: 4rem 1rem;">
-<img src="/assets/Calepin.svg" alt="Calepin" style="width: 120px; margin-bottom: 2rem;" class="logo-light">
-<img src="/assets/Calepin_dark.svg" alt="Calepin" style="width: 120px; margin-bottom: 2rem;" class="logo-dark">
+::: {.text-center .py-16 .px-4}
 
-<p style="font-size: 4rem; font-weight: 200; margin: 0; color: var(--c-text-muted);">404</p>
+[404]{.text-7xl .font-extralight .block .text-muted}
 
-<p style="font-size: 1.2rem; color: var(--c-text-muted); margin-bottom: 2rem;">This page does not exist.</p>
+[This page does not exist.]{.text-lg .text-muted .block .mb-8}
 
-<a href="/" style="color: var(--c-link);">Back to home</a>
-</div>
+[Back to home](/)
+
+:::

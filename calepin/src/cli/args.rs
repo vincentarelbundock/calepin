@@ -86,9 +86,6 @@ pub struct RenderArgs {
     #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
     pub overrides: Vec<String>,
 
-    /// Disable syntax highlighting for code blocks
-    #[arg(long)]
-    pub no_highlight: bool,
 
     /// Override the writer for compound targets (pdf, book).
     /// Allowed values depend on the target: pdf accepts html/latex/typst/markdown,
@@ -207,8 +204,8 @@ pub enum ManAction {
 pub enum ExtraAction {
     /// List available citation styles
     Csl,
-    /// List available syntax highlighting themes
-    Highlight,
+    /// List built-in color schemes
+    Colors,
     /// Print shell completions
     #[command(arg_required_else_help = true, after_help = "\
 \x1B[1;4mExamples:\x1B[0m

@@ -8,9 +8,6 @@
 //! Per-element transforms:
 //!   - `transform_element/` — theorem, code, figure enrichment
 //!
-//! AST emitters:
-//!   - `emit/` — shared walker + html/latex/typst/markdown emitters
-//!
 //! Shared machinery:
 //!   - `template` — {{variable}} substitution + page templates
 //!   - `convert` — comrak options, image attrs, render entry points

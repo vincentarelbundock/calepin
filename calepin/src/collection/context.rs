@@ -345,8 +345,7 @@ pub fn build_document_context(
     pages: &[DocumentInfo],
     listing_items: Option<Vec<ListingItem>>,
     languages: &[LanguageConfig],
-    meta: &Metadata,
-    base_dir: &std::path::Path,
+    nav_paths: &[String],
 ) -> DocumentContext {
     let body = result.map(|r| r.body.clone()).unwrap_or_default();
 
@@ -355,9 +354,6 @@ pub fn build_document_context(
         .map(|d| crate::utils::date::format_date_display(&d, None));
     let subtitle = result.and_then(|r| r.subtitle.clone()).or_else(|| page.meta.subtitle.clone());
     let abstract_text = result.and_then(|r| r.abstract_text.clone()).or_else(|| page.meta.r#abstract.clone());
-
-    // Prev/next navigation: pages in [[contents]] order, matching language
-    let nav_paths = super::discover::collect_document_paths(meta, base_dir);
     let pages_by_source = pages_to_map(pages);
     let nav_documents: Vec<&DocumentInfo> = nav_paths.iter()
         .filter_map(|path| pages_by_source.get(path.as_str()).copied())
@@ -466,8 +462,7 @@ fn resolve_translations(
 /// Format a YYYY-MM-DD date string for display using the default format.
 
 fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcrumb> {
-    // Collect all page URLs for checking if a path leads to a real page
-    let document_urls: Vec<String> = pages.iter().map(|p| p.url.clone()).collect();
+    let document_urls: std::collections::HashSet<String> = pages.iter().map(|p| p.url.clone()).collect();
 
     let mut crumbs = vec![Breadcrumb {
         text: "Home".to_string(),
@@ -497,7 +492,7 @@ fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcr
                 .join(" ");
             // Only link if there's a page at this path (index.html)
             let index_url = format!("{}index.html", href_path);
-            let href = if document_urls.iter().any(|u| *u == index_url) {
+            let href = if document_urls.contains(&index_url) {
                 Some(href_path.clone())
             } else {
                 None

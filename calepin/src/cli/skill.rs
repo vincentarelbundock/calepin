@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use include_dir::{include_dir, Dir};
 use std::path::{Path, PathBuf};
 
-static SKILL_FILES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/scaffold/skill");
+static SKILL_FILES: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/skill");
 
 struct Tool {
     name: &'static str,

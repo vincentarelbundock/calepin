@@ -713,7 +713,7 @@ pub fn collect_color_schemes(target_name: &str) -> Vec<(String, ColorsDef)> {
 }
 
 /// Resolve the active color scheme for a document.
-/// Priority: first entry in `cfg.colors` > extension `default_colors` > nord fallback.
+/// Priority: first entry in `cfg.colors` > extension `default_colors`.
 pub fn resolve_active_colors(
     cfg: &std::collections::HashMap<String, crate::value::Value>,
     target_name: &str,
@@ -765,8 +765,6 @@ pub const BUILTIN_EXTENSIONS: &[(&str, &str)] = &[
 pub const BUILTIN_COLOR_EXTENSIONS: &[(&str, &str)] = &[
     ("nord", include_str!("../themes/nord/extension.toml")),
     ("ayu", include_str!("../themes/ayu/extension.toml")),
-
-
     ("catppuccin-frappe", include_str!("../themes/catppuccin-frappe/extension.toml")),
     ("catppuccin-macchiato", include_str!("../themes/catppuccin-macchiato/extension.toml")),
     ("catppuccin-mocha", include_str!("../themes/catppuccin-mocha/extension.toml")),
@@ -778,8 +776,6 @@ pub const BUILTIN_COLOR_EXTENSIONS: &[(&str, &str)] = &[
 pub static BUILTIN_COLOR_DIRS: &[(&str, &Dir<'static>)] = &[
     ("nord", &COLOR_DIR_NORD),
     ("ayu", &COLOR_DIR_AYU),
-
-
     ("catppuccin-frappe", &COLOR_DIR_CATPPUCCIN_FRAPPE),
     ("catppuccin-macchiato", &COLOR_DIR_CATPPUCCIN_MACCHIATO),
     ("catppuccin-mocha", &COLOR_DIR_CATPPUCCIN_MOCHA),
@@ -835,8 +831,6 @@ pub static BUILTIN_SCAFFOLDS: &[(&str, &str, &Dir<'static>)] = &[
 
 static COLOR_DIR_NORD: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/nord");
 static COLOR_DIR_AYU: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/ayu");
-
-
 static COLOR_DIR_CATPPUCCIN_FRAPPE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/catppuccin-frappe");
 static COLOR_DIR_CATPPUCCIN_MACCHIATO: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/catppuccin-macchiato");
 static COLOR_DIR_CATPPUCCIN_MOCHA: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/themes/catppuccin-mocha");

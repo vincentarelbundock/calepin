@@ -6,7 +6,7 @@ mod cli;
 mod man;
 mod types;
 mod config;
-mod emit;
+mod writers;
 mod engines;
 mod modules;
 mod parse;

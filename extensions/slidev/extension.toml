@@ -1,0 +1,10 @@
+name = "slidev"
+description = "Convert rendered markdown to Slidev slide format"
+version = "0.1.0"
+license = "MIT"
+
+[[modules]]
+name = "slidev"
+kind = "document"
+protocol = "text"
+run = "slidev.sh"

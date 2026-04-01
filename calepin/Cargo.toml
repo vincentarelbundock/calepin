@@ -78,7 +78,3 @@ hayro-svg = "0.3"
 
 indexmap = "2.13.0"
 mimalloc = "0.1"
-
-[[bench]]
-name = "template_bench"
-harness = false

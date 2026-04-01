@@ -1,0 +1,13 @@
+name = "txtfmt"
+description = "Text formatting spans: color, size, smallcaps, underline, mark"
+version = "0.1.0"
+license = "MIT"
+
+[[modules]]
+name = "txtfmt"
+kind = "span"
+contexts = ["span"]
+run = "txtfmt.sh"
+
+[modules.match]
+classes = ["txtfmt"]

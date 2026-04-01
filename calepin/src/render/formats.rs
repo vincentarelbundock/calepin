@@ -1,7 +1,7 @@
 //! Output format pipeline.
 //!
-//! A format is defined by a Target configuration that declares a writer
-//! (AST emitter), a list of body transform modules, and a cross-reference
+//! A format is defined by a Target configuration that declares a writer,
+//! a list of body transform modules, and a cross-reference
 //! strategy. The `FormatPipeline` reads this config and dispatches to the
 //! appropriate modules.
 

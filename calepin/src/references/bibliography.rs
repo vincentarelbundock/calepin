@@ -86,7 +86,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
     // Collect cited keys before loading the CSL style. CSL deserialization is
     // expensive (~5ms), so we defer it until we know there are actual citations.
     static RE_ANY: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?:\[-)?@([a-zA-Z0-9_][-a-zA-Z0-9_:]*)\]?").unwrap()
+        Regex::new(r"(?:\[-)?@([a-zA-Z0-9_][-a-zA-Z0-9_]*)\]?").unwrap()
     });
     // Cross-reference prefixes that should not be looked up as citation keys
     let crossref_prefixes: Vec<String> = crate::registry::all_crossref_prefixes()
@@ -101,8 +101,7 @@ pub fn process_citations(elements: &mut Vec<Element>, metadata: &Metadata, proje
         if let Element::Text { content } = el {
             for caps in re_any.captures_iter(content) {
                 let key = caps[1].to_string();
-                if !key.contains(':')
-                    && !crossref_prefixes.iter().any(|p| key.starts_with(p.as_str()))
+                if !crossref_prefixes.iter().any(|p| key.starts_with(p.as_str()))
                     && seen_keys.insert(key.clone())
                     && library.get(&key).is_some()
                 {

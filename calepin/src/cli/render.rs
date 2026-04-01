@@ -7,10 +7,7 @@ use crate::render::pipeline;
 
 pub fn handle_render(args: RenderArgs) -> Result<()> {
     crate::cli::set_quiet(args.quiet);
-    let mut overrides = args.overrides;
-    if args.no_highlight {
-        overrides.push("highlight-style=none".to_string());
-    }
+    let overrides = args.overrides;
 
     // Single input: discover project kind
     if args.input.len() == 1 {
@@ -130,11 +127,8 @@ fn render_one_with_context(
     );
     crate::paths::set_active_target_with_chain(Some(&ctx.target_name), chain);
 
-    // Build overrides from project metadata
     let mut all_overrides: Vec<String> = overrides.to_vec();
-    if let Some(ref meta) = ctx.project_metadata {
-        all_overrides.extend(crate::collection::render::build_overrides(meta, Some(&ctx.target)));
-    }
+    all_overrides.extend(crate::collection::render::build_overrides(Some(&ctx.target)));
 
     // Render through the shared pipeline (render_core + assemble_page + transform_document)
     let (page, _result) = pipeline::render_page(

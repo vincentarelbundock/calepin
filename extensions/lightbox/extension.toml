@@ -1,0 +1,10 @@
+name = "lightbox"
+description = "Clickable image zoom overlay for HTML output"
+version = "0.1.0"
+license = "MIT"
+
+[[modules]]
+name = "lightbox"
+kind = "document"
+protocol = "text"
+run = "lightbox.sh"

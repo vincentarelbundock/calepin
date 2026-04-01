@@ -12,7 +12,7 @@ use regex::Regex;
 use crate::config::Metadata;
 
 /// Build an HTML table of contents from heading metadata collected during the AST walk.
-pub fn build_toc_html(headings: &[crate::emit::TocEntry], depth: u8, title: &str) -> String {
+pub fn build_toc_html(headings: &[crate::writers::TocEntry], depth: u8, title: &str) -> String {
     let items: Vec<(u8, &str, &str)> = headings.iter()
         .filter(|h| h.level <= depth)
         .filter(|h| !h.classes.iter().any(|c| c == "unlisted"))
@@ -468,7 +468,7 @@ pub fn build_template_vars_with_headings(
     meta: &Metadata,
     body: &str,
     writer: &str,
-    headings: &[crate::emit::TocEntry],
+    headings: &[crate::writers::TocEntry],
     _target: Option<&crate::config::Target>,
 ) -> TemplateVars {
     let mut vars = TemplateVars::new();
@@ -668,7 +668,7 @@ pub fn assemble_page(
     body: &str,
     meta: &Metadata,
     writer: &str,
-    headings: &[crate::emit::TocEntry],
+    headings: &[crate::writers::TocEntry],
     preamble: &[String],
     target: Option<&crate::config::Target>,
     customize: impl FnOnce(&mut TemplateVars),

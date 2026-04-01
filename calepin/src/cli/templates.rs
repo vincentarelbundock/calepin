@@ -18,7 +18,25 @@ struct TemplateContext {
     tpl_dir: PathBuf,
     target_name: String,
     writer: String,
+    writer_ext: String,
     chain: Vec<String>,
+}
+
+impl TemplateContext {
+    /// Resolve a template file by name: try exact name, then name.{writer_ext}.
+    /// Returns (path, filename) if found in the sidecar.
+    fn resolve_local(&self, name: &str) -> Option<(PathBuf, String)> {
+        let exact = self.tpl_dir.join(name);
+        if exact.exists() {
+            return Some((exact, name.to_string()));
+        }
+        let with_ext = format!("{}.{}", name, self.writer_ext);
+        let path = self.tpl_dir.join(&with_ext);
+        if path.exists() {
+            return Some((path, with_ext));
+        }
+        None
+    }
 }
 
 /// Resolve the sidecar and target from an input .qmd file.
@@ -51,7 +69,8 @@ fn resolve_context(input: &Path, target_override: Option<&str>) -> Result<Templa
 
     let tpl_dir = sidecar.join("templates").join(&target_name);
 
-    Ok(TemplateContext { tpl_dir, target_name, writer, chain })
+    let writer_ext = crate::paths::resolve_extension(&writer).to_string();
+    Ok(TemplateContext { tpl_dir, target_name, writer, writer_ext, chain })
 }
 
 /// Collect all built-in template filenames for the given inheritance chain.
@@ -172,29 +191,17 @@ fn handle_list(input: &Path, target: Option<&str>) -> Result<()> {
 fn handle_show(name: &str, input: &Path, target: Option<&str>) -> Result<()> {
     let ctx = resolve_context(input, target)?;
 
-    // Try local file first
-    let specific = format!("{}.{}", name, crate::paths::resolve_extension(&ctx.writer));
-    let path = ctx.tpl_dir.join(&specific);
-    if path.exists() {
+    // Try local sidecar file
+    if let Some((path, _)) = ctx.resolve_local(name) {
         print!("{}", std::fs::read_to_string(&path)?);
         return Ok(());
     }
 
-    // Try exact filename (e.g., "base.html")
-    let path = ctx.tpl_dir.join(name);
-    if path.exists() {
-        print!("{}", std::fs::read_to_string(&path)?);
-        return Ok(());
-    }
-
-    // Fall back to built-in
-    if let Some(content) = resolve_builtin_template(name, &ctx.writer) {
-        print!("{}", content);
-        return Ok(());
-    }
-
-    // Try by full filename in chain
-    if let Some(content) = get_builtin_content(&ctx.chain, name) {
+    // Fall back to built-in (by short name, then full filename)
+    if let Some(content) = resolve_builtin_template(name, &ctx.writer)
+        .map(|s| s.to_string())
+        .or_else(|| get_builtin_content(&ctx.chain, name))
+    {
         print!("{}", content);
         return Ok(());
     }
@@ -214,18 +221,10 @@ fn handle_diff(input: &Path, name: Option<&str>, target: Option<&str>) -> Result
     }
 
     let files: Vec<String> = if let Some(name) = name {
-        // Single file: try exact name, then name.ext
-        let path = ctx.tpl_dir.join(name);
-        if path.exists() {
-            vec![name.to_string()]
+        if let Some((_, filename)) = ctx.resolve_local(name) {
+            vec![filename]
         } else {
-            let specific = format!("{}.{}", name, crate::paths::resolve_extension(&ctx.writer));
-            let path = ctx.tpl_dir.join(&specific);
-            if path.exists() {
-                vec![specific]
-            } else {
-                bail!("Template '{}' not found in {}", name, ctx.tpl_dir.display());
-            }
+            bail!("Template '{}' not found in {}", name, ctx.tpl_dir.display());
         }
     } else {
         collect_builtin_files(&ctx.chain)
@@ -290,10 +289,11 @@ fn handle_reset(input: &Path, name: Option<&str>, target: Option<&str>, force: b
 
     if let Some(name) = name {
         // Reset single template
-        let path = ctx.tpl_dir.join(name);
-        let specific = format!("{}.{}", name, crate::paths::resolve_extension(&ctx.writer));
-        let path = if path.exists() { path } else { ctx.tpl_dir.join(&specific) };
-        let filename = if ctx.tpl_dir.join(name).exists() { name.to_string() } else { specific };
+        let (path, filename) = ctx.resolve_local(name)
+            .unwrap_or_else(|| {
+                let with_ext = format!("{}.{}", name, ctx.writer_ext);
+                (ctx.tpl_dir.join(&with_ext), with_ext)
+            });
 
         let builtin = get_builtin_content(&ctx.chain, &filename)
             .ok_or_else(|| anyhow::anyhow!("No built-in template '{}' for target '{}'", filename, ctx.target_name))?;

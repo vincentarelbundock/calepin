@@ -121,7 +121,7 @@ pub fn build_collection(
     let mut new_cache: HashMap<String, u64> = HashMap::new();
 
     // Build overrides once (same logic render.rs uses) for the hash
-    let cache_overrides = render::build_overrides(&meta, Some(&collection_target));
+    let cache_overrides = render::build_overrides(Some(&collection_target));
 
     // Partition pages into stale (need rendering) and fresh (output already on disk)
     let (stale_pages, fresh_keys): (Vec<&DocumentInfo>, Vec<String>) = if use_page_cache {
@@ -241,10 +241,10 @@ pub fn build_collection(
         }
     }
 
-    // 11. Copy assets/ and static directories to output
+    // 10. Copy assets/ and static directories to output
     assets::copy_assets(&base_dir, output, &meta.static_dirs)?;
 
-    // 12. Run user-configured post-processing commands
+    // 11. Run user-configured post-processing commands
     run_post_commands(&meta, &collection_target_name, &base_dir, output, quiet)?;
 
     // 12. Save page cache (after successful build only)

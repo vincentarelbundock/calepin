@@ -228,13 +228,14 @@ fn resolve_sort_value(page: &DocumentInfo, field: &str) -> String {
 fn extract_frontmatter(path: &Path) -> Result<DocumentMeta> {
     let content = std::fs::read_to_string(path)?;
     let (meta, _body) = crate::config::split_frontmatter(&content)?;
+    let image = meta.cfg.get("image").and_then(|v| v.as_str()).map(String::from);
     Ok(DocumentMeta {
         title: meta.title,
         subtitle: meta.subtitle,
         date: meta.date,
-        description: meta.abstract_text,
-        image: None,
-        r#abstract: None,
+        description: meta.abstract_text.clone(),
+        image,
+        r#abstract: meta.abstract_text,
         listing: None,
         lang: meta.lang,
         cfg: meta.cfg,

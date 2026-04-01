@@ -10,7 +10,6 @@ use crate::value::Value as MetaValue;
 // Defaults sub-types (rendering defaults for figures, code execution, etc.)
 // ---------------------------------------------------------------------------
 
-
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct FigureConfig {
     pub fig_width: Option<f64>,

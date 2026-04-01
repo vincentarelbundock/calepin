@@ -110,7 +110,6 @@ fn read_target_from_config(path: &Path) -> Option<String> {
     let text = std::fs::read_to_string(path).ok()?;
     let table: toml::Value = toml::from_str(&text).ok()?;
     table.get("target")
-        .or_else(|| table.get("format"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
 }
@@ -293,10 +292,6 @@ pub fn resolve_or_create_sidecar_dir(input: &Path) -> Option<PathBuf> {
     }
 }
 
-/// Ensure a sidecar directory is populated with templates and assets for the
-/// given target. Idempotent: only writes files that do not already exist.
-///
-/// Call this after the target has been resolved (i.e., after `resolve_context`).
 /// Resolve a target name to its embedded directory name.
 /// Handles aliases (e.g., "html" -> "tailwind") by checking the builtin
 /// extension manifest's actual name, which matches the directory in targets/.

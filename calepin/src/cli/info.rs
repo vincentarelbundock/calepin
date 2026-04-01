@@ -49,14 +49,14 @@ pub fn handle_extra(action: ExtraAction) -> Result<()> {
             clap_complete::generate(shell, &mut cmd, "calepin", &mut std::io::stdout());
             Ok(())
         }
-        ExtraAction::Highlight => {
-            println!("Built-in syntax highlighting themes:\n");
+        ExtraAction::Colors => {
+            println!("Built-in color schemes:\n");
             let names = crate::modules::list_builtin_color_schemes();
             for name in &names {
                 println!("  {}", name);
             }
-            println!("\n{} themes available.", names.len());
-            println!("Custom themes: place a .tmTheme file in {{stem}}_calepin/assets/highlighting/");
+            println!("\n{} color schemes available.", names.len());
+            println!("Set colors = [\"name\", ...] in config.toml to enable the picker.");
             Ok(())
         }
         ExtraAction::Skill { project, claude, codex, opencode, pi, yes } => {

@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Calepin">
-{% if clp.title %}<title>{{ clp.title }}{% if clp.title %} — {{ clp.title }}{% endif %}</title>
-{% elif clp.title %}<title>{{ clp.title }}</title>{% endif %}
+{% if clp.title %}<title>{{ clp.title }}</title>{% endif %}
 {% if clp.abstract %}<meta name="description" content="{{ clp.abstract }}">{% endif %}
 {% if clp.favicon %}<link rel="icon" href="{{ link(clp.favicon) }}">{% endif %}
 <script>
@@ -70,53 +69,5 @@ tailwind.config = {
 </div>
 {% include "footer.html" %}
 <script type="module" src="{{ link('assets/calepin.js') }}"></script>
-<script>
-(function(){
-  var btn=document.getElementById('sidebar-toggle');
-  var sb=document.getElementById('sidebar-nav');
-  var nav=document.getElementById('navbar-menu');
-  if(!btn)return;
-  var open=false;
-  function toggle(v){
-    open=v;
-    btn.setAttribute('aria-expanded',v?'true':'false');
-    if(sb){sb.style.transform=v?'translateX(0)':''}
-    else if(nav){
-      if(v){nav.classList.remove('hidden');nav.classList.add('flex','flex-col','absolute','top-full','left-0','right-0','bg-page','border-b','border-brd','p-4','gap-2','z-40','shadow-lg')}
-      else{nav.classList.add('hidden');nav.classList.remove('flex','flex-col','absolute','top-full','left-0','right-0','bg-page','border-b','border-brd','p-4','gap-2','z-40','shadow-lg')}
-    }
-  }
-  btn.addEventListener('click',function(e){e.stopPropagation();toggle(!open)});
-  document.addEventListener('click',function(e){if(open&&(sb?!sb.contains(e.target):nav?!nav.contains(e.target):true)&&!btn.contains(e.target))toggle(false)});
-})();
-(function(){
-  var btn=document.getElementById('source-toggle');
-  var overlay=document.getElementById('split-overlay');
-  var left=document.getElementById('split-left');
-  var code=document.getElementById('source-code');
-  var siteBody=document.getElementById('site-body');
-  var footer=document.querySelector('footer');
-  if(!btn||!overlay)return;
-  var active=false;
-  btn.addEventListener('click',function(){
-    active=!active;
-    if(active){
-      var article=document.querySelector('article');
-      if(article&&left)left.innerHTML=article.innerHTML;
-      if(code&&code.textContent==='Loading source...'){
-        var url=btn.getAttribute('data-source');
-        if(url)fetch(url).then(function(r){return r.text()}).then(function(t){code.textContent=t}).catch(function(){code.textContent='Failed to load source.'});
-      }
-      overlay.style.display='block';
-      if(siteBody)siteBody.style.display='none';
-      if(footer)footer.style.display='none';
-    }else{
-      overlay.style.display='none';
-      if(siteBody)siteBody.style.display='';
-      if(footer)footer.style.display='';
-    }
-  });
-})();
-</script>
 </body>
 </html>

@@ -160,6 +160,65 @@ impl crate::modules::registry::TransformElementChildren for ExternalElementChild
 }
 
 // ---------------------------------------------------------------------------
+// External span transform
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct SpanModuleInput<'a> {
+    name: &'a str,
+    kind: &'a str,
+    writer: &'a str,
+    content: &'a str,
+    attrs: &'a std::collections::HashMap<String, String>,
+    vars: serde_json::Value,
+}
+
+/// A span transform backed by an external script using JSON protocol.
+pub struct ExternalSpanTransform {
+    pub name: String,
+    pub script_path: PathBuf,
+    pub module_dir: PathBuf,
+    pub vars: serde_json::Value,
+}
+
+impl crate::modules::registry::TransformSpan for ExternalSpanTransform {
+    fn render(
+        &self,
+        attrs: &std::collections::HashMap<String, String>,
+        content: &str,
+        writer: &str,
+        _defaults: &crate::config::Metadata,
+    ) -> Option<String> {
+        let input = SpanModuleInput {
+            name: &self.name,
+            kind: "span",
+            writer,
+            content,
+            attrs,
+            vars: self.vars.clone(),
+        };
+        let json_input = match serde_json::to_string(&input) {
+            Ok(j) => j,
+            Err(_) => return None,
+        };
+
+        match run_script(&self.script_path, &self.module_dir, &json_input, writer) {
+            Ok(output) => {
+                match serde_json::from_str::<ModuleOutput>(&output) {
+                    Ok(result) if result.action == "rendered" => Some(result.output),
+                    Ok(_) => None, // "pass"
+                    Err(_) => None,
+                }
+            }
+            Err(e) => {
+                eprintln!("Warning: external span module '{}' error: {}", self.name, e);
+                None
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // External document transform (JSON protocol)
 // ---------------------------------------------------------------------------
 

@@ -5,7 +5,7 @@
 
 use crate::types::Element;
 use crate::modules::Highlighter;
-use crate::utils::escape::escape_code_for_format;
+use crate::utils::util::escape_code_for_format;
 use crate::render::template::TemplateVars;
 
 /// Populates template variables for a specific element type.

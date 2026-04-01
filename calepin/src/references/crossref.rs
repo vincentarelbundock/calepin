@@ -20,6 +20,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use crate::render::markers;
+use crate::util::slugify;
 
 // ---------------------------------------------------------------------------
 // Data structures for cross-file cross-reference resolution
@@ -92,13 +93,13 @@ fn renumber_with_chapter(local_num: &str, chapter: usize) -> String {
     format!("{}.{}", chapter, local_num)
 }
 
-/// All cross-referenceable prefixes (used in regex patterns).
-const REF_PREFIXES: &str = "fig|sec|tbl|eq|thm|lem|cor|prp|cnj|def|exm|exr|sol|rem|alg|lst|tip|nte|wrn|imp|cau";
-
 /// A reference ID pattern: one of the known prefixes followed by `-` and an identifier.
-/// Reused across all crossref regex patterns to avoid repeating the prefix list.
+/// Derived from `CROSSREF_PREFIXES` in the module registry (single source of truth).
 static REF_ID: LazyLock<String> = LazyLock::new(|| {
-    format!(r"(?:{})-[-a-zA-Z0-9_]+", REF_PREFIXES)
+    let prefixes: Vec<&str> = crate::registry::CROSSREF_PREFIXES.iter()
+        .map(|(p, _)| *p)
+        .collect();
+    format!(r"(?:{})-[-a-zA-Z0-9_]+", prefixes.join("|"))
 });
 
 // Cached regex patterns for cross-reference resolution.
@@ -776,12 +777,10 @@ pub fn resolve_plain(text: &str, module_ids: &HashMap<String, String>) -> String
     result
 }
 
-use crate::util::slugify;
-
 // Helpers
 
 fn type_label(typ: &str) -> &str {
-    for (prefix, label) in crate::registry::all_crossref_prefixes() {
+    for &(prefix, label) in crate::registry::all_crossref_prefixes() {
         if prefix == typ {
             return label;
         }

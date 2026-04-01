@@ -20,6 +20,14 @@ pub fn try_canonicalize(path: &Path) -> std::path::PathBuf {
     std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
+/// Format-specific escaping for code strings.
+pub fn escape_code_for_format(s: &str, format: &str) -> String {
+    match format {
+        "typst" => s.replace('\\', "\\\\").replace('"', "\\\""),
+        _ => s.to_string(),
+    }
+}
+
 /// HTML-escape the minimal set of characters for safe embedding.
 pub fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")

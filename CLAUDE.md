@@ -213,18 +213,18 @@ Internally, formats use canonical writer names: `html`, `latex`, `typst`, `markd
 - `split_slides/` -- `TransformDocument`: split body into RevealJS slides
 - `embed_images/` -- `TransformDocument`: base64-encode images
 
-### `emit/` -- AST emitters
+### `writers/` -- AST writers
 
-Shared AST walker + format-specific implementations via `FormatEmitter` trait.
+Shared AST walker + format-specific implementations via `FormatWriter` trait.
 
-- `mod.rs` -- `FormatEmitter` trait + `walk_ast()`, heading IDs, section numbering, footnotes, tables
-- `html.rs`, `latex.rs`, `typst.rs`, `markdown.rs` -- Per-format emitters
+- `mod.rs` -- `FormatWriter` trait + `walk_ast()`, heading IDs, section numbering, footnotes, tables
+- `html.rs`, `latex.rs`, `typst.rs`, `markdown.rs` -- Per-format writers
 
 ### `utils/` -- Shared utilities
 
 - `tools.rs` -- External tool availability checks and error messages
 - `paths.rs` -- Path utilities: `templates_dir`, `resolve_template`, `PathContext`
-- `escape.rs` -- Format-specific code escaping
+- `util.rs` -- Shared helpers: `slugify`, `escape_html`, `escape_code_for_format`, `base64_encode_image`
 - `lipsum.rs` -- Lorem ipsum text generation
 - `cache.rs` -- Hash-based page cache for incremental builds
 - `date.rs` -- Date formatting and resolution helpers
@@ -239,10 +239,9 @@ Website template icons live in `templates/website/icons/` (used via `{% include 
 
 User overrides: `{stem}_calepin/templates/{target}/{name}.{ext}`
 
-### `scaffold/` -- Project scaffolding and shared assets
+### `skill/` -- Embedded agent skill for coding assistants
 
-- `website/`, `book/`, `notebook/` -- Starter project templates for `calepin init`
-- `assets/` -- Shared website assets (CSS, JS, social icons) copied to output at build time
+- `SKILL.md`, `references/` -- Installed to user machines via `calepin extra skill`
 
 ### `themes/` -- Built-in color schemes (embedded at compile time)
 

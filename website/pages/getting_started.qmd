@@ -49,8 +49,8 @@ calepin render notebook.qmd
 - `preview`: start a live-reloading server.
 - `init`: scaffold projects, sidecars, and extensions.
 - `man`: extract package documentation as `.qmd` files.
-- `extra`: show available CSL styles, syntax themes, and shell completions.
-- `flush`: clean up caches and build artefacts.
+- `extra`: show available CSL styles, color schemes, and shell completions.
+- `templates`: inspect and manage template overrides.
 
 Run `calepin --help` or `calepin <command> --help` for full option details.
 
@@ -121,8 +121,8 @@ Query built-in resources.
 # List available CSL citation styles
 calepin extra csl
 
-# List available syntax highlighting themes
-calepin extra themes
+# List available color schemes
+calepin extra colors
 
 # Show template resolution chain for a target
 calepin templates list html
@@ -141,14 +141,18 @@ calepin man r ./path/to/package
 calepin man python numpy
 ```
 
-### flush
+### templates
 
 ```bash
-# Delete cache and build artefacts
-calepin flush
-calepin flush -y              # skip confirmation
-calepin flush --cache          # cache only
-calepin flush --files          # generated files only
-calepin flush --compilation    # LaTeX artefacts only (.aux, .log, etc.)
-calepin flush path/to/dir      # flush a specific directory
+# Show all templates with status (modified, default, missing)
+calepin templates list doc.qmd
+
+# Print a resolved template's content
+calepin templates show figure doc.qmd
+
+# Compare sidecar templates against built-in defaults
+calepin templates diff doc.qmd
+
+# Revert sidecar template(s) to the built-in version
+calepin templates reset doc.qmd
 ```

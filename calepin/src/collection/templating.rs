@@ -72,6 +72,9 @@ pub(crate) fn apply_collection_templates(
         _ => writer,
     };
 
+    // Precompute nav paths for prev/next navigation (avoids re-expanding globs per page)
+    let nav_paths = super::discover::collect_document_paths(meta, base_dir);
+
     // Render each page through MiniJinja, overwriting the raw body files
     for page in pages {
         let source_key = page.source.display().to_string();
@@ -138,7 +141,7 @@ pub(crate) fn apply_collection_templates(
 
         for (page_idx, (items, pagination)) in paginated.iter().enumerate() {
             let listing = if items.is_empty() { None } else { Some(items.clone()) };
-            let mut doc_ctx = build_document_context(page, Some(result), pages, listing, &meta.languages, meta, base_dir);
+            let mut doc_ctx = build_document_context(page, Some(result), pages, listing, &meta.languages, &nav_paths);
             doc_ctx.pagination = pagination.clone();
 
             doc_ctx.resolve_urls(page_depth);
