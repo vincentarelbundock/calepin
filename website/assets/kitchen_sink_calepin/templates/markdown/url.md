@@ -1,0 +1,1 @@
+[{{ cfg.label }}]({{ cfg.url }})

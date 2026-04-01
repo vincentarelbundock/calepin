@@ -29,7 +29,13 @@ pub fn render(
 ) -> String {
     raw_fragments.borrow_mut().clear();
 
-    RE_BRACKETED_SPAN.replace_all(text, |caps: &regex::Captures| {
+    // Protect backtick code spans using the existing marker infrastructure.
+    // Replace code spans with raw markers so the span regex skips them,
+    // then resolve_raw restores them after markdown conversion.
+    let mut code_fragments: Vec<String> = Vec::new();
+    let protected = crate::render::markers::protect_code_spans(text, &mut code_fragments);
+
+    let span_result = RE_BRACKETED_SPAN.replace_all(&protected, |caps: &regex::Captures| {
         let content = &caps[1];
         let attr_str = &caps[2];
         let (classes, id, kv) = crate::parse::blocks::parse_attributes(attr_str);
@@ -84,8 +90,10 @@ pub fn render(
         let tpl = resolve_partial("span").unwrap_or_default();
         let output = template_env.render_dynamic("span", &tpl, &vars);
         wrap_output(writer, raw_fragments, output)
-    })
-    .to_string()
+    }).to_string();
+
+    // Restore protected code spans
+    crate::render::markers::restore_code_spans(&span_result, &code_fragments)
 }
 
 /// Wrap non-HTML output in raw markers to protect from markdown conversion.

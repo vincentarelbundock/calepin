@@ -123,9 +123,7 @@ pub fn handle_templates(action: TemplatesAction) -> Result<()> {
         TemplatesAction::List { input, target } => handle_list(&input, target.as_deref()),
         TemplatesAction::Show { name, input, target } => handle_show(&name, &input, target.as_deref()),
         TemplatesAction::Diff { input, name, target } => handle_diff(&input, name.as_deref(), target.as_deref()),
-        TemplatesAction::Reset { input, name, target, force } => handle_reset(&input, name.as_deref(), target.as_deref(), force),
-        TemplatesAction::Eject { name, input, target, force } => handle_eject(&name, &input, target.as_deref(), force),
-        TemplatesAction::Outdated { input, target } => handle_outdated(&input, target.as_deref()),
+        TemplatesAction::Eject { name, input, target, yes } => handle_eject(&name, &input, target.as_deref(), yes),
         TemplatesAction::Vars { name, input, target } => handle_vars(&name, &input, target.as_deref()),
         TemplatesAction::Preview { name, input, target } => handle_preview(&name, &input, target.as_deref()),
         TemplatesAction::Lint { input, name, target } => handle_lint(&input, name.as_deref(), target.as_deref()),
@@ -282,64 +280,10 @@ fn handle_diff(input: &Path, name: Option<&str>, target: Option<&str>) -> Result
 }
 
 // ---------------------------------------------------------------------------
-// reset
+// eject: copy a built-in template into the sidecar for editing
 // ---------------------------------------------------------------------------
 
-fn handle_reset(input: &Path, name: Option<&str>, target: Option<&str>, force: bool) -> Result<()> {
-    let ctx = resolve_context(input, target)?;
-
-    if !ctx.tpl_dir.is_dir() {
-        bail!("No sidecar templates at {}. Nothing to reset.", ctx.tpl_dir.display());
-    }
-
-    if let Some(name) = name {
-        // Reset single template
-        let (path, filename) = ctx.resolve_local(name)
-            .unwrap_or_else(|| {
-                let with_ext = format!("{}.{}", name, ctx.writer_ext);
-                (ctx.tpl_dir.join(&with_ext), with_ext)
-            });
-
-        let builtin = get_builtin_content(&ctx.chain, &filename)
-            .ok_or_else(|| anyhow::anyhow!("No built-in template '{}' for target '{}'", filename, ctx.target_name))?;
-
-        std::fs::write(&path, &builtin)?;
-        eprintln!("Reset {} to built-in.", filename);
-    } else {
-        // Reset all templates
-        if !force {
-            eprint!("Reset all templates in {} to built-in defaults? [y/N] ", ctx.tpl_dir.display());
-            let mut answer = String::new();
-            std::io::stdin().read_line(&mut answer)?;
-            if !answer.trim().eq_ignore_ascii_case("y") {
-                eprintln!("Aborted.");
-                return Ok(());
-            }
-        }
-
-        let files = collect_builtin_files(&ctx.chain);
-        let mut count = 0;
-        for filename in &files {
-            if let Some(builtin) = get_builtin_content(&ctx.chain, filename) {
-                let path = ctx.tpl_dir.join(filename);
-                if let Some(parent) = path.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                std::fs::write(&path, &builtin)?;
-                count += 1;
-            }
-        }
-        eprintln!("Reset {} template(s) to built-in defaults.", count);
-    }
-
-    Ok(())
-}
-
-// ---------------------------------------------------------------------------
-// eject: copy a single built-in template into the sidecar
-// ---------------------------------------------------------------------------
-
-fn handle_eject(name: &str, input: &Path, target: Option<&str>, force: bool) -> Result<()> {
+fn handle_eject(name: &str, input: &Path, target: Option<&str>, yes: bool) -> Result<()> {
     let ctx = resolve_context(input, target)?;
 
     // Resolve the built-in template content
@@ -352,15 +296,20 @@ fn handle_eject(name: &str, input: &Path, target: Option<&str>, force: bool) -> 
 
     let dest = ctx.tpl_dir.join(&filename);
 
-    // Check if already exists
-    if dest.exists() && !force {
+    // Confirm before overwriting
+    if dest.exists() && !yes {
         let existing = std::fs::read_to_string(&dest).unwrap_or_default();
         if existing == builtin {
-            eprintln!("{} already exists (identical to built-in). Use --force to overwrite.", filename);
-        } else {
-            eprintln!("{} already exists (modified). Use --force to overwrite with built-in.", filename);
+            eprintln!("{} already exists (identical to built-in).", filename);
+            return Ok(());
         }
-        return Ok(());
+        eprint!("{} already exists in sidecar. Overwrite with built-in? [y/N] ", filename);
+        let mut answer = String::new();
+        std::io::stdin().read_line(&mut answer)?;
+        if !answer.trim().eq_ignore_ascii_case("y") {
+            eprintln!("Aborted.");
+            return Ok(());
+        }
     }
 
     // Ensure directories exist
@@ -370,53 +319,6 @@ fn handle_eject(name: &str, input: &Path, target: Option<&str>, force: bool) -> 
 
     std::fs::write(&dest, &builtin)?;
     eprintln!("Ejected {} to {}", filename, dest.display());
-
-    Ok(())
-}
-
-// ---------------------------------------------------------------------------
-// outdated: find templates that have diverged from current built-in
-// ---------------------------------------------------------------------------
-
-fn handle_outdated(input: &Path, target: Option<&str>) -> Result<()> {
-    let ctx = resolve_context(input, target)?;
-
-    if !ctx.tpl_dir.is_dir() {
-        bail!("No sidecar templates at {}. Nothing to check.", ctx.tpl_dir.display());
-    }
-
-    let builtin_files = collect_builtin_files(&ctx.chain);
-    let mut outdated_count = 0;
-
-    for filename in &builtin_files {
-        let path = ctx.tpl_dir.join(filename);
-        if !path.exists() { continue; }
-
-        let local = match std::fs::read_to_string(&path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-
-        let builtin = match get_builtin_content(&ctx.chain, filename) {
-            Some(b) => b,
-            None => continue,
-        };
-
-        if local != builtin {
-            outdated_count += 1;
-            // Check if the local version looks like an unmodified copy of an older built-in
-            // (heuristic: contains the same structure but differs in details)
-            println!("  {}  \x1b[33mdiverged\x1b[0m", filename);
-        }
-    }
-
-    if outdated_count == 0 {
-        eprintln!("All sidecar templates match their built-in versions.");
-    } else {
-        eprintln!("\n{} template(s) differ from built-in.", outdated_count);
-        eprintln!("Run `calepin templates diff {}` to see changes.", input.display());
-        eprintln!("Run `calepin templates reset {} <name>` to revert individual templates.", input.display());
-    }
 
     Ok(())
 }

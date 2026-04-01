@@ -8,8 +8,9 @@ docs = "https://github.com/vincentarelbundock/calepin"
 
 *Calepin* processes the body of every `.qmd` document through the Jinja2 template engine. This means you can insert variables, conditionals, and reusable snippets directly in your prose. Fenced code blocks and inline code are automatically protected from evaluation.
 
-
 # Variables
+
+{% include "assets/source_tip.html" %}
 
 ## Front matter fields
 
@@ -45,14 +46,14 @@ System environment variables are available under `env`:
 
 `{{ env.SHELL }}`: on this machine, {{ env.SHELL }}.
 
-## Format
+## Writer: html, latex, typst, markdown
 
-The current output format is available as `{{ clp.writer }}` (`html`, `latex`, `typst`, or `markdown`). The target name is `{{ cfg.target }}`.
+The current output write is available as `{{ clp.writer }}` (`html`, `latex`, `typst`, or `markdown`). The target name is `{{ cfg.target }}`.
 
 
 # Conditional content
 
-Show content only for certain output formats:
+Show content only for certain writers:
 
 ````
 {% if clp.writer == "html" %}
@@ -89,7 +90,7 @@ With a file extension, `{% include %}` resolves relative to the project root:
 {% include "assets/source_tip.html" %}
 ```
 
-Without a file extension, it looks up a template from `{stem}_calepin/templates/` using format-aware resolution (e.g., `{stem}_calepin/templates/html/source_tip.html`).
+Without a file extension, it looks up a template from `{stem}_calepin/templates/` using target-aware resolution (e.g., `{stem}_calepin/templates/html/source_tip.html`).
 
 
 # Jinja in code chunks

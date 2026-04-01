@@ -1,9 +1,10 @@
 //! URL resolution helpers for site builds.
 //!
-//! All internal URLs flow through `link()` which produces page-relative
-//! paths (`../` prefixed based on page depth). `canonical_url()` produces
-//! absolute URLs for meta tags and feeds.
+//! All internal URLs flow through `link()` which produces root-relative
+//! paths (prefixed with `base_path`, defaulting to `/`). `canonical_url()`
+//! produces absolute URLs for meta tags and feeds.
 
+#[allow(dead_code)]
 /// Extract the path component from a site URL.
 ///
 /// ```text
@@ -35,6 +36,7 @@ pub fn extract_base_path(url: Option<&str>) -> &str {
     "/"
 }
 
+#[allow(dead_code)]
 /// Normalize a base path: ensure it starts and ends with `/`.
 pub fn normalize_base_path(path: &str) -> String {
     let path = path.trim().trim_matches('/');
@@ -45,13 +47,13 @@ pub fn normalize_base_path(path: &str) -> String {
     }
 }
 
-/// Resolve an internal site path to a page-relative path.
+/// Resolve an internal site path to a root-relative path.
 ///
 /// - `path`: site-root-relative path (e.g., `assets/calepin.css`, `/guide/intro.html`)
-/// - `current_depth`: nesting depth of the current page (0 = root, 1 = one dir deep, etc.)
+/// - `base_path`: site base path (e.g., `/`, `/docs/`)
 ///
 /// External URLs (http://, https://, #, data:, mailto:) pass through unchanged.
-pub fn link(path: &str, current_depth: usize) -> String {
+pub fn link(path: &str, base_path: &str) -> String {
     if path.starts_with("http://") || path.starts_with("https://")
         || path.starts_with('#') || path.starts_with("data:")
         || path.starts_with("mailto:")
@@ -60,16 +62,12 @@ pub fn link(path: &str, current_depth: usize) -> String {
     }
 
     let path = path.strip_prefix('/').unwrap_or(path);
+    let base = if base_path.is_empty() { "/" } else { base_path };
 
-    if current_depth == 0 {
-        if path.is_empty() { ".".to_string() } else { format!("./{}", path) }
+    if path.is_empty() {
+        base.to_string()
     } else {
-        let prefix = "../".repeat(current_depth);
-        if path.is_empty() {
-            prefix.trim_end_matches('/').to_string()
-        } else {
-            format!("{}{}", prefix, path)
-        }
+        format!("{}{}", base, path)
     }
 }
 
@@ -85,16 +83,6 @@ pub fn canonical_url(path: &str, site_url: Option<&str>) -> Option<String> {
     Some(format!("{}/{}", site_url, path))
 }
 
-/// Compute the directory depth of a path (number of `/` separators).
-///
-/// ```text
-/// "index.html"           -> 0
-/// "guide/intro.html"     -> 1
-/// "guide/sub/page.html"  -> 2
-/// ```
-pub fn path_depth(path: &str) -> usize {
-    path.strip_prefix('/').unwrap_or(path).matches('/').count()
-}
 
 #[cfg(test)]
 mod tests {
@@ -120,20 +108,25 @@ mod tests {
     }
 
     #[test]
-    fn test_link_relative() {
-        assert_eq!(link("assets/calepin.css", 0), "./assets/calepin.css");
-        assert_eq!(link("assets/calepin.css", 1), "../assets/calepin.css");
-        assert_eq!(link("assets/calepin.css", 2), "../../assets/calepin.css");
-        assert_eq!(link("guide/intro.html", 1), "../guide/intro.html");
-        assert_eq!(link("/guide/intro.html", 0), "./guide/intro.html");
-        assert_eq!(link("index.html", 0), "./index.html");
+    fn test_link_root_relative() {
+        assert_eq!(link("assets/calepin.css", "/"), "/assets/calepin.css");
+        assert_eq!(link("/assets/calepin.css", "/"), "/assets/calepin.css");
+        assert_eq!(link("guide/intro.html", "/"), "/guide/intro.html");
+        assert_eq!(link("index.html", "/"), "/index.html");
+    }
+
+    #[test]
+    fn test_link_with_base_path() {
+        assert_eq!(link("assets/calepin.css", "/docs/"), "/docs/assets/calepin.css");
+        assert_eq!(link("/assets/calepin.css", "/docs/"), "/docs/assets/calepin.css");
+        assert_eq!(link("index.html", "/docs/"), "/docs/index.html");
     }
 
     #[test]
     fn test_link_passthrough() {
-        assert_eq!(link("https://cdn.example.com/lib.js", 0), "https://cdn.example.com/lib.js");
-        assert_eq!(link("#section", 0), "#section");
-        assert_eq!(link("data:image/png;base64,abc", 0), "data:image/png;base64,abc");
+        assert_eq!(link("https://cdn.example.com/lib.js", "/"), "https://cdn.example.com/lib.js");
+        assert_eq!(link("#section", "/"), "#section");
+        assert_eq!(link("data:image/png;base64,abc", "/"), "data:image/png;base64,abc");
     }
 
     #[test]
@@ -143,17 +136,9 @@ mod tests {
         assert_eq!(canonical_url("index.html", None), None);
     }
 
-    #[test]
-    fn test_path_depth() {
-        assert_eq!(path_depth("index.html"), 0);
-        assert_eq!(path_depth("guide/intro.html"), 1);
-        assert_eq!(path_depth("guide/sub/page.html"), 2);
-        assert_eq!(path_depth("/guide/intro.html"), 1);
-    }
-
-    #[test]
+#[test]
     fn test_link_empty_path() {
-        assert_eq!(link("", 0), ".");
-        assert_eq!(link("", 2), "../..");
+        assert_eq!(link("", "/"), "/");
+        assert_eq!(link("", "/docs/"), "/docs/");
     }
 }

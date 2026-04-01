@@ -50,13 +50,12 @@ pub fn load_templates(base_dir: &Path, target_name: &str) -> Result<Option<Envir
     });
 
     // Register link(path) function for templates.
-    // Always produces page-relative paths. current_depth is injected
-    // per-page via the `_page_depth` context variable.
+    // Produces root-relative paths using the base_path from context.
     env.add_function("link", |path: String, state: &minijinja::State| -> String {
-        let depth: usize = state.lookup("_page_depth")
-            .and_then(|v| v.as_usize())
-            .unwrap_or(0);
-        crate::utils::links::link(&path, depth)
+        let base_path: String = state.lookup("_base_path")
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_else(|| "/".to_string());
+        crate::utils::links::link(&path, &base_path)
     });
 
     Ok(Some(env))

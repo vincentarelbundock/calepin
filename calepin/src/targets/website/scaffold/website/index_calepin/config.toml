@@ -4,12 +4,10 @@ title = "My Website"
 
 # -- Navbar --
 [[navbar.left]]
-text = "My Site"
-icon = "assets/logo.svg"
-# image = "assets/logo.svg"
-# image_dark = "assets/logo_dark.svg"
+image = "assets/calepin.svg"
+image_dark = "invert"
 href = "index.qmd"
-width = "120px"
+width = "104px"
 height = "36px"
 
 [[navbar.middle]]

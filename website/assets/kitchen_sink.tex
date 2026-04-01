@@ -1,0 +1,756 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,hyperref}
+\usepackage{titling}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage[normalem]{ulem}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+\usepackage{microtype}
+
+\newtcolorbox{srccode}{
+  enhanced, breakable,
+  colback=white, colframe=black!20,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  boxrule=0.4pt,
+  arc=0pt, outer arc=0pt
+}
+
+\newtcolorbox{outcode}{
+  enhanced, breakable,
+  colback=white, colframe=black!20,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  boxrule=0.4pt,
+  arc=0pt, outer arc=0pt,
+  fontupper=\small
+}
+
+\title{Kitchen Sink}
+\posttitle{\par\vskip 0.5em\large Every Feature in One File\end{center}}
+\author{ }
+\date{March 25, 2026}
+\definecolor{hl1}{RGB}{51,51,51}
+\definecolor{hl2}{RGB}{167,29,93}
+\definecolor{hl3}{RGB}{0,134,179}
+\definecolor{hl4}{RGB}{150,152,150}
+\definecolor{hl5}{RGB}{24,54,145}
+\definecolor{hl6}{RGB}{121,93,163}
+\definecolor{hl7}{RGB}{3,3,3}
+\begin{document}
+\maketitle
+\ifdefined\affiliationblock\affiliationblock\fi
+
+
+\begin{abstract}
+This document exercises every supported feature of Calepin in a single file.
+\end{abstract}
+
+\paragraph{ Keywords } test, features
+
+
+\subsection{Markdown basics}
+\label{sec-basics}
+
+This section tests standard CommonMark and GFM features.
+
+\subsubsection{Inline formatting}
+\label{inline-formatting}
+
+\emph{Italic}, \textbf{bold}, \emph{\textbf{bold italic}}, \sout{strikethrough}, and \texttt{inline code}.
+
+\subsubsection{Lists}
+\label{lists}
+
+Ordered:
+
+\begin{enumerate}
+\item First item
+
+
+\item Second item
+
+
+\item Third item
+
+
+\end{enumerate}
+
+Unordered:
+
+\begin{itemize}
+\item Alpha
+
+
+\item Beta
+
+
+\item Gamma
+
+
+\end{itemize}
+
+\subsubsection{Blockquote}
+\label{blockquote}
+
+\begin{quote}
+This is a blockquote with \textbf{bold} and \emph{italic} text.
+
+\end{quote}
+
+\subsubsection{Links and images}
+\label{links-and-images}
+
+A \href{https://example.com}{link to nowhere} and a reference-style \href{https://example.com}{link}.
+
+\fbox{\parbox[c][100pt]{200pt}{\centering Placeholder}}
+
+\subsubsection{Footnotes}
+\label{footnotes}
+
+Here is a sentence with a footnote\footnotemark[1].
+
+\subsubsection{Horizontal rule}
+\label{horizontal-rule}
+
+
+\begin{center}\rule{0.5\linewidth}{0.4pt}\end{center}
+
+\subsubsection{Table}
+\label{sec-tables}
+
+\begin{tabular}{lrc}
+\hline
+Name & Score & Grade \\
+\hline
+Alice & 95 & A \\
+Bob & 87 & B \\
+Carol & 92 & A \\
+\hline
+\end{tabular}
+
+\subsection{Code chunks}
+\label{code-chunks}
+
+\subsubsection{R chunks}
+\label{r-chunks}
+
+\footnotetext[1]{This is the footnote content.
+
+}
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{x }\textcolor{hl2}{<-}\textcolor{hl1}{ }\textcolor{hl3}{1}\textcolor{hl2}{:}\textcolor{hl3}{10}
+\textcolor{hl3}{mean}\textcolor{hl1}{(x)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+> [1] 5.5
+\end{verbatim}
+\end{outcode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{/Users/vincent/repos/calepin/website/assets/kitchen_sink_files/chunk-1-1.pdf}
+\label{chunk-1}
+\end{figure}
+
+\paragraph{Echo fenced}
+\label{echo-fenced}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{```\{r, chunk}\textcolor{hl2}{-}\textcolor{hl3}{2}\textcolor{hl1}{\}}
+\textcolor{hl4}{\#| echo: fenced
+}
+\textcolor{hl3}{summary}\textcolor{hl1}{(mtcars}\textcolor{hl2}{\$}\textcolor{hl1}{mpg)}
+\textcolor{hl1}{```}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+>   10.40   15.43   19.20   20.09   22.80   33.90
+\end{verbatim}
+\end{outcode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{/Users/vincent/repos/calepin/website/assets/kitchen_sink_files/chunk-2-1.pdf}
+\label{chunk-2}
+\end{figure}
+
+\paragraph{Figure from R}
+\label{sec-rfig}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl3}{plot}\textcolor{hl1}{(}\textcolor{hl3}{1}\textcolor{hl2}{:}\textcolor{hl3}{10}\textcolor{hl1}{, (}\textcolor{hl3}{1}\textcolor{hl2}{:}\textcolor{hl3}{10}\textcolor{hl1}{)}\textcolor{hl2}{\^{}}\textcolor{hl3}{2}\textcolor{hl1}{, }\textcolor{hl3}{pch}\textcolor{hl1}{ }\textcolor{hl2}{=}\textcolor{hl1}{ }\textcolor{hl3}{19}\textcolor{hl1}{, }\textcolor{hl3}{col}\textcolor{hl1}{ }\textcolor{hl2}{=}\textcolor{hl1}{ }\textcolor{hl5}{"steelblue"}\textcolor{hl1}{,}
+\textcolor{hl1}{     }\textcolor{hl3}{xlab}\textcolor{hl1}{ }\textcolor{hl2}{=}\textcolor{hl1}{ }\textcolor{hl5}{"x"}\textcolor{hl1}{, }\textcolor{hl3}{ylab}\textcolor{hl1}{ }\textcolor{hl2}{=}\textcolor{hl1}{ }\textcolor{hl5}{"x squared"}\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.80\textwidth]{/Users/vincent/repos/calepin/website/assets/kitchen_sink_files/fig-scatter-1.pdf}
+\caption{Scatter plot of x vs x squared}
+\label{fig-scatter}
+\end{figure}
+
+See \hyperref[fig-scatter]{Figure 1} for the scatter plot.
+
+\paragraph{Echo false}
+\label{echo-false}
+
+
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{/Users/vincent/repos/calepin/website/assets/kitchen_sink_files/chunk-4-1.pdf}
+\label{chunk-4}
+\end{figure}
+
+\paragraph{Eval false}
+\label{eval-false}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl3}{stop}\textcolor{hl1}{(}\textcolor{hl5}{"this would error if evaluated"}\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+
+\paragraph{Include false (silent execution)}
+\label{include-false-silent-execution}
+
+
+
+\paragraph{Results asis}
+\label{results-asis}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl3}{cat}\textcolor{hl1}{(}\textcolor{hl5}{"**This is bold from asis output.**\textbackslash{}n"}\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+
+**This is bold from asis output.**
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{/Users/vincent/repos/calepin/website/assets/kitchen_sink_files/chunk-7-1.pdf}
+\label{chunk-7}
+\end{figure}
+
+\paragraph{Warning and message control}
+\label{warning-and-message-control}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl3}{warning}\textcolor{hl1}{(}\textcolor{hl5}{"suppressed warning"}\textcolor{hl1}{)}
+\textcolor{hl3}{message}\textcolor{hl1}{(}\textcolor{hl5}{"suppressed message"}\textcolor{hl1}{)}
+\textcolor{hl3}{cat}\textcolor{hl1}{(}\textcolor{hl5}{"Only this output appears.\textbackslash{}n"}\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+> Only this output appears.
+\end{verbatim}
+\end{outcode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{/Users/vincent/repos/calepin/website/assets/kitchen_sink_files/chunk-8-1.pdf}
+\label{chunk-8}
+\end{figure}
+
+\subsubsection{Python chunks}
+\label{python-chunks}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl2}{import}\textcolor{hl1}{ math}
+\textcolor{hl3}{print}\textcolor{hl1}{(}\textcolor{hl2}{f}\textcolor{hl5}{"Pi is approximately }\textcolor{hl1}{\{math.pi}\textcolor{hl3}{:.4f}\textcolor{hl1}{\}}\textcolor{hl5}{"}\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+> Pi is approximately 3.1416
+\end{verbatim}
+\end{outcode}
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{squares }\textcolor{hl2}{=}\textcolor{hl1}{ [x}\textcolor{hl2}{**}\textcolor{hl3}{2}\textcolor{hl1}{ }\textcolor{hl2}{for}\textcolor{hl1}{ x }\textcolor{hl2}{in}\textcolor{hl1}{ }\textcolor{hl3}{range}\textcolor{hl1}{(}\textcolor{hl3}{1}\textcolor{hl1}{, }\textcolor{hl3}{6}\textcolor{hl1}{)]}
+\textcolor{hl3}{print}\textcolor{hl1}{(squares)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+> [1, 4, 9, 16, 25]
+\end{verbatim}
+\end{outcode}
+
+\subsubsection{Shell chunks}
+\label{shell-chunks}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl3}{echo}\textcolor{hl1}{ }\textcolor{hl5}{"Hello from shell"}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+> Hello from shell
+\end{verbatim}
+\end{outcode}
+
+\subsubsection{Inline code}
+\label{inline-code}
+
+The mean of 1 to 10 is 5.5. Pi is 3.14.
+The secret value is \_\_CALEPIN\_13607\_2\_\_\_ERROR:object `secret\_value' not found.
+
+
+
+\begin{quote}
+\subsection{Math}
+\label{sec-math}
+
+\subsubsection{Inline math}
+\label{inline-math}
+
+The Pythagorean theorem states $a^2 + b^2 = c^2$.
+
+A literal dollar sign costs \$5.
+
+\subsubsection{Display math}
+\label{display-math}
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$
+
+\subsubsection{Labeled equation}
+\label{labeled-equation}
+
+\begin{equation}
+E = mc^2
+\label{eq-einstein}
+\end{equation}
+
+\subsubsection{Another labeled equation}
+\label{another-labeled-equation}
+
+\begin{equation}
+\sum_{i=1}^{n} i = \frac{n(n+1)}{2}
+\label{eq-binomial}
+\end{equation}
+
+See \hyperref[eq-einstein]{Equation 1} and \hyperref[eq-binomial]{Equation 2}.
+
+
+\end{quote}
+
+\subsection{Cross-references}
+\label{sec-crossref}
+
+We can reference sections (\hyperref[sec-basics]{Section 1}), figures (\hyperref[fig-scatter]{Figure 1}), tables (\hyperref[tbl-planets]{Table 1}), theorems (\hyperref[thm-fermat]{Theorem 1}), definitions (\hyperref[def-group]{Definition 1}), and code listings (\hyperref[lst-example]{Listing 1}).
+
+Bracketed form: [\hyperref[fig-scatter]{Figure 1}].
+
+
+
+\begin{quote}
+Suppress type: \hyperref[eq-einstein]{1}. Grouped: {[}\hyperref[eq-einstein]{Equation 1}; \hyperref[eq-binomial]{Equation 2}{]}.
+
+
+\end{quote}
+
+\subsection{Callouts}
+\label{callouts}
+
+
+
+
+\begin{tcolorbox}[enhanced, breakable, colback=blue!5, colframe=blue!40,
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+  title=Note, fonttitle=\bfseries]
+\subsubsection{A note}
+\label{a-note}
+
+This is a \textbf{note} callout with a custom title.
+
+
+
+\end{tcolorbox}
+
+
+\begin{tcolorbox}[enhanced, breakable, colback=green!5, colframe=green!40,
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+  title=Tip, fonttitle=\bfseries]
+A tip callout with the default title.
+
+
+
+\end{tcolorbox}
+
+
+\begin{tcolorbox}[enhanced, breakable, colback=yellow!10, colframe=yellow!60!black,
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+  title=Warning, fonttitle=\bfseries]
+\subsubsection{Watch out}
+\label{watch-out}
+
+A warning callout.
+
+
+
+\end{tcolorbox}
+
+
+\begin{tcolorbox}[enhanced, breakable, colback=violet!5, colframe=violet!40,
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+  title=Important, fonttitle=\bfseries]
+An important callout with the default title.
+
+
+
+\end{tcolorbox}
+
+
+\begin{tcolorbox}[enhanced, breakable, colback=red!5, colframe=red!40,
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+  title=Caution, fonttitle=\bfseries]
+\subsubsection{Collapsible caution}
+\label{collapsible-caution}
+
+This caution callout starts collapsed.
+
+
+
+\end{tcolorbox}
+
+\subsection{Theorems}
+\label{sec-theorems}
+
+
+
+\par\medskip\noindent\textbf{Theorem 1.}\label{thm-fermat} \itshape{} \subsubsection{Fermat's Last Theorem}
+\label{fermats-last-theorem}
+
+For $n > 2$, there are no positive integers $a$, $b$, $c$ such that $a^n + b^n = c^n$.
+
+\upshape\medskip
+
+\par\medskip\noindent\textit{ Proof.} The proof was completed by Andrew Wiles in 1995 and is too long to include here.
+
+ \hfill$\square$\medskip
+
+\par\medskip\noindent\textbf{Definition 1.}\label{def-group} \subsubsection{Group}
+\label{group}
+
+A group is a set $G$ with a binary operation satisfying closure, associativity, identity, and invertibility.
+
+\medskip
+
+\par\medskip\noindent\textbf{Lemma 1.}\label{lem-helper} \itshape{} Every finite group has an element of order dividing the group order.
+
+\upshape\medskip
+
+\par\medskip\noindent\textbf{Corollary 1.}\label{cor-consequence} \itshape{} Every group of prime order is cyclic.
+
+\upshape\medskip
+
+\par\medskip\noindent\textbf{Example 1.}\label{exm-integers} The integers under addition form a group.
+
+\medskip
+
+\par\medskip\noindent\textbf{Remark 1.}\label{rem-note} Groups are fundamental to abstract algebra.
+
+\medskip
+
+By \hyperref[thm-fermat]{Theorem 1} and \hyperref[def-group]{Definition 1}, we see the connection. Also see \hyperref[lem-helper]{Lemma 1}, \hyperref[cor-consequence]{Corollary 1}, \hyperref[exm-integers]{Example 1}, and \hyperref[rem-note]{Remark 1}.
+
+\subsection{Tabsets}
+\label{tabsets}
+
+
+
+\subsubsection{Tab A}
+\label{tab-a}
+
+Content of the first tab.
+
+\subsubsection{Tab B}
+\label{tab-b}
+
+Content of the second tab with some math: $e^{i\pi} + 1 = 0$.
+
+\subsubsection{Tab C}
+\label{tab-c}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl3}{cat}\textcolor{hl1}{(}\textcolor{hl5}{"Code in a tab\textbackslash{}n"}\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+
+\begin{outcode}
+\begin{verbatim}
+> Code in a tab
+\end{verbatim}
+\end{outcode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{/Users/vincent/repos/calepin/website/assets/kitchen_sink_files/chunk-12-1.pdf}
+\label{chunk-12}
+\end{figure}
+
+\subsection{Layouts}
+\label{layouts}
+
+\subsubsection{Two-column layout}
+\label{two-column-layout}
+
+
+
+
+\begin{minipage}[t]{1.000\textwidth}
+Left column content. This paragraph appears on the left side of a two-column layout.
+
+Right column content. This paragraph appears on the right side.
+
+
+\end{minipage}
+
+\subsubsection{Custom grid layout}
+\label{custom-grid-layout}
+
+
+
+
+\begin{minipage}[t]{1.000\textwidth}
+\fbox{\parbox[c][100pt]{150pt}{\centering A}}
+
+\fbox{\parbox[c][100pt]{150pt}{\centering B}}
+
+\fbox{\parbox[c][100pt]{150pt}{\centering C}}
+
+
+\end{minipage}
+
+\subsection{Figure divs}
+\label{figure-divs}
+
+
+
+\begin{figure}
+\centering
+\fbox{\parbox[c][200pt]{300pt}{\centering Figure}}
+
+
+\caption{A figure div with a caption.}
+\label{fig-div-example}
+\end{figure}
+
+See \hyperref[fig-div-example]{Figure 1}.
+
+\subsection{Table divs}
+\label{table-divs}
+
+
+
+\begin{table}
+\centering
+\caption{Number of known moons for selected planets.}
+\label{tbl-planets}
+\begin{tabular}{lr}
+\hline
+Planet & Moons \\
+\hline
+Earth & 1 \\
+Mars & 2 \\
+Jupiter & 95 \\
+\hline
+\end{tabular}
+
+
+\end{table}
+
+See \hyperref[tbl-planets]{Table 1}.
+
+\subsection{Code listings}
+\label{code-listings}
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl6}{square}\textcolor{hl1}{ }\textcolor{hl2}{<-}\textcolor{hl1}{ }\textcolor{hl2}{function}\textcolor{hl1}{(}\textcolor{hl3}{x}\textcolor{hl1}{) x}\textcolor{hl2}{\^{}}\textcolor{hl3}{2}
+\textcolor{hl3}{square}\textcolor{hl1}{(}\textcolor{hl3}{7}\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+\label{lst-example}
+
+\begin{outcode}
+\begin{verbatim}
+> [1] 49
+\end{verbatim}
+\end{outcode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{/Users/vincent/repos/calepin/website/assets/kitchen_sink_files/lst-example-1.pdf}
+\label{lst-example}
+\end{figure}
+
+See \hyperref[lst-example]{Listing 1}.
+
+\subsection{Content visibility}
+\label{content-visibility}
+
+
+
+\begin{quote}
+This paragraph is only visible in \textbf{LaTeX} output.
+
+
+\end{quote}
+
+\begin{quote}
+This paragraph is hidden in HTML output but visible elsewhere.
+
+
+\end{quote}
+
+\begin{quote}
+This paragraph is visible because \texttt{show\_extra} is true.
+
+
+\end{quote}
+
+\subsection{Hidden div}
+\label{hidden-div}
+
+
+
+The hidden div executed: \_\_CALEPIN\_13607\_3\_\_\_ERROR:object `hidden\_result' not found.
+
+\subsection{Raw blocks}
+\label{raw-blocks}
+
+
+
+\textbf{This is raw \LaTeX{}.}
+
+\subsection{Jinja features}
+\label{jinja-features}
+
+\subsubsection{Context variables}
+\label{context-variables}
+
+The document title is: Kitchen Sink.
+
+The sample size is: 50.
+
+The current format is: latex.
+
+\subsubsection{Conditionals}
+\label{conditionals}
+
+Rendering to latex.
+
+\subsubsection{Loops}
+\label{loops}
+
+Features of this document:
+
+\begin{itemize}
+\item R code chunks
+
+
+\item Python code chunks
+
+
+\item Cross-references
+
+
+\end{itemize}
+
+\subsubsection{Built-in spans}
+\label{built-in-spans}
+
+Lorem ipsum dolor sit amet consectetur adipiscing elit. Elit sed do eiusmod tempor incididunt ut labore et dolore magna.
+
+\newpage{}
+
+After the page break.
+
+\subsection{Syntax highlighting}
+\label{syntax-highlighting}
+
+Non-executable code blocks with syntax highlighting:
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl2}{function}\textcolor{hl1}{ }\textcolor{hl6}{greet}\textcolor{hl1}{(}\textcolor{hl7}{name}\textcolor{hl1}{) \{}
+\textcolor{hl1}{  }\textcolor{hl2}{return}\textcolor{hl1}{ }\textcolor{hl5}{`Hello, }\textcolor{hl1}{\$\{}\textcolor{hl3}{name}\textcolor{hl1}{\}}\textcolor{hl5}{!`}\textcolor{hl1}{;}
+\textcolor{hl1}{\}}
+\end{Verbatim}
+\end{srccode}
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl2}{def}\textcolor{hl1}{ }\textcolor{hl6}{factorial}\textcolor{hl1}{(}\textcolor{hl3}{n}\textcolor{hl1}{: }\textcolor{hl3}{int}\textcolor{hl1}{) -> }\textcolor{hl3}{int}\textcolor{hl1}{:}
+\textcolor{hl1}{    }\textcolor{hl2}{return}\textcolor{hl1}{ }\textcolor{hl3}{1}\textcolor{hl1}{ }\textcolor{hl2}{if}\textcolor{hl1}{ n }\textcolor{hl2}{<=}\textcolor{hl1}{ }\textcolor{hl3}{1}\textcolor{hl1}{ }\textcolor{hl2}{else}\textcolor{hl1}{ n }\textcolor{hl2}{*}\textcolor{hl1}{ }\textcolor{hl3}{factorial}\textcolor{hl1}{(n }\textcolor{hl2}{-}\textcolor{hl1}{ }\textcolor{hl3}{1}\textcolor{hl1}{)}
+\end{Verbatim}
+\end{srccode}
+
+
+
+\end{document}

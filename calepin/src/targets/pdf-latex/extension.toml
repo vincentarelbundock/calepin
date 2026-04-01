@@ -5,4 +5,4 @@ inherits = "latex"
 [target]
 extension = "pdf"
 preview = "open"
-post = ["latexmk -pdf -interaction=nonstopmode {input}"]
+post = ["tectonic {input}"]

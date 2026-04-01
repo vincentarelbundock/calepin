@@ -39,9 +39,16 @@ calepin render notebook.qmd -t html
 calepin render notebook.qmd -t pdf
 ```
 
+## Directories
+
+When you run `calepin render notebook.qmd`, two new directories will be created:
+
+1. `notebook_calepin/` is the *sidecar*. It holds the configuration files and templates that you should edit to customize the output.
+2. `.calepin/` is the *cache*. It holds cached results and generated files. You can safely delete this directory at any time. You should add it to your `.gitignore` if you are using version control.
+
 ## Commands
 
-*Calepin* has six main commands:
+*Calepin* offers six main subcommands:
 
 - `render`: produce output files.
 - `preview`: start a live-reloading server.
@@ -154,6 +161,6 @@ calepin templates show figure doc.qmd
 # Compare sidecar templates against built-in defaults
 calepin templates diff doc.qmd
 
-# Revert sidecar template(s) to the built-in version
-calepin templates reset doc.qmd
+# Revert a sidecar template to the built-in version
+calepin templates eject figure doc.qmd
 ```

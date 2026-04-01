@@ -31,7 +31,7 @@ For a thorough introduction, see the [Jinja2 Template Designer Documentation](ht
 
 # Templates
 
-Each template file controls one piece of output. They live in `{stem}_calepin/templates/`, organized by format:
+Each template file controls one piece of output. They live in `{stem}_calepin/templates/`, where `{stem}` is the original name of your notebok, without its file extension. Tempaltes are organized by target format:
 
 ```
 {stem}_calepin/templates/
@@ -42,7 +42,13 @@ Each template file controls one piece of output. They live in `{stem}_calepin/te
   common/       # Format-agnostic templates (.jinja)
 ```
 
-Resolution is layered per file: *Calepin* checks sidecar templates, then project templates (`{stem}_calepin/templates/`), then extension templates, then built-in defaults. You only need to override the specific files you want to change; everything else falls through to the built-in templates.
+Resolution is layered per file. *Calepin* checks each location in order and uses the first match:
+
+- Sidecar templates (`{stem}_calepin/templates/{target}/`)
+- Extension templates (from activated extensions)
+- Built-in defaults (embedded in the binary)
+
+You only need to override the specific files you want to change; everything else falls through to the built-in templates.
 
 
 # Element templates
@@ -116,78 +122,63 @@ The page template wraps the entire rendered body in a complete document. Here is
 Variables are namespaced: `clp.*` for engine-computed values (`clp.body`, `clp.toc`, `clp.preamble`, `clp.bibliography`) and `cfg.*` for user-authored values (`cfg.title`, `cfg.abstract`). Custom front matter fields are also available: a field `custom_footer = "Confidential"` in your document becomes `{{cfg.custom_footer}}` in the page template.
 
 
-# More powerful features
+# Editing templates
 
-Jinja2 goes far beyond simple variable insertion. Here are three features that are especially useful in templates.
+The simplest way to customize output is to edit a template in your sidecar. The `eject` command copies a built-in template into your sidecar so you can modify it:
 
-Conditionals let you vary output by format or by the presence of a variable:
-
-```
-{% if caption %}
-<figcaption>{{caption}}</figcaption>
-{% endif %}
+```bash
+calepin templates eject figure doc.qmd
 ```
 
-Loops iterate over lists:
+This creates `doc_calepin/templates/html/figure.html` (or the appropriate format). Open the file, make your changes, and re-render. *Calepin* will use your sidecar copy instead of the built-in.
 
-```
-{% for item in keywords %}
-\keyword{ {{- item -}} }
-{% endfor %}
-```
+You can eject as many or as few templates as you like. Templates you have not ejected continue to use the built-in defaults. To see all available templates and which ones you have already ejected:
 
-Filters transform values inline. Jinja2 provides `upper`, `lower`, `trim`, `replace`, `default`, `length`, and many others:
-
-```
-{{ title | upper }}
-{{ width | default("100%") }}
+```bash
+calepin templates list doc.qmd
 ```
 
-Again, see the [Jinja2 documentation](https://jinja.palletsprojects.com/en/3.1.x/templates/) for the full syntax.
+To view a built-in template without ejecting it:
+
+```bash
+calepin templates show figure doc.qmd
+```
+
+To compare your ejected version against the current built-in (useful after upgrading *Calepin*):
+
+```bash
+calepin templates diff doc.qmd figure
+```
+
+To revert an ejected template back to the built-in version:
+
+```bash
+calepin templates reset figure doc.qmd
+```
 
 
 # Template management
 
 *Calepin* provides several commands to inspect, override, and validate templates.
 
-## Ejecting a single template
+## Ejecting templates
 
-Instead of overriding all templates at once, you can eject just the one you need:
+Ejecting copies a built-in template from the *Calepin* binary into your sidecar directory, so you can edit it freely. The rest of your templates continue to use the built-in defaults.
 
 ```bash
 calepin templates eject figure doc.qmd
 calepin templates eject main doc.qmd -t latex
 ```
 
-This copies the built-in template into your sidecar so you can edit it. The rest of your templates continue to use built-in defaults. Use `--force` to overwrite an existing sidecar copy.
+If the file already exists in the sidecar, *Calepin* asks for confirmation before overwriting. Pass `-y` to skip the prompt.
 
-## Extending built-in templates
-
-When you only want to change a small part of a template, copying the entire file means your override may become stale after a *Calepin* upgrade. Template inheritance solves this.
-
-Use `{% extends "builtin:filename" %}` in your sidecar template to inherit from the built-in version and override only specific blocks:
-
-```html
-{% extends "builtin:figure.html" %}
-
-{% block caption %}
-<figcaption class="custom-caption">{{ cfg.caption }}</figcaption>
-{% endblock %}
-```
-
-The `builtin:` prefix tells the template engine to load the original built-in template, regardless of any sidecar overrides. Your template inherits all blocks from the built-in and you only redefine the ones you need.
-
-This works for both element templates (figure, div, code_source, etc.) and page templates (main, base). For this to work, the built-in template must define `{% block %}` regions. Check the built-in source with `calepin templates show` to see available blocks.
-
-## Checking for outdated templates
-
-After upgrading *Calepin*, your sidecar templates may no longer match the new built-in defaults:
+To see which templates are available and whether they have been ejected, use `list`. To compare an ejected template against the current built-in version (for example, after upgrading *Calepin*), use `diff`:
 
 ```bash
-calepin templates outdated doc.qmd
+calepin templates list doc.qmd
+calepin templates diff doc.qmd
+calepin templates diff doc.qmd figure
 ```
-
-This lists every sidecar template that differs from its current built-in version. Use `calepin templates diff` to inspect the differences and `calepin templates reset <name>` to revert individual files.
 
 ## Inspecting template variables
 

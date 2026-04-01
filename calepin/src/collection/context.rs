@@ -256,8 +256,7 @@ pub fn build_collection_context(
         base_dir,
     );
 
-    let raw_base = crate::utils::links::extract_base_path(meta.url.as_deref());
-    let base_path = crate::utils::links::normalize_base_path(raw_base);
+    let base_path = "/".to_string();
 
     CollectionContext {
         title: meta.title.clone(),
@@ -513,70 +512,4 @@ fn build_breadcrumbs(page: &DocumentInfo, pages: &[DocumentInfo]) -> Vec<Breadcr
     crumbs
 }
 
-/// Rewrite all hrefs in a navbar config through `link()`.
-pub fn resolve_navbar_urls(navbar: &mut crate::config::NavbarConfig, depth: usize) {
-    fn resolve_items(items: &mut [crate::config::ContentSection], depth: usize) {
-        for item in items.iter_mut() {
-            if let Some(ref mut href) = item.href {
-                *href = crate::utils::links::link(href, depth);
-            }
-            resolve_items(&mut item.children, depth);
-        }
-    }
-    resolve_items(&mut navbar.left, depth);
-    resolve_items(&mut navbar.middle, depth);
-    resolve_items(&mut navbar.right, depth);
-}
-
-/// Rewrite all hrefs in a nav tree through `link()`.
-pub fn resolve_nav_urls(nodes: &mut [PageNode], depth: usize) {
-    for node in nodes.iter_mut() {
-        if let Some(ref mut href) = node.href {
-            *href = crate::utils::links::link(href, depth);
-        }
-        resolve_nav_urls(&mut node.children, depth);
-    }
-}
-
-impl DocumentContext {
-    /// Rewrite all internal URLs through `link()` to page-relative paths.
-    pub fn resolve_urls(&mut self, depth: usize) {
-        let resolve = |path: &str| crate::utils::links::link(path, depth);
-
-        self.url = resolve(&self.url);
-        self.source_url = resolve(&self.source_url);
-
-        if let Some(ref mut prev) = self.prev {
-            prev.href = resolve(&prev.href);
-        }
-        if let Some(ref mut next) = self.next {
-            next.href = resolve(&next.href);
-        }
-
-        for crumb in &mut self.breadcrumbs {
-            if let Some(ref mut href) = crumb.href {
-                *href = resolve(href);
-            }
-        }
-
-        if let Some(ref mut items) = self.listing {
-            for item in items.iter_mut() {
-                item.url = resolve(&item.url);
-            }
-        }
-
-        if let Some(ref mut pagination) = self.pagination {
-            if let Some(ref mut url) = pagination.prev_url {
-                *url = resolve(url);
-            }
-            if let Some(ref mut url) = pagination.next_url {
-                *url = resolve(url);
-            }
-        }
-
-        for t in &mut self.translations {
-            t.url = resolve(&t.url);
-        }
-    }
-}
 

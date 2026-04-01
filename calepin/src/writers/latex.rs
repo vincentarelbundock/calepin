@@ -200,7 +200,7 @@ impl FormatWriter for LatexWriter {
     fn table_cell_close(&self, _is_header: bool) -> String { String::new() }
 
     fn thematic_break(&self) -> &str {
-        "\n\\begin{center}\\rule{0.5\\linewidth}{\\linethickness}\\end{center}\n\n"
+        "\n\\begin{center}\\rule{0.5\\linewidth}{0.4pt}\\end{center}\n\n"
     }
     fn soft_break(&self) -> &str { "\n" }
     fn line_break(&self) -> &str { "\\\\\n" }

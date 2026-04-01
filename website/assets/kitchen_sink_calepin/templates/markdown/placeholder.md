@@ -1,0 +1,1 @@
+[{{ cfg.text }} ({{ cfg.width }}x{{ cfg.height }})]

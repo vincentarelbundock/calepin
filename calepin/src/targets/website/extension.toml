@@ -10,6 +10,8 @@ modules = ["highlight", "append_footnotes", "embed_images"]
 [assets]
 static = ["fontawesome/"]
 
+[scaffold.website]
+
 [[modules]]
 name = "site_wrap"
 kind = "project"

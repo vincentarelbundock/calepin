@@ -105,14 +105,8 @@ To see the status of all templates:
 calepin templates list index.qmd
 ```
 
-To revert a specific template to the built-in version:
+To revert a template to the built-in version, eject it again:
 
 ```
-calepin templates reset index.qmd base.html
-```
-
-To revert all templates:
-
-```
-calepin templates reset index.qmd --force
+calepin templates eject base index.qmd
 ```

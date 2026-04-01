@@ -271,13 +271,17 @@ pub fn execute_chunk(
     }
     let fig_width = options.fig_width();
     let fig_height = options.fig_height();
-    let fig_full_path = fig_dir.join(format!("{}-1.{}", label, fig_ext));
+    let fig_filename = format!("{}-1.{}", label, fig_ext);
+    let fig_full_path = fig_dir.join(&fig_filename);
     // Use absolute path so the subprocess can write figures regardless of its cwd
     let fig_abs = if fig_full_path.is_relative() {
         std::env::current_dir().unwrap_or_default().join(&fig_full_path)
     } else {
         fig_full_path.clone()
     };
+    // Path relative to output directory (for \includegraphics, #image, etc.)
+    let fig_dir_name = fig_dir.file_name().unwrap_or_default();
+    let fig_rel_path = Path::new(fig_dir_name).join(&fig_filename);
     let fig_full_str = if is_table_chunk {
         String::new()
     } else {
@@ -337,6 +341,14 @@ pub fn execute_chunk(
     };
 
     process_results(&captured, &fig_full_path, options, &mut results)?;
+
+    // Rewrite figure paths to be relative to the output directory so they work
+    // in \includegraphics (LaTeX) and #image (Typst) regardless of CWD.
+    for r in &mut results {
+        if let ChunkResult::Plot(ref mut p) = r {
+            *p = fig_rel_path.clone();
+        }
+    }
 
     // Fallback: if engine emitted no SOURCE tags (e.g. parse error), add upfront source.
     if interleaved && !results.iter().any(|r| matches!(r, ChunkResult::Source(_))) {

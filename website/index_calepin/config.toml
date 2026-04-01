@@ -6,6 +6,7 @@ title = "Calepin"
 url = "https://vincentarelbundock.github.io/calepin"
 
 # -- Rendering --
+exclude = ["assets/*.qmd"]
 csl = "chicago-author-date"
 math = "katex"
 lang = "en"
@@ -105,6 +106,21 @@ height = "36px"
 [[navbar.middle]]
 text = "Docs"
 href = "pages/installation.qmd"
+
+[[navbar.middle]]
+text = "Examples"
+[[navbar.middle.children]]
+text = "HTML"
+href = "assets/kitchen_sink.html"
+[[navbar.middle.children]]
+text = "PDF (LaTeX)"
+href = "assets/kitchen_sink_latex.pdf"
+[[navbar.middle.children]]
+text = "PDF (Typst)"
+href = "assets/kitchen_sink_typst.pdf"
+[[navbar.middle.children]]
+text = "Markdown"
+href = "assets/kitchen_sink.md"
 
 [[navbar.right]]
 icon = "assets/fontawesome/brands/github.svg"

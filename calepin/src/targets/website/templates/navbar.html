@@ -27,7 +27,7 @@
     <button class="flex items-center gap-1 px-2.5 py-1.5 text-sm text-muted rounded-md hover:bg-hover hover:text-[color:var(--c-text)] whitespace-nowrap bg-transparent border-none cursor-pointer" aria-expanded="false">
       {{ item.text }} {% include "icons/chevron-right.svg" %}
     </button>
-    <ul class="hidden group-hover:block absolute top-full left-0 z-40 min-w-[10rem] py-1.5 mt-0.5 list-none p-0 bg-page border border-brd rounded-lg shadow-lg">
+    <ul class="hidden group-hover:block absolute top-full left-0 z-40 min-w-[10rem] py-1.5 pt-3 list-none p-0 bg-page border border-brd rounded-lg shadow-lg -mt-1.5">
       {% for child in item.children %}
       <li class="list-none"><a href="{{ child.href | default(value='#') }}" class="block px-3 py-1.5 text-sm text-muted hover:bg-hover hover:text-[color:var(--c-text)] no-underline whitespace-nowrap">{{ child.text }}</a></li>
       {% endfor %}

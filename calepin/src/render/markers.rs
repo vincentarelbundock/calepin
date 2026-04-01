@@ -39,6 +39,7 @@ const TY_MATH: char = 'M';
 const TY_ESC_DOLLAR: char = 'D';
 const TY_EQ_LABEL: char = 'L';
 const TY_RAW: char = 'R';
+const TY_CODE: char = 'C';
 
 // ---------------------------------------------------------------------------
 // Compiled regex patterns (one per marker type that needs resolution)
@@ -63,6 +64,16 @@ static RE_MATH: LazyLock<Regex> = LazyLock::new(|| {
 /// Matches raw span markers: `\u{FFFF}R<digits>\u{FFFE}`
 static RE_RAW: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!("{}{}(\\d+){}", MS, TY_RAW, ME)).unwrap()
+});
+
+/// Matches code span markers: `\u{FFFF}C<digits>\u{FFFE}`
+static RE_CODE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!("{}{}(\\d+){}", MS, TY_CODE, ME)).unwrap()
+});
+
+/// Matches backtick code spans (`` `...` `` and ``` ``...`` ```).
+static RE_CODE_SPAN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"``[^`]+``|`[^`]+`").unwrap()
 });
 
 // ---------------------------------------------------------------------------
@@ -315,6 +326,26 @@ fn builtin_equation_template(writer: &str) -> &'static str {
 /// Resolve raw span markers (`R` type) to their content.
 pub fn resolve_raw(text: &str, fragments: &[String]) -> String {
     restore_indexed_markers(text, &RE_RAW, fragments)
+}
+
+// ---------------------------------------------------------------------------
+// Code span protection
+// ---------------------------------------------------------------------------
+
+/// Replace backtick code spans with indexed markers so downstream processing
+/// (e.g., bracketed span resolution) skips their content. Store the original
+/// code spans in `fragments` for later restoration via [`restore_code_spans`].
+pub fn protect_code_spans(text: &str, fragments: &mut Vec<String>) -> String {
+    RE_CODE_SPAN.replace_all(text, |caps: &regex::Captures| {
+        let idx = fragments.len();
+        fragments.push(caps[0].to_string());
+        format!("{}{}{}{}", MS, TY_CODE, idx, ME)
+    }).to_string()
+}
+
+/// Restore code span markers (`C` type) to their original backtick content.
+pub fn restore_code_spans(text: &str, fragments: &[String]) -> String {
+    restore_indexed_markers(text, &RE_CODE, fragments)
 }
 
 // ---------------------------------------------------------------------------

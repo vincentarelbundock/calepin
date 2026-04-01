@@ -126,8 +126,7 @@ pub(crate) fn apply_collection_templates(
         };
         mark_active(&mut nav_tree, &page.url);
 
-        let page_depth = crate::utils::links::path_depth(&page.url);
-        context::resolve_nav_urls(&mut nav_tree, page_depth);
+        // Nav tree hrefs are already root-relative from discover_documents
 
         let base_name = if page.meta.listing.is_some() { "listing" } else { "main" };
         let template_name = if let Some(variant) = page.meta.tpl.get(base_name) {
@@ -144,9 +143,8 @@ pub(crate) fn apply_collection_templates(
             let mut doc_ctx = build_document_context(page, Some(result), pages, listing, &meta.languages, &nav_paths);
             doc_ctx.pagination = pagination.clone();
 
-            doc_ctx.resolve_urls(page_depth);
-            let mut resolved_navbar = collection_ctx.navbar.clone();
-            context::resolve_navbar_urls(&mut resolved_navbar, page_depth);
+            // URLs are already root-relative; no depth-based rewriting needed
+            let resolved_navbar = collection_ctx.navbar.clone();
 
             // Merge per-page var over collection-level var so pages can override.
             let page_cfg_ctx = if page.meta.cfg.is_empty() {
@@ -197,7 +195,7 @@ pub(crate) fn apply_collection_templates(
             let clp_val = minijinja::Value::from_serialize(&clp_map);
             let collection_with_active = minijinja::context! {
                 clp => clp_val,
-                _page_depth => page_depth,
+                _base_path => collection_ctx.base_path.clone(),
                 cfg => page_cfg_ctx,
             };
 

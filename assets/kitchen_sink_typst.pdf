@@ -1,0 +1,493 @@
+#set document(title: "Kitchen Sink", author: ())
+#set text(size: 11pt)
+#set par(justify: true, leading: 0.65em)
+#set heading(numbering: "1.1")
+
+#let srcbox(body) = block(
+  stroke: 0.4pt + luma(200),
+  inset: (x: 8pt, y: 6pt),
+  width: 100%,
+  body
+)
+
+#let outbox(body) = block(
+  stroke: 0.4pt + luma(200),
+  inset: (x: 8pt, y: 6pt),
+  width: 100%,
+  body
+)
+
+
+#align(center)[
+  #text(size: 17pt)[Kitchen Sink]
+  #v(0.5em)
+  #text(size: 13pt)[Every Feature in One File]
+  #v(0.5em)
+  #text(size: 12pt)[]
+  #v(0.3em)
+  #text(size: 10pt)[March 25, 2026]
+]
+
+
+#pad(x: 1cm)[
+  #align(center)[#smallcaps[Abstract]]
+  #v(0.5em)
+  #text(size: 9.5pt)[This document exercises every supported feature of Calepin in a single file.]
+]
+
+#text(weight: "bold")[Keywords:] test, features
+
+
+== Markdown basics <sec-basics>
+This section tests standard CommonMark and GFM features.
+
+=== Inline formatting <inline-formatting>
+_Italic_, *bold*, _*bold italic*_, #strike[strikethrough], and `inline code`.
+
+=== Lists <lists>
+Ordered:
+
+
+- First item
+
+
+- Second item
+
+
+- Third item
+
+
+
+Unordered:
+
+
+- Alpha
+
+
+- Beta
+
+
+- Gamma
+
+
+
+=== Blockquote <blockquote>
+#quote(block: true)[
+This is a blockquote with *bold* and _italic_ text.
+
+]
+
+=== Links and images <links-and-images>
+A #link("https://example.com")[link to nowhere] and a reference-style #link("https://example.com")[link].
+
+
+
+#box(image("https://placehold.co/200x100"))=== Footnotes <footnotes>
+Here is a sentence with a footnote#footnote[This is the footnote content.].
+
+=== Horizontal rule <horizontal-rule>
+#line(length: 100%)
+
+=== Table <sec-tables>
+#table(
+  columns: 3,
+  align: (auto, right, center),
+  [Name],
+  [Score],
+  [Grade],
+  [Alice],
+  [95],
+  [A],
+  [Bob],
+  [87],
+  [B],
+  [Carol],
+  [92],
+  [A],
+)
+
+== Code chunks <code-chunks>
+=== R chunks <r-chunks>
+
+
+
+#srcbox[#raw("x <- 1:10
+mean(x)", block: true, lang: "r")]
+
+#outbox[#raw("> [1] 5.5", block: true)]
+
+==== Echo fenced <echo-fenced>
+
+
+
+#srcbox[#raw("```{r, chunk-2}
+#| echo: fenced
+summary(mtcars$mpg)
+```", block: true, lang: "r")]
+
+#outbox[#raw(">    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+>   10.40   15.43   19.20   20.09   22.80   33.90", block: true)]
+
+==== Figure from R <sec-rfig>
+
+
+
+#srcbox[#raw("plot(1:10, (1:10)^2, pch = 19, col = \"steelblue\",
+     xlab = \"x\", ylab = \"x squared\")", block: true, lang: "r")]
+
+
+#figure(placement: auto, caption: [Scatter plot of x vs x squared])[
+image("index_output/assets/kitchen_sink_files/fig-scatter-1.svg", width: 80%)
+] <fig-scatter>
+
+See \Figure 1 for the scatter plot.
+
+==== Echo false <echo-false>
+
+
+==== Eval false <eval-false>
+
+
+
+#srcbox[#raw("stop(\"this would error if evaluated\")", block: true, lang: "r")]
+
+==== Include false (silent execution) <include-false-silent-execution>
+
+
+==== Results asis <results-asis>
+
+
+
+#srcbox[#raw("cat(\"**This is bold from asis output.**\\n\")", block: true, lang: "r")]
+
+**This is bold from asis output.**
+
+==== Warning and message control <warning-and-message-control>
+
+
+
+#srcbox[#raw("warning(\"suppressed warning\")
+message(\"suppressed message\")
+cat(\"Only this output appears.\\n\")", block: true, lang: "r")]
+
+#outbox[#raw("> Only this output appears.", block: true)]
+
+=== Python chunks <python-chunks>
+
+
+
+#srcbox[#raw("import math
+print(f\"Pi is approximately {math.pi:.4f}\")", block: true, lang: "python")]
+
+#outbox[#raw("> Pi is approximately 3.1416", block: true)]
+
+
+#srcbox[#raw("squares = [x**2 for x in range(1, 6)]
+print(squares)", block: true, lang: "python")]
+
+#outbox[#raw("> [1, 4, 9, 16, 25]", block: true)]
+
+=== Shell chunks <shell-chunks>
+
+
+
+#srcbox[#raw("echo \"Hello from shell\"", block: true, lang: "sh")]
+
+#outbox[#raw("> Hello from shell", block: true)]
+
+=== Inline code <inline-code>
+The mean of 1 to 10 is 5.5. Pi is 3.14.
+The secret value is \_\_CALEPIN\_1586d\_2\_\_\_ERROR:object ‘secret\_value’ not found.
+
+== Math <sec-math>
+=== Inline math <inline-math>
+The Pythagorean theorem states .
+
+A literal dollar sign costs \ E = mc^2  \begin{aligned}
+(a + b)^2 &= a^2 + 2ab + b^2 \\
+(a - b)^2 &= a^2 - 2ab + b^2
+\end{aligned} $ <eq-binomial>
+
+See \@eq-einstein and \Equation 1.
+
+== Cross-references <sec-crossref>
+We can reference sections (\Section 1, \Section 3), figures (\Figure 1), tables (\Table 1), equations (\@eq-einstein), theorems (\Theorem 1), definitions (\Definition 1), and code listings (\Listing 1).
+
+Bracketed form: [\Figure 1]. Suppress type: [-\@eq-einstein]. Grouped: [\@eq-einstein; \Equation 1].
+
+== Citations <citations>
+Narrative citation: (Arel-Bundock et al. (2026)). Parenthetical: ((Arel-Bundock et al. 2026)). Year only: 2026.
+
+== Callouts <callouts>
+
+
+
+#block(fill: rgb("#dbeafe"), stroke: (left: 3pt + rgb("#3b82f6")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
+  #text(weight: "bold")[ℹ️ Note] \
+  === A note <a-note>
+This is a *note* callout with a custom title.
+
+
+]
+
+
+#block(fill: rgb("#dcfce7"), stroke: (left: 3pt + rgb("#22c55e")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
+  #text(weight: "bold")[💡 Tip] \
+  A tip callout with the default title.
+
+
+]
+
+
+#block(fill: rgb("#fef9c3"), stroke: (left: 3pt + rgb("#eab308")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
+  #text(weight: "bold")[⚠️ Warning] \
+  === Watch out <watch-out>
+A warning callout.
+
+
+]
+
+
+#block(fill: rgb("#ede9fe"), stroke: (left: 3pt + rgb("#8b5cf6")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
+  #text(weight: "bold")[❗ Important] \
+  An important callout with the default title.
+
+
+]
+
+
+#block(fill: rgb("#fee2e2"), stroke: (left: 3pt + rgb("#ef4444")), inset: (x: 10pt, y: 8pt), radius: 0pt, width: 100%)[
+  #text(weight: "bold")[🔥 Caution] \
+  === Collapsible caution <collapsible-caution>
+This caution callout starts collapsed.
+
+
+]
+
+== Theorems <sec-theorems>
+
+
+#block(width: 100%, above: 1em, below: 1em)[*Theorem 1.* #emph[=== Fermat’s Last Theorem <fermats-last-theorem>
+For , there are no positive integers , ,  such that .
+
+]] <thm-fermat>
+
+#block(width: 100%, above: 1em, below: 1em)[_Proof._ The proof was completed by Andrew Wiles in 1995 and is too long to include here.
+
+ #h(1fr) □]
+
+#block(width: 100%, above: 1em, below: 1em)[*Definition 1.* === Group <group>
+A group is a set  with a binary operation satisfying closure, associativity, identity, and invertibility.
+
+] <def-group>
+
+#block(width: 100%, above: 1em, below: 1em)[*Lemma 1.* #emph[Every finite group has an element of order dividing the group order.
+
+]] <lem-helper>
+
+#block(width: 100%, above: 1em, below: 1em)[*Corollary 1.* #emph[Every group of prime order is cyclic.
+
+]] <cor-consequence>
+
+#block(width: 100%, above: 1em, below: 1em)[*Example 1.* The integers under addition form a group.
+
+] <exm-integers>
+
+#block(width: 100%, above: 1em, below: 1em)[*Remark 1.* Groups are fundamental to abstract algebra.
+
+] <rem-note>
+
+By \Theorem 1 and \Definition 1, we see the connection. Also see \Lemma 1, \Corollary 1, \Example 1, and \Remark 1.
+
+== Tabsets <tabsets>
+
+
+=== Tab A <tab-a>
+Content of the first tab.
+
+=== Tab B <tab-b>
+Content of the second tab with some math: .
+
+=== Tab C <tab-c>
+
+
+
+#srcbox[#raw("cat(\"Code in a tab\\n\")", block: true, lang: "r")]
+
+#outbox[#raw("> Code in a tab", block: true)]
+
+== Layouts <layouts>
+=== Two-column layout <two-column-layout>
+
+
+
+#grid(columns: (100fr), gutter: 1em,
+  [
+Left column content. This paragraph appears on the left side of a two-column layout.
+
+Right column content. This paragraph appears on the right side.
+
+
+  ],
+)
+
+=== Custom grid layout <custom-grid-layout>
+
+
+
+#grid(columns: (100fr), gutter: 1em,
+  [
+
+
+#box(image("https://placehold.co/150x100"))
+
+#box(image("https://placehold.co/150x100"))
+
+#box(image("https://placehold.co/150x100"))
+  ],
+)
+
+== Figure divs <figure-divs>
+
+
+
+#figure(placement: auto, caption: [A figure div with a caption.])[
+
+
+#box(image("https://placehold.co/300x200"))
+] <fig-div-example>
+
+See \Figure 1.
+
+== Table divs <table-divs>
+
+
+
+#figure(kind: table, caption: [Number of known moons for selected planets.])[
+#table(
+  columns: 2,
+  align: (auto, right),
+  [Planet],
+  [Moons],
+  [Earth],
+  [1],
+  [Mars],
+  [2],
+  [Jupiter],
+  [95],
+)
+
+
+] <tbl-planets>
+
+See \Table 1.
+
+== Code listings <code-listings>
+
+
+
+#srcbox[#raw("square <- function(x) x^2
+square(7)", block: true, lang: "r")] <lst-example>
+
+#outbox[#raw("> [1] 49", block: true)]
+
+See \Listing 1.
+
+== Content visibility <content-visibility>
+
+
+#block(inset: 1em)[
+This paragraph is only visible in *Typst* output.
+
+
+]
+
+#block(inset: 1em)[
+This paragraph is hidden in HTML output but visible elsewhere.
+
+
+]
+
+#block(inset: 1em)[
+This paragraph is visible because `show_extra` is true.
+
+
+]
+
+== Hidden div <hidden-div>
+
+
+The hidden div executed: \_\_CALEPIN\_1586d\_3\_\_\_ERROR:object ‘hidden\_result’ not found.
+
+== Raw blocks <raw-blocks>
+
+
+#strong[This is raw Typst.]
+
+== Jinja features <jinja-features>
+=== Context variables <context-variables>
+The document title is: Kitchen Sink.
+
+The sample size is: 50.
+
+The current format is: typst.
+
+=== Conditionals <conditionals>
+Rendering to typst.
+
+=== Loops <loops>
+Features of this document:
+
+
+- R code chunks
+
+
+- Python code chunks
+
+
+- Cross-references
+
+
+
+=== Built-in spans <built-in-spans>
+Lorem ipsum dolor sit amet consectetur adipiscing elit. Elit sed do eiusmod tempor incididunt ut labore et dolore magna.
+
+#pagebreak()
+
+After the page break.
+
+== Syntax highlighting <syntax-highlighting>
+Non-executable code blocks with syntax highlighting:
+
+
+
+
+#srcbox[#raw("function greet(name) {
+  return `Hello, ${name}!`;
+}", block: true, lang: "javascript")]
+
+
+#srcbox[#raw("def factorial(n: int) -> int:
+    return 1 if n <= 1 else n * factorial(n - 1)", block: true, lang: "python")]
+
+== Diagrams <diagrams>
+
+
+
+#srcbox[#raw("graph LR
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action]
+    B -->|No| D[End]", block: true, lang: "mermaid")]
+
+
+image("index_output/assets/kitchen_sink_files/chunk-15-1.svg", width: 70%) <chunk-15>
+
+== References <references>
+
+
+== References <references>
+Arel-Bundock, Vincent, Ryan C Briggs, Hristos Doucouliagos, Marco M Aviña, and Tom D Stanley. 2026. “Quantitative Political Science Research Is Greatly Underpowered.” The Journal of Politics 88 (1): 36–46.
+
+
+
+#bibliography("library.bib")

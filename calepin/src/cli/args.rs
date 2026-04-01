@@ -319,24 +319,7 @@ pub enum TemplatesAction {
         target: Option<String>,
     },
 
-    /// Revert sidecar template(s) to the built-in version
-    Reset {
-        /// Input .qmd file (determines the sidecar)
-        input: PathBuf,
-
-        /// Template name (reset one template; omit to reset all)
-        name: Option<String>,
-
-        /// Override the target (default: read from front matter)
-        #[arg(short = 't', long)]
-        target: Option<String>,
-
-        /// Reset without confirmation
-        #[arg(long)]
-        force: bool,
-    },
-
-    /// Copy a single built-in template into the sidecar for editing
+    /// Copy a built-in template into the sidecar for editing
     #[command(after_help = "\
 \x1B[1;4mExamples:\x1B[0m
   calepin templates eject figure doc.qmd
@@ -353,19 +336,9 @@ pub enum TemplatesAction {
         #[arg(short = 't', long)]
         target: Option<String>,
 
-        /// Overwrite existing sidecar template
-        #[arg(long)]
-        force: bool,
-    },
-
-    /// Show templates that have diverged from current built-in (after an upgrade)
-    Outdated {
-        /// Input .qmd file (determines the sidecar)
-        input: PathBuf,
-
-        /// Override the target (default: read from front matter)
-        #[arg(short = 't', long)]
-        target: Option<String>,
+        /// Overwrite without confirmation
+        #[arg(short = 'y', long)]
+        yes: bool,
     },
 
     /// Show available template variables for a given template

@@ -4,9 +4,6 @@ title = "Template Variable Reference"
 
 Templates use two namespaces: `cfg.*` for user-authored values (front matter, attributes) and `clp.*` for engine-computed values (rendered content, metadata). Chunk options and div attributes are passed through as-is to `cfg.*`.
 
-Literal braces in LaTeX templates: use `{{ '{' }}` and `{{ '}' }}`.
-
-
 ## Universal variables
 
 Available in every element template:

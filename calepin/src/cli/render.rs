@@ -107,15 +107,23 @@ fn render_one_with_context(
             ctx.target.output_extension()
         }
     };
-    let output_path = if let Some(o) = output {
-        o.to_path_buf()
+    let (output_path, final_path) = if let Some(o) = output {
+        let writer_ext = crate::paths::resolve_extension(writer);
+        let o_ext = o.extension().and_then(|e| e.to_str()).unwrap_or("");
+        if o_ext != writer_ext && !ctx.target.post.is_empty() {
+            // User wants e.g. .pdf but writer produces .typ/.tex.
+            // Write to the native extension; post commands will produce the final file.
+            (o.with_extension(writer_ext), Some(o.to_path_buf()))
+        } else {
+            (o.to_path_buf(), None)
+        }
     } else if ctx.explicit_target {
-        crate::config::resolve_target_output_path(
+        (crate::config::resolve_target_output_path(
             input, &ctx.target_name, ext,
             ctx.project_root.as_deref(), ctx.output_dir(),
-        )
+        ), None)
     } else {
-        input.with_extension(ext)
+        (input.with_extension(ext), None)
     };
 
     // Set active target and inheritance chain for template/extension resolution
@@ -171,9 +179,42 @@ fn render_one_with_context(
 
     // Run target-level post-processing commands
     if !ctx.target.post.is_empty() {
+        // Copy the figures directory next to the output so LaTeX/Typst can find it
+        let input_stem = input.file_stem().unwrap_or_default().to_string_lossy();
+        let files_dir_name = format!("{}_files", input_stem);
+        let src_files = input.parent().unwrap_or(Path::new(".")).join(&files_dir_name);
+        let dst_files = output_path.parent().unwrap_or(Path::new(".")).join(&files_dir_name);
+        let copied_files = if src_files.is_dir() && !dst_files.exists() {
+            crate::paths::copy_dir_recursive(&src_files, &dst_files).ok();
+            true
+        } else {
+            false
+        };
+
         let root = ctx.project_root.as_deref()
             .unwrap_or_else(|| output_path.parent().unwrap_or(Path::new(".")));
         run_target_post_commands(&ctx.target.post, &output_path, root, quiet)?;
+
+        // Clean up copied figures directory
+        if copied_files {
+            std::fs::remove_dir_all(&dst_files).ok();
+        }
+    }
+
+    // When -o requested a different extension (e.g. .pdf) than the writer
+    // produced (e.g. .typ), the post command should have created the final
+    // file next to the intermediate. Move it to the requested -o path.
+    if let Some(final_path) = final_path {
+        let produced = output_path.with_extension(
+            final_path.extension().and_then(|e| e.to_str()).unwrap_or(""),
+        );
+        if produced.exists() {
+            if produced != final_path {
+                std::fs::rename(&produced, &final_path)?;
+            }
+            // Clean up the intermediate file only on success
+            let _ = std::fs::remove_file(&output_path);
+        }
     }
 
     Ok(())
@@ -184,6 +225,7 @@ fn render_one_with_context(
 /// Each command supports these placeholders:
 /// - `{input}` -- the rendered file path (e.g., `file.typ`)
 /// - `{output}` -- alias for `{input}` (for backward compatibility)
+/// - `{dir}` -- parent directory of the rendered file
 /// - `{root}` -- the project root directory
 pub fn run_target_post_commands(
     commands: &[String],
@@ -191,12 +233,21 @@ pub fn run_target_post_commands(
     project_root: &Path,
     quiet: bool,
 ) -> Result<()> {
+    // Use absolute path so post commands work regardless of working_dir
+    let output_abs = if output.is_absolute() {
+        output.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_default().join(output)
+    };
+    let working_dir = output_abs.parent().unwrap_or(project_root);
+    let dir = working_dir.display().to_string();
     for command in commands {
         let cmd = command
-            .replace("{input}", &output.display().to_string())
-            .replace("{output}", &output.display().to_string())
+            .replace("{input}", &output_abs.display().to_string())
+            .replace("{output}", &output_abs.display().to_string())
+            .replace("{dir}", &dir)
             .replace("{root}", &project_root.display().to_string());
-        run_shell_command(&cmd, project_root, quiet);
+        run_shell_command(&cmd, working_dir, quiet);
     }
     Ok(())
 }

@@ -13,18 +13,31 @@
     if (a.getAttribute('download') != null) return false;
     var href = a.getAttribute('href');
     if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('javascript:')) return false;
+    // Only SPA-navigate site pages (.html not under assets/)
+    var path = a.pathname || '';
+    if (path && !/\.html$/.test(path) && /\.\w+$/.test(path)) return false;
+    if (/\/assets\//.test(path)) return false;
     return true;
   }
 
   function updateSidebarActive(url) {
     var path = new URL(url, location.href).pathname;
+    var activeSection = null;
     document.querySelectorAll('#sidebar-nav a').forEach(function(a) {
       var aPath = new URL(a.href).pathname;
-      a.classList.toggle('active', aPath === path);
-      if (aPath === path) {
-        var details = a.closest('details.sidebar-section');
-        if (details) details.open = true;
+      var isActive = aPath === path;
+      a.classList.toggle('text-link', isActive);
+      a.classList.toggle('font-semibold', isActive);
+      if (isActive) {
+        a.setAttribute('aria-current', 'page');
+        activeSection = a.closest('details.sidebar-section');
+      } else {
+        a.removeAttribute('aria-current');
       }
+    });
+    // Close all sections, then open the one containing the active link
+    document.querySelectorAll('#sidebar-nav details.sidebar-section').forEach(function(d) {
+      d.open = (d === activeSection);
     });
   }
 

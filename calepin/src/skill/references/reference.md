@@ -76,7 +76,7 @@ calepin init paper.qmd -e ./ext/tufte   # from extension (scaffold + install)
 calepin templates list doc.qmd          # show template resolution chain
 calepin templates show figure doc.qmd   # print resolved template content
 calepin templates diff doc.qmd          # compare sidecar vs built-in
-calepin templates reset doc.qmd         # revert sidecar to built-in
+calepin templates eject figure doc.qmd  # copy built-in template to sidecar
 ```
 
 ### extra

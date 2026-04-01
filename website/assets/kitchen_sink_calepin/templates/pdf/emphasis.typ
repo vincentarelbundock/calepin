@@ -1,0 +1,1 @@
+#emph[{{ cfg.text }}]

@@ -45,7 +45,8 @@ Diagrams:
 
 Website features:
 
-- [pagefind](https://pagefind.app/): static site search (optional)
+- [pagefind](https://pagefind.app/): static site search
+- [tailwindcss](https://tailwindcss.com/blog/standalone-cli): compiles Tailwind utility classes at build time, producing smaller and faster pages than the default CDN mode
 
 # Shell completions
 
