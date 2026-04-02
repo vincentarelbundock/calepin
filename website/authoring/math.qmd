@@ -2,6 +2,8 @@
 title = "Math"
 ---
 
+::: {.content-hidden when-format="typst"}
+
 *Calepin* renders LaTeX math notation using KaTeX (HTML, optionally MathJax) or natively (LaTeX and Typst). Use `\$` for a literal dollar sign.
 
 # Inline and display math
@@ -61,3 +63,5 @@ Fenced divs with reserved id prefixes participate in the cross-reference system:
 | `example` | `exm` | `::: {.example #exm-basic}` |
 
 References like `@thm-pythagoras` resolve to the theorem number. The `{{label}}` variable generates format-specific anchors: `\label{thm-pythagoras}` (LaTeX), `<thm-pythagoras>` (Typst).
+
+:::

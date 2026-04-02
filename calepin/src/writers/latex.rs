@@ -172,8 +172,9 @@ impl FormatWriter for LatexWriter {
         let resolved = crate::modules::select_image_variant(
             std::path::Path::new(url), "latex",
         );
+        let path_str = crate::paths::resolve_site_relative(&resolved.display().to_string());
         let options = attrs.to_latex_options();
-        format!("\\protect\\includegraphics{}{{{}}}", options, resolved.display())
+        format!("\\protect\\includegraphics{}{{{}}}", options, path_str)
     }
 
     fn table_open(&self, alignments: &[TableAlignment]) -> String {

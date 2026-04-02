@@ -57,6 +57,8 @@ This caption appears below the table.
 :::
 
 
+::: {.content-hidden when-format="typst"}
+
 # R
 
 The [tinytable](https://vincentarelbundock.github.io/tinytable/) R package generates format-aware tables that work automatically in *Calepin*. Use a `tbl-` label on the chunk and `tbl-cap` for the caption. The `style_tt()` function applies cell-level formatting, and `group_tt()` adds spanning headers.
@@ -85,3 +87,5 @@ gt::gt(mtcars[1:5, 1:4])
 #| echo = fenced
 knitr::kable(mtcars[1:5, 1:4])
 ```
+
+:::

@@ -1,0 +1,8 @@
+\begin{{ '{' }}figure{{ '}' }}{% if cfg.fig_pos %}[{{cfg.fig_pos}}]{% endif %}
+\centering
+{{clp.content}}
+{%- if cfg.caption %}
+\caption{% if cfg.fig_scap %}[{{cfg.fig_scap}}]{% endif %}{{ '{' }}{{cfg.caption}}{{ '}' }}
+{%- endif %}
+\label{{ '{' }}{{cfg.id}}{{ '}' }}
+\end{{ '{' }}figure{{ '}' }}

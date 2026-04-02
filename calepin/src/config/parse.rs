@@ -61,56 +61,15 @@ pub fn split_frontmatter(text: &str) -> Result<(Metadata, String)> {
         return Ok((Metadata::default(), body));
     }
 
-    // Parse as TOML; fall back to simple YAML key: value parsing for basic fields
+    // Parse as TOML; fall back to YAML via the quarto compatibility layer
     let meta = match crate::value::parse_frontmatter(&raw) {
         Ok(table) => parse_metadata(&table).unwrap_or_default(),
-        Err(_) => parse_yaml_simple(&raw),
+        Err(_) => match crate::quarto::parse_yaml(&raw) {
+            Ok(table) => parse_metadata(&table).unwrap_or_default(),
+            Err(_) => Metadata::default(),
+        },
     };
     Ok((meta, body))
-}
-
-/// Parse simple YAML-style `key: value` lines as a fallback when TOML parsing fails.
-/// Only recognizes: title, author, date, bibliography. Warns on unknown fields.
-fn parse_yaml_simple(raw: &str) -> Metadata {
-    const ALLOWED: &[&str] = &["title", "author", "date", "bibliography"];
-    let mut meta = Metadata::default();
-
-    for line in raw.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
-        }
-        // Match `key: value` pattern
-        let Some((key, val)) = trimmed.split_once(':') else {
-            continue;
-        };
-        let key = key.trim();
-        let val = val.trim();
-        // Strip surrounding quotes (single or double)
-        let val = val.strip_prefix('"').and_then(|v| v.strip_suffix('"'))
-            .or_else(|| val.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
-            .unwrap_or(val);
-
-        if !ALLOWED.contains(&key) {
-            cwarn!("ignoring unsupported front matter field: {}", key);
-            continue;
-        }
-
-        match key {
-            "title" => meta.title = Some(val.to_string()),
-            "author" => {
-                let name = parse_author_name_str(val);
-                meta.authors = vec![Author { name, ..Default::default() }];
-            }
-            "date" => meta.date = Some(val.to_string()),
-            "bibliography" => {
-                meta.bibliography = vec![val.to_string()];
-            }
-            _ => {}
-        }
-    }
-
-    meta
 }
 
 pub fn parse_metadata(table: &Table) -> Result<Metadata> {
@@ -689,5 +648,279 @@ mod tests {
         let table = crate::value::parse_frontmatter("[calepin]\nplugins = [\"txtfmt\"]").unwrap();
         let meta = parse_metadata(&table).unwrap();
         assert_eq!(meta.plugins, vec!["txtfmt"]);
+    }
+
+    // -----------------------------------------------------------------------
+    // End-to-end YAML front matter tests (through split_frontmatter)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_yaml_format_becomes_target() {
+        let text = "---\ntitle: Hello\nformat: html\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.target.as_deref(), Some("html"));
+    }
+
+    #[test]
+    fn test_yaml_toc_bool() {
+        let text = "---\ntoc: true\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert!(meta.toc.is_some());
+        assert_eq!(meta.toc.as_ref().unwrap().enabled, Some(true));
+    }
+
+    #[test]
+    fn test_yaml_toc_false() {
+        let text = "---\ntoc: false\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert!(meta.toc.is_some());
+        assert_eq!(meta.toc.as_ref().unwrap().enabled, Some(false));
+    }
+
+    #[test]
+    fn test_yaml_nested_execute() {
+        let text = "---\nexecute:\n  echo: false\n  eval: true\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        let exec = meta.execute.unwrap();
+        assert_eq!(exec.echo, Some(false));
+        assert_eq!(exec.eval, Some(true));
+    }
+
+    #[test]
+    fn test_yaml_bibliography_list() {
+        let text = "---\nbibliography:\n  - refs.bib\n  - extra.bib\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.bibliography, vec!["refs.bib", "extra.bib"]);
+    }
+
+    #[test]
+    fn test_yaml_number_sections_with_dashes() {
+        let text = "---\nnumber-sections: true\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert!(meta.number_sections);
+    }
+
+    #[test]
+    fn test_yaml_unknown_keys_pass_through_to_cfg() {
+        let text = "---\ntitle: Hi\ncustom_field: my_value\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.title.as_deref(), Some("Hi"));
+        // Unknown keys land in cfg for template access
+        let val = meta.cfg.get("custom_field");
+        assert!(val.is_some());
+        assert_eq!(val.unwrap().as_str(), Some("my_value"));
+    }
+
+    #[test]
+    fn test_yaml_target_takes_precedence_over_format() {
+        let text = "---\ntarget: latex\nformat: html\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        // target should win; format should not overwrite it
+        assert_eq!(meta.target.as_deref(), Some("latex"));
+    }
+
+    #[test]
+    fn test_yaml_structured_authors() {
+        let text = "---\nauthor:\n  - name: Jane Doe\n    email: jane@example.com\n  - name: John Smith\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.authors.len(), 2);
+        assert_eq!(meta.author_names(), vec!["Jane Doe", "John Smith"]);
+        assert_eq!(meta.authors[0].email.as_deref(), Some("jane@example.com"));
+    }
+
+    #[test]
+    fn test_yaml_date_not_mangled() {
+        // YAML parses 2024-01-01 as a string (serde_yaml behavior)
+        let text = "---\ndate: 2024-01-01\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.date.as_deref(), Some("2024-01-01"));
+    }
+
+    #[test]
+    fn test_yaml_keywords() {
+        let text = "---\nkeywords:\n  - rust\n  - cli\n  - rendering\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.keywords, vec!["rust", "cli", "rendering"]);
+    }
+
+    #[test]
+    fn test_yaml_lang() {
+        let text = "---\nlang: fr\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.lang.as_deref(), Some("fr"));
+    }
+
+    #[test]
+    fn test_yaml_csl() {
+        let text = "---\ncsl: apa.csl\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.csl.as_deref(), Some("apa.csl"));
+    }
+
+    #[test]
+    fn test_yaml_subtitle_and_abstract() {
+        let text = "---\ntitle: Main\nsubtitle: Sub\nabstract: Some abstract text\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.subtitle.as_deref(), Some("Sub"));
+        assert_eq!(meta.abstract_text.as_deref(), Some("Some abstract text"));
+    }
+
+    // -----------------------------------------------------------------------
+    // YAML author/affiliation integration tests (Quarto compatibility)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_yaml_author_single_string() {
+        let text = "---\nauthor: Jane Doe\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.authors.len(), 1);
+        assert_eq!(meta.author_names(), vec!["Jane Doe"]);
+    }
+
+    #[test]
+    fn test_yaml_author_list_of_strings() {
+        let text = "---\nauthor:\n  - Jane Doe\n  - John Smith\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.authors.len(), 2);
+        assert_eq!(meta.author_names(), vec!["Jane Doe", "John Smith"]);
+    }
+
+    #[test]
+    fn test_yaml_author_structured_name() {
+        let text = "---\nauthor:\n  - name:\n      given: Jane\n      family: Doe\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.authors.len(), 1);
+        assert_eq!(meta.authors[0].name.given.as_deref(), Some("Jane"));
+        assert_eq!(meta.authors[0].name.family.as_deref(), Some("Doe"));
+        assert_eq!(meta.authors[0].name.literal, "Jane Doe");
+    }
+
+    #[test]
+    fn test_yaml_author_with_orcid_and_roles() {
+        let text = "---\nauthor:\n  - name: Jane Doe\n    orcid: 0000-0000-0000-0001\n    roles:\n      - writing\n      - methodology\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.authors[0].orcid.as_deref(), Some("0000-0000-0000-0001"));
+        assert_eq!(meta.authors[0].roles, vec!["writing", "methodology"]);
+    }
+
+    #[test]
+    fn test_yaml_author_corresponding_and_flags() {
+        let text = "---\nauthor:\n  - name: Jane Doe\n    corresponding: true\n    equal-contributor: true\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert!(meta.authors[0].corresponding);
+        assert!(meta.authors[0].equal_contributor);
+    }
+
+    #[test]
+    fn test_yaml_author_affiliation_singular_string() {
+        // Quarto accepts `affiliation` (singular) on author entries
+        let text = "---\nauthor:\n  - name: Jane Doe\n    affiliation: MIT\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.affiliations.len(), 1);
+        assert_eq!(meta.affiliations[0].name.as_deref(), Some("MIT"));
+        assert_eq!(meta.authors[0].affiliation_ids, vec![0]);
+    }
+
+    #[test]
+    fn test_yaml_author_affiliation_singular_list() {
+        let text = "---\nauthor:\n  - name: Jane Doe\n    affiliation:\n      - MIT\n      - Stanford\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.affiliations.len(), 2);
+        assert_eq!(meta.authors[0].affiliation_ids, vec![0, 1]);
+    }
+
+    #[test]
+    fn test_yaml_inline_affiliation_with_department() {
+        let text = "---\nauthor:\n  - name: Jane Doe\n    affiliations:\n      - name: MIT\n        department: CSAIL\n        city: Cambridge\n        country: US\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.affiliations.len(), 1);
+        assert_eq!(meta.affiliations[0].name.as_deref(), Some("MIT"));
+        assert_eq!(meta.affiliations[0].department.as_deref(), Some("CSAIL"));
+        assert_eq!(meta.affiliations[0].city.as_deref(), Some("Cambridge"));
+        assert_eq!(meta.affiliations[0].country.as_deref(), Some("US"));
+    }
+
+    #[test]
+    fn test_yaml_top_level_affiliations_with_ref() {
+        let text = "---\nauthor:\n  - name: Jane Doe\n    affiliations:\n      - ref: stanford\n  - name: John Smith\n    affiliations:\n      - ref: stanford\naffiliations:\n  - id: stanford\n    name: Stanford University\n    department: Statistics\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.affiliations.len(), 1);
+        assert_eq!(meta.affiliations[0].name.as_deref(), Some("Stanford University"));
+        assert_eq!(meta.affiliations[0].department.as_deref(), Some("Statistics"));
+        // Both authors should reference the same affiliation
+        assert_eq!(meta.authors[0].affiliation_ids, vec![0]);
+        assert_eq!(meta.authors[1].affiliation_ids, vec![0]);
+    }
+
+    #[test]
+    fn test_yaml_multiple_affiliations_with_ref() {
+        let text = "---\nauthor:\n  - name: Jane Doe\n    affiliations:\n      - ref: mit\n      - ref: stanford\naffiliations:\n  - id: mit\n    name: MIT\n  - id: stanford\n    name: Stanford\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.affiliations.len(), 2);
+        assert_eq!(meta.authors[0].affiliation_ids, vec![0, 1]);
+    }
+
+    #[test]
+    fn test_yaml_institutes_alias() {
+        let text = "---\nauthor:\n  - name: Jane Doe\n    affiliations:\n      - ref: mit\ninstitutes:\n  - id: mit\n    name: MIT\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.affiliations.len(), 1);
+        assert_eq!(meta.affiliations[0].name.as_deref(), Some("MIT"));
+        assert_eq!(meta.authors[0].affiliation_ids, vec![0]);
+    }
+
+    #[test]
+    fn test_yaml_shared_affiliation_deduplication() {
+        // Two authors referencing the same affiliation string should share one entry
+        let text = "---\nauthor:\n  - name: Jane Doe\n    affiliations:\n      - MIT\n  - name: John Smith\n    affiliations:\n      - MIT\n---\nBody";
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.affiliations.len(), 1);
+        assert_eq!(meta.authors[0].affiliation_ids, vec![0]);
+        assert_eq!(meta.authors[1].affiliation_ids, vec![0]);
+    }
+
+    #[test]
+    fn test_yaml_full_quarto_scholarly() {
+        let text = r#"---
+title: "A Study of Things"
+author:
+  - name: Jane Doe
+    email: jane@example.com
+    orcid: 0000-0000-0000-0001
+    corresponding: true
+    affiliations:
+      - ref: stanford
+  - name: John Smith
+    affiliations:
+      - ref: stanford
+      - ref: mit
+affiliations:
+  - id: stanford
+    name: Stanford University
+    department: Department of Statistics
+    city: Stanford
+    region: CA
+    country: US
+  - id: mit
+    name: MIT
+    department: Department of Mathematics
+    city: Cambridge
+    region: MA
+    country: US
+---
+Body"#;
+        let (meta, _) = split_frontmatter(text).unwrap();
+        assert_eq!(meta.title.as_deref(), Some("A Study of Things"));
+        assert_eq!(meta.authors.len(), 2);
+        assert!(meta.authors[0].corresponding);
+        assert_eq!(meta.authors[0].email.as_deref(), Some("jane@example.com"));
+        assert_eq!(meta.affiliations.len(), 2);
+        assert_eq!(meta.affiliations[0].name.as_deref(), Some("Stanford University"));
+        assert_eq!(meta.affiliations[0].region.as_deref(), Some("CA"));
+        assert_eq!(meta.affiliations[1].name.as_deref(), Some("MIT"));
+        // Jane -> Stanford only
+        assert_eq!(meta.authors[0].affiliation_ids, vec![0]);
+        // John -> Stanford + MIT
+        assert_eq!(meta.authors[1].affiliation_ids, vec![0, 1]);
     }
 }

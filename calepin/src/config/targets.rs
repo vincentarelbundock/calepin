@@ -136,9 +136,12 @@ fn resolve_one(
         bail!("circular inheritance: {} -> {}", chain.join(" -> "), name);
     }
 
+    let normalized = crate::util::normalize_key(name);
     let target = targets.get(name)
+        .or_else(|| targets.get(&normalized))
         .cloned()
         .or_else(|| super::builtin_metadata().targets.get(name).cloned())
+        .or_else(|| super::builtin_metadata().targets.get(&normalized).cloned())
         .or_else(|| resolve_extension_target(name).ok().flatten())
         .or_else(|| super::extension::builtin_extension(name).map(|m| m.to_target()))
         .ok_or_else(|| anyhow::anyhow!(
@@ -189,8 +192,12 @@ fn merge_targets(parent: &Target, child: &Target) -> Target {
 ///   4. Built-in config (embedded default `config.toml`)
 ///   5. Built-in extension manifests (embedded in binary)
 pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Target>) -> Result<Target> {
+    // Config parsing normalizes dashes to underscores in keys, so look up
+    // both the original name and the normalized form.
+    let normalized = crate::util::normalize_key(name);
+
     // 1. User targets
-    if let Some(target) = targets.get(name) {
+    if let Some(target) = targets.get(name).or_else(|| targets.get(&normalized)) {
         return Ok(merge_with_builtin(target));
     }
 
@@ -214,7 +221,9 @@ pub fn resolve_target(name: &str, targets: &std::collections::HashMap<String, Ta
     }
 
     // 4. Built-in config (from document.toml/collection.toml)
-    if let Some(target) = super::builtin_metadata().targets.get(name) {
+    if let Some(target) = super::builtin_metadata().targets.get(name)
+        .or_else(|| super::builtin_metadata().targets.get(&normalized))
+    {
         return Ok(target.clone());
     }
 

@@ -165,11 +165,14 @@ pub fn render_core(
     let mut element_renderer = ElementRenderer::from_metadata(pipeline.writer(), &metadata, options);
     element_renderer.set_target(target.cloned());
 
-    // Shift headings down one level in HTML when the document has a title AND
-    // the body uses h1 (`#`) headers, so `<h1>` is reserved for the title.
-    // LaTeX and Typst handle titles separately (\maketitle, #align) so headings
-    // stay at their natural level.
-    if pipeline.writer() == "html" && metadata.title.is_some() {
+    // Shift headings down one level when needed:
+    // - HTML: when the document has a title AND the body uses h1 (`#`) headers,
+    //   so `<h1>` is reserved for the title.
+    // - Book chapters: so content headings are subordinate to the chapter title.
+    let is_book_chapter = target.map(|t| t.template_name() == "chapter").unwrap_or(false);
+    if is_book_chapter {
+        element_renderer.set_shift_headings(true);
+    } else if pipeline.writer() == "html" && metadata.title.is_some() {
         let has_h1 = blocks.iter().any(|b| match b {
             crate::types::Block::Text(t) => t.content.lines().any(|l| l.starts_with("# ")),
             _ => false,

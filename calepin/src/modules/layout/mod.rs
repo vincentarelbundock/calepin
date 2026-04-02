@@ -138,7 +138,8 @@ fn render_rows_via_templates(
 
         let mut row_vars = TemplateVars::new();
         row_vars.clp.insert("cells".to_string(), minijinja::Value::from(cells_rendered.join(cell_separator)));
-        row_vars.clp.insert("columns".to_string(), minijinja::Value::from(columns.join(" ")));
+        let col_sep = if writer == "typst" { ", " } else { " " };
+        row_vars.clp.insert("columns".to_string(), minijinja::Value::from(columns.join(col_sep)));
         row_vars.clp.insert("align_items".to_string(), minijinja::Value::from(align_items.to_string()));
         row_vars.clp.insert("valign".to_string(), minijinja::Value::from(valign_char.to_string()));
         output.push_str(&apply_template(row_tpl, &row_vars));

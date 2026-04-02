@@ -122,8 +122,9 @@ impl FormatWriter for TypstWriter {
         let resolved = crate::modules::select_image_variant(
             std::path::Path::new(url), "typst",
         );
+        let path_str = crate::paths::resolve_site_relative(&resolved.display().to_string());
         let params = attrs.to_typst_params();
-        format!("#box(image(\"{}\"{}))", resolved.display(), params)
+        format!("#box(image(\"{}\"{}))", path_str, params)
     }
 
     fn table_open(&self, alignments: &[TableAlignment]) -> String {
@@ -161,8 +162,8 @@ impl FormatWriter for TypstWriter {
         format!("#footnote[{}]", content.trim())
     }
 
-    fn html_block(&self, literal: &str) -> String { literal.to_string() }
-    fn html_inline(&self, literal: &str) -> String { literal.to_string() }
+    fn html_block(&self, _literal: &str) -> String { String::new() }
+    fn html_inline(&self, _literal: &str) -> String { String::new() }
 
     fn task_item(&self, checked: bool) -> String {
         if checked { "- [x] ".to_string() } else { "- [ ] ".to_string() }

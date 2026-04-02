@@ -6,6 +6,7 @@ mod cli;
 mod man;
 mod types;
 mod config;
+mod quarto;
 mod writers;
 mod engines;
 mod modules;

@@ -19,6 +19,7 @@ calepin tutorial.qmd
 
 *Calepin* supports standard CommonMark and GitHub Flavored Markdown. The table below summarizes the basic Markdown notation from the original specification.
 
+::: {.content-hidden when-format="typst"}
 | Element | Syntax |
 |---|---|
 | Heading | `# H1`, `## H2`, ..., `###### H6` |
@@ -37,6 +38,7 @@ calepin tutorial.qmd
 | Reference link | `[text][id]` then `[id]: url` |
 | Image | `![alt text](path)` |
 | Escape | `\*`, `\[`, `\\`, etc. |
+:::
 
 Here is a paragraph about Montreal that illustrates all of these features.
 
@@ -67,7 +69,7 @@ The city's motto is `Concordia Salus`[^mtl], meaning "well-being through harmony
 As the Montréal tourism board puts it:\
 "*There is no place quite like it.*"
 
-![A view of the Montréal skyline](/assets/placeholder.png)
+[]{.placeholder width=600 height=300 text="Montréal skyline"}
 
 
 # Code chunks

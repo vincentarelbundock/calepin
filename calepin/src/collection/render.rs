@@ -54,7 +54,7 @@ pub fn render_documents(
         crate::paths::set_active_target_with_chain(target_owned.as_deref(), chain.clone());
         crate::paths::set_active_tpl(meta.tpl.clone());
         crate::paths::set_project_dir(Some(base_dir));
-        let result = render_one_document(page, &overrides, base_dir, output_dir, &writer_owned, apply_page_template, Some(meta));
+        let result = render_one_document(page, &overrides, base_dir, output_dir, &writer_owned, apply_page_template, Some(meta), target);
         (key, result)
     });
 
@@ -85,7 +85,7 @@ pub fn render_documents(
             crate::paths::set_active_tpl(meta.tpl.clone());
             crate::paths::set_project_dir(Some(base_dir));
             let key = page.source.display().to_string();
-            match render_one_document(page, &overrides, base_dir, output_dir, writer, apply_page_template, Some(meta)) {
+            match render_one_document(page, &overrides, base_dir, output_dir, writer, apply_page_template, Some(meta), target) {
                 Ok(render_result) => {
                     if !quiet {
                         eprintln!("  [ok] {}", key);
@@ -110,6 +110,7 @@ fn render_one_document(
     writer: &str,
     apply_page_template: bool,
     project_metadata: Option<&crate::config::Metadata>,
+    target: Option<&config::Target>,
 ) -> Result<CollectionRenderResult> {
     let input = base_dir.join(&page.source);
     let output_path = output_dir.join(&page.output);
@@ -120,13 +121,17 @@ fn render_one_document(
         std::fs::create_dir_all(parent).ok();
     }
 
+    // Set page depth so writers can resolve site-relative image paths.
+    let depth = page.output.components().count().saturating_sub(1);
+    crate::paths::set_page_depth(depth);
+
     if apply_page_template {
         // Orchestrator mode: use the shared render_page pipeline
         // (render_core + assemble_page + transform_document)
         let (page, _result) = crate::render::pipeline::render_page(
             &input, &output_path, writer, overrides, Some(base_dir),
             &crate::render::pipeline::RenderCoreOptions::default(),
-            project_metadata, None,
+            project_metadata, target,
         )?;
         return Ok(CollectionRenderResult {
             body: page.body,

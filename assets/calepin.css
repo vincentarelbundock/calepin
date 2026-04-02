@@ -1,0 +1,5 @@
+/* Search result highlight marks (pagefind) */
+.search-overlay mark { background: color-mix(in srgb, var(--c-link) 25%, var(--c-page)); border-radius: 2px; padding: 0 1px; }
+
+/* Active tab indicator */
+.nav-link.active { border-bottom: 2px solid currentColor; color: var(--c-text); }

@@ -3,4 +3,7 @@ description = "Multi-chapter book (LaTeX)"
 inherits = "latex"
 collection = true
 
+[target]
+template = "chapter"
+
 [scaffold.book-latex]

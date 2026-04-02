@@ -22,7 +22,7 @@ device = "png"
 alignment = "center"
 
 [execute]
-cache = true
+cache = false
 eval = true
 echo = true
 include = true
@@ -86,6 +86,14 @@ fig_formats = ["svg", "png", "jpg"]
 preview = "serve"
 modules = ["highlight"]
 crossref = "plain"
+
+[targets.book-latex]
+writer = "latex"
+template = "chapter"
+extension = "pdf"
+fig_extension = "pdf"
+modules = ["highlight", "convert_svg_pdf"]
+post = ["tectonic {input}"]
 
 [targets.markdown]
 writer = "markdown"

@@ -8,7 +8,7 @@
 //! The output directory is where finished files are written; no inputs
 //! resolve from it.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -132,6 +132,9 @@ thread_local! {
     static SIDELOADED_EXTENSIONS: RefCell<Vec<String>> = RefCell::new(Vec::new());
     /// Active template variant selections (from [tpl] config).
     static ACTIVE_TPL: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
+    /// Nesting depth of the current page's output path (e.g., "authoring/basics.typ" = 1).
+    /// Used by non-HTML writers to resolve site-relative image paths.
+    static PAGE_DEPTH: Cell<usize> = Cell::new(0);
 }
 
 /// Set the active target name for template resolution.
@@ -233,6 +236,33 @@ pub fn set_active_tpl(tpl: HashMap<String, String>) {
 
 pub fn get_active_tpl() -> HashMap<String, String> {
     ACTIVE_TPL.with(|t| t.borrow().clone())
+}
+
+/// Set the nesting depth of the current page's output path.
+pub fn set_page_depth(depth: usize) {
+    PAGE_DEPTH.with(|d| d.set(depth));
+}
+
+/// Get the nesting depth of the current page's output path.
+pub fn get_page_depth() -> usize {
+    PAGE_DEPTH.with(|d| d.get())
+}
+
+/// Resolve a site-relative URL (starting with `/`) to a path relative to the
+/// current page's output location. Uses the page depth to prepend `../` prefixes.
+/// Non-absolute and external URLs are returned unchanged.
+pub fn resolve_site_relative(url: &str) -> String {
+    if !url.starts_with('/') || url.starts_with("//") {
+        return url.to_string();
+    }
+    let depth = get_page_depth();
+    let stripped = &url[1..]; // remove leading `/`
+    if depth == 0 {
+        stripped.to_string()
+    } else {
+        let prefix = "../".repeat(depth);
+        format!("{}{}", prefix, stripped)
+    }
 }
 
 /// Given the path to a sidecar config file (e.g. `<root>/index_calepin/config.toml`),

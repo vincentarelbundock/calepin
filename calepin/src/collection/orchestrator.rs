@@ -16,8 +16,8 @@ pub(crate) fn render_book(
     base_dir: &Path,
     output: &Path,
     writer: &str,
-    output_ext: &str,
     target_name: &str,
+    target: &crate::config::Target,
     quiet: bool,
 ) -> Result<()> {
     // Build template context
@@ -59,8 +59,9 @@ pub(crate) fn render_book(
     let rendered = tpl.render(&ctx)
         .with_context(|| format!("Failed to render book template for target {}", target_name))?;
 
-    // Write the master file
-    let master_name = format!("book.{}", output_ext);
+    // Write the master file using the writer extension (.typ/.tex),
+    // not the final output extension (.pdf).
+    let master_name = format!("book.{}", ext);
     let master_path = output.join(&master_name);
     fs::write(&master_path, &rendered)?;
 
@@ -69,11 +70,10 @@ pub(crate) fn render_book(
     }
 
     // Run post commands if configured (e.g., "typst compile {input}")
-    let target_def = meta.targets.get(target_name);
-    if let Some(cmds) = target_def.map(|t| &t.post) {
+    let cmds = &target.post;
+    {
         if !cmds.is_empty() {
-            let target_ext = target_def.map(|t| t.output_extension()).unwrap_or("pdf");
-            let output_filename = format!("book.{}", target_ext);
+            let output_filename = format!("book.{}", target.output_extension());
 
             for cmd in cmds {
                 let expanded = cmd
@@ -86,16 +86,19 @@ pub(crate) fn render_book(
                 }
 
                 let texinputs = format!("{}:{}:", output.display(), base_dir.display());
-                let status = std::process::Command::new("sh")
+                let child = std::process::Command::new("sh")
                     .arg("-c")
                     .arg(&expanded)
                     .current_dir(output)
                     .env("TEXINPUTS", &texinputs)
+                    .stdout(std::process::Stdio::inherit())
+                    .stderr(std::process::Stdio::inherit())
                     .status()
                     .with_context(|| format!("Failed to run post command: {}", expanded))?;
 
-                if !status.success() {
-                    anyhow::bail!("Post command failed: {}", expanded);
+                if !child.success() {
+                    anyhow::bail!("Post command failed (exit {}): {}",
+                        child.code().unwrap_or(-1), expanded);
                 }
             }
 

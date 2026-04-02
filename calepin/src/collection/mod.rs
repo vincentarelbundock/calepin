@@ -88,7 +88,11 @@ pub fn build_collection(
     fs::create_dir_all(output)?;
 
     // 4. Discover all .qmd pages (auto-discovered, filtered by exclude)
-    let mut pages = discover_documents(&meta, &base_dir, output_ext)?;
+    //    For book builds, fragment files use the writer extension (.typ/.tex),
+    //    not the final output extension (.pdf), so that #include / \include
+    //    references resolve correctly.
+    let page_ext = if is_book { crate::paths::resolve_extension(writer) } else { output_ext };
+    let mut pages = discover_documents(&meta, &base_dir, page_ext)?;
 
     // 5. Discover listing pages and merge into the page list
     let mut all_listing_documents: HashMap<String, Vec<DocumentInfo>> = HashMap::new();
@@ -179,7 +183,24 @@ pub fn build_collection(
                 fs::create_dir_all(parent)?;
             }
             let body = if is_book {
-                result.body.replace(&output_prefix, "")
+                let body = result.body.replace(&output_prefix, "");
+                // Figure paths may be relative to the fragment (e.g.
+                // "basics_files/fig.pdf" in authoring/basics.tex). Book
+                // builds compile from the output root, so prepend the
+                // subdirectory. Skip paths that are already root-relative
+                // (e.g. from absolute-path stripping above).
+                if let Some(subdir) = page.output.parent().filter(|p| *p != Path::new("")) {
+                    let stem = page.output.file_stem()
+                        .unwrap_or_default().to_string_lossy();
+                    let files_dir = format!("{}_files/", stem);
+                    let rooted = format!("{}/{}", subdir.display(), files_dir);
+                    // Only replace occurrences not already prefixed
+                    body.replace(&rooted, "\x00ROOTED\x00")
+                        .replace(&files_dir, &rooted)
+                        .replace("\x00ROOTED\x00", &rooted)
+                } else {
+                    body
+                }
             } else {
                 result.body.clone()
             };
@@ -235,7 +256,7 @@ pub fn build_collection(
             if is_book {
                 let document_nodes = contents::expand_contents(&meta.contents, &base_dir);
                 let page_tree = context::build_page_tree(&document_nodes, &pages);
-                orchestrator::render_book(&meta, &page_tree, &base_dir, output, writer, output_ext, &collection_target_name, quiet)?;
+                orchestrator::render_book(&meta, &page_tree, &base_dir, output, writer, &collection_target_name, &collection_target, quiet)?;
             } else {
                 templating::apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, writer, &collection_target_name)?;
             }

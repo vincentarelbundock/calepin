@@ -3,4 +3,7 @@ description = "Multi-chapter book (Typst)"
 inherits = "typst"
 collection = true
 
+[target]
+template = "chapter"
+
 [scaffold.book]
