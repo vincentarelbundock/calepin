@@ -1,1 +1,0 @@
-#bibliography("{{cfg.path}}")

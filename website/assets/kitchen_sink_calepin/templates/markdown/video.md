@@ -1,1 +1,0 @@
-[{{ cfg.title }}]({{ cfg.url }})

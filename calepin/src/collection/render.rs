@@ -488,6 +488,10 @@ pub fn build_overrides(target: Option<&config::Target>) -> Vec<String> {
         if let Some(standalone) = t.standalone {
             overrides.push(format!("standalone={}", standalone));
         }
+        // Propagate page_vars as overrides so they affect metadata
+        for (k, v) in &t.page_vars {
+            overrides.push(format!("{}={}", k, v));
+        }
     }
     overrides
 }

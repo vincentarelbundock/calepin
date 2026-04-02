@@ -1,3 +1,0 @@
-#pagebreak()
-= Appendix
-{{clp.content}}

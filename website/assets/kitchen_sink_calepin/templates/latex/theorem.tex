@@ -1,2 +1,0 @@
-{%- set italic = clp.type_class in ["theorem", "lemma", "corollary", "conjecture", "proposition"] -%}
-\par\medskip\noindent\textbf{{ '{' }}{{clp.type_class | title}} {{clp.number}}.{{ '}' }}{% if cfg.id %}\label{ {{-cfg.id-}} }{% endif %} {% if italic %}\itshape{} {% endif %}{{clp.content}}{% if italic %}\upshape{% endif %}\medskip

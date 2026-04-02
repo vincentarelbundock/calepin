@@ -10,6 +10,10 @@ use super::context::PageNode;
 /// Render the book master file from the page tree.
 /// Fragment files are already written; this produces the master file
 /// that references them via \include{} or equivalent.
+///
+/// Build happens in a temporary directory so intermediate files (.aux,
+/// .log, .toc, fragment .tex) don't pollute the output. Only the final
+/// PDF is copied to `output`.
 pub(crate) fn render_book(
     meta: &crate::config::Metadata,
     page_tree: &[PageNode],
@@ -72,54 +76,112 @@ pub(crate) fn render_book(
     let rendered = tpl.render(&ctx)
         .with_context(|| format!("Failed to render book template for target {}", target_name))?;
 
-    // Write the master file using the writer extension (.typ/.tex),
-    // not the final output extension (.pdf).
     let master_name = format!("book.{}", ext);
-    let master_path = output.join(&master_name);
+    let output_filename = format!("book.{}", target.output_extension());
+
+    // Create a temporary build directory. Copy fragments and figures
+    // there, write the master file, run post commands, then copy only
+    // the final output (e.g. book.pdf) back to `output`.
+    let build_dir = tempfile::tempdir()
+        .context("Failed to create temporary build directory")?;
+    let build = build_dir.path();
+
+    // Copy all rendered fragments and figure directories from output to build dir
+    copy_tree(output, build)?;
+
+    // Write the master file into the build dir
+    let master_path = build.join(&master_name);
     fs::write(&master_path, &rendered)?;
 
     if !quiet {
-        eprintln!("  Master: {}", master_path.display());
+        eprintln!("  Master: {}", master_name);
     }
 
-    // Run post commands if configured (e.g., "typst compile {input}")
+    // Run post commands if configured (e.g., "latexmk -pdf book.tex")
     let cmds = &target.post;
-    {
-        if !cmds.is_empty() {
-            let output_filename = format!("book.{}", target.output_extension());
-
-            for cmd in cmds {
-                let expanded = cmd
-                    .replace("{input}", &master_name)
-                    .replace("{output}", &output_filename)
-                    .replace("{root}", &base_dir.display().to_string());
-
-                if !quiet {
-                    eprintln!("  \x1b[36mpost:\x1b[0m {}", expanded);
-                }
-
-                let texinputs = format!("{}:{}:", output.display(), base_dir.display());
-                let child = std::process::Command::new("sh")
-                    .arg("-c")
-                    .arg(&expanded)
-                    .current_dir(output)
-                    .env("TEXINPUTS", &texinputs)
-                    .stdout(std::process::Stdio::inherit())
-                    .stderr(std::process::Stdio::inherit())
-                    .status()
-                    .with_context(|| format!("Failed to run post command: {}", expanded))?;
-
-                if !child.success() {
-                    anyhow::bail!("Post command failed (exit {}): {}",
-                        child.code().unwrap_or(-1), expanded);
-                }
-            }
+    if !cmds.is_empty() {
+        for cmd in cmds {
+            let expanded = cmd
+                .replace("{input}", &master_name)
+                .replace("{output}", &output_filename)
+                .replace("{root}", &base_dir.display().to_string());
 
             if !quiet {
-                eprintln!("  Output: {}", output.join(&output_filename).display());
+                eprintln!("  \x1b[36mpost:\x1b[0m {}", expanded);
+            }
+
+            let texinputs = format!("{}:{}:", build.display(), base_dir.display());
+            let child = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(&expanded)
+                .current_dir(build)
+                .env("TEXINPUTS", &texinputs)
+                .stdout(std::process::Stdio::inherit())
+                .stderr(std::process::Stdio::inherit())
+                .status()
+                .with_context(|| format!("Failed to run post command: {}", expanded))?;
+
+            if !child.success() {
+                anyhow::bail!("Post command failed (exit {}): {}",
+                    child.code().unwrap_or(-1), expanded);
+            }
+        }
+
+        // Copy the final output file back
+        let built_file = build.join(&output_filename);
+        if built_file.exists() {
+            let dest = output.join(&output_filename);
+            fs::copy(&built_file, &dest)
+                .with_context(|| format!("Failed to copy {} to {}", built_file.display(), dest.display()))?;
+            if !quiet {
+                eprintln!("  Output: {}", dest.display());
             }
         }
     }
 
+    // Clean up fragment files from output (keep only the final PDF and
+    // figure directories which may be needed by other targets).
+    clean_fragments(output, ext);
+
     Ok(())
+}
+
+/// Recursively copy a directory tree.
+fn copy_tree(src: &Path, dst: &Path) -> Result<()> {
+    for entry in walkdir::WalkDir::new(src) {
+        let entry = entry?;
+        let rel = entry.path().strip_prefix(src)?;
+        let target = dst.join(rel);
+        if entry.file_type().is_dir() {
+            fs::create_dir_all(&target)?;
+        } else {
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
+}
+
+/// Remove .tex fragment files and LaTeX auxiliary files from the output
+/// directory, leaving only the final PDF and figure directories.
+fn clean_fragments(output: &Path, writer_ext: &str) {
+    let pattern = format!("*.{}", writer_ext);
+    for entry in walkdir::WalkDir::new(output)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+    {
+        let path = entry.path();
+        if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+            if ext == writer_ext || matches!(ext, "aux" | "log" | "toc" | "out" | "fls" | "fdb_latexmk" | "synctex.gz") {
+                let _ = fs::remove_file(path);
+            }
+        }
+        // Also match the glob pattern for the writer extension
+        if path.file_name().and_then(|n| n.to_str()).map(|n| n.ends_with(&pattern)).unwrap_or(false) {
+            let _ = fs::remove_file(path);
+        }
+    }
 }
