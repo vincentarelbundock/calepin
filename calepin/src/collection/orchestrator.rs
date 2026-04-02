@@ -39,9 +39,22 @@ pub(crate) fn render_book(
     if let Some(ref u) = meta.url { cfg_map.insert("url".into(), minijinja::Value::from(u.clone())); }
     cfg_map.insert("authors".into(), minijinja::Value::from_serialize(&authors));
 
+    // Render page titles through the writer so special characters are escaped
+    // (e.g., "&" -> "\&" in LaTeX).
+    let escaped_pages: Vec<super::context::PageNode> = page_tree.iter().map(|node| {
+        let mut n = node.clone();
+        n.title = crate::render::convert::render_inline(&n.title, writer);
+        n.children = n.children.iter().map(|c| {
+            let mut c = c.clone();
+            c.title = crate::render::convert::render_inline(&c.title, writer);
+            c
+        }).collect();
+        n
+    }).collect();
+
     let ctx = minijinja::context! {
         cfg => minijinja::Value::from_serialize(&cfg_map),
-        pages => page_tree,
+        pages => escaped_pages,
         writer => writer,
         base => writer,
     };
