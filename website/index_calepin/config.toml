@@ -93,7 +93,7 @@ template = "chapter"
 extension = "pdf"
 fig_extension = "pdf"
 modules = ["highlight", "convert_svg_pdf"]
-post = ["tectonic {input}"]
+post = ["latexmk -pdf -interaction=nonstopmode {input}"]
 
 [targets.markdown]
 writer = "markdown"

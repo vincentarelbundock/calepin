@@ -183,7 +183,22 @@ pub fn build_collection(
                 fs::create_dir_all(parent)?;
             }
             let body = if is_book {
-                let body = result.body.replace(&output_prefix, "");
+                let mut body = result.body.replace(&output_prefix, "");
+
+                // Prefix labels to avoid duplicates across chapters.
+                // E.g. \label{chunk-1} in authoring/basics.tex becomes
+                // \label{authoring-basics--chunk-1}. Same-page \hyperref
+                // links are also prefixed so they still resolve.
+                if writer == "latex" {
+                    let page_stem = page.output.with_extension("")
+                        .display().to_string()
+                        .replace('/', "-");
+                    if !page_stem.is_empty() {
+                        let prefix = format!("{}--", page_stem);
+                        body = body.replace("\\label{", &format!("\\label{{{}", prefix));
+                        body = body.replace("\\hyperref[", &format!("\\hyperref[{}", prefix));
+                    }
+                }
                 // Figure paths may be relative to the fragment (e.g.
                 // "basics_files/fig.pdf" in authoring/basics.tex). Book
                 // builds compile from the output root, so prepend the
