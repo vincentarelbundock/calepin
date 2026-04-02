@@ -87,6 +87,19 @@ pub fn build_collection(
     }
     fs::create_dir_all(output)?;
 
+    // For book builds, use a temporary directory for fragments and
+    // compilation. Only the final PDF is copied to `output`.
+    let _book_build_dir = if is_book {
+        Some(tempfile::tempdir().context("Failed to create temporary build directory")?)
+    } else {
+        None
+    };
+    let render_dir: &Path = if let Some(ref d) = _book_build_dir {
+        d.path()
+    } else {
+        output
+    };
+
     // 4. Discover all .qmd pages (auto-discovered, filtered by exclude)
     //    For book builds, fragment files use the writer extension (.typ/.tex),
     //    not the final output extension (.pdf), so that #include / \include
@@ -122,7 +135,7 @@ pub fn build_collection(
 
     let mut config_bytes = fs::read(&found_path).unwrap_or_default();
     config_bytes.extend_from_slice(&crate::utils::cache::collect_auxiliary_bytes(&base_dir));
-    let old_cache = if use_page_cache { crate::utils::cache::load(output) } else { HashMap::new() };
+    let old_cache = if use_page_cache { crate::utils::cache::load(render_dir) } else { HashMap::new() };
     let mut new_cache: HashMap<String, u64> = HashMap::new();
 
     // Build overrides once (same logic render.rs uses) for the hash
@@ -139,7 +152,7 @@ pub fn build_collection(
             let hash = crate::utils::cache::page_hash(&source_bytes, &config_bytes, &collection_target_name, &cache_overrides);
             new_cache.insert(key.clone(), hash);
 
-            let output_exists = output.join(&page.output).exists();
+            let output_exists = render_dir.join(&page.output).exists();
             if output_exists && old_cache.get(&key) == Some(&hash) {
                 fresh.push(key);
             } else {
@@ -155,11 +168,11 @@ pub fn build_collection(
 
     // 7. Render pages
     let results = if use_crossref {
-        render::render_documents_with_crossref(&pages, &meta, &base_dir, output, Some(&collection_target_name), Some(&collection_target), quiet)?
+        render::render_documents_with_crossref(&pages, &meta, &base_dir, render_dir, Some(&collection_target_name), Some(&collection_target), quiet)?
     } else {
         // Render only stale pages
         let stale_owned: Vec<DocumentInfo> = stale_pages.into_iter().cloned().collect();
-        render::render_documents(&stale_owned, &meta, &base_dir, output, writer, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
+        render::render_documents(&stale_owned, &meta, &base_dir, render_dir, writer, apply_page_template, Some(&collection_target_name), Some(&collection_target), quiet)?
     };
 
     if !quiet && skipped > 0 {
@@ -170,7 +183,7 @@ pub fn build_collection(
     //    For orchestrated builds, strip the output directory prefix from paths
     //    in the rendered bodies so they resolve correctly when the compile
     //    command runs from the output directory.
-    let output_prefix = format!("{}/", output.display());
+    let output_prefix = format!("{}/", render_dir.display());
     for page in &pages {
         let source_key = page.source.display().to_string();
         // Don't overwrite fresh pages -- their output is already correct on disk
@@ -178,7 +191,7 @@ pub fn build_collection(
             continue;
         }
         if let Some(result) = results.get(&source_key) {
-            let output_path = output.join(&page.output);
+            let output_path = render_dir.join(&page.output);
             if let Some(parent) = output_path.parent() {
                 fs::create_dir_all(parent)?;
             }
@@ -228,7 +241,7 @@ pub fn build_collection(
         let registry = crate::registry::ModuleRegistry::load(&collection_target.modules, &base_dir);
         let project_ctx = crate::registry::ProjectTransformContext {
             base_dir: base_dir.clone(),
-            output_dir: output.to_path_buf(),
+            output_dir: render_dir.to_path_buf(),
             target_name: collection_target_name.clone(),
         };
 
@@ -237,7 +250,7 @@ pub fn build_collection(
             let source_key = page.source.display().to_string();
             let result = results.get(&source_key);
             let body = result.map(|r| r.body.clone()).unwrap_or_else(|| {
-                fs::read_to_string(output.join(&page.output)).unwrap_or_default()
+                fs::read_to_string(render_dir.join(&page.output)).unwrap_or_default()
             });
             crate::registry::RenderedPage {
                 source: page.source.clone(),
@@ -260,7 +273,7 @@ pub fn build_collection(
         if ran {
             // Write back pages modified by project modules
             for rp in &rendered_pages {
-                let out_path = output.join(&rp.output);
+                let out_path = render_dir.join(&rp.output);
                 if let Some(parent) = out_path.parent() {
                     fs::create_dir_all(parent)?;
                 }
@@ -271,15 +284,17 @@ pub fn build_collection(
             if is_book {
                 let document_nodes = contents::expand_contents(&meta.contents, &base_dir);
                 let page_tree = context::build_page_tree(&document_nodes, &pages);
-                orchestrator::render_book(&meta, &page_tree, &base_dir, output, writer, &collection_target_name, &collection_target, quiet)?;
+                orchestrator::render_book(&meta, &page_tree, &base_dir, render_dir, output, writer, &collection_target_name, &collection_target, quiet)?;
             } else {
                 templating::apply_collection_templates(&meta, &pages, &results, &all_listing_documents, &base_dir, output, writer, &collection_target_name)?;
             }
         }
     }
 
-    // 10. Copy assets/ and static directories to output
-    assets::copy_assets(&base_dir, output, &meta.static_dirs)?;
+    // 10. Copy assets/ and static directories to output (skip for book builds)
+    if !is_book {
+        assets::copy_assets(&base_dir, output, &meta.static_dirs)?;
+    }
 
     // 10b. Run Tailwind CSS CLI if available (compiles utility classes from rendered HTML)
     let tailwind_available = writer == "html" && tailwind::is_available();
@@ -292,7 +307,7 @@ pub fn build_collection(
 
     // 12. Save page cache (after successful build only)
     if use_page_cache {
-        crate::utils::cache::save(output, &new_cache);
+        crate::utils::cache::save(render_dir, &new_cache);
     }
 
     if !quiet {
