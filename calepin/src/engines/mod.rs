@@ -222,12 +222,19 @@ pub fn evaluate(
                 let child_result = evaluate(&div.children, fig_dir, fig_ext, output_ext, metadata, registry, ctx, cache)?;
                 preamble.extend(child_result.preamble);
                 let child_elements = child_result.elements;
-                elements.push(Element::Div {
-                    classes: div.classes.clone(),
-                    id: div.id.clone(),
-                    attrs: div.attrs.clone(),
-                    children: child_elements,
-                });
+                // Conditional divs (content-visible/content-hidden) that passed
+                // the visibility check emit children directly without a wrapper.
+                let is_conditional = div.classes.iter().any(|c| c == "content-visible" || c == "content-hidden");
+                if is_conditional {
+                    elements.extend(child_elements);
+                } else {
+                    elements.push(Element::Div {
+                        classes: div.classes.clone(),
+                        id: div.id.clone(),
+                        attrs: div.attrs.clone(),
+                        children: child_elements,
+                    });
+                }
             }
             Block::Raw(raw) => {
                 if format_matches(&raw.format, output_ext) {
@@ -273,15 +280,8 @@ pub fn execute_chunk(
     let fig_height = options.fig_height();
     let fig_filename = format!("{}-1.{}", label, fig_ext);
     let fig_full_path = fig_dir.join(&fig_filename);
-    // Use absolute path so the subprocess can write figures regardless of its cwd
-    let fig_abs = if fig_full_path.is_relative() {
-        std::env::current_dir().unwrap_or_default().join(&fig_full_path)
-    } else {
-        fig_full_path.clone()
-    };
-    // Path relative to output directory (for \includegraphics, #image, etc.)
-    let fig_dir_name = fig_dir.file_name().unwrap_or_default();
-    let fig_rel_path = Path::new(fig_dir_name).join(&fig_filename);
+    let fig_abs = crate::paths::ensure_absolute(&fig_full_path);
+    let fig_rel_path = crate::paths::figure_rel_path(fig_dir, &fig_filename);
     let fig_full_str = if is_table_chunk {
         String::new()
     } else {

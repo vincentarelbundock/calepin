@@ -218,12 +218,7 @@ fn resolve_scaffold(scaffold_name: &str, extension: Option<&str>) -> Result<Reso
 }
 
 fn resolve_extension(extension: &str) -> Result<(PathBuf, ExtensionManifest)> {
-    let ext_dir = PathBuf::from(extension);
-    let ext_dir = if ext_dir.is_relative() {
-        std::env::current_dir()?.join(&ext_dir)
-    } else {
-        ext_dir
-    };
+    let ext_dir = crate::paths::ensure_absolute(Path::new(extension));
     if !ext_dir.join("extension.toml").exists() {
         bail!(
             "No extension.toml found in {}. Provide a path to an extension directory.",

@@ -454,11 +454,7 @@ impl PathContext {
     /// Resolve the figure output directory for a given document stem.
     /// Places `{leaf_stem}_files/` next to the output file.
     pub fn figures_dir(&self, stem: &str) -> PathBuf {
-        // Use only the filename part of the stem (no directory components)
-        let leaf = std::path::Path::new(stem).file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or(stem);
-        self.output_dir.join(format!("{}_files", leaf))
+        self.output_dir.join(figures_dir_name(stem))
     }
 
     /// Resolve the cache directory for a given document stem.
@@ -481,6 +477,68 @@ impl PathContext {
     /// Returns the input file's parent directory, or None if empty.
     pub fn code_working_dir(input: &Path) -> Option<&Path> {
         input.parent().and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Path helpers
+// ---------------------------------------------------------------------------
+
+/// Ensure a path is absolute. Relative paths are resolved against the current
+/// working directory.
+pub fn ensure_absolute(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_default().join(path)
+    }
+}
+
+/// Return the figures directory name for a given document stem: `{leaf}_files`.
+pub fn figures_dir_name(stem: &str) -> String {
+    let leaf = Path::new(stem).file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(stem);
+    format!("{}_files", leaf)
+}
+
+/// Compute a figure path relative to the output directory.
+/// Returns `{dir_basename}/{filename}`, e.g. `myfile_files/fig-plot-1.png`.
+pub fn figure_rel_path(fig_dir: &Path, filename: &str) -> PathBuf {
+    let dir_name = fig_dir.file_name().unwrap_or_default();
+    Path::new(dir_name).join(filename)
+}
+
+/// When the user-requested output extension differs from the writer's native
+/// extension (e.g. writer produces `.typ` but user wants `.pdf`), returns
+/// `(intermediate_path, Some(final_path))`. When they match, returns
+/// `(user_output, None)`.
+pub fn resolve_intermediate_output(
+    user_output: &Path,
+    writer_ext: &str,
+    has_post_commands: bool,
+) -> (PathBuf, Option<PathBuf>) {
+    let o_ext = user_output.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if o_ext != writer_ext && has_post_commands {
+        (user_output.with_extension(writer_ext), Some(user_output.to_path_buf()))
+    } else {
+        (user_output.to_path_buf(), None)
+    }
+}
+
+/// Copy the `{stem}_files/` directory from the input's parent to the output
+/// directory so post commands (tectonic, typst) can find figure files.
+/// Returns `Some(dst)` if a copy was made (caller should clean up after post
+/// commands), or `None` if no copy was needed.
+pub fn copy_figures_for_output(input: &Path, output_dir: &Path, stem: &str) -> Option<PathBuf> {
+    let dir_name = figures_dir_name(stem);
+    let src = input.parent().unwrap_or(Path::new(".")).join(&dir_name);
+    let dst = output_dir.join(&dir_name);
+    if src.is_dir() && !dst.exists() {
+        copy_dir_recursive(&src, &dst).ok();
+        Some(dst)
+    } else {
+        None
     }
 }
 

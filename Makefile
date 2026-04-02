@@ -48,21 +48,20 @@ check:  ## Run cargo check (fast compile check)
 
 CLP = target/debug/calepin
 
-kitchen: build ## Render kitchen_sink.qmd to HTML, PDF, and Markdown
-	cd website/assets && ../../$(CLP) kitchen_sink.qmd -t html -o kitchen_sink.html
-	cd website/assets && ../../$(CLP) kitchen_sink.qmd -t pdf-latex -o kitchen_sink_latex.pdf
-	cd website/assets && ../../$(CLP) kitchen_sink.qmd -t pdf -o kitchen_sink_typst.pdf
-	cd website/assets && ../../$(CLP) kitchen_sink.qmd -t markdown -o kitchen_sink.md
-
 site: build ## Build and serve static site from website/
 	rm -rf website/.calepin
+	rm -rf website/assets/.calepin
 	rm -rf website/*_output
 	rm -rf website/index_calepin/templates/
 	rm -rf website/index_calepin/assets
 	calepin website/index.qmd
+	rm -rf website/assets/.calepin
 	calepin website/assets/kitchen_sink.qmd -t html -o website/index_output/assets/kitchen_sink.html
+	rm -rf website/assets/.calepin
 	calepin website/assets/kitchen_sink.qmd -t pdf-latex -o website/index_output/assets/kitchen_sink_latex.pdf
+	rm -rf website/assets/.calepin
 	calepin website/assets/kitchen_sink.qmd -t pdf -o website/index_output/assets/kitchen_sink_typst.pdf
+	rm -rf website/assets/.calepin
 	calepin website/assets/kitchen_sink.qmd -t markdown -o website/index_output/assets/kitchen_sink.md
 	calepin preview website/index_output
 

@@ -99,7 +99,7 @@ crossref = "plain"
 [[navbar.left]]
 image = "assets/calepin.svg"
 image_dark = "invert"
-href = "index.qmd"
+href = "/"
 width = "104px"
 height = "36px"
 

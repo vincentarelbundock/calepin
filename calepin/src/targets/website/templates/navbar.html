@@ -1,6 +1,6 @@
 {% if clp.navbar.left %}
 {% set brand = clp.navbar.left[0] %}
-<a class="flex items-center text-[color:var(--c-text)] no-underline shrink-0" href="{{ link('index.html') }}">
+<a class="flex items-center text-[color:var(--c-text)] no-underline shrink-0" href="{{ link(brand.href) if brand.href else '/' }}">
   {% if brand.image %}
     {% if brand.image_dark == "invert" %}
   <img class="h-10 w-auto dark:brightness-0 dark:invert" src="{{ link(brand.image) }}" alt="{{ brand.text or 'Home' }}"{% if brand.width %} width="{{ brand.width }}"{% endif %}{% if brand.height %} height="{{ brand.height }}"{% endif %}>
@@ -29,16 +29,16 @@
     </button>
     <ul class="hidden group-hover:block absolute top-full left-0 z-40 min-w-[10rem] py-1.5 pt-3 list-none p-0 bg-page border border-brd rounded-lg shadow-lg -mt-1.5">
       {% for child in item.children %}
-      <li class="list-none"><a href="{{ child.href | default(value='#') }}" class="block px-3 py-1.5 text-sm text-muted hover:bg-hover hover:text-[color:var(--c-text)] no-underline whitespace-nowrap">{{ child.text }}</a></li>
+      <li class="list-none"><a href="{{ link(child.href) if child.href else '#' }}" class="block px-3 py-1.5 text-sm text-muted hover:bg-hover hover:text-[color:var(--c-text)] no-underline whitespace-nowrap">{{ child.text }}</a></li>
       {% endfor %}
     </ul>
   </div>
     {% elif item.children %}
       {% for child in item.children %}
-  <a href="{{ child.href | default(value='#') }}" class="px-2.5 py-1.5 text-sm text-muted rounded-md hover:bg-hover hover:text-[color:var(--c-text)] no-underline whitespace-nowrap">{{ child.text }}</a>
+  <a href="{{ link(child.href) if child.href else '#' }}" class="px-2.5 py-1.5 text-sm text-muted rounded-md hover:bg-hover hover:text-[color:var(--c-text)] no-underline whitespace-nowrap">{{ child.text }}</a>
       {% endfor %}
     {% else %}
-  <a href="{{ item.href | default(value='#') }}" class="px-2.5 py-1.5 text-sm text-muted rounded-md hover:bg-hover hover:text-[color:var(--c-text)] no-underline whitespace-nowrap">{{ item.text }}</a>
+  <a href="{{ link(item.href) if item.href else '#' }}" class="px-2.5 py-1.5 text-sm text-muted rounded-md hover:bg-hover hover:text-[color:var(--c-text)] no-underline whitespace-nowrap">{{ item.text }}</a>
     {% endif %}
   {% endif %}
   {% endfor %}
@@ -59,7 +59,7 @@
   {% elif item.widget == "language" %}
   {% if clp.translations %}{% for t in clp.translations %}<a href="{{ t.url }}" hreflang="{{ t.lang }}" title="{{ t.name }}" class="text-2xl leading-none no-underline">{{ t.flag }}</a>{% endfor %}{% endif %}
   {% else %}
-  <a href="{{ item.href | default(value='#') }}" class="flex items-center gap-1 p-1.5 text-muted rounded-md hover:bg-hover hover:text-[color:var(--c-text)] no-underline">
+  <a href="{{ link(item.href) if item.href else '#' }}" class="flex items-center gap-1 p-1.5 text-muted rounded-md hover:bg-hover hover:text-[color:var(--c-text)] no-underline">
     {% if item.icon %}<span class="inline-block w-5 h-5 bg-current align-middle" style="-webkit-mask-image: url({{ link(item.icon) }}); mask-image: url({{ link(item.icon) }}); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;{% if item.width %} width: {{ item.width }};{% endif %}{% if item.height %} height: {{ item.height }};{% endif %}"></span>{% endif %}
     {% if item.image %}
       {% if item.image_dark == "invert" %}<img class="h-5 w-auto dark:brightness-0 dark:invert" src="{{ link(item.image) }}" alt="{{ item.text or '' }}">

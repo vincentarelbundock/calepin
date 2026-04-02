@@ -666,17 +666,8 @@ fn load_extension_modules(modules: &mut Vec<LoadedModule>, project_root: &Path) 
             } else {
                 ext_dir.join(run_path)
             };
-            // Ensure absolute path for script execution
-            let script_path = if script_path.is_relative() {
-                std::env::current_dir().unwrap_or_default().join(&script_path)
-            } else {
-                script_path
-            };
-            let ext_dir_abs = if ext_dir.is_relative() {
-                std::env::current_dir().unwrap_or_default().join(&ext_dir)
-            } else {
-                ext_dir.clone()
-            };
+            let script_path = crate::paths::ensure_absolute(&script_path);
+            let ext_dir_abs = crate::paths::ensure_absolute(&ext_dir);
 
             let kind = match module_decl.kind.as_str() {
                 "document" => {

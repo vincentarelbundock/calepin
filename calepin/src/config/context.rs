@@ -29,11 +29,7 @@ impl ProjectContext {
 /// Falls back to front matter `target:`, then "html".
 pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<ProjectContext> {
     let input_dir = input.parent().unwrap_or(Path::new("."));
-    let abs_input_dir = if input_dir.is_relative() {
-        std::env::current_dir().unwrap_or_default().join(input_dir)
-    } else {
-        input_dir.to_path_buf()
-    };
+    let abs_input_dir = crate::paths::ensure_absolute(input_dir);
 
     // Project root is the directory containing the input file.
     // Load config and convert to Metadata immediately.
@@ -65,11 +61,7 @@ pub fn resolve_context(input: &Path, cli_target: Option<&str>) -> Result<Project
     };
 
     // Set sidecar root early so resolve_target can find sidecar extensions.
-    let abs_input = if input.is_relative() {
-        std::env::current_dir().unwrap_or_default().join(input)
-    } else {
-        input.to_path_buf()
-    };
+    let abs_input = crate::paths::ensure_absolute(input);
     let sidecar = paths::resolve_or_create_sidecar_dir(&abs_input);
     paths::set_page_sidecar(sidecar.as_deref());
 

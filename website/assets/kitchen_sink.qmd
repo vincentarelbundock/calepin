@@ -154,7 +154,6 @@ echo "Hello from shell"
 The mean of 1 to 10 is `{r} mean(1:10)`. Pi is `{python} f"{__import__('math').pi:.2f}"`.
 The secret value is `{r} secret_value`.
 
-
 ::: {.content-hidden when-format="typst"}
 
 # Math {#sec-math}

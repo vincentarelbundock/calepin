@@ -13,9 +13,9 @@
     if (a.getAttribute('download') != null) return false;
     var href = a.getAttribute('href');
     if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('javascript:')) return false;
-    // Only SPA-navigate site pages (.html not under assets/)
+    // Only SPA-navigate .html pages (not assets, not bare paths like /)
     var path = a.pathname || '';
-    if (path && !/\.html$/.test(path) && /\.\w+$/.test(path)) return false;
+    if (!/\.html$/.test(path)) return false;
     if (/\/assets\//.test(path)) return false;
     return true;
   }

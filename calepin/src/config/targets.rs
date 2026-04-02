@@ -317,11 +317,7 @@ pub fn resolve_target_output_path(
     output_dir: Option<&str>,
 ) -> PathBuf {
     if let (Some(root), Some(out)) = (project_root, output_dir) {
-        let abs_input = if input.is_relative() {
-            std::env::current_dir().unwrap_or_default().join(input)
-        } else {
-            input.to_path_buf()
-        };
+        let abs_input = crate::paths::ensure_absolute(input);
         let relative = abs_input.strip_prefix(root)
             .unwrap_or(&abs_input);
         root.join(out).join(target_name).join(relative).with_extension(ext)

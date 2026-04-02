@@ -109,14 +109,7 @@ fn render_one_with_context(
     };
     let (output_path, final_path) = if let Some(o) = output {
         let writer_ext = crate::paths::resolve_extension(writer);
-        let o_ext = o.extension().and_then(|e| e.to_str()).unwrap_or("");
-        if o_ext != writer_ext && !ctx.target.post.is_empty() {
-            // User wants e.g. .pdf but writer produces .typ/.tex.
-            // Write to the native extension; post commands will produce the final file.
-            (o.with_extension(writer_ext), Some(o.to_path_buf()))
-        } else {
-            (o.to_path_buf(), None)
-        }
+        crate::paths::resolve_intermediate_output(o, writer_ext, !ctx.target.post.is_empty())
     } else if ctx.explicit_target {
         (crate::config::resolve_target_output_path(
             input, &ctx.target_name, ext,
@@ -179,25 +172,15 @@ fn render_one_with_context(
 
     // Run target-level post-processing commands
     if !ctx.target.post.is_empty() {
-        // Copy the figures directory next to the output so LaTeX/Typst can find it
         let input_stem = input.file_stem().unwrap_or_default().to_string_lossy();
-        let files_dir_name = format!("{}_files", input_stem);
-        let src_files = input.parent().unwrap_or(Path::new(".")).join(&files_dir_name);
-        let dst_files = output_path.parent().unwrap_or(Path::new(".")).join(&files_dir_name);
-        let copied_files = if src_files.is_dir() && !dst_files.exists() {
-            crate::paths::copy_dir_recursive(&src_files, &dst_files).ok();
-            true
-        } else {
-            false
-        };
+        let output_dir = output_path.parent().unwrap_or(Path::new("."));
+        let copied_figs = crate::paths::copy_figures_for_output(input, output_dir, &input_stem);
 
-        let root = ctx.project_root.as_deref()
-            .unwrap_or_else(|| output_path.parent().unwrap_or(Path::new(".")));
+        let root = ctx.project_root.as_deref().unwrap_or(output_dir);
         run_target_post_commands(&ctx.target.post, &output_path, root, quiet)?;
 
-        // Clean up copied figures directory
-        if copied_files {
-            std::fs::remove_dir_all(&dst_files).ok();
+        if let Some(dst) = copied_figs {
+            std::fs::remove_dir_all(&dst).ok();
         }
     }
 
@@ -233,12 +216,7 @@ pub fn run_target_post_commands(
     project_root: &Path,
     quiet: bool,
 ) -> Result<()> {
-    // Use absolute path so post commands work regardless of working_dir
-    let output_abs = if output.is_absolute() {
-        output.to_path_buf()
-    } else {
-        std::env::current_dir().unwrap_or_default().join(output)
-    };
+    let output_abs = crate::paths::ensure_absolute(output);
     let working_dir = output_abs.parent().unwrap_or(project_root);
     let dir = working_dir.display().to_string();
     for command in commands {
