@@ -46,6 +46,15 @@ pub fn render(
         .collect::<Vec<_>>()
         .join("\n\n");
 
+    // If the rendered children already contain a table float environment
+    // (e.g., from tinytable or gt), skip the calepin table wrapper to
+    // avoid nested \begin{table} errors.
+    if (writer == "latex" && children_rendered.contains("\\begin{table}"))
+        || (writer == "typst" && children_rendered.contains("#figure("))
+    {
+        return children_rendered;
+    }
+
     // Build template vars
     let mut vars = TemplateVars::with_writer(writer);
     vars.clp.insert("content".to_string(), minijinja::Value::from(children_rendered));

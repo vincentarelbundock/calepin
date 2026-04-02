@@ -1,10 +1,41 @@
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{textcomp}
+\usepackage{newunicodechar}
+{% raw %}\newunicodechar{├}{{\textbar--}}{% endraw %}
+{% raw %}\newunicodechar{└}{{\textbackslash--}}{% endraw %}
+{% raw %}\newunicodechar{─}{{-}}{% endraw %}
+{% raw %}\newunicodechar{→}{{$\rightarrow$}}{% endraw %}
+{% raw %}\newunicodechar{│}{{\textbar}}{% endraw %}
 \usepackage{amsmath,amssymb}
 \usepackage{tcolorbox}
 \tcbuselibrary{breakable,skins}
 \usepackage{fvextra}
 \usepackage{titling}
 \usepackage{pdflscape}
-\newcommand{\codefilenameheader}[1]{\noindent\texttt{\small #1}\par\vspace{-0.5em}}
+\usepackage{tabularray}
+\usepackage{float}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\setlist{nosep}
+{% raw %}\NewTableCommand{\tinytableDefineColor}[3]{\definecolor{#1}{#2}{#3}}{% endraw %}
+{% raw %}\newcommand{\tinytableTabularrayUnderline}[1]{\underline{#1}}{% endraw %}
+{% raw %}\newcommand{\tinytableTabularrayStrikeout}[1]{\sout{#1}}{% endraw %}
+{% raw %}\newcommand{\codefilenameheader}[1]{\noindent\texttt{\small #1}\par\vspace{-0.5em}}{% endraw %}
 \newenvironment{codefilename}{}{}
-\newenvironment{srccode}{\vspace{0.3em}}{\vspace{0.3em}}
-\newenvironment{outcode}{\vspace{0.3em}}{\vspace{0.3em}}
+\newtcolorbox{srccode}{
+  enhanced, breakable,
+  colback=gray!8, colframe=gray!8,
+  arc=4pt, boxrule=0pt,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  before skip=0.6em, after skip=0.1em
+}
+\newtcolorbox{outcode}{
+  enhanced, breakable,
+  colback=gray!5, colframe=gray!5,
+  arc=4pt, boxrule=0pt,
+  left=4pt, right=4pt, top=2pt, bottom=2pt,
+  before skip=0pt, after skip=0.6em
+}

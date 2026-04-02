@@ -1,0 +1,206 @@
+\definecolor{hl1}{RGB}{51,51,51}
+\definecolor{hl2}{RGB}{24,54,145}
+\definecolor{hl3}{RGB}{0,134,179}
+\definecolor{hl4}{RGB}{15,0,0}
+\definecolor{hl5}{RGB}{3,3,3}
+\definecolor{hl6}{RGB}{99,163,92}
+\definecolor{hl7}{RGB}{121,93,163}
+\definecolor{hl8}{RGB}{167,29,93}
+\definecolor{hl9}{RGB}{223,80,0}
+\definecolor{hl10}{RGB}{150,152,150}
+\subsection*{Markdown}
+\label{markdown}
+
+Tables can use the standard Github-Flavored Markdown pipe syntax. Column alignment is controlled by colons in the separator row: left (default), right (\texttt{-{}-{}-:}), or center (\texttt{:-{}-{}-:}).
+
+\medskip
+\begin{tblr}{colspec={Q[l]Q[r]X[l]}, hline{1,2,Z}={solid}}
+Name & Score & Grade \\
+Alice & 95 & A \\
+Bob & 87 & B \\
+Carol & 92 & A \\
+\end{tblr}
+\medskip
+
+\subsubsection*{Captions and cross-references}
+\label{captions-and-cross-references}
+
+Wrap a table in a fenced div with a \texttt{\#tbl-} id to add a caption and make it cross-referenceable. The last paragraph in the div becomes the caption:
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{::: \{\#tbl-grades\}
+}
+\textcolor{hl1}{| Name  | Score | Grade |
+}
+\textcolor{hl1}{|-------|------:|:-----:|
+}
+\textcolor{hl1}{| Alice |    95 | A     |
+}
+\textcolor{hl1}{| Bob   |    87 | B     |
+}
+\textcolor{hl1}{| Carol |    92 | A     |
+}
+
+\textcolor{hl1}{Student grades for Fall 2026.
+}
+\textcolor{hl1}{:::}
+\end{Verbatim}
+\end{srccode}
+
+\begin{table}
+\centering
+\caption{Student grades for Fall 2026.}
+\label{tbl-grades}
+\medskip
+\begin{tblr}{colspec={Q[l]Q[r]X[l]}, hline{1,2,Z}={solid}}
+Name & Score & Grade \\
+Alice & 95 & A \\
+Bob & 87 & B \\
+Carol & 92 & A \\
+\end{tblr}
+\medskip
+
+
+\end{table}
+
+Reference tables with \texttt{Table \ref{tbl-label}}: \hyperref[tbl-grades]{Table 1} shows the full class results. Suppress the type prefix with \texttt{\ref{tbl-label}}: \hyperref[tbl-grades]{1}.
+
+\subsubsection*{Caption location}
+\label{caption-location}
+
+By default, captions appear above the table. Use \texttt{tbl-cap-location} to place them below:
+
+
+
+\begin{table}
+\centering
+\caption{This caption appears below the table.}
+\label{tbl-bottom}
+\medskip
+\begin{tblr}{colspec={X[l]X[l]}, hline{1,2,Z}={solid}}
+x & y \\
+1 & 1 \\
+2 & 4 \\
+3 & 9 \\
+\end{tblr}
+\medskip
+
+
+\end{table}
+
+\subsection*{R}
+\label{r}
+
+The \href{https://vincentarelbundock.github.io/tinytable/}{tinytable} R package generates format-aware tables that work automatically in \emph{Calepin}. Use a \texttt{tbl-} label on the chunk and \texttt{tbl-cap} for the caption. The \texttt{style\_tt()} function applies cell-level formatting, and \texttt{group\_tt()} adds spanning headers.
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{```\{r, tbl}\textcolor{hl8}{-}\textcolor{hl1}{cars\}}
+\textcolor{hl10}{\#| tbl-cap = Motor Trend car data
+}
+\textcolor{hl10}{\#| echo = fenced
+}
+\textcolor{hl3}{library}\textcolor{hl1}{(tinytable)}
+\textcolor{hl3}{tt}\textcolor{hl1}{(mtcars[}\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{5}\textcolor{hl1}{, }\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{4}\textcolor{hl1}{]) }\textcolor{hl8}{|>}
+\textcolor{hl1}{  }\textcolor{hl3}{style\_tt}\textcolor{hl1}{(}\textcolor{hl3}{2}\textcolor{hl8}{:}\textcolor{hl3}{3}\textcolor{hl1}{, }\textcolor{hl3}{background}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"\#5E81AC"}\textcolor{hl1}{, }\textcolor{hl3}{color}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"white"}\textcolor{hl1}{) }\textcolor{hl8}{|>}
+\textcolor{hl1}{  }\textcolor{hl3}{group\_tt}\textcolor{hl1}{(}\textcolor{hl3}{j}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl8}{list}\textcolor{hl1}{(}\textcolor{hl2}{"Group"}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl3}{3}\textcolor{hl8}{:}\textcolor{hl3}{4}\textcolor{hl1}{))}
+\textcolor{hl1}{```}
+\end{Verbatim}
+\end{srccode}
+
+\begin{table}
+\centering
+\begin{tblr}[         %% tabularray outer open
+]                     %% tabularray outer close
+{                     %% tabularray inner open
+colspec={Q[]Q[]Q[]Q[]},
+hline{2}={4}{solid, black, 0.03em},
+hline{2}={3}{solid, black, 0.03em, l=-0.5},
+hline{3}={1-4}{solid, black, 0.05em},
+hline{1}={1-4}{solid, black, 0.08em},
+hline{8}={1-4}{solid, black, 0.08em},
+row{4,5}={}{fg=white, bg=c5E81AC},
+cell{1}{1}={}{halign=c},
+cell{1}{2}={}{halign=c},
+cell{1}{3}={c=2}{halign=c},
+cell{1}{4}={}{halign=c},
+}                     %% tabularray inner close
+\tinytableDefineColor{c5E81AC}{HTML}{5E81AC}
+&  & Group &  \\
+mpg & cyl & disp & hp \\
+21.0 & 6 & 160 & 110 \\
+21.0 & 6 & 160 & 110 \\
+22.8 & 4 & 108 & 93 \\
+21.4 & 6 & 258 & 110 \\
+18.7 & 8 & 360 & 175 \\
+\end{tblr}
+\end{table}
+
+Cross-reference work as expected, by referring to the figure label: see \hyperref[tbl-cars]{Table 4}.
+
+The \href{https://gt.rstudio.com/}{gt} and \href{https://yihui.org/knitr/}{\texttt{knitr}} are two other popular packages in \texttt{R} to generate tables:
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{```\{r, tbl}\textcolor{hl8}{-}\textcolor{hl1}{cars\}}
+\textcolor{hl10}{\#| tbl-cap = Motor Trend car data
+}
+\textcolor{hl10}{\#| echo = fenced
+}
+\textcolor{hl1}{gt}\textcolor{hl8}{::}\textcolor{hl3}{gt}\textcolor{hl1}{(mtcars[}\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{5}\textcolor{hl1}{, }\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{4}\textcolor{hl1}{])}
+\textcolor{hl1}{```}
+\end{Verbatim}
+\end{srccode}
+
+\begin{table}[t]
+\fontsize{12.0pt}{14.0pt}\selectfont
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}rrrr}
+\toprule
+mpg & cyl & disp & hp \\ 
+\midrule\addlinespace[2.5pt]
+21.0 & 6 & 160 & 110 \\ 
+21.0 & 6 & 160 & 110 \\ 
+22.8 & 4 & 108 & 93 \\ 
+21.4 & 6 & 258 & 110 \\ 
+18.7 & 8 & 360 & 175 \\ 
+\bottomrule
+\end{tabular*}
+\end{table}
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{```\{r, tbl}\textcolor{hl8}{-}\textcolor{hl1}{cars\}}
+\textcolor{hl10}{\#| tbl-cap = Motor Trend car data
+}
+\textcolor{hl10}{\#| echo = fenced
+}
+\textcolor{hl1}{knitr}\textcolor{hl8}{::}\textcolor{hl3}{kable}\textcolor{hl1}{(mtcars[}\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{5}\textcolor{hl1}{, }\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{4}\textcolor{hl1}{])}
+\textcolor{hl1}{```}
+\end{Verbatim}
+\end{srccode}
+
+\begin{table}
+\centering
+\caption{Motor Trend car data}
+\label{tbl-cars}
+
+
+|                  |  mpg| cyl| disp|  hp|
+|:-----------------|----:|---:|----:|---:|
+|Mazda RX4         | 21.0|   6|  160| 110|
+|Mazda RX4 Wag     | 21.0|   6|  160| 110|
+|Datsun 710        | 22.8|   4|  108|  93|
+|Hornet 4 Drive    | 21.4|   6|  258| 110|
+|Hornet Sportabout | 18.7|   8|  360| 175|
+\end{table}

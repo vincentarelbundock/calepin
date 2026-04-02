@@ -178,21 +178,31 @@ impl FormatWriter for LatexWriter {
     }
 
     fn table_open(&self, alignments: &[TableAlignment]) -> String {
-        let col_spec: String = alignments.iter().map(|a| match a {
-            TableAlignment::Left => 'l',
-            TableAlignment::Center => 'c',
-            TableAlignment::Right => 'r',
-            _ => 'l',
-        }).collect();
-        format!("\\begin{{tabular}}{{{}}}\n\\hline\n", col_spec)
+        // Use tabularray so long text wraps instead of overflowing.
+        let n = alignments.len();
+        let col_spec: String = if n <= 2 {
+            alignments.iter().map(|_| "X[l]").collect::<Vec<_>>().join("")
+        } else {
+            alignments.iter().enumerate().map(|(i, a)| {
+                if i == n - 1 {
+                    "X[l]".to_string()
+                } else {
+                    match a {
+                        TableAlignment::Left => "Q[l]".to_string(),
+                        TableAlignment::Center => "Q[c]".to_string(),
+                        TableAlignment::Right => "Q[r]".to_string(),
+                        _ => "Q[l]".to_string(),
+                    }
+                }
+            }).collect::<Vec<_>>().join("")
+        };
+        format!("\\medskip\n\\begin{{tblr}}{{colspec={{{}}}, hline{{1,2,Z}}={{solid}}}}\n", col_spec)
     }
-    fn table_close(&self) -> &str { "\\hline\n\\end{tabular}\n\n" }
+    fn table_close(&self) -> &str { "\\end{tblr}\n\\medskip\n\n" }
 
     fn table_row_open(&self, _is_header: bool) -> String { String::new() }
-    fn table_row_close(&self, is_header: bool) -> String {
-        let mut out = " \\\\\n".to_string();
-        if is_header { out.push_str("\\hline\n"); }
-        out
+    fn table_row_close(&self, _is_header: bool) -> String {
+        " \\\\\n".to_string()
     }
 
     fn table_cell_open(&self, _is_header: bool, _align: TableAlignment, index: usize) -> String {

@@ -101,16 +101,12 @@ pub fn evaluate_block(
                 }
             },
             ChunkResult::Asis(text) => {
-                // knit_print methods often wrap output in Pandoc raw blocks:
-                //   ```{=html}\n...\n```
-                // Strip the wrapper and emit the inner content directly as CodeAsis.
-                // If there is no raw block wrapper, the content is markdown (e.g.,
-                // knitr::kable pipe tables) and should be rendered as Text.
-                if let Some(inner) = strip_raw_block_wrapper(&text) {
-                    elements.push(Element::CodeAsis { text: inner });
-                } else {
-                    elements.push(Element::Text { content: text });
-                }
+                // knit_print methods wrap output in knit_asis, meaning the
+                // content should be passed through raw. Some packages also
+                // add a Pandoc raw block wrapper (```{=html}\n...\n```);
+                // strip it if present.
+                let content = strip_raw_block_wrapper(&text).unwrap_or(text);
+                elements.push(Element::CodeAsis { text: content });
             }
             ChunkResult::Warning(text) => {
                 if opts.warning() {

@@ -1,0 +1,179 @@
+\definecolor{hl1}{RGB}{51,51,51}
+\definecolor{hl2}{RGB}{24,54,145}
+\definecolor{hl3}{RGB}{0,134,179}
+\definecolor{hl4}{RGB}{15,0,0}
+\definecolor{hl5}{RGB}{3,3,3}
+\definecolor{hl6}{RGB}{99,163,92}
+\definecolor{hl7}{RGB}{121,93,163}
+\definecolor{hl8}{RGB}{167,29,93}
+\definecolor{hl9}{RGB}{223,80,0}
+\definecolor{hl10}{RGB}{150,152,150}
+Code chunks that produce plots automatically generate figures. Use \texttt{fig-cap} for a caption and a label in the chunk header for cross-referencing.
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{```\{r, fig}\textcolor{hl8}{-}\textcolor{hl1}{scatter\}}
+\textcolor{hl10}{\#| echo = fenced
+}
+\textcolor{hl10}{\#| fig-cap = "A simple scatter plot"
+}
+\textcolor{hl3}{plot}\textcolor{hl1}{(}
+\textcolor{hl1}{    }\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{10}\textcolor{hl1}{,}
+\textcolor{hl1}{    (}\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{10}\textcolor{hl1}{)}\textcolor{hl8}{\^{}}\textcolor{hl3}{2}\textcolor{hl1}{,}
+\textcolor{hl1}{    }\textcolor{hl3}{main}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"Square Numbers"}\textcolor{hl1}{,}
+\textcolor{hl1}{    }\textcolor{hl3}{xlab}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"x"}\textcolor{hl1}{,}
+\textcolor{hl1}{    }\textcolor{hl3}{ylab}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"x\^{}2"}
+\textcolor{hl1}{)}
+\textcolor{hl1}{```}
+\end{Verbatim}
+\end{srccode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{authoring/figures_files/fig-scatter-1.pdf}
+\caption{A simple scatter plot}
+\label{fig-scatter}
+\end{figure}
+
+Figures with labels can be cross-referenced with \texttt{Figure \ref{fig-label}} (see \hyperref[fig-scatter]{Figure 1} above).
+
+Any plotting library works. Here is a ggplot2 example:
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{```\{r, fig}\textcolor{hl8}{-}\textcolor{hl1}{ggplot\}}
+\textcolor{hl10}{\#| echo = fenced
+}
+\textcolor{hl10}{\#| fig-cap = "Fuel efficiency by weight (ggplot2)"
+}
+\textcolor{hl3}{library}\textcolor{hl1}{(ggplot2)}
+\textcolor{hl3}{ggplot}\textcolor{hl1}{(mtcars, }\textcolor{hl3}{aes}\textcolor{hl1}{(wt, mpg, }\textcolor{hl3}{color}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl3}{factor}\textcolor{hl1}{(cyl))) }\textcolor{hl8}{+}
+\textcolor{hl1}{  }\textcolor{hl3}{geom\_point}\textcolor{hl1}{(}\textcolor{hl3}{size}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl3}{3}\textcolor{hl1}{) }\textcolor{hl8}{+}
+\textcolor{hl1}{  }\textcolor{hl3}{labs}\textcolor{hl1}{(}\textcolor{hl3}{x}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"Weight (1000 lbs)"}\textcolor{hl1}{, }\textcolor{hl3}{y}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"MPG"}\textcolor{hl1}{, }\textcolor{hl3}{color}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"Cylinders"}\textcolor{hl1}{) }\textcolor{hl8}{+}
+\textcolor{hl1}{  }\textcolor{hl3}{theme\_minimal}\textcolor{hl1}{()}
+\textcolor{hl1}{```}
+\end{Verbatim}
+\end{srccode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.70\textwidth]{authoring/figures_files/fig-ggplot-1.pdf}
+\caption{Fuel efficiency by weight (ggplot2)}
+\label{fig-ggplot}
+\end{figure}
+
+\subsection*{Size}
+\label{size}
+
+In Quarto, figure appearance is governed by four parameters: \texttt{fig-width}, \texttt{fig-height}, \texttt{fig-asp}, and \texttt{out-width}. Unless users pick exactly the right combination, figures end up with inconsistent font sizes, axis labels, and line widths. A narrow figure has tiny text while a wide figure has huge text, because the graphics device size changes but the display size does not (or vice versa).
+
+\emph{Calepin} uses pragmatic defaults and adjusts some parameters automatically to maintain a consistent look. In practice, we normally only need two options:
+
+\medskip
+\begin{tblr}{colspec={Q[l]Q[l]X[l]}, hline{1,2,Z}={solid}}
+Option & Default & What it controls \\
+\texttt{out-width} & \texttt{70\%} & Horizontal space in the document \\
+\texttt{fig-asp} & \texttt{0.618} & Aspect ratio (golden ratio) \\
+\end{tblr}
+\medskip
+
+\emph{Calepin} automatically scales the internal graphics device (\texttt{fig-width}) to match \texttt{out-width}, so text and labels inside figures stay the same size regardless of how wide the figure is displayed. This means a narrow figure and a wide figure will have consistent font sizes.
+
+\begin{itemize}
+\item Want a wider figure? Change \texttt{out-width}.
+
+
+\item Want a taller figure? Change \texttt{fig-asp}.
+
+
+\end{itemize}
+
+That is all.
+
+
+
+
+\begin{srccode}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{hl1}{```\{r, chunk}\textcolor{hl8}{-}\textcolor{hl3}{3}\textcolor{hl1}{\}}
+\textcolor{hl10}{\#| fig-asp = 0.4
+}
+\textcolor{hl10}{\#| out-width = "95\%"
+}
+\textcolor{hl10}{\#| fig-cap = "A wide, short figure"
+}
+\textcolor{hl10}{\#| echo = fenced
+}
+\textcolor{hl3}{plot}\textcolor{hl1}{(}\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{20}\textcolor{hl1}{, }\textcolor{hl3}{sin}\textcolor{hl1}{(}\textcolor{hl3}{1}\textcolor{hl8}{:}\textcolor{hl3}{20}\textcolor{hl1}{), }\textcolor{hl3}{type}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"l"}\textcolor{hl1}{, }\textcolor{hl3}{col}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl2}{"steelblue"}\textcolor{hl1}{, }\textcolor{hl3}{lwd}\textcolor{hl1}{ }\textcolor{hl8}{=}\textcolor{hl1}{ }\textcolor{hl3}{2}\textcolor{hl1}{)}
+\textcolor{hl1}{```}
+\end{Verbatim}
+\end{srccode}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.95\textwidth]{authoring/figures_files/chunk-3-1.pdf}
+\caption{A wide, short figure}
+\label{chunk-3}
+\end{figure}
+
+The \texttt{fig-width} and \texttt{fig-height} options still exist for full manual control, but you rarely need them. When you set \texttt{fig-width} explicitly, auto-scaling is disabled.
+
+\subsection*{Options}
+\label{options}
+
+\medskip
+\begin{tblr}{colspec={Q[l]Q[l]X[l]}, hline{1,2,Z}={solid}}
+Option & Default & Description \\
+\texttt{out-width} & \texttt{70\%} & Display width in the document \\
+\texttt{fig-asp} & \texttt{0.618} & Aspect ratio (height / width) \\
+\texttt{fig-width} & \texttt{6} & Graphics device width in inches (auto-scaled from \texttt{out-width}) \\
+\texttt{fig-height} &  & Derived from \texttt{fig-width * fig-asp} \\
+\texttt{fig-cap} &  & Caption text \\
+\texttt{fig-alt} &  & Alt text for accessibility \\
+\texttt{fig-align} & \texttt{center} & Alignment (\texttt{left}, \texttt{center}, \texttt{right}) \\
+\texttt{dev} & \texttt{png} & Graphics device (\texttt{png}, \texttt{pdf}, \texttt{svg}) \\
+\end{tblr}
+\medskip
+
+\subsection*{Layouts}
+\label{layouts}
+
+Figures can be arranged in grids using \texttt{layout-ncol}. The following example places three plots side by side with individual subcaptions and an overall caption.
+
+
+
+\begin{figure}
+\centering
+
+\begin{minipage}[t]{0.320\textwidth}
+\centering
+\includegraphics[width=1.00\textwidth]{authoring/figures_files/line-1.pdf}
+\caption{Linear}
+\label{line}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.320\textwidth}
+\centering
+\includegraphics[width=1.00\textwidth]{authoring/figures_files/quad-1.pdf}
+\caption{Quadratic}
+\label{quad}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.320\textwidth}
+\centering
+\includegraphics[width=1.00\textwidth]{authoring/figures_files/log-1.pdf}
+\caption{Logarithmic}
+\label{log}
+\end{minipage}
+\caption{Three growth patterns compared.}
+\label{fig-panels}
+\end{figure}
+
+See \hyperref[fig-panels]{Figure 3} for the result. The \texttt{layout} attribute supports custom grids with relative widths (e.g., \texttt{layout=\textquotedbl{}{[}{[}1,1{]},{[}1{]}{]}\textquotedbl{}}) and negative values for spacing gaps.
+
