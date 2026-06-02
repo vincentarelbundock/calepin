@@ -1,0 +1,235 @@
+:root {
+__CALEPIN_SYNTAX_LIGHT__}
+
+.sourceCode,
+div.sourceCode,
+pre.sourceCode {
+  position: relative;
+  background: var(--calepin-syntax-background);
+  border: 1px solid var(--calepin-syntax-border);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  padding-right: 1.6rem;
+  margin: 0.55rem 0 0.2rem 0;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--calepin-syntax-foreground);
+}
+
+__CALEPIN_SYNTAX_CLASSES__
+div.sourceCode pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  line-height: inherit;
+}
+
+pre.numberSource code > span > a:first-child::before {
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
+.calepin-copy-code {
+  appearance: none;
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(31, 41, 51, 0.07);
+  color: rgba(31, 41, 51, 0.58);
+  box-shadow: none;
+  opacity: 0.62;
+  cursor: pointer;
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+div.sourceCode:hover .calepin-copy-code,
+.cell-output:hover .calepin-copy-code,
+.calepin-copy-code:focus-visible {
+  background: rgba(31, 41, 51, 0.12);
+  color: rgba(31, 41, 51, 0.82);
+  opacity: 1;
+}
+
+.calepin-copy-code svg {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+.calepin-copy-code.copied {
+  background: rgba(31, 122, 77, 0.12);
+  color: #1f7a4d;
+  opacity: 1;
+}
+
+.cell-output {
+  position: relative;
+  background: #fbfbfa;
+  border: 1px solid #ddddda;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  padding-right: 1.6rem;
+  margin: 0.2rem 0 0.7rem 0;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  color: #333;
+}
+
+.cell-output pre,
+.cell-output-stdout pre,
+.cell-output-stderr pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.cell-output-stdout {
+  border-left: 3px solid #cfcfc8;
+}
+
+.cell-output-stderr {
+  background: #fffaf7;
+  border-color: #e2c7ba;
+  border-left: 3px solid #c48672;
+  color: #5f3328;
+}
+
+figure {
+  text-align: center;
+}
+
+figure > img {
+  display: block;
+  margin-inline: auto;
+}
+
+html[data-theme="dark"] {
+__CALEPIN_SYNTAX_DARK__}
+
+html[data-theme="dark"] .sourceCode,
+html[data-theme="dark"] div.sourceCode,
+html[data-theme="dark"] pre.sourceCode {
+  background: var(--calepin-syntax-background);
+  border-color: var(--calepin-syntax-border);
+  color: var(--calepin-syntax-foreground);
+}
+
+html[data-theme="dark"] .calepin-copy-code {
+  background: rgba(216, 222, 233, 0.08);
+  color: rgba(216, 222, 233, 0.68);
+}
+
+html[data-theme="dark"] div.sourceCode:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output:hover .calepin-copy-code,
+html[data-theme="dark"] .calepin-copy-code:focus-visible {
+  background: rgba(216, 222, 233, 0.14);
+  color: rgba(216, 222, 233, 0.92);
+}
+
+html[data-theme="dark"] .cell-output {
+  background: #11161d;
+  border-color: #2c3440;
+  color: #d8dee9;
+}
+
+html[data-theme="dark"] .cell-output-stdout {
+  border-left-color: #53606e;
+}
+
+html[data-theme="dark"] .cell-output-stderr {
+  background: #211612;
+  border-color: #5a3428;
+  border-left-color: #c48672;
+  color: #f0d5cb;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+__CALEPIN_SYNTAX_DARK__  }
+
+  html:not([data-theme]) .sourceCode,
+  html:not([data-theme]) div.sourceCode,
+  html:not([data-theme]) pre.sourceCode {
+    background: var(--calepin-syntax-background);
+    border-color: var(--calepin-syntax-border);
+    color: var(--calepin-syntax-foreground);
+  }
+
+  html:not([data-theme]) .calepin-copy-code {
+    background: rgba(216, 222, 233, 0.08);
+    color: rgba(216, 222, 233, 0.68);
+  }
+
+  html:not([data-theme]) div.sourceCode:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output:hover .calepin-copy-code,
+  html:not([data-theme]) .calepin-copy-code:focus-visible {
+    background: rgba(216, 222, 233, 0.14);
+    color: rgba(216, 222, 233, 0.92);
+  }
+
+  html:not([data-theme]) .cell-output {
+    background: #11161d;
+    border-color: #2c3440;
+    color: #d8dee9;
+  }
+
+  html:not([data-theme]) .cell-output-stdout {
+    border-left-color: #53606e;
+  }
+
+  html:not([data-theme]) .cell-output-stderr {
+    background: #211612;
+    border-color: #5a3428;
+    border-left-color: #c48672;
+    color: #f0d5cb;
+  }
+}
+
+.calepin-theme-switcher {
+  max-width: 1120px;
+  margin: 1rem auto 0 auto;
+  padding: 0 1rem;
+  color: var(--pico-color);
+  justify-content: flex-end;
+}
+
+.calepin-theme-button {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 999px;
+  background: var(--pico-card-background-color);
+  color: inherit;
+  box-shadow: none;
+}
+
+.calepin-theme-button:hover,
+.calepin-theme-button:focus-visible {
+  background: var(--pico-card-background-color);
+  color: inherit;
+}
+
+.calepin-theme-button svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: inherit;
+}

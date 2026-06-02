@@ -2,12 +2,13 @@ use anyhow::{Context, Result};
 use indexmap::IndexMap;
 use std::path::Path;
 
-use crate::typst::model::{
-    ChunkResultDocument, ResultsDocument, RESULT_SCHEMA_VERSION,
-};
+use crate::typst::model::{ChunkResultDocument, ResultsDocument, RESULT_SCHEMA_VERSION};
 use crate::typst::paths::slash_path;
 
-pub fn build_results_document(input_rel: &Path, chunks: Vec<ChunkResultDocument>) -> ResultsDocument {
+pub fn build_results_document(
+    input_rel: &Path,
+    chunks: Vec<ChunkResultDocument>,
+) -> ResultsDocument {
     let mut map = IndexMap::new();
     for chunk in chunks {
         map.insert(chunk.label.clone(), chunk);
@@ -26,8 +27,11 @@ pub fn write_results(path: &Path, document: &ResultsDocument) -> Result<()> {
             .with_context(|| format!("failed to create {}", parent.display()))?;
     }
     let json = serde_json::to_string_pretty(document)?;
-    std::fs::write(path, format!("{}\n", json))
-        .with_context(|| format!("failed to write {}", path.display()))
+    let json = format!("{}\n", json);
+    if std::fs::read_to_string(path).is_ok_and(|existing| existing == json) {
+        return Ok(());
+    }
+    std::fs::write(path, json).with_context(|| format!("failed to write {}", path.display()))
 }
 
 #[cfg(test)]
@@ -43,7 +47,6 @@ mod tests {
                 label: "setup".to_string(),
                 engine: EngineName::Python,
                 status: ChunkStatus::Ok,
-                cached: false,
                 items: Vec::new(),
             }],
         );

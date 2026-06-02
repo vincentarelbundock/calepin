@@ -25,9 +25,44 @@ pub const PYTHON: Tool = Tool {
     install_hint: "install from https://www.python.org/downloads/",
 };
 
+pub const JULIA: Tool = Tool {
+    cmd: "julia",
+    install_hint: "install from https://julialang.org/downloads/",
+};
+
 pub const SH: Tool = Tool {
     cmd: "/bin/sh",
     install_hint: "/bin/sh should be available on any Unix system",
+};
+
+pub const MMDC: Tool = Tool {
+    cmd: "mmdc",
+    install_hint: "install with `npm install -g @mermaid-js/mermaid-cli`",
+};
+
+pub const DOT: Tool = Tool {
+    cmd: "dot",
+    install_hint: "install Graphviz from https://graphviz.org/download/",
+};
+
+pub const TECTONIC: Tool = Tool {
+    cmd: "tectonic",
+    install_hint: "install from https://tectonic-typesetting.github.io/",
+};
+
+pub const DVISVGM: Tool = Tool {
+    cmd: "dvisvgm",
+    install_hint: "install TeX Live or MacTeX from https://tug.org/texlive/",
+};
+
+pub const PDF2SVG: Tool = Tool {
+    cmd: "pdf2svg",
+    install_hint: "install with `brew install pdf2svg` or from your system package manager",
+};
+
+pub const D2: Tool = Tool {
+    cmd: "d2",
+    install_hint: "install from https://d2lang.com/tour/install/",
 };
 
 // ---------------------------------------------------------------------------
@@ -37,4 +72,9 @@ pub const SH: Tool = Tool {
 /// Format a "not found" error message for a tool.
 pub fn not_found_message(tool: &Tool) -> String {
     format!("{} not found on PATH. {}", tool.cmd, tool.install_hint)
+}
+
+/// Format a "not found" error for a configured tool path.
+pub fn configured_not_found_message(tool: &Tool, program: &std::path::Path) -> String {
+    format!("{} not found. {}", program.display(), tool.install_hint)
 }

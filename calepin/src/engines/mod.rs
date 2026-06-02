@@ -1,49 +1,56 @@
+pub mod diagram;
+pub mod julia;
 pub mod python;
 pub mod r;
 pub mod sh;
 pub mod subprocess;
 
 use anyhow::Result;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use crate::types::{ChunkOptions, ChunkResult};
+use crate::typst::model::{EngineName, FigureSpec};
 use crate::utils::tools;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum EngineResult {
+    Source(Vec<String>),
+    Output(String),
+    Warning(String),
+    Message(String),
+    Error(String),
+    Plot(PathBuf),
+    Asis(String),
+    Preamble(String),
+}
 
 /// Holds mutable references to active engine sessions.
 pub struct EngineContext<'a> {
     pub r: Option<&'a mut r::RSession>,
     pub python: Option<&'a mut python::PythonSession>,
+    pub julia: Option<&'a mut julia::JuliaSession>,
     pub sh: Option<&'a mut sh::ShSession>,
 }
 
 /// Execute a Typst chunk and capture its output.
 pub fn execute_chunk(
     source: &[String],
-    options: &ChunkOptions,
+    engine: EngineName,
     label: &str,
     fig_dir: &Path,
-    fig_ext: &str,
+    figure: &FigureSpec,
     ctx: &mut EngineContext,
-) -> Result<Vec<ChunkResult>> {
+) -> Result<Vec<EngineResult>> {
     let code = source.join("\n");
     let mut results = Vec::new();
 
-    if !options.eval() {
-        results.push(ChunkResult::Source(source.to_vec()));
-        return Ok(results);
-    }
-
-    let engine = options.engine();
-    let interleaved = !matches!(engine.as_str(), "sh");
+    let interleaved = engine != EngineName::Sh;
     if !interleaved {
-        results.push(ChunkResult::Source(source.to_vec()));
+        results.push(EngineResult::Source(source.to_vec()));
     }
 
     let is_table_chunk = label.starts_with("tbl-");
-    std::fs::create_dir_all(fig_dir).ok();
-    let fig_width = options.fig_width();
-    let fig_height = options.fig_height();
-    let fig_full_path = fig_dir.join(format!("{}-1.{}", label, fig_ext));
+    std::fs::create_dir_all(fig_dir)?;
+    let fig_full_path = fig_dir.join(figure.numbered_filename(label));
     let fig_abs = if fig_full_path.is_relative() {
         std::env::current_dir()?.join(&fig_full_path)
     } else {
@@ -55,48 +62,64 @@ pub fn execute_chunk(
         fig_abs.to_string_lossy().replace('\\', "/")
     };
 
-    let captured = match engine.as_str() {
-        "sh" => {
-            let session = ctx
-                .sh
-                .as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", tools::not_found_message(&tools::SH)))?;
-            session.capture(&code)?
-        }
-        "python" => {
-            let session = ctx
-                .python
-                .as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", tools::not_found_message(&tools::PYTHON)))?;
-            let dpi = options
-                .get_opt_string("dpi")
-                .and_then(|value| value.parse().ok())
-                .unwrap_or_else(|| options.metadata.dpi.unwrap_or(150.0));
-            session.capture(&code, &fig_full_str, fig_width, fig_height, dpi)?
-        }
-        "r" => {
-            let session = ctx
-                .r
-                .as_mut()
-                .ok_or_else(|| anyhow::anyhow!("{}", tools::not_found_message(&tools::RSCRIPT)))?;
-            let dev = if options.get_opt_string("dev").is_some() {
-                options.dev()
-            } else {
-                match fig_ext {
-                    "pdf" => "cairo_pdf".to_string(),
-                    "svg" => "svg".to_string(),
-                    _ => "png".to_string(),
-                }
-            };
-            session.capture(&code, &fig_full_str, &dev, fig_width, fig_height)?
-        }
-        other => return Err(anyhow::anyhow!("unsupported engine `{}`", other)),
-    };
+    let captured =
+        match engine {
+            EngineName::Sh => {
+                let session = ctx
+                    .sh
+                    .as_mut()
+                    .ok_or_else(|| anyhow::anyhow!("{}", tools::not_found_message(&tools::SH)))?;
+                session.capture(&code)?
+            }
+            EngineName::Python => {
+                let session = ctx.python.as_mut().ok_or_else(|| {
+                    anyhow::anyhow!("{}", tools::not_found_message(&tools::PYTHON))
+                })?;
+                session.capture(
+                    &code,
+                    &fig_full_str,
+                    figure.width,
+                    figure.height,
+                    f64::from(figure.dpi),
+                )?
+            }
+            EngineName::Julia => {
+                let session = ctx.julia.as_mut().ok_or_else(|| {
+                    anyhow::anyhow!("{}", tools::not_found_message(&tools::JULIA))
+                })?;
+                session.capture(
+                    &code,
+                    &fig_full_str,
+                    &figure.format,
+                    figure.width,
+                    figure.height,
+                    f64::from(figure.dpi),
+                )?
+            }
+            EngineName::R => {
+                let session = ctx.r.as_mut().ok_or_else(|| {
+                    anyhow::anyhow!("{}", tools::not_found_message(&tools::RSCRIPT))
+                })?;
+                session.capture(
+                    &code,
+                    &fig_full_str,
+                    figure.r_device(),
+                    figure.width,
+                    figure.height,
+                    f64::from(figure.dpi),
+                )?
+            }
+            other => return Err(anyhow::anyhow!("unsupported engine `{}`", other)),
+        };
 
-    process_results(&captured, &fig_full_path, options, &mut results)?;
+    process_results(&captured, &fig_full_path, &mut results)?;
 
-    if interleaved && !results.iter().any(|result| matches!(result, ChunkResult::Source(_))) {
-        results.insert(0, ChunkResult::Source(source.to_vec()));
+    if interleaved
+        && !results
+            .iter()
+            .any(|result| matches!(result, EngineResult::Source(_)))
+    {
+        results.insert(0, EngineResult::Source(source.to_vec()));
     }
 
     Ok(results)
@@ -110,12 +133,7 @@ pub fn make_sentinel() -> String {
     format!("__CALEPIN_{:x}_{:x}__", std::process::id(), seq)
 }
 
-fn process_results(
-    raw: &str,
-    fig_path: &Path,
-    options: &ChunkOptions,
-    results: &mut Vec<ChunkResult>,
-) -> Result<()> {
+fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) -> Result<()> {
     let (sentinel, rest) = raw.split_once('\n').unwrap_or(("", raw));
     let sep = format!("\n{}_SEP\n", sentinel);
 
@@ -135,37 +153,39 @@ fn process_results(
         }
         if let Some(text) = part.strip_prefix(&source_prefix) {
             if !text.is_empty() {
-                results.push(ChunkResult::Source(text.lines().map(ToOwned::to_owned).collect()));
+                results.push(EngineResult::Source(
+                    text.lines().map(ToOwned::to_owned).collect(),
+                ));
             }
         } else if let Some(text) = part.strip_prefix(&error_prefix) {
             if !text.is_empty() {
-                results.push(ChunkResult::Error(text.to_string()));
+                results.push(EngineResult::Error(text.to_string()));
             }
         } else if let Some(text) = part.strip_prefix(&asis_prefix) {
             if !text.is_empty() {
-                results.push(ChunkResult::Asis(text.to_string()));
+                results.push(EngineResult::Asis(text.to_string()));
             }
         } else if let Some(text) = part.strip_prefix(&output_prefix) {
             if let Some(message) = text.strip_prefix(&error_prefix) {
-                results.push(ChunkResult::Error(message.to_string()));
+                results.push(EngineResult::Error(message.to_string()));
             } else if !text.is_empty() {
-                results.push(ChunkResult::Output(text.to_string()));
+                results.push(EngineResult::Output(text.to_string()));
             }
         } else if let Some(text) = part.strip_prefix(&warning_prefix) {
-            if options.warning() && !text.is_empty() {
-                results.push(ChunkResult::Warning(text.to_string()));
+            if !text.is_empty() {
+                results.push(EngineResult::Warning(text.to_string()));
             }
         } else if let Some(text) = part.strip_prefix(&message_prefix) {
-            if options.message() && !text.is_empty() {
-                results.push(ChunkResult::Message(text.to_string()));
+            if !text.is_empty() {
+                results.push(EngineResult::Message(text.to_string()));
             }
         } else if part.starts_with(&plot_prefix) {
             if fig_path.exists() {
-                results.push(ChunkResult::Plot(fig_path.to_path_buf()));
+                results.push(EngineResult::Plot(fig_path.to_path_buf()));
             }
         } else if let Some(text) = part.strip_prefix(&preamble_prefix) {
             if !text.is_empty() {
-                results.push(ChunkResult::Preamble(text.to_string()));
+                results.push(EngineResult::Preamble(text.to_string()));
             }
         }
     }

@@ -15,7 +15,7 @@ pub fn set_quiet(q: bool) {
     about = "Preprocess Typst documents with executable code chunks",
     version,
     disable_version_flag = true,
-    arg_required_else_help = true,
+    arg_required_else_help = true
 )]
 #[command(arg(clap::Arg::new("version")
     .short('v')
@@ -30,95 +30,70 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// Execute chunks and write Typst-readable result artifacts
-    Preprocess(PreprocessArgs),
+    /// Create a new example Typst file
+    New(NewArgs),
 
     /// Preprocess, then invoke typst compile
     Compile(CompileArgs),
+
+    /// Watch, preprocess, and delegate recompiles to typst watch
+    Watch(WatchArgs),
+
+    /// Stop a running calepin watch process
+    Stop(StopArgs),
+}
+
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompileFormat {
+    Pdf,
+    Png,
+    Svg,
+    Html,
+}
+
+impl CompileFormat {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Pdf => "pdf",
+            Self::Png => "png",
+            Self::Svg => "svg",
+            Self::Html => "html",
+        }
+    }
+}
+
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompileOutputTemplate {
+    /// Extract only `<head>` styles and `<body>` HTML for markdown embedding.
+    HtmlInMd,
+    /// Render HTML using the built-in `basic` theme.
+    Basic,
+    /// Render HTML using the built-in `pico` theme.
+    Pico,
+}
+
+impl CompileOutputTemplate {
+    pub fn html_template_name(self) -> Option<&'static str> {
+        match self {
+            Self::Basic => Some("basic"),
+            Self::Pico => Some("pico"),
+            Self::HtmlInMd => None,
+        }
+    }
+
+    pub fn is_html_in_markdown(&self) -> bool {
+        matches!(self, Self::HtmlInMd)
+    }
 }
 
 #[derive(clap::Args, Debug, Clone)]
-pub struct PreprocessArgs {
-    /// Input .typ file
-    pub input: PathBuf,
+pub struct NewArgs {
+    /// Path to the new .typ file
+    pub path: PathBuf,
 
-    /// Typst project root. Defaults to the input file directory
-    #[arg(long)]
-    pub root: Option<PathBuf>,
-
-    /// Execution working directory. Defaults to the input file directory
-    #[arg(long)]
-    pub cwd: Option<PathBuf>,
-
-    /// Override results JSON path
-    #[arg(long)]
-    pub results: Option<PathBuf>,
-
-    /// Force chunk caching on
-    #[arg(long = "cache", action = clap::ArgAction::SetTrue, conflicts_with = "no_cache")]
-    pub cache: bool,
-
-    /// Force chunk caching off
-    #[arg(long = "no-cache", action = clap::ArgAction::SetTrue)]
-    pub no_cache: bool,
-
-    /// Force chunk execution on
-    #[arg(long = "execute", action = clap::ArgAction::SetTrue, conflicts_with = "no_execute")]
-    pub execute: bool,
-
-    /// Force chunk execution off
-    #[arg(long = "no-execute", action = clap::ArgAction::SetTrue)]
-    pub no_execute: bool,
-
-    /// Remove generated results and figures before preprocessing
-    #[arg(long)]
-    pub clean: bool,
-
-    /// Quiet mode
+    /// Overwrite the file if it already exists
     #[arg(short, long)]
-    pub quiet: bool,
-
-    /// Path to Typst executable
-    #[arg(long, default_value = "typst")]
-    pub typst: PathBuf,
-
-    /// Path to Rscript executable
-    #[arg(long, default_value = "Rscript")]
-    pub rscript: PathBuf,
-
-    /// Path to Python executable
-    #[arg(long, default_value = "python3")]
-    pub python: PathBuf,
-
-    /// Path to shell executable
-    #[arg(long, default_value = "/bin/sh")]
-    pub shell: PathBuf,
-
-    /// Per-chunk timeout in seconds
-    #[arg(long)]
-    pub timeout: Option<u64>,
-}
-
-impl PreprocessArgs {
-    pub fn cache_override(&self) -> Option<bool> {
-        if self.cache {
-            Some(true)
-        } else if self.no_cache {
-            Some(false)
-        } else {
-            None
-        }
-    }
-
-    pub fn execute_override(&self) -> Option<bool> {
-        if self.execute {
-            Some(true)
-        } else if self.no_execute {
-            Some(false)
-        } else {
-            None
-        }
-    }
+    pub force: bool,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -129,6 +104,17 @@ pub struct CompileArgs {
     /// Output path passed to typst compile
     pub output: Option<PathBuf>,
 
+    /// Output format passed to typst compile
+    #[arg(long, value_enum)]
+    pub format: Option<CompileFormat>,
+
+    /// Output template applied after compilation.
+    ///
+    /// Use `html-in-md` to embed only CSS and body content for markdown pages.
+    /// Use `basic` or `pico` to apply a built-in HTML theme.
+    #[arg(long, value_enum)]
+    pub template: Option<CompileOutputTemplate>,
+
     #[command(flatten)]
     pub common: CommonArgs,
 
@@ -138,34 +124,37 @@ pub struct CompileArgs {
 }
 
 #[derive(clap::Args, Debug, Clone)]
+pub struct WatchArgs {
+    /// Input .typ file
+    pub input: PathBuf,
+
+    /// Output path passed to typst watch
+    pub output: Option<PathBuf>,
+
+    /// Output format passed to typst watch
+    #[arg(long, value_enum)]
+    pub format: Option<CompileFormat>,
+
+    #[command(flatten)]
+    pub common: CommonArgs,
+
+    /// Arguments forwarded to typst watch after `--`
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub typst_args: Vec<String>,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct StopArgs {
+    /// Input .typ file to stop the matching calepin watch.
+    /// Omit this value to stop all active watches under the current project's `.calepin` directory.
+    pub input: Option<PathBuf>,
+}
+
+#[derive(clap::Args, Debug, Clone)]
 pub struct CommonArgs {
-    /// Typst project root. Defaults to the input file directory
-    #[arg(long)]
-    pub root: Option<PathBuf>,
-
-    /// Execution working directory. Defaults to the input file directory
-    #[arg(long)]
-    pub cwd: Option<PathBuf>,
-
     /// Override results JSON path
     #[arg(long)]
     pub results: Option<PathBuf>,
-
-    /// Force chunk caching on
-    #[arg(long = "cache", action = clap::ArgAction::SetTrue, conflicts_with = "no_cache")]
-    pub cache: bool,
-
-    /// Force chunk caching off
-    #[arg(long = "no-cache", action = clap::ArgAction::SetTrue)]
-    pub no_cache: bool,
-
-    /// Force chunk execution on
-    #[arg(long = "execute", action = clap::ArgAction::SetTrue, conflicts_with = "no_execute")]
-    pub execute: bool,
-
-    /// Force chunk execution off
-    #[arg(long = "no-execute", action = clap::ArgAction::SetTrue)]
-    pub no_execute: bool,
 
     /// Remove generated results and figures before preprocessing
     #[arg(long)]
@@ -175,47 +164,9 @@ pub struct CommonArgs {
     #[arg(short, long)]
     pub quiet: bool,
 
-    /// Path to Typst executable
-    #[arg(long, default_value = "typst")]
-    pub typst: PathBuf,
-
-    /// Path to Rscript executable
-    #[arg(long, default_value = "Rscript")]
-    pub rscript: PathBuf,
-
-    /// Path to Python executable
-    #[arg(long, default_value = "python3")]
-    pub python: PathBuf,
-
-    /// Path to shell executable
-    #[arg(long, default_value = "/bin/sh")]
-    pub shell: PathBuf,
-
     /// Per-chunk timeout in seconds
     #[arg(long)]
     pub timeout: Option<u64>,
-}
-
-impl CommonArgs {
-    pub fn cache_override(&self) -> Option<bool> {
-        if self.cache {
-            Some(true)
-        } else if self.no_cache {
-            Some(false)
-        } else {
-            None
-        }
-    }
-
-    pub fn execute_override(&self) -> Option<bool> {
-        if self.execute {
-            Some(true)
-        } else if self.no_execute {
-            Some(false)
-        } else {
-            None
-        }
-    }
 }
 
 /// Print a yellow warning to stderr.
@@ -232,63 +183,12 @@ mod tests {
     use clap::Parser;
 
     #[test]
-    fn test_typst_preprocess_args() {
-        let cli = Cli::try_parse_from([
-            "calepin",
-            "preprocess",
-            "paper.typ",
-            "--root",
-            "project",
-            "--cwd",
-            "work",
-            "--results",
-            "out/results.json",
-            "--no-cache",
-            "--no-execute",
-            "--clean",
-            "--quiet",
-            "--typst",
-            "typst-dev",
-            "--rscript",
-            "Rscript-dev",
-            "--python",
-            "python-dev",
-            "--shell",
-            "/bin/bash",
-            "--timeout",
-            "42",
-        ])
-        .unwrap();
-
-        match cli.command {
-            Command::Preprocess(args) => {
-                assert_eq!(args.input, PathBuf::from("paper.typ"));
-                assert_eq!(args.root, Some(PathBuf::from("project")));
-                assert_eq!(args.cwd, Some(PathBuf::from("work")));
-                assert_eq!(args.results, Some(PathBuf::from("out/results.json")));
-                assert_eq!(args.cache_override(), Some(false));
-                assert_eq!(args.execute_override(), Some(false));
-                assert!(args.clean);
-                assert!(args.quiet);
-                assert_eq!(args.typst, PathBuf::from("typst-dev"));
-                assert_eq!(args.rscript, PathBuf::from("Rscript-dev"));
-                assert_eq!(args.python, PathBuf::from("python-dev"));
-                assert_eq!(args.shell, PathBuf::from("/bin/bash"));
-                assert_eq!(args.timeout, Some(42));
-            }
-            other => panic!("expected preprocess command, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn test_typst_compile_args() {
         let cli = Cli::try_parse_from([
             "calepin",
             "compile",
             "paper.typ",
             "paper.pdf",
-            "--root",
-            "project",
             "--",
             "--font-path",
             "fonts",
@@ -301,18 +201,159 @@ mod tests {
             Command::Compile(args) => {
                 assert_eq!(args.input, PathBuf::from("paper.typ"));
                 assert_eq!(args.output, Some(PathBuf::from("paper.pdf")));
-                assert_eq!(args.common.root, Some(PathBuf::from("project")));
-                assert_eq!(args.typst_args, vec!["--font-path", "fonts", "--input", "theme=dark"]);
+                assert_eq!(
+                    args.typst_args,
+                    vec!["--font-path", "fonts", "--input", "theme=dark"]
+                );
             }
             other => panic!("expected compile command, got {other:?}"),
         }
     }
 
     #[test]
-    fn test_old_subcommands_removed() {
-        for command in ["render", "preview", "init", "man", "extra", "templates"] {
-            let err = Cli::try_parse_from(["calepin", command]).unwrap_err();
-            assert_eq!(err.kind(), clap::error::ErrorKind::InvalidSubcommand);
+    fn test_typst_compile_args_template() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "--format",
+            "html",
+            "--template",
+            "html-in-md",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert_eq!(args.template, Some(CompileOutputTemplate::HtmlInMd));
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_compile_args_template_theme_name() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "--format",
+            "html",
+            "--template",
+            "pico",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert_eq!(args.template, Some(CompileOutputTemplate::Pico));
+                assert_eq!(args.template.unwrap().html_template_name(), Some("pico"));
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_compile_args_template_basic() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "--format",
+            "html",
+            "--template",
+            "basic",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert_eq!(args.template, Some(CompileOutputTemplate::Basic));
+                assert_eq!(args.template.unwrap().html_template_name(), Some("basic"));
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_watch_args() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "watch",
+            "paper.typ",
+            "out/paper.html",
+            "--format",
+            "html",
+            "--results",
+            "out/results.json",
+            "--clean",
+            "--quiet",
+            "--timeout",
+            "42",
+            "--",
+            "--font-path",
+            "fonts",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Watch(args) => {
+                assert_eq!(args.input, PathBuf::from("paper.typ"));
+                assert_eq!(args.output, Some(PathBuf::from("out/paper.html")));
+                assert_eq!(args.format, Some(CompileFormat::Html));
+                assert_eq!(args.common.results, Some(PathBuf::from("out/results.json")));
+                assert!(args.common.clean);
+                assert!(args.common.quiet);
+                assert_eq!(args.common.timeout, Some(42));
+                assert_eq!(args.typst_args, vec!["--font-path", "fonts"]);
+            }
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_stop_args() {
+        let cli = Cli::try_parse_from(["calepin", "stop"]).unwrap();
+
+        match cli.command {
+            Command::Stop(args) => {
+                assert!(args.input.is_none());
+            }
+            other => panic!("expected stop command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_stop_args_with_input() {
+        let cli = Cli::try_parse_from(["calepin", "stop", "paper.typ"]).unwrap();
+
+        match cli.command {
+            Command::Stop(args) => {
+                assert_eq!(args.input, Some(PathBuf::from("paper.typ")));
+            }
+            other => panic!("expected stop command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_new_args() {
+        let cli = Cli::try_parse_from(["calepin", "new", "paper.typ", "--force"]).unwrap();
+
+        match cli.command {
+            Command::New(args) => {
+                assert_eq!(args.path, PathBuf::from("paper.typ"));
+                assert!(args.force);
+            }
+            other => panic!("expected new command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_executable_path_flags_removed() {
+        for flag in ["--typst", "--rscript", "--python", "--julia", "--shell"] {
+            let err = Cli::try_parse_from(["calepin", "compile", "paper.typ", flag, "custom"])
+                .unwrap_err();
+            assert_eq!(err.kind(), clap::error::ErrorKind::UnknownArgument);
         }
     }
 }

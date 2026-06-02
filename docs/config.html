@@ -1,0 +1,1022 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Experimental Typst preprocessor for executable code chunks.">
+      
+      
+        <meta name="author" content="Vincent Arel-Bundock">
+      
+      
+        <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/config.html">
+      
+      
+        <link rel="prev" href="./options.html">
+      
+      
+        <link rel="next" href="./templates.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="./assets/logo_short_2.svg">
+      <meta name="generator" content="zensical-0.0.43">
+    
+    
+      
+        <title>Configuration - Calepin</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="./assets/stylesheets/modern/main.fba56155.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="./assets/stylesheets/modern/palette.dfe2e883.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="./assets/stylesheets/extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  
+  <link rel="icon" href="./assets/logo_short_2.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="./assets/favicon.ico" type="image/x-icon">
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configtoml" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="" title="Calepin" class="md-header__button md-logo" aria-label="Calepin" data-md-component="logo">
+      
+  
+  <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="24.908279mm"
+   height="25.230688mm"
+   viewBox="0 0 24.90828 25.230688"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   sodipodi:docname="logo_short_2.svg"
+   inkscape:export-filename="logo_long_text_2.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.98691752"
+     inkscape:cx="152.49501"
+     inkscape:cy="266.4863"
+     inkscape:window-width="1512"
+     inkscape:window-height="921"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-40.950869,-44.061117)">
+    <path
+       d="m 59.186668,76.538231 h -0.565271 q -0.263792,-0.301478 -0.602955,-0.527586 -0.339162,-0.263793 -1.055171,-0.263793 -0.565271,0 -1.243595,0.226108 -0.64064,0.188424 -1.507388,0.452217 -0.829064,0.263793 -1.884235,0.452216 -1.055172,0.226108 -2.336452,0.226108 -2.374136,0 -4.635218,-0.866748 -2.223397,-0.866748 -4.220686,-2.826352 -1.846551,-1.846551 -3.090146,-4.371425 -1.243595,-2.524875 -1.243595,-5.841129 0,-2.826352 1.017487,-5.388912 1.017487,-2.56256 2.826353,-4.522164 1.808865,-1.959604 4.258371,-3.090145 2.449505,-1.168226 5.351227,-1.168226 1.168226,0 2.072659,0.226108 0.904432,0.226108 1.620442,0.527586 0.716009,0.263793 1.318964,0.489901 0.602955,0.226108 1.168226,0.226108 0.753694,0 1.055171,-0.226108 0.339163,-0.263793 0.602956,-0.565271 h 0.56527 v 7.53694 H 58.24455 Q 57.905388,55.811646 57.377802,54.417312 56.850217,53.022978 55.908099,51.967806 54.965982,50.87495 53.496278,50.23431 52.06426,49.555986 49.916232,49.555986 q -1.997289,0 -3.429308,0.64064 -1.432019,0.602955 -2.411821,1.658126 -0.979802,1.017487 -1.582757,2.411821 -0.565271,1.356649 -0.866748,2.901722 -0.301478,1.507388 -0.414532,3.090145 -0.07537,1.545073 -0.07537,2.939407 0,3.956894 0.64064,6.557138 0.640639,2.600244 1.77118,4.107632 1.168226,1.507388 2.788668,2.110343 1.620442,0.602956 3.580047,0.602956 2.524875,0 4.069947,-0.71601 1.545073,-0.716009 2.487191,-1.84655 0.942117,-1.168226 1.432018,-2.600244 0.489901,-1.469704 0.866748,-2.901722 h 0.414532 z"
+       id="text8"
+       style="font-size:37.6847px;font-family:Didot;-inkscape-font-specification:'Didot, Normal';letter-spacing:-1.70758px;word-spacing:0px;stroke-width:2.22546;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
+       transform="scale(1.1127362,0.8986856)"
+       aria-label="C" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:33.8667px;font-family:Courier;-inkscape-font-specification:Courier;letter-spacing:1.15887px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
+       x="55.226665"
+       y="54.690483"
+       id="text3"><tspan
+         sodipodi:role="line"
+         id="tspan3"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Courier;-inkscape-font-specification:Courier;stroke-width:1.99999"
+         x="55.226665"
+         y="54.690483" /></text>
+    <path
+       style="font-weight:500;font-size:12.3677px;font-family:'Hasklug Nerd Font';-inkscape-font-specification:'Hasklug Nerd Font, Medium';letter-spacing:-1.92141px;word-spacing:0px;stroke-width:2.50416;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
+       d="m 52.749381,60.203635 v -1.150196 l -3.611369,-2.386966 v -0.04947 l 3.611369,-2.386967 V 53.07984 l -4.662623,3.116661 v 0.890474 z m 0.515031,2.523011 h 1.063622 L 58.38464,51.966747 h -1.063623 z m 5.635259,-2.523011 4.662623,-3.11666 V 56.196501 L 58.899671,53.07984 v 1.150196 l 3.611368,2.386967 v 0.04947 l -3.611368,2.386966 z"
+       id="text4"
+       aria-label="&lt;/&gt;" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:9.87777px;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:-1.53458px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
+       x="45.843494"
+       y="78.282463"
+       id="text5"><tspan
+         sodipodi:role="line"
+         id="tspan5"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';stroke-width:1.99999"
+         x="45.843494"
+         y="78.282463" /></text>
+  </g>
+</svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Calepin
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/vincentarelbundock/calepin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    vincentarelbundock/calepin
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="" title="Calepin" class="md-nav__button md-logo" aria-label="Calepin" data-md-component="logo">
+      
+  
+  <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="24.908279mm"
+   height="25.230688mm"
+   viewBox="0 0 24.90828 25.230688"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   sodipodi:docname="logo_short_2.svg"
+   inkscape:export-filename="logo_long_text_2.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.98691752"
+     inkscape:cx="152.49501"
+     inkscape:cy="266.4863"
+     inkscape:window-width="1512"
+     inkscape:window-height="921"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-40.950869,-44.061117)">
+    <path
+       d="m 59.186668,76.538231 h -0.565271 q -0.263792,-0.301478 -0.602955,-0.527586 -0.339162,-0.263793 -1.055171,-0.263793 -0.565271,0 -1.243595,0.226108 -0.64064,0.188424 -1.507388,0.452217 -0.829064,0.263793 -1.884235,0.452216 -1.055172,0.226108 -2.336452,0.226108 -2.374136,0 -4.635218,-0.866748 -2.223397,-0.866748 -4.220686,-2.826352 -1.846551,-1.846551 -3.090146,-4.371425 -1.243595,-2.524875 -1.243595,-5.841129 0,-2.826352 1.017487,-5.388912 1.017487,-2.56256 2.826353,-4.522164 1.808865,-1.959604 4.258371,-3.090145 2.449505,-1.168226 5.351227,-1.168226 1.168226,0 2.072659,0.226108 0.904432,0.226108 1.620442,0.527586 0.716009,0.263793 1.318964,0.489901 0.602955,0.226108 1.168226,0.226108 0.753694,0 1.055171,-0.226108 0.339163,-0.263793 0.602956,-0.565271 h 0.56527 v 7.53694 H 58.24455 Q 57.905388,55.811646 57.377802,54.417312 56.850217,53.022978 55.908099,51.967806 54.965982,50.87495 53.496278,50.23431 52.06426,49.555986 49.916232,49.555986 q -1.997289,0 -3.429308,0.64064 -1.432019,0.602955 -2.411821,1.658126 -0.979802,1.017487 -1.582757,2.411821 -0.565271,1.356649 -0.866748,2.901722 -0.301478,1.507388 -0.414532,3.090145 -0.07537,1.545073 -0.07537,2.939407 0,3.956894 0.64064,6.557138 0.640639,2.600244 1.77118,4.107632 1.168226,1.507388 2.788668,2.110343 1.620442,0.602956 3.580047,0.602956 2.524875,0 4.069947,-0.71601 1.545073,-0.716009 2.487191,-1.84655 0.942117,-1.168226 1.432018,-2.600244 0.489901,-1.469704 0.866748,-2.901722 h 0.414532 z"
+       id="text8"
+       style="font-size:37.6847px;font-family:Didot;-inkscape-font-specification:'Didot, Normal';letter-spacing:-1.70758px;word-spacing:0px;stroke-width:2.22546;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
+       transform="scale(1.1127362,0.8986856)"
+       aria-label="C" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:33.8667px;font-family:Courier;-inkscape-font-specification:Courier;letter-spacing:1.15887px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
+       x="55.226665"
+       y="54.690483"
+       id="text3"><tspan
+         sodipodi:role="line"
+         id="tspan3"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Courier;-inkscape-font-specification:Courier;stroke-width:1.99999"
+         x="55.226665"
+         y="54.690483" /></text>
+    <path
+       style="font-weight:500;font-size:12.3677px;font-family:'Hasklug Nerd Font';-inkscape-font-specification:'Hasklug Nerd Font, Medium';letter-spacing:-1.92141px;word-spacing:0px;stroke-width:2.50416;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
+       d="m 52.749381,60.203635 v -1.150196 l -3.611369,-2.386966 v -0.04947 l 3.611369,-2.386967 V 53.07984 l -4.662623,3.116661 v 0.890474 z m 0.515031,2.523011 h 1.063622 L 58.38464,51.966747 h -1.063623 z m 5.635259,-2.523011 4.662623,-3.11666 V 56.196501 L 58.899671,53.07984 v 1.150196 l 3.611368,2.386967 v 0.04947 l -3.611368,2.386966 z"
+       id="text4"
+       aria-label="&lt;/&gt;" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:9.87777px;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:-1.53458px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
+       x="45.843494"
+       y="78.282463"
+       id="text5"><tspan
+         sodipodi:role="line"
+         id="tspan5"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';stroke-width:1.99999"
+         x="45.843494"
+         y="78.282463" /></text>
+  </g>
+</svg>
+
+    </a>
+    Calepin
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/vincentarelbundock/calepin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    vincentarelbundock/calepin
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./options.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Options
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Configuration
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="config.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configtoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>config.toml</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#executable-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Executable paths
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimal-python-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Minimal Python Environment
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-executable-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Full Executable Set
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#absolute-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Absolute Paths
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diagram-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Diagram Tools
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mermaid-chrome" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Mermaid Chrome
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#template-themes-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Template Themes Directory
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./templates.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./cli.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CLI
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./example-typst.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  example.typ
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./example-pdf.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  example.pdf
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./example-html.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  example.html
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configtoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>config.toml</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#executable-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Executable paths
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimal-python-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Minimal Python Environment
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-executable-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Full Executable Set
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#absolute-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Absolute Paths
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diagram-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Diagram Tools
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mermaid-chrome" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Mermaid Chrome
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#template-themes-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Template Themes Directory
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+  
+
+
+  <h1 id="__skip">Configuration</h1>
+
+<h2 id="configtoml"><code>config.toml</code><a class="headerlink" href="#configtoml" title="Permanent link">&para;</a></h2>
+<p>Calepin reads executable paths from <code>.calepin/config.toml</code> under the Typst project root. If the file is absent, Calepin uses the current defaults and resolves bare command names on <code>PATH</code>.</p>
+<p>Relative path-like values are resolved from the project root. Bare command names such as <code>python3</code>, <code>Rscript</code>, or <code>typst</code> are left as command names and resolved by the operating system.</p>
+<p>The <code>CALEPIN_PYTHON</code> environment variable can set the default Python executable when <code>python</code> is not configured in <code>.calepin/config.toml</code>. The VS Code extension uses this to pass the interpreter selected by the Python extension to Calepin Watch and Calepin Compile.</p>
+<h2 id="executable-paths">Executable paths<a class="headerlink" href="#executable-paths" title="Permanent link">&para;</a></h2>
+<p>Executable paths are configured in <code>.calepin/config.toml</code> under the project root. See <a href="config.html">Configuration</a> for examples.</p>
+<div class="language-toml highlight"><pre><span></span><code><span class="k">[executables]</span>
+<span class="n">python</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;.venv/bin/python&quot;</span>
+</code></pre></div>
+<h2 id="minimal-python-environment">Minimal Python Environment<a class="headerlink" href="#minimal-python-environment" title="Permanent link">&para;</a></h2>
+<p>Use this when a project keeps Python packages in a local virtual environment.</p>
+<div class="language-toml highlight"><pre><span></span><code><span class="k">[executables]</span>
+<span class="n">python</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;.venv/bin/python&quot;</span>
+</code></pre></div>
+<h2 id="full-executable-set">Full Executable Set<a class="headerlink" href="#full-executable-set" title="Permanent link">&para;</a></h2>
+<p>Any omitted value falls back to the default shown here.</p>
+<div class="language-toml highlight"><pre><span></span><code><span class="k">[executables]</span>
+<span class="n">typst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;typst&quot;</span>
+<span class="n">python</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;python3&quot;</span>
+<span class="n">rscript</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Rscript&quot;</span>
+<span class="n">julia</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;julia&quot;</span>
+<span class="n">shell</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/bin/sh&quot;</span>
+<span class="n">mmdc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mmdc&quot;</span>
+<span class="n">dot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dot&quot;</span>
+<span class="n">tectonic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;tectonic&quot;</span>
+<span class="n">dvisvgm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dvisvgm&quot;</span>
+<span class="n">pdf2svg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pdf2svg&quot;</span>
+<span class="n">d2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;d2&quot;</span>
+</code></pre></div>
+<h2 id="absolute-paths">Absolute Paths<a class="headerlink" href="#absolute-paths" title="Permanent link">&para;</a></h2>
+<p>Use absolute paths when executables are outside the project or should not depend on <code>PATH</code>.</p>
+<div class="language-toml highlight"><pre><span></span><code><span class="k">[executables]</span>
+<span class="n">typst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/opt/homebrew/bin/typst&quot;</span>
+<span class="n">python</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/Users/me/projects/report/.venv/bin/python&quot;</span>
+<span class="n">rscript</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/opt/homebrew/bin/Rscript&quot;</span>
+</code></pre></div>
+<h2 id="diagram-tools">Diagram Tools<a class="headerlink" href="#diagram-tools" title="Permanent link">&para;</a></h2>
+<p>Diagram chunks use external command-line tools. Configure only the tools needed by the engines in your document.</p>
+<div class="language-toml highlight"><pre><span></span><code><span class="k">[executables]</span>
+<span class="n">mmdc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;node_modules/.bin/mmdc&quot;</span>
+<span class="n">dot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/opt/homebrew/bin/dot&quot;</span>
+<span class="n">d2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/opt/homebrew/bin/d2&quot;</span>
+</code></pre></div>
+<h2 id="mermaid-chrome">Mermaid Chrome<a class="headerlink" href="#mermaid-chrome" title="Permanent link">&para;</a></h2>
+<p>If Mermaid cannot find Chrome through Puppeteer, set <code>chrome</code> explicitly.</p>
+<div class="language-toml highlight"><pre><span></span><code><span class="k">[executables]</span>
+<span class="n">mmdc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;node_modules/.bin/mmdc&quot;</span>
+<span class="n">chrome</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/Applications/Google Chrome.app/Contents/MacOS/Google Chrome&quot;</span>
+</code></pre></div>
+<h2 id="template-themes-directory">Template Themes Directory<a class="headerlink" href="#template-themes-directory" title="Permanent link">&para;</a></h2>
+<p>User-authored HTML themes live in a project directory, <code>themes/</code> by default. The
+<code>themes_dir</code> key overrides that location. Relative values resolve from the
+project root; absolute values are used as given.</p>
+<div class="language-toml highlight"><pre><span></span><code><span class="n">themes_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;site/themes&quot;</span>
+</code></pre></div>
+<p>A template theme is a directory named after the value passed to <code>--template</code>. It holds a
+required <code>layout.html</code> plus optional <code>partials/</code>, <code>styles/</code>, and <code>scripts/</code>
+subdirectories. A user theme whose directory name matches a built-in (such as
+<code>pico</code> or <code>basic</code>) takes precedence over the built-in. See
+<a href="index.html">Document Options</a> for how template themes are applied to HTML output.</p>
+
+
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Calepin is distributed under the MIT License.
+    </div>
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":".","features":["content.code.copy","navigation.top","navigation.tracking","search.highlight"],"search":"./assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+  
+      <script src="./assets/javascripts/bundle.6e5f0216.min.js"></script>
+      
+    
+  <script>
+    (function () {
+      const logoLinks = document.querySelectorAll('[data-md-component="logo"]');
+      for (const link of logoLinks) {
+        link.href = ".";
+      }
+    })();
+  </script>
+
+  </body>
+</html>

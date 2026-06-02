@@ -88,13 +88,56 @@ while True:
 
     sep = sentinel + "_SEP"
     parts = []
+    if fig_path and os.path.exists(fig_path):
+        try:
+            os.remove(fig_path)
+        except OSError as remove_err:
+            parts.append(f"{sentinel}_WARNING:Failed to remove previous figure: {remove_err}")
     err = None
-    warns_list = []
+    warn_records = []
     old_stdout = sys.stdout
+    old_stderr = sys.stderr
 
     try:
         import warnings, ast as _ast
-        with warnings.catch_warnings(record=True) as w:
+        last_expr_result = None
+
+        def _calepin_is_matplotlib_figure(value):
+            if not fig_path:
+                return False
+            try:
+                from matplotlib.figure import Figure
+            except Exception:
+                return False
+            return isinstance(value, Figure)
+
+        def _calepin_is_matplotlib_display_value(value, seen=None):
+            if not fig_path or value is None:
+                return False
+            if seen is None:
+                seen = set()
+            value_id = id(value)
+            if value_id in seen:
+                return False
+            seen.add(value_id)
+            try:
+                from matplotlib.figure import Figure
+                from matplotlib.artist import Artist
+                from matplotlib.axes import Axes
+            except Exception:
+                return False
+            if isinstance(value, (Figure, Artist, Axes)):
+                return True
+            if isinstance(value, (list, tuple, set, frozenset)):
+                return any(_calepin_is_matplotlib_display_value(item, seen) for item in value)
+            if isinstance(value, dict):
+                return any(_calepin_is_matplotlib_display_value(item, seen) for item in value.values())
+            return False
+
+        def _calepin_should_print_expr_result(value):
+            return value is not None and not _calepin_is_matplotlib_display_value(value)
+
+        with warnings.catch_warnings(record=True) as warn_records:
             warnings.simplefilter("always")
             if "matplotlib.pyplot" in sys.modules:
                 sys.modules["matplotlib.pyplot"].show = lambda *a, **k: None
@@ -111,39 +154,54 @@ while True:
                 prev_end = end_line
 
                 # Capture stdout per-statement
-                buf = io.StringIO()
-                sys.stdout = buf
+                out_buf = io.StringIO()
+                err_buf = io.StringIO()
+                sys.stdout = out_buf
+                sys.stderr = err_buf
                 try:
                     if isinstance(node, _ast.Expr):
                         expr_code = compile(_ast.Expression(body=node.value), "<chunk>", "eval")
                         result = eval(expr_code, _globals)
-                        if result is not None:
+                        last_expr_result = result
+                        if _calepin_should_print_expr_result(result):
                             print(repr(result))
                     else:
                         mod = _ast.Module(body=[node], type_ignores=[])
                         _ast.fix_missing_locations(mod)
                         stmt_code = compile(mod, "<chunk>", "exec")
                         exec(stmt_code, _globals)
+                except Exception:
+                    import traceback
+                    err = traceback.format_exc()
                 finally:
                     sys.stdout = old_stdout
+                    sys.stderr = old_stderr
 
-                output = buf.getvalue().rstrip("\n")
+                output = out_buf.getvalue().rstrip("\n")
                 if output:
                     # Flush accumulated source before output
                     parts.append(f"{sentinel}_SOURCE:" + "\n".join(src_buf))
                     src_buf = []
                     parts.append(f"{sentinel}_OUTPUT:{output}")
 
+                diagnostics = err_buf.getvalue().rstrip("\n")
+                if diagnostics:
+                    parts.append(f"{sentinel}_WARNING:{diagnostics}")
+
+                if err:
+                    break
+
             # Flush remaining source (trailing statements + comments)
             remaining = src_buf + code_lines[prev_end:] if prev_end < len(code_lines) else src_buf
-            if remaining and "\n".join(remaining).strip():
+            if not err and remaining and "\n".join(remaining).strip():
                 parts.append(f"{sentinel}_SOURCE:" + "\n".join(remaining))
-
-            warns_list = [str(x.message) for x in w]
     except Exception:
         sys.stdout = old_stdout
+        sys.stderr = old_stderr
         import traceback
         err = traceback.format_exc()
+
+    warns_list = [str(x.message) for x in warn_records]
 
     # Check for matplotlib figures. The import is a no-op if matplotlib is
     # already loaded (cached in sys.modules), and a cheap ImportError if not
@@ -158,18 +216,24 @@ while True:
     if fig_path:
         try:
             import matplotlib.pyplot as plt
-            if plt.get_fignums():
+            fig = last_expr_result if _calepin_is_matplotlib_figure(last_expr_result) else None
+            if fig is None and plt.get_fignums():
                 fig = plt.gcf()
+            if fig is not None:
                 fig.set_size_inches(width, height)
+                saved_plot = False
                 try:
                     fig.savefig(fig_path, dpi=dpi, bbox_inches="tight")
+                    saved_plot = True
                 except Exception as save_err:
                     parts.append(f"{sentinel}_WARNING:Failed to save figure: {save_err}")
                 plt.close("all")
-                if os.path.exists(fig_path) and os.path.getsize(fig_path) > 0:
+                if saved_plot and os.path.exists(fig_path) and os.path.getsize(fig_path) > 0:
                     has_plot = True
         except ImportError:
             pass
+        except Exception as plot_err:
+            parts.append(f"{sentinel}_WARNING:Failed to capture figure: {plot_err}")
 
     if err:
         parts.append(f"{sentinel}_ERROR:{err}")
@@ -191,7 +255,11 @@ pub struct PythonSession {
 }
 
 impl PythonSession {
-    pub fn init_with_program(program: &str, cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
+    pub fn init_with_program(
+        program: &str,
+        cwd: Option<&std::path::Path>,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<Self> {
         let proc = SubprocessSession::spawn(
             program,
             &["-s", "-u", "-c", PYTHON_BOOTSTRAP],
@@ -219,5 +287,168 @@ impl PythonSession {
         );
         let payload = format!("{}\n{}", meta, code);
         self.proc.execute(&sentinel, &payload)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+    use std::time::Duration;
+
+    fn has_python3() -> bool {
+        Command::new("python3")
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+
+    fn session() -> PythonSession {
+        PythonSession::init_with_program("python3", None, Some(Duration::from_secs(10))).unwrap()
+    }
+
+    #[test]
+    fn python_session_captures_stderr_as_warning() {
+        if !has_python3() {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture(
+                "import sys\nprint('stderr text', file=sys.stderr)",
+                "",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_WARNING:stderr text"), "{raw}");
+    }
+
+    #[test]
+    fn python_session_preserves_warnings_before_errors() {
+        if !has_python3() {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture(
+                "import warnings\nwarnings.warn('careful')\nraise ValueError('boom')",
+                "",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_ERROR:"), "{raw}");
+        assert!(raw.contains("ValueError: boom"), "{raw}");
+        assert!(raw.contains("_WARNING:careful"), "{raw}");
+    }
+
+    #[test]
+    fn python_session_removes_stale_figure_file() {
+        if !has_python3() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("stale.svg");
+        std::fs::write(&fig_path, "<svg>old</svg>").unwrap();
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+
+        let mut session = session();
+        let raw = session
+            .capture("print('fresh')", &fig_path, 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_OUTPUT:fresh"), "{raw}");
+        assert!(!raw.contains("_PLOT:"), "{raw}");
+        assert!(!std::path::Path::new(&fig_path).exists());
+    }
+
+    #[test]
+    fn python_session_suppresses_matplotlib_artist_repr() {
+        if !has_python3() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("plot.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture(
+                r#"import sys, types
+
+matplotlib = types.ModuleType("matplotlib")
+figure_mod = types.ModuleType("matplotlib.figure")
+artist_mod = types.ModuleType("matplotlib.artist")
+axes_mod = types.ModuleType("matplotlib.axes")
+pyplot_mod = types.ModuleType("matplotlib.pyplot")
+
+class Figure:
+    def set_size_inches(self, width, height):
+        self.size = (width, height)
+    def savefig(self, path, dpi=None, bbox_inches=None):
+        with open(path, "w") as handle:
+            handle.write("<svg><path d='M0 0L1 1'/></svg>")
+
+class Artist:
+    pass
+
+class Axes:
+    pass
+
+class Line2D(Artist):
+    pass
+
+_fig = Figure()
+
+def plot(values):
+    return [Line2D()]
+
+def get_fignums():
+    return [1]
+
+def gcf():
+    return _fig
+
+def close(target=None):
+    pass
+
+pyplot_mod.plot = plot
+pyplot_mod.get_fignums = get_fignums
+pyplot_mod.gcf = gcf
+pyplot_mod.close = close
+figure_mod.Figure = Figure
+artist_mod.Artist = Artist
+axes_mod.Axes = Axes
+matplotlib.figure = figure_mod
+matplotlib.artist = artist_mod
+matplotlib.axes = axes_mod
+matplotlib.pyplot = pyplot_mod
+sys.modules["matplotlib"] = matplotlib
+sys.modules["matplotlib.figure"] = figure_mod
+sys.modules["matplotlib.artist"] = artist_mod
+sys.modules["matplotlib.axes"] = axes_mod
+sys.modules["matplotlib.pyplot"] = pyplot_mod
+
+import matplotlib.pyplot as plt
+plt.plot([1, 2, 3])"#,
+                &fig_path,
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_PLOT:"), "{raw}");
+        assert!(std::path::Path::new(&fig_path).exists());
+        assert!(!raw.contains("_OUTPUT:"), "{raw}");
     }
 }

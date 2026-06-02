@@ -1,5 +1,5 @@
-pub mod cache;
 pub mod cli;
+pub mod compile;
 pub mod execute;
 pub mod model;
 pub mod paths;
@@ -7,3 +7,5 @@ pub mod preprocess;
 pub mod query;
 pub mod results;
 pub mod runtime;
+pub mod sync;
+pub mod watch;

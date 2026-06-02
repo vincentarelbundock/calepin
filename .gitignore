@@ -7,10 +7,17 @@ quarto_website/
 *_files/
 *_cache/
 .calepin/
+**/.calepin/
 *_output/
 cache/
 _astro/
 node_modules/
+editors/vscode/bin/
+editors/vscode/dist/
+editors/vscode/media/
+editors/vscode/node_modules/
+editors/vscode/out/
+.venv/
 _site/
 
 # Rendered output

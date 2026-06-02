@@ -3,8 +3,8 @@
 // ## Sentinel protocol
 //
 // Each request/response pair is framed by a unique sentinel string generated from
-// PID + nanosecond timestamp (see make_sentinel() in mod.rs). This avoids any
-// possibility of collision with user output.
+// PID + an atomic counter (see make_sentinel() in mod.rs). This avoids practical
+// collisions with user output.
 //
 // Request: Rust writes `{sentinel}_BEGIN\n{payload}\n{sentinel}_END\n` to stdin.
 // Response: the subprocess writes tagged output lines, then `{sentinel}_DONE\n`.
@@ -23,12 +23,14 @@
 // ## Functions
 //
 // - SubprocessSession::spawn()   -- Start a subprocess with piped stdin/stdout.
+// - spawn_script()               -- Write a bootstrap script to a temp file and run it.
 // - SubprocessSession::execute() -- Send a sentinel-delimited code payload and read back
 //                                   the sentinel-delimited result (with timeout).
 // - Drop                         -- Close stdin and wait for the subprocess to exit.
 
 use anyhow::{Context, Result};
 use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
@@ -39,7 +41,7 @@ pub struct SubprocessSession {
     stdin: Option<BufWriter<std::process::ChildStdin>>,
     /// Reader thread sends lines via this channel.
     reader_rx: Option<std::sync::mpsc::Receiver<ReaderMsg>>,
-    /// Handle for the reader thread (joined on drop).
+    /// Handle for the detached reader thread.
     _reader_handle: Option<std::thread::JoinHandle<()>>,
     /// Chunk execution timeout.
     timeout: Option<Duration>,
@@ -55,7 +57,13 @@ impl SubprocessSession {
     /// Spawn a subprocess with piped stdin/stdout, optional env vars and working directory.
     /// stderr is inherited (warnings go to terminal).
     /// A reader thread is spawned to enable timeout-based reads.
-    pub fn spawn(program: &str, args: &[&str], env: &[(&str, &str)], cwd: Option<&std::path::Path>, timeout: Option<Duration>) -> Result<Self> {
+    pub fn spawn(
+        program: &str,
+        args: &[&str],
+        env: &[(&str, &str)],
+        cwd: Option<&std::path::Path>,
+        timeout: Option<Duration>,
+    ) -> Result<Self> {
         let mut cmd = Command::new(program);
         cmd.args(args)
             .stdin(Stdio::piped())
@@ -67,15 +75,13 @@ impl SubprocessSession {
         if let Some(dir) = cwd {
             cmd.current_dir(dir);
         }
-        let mut child = cmd
-            .spawn()
-            .map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    anyhow::anyhow!("{} not found on PATH", program)
-                } else {
-                    anyhow::anyhow!("Failed to spawn {}: {}", program, e)
-                }
-            })?;
+        let mut child = cmd.spawn().map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                anyhow::anyhow!("{} not found on PATH", program)
+            } else {
+                anyhow::anyhow!("Failed to spawn {}: {}", program, e)
+            }
+        })?;
 
         let stdin = BufWriter::new(child.stdin.take().unwrap());
         let stdout = child.stdout.take().unwrap();
@@ -88,9 +94,19 @@ impl SubprocessSession {
             loop {
                 let mut line = String::new();
                 match reader.read_line(&mut line) {
-                    Ok(0) => { let _ = tx.send(ReaderMsg::Eof); break; }
-                    Ok(_) => { if tx.send(ReaderMsg::Line(line)).is_err() { break; } }
-                    Err(e) => { let _ = tx.send(ReaderMsg::Error(e)); break; }
+                    Ok(0) => {
+                        let _ = tx.send(ReaderMsg::Eof);
+                        break;
+                    }
+                    Ok(_) => {
+                        if tx.send(ReaderMsg::Line(line)).is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx.send(ReaderMsg::Error(e));
+                        break;
+                    }
                 }
             }
         });
@@ -103,7 +119,6 @@ impl SubprocessSession {
             timeout,
         })
     }
-
 
     /// Send code to the subprocess and read back the sentinel-delimited result.
     /// Times out after the configured timeout (default: no timeout). On timeout,
@@ -125,7 +140,9 @@ impl SubprocessSession {
         loop {
             let recv_result = match timeout {
                 Some(dur) => rx.recv_timeout(*dur),
-                None => rx.recv().map_err(|_| std::sync::mpsc::RecvTimeoutError::Disconnected),
+                None => rx
+                    .recv()
+                    .map_err(|_| std::sync::mpsc::RecvTimeoutError::Disconnected),
             };
             match recv_result {
                 Ok(ReaderMsg::Line(line)) => {
@@ -162,6 +179,27 @@ impl SubprocessSession {
 
         Ok(format!("{}\n{}", sentinel, output))
     }
+}
+
+pub fn spawn_script(
+    program: &str,
+    args_before_script: &[&str],
+    script: &str,
+    context_name: &str,
+    cwd: Option<&Path>,
+    timeout: Option<Duration>,
+) -> Result<(SubprocessSession, tempfile::NamedTempFile)> {
+    let script_file = tempfile::NamedTempFile::new()
+        .with_context(|| format!("Failed to create temp file for {context_name} bootstrap"))?;
+    std::fs::write(script_file.path(), script)
+        .with_context(|| format!("Failed to write {context_name} bootstrap"))?;
+    let path_str = script_file.path().to_string_lossy().to_string();
+    let mut args = Vec::with_capacity(args_before_script.len() + 1);
+    args.extend(args_before_script.iter().copied());
+    args.push(path_str.as_str());
+    let proc = SubprocessSession::spawn(program, &args, &[], cwd, timeout)
+        .with_context(|| format!("Failed to start {context_name}"))?;
+    Ok((proc, script_file))
 }
 
 impl Drop for SubprocessSession {

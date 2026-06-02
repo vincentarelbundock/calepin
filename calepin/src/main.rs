@@ -5,8 +5,8 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 mod cli;
 mod config;
 mod engines;
+mod html;
 mod typst;
-mod types;
 mod utils;
 
 use anyhow::Result;
@@ -22,7 +22,9 @@ fn main() -> Result<()> {
     let cli = parse_cli();
 
     match cli.command {
-        Command::Preprocess(args) => typst::cli::handle_preprocess(args),
+        Command::New(args) => typst::cli::handle_new(args),
         Command::Compile(args) => typst::cli::handle_compile(args),
+        Command::Watch(args) => typst::cli::handle_watch(args),
+        Command::Stop(args) => typst::cli::handle_stop(args),
     }
 }

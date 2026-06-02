@@ -1,0 +1,129 @@
+{
+  "name": "calepin",
+  "displayName": "Calepin for Typst",
+  "description": "Calepin brings computational notebooks to Typst",
+  "version": "0.0.1-alpha.10",
+  "publisher": "VincentArel-Bundock",
+  "license": "MIT",
+  "homepage": "https://vincentarelbundock.github.io/calepin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vincentarelbundock/calepin"
+  },
+  "bugs": {
+    "url": "https://github.com/vincentarelbundock/calepin/issues"
+  },
+  "qna": "marketplace",
+  "pricing": "Free",
+  "galleryBanner": {
+    "color": "#40e0d0",
+    "theme": "light"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Data Science",
+    "Other"
+  ],
+  "keywords": [
+    "typst",
+    "calepin",
+    "notebook",
+    "literate programming",
+    "python",
+    "r",
+    "julia",
+    "rust"
+  ],
+  "activationEvents": [
+    "onLanguage:typst",
+    "workspaceContains:**/*.typ",
+    "onCommand:calepin.watch",
+    "onCommand:calepin.compile",
+    "onCommand:calepin.stop",
+    "onCommand:calepin.new"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "calepin.watch",
+        "title": "Calepin Typst Watch"
+      },
+      {
+        "command": "calepin.compile",
+        "title": "Calepin Typst Compile"
+      },
+      {
+        "command": "calepin.stop",
+        "title": "Calepin Typst Stop"
+      },
+      {
+        "command": "calepin.new",
+        "title": "Calepin Typst New"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "calepin.watch"
+        },
+        {
+          "command": "calepin.compile"
+        },
+        {
+          "command": "calepin.stop"
+        },
+        {
+          "command": "calepin.new"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Calepin",
+      "properties": {
+        "calepin.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the calepin binary. Leave empty to use the bundled binary, then PATH."
+        },
+        "calepin.watchFormat": {
+          "type": "string",
+          "enum": [
+            "pdf",
+            "html",
+            "svg",
+            "png"
+          ],
+          "default": "pdf",
+          "description": "Output format for Calepin Typst Watch."
+        },
+        "calepin.watchTypstArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Arguments forwarded to typst watch after --, such as --port, --open, or --font-path."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^3.0.0",
+    "ovsx": "^0.9.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^4.10.38"
+  }
+}

@@ -11,10 +11,10 @@
 // - ShSession::capture()         — Execute a shell code chunk and capture output.
 // - ShSession::evaluate_inline() — Evaluate a single shell expression and return trimmed output.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use super::make_sentinel;
-use super::subprocess::SubprocessSession;
+use super::subprocess::{spawn_script, SubprocessSession};
 
 /// Bootstrap shell script sent once at startup.
 /// Reads sentinel-delimited code blocks from stdin, executes them with eval,
@@ -57,15 +57,17 @@ pub struct ShSession {
 }
 
 impl ShSession {
-    pub fn init_with_program(program: &str, cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
-        let bootstrap_file = tempfile::NamedTempFile::new()
-            .context("Failed to create temp file for sh bootstrap")?;
-        std::fs::write(bootstrap_file.path(), SH_BOOTSTRAP)
-            .context("Failed to write sh bootstrap")?;
-        let path_str = bootstrap_file.path().to_string_lossy().to_string();
-        let session = SubprocessSession::spawn(program, &[&path_str], &[], cwd, timeout)
-            .context("Failed to start /bin/sh")?;
-        Ok(ShSession { session, _bootstrap_file: bootstrap_file })
+    pub fn init_with_program(
+        program: &str,
+        cwd: Option<&std::path::Path>,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<Self> {
+        let (session, bootstrap_file) =
+            spawn_script(program, &[], SH_BOOTSTRAP, "sh", cwd, timeout)?;
+        Ok(ShSession {
+            session,
+            _bootstrap_file: bootstrap_file,
+        })
     }
 
     /// Execute a shell code chunk and return sentinel-tagged output.

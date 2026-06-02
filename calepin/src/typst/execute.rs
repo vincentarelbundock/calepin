@@ -1,28 +1,30 @@
 use anyhow::{anyhow, Context, Result};
 use serde_json::{json, Value};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::config::{ExecuteConfig, FigureConfig, Metadata};
-use crate::engines::{self, python::PythonSession, r::RSession, sh::ShSession, EngineContext};
-use crate::types::{ChunkOptions, ChunkResult as LegacyChunkResult, OptionValue};
+use crate::config::ExecutablePaths;
+use crate::engines::{
+    self, julia::JuliaSession, python::PythonSession, r::RSession, sh::ShSession, EngineContext,
+    EngineResult,
+};
 use crate::typst::model::{
-    ChunkResultDocument, ChunkSpec, ChunkStatus, EngineName, MimeData, ResultItem,
+    ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec, MimeData,
+    ResultItem, ResultItemName, ResultItemType,
 };
 
 #[derive(Debug, Clone)]
 pub struct ExecutionConfig {
     pub cwd: PathBuf,
-    pub rscript: PathBuf,
-    pub python: PathBuf,
-    pub shell: PathBuf,
+    pub executables: ExecutablePaths,
     pub timeout: Option<Duration>,
 }
 
 pub struct EnginePool {
     r: Option<RSession>,
     python: Option<PythonSession>,
+    julia: Option<JuliaSession>,
     sh: Option<ShSession>,
     config: ExecutionConfig,
 }
@@ -32,6 +34,7 @@ impl EnginePool {
         Self {
             r: None,
             python: None,
+            julia: None,
             sh: None,
             config,
         }
@@ -48,29 +51,41 @@ impl EnginePool {
                 label: chunk.label.clone(),
                 engine: chunk.engine,
                 status: ChunkStatus::Skipped,
-                cached: false,
                 items: Vec::new(),
             });
         }
 
-        let options = legacy_options(chunk);
         let source = lines(&chunk.code);
-        let fig_ext = figure_extension(&chunk.exec_options.dev);
-        let mut ctx = self.context_for(chunk.engine)?;
-        let legacy = engines::execute_chunk(
-            &source,
-            &options,
-            &chunk.label,
-            figures_dir,
-            &fig_ext,
-            &mut ctx,
-        )?;
-        let items = normalize_legacy_results(chunk, figures_dir, &fig_ext, legacy, artifact_path)?;
-        let has_error = items.iter().any(|item| item.item_type == "error");
+        let figure = FigureSpec::from_exec_options(chunk.engine, &chunk.exec_options);
+        let engine_results = if chunk.engine.is_diagram() {
+            let fig_path = figures_dir.join(format!("{}-1.svg", chunk.label));
+            engines::diagram::execute_diagram(
+                &chunk.code,
+                chunk.engine,
+                &fig_path,
+                &source,
+                &self.config.executables,
+            )?
+        } else {
+            let mut ctx = self.context_for(chunk.engine)?;
+            engines::execute_chunk(
+                &source,
+                chunk.engine,
+                &chunk.label,
+                figures_dir,
+                &figure,
+                &mut ctx,
+            )?
+        };
+        let items =
+            normalize_engine_results(chunk, figures_dir, &figure, engine_results, artifact_path)?;
+        let has_error = items
+            .iter()
+            .any(|item| item.item_type == ResultItemType::Error);
         if has_error && !chunk.exec_options.error {
             let message = items
                 .iter()
-                .find(|item| item.item_type == "error")
+                .find(|item| item.item_type == ResultItemType::Error)
                 .and_then(|item| item.message.as_deref())
                 .unwrap_or("execution failed");
             return Err(anyhow!("chunk `{}` failed: {}", chunk.label, message));
@@ -78,85 +93,123 @@ impl EnginePool {
         Ok(ChunkResultDocument {
             label: chunk.label.clone(),
             engine: chunk.engine,
-            status: if has_error { ChunkStatus::Error } else { ChunkStatus::Ok },
-            cached: false,
+            status: if has_error {
+                ChunkStatus::Error
+            } else {
+                ChunkStatus::Ok
+            },
             items,
         })
     }
 
+    fn ensure_r_session(&mut self) -> Result<()> {
+        if self.r.is_none() {
+            let program = self.config.executables.rscript.to_string_lossy();
+            self.r = Some(RSession::init_with_program(
+                &program,
+                "typst",
+                Some(&self.config.cwd),
+                self.config.timeout,
+            )?);
+        }
+        Ok(())
+    }
+
+    fn ensure_python_session(&mut self) -> Result<()> {
+        if self.python.is_none() {
+            let program = self.config.executables.python.to_string_lossy();
+            self.python = Some(PythonSession::init_with_program(
+                &program,
+                Some(&self.config.cwd),
+                self.config.timeout,
+            )?);
+        }
+        Ok(())
+    }
+
+    fn ensure_julia_session(&mut self) -> Result<()> {
+        if self.julia.is_none() {
+            let program = self.config.executables.julia.to_string_lossy();
+            self.julia = Some(JuliaSession::init_with_program(
+                &program,
+                Some(&self.config.cwd),
+                self.config.timeout,
+            )?);
+        }
+        Ok(())
+    }
+
+    fn ensure_sh_session(&mut self) -> Result<()> {
+        if self.sh.is_none() {
+            let program = self.config.executables.shell.to_string_lossy();
+            self.sh = Some(ShSession::init_with_program(
+                &program,
+                Some(&self.config.cwd),
+                self.config.timeout,
+            )?);
+        }
+        Ok(())
+    }
+
     fn context_for(&mut self, engine: EngineName) -> Result<EngineContext<'_>> {
         match engine {
-            EngineName::R => {
-                if self.r.is_none() {
-                    let program = self.config.rscript.to_string_lossy().to_string();
-                    self.r = Some(RSession::init_with_program(
-                        &program,
-                        "typst",
-                        Some(&self.config.cwd),
-                        self.config.timeout,
-                    )?);
-                }
-            }
-            EngineName::Python => {
-                if self.python.is_none() {
-                    let program = self.config.python.to_string_lossy().to_string();
-                    self.python = Some(PythonSession::init_with_program(
-                        &program,
-                        Some(&self.config.cwd),
-                        self.config.timeout,
-                    )?);
-                }
-            }
-            EngineName::Sh => {
-                if self.sh.is_none() {
-                    let program = self.config.shell.to_string_lossy().to_string();
-                    self.sh = Some(ShSession::init_with_program(
-                        &program,
-                        Some(&self.config.cwd),
-                        self.config.timeout,
-                    )?);
-                }
+            EngineName::R => self.ensure_r_session()?,
+            EngineName::Python => self.ensure_python_session()?,
+            EngineName::Julia => self.ensure_julia_session()?,
+            EngineName::Sh => self.ensure_sh_session()?,
+            EngineName::Mermaid | EngineName::Tikz | EngineName::Dot | EngineName::D2 => {
+                return Err(anyhow!(
+                    "diagram engine `{}` does not use a persistent context",
+                    engine
+                ));
             }
         }
 
         Ok(EngineContext {
             r: self.r.as_mut(),
             python: self.python.as_mut(),
+            julia: self.julia.as_mut(),
             sh: self.sh.as_mut(),
         })
     }
 }
 
-pub fn normalize_legacy_results(
+pub fn normalize_engine_results(
     chunk: &ChunkSpec,
     figures_dir: &Path,
-    fig_ext: &str,
-    legacy: Vec<LegacyChunkResult>,
+    figure: &FigureSpec,
+    engine_results: Vec<EngineResult>,
     artifact_path: impl Fn(&Path) -> String,
 ) -> Result<Vec<ResultItem>> {
     let mut items = Vec::new();
-    for result in legacy {
+    for result in engine_results {
         match result {
-            LegacyChunkResult::Source(_) | LegacyChunkResult::Preamble(_) => {}
-            LegacyChunkResult::Output(text) => items.push(stream_item("stdout", text)),
-            LegacyChunkResult::Asis(text) => {
-                items.push(rich_text_item("display", "text/x-typst", Value::String(text)));
+            EngineResult::Source(_) | EngineResult::Preamble(_) => {}
+            EngineResult::Output(text) => items.push(stream_item(ResultItemName::Stdout, text)),
+            EngineResult::Asis(text) => {
+                items.push(rich_text_item(
+                    ResultItemType::Display,
+                    "text/x-typst",
+                    Value::String(text),
+                ));
             }
-            LegacyChunkResult::Warning(text) => items.push(diagnostic_item("warning", text)),
-            LegacyChunkResult::Message(text) => items.push(diagnostic_item("message", text)),
-            LegacyChunkResult::Error(text) => items.push(error_item(text)),
-            LegacyChunkResult::Plot(path) => {
-                let artifact = normalize_plot_path(&chunk.label, figures_dir, fig_ext, &path)
+            EngineResult::Warning(text) => {
+                items.push(diagnostic_item(DiagnosticLevel::Warning, text))
+            }
+            EngineResult::Message(text) => {
+                items.push(diagnostic_item(DiagnosticLevel::Message, text))
+            }
+            EngineResult::Error(text) => items.push(error_item(text)),
+            EngineResult::Plot(path) => {
+                let artifact = normalize_plot_path(&chunk.label, figures_dir, figure, &path)
                     .context("failed to normalize plot artifact path")?;
                 let mut data = MimeData::new();
-                let mime = if fig_ext == "png" {
-                    "image/png"
-                } else {
-                    "image/svg+xml"
-                };
-                data.insert(mime.to_string(), json!({ "path": artifact_path(&artifact) }));
+                data.insert(
+                    figure.mime_type().to_string(),
+                    json!({ "path": artifact_path(&artifact) }),
+                );
                 items.push(ResultItem {
-                    item_type: "display".to_string(),
+                    item_type: ResultItemType::Display,
                     name: None,
                     text: None,
                     level: None,
@@ -171,8 +224,13 @@ pub fn normalize_legacy_results(
     Ok(items)
 }
 
-fn normalize_plot_path(label: &str, figures_dir: &Path, fig_ext: &str, path: &Path) -> Result<PathBuf> {
-    let target = figures_dir.join(format!("{}.{}", label, fig_ext));
+fn normalize_plot_path(
+    label: &str,
+    figures_dir: &Path,
+    figure: &FigureSpec,
+    path: &Path,
+) -> Result<PathBuf> {
+    let target = figures_dir.join(figure.artifact_filename(label));
     if path == target {
         return Ok(target);
     }
@@ -186,10 +244,10 @@ fn normalize_plot_path(label: &str, figures_dir: &Path, fig_ext: &str, path: &Pa
     Ok(target)
 }
 
-fn stream_item(name: &str, text: String) -> ResultItem {
+fn stream_item(name: ResultItemName, text: String) -> ResultItem {
     ResultItem {
-        item_type: "stream".to_string(),
-        name: Some(name.to_string()),
+        item_type: ResultItemType::Stream,
+        name: Some(name),
         text: Some(text),
         level: None,
         message: None,
@@ -199,12 +257,12 @@ fn stream_item(name: &str, text: String) -> ResultItem {
     }
 }
 
-fn diagnostic_item(level: &str, text: String) -> ResultItem {
+fn diagnostic_item(level: DiagnosticLevel, text: String) -> ResultItem {
     ResultItem {
-        item_type: "diagnostic".to_string(),
+        item_type: ResultItemType::Diagnostic,
         name: None,
         text: Some(text),
-        level: Some(level.to_string()),
+        level: Some(level),
         message: None,
         traceback: None,
         data: None,
@@ -214,8 +272,8 @@ fn diagnostic_item(level: &str, text: String) -> ResultItem {
 
 fn error_item(message: String) -> ResultItem {
     ResultItem {
-        item_type: "error".to_string(),
-        name: Some("error".to_string()),
+        item_type: ResultItemType::Error,
+        name: Some(ResultItemName::Error),
         text: None,
         level: None,
         message: Some(message),
@@ -225,11 +283,11 @@ fn error_item(message: String) -> ResultItem {
     }
 }
 
-fn rich_text_item(kind: &str, mime: &str, value: Value) -> ResultItem {
+fn rich_text_item(kind: ResultItemType, mime: &str, value: Value) -> ResultItem {
     let mut data = MimeData::new();
     data.insert(mime.to_string(), value);
     ResultItem {
-        item_type: kind.to_string(),
+        item_type: kind,
         name: None,
         text: None,
         level: None,
@@ -240,53 +298,8 @@ fn rich_text_item(kind: &str, mime: &str, value: Value) -> ResultItem {
     }
 }
 
-fn legacy_options(chunk: &ChunkSpec) -> ChunkOptions {
-    let fig_height = chunk
-        .exec_options
-        .fig_height
-        .unwrap_or(chunk.exec_options.fig_width * 0.618);
-    let mut inner = HashMap::new();
-    inner.insert("engine".to_string(), OptionValue::String(chunk.engine.as_str().to_string()));
-    inner.insert("cache".to_string(), OptionValue::Bool(false));
-    inner.insert("eval".to_string(), OptionValue::Bool(chunk.exec_options.eval));
-    inner.insert("warning".to_string(), OptionValue::Bool(true));
-    inner.insert("message".to_string(), OptionValue::Bool(true));
-    inner.insert("dev".to_string(), OptionValue::String(chunk.exec_options.dev.clone()));
-    inner.insert("dpi".to_string(), OptionValue::Number(chunk.exec_options.dpi as f64));
-    inner.insert("fig_width".to_string(), OptionValue::Number(chunk.exec_options.fig_width));
-    inner.insert("fig_height".to_string(), OptionValue::Number(fig_height));
-
-    ChunkOptions {
-        inner,
-        metadata: Metadata {
-            dpi: Some(chunk.exec_options.dpi as f64),
-            figure: Some(FigureConfig {
-                fig_width: Some(chunk.exec_options.fig_width),
-                fig_height: Some(fig_height),
-                device: Some(chunk.exec_options.dev.clone()),
-                ..FigureConfig::default()
-            }),
-            execute: Some(ExecuteConfig {
-                eval: Some(chunk.exec_options.eval),
-                warning: Some(true),
-                message: Some(true),
-            }),
-            ..Metadata::default()
-        },
-    }
-}
-
 fn lines(code: &str) -> Vec<String> {
     code.lines().map(ToOwned::to_owned).collect()
-}
-
-pub fn figure_extension(dev: &str) -> String {
-    match dev {
-        "png" => "png".to_string(),
-        "jpeg" | "jpg" => "jpg".to_string(),
-        "pdf" | "cairo_pdf" => "pdf".to_string(),
-        _ => "svg".to_string(),
-    }
 }
 
 #[cfg(test)]
@@ -303,65 +316,80 @@ mod tests {
             engine: EngineName::R,
             code: "x <- 1".to_string(),
             exec_options: ExecOptions {
-                cache: true,
                 eval: true,
                 error: false,
-                dev: "svg".to_string(),
-                dpi: 150,
-                fig_width: 6.0,
-                fig_height: None,
+                fig_device_format: "svg".to_string(),
+                fig_device_dpi: 150,
+                fig_device_width: 6.0,
+                fig_device_height: None,
+                fig_device_aspect: 0.618,
             },
             display_options: DisplayOptions {
                 echo: true,
-                include: true,
+                output: true,
                 results,
                 warning: true,
                 message: true,
                 format: defaults.format,
                 item: ItemSelector::ALL,
                 placeholder: true,
-                out_width: None,
-                out_height: None,
-                fig_cap: None,
-                fig_alt: None,
-                tbl_cap: None,
+                fig_display_width: None,
+                fig_display_height: None,
+                fig_display_align: None,
+                fig_display_responsive: None,
+                fig_display_link: None,
+                fig_caption: None,
+                fig_caption_position: None,
+                fig_alt_text: None,
+                fig_subcaptions: None,
+                fig_layout_columns: None,
+                fig_layout_rows: None,
+                fig_layout_design: None,
                 kind: None,
             },
             ordinal: 0,
         }
     }
 
+    fn figure_for(chunk: &ChunkSpec) -> FigureSpec {
+        FigureSpec::from_exec_options(chunk.engine, &chunk.exec_options)
+    }
+
     #[test]
     fn normalizes_verbatim_output_and_diagnostics() {
         let dir = tempfile::tempdir().unwrap();
-        let items = normalize_legacy_results(
-            &chunk(ResultsMode::Verbatim),
+        let chunk = chunk(ResultsMode::Verbatim);
+        let figure = figure_for(&chunk);
+        let items = normalize_engine_results(
+            &chunk,
             dir.path(),
-            "svg",
+            &figure,
             vec![
-                LegacyChunkResult::Source(vec!["x <- 1".to_string()]),
-                LegacyChunkResult::Output("1".to_string()),
-                LegacyChunkResult::Warning("careful".to_string()),
-                LegacyChunkResult::Message("note".to_string()),
+                EngineResult::Source(vec!["x <- 1".to_string()]),
+                EngineResult::Output("1".to_string()),
+                EngineResult::Warning("careful".to_string()),
+                EngineResult::Message("note".to_string()),
             ],
             |_| "unused".to_string(),
         )
         .unwrap();
         assert_eq!(items.len(), 3);
-        assert_eq!(items[0].item_type, "stream");
+        assert_eq!(items[0].item_type, ResultItemType::Stream);
         assert_eq!(items[0].text.as_deref(), Some("1"));
-        assert_eq!(items[1].level.as_deref(), Some("warning"));
-        assert_eq!(items[2].level.as_deref(), Some("message"));
+        assert_eq!(items[1].level, Some(DiagnosticLevel::Warning));
+        assert_eq!(items[2].level, Some(DiagnosticLevel::Message));
     }
 
     #[test]
     fn normalizes_engine_asis_to_typst_mime() {
         let dir = tempfile::tempdir().unwrap();
-        let items = normalize_legacy_results(
-            &chunk(ResultsMode::Asis),
+        let chunk = chunk(ResultsMode::Asis);
+        let figure = figure_for(&chunk);
+        let items = normalize_engine_results(
+            &chunk,
             dir.path(),
-            "svg",
-            vec![LegacyChunkResult::Asis("#table()[x]".to_string())],
+            &figure,
+            vec![EngineResult::Asis("#table()[x]".to_string())],
             |_| "unused".to_string(),
         )
         .unwrap();
@@ -372,15 +400,17 @@ mod tests {
     #[test]
     fn stdout_is_stored_independent_of_results_mode() {
         let dir = tempfile::tempdir().unwrap();
-        let items = normalize_legacy_results(
-            &chunk(ResultsMode::Hide),
+        let chunk = chunk(ResultsMode::Hide);
+        let figure = figure_for(&chunk);
+        let items = normalize_engine_results(
+            &chunk,
             dir.path(),
-            "svg",
-            vec![LegacyChunkResult::Output("visible to runtime".to_string())],
+            &figure,
+            vec![EngineResult::Output("visible to runtime".to_string())],
             |_| "unused".to_string(),
         )
         .unwrap();
-        assert_eq!(items[0].item_type, "stream");
+        assert_eq!(items[0].item_type, ResultItemType::Stream);
         assert_eq!(items[0].text.as_deref(), Some("visible to runtime"));
     }
 
@@ -389,16 +419,131 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let source = dir.path().join("fig-demo-1.svg");
         std::fs::write(&source, "<svg></svg>").unwrap();
-        let items = normalize_legacy_results(
-            &chunk(ResultsMode::Verbatim),
+        let chunk = chunk(ResultsMode::Verbatim);
+        let figure = figure_for(&chunk);
+        let items = normalize_engine_results(
+            &chunk,
             dir.path(),
-            "svg",
-            vec![LegacyChunkResult::Plot(source)],
+            &figure,
+            vec![EngineResult::Plot(source)],
             |path| path.file_name().unwrap().to_string_lossy().to_string(),
         )
         .unwrap();
         let data = items[0].data.as_ref().unwrap();
         assert_eq!(data["image/svg+xml"]["path"], "fig-demo.svg");
         assert!(dir.path().join("fig-demo.svg").exists());
+    }
+
+    #[test]
+    fn engine_pool_executes_julia_with_configured_program() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake_julia = dir.path().join("fake-julia");
+        std::fs::write(
+            &fake_julia,
+            r#"#!/bin/sh
+x=""
+while IFS= read -r header; do
+    case "$header" in
+        *_BEGIN)
+            sentinel="${header%_BEGIN}"
+            end_marker="${sentinel}_END"
+            code=""
+            while IFS= read -r line; do
+                [ "$line" = "$end_marker" ] && break
+                code="${code}${line}
+"
+            done
+            case "$code" in
+                *"x = 40"*) x=40 ;;
+            esac
+            case "$code" in
+                *"println(x + 2)"*)
+                    if [ "$x" = "40" ]; then
+                        printf '%s_OUTPUT:42\n' "$sentinel"
+                    else
+                        printf '%s_ERROR:missing state\n' "$sentinel"
+                    fi
+                    ;;
+            esac
+            printf '%s_DONE\n' "$sentinel"
+            ;;
+    esac
+done
+"#,
+        )
+        .unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut permissions = std::fs::metadata(&fake_julia).unwrap().permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(&fake_julia, permissions).unwrap();
+        }
+
+        let config = ExecutionConfig {
+            cwd: dir.path().to_path_buf(),
+            executables: ExecutablePaths {
+                julia: fake_julia,
+                ..ExecutablePaths::defaults()
+            },
+            timeout: Some(std::time::Duration::from_secs(5)),
+        };
+        let mut pool = EnginePool::new(config);
+
+        let mut setup = chunk(ResultsMode::Verbatim);
+        setup.engine = EngineName::Julia;
+        setup.label = "julia-setup".to_string();
+        setup.code = "x = 40".to_string();
+        pool.execute_chunk(&setup, dir.path(), |_| "unused".to_string())
+            .unwrap();
+
+        let mut answer = chunk(ResultsMode::Verbatim);
+        answer.engine = EngineName::Julia;
+        answer.label = "julia-answer".to_string();
+        answer.code = "println(x + 2)".to_string();
+        let document = pool
+            .execute_chunk(&answer, dir.path(), |path| path.display().to_string())
+            .unwrap();
+
+        assert_eq!(document.engine, EngineName::Julia);
+        assert_eq!(document.items[0].item_type, ResultItemType::Stream);
+        assert_eq!(document.items[0].text.as_deref(), Some("42"));
+    }
+
+    #[test]
+    fn diagram_engines_always_use_svg_figures() {
+        assert_eq!(
+            FigureSpec::from_exec_options(
+                EngineName::Mermaid,
+                &ExecOptions {
+                    fig_device_format: "png".to_string(),
+                    ..chunk(ResultsMode::Verbatim).exec_options
+                }
+            )
+            .extension(),
+            "svg"
+        );
+        assert_eq!(
+            FigureSpec::from_exec_options(
+                EngineName::Tikz,
+                &ExecOptions {
+                    fig_device_format: "pdf".to_string(),
+                    ..chunk(ResultsMode::Verbatim).exec_options
+                }
+            )
+            .extension(),
+            "svg"
+        );
+        assert_eq!(
+            FigureSpec::from_exec_options(
+                EngineName::R,
+                &ExecOptions {
+                    fig_device_format: "png".to_string(),
+                    ..chunk(ResultsMode::Verbatim).exec_options
+                }
+            )
+            .extension(),
+            "png"
+        );
     }
 }

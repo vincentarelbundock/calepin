@@ -1,0 +1,9 @@
+{{ doc.head }}
+{% for style in styles -%}
+<style>
+{{ style.css }}
+</style>
+{% endfor -%}
+{{ doc.body_open }}
+{{ doc.body }}
+{{ doc.body_close }}

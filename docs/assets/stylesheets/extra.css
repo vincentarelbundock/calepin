@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
+
+/* Home page hero: Calepin wordmark and tagline, centered, theme-aware. */
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+  letter-spacing: 0.02em;
+}
+
+.calepin-hero {
+  text-align: center;
+  margin: 1.5rem 0 2.75rem;
+}
+
+/* The logo is the page title on the home page, so hide the auto-generated H1. */
+.md-typeset h1:has(+ .calepin-hero) {
+  display: none;
+}
+
+.calepin-hero .calepin-hero__logo {
+  width: min(15.5rem, 47.6%);
+  height: auto;
+  color: var(--md-default-fg-color);
+}
+
+.calepin-hero .calepin-hero__logo path {
+  fill: currentColor;
+}
+
+.calepin-hero .calepin-hero__tagline {
+  margin: 0.6rem 0 0;
+  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+  font-size: 1.19rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* The typst wordmark keeps its brand teal; size and baseline-align it to the text. */
+.calepin-hero .calepin-hero__typst {
+  height: 1.5em;
+  width: auto;
+  vertical-align: -0.3em;
+  margin-left: 0.15em;
+}
+
+/* Embedded example renders (PDF viewer). */
+.calepin-embed {
+  width: 100%;
+  height: 80vh;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+}
+
+/* Editor preview screencast block. */
+.calepin-video-block {
+  width: 400px;
+  max-width: 100%;
+  margin: 1.1rem 0 1.9rem;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.calepin-video-thumb {
+  position: relative;
+  display: inline-block;
+  width: 400px;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.45rem;
+  overflow: hidden;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.calepin-video-thumb:visited {
+  color: inherit;
+}
+
+.calepin-video-thumb:hover .calepin-video-thumb__play {
+  background: rgba(0, 0, 0, 0.58);
+}
+
+.calepin-video-thumb__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0f111a;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.calepin-video-thumb__play {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 1.35rem;
+  line-height: 1;
+  text-indent: 0.16rem;
+  border: 2px solid #ffffffb3;
+  box-shadow: 0 0 0.65rem #0009;
+  pointer-events: none;
+}
+
+.calepin-video-lightbox {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.18s ease;
+}
+
+.calepin-video-lightbox::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: #000c;
+  backdrop-filter: blur(1.5px);
+}
+
+.calepin-video-lightbox__backdrop {
+  position: fixed;
+  inset: 0;
+  cursor: pointer;
+}
+
+.calepin-video-lightbox__panel {
+  position: relative;
+  width: min(96vw, 76rem);
+  max-height: 85vh;
+  border-radius: 0.4rem;
+  background: #101115;
+  border: 1px solid #ffffff4d;
+  z-index: 1;
+}
+
+.calepin-video-lightbox__media {
+  display: block;
+  width: 100%;
+  max-height: 85vh;
+  min-height: 18rem;
+  aspect-ratio: 16 / 9;
+  border-bottom-left-radius: 0.4rem;
+  border-bottom-right-radius: 0.4rem;
+}
+
+@supports selector(video::-webkit-media-controls-timeline) {
+  .calepin-video-lightbox__media::-webkit-media-controls-panel {
+    min-height: 3rem;
+  }
+
+  .calepin-video-lightbox__media::-webkit-media-controls-timeline-container {
+    padding: 0.2rem 0 0.25rem;
+  }
+
+  .calepin-video-lightbox__media::-webkit-media-controls-timeline {
+    height: 10px;
+  }
+}
+
+.calepin-video-lightbox__close {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.45rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  border: 1px solid #ffffff66;
+  color: #fff;
+  background: #000c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.calepin-video-lightbox:target {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.calepin-video-lightbox:target .calepin-video-lightbox__media {
+  animation: calepin-video-fadein 0.2s ease;
+}
+
+@keyframes calepin-video-fadein {
+  from {
+    transform: scale(0.985);
+    opacity: 0.9;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.calepin-video-lightbox__media:focus,
+.calepin-video-thumb:focus-within,
+.calepin-video-lightbox__close:focus,
+.calepin-video-thumb__play:focus {
+  outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 2px;
+}
+
+.md-header__topic:first-child {
+  display: none;
+}

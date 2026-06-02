@@ -1,0 +1,35 @@
+name: Publish to crates.io
+
+# Fires on the same release tag that triggers cargo-dist's release.yml. Both
+# workflows run independently from the tag push, so binary uploads and
+# crates.io publishing are not coupled.
+#
+# Required secrets:
+#   CARGO_REGISTRY_TOKEN   crates.io token with publish rights.
+
+on:
+  push:
+    tags:
+      - '**[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    name: cargo publish
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Publish calepin
+        run: cargo publish -p calepin --locked --token "${CARGO_REGISTRY_TOKEN}"
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

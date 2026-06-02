@@ -17,7 +17,7 @@
 //   are formatted with `format(digits=3, big.mark=",")` for readable output.
 //
 // The graphics device type (png, svg, cairo_pdf, etc.) is configurable per chunk
-// via the `dev` option. Raster devices get `units="in"` and `res=150`.
+// via the `dev` option. Raster devices get `units="in"` and the requested DPI.
 //
 // ## Functions
 //
@@ -26,10 +26,10 @@
 // - RSession::capture()         — Execute an R code chunk with output/warning/message/plot capture
 //                                 using the sentinel protocol.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use super::make_sentinel;
-use super::subprocess::SubprocessSession;
+use super::subprocess::{spawn_script, SubprocessSession};
 
 /// Format placeholder replaced at init time with the actual output format.
 const FORMAT_PLACEHOLDER: &str = "__CALEPIN_FORMAT__";
@@ -100,129 +100,207 @@ calepin.preamble <- function(text) {
       next
     }
 
-    # Parse metadata: fig_path, dev, width, height
+    # Parse metadata: fig_path, dev, width, height, dpi
     meta <- list()
     for (item in strsplit(sub("^META:", "", meta_line), ";")[[1]]) {
-      kv <- strsplit(item, "=", fixed = TRUE)[[1]]
-      if (length(kv) == 2) meta[[kv[1]]] <- kv[2]
+      eq <- regexpr("=", item, fixed = TRUE)
+      if (eq > 0) {
+        key <- substr(item, 1L, eq - 1L)
+        value <- substr(item, eq + 1L, nchar(item))
+        meta[[key]] <- value
+      }
     }
     fig_path <- meta[["fig_path"]]
+    if (is.null(fig_path)) fig_path <- ""
     dev_name <- meta[["dev"]]
+    if (is.null(dev_name)) dev_name <- ""
     width <- as.numeric(meta[["width"]])
     height <- as.numeric(meta[["height"]])
+    dpi <- as.numeric(meta[["dpi"]])
+    if (!is.finite(dpi)) dpi <- 150
 
     sep <- paste0(sentinel, "_SEP")
+    parts <- character(0)
+    warns <- character(0)
+    msgs <- character(0)
+    .calepin_env <- environment()
+    err_out <- NULL
+    device_id <- NA_integer_
+    last_plot_state <- NULL
+    plot_pending <- FALSE
+    plot_emitted <- FALSE
+
+    .calepin_plot_threshold <- function(dev_name) {
+      if (dev_name %in% c("pdf", "cairo_pdf")) {
+        4000
+      } else if (dev_name %in% c("svg")) {
+        300
+      } else {
+        0
+      }
+    }
+
+    .calepin_plot_state <- function() {
+      open_devices <- dev.list()
+      if (is.na(device_id) || is.null(open_devices) || !(device_id %in% open_devices)) {
+        return(NULL)
+      }
+      tryCatch(serialize(recordPlot(), NULL), error = function(e) NULL)
+    }
+
+    .calepin_note_plot_change <- function() {
+      current <- .calepin_plot_state()
+      if (is.null(current)) {
+        return(FALSE)
+      }
+      changed <- !identical(current, last_plot_state)
+      last_plot_state <<- current
+      if (changed) {
+        plot_pending <<- TRUE
+      }
+      changed
+    }
+
+    .calepin_emit_plot_pending <- function() {
+      if (plot_pending && !plot_emitted) {
+        parts <<- c(parts, paste0(sentinel, "_PLOT:", fig_path))
+        plot_pending <<- FALSE
+        plot_emitted <<- TRUE
+      }
+    }
 
     # Open graphics device
     has_plot <- FALSE
     if (isTRUE(nzchar(fig_path)) && isTRUE(nzchar(dev_name))) {
-      dir.create(dirname(fig_path), recursive = TRUE, showWarnings = FALSE)
-      dev_fun <- match.fun(dev_name)
-      # Raster devices (png, jpeg, etc.) need units and resolution
-      if (dev_name %in% c("png", "jpeg", "bmp", "tiff")) {
-        dev_fun(fig_path, width = width, height = height, units = "in", res = 150)
-      } else {
-        dev_fun(fig_path, width = width, height = height)
-      }
-      on.exit({ if (dev.cur() > 1) dev.off() }, add = TRUE)
+      tryCatch({
+        dir.create(dirname(fig_path), recursive = TRUE, showWarnings = FALSE)
+        if (file.exists(fig_path)) suppressWarnings(file.remove(fig_path))
+        dev_fun <- match.fun(dev_name)
+        # Raster devices (png, jpeg, etc.) need units and resolution
+        if (dev_name %in% c("png", "jpeg", "bmp", "tiff")) {
+          dev_fun(fig_path, width = width, height = height, units = "in", res = dpi)
+        } else {
+          dev_fun(fig_path, width = width, height = height)
+        }
+        device_id <- dev.cur()
+        dev.control(displaylist = "enable")
+        last_plot_state <- .calepin_plot_state()
+      }, error = function(e) {
+        err_out <<- conditionMessage(e)
+      })
     }
 
-    warns <- character(0)
-    msgs <- character(0)
-    .calepin_env <- environment()
-    parts <- character(0)
-    err_out <- NULL
-    tryCatch(
-      withCallingHandlers(
-        {
-          exprs <- parse(text = code, keep.source = TRUE)
-          srcs <- attr(exprs, "srcref")
-          code_lines <- strsplit(code, "\n", fixed = TRUE)[[1]]
-          prev_end <- 0L
-          src_buf <- character(0)
-          for (i in seq_along(exprs)) {
-            # Determine source line range (include gap lines: comments, blanks)
-            if (!is.null(srcs) && i <= length(srcs)) {
-              last_line <- srcs[[i]][3L]
-            } else {
-              last_line <- length(code_lines)
-            }
-            src_buf <- c(src_buf, code_lines[(prev_end + 1L):last_line])
-            prev_end <- last_line
-
-            # Capture stdout (cat() output) during eval
-            .cat_out <- capture.output(
-              .val <- withVisible(eval(exprs[[i]], envir = globalenv()))
-            )
-
-            has_output <- FALSE
-
-            # Emit cat() output first
-            if (length(.cat_out) > 0) {
-              parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
-              src_buf <- character(0)
-              has_output <- TRUE
-              parts <- c(parts, paste0(sentinel, "_OUTPUT:", paste(.cat_out, collapse = "\n")))
-            }
-
-            # Then emit visible return value
-            if (.val$visible) {
-              is_asis <- FALSE
-              r <- character(0)
-              if (.calepin_has_knitr) {
-                r <- capture.output(assign("kp_val", knitr::knit_print(.val$value), envir = .calepin_env))
-                if (inherits(kp_val, "knit_asis")) {
-                  is_asis <- TRUE
-                  r <- as.character(kp_val)
-                } else if (length(r) == 0) {
-                  r <- capture.output(print(.val$value))
-                }
+    if (is.null(err_out)) {
+      tryCatch(
+        withCallingHandlers(
+          {
+            exprs <- parse(text = code, keep.source = TRUE)
+            srcs <- attr(exprs, "srcref")
+            code_lines <- strsplit(code, "\n", fixed = TRUE)[[1]]
+            prev_end <- 0L
+            src_buf <- character(0)
+            for (i in seq_along(exprs)) {
+              # Determine source line range (include gap lines: comments, blanks)
+              if (!is.null(srcs) && i <= length(srcs)) {
+                last_line <- srcs[[i]][3L]
               } else {
-                r <- capture.output(print(.val$value))
+                last_line <- length(code_lines)
               }
-              if (length(r) > 0) {
+              src_buf <- c(src_buf, code_lines[(prev_end + 1L):last_line])
+              prev_end <- last_line
+
+              # Capture stdout and direct stderr during eval
+              plot_pending_before <- plot_pending
+              .err_out <- capture.output(
+                .cat_out <- capture.output(
+                  .val <- withVisible(eval(exprs[[i]], envir = globalenv()))
+                ),
+                type = "message"
+              )
+              .calepin_note_plot_change()
+
+              has_output <- FALSE
+
+              # Emit cat() output first
+              if (length(.cat_out) > 0) {
+                if (plot_pending_before) .calepin_emit_plot_pending()
+                parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
+                src_buf <- character(0)
+                has_output <- TRUE
+                parts <- c(parts, paste0(sentinel, "_OUTPUT:", paste(.cat_out, collapse = "\n")))
+              }
+
+              if (length(.err_out) > 0) {
+                if (plot_pending_before) .calepin_emit_plot_pending()
                 if (!has_output) {
                   parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
                   src_buf <- character(0)
+                  has_output <- TRUE
                 }
-                tag <- if (is_asis) "_ASIS:" else "_OUTPUT:"
-                parts <- c(parts, paste0(sentinel, tag, paste(r, collapse = "\n")))
+                parts <- c(parts, paste0(sentinel, "_MESSAGE:", paste(.err_out, collapse = "\n")))
+              }
+
+              # Then emit visible return value
+              if (.val$visible) {
+                is_asis <- FALSE
+                r <- character(0)
+                if (.calepin_has_knitr) {
+                  r <- capture.output(assign("kp_val", knitr::knit_print(.val$value), envir = .calepin_env))
+                  if (inherits(kp_val, "knit_asis")) {
+                    is_asis <- TRUE
+                    r <- as.character(kp_val)
+                  } else if (length(r) == 0) {
+                    r <- capture.output(print(.val$value))
+                  }
+                } else {
+                  r <- capture.output(print(.val$value))
+                }
+                if (length(r) > 0) {
+                  if (plot_pending_before) .calepin_emit_plot_pending()
+                  if (!has_output) {
+                    parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
+                    src_buf <- character(0)
+                  }
+                  tag <- if (is_asis) "_ASIS:" else "_OUTPUT:"
+                  parts <- c(parts, paste0(sentinel, tag, paste(r, collapse = "\n")))
+                }
               }
             }
+            # Flush remaining source (trailing expressions + comments)
+            remaining <- if (prev_end < length(code_lines)) {
+              c(src_buf, code_lines[(prev_end + 1L):length(code_lines)])
+            } else {
+              src_buf
+            }
+            if (length(remaining) > 0 && nzchar(trimws(paste(remaining, collapse = "\n")))) {
+              parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(remaining, collapse = "\n")))
+            }
+          },
+          warning = function(w) {
+            warns <<- c(warns, conditionMessage(w))
+            invokeRestart("muffleWarning")
+          },
+          message = function(m) {
+            msgs <<- c(msgs, conditionMessage(m))
+            invokeRestart("muffleMessage")
           }
-          # Flush remaining source (trailing expressions + comments)
-          remaining <- if (prev_end < length(code_lines)) {
-            c(src_buf, code_lines[(prev_end + 1L):length(code_lines)])
-          } else {
-            src_buf
-          }
-          if (length(remaining) > 0 && nzchar(trimws(paste(remaining, collapse = "\n")))) {
-            parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(remaining, collapse = "\n")))
-          }
-        },
-        warning = function(w) {
-          warns <<- c(warns, conditionMessage(w))
-          invokeRestart("muffleWarning")
-        },
-        message = function(m) {
-          msgs <<- c(msgs, conditionMessage(m))
-          invokeRestart("muffleMessage")
+        ),
+        error = function(e) {
+          err_out <<- conditionMessage(e)
         }
-      ),
-      error = function(e) {
-        err_out <<- conditionMessage(e)
-      }
-    )
+      )
+    }
 
-    if (dev.cur() > 1) dev.off()
-    on.exit(NULL)
+    open_devices <- dev.list()
+    if (!is.na(device_id) && !is.null(open_devices) && device_id %in% open_devices) {
+      dev.off(device_id)
+    }
 
     if (isTRUE(nzchar(fig_path)) && file.exists(fig_path)) {
-      # An empty SVG device writes only the XML/SVG skeleton with no drawing
-      # elements (no <defs>, <path>, <line>, <rect>, <circle>, <text>, etc.).
-      # Check file size: empty SVGs are tiny (~200 bytes), real plots are larger.
+      # Empty device files are small but format-specific: empty PDFs are larger
+      # than empty SVGs, while empty raster devices often write no file at all.
       sz <- file.info(fig_path)$size
-      has_plot <- sz > 300
+      has_plot <- is.finite(sz) && sz > .calepin_plot_threshold(dev_name)
       if (!has_plot) suppressWarnings(file.remove(fig_path))
     }
 
@@ -257,12 +335,19 @@ calepin.preamble <- function(text) {
       }
     }
 
+    if (has_plot) {
+      if (plot_pending) {
+        .calepin_emit_plot_pending()
+      } else if (!plot_emitted) {
+        parts <- c(parts, paste0(sentinel, "_PLOT:", fig_path))
+        plot_emitted <- TRUE
+      }
+    }
     if (!is.null(err_out)) {
       parts <- c(parts, paste0(sentinel, "_ERROR:", err_out))
     }
     if (length(warns) > 0) parts <- c(parts, paste0(sentinel, "_WARNING:", paste(warns, collapse = "\n")))
     if (length(msgs) > 0) parts <- c(parts, paste0(sentinel, "_MESSAGE:", paste(msgs, collapse = "\n")))
-    if (has_plot) parts <- c(parts, paste0(sentinel, "_PLOT:", fig_path))
 
     if (length(.calepin_preamble_buf) > 0) {
       for (p in .calepin_preamble_buf) {
@@ -287,17 +372,25 @@ pub struct RSession {
 }
 
 impl RSession {
-    pub fn init_with_program(program: &str, format: &str, cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
+    pub fn init_with_program(
+        program: &str,
+        format: &str,
+        cwd: Option<&std::path::Path>,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<Self> {
         let bootstrap = R_BOOTSTRAP.replace(FORMAT_PLACEHOLDER, format);
-        let bootstrap_file = tempfile::NamedTempFile::new()
-            .context("Failed to create temp file for R bootstrap")?;
-        std::fs::write(bootstrap_file.path(), &bootstrap)
-            .context("Failed to write R bootstrap")?;
-        let path_str = bootstrap_file.path().to_string_lossy().to_string();
-        let proc = SubprocessSession::spawn(
-            program, &["--no-save", "--no-restore", &path_str], &[], cwd, timeout,
-        ).context("Failed to start R")?;
-        Ok(RSession { proc, _bootstrap_file: bootstrap_file })
+        let (proc, bootstrap_file) = spawn_script(
+            program,
+            &["--no-save", "--no-restore"],
+            &bootstrap,
+            "R",
+            cwd,
+            timeout,
+        )?;
+        Ok(RSession {
+            proc,
+            _bootstrap_file: bootstrap_file,
+        })
     }
 
     /// Capture R code output using the sentinel protocol.
@@ -308,13 +401,185 @@ impl RSession {
         dev: &str,
         width: f64,
         height: f64,
+        dpi: f64,
     ) -> Result<String> {
         let sentinel = make_sentinel();
         let meta = format!(
-            "META:fig_path={};dev={};width={};height={}",
-            fig_path, dev, width, height
+            "META:fig_path={};dev={};width={};height={};dpi={}",
+            fig_path, dev, width, height, dpi
         );
         let payload = format!("{}\n{}", meta, code);
         self.proc.execute(&sentinel, &payload)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+    use std::time::Duration;
+
+    fn has_rscript() -> bool {
+        Command::new("Rscript")
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+
+    fn session() -> RSession {
+        RSession::init_with_program("Rscript", "typst", None, Some(Duration::from_secs(10)))
+            .unwrap()
+    }
+
+    #[test]
+    fn r_session_reports_invalid_figure_device_without_exiting() {
+        if !has_rscript() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("bad.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture(
+                "cat('should not run')",
+                &fig_path,
+                "baddev",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_ERROR:"), "{raw}");
+        assert!(raw.contains("baddev"), "{raw}");
+
+        let raw = session
+            .capture("cat(42)", "", "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+        assert!(raw.contains("_OUTPUT:42"), "{raw}");
+    }
+
+    #[test]
+    fn r_session_does_not_report_empty_pdf_as_plot() {
+        if !has_rscript() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("empty.pdf");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture(
+                "cat('text only')",
+                &fig_path,
+                "cairo_pdf",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_OUTPUT:text only"), "{raw}");
+        assert!(!raw.contains("_PLOT:"), "{raw}");
+        assert!(!std::path::Path::new(&fig_path).exists());
+    }
+
+    #[test]
+    fn r_session_uses_requested_raster_dpi() {
+        if !has_rscript() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("plot.png");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture("plot(1:3)", &fig_path, "png", 2.0, 2.0, 77.0)
+            .unwrap();
+
+        assert!(raw.contains("_PLOT:"), "{raw}");
+        let bytes = std::fs::read(&fig_path).unwrap();
+        assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n");
+        let width = u32::from_be_bytes(bytes[16..20].try_into().unwrap());
+        let height = u32::from_be_bytes(bytes[20..24].try_into().unwrap());
+        assert_eq!(width, 154);
+        assert_eq!(height, 154);
+    }
+
+    #[test]
+    fn r_session_reports_plot_before_later_text_output() {
+        if !has_rscript() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("plot.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture(
+                r#"m <- lm(mpg ~ wt, data = mtcars)
+plot(hp ~ qsec, data = mtcars, col = "red", pch = 19)
+summary(m)"#,
+                &fig_path,
+                "svg",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        let plot = raw.find("_PLOT:").expect(&raw);
+        let summary = raw.find("Residuals:").expect(&raw);
+        assert!(plot < summary, "{raw}");
+    }
+
+    #[test]
+    fn r_session_captures_direct_stderr_as_message() {
+        if !has_rscript() {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture(
+                "cat('stderr text', file = stderr())",
+                "",
+                "svg",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_MESSAGE:stderr text"), "{raw}");
+        assert!(
+            raw.contains("_SOURCE:cat('stderr text', file = stderr())"),
+            "{raw}"
+        );
+    }
+
+    #[test]
+    fn r_session_accepts_equals_in_figure_path() {
+        if !has_rscript() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("plot=equals.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture("plot(1:3)", &fig_path, "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(std::path::Path::new(&fig_path).exists());
+        assert!(raw.contains("_PLOT:"), "{raw}");
+        assert!(raw.contains(&fig_path), "{raw}");
     }
 }
