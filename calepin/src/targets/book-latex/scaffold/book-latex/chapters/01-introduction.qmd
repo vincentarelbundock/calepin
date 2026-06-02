@@ -1,5 +1,0 @@
----
-title = "Introduction"
----
-
-This is the first chapter of your book.

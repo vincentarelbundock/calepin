@@ -1,1 +1,0 @@
-#place(right, dx: 1em)[#text(size: 0.8em)[{{clp.content}}]]

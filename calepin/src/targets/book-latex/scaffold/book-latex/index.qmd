@@ -1,4 +1,0 @@
----
-title = "My Book"
-target = "book-latex"
----

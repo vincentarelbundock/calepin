@@ -1,18 +1,18 @@
 use clap::{Parser, Subcommand};
-use clap_complete::Shell;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Global quiet flag, set once from CLI args and readable anywhere.
 pub static QUIET: AtomicBool = AtomicBool::new(false);
 
-pub fn set_quiet(q: bool) { QUIET.store(q, Ordering::Relaxed); }
-pub fn is_quiet() -> bool { QUIET.load(Ordering::Relaxed) }
+pub fn set_quiet(q: bool) {
+    QUIET.store(q, Ordering::Relaxed);
+}
 
 #[derive(Parser, Debug)]
 #[command(
     name = "calepin",
-    about = "Render .qmd files to HTML, LaTeX, Typst, or Markdown",
+    about = "Preprocess Typst documents with executable code chunks",
     version,
     disable_version_flag = true,
     arg_required_else_help = true,
@@ -30,316 +30,192 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// Render a .qmd file or a project .yaml manifest
-    Render(RenderArgs),
+    /// Execute chunks and write Typst-readable result artifacts
+    Preprocess(PreprocessArgs),
 
-    /// Preview a file, project, or directory with live-reload
-    Preview(PreviewArgs),
-
-    /// Initialize a new document, website, or book
-    Init(InitArgs),
-
-    /// Extract package documentation as .qmd files
-    Man {
-        #[command(subcommand)]
-        action: ManAction,
-    },
-
-    /// Show information and utilities
-    Extra {
-        #[command(subcommand)]
-        action: ExtraAction,
-    },
-
-    /// Manage templates (list, show, diff, reset)
-    Templates {
-        #[command(subcommand)]
-        action: TemplatesAction,
-    },
+    /// Preprocess, then invoke typst compile
+    Compile(CompileArgs),
 }
 
-#[derive(clap::Args, Debug)]
-pub struct RenderArgs {
-    /// Input .qmd file(s) or .yaml/.yml project manifest.
-    /// Multiple files are rendered in parallel.
-    #[arg(required = true)]
-    pub input: Vec<PathBuf>,
-
-    /// Output path. With a single input, specifies the output file.
-    /// With multiple inputs, specifies the output directory.
-    /// If omitted, output goes next to each input file.
-    #[arg(short, long)]
-    pub output: Option<PathBuf>,
-
-    /// Target: a target name from sidecar config.toml (e.g., web, article)
-    /// or a base name (html, latex, typst, slides, website, markdown).
-    /// If omitted, auto-detected from output extension or front matter.
-    #[arg(short = 't', long)]
-    pub target: Option<String>,
-
-    /// Quiet mode (suppress progress messages)
-    #[arg(short, long)]
-    pub quiet: bool,
-
-    /// Override YAML metadata fields. Accepts multiple values per flag.
-    /// Example: --set title="My Title" bibliography=refs.bib toc=true
-    #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
-    pub overrides: Vec<String>,
-
-    /// Disable syntax highlighting for code blocks
-    #[arg(long)]
-    pub no_highlight: bool,
-
-    /// Override the writer for compound targets (pdf, book).
-    /// Allowed values depend on the target: pdf accepts html/latex/typst/markdown,
-    /// book accepts latex/typst.
-    #[arg(long, value_parser = ["html", "latex", "typst", "markdown"])]
-    pub writer: Option<String>,
-
-    /// Remove output directory before building (project manifests only)
-    #[arg(long)]
-    pub clean: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct PreviewArgs {
-    /// Input .qmd file, .yaml/.yml project manifest, or directory to serve
+#[derive(clap::Args, Debug, Clone)]
+pub struct PreprocessArgs {
+    /// Input .typ file
     pub input: PathBuf,
 
-    /// Port for the preview server
-    #[arg(short, long, default_value = "3456")]
-    pub port: u16,
+    /// Typst project root. Defaults to the input file directory
+    #[arg(long)]
+    pub root: Option<PathBuf>,
 
-    /// Target: a target name or base name (html, latex, typst, website)
-    #[arg(short = 't', long)]
-    pub target: Option<String>,
+    /// Execution working directory. Defaults to the input file directory
+    #[arg(long)]
+    pub cwd: Option<PathBuf>,
 
-    /// Override YAML metadata fields
-    #[arg(short = 's', long = "set", value_name = "KEY=VALUE", num_args = 1..)]
-    pub overrides: Vec<String>,
+    /// Override results JSON path
+    #[arg(long)]
+    pub results: Option<PathBuf>,
 
-    /// Quiet mode (suppress progress messages)
+    /// Force chunk caching on
+    #[arg(long = "cache", action = clap::ArgAction::SetTrue, conflicts_with = "no_cache")]
+    pub cache: bool,
+
+    /// Force chunk caching off
+    #[arg(long = "no-cache", action = clap::ArgAction::SetTrue)]
+    pub no_cache: bool,
+
+    /// Force chunk execution on
+    #[arg(long = "execute", action = clap::ArgAction::SetTrue, conflicts_with = "no_execute")]
+    pub execute: bool,
+
+    /// Force chunk execution off
+    #[arg(long = "no-execute", action = clap::ArgAction::SetTrue)]
+    pub no_execute: bool,
+
+    /// Remove generated results and figures before preprocessing
+    #[arg(long)]
+    pub clean: bool,
+
+    /// Quiet mode
     #[arg(short, long)]
     pub quiet: bool,
-}
 
-/// Arguments for `calepin init`.
-#[derive(clap::Args, Debug)]
-#[command(after_help = "\
-\x1B[1;4mExamples:\x1B[0m
-  calepin init paper.qmd                  # new document (html target)
-  calepin init paper.qmd -t latex         # new document (latex target)
-  calepin init mysite -t website          # new website project
-  calepin init mybook -t book             # new book project
-  calepin init extension myext            # new extension
-  calepin init letter.qmd --extension ./extensions/letter  # from extension")]
-pub struct InitArgs {
-    /// Path to create (directory for collections, .qmd for documents)
-    pub path: std::path::PathBuf,
+    /// Path to Typst executable
+    #[arg(long, default_value = "typst")]
+    pub typst: PathBuf,
 
-    /// Target (html, latex, typst, website, book, book-latex)
-    #[arg(short = 't', long)]
-    pub target: Option<String>,
+    /// Path to Rscript executable
+    #[arg(long, default_value = "Rscript")]
+    pub rscript: PathBuf,
 
-    /// Path to an extension directory to scaffold from and install
-    #[arg(short = 'e', long)]
-    pub extension: Option<String>,
+    /// Path to Python executable
+    #[arg(long, default_value = "python3")]
+    pub python: PathBuf,
 
-    /// Overwrite existing sidecar
+    /// Path to shell executable
+    #[arg(long, default_value = "/bin/sh")]
+    pub shell: PathBuf,
+
+    /// Per-chunk timeout in seconds
     #[arg(long)]
-    pub force: bool,
+    pub timeout: Option<u64>,
 }
 
-#[derive(Subcommand, Debug)]
-#[command(arg_required_else_help = true)]
-pub enum ManAction {
-    /// Extract R package documentation
-    R {
-        /// Package name or path to source directory
-        package: String,
-
-        /// Output directory for .qmd files
-        #[arg(short, long, default_value = "man")]
-        output: PathBuf,
-
-        /// Quiet mode
-        #[arg(short, long)]
-        quiet: bool,
-    },
-
-    /// Extract Python package documentation
-    Python {
-        /// Package name or path to source directory
-        package: String,
-
-        /// Output directory for .qmd files
-        #[arg(short, long, default_value = "man")]
-        output: PathBuf,
-
-        /// Quiet mode
-        #[arg(short, long)]
-        quiet: bool,
-
-        /// Docstring style: google, numpy, sphinx, markdown, or auto (default: auto)
-        #[arg(long, default_value = "auto")]
-        style: String,
-
-        /// Only include names exported in __all__
-        #[arg(long, name = "all")]
-        exports_only: bool,
-
-        /// Also include names re-exported via __init__.py imports
-        #[arg(long)]
-        imports: bool,
-
-        /// Include test modules and directories
-        #[arg(long)]
-        include_tests: bool,
-
-        /// Include private (_-prefixed) modules and directories
-        #[arg(long)]
-        include_private: bool,
-    },
-}
-
-#[derive(Subcommand, Debug)]
-#[command(arg_required_else_help = true)]
-pub enum ExtraAction {
-    /// List available citation styles
-    Csl,
-    /// List available syntax highlighting themes
-    Highlight,
-    /// Print shell completions
-    #[command(arg_required_else_help = true, after_help = "\
-\x1B[1;4mExamples:\x1B[0m
-  calepin extra completions zsh  > ~/.zfunc/_calepin
-  calepin extra completions bash > ~/.local/share/bash-completion/completions/calepin
-  calepin extra completions fish > ~/.config/fish/completions/calepin.fish")]
-    Completions {
-        /// Shell to generate completions for (bash, zsh, fish, elvish, powershell)
-        shell: Shell,
-    },
-
-    /// Install the calepin agent skill for coding assistants (Claude, Codex, opencode, pi)
-    #[command(after_help = "\
-\x1B[1;4mExamples:\x1B[0m
-  calepin extra skill                    # install for all tools (personal)
-  calepin extra skill --project          # install into current project
-  calepin extra skill --claude --codex   # specific tools only")]
-    Skill {
-        /// Install to current project directory instead of personal home directory
-        #[arg(long)]
-        project: bool,
-
-        /// Install for Claude Code
-        #[arg(long)]
-        claude: bool,
-
-        /// Install for OpenAI Codex CLI
-        #[arg(long)]
-        codex: bool,
-
-        /// Install for opencode
-        #[arg(long)]
-        opencode: bool,
-
-        /// Install for pi
-        #[arg(long)]
-        pi: bool,
-
-        /// Skip confirmation prompt
-        #[arg(short = 'y', long)]
-        yes: bool,
-    },
-
-    /// Generate .qmd files filled with lorem ipsum text (for benchmarking)
-    Gibberish {
-        /// Number of .qmd files to generate
-        #[arg(short = 'n', long, default_value = "50")]
-        files: usize,
-
-        /// Number of paragraphs per file
-        #[arg(short, long, default_value = "50")]
-        paragraphs: usize,
-
-        /// Output directory
-        #[arg(short, long, default_value = "gibberish")]
-        dir: std::path::PathBuf,
-
-        /// Complexity level: 0 = prose only, 1 = + code chunks,
-        /// 2 = + cross-references, footnotes, citations, and tables
-        #[arg(short, long, default_value = "1", value_parser = clap::value_parser!(u8).range(0..=2))]
-        complexity: u8,
-    },
-}
-
-#[derive(Subcommand, Debug)]
-#[command(arg_required_else_help = true)]
-pub enum TemplatesAction {
-    /// Show all templates with status (modified, default, custom, missing)
-    List {
-        /// Input .qmd file (determines the sidecar)
-        input: PathBuf,
-
-        /// Override the target (default: read from front matter)
-        #[arg(short = 't', long)]
-        target: Option<String>,
-    },
-
-    /// Print a template's resolved content
-    Show {
-        /// Template name (e.g., figure, code_source, base)
-        name: String,
-
-        /// Input .qmd file (determines the sidecar)
-        input: PathBuf,
-
-        /// Override the target (default: read from front matter)
-        #[arg(short = 't', long)]
-        target: Option<String>,
-    },
-
-    /// Compare sidecar templates against built-in defaults
-    Diff {
-        /// Input .qmd file (determines the sidecar)
-        input: PathBuf,
-
-        /// Template name (show diff for one template only)
-        name: Option<String>,
-
-        /// Override the target (default: read from front matter)
-        #[arg(short = 't', long)]
-        target: Option<String>,
-    },
-
-    /// Revert sidecar template(s) to the built-in version
-    Reset {
-        /// Input .qmd file (determines the sidecar)
-        input: PathBuf,
-
-        /// Template name (reset one template; omit to reset all)
-        name: Option<String>,
-
-        /// Override the target (default: read from front matter)
-        #[arg(short = 't', long)]
-        target: Option<String>,
-
-        /// Reset without confirmation
-        #[arg(long)]
-        force: bool,
-    },
-}
-
-/// Find the project config file in a directory.
-/// Checks `index_calepin/config.toml` as the canonical entry point.
-pub fn find_project_config(dir: &std::path::Path) -> Option<std::path::PathBuf> {
-    let index_sidecar = dir.join("index_calepin").join("config.toml");
-    if index_sidecar.exists() {
-        return index_sidecar.canonicalize().ok()
-            .or_else(|| Some(crate::paths::normalize_path(&index_sidecar)));
+impl PreprocessArgs {
+    pub fn cache_override(&self) -> Option<bool> {
+        if self.cache {
+            Some(true)
+        } else if self.no_cache {
+            Some(false)
+        } else {
+            None
+        }
     }
 
-    None
+    pub fn execute_override(&self) -> Option<bool> {
+        if self.execute {
+            Some(true)
+        } else if self.no_execute {
+            Some(false)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct CompileArgs {
+    /// Input .typ file
+    pub input: PathBuf,
+
+    /// Output path passed to typst compile
+    pub output: Option<PathBuf>,
+
+    #[command(flatten)]
+    pub common: CommonArgs,
+
+    /// Arguments forwarded to typst compile after `--`
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub typst_args: Vec<String>,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct CommonArgs {
+    /// Typst project root. Defaults to the input file directory
+    #[arg(long)]
+    pub root: Option<PathBuf>,
+
+    /// Execution working directory. Defaults to the input file directory
+    #[arg(long)]
+    pub cwd: Option<PathBuf>,
+
+    /// Override results JSON path
+    #[arg(long)]
+    pub results: Option<PathBuf>,
+
+    /// Force chunk caching on
+    #[arg(long = "cache", action = clap::ArgAction::SetTrue, conflicts_with = "no_cache")]
+    pub cache: bool,
+
+    /// Force chunk caching off
+    #[arg(long = "no-cache", action = clap::ArgAction::SetTrue)]
+    pub no_cache: bool,
+
+    /// Force chunk execution on
+    #[arg(long = "execute", action = clap::ArgAction::SetTrue, conflicts_with = "no_execute")]
+    pub execute: bool,
+
+    /// Force chunk execution off
+    #[arg(long = "no-execute", action = clap::ArgAction::SetTrue)]
+    pub no_execute: bool,
+
+    /// Remove generated results and figures before preprocessing
+    #[arg(long)]
+    pub clean: bool,
+
+    /// Quiet mode
+    #[arg(short, long)]
+    pub quiet: bool,
+
+    /// Path to Typst executable
+    #[arg(long, default_value = "typst")]
+    pub typst: PathBuf,
+
+    /// Path to Rscript executable
+    #[arg(long, default_value = "Rscript")]
+    pub rscript: PathBuf,
+
+    /// Path to Python executable
+    #[arg(long, default_value = "python3")]
+    pub python: PathBuf,
+
+    /// Path to shell executable
+    #[arg(long, default_value = "/bin/sh")]
+    pub shell: PathBuf,
+
+    /// Per-chunk timeout in seconds
+    #[arg(long)]
+    pub timeout: Option<u64>,
+}
+
+impl CommonArgs {
+    pub fn cache_override(&self) -> Option<bool> {
+        if self.cache {
+            Some(true)
+        } else if self.no_cache {
+            Some(false)
+        } else {
+            None
+        }
+    }
+
+    pub fn execute_override(&self) -> Option<bool> {
+        if self.execute {
+            Some(true)
+        } else if self.no_execute {
+            Some(false)
+        } else {
+            None
+        }
+    }
 }
 
 /// Print a yellow warning to stderr.
@@ -348,4 +224,95 @@ macro_rules! cwarn {
         eprint!("\x1b[33mWarning:\x1b[0m ");
         eprintln!($($arg)*);
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn test_typst_preprocess_args() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "preprocess",
+            "paper.typ",
+            "--root",
+            "project",
+            "--cwd",
+            "work",
+            "--results",
+            "out/results.json",
+            "--no-cache",
+            "--no-execute",
+            "--clean",
+            "--quiet",
+            "--typst",
+            "typst-dev",
+            "--rscript",
+            "Rscript-dev",
+            "--python",
+            "python-dev",
+            "--shell",
+            "/bin/bash",
+            "--timeout",
+            "42",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Preprocess(args) => {
+                assert_eq!(args.input, PathBuf::from("paper.typ"));
+                assert_eq!(args.root, Some(PathBuf::from("project")));
+                assert_eq!(args.cwd, Some(PathBuf::from("work")));
+                assert_eq!(args.results, Some(PathBuf::from("out/results.json")));
+                assert_eq!(args.cache_override(), Some(false));
+                assert_eq!(args.execute_override(), Some(false));
+                assert!(args.clean);
+                assert!(args.quiet);
+                assert_eq!(args.typst, PathBuf::from("typst-dev"));
+                assert_eq!(args.rscript, PathBuf::from("Rscript-dev"));
+                assert_eq!(args.python, PathBuf::from("python-dev"));
+                assert_eq!(args.shell, PathBuf::from("/bin/bash"));
+                assert_eq!(args.timeout, Some(42));
+            }
+            other => panic!("expected preprocess command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_compile_args() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "paper.pdf",
+            "--root",
+            "project",
+            "--",
+            "--font-path",
+            "fonts",
+            "--input",
+            "theme=dark",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert_eq!(args.input, PathBuf::from("paper.typ"));
+                assert_eq!(args.output, Some(PathBuf::from("paper.pdf")));
+                assert_eq!(args.common.root, Some(PathBuf::from("project")));
+                assert_eq!(args.typst_args, vec!["--font-path", "fonts", "--input", "theme=dark"]);
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_old_subcommands_removed() {
+        for command in ["render", "preview", "init", "man", "extra", "templates"] {
+            let err = Cli::try_parse_from(["calepin", command]).unwrap_err();
+            assert_eq!(err.kind(), clap::error::ErrorKind::InvalidSubcommand);
+        }
+    }
 }

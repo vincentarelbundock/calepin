@@ -1,8 +1,0 @@
-{%- set title = cfg.title -%}
-{%- if not title -%}{%- set title = "Caution" -%}{%- endif -%}
-<div class="callout callout-caution"{% if cfg.id %} id="{{cfg.id}}"{% endif %} role="note">
-<div class="callout-header">🔥 {{title}}</div>
-<div class="callout-body">
-{{clp.content}}
-</div>
-</div>

@@ -1,7 +1,0 @@
-# -- Project --
-target = "book-latex"
-title = "My Book"
-
-# -- Contents (chapter order) --
-[[contents]]
-include = "chapters"

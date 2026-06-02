@@ -1,1 +1,0 @@
-#link("{{ cfg.url }}")[{{ cfg.label }}]

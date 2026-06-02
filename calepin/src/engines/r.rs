@@ -287,11 +287,7 @@ pub struct RSession {
 }
 
 impl RSession {
-    /// Spawn an Rscript subprocess running the bootstrap script.
-    /// `format` is the output format name (html, latex, typst, markdown) so that
-    /// knitr-aware packages (tinytable, gt, …) can auto-detect it.
-    /// `cwd` sets the working directory for the R process (typically the input file's directory).
-    pub fn init(format: &str, cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
+    pub fn init_with_program(program: &str, format: &str, cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
         let bootstrap = R_BOOTSTRAP.replace(FORMAT_PLACEHOLDER, format);
         let bootstrap_file = tempfile::NamedTempFile::new()
             .context("Failed to create temp file for R bootstrap")?;
@@ -299,19 +295,9 @@ impl RSession {
             .context("Failed to write R bootstrap")?;
         let path_str = bootstrap_file.path().to_string_lossy().to_string();
         let proc = SubprocessSession::spawn(
-            "Rscript", &["--no-save", "--no-restore", &path_str], &[], cwd, timeout,
+            program, &["--no-save", "--no-restore", &path_str], &[], cwd, timeout,
         ).context("Failed to start R")?;
         Ok(RSession { proc, _bootstrap_file: bootstrap_file })
-    }
-
-    /// Evaluate an inline R expression and return the formatted result.
-    pub fn evaluate_inline(&mut self, expr: &str) -> Result<String> {
-        let sentinel = make_sentinel();
-        let payload = format!("INLINE:{}", expr);
-        let raw = self.proc.execute(&sentinel, &payload)?;
-        // Result is: {sentinel}\n{result}
-        let (_, result) = raw.split_once('\n').unwrap_or(("", ""));
-        Ok(result.to_string())
     }
 
     /// Capture R code output using the sentinel protocol.

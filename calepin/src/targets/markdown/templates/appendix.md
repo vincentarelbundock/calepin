@@ -1,3 +1,0 @@
-# Appendix
-
-{{clp.content}}

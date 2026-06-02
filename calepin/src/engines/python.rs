@@ -191,13 +191,9 @@ pub struct PythonSession {
 }
 
 impl PythonSession {
-    /// Spawn a python3 subprocess running the bootstrap script.
-    /// Uses -s (no user site), -u (unbuffered stdio),
-    /// and passes the bootstrap as a -c argument (no temp file needed).
-    /// `cwd` sets the working directory for the Python process.
-    pub fn init(cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
+    pub fn init_with_program(program: &str, cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
         let proc = SubprocessSession::spawn(
-            "python3",
+            program,
             &["-s", "-u", "-c", PYTHON_BOOTSTRAP],
             &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
             cwd,
@@ -205,15 +201,6 @@ impl PythonSession {
         )
         .context("Failed to start Python")?;
         Ok(PythonSession { proc })
-    }
-
-    /// Evaluate an inline Python expression and return the result as a string.
-    pub fn evaluate_inline(&mut self, expr: &str) -> Result<String> {
-        let sentinel = make_sentinel();
-        let payload = format!("INLINE:{}", expr);
-        let raw = self.proc.execute(&sentinel, &payload)?;
-        let (_, result) = raw.split_once('\n').unwrap_or(("", ""));
-        Ok(result.to_string())
     }
 
     /// Capture Python code output using the sentinel protocol.

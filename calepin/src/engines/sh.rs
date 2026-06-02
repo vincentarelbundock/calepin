@@ -57,13 +57,13 @@ pub struct ShSession {
 }
 
 impl ShSession {
-    pub fn init(cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
+    pub fn init_with_program(program: &str, cwd: Option<&std::path::Path>, timeout: Option<std::time::Duration>) -> Result<Self> {
         let bootstrap_file = tempfile::NamedTempFile::new()
             .context("Failed to create temp file for sh bootstrap")?;
         std::fs::write(bootstrap_file.path(), SH_BOOTSTRAP)
             .context("Failed to write sh bootstrap")?;
         let path_str = bootstrap_file.path().to_string_lossy().to_string();
-        let session = SubprocessSession::spawn("/bin/sh", &[&path_str], &[], cwd, timeout)
+        let session = SubprocessSession::spawn(program, &[&path_str], &[], cwd, timeout)
             .context("Failed to start /bin/sh")?;
         Ok(ShSession { session, _bootstrap_file: bootstrap_file })
     }
@@ -72,24 +72,5 @@ impl ShSession {
     pub fn capture(&mut self, code: &str) -> Result<String> {
         let sentinel = make_sentinel();
         self.session.execute(&sentinel, code)
-    }
-
-    /// Evaluate a single shell expression and return trimmed output.
-    pub fn evaluate_inline(&mut self, expr: &str) -> Result<String> {
-        let sentinel = make_sentinel();
-        let raw = self.session.execute(&sentinel, expr)?;
-
-        // Extract just the output text from sentinel-tagged lines
-        let output_prefix = format!("{}_OUTPUT:", sentinel);
-        let mut result = String::new();
-        for line in raw.lines() {
-            if let Some(text) = line.strip_prefix(&output_prefix) {
-                if !result.is_empty() {
-                    result.push(' ');
-                }
-                result.push_str(text);
-            }
-        }
-        Ok(result.trim().to_string())
     }
 }

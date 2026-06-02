@@ -30,27 +30,6 @@ pub const SH: Tool = Tool {
     install_hint: "/bin/sh should be available on any Unix system",
 };
 
-
-pub const MMDC: Tool = Tool {
-    cmd: "mmdc",
-    install_hint: "install with: npm install -g @mermaid-js/mermaid-cli",
-};
-
-pub const DOT: Tool = Tool {
-    cmd: "dot",
-    install_hint: "install from https://graphviz.org/download/",
-};
-
-pub const TECTONIC: Tool = Tool {
-    cmd: "tectonic",
-    install_hint: "install from https://tectonic-typesetting.github.io/",
-};
-
-pub const D2: Tool = Tool {
-    cmd: "d2",
-    install_hint: "install from https://d2lang.com/",
-};
-
 // ---------------------------------------------------------------------------
 // Checks
 // ---------------------------------------------------------------------------

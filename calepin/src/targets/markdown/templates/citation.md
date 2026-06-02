@@ -1,3 +1,0 @@
-## Citation
-
-{{clp.content}}

@@ -1,1 +1,0 @@
-$ {{ clp.content }} $ <{{ cfg.id }}>

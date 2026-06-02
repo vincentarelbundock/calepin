@@ -1,69 +1,12 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// A parsed block from the .qmd file
-#[derive(Debug, Clone)]
-pub enum Block {
-    Text(TextBlock),
-    /// Executable code chunk: `{r}`, `{r, label}` with pipe options.
-    Code(CodeChunk),
-    /// Opaque fenced code block: ` ```python `, ` ``` ` — displayed but not executed.
-    /// Bypasses Jinja, citation, and cross-reference processing.
-    CodeBlock(CodeBlock),
-    Div(DivBlock),
-    /// A raw block: `` ```{=format} `` content `` ``` ``.
-    /// Content is passed through verbatim when the output format matches.
-    Raw(RawBlock),
-}
+use crate::config::Metadata;
 
-/// An opaque (non-executable) fenced code block.
-#[derive(Debug, Clone)]
-pub struct CodeBlock {
-    pub code: String,
-    pub lang: String,
-    pub filename: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct RawBlock {
-    pub format: String,
-    pub content: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct DivBlock {
-    pub classes: Vec<String>,
-    pub id: Option<String>,
-    pub attrs: HashMap<String, String>,
-    pub children: Vec<Block>,
-}
-
-#[derive(Debug, Clone)]
-pub struct TextBlock {
-    pub content: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct CodeChunk {
-    /// Lines of code (fences removed)
-    pub source: Vec<String>,
-    /// Chunk options (from header + pipe comments)
-    pub options: ChunkOptions,
-    /// Auto-generated or user-specified label
-    pub label: String,
-    /// Raw `#| key: value` lines (without the `#| ` prefix), for `echo: fenced`
-    pub pipe_comments: Vec<String>,
-}
-
-/// Chunk options stored as a string-keyed map with typed access.
-/// Keys in `defaults_keys` came from front matter / TOML defaults (not chunk-level `#|`).
 #[derive(Debug, Clone, Default)]
 pub struct ChunkOptions {
     pub inner: HashMap<String, OptionValue>,
-    /// Keys that were merged from document-level defaults (not set per-chunk).
-    pub defaults_keys: std::collections::HashSet<String>,
-    /// Resolved rendering metadata for fallback values.
-    pub metadata: crate::config::Metadata,
+    pub metadata: Metadata,
 }
 
 #[derive(Debug, Clone)]
@@ -71,173 +14,128 @@ pub enum OptionValue {
     Bool(bool),
     String(String),
     Number(f64),
-    Null,
-}
-
-/// Generate `pub fn name(&self) -> Option<String>` accessors that delegate to `get_opt_string`.
-macro_rules! chunk_opt_string {
-    ($($name:ident),+ $(,)?) => {
-        $(pub fn $name(&self) -> Option<String> { self.get_opt_string(stringify!($name)) })+
-    };
 }
 
 impl ChunkOptions {
     pub fn get_bool(&self, key: &str, default: bool) -> bool {
         match self.inner.get(key) {
-            Some(OptionValue::Bool(b)) => *b,
-            Some(OptionValue::String(s)) => !s.is_empty() && s != "FALSE" && s != "false",
+            Some(OptionValue::Bool(value)) => *value,
+            Some(OptionValue::String(value)) => {
+                !value.is_empty() && value != "FALSE" && value != "false"
+            }
             _ => default,
         }
     }
 
     pub fn get_string(&self, key: &str, default: &str) -> String {
         match self.inner.get(key) {
-            Some(OptionValue::String(s)) => s.clone(),
-            Some(OptionValue::Bool(b)) => b.to_string(),
-            Some(OptionValue::Number(n)) => n.to_string(),
+            Some(OptionValue::String(value)) => value.clone(),
+            Some(OptionValue::Bool(value)) => value.to_string(),
+            Some(OptionValue::Number(value)) => value.to_string(),
             _ => default.to_string(),
         }
     }
 
     pub fn get_number(&self, key: &str, default: f64) -> f64 {
         match self.inner.get(key) {
-            Some(OptionValue::Number(n)) => *n,
-            Some(OptionValue::String(s)) => s.parse().unwrap_or(default),
+            Some(OptionValue::Number(value)) => *value,
+            Some(OptionValue::String(value)) => value.parse().unwrap_or(default),
             _ => default,
         }
     }
 
     pub fn get_opt_string(&self, key: &str) -> Option<String> {
         match self.inner.get(key) {
-            Some(OptionValue::String(s)) => Some(s.clone()),
-            Some(OptionValue::Null) | None => None,
-            Some(OptionValue::Bool(b)) => Some(b.to_string()),
-            Some(OptionValue::Number(n)) => Some(n.to_string()),
+            Some(OptionValue::String(value)) => Some(value.clone()),
+            Some(OptionValue::Bool(value)) => Some(value.to_string()),
+            Some(OptionValue::Number(value)) => Some(value.to_string()),
+            None => None,
         }
     }
 
-    // Convenience accessors mirroring calepin's reactor defaults
-    pub fn cache(&self) -> bool {
-        let d = self.metadata.execute.as_ref().and_then(|c| c.cache).unwrap_or(true);
-        self.get_bool("cache", d)
-    }
     pub fn eval(&self) -> bool {
-        let d = self.metadata.execute.as_ref().and_then(|c| c.eval).unwrap_or(true);
-        self.get_bool("eval", d)
+        let default = self
+            .metadata
+            .execute
+            .as_ref()
+            .and_then(|config| config.eval)
+            .unwrap_or(true);
+        self.get_bool("eval", default)
     }
-    #[cfg(test)]
-    pub fn echo(&self) -> bool {
-        let d = self.metadata.execute.as_ref().and_then(|c| c.echo).unwrap_or(true);
-        self.get_bool("echo", d)
-    }
-    pub fn include(&self) -> bool {
-        let d = self.metadata.execute.as_ref().and_then(|c| c.include).unwrap_or(true);
-        self.get_bool("include", d)
-    }
+
     pub fn warning(&self) -> bool {
-        let d = self.metadata.execute.as_ref().and_then(|c| c.warning).unwrap_or(true);
-        self.get_bool("warning", d)
+        let default = self
+            .metadata
+            .execute
+            .as_ref()
+            .and_then(|config| config.warning)
+            .unwrap_or(true);
+        self.get_bool("warning", default)
     }
+
     pub fn message(&self) -> bool {
-        let d = self.metadata.execute.as_ref().and_then(|c| c.message).unwrap_or(true);
-        self.get_bool("message", d)
+        let default = self
+            .metadata
+            .execute
+            .as_ref()
+            .and_then(|config| config.message)
+            .unwrap_or(true);
+        self.get_bool("message", default)
     }
-    pub fn comment(&self) -> String {
-        let d = self.metadata.execute.as_ref().and_then(|c| c.comment.clone()).unwrap_or_else(|| "> ".to_string());
-        self.get_string("comment", &d)
-    }
-    pub fn results(&self) -> ResultsMode {
-        let d = self.metadata.execute.as_ref().and_then(|c| c.results.clone()).unwrap_or_else(|| "markup".to_string());
-        match self.get_string("results", &d).as_str() {
-            "asis" => ResultsMode::Asis,
-            "hide" => ResultsMode::Hide,
-            _ => ResultsMode::Markup,
-        }
-    }
+
     pub fn engine(&self) -> String {
         self.get_opt_string("engine")
-            .expect("engine must be set by the parser (e.g., {r} or {python})")
+            .expect("engine must be set for executable chunks")
     }
 
-    fn default_fig_width(&self) -> f64 {
-        self.metadata.figure.as_ref().and_then(|f| f.fig_width).unwrap_or(6.0)
-    }
-    fn default_out_width_frac(&self) -> f64 {
-        self.metadata.figure.as_ref().and_then(|f| f.out_width).unwrap_or(0.70)
-    }
-    fn default_fig_asp(&self) -> f64 {
-        self.metadata.figure.as_ref().and_then(|f| f.fig_asp).unwrap_or(0.618)
-    }
-
-    /// Graphics device width in inches.
-    /// When `out-width` is set but `fig-width` is not set per-chunk, auto-scales
-    /// to keep text size consistent: `default_fig_width * (out_width / default_out_width)`.
-    /// Document-level defaults (from TOML/front matter) don't suppress auto-scaling.
     pub fn fig_width(&self) -> f64 {
-        let fig_width_set_per_chunk = self.get_opt_string("fig_width").is_some()
-            && !self.defaults_keys.contains("fig_width");
-        if fig_width_set_per_chunk {
-            return self.get_number("fig_width", self.default_fig_width());
-        }
-        // Auto-scale from out-width if set (per-chunk out-width takes priority)
-        if let Some(frac) = self.out_width_fraction() {
-            let base = self.get_number("fig_width", self.default_fig_width());
-            return base * (frac / self.default_out_width_frac());
-        }
-        self.get_number("fig_width", self.default_fig_width())
+        let default = self
+            .metadata
+            .figure
+            .as_ref()
+            .and_then(|figure| figure.fig_width)
+            .unwrap_or(6.0);
+        self.get_number("fig_width", default)
     }
 
-    /// Graphics device height in inches.
-    /// Derived from `fig-width * fig-asp` unless explicitly set.
     pub fn fig_height(&self) -> f64 {
-        if self.get_opt_string("fig_height").is_some() {
-            return self.get_number("fig_height", self.default_fig_width() * self.default_fig_asp());
+        if let Some(value) = self.get_opt_string("fig_height") {
+            return value
+                .parse()
+                .unwrap_or_else(|_| self.fig_width() * self.fig_asp());
+        }
+        if let Some(default) = self
+            .metadata
+            .figure
+            .as_ref()
+            .and_then(|figure| figure.fig_height)
+        {
+            return default;
         }
         self.fig_width() * self.fig_asp()
     }
 
-    /// Aspect ratio (height / width). Defaults to golden ratio.
     pub fn fig_asp(&self) -> f64 {
-        self.get_number("fig_asp", self.default_fig_asp())
+        let default = self
+            .metadata
+            .figure
+            .as_ref()
+            .and_then(|figure| figure.fig_asp)
+            .unwrap_or(0.618);
+        self.get_number("fig_asp", default)
     }
 
-    /// Parse out-width as a fraction (e.g., "70%" -> 0.70, "0.5" -> 0.5).
-    /// Returns None if out-width is not set or not a percentage/fraction.
-    fn out_width_fraction(&self) -> Option<f64> {
-        let s = self.get_opt_string("out_width")?;
-        if let Some(pct) = s.strip_suffix('%') {
-            pct.trim().parse::<f64>().ok().map(|v| v / 100.0)
-        } else {
-            let v = s.trim().parse::<f64>().ok()?;
-            if v > 0.0 && v <= 1.0 { Some(v) } else { None }
-        }
-    }
-    chunk_opt_string!(fig_cap, tbl_cap, lst_cap, fig_alt);
     pub fn dev(&self) -> String {
-        let default = self.metadata.figure.as_ref().and_then(|f| f.device.clone()).unwrap_or_else(|| "png".to_string());
+        let default = self
+            .metadata
+            .figure
+            .as_ref()
+            .and_then(|figure| figure.device.clone())
+            .unwrap_or_else(|| "png".to_string());
         self.get_string("dev", &default)
     }
-    chunk_opt_string!(out_width, out_height, fig_link);
-
-    /// Build figure rendering attributes from chunk options.
-    pub fn to_figure_attrs(&self) -> FigureAttrs {
-        let default_out_width = format!("{}%", (self.default_out_width_frac() * 100.0) as u32);
-        FigureAttrs {
-            width: self.out_width().or_else(|| Some(default_out_width)),
-            height: self.out_height(),
-            link: self.fig_link(),
-        }
-    }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ResultsMode {
-    Markup,
-    Asis,
-    Hide,
-}
-
-/// The result of executing a code chunk
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ChunkResult {
     Source(Vec<String>),
@@ -246,73 +144,6 @@ pub enum ChunkResult {
     Message(String),
     Error(String),
     Plot(PathBuf),
-    /// Raw output from knit_print (knit_asis class) — included verbatim, bypassing comment wrapping.
     Asis(String),
-    /// Content to inject into the document preamble (e.g. \usepackage lines from knitr::knit_meta).
     Preamble(String),
 }
-
-/// Attributes for figure rendering (sizing, alignment, LaTeX-specific options).
-#[derive(Debug, Clone, Default)]
-pub struct FigureAttrs {
-    /// Output width: "300", "80%", "4in", etc.
-    pub width: Option<String>,
-    /// Output height.
-    pub height: Option<String>,
-    /// URL for linked figure.
-    pub link: Option<String>,
-}
-
-/// An inline code expression embedded in text
-#[derive(Debug, Clone)]
-pub struct InlineCode {
-    pub engine: String,
-    pub expr: String,
-}
-
-// ---------------------------------------------------------------------------
-// Element: intermediate representation between parsing and rendering
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone)]
-pub enum Element {
-    Text { content: String },
-    CodeSource { code: String, lang: String, label: String, filename: String, lst_cap: Option<String> },
-    CodeOutput { text: String },
-    CodeWarning { text: String },
-    CodeMessage { text: String },
-    CodeError { text: String },
-    Figure {
-        path: PathBuf,
-        alt: String,
-        caption: Option<String>,
-        label: String,
-        number: Option<String>,
-        attrs: FigureAttrs,
-        /// Raw chunk options passed through to templates as cfg.*.
-        options: HashMap<String, String>,
-    },
-    CodeAsis { text: String },
-    Div {
-        classes: Vec<String>,
-        id: Option<String>,
-        attrs: HashMap<String, String>,
-        children: Vec<Element>,
-    },
-}
-
-impl Element {
-    pub fn template_name(&self) -> &str {
-        match self {
-            Element::CodeSource { .. } => "code_source",
-            Element::CodeOutput { .. } => "code_output",
-            Element::CodeWarning { .. } => "code_warning",
-            Element::CodeMessage { .. } => "code_message",
-            Element::CodeError { .. } => "code_error",
-            Element::Figure { .. } => "figure",
-            Element::Div { .. } => "div",
-            Element::Text { .. } | Element::CodeAsis { .. } => "",
-        }
-    }
-}
-

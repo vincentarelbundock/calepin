@@ -1,8 +1,0 @@
-name = "slides"
-description = "Slide presentations"
-inherits = "html"
-
-[target]
-standalone = false
-toc_headings = false
-modules = ["highlight", "append_footnotes", "split_slides"]
