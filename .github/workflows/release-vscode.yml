@@ -101,7 +101,8 @@ jobs:
           cd ../..
           VERSION=$(awk -F'"' '/^version/ { print $2; exit }' calepin/Cargo.toml)
           echo "Packaging version: $VERSION"
-          make -C . vscode-package-target TARGET=${{ matrix.vsce }} VERSION="$VERSION"
+          BIN=target/${{ matrix.rust }}/release/calepin${{ matrix.ext }}
+          make -C . vscode-package-target TARGET=${{ matrix.vsce }} BIN_PATH="$BIN" VERSION="$VERSION"
 
       - uses: actions/upload-artifact@v7
         with:

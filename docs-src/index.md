@@ -38,6 +38,20 @@ Some notebook tools can act as frontends for Typst, but they often superimpose t
   </div>
 </div>
 
+## Install calepin
+
+MacOS and Linux:
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh
+```
+
+Windows via powershell:
+
+```sh
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex"
+```
+
 ## Render
 
 Use `calepin compile` when you want to execute code chunks and render the notebook.

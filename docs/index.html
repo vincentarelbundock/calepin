@@ -466,6 +466,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#install-calepin" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Install calepin
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#render" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -786,6 +797,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#install-calepin" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Install calepin
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#render" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1030,6 +1052,13 @@
   </div>
 </div>
 
+<h2 id="install-calepin">Install calepin<a class="headerlink" href="#install-calepin" title="Permanent link">&para;</a></h2>
+<p>MacOS and Linux:</p>
+<div class="language-sh highlight"><pre><span></span><code>curl<span class="w"> </span>--proto<span class="w"> </span><span class="s1">&#39;=https&#39;</span><span class="w"> </span>--tlsv1.2<span class="w"> </span>-LsSf<span class="w"> </span>https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
+</code></pre></div>
+<p>Windows via powershell:</p>
+<div class="language-sh highlight"><pre><span></span><code>powershell<span class="w"> </span>-ExecutionPolicy<span class="w"> </span>Bypass<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex&quot;</span>
+</code></pre></div>
 <h2 id="render">Render<a class="headerlink" href="#render" title="Permanent link">&para;</a></h2>
 <p>Use <code>calepin compile</code> when you want to execute code chunks and render the notebook.
 The command line shape is intentionally the same as <code>typst compile</code>: same output-first/format-driven arguments, with <code>--</code> pass-through for Typst flags, plus Calepin preprocessing.</p>
