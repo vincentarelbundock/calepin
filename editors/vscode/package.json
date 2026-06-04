@@ -5,6 +5,7 @@
   "version": "0.0.2",
   "publisher": "VincentArel-Bundock",
   "license": "MIT",
+  "icon": "logo_short_2.svg",
   "homepage": "https://vincentarelbundock.github.io/calepin",
   "repository": {
     "type": "git",

@@ -22,7 +22,12 @@ Some notebook tools can act as frontends for Typst, but they often superimpose t
 
 *Calepin* is language-agnostic. It can execute code in Python, R, Julia, and shell, and it can render diagrams using engines like Mermaid, Graphviz, TikZ, and D2.
 
-*Calepin* comes with extensions for popular editors like VS-Code, Cursor, and Positron (via the Microsoft and VSX marketplaces). Here is a short video of a live editing session in VS-Code.
+*Calepin* comes with extensions for popular editors like VS-Code, Cursor, and Positron (via the Microsoft and VSX marketplaces).
+
+- VS Code: [VincentArel-Bundock.calepin](https://marketplace.visualstudio.com/items?itemName=VincentArel-Bundock.calepin)
+- Open VSX: [VincentArel-Bundock/calepin](https://open-vsx.org/extension/VincentArel-Bundock/calepin)
+
+Here is a short video of a live editing session in VS-Code.
 
 <div class="calepin-video-block" markdown="0">
   <a class="calepin-video-thumb" href="#calepin-video-lightbox" aria-label="Open Calepin editor preview video">
