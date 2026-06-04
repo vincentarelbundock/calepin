@@ -1,12 +1,3 @@
-# Calepin for Typst
+# Calepin for VS Code
 
-Run *Calepin* commands for Typst computational notebooks from VS Code.
-
-The extension packages the `calepin` Rust binary and exposes:
-
-- `Calepin Typst New`
-- `Calepin Typst Compile` (command palette)
-- `Calepin Typst Watch` (command palette)
-- `Calepin Typst Stop` (command palette)
-
-Set `calepin.binaryPath` to use a different binary than the bundled one.
+The Calepin VS Code extension gives you quick access to `compile`, `watch`, and `stop` flows directly inside the editor so you can work on computational Typst documents without context switching. See https://vincentarelbundock.github.io/calepin/ for full details.
