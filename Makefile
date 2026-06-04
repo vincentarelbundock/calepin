@@ -1,9 +1,10 @@
-.PHONY: help build build-release release install clean test check version bump editors vscode vsx positron vscode-package vscode-sync-version vscode-stage-binary vscode-stage-pdfjs vscode-compile cli-reference website serve
+.PHONY: help build build-release release install clean test check version bump editors vscode vsx positron vscode-package vscode-sync-version vscode-stage-binary vscode-stage-pdfjs vscode-package-target vscode-package-universal vscode-publish vscode-compile cli-reference website serve
 
 # Package version, parsed from the CLI crate manifest.
 VERSION := $(shell awk -F'"' '/^version/ { print $$2; exit }' calepin/Cargo.toml)
 VSCODE_DIR := editors/vscode
 VSCODE_OUT := $(VSCODE_DIR)/dist
+VSCODE_BIN_PATH ?= $(if $(BIN_PATH),$(BIN_PATH),target/release/calepin)
 VSCODE_CLI := code
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -86,11 +87,11 @@ vscode-sync-version:
 	  const p='$(VSCODE_DIR)/package.json'; const j=JSON.parse(fs.readFileSync(p)); \
 	  j.version='$(VERSION)'; fs.writeFileSync(p, JSON.stringify(j, null, 2)+'\n');"
 
-vscode-stage-binary: build-release
+vscode-stage-binary:
 	@rm -rf $(VSCODE_DIR)/bin
 	@mkdir -p $(VSCODE_DIR)/bin
-	@cp target/release/calepin $(VSCODE_DIR)/bin/
-	@chmod +x $(VSCODE_DIR)/bin/calepin
+	@cp "$(VSCODE_BIN_PATH)" $(VSCODE_DIR)/bin/
+	@chmod +x $(VSCODE_DIR)/bin/$$(basename "$(VSCODE_BIN_PATH)") 2>/dev/null || true
 
 vscode-stage-pdfjs:
 	@rm -rf $(VSCODE_DIR)/media/pdfjs
@@ -105,9 +106,29 @@ vscode-compile: vscode-sync-version
 	cd $(VSCODE_DIR) && npm install --no-audit --no-fund --silent
 	cd $(VSCODE_DIR) && npx tsc -p ./
 
-vscode-package: vscode-stage-binary vscode-compile vscode-stage-pdfjs
+vscode-package: build-release vscode-stage-binary vscode-compile vscode-stage-pdfjs
 	@mkdir -p $(VSCODE_OUT)
 	cd $(VSCODE_DIR) && npx vsce package --no-dependencies -o dist/calepin-$(VERSION).vsix
+
+vscode-package-target: vscode-sync-version vscode-stage-binary vscode-compile vscode-stage-pdfjs
+	@test -n "$(TARGET)" || { echo "TARGET must be set (e.g. darwin-arm64)"; exit 1; }
+	@mkdir -p $(VSCODE_OUT)
+	@cd $(VSCODE_DIR) && npx tsc -p ./
+	@cd $(VSCODE_DIR) && npx vsce package --no-dependencies \
+	  --target $(TARGET) -o dist/calepin-$(TARGET)-$(VERSION).vsix
+
+vscode-package-universal: vscode-sync-version vscode-compile vscode-stage-pdfjs
+	@mkdir -p $(VSCODE_OUT)
+	@cd $(VSCODE_DIR) && npx tsc -p ./
+	@cd $(VSCODE_DIR) && npx vsce package --no-dependencies \
+	  -o dist/calepin-universal-$(VERSION).vsix
+
+vscode-publish:
+	@for v in $(VSCODE_OUT)/*.vsix; do \
+	  echo "Publishing $$v"; \
+	  npx --prefix $(VSCODE_DIR) vsce publish --no-dependencies --packagePath $$v -p $$VSCE_PAT; \
+	  npx --prefix $(VSCODE_DIR) ovsx publish $$v -p $$OVSX_PAT; \
+	done
 
 vscode: vscode-package  ## Install Calepin for Typst in VS Code
 	$(VSCODE_CLI) --install-extension $(VSCODE_OUT)/calepin-$(VERSION).vsix --force
