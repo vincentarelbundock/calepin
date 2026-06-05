@@ -970,12 +970,12 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unsupported_engine() {
+    fn unknown_engine_routes_to_jupyter() {
         let json = metadata(
-            r#"{"body":{"func":"raw","text":"x","block":false},"engine":"ruby","label":"bad"}"#,
+            r#"{"body":{"func":"raw","text":"x","block":false},"engine":"ruby","label":"ch1"}"#,
         );
-        let err = parse_chunks(&json, None).unwrap_err().to_string();
-        assert!(err.contains("unsupported engine `ruby`"));
+        let chunks = parse_chunks(&json, None).unwrap();
+        assert_eq!(chunks[0].engine, EngineName::Jupyter("ruby".to_string()));
     }
 
     #[test]

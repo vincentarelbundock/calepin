@@ -7,8 +7,9 @@ use std::path::PathBuf;
 
 pub const RESULT_SCHEMA_VERSION: u8 = 1;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+// Copy is not derived: Jupyter(String) is not Copy.
+// Serde is implemented manually so Jupyter("julia") serializes as "julia".
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EngineName {
     R,
     Python,
@@ -18,24 +19,48 @@ pub enum EngineName {
     Tikz,
     Dot,
     D2,
+    Jupyter(String),
+}
+
+impl serde::Serialize for EngineName {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for EngineName {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(match s.as_str() {
+            "r" => Self::R,
+            "python" => Self::Python,
+            "julia" => Self::Julia,
+            "sh" | "bash" => Self::Sh,
+            "mermaid" => Self::Mermaid,
+            "tikz" => Self::Tikz,
+            "dot" => Self::Dot,
+            "d2" => Self::D2,
+            _ => Self::Jupyter(s),
+        })
+    }
 }
 
 impl EngineName {
     pub fn parse(value: &str) -> anyhow::Result<Self> {
-        match value {
-            "r" => Ok(Self::R),
-            "python" => Ok(Self::Python),
-            "julia" => Ok(Self::Julia),
-            "sh" | "bash" => Ok(Self::Sh),
-            "mermaid" => Ok(Self::Mermaid),
-            "tikz" => Ok(Self::Tikz),
-            "dot" => Ok(Self::Dot),
-            "d2" => Ok(Self::D2),
-            other => Err(anyhow::anyhow!("unsupported engine `{}`", other)),
-        }
+        Ok(match value {
+            "r" => Self::R,
+            "python" => Self::Python,
+            "julia" => Self::Julia,
+            "sh" | "bash" => Self::Sh,
+            "mermaid" => Self::Mermaid,
+            "tikz" => Self::Tikz,
+            "dot" => Self::Dot,
+            "d2" => Self::D2,
+            other => Self::Jupyter(other.to_string()),
+        })
     }
 
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::R => "r",
             Self::Python => "python",
@@ -45,10 +70,11 @@ impl EngineName {
             Self::Tikz => "tikz",
             Self::Dot => "dot",
             Self::D2 => "d2",
+            Self::Jupyter(name) => name.as_str(),
         }
     }
 
-    pub fn is_diagram(self) -> bool {
+    pub fn is_diagram(&self) -> bool {
         matches!(self, Self::Mermaid | Self::Tikz | Self::Dot | Self::D2)
     }
 }
@@ -393,5 +419,22 @@ mod tests {
             let engine = EngineName::parse(name).unwrap();
             assert_eq!(engine.as_str(), name);
         }
+    }
+
+    #[test]
+    fn jupyter_engine_roundtrips_as_string() {
+        let engine = EngineName::Jupyter("octave".to_string());
+        let json = serde_json::to_string(&engine).unwrap();
+        assert_eq!(json, r#""octave""#);
+        let back: EngineName = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, engine);
+    }
+
+    #[test]
+    fn unknown_engine_name_parses_as_jupyter() {
+        let engine = EngineName::parse("octave").unwrap();
+        assert_eq!(engine, EngineName::Jupyter("octave".to_string()));
+        assert_eq!(engine.as_str(), "octave");
+        assert!(!engine.is_diagram());
     }
 }
