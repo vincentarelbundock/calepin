@@ -12,6 +12,7 @@ copyright = "Calepin is distributed under the MIT License."
 extra_css = ["assets/stylesheets/extra.css"]
 nav = [
   { "Home" = "index.html" },
+  { "Supported Languages" = "supported-languages.html" },
   { "Options" = "options.html" },
   { "Configuration" = "config.html" },
   { "Templates" = "templates.html" },
