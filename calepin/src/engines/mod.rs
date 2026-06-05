@@ -1,9 +1,7 @@
 pub mod diagram;
-pub mod julia;
 pub mod jupyter;
 pub mod python;
 pub mod r;
-pub mod sh;
 pub mod subprocess;
 
 use anyhow::Result;
@@ -28,8 +26,6 @@ pub enum EngineResult {
 pub struct EngineContext<'a> {
     pub r: Option<&'a mut r::RSession>,
     pub python: Option<&'a mut python::PythonSession>,
-    pub julia: Option<&'a mut julia::JuliaSession>,
-    pub sh: Option<&'a mut sh::ShSession>,
     pub jupyter: Option<&'a mut jupyter::JupyterBridgeSession>,
 }
 
@@ -44,11 +40,6 @@ pub fn execute_chunk(
 ) -> Result<Vec<EngineResult>> {
     let code = source.join("\n");
     let mut results = Vec::new();
-
-    let interleaved = !matches!(engine, EngineName::Sh);
-    if !interleaved {
-        results.push(EngineResult::Source(source.to_vec()));
-    }
 
     let is_table_chunk = label.starts_with("tbl-");
     std::fs::create_dir_all(fig_dir)?;
@@ -66,13 +57,6 @@ pub fn execute_chunk(
 
     let captured =
         match engine {
-            EngineName::Sh => {
-                let session = ctx
-                    .sh
-                    .as_mut()
-                    .ok_or_else(|| anyhow::anyhow!("{}", tools::not_found_message(&tools::SH)))?;
-                session.capture(&code)?
-            }
             EngineName::Python => {
                 let session = ctx.python.as_mut().ok_or_else(|| {
                     anyhow::anyhow!("{}", tools::not_found_message(&tools::PYTHON))
@@ -80,19 +64,6 @@ pub fn execute_chunk(
                 session.capture(
                     &code,
                     &fig_full_str,
-                    figure.width,
-                    figure.height,
-                    f64::from(figure.dpi),
-                )?
-            }
-            EngineName::Julia => {
-                let session = ctx.julia.as_mut().ok_or_else(|| {
-                    anyhow::anyhow!("{}", tools::not_found_message(&tools::JULIA))
-                })?;
-                session.capture(
-                    &code,
-                    &fig_full_str,
-                    &figure.format,
                     figure.width,
                     figure.height,
                     f64::from(figure.dpi),
@@ -133,10 +104,9 @@ pub fn execute_chunk(
 
     process_results(&captured, &fig_full_path, &mut results)?;
 
-    if interleaved
-        && !results
-            .iter()
-            .any(|result| matches!(result, EngineResult::Source(_)))
+    if !results
+        .iter()
+        .any(|result| matches!(result, EngineResult::Source(_)))
     {
         results.insert(0, EngineResult::Source(source.to_vec()));
     }

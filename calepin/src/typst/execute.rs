@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use crate::config::ExecutablePaths;
 use crate::engines::{
-    self, julia::JuliaSession, jupyter::JupyterBridgeSession, python::PythonSession, r::RSession,
-    sh::ShSession, EngineContext, EngineResult,
+    self, jupyter::JupyterBridgeSession, python::PythonSession, r::RSession, EngineContext,
+    EngineResult,
 };
 use crate::typst::model::{
     ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec, MimeData,
@@ -24,8 +24,6 @@ pub struct ExecutionConfig {
 pub struct EnginePool {
     r: Option<RSession>,
     python: Option<PythonSession>,
-    julia: Option<JuliaSession>,
-    sh: Option<ShSession>,
     jupyter: Option<JupyterBridgeSession>,
     config: ExecutionConfig,
 }
@@ -35,8 +33,6 @@ impl EnginePool {
         Self {
             r: None,
             python: None,
-            julia: None,
-            sh: None,
             jupyter: None,
             config,
         }
@@ -130,30 +126,6 @@ impl EnginePool {
         Ok(())
     }
 
-    fn ensure_julia_session(&mut self) -> Result<()> {
-        if self.julia.is_none() {
-            let program = self.config.executables.julia.to_string_lossy();
-            self.julia = Some(JuliaSession::init_with_program(
-                &program,
-                Some(&self.config.cwd),
-                self.config.timeout,
-            )?);
-        }
-        Ok(())
-    }
-
-    fn ensure_sh_session(&mut self) -> Result<()> {
-        if self.sh.is_none() {
-            let program = self.config.executables.shell.to_string_lossy();
-            self.sh = Some(ShSession::init_with_program(
-                &program,
-                Some(&self.config.cwd),
-                self.config.timeout,
-            )?);
-        }
-        Ok(())
-    }
-
     fn ensure_jupyter_session(&mut self) -> Result<()> {
         if self.jupyter.is_none() {
             let program = self.config.executables.python.to_string_lossy();
@@ -170,8 +142,6 @@ impl EnginePool {
         match engine {
             EngineName::R => self.ensure_r_session()?,
             EngineName::Python => self.ensure_python_session()?,
-            EngineName::Julia => self.ensure_julia_session()?,
-            EngineName::Sh => self.ensure_sh_session()?,
             EngineName::Mermaid | EngineName::Tikz | EngineName::Dot | EngineName::D2 => {
                 return Err(anyhow!(
                     "diagram engine `{}` does not use a persistent context",
@@ -184,8 +154,6 @@ impl EnginePool {
         Ok(EngineContext {
             r: self.r.as_mut(),
             python: self.python.as_mut(),
-            julia: self.julia.as_mut(),
-            sh: self.sh.as_mut(),
             jupyter: self.jupyter.as_mut(),
         })
     }
@@ -451,81 +419,6 @@ mod tests {
         assert!(dir.path().join("fig-demo.svg").exists());
     }
 
-    #[test]
-    fn engine_pool_executes_julia_with_configured_program() {
-        let dir = tempfile::tempdir().unwrap();
-        let fake_julia = dir.path().join("fake-julia");
-        std::fs::write(
-            &fake_julia,
-            r#"#!/bin/sh
-x=""
-while IFS= read -r header; do
-    case "$header" in
-        *_BEGIN)
-            sentinel="${header%_BEGIN}"
-            end_marker="${sentinel}_END"
-            code=""
-            while IFS= read -r line; do
-                [ "$line" = "$end_marker" ] && break
-                code="${code}${line}
-"
-            done
-            case "$code" in
-                *"x = 40"*) x=40 ;;
-            esac
-            case "$code" in
-                *"println(x + 2)"*)
-                    if [ "$x" = "40" ]; then
-                        printf '%s_OUTPUT:42\n' "$sentinel"
-                    else
-                        printf '%s_ERROR:missing state\n' "$sentinel"
-                    fi
-                    ;;
-            esac
-            printf '%s_DONE\n' "$sentinel"
-            ;;
-    esac
-done
-"#,
-        )
-        .unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut permissions = std::fs::metadata(&fake_julia).unwrap().permissions();
-            permissions.set_mode(0o755);
-            std::fs::set_permissions(&fake_julia, permissions).unwrap();
-        }
-
-        let config = ExecutionConfig {
-            cwd: dir.path().to_path_buf(),
-            executables: ExecutablePaths {
-                julia: fake_julia,
-                ..ExecutablePaths::defaults()
-            },
-            timeout: Some(std::time::Duration::from_secs(5)),
-        };
-        let mut pool = EnginePool::new(config);
-
-        let mut setup = chunk(ResultsMode::Verbatim);
-        setup.engine = EngineName::Julia;
-        setup.label = "julia-setup".to_string();
-        setup.code = "x = 40".to_string();
-        pool.execute_chunk(&setup, dir.path(), |_| "unused".to_string())
-            .unwrap();
-
-        let mut answer = chunk(ResultsMode::Verbatim);
-        answer.engine = EngineName::Julia;
-        answer.label = "julia-answer".to_string();
-        answer.code = "println(x + 2)".to_string();
-        let document = pool
-            .execute_chunk(&answer, dir.path(), |path| path.display().to_string())
-            .unwrap();
-
-        assert_eq!(document.engine, EngineName::Julia);
-        assert_eq!(document.items[0].item_type, ResultItemType::Stream);
-        assert_eq!(document.items[0].text.as_deref(), Some("42"));
-    }
 
     #[test]
     fn diagram_engines_always_use_svg_figures() {

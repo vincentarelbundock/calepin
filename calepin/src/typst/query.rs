@@ -945,7 +945,7 @@ mod tests {
             }"#,
         );
         let chunks = parse_chunks(&json, None).unwrap();
-        assert_eq!(chunks[0].engine, EngineName::Julia);
+        assert_eq!(chunks[0].engine, EngineName::Jupyter("julia".to_string()));
         assert_eq!(chunks[0].engine.as_str(), "julia");
         assert_eq!(chunks[0].code, "println(42)");
     }

@@ -477,6 +477,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-languages" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Supported languages
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#render" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -808,6 +819,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-languages" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Supported languages
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#render" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1036,7 +1058,7 @@
 <p>Some notebook tools can act as frontends for Typst, but they often superimpose their own syntax, language, and structure. For example, <a href="https://quarto.org/">Posit's Quarto</a> supports an extended idiom of Markdown, which can be translated to Typst and then rendered as PDF.</p>
 <h4 id="calepin">Calepin<a class="headerlink" href="#calepin" title="Permanent link">&para;</a></h4>
 <p><em>Calepin</em> is a Typst-native computational notebook. Rather than hide Typst behind Markdown, it embeds executable code chunks directly inside <code>.typ</code> documents. <em>Calepin</em> scans a <code>.typ</code> file for inline code or exectuable chunks, evaluates them, and lets Typst render the final document with computed results in place. </p>
-<p><em>Calepin</em> is language-agnostic. It can execute code in Python, R, Julia, and shell, and it can render diagrams using engines like Mermaid, Graphviz, TikZ, and D2.</p>
+<p><em>Calepin</em> is language-agnostic. It can execute code in Python, R, and any language with a Jupyter kernel. It can also render diagrams using engines like Mermaid, Graphviz, TikZ, and D2.</p>
 <p><em>Calepin</em> comes with extensions for popular editors like VS-Code, Cursor, and Positron (via the Microsoft and VSX marketplaces).</p>
 <ul>
 <li>VS Code: <a href="https://marketplace.visualstudio.com/items?itemName=VincentArel-Bundock.calepin">VincentArel-Bundock.calepin</a></li>
@@ -1063,6 +1085,29 @@
 </code></pre></div>
 <p>Windows via powershell:</p>
 <div class="language-sh highlight"><pre><span></span><code>powershell<span class="w"> </span>-ExecutionPolicy<span class="w"> </span>Bypass<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex&quot;</span>
+</code></pre></div>
+<h2 id="supported-languages">Supported languages<a class="headerlink" href="#supported-languages" title="Permanent link">&para;</a></h2>
+<p>Calepin has built-in engines for <strong>Python</strong> and <strong>R</strong>. Diagram engines (<strong>Mermaid</strong>, <strong>Graphviz DOT</strong>, <strong>TikZ</strong>, <strong>D2</strong>) are also built in.</p>
+<p>Any language with a <a href="https://github.com/jupyter/jupyter/wiki/Jupyter-kernels">Jupyter kernel</a> works as an engine: use the kernel name as the chunk language. Popular examples include <strong>Bash</strong> (<code>bash</code>), <strong>Julia</strong> (<code>julia</code>), <strong>Octave</strong> (<code>octave</code>), <strong>Gnuplot</strong> (<code>gnuplot</code>), <strong>Ruby</strong> (<code>ruby</code>), and <strong>JavaScript</strong> (<code>javascript</code>).</p>
+<p>To use a Jupyter kernel, install <code>jupyter_client</code> first:</p>
+<div class="language-sh highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>jupyter_client
+</code></pre></div>
+<p>Most kernels then install with a single <code>pip install</code>:</p>
+<div class="language-sh highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>bash_kernel<span class="w">       </span><span class="c1"># Bash</span>
+pip<span class="w"> </span>install<span class="w"> </span>octave_kernel<span class="w">     </span><span class="c1"># GNU Octave</span>
+pip<span class="w"> </span>install<span class="w"> </span>gnuplot_kernel<span class="w">    </span><span class="c1"># Gnuplot</span>
+</code></pre></div>
+<p>Some kernels are installed from their language's own package manager:</p>
+<div class="language-sh highlight"><pre><span></span><code><span class="c1"># Julia</span>
+julia<span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;using Pkg; Pkg.add(&quot;IJulia&quot;)&#39;</span>
+
+<span class="c1"># JavaScript (Node.js)</span>
+npm<span class="w"> </span>install<span class="w"> </span>-g<span class="w"> </span>ijavascript<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ijsinstall
+</code></pre></div>
+<p>Run <code>jupyter kernelspec list</code> to see what is registered. Whatever name appears in that list can be used as an engine name directly in a chunk:</p>
+<div class="language-text highlight"><pre><span></span><code>```bash
+echo &quot;hello from bash&quot;
+```
 </code></pre></div>
 <h2 id="render">Render<a class="headerlink" href="#render" title="Permanent link">&para;</a></h2>
 <p>Use <code>calepin compile</code> when you want to execute code chunks and render the notebook.

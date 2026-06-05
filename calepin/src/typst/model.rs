@@ -9,12 +9,12 @@ pub const RESULT_SCHEMA_VERSION: u8 = 1;
 
 // Copy is not derived: Jupyter(String) is not Copy.
 // Serde is implemented manually so Jupyter("julia") serializes as "julia".
+// Neither "julia" nor "sh"/"bash" have named variants: they are all routed
+// through the Jupyter bridge like any other third-party kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EngineName {
     R,
     Python,
-    Julia,
-    Sh,
     Mermaid,
     Tikz,
     Dot,
@@ -34,8 +34,6 @@ impl<'de> serde::Deserialize<'de> for EngineName {
         Ok(match s.as_str() {
             "r" => Self::R,
             "python" => Self::Python,
-            "julia" => Self::Julia,
-            "sh" | "bash" => Self::Sh,
             "mermaid" => Self::Mermaid,
             "tikz" => Self::Tikz,
             "dot" => Self::Dot,
@@ -50,8 +48,6 @@ impl EngineName {
         Ok(match value {
             "r" => Self::R,
             "python" => Self::Python,
-            "julia" => Self::Julia,
-            "sh" | "bash" => Self::Sh,
             "mermaid" => Self::Mermaid,
             "tikz" => Self::Tikz,
             "dot" => Self::Dot,
@@ -64,8 +60,6 @@ impl EngineName {
         match self {
             Self::R => "r",
             Self::Python => "python",
-            Self::Julia => "julia",
-            Self::Sh => "sh",
             Self::Mermaid => "mermaid",
             Self::Tikz => "tikz",
             Self::Dot => "dot",

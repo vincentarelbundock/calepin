@@ -56,8 +56,6 @@ pub struct ExecutablePaths {
     pub typst: PathBuf,
     pub rscript: PathBuf,
     pub python: PathBuf,
-    pub julia: PathBuf,
-    pub shell: PathBuf,
     pub mmdc: PathBuf,
     pub dot: PathBuf,
     pub tectonic: PathBuf,
@@ -73,8 +71,6 @@ impl ExecutablePaths {
             typst: PathBuf::from("typst"),
             rscript: PathBuf::from(tools::RSCRIPT.cmd),
             python: PathBuf::from(tools::PYTHON.cmd),
-            julia: PathBuf::from(tools::JULIA.cmd),
-            shell: PathBuf::from(tools::SH.cmd),
             mmdc: PathBuf::from(tools::MMDC.cmd),
             dot: PathBuf::from(tools::DOT.cmd),
             tectonic: PathBuf::from(tools::TECTONIC.cmd),
@@ -96,8 +92,6 @@ impl ExecutablePaths {
             typst: tool_path(root, raw.typst, defaults.typst),
             rscript: tool_path(root, raw.rscript, defaults.rscript),
             python: tool_path(root, raw.python.or(env_python), defaults.python),
-            julia: tool_path(root, raw.julia, defaults.julia),
-            shell: tool_path(root, raw.shell, defaults.shell),
             mmdc: tool_path(root, raw.mmdc, defaults.mmdc),
             dot: tool_path(root, raw.dot, defaults.dot),
             tectonic: tool_path(root, raw.tectonic, defaults.tectonic),
@@ -122,8 +116,6 @@ struct RawExecutablePaths {
     typst: Option<PathBuf>,
     rscript: Option<PathBuf>,
     python: Option<PathBuf>,
-    julia: Option<PathBuf>,
-    shell: Option<PathBuf>,
     mmdc: Option<PathBuf>,
     dot: Option<PathBuf>,
     tectonic: Option<PathBuf>,
@@ -200,7 +192,6 @@ mod tests {
         assert_eq!(config.executables.typst, PathBuf::from("typst"));
         assert_eq!(config.executables.python, PathBuf::from("python3"));
         assert_eq!(config.executables.rscript, PathBuf::from("Rscript"));
-        assert_eq!(config.executables.shell, PathBuf::from("/bin/sh"));
     }
 
     #[test]
@@ -251,7 +242,6 @@ mod tests {
             r#"[executables]
 typst = "typst-dev"
 python = ".venv/bin/python"
-shell = "tools/sh"
 chrome = "tools/chrome"
 "#,
         )
@@ -264,7 +254,6 @@ chrome = "tools/chrome"
             config.executables.python,
             dir.path().join(".venv/bin/python")
         );
-        assert_eq!(config.executables.shell, dir.path().join("tools/sh"));
         assert_eq!(
             config.executables.chrome,
             Some(dir.path().join("tools/chrome"))

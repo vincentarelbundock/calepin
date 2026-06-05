@@ -673,19 +673,9 @@ This notebook demonstrates the #emph[Calepin] executable Typst workflow: code ch
 
 = Language-specific settings
 
-`#calepin.setup()` still accepts document-wide defaults.
-Use `lang:` to add language-specific overrides that fall back to those defaults.
+`#calepin.setup()` sets document-wide defaults. Pass `lang:` to narrow those defaults to chunks of a specific language.
 
-#calepin.setup(
-  echo: false,
-  results: &quot;verbatim&quot;,
-)
-
-Python keeps source and results.
 #calepin.setup(lang: &quot;python&quot;, echo: true)
-
-R defaults to no output and no execution.
-#calepin.setup(lang: &quot;r&quot;, eval: false)
 
 #calepin.chunk(&quot;python&quot;, label: &quot;python-lang-default&quot;)[
 ```python
@@ -693,20 +683,10 @@ print(40 + 2)
 ```
 ]
 
-`inline` calls also inherit those defaults:
+Define a short alias for inline Python expressions:
 
-The inline Python result is #calepin.inline(&quot;python&quot;)[`print(40 + 2)`].
-The inline R result is #calepin.inline(&quot;r&quot;)[`print(40 + 2)`].
-
-// An inline alias is convenient inside prose, where spelling out
-// `calepin.inline(&quot;python&quot;)` would interrupt the sentence.
+// A short alias avoids spelling out calepin.inline(&quot;python&quot;) inside sentences.
 #let py = calepin.inline.with(&quot;python&quot;)
-
-Python inline sample: #py[`print(40 + 2)`].
-
-```r
-cat(&quot;42 in R&quot;)
-```
 
 = Python
 
@@ -797,7 +777,7 @@ Shell chunks are useful for small environment checks or command-line examples.
 They behave like the other engines: the command is collected, executed, and its
 captured output is placed back into the document.
 
-```sh
+```bash
 printf &quot;hello $USER&quot;
 ```
 

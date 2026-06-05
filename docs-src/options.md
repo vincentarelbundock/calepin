@@ -73,7 +73,7 @@ print("This chunk is forced to use python and gets a stable label")
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `lang` | `none` | Restrict setup defaults to this language (`"python"`, `"r"`, ...). Global defaults apply when a chunk's language has no language-specific setup entry. |
-| `engine` | inferred | Execution engine: `"python"`, `"r"`, `"julia"`, `"sh"`, `"bash"`, `"mermaid"`, `"dot"`, `"tikz"`, or `"d2"`. Omit it to infer the engine from the fenced block's language (`` ```python ``); pass it explicitly to override, or when the body fence has no language. |
+| `engine` | inferred | Execution engine: `"python"`, `"r"`, `"mermaid"`, `"dot"`, `"tikz"`, `"d2"`, or any Jupyter kernel name (e.g. `"bash"`, `"julia"`, `"octave"`). Omit it to infer the engine from the fenced block's language (`` ```python ``); pass it explicitly to override, or when the body fence has no language. |
 | `body` | required | Raw code body. It must contain exactly one raw element. |
 | `label` | auto-generated | Unique result label. Required for stable references and figures. |
 | `echo` | `true` | Show source code before results. |

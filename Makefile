@@ -6,13 +6,8 @@ VSCODE_DIR := editors/vscode
 VSCODE_OUT := $(VSCODE_DIR)/dist
 VSCODE_BIN_PATH ?= $(if $(BIN_PATH),$(BIN_PATH),target/release/calepin)
 VSCODE_CLI := code
+CALEPIN := uv run calepin
 UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Darwin)
-  CARGO_BIN_DIR := $(if $(CARGO_HOME),$(CARGO_HOME)/bin,$(HOME)/.cargo/bin)
-else
-  CARGO_BIN_DIR := $(if $(CARGO_HOME),$(CARGO_HOME)/bin,$(HOME)/.cargo/bin)
-endif
-CALEPIN := $(if $(wildcard $(CARGO_BIN_DIR)/calepin),$(CARGO_BIN_DIR)/calepin,calepin)
 ifeq ($(UNAME_S),Darwin)
   POSITRON_CLI := /Applications/Positron.app/Contents/Resources/app/bin/code
 else

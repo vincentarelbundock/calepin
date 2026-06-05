@@ -37,8 +37,6 @@ Any omitted value falls back to the default shown here.
 typst = "typst"
 python = "python3"
 rscript = "Rscript"
-julia = "julia"
-shell = "/bin/sh"
 mmdc = "mmdc"
 dot = "dot"
 tectonic = "tectonic"

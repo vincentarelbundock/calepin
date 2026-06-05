@@ -17,19 +17,9 @@ This notebook demonstrates the #emph[Calepin] executable Typst workflow: code ch
 
 = Language-specific settings
 
-`#calepin.setup()` still accepts document-wide defaults.
-Use `lang:` to add language-specific overrides that fall back to those defaults.
+`#calepin.setup()` sets document-wide defaults. Pass `lang:` to narrow those defaults to chunks of a specific language.
 
-#calepin.setup(
-  echo: false,
-  results: "verbatim",
-)
-
-Python keeps source and results.
 #calepin.setup(lang: "python", echo: true)
-
-R defaults to no output and no execution.
-#calepin.setup(lang: "r", eval: false)
 
 #calepin.chunk("python", label: "python-lang-default")[
 ```python
@@ -37,20 +27,10 @@ print(40 + 2)
 ```
 ]
 
-`inline` calls also inherit those defaults:
+Define a short alias for inline Python expressions:
 
-The inline Python result is #calepin.inline("python")[`print(40 + 2)`].
-The inline R result is #calepin.inline("r")[`print(40 + 2)`].
-
-// An inline alias is convenient inside prose, where spelling out
-// `calepin.inline("python")` would interrupt the sentence.
+// A short alias avoids spelling out calepin.inline("python") inside sentences.
 #let py = calepin.inline.with("python")
-
-Python inline sample: #py[`print(40 + 2)`].
-
-```r
-cat("42 in R")
-```
 
 = Python
 
@@ -135,13 +115,21 @@ x = 40
 println(x + 2)
 ```
 
+#calepin.chunk(label: "fig-julia", fig-caption: [Julia sine wave])[
+```julia
+using Plots
+x = range(0, 2π; length=200)
+plot(x, sin.(x); label="sin(x)", xlabel="x", ylabel="y", lw=2)
+```
+]
+
 = Shell
 
 Shell chunks are useful for small environment checks or command-line examples.
 They behave like the other engines: the command is collected, executed, and its
 captured output is placed back into the document.
 
-```sh
+```bash
 printf "hello $USER"
 ```
 

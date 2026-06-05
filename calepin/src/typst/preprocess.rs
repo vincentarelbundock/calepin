@@ -61,7 +61,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let config = CalepinConfig::load(&layout.root)?;
 
     write_runtime(&layout.root)?;
-    layout.render_input = write_render_wrapper(&layout)?;
+    layout.render_input = write_render_wrapper(&layout, &[])?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
     let setup_json = typst_query(
         &config.executables.typst,
@@ -78,6 +78,23 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &results_input,
     )?;
     let chunks = parse_chunks(&chunks_json, Some(setup_config.clone()))?;
+
+    // Collect unique Jupyter kernel names so the render wrapper gets their show rules.
+    let jupyter_kernels: std::collections::BTreeSet<&str> = chunks
+        .iter()
+        .filter_map(|c| {
+            if let EngineName::Jupyter(k) = &c.engine {
+                Some(k.as_str())
+            } else {
+                None
+            }
+        })
+        .collect();
+    if !jupyter_kernels.is_empty() {
+        let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
+        layout.render_input = write_render_wrapper(&layout, &kernels)?;
+    }
+
     let cwd = layout.work_dir.clone();
     let timeout = options.timeout.map(Duration::from_secs);
     let fingerprint = preprocess_fingerprint(&layout, &config.executables, &chunks, &cwd, timeout)?;
@@ -96,7 +113,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     })
 }
 
-fn write_render_wrapper(layout: &LayoutPaths) -> Result<PathBuf> {
+fn write_render_wrapper(layout: &LayoutPaths, jupyter_kernels: &[&str]) -> Result<PathBuf> {
     let mut wrapper_relative = PathBuf::from(".calepin");
     let mut stem = layout.input_rel.clone();
     stem.set_extension("");
@@ -110,12 +127,9 @@ fn write_render_wrapper(layout: &LayoutPaths) -> Result<PathBuf> {
     lines.push('\n');
     lines.push('\n');
 
-    let engines: [(&str, &str); 9] = [
+    let engines: [(&str, &str); 6] = [
         ("python", "python"),
         ("r", "r"),
-        ("julia", "julia"),
-        ("sh", "sh"),
-        ("bash", "sh"),
         ("mermaid", "mermaid"),
         ("dot", "dot"),
         ("tikz", "tikz"),
@@ -126,6 +140,12 @@ fn write_render_wrapper(layout: &LayoutPaths) -> Result<PathBuf> {
         lines.push_str(&format!(
             "#show raw.where(block: true, lang: \"{}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ it }} else {{ chunk-from-raw-plain(\"{}\", it) }}\n",
             lang, engine
+        ));
+    }
+
+    for kernel in jupyter_kernels {
+        lines.push_str(&format!(
+            "#show raw.where(block: true, lang: \"{kernel}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ it }} else {{ chunk-from-raw-plain(\"{kernel}\", it) }}\n"
         ));
     }
 
@@ -368,8 +388,6 @@ struct ExecutableFingerprint {
     typst: String,
     rscript: String,
     python: String,
-    julia: String,
-    shell: String,
     mmdc: String,
     dot: String,
     tectonic: String,
@@ -385,8 +403,6 @@ impl From<&ExecutablePaths> for ExecutableFingerprint {
             typst: path_fingerprint(&paths.typst),
             rscript: path_fingerprint(&paths.rscript),
             python: path_fingerprint(&paths.python),
-            julia: path_fingerprint(&paths.julia),
-            shell: path_fingerprint(&paths.shell),
             mmdc: path_fingerprint(&paths.mmdc),
             dot: path_fingerprint(&paths.dot),
             tectonic: path_fingerprint(&paths.tectonic),

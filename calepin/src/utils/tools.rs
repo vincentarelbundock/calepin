@@ -25,19 +25,9 @@ pub const PYTHON: Tool = Tool {
     install_hint: "install from https://www.python.org/downloads/",
 };
 
-pub const JULIA: Tool = Tool {
-    cmd: "julia",
-    install_hint: "install from https://julialang.org/downloads/",
-};
-
 pub const JUPYTER_CLIENT: Tool = Tool {
     cmd: "python3",
     install_hint: "jupyter_client not found — install with: pip install jupyter_client",
-};
-
-pub const SH: Tool = Tool {
-    cmd: "/bin/sh",
-    install_hint: "/bin/sh should be available on any Unix system",
 };
 
 pub const MMDC: Tool = Tool {

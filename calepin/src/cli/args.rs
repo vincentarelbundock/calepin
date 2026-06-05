@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn test_executable_path_flags_removed() {
-        for flag in ["--typst", "--rscript", "--python", "--julia", "--shell"] {
+        for flag in ["--typst", "--rscript", "--python"] {
             let err = Cli::try_parse_from(["calepin", "compile", "paper.typ", flag, "custom"])
                 .unwrap_err();
             assert_eq!(err.kind(), clap::error::ErrorKind::UnknownArgument);
