@@ -43,7 +43,7 @@ pub fn execute_chunk(
     let code = source.join("\n");
     let mut results = Vec::new();
 
-    let interleaved = engine != EngineName::Sh;
+    let interleaved = !matches!(engine, EngineName::Sh);
     if !interleaved {
         results.push(EngineResult::Source(source.to_vec()));
     }
@@ -108,6 +108,12 @@ pub fn execute_chunk(
                     figure.height,
                     f64::from(figure.dpi),
                 )?
+            }
+            EngineName::Jupyter(ref kernel) => {
+                return Err(anyhow::anyhow!(
+                    "Jupyter kernel `{}` support not yet wired (Task 4)",
+                    kernel
+                ));
             }
             other => return Err(anyhow::anyhow!("unsupported engine `{}`", other)),
         };

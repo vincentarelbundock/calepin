@@ -356,7 +356,7 @@ impl From<&ChunkSpec> for ChunkFingerprint {
         Self {
             label: chunk.label.clone(),
             ordinal: chunk.ordinal,
-            engine: chunk.engine,
+            engine: chunk.engine.clone(),
             code: chunk.code.clone(),
             exec_options: chunk.exec_options.clone(),
         }

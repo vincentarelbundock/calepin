@@ -58,7 +58,7 @@ impl Default for SetupConfig {
 }
 
 impl SetupConfig {
-    fn defaults_for_engine<'a>(&'a self, engine: EngineName) -> &'a SetupDefaults {
+    fn defaults_for_engine<'a>(&'a self, engine: &EngineName) -> &'a SetupDefaults {
         self.lang_defaults
             .get(engine.as_str())
             .unwrap_or(&self.defaults)
@@ -86,7 +86,7 @@ fn parse_chunk_metadata(
     ordinal: usize,
 ) -> Result<()> {
     let engine = parse_engine(value)?;
-    let defaults = config.defaults_for_engine(engine);
+    let defaults = config.defaults_for_engine(&engine);
     let code = extract_code(value.get("body").unwrap_or(&Value::Null), label)?;
     let fig_display_width =
         raw_option(value, "fig-display-width").or_else(|| defaults.fig_display_width.clone());
@@ -151,7 +151,7 @@ fn parse_chunk_raw_block(
     let Some(engine) = EngineName::parse(lang).ok() else {
         return Ok(None);
     };
-    let defaults = config.defaults_for_engine(engine);
+    let defaults = config.defaults_for_engine(&engine);
     if !defaults.raw_chunks.allows(lang) {
         return Ok(None);
     }

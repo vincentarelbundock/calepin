@@ -49,28 +49,29 @@ impl EnginePool {
         if !chunk.exec_options.eval {
             return Ok(ChunkResultDocument {
                 label: chunk.label.clone(),
-                engine: chunk.engine,
+                engine: chunk.engine.clone(),
                 status: ChunkStatus::Skipped,
                 items: Vec::new(),
             });
         }
 
+        let engine = chunk.engine.clone();
         let source = lines(&chunk.code);
-        let figure = FigureSpec::from_exec_options(chunk.engine, &chunk.exec_options);
-        let engine_results = if chunk.engine.is_diagram() {
+        let figure = FigureSpec::from_exec_options(engine.clone(), &chunk.exec_options);
+        let engine_results = if engine.is_diagram() {
             let fig_path = figures_dir.join(format!("{}-1.svg", chunk.label));
             engines::diagram::execute_diagram(
                 &chunk.code,
-                chunk.engine,
+                engine.clone(),
                 &fig_path,
                 &source,
                 &self.config.executables,
             )?
         } else {
-            let mut ctx = self.context_for(chunk.engine)?;
+            let mut ctx = self.context_for(engine.clone())?;
             engines::execute_chunk(
                 &source,
-                chunk.engine,
+                engine.clone(),
                 &chunk.label,
                 figures_dir,
                 &figure,
@@ -92,7 +93,7 @@ impl EnginePool {
         }
         Ok(ChunkResultDocument {
             label: chunk.label.clone(),
-            engine: chunk.engine,
+            engine,
             status: if has_error {
                 ChunkStatus::Error
             } else {
@@ -161,6 +162,12 @@ impl EnginePool {
                 return Err(anyhow!(
                     "diagram engine `{}` does not use a persistent context",
                     engine
+                ));
+            }
+            EngineName::Jupyter(ref kernel) => {
+                return Err(anyhow!(
+                    "Jupyter kernel `{}` support not yet wired (Task 4)",
+                    kernel
                 ));
             }
         }
@@ -352,7 +359,7 @@ mod tests {
     }
 
     fn figure_for(chunk: &ChunkSpec) -> FigureSpec {
-        FigureSpec::from_exec_options(chunk.engine, &chunk.exec_options)
+        FigureSpec::from_exec_options(chunk.engine.clone(), &chunk.exec_options)
     }
 
     #[test]

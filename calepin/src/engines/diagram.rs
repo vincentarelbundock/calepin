@@ -40,7 +40,7 @@ pub fn execute_diagram(
     executables: &ExecutablePaths,
 ) -> Result<Vec<EngineResult>> {
     let mut results = vec![EngineResult::Source(source.to_vec())];
-    let spec = diagram_spec(engine)
+    let spec = diagram_spec(&engine)
         .ok_or_else(|| anyhow::anyhow!("unsupported diagram engine `{}`", engine))?;
 
     if let Some(parent) = fig_path.parent() {
@@ -71,7 +71,7 @@ pub fn execute_diagram(
     Ok(results)
 }
 
-fn diagram_spec(engine: EngineName) -> Option<DiagramSpec> {
+fn diagram_spec(engine: &EngineName) -> Option<DiagramSpec> {
     match engine {
         EngineName::Mermaid => Some(DiagramSpec {
             input_ext: mermaid::INPUT_EXT,
