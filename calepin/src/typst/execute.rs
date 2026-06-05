@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use crate::config::ExecutablePaths;
 use crate::engines::{
-    self, julia::JuliaSession, python::PythonSession, r::RSession, sh::ShSession, EngineContext,
-    EngineResult,
+    self, julia::JuliaSession, jupyter::JupyterBridgeSession, python::PythonSession, r::RSession,
+    sh::ShSession, EngineContext, EngineResult,
 };
 use crate::typst::model::{
     ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec, MimeData,
@@ -26,6 +26,7 @@ pub struct EnginePool {
     python: Option<PythonSession>,
     julia: Option<JuliaSession>,
     sh: Option<ShSession>,
+    jupyter: Option<JupyterBridgeSession>,
     config: ExecutionConfig,
 }
 
@@ -36,6 +37,7 @@ impl EnginePool {
             python: None,
             julia: None,
             sh: None,
+            jupyter: None,
             config,
         }
     }
@@ -152,6 +154,18 @@ impl EnginePool {
         Ok(())
     }
 
+    fn ensure_jupyter_session(&mut self) -> Result<()> {
+        if self.jupyter.is_none() {
+            let program = self.config.executables.python.to_string_lossy();
+            self.jupyter = Some(JupyterBridgeSession::init_with_program(
+                &program,
+                Some(&self.config.cwd),
+                self.config.timeout,
+            )?);
+        }
+        Ok(())
+    }
+
     fn context_for(&mut self, engine: EngineName) -> Result<EngineContext<'_>> {
         match engine {
             EngineName::R => self.ensure_r_session()?,
@@ -164,12 +178,7 @@ impl EnginePool {
                     engine
                 ));
             }
-            EngineName::Jupyter(ref kernel) => {
-                return Err(anyhow!(
-                    "Jupyter kernel `{}` support not yet wired (Task 4)",
-                    kernel
-                ));
-            }
+            EngineName::Jupyter(_) => self.ensure_jupyter_session()?,
         }
 
         Ok(EngineContext {
@@ -177,7 +186,7 @@ impl EnginePool {
             python: self.python.as_mut(),
             julia: self.julia.as_mut(),
             sh: self.sh.as_mut(),
-            jupyter: None,
+            jupyter: self.jupyter.as_mut(),
         })
     }
 }
@@ -552,6 +561,31 @@ done
             )
             .extension(),
             "png"
+        );
+    }
+
+    #[test]
+    fn engine_pool_routes_unknown_engine_to_jupyter_arm() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing_python = dir.path().join("missing-python3");
+        let mut executables = ExecutablePaths::defaults();
+        executables.python = missing_python.clone();
+        let config = ExecutionConfig {
+            cwd: dir.path().to_path_buf(),
+            executables,
+            timeout: Some(std::time::Duration::from_secs(5)),
+        };
+        let mut pool = EnginePool::new(config);
+        let mut octave_chunk = chunk(ResultsMode::Verbatim);
+        octave_chunk.engine = EngineName::Jupyter("octave".to_string());
+        octave_chunk.label = "octave-test".to_string();
+        octave_chunk.code = "disp(42)".to_string();
+        let result = pool.execute_chunk(&octave_chunk, dir.path(), |_| "unused".to_string());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("failed to start Jupyter bridge")
+                || err.contains(missing_python.to_string_lossy().as_ref()),
+            "expected Jupyter bridge startup error, got: {err}"
         );
     }
 }
