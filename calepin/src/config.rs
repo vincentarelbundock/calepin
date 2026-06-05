@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use indexmap::IndexMap;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -9,10 +10,26 @@ pub const PYTHON_EXECUTABLE_ENV_VAR: &str = "CALEPIN_PYTHON";
 
 pub const DEFAULT_THEMES_DIR: &str = "themes";
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum DiagramOutput {
+    #[default]
+    File,
+    Stdout,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CustomDiagramBackend {
+    pub command: PathBuf,
+    pub input_ext: String,
+    pub args: Vec<String>,
+    pub output: DiagramOutput,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
     pub themes_dir: PathBuf,
+    pub custom_diagrams: IndexMap<String, CustomDiagramBackend>,
 }
 
 impl CalepinConfig {
@@ -29,6 +46,7 @@ impl CalepinConfig {
         Ok(Self {
             executables: ExecutablePaths::from_raw(root, raw.executables),
             themes_dir: resolve_themes_dir(root, raw.themes_dir),
+            custom_diagrams: custom_diagrams_from_raw(root, raw.diagram),
         })
     }
 
@@ -36,6 +54,7 @@ impl CalepinConfig {
         Self {
             executables: ExecutablePaths::from_raw(root, RawExecutablePaths::default()),
             themes_dir: resolve_themes_dir(root, None),
+            custom_diagrams: IndexMap::new(),
         }
     }
 }
@@ -108,6 +127,54 @@ impl ExecutablePaths {
 struct RawCalepinConfig {
     executables: RawExecutablePaths,
     themes_dir: Option<PathBuf>,
+    diagram: IndexMap<String, RawCustomDiagramBackend>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawCustomDiagramBackend {
+    command: PathBuf,
+    #[serde(default = "default_input_ext")]
+    input_ext: String,
+    #[serde(default = "default_args")]
+    args: Vec<String>,
+    #[serde(default)]
+    output: RawDiagramOutput,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum RawDiagramOutput {
+    #[default]
+    File,
+    Stdout,
+}
+
+fn default_input_ext() -> String {
+    "txt".to_string()
+}
+
+fn default_args() -> Vec<String> {
+    vec!["{input}".to_string()]
+}
+
+fn custom_diagrams_from_raw(
+    root: &Path,
+    raw: IndexMap<String, RawCustomDiagramBackend>,
+) -> IndexMap<String, CustomDiagramBackend> {
+    raw.into_iter()
+        .map(|(name, r)| {
+            let backend = CustomDiagramBackend {
+                command: resolve_tool_path(root, r.command),
+                input_ext: r.input_ext,
+                args: r.args,
+                output: match r.output {
+                    RawDiagramOutput::File => DiagramOutput::File,
+                    RawDiagramOutput::Stdout => DiagramOutput::Stdout,
+                },
+            };
+            (name, backend)
+        })
+        .collect()
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -228,6 +295,52 @@ mod tests {
         let config = CalepinConfig::load(dir.path()).unwrap();
 
         assert_eq!(config.executables.python, PathBuf::from("env-python"));
+    }
+
+    #[test]
+    fn custom_diagram_parsed_from_config() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let calepin_dir = dir.path().join(".calepin");
+        std::fs::create_dir(&calepin_dir).unwrap();
+        std::fs::write(
+            calepin_dir.join("config.toml"),
+            r#"[diagram.plantuml]
+command = "plantuml"
+input_ext = "puml"
+args = ["-tsvg", "-pipe", "{input}"]
+output = "stdout"
+"#,
+        )
+        .unwrap();
+
+        let config = CalepinConfig::load(dir.path()).unwrap();
+
+        let backend = config.custom_diagrams.get("plantuml").unwrap();
+        assert_eq!(backend.command, PathBuf::from("plantuml"));
+        assert_eq!(backend.input_ext, "puml");
+        assert_eq!(backend.args, vec!["-tsvg", "-pipe", "{input}"]);
+        assert!(matches!(backend.output, DiagramOutput::Stdout));
+    }
+
+    #[test]
+    fn custom_diagram_defaults() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let calepin_dir = dir.path().join(".calepin");
+        std::fs::create_dir(&calepin_dir).unwrap();
+        std::fs::write(
+            calepin_dir.join("config.toml"),
+            "[diagram.mydiag]\ncommand = \"mydiag\"\n",
+        )
+        .unwrap();
+
+        let config = CalepinConfig::load(dir.path()).unwrap();
+
+        let backend = config.custom_diagrams.get("mydiag").unwrap();
+        assert_eq!(backend.input_ext, "txt");
+        assert_eq!(backend.args, vec!["{input}"]);
+        assert!(matches!(backend.output, DiagramOutput::File));
     }
 
     #[test]

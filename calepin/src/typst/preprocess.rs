@@ -6,7 +6,8 @@ use std::process::Command;
 use std::time::Duration;
 use xxhash_rust::xxh3::xxh3_64;
 
-use crate::config::{CalepinConfig, ExecutablePaths};
+use crate::config::{CalepinConfig, CustomDiagramBackend, ExecutablePaths};
+use indexmap::IndexMap;
 use crate::typst::execute::{EnginePool, ExecutionConfig};
 use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, ExecOptions, LayoutPaths};
 use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout, slash_path};
@@ -39,6 +40,7 @@ pub struct PreprocessPlan {
     pub executables: ExecutablePaths,
     pub themes_dir: PathBuf,
     pub fingerprint: u64,
+    pub custom_diagrams: IndexMap<String, CustomDiagramBackend>,
     chunks: Vec<ChunkSpec>,
     cwd: PathBuf,
     timeout: Option<Duration>,
@@ -104,6 +106,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         executables: config.executables,
         themes_dir: config.themes_dir,
         fingerprint,
+        custom_diagrams: config.custom_diagrams,
         chunks,
         cwd,
         timeout,
@@ -183,6 +186,7 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
         cwd: plan.cwd.clone(),
         executables: plan.executables.clone(),
         timeout: plan.timeout,
+        custom_diagrams: plan.custom_diagrams.clone(),
     };
     let mut pool = EnginePool::new(execution_config);
     let mut chunk_results = Vec::with_capacity(plan.chunks.len());

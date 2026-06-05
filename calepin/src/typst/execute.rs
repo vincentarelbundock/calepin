@@ -4,11 +4,12 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::config::ExecutablePaths;
+use crate::config::{CustomDiagramBackend, ExecutablePaths};
 use crate::engines::{
     self, jupyter::JupyterBridgeSession, python::PythonSession, r::RSession, EngineContext,
     EngineResult,
 };
+use indexmap::IndexMap;
 use crate::typst::model::{
     ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec, MimeData,
     ResultItem, ResultItemName, ResultItemType,
@@ -19,6 +20,7 @@ pub struct ExecutionConfig {
     pub cwd: PathBuf,
     pub executables: ExecutablePaths,
     pub timeout: Option<Duration>,
+    pub custom_diagrams: IndexMap<String, CustomDiagramBackend>,
 }
 
 pub struct EnginePool {
@@ -56,7 +58,15 @@ impl EnginePool {
         let engine = chunk.engine.clone();
         let source = lines(&chunk.code);
         let figure = FigureSpec::from_exec_options(engine.clone(), &chunk.exec_options);
-        let engine_results = if engine.is_diagram() {
+        let engine_results = if let Some(backend) = self
+            .config
+            .custom_diagrams
+            .get(engine.as_str())
+            .cloned()
+        {
+            let fig_path = figures_dir.join(format!("{}-1.svg", chunk.label));
+            engines::diagram::execute_custom_diagram(&chunk.code, &backend, &fig_path, &source)?
+        } else if engine.is_diagram() {
             let fig_path = figures_dir.join(format!("{}-1.svg", chunk.label));
             engines::diagram::execute_diagram(
                 &chunk.code,
@@ -458,6 +468,58 @@ mod tests {
     }
 
     #[test]
+    fn engine_pool_dispatches_custom_diagram_backend() {
+        use crate::config::{CustomDiagramBackend, DiagramOutput};
+        use crate::engines::diagram::test_support::write_executable;
+        use indexmap::IndexMap;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bin_dir = temp_dir.path().join("bin");
+        std::fs::create_dir(&bin_dir).unwrap();
+        let mydiag_path = bin_dir.join("mydiag");
+        write_executable(
+            &mydiag_path,
+            r#"#!/bin/sh
+printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$2"
+"#,
+        );
+
+        let mut custom_diagrams = IndexMap::new();
+        custom_diagrams.insert(
+            "mydiag".to_string(),
+            CustomDiagramBackend {
+                command: mydiag_path,
+                input_ext: "txt".to_string(),
+                args: vec!["{input}".to_string(), "{output}".to_string()],
+                output: DiagramOutput::File,
+            },
+        );
+
+        let config = ExecutionConfig {
+            cwd: temp_dir.path().to_path_buf(),
+            executables: ExecutablePaths::defaults(),
+            timeout: Some(std::time::Duration::from_secs(5)),
+            custom_diagrams,
+        };
+        let mut pool = EnginePool::new(config);
+
+        let mut mydiag_chunk = chunk(ResultsMode::Verbatim);
+        mydiag_chunk.engine = EngineName::Jupyter("mydiag".to_string());
+        mydiag_chunk.label = "mydiag-fig".to_string();
+        mydiag_chunk.code = "source code".to_string();
+
+        let figures_dir = temp_dir.path().join("figures");
+        std::fs::create_dir(&figures_dir).unwrap();
+
+        let result = pool
+            .execute_chunk(&mydiag_chunk, &figures_dir, |_| "unused".to_string())
+            .unwrap();
+        assert_eq!(result.status, crate::typst::model::ChunkStatus::Ok);
+        // normalize_plot_path renames label-1.svg → label.svg
+        assert!(figures_dir.join("mydiag-fig.svg").exists());
+    }
+
+    #[test]
     fn engine_pool_routes_unknown_engine_to_jupyter_arm() {
         let dir = tempfile::tempdir().unwrap();
         let missing_python = dir.path().join("missing-python3");
@@ -467,6 +529,7 @@ mod tests {
             cwd: dir.path().to_path_buf(),
             executables,
             timeout: Some(std::time::Duration::from_secs(5)),
+            custom_diagrams: IndexMap::new(),
         };
         let mut pool = EnginePool::new(config);
         let mut octave_chunk = chunk(ResultsMode::Verbatim);

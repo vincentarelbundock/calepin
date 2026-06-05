@@ -11,7 +11,7 @@ use std::ffi::OsString;
 use std::path::Path;
 use std::process::Output;
 
-use crate::config::ExecutablePaths;
+use crate::config::{CustomDiagramBackend, DiagramOutput, ExecutablePaths};
 use crate::engines::EngineResult;
 use crate::typst::model::EngineName;
 use crate::utils::tools::{self, Tool};
@@ -68,6 +68,92 @@ pub fn execute_diagram(
         results.push(EngineResult::Plot(fig_path.to_path_buf()));
     }
 
+    Ok(results)
+}
+
+pub fn execute_custom_diagram(
+    code: &str,
+    backend: &CustomDiagramBackend,
+    fig_path: &Path,
+    source: &[String],
+) -> Result<Vec<EngineResult>> {
+    let mut results = vec![EngineResult::Source(source.to_vec())];
+
+    if let Some(parent) = fig_path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+
+    let temp_dir = tempfile::Builder::new()
+        .prefix("calepin-diagram-")
+        .tempdir()
+        .context("failed to create temporary diagram directory")?;
+    let input_path = temp_dir
+        .path()
+        .join(format!("input.{}", backend.input_ext));
+    std::fs::write(&input_path, code.as_bytes())
+        .with_context(|| format!("failed to write {}", input_path.display()))?;
+
+    let args: Vec<OsString> = backend
+        .args
+        .iter()
+        .map(|arg| {
+            if arg == "{input}" {
+                path_arg(&input_path)
+            } else if arg == "{output}" {
+                path_arg(fig_path)
+            } else {
+                OsString::from(arg)
+            }
+        })
+        .collect();
+
+    let output = match std::process::Command::new(&backend.command)
+        .args(&args)
+        .output()
+    {
+        Ok(out) => out,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            results.push(EngineResult::Error(format!(
+                "custom diagram command not found: {}",
+                backend.command.display()
+            )));
+            return Ok(results);
+        }
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!("failed to run {}", backend.command.display())
+            });
+        }
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        results.push(EngineResult::Error(format!(
+            "{} failed: {}",
+            backend.command.display(),
+            stderr.trim()
+        )));
+        return Ok(results);
+    }
+
+    match backend.output {
+        DiagramOutput::Stdout => {
+            std::fs::write(fig_path, &output.stdout)
+                .with_context(|| format!("failed to write {}", fig_path.display()))?;
+        }
+        DiagramOutput::File => {
+            if !fig_path.exists() {
+                results.push(EngineResult::Error(format!(
+                    "{} succeeded but produced no output file",
+                    backend.command.display()
+                )));
+                return Ok(results);
+            }
+        }
+    }
+
+    results.push(EngineResult::Plot(fig_path.to_path_buf()));
     Ok(results)
 }
 
@@ -145,13 +231,142 @@ pub(super) fn tool_error(program: &Path, stderr: Vec<u8>) -> EngineResult {
 }
 
 #[cfg(test)]
-pub(super) mod test_support {
+mod custom_diagram_tests {
+    use super::execute_custom_diagram;
+    use super::test_support::{assert_successful_plot, env_lock, write_executable, EnvVarGuard};
+    use crate::config::{CustomDiagramBackend, DiagramOutput};
+    use std::path::PathBuf;
+
+    fn file_backend(cmd: &str) -> CustomDiagramBackend {
+        CustomDiagramBackend {
+            command: PathBuf::from(cmd),
+            input_ext: "txt".to_string(),
+            args: vec!["{input}".to_string(), "{output}".to_string()],
+            output: DiagramOutput::File,
+        }
+    }
+
+    fn stdout_backend(cmd: &str) -> CustomDiagramBackend {
+        CustomDiagramBackend {
+            command: PathBuf::from(cmd),
+            input_ext: "txt".to_string(),
+            args: vec!["{input}".to_string()],
+            output: DiagramOutput::Stdout,
+        }
+    }
+
+    #[test]
+    fn file_output_backend_produces_plot() {
+        let _guard = env_lock();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bin_dir = temp_dir.path().join("bin");
+        std::fs::create_dir(&bin_dir).unwrap();
+        write_executable(
+            &bin_dir.join("mydiag"),
+            r#"#!/bin/sh
+printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$2"
+"#,
+        );
+        let _path = EnvVarGuard::prepend_path(bin_dir);
+
+        let fig_path = temp_dir.path().join("figure.svg");
+        let source = vec!["source code".to_string()];
+        let results =
+            execute_custom_diagram("source code", &file_backend("mydiag"), &fig_path, &source)
+                .unwrap();
+
+        assert_successful_plot(&results, &fig_path);
+    }
+
+    #[test]
+    fn stdout_output_backend_produces_plot() {
+        let _guard = env_lock();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bin_dir = temp_dir.path().join("bin");
+        std::fs::create_dir(&bin_dir).unwrap();
+        write_executable(
+            &bin_dir.join("mydiag"),
+            r#"#!/bin/sh
+printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"
+"#,
+        );
+        let _path = EnvVarGuard::prepend_path(bin_dir);
+
+        let fig_path = temp_dir.path().join("figure.svg");
+        let source = vec!["source code".to_string()];
+        let results =
+            execute_custom_diagram("source code", &stdout_backend("mydiag"), &fig_path, &source)
+                .unwrap();
+
+        assert_successful_plot(&results, &fig_path);
+    }
+
+    #[test]
+    fn failing_backend_emits_error_result() {
+        let _guard = env_lock();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bin_dir = temp_dir.path().join("bin");
+        std::fs::create_dir(&bin_dir).unwrap();
+        write_executable(
+            &bin_dir.join("mydiag"),
+            "#!/bin/sh\necho 'bad input' >&2\nexit 1\n",
+        );
+        let _path = EnvVarGuard::prepend_path(bin_dir);
+
+        let fig_path = temp_dir.path().join("figure.svg");
+        let source = vec!["bad".to_string()];
+        let results =
+            execute_custom_diagram("bad", &file_backend("mydiag"), &fig_path, &source).unwrap();
+
+        assert!(results
+            .iter()
+            .any(|r| matches!(r, crate::engines::EngineResult::Error(_))));
+        assert!(!fig_path.exists());
+    }
+
+    #[test]
+    fn source_written_to_input_file_with_correct_extension() {
+        let _guard = env_lock();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bin_dir = temp_dir.path().join("bin");
+        std::fs::create_dir(&bin_dir).unwrap();
+        write_executable(
+            &bin_dir.join("mydiag"),
+            r#"#!/bin/sh
+# verify input has .puml extension and contains expected content
+case "$1" in *.puml) ;; *) echo "wrong ext: $1" >&2; exit 1;; esac
+if ! grep -q "diagram source" "$1"; then
+  echo "missing content" >&2
+  exit 1
+fi
+printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$2"
+"#,
+        );
+        let _path = EnvVarGuard::prepend_path(bin_dir);
+
+        let backend = CustomDiagramBackend {
+            command: PathBuf::from("mydiag"),
+            input_ext: "puml".to_string(),
+            args: vec!["{input}".to_string(), "{output}".to_string()],
+            output: DiagramOutput::File,
+        };
+        let fig_path = temp_dir.path().join("figure.svg");
+        let source = vec!["diagram source".to_string()];
+        let results =
+            execute_custom_diagram("diagram source", &backend, &fig_path, &source).unwrap();
+
+        assert_successful_plot(&results, &fig_path);
+    }
+}
+
+#[cfg(test)]
+pub mod test_support {
     use crate::engines::EngineResult;
     use std::ffi::{OsStr, OsString};
     use std::path::{Path, PathBuf};
     use std::sync::{Mutex, OnceLock};
 
-    pub(super) fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+    pub fn env_lock() -> std::sync::MutexGuard<'static, ()> {
         static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         ENV_LOCK
             .get_or_init(|| Mutex::new(()))
@@ -159,13 +374,13 @@ pub(super) mod test_support {
             .unwrap_or_else(|error| error.into_inner())
     }
 
-    pub(super) struct EnvVarGuard {
+    pub struct EnvVarGuard {
         key: &'static str,
         old_value: Option<OsString>,
     }
 
     impl EnvVarGuard {
-        pub(super) fn set(key: &'static str, value: impl AsRef<OsStr>) -> Self {
+        pub fn set(key: &'static str, value: impl AsRef<OsStr>) -> Self {
             let guard = Self {
                 key,
                 old_value: std::env::var_os(key),
@@ -174,7 +389,7 @@ pub(super) mod test_support {
             guard
         }
 
-        pub(super) fn prepend_path(path: PathBuf) -> Self {
+        pub fn prepend_path(path: PathBuf) -> Self {
             let old_value = std::env::var_os("PATH");
             let mut paths = vec![path];
             if let Some(old_path) = &old_value {
@@ -200,14 +415,14 @@ pub(super) mod test_support {
     }
 
     #[cfg(unix)]
-    pub(super) fn write_executable(path: &Path, contents: impl AsRef<[u8]>) {
+    pub fn write_executable(path: &Path, contents: impl AsRef<[u8]>) {
         use std::os::unix::fs::PermissionsExt;
 
         std::fs::write(path, contents).unwrap();
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
     }
 
-    pub(super) fn assert_successful_plot(results: &[EngineResult], fig_path: &Path) {
+    pub fn assert_successful_plot(results: &[EngineResult], fig_path: &Path) {
         assert!(fig_path.exists());
         assert!(results
             .iter()
