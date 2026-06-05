@@ -1,5 +1,6 @@
 pub mod diagram;
 pub mod julia;
+pub mod jupyter;
 pub mod python;
 pub mod r;
 pub mod sh;
@@ -29,6 +30,7 @@ pub struct EngineContext<'a> {
     pub python: Option<&'a mut python::PythonSession>,
     pub julia: Option<&'a mut julia::JuliaSession>,
     pub sh: Option<&'a mut sh::ShSession>,
+    pub jupyter: Option<&'a mut jupyter::JupyterBridgeSession>,
 }
 
 /// Execute a Typst chunk and capture its output.
@@ -110,10 +112,21 @@ pub fn execute_chunk(
                 )?
             }
             EngineName::Jupyter(ref kernel) => {
-                return Err(anyhow::anyhow!(
-                    "Jupyter kernel `{}` support not yet wired (Task 4)",
-                    kernel
-                ));
+                let session = ctx.jupyter.as_mut().ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "{}",
+                        crate::utils::tools::not_found_message(&crate::utils::tools::JUPYTER_CLIENT)
+                    )
+                })?;
+                session.capture(
+                    kernel,
+                    &code,
+                    &fig_full_str,
+                    &figure.format,
+                    figure.width,
+                    figure.height,
+                    f64::from(figure.dpi),
+                )?
             }
             other => return Err(anyhow::anyhow!("unsupported engine `{}`", other)),
         };

@@ -177,6 +177,7 @@ impl EnginePool {
             python: self.python.as_mut(),
             julia: self.julia.as_mut(),
             sh: self.sh.as_mut(),
+            jupyter: None,
         })
     }
 }

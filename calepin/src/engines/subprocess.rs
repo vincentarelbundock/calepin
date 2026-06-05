@@ -120,6 +120,11 @@ impl SubprocessSession {
         })
     }
 
+    /// Returns the configured execution timeout.
+    pub fn timeout(&self) -> Option<std::time::Duration> {
+        self.timeout
+    }
+
     /// Send code to the subprocess and read back the sentinel-delimited result.
     /// Times out after the configured timeout (default: no timeout). On timeout,
     /// the subprocess is killed.
