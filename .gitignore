@@ -2,6 +2,7 @@ target/
 calepin/target
 Cargo.lock
 
+__pycache__
 .claude
 quarto_website/
 *_files/

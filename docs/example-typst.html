@@ -771,6 +771,14 @@ x = 40
 println(x + 2)
 ```
 
+#calepin.chunk(label: &quot;fig-julia&quot;, fig-caption: [Julia sine wave])[
+```julia
+using Plots
+x = range(0, 2π; length=200)
+plot(x, sin.(x); label=&quot;sin(x)&quot;, xlabel=&quot;x&quot;, ylabel=&quot;y&quot;, lw=2)
+```
+]
+
 = Shell
 
 Shell chunks are useful for small environment checks or command-line examples.
