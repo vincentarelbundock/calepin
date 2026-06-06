@@ -168,9 +168,14 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
             if !text.is_empty() {
                 results.push(EngineResult::Message(text.to_string()));
             }
-        } else if part.starts_with(&plot_prefix) {
-            if fig_path.exists() {
-                results.push(EngineResult::Plot(fig_path.to_path_buf()));
+        } else if let Some(text) = part.strip_prefix(&plot_prefix) {
+            let path = if text.is_empty() {
+                fig_path.to_path_buf()
+            } else {
+                PathBuf::from(text)
+            };
+            if path.exists() {
+                results.push(EngineResult::Plot(path));
             }
         } else if let Some(text) = part.strip_prefix(&preamble_prefix) {
             if !text.is_empty() {

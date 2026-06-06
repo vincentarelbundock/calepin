@@ -14,6 +14,7 @@ nav = [
   { "Home" = "index.html" },
   { "Supported Languages" = "supported-languages.html" },
   { "Options" = "options.html" },
+  { "Tables and Figures" = "tables_and_figures.html" },
   { "Configuration" = "config.html" },
   { "Templates" = "templates.html" },
   { "CLI" = "cli.html" },

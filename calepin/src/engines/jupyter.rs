@@ -46,11 +46,55 @@ def _get_kernel(kernel_name, timeout):
 def _strip_ansi(text):
     return re.sub(r'\x1b\[[0-9;]*[mGKH]', '', text)
 
+def _image_mime_for_format(fig_format):
+    return {
+        "png": "image/png",
+        "svg": "image/svg+xml",
+        "jpeg": "image/jpeg",
+        "jpg": "image/jpeg",
+    }.get(fig_format)
+
+def _plot_path(base, index):
+    if index <= 1:
+        return base
+    root, ext = os.path.splitext(base)
+    if root.endswith("-1"):
+        root = root[:-2]
+    return f"{root}-{index}{ext}"
+
+def _save_image_bundle(data, fig_path, fig_format, plot_index):
+    if not fig_path:
+        return None, None
+    requested_mime = _image_mime_for_format(fig_format)
+    if not requested_mime:
+        return None, f"unsupported Jupyter figure format {fig_format}"
+    if requested_mime not in data:
+        if any(m in data for m in ("image/png", "image/svg+xml", "image/jpeg")):
+            return None, f"kernel emitted an image, but not requested format {fig_format}"
+        return None, None
+
+    raw = data[requested_mime]
+    path = _plot_path(fig_path, plot_index)
+    try:
+        if requested_mime in ("image/png", "image/jpeg"):
+            payload = base64.b64decode(raw) if isinstance(raw, str) else raw
+            with open(path, "wb") as fh:
+                fh.write(payload)
+        else:
+            svg = raw if isinstance(raw, str) else raw.decode()
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(svg)
+        if os.path.getsize(path) > 0:
+            return path, None
+        return None, "kernel emitted an empty image"
+    except Exception as save_exc:
+        return None, f"failed to save figure: {save_exc}"
+
 def _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeout):
     sep = sentinel + "_SEP"
     parts = [sentinel + "_SOURCE:" + code]
     msg_id = kc.execute(code, store_history=True)
-    plot_saved = False
+    plot_index = 1
     stream_texts = set()  # deduplicate execute_result vs stream stdout
 
     while True:
@@ -76,35 +120,20 @@ def _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeo
 
         elif mtype in ("execute_result", "display_data"):
             data = content.get("data", {})
-            if "text/plain" in data:
+            image_path, image_warning = _save_image_bundle(data, fig_path, fig_format, plot_index)
+            if image_path:
+                parts.append(f"{sentinel}_PLOT:{image_path}")
+                plot_index += 1
+            elif image_warning:
+                parts.append(f"{sentinel}_WARNING:{image_warning}")
+
+            # For rich display bundles, text/plain is the fallback. If an image
+            # was captured, emitting the fallback as stream output would duplicate
+            # plot object reprs for kernels such as Julia, Python, and R.
+            if not image_path and "text/plain" in data:
                 text = data["text/plain"].rstrip("\n")
                 if text and text not in stream_texts:
                     parts.append(f"{sentinel}_OUTPUT:{text}")
-            if fig_path and not plot_saved:
-                requested_mime = {
-                    "png": "image/png",
-                    "svg": "image/svg+xml",
-                }.get(fig_format)
-                if requested_mime and requested_mime in data:
-                    raw = data[requested_mime]
-                    try:
-                        if requested_mime == "image/png":
-                            payload = base64.b64decode(raw) if isinstance(raw, str) else raw
-                            with open(fig_path, "wb") as fh:
-                                fh.write(payload)
-                        else:  # svg
-                            svg = raw if isinstance(raw, str) else raw.decode()
-                            with open(fig_path, "w", encoding="utf-8") as fh:
-                                fh.write(svg)
-                        if os.path.getsize(fig_path) > 0:
-                            parts.append(f"{sentinel}_PLOT:{fig_path}")
-                            plot_saved = True
-                    except Exception as save_exc:
-                        parts.append(f"{sentinel}_WARNING:failed to save figure: {save_exc}")
-                elif any(m in data for m in ("image/png", "image/svg+xml")):
-                    parts.append(
-                        f"{sentinel}_WARNING:kernel emitted an image, but not requested format {fig_format}"
-                    )
 
         elif mtype == "error":
             tb_lines = content.get("traceback", [content.get("evalue", "error")])
@@ -188,17 +217,16 @@ impl JupyterBridgeSession {
         let mut proc = SubprocessSession::spawn(
             program,
             &["-s", "-u", "-c", JUPYTER_BRIDGE],
-            &[
-                ("PYTHONDONTWRITEBYTECODE", "1"),
-                ("PYTHONNOUSERSITE", "1"),
-            ],
+            &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
             cwd,
             timeout,
         )
         .context("failed to start Jupyter bridge")?;
         let sentinel = make_sentinel();
         proc.execute(&sentinel, r#"META:{"command":"ping"}"#)
-            .context("jupyter_client Python package not found — install with: pip install jupyter_client")?;
+            .context(
+            "jupyter_client Python package not found — install with: pip install jupyter_client",
+        )?;
         Ok(Self { proc })
     }
 
@@ -213,11 +241,7 @@ impl JupyterBridgeSession {
         dpi: f64,
     ) -> Result<String> {
         let sentinel = make_sentinel();
-        let timeout_secs = self
-            .proc
-            .timeout()
-            .map(|d| d.as_secs_f64())
-            .unwrap_or(30.0);
+        let timeout_secs = self.proc.timeout().map(|d| d.as_secs_f64()).unwrap_or(30.0);
         let meta = serde_json::json!({
             "kernel": kernel,
             "fig_path": fig_path,
@@ -247,18 +271,100 @@ impl Drop for JupyterBridgeSession {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::process::Command;
+    use std::time::Duration;
+
     #[test]
     fn jupyter_bridge_bootstrap_is_valid_python() {
-        use std::process::Command;
         let status = Command::new("python3")
-            .args(["-c", &format!(
-                "compile({:?}, '<bootstrap>', 'exec')",
-                super::JUPYTER_BRIDGE
-            )])
+            .args([
+                "-c",
+                &format!("compile({:?}, '<bootstrap>', 'exec')", JUPYTER_BRIDGE),
+            ])
             .status();
         match status {
             Ok(s) => assert!(s.success(), "JUPYTER_BRIDGE has a Python syntax error"),
             Err(_) => eprintln!("python3 not found — skipping bootstrap syntax check"),
         }
+    }
+
+    fn has_python_jupyter_kernel() -> bool {
+        Command::new("python3")
+            .args([
+                "-c",
+                "import jupyter_client; from jupyter_client.kernelspec import KernelSpecManager; KernelSpecManager().get_kernel_spec('python3')",
+            ])
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn jupyter_bridge_captures_image_bundle_without_text_fallback() {
+        if !has_python_jupyter_kernel() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("bundle-1.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session =
+            JupyterBridgeSession::init_with_program("python3", None, Some(Duration::from_secs(10)))
+                .unwrap();
+
+        let raw = session
+            .capture(
+                "python3",
+                r#"from IPython.display import display
+display({
+    "image/svg+xml": "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><circle cx='5' cy='5' r='4'/></svg>",
+    "text/plain": "fallback text",
+}, raw=True)"#,
+                &fig_path,
+                "svg",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_PLOT:"), "{raw}");
+        assert!(!raw.contains("_OUTPUT:fallback text"), "{raw}");
+        assert!(std::path::Path::new(&fig_path).exists());
+    }
+
+    #[test]
+    fn jupyter_bridge_captures_multiple_image_bundles() {
+        if !has_python_jupyter_kernel() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("bundle-1.svg");
+        let second_fig_path = dir.path().join("bundle-2.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let second_fig_path = second_fig_path.to_string_lossy().replace('\\', "/");
+        let mut session =
+            JupyterBridgeSession::init_with_program("python3", None, Some(Duration::from_secs(10)))
+                .unwrap();
+
+        let raw = session
+            .capture(
+                "python3",
+                r#"from IPython.display import display
+display({"image/svg+xml": "<svg xmlns='http://www.w3.org/2000/svg'><path d='M0 0L1 1'/></svg>"}, raw=True)
+display({"image/svg+xml": "<svg xmlns='http://www.w3.org/2000/svg'><path d='M1 0L0 1'/></svg>"}, raw=True)"#,
+                &fig_path,
+                "svg",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert_eq!(raw.matches("_PLOT:").count(), 2, "{raw}");
+        assert!(std::path::Path::new(&fig_path).exists());
+        assert!(std::path::Path::new(&second_fig_path).exists());
     }
 }

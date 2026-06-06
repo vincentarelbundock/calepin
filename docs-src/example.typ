@@ -101,37 +101,32 @@ plot(hp ~ mpg, data = mtcars)
 
 Julia is a language for technical and scientific computing; learn more at #link("https://julialang.org/")[julialang.org].
 
-Julia chunks use the same `calepin.inline` and `calepin.chunk` helpers. That
-lets a notebook switch engines without changing the surrounding Typst markup.
+Julia runs through a Jupyter kernel. Use the kernel name reported by
+`jupyter kernelspec list`; this example uses `julia-1.12`.
 
-The inline Julia result is #calepin.inline("julia")[`println(42)`].
+The inline Julia result is #calepin.inline("julia-1.12")[`println(42)`].
 
-For block output, choose the engine name and place the code in the chunk body.
-Calepin handles collection, execution, and reinsertion into the rendered
-document.
+For block output, pass the Jupyter kernel name as the chunk engine and set the
+source language to `julia` for highlighting.
 
+#calepin.chunk("julia-1.12", source-lang: "julia")[
 ```julia
 x = 40
 println(x + 2)
-```
-
-#calepin.chunk(label: "fig-julia", fig-caption: [Julia sine wave])[
-```julia
-using Plots
-x = range(0, 2π; length=200)
-plot(x, sin.(x); label="sin(x)", xlabel="x", ylabel="y", lw=2)
 ```
 ]
 
 = Shell
 
-Shell chunks are useful for small environment checks or command-line examples.
-They behave like the other engines: the command is collected, executed, and its
-captured output is placed back into the document.
+Shell chunks run through the Bash Jupyter kernel. They behave like the other
+engines: the command is collected, executed, and its captured output is placed
+back into the document.
 
+#calepin.chunk("bash")[
 ```bash
-printf "hello $USER"
+printf "hello from bash\n"
 ```
+]
 
 = Mermaid
 

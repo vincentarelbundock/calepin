@@ -6,6 +6,10 @@ use crate::utils::tools;
 
 pub const CONFIG_RELATIVE_PATH: &str = ".calepin/config.toml";
 pub const PYTHON_EXECUTABLE_ENV_VAR: &str = "CALEPIN_PYTHON";
+#[cfg(windows)]
+pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
+#[cfg(not(windows))]
+pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 
 pub const DEFAULT_THEMES_DIR: &str = "themes";
 
@@ -88,10 +92,15 @@ impl ExecutablePaths {
         let env_python = std::env::var_os(PYTHON_EXECUTABLE_ENV_VAR)
             .filter(|value| !value.is_empty())
             .map(PathBuf::from);
+        let project_venv_python = project_venv_python(root);
         Self {
             typst: tool_path(root, raw.typst, defaults.typst),
             rscript: tool_path(root, raw.rscript, defaults.rscript),
-            python: tool_path(root, raw.python.or(env_python), defaults.python),
+            python: tool_path(
+                root,
+                raw.python.or(env_python).or(project_venv_python),
+                defaults.python,
+            ),
             mmdc: tool_path(root, raw.mmdc, defaults.mmdc),
             dot: tool_path(root, raw.dot, defaults.dot),
             tectonic: tool_path(root, raw.tectonic, defaults.tectonic),
@@ -133,6 +142,12 @@ fn tool_path(root: &Path, value: Option<PathBuf>, default: PathBuf) -> PathBuf {
     value
         .map(|path| resolve_tool_path(root, path))
         .unwrap_or(default)
+}
+
+fn project_venv_python(root: &Path) -> Option<PathBuf> {
+    let path = root.join(PROJECT_VENV_PYTHON_RELATIVE_PATH);
+    path.is_file()
+        .then(|| PathBuf::from(PROJECT_VENV_PYTHON_RELATIVE_PATH))
 }
 
 fn resolve_tool_path(root: &Path, path: PathBuf) -> PathBuf {
@@ -228,6 +243,20 @@ mod tests {
         let config = CalepinConfig::load(dir.path()).unwrap();
 
         assert_eq!(config.executables.python, PathBuf::from("env-python"));
+    }
+
+    #[test]
+    fn missing_config_uses_project_venv_python() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        let _env = EnvVarGuard::unset(PYTHON_EXECUTABLE_ENV_VAR);
+        let dir = tempfile::tempdir().unwrap();
+        let python = dir.path().join(PROJECT_VENV_PYTHON_RELATIVE_PATH);
+        std::fs::create_dir_all(python.parent().unwrap()).unwrap();
+        std::fs::write(&python, "").unwrap();
+
+        let config = CalepinConfig::load(dir.path()).unwrap();
+
+        assert_eq!(config.executables.python, python);
     }
 
     #[test]

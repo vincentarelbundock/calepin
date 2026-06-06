@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/config.html">
       
       
-        <link rel="prev" href="./options.html">
+        <link rel="prev" href="./tables_and_figures.html">
       
       
         <link rel="next" href="./templates.html">
@@ -428,6 +428,32 @@
   
   
     <li class="md-nav__item">
+      <a href="./supported-languages.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Supported Languages
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="./options.html" class="md-nav__link">
         
   
@@ -436,6 +462,32 @@
     
   
   Options
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./tables_and_figures.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Tables and Figures
 
     
   </span>
@@ -879,16 +931,16 @@
   <h1 id="__skip">Configuration</h1>
 
 <h2 id="configtoml"><code>config.toml</code><a class="headerlink" href="#configtoml" title="Permanent link">&para;</a></h2>
-<p>Calepin reads executable paths from <code>.calepin/config.toml</code> under the Typst project root. If the file is absent, Calepin uses the current defaults and resolves bare command names on <code>PATH</code>.</p>
+<p>Calepin reads executable paths from <code>.calepin/config.toml</code> under the Typst project root. If the file is absent, Calepin auto-detects a project virtual environment at <code>.venv/bin/python</code> on Unix or <code>.venv/Scripts/python.exe</code> on Windows, then falls back to the current defaults and resolves bare command names on <code>PATH</code>.</p>
 <p>Relative path-like values are resolved from the project root. Bare command names such as <code>python3</code>, <code>Rscript</code>, or <code>typst</code> are left as command names and resolved by the operating system.</p>
-<p>The <code>CALEPIN_PYTHON</code> environment variable can set the default Python executable when <code>python</code> is not configured in <code>.calepin/config.toml</code>. The VS Code extension uses this to pass the interpreter selected by the Python extension to Calepin Watch and Calepin Compile.</p>
+<p>The <code>CALEPIN_PYTHON</code> environment variable can set the default Python executable when <code>python</code> is not configured in <code>.calepin/config.toml</code>. The VS Code extension uses this to pass the interpreter selected by the Python extension to Calepin Watch and Calepin Compile. When neither project config nor <code>CALEPIN_PYTHON</code> is set, the local <code>.venv</code> interpreter is used if it exists.</p>
 <h2 id="executable-paths">Executable paths<a class="headerlink" href="#executable-paths" title="Permanent link">&para;</a></h2>
 <p>Executable paths are configured in <code>.calepin/config.toml</code> under the project root. See <a href="config.html">Configuration</a> for examples.</p>
 <div class="language-toml highlight"><pre><span></span><code><span class="k">[executables]</span>
 <span class="n">python</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;.venv/bin/python&quot;</span>
 </code></pre></div>
 <h2 id="minimal-python-environment">Minimal Python Environment<a class="headerlink" href="#minimal-python-environment" title="Permanent link">&para;</a></h2>
-<p>Use this when a project keeps Python packages in a local virtual environment.</p>
+<p>Use this when a project keeps Python packages somewhere other than the auto-detected <code>.venv</code>.</p>
 <div class="language-toml highlight"><pre><span></span><code><span class="k">[executables]</span>
 <span class="n">python</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;.venv/bin/python&quot;</span>
 </code></pre></div>

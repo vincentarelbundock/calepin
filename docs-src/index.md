@@ -142,6 +142,13 @@ A block chunk runs a piece of code and inserts its result. Start with a plain fe
 x = 41
 print(x + 1)
 ```
+
+Variables are persistent across chunks:
+
+```python
+print(x + 2)
+```
+]
 ````
 
 When you need extra control, use `#calepin.chunk` with options such as labels, captions, hiding source code, or changing how results are shown. If the body is a fenced block with a language, `#calepin.chunk` infers the engine from the fence:
@@ -152,7 +159,6 @@ When you need extra control, use `#calepin.chunk` with options such as labels, c
 x = 41
 print(x + 1)
 ```
-]
 ````
 
 ### Inline
@@ -180,6 +186,12 @@ Here is one full document example.
 ```python
 x = 41
 print(x + 1)
+```
+
+Variables are persistent across chunks:
+
+```python
+print(x + 2)
 ```
 
 The inline answer is #py[`print(40 + 2)`].

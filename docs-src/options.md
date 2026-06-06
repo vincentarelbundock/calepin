@@ -85,7 +85,6 @@ print("This chunk is forced to use python and gets a stable label")
 | `results` | `"verbatim"` | Render text output as verbatim text. Use `"asis"` for Typst markup or `"hide"` to suppress results. |
 | `format` | `auto` | Preferred result formats for display. |
 | `item` | `"all"` | Which result item to render: `"all"`, `"first"`, `"last"`, or an index. |
-| `placeholder` | `auto` | Reserve a placeholder when no result is available. |
 | `kind` | `auto` | Output kind hint, such as table handling for Typst markup results. |
 | `fig-device-format` | `"svg"` | Figure artifact format. |
 | `fig-device-dpi` | `150` | DPI for raster figure devices. |
@@ -96,12 +95,10 @@ print("This chunk is forced to use python and gets a stable label")
 | `fig-display-height` | `auto` | Height used when displaying generated images. |
 | `fig-display-align` | `center` | Alignment for displayed figures. |
 | `fig-display-responsive` | `true` | Constrain displayed figures to the available width in HTML. |
-| `fig-display-link` | `auto` | Optional link around a displayed figure. |
 | `fig-caption` | `none` | Figure caption. |
 | `fig-caption-position` | `auto` | Caption position when Typst can express it. |
 | `fig-alt-text` | `none` | Alternative text for generated images. |
-| `fig-subcaptions` | `none` | Subcaption metadata for multi-output layouts. |
-| `fig-layout-columns` | `auto` | Column layout metadata for future multi-output figure layouts. |
-| `fig-layout-rows` | `auto` | Row layout metadata for future multi-output figure layouts. |
+| `fig-subcaptions` | `none` | Subcaptions for multi-output figure layouts. |
+| `fig-layout-columns` | `auto` | Column tracks for multi-output figure layouts. |
+| `fig-layout-rows` | `auto` | Row tracks for multi-output figure layouts. |
 | `fig-layout-design` | `auto` | Layout design metadata for future multi-output figure layouts. |
-

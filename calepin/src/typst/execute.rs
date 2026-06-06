@@ -215,7 +215,7 @@ fn normalize_plot_path(
     figure: &FigureSpec,
     path: &Path,
 ) -> Result<PathBuf> {
-    let target = figures_dir.join(figure.artifact_filename(label));
+    let target = figures_dir.join(normalized_plot_filename(label, figure, path));
     if path == target {
         return Ok(target);
     }
@@ -227,6 +227,24 @@ fn normalize_plot_path(
         let _ = std::fs::remove_file(path);
     }
     Ok(target)
+}
+
+fn normalized_plot_filename(label: &str, figure: &FigureSpec, path: &Path) -> String {
+    let extension = figure.extension();
+    let Some(stem) = path.file_stem().and_then(|value| value.to_str()) else {
+        return figure.artifact_filename(label);
+    };
+    let Some(suffix) = stem.strip_prefix(&format!("{label}-")) else {
+        return figure.artifact_filename(label);
+    };
+    let Ok(index) = suffix.parse::<usize>() else {
+        return figure.artifact_filename(label);
+    };
+    if index <= 1 {
+        figure.artifact_filename(label)
+    } else {
+        format!("{label}-{index}.{extension}")
+    }
 }
 
 fn stream_item(name: ResultItemName, text: String) -> ResultItem {
@@ -419,6 +437,36 @@ mod tests {
         assert!(dir.path().join("fig-demo.svg").exists());
     }
 
+    #[test]
+    fn normalizes_additional_plots_to_numbered_artifacts() {
+        let dir = tempfile::tempdir().unwrap();
+        let first = dir.path().join("fig-demo-1.svg");
+        let second = dir.path().join("fig-demo-2.svg");
+        std::fs::write(&first, "<svg id=\"first\"></svg>").unwrap();
+        std::fs::write(&second, "<svg id=\"second\"></svg>").unwrap();
+        let chunk = chunk(ResultsMode::Verbatim);
+        let figure = figure_for(&chunk);
+        let items = normalize_engine_results(
+            &chunk,
+            dir.path(),
+            &figure,
+            vec![EngineResult::Plot(first), EngineResult::Plot(second)],
+            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+        )
+        .unwrap();
+
+        assert_eq!(items.len(), 2);
+        assert_eq!(
+            items[0].data.as_ref().unwrap()["image/svg+xml"]["path"],
+            "fig-demo.svg"
+        );
+        assert_eq!(
+            items[1].data.as_ref().unwrap()["image/svg+xml"]["path"],
+            "fig-demo-2.svg"
+        );
+        assert!(dir.path().join("fig-demo.svg").exists());
+        assert!(dir.path().join("fig-demo-2.svg").exists());
+    }
 
     #[test]
     fn diagram_engines_always_use_svg_figures() {

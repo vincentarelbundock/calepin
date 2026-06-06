@@ -209,27 +209,41 @@ while True:
     # bbox_inches="tight" recomputes layout, so set_size_inches after user
     # code is fine even if user called tight_layout().
     #
-    # Only the current figure (gcf) is saved. If a chunk creates multiple
-    # figures, earlier ones are discarded. This matches R's behavior where
-    # only the last plot device output is captured per chunk.
+    def _calepin_plot_path(base, index):
+        if index <= 1:
+            return base
+        root, ext = os.path.splitext(base)
+        if root.endswith("-1"):
+            root = root[:-2]
+        return f"{root}-{index}{ext}"
+
     has_plot = False
     if fig_path:
         try:
             import matplotlib.pyplot as plt
-            fig = last_expr_result if _calepin_is_matplotlib_figure(last_expr_result) else None
-            if fig is None and plt.get_fignums():
-                fig = plt.gcf()
-            if fig is not None:
+            figs = []
+            seen_figs = set()
+            if _calepin_is_matplotlib_figure(last_expr_result):
+                figs.append(last_expr_result)
+                seen_figs.add(id(last_expr_result))
+            for num in plt.get_fignums():
+                fig = plt.figure(num) if hasattr(plt, "figure") else plt.gcf()
+                if id(fig) not in seen_figs:
+                    figs.append(fig)
+                    seen_figs.add(id(fig))
+            for index, fig in enumerate(figs, start=1):
                 fig.set_size_inches(width, height)
+                path = _calepin_plot_path(fig_path, index)
                 saved_plot = False
                 try:
-                    fig.savefig(fig_path, dpi=dpi, bbox_inches="tight")
+                    fig.savefig(path, dpi=dpi, bbox_inches="tight")
                     saved_plot = True
                 except Exception as save_err:
                     parts.append(f"{sentinel}_WARNING:Failed to save figure: {save_err}")
-                plt.close("all")
-                if saved_plot and os.path.exists(fig_path) and os.path.getsize(fig_path) > 0:
+                if saved_plot and os.path.exists(path) and os.path.getsize(path) > 0:
                     has_plot = True
+                    parts.append(f"{sentinel}_PLOT:{path}")
+            plt.close("all")
         except ImportError:
             pass
         except Exception as plot_err:
@@ -240,9 +254,6 @@ while True:
 
     for ww in warns_list:
         parts.append(f"{sentinel}_WARNING:{ww}")
-
-    if has_plot:
-        parts.append(f"{sentinel}_PLOT:{fig_path}")
 
     result = ("\n" + sep + "\n").join(parts)
     print(result, flush=True)

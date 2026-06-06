@@ -128,7 +128,9 @@ calepin.preamble <- function(text) {
     device_id <- NA_integer_
     last_plot_state <- NULL
     plot_pending <- FALSE
-    plot_emitted <- FALSE
+    pending_plot_state <- NULL
+    plot_index <- 1L
+    device_path <- if (isTRUE(nzchar(fig_path))) paste0(fig_path, ".device") else ""
 
     .calepin_plot_threshold <- function(dev_name) {
       if (dev_name %in% c("pdf", "cairo_pdf")) {
@@ -145,7 +147,7 @@ calepin.preamble <- function(text) {
       if (is.na(device_id) || is.null(open_devices) || !(device_id %in% open_devices)) {
         return(NULL)
       }
-      tryCatch(serialize(recordPlot(), NULL), error = function(e) NULL)
+      tryCatch(recordPlot(), error = function(e) NULL)
     }
 
     .calepin_note_plot_change <- function() {
@@ -153,38 +155,99 @@ calepin.preamble <- function(text) {
       if (is.null(current)) {
         return(FALSE)
       }
-      changed <- !identical(current, last_plot_state)
-      last_plot_state <<- current
+      current_key <- tryCatch(serialize(current, NULL), error = function(e) NULL)
+      if (is.null(current_key)) {
+        return(FALSE)
+      }
+      changed <- !identical(current_key, last_plot_state)
+      last_plot_state <<- current_key
       if (changed) {
         plot_pending <<- TRUE
+        pending_plot_state <<- current
       }
       changed
     }
 
+    .calepin_plot_path <- function(index) {
+      if (index <= 1L) {
+        return(fig_path)
+      }
+      ext <- tools::file_ext(fig_path)
+      if (nzchar(ext)) {
+        root <- substr(fig_path, 1L, nchar(fig_path) - nchar(ext) - 1L)
+        root <- sub("-1$", "", root)
+        paste0(root, "-", index, ".", ext)
+      } else {
+        root <- sub("-1$", "", fig_path)
+        paste0(root, "-", index)
+      }
+    }
+
+    .calepin_write_plot_state <- function(state, path) {
+      if (is.null(state) || !isTRUE(nzchar(path))) {
+        return(FALSE)
+      }
+      previous_device <- dev.cur()
+      tryCatch({
+        dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+        if (file.exists(path)) suppressWarnings(file.remove(path))
+        dev_fun <- match.fun(dev_name)
+        if (dev_name %in% c("png", "jpeg", "bmp", "tiff")) {
+          dev_fun(path, width = width, height = height, units = "in", res = dpi)
+        } else {
+          dev_fun(path, width = width, height = height)
+        }
+        replayPlot(state)
+        dev.off()
+        if (!is.null(dev.list()) && previous_device %in% dev.list()) {
+          dev.set(previous_device)
+        }
+        if (!file.exists(path)) {
+          return(FALSE)
+        }
+        sz <- file.info(path)$size
+        is.finite(sz) && sz > .calepin_plot_threshold(dev_name)
+      }, error = function(e) {
+        if (!is.null(dev.list()) && dev.cur() != previous_device) {
+          try(dev.off(), silent = TRUE)
+        }
+        if (!is.null(dev.list()) && previous_device %in% dev.list()) {
+          try(dev.set(previous_device), silent = TRUE)
+        }
+        warns <<- c(warns, paste0("Failed to save figure: ", conditionMessage(e)))
+        FALSE
+      })
+    }
+
     .calepin_emit_plot_pending <- function() {
-      if (plot_pending && !plot_emitted) {
-        parts <<- c(parts, paste0(sentinel, "_PLOT:", fig_path))
+      if (plot_pending) {
+        path <- .calepin_plot_path(plot_index)
+        if (.calepin_write_plot_state(pending_plot_state, path)) {
+          parts <<- c(parts, paste0(sentinel, "_PLOT:", path))
+          plot_index <<- plot_index + 1L
+        }
         plot_pending <<- FALSE
-        plot_emitted <<- TRUE
+        pending_plot_state <<- NULL
       }
     }
 
     # Open graphics device
     has_plot <- FALSE
-    if (isTRUE(nzchar(fig_path)) && isTRUE(nzchar(dev_name))) {
+    if (isTRUE(nzchar(device_path)) && isTRUE(nzchar(dev_name))) {
       tryCatch({
-        dir.create(dirname(fig_path), recursive = TRUE, showWarnings = FALSE)
-        if (file.exists(fig_path)) suppressWarnings(file.remove(fig_path))
+        dir.create(dirname(device_path), recursive = TRUE, showWarnings = FALSE)
+        if (file.exists(device_path)) suppressWarnings(file.remove(device_path))
         dev_fun <- match.fun(dev_name)
         # Raster devices (png, jpeg, etc.) need units and resolution
         if (dev_name %in% c("png", "jpeg", "bmp", "tiff")) {
-          dev_fun(fig_path, width = width, height = height, units = "in", res = dpi)
+          dev_fun(device_path, width = width, height = height, units = "in", res = dpi)
         } else {
-          dev_fun(fig_path, width = width, height = height)
+          dev_fun(device_path, width = width, height = height)
         }
         device_id <- dev.cur()
         dev.control(displaylist = "enable")
-        last_plot_state <- .calepin_plot_state()
+        initial_plot <- .calepin_plot_state()
+        last_plot_state <- if (is.null(initial_plot)) NULL else serialize(initial_plot, NULL)
       }, error = function(e) {
         err_out <<- conditionMessage(e)
       })
@@ -200,6 +263,8 @@ calepin.preamble <- function(text) {
             prev_end <- 0L
             src_buf <- character(0)
             for (i in seq_along(exprs)) {
+              if (plot_pending) .calepin_emit_plot_pending()
+
               # Determine source line range (include gap lines: comments, blanks)
               if (!is.null(srcs) && i <= length(srcs)) {
                 last_line <- srcs[[i]][3L]
@@ -296,12 +361,12 @@ calepin.preamble <- function(text) {
       dev.off(device_id)
     }
 
-    if (isTRUE(nzchar(fig_path)) && file.exists(fig_path)) {
+    if (isTRUE(nzchar(device_path)) && file.exists(device_path)) {
       # Empty device files are small but format-specific: empty PDFs are larger
       # than empty SVGs, while empty raster devices often write no file at all.
-      sz <- file.info(fig_path)$size
+      sz <- file.info(device_path)$size
       has_plot <- is.finite(sz) && sz > .calepin_plot_threshold(dev_name)
-      if (!has_plot) suppressWarnings(file.remove(fig_path))
+      suppressWarnings(file.remove(device_path))
     }
 
     # Collect knitr::knit_meta (used by tinytable, gt, etc. for LaTeX dependencies)
@@ -338,9 +403,6 @@ calepin.preamble <- function(text) {
     if (has_plot) {
       if (plot_pending) {
         .calepin_emit_plot_pending()
-      } else if (!plot_emitted) {
-        parts <- c(parts, paste0(sentinel, "_PLOT:", fig_path))
-        plot_emitted <- TRUE
       }
     }
     if (!is.null(err_out)) {

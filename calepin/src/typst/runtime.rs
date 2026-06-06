@@ -409,6 +409,11 @@ print("RESULT_12345")
             r##"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#88c0d0"/></svg>"##,
         )
         .unwrap();
+        std::fs::write(
+            figures.join("fig-demo-2.svg"),
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><circle cx="60" cy="40" r="30" fill="#a3be8c"/></svg>"##,
+        )
+        .unwrap();
         std::fs::create_dir_all(dir.path().join(".calepin/paper")).unwrap();
         std::fs::write(
             dir.path().join(".calepin/paper/results.json"),
@@ -427,6 +432,14 @@ print("RESULT_12345")
           "data": {
             "image/svg+xml": {
               "path": "/.calepin/paper/figures/fig-demo.svg"
+            }
+          }
+        },
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/paper/figures/fig-demo-2.svg"
             }
           }
         }
@@ -482,7 +495,20 @@ print("ignored")
             String::from_utf8_lossy(&compile.stderr)
         );
         assert!(output.exists());
-        assert!(std::fs::metadata(output).unwrap().len() > 0);
+        assert!(std::fs::metadata(&output).unwrap().len() > 0);
+
+        if Command::new("pdftotext").arg("-v").output().is_ok() {
+            let text = Command::new("pdftotext")
+                .arg(&output)
+                .arg("-")
+                .output()
+                .unwrap();
+            assert!(text.status.success());
+            let extracted = String::from_utf8(text.stdout).unwrap();
+            assert!(extracted.contains("Runtime figure caption"), "{extracted}");
+            assert!(extracted.contains("A"), "{extracted}");
+            assert!(extracted.contains("B"), "{extracted}");
+        }
     }
 
     #[test]

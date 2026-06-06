@@ -228,8 +228,155 @@
   }
 }
 
+#let _display-selection(item, opts) = {
+  let data = item.at("data", default: (:))
+  _select-representation(data, opts.at("format"))
+}
+
+#let _is-image-mime(mime) = mime == "image/svg+xml" or mime == "image/png"
+
+#let _is-image-display-item(item, opts) = {
+  let item-type = item.at("type", default: "")
+  if item-type != "display" and item-type != "result" {
+    return false
+  }
+  let selected = _display-selection(item, opts)
+  selected != none and _is-image-mime(selected.mime)
+}
+
+#let _fr-tracks(count) = {
+  let tracks = ()
+  for _ in range(count) {
+    tracks.push(1fr)
+  }
+  tracks
+}
+
+#let _track-list(value) = {
+  if value == auto or value == none {
+    auto
+  } else if type(value) == int {
+    _fr-tracks(value)
+  } else {
+    value
+  }
+}
+
+#let _auto-grid-columns(count, fig-layout-rows) = {
+  if type(fig-layout-rows) == int and fig-layout-rows > 0 {
+    return _fr-tracks(calc.ceil(count / fig-layout-rows))
+  }
+  if count <= 1 {
+    (1fr,)
+  } else if count <= 4 {
+    (1fr, 1fr)
+  } else {
+    (1fr, 1fr, 1fr)
+  }
+}
+
+#let _grid-columns(count, fig-layout-columns, fig-layout-rows) = {
+  let columns = _track-list(fig-layout-columns)
+  if columns == auto {
+    _auto-grid-columns(count, fig-layout-rows)
+  } else {
+    columns
+  }
+}
+
+#let _grid-content(columns, rows, cells) = {
+  let rows = _track-list(rows)
+  if rows == auto {
+    grid(columns: columns, gutter: 1em, ..cells)
+  } else {
+    grid(columns: columns, rows: rows, gutter: 1em, ..cells)
+  }
+}
+
+#let _caption-for-index(captions, index) = {
+  if captions == none or captions == auto {
+    none
+  } else if type(captions) == array and index < captions.len() {
+    captions.at(index)
+  } else {
+    none
+  }
+}
+
+#let _grid-image(item, opts) = {
+  let selected = _display-selection(item, opts)
+  let value = selected.value
+  let artifact-path = _artifact-path(value)
+  let html-path = _resolve-asset-href(artifact-path)
+  let fig-display-height = opts.at("fig-display-height")
+  let fig-display-responsive = opts.at("fig-display-responsive")
+  let fig-alt-text = opts.at("fig-alt-text")
+  let alt = if fig-alt-text == none { "" } else { fig-alt-text }
+  if _html-target() {
+    _html-image(html-path, 100%, fig-display-height, fig-display-responsive, center, alt)
+  } else {
+    image(artifact-path, width: 100%, height: fig-display-height, alt: alt)
+  }
+}
+
+#let _grid-cell(content, caption) = {
+  if caption == none {
+    content
+  } else {
+    stack(spacing: 0.35em, content, text(size: 0.85em)[#caption])
+  }
+}
+
+#let _wrap-grid-display(content, width, responsive, align) = {
+  if _html-target() {
+    let style = _html-figure-style(width, responsive, align)
+    if style == "" {
+      std.html.elem("div")[#content]
+    } else {
+      std.html.elem("div", attrs: (style: style))[#content]
+    }
+  } else if width == none or width == auto {
+    content
+  } else {
+    block(width: width)[#content]
+  }
+}
+
+#let _render-image-grid(items, label, opts) = {
+  let fig-display-width = opts.at("fig-display-width")
+  let fig-display-align = opts.at("fig-display-align")
+  let fig-display-responsive = opts.at("fig-display-responsive")
+  let fig-display-link = opts.at("fig-display-link")
+  let fig-caption = opts.at("fig-caption")
+  let fig-caption-position = opts.at("fig-caption-position")
+  let fig-subcaptions = opts.at("fig-subcaptions")
+  let fig-layout-columns = opts.at("fig-layout-columns")
+  let fig-layout-rows = opts.at("fig-layout-rows")
+
+  let cells = ()
+  for (index, item) in items.enumerate() {
+    cells.push(_grid-cell(_grid-image(item, opts), _caption-for-index(fig-subcaptions, index)))
+  }
+
+  let columns = _grid-columns(items.len(), fig-layout-columns, fig-layout-rows)
+  let content = _wrap-grid-display(
+    _grid-content(columns, fig-layout-rows, cells),
+    fig-display-width,
+    fig-display-responsive,
+    fig-display-align,
+  )
+  let rendered = if fig-caption != none {
+    _attach-label(
+      figure(content, caption: _figure-caption(fig-caption, fig-caption-position)),
+      label,
+    )
+  } else {
+    content
+  }
+  _finalize-figure-display(rendered, fig-display-align, fig-display-link)
+}
+
 #let _render-display-item(item, label, opts) = {
-  let format = opts.at("format")
   let fig-display-width = opts.at("fig-display-width")
   let fig-display-height = opts.at("fig-display-height")
   let fig-display-align = opts.at("fig-display-align")
@@ -240,14 +387,13 @@
   let fig-alt-text = opts.at("fig-alt-text")
   let kind = opts.at("kind")
 
-  let data = item.at("data", default: (:))
-  let selected = _select-representation(data, format)
+  let selected = _display-selection(item, opts)
   if selected == none {
     return none
   }
   let mime = selected.mime
   let value = selected.value
-  if mime == "image/svg+xml" or mime == "image/png" {
+  if _is-image-mime(mime) {
     let artifact-path = _artifact-path(value)
     let html-path = _resolve-asset-href(artifact-path)
     let display-width = if fig-display-width == auto and fig-display-responsive == true { 100% } else { fig-display-width }
@@ -367,7 +513,27 @@
     }
     return none
   }
+  let image-group = ()
   for result-item in items {
-    _render-item(result-item, label, opts)
+    if _is-image-display-item(result-item, opts) {
+      image-group.push(result-item)
+    } else {
+      if image-group.len() > 0 {
+        if image-group.len() == 1 {
+          _render-item(image-group.first(), label, opts)
+        } else {
+          _render-image-grid(image-group, label, opts)
+        }
+        image-group = ()
+      }
+      _render-item(result-item, label, opts)
+    }
+  }
+  if image-group.len() > 0 {
+    if image-group.len() == 1 {
+      _render-item(image-group.first(), label, opts)
+    } else {
+      _render-image-grid(image-group, label, opts)
+    }
   }
 }

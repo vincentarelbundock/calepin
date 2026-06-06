@@ -4,11 +4,11 @@ title: Configuration
 
 ## `config.toml`
 
-Calepin reads executable paths from `.calepin/config.toml` under the Typst project root. If the file is absent, Calepin uses the current defaults and resolves bare command names on `PATH`.
+Calepin reads executable paths from `.calepin/config.toml` under the Typst project root. If the file is absent, Calepin auto-detects a project virtual environment at `.venv/bin/python` on Unix or `.venv/Scripts/python.exe` on Windows, then falls back to the current defaults and resolves bare command names on `PATH`.
 
 Relative path-like values are resolved from the project root. Bare command names such as `python3`, `Rscript`, or `typst` are left as command names and resolved by the operating system.
 
-The `CALEPIN_PYTHON` environment variable can set the default Python executable when `python` is not configured in `.calepin/config.toml`. The VS Code extension uses this to pass the interpreter selected by the Python extension to Calepin Watch and Calepin Compile.
+The `CALEPIN_PYTHON` environment variable can set the default Python executable when `python` is not configured in `.calepin/config.toml`. The VS Code extension uses this to pass the interpreter selected by the Python extension to Calepin Watch and Calepin Compile. When neither project config nor `CALEPIN_PYTHON` is set, the local `.venv` interpreter is used if it exists.
 
 ## Executable paths
 
@@ -21,7 +21,7 @@ python = ".venv/bin/python"
 
 ## Minimal Python Environment
 
-Use this when a project keeps Python packages in a local virtual environment.
+Use this when a project keeps Python packages somewhere other than the auto-detected `.venv`.
 
 ```toml
 [executables]
