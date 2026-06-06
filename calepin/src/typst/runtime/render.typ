@@ -284,9 +284,59 @@
   }
 }
 
+#let _css-track(value) = {
+  if value == auto {
+    "auto"
+  } else if type(value) == str {
+    value
+  } else {
+    repr(value)
+  }
+}
+
+#let _css-track-template(value) = {
+  if value == auto or value == none {
+    none
+  } else if type(value) == array {
+    let tracks = ()
+    for track in value {
+      tracks.push(_css-track(track))
+    }
+    tracks.join(" ")
+  } else {
+    _css-track(value)
+  }
+}
+
+#let _html-grid-style(columns, rows) = {
+  let style = "display: grid; gap: 1em;"
+  let column-template = _css-track-template(columns)
+  if column-template != none {
+    style = _append-css(style, "grid-template-columns: " + column-template + ";")
+  }
+  let row-template = _css-track-template(rows)
+  if row-template != none {
+    style = _append-css(style, "grid-template-rows: " + row-template + ";")
+  }
+  style
+}
+
+#let _html-grid-content(columns, rows, cells) = {
+  let body = []
+  for cell in cells {
+    body += cell
+  }
+  std.html.elem("div", attrs: (
+    class: "calepin-figure-grid",
+    style: _html-grid-style(columns, rows),
+  ))[#body]
+}
+
 #let _grid-content(columns, rows, cells) = {
   let rows = _track-list(rows)
-  if rows == auto {
+  if _html-target() {
+    _html-grid-content(columns, rows, cells)
+  } else if rows == auto {
     grid(columns: columns, gutter: 1em, ..cells)
   } else {
     grid(columns: columns, rows: rows, gutter: 1em, ..cells)
@@ -320,7 +370,14 @@
 }
 
 #let _grid-cell(content, caption) = {
-  if caption == none {
+  if _html-target() and caption != none {
+    std.html.elem("div", attrs: (style: "min-width: 0;"))[
+      #content
+      #std.html.elem("div", attrs: (style: "font-size: 0.85em; margin-top: 0.35em;"))[#caption]
+    ]
+  } else if _html-target() {
+    std.html.elem("div", attrs: (style: "min-width: 0;"))[#content]
+  } else if caption == none {
     content
   } else {
     stack(spacing: 0.35em, content, text(size: 0.85em)[#caption])

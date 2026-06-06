@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
@@ -96,11 +97,32 @@ struct DocContext {
 #[derive(Serialize)]
 struct ThemeContext {
     doc: DocContext,
+    site: SiteContext,
     styles: Vec<StyleEntry>,
     scripts: Vec<ScriptEntry>,
     syntax_css: String,
     theme: String,
     target: String,
+}
+
+#[derive(Serialize)]
+struct SiteContext {
+    nav: Vec<NavEntry>,
+    toc: Vec<TocEntry>,
+}
+
+#[derive(Serialize)]
+struct NavEntry {
+    href: String,
+    label: String,
+    active: bool,
+}
+
+#[derive(Serialize)]
+struct TocEntry {
+    level: usize,
+    href: String,
+    label: String,
 }
 
 struct HtmlDocumentParts<'a> {
@@ -116,6 +138,8 @@ pub(super) fn apply_html_theme(
     html_theme: Option<&str>,
     themes_dir: &Path,
     syntax_theme: &HtmlSyntaxTheme,
+    output_path: Option<&Path>,
+    project_root: Option<&Path>,
 ) -> Result<String> {
     let Some(name) = html_theme else {
         return Ok(html.to_string());
@@ -124,8 +148,21 @@ pub(super) fn apply_html_theme(
     // Rewrite Typst's inline `style="color: ..."` spans to syntax classes so
     // the theme's syntax CSS (placeholders or `syntax_css`) can drive colors.
     let rewritten = syntax_theme.rewrite_classes(html);
-    let parts = html_document_parts(&rewritten)?;
-    render_theme(loaded, &parts, syntax_theme)
+    // Typst emits a bare HTML fragment (no <html>/<head>/<body> wrapper) when
+    // the document has no explicit html.elem("html") root element, i.e. when
+    // the user has not called #calepin.html[...].  Wrap those fragments in a
+    // minimal well-formed document so html_document_parts can always locate
+    // </head>, <body>, and </body>.
+    let normalized = if rewritten.contains("</head>") {
+        rewritten
+    } else {
+        format!(
+            "<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"></head><body>{}</body></html>",
+            rewritten.trim()
+        )
+    };
+    let parts = html_document_parts(&normalized)?;
+    render_theme(loaded, &parts, syntax_theme, output_path, project_root)
 }
 
 fn load_theme(
@@ -288,6 +325,8 @@ fn render_theme(
     loaded: LoadedTheme,
     parts: &HtmlDocumentParts<'_>,
     syntax_theme: &HtmlSyntaxTheme,
+    output_path: Option<&Path>,
+    project_root: Option<&Path>,
 ) -> Result<String> {
     let name = loaded.name;
     let mut env = Environment::new();
@@ -301,14 +340,16 @@ fn render_theme(
             .map_err(|error| theme_error(&name, error))?;
     }
 
+    let (body, toc) = body_with_heading_ids(parts.body);
     let context = ThemeContext {
         doc: DocContext {
             head: parts.head.to_string(),
             body_open: parts.body_open.to_string(),
-            body: parts.body.to_string(),
+            body,
             body_close: parts.body_close.to_string(),
             title: parts.title.clone().unwrap_or_default(),
         },
+        site: site_context(project_root, output_path, toc),
         styles: loaded.styles,
         scripts: loaded.scripts,
         syntax_css: syntax_css(syntax_theme),
@@ -322,6 +363,187 @@ fn render_theme(
     template
         .render(&context)
         .map_err(|error| theme_error(&name, error))
+}
+
+fn site_context(
+    project_root: Option<&Path>,
+    output_path: Option<&Path>,
+    toc: Vec<TocEntry>,
+) -> SiteContext {
+    SiteContext {
+        nav: nav_entries(project_root, output_path),
+        toc,
+    }
+}
+
+fn nav_entries(project_root: Option<&Path>, output_path: Option<&Path>) -> Vec<NavEntry> {
+    let Some(root) = project_root else {
+        return Vec::new();
+    };
+    let docs_src2 = root.join("docs-src2");
+    let docs_dir = if docs_src2.is_dir() {
+        docs_src2
+    } else {
+        root.to_path_buf()
+    };
+    let Ok(entries) = std::fs::read_dir(&docs_dir) else {
+        return Vec::new();
+    };
+    let current_stem = output_path
+        .and_then(|path| path.file_stem())
+        .and_then(|stem| stem.to_str())
+        .unwrap_or_default();
+
+    let mut stems = entries
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("typ"))
+        .filter_map(|path| {
+            path.file_stem()
+                .and_then(|stem| stem.to_str())
+                .map(|stem| stem.to_string())
+        })
+        .collect::<Vec<_>>();
+    stems.sort_by(|left, right| match (left.as_str(), right.as_str()) {
+        ("index", "index") => std::cmp::Ordering::Equal,
+        ("index", _) => std::cmp::Ordering::Less,
+        (_, "index") => std::cmp::Ordering::Greater,
+        _ => left.cmp(right),
+    });
+
+    stems
+        .into_iter()
+        .map(|stem| NavEntry {
+            href: format!("{stem}.html"),
+            label: html_escape(&format!("{stem}.typ")),
+            active: stem == current_stem,
+        })
+        .collect()
+}
+
+fn body_with_heading_ids(body: &str) -> (String, Vec<TocEntry>) {
+    let mut out = String::with_capacity(body.len());
+    let mut toc = Vec::new();
+    let mut counts = HashMap::<String, usize>::new();
+    let mut cursor = 0;
+
+    while let Some(relative_start) = body[cursor..].find("<h") {
+        let start = cursor + relative_start;
+        let tag_start = start + 2;
+        let Some(level_byte) = body.as_bytes().get(tag_start).copied() else {
+            break;
+        };
+        if !(b"1"[0]..=b"4"[0]).contains(&level_byte) {
+            out.push_str(&body[cursor..start + 2]);
+            cursor = start + 2;
+            continue;
+        }
+        let level = (level_byte - b"0"[0]) as usize;
+        let after_level = tag_start + 1;
+        let Some(after_byte) = body.as_bytes().get(after_level).copied() else {
+            break;
+        };
+        if after_byte != b">"[0] && !after_byte.is_ascii_whitespace() {
+            out.push_str(&body[cursor..after_level]);
+            cursor = after_level;
+            continue;
+        }
+
+        let Some(open_offset) = body[start..].find(">") else {
+            break;
+        };
+        let open_end = start + open_offset + 1;
+        let close_tag = format!("</h{level}>");
+        let Some(close_offset) = body[open_end..].find(&close_tag) else {
+            break;
+        };
+        let close_start = open_end + close_offset;
+        let close_end = close_start + close_tag.len();
+        let open_tag = &body[start..open_end];
+        let inner = &body[open_end..close_start];
+        let label = html_escape(&strip_html_tags(inner));
+        let base_id = slugify(&label);
+        let count = counts.entry(base_id.clone()).or_insert(0);
+        let id = if *count == 0 {
+            base_id
+        } else {
+            format!("{base_id}-{}", *count + 1)
+        };
+        *count += 1;
+
+        out.push_str(&body[cursor..start]);
+        if open_tag.contains(r#" id=""#) {
+            out.push_str(open_tag);
+        } else {
+            out.push_str(&open_tag[..open_tag.len() - 1]);
+            out.push_str(r#" id=""#);
+            out.push_str(&id);
+            out.push(34 as char);
+            out.push(62 as char);
+        }
+        out.push_str(inner);
+        out.push_str(&close_tag);
+        toc.push(TocEntry {
+            level,
+            href: format!("#{id}"),
+            label,
+        });
+        cursor = close_end;
+    }
+
+    out.push_str(&body[cursor..]);
+    (out, toc)
+}
+
+fn strip_html_tags(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut in_tag = false;
+    for ch in value.chars() {
+        match ch as u32 {
+            60 => in_tag = true,
+            62 => in_tag = false,
+            _ if !in_tag => out.push(ch),
+            _ => {}
+        }
+    }
+    decode_basic_entities(out.trim())
+}
+
+fn decode_basic_entities(value: &str) -> String {
+    value
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "\u{27}")
+}
+
+fn html_escape(value: &str) -> String {
+    value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+}
+
+fn slugify(value: &str) -> String {
+    let mut slug = String::new();
+    let mut pending_dash = false;
+    for ch in value.chars().flat_map(|ch| ch.to_lowercase()) {
+        if ch.is_ascii_alphanumeric() {
+            if pending_dash && !slug.is_empty() {
+                slug.push(45 as char);
+            }
+            slug.push(ch);
+            pending_dash = false;
+        } else {
+            pending_dash = true;
+        }
+    }
+    if slug.is_empty() {
+        "section".to_string()
+    } else {
+        slug
+    }
 }
 
 fn theme_error(name: &str, error: minijinja::Error) -> anyhow::Error {

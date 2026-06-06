@@ -58,7 +58,6 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         &initial.layout,
         args.output.as_deref(),
         format.as_deref(),
-        false,
     );
     let root = initial.layout.root.clone();
     let asset_server = if format.as_deref() == Some("html") {

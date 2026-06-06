@@ -3,20 +3,12 @@ mod syntax;
 mod theme;
 
 use anyhow::{anyhow, Context, Result};
-use minijinja::{AutoEscape, Environment};
-use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 use syntax::HtmlSyntaxTheme;
 
-#[derive(Serialize)]
-struct HtmlInMarkdownStyle {
-    css: String,
-}
-
 const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
 const HTML_INPUT_LIGHT_THEME_REF: &str = "/.calepin/calepin-input-light.tmTheme";
-const HTML_IN_MD_LAYOUT: &str = include_str!("../templates/html/html-in-md/layout.html");
 
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedHtmlTheme {
@@ -81,10 +73,18 @@ pub(crate) fn apply_html_theme_file(
     html_theme: Option<&str>,
     themes_dir: &Path,
     syntax_theme: &HtmlSyntaxTheme,
+    root: &Path,
 ) -> Result<()> {
     let html = std::fs::read_to_string(path)
         .with_context(|| format!("failed to read {}", path.display()))?;
-    let themed = theme::apply_html_theme(&html, html_theme, themes_dir, syntax_theme)?;
+    let themed = theme::apply_html_theme(
+        &html,
+        html_theme,
+        themes_dir,
+        syntax_theme,
+        Some(path),
+        Some(root),
+    )?;
     if themed != html {
         std::fs::write(path, themed)
             .with_context(|| format!("failed to write {}", path.display()))?;
@@ -102,99 +102,6 @@ pub(crate) fn inline_html_images_file(path: &Path, root: &Path) -> Result<()> {
             .with_context(|| format!("failed to write {}", path.display()))?;
     }
     Ok(())
-}
-
-pub(crate) fn render_html_in_markdown(path: &Path) -> Result<()> {
-    let rendered = std::fs::read_to_string(path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
-    let head = extract_tag_content(&rendered, "head")
-        .context("generated Calepin HTML is missing <head>")?;
-    let body = extract_tag_content(&rendered, "body")
-        .context("generated Calepin HTML is missing <body>")?;
-    let styles = extract_style_tags(&head)
-        .into_iter()
-        .map(|css| HtmlInMarkdownStyle {
-            css: rewrite_artifact_urls(&css),
-        })
-        .collect();
-    let body = rewrite_artifact_urls(body.trim());
-    let context = HtmlInMarkdownTemplateContext { styles, body };
-    let rendered = render_output_template(context)?;
-
-    std::fs::write(path, rendered.trim_start())
-        .with_context(|| format!("failed to write {}", path.display()))?;
-    Ok(())
-}
-
-#[derive(Serialize)]
-struct HtmlInMarkdownTemplateContext {
-    styles: Vec<HtmlInMarkdownStyle>,
-    body: String,
-}
-
-fn render_output_template(context: HtmlInMarkdownTemplateContext) -> Result<String> {
-    let mut env = Environment::new();
-    env.set_auto_escape_callback(|_| AutoEscape::None);
-    env.add_template("html-in-md", HTML_IN_MD_LAYOUT)
-        .with_context(|| anyhow!("failed to load html-in-md template"))?;
-    let template = env
-        .get_template("html-in-md")
-        .map_err(|error| anyhow!("failed to load html-in-md layout: {error}"))?;
-    template
-        .render(&context)
-        .map_err(|error| anyhow!("failed to render html-in-md template: {error}"))
-}
-
-fn extract_tag_content(document: &str, tag: &str) -> Result<String> {
-    let open_tag = format!("<{}", tag);
-    let close_tag = format!("</{}>", tag);
-    let start = document
-        .find(&open_tag)
-        .ok_or_else(|| anyhow!("missing opening tag <{}>", tag))?;
-    let open_end = start
-        + document[start..]
-            .find('>')
-            .ok_or_else(|| anyhow!("malformed opening <{}>", tag))?
-            + 1;
-    let end = open_end
-        .checked_add(document[open_end..].find(&close_tag).ok_or_else(|| {
-            anyhow!("missing closing tag </{}>", tag)
-        })?)
-        .ok_or_else(|| anyhow!("invalid HTML for tag {}", tag))?;
-
-    Ok(document[open_end..end].to_string())
-}
-
-fn extract_style_tags(head: &str) -> Vec<String> {
-    const STYLE_START: &str = "<style";
-    const STYLE_END: &str = "</style>";
-    let mut head_cursor = head;
-    let mut styles = Vec::new();
-
-    while let Some(start_offset) = head_cursor.find(STYLE_START) {
-        let style_start = start_offset;
-        let style_open_end = match head_cursor[style_start..].find('>') {
-            Some(offset) => style_start + offset + 1,
-            None => break,
-        };
-        let style_close_offset = match head_cursor[style_open_end..].find(STYLE_END) {
-            Some(offset) => style_open_end + offset + STYLE_END.len(),
-            None => break,
-        };
-
-        let css = &head_cursor[style_open_end..(style_close_offset - STYLE_END.len())];
-        styles.push(css.trim().to_string());
-        head_cursor = &head_cursor[style_close_offset..];
-    }
-
-    styles
-}
-
-fn rewrite_artifact_urls(html: &str) -> String {
-    html.replace(r#"src="/.calepin/"#, r#"src=".calepin/"#)
-        .replace(r#"src='/.calepin/"#, r#"src='.calepin/"#)
-        .replace(r#"href="/.calepin/"#, r#"href=".calepin/"#)
-        .replace(r#"href='/.calepin/"#, r#"href='.calepin/"#)
 }
 
 fn resolve_setup_theme_path(root: &Path, value: &str) -> PathBuf {
@@ -216,7 +123,14 @@ mod tests {
     // bare name resolves to the embedded built-in theme.
     fn apply_html_theme(html: &str, html_theme: Option<&str>) -> Result<String> {
         let dir = tempfile::tempdir().unwrap();
-        theme::apply_html_theme(html, html_theme, dir.path(), &HtmlSyntaxTheme::builtin())
+        theme::apply_html_theme(
+            html,
+            html_theme,
+            dir.path(),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+        )
     }
 
     fn write_theme(themes_dir: &Path, name: &str, layout: &str) {
@@ -237,7 +151,39 @@ mod tests {
         assert!(themed.contains("calepin-copy-code"));
         assert!(themed.contains(r#"<nav class="calepin-theme-switcher""#));
         assert!(themed.contains("const themeOrder = [\"\", \"light\", \"dark\"]"));
-        assert!(themed.contains("<h1>Standard Title</h1>"));
+        assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
+    }
+
+    #[test]
+    fn user_html_theme_gets_docs_navigation_and_toc_context() {
+        let dir = tempfile::tempdir().unwrap();
+        let docs = dir.path().join("docs-src2");
+        std::fs::create_dir_all(&docs).unwrap();
+        std::fs::write(docs.join("index.typ"), "").unwrap();
+        std::fs::write(docs.join("cli.typ"), "").unwrap();
+        write_theme(
+            dir.path(),
+            "zensical",
+            r#"{{ doc.body_open }}<aside>{% for item in site.nav %}<a href="{{ item.href }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>{% endfor %}</aside><nav>{% for item in site.toc %}<a href="{{ item.href }}">{{ item.label }}</a>{% endfor %}</nav><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
+        );
+        let output = dir.path().join("docs-src2-build/html/cli.html");
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some("zensical"),
+            dir.path(),
+            &HtmlSyntaxTheme::builtin(),
+            Some(&output),
+            Some(dir.path()),
+        )
+        .unwrap();
+
+        assert!(themed.contains("index.html"));
+        assert!(themed.contains("cli.html"));
+        assert!(themed.contains("cli.typ"));
+        assert!(themed.contains(r#"aria-current="page""#));
+        assert!(themed.contains("href=\"#standard-title\""));
+        assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
     }
 
     #[test]
@@ -258,6 +204,18 @@ mod tests {
         assert!(!themed.contains("calepin-copy-code"));
         assert!(!themed.contains("cdn.jsdelivr.net/npm/@picocss/pico"));
         assert!(!themed.contains("calepin-theme-switcher"));
+    }
+
+    #[test]
+    fn pico_theme_applies_to_bare_html_fragment() {
+        // Typst emits a fragment (no <html>/<head>/<body>) for documents that
+        // don't call #calepin.html[...].  The theme must still apply.
+        let fragment = "<h1>Hello</h1><p>World</p>";
+        let themed = apply_html_theme(fragment, Some("pico")).unwrap();
+
+        assert!(themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
+        assert!(themed.contains("<main class=\"container\">"));
+        assert!(themed.contains(r#"<h1 id="hello">Hello</h1>"#));
     }
 
     #[test]
@@ -339,11 +297,13 @@ mod tests {
             Some("pico"),
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
         )
         .unwrap();
 
         assert!(themed.contains("<custom-shell>"));
-        assert!(themed.contains("<h1>Standard Title</h1>"));
+        assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
         // The built-in pico theme is not used when a user theme shadows it.
         assert!(!themed.contains("cdn.jsdelivr.net/npm/@picocss/pico"));
     }
@@ -373,6 +333,8 @@ mod tests {
             Some("mini"),
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
         )
         .unwrap();
 
@@ -391,6 +353,8 @@ mod tests {
             Some("bare"),
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
         )
         .unwrap_err()
         .to_string();
@@ -413,6 +377,8 @@ mod tests {
             Some("broken"),
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
         )
         .unwrap_err()
         .to_string();
@@ -435,6 +401,8 @@ mod tests {
             Some("title-only"),
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
         )
         .unwrap();
 

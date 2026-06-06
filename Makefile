@@ -157,23 +157,9 @@ cli-reference:  ## Generate docs-src/cli.md from clap help output
 		printf '```\n'; \
 	} > docs-src/cli.md
 
-website: cli-reference  ## Render docs-src/ into docs/
-	@set -eu; tmp="$$(mktemp -d)"; trap 'rm -rf "$$tmp"' EXIT; \
-	uv sync --locked --quiet; \
-	if [ -d docs/superpowers ]; then cp -R docs/superpowers "$$tmp/superpowers"; fi; \
-	mkdir -p .calepin/site docs-src/.calepin overrides; \
-	printf '%s\n' '[executables]' 'python = "$(CURDIR)/.venv/bin/python"' > docs-src/.calepin/config.toml; \
-	$(CALEPIN) compile docs-src/example.typ ../.calepin/site/example --format html --template html-in-md --clean --quiet; \
-	$(CALEPIN) compile docs-src/language-specific-setup.typ ../.calepin/site/language-specific-setup --format html --template html-in-md --clean --quiet; \
-	$(CALEPIN) compile docs-src/example.typ ../.calepin/site/example.pdf --format pdf --quiet; \
-	set +e; uv run zensical build --clean; status=$$?; set -e; \
-	for dir in example language-specific-setup; do \
-	  if [ -d docs-src/.calepin/$$dir ]; then mkdir -p docs/.calepin; cp -R docs-src/.calepin/$$dir docs/.calepin/; fi; \
-	done; \
-	mkdir -p docs/assets; cp .calepin/site/example.pdf docs/assets/example.pdf; \
-	if [ -d "$$tmp/superpowers" ]; then mkdir -p docs; cp -R "$$tmp/superpowers" docs/superpowers; fi; \
-	$(RM) docs/example.typ docs/Catppuccin\ Latte.tmTheme docs/Catppuccin\ Mocha.tmTheme; \
-	exit $$status
+website:  ## Render docs/ via build_website.py
+	@set -eu; \
+	uv run python build_website.py
 
 serve:  ## Build and serve the website at http://localhost:8000
 	$(MAKE) website

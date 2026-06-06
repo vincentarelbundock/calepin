@@ -512,6 +512,117 @@ print("ignored")
     }
 
     #[test]
+    fn typst_compile_html_renders_explicit_figure_grid_layout_from_results() {
+        if Command::new("typst").arg("--version").output().is_err() {
+            return;
+        }
+
+        let dir = typst_accessible_tempdir();
+        write_runtime(dir.path()).unwrap();
+        let figures = dir.path().join(".calepin/paper/figures");
+        std::fs::create_dir_all(&figures).unwrap();
+        std::fs::write(
+            figures.join("fig-demo.svg"),
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#88c0d0"/></svg>"##,
+        )
+        .unwrap();
+        std::fs::write(
+            figures.join("fig-demo-2.svg"),
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><circle cx="60" cy="40" r="30" fill="#a3be8c"/></svg>"##,
+        )
+        .unwrap();
+        std::fs::create_dir_all(dir.path().join(".calepin/paper")).unwrap();
+        std::fs::write(
+            dir.path().join(".calepin/paper/results.json"),
+            r#"{
+  "schema": 1,
+  "calepin_version": "test",
+  "input": "paper.typ",
+  "chunks": {
+    "fig-demo": {
+      "label": "fig-demo",
+      "engine": "python",
+      "status": "ok",
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/paper/figures/fig-demo.svg"
+            }
+          }
+        },
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/paper/figures/fig-demo-2.svg"
+            }
+          }
+        }
+      ]
+    }
+  }
+}"#,
+        )
+        .unwrap();
+
+        let input = dir.path().join("paper.typ");
+        let output = dir.path().join("paper.html");
+        std::fs::write(
+            &input,
+            r##"#import ".calepin/calepin.typ"
+
+#calepin.html[
+  #calepin.chunk(
+    "python",
+    label: "fig-demo",
+    echo: false,
+    fig-caption: [HTML grid figure],
+    fig-subcaptions: ([Panel A], [Panel B]),
+    fig-layout-columns: (2fr, 1fr),
+    fig-layout-rows: (auto, auto),
+  )[`print("ignored")`]
+]
+"##,
+        )
+        .unwrap();
+
+        let compile = Command::new("typst")
+            .arg("compile")
+            .arg(&input)
+            .arg(&output)
+            .arg("--root")
+            .arg(dir.path())
+            .arg("--features")
+            .arg("html")
+            .arg("--input")
+            .arg("calepin-target=html")
+            .arg("--input")
+            .arg("calepin-results=/.calepin/paper/results.json")
+            .output()
+            .unwrap();
+
+        assert!(
+            compile.status.success(),
+            "{}",
+            String::from_utf8_lossy(&compile.stderr)
+        );
+        let html = std::fs::read_to_string(output).unwrap();
+        assert!(html.contains(r#"class="calepin-figure-grid""#), "{html}");
+        assert!(
+            html.contains("grid-template-columns: 2fr 1fr;"),
+            "expected explicit grid columns in HTML output:\n{html}"
+        );
+        assert!(
+            html.contains("grid-template-rows: auto auto;"),
+            "expected explicit grid rows in HTML output:\n{html}"
+        );
+        assert!(html.contains("Panel A"), "{html}");
+        assert!(html.contains("Panel B"), "{html}");
+    }
+
+    #[test]
     fn typst_compile_html_respects_figure_display_dimensions_from_results() {
         if Command::new("typst").arg("--version").output().is_err() {
             return;

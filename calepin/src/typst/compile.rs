@@ -11,7 +11,6 @@ pub struct CompileOptions<'a> {
     pub output: Option<PathBuf>,
     pub format: Option<&'a str>,
     pub typst_args: &'a [String],
-    pub html_in_markdown: bool,
     pub template_theme: Option<&'a str>,
     pub themes_dir: &'a Path,
 }
@@ -96,7 +95,7 @@ fn typst_subcommand_args(
     if let Some(output) = output {
         args.push(output.as_os_str().into());
     } else {
-        let default_output = resolve_output_path(layout, output, format, false);
+        let default_output = resolve_output_path(layout, output, format);
         args.push(default_output.as_os_str().into());
     }
     args.extend(typst_args.iter().map(|arg| OsString::from(arg.as_str())));
@@ -144,28 +143,20 @@ fn html_output_path(
     layout: &LayoutPaths,
     output: Option<&Path>,
     format: Option<&str>,
-    html_in_markdown: bool,
 ) -> Option<PathBuf> {
     if format != Some("html") {
         return None;
     }
-    Some(resolve_output_path(layout, output, format, html_in_markdown))
+    Some(resolve_output_path(layout, output, format))
 }
 
 pub(crate) fn resolve_output_path(
     layout: &LayoutPaths,
     output: Option<&Path>,
     format: Option<&str>,
-    html_in_markdown: bool,
 ) -> PathBuf {
     let extension = match format {
-        Some("html") => {
-            if html_in_markdown {
-                "md"
-            } else {
-                "html"
-            }
-        }
+        Some("html") => "html",
         Some("png") => "png",
         Some("svg") => "svg",
         _ => "pdf",
@@ -197,9 +188,8 @@ fn resolve_default_output_path(
     layout: &LayoutPaths,
     output: Option<&Path>,
     format: Option<&str>,
-    html_in_markdown: bool,
 ) -> PathBuf {
-    resolve_output_path(layout, output, format, html_in_markdown)
+    resolve_output_path(layout, output, format)
 }
 
 pub fn compile_with_typst(
@@ -220,13 +210,11 @@ pub fn compile_with_typst(
         layout,
         options.output.as_deref(),
         options.format,
-        options.html_in_markdown,
     );
     let html_output = html_output_path(
         layout,
         Some(output_path.as_path()),
         options.format,
-        options.html_in_markdown,
     );
     let args = typst_compile_args(
         layout,
@@ -252,12 +240,10 @@ pub fn compile_with_typst(
             html_theme,
             options.themes_dir,
             &prepared_theme.syntax_theme,
+            &layout.root,
         )?;
         inline_html_images_file(&path, &layout.root)?;
 
-        if options.html_in_markdown {
-            crate::html::render_html_in_markdown(&path)?;
-        }
     }
     Ok(())
 }
@@ -403,19 +389,18 @@ mod tests {
         let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
 
         assert_eq!(
-            resolve_output_path(&layout, Some(Path::new("out/report.pdf")), Some("pdf"), false),
+            resolve_output_path(&layout, Some(Path::new("out/report.pdf")), Some("pdf")),
             layout.root.join("out/report.pdf")
         );
         assert_eq!(
-            resolve_output_path(&layout, None, Some("pdf"), false),
+            resolve_output_path(&layout, None, Some("pdf")),
             layout.root.join("paper.pdf")
         );
         assert_eq!(
-            resolve_output_path(&layout, None, Some("html"), false),
+            resolve_output_path(&layout, None, Some("html")),
             layout.root.join("paper.html")
         );
-        assert_eq!(
-            resolve_output_path(&layout, None, None, false),
+        assert_eq!(resolve_output_path(&layout, None, None),
             layout.root.join("paper.pdf")
         );
     }

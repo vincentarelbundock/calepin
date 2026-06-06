@@ -11,6 +11,26 @@
   out
 }
 
+// Detect and strip a version suffix that Typst's fence parser split from
+// the lang identifier.  For example, ```julia-1.2 produces lang="julia-1"
+// with ".2\n" prepended to the code text.  This mirrors the
+// reattach_version_suffix() logic in query.rs so the echo shows clean code.
+#let _strip-lang-version-suffix(engine, code) = {
+  let builtin-engines = ("python", "r", "mermaid", "dot", "tikz", "d2")
+  if engine in builtin-engines { return code }
+  let nl = code.position("\n")
+  if nl == none { return code }
+  let first-line = code.slice(0, nl)
+  if not first-line.starts-with(".") or first-line.len() < 2 { return code }
+  let tail = first-line.slice(1)
+  let parts = tail.split(".")
+  let is-version = parts.all(part =>
+    part.len() > 0 and part.match(regex("^[0-9]+$")) != none
+  )
+  if not is-version { return code }
+  code.slice(nl + 1)
+}
+
 #let _emit-chunk(engine, body, ..args) = context {
   let options = _call-defaults + args.named()
   let label = options.at("label")
@@ -28,6 +48,7 @@
   } else {
     let code = _raw-text(body)
     let code = if code.starts-with("\n") { code.slice(1) } else { code }
+    let code = _strip-lang-version-suffix(engine, code)
     let options = _resolve-options(engine, options)
     let show-echo = options.at("echo") == true
     let results-path = sys.inputs.at("calepin-results", default: "")

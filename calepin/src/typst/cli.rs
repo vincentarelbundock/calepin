@@ -3,7 +3,7 @@ use std::io::Write;
 
 use anyhow::{Context, Result};
 
-use crate::cli::{set_quiet, CompileArgs, CompileOutputTemplate, NewArgs, StopArgs, WatchArgs};
+use crate::cli::{set_quiet, CompileArgs, NewArgs, StopArgs, WatchArgs};
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess, PreprocessOptions};
 
@@ -73,11 +73,7 @@ pub fn handle_stop(args: StopArgs) -> Result<()> {
 pub fn handle_compile(args: CompileArgs) -> Result<()> {
     set_quiet(args.common.quiet);
     let format = args.format.map(|format| format.as_str().to_string());
-    let template_name = args.template.map(CompileOutputTemplate::html_template_name).flatten();
-    let html_in_markdown = args
-        .template
-        .as_ref()
-        .is_some_and(CompileOutputTemplate::is_html_in_markdown);
+    let template_name = args.template.as_deref();
     if args.template.is_some() && format.as_deref() != Some("html") {
         return Err(anyhow::anyhow!(
             "`--template` can only be used with `--format html`"
@@ -98,7 +94,6 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             output: args.output,
             format: format.as_deref(),
             typst_args: &args.typst_args,
-            html_in_markdown,
             template_theme: template_name,
             themes_dir: &output.themes_dir,
         },

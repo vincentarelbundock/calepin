@@ -2,12 +2,12 @@
 
 /* Home page hero: Calepin wordmark and tagline, centered, theme-aware. */
 
-.md-typeset h1,
-.md-typeset h2,
-.md-typeset h3,
-.md-typeset h4,
-.md-typeset h5,
-.md-typeset h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
   letter-spacing: 0.02em;
 }

@@ -151,12 +151,15 @@ fn parse_chunk_raw_block(
     let Some(engine) = EngineName::parse(lang).ok() else {
         return Ok(None);
     };
+    let raw_text = value.get("text").and_then(Value::as_str).unwrap_or("");
+    // Reattach any version suffix Typst split from the lang identifier
+    // (e.g. ```julia-1.2 → lang="julia-1", text=".2\n...").
+    let (engine, code) = reattach_version_suffix(engine, lang, raw_text);
+    // Allow if the original lang OR the reattached engine name is permitted.
     let defaults = config.defaults_for_engine(&engine);
-    if !defaults.raw_chunks.allows(lang) {
+    if !defaults.raw_chunks.allows(lang) && !defaults.raw_chunks.allows(engine.as_str()) {
         return Ok(None);
     }
-    let code = value.get("text").and_then(Value::as_str).unwrap_or("");
-    let code = code.strip_prefix('\n').unwrap_or(code).to_string();
     let label = next_available_label(seen, auto_label_index);
     seen.insert(label.clone());
     let fig_display_width = defaults.fig_display_width.clone();
@@ -641,6 +644,50 @@ fn extract_text(value: &Value) -> Option<String> {
     None
 }
 
+/// Typst's raw-block fence parser stops the `lang` identifier at the first
+/// period, so ` ```julia-1.2 ` produces `lang="julia-1"` and a code text
+/// that begins with `".2\n"`.  This function detects that pattern and
+/// re-attaches the split suffix to the engine name while stripping it from
+/// the code.
+///
+/// The heuristic is conservative: the leading line must consist solely of a
+/// dot followed by one or more groups of `.<digits>` (a pure version suffix
+/// like `.2`, `.11`, `.2.1`).  Anything else is left untouched.
+fn reattach_version_suffix(engine: EngineName, lang: &str, raw_text: &str) -> (EngineName, String) {
+    // Typst may include the fence line's trailing newline as the first byte
+    // of the text field.  For the period-split case (```julia-1.12 →
+    // lang="julia-1") the remainder ".12" may appear either right at the
+    // start or after that leading newline.  Strip it before inspecting.
+    let text = raw_text.strip_prefix('\n').unwrap_or(raw_text);
+
+    // Only relevant for Jupyter kernels (unknown engine names).
+    if !matches!(engine, EngineName::Jupyter(_)) {
+        return (engine, text.to_string());
+    }
+
+    // The text must start with a version-like suffix (".N[.N...]") on its
+    // own line.
+    let (first_line, rest) = match text.split_once('\n') {
+        Some((f, r)) => (f, r),
+        // No newline: the entire (stripped) text is the first line.
+        None => (text, ""),
+    };
+
+    // The first line must look like ".<digits>[.<digits>]*" – pure version.
+    let is_version_suffix = first_line.starts_with('.')
+        && first_line.len() > 1
+        && first_line[1..].split('.').all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()));
+
+    if !is_version_suffix {
+        return (engine, text.to_string());
+    }
+
+    // Reconstruct the full kernel name (lang + the suffix that Typst split off).
+    let full_name = format!("{}{}", lang, first_line);
+    let new_engine = EngineName::Jupyter(full_name);
+    (new_engine, rest.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1118,5 +1165,81 @@ mod tests {
         );
         let err = parse_chunks(&json, None).unwrap_err().to_string();
         assert!(err.contains("exactly one raw element"));
+    }
+
+    // reattach_version_suffix ---------------------------------------------------
+
+    #[test]
+    fn reattaches_minor_version_suffix_no_leading_newline() {
+        // Typst puts ".2" at the very start of the text (no leading newline).
+        let (engine, code) = reattach_version_suffix(
+            EngineName::Jupyter("julia-1".into()),
+            "julia-1",
+            ".2\nx = 41\nprint(x + 1)",
+        );
+        assert_eq!(engine, EngineName::Jupyter("julia-1.2".into()));
+        assert_eq!(code, "x = 41\nprint(x + 1)");
+    }
+
+    #[test]
+    fn reattaches_minor_version_suffix_with_leading_newline() {
+        // Typst may include the fence line's trailing newline before ".2".
+        let (engine, code) = reattach_version_suffix(
+            EngineName::Jupyter("julia-1".into()),
+            "julia-1",
+            "\n.2\nx = 41\nprint(x + 1)",
+        );
+        assert_eq!(engine, EngineName::Jupyter("julia-1.2".into()));
+        assert_eq!(code, "x = 41\nprint(x + 1)");
+    }
+
+    #[test]
+    fn reattaches_two_part_version_suffix() {
+        // ```some-kernel-1.2.3 → lang="some-kernel-1", text=".2.3\ncode"
+        let (engine, code) = reattach_version_suffix(
+            EngineName::Jupyter("some-kernel-1".into()),
+            "some-kernel-1",
+            ".2.3\ncode",
+        );
+        assert_eq!(engine, EngineName::Jupyter("some-kernel-1.2.3".into()));
+        assert_eq!(code, "code");
+    }
+
+    #[test]
+    fn no_reattach_when_first_line_is_not_version() {
+        // A leading newline with normal code (no version suffix to strip).
+        let (engine, code) = reattach_version_suffix(
+            EngineName::Jupyter("julia-1".into()),
+            "julia-1",
+            "\nx = 41",
+        );
+        assert_eq!(engine, EngineName::Jupyter("julia-1".into()));
+        assert_eq!(code, "x = 41");
+    }
+
+    #[test]
+    fn no_reattach_for_builtin_engine() {
+        // Built-in engines like Python are not Jupyter and must not be touched.
+        let (engine, code) =
+            reattach_version_suffix(EngineName::Python, "python", ".2\nprint(1)");
+        assert_eq!(engine, EngineName::Python);
+        assert_eq!(code, ".2\nprint(1)");
+    }
+
+    #[test]
+    fn raw_block_with_period_in_lang_parsed_correctly() {
+        // Simulate what Typst produces for ```julia-1.2\nx = 41\n```
+        // (lang truncated to "julia-1", ".2\n" prepended to text).
+        let defaults = SetupDefaults {
+            raw_chunks: RawChunks::All,
+            ..SetupDefaults::default()
+        };
+        let json = r#"[
+          {"func":"raw","text":".2\nx = 41\nprint(x + 1)","block":true,"lang":"julia-1"}
+        ]"#;
+        let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].engine, EngineName::Jupyter("julia-1.2".into()));
+        assert_eq!(chunks[0].code, "x = 41\nprint(x + 1)");
     }
 }

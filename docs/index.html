@@ -1,1295 +1,1543 @@
-
-<!doctype html>
-<html lang="en" class="no-js">
+<!DOCTYPE html>
+<html>
   <head>
-    
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      
-        <meta name="description" content="Experimental Typst preprocessor for executable code chunks.">
-      
-      
-        <meta name="author" content="Vincent Arel-Bundock">
-      
-      
-        <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/index.html">
-      
-      
-      
-        <link rel="next" href="./supported-languages.html">
-      
-      
-        
-      
-      
-      <link rel="icon" href="./assets/logo_short_2.svg">
-      <meta name="generator" content="zensical-0.0.43">
-    
-    
-      
-        <title>Index - Calepin</title>
-      
-    
-    
-      
-        
-      
-      <link rel="stylesheet" href="./assets/stylesheets/modern/main.fba56155.min.css">
-      
-        
-          
-        
-        <link rel="stylesheet" href="./assets/stylesheets/modern/palette.dfe2e883.min.css">
-      
-      
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+    <meta name="color-scheme" content="light dark">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
+
+/* Calepin website theme — Pico-native overrides.
+ *
+ * Pico is loaded unlayered via <link> in layout.html; this stylesheet is
+ * inlined immediately after it, so plain rules win at equal specificity by
+ * source order (Pico uses zero-specificity :where() selectors throughout).
+ * That is why there is no @layer wrapping and no !important here: the cascade
+ * already favours these rules. Keep selectors class-scoped so we tune Pico
+ * rather than fight it. */
+
+:root {
+    --calepin-syntax-foreground: #003b4f;
+  --calepin-syntax-background: #f7f7f5;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #4759ab;
+  --calepin-syntax-number: #ad0000;
+  --calepin-syntax-operator: #5e5e5e;
+  --calepin-syntax-parameter: #667321;
 
 
-    
-    
-      
-    
-    
-      
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
-        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
-      
-    
-    
-      <link rel="stylesheet" href="./assets/stylesheets/extra.css">
-    
-    <script>__md_scope=new URL(".",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
-    
-      
+  /* Brand accent (mapped onto Pico's primary colour scale below). */
+  --calepin-accent: #1c9bad;
+  --calepin-accent-hover: #16808f;
 
-    
-    
-  
-  <link rel="icon" href="./assets/logo_short_2.png" type="image/png" sizes="32x32">
-  <link rel="shortcut icon" href="./assets/favicon.ico" type="image/x-icon">
+  /* Layout */
+  --calepin-topbar-height: 3.5rem;
+  --calepin-topbar-z: 20;
+  --calepin-overlay-z: 25;
+  --calepin-drawer-z: 30;
+  --calepin-side-width: 12rem;
+  --calepin-shell-gap: 1.5rem;
+  --calepin-sidebar-mobile-width: min(18rem, 78vw);
+  --calepin-radius-sm: 4px;
+}
 
-  </head>
-  
-  
-    
-    
-      
-    
-    
-    
-    
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
-  
-    
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
-    <div data-md-component="skip">
-      
-        
-        <a href="#what-is-calepin" class="md-skip">
-          Skip to content
-        </a>
-      
-    </div>
-    <div data-md-component="announce">
-      
-    </div>
-    
-    
-      
+/* Teal brand accent, the Pico-native way: override the primary colour scale for
+ * every scheme. `:root:not([data-theme="dark"])` matches the specificity of
+ * Pico's own light/auto selectors, and `[data-theme="dark"]` covers forced
+ * dark; both are later in source order than Pico, so our teal wins. We use the
+ * same accent in light and dark. */
+:root:not([data-theme="dark"]),
+[data-theme="dark"] {
+  --pico-primary: var(--calepin-accent);
+  --pico-primary-background: var(--calepin-accent);
+  --pico-primary-border: var(--calepin-accent);
+  --pico-primary-underline: rgba(28, 155, 173, 0.5);
+  --pico-primary-hover: var(--calepin-accent-hover);
+  --pico-primary-hover-background: var(--calepin-accent-hover);
+  --pico-primary-hover-border: var(--calepin-accent-hover);
+  --pico-primary-hover-underline: var(--calepin-accent-hover);
+  --pico-primary-focus: rgba(28, 155, 173, 0.4);
+  --pico-primary-inverse: #fff;
+}
 
-  
+html {
+  scroll-behavior: smooth;
+}
 
-<header class="md-header md-header--shadow" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="" title="Calepin" class="md-header__button md-logo" aria-label="Calepin" data-md-component="logo">
-      
-  
-  <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+}
 
-<svg
-   width="24.908279mm"
-   height="25.230688mm"
-   viewBox="0 0 24.90828 25.230688"
-   version="1.1"
-   id="svg1"
-   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
-   sodipodi:docname="logo_short_2.svg"
-   inkscape:export-filename="logo_long_text_2.png"
-   inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.98691752"
-     inkscape:cx="152.49501"
-     inkscape:cy="266.4863"
-     inkscape:window-width="1512"
-     inkscape:window-height="921"
-     inkscape:window-x="0"
-     inkscape:window-y="33"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="layer1" />
-  <defs
-     id="defs1" />
-  <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
-     id="layer1"
-     transform="translate(-40.950869,-44.061117)">
-    <path
-       d="m 59.186668,76.538231 h -0.565271 q -0.263792,-0.301478 -0.602955,-0.527586 -0.339162,-0.263793 -1.055171,-0.263793 -0.565271,0 -1.243595,0.226108 -0.64064,0.188424 -1.507388,0.452217 -0.829064,0.263793 -1.884235,0.452216 -1.055172,0.226108 -2.336452,0.226108 -2.374136,0 -4.635218,-0.866748 -2.223397,-0.866748 -4.220686,-2.826352 -1.846551,-1.846551 -3.090146,-4.371425 -1.243595,-2.524875 -1.243595,-5.841129 0,-2.826352 1.017487,-5.388912 1.017487,-2.56256 2.826353,-4.522164 1.808865,-1.959604 4.258371,-3.090145 2.449505,-1.168226 5.351227,-1.168226 1.168226,0 2.072659,0.226108 0.904432,0.226108 1.620442,0.527586 0.716009,0.263793 1.318964,0.489901 0.602955,0.226108 1.168226,0.226108 0.753694,0 1.055171,-0.226108 0.339163,-0.263793 0.602956,-0.565271 h 0.56527 v 7.53694 H 58.24455 Q 57.905388,55.811646 57.377802,54.417312 56.850217,53.022978 55.908099,51.967806 54.965982,50.87495 53.496278,50.23431 52.06426,49.555986 49.916232,49.555986 q -1.997289,0 -3.429308,0.64064 -1.432019,0.602955 -2.411821,1.658126 -0.979802,1.017487 -1.582757,2.411821 -0.565271,1.356649 -0.866748,2.901722 -0.301478,1.507388 -0.414532,3.090145 -0.07537,1.545073 -0.07537,2.939407 0,3.956894 0.64064,6.557138 0.640639,2.600244 1.77118,4.107632 1.168226,1.507388 2.788668,2.110343 1.620442,0.602956 3.580047,0.602956 2.524875,0 4.069947,-0.71601 1.545073,-0.716009 2.487191,-1.84655 0.942117,-1.168226 1.432018,-2.600244 0.489901,-1.469704 0.866748,-2.901722 h 0.414532 z"
-       id="text8"
-       style="font-size:37.6847px;font-family:Didot;-inkscape-font-specification:'Didot, Normal';letter-spacing:-1.70758px;word-spacing:0px;stroke-width:2.22546;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       transform="scale(1.1127362,0.8986856)"
-       aria-label="C" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:33.8667px;font-family:Courier;-inkscape-font-specification:Courier;letter-spacing:1.15887px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="55.226665"
-       y="54.690483"
-       id="text3"><tspan
-         sodipodi:role="line"
-         id="tspan3"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Courier;-inkscape-font-specification:Courier;stroke-width:1.99999"
-         x="55.226665"
-         y="54.690483" /></text>
-    <path
-       style="font-weight:500;font-size:12.3677px;font-family:'Hasklug Nerd Font';-inkscape-font-specification:'Hasklug Nerd Font, Medium';letter-spacing:-1.92141px;word-spacing:0px;stroke-width:2.50416;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       d="m 52.749381,60.203635 v -1.150196 l -3.611369,-2.386966 v -0.04947 l 3.611369,-2.386967 V 53.07984 l -4.662623,3.116661 v 0.890474 z m 0.515031,2.523011 h 1.063622 L 58.38464,51.966747 h -1.063623 z m 5.635259,-2.523011 4.662623,-3.11666 V 56.196501 L 58.899671,53.07984 v 1.150196 l 3.611368,2.386967 v 0.04947 l -3.611368,2.386966 z"
-       id="text4"
-       aria-label="&lt;/&gt;" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:9.87777px;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:-1.53458px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="45.843494"
-       y="78.282463"
-       id="text5"><tspan
-         sodipodi:role="line"
-         id="tspan5"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';stroke-width:1.99999"
-         x="45.843494"
-         y="78.282463" /></text>
-  </g>
-</svg>
+/* ------------------------------------------------------------------ Shell */
 
-    </a>
-    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
-      
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
-    </label>
-    <div class="md-header__title" data-md-component="header-title">
-      <div class="md-header__ellipsis">
-        <div class="md-header__topic">
-          <span class="md-ellipsis">
-            Calepin
-          </span>
-        </div>
-        <div class="md-header__topic" data-md-component="header-topic">
-          <span class="md-ellipsis">
-            
-              Index
-            
-          </span>
-        </div>
-      </div>
-    </div>
-    
-      
-        <form class="md-header__option" data-md-component="palette">
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
-    
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-      </label>
-    
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
-    
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
-      </label>
-    
-  
-</form>
-      
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
-    
-    
-    
-      
-      
-        <label class="md-header__button md-icon" for="__search" aria-label="Search">
-          
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-        </label>
-        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
-  <button type="button" class="md-search__button">
-    Search
-  </button>
-</div>
-      
-    
-    <div class="md-header__source">
-      
-        <a href="https://github.com/vincentarelbundock/calepin" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
-  </div>
-  <div class="md-source__repository">
-    vincentarelbundock/calepin
-  </div>
-</a>
-      
-    </div>
-  </nav>
-  
-</header>
-    
-    <div class="md-container" data-md-component="container">
-      
-      
-        
-          
-        
-      
-      <main class="md-main" data-md-component="main">
-        <div class="md-main__inner md-grid">
-          
-            
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
+.calepin-website-shell.grid {
+  display: grid;
+  grid-template-columns: var(--calepin-side-width) minmax(0, 1fr) var(--calepin-side-width);
+  grid-template-areas: "sidebar main toc";
+  gap: var(--calepin-shell-gap);
+  width: min(100% - 2rem, 95rem);
+  margin: 0;
+  justify-items: stretch;
+  justify-content: start;
+  padding: 2rem 0 4rem;
+  padding-inline-start: 1rem;
+}
+
+.calepin-website-sidebar {
+  grid-area: sidebar;
+}
+
+.calepin-website-main {
+  grid-area: main;
+  min-width: 0;
+  padding-inline: 1rem;
+}
+
+.calepin-website-main > :first-child {
+  margin-top: 0;
+}
+
+.calepin-website-toc {
+  grid-area: toc;
+}
+
+.calepin-website-sidebar,
+.calepin-website-toc {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  align-self: start;
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow: auto;
+  text-align: left;
+}
+
+/* ----------------------------------------------------------- Topbar / nav */
+
+.calepin-website-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--calepin-topbar-z);
+  min-height: var(--calepin-topbar-height);
+  padding: 0 1.25rem;
+  background: color-mix(in srgb, var(--pico-background-color) 92%, transparent);
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  backdrop-filter: blur(12px);
+}
+
+/* Pico's <nav> already lays the two <ul> groups out with space-between. */
+.calepin-website-topbar nav {
+  min-height: var(--calepin-topbar-height);
+}
+
+.calepin-website-topbrand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.calepin-website-topbrand-logo {
+  display: block;
+  height: 1.4rem;
+  width: auto;
+}
+
+.calepin-website-topbrand svg {
+  fill: currentColor;
+}
+
+.calepin-website-view-mode {
+  width: auto;
+  min-width: 6rem;
+  margin: 0;
+  padding: 0.3rem 1.8rem 0.3rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.calepin-website-theme-button,
+.calepin-website-nav-toggle {
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: 0;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.calepin-website-theme-button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  stroke: currentColor;
+  fill: none;
+}
+
+.calepin-website-theme-button svg path[fill="currentColor"] {
+  fill: currentColor;
+}
+
+.calepin-website-nav-toggle {
+  display: none;
+  font-size: 1.2rem;
+}
+
+.calepin-website-github-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.calepin-website-github-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentColor;
+}
 
 
+/* --------------------------------------------------------- Sidebar + TOC */
 
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
-  <label class="md-nav__title" for="__drawer">
-    <a href="" title="Calepin" class="md-nav__button md-logo" aria-label="Calepin" data-md-component="logo">
-      
-  
-  <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
+#calepin-website-sidebar,
+#calepin-website-sidebar nav,
+#calepin-website-sidebar nav ul,
+#calepin-website-sidebar nav li,
+#calepin-website-sidebar nav li a,
+#calepin-website-toc,
+#calepin-website-toc nav,
+#calepin-website-toc nav ul,
+#calepin-website-toc nav li,
+#calepin-website-toc nav li a {
+  text-align: left !important;
+}
 
-<svg
-   width="24.908279mm"
-   height="25.230688mm"
-   viewBox="0 0 24.90828 25.230688"
-   version="1.1"
-   id="svg1"
-   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
-   sodipodi:docname="logo_short_2.svg"
-   inkscape:export-filename="logo_long_text_2.png"
-   inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.98691752"
-     inkscape:cx="152.49501"
-     inkscape:cy="266.4863"
-     inkscape:window-width="1512"
-     inkscape:window-height="921"
-     inkscape:window-x="0"
-     inkscape:window-y="33"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="layer1" />
-  <defs
-     id="defs1" />
-  <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
-     id="layer1"
-     transform="translate(-40.950869,-44.061117)">
-    <path
-       d="m 59.186668,76.538231 h -0.565271 q -0.263792,-0.301478 -0.602955,-0.527586 -0.339162,-0.263793 -1.055171,-0.263793 -0.565271,0 -1.243595,0.226108 -0.64064,0.188424 -1.507388,0.452217 -0.829064,0.263793 -1.884235,0.452216 -1.055172,0.226108 -2.336452,0.226108 -2.374136,0 -4.635218,-0.866748 -2.223397,-0.866748 -4.220686,-2.826352 -1.846551,-1.846551 -3.090146,-4.371425 -1.243595,-2.524875 -1.243595,-5.841129 0,-2.826352 1.017487,-5.388912 1.017487,-2.56256 2.826353,-4.522164 1.808865,-1.959604 4.258371,-3.090145 2.449505,-1.168226 5.351227,-1.168226 1.168226,0 2.072659,0.226108 0.904432,0.226108 1.620442,0.527586 0.716009,0.263793 1.318964,0.489901 0.602955,0.226108 1.168226,0.226108 0.753694,0 1.055171,-0.226108 0.339163,-0.263793 0.602956,-0.565271 h 0.56527 v 7.53694 H 58.24455 Q 57.905388,55.811646 57.377802,54.417312 56.850217,53.022978 55.908099,51.967806 54.965982,50.87495 53.496278,50.23431 52.06426,49.555986 49.916232,49.555986 q -1.997289,0 -3.429308,0.64064 -1.432019,0.602955 -2.411821,1.658126 -0.979802,1.017487 -1.582757,2.411821 -0.565271,1.356649 -0.866748,2.901722 -0.301478,1.507388 -0.414532,3.090145 -0.07537,1.545073 -0.07537,2.939407 0,3.956894 0.64064,6.557138 0.640639,2.600244 1.77118,4.107632 1.168226,1.507388 2.788668,2.110343 1.620442,0.602956 3.580047,0.602956 2.524875,0 4.069947,-0.71601 1.545073,-0.716009 2.487191,-1.84655 0.942117,-1.168226 1.432018,-2.600244 0.489901,-1.469704 0.866748,-2.901722 h 0.414532 z"
-       id="text8"
-       style="font-size:37.6847px;font-family:Didot;-inkscape-font-specification:'Didot, Normal';letter-spacing:-1.70758px;word-spacing:0px;stroke-width:2.22546;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       transform="scale(1.1127362,0.8986856)"
-       aria-label="C" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:33.8667px;font-family:Courier;-inkscape-font-specification:Courier;letter-spacing:1.15887px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="55.226665"
-       y="54.690483"
-       id="text3"><tspan
-         sodipodi:role="line"
-         id="tspan3"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Courier;-inkscape-font-specification:Courier;stroke-width:1.99999"
-         x="55.226665"
-         y="54.690483" /></text>
-    <path
-       style="font-weight:500;font-size:12.3677px;font-family:'Hasklug Nerd Font';-inkscape-font-specification:'Hasklug Nerd Font, Medium';letter-spacing:-1.92141px;word-spacing:0px;stroke-width:2.50416;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       d="m 52.749381,60.203635 v -1.150196 l -3.611369,-2.386966 v -0.04947 l 3.611369,-2.386967 V 53.07984 l -4.662623,3.116661 v 0.890474 z m 0.515031,2.523011 h 1.063622 L 58.38464,51.966747 h -1.063623 z m 5.635259,-2.523011 4.662623,-3.11666 V 56.196501 L 58.899671,53.07984 v 1.150196 l 3.611368,2.386967 v 0.04947 l -3.611368,2.386966 z"
-       id="text4"
-       aria-label="&lt;/&gt;" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:9.87777px;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:-1.53458px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="45.843494"
-       y="78.282463"
-       id="text5"><tspan
-         sodipodi:role="line"
-         id="tspan5"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';stroke-width:1.99999"
-         x="45.843494"
-         y="78.282463" /></text>
-  </g>
-</svg>
+.calepin-website-sidebar nav,
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left !important;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
 
-    </a>
-    Calepin
-  </label>
-  
-    <div class="md-nav__source">
-      <a href="https://github.com/vincentarelbundock/calepin" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
-  </div>
-  <div class="md-source__repository">
-    vincentarelbundock/calepin
-  </div>
-</a>
-    </div>
-  
-  <ul class="md-nav__list" data-md-scrollfix>
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Home
+.calepin-website-sidebar nav ul,
+.calepin-website-toc nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left !important;
+  width: 100%;
+}
 
-    
-  </span>
-  
-  
+.calepin-website-sidebar nav li,
+.calepin-website-toc nav li {
+  display: block;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  text-align: left !important;
+}
 
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="index.html" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Home
+.calepin-website-sidebar a,
+.calepin-website-toc a {
+  display: block;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  text-decoration: none;
+  text-align: left !important;
+  width: 100%;
+  color: inherit;
+  white-space: normal;
+  line-height: 1.45;
+}
 
-    
-  </span>
-  
-  
+.calepin-website-sidebar a:hover,
+.calepin-website-toc a:hover,
+.calepin-website-sidebar a:focus,
+.calepin-website-toc a:focus,
+.calepin-website-sidebar a:active,
+.calepin-website-toc a:active,
+.calepin-website-sidebar a:visited,
+.calepin-website-toc a:visited {
+  color: inherit;
+  background: color-mix(in srgb, var(--calepin-accent) 12%, transparent);
+}
 
-      </a>
-      
-        
+.calepin-website-sidebar a.active,
+.calepin-website-sidebar a[aria-current],
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-accent) 14%, transparent);
+  font-weight: 600;
+  color: inherit;
+}
 
+/* Section labels rendered as <p><strong>…</strong></p> by build_website.py. */
+.calepin-website-sidebar nav p,
+.calepin-website-toc-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+  text-align: left;
+  font-weight: 600;
+}
 
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#what-is-calepin" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        What is Calepin?
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-calepin" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Install calepin
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#render" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Render
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#watch" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Watch
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Example
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#preamble" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Preamble
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#chunks" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Chunks
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#inline" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Inline
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#all-together-now" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        All together now
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
+.calepin-website-sidebar nav p {
+  margin: 0.85rem 0 0.9rem;
+}
 
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./supported-languages.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Supported Languages
+.calepin-website-sidebar nav p strong {
+  font-weight: inherit;
+}
 
-    
-  </span>
-  
-  
+.calepin-website-sidebar nav p:first-child {
+  margin-top: 0;
+}
 
-      </a>
-    </li>
-  
+.calepin-website-toc-title {
+  margin: 0 0 0.9rem;
+}
 
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./options.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Options
+.calepin-website-toc li.level-3 a {
+  padding-left: 1rem;
+}
 
-    
-  </span>
-  
-  
+.calepin-website-toc li.level-4 a {
+  padding-left: 1.6rem;
+}
 
-      </a>
-    </li>
-  
+/* ---------------------------------------------------- Code & cell output */
 
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./tables_and_figures.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Tables and Figures
+.sourceCode,
+div.sourceCode,
+pre.sourceCode {
+  background: var(--calepin-syntax-background);
+  color: var(--calepin-syntax-foreground);
+  border: 1px solid var(--pico-muted-border-color);
+  border-left: 3px solid var(--pico-primary);
+  border-radius: var(--calepin-radius-sm);
+  font-family: var(--pico-font-family-monospace);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0.9rem 0 0.35rem;
+  padding: 0.65rem 0.8rem;
+  overflow: auto;
+}
 
-    
-  </span>
-  
-  
+div.sourceCode pre {
+  background: transparent;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  line-height: inherit;
+}
 
-      </a>
-    </li>
-  
+.sourceCode code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+}
 
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./config.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Configuration
+.sourceCode .calepin-syntax-foreground {
+  color: var(--calepin-syntax-foreground);
+}
 
-    
-  </span>
-  
-  
+.sourceCode .calepin-syntax-function {
+  color: var(--calepin-syntax-function);
+}
 
-      </a>
-    </li>
-  
+.sourceCode .calepin-syntax-number {
+  color: var(--calepin-syntax-number);
+}
 
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./templates.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Templates
+.sourceCode .calepin-syntax-operator {
+  color: var(--calepin-syntax-operator);
+}
 
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./cli.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  CLI
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./example-typst.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  example.typ
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./example-pdf.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  example.pdf
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./example-html.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  example.html
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-  </ul>
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-            
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
-                <div class="md-sidebar__scrollwrap">
-                  
-                    
-                    
-                    
-                    
-                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-                      <div class="md-sidebar-button__wrapper">
-                        <label class="md-sidebar-button" for="__toc"></label>
-                      </div>
-                    
-                  
-                  <div class="md-sidebar__inner">
-                    
+.sourceCode .calepin-syntax-parameter {
+  color: var(--calepin-syntax-parameter);
+}
 
 
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#what-is-calepin" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        What is Calepin?
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-calepin" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Install calepin
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#render" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Render
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#watch" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Watch
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Example
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#preamble" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Preamble
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#chunks" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Chunks
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#inline" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Inline
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#all-together-now" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        All together now
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-          
-          
-            <div class="md-content" data-md-component="content">
-              
-              <article class="md-content__inner md-typeset">
-                
-                  
-  
-  
 
+.cell-output,
+.cell-output-stdout,
+.cell-output-stderr {
+  background: var(--pico-card-sectioning-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-left: 3px solid var(--pico-primary);
+  border-radius: var(--calepin-radius-sm);
+  font-family: var(--pico-font-family-monospace);
+  font-size: 0.86rem;
+  line-height: 1.4;
+  margin: 0.25rem 0 0.9rem;
+  padding: 0.5rem 0.7rem;
+  overflow: auto;
+}
 
-  <h1 id="__skip">Index</h1>
+:is(.cell-output, .cell-output-stdout, .cell-output-stderr) pre {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+}
 
-<div class="calepin-hero" markdown="0">
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
+.cell-output-stderr {
+  background: #fff6f2;
+  border-left-color: #b75e43;
+  color: #663021;
+}
 
-<svg class="calepin-hero__logo"
-   width="104.71918mm"
-   height="31.377689mm"
-   viewBox="0 0 104.71918 31.377689"
-   version="1.1"
-   id="svg1"
-   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
-   sodipodi:docname="logo_long_2.svg"
-   inkscape:export-filename="logo_long_text_2.png"
-   inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.98691752"
-     inkscape:cx="152.49501"
-     inkscape:cy="266.4863"
-     inkscape:window-width="1512"
-     inkscape:window-height="921"
-     inkscape:window-x="0"
-     inkscape:window-y="33"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="layer1" />
-  <defs
-     id="defs1" />
-  <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
-     id="layer1"
-     transform="translate(-40.950855,-44.061132)">
-    <path
-       d="m 59.186668,76.538231 h -0.565271 q -0.263792,-0.301478 -0.602955,-0.527586 -0.339162,-0.263793 -1.055171,-0.263793 -0.565271,0 -1.243595,0.226108 -0.64064,0.188424 -1.507388,0.452217 -0.829064,0.263793 -1.884235,0.452216 -1.055172,0.226108 -2.336452,0.226108 -2.374136,0 -4.635218,-0.866748 -2.223397,-0.866748 -4.220686,-2.826352 -1.846551,-1.846551 -3.090146,-4.371425 -1.243595,-2.524875 -1.243595,-5.841129 0,-2.826352 1.017487,-5.388912 1.017487,-2.56256 2.826353,-4.522164 1.808865,-1.959604 4.258371,-3.090145 2.449505,-1.168226 5.351227,-1.168226 1.168226,0 2.072659,0.226108 0.904432,0.226108 1.620442,0.527586 0.716009,0.263793 1.318964,0.489901 0.602955,0.226108 1.168226,0.226108 0.753694,0 1.055171,-0.226108 0.339163,-0.263793 0.602956,-0.565271 h 0.56527 v 7.53694 H 58.24455 Q 57.905388,55.811646 57.377802,54.417312 56.850217,53.022978 55.908099,51.967806 54.965982,50.87495 53.496278,50.23431 52.06426,49.555986 49.916232,49.555986 q -1.997289,0 -3.429308,0.64064 -1.432019,0.602955 -2.411821,1.658126 -0.979802,1.017487 -1.582757,2.411821 -0.565271,1.356649 -0.866748,2.901722 -0.301478,1.507388 -0.414532,3.090145 -0.07537,1.545073 -0.07537,2.939407 0,3.956894 0.64064,6.557138 0.640639,2.600244 1.77118,4.107632 1.168226,1.507388 2.788668,2.110343 1.620442,0.602956 3.580047,0.602956 2.524875,0 4.069947,-0.71601 1.545073,-0.716009 2.487191,-1.84655 0.942117,-1.168226 1.432018,-2.600244 0.489901,-1.469704 0.866748,-2.901722 h 0.414532 z"
-       id="text8"
-       style="font-size:37.6847px;font-family:Didot;-inkscape-font-specification:'Didot, Normal';letter-spacing:-1.70758px;word-spacing:0px;stroke-width:2.22546;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       transform="scale(1.1127362,0.8986856)"
-       aria-label="C" />
-    <path
-       d="m 77.671069,62.103805 h -0.0508 c -0.03387,0.220133 -0.313267,0.440267 -0.8382,0.6604 l -1.905,0.762 c -0.541867,0.220133 -0.956733,0.5334 -1.2446,0.9398 -0.287867,0.389467 -0.4318,0.880533 -0.4318,1.4732 0,0.254 0.0254,0.516467 0.0762,0.7874 0.0508,0.270933 0.143933,0.516467 0.2794,0.7366 0.135467,0.2032 0.321733,0.372533 0.5588,0.508 0.254,0.135467 0.575733,0.2032 0.9652,0.2032 0.5588,0 1.007533,-0.118533 1.3462,-0.3556 0.3556,-0.237067 0.618067,-0.5334 0.7874,-0.889 0.186267,-0.3556 0.3048,-0.7366 0.3556,-1.143 0.06773,-0.423333 0.1016,-0.804333 0.1016,-1.143 z m 4.445,5.9436 c -0.220133,0.169333 -0.4826,0.313267 -0.7874,0.4318 -0.3048,0.135467 -0.677333,0.2032 -1.1176,0.2032 -0.8128,0 -1.405467,-0.169333 -1.778,-0.508 -0.3556,-0.3556 -0.601133,-0.846667 -0.7366,-1.4732 h -0.0508 c -0.06773,0.1524 -0.160867,0.347133 -0.2794,0.5842 -0.118533,0.220133 -0.3048,0.440267 -0.5588,0.6604 -0.237067,0.2032 -0.5588,0.372533 -0.9652,0.508 -0.4064,0.1524 -0.922867,0.2286 -1.5494,0.2286 -0.7112,0 -1.278467,-0.08467 -1.7018,-0.254 -0.423333,-0.1524 -0.753533,-0.347133 -0.9906,-0.5842 -0.237067,-0.237067 -0.397933,-0.499533 -0.4826,-0.7874 -0.06773,-0.3048 -0.1016,-0.5842 -0.1016,-0.8382 0,-0.592667 0.118533,-1.0668 0.3556,-1.4224 0.237067,-0.3556 0.541867,-0.635 0.9144,-0.8382 0.389467,-0.220133 0.8128,-0.397933 1.27,-0.5334 0.474133,-0.135467 0.948267,-0.2794 1.4224,-0.4318 0.5588,-0.186267 1.016,-0.347133 1.3716,-0.4826 0.372533,-0.135467 0.6604,-0.296333 0.8636,-0.4826 0.2032,-0.2032 0.338667,-0.448733 0.4064,-0.7366 0.08467,-0.3048 0.120026,-0.810661 0.127,-1.2192 0.0062,-0.364898 -0.0254,-0.770467 -0.0762,-1.0922 -0.0508,-0.321733 -0.143933,-0.592667 -0.2794,-0.8128 -0.135467,-0.237067 -0.3302,-0.414867 -0.5842,-0.5334 -0.254,-0.118533 -0.592667,-0.1778 -1.016,-0.1778 -0.5588,0 -1.024467,0.1016 -1.397,0.3048 -0.3556,0.186267 -0.5334,0.499533 -0.5334,0.9398 0,0.287867 0.0254,0.575733 0.0762,0.8636 0.0508,0.270933 0.0762,0.474133 0.0762,0.6096 0,0.237067 -0.08467,0.440267 -0.254,0.6096 -0.169333,0.1524 -0.414867,0.2286 -0.7366,0.2286 -0.5588,0 -0.905933,-0.1016 -1.0414,-0.3048 -0.135467,-0.2032 -0.2032,-0.465667 -0.2032,-0.7874 0,-0.372533 0.08467,-0.728133 0.254,-1.0668 0.169333,-0.338667 0.414867,-0.635 0.7366,-0.889 0.338667,-0.270933 0.753533,-0.4826 1.2446,-0.635 0.508,-0.1524 1.083733,-0.2286 1.7272,-0.2286 0.778933,0 1.430867,0.1016 1.9558,0.3048 0.524933,0.186267 0.948267,0.448733 1.27,0.7874 0.321733,0.321733 0.550333,0.694267 0.6858,1.1176 0.135467,0.4064 0.2032,0.8382 0.2032,1.2954 v 6.3246 c 0,0.491067 0.0762,0.821267 0.2286,0.9906 0.1524,0.169333 0.372533,0.254 0.6604,0.254 0.186267,0 0.381,-0.03387 0.5842,-0.1016 0.2032,-0.06773 0.397933,-0.169333 0.5842,-0.3048 z m 1.946292,-0.0762 h 1.9558 v -17.6022 h -1.9558 v -0.3556 h 4.1402 v 17.9578 h 1.9558 v 0.3556 h -6.096 z m 16.906859,-6.2992 c 0.0339,-0.237067 0.0508,-0.4572 0.0508,-0.6604 v -0.635 c 0,-0.575733 -0.0593,-1.049867 -0.1778,-1.4224 -0.1016,-0.372533 -0.254,-0.668867 -0.4572,-0.889 -0.18627,-0.220133 -0.423334,-0.372533 -0.711201,-0.4572 -0.270933,-0.1016 -0.567267,-0.1524 -0.889,-0.1524 -0.575733,0 -1.049867,0.118533 -1.4224,0.3556 -0.372533,0.220133 -0.668867,0.524933 -0.889,0.9144 -0.220133,0.389467 -0.389467,0.8382 -0.508,1.3462 -0.1016,0.508 -0.169333,1.0414 -0.2032,1.6002 z m -5.232401,0.3556 c 0,0.169333 -0.0085,0.347133 -0.0254,0.5334 v 0.6604 c 0,0.5588 0.03387,1.143 0.1016,1.7526 0.06773,0.6096 0.211667,1.159933 0.4318,1.651 0.237067,0.491067 0.575733,0.897467 1.016,1.2192 0.4572,0.321733 1.058333,0.4826 1.8034,0.4826 0.745067,0 1.354671,-0.110067 1.828801,-0.3302 0.49107,-0.220133 0.87207,-0.4826 1.143,-0.7874 0.28787,-0.321733 0.49953,-0.643467 0.635,-0.9652 0.13547,-0.321733 0.23707,-0.5842 0.3048,-0.7874 l 0.381,0.0762 c -0.0508,0.186267 -0.1524,0.4572 -0.3048,0.8128 -0.13547,0.338667 -0.36407,0.6858 -0.6858,1.0414 -0.3048,0.338667 -0.72813,0.643467 -1.27,0.9144 -0.52493,0.254 -1.210734,0.381 -2.057401,0.381 -0.846667,0 -1.634067,-0.135467 -2.3622,-0.4064 -0.7112,-0.270933 -1.329267,-0.6604 -1.8542,-1.1684 -0.524933,-0.508 -0.931333,-1.109133 -1.2192,-1.8034 -0.287867,-0.7112 -0.4318,-1.4986 -0.4318,-2.3622 0,-0.745067 0.143933,-1.464733 0.4318,-2.159 0.3048,-0.7112 0.7112,-1.337733 1.2192,-1.8796 0.524933,-0.541867 1.134533,-0.973667 1.8288,-1.2954 0.694267,-0.338667 1.439333,-0.508 2.2352,-0.508 0.474133,0 0.982134,0.08467 1.524001,0.254 0.54187,0.169333 1.0414,0.448733 1.4986,0.8382 0.47413,0.372533 0.8636,0.872067 1.1684,1.4986 0.32173,0.626533 0.4826,1.405467 0.4826,2.3368 z m 21.351871,0.4826 c 0,-0.778933 -0.0423,-1.4732 -0.127,-2.0828 -0.0847,-0.626533 -0.23707,-1.159933 -0.4572,-1.6002 -0.2032,-0.440267 -0.49953,-0.778933 -0.889,-1.016 -0.37253,-0.237067 -0.85513,-0.3556 -1.4478,-0.3556 -0.62653,0 -1.143,0.110067 -1.5494,0.3302 -0.4064,0.220133 -0.7366,0.499533 -0.9906,0.8382 -0.18627,0.237067 -0.33867,0.491067 -0.4572,0.762 -0.1016,0.270933 -0.18627,0.592667 -0.254,0.9652 -0.0677,0.372533 -0.11853,0.804333 -0.1524,1.2954 -0.0169,0.474133 -0.0254,1.0414 -0.0254,1.7018 0,0.5588 0.0423,1.134533 0.127,1.7272 0.0847,0.592667 0.24553,1.134533 0.4826,1.6256 0.23707,0.474133 0.56727,0.8636 0.9906,1.1684 0.44027,0.3048 1.016,0.4572 1.7272,0.4572 0.69427,0 1.2446,-0.135467 1.651,-0.4064 0.4064,-0.270933 0.7112,-0.6604 0.9144,-1.1684 0.2032,-0.508 0.3302,-1.1176 0.381,-1.8288 0.0508,-0.728133 0.0762,-1.532467 0.0762,-2.413 z m -10.4902,12.573 h 1.9558 v -17.2974 h -1.9558 v -0.3556 h 4.0894 v 2.1336 h 0.0508 c 0.254,-0.7112 0.66887,-1.2954 1.2446,-1.7526 0.59267,-0.474133 1.35467,-0.7112 2.286,-0.7112 0.72813,0 1.41393,0.160867 2.0574,0.4826 0.64347,0.3048 1.21073,0.719667 1.7018,1.2446 0.49107,0.508 0.88053,1.109133 1.1684,1.8034 0.28787,0.694267 0.4318,1.4224 0.4318,2.1844 0,0.778933 -0.1524,1.524 -0.4572,2.2352 -0.28787,0.694267 -0.6858,1.312333 -1.1938,1.8542 -0.508,0.541867 -1.10067,0.973667 -1.778,1.2954 -0.6604,0.321733 -1.36313,0.4826 -2.1082,0.4826 -0.57573,0 -1.0668,-0.1016 -1.4732,-0.3048 -0.38947,-0.186267 -0.7112,-0.4064 -0.9652,-0.6604 -0.254,-0.270933 -0.44873,-0.541867 -0.5842,-0.8128 -0.13547,-0.287867 -0.2286,-0.516467 -0.2794,-0.6858 h -0.0508 v 8.8646 h 1.9558 v 0.3556 h -6.096 z m 17.87208,-23.5712 c 0,-0.372533 0.127,-0.6858 0.381,-0.9398 0.27093,-0.270933 0.59267,-0.4064 0.9652,-0.4064 0.37253,0 0.6858,0.135467 0.9398,0.4064 0.27093,0.254 0.4064,0.567267 0.4064,0.9398 0,0.372533 -0.13547,0.694267 -0.4064,0.9652 -0.254,0.254 -0.56727,0.381 -0.9398,0.381 -0.37253,0 -0.69427,-0.127 -0.9652,-0.381 -0.254,-0.270933 -0.381,-0.592667 -0.381,-0.9652 z m -1.651,16.4592 h 1.9558 v -10.1854 h -1.9558 v -0.3556 h 4.1402 v 10.541 h 1.9558 v 0.3556 h -6.096 z m 8.60106,0 h 1.9558 v -10.1854 h -1.9558 v -0.3556 h 4.0894 v 2.7178 h 0.0508 c 0.1016,-0.220133 0.24553,-0.499533 0.4318,-0.8382 0.2032,-0.338667 0.47413,-0.668867 0.8128,-0.9906 0.33867,-0.321733 0.762,-0.592667 1.27,-0.8128 0.508,-0.237067 1.12607,-0.3556 1.8542,-0.3556 1.1176,0 2.02353,0.270933 2.7178,0.8128 0.7112,0.541867 1.0668,1.405467 1.0668,2.5908 v 7.4168 h 1.9558 v 0.3556 h -6.096 v -0.3556 h 1.9558 v -8.2042 c 0,-0.6604 -0.16087,-1.202267 -0.4826,-1.6256 -0.3048,-0.423333 -0.7874,-0.635 -1.4478,-0.635 -0.54187,0 -1.05833,0.118533 -1.5494,0.3556 -0.49107,0.237067 -0.92287,0.567267 -1.2954,0.9906 -0.37253,0.423333 -0.66887,0.922867 -0.889,1.4986 -0.2032,0.575733 -0.3048,1.202267 -0.3048,1.8796 v 5.7404 h 1.9558 v 0.3556 h -6.096 z"
-       id="text1"
-       style="font-size:25.4px;font-family:Didot;-inkscape-font-specification:Didot;letter-spacing:1.15887px;word-spacing:0px;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       aria-label="alepin"
-       sodipodi:nodetypes="cccccssccscccscccsccccccscscssccccccascsscscscssssccscccsssssccccccccccccccsscccscscccccssccsccscccccscscscccssccccscccssccscssccssscscccccccccsccsscscsccccccccccssscssscsccccccccccccccccccccscscsccccccscssscsccccc" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:33.8667px;font-family:Courier;-inkscape-font-specification:Courier;letter-spacing:1.15887px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="55.226665"
-       y="54.690483"
-       id="text3"><tspan
-         sodipodi:role="line"
-         id="tspan3"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Courier;-inkscape-font-specification:Courier;stroke-width:1.99999"
-         x="55.226665"
-         y="54.690483" /></text>
-    <path
-       style="font-weight:500;font-size:12.3677px;font-family:'Hasklug Nerd Font';-inkscape-font-specification:'Hasklug Nerd Font, Medium';letter-spacing:-1.92141px;word-spacing:0px;stroke-width:2.50416;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       d="m 52.749381,60.203635 v -1.150196 l -3.611369,-2.386966 v -0.04947 l 3.611369,-2.386967 V 53.07984 l -4.662623,3.116661 v 0.890474 z m 0.515031,2.523011 h 1.063622 L 58.38464,51.966747 h -1.063623 z m 5.635259,-2.523011 4.662623,-3.11666 V 56.196501 L 58.899671,53.07984 v 1.150196 l 3.611368,2.386967 v 0.04947 l -3.611368,2.386966 z"
-       id="text4"
-       aria-label="&lt;/&gt;" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:9.87777px;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:-1.53458px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="45.843494"
-       y="78.282463"
-       id="text5"><tspan
-         sodipodi:role="line"
-         id="tspan5"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';stroke-width:1.99999"
-         x="45.843494"
-         y="78.282463" /></text>
-  </g>
-</svg>
-<p class="calepin-hero__tagline">Computational Notebooks in <svg class="calepin-hero__typst"
-   width="100"
-   height="40"
-   viewBox="0 0 100 40"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <g
-     id="typst-logo"
-     transform="translate(4.5,2.5)">
-    <path
-       d="m 7.88785,18.1481 c 0,1.1324 0.16248,1.8923 0.48745,2.2797 0.32496,0.3874 0.91581,0.5811 1.7725,0.5811 0.8863,0 2.0237,-0.447 3.4122,-1.341 l 0.8863,1.4751 c -2.5998,2.1754 -4.74159,3.2631 -6.42551,3.2631 -1.68392,0 -3.01334,-0.4023 -3.98824,-1.2069 C 3.05765,22.3648 2.5702,20.9046 2.5702,18.8186 V 7.10728 H 0.35451 L 0,5.45338 2.5702,4.64879 V 2.45849 L 7.88785,0 V 4.91699 L 13.1169,4.51469 12.6294,7.42018 7.88785,7.24138 Z"
-       fill="#239dad"
-       id="t" />
-    <path
-       d="m 17.5836,34.5977 h -0.7534 c -0.709,-1.2218 -1.2555,-2.9651 -1.6396,-5.2299 l 1.0192,-0.6258 c 0.8568,0.5364 1.6101,0.8046 2.26,0.8046 1.3885,0 2.4521,-0.6407 3.1906,-1.9221 l 1.5067,-3.5313 -6.78,-15.95782 c -0.3545,-0.8046 -0.6647,-1.3112 -0.9306,-1.5198 -0.2659,-0.2086 -0.7681,-0.3576 -1.5067,-0.447 L 13.6396,4.51469 c 2.3634,0.2384 4.0621,0.3576 5.0961,0.3576 1.034,0 2.8804,-0.1192 5.5392,-0.3576 l -0.1772,1.56449 c -0.0591,0.0298 -0.2216,0.0745 -0.4875,0.1341 -0.2363,0.0596 -0.4431,0.1192 -0.6204,0.1788 -0.1477,0.0298 -0.3249,0.0745 -0.5317,0.1341 -0.4136,0.1788 -0.6204,0.4023 -0.6204,0.6705 0,0.2086 0.0591,0.5215 0.1772,0.9387 l 3.8996,10.05742 3.811,-10.23623 c 0.0886,-0.2682 0.133,-0.52149 0.133,-0.75989 0,-0.5364 -0.7829,-0.894 -2.3487,-1.0728 l -0.0886,-1.5645 c 1.4476,0.2086 2.6588,0.31291 3.6337,0.31291 0.9749,0 2.585,-0.10431 4.8302,-0.31291 l -0.3102,1.6539 c -0.709,0.0298 -1.2112,0.1639 -1.5066,0.4023 -0.2659,0.2086 -0.5466,0.6556 -0.842,1.34099 L 23.9204,29.9042 c -1.3294,3.129 -3.4417,4.6935 -6.3368,4.6935 z"
-       fill="#239dad"
-       id="y" />
-    <path
-       d="m 49.1768,22.1264 c 1.1522,0 2.1271,-0.6407 2.9247,-1.9221 0.8272,-1.3112 1.2408,-3.2184 1.2408,-5.7215 0,-4.64883 -1.3442,-6.97322 -4.0325,-6.97322 -1.0931,0 -2.2896,0.6109 -3.5894,1.83269 V 19.6232 c 0.3249,0.7152 0.8124,1.3112 1.4623,1.788 0.65,0.4768 1.3147,0.7152 1.9941,0.7152 z M 49.2655,35 c -2.7475,-0.2682 -4.6087,-0.4023 -5.5836,-0.4023 -0.9749,0 -2.9247,0.1341 -5.8494,0.4023 l -0.4431,-1.6092 c 1.0635,-0.2384 1.8316,-0.5066 2.3043,-0.8046 0.4727,-0.298 0.709,-0.7599 0.709,-1.3857 V 8.89527 c 0,-1.01319 -0.384,-1.51979 -1.1521,-1.51979 l -2.0385,0.2682 -0.2215,-1.6986 c 2.5406,-1.13239 4.9483,-1.80289 7.2231,-2.01149 l 0.9306,1.02809 c 0,0.6556 0.1477,1.4006 0.4431,2.235 l 1.9498,-1.4751 c 1.359,-1.04299 2.585,-1.56449 3.6781,-1.56449 2.6883,0 4.6677,0.81949 5.938,2.45849 1.2703,1.63899 1.9055,3.99322 1.9055,7.06262 0,3.0395 -0.9601,5.5874 -2.8804,7.6436 -1.9203,2.0562 -4.3871,3.0843 -7.4004,3.0843 -0.9749,0 -1.9941,-0.3278 -3.0576,-0.9834 v 7.8672 c 0,0.5662 0.2363,1.0132 0.709,1.341 0.6795,0.298 1.5657,0.5364 2.6588,0.7152 l 0.4875,0.0894 z"
-       fill="#239dad"
-       id="p" />
-    <path
-       d="m 67.3337,22.2605 c 0.709,0 1.2999,-0.2235 1.7726,-0.6705 0.4726,-0.447 0.709,-0.9983 0.709,-1.6539 0,-0.6854 -0.0886,-1.192 -0.2659,-1.5198 -0.1772,-0.3576 -0.4727,-0.6854 -0.8863,-0.9834 -0.5908,-0.4768 -1.4328,-0.9833 -2.5258,-1.5197 -1.0636,-0.5364 -1.9055,-0.9983 -2.5259,-1.3857 -0.5909,-0.3874 -1.1817,-1.0132 -1.7726,-1.8774 -0.5613,-0.894 -0.8419,-1.9221 -0.8419,-3.08433 0,-1.66879 0.6499,-2.97999 1.9498,-3.93359 1.3294,-0.98339 2.969,-1.47509 4.9188,-1.47509 1.9498,0 4.1655,0.3427 6.6471,1.02809 -0.0887,1.937 -0.3398,3.57599 -0.7534,4.91702 l -1.7725,0.4023 c -0.709,-2.86082 -2.0532,-4.29122 -4.0326,-4.29122 -1.3294,0 -1.9941,0.7897 -1.9941,2.36909 0,0.6258 0.2511,1.1622 0.7533,1.60923 0.5318,0.447 1.2999,0.9238 2.3043,1.4304 1.0045,0.4768 1.7283,0.8493 2.1714,1.1175 0.4432,0.2384 1.034,0.6407 1.7726,1.2069 C 74.3205,15.0192 75,16.524 75,18.461 c 0,1.937 -0.7386,3.4121 -2.2157,4.4253 -1.4771,1.0132 -3.4269,1.5198 -5.8494,1.5198 -2.3929,0 -4.4905,-0.4023 -6.2926,-1.2069 -0.059,-0.5066 -0.0886,-1.3857 -0.0886,-2.6373 0,-1.2814 0.0296,-2.1754 0.0886,-2.682 l 2.1714,-0.4916 c 0.2364,1.4601 0.7534,2.6372 1.551,3.5312 0.7976,0.894 1.7873,1.341 2.969,1.341 z"
-       fill="#239dad"
-       id="s" />
-    <path
-       d="m 84.4416,18.1481 c 0,1.1324 0.1624,1.8923 0.4874,2.2797 0.325,0.3874 0.9158,0.5811 1.7726,0.5811 0.8862,0 2.0236,-0.447 3.4121,-1.341 L 91,21.143 c -2.5997,2.1754 -4.7416,3.2631 -6.4255,3.2631 -1.6839,0 -3.0133,-0.4023 -3.9882,-1.2069 -0.9749,-0.8344 -1.4624,-2.2946 -1.4624,-4.3806 V 7.10728 H 76.9082 L 76.5537,5.45338 79.1239,4.64879 V 2.45849 L 84.4416,0 v 4.91699 l 5.229,-0.4023 -0.4875,2.90549 -4.7415,-0.1788 z"
-       fill="#239dad"
-       id="t" />
-  </g>
-</svg></p>
-</div>
+html[data-theme="dark"] {
+  --calepin-syntax-foreground: #d8e7ef;
+  --calepin-syntax-background: #161b22;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #9db8ff;
+  --calepin-syntax-number: #ffb3a7;
+  --calepin-syntax-operator: #b5bdc9;
+  --calepin-syntax-parameter: #c3d86c;
 
-<h2 id="what-is-calepin">What is Calepin?<a class="headerlink" href="#what-is-calepin" title="Permanent link">&para;</a></h2>
-<h4 id="typst">Typst<a class="headerlink" href="#typst" title="Permanent link">&para;</a></h4>
-<p><a href="https://typst.app/">Typst</a> is a modern typesetting system that compiles plain text markup into rich documents. Think of it as a simple Markdown-like syntax, with the scriptability of LaTeX, and the ability to export to PDF, SVG, and HTML files. Typst is ultra fast, easy to learn, and expressive, which makes it a comfortable tool for anything from short letters to full scientific manuscripts.</p>
-<h4 id="computational-notebooks">Computational notebooks<a class="headerlink" href="#computational-notebooks" title="Permanent link">&para;</a></h4>
-<p>A computational notebook mixes prose with executable code. Figures, tables, and numbers are computed when the document is rendered, rather than pasted-in by hand. This allows analysts to create reproducible reports in the tradition of <a href="https://en.wikipedia.org/wiki/Literate_programming">literate programming</a>. </p>
-<p>Some notebook tools can act as frontends for Typst, but they often superimpose their own syntax, language, and structure. For example, <a href="https://quarto.org/">Posit's Quarto</a> supports an extended idiom of Markdown, which can be translated to Typst and then rendered as PDF.</p>
-<h4 id="calepin">Calepin<a class="headerlink" href="#calepin" title="Permanent link">&para;</a></h4>
-<p><em>Calepin</em> is a Typst-native computational notebook. Rather than hide Typst behind Markdown, it embeds executable code chunks directly inside <code>.typ</code> documents. <em>Calepin</em> scans a <code>.typ</code> file for inline code or exectuable chunks, evaluates them, and lets Typst render the final document with computed results in place. </p>
-<p><em>Calepin</em> is language-agnostic. It can execute code in Python, R, and any language with a Jupyter kernel. It can also render diagrams using engines like Mermaid, Graphviz, TikZ, and D2.</p>
-<p><em>Calepin</em> comes with extensions for popular editors like VS-Code, Cursor, and Positron (via the Microsoft and VSX marketplaces).</p>
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+  --calepin-syntax-foreground: #d8e7ef;
+  --calepin-syntax-background: #161b22;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #9db8ff;
+  --calepin-syntax-number: #ffb3a7;
+  --calepin-syntax-operator: #b5bdc9;
+  --calepin-syntax-parameter: #c3d86c;
+  }
+}
+
+figure > img {
+  display: block;
+  margin-inline: auto;
+  max-width: 100%;
+}
+
+/* ------------------------------------------------------ Home page (hero) */
+
+.hero {
+  text-align: center;
+  padding: 0.5rem 1rem 1.5rem;
+}
+
+.hero-wordmark {
+  display: block;
+  width: min(20rem, 82vw);
+  height: auto;
+  margin: 0 auto;
+  fill: currentColor;
+}
+
+.hero-subtitle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 1.4rem;
+}
+
+.hero-subtitle p {
+  margin: 0;
+  display: inline;
+  font-size: 1.4rem;
+}
+
+.hero-typst-logo {
+  height: 1.5em;
+  width: auto;
+}
+
+.hero-tagline {
+  margin: 0.8rem auto 0.4rem;
+  max-width: 44ch;
+  font-size: 1.1rem;
+}
+
+.hero-lede {
+  margin: 0.2rem auto 1rem;
+  max-width: 49ch;
+  color: var(--pico-muted-color);
+}
+
+.hero-command {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-family: var(--pico-font-family-monospace);
+}
+
+.calepin-website-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  max-width: 72rem;
+  margin: 0 auto 1.5rem;
+}
+
+.calepin-website-feature-card {
+  margin: 0;
+}
+
+.calepin-website-feature-card h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.calepin-website-feature-card p {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+/* -------------------------------------------------------- 404 */
+
+.calepin-website-404 {
+  text-align: center;
+  max-width: 40rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+
+.calepin-website-404-code {
+  margin: 0;
+  font-family: var(--pico-font-family-monospace);
+  font-weight: 700;
+  font-size: clamp(4rem, 18vw, 8rem);
+  line-height: 1;
+  color: var(--calepin-accent);
+}
+
+.calepin-website-404-title {
+  margin: 0.25rem 0 0;
+}
+
+.calepin-website-404-lede {
+  margin: 0.6rem auto 1.6rem;
+  max-width: 42ch;
+  color: var(--pico-muted-color);
+}
+
+.calepin-website-404-actions {
+  margin: 0 0 1.6rem;
+}
+
+.calepin-website-404-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* -------------------------------------------------------- Video preview */
+
+.calepin-video-block {
+  width: 400px;
+  max-width: 100%;
+  margin: 1.2rem auto 2rem;
+}
+
+.calepin-video-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--calepin-radius-sm);
+  background: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.calepin-video-thumb__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #0f111a;
+  pointer-events: none;
+}
+
+.calepin-video-thumb__play {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 3.4rem;
+  height: 3.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 1.3rem;
+  pointer-events: none;
+}
+
+.calepin-video-dialog article {
+  width: min(96vw, 76rem);
+  max-width: min(96vw, 76rem);
+  padding: 0;
+  overflow: hidden;
+}
+
+.calepin-video-dialog header {
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+}
+
+.calepin-video-dialog video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+/* --------------------------------------------------- Copy-to-clipboard */
+
+.calepin-website-copy-code-host {
+  position: relative;
+}
+
+.calepin-website-copy-code-scroll {
+  position: relative;
+}
+
+.calepin-website-copy-code-block {
+  position: relative;
+}
+
+.calepin-website-copy-code-button {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  margin: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--calepin-radius-sm);
+  background: none;
+  color: inherit;
+  opacity: 1;
+  cursor: pointer;
+  line-height: 1;
+  z-index: 1;
+}
+
+.calepin-website-copy-code-button:hover,
+.calepin-website-copy-code-button:focus-visible {
+  opacity: 0.95;
+  background: none;
+}
+
+.calepin-website-copy-code-button svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.calepin-website-copy-code-button--copied {
+  opacity: 0.95;
+  color: var(--pico-primary);
+}
+
+.calepin-website-copy-code-button--error {
+  opacity: 0.9;
+  color: #ef4444;
+}
+
+/* --------------------------------------------------------- Source / PDF */
+
+.calepin-website-source-view pre {
+  margin: 0;
+  overflow: auto;
+}
+
+.calepin-website-pdf-viewer {
+  display: block;
+  width: 100%;
+  height: 75vh;
+  border: 0;
+}
+
+/* ------------------------------------------------------------ Responsive */
+
+@media (max-width: 88rem) {
+  .calepin-website-shell.grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "sidebar"
+      "main"
+      "toc";
+  }
+
+  .calepin-website-sidebar,
+  .calepin-website-toc {
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (max-width: 56rem) {
+  .calepin-website-nav-toggle {
+    display: inline-grid;
+  }
+
+  .calepin-website-shell.grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "main";
+  }
+
+  .calepin-website-toc {
+    display: none;
+  }
+
+  .calepin-website-sidebar {
+    position: fixed;
+    top: var(--calepin-topbar-height);
+    left: 0;
+    width: var(--calepin-sidebar-mobile-width);
+    height: calc(100vh - var(--calepin-topbar-height));
+    padding: 0.8rem;
+    background: var(--pico-background-color);
+    border-right: 1px solid var(--pico-muted-border-color);
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.2);
+    overflow: auto;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+    z-index: var(--calepin-drawer-z);
+  }
+
+  .calepin-website-shell.nav-open .calepin-website-sidebar {
+    transform: translateX(0);
+  }
+
+  .calepin-website-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: var(--calepin-topbar-height) 0 0 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+    z-index: var(--calepin-overlay-z);
+  }
+
+  .calepin-website-shell.nav-open .calepin-website-nav-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  body.calepin-website-nav-open {
+    overflow: hidden;
+  }
+
+  .calepin-website-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calepin-website-nav-backdrop {
+  display: none;
+}
+
+    </style>
+
+<script id="calepin-website-source-data" type="application/json">"#let hero(\n  logo,\n  subtitle,\n  typst-logo,\n) = {\n  let target = sys.inputs.at(\"calepin-target\", default: \"paged\");\n\n  if target == \"html\" {\n    html.elem(\"section\", attrs: (class: \"hero\"))[\n      #html.elem(\"div\", attrs: (class: \"hero-text\"))[\n        #html.elem(\"div\", attrs: (class: \"hero-title\"))[\n          #html.elem(\"img\", attrs: (\n            src: logo,\n            alt: \"Calepin logo\",\n            class: \"hero-wordmark\",\n            \"data-inline-svg\": \"1\",\n          ))\n        ]\n        #html.elem(\"div\", attrs: (class: \"hero-subtitle\"))[\n          #html.elem(\"span\", attrs: (class: \"hero-subtitle-text\"))[#text(subtitle)]\n          #html.elem(\"img\", attrs: (src: typst-logo, alt: \"Typst logo\", class: \"hero-typst-logo\"))\n        ]\n        #html.elem(\"code\", attrs: (class: \"hero-command\"))[calepin compile notebook.typ]\n      ]\n    ]\n  } else if target == \"paged\" {\n    align(center, image(logo, width: 40%, alt: \"Calepin logo\"))\n  }\n}\n\n#hero(\n  \"assets/logo_long_2.svg\",\n  \"Computational Notebooks in\",\n  \"assets/logo_typst.svg\",\n)\n\n#if sys.inputs.at(\"calepin-target\", default: \"paged\") == \"html\" [\n  #html.elem(\n    \"section\",\n    attrs: (class: \"calepin-website-features\"),\n  )[\n    #html.elem(\"article\", attrs: (class: \"calepin-website-feature-card\"))[\n      #html.elem(\"h3\", [Typst-native])\n      #html.elem(\"p\", [Write your notebooks directly in Typst, leveraging the simplicitly, flexibility, and elegance of this modern language.])\n    ]\n    #html.elem(\"article\", attrs: (class: \"calepin-website-feature-card\"))[\n      #html.elem(\"h3\", [Executable code])\n      #html.elem(\"p\", [Insert code blocks and inline code. These chunks are executed and resulting text and figures are inserted in the final document automatically.])\n    ]\n    #html.elem(\"article\", attrs: (class: \"calepin-website-feature-card\"))[\n      #html.elem(\"h3\", [Multiple outputs])\n      #html.elem(\"p\", [Publish clean HTML, PDF, and Typst builds from the same source.])\n    ]\n  ]\n]\n\n== What is Calepin?\n<what-is-calepin>\n\n==== Typst\n<typst>\n\n#link(\"https://typst.app/\")[Typst] is a modern typesetting system that\ncompiles plain text markup into rich documents. Think of it as a simple\nMarkdown-like syntax, with the scriptability of LaTeX, and the ability\nto export to PDF, SVG, and HTML files. Typst is ultra fast, easy to\nlearn, and expressive, which makes it a comfortable tool for anything\nfrom short letters to full scientific manuscripts.\n\n==== Computational notebooks\n<computational-notebooks>\n\nA computational notebook mixes prose with executable code. Figures,\ntables, and numbers are computed when the document is rendered, rather\nthan pasted-in by hand. This allows analysts to create reproducible\nreports in the tradition of\n#link(\"https://en.wikipedia.org/wiki/Literate_programming\")[literate programming].\n\nSome notebook tools can act as frontends for Typst, but they often\nsuperimpose their own syntax, language, and structure. For example,\n#link(\"https://quarto.org/\")[Posit's Quarto] supports an extended idiom\nof Markdown, which can be translated to Typst and then rendered as PDF.\n\n==== Calepin\n<calepin>\n\n#emph[Calepin] is a Typst-native computational notebook. Rather than\nhide Typst behind Markdown, it embeds executable code chunks directly\ninside `.typ` documents. #emph[Calepin] scans a `.typ` file for inline\ncode or exectuable chunks, evaluates them, and lets Typst render the\nfinal document with computed results in place.\n\n#emph[Calepin] is language-agnostic. It can execute code in Python, R,\nand any language with a Jupyter kernel. It can also render diagrams\nusing engines like Mermaid, Graphviz, TikZ, and D2.\n\n#emph[Calepin] comes with extensions for popular editors like VS-Code,\nCursor, and Positron (via the Microsoft and VSX marketplaces).\n\n- VS Code:\n  #link(\"https://marketplace.visualstudio.com/items?itemName=VincentArel-Bundock.calepin\")[VincentArel-Bundock.calepin]\n- Open VSX:\n  #link(\"https://open-vsx.org/extension/VincentArel-Bundock/calepin\")[VincentArel-Bundock/calepin]\n\n#if sys.inputs.at(\"calepin-target\", default: \"paged\") == \"html\" [\n  Here is a short video of a live editing session in VS-Code.\n\n  #html.elem(\"div\", attrs: (class: \"calepin-video-block\"))[\n    #html.elem(\"button\", attrs: (\n        class: \"calepin-video-thumb\",\n        type: \"button\",\n        \"data-video-dialog\": \"calepin-video-dialog\",\n        \"aria-label\": \"Open Calepin editor preview video\",\n      ))[\n      #html.elem(\"video\", attrs: (\n        class: \"calepin-video-thumb__media\",\n        src: \"assets/calepin_vscode.mp4\",\n        muted: \"\",\n        playsinline: \"\",\n        preload: \"metadata\",\n        poster: \"assets/calepin_vscode-thumb.png\",\n      ))\n      #html.elem(\"span\", attrs: (class: \"calepin-video-thumb__play\", \"aria-hidden\": \"true\"))[\u25b6]\n    ]\n  ]\n  #html.elem(\"dialog\", attrs: (id: \"calepin-video-dialog\", class: \"calepin-video-dialog\"))[\n    #html.elem(\"article\")[\n      #html.elem(\"header\")[\n        #html.elem(\"button\", attrs: (\n          rel: \"prev\",\n          type: \"button\",\n          \"data-close-dialog\": \"\",\n          \"aria-label\": \"Close video preview\",\n        ))\n      ]\n      #html.elem(\"video\", attrs: (\n        class: \"calepin-video-dialog__media\",\n        src: \"assets/calepin_vscode.mp4\",\n        muted: \"\",\n        autoplay: \"\",\n        controls: \"\",\n        playsinline: \"\",\n        preload: \"metadata\",\n      ))\n    ]\n  ]\n]\n\n\n== Render\n<render>\n\nUse `calepin compile` when you want to execute code chunks and render\nthe notebook. The command line shape is intentionally the same as\n`typst compile`: same output-first/format-driven arguments, with `--`\npass-through for Typst flags, plus Calepin preprocessing.\n\n```sh\ncalepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n```\n\nArguments after `--` are forwarded to Typst, so project-specific Typst\nflags can stay in the same command.\n\n```sh\n# open pdf in system viewer\ncalepin compile paper.typ -- --open \n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n```\n\n== Watch\n<watch>\n\nUse `calepin watch` while editing. It watches your source for changes,\nre-runs preprocessing, and delegates recompilation and previewing to\n`typst watch`. The command form is the same as `typst watch`: same\npositional arguments and pass-through flags, with Calepin running its\npreprocessing step first.\n\n```sh\ncalepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n\nStop a running watch from the same project.\ncalepin stop paper.typ\n```\n\nThe default output format is PDF. Choose another format with `--format`,\nor let the output extension select the format.\n\nArguments after `--` are passed through to `typst watch`. Typst's\n`--open` flag opens the rendered output in the operating system's\ndefault viewer, and Typst's `--port` flag chooses the HTML preview port.\n\n```sh\ncalepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n```\n\n==== PDF viewer auto-refresh\n<pdf-viewer-auto-refresh>\n\nSome PDF viewers do not automatically refresh a document when it is\nregenerated on disk. For example, macOS Preview may keep showing an\nolder PDF until the window is focused, the file is reopened, or the\napplication is restarted.\n\nFor smoother live preview, use a PDF viewer that reloads the file when\nit changes. On macOS, Skim is a good option. Other platforms have\nsimilar auto-reloading viewers, which are useful when working with tools\nthat repeatedly rebuild PDFs.\n\n== Example\n<example>\n\nEvery document uses the runtime file #emph[Calepin] writes to\n`.calepin/calepin.typ`. `calepin compile` and `calepin watch` run code\nchunks first, so the runtime and computed outputs are ready when Typst\nbuilds the document.\n\n=== Preamble\n<preamble>\n\nStart by importing the runtime and setting document-wide defaults with\n`calepin.setup()`.\n\n```typ\n#import \".calepin/calepin.typ\"\n\n#calepin.setup(\n  echo: true,\n  eval: true,\n)\n```\n\nDefine a short alias for Python inline computation.\n\n```typ\n#let py = calepin.inline.with(\"python\")\n```\n\n=== Chunks\n<chunks>\n\nA block chunk runs a piece of code and inserts its result. Start with a\nplain fenced block:\n\n````typ\n```python\nx = 41\nprint(x + 1)\n```\n\nVariables are persistent across chunks:\n\n```python\nprint(x + 2)\n```\n]\n````\n\nWhen you need extra control, use `#calepin.chunk` with options such as\nlabels, captions, hiding source code, or changing how results are shown.\nIf the body is a fenced block with a language, `#calepin.chunk` infers\nthe engine from the fence:\n\n````typ\n#calepin.chunk(label: \"answer\")[\n```python\nx = 41\nprint(x + 1)\n```\n````\n\n=== Inline\n<inline>\n\nAn inline expression drops a computed value into the surrounding prose.\nIt uses the same raw body contract and never takes a label.\n\n```typ\nThe inline answer is #py[`print(40 + 2)`].\n```\n\n=== All together now\n<all-together-now>\n\nHere is one full document example.\n\n````typ\n#import \".calepin/calepin.typ\"\n\n#calepin.setup(\n  echo: true,\n  results: \"verbatim\",\n)\n\n#let py = calepin.inline.with(\"python\")\n\n```python\nx = 41\nprint(x + 1)\n```\n\nVariables are persistent across chunks:\n\n```python\nprint(x + 2)\n```\n\nThe inline answer is #py[`print(40 + 2)`].\n````\n"</script>
+</head>
+  <body>
+    <header class="calepin-website-topbar">
+        <nav>
+            <ul>
+                <li>
+                    <button class="calepin-website-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
+                </li>
+                <li>
+                    <a class="calepin-website-topbrand contrast" href="index.html" aria-label="Calepin home">
+                        <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjQuOTA4Mjc5bW0iCiAgIGhlaWdodD0iMjUuMjMwNjg4bW0iCiAgIHZpZXdCb3g9IjAgMCAyNC45MDgyOCAyNS4yMzA2ODgiCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzEiCiAgIGlua3NjYXBlOnZlcnNpb249IjEuNC40IChkY2FmM2U3LCAyMDI2LTA1LTA1KSIKICAgc29kaXBvZGk6ZG9jbmFtZT0ibG9nb19zaG9ydF8yLnN2ZyIKICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSJsb2dvX2xvbmdfdGV4dF8yLnBuZyIKICAgaW5rc2NhcGU6ZXhwb3J0LXhkcGk9Ijk2IgogICBpbmtzY2FwZTpleHBvcnQteWRwaT0iOTYiCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iY3VycmVudENvbG9yIj4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgaW5rc2NhcGU6em9vbT0iMC45ODY5MTc1MiIKICAgICBpbmtzY2FwZTpjeD0iMTUyLjQ5NTAxIgogICAgIGlua3NjYXBlOmN5PSIyNjYuNDg2MyIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjE1MTIiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iOTIxIgogICAgIGlua3NjYXBlOndpbmRvdy14PSIwIgogICAgIGlua3NjYXBlOndpbmRvdy15PSIzMyIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIwIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSIKICAgICB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuOTUwODY5LC00NC4wNjExMTcpIj4KICAgIDxwYXRoCiAgICAgICBkPSJtIDU5LjE4NjY2OCw3Ni41MzgyMzEgaCAtMC41NjUyNzEgcSAtMC4yNjM3OTIsLTAuMzAxNDc4IC0wLjYwMjk1NSwtMC41Mjc1ODYgLTAuMzM5MTYyLC0wLjI2Mzc5MyAtMS4wNTUxNzEsLTAuMjYzNzkzIC0wLjU2NTI3MSwwIC0xLjI0MzU5NSwwLjIyNjEwOCAtMC42NDA2NCwwLjE4ODQyNCAtMS41MDczODgsMC40NTIyMTcgLTAuODI5MDY0LDAuMjYzNzkzIC0xLjg4NDIzNSwwLjQ1MjIxNiAtMS4wNTUxNzIsMC4yMjYxMDggLTIuMzM2NDUyLDAuMjI2MTA4IC0yLjM3NDEzNiwwIC00LjYzNTIxOCwtMC44NjY3NDggLTIuMjIzMzk3LC0wLjg2Njc0OCAtNC4yMjA2ODYsLTIuODI2MzUyIC0xLjg0NjU1MSwtMS44NDY1NTEgLTMuMDkwMTQ2LC00LjM3MTQyNSAtMS4yNDM1OTUsLTIuNTI0ODc1IC0xLjI0MzU5NSwtNS44NDExMjkgMCwtMi44MjYzNTIgMS4wMTc0ODcsLTUuMzg4OTEyIDEuMDE3NDg3LC0yLjU2MjU2IDIuODI2MzUzLC00LjUyMjE2NCAxLjgwODg2NSwtMS45NTk2MDQgNC4yNTgzNzEsLTMuMDkwMTQ1IDIuNDQ5NTA1LC0xLjE2ODIyNiA1LjM1MTIyNywtMS4xNjgyMjYgMS4xNjgyMjYsMCAyLjA3MjY1OSwwLjIyNjEwOCAwLjkwNDQzMiwwLjIyNjEwOCAxLjYyMDQ0MiwwLjUyNzU4NiAwLjcxNjAwOSwwLjI2Mzc5MyAxLjMxODk2NCwwLjQ4OTkwMSAwLjYwMjk1NSwwLjIyNjEwOCAxLjE2ODIyNiwwLjIyNjEwOCAwLjc1MzY5NCwwIDEuMDU1MTcxLC0wLjIyNjEwOCAwLjMzOTE2MywtMC4yNjM3OTMgMC42MDI5NTYsLTAuNTY1MjcxIGggMC41NjUyNyB2IDcuNTM2OTQgSCA1OC4yNDQ1NSBRIDU3LjkwNTM4OCw1NS44MTE2NDYgNTcuMzc3ODAyLDU0LjQxNzMxMiA1Ni44NTAyMTcsNTMuMDIyOTc4IDU1LjkwODA5OSw1MS45Njc4MDYgNTQuOTY1OTgyLDUwLjg3NDk1IDUzLjQ5NjI3OCw1MC4yMzQzMSA1Mi4wNjQyNiw0OS41NTU5ODYgNDkuOTE2MjMyLDQ5LjU1NTk4NiBxIC0xLjk5NzI4OSwwIC0zLjQyOTMwOCwwLjY0MDY0IC0xLjQzMjAxOSwwLjYwMjk1NSAtMi40MTE4MjEsMS42NTgxMjYgLTAuOTc5ODAyLDEuMDE3NDg3IC0xLjU4Mjc1NywyLjQxMTgyMSAtMC41NjUyNzEsMS4zNTY2NDkgLTAuODY2NzQ4LDIuOTAxNzIyIC0wLjMwMTQ3OCwxLjUwNzM4OCAtMC40MTQ1MzIsMy4wOTAxNDUgLTAuMDc1MzcsMS41NDUwNzMgLTAuMDc1MzcsMi45Mzk0MDcgMCwzLjk1Njg5NCAwLjY0MDY0LDYuNTU3MTM4IDAuNjQwNjM5LDIuNjAwMjQ0IDEuNzcxMTgsNC4xMDc2MzIgMS4xNjgyMjYsMS41MDczODggMi43ODg2NjgsMi4xMTAzNDMgMS42MjA0NDIsMC42MDI5NTYgMy41ODAwNDcsMC42MDI5NTYgMi41MjQ4NzUsMCA0LjA2OTk0NywtMC43MTYwMSAxLjU0NTA3MywtMC43MTYwMDkgMi40ODcxOTEsLTEuODQ2NTUgMC45NDIxMTcsLTEuMTY4MjI2IDEuNDMyMDE4LC0yLjYwMDI0NCAwLjQ4OTkwMSwtMS40Njk3MDQgMC44NjY3NDgsLTIuOTAxNzIyIGggMC40MTQ1MzIgeiIKICAgICAgIGlkPSJ0ZXh0OCIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MzcuNjg0N3B4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90LCBOb3JtYWwnO2xldHRlci1zcGFjaW5nOi0xLjcwNzU4cHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi4yMjU0NjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMS4xMTI3MzYyLDAuODk4Njg1NikiCiAgICAgICBhcmlhLWxhYmVsPSJDIiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpub3JtYWw7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6MzMuODY2N3B4O2ZvbnQtZmFtaWx5OkNvdXJpZXI7LWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjpDb3VyaWVyO2xldHRlci1zcGFjaW5nOjEuMTU4ODdweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNTUuMjI2NjY1IgogICAgICAgeT0iNTQuNjkwNDgzIgogICAgICAgaWQ9InRleHQzIj48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuMyIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6bm9ybWFsO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1mYW1pbHk6Q291cmllcjstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOkNvdXJpZXI7c3Ryb2tlLXdpZHRoOjEuOTk5OTkiCiAgICAgICAgIHg9IjU1LjIyNjY2NSIKICAgICAgICAgeT0iNTQuNjkwNDgzIiAvPjwvdGV4dD4KICAgIDxwYXRoCiAgICAgICBzdHlsZT0iZm9udC13ZWlnaHQ6NTAwO2ZvbnQtc2l6ZToxMi4zNjc3cHg7Zm9udC1mYW1pbHk6J0hhc2tsdWcgTmVyZCBGb250JzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidIYXNrbHVnIE5lcmQgRm9udCwgTWVkaXVtJztsZXR0ZXItc3BhY2luZzotMS45MjE0MXB4O3dvcmQtc3BhY2luZzowcHg7c3Ryb2tlLXdpZHRoOjIuNTA0MTY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICBkPSJtIDUyLjc0OTM4MSw2MC4yMDM2MzUgdiAtMS4xNTAxOTYgbCAtMy42MTEzNjksLTIuMzg2OTY2IHYgLTAuMDQ5NDcgbCAzLjYxMTM2OSwtMi4zODY5NjcgViA1My4wNzk4NCBsIC00LjY2MjYyMywzLjExNjY2MSB2IDAuODkwNDc0IHogbSAwLjUxNTAzMSwyLjUyMzAxMSBoIDEuMDYzNjIyIEwgNTguMzg0NjQsNTEuOTY2NzQ3IGggLTEuMDYzNjIzIHogbSA1LjYzNTI1OSwtMi41MjMwMTEgNC42NjI2MjMsLTMuMTE2NjYgViA1Ni4xOTY1MDEgTCA1OC44OTk2NzEsNTMuMDc5ODQgdiAxLjE1MDE5NiBsIDMuNjExMzY4LDIuMzg2OTY3IHYgMC4wNDk0NyBsIC0zLjYxMTM2OCwyLjM4Njk2NiB6IgogICAgICAgaWQ9InRleHQ0IgogICAgICAgYXJpYS1sYWJlbD0iJmx0Oy8mZ3Q7IiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpib2xkO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1zaXplOjkuODc3NzdweDtmb250LWZhbWlseTonRGlkb3QgSFRGJzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidEaWRvdCBIVEYgQm9sZCc7Zm9udC12YXJpYW50LWxpZ2F0dXJlczpub3JtYWw7Zm9udC12YXJpYW50LWNhcHM6bm9ybWFsO2ZvbnQtdmFyaWFudC1udW1lcmljOm5vcm1hbDtmb250LXZhcmlhbnQtZWFzdC1hc2lhbjpub3JtYWw7bGV0dGVyLXNwYWNpbmc6LTEuNTM0NThweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgeT0iNzguMjgyNDYzIgogICAgICAgaWQ9InRleHQ1Ij48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuNSIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6Ym9sZDtmb250LXN0cmV0Y2g6bm9ybWFsO2ZvbnQtZmFtaWx5OidEaWRvdCBIVEYnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90IEhURiBCb2xkJztzdHJva2Utd2lkdGg6MS45OTk5OSIKICAgICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgICB5PSI3OC4yODI0NjMiIC8+PC90ZXh0PgogIDwvZz4KPC9zdmc+Cg==" alt="Calepin" class="calepin-website-topbrand-logo" data-inline-svg="1">
+                    </a>
+                </li>
+            </ul>
+            <ul>
+                <li>
+                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
+                        <option value="rendered">HTML</option>
+                        <option value="source">Source</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </li>
+                <li>
+                    <button id="calepin-website-theme-button" class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme: Auto" title="Theme: Auto">
+                        <span aria-hidden="true">◐</span>
+                    </button>
+                </li>
+                <li>
+                    <a class="calepin-website-github-link contrast" href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub" title="GitHub">
+                        <svg viewBox="0 0 24 24" class="calepin-website-github-icon" aria-hidden="true" focusable="false">
+                            <path d="M12 .297C5.373.297 0 5.67 0 12.297c0 5.292 3.438 9.775 8.207 11.387.6.113.793-.26.793-.577 0-.285-.01-1.04-.016-2.042-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.086 1.838 1.238 1.838 1.238 1.072 1.836 2.813 1.306 3.5.999.108-.775.418-1.306.76-1.606-2.665-.304-5.466-1.333-5.466-5.932 0-1.31.467-2.381 1.235-3.221-.123-.304-.535-1.527.117-3.18 0 0 1.008-.323 3.3 1.23a11.36 11.36 0 0 1 3.003-.404c1.089.005 2.2.147 3.003.404 2.291-1.553 3.297-1.23 3.297-1.23.654 1.653.242 2.876.119 3.18.77.84 1.233 1.911 1.233 3.221 0 4.61-2.803 5.624-5.475 5.922.43.372.823 1.102.823 2.222 0 1.606-.014 2.897-.014 3.293 0 .32.19.694.8.576C20.565 22.07 24 17.59 24 12.297 24 5.67 18.627.297 12 .297z"/>
+                        </svg>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    <div class="calepin-website-shell grid">
+        <div class="calepin-website-nav-backdrop" aria-hidden="true"></div>
+        <aside id="calepin-website-sidebar" class="calepin-website-sidebar">
+            <nav aria-label="Documentation"><p><strong>Getting started</strong></p>
 <ul>
-<li>VS Code: <a href="https://marketplace.visualstudio.com/items?itemName=VincentArel-Bundock.calepin">VincentArel-Bundock.calepin</a></li>
-<li>Open VSX: <a href="https://open-vsx.org/extension/VincentArel-Bundock/calepin">VincentArel-Bundock/calepin</a></li>
+<li><a href="index.html" class="active" aria-current="page">Home</a></li>
+<li><a href="install.html">Install</a></li>
+<li><a href="config.html">Configuration</a></li>
 </ul>
-<p>Here is a short video of a live editing session in VS-Code.</p>
-<div class="calepin-video-block" markdown="0">
-  <a class="calepin-video-thumb" href="#calepin-video-lightbox" aria-label="Open Calepin editor preview video">
-    <video class="calepin-video-thumb__media" src="assets/calepin_vscode.mp4" muted preload="metadata" playsinline></video>
-    <span class="calepin-video-thumb__play" aria-hidden="true">▶</span>
-  </a>
-  <div id="calepin-video-lightbox" class="calepin-video-lightbox">
-    <a class="calepin-video-lightbox__backdrop" href="" aria-label="Close video preview"></a>
-    <div class="calepin-video-lightbox__panel">
-      <a class="calepin-video-lightbox__close" href="" aria-label="Close video preview">×</a>
-      <video class="calepin-video-lightbox__media" src="assets/calepin_vscode.mp4" muted autoplay controls playsinline preload="metadata"></video>
-    </div>
-  </div>
-</div>
-
-<h2 id="install-calepin">Install calepin<a class="headerlink" href="#install-calepin" title="Permanent link">&para;</a></h2>
-<p>MacOS and Linux:</p>
-<div class="language-sh highlight"><pre><span></span><code>curl<span class="w"> </span>--proto<span class="w"> </span><span class="s1">&#39;=https&#39;</span><span class="w"> </span>--tlsv1.2<span class="w"> </span>-LsSf<span class="w"> </span>https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
-</code></pre></div>
-<p>Windows via powershell:</p>
-<div class="language-sh highlight"><pre><span></span><code>powershell<span class="w"> </span>-ExecutionPolicy<span class="w"> </span>Bypass<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex&quot;</span>
-</code></pre></div>
-<h2 id="render">Render<a class="headerlink" href="#render" title="Permanent link">&para;</a></h2>
-<p>Use <code>calepin compile</code> when you want to execute code chunks and render the notebook.
-The command line shape is intentionally the same as <code>typst compile</code>: same output-first/format-driven arguments, with <code>--</code> pass-through for Typst flags, plus Calepin preprocessing.</p>
-<div class="language-sh highlight"><pre><span></span><code>calepin<span class="w"> </span>compile<span class="w"> </span>paper.typ<span class="w"> </span>--format<span class="w"> </span>pdf
-calepin<span class="w"> </span>compile<span class="w"> </span>paper.typ<span class="w"> </span>--format<span class="w"> </span>html
-calepin<span class="w"> </span>compile<span class="w"> </span>paper.typ<span class="w"> </span><span class="o">{</span>p<span class="o">}</span>.svg<span class="w"> </span>--format<span class="w"> </span>svg
-
-<span class="c1"># explicit output path</span>
-calepin<span class="w"> </span>compile<span class="w"> </span>paper.typ<span class="w"> </span>path/to/paper.pdf<span class="w"> </span>--format<span class="w"> </span>pdf
-</code></pre></div>
-<p>Arguments after <code>--</code> are forwarded to Typst, so project-specific Typst flags can stay in the same command.</p>
-<div class="language-sh highlight"><pre><span></span><code><span class="c1"># open pdf in system viewer</span>
-calepin<span class="w"> </span>compile<span class="w"> </span>paper.typ<span class="w"> </span>--<span class="w"> </span>--open<span class="w"> </span>
-
-<span class="c1"># set path to font directory</span>
-calepin<span class="w"> </span>compile<span class="w"> </span>paper.typ<span class="w"> </span>--<span class="w"> </span>--font-path<span class="w"> </span>fonts
-</code></pre></div>
-<h2 id="watch">Watch<a class="headerlink" href="#watch" title="Permanent link">&para;</a></h2>
-<p>Use <code>calepin watch</code> while editing. It watches your source for changes, re-runs preprocessing, and delegates recompilation and previewing to <code>typst watch</code>.
-The command form is the same as <code>typst watch</code>: same positional arguments and pass-through flags, with Calepin running its preprocessing step first.</p>
-<div class="language-sh highlight"><pre><span></span><code>calepin<span class="w"> </span>watch<span class="w"> </span>paper.typ
-calepin<span class="w"> </span>watch<span class="w"> </span>paper.typ<span class="w"> </span>--format<span class="w"> </span>html
-calepin<span class="w"> </span>watch<span class="w"> </span>paper.typ<span class="w"> </span><span class="o">{</span>p<span class="o">}</span>.svg<span class="w"> </span>--format<span class="w"> </span>svg
-
-Stop<span class="w"> </span>a<span class="w"> </span>running<span class="w"> </span>watch<span class="w"> </span>from<span class="w"> </span>the<span class="w"> </span>same<span class="w"> </span>project.
-calepin<span class="w"> </span>stop<span class="w"> </span>paper.typ
-</code></pre></div>
-<p>The default output format is PDF. Choose another format with <code>--format</code>, or let the output extension select the format. </p>
-<p>Arguments after <code>--</code> are passed through to <code>typst watch</code>. Typst's <code>--open</code> flag opens the rendered output in the operating system's default viewer, and Typst's <code>--port</code> flag chooses the HTML preview port.</p>
-<div class="language-sh highlight"><pre><span></span><code>calepin<span class="w"> </span>watch<span class="w"> </span>example.typ<span class="w"> </span>--<span class="w"> </span>--open
-calepin<span class="w"> </span>watch<span class="w"> </span>paper.typ<span class="w"> </span>paper.html<span class="w"> </span>--format<span class="w"> </span>html<span class="w"> </span>--<span class="w"> </span>--port<span class="w"> </span><span class="m">3001</span><span class="w"> </span>--open
-</code></pre></div>
-<h4 id="pdf-viewer-auto-refresh">PDF viewer auto-refresh<a class="headerlink" href="#pdf-viewer-auto-refresh" title="Permanent link">&para;</a></h4>
-<p>Some PDF viewers do not automatically refresh a document when it is regenerated on disk. For example, macOS Preview may keep showing an older PDF until the window is focused, the file is reopened, or the application is restarted.</p>
-<p>For smoother live preview, use a PDF viewer that reloads the file when it changes. On macOS, Skim is a good option. Other platforms have similar auto-reloading viewers, which are useful when working with tools that repeatedly rebuild PDFs.</p>
-<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
-<p>Every document uses the runtime file <em>Calepin</em> writes to <code>.calepin/calepin.typ</code>. <code>calepin compile</code> and <code>calepin watch</code> run code chunks first, so the runtime and computed outputs are ready when Typst builds the document.</p>
-<h3 id="preamble">Preamble<a class="headerlink" href="#preamble" title="Permanent link">&para;</a></h3>
-<p>Start by importing the runtime and setting document-wide defaults with <code>calepin.setup()</code>.</p>
-<div class="language-text highlight"><pre><span></span><code>#import &quot;.calepin/calepin.typ&quot;
-
-#calepin.setup(
-  echo: true,
-  eval: true,
-)
-</code></pre></div>
-<p>Define a short alias for Python inline computation.</p>
-<div class="language-text highlight"><pre><span></span><code>#let py = calepin.inline.with(&quot;python&quot;)
-</code></pre></div>
-<h3 id="chunks">Chunks<a class="headerlink" href="#chunks" title="Permanent link">&para;</a></h3>
-<p>A block chunk runs a piece of code and inserts its result. Start with a plain fenced block:</p>
-<div class="language-text highlight"><pre><span></span><code>```python
-x = 41
-print(x + 1)
-```
-
-Variables are persistent across chunks:
-
-```python
-print(x + 2)
-```
-]
-</code></pre></div>
-<p>When you need extra control, use <code>#calepin.chunk</code> with options such as labels, captions, hiding source code, or changing how results are shown. If the body is a fenced block with a language, <code>#calepin.chunk</code> infers the engine from the fence:</p>
-<div class="language-text highlight"><pre><span></span><code>#calepin.chunk(label: &quot;answer&quot;)[
-```python
-x = 41
-print(x + 1)
-```
-</code></pre></div>
-<h3 id="inline">Inline<a class="headerlink" href="#inline" title="Permanent link">&para;</a></h3>
-<p>An inline expression drops a computed value into the surrounding prose. It uses the same raw body contract and never takes a label.</p>
-<div class="language-text highlight"><pre><span></span><code>The inline answer is #py[`print(40 + 2)`].
-</code></pre></div>
-<h3 id="all-together-now">All together now<a class="headerlink" href="#all-together-now" title="Permanent link">&para;</a></h3>
-<p>Here is one full document example.</p>
-<div class="language-text highlight"><pre><span></span><code>#import &quot;.calepin/calepin.typ&quot;
-
-#calepin.setup(
-  echo: true,
-  results: &quot;verbatim&quot;,
-)
-
-#let py = calepin.inline.with(&quot;python&quot;)
-
-```python
-x = 41
-print(x + 1)
-```
-
-Variables are persistent across chunks:
-
-```python
-print(x + 2)
-```
-
-The inline answer is #py[`print(40 + 2)`].
-</code></pre></div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                
-              </article>
-            </div>
-          
-          
-<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+<p><strong>Features</strong></p>
+<ul>
+<li><a href="options.html">Global options</a></li>
+<li><a href="supported-languages.html">Supported Languages</a></li>
+<li><a href="tables_and_figures.html">Tables and figures</a></li>
+</ul>
+<p><strong>Roadmap</strong></p>
+<ul>
+<li><a href="website.html">Website generation</a></li>
+<li><a href="templates.html">Templates</a></li>
+</ul>
+<p><strong>Reference</strong></p>
+<ul>
+<li><a href="cli.html">CLI reference</a></li>
+<li><a href="example.html">Example notebook</a></li>
+</ul></nav>
+        </aside>
+        <main class="calepin-website-main">
+            
+    <section class="hero">
+      <div class="hero-text">
+        <div class="hero-title"><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMTA0LjcxOTE4bW0iCiAgIGhlaWdodD0iMzEuMzc3Njg5bW0iCiAgIHZpZXdCb3g9IjAgMCAxMDQuNzE5MTggMzEuMzc3Njg5IgogICB2ZXJzaW9uPSIxLjEiCiAgIGlkPSJzdmcxIgogICBpbmtzY2FwZTp2ZXJzaW9uPSIxLjQuNCAoZGNhZjNlNywgMjAyNi0wNS0wNSkiCiAgIHNvZGlwb2RpOmRvY25hbWU9ImxvZ29fbG9uZ18yLnN2ZyIKICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSJsb2dvX2xvbmdfdGV4dF8yLnBuZyIKICAgaW5rc2NhcGU6ZXhwb3J0LXhkcGk9Ijk2IgogICBpbmtzY2FwZTpleHBvcnQteWRwaT0iOTYiCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iY3VycmVudENvbG9yIj4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgaW5rc2NhcGU6em9vbT0iMC45ODY5MTc1MiIKICAgICBpbmtzY2FwZTpjeD0iMTUyLjQ5NTAxIgogICAgIGlua3NjYXBlOmN5PSIyNjYuNDg2MyIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjE1MTIiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iOTIxIgogICAgIGlua3NjYXBlOndpbmRvdy14PSIwIgogICAgIGlua3NjYXBlOndpbmRvdy15PSIzMyIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIwIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSIKICAgICB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuOTUwODU1LC00NC4wNjExMzIpIj4KICAgIDxwYXRoCiAgICAgICBkPSJtIDU5LjE4NjY2OCw3Ni41MzgyMzEgaCAtMC41NjUyNzEgcSAtMC4yNjM3OTIsLTAuMzAxNDc4IC0wLjYwMjk1NSwtMC41Mjc1ODYgLTAuMzM5MTYyLC0wLjI2Mzc5MyAtMS4wNTUxNzEsLTAuMjYzNzkzIC0wLjU2NTI3MSwwIC0xLjI0MzU5NSwwLjIyNjEwOCAtMC42NDA2NCwwLjE4ODQyNCAtMS41MDczODgsMC40NTIyMTcgLTAuODI5MDY0LDAuMjYzNzkzIC0xLjg4NDIzNSwwLjQ1MjIxNiAtMS4wNTUxNzIsMC4yMjYxMDggLTIuMzM2NDUyLDAuMjI2MTA4IC0yLjM3NDEzNiwwIC00LjYzNTIxOCwtMC44NjY3NDggLTIuMjIzMzk3LC0wLjg2Njc0OCAtNC4yMjA2ODYsLTIuODI2MzUyIC0xLjg0NjU1MSwtMS44NDY1NTEgLTMuMDkwMTQ2LC00LjM3MTQyNSAtMS4yNDM1OTUsLTIuNTI0ODc1IC0xLjI0MzU5NSwtNS44NDExMjkgMCwtMi44MjYzNTIgMS4wMTc0ODcsLTUuMzg4OTEyIDEuMDE3NDg3LC0yLjU2MjU2IDIuODI2MzUzLC00LjUyMjE2NCAxLjgwODg2NSwtMS45NTk2MDQgNC4yNTgzNzEsLTMuMDkwMTQ1IDIuNDQ5NTA1LC0xLjE2ODIyNiA1LjM1MTIyNywtMS4xNjgyMjYgMS4xNjgyMjYsMCAyLjA3MjY1OSwwLjIyNjEwOCAwLjkwNDQzMiwwLjIyNjEwOCAxLjYyMDQ0MiwwLjUyNzU4NiAwLjcxNjAwOSwwLjI2Mzc5MyAxLjMxODk2NCwwLjQ4OTkwMSAwLjYwMjk1NSwwLjIyNjEwOCAxLjE2ODIyNiwwLjIyNjEwOCAwLjc1MzY5NCwwIDEuMDU1MTcxLC0wLjIyNjEwOCAwLjMzOTE2MywtMC4yNjM3OTMgMC42MDI5NTYsLTAuNTY1MjcxIGggMC41NjUyNyB2IDcuNTM2OTQgSCA1OC4yNDQ1NSBRIDU3LjkwNTM4OCw1NS44MTE2NDYgNTcuMzc3ODAyLDU0LjQxNzMxMiA1Ni44NTAyMTcsNTMuMDIyOTc4IDU1LjkwODA5OSw1MS45Njc4MDYgNTQuOTY1OTgyLDUwLjg3NDk1IDUzLjQ5NjI3OCw1MC4yMzQzMSA1Mi4wNjQyNiw0OS41NTU5ODYgNDkuOTE2MjMyLDQ5LjU1NTk4NiBxIC0xLjk5NzI4OSwwIC0zLjQyOTMwOCwwLjY0MDY0IC0xLjQzMjAxOSwwLjYwMjk1NSAtMi40MTE4MjEsMS42NTgxMjYgLTAuOTc5ODAyLDEuMDE3NDg3IC0xLjU4Mjc1NywyLjQxMTgyMSAtMC41NjUyNzEsMS4zNTY2NDkgLTAuODY2NzQ4LDIuOTAxNzIyIC0wLjMwMTQ3OCwxLjUwNzM4OCAtMC40MTQ1MzIsMy4wOTAxNDUgLTAuMDc1MzcsMS41NDUwNzMgLTAuMDc1MzcsMi45Mzk0MDcgMCwzLjk1Njg5NCAwLjY0MDY0LDYuNTU3MTM4IDAuNjQwNjM5LDIuNjAwMjQ0IDEuNzcxMTgsNC4xMDc2MzIgMS4xNjgyMjYsMS41MDczODggMi43ODg2NjgsMi4xMTAzNDMgMS42MjA0NDIsMC42MDI5NTYgMy41ODAwNDcsMC42MDI5NTYgMi41MjQ4NzUsMCA0LjA2OTk0NywtMC43MTYwMSAxLjU0NTA3MywtMC43MTYwMDkgMi40ODcxOTEsLTEuODQ2NTUgMC45NDIxMTcsLTEuMTY4MjI2IDEuNDMyMDE4LC0yLjYwMDI0NCAwLjQ4OTkwMSwtMS40Njk3MDQgMC44NjY3NDgsLTIuOTAxNzIyIGggMC40MTQ1MzIgeiIKICAgICAgIGlkPSJ0ZXh0OCIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MzcuNjg0N3B4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90LCBOb3JtYWwnO2xldHRlci1zcGFjaW5nOi0xLjcwNzU4cHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi4yMjU0NjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMS4xMTI3MzYyLDAuODk4Njg1NikiCiAgICAgICBhcmlhLWxhYmVsPSJDIiAvPgogICAgPHBhdGgKICAgICAgIGQ9Im0gNzcuNjcxMDY5LDYyLjEwMzgwNSBoIC0wLjA1MDggYyAtMC4wMzM4NywwLjIyMDEzMyAtMC4zMTMyNjcsMC40NDAyNjcgLTAuODM4MiwwLjY2MDQgbCAtMS45MDUsMC43NjIgYyAtMC41NDE4NjcsMC4yMjAxMzMgLTAuOTU2NzMzLDAuNTMzNCAtMS4yNDQ2LDAuOTM5OCAtMC4yODc4NjcsMC4zODk0NjcgLTAuNDMxOCwwLjg4MDUzMyAtMC40MzE4LDEuNDczMiAwLDAuMjU0IDAuMDI1NCwwLjUxNjQ2NyAwLjA3NjIsMC43ODc0IDAuMDUwOCwwLjI3MDkzMyAwLjE0MzkzMywwLjUxNjQ2NyAwLjI3OTQsMC43MzY2IDAuMTM1NDY3LDAuMjAzMiAwLjMyMTczMywwLjM3MjUzMyAwLjU1ODgsMC41MDggMC4yNTQsMC4xMzU0NjcgMC41NzU3MzMsMC4yMDMyIDAuOTY1MiwwLjIwMzIgMC41NTg4LDAgMS4wMDc1MzMsLTAuMTE4NTMzIDEuMzQ2MiwtMC4zNTU2IDAuMzU1NiwtMC4yMzcwNjcgMC42MTgwNjcsLTAuNTMzNCAwLjc4NzQsLTAuODg5IDAuMTg2MjY3LC0wLjM1NTYgMC4zMDQ4LC0wLjczNjYgMC4zNTU2LC0xLjE0MyAwLjA2NzczLC0wLjQyMzMzMyAwLjEwMTYsLTAuODA0MzMzIDAuMTAxNiwtMS4xNDMgeiBtIDQuNDQ1LDUuOTQzNiBjIC0wLjIyMDEzMywwLjE2OTMzMyAtMC40ODI2LDAuMzEzMjY3IC0wLjc4NzQsMC40MzE4IC0wLjMwNDgsMC4xMzU0NjcgLTAuNjc3MzMzLDAuMjAzMiAtMS4xMTc2LDAuMjAzMiAtMC44MTI4LDAgLTEuNDA1NDY3LC0wLjE2OTMzMyAtMS43NzgsLTAuNTA4IC0wLjM1NTYsLTAuMzU1NiAtMC42MDExMzMsLTAuODQ2NjY3IC0wLjczNjYsLTEuNDczMiBoIC0wLjA1MDggYyAtMC4wNjc3MywwLjE1MjQgLTAuMTYwODY3LDAuMzQ3MTMzIC0wLjI3OTQsMC41ODQyIC0wLjExODUzMywwLjIyMDEzMyAtMC4zMDQ4LDAuNDQwMjY3IC0wLjU1ODgsMC42NjA0IC0wLjIzNzA2NywwLjIwMzIgLTAuNTU4OCwwLjM3MjUzMyAtMC45NjUyLDAuNTA4IC0wLjQwNjQsMC4xNTI0IC0wLjkyMjg2NywwLjIyODYgLTEuNTQ5NCwwLjIyODYgLTAuNzExMiwwIC0xLjI3ODQ2NywtMC4wODQ2NyAtMS43MDE4LC0wLjI1NCAtMC40MjMzMzMsLTAuMTUyNCAtMC43NTM1MzMsLTAuMzQ3MTMzIC0wLjk5MDYsLTAuNTg0MiAtMC4yMzcwNjcsLTAuMjM3MDY3IC0wLjM5NzkzMywtMC40OTk1MzMgLTAuNDgyNiwtMC43ODc0IC0wLjA2NzczLC0wLjMwNDggLTAuMTAxNiwtMC41ODQyIC0wLjEwMTYsLTAuODM4MiAwLC0wLjU5MjY2NyAwLjExODUzMywtMS4wNjY4IDAuMzU1NiwtMS40MjI0IDAuMjM3MDY3LC0wLjM1NTYgMC41NDE4NjcsLTAuNjM1IDAuOTE0NCwtMC44MzgyIDAuMzg5NDY3LC0wLjIyMDEzMyAwLjgxMjgsLTAuMzk3OTMzIDEuMjcsLTAuNTMzNCAwLjQ3NDEzMywtMC4xMzU0NjcgMC45NDgyNjcsLTAuMjc5NCAxLjQyMjQsLTAuNDMxOCAwLjU1ODgsLTAuMTg2MjY3IDEuMDE2LC0wLjM0NzEzMyAxLjM3MTYsLTAuNDgyNiAwLjM3MjUzMywtMC4xMzU0NjcgMC42NjA0LC0wLjI5NjMzMyAwLjg2MzYsLTAuNDgyNiAwLjIwMzIsLTAuMjAzMiAwLjMzODY2NywtMC40NDg3MzMgMC40MDY0LC0wLjczNjYgMC4wODQ2NywtMC4zMDQ4IDAuMTIwMDI2LC0wLjgxMDY2MSAwLjEyNywtMS4yMTkyIDAuMDA2MiwtMC4zNjQ4OTggLTAuMDI1NCwtMC43NzA0NjcgLTAuMDc2MiwtMS4wOTIyIC0wLjA1MDgsLTAuMzIxNzMzIC0wLjE0MzkzMywtMC41OTI2NjcgLTAuMjc5NCwtMC44MTI4IC0wLjEzNTQ2NywtMC4yMzcwNjcgLTAuMzMwMiwtMC40MTQ4NjcgLTAuNTg0MiwtMC41MzM0IC0wLjI1NCwtMC4xMTg1MzMgLTAuNTkyNjY3LC0wLjE3NzggLTEuMDE2LC0wLjE3NzggLTAuNTU4OCwwIC0xLjAyNDQ2NywwLjEwMTYgLTEuMzk3LDAuMzA0OCAtMC4zNTU2LDAuMTg2MjY3IC0wLjUzMzQsMC40OTk1MzMgLTAuNTMzNCwwLjkzOTggMCwwLjI4Nzg2NyAwLjAyNTQsMC41NzU3MzMgMC4wNzYyLDAuODYzNiAwLjA1MDgsMC4yNzA5MzMgMC4wNzYyLDAuNDc0MTMzIDAuMDc2MiwwLjYwOTYgMCwwLjIzNzA2NyAtMC4wODQ2NywwLjQ0MDI2NyAtMC4yNTQsMC42MDk2IC0wLjE2OTMzMywwLjE1MjQgLTAuNDE0ODY3LDAuMjI4NiAtMC43MzY2LDAuMjI4NiAtMC41NTg4LDAgLTAuOTA1OTMzLC0wLjEwMTYgLTEuMDQxNCwtMC4zMDQ4IC0wLjEzNTQ2NywtMC4yMDMyIC0wLjIwMzIsLTAuNDY1NjY3IC0wLjIwMzIsLTAuNzg3NCAwLC0wLjM3MjUzMyAwLjA4NDY3LC0wLjcyODEzMyAwLjI1NCwtMS4wNjY4IDAuMTY5MzMzLC0wLjMzODY2NyAwLjQxNDg2NywtMC42MzUgMC43MzY2LC0wLjg4OSAwLjMzODY2NywtMC4yNzA5MzMgMC43NTM1MzMsLTAuNDgyNiAxLjI0NDYsLTAuNjM1IDAuNTA4LC0wLjE1MjQgMS4wODM3MzMsLTAuMjI4NiAxLjcyNzIsLTAuMjI4NiAwLjc3ODkzMywwIDEuNDMwODY3LDAuMTAxNiAxLjk1NTgsMC4zMDQ4IDAuNTI0OTMzLDAuMTg2MjY3IDAuOTQ4MjY3LDAuNDQ4NzMzIDEuMjcsMC43ODc0IDAuMzIxNzMzLDAuMzIxNzMzIDAuNTUwMzMzLDAuNjk0MjY3IDAuNjg1OCwxLjExNzYgMC4xMzU0NjcsMC40MDY0IDAuMjAzMiwwLjgzODIgMC4yMDMyLDEuMjk1NCB2IDYuMzI0NiBjIDAsMC40OTEwNjcgMC4wNzYyLDAuODIxMjY3IDAuMjI4NiwwLjk5MDYgMC4xNTI0LDAuMTY5MzMzIDAuMzcyNTMzLDAuMjU0IDAuNjYwNCwwLjI1NCAwLjE4NjI2NywwIDAuMzgxLC0wLjAzMzg3IDAuNTg0MiwtMC4xMDE2IDAuMjAzMiwtMC4wNjc3MyAwLjM5NzkzMywtMC4xNjkzMzMgMC41ODQyLC0wLjMwNDggeiBtIDEuOTQ2MjkyLC0wLjA3NjIgaCAxLjk1NTggdiAtMTcuNjAyMiBoIC0xLjk1NTggdiAtMC4zNTU2IGggNC4xNDAyIHYgMTcuOTU3OCBoIDEuOTU1OCB2IDAuMzU1NiBoIC02LjA5NiB6IG0gMTYuOTA2ODU5LC02LjI5OTIgYyAwLjAzMzksLTAuMjM3MDY3IDAuMDUwOCwtMC40NTcyIDAuMDUwOCwtMC42NjA0IHYgLTAuNjM1IGMgMCwtMC41NzU3MzMgLTAuMDU5MywtMS4wNDk4NjcgLTAuMTc3OCwtMS40MjI0IC0wLjEwMTYsLTAuMzcyNTMzIC0wLjI1NCwtMC42Njg4NjcgLTAuNDU3MiwtMC44ODkgLTAuMTg2MjcsLTAuMjIwMTMzIC0wLjQyMzMzNCwtMC4zNzI1MzMgLTAuNzExMjAxLC0wLjQ1NzIgLTAuMjcwOTMzLC0wLjEwMTYgLTAuNTY3MjY3LC0wLjE1MjQgLTAuODg5LC0wLjE1MjQgLTAuNTc1NzMzLDAgLTEuMDQ5ODY3LDAuMTE4NTMzIC0xLjQyMjQsMC4zNTU2IC0wLjM3MjUzMywwLjIyMDEzMyAtMC42Njg4NjcsMC41MjQ5MzMgLTAuODg5LDAuOTE0NCAtMC4yMjAxMzMsMC4zODk0NjcgLTAuMzg5NDY3LDAuODM4MiAtMC41MDgsMS4zNDYyIC0wLjEwMTYsMC41MDggLTAuMTY5MzMzLDEuMDQxNCAtMC4yMDMyLDEuNjAwMiB6IG0gLTUuMjMyNDAxLDAuMzU1NiBjIDAsMC4xNjkzMzMgLTAuMDA4NSwwLjM0NzEzMyAtMC4wMjU0LDAuNTMzNCB2IDAuNjYwNCBjIDAsMC41NTg4IDAuMDMzODcsMS4xNDMgMC4xMDE2LDEuNzUyNiAwLjA2NzczLDAuNjA5NiAwLjIxMTY2NywxLjE1OTkzMyAwLjQzMTgsMS42NTEgMC4yMzcwNjcsMC40OTEwNjcgMC41NzU3MzMsMC44OTc0NjcgMS4wMTYsMS4yMTkyIDAuNDU3MiwwLjMyMTczMyAxLjA1ODMzMywwLjQ4MjYgMS44MDM0LDAuNDgyNiAwLjc0NTA2NywwIDEuMzU0NjcxLC0wLjExMDA2NyAxLjgyODgwMSwtMC4zMzAyIDAuNDkxMDcsLTAuMjIwMTMzIDAuODcyMDcsLTAuNDgyNiAxLjE0MywtMC43ODc0IDAuMjg3ODcsLTAuMzIxNzMzIDAuNDk5NTMsLTAuNjQzNDY3IDAuNjM1LC0wLjk2NTIgMC4xMzU0NywtMC4zMjE3MzMgMC4yMzcwNywtMC41ODQyIDAuMzA0OCwtMC43ODc0IGwgMC4zODEsMC4wNzYyIGMgLTAuMDUwOCwwLjE4NjI2NyAtMC4xNTI0LDAuNDU3MiAtMC4zMDQ4LDAuODEyOCAtMC4xMzU0NywwLjMzODY2NyAtMC4zNjQwNywwLjY4NTggLTAuNjg1OCwxLjA0MTQgLTAuMzA0OCwwLjMzODY2NyAtMC43MjgxMywwLjY0MzQ2NyAtMS4yNywwLjkxNDQgLTAuNTI0OTMsMC4yNTQgLTEuMjEwNzM0LDAuMzgxIC0yLjA1NzQwMSwwLjM4MSAtMC44NDY2NjcsMCAtMS42MzQwNjcsLTAuMTM1NDY3IC0yLjM2MjIsLTAuNDA2NCAtMC43MTEyLC0wLjI3MDkzMyAtMS4zMjkyNjcsLTAuNjYwNCAtMS44NTQyLC0xLjE2ODQgLTAuNTI0OTMzLC0wLjUwOCAtMC45MzEzMzMsLTEuMTA5MTMzIC0xLjIxOTIsLTEuODAzNCAtMC4yODc4NjcsLTAuNzExMiAtMC40MzE4LC0xLjQ5ODYgLTAuNDMxOCwtMi4zNjIyIDAsLTAuNzQ1MDY3IDAuMTQzOTMzLC0xLjQ2NDczMyAwLjQzMTgsLTIuMTU5IDAuMzA0OCwtMC43MTEyIDAuNzExMiwtMS4zMzc3MzMgMS4yMTkyLC0xLjg3OTYgMC41MjQ5MzMsLTAuNTQxODY3IDEuMTM0NTMzLC0wLjk3MzY2NyAxLjgyODgsLTEuMjk1NCAwLjY5NDI2NywtMC4zMzg2NjcgMS40MzkzMzMsLTAuNTA4IDIuMjM1MiwtMC41MDggMC40NzQxMzMsMCAwLjk4MjEzNCwwLjA4NDY3IDEuNTI0MDAxLDAuMjU0IDAuNTQxODcsMC4xNjkzMzMgMS4wNDE0LDAuNDQ4NzMzIDEuNDk4NiwwLjgzODIgMC40NzQxMywwLjM3MjUzMyAwLjg2MzYsMC44NzIwNjcgMS4xNjg0LDEuNDk4NiAwLjMyMTczLDAuNjI2NTMzIDAuNDgyNiwxLjQwNTQ2NyAwLjQ4MjYsMi4zMzY4IHogbSAyMS4zNTE4NzEsMC40ODI2IGMgMCwtMC43Nzg5MzMgLTAuMDQyMywtMS40NzMyIC0wLjEyNywtMi4wODI4IC0wLjA4NDcsLTAuNjI2NTMzIC0wLjIzNzA3LC0xLjE1OTkzMyAtMC40NTcyLC0xLjYwMDIgLTAuMjAzMiwtMC40NDAyNjcgLTAuNDk5NTMsLTAuNzc4OTMzIC0wLjg4OSwtMS4wMTYgLTAuMzcyNTMsLTAuMjM3MDY3IC0wLjg1NTEzLC0wLjM1NTYgLTEuNDQ3OCwtMC4zNTU2IC0wLjYyNjUzLDAgLTEuMTQzLDAuMTEwMDY3IC0xLjU0OTQsMC4zMzAyIC0wLjQwNjQsMC4yMjAxMzMgLTAuNzM2NiwwLjQ5OTUzMyAtMC45OTA2LDAuODM4MiAtMC4xODYyNywwLjIzNzA2NyAtMC4zMzg2NywwLjQ5MTA2NyAtMC40NTcyLDAuNzYyIC0wLjEwMTYsMC4yNzA5MzMgLTAuMTg2MjcsMC41OTI2NjcgLTAuMjU0LDAuOTY1MiAtMC4wNjc3LDAuMzcyNTMzIC0wLjExODUzLDAuODA0MzMzIC0wLjE1MjQsMS4yOTU0IC0wLjAxNjksMC40NzQxMzMgLTAuMDI1NCwxLjA0MTQgLTAuMDI1NCwxLjcwMTggMCwwLjU1ODggMC4wNDIzLDEuMTM0NTMzIDAuMTI3LDEuNzI3MiAwLjA4NDcsMC41OTI2NjcgMC4yNDU1MywxLjEzNDUzMyAwLjQ4MjYsMS42MjU2IDAuMjM3MDcsMC40NzQxMzMgMC41NjcyNywwLjg2MzYgMC45OTA2LDEuMTY4NCAwLjQ0MDI3LDAuMzA0OCAxLjAxNiwwLjQ1NzIgMS43MjcyLDAuNDU3MiAwLjY5NDI3LDAgMS4yNDQ2LC0wLjEzNTQ2NyAxLjY1MSwtMC40MDY0IDAuNDA2NCwtMC4yNzA5MzMgMC43MTEyLC0wLjY2MDQgMC45MTQ0LC0xLjE2ODQgMC4yMDMyLC0wLjUwOCAwLjMzMDIsLTEuMTE3NiAwLjM4MSwtMS44Mjg4IDAuMDUwOCwtMC43MjgxMzMgMC4wNzYyLC0xLjUzMjQ2NyAwLjA3NjIsLTIuNDEzIHogbSAtMTAuNDkwMiwxMi41NzMgaCAxLjk1NTggdiAtMTcuMjk3NCBoIC0xLjk1NTggdiAtMC4zNTU2IGggNC4wODk0IHYgMi4xMzM2IGggMC4wNTA4IGMgMC4yNTQsLTAuNzExMiAwLjY2ODg3LC0xLjI5NTQgMS4yNDQ2LC0xLjc1MjYgMC41OTI2NywtMC40NzQxMzMgMS4zNTQ2NywtMC43MTEyIDIuMjg2LC0wLjcxMTIgMC43MjgxMywwIDEuNDEzOTMsMC4xNjA4NjcgMi4wNTc0LDAuNDgyNiAwLjY0MzQ3LDAuMzA0OCAxLjIxMDczLDAuNzE5NjY3IDEuNzAxOCwxLjI0NDYgMC40OTEwNywwLjUwOCAwLjg4MDUzLDEuMTA5MTMzIDEuMTY4NCwxLjgwMzQgMC4yODc4NywwLjY5NDI2NyAwLjQzMTgsMS40MjI0IDAuNDMxOCwyLjE4NDQgMCwwLjc3ODkzMyAtMC4xNTI0LDEuNTI0IC0wLjQ1NzIsMi4yMzUyIC0wLjI4Nzg3LDAuNjk0MjY3IC0wLjY4NTgsMS4zMTIzMzMgLTEuMTkzOCwxLjg1NDIgLTAuNTA4LDAuNTQxODY3IC0xLjEwMDY3LDAuOTczNjY3IC0xLjc3OCwxLjI5NTQgLTAuNjYwNCwwLjMyMTczMyAtMS4zNjMxMywwLjQ4MjYgLTIuMTA4MiwwLjQ4MjYgLTAuNTc1NzMsMCAtMS4wNjY4LC0wLjEwMTYgLTEuNDczMiwtMC4zMDQ4IC0wLjM4OTQ3LC0wLjE4NjI2NyAtMC43MTEyLC0wLjQwNjQgLTAuOTY1MiwtMC42NjA0IC0wLjI1NCwtMC4yNzA5MzMgLTAuNDQ4NzMsLTAuNTQxODY3IC0wLjU4NDIsLTAuODEyOCAtMC4xMzU0NywtMC4yODc4NjcgLTAuMjI4NiwtMC41MTY0NjcgLTAuMjc5NCwtMC42ODU4IGggLTAuMDUwOCB2IDguODY0NiBoIDEuOTU1OCB2IDAuMzU1NiBoIC02LjA5NiB6IG0gMTcuODcyMDgsLTIzLjU3MTIgYyAwLC0wLjM3MjUzMyAwLjEyNywtMC42ODU4IDAuMzgxLC0wLjkzOTggMC4yNzA5MywtMC4yNzA5MzMgMC41OTI2NywtMC40MDY0IDAuOTY1MiwtMC40MDY0IDAuMzcyNTMsMCAwLjY4NTgsMC4xMzU0NjcgMC45Mzk4LDAuNDA2NCAwLjI3MDkzLDAuMjU0IDAuNDA2NCwwLjU2NzI2NyAwLjQwNjQsMC45Mzk4IDAsMC4zNzI1MzMgLTAuMTM1NDcsMC42OTQyNjcgLTAuNDA2NCwwLjk2NTIgLTAuMjU0LDAuMjU0IC0wLjU2NzI3LDAuMzgxIC0wLjkzOTgsMC4zODEgLTAuMzcyNTMsMCAtMC42OTQyNywtMC4xMjcgLTAuOTY1MiwtMC4zODEgLTAuMjU0LC0wLjI3MDkzMyAtMC4zODEsLTAuNTkyNjY3IC0wLjM4MSwtMC45NjUyIHogbSAtMS42NTEsMTYuNDU5MiBoIDEuOTU1OCB2IC0xMC4xODU0IGggLTEuOTU1OCB2IC0wLjM1NTYgaCA0LjE0MDIgdiAxMC41NDEgaCAxLjk1NTggdiAwLjM1NTYgaCAtNi4wOTYgeiBtIDguNjAxMDYsMCBoIDEuOTU1OCB2IC0xMC4xODU0IGggLTEuOTU1OCB2IC0wLjM1NTYgaCA0LjA4OTQgdiAyLjcxNzggaCAwLjA1MDggYyAwLjEwMTYsLTAuMjIwMTMzIDAuMjQ1NTMsLTAuNDk5NTMzIDAuNDMxOCwtMC44MzgyIDAuMjAzMiwtMC4zMzg2NjcgMC40NzQxMywtMC42Njg4NjcgMC44MTI4LC0wLjk5MDYgMC4zMzg2NywtMC4zMjE3MzMgMC43NjIsLTAuNTkyNjY3IDEuMjcsLTAuODEyOCAwLjUwOCwtMC4yMzcwNjcgMS4xMjYwNywtMC4zNTU2IDEuODU0MiwtMC4zNTU2IDEuMTE3NiwwIDIuMDIzNTMsMC4yNzA5MzMgMi43MTc4LDAuODEyOCAwLjcxMTIsMC41NDE4NjcgMS4wNjY4LDEuNDA1NDY3IDEuMDY2OCwyLjU5MDggdiA3LjQxNjggaCAxLjk1NTggdiAwLjM1NTYgaCAtNi4wOTYgdiAtMC4zNTU2IGggMS45NTU4IHYgLTguMjA0MiBjIDAsLTAuNjYwNCAtMC4xNjA4NywtMS4yMDIyNjcgLTAuNDgyNiwtMS42MjU2IC0wLjMwNDgsLTAuNDIzMzMzIC0wLjc4NzQsLTAuNjM1IC0xLjQ0NzgsLTAuNjM1IC0wLjU0MTg3LDAgLTEuMDU4MzMsMC4xMTg1MzMgLTEuNTQ5NCwwLjM1NTYgLTAuNDkxMDcsMC4yMzcwNjcgLTAuOTIyODcsMC41NjcyNjcgLTEuMjk1NCwwLjk5MDYgLTAuMzcyNTMsMC40MjMzMzMgLTAuNjY4ODcsMC45MjI4NjcgLTAuODg5LDEuNDk4NiAtMC4yMDMyLDAuNTc1NzMzIC0wLjMwNDgsMS4yMDIyNjcgLTAuMzA0OCwxLjg3OTYgdiA1Ljc0MDQgaCAxLjk1NTggdiAwLjM1NTYgaCAtNi4wOTYgeiIKICAgICAgIGlkPSJ0ZXh0MSIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MjUuNHB4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246RGlkb3Q7bGV0dGVyLXNwYWNpbmc6MS4xNTg4N3B4O3dvcmQtc3BhY2luZzowcHg7c3Ryb2tlLXdpZHRoOjEuOTk5OTk7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICBhcmlhLWxhYmVsPSJhbGVwaW4iCiAgICAgICBzb2RpcG9kaTpub2RldHlwZXM9ImNjY2Njc3NjY3NjY2NzY2Njc2NjY2NjY3Njc2Nzc2NjY2NjY2FzY3NzY3Njc2Nzc3NzY2NzY2Njc3Nzc3NjY2NjY2NjY2NjY2NjY3NzY2Njc2NzY2NjY2Nzc2Njc2Njc2NjY2Njc2NzY3NjY2Nzc2NjY2NzY2Njc3NjY3Njc3NjY3Nzc2NzY2NjY2NjY2Njc2Njc3Njc2NzY2NjY2NjY2NjY3Nzc2Nzc3Njc2NjY2NjY2NjY2NjY2NjY2NjY2Njc2NzY3NjY2NjY2NzY3Nzc2NzY2NjY2MiIC8+CiAgICA8dGV4dAogICAgICAgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIKICAgICAgIHN0eWxlPSJmb250LXN0eWxlOm5vcm1hbDtmb250LXZhcmlhbnQ6bm9ybWFsO2ZvbnQtd2VpZ2h0Om5vcm1hbDtmb250LXN0cmV0Y2g6bm9ybWFsO2ZvbnQtc2l6ZTozMy44NjY3cHg7Zm9udC1mYW1pbHk6Q291cmllcjstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOkNvdXJpZXI7bGV0dGVyLXNwYWNpbmc6MS4xNTg4N3B4O3dvcmQtc3BhY2luZzowcHg7d3JpdGluZy1tb2RlOmxyLXRiO2RpcmVjdGlvbjpsdHI7ZmlsbDpjdXJyZW50Q29sb3I7c3Ryb2tlLXdpZHRoOjEuOTk5OTk7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICB4PSI1NS4yMjY2NjUiCiAgICAgICB5PSI1NC42OTA0ODMiCiAgICAgICBpZD0idGV4dDMiPjx0c3BhbgogICAgICAgICBzb2RpcG9kaTpyb2xlPSJsaW5lIgogICAgICAgICBpZD0idHNwYW4zIgogICAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpub3JtYWw7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LWZhbWlseTpDb3VyaWVyOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246Q291cmllcjtzdHJva2Utd2lkdGg6MS45OTk5OSIKICAgICAgICAgeD0iNTUuMjI2NjY1IgogICAgICAgICB5PSI1NC42OTA0ODMiIC8+PC90ZXh0PgogICAgPHBhdGgKICAgICAgIHN0eWxlPSJmb250LXdlaWdodDo1MDA7Zm9udC1zaXplOjEyLjM2NzdweDtmb250LWZhbWlseTonSGFza2x1ZyBOZXJkIEZvbnQnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0hhc2tsdWcgTmVyZCBGb250LCBNZWRpdW0nO2xldHRlci1zcGFjaW5nOi0xLjkyMTQxcHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi41MDQxNjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIGQ9Im0gNTIuNzQ5MzgxLDYwLjIwMzYzNSB2IC0xLjE1MDE5NiBsIC0zLjYxMTM2OSwtMi4zODY5NjYgdiAtMC4wNDk0NyBsIDMuNjExMzY5LC0yLjM4Njk2NyBWIDUzLjA3OTg0IGwgLTQuNjYyNjIzLDMuMTE2NjYxIHYgMC44OTA0NzQgeiBtIDAuNTE1MDMxLDIuNTIzMDExIGggMS4wNjM2MjIgTCA1OC4zODQ2NCw1MS45NjY3NDcgaCAtMS4wNjM2MjMgeiBtIDUuNjM1MjU5LC0yLjUyMzAxMSA0LjY2MjYyMywtMy4xMTY2NiBWIDU2LjE5NjUwMSBMIDU4Ljg5OTY3MSw1My4wNzk4NCB2IDEuMTUwMTk2IGwgMy42MTEzNjgsMi4zODY5NjcgdiAwLjA0OTQ3IGwgLTMuNjExMzY4LDIuMzg2OTY2IHoiCiAgICAgICBpZD0idGV4dDQiCiAgICAgICBhcmlhLWxhYmVsPSImbHQ7LyZndDsiIC8+CiAgICA8dGV4dAogICAgICAgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIKICAgICAgIHN0eWxlPSJmb250LXN0eWxlOm5vcm1hbDtmb250LXZhcmlhbnQ6bm9ybWFsO2ZvbnQtd2VpZ2h0OmJvbGQ7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6OS44Nzc3N3B4O2ZvbnQtZmFtaWx5OidEaWRvdCBIVEYnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90IEhURiBCb2xkJztmb250LXZhcmlhbnQtbGlnYXR1cmVzOm5vcm1hbDtmb250LXZhcmlhbnQtY2Fwczpub3JtYWw7Zm9udC12YXJpYW50LW51bWVyaWM6bm9ybWFsO2ZvbnQtdmFyaWFudC1lYXN0LWFzaWFuOm5vcm1hbDtsZXR0ZXItc3BhY2luZzotMS41MzQ1OHB4O3dvcmQtc3BhY2luZzowcHg7d3JpdGluZy1tb2RlOmxyLXRiO2RpcmVjdGlvbjpsdHI7ZmlsbDpjdXJyZW50Q29sb3I7c3Ryb2tlLXdpZHRoOjEuOTk5OTk7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICB4PSI0NS44NDM0OTQiCiAgICAgICB5PSI3OC4yODI0NjMiCiAgICAgICBpZD0idGV4dDUiPjx0c3BhbgogICAgICAgICBzb2RpcG9kaTpyb2xlPSJsaW5lIgogICAgICAgICBpZD0idHNwYW41IgogICAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpib2xkO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1mYW1pbHk6J0RpZG90IEhURic7LWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjonRGlkb3QgSFRGIEJvbGQnO3N0cm9rZS13aWR0aDoxLjk5OTk5IgogICAgICAgICB4PSI0NS44NDM0OTQiCiAgICAgICAgIHk9Ijc4LjI4MjQ2MyIgLz48L3RleHQ+CiAgPC9nPgo8L3N2Zz4K" alt="Calepin logo" class="hero-wordmark" data-inline-svg="1"></div>
+        <div class="hero-subtitle">
+          <p><span class="hero-subtitle-text">Computational Notebooks in</span></p>
+          <img src="data:image/svg+xml;base64,PHN2ZwogICB3aWR0aD0iMTAwIgogICBoZWlnaHQ9IjQwIgogICB2aWV3Qm94PSIwIDAgMTAwIDQwIgogICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxnCiAgICAgaWQ9InR5cHN0LWxvZ28iCiAgICAgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNC41LDIuNSkiPgogICAgPHBhdGgKICAgICAgIGQ9Im0gNy44ODc4NSwxOC4xNDgxIGMgMCwxLjEzMjQgMC4xNjI0OCwxLjg5MjMgMC40ODc0NSwyLjI3OTcgMC4zMjQ5NiwwLjM4NzQgMC45MTU4MSwwLjU4MTEgMS43NzI1LDAuNTgxMSAwLjg4NjMsMCAyLjAyMzcsLTAuNDQ3IDMuNDEyMiwtMS4zNDEgbCAwLjg4NjMsMS40NzUxIGMgLTIuNTk5OCwyLjE3NTQgLTQuNzQxNTksMy4yNjMxIC02LjQyNTUxLDMuMjYzMSAtMS42ODM5MiwwIC0zLjAxMzM0LC0wLjQwMjMgLTMuOTg4MjQsLTEuMjA2OSBDIDMuMDU3NjUsMjIuMzY0OCAyLjU3MDIsMjAuOTA0NiAyLjU3MDIsMTguODE4NiBWIDcuMTA3MjggSCAwLjM1NDUxIEwgMCw1LjQ1MzM4IDIuNTcwMiw0LjY0ODc5IFYgMi40NTg0OSBMIDcuODg3ODUsMCBWIDQuOTE2OTkgTCAxMy4xMTY5LDQuNTE0NjkgMTIuNjI5NCw3LjQyMDE4IDcuODg3ODUsNy4yNDEzOCBaIgogICAgICAgZmlsbD0iIzIzOWRhZCIKICAgICAgIGlkPSJ0IiAvPgogICAgPHBhdGgKICAgICAgIGQ9Im0gMTcuNTgzNiwzNC41OTc3IGggLTAuNzUzNCBjIC0wLjcwOSwtMS4yMjE4IC0xLjI1NTUsLTIuOTY1MSAtMS42Mzk2LC01LjIyOTkgbCAxLjAxOTIsLTAuNjI1OCBjIDAuODU2OCwwLjUzNjQgMS42MTAxLDAuODA0NiAyLjI2LDAuODA0NiAxLjM4ODUsMCAyLjQ1MjEsLTAuNjQwNyAzLjE5MDYsLTEuOTIyMSBsIDEuNTA2NywtMy41MzEzIC02Ljc4LC0xNS45NTc4MiBjIC0wLjM1NDUsLTAuODA0NiAtMC42NjQ3LC0xLjMxMTIgLTAuOTMwNiwtMS41MTk4IC0wLjI2NTksLTAuMjA4NiAtMC43NjgxLC0wLjM1NzYgLTEuNTA2NywtMC40NDcgTCAxMy42Mzk2LDQuNTE0NjkgYyAyLjM2MzQsMC4yMzg0IDQuMDYyMSwwLjM1NzYgNS4wOTYxLDAuMzU3NiAxLjAzNCwwIDIuODgwNCwtMC4xMTkyIDUuNTM5MiwtMC4zNTc2IGwgLTAuMTc3MiwxLjU2NDQ5IGMgLTAuMDU5MSwwLjAyOTggLTAuMjIxNiwwLjA3NDUgLTAuNDg3NSwwLjEzNDEgLTAuMjM2MywwLjA1OTYgLTAuNDQzMSwwLjExOTIgLTAuNjIwNCwwLjE3ODggLTAuMTQ3NywwLjAyOTggLTAuMzI0OSwwLjA3NDUgLTAuNTMxNywwLjEzNDEgLTAuNDEzNiwwLjE3ODggLTAuNjIwNCwwLjQwMjMgLTAuNjIwNCwwLjY3MDUgMCwwLjIwODYgMC4wNTkxLDAuNTIxNSAwLjE3NzIsMC45Mzg3IGwgMy44OTk2LDEwLjA1NzQyIDMuODExLC0xMC4yMzYyMyBjIDAuMDg4NiwtMC4yNjgyIDAuMTMzLC0wLjUyMTQ5IDAuMTMzLC0wLjc1OTg5IDAsLTAuNTM2NCAtMC43ODI5LC0wLjg5NCAtMi4zNDg3LC0xLjA3MjggbCAtMC4wODg2LC0xLjU2NDUgYyAxLjQ0NzYsMC4yMDg2IDIuNjU4OCwwLjMxMjkxIDMuNjMzNywwLjMxMjkxIDAuOTc0OSwwIDIuNTg1LC0wLjEwNDMxIDQuODMwMiwtMC4zMTI5MSBsIC0wLjMxMDIsMS42NTM5IGMgLTAuNzA5LDAuMDI5OCAtMS4yMTEyLDAuMTYzOSAtMS41MDY2LDAuNDAyMyAtMC4yNjU5LDAuMjA4NiAtMC41NDY2LDAuNjU1NiAtMC44NDIsMS4zNDA5OSBMIDIzLjkyMDQsMjkuOTA0MiBjIC0xLjMyOTQsMy4xMjkgLTMuNDQxNyw0LjY5MzUgLTYuMzM2OCw0LjY5MzUgeiIKICAgICAgIGZpbGw9IiMyMzlkYWQiCiAgICAgICBpZD0ieSIgLz4KICAgIDxwYXRoCiAgICAgICBkPSJtIDQ5LjE3NjgsMjIuMTI2NCBjIDEuMTUyMiwwIDIuMTI3MSwtMC42NDA3IDIuOTI0NywtMS45MjIxIDAuODI3MiwtMS4zMTEyIDEuMjQwOCwtMy4yMTg0IDEuMjQwOCwtNS43MjE1IDAsLTQuNjQ4ODMgLTEuMzQ0MiwtNi45NzMyMiAtNC4wMzI1LC02Ljk3MzIyIC0xLjA5MzEsMCAtMi4yODk2LDAuNjEwOSAtMy41ODk0LDEuODMyNjkgViAxOS42MjMyIGMgMC4zMjQ5LDAuNzE1MiAwLjgxMjQsMS4zMTEyIDEuNDYyMywxLjc4OCAwLjY1LDAuNDc2OCAxLjMxNDcsMC43MTUyIDEuOTk0MSwwLjcxNTIgeiBNIDQ5LjI2NTUsMzUgYyAtMi43NDc1LC0wLjI2ODIgLTQuNjA4NywtMC40MDIzIC01LjU4MzYsLTAuNDAyMyAtMC45NzQ5LDAgLTIuOTI0NywwLjEzNDEgLTUuODQ5NCwwLjQwMjMgbCAtMC40NDMxLC0xLjYwOTIgYyAxLjA2MzUsLTAuMjM4NCAxLjgzMTYsLTAuNTA2NiAyLjMwNDMsLTAuODA0NiAwLjQ3MjcsLTAuMjk4IDAuNzA5LC0wLjc1OTkgMC43MDksLTEuMzg1NyBWIDguODk1MjcgYyAwLC0xLjAxMzE5IC0wLjM4NCwtMS41MTk3OSAtMS4xNTIxLC0xLjUxOTc5IGwgLTIuMDM4NSwwLjI2ODIgLTAuMjIxNSwtMS42OTg2IGMgMi41NDA2LC0xLjEzMjM5IDQuOTQ4MywtMS44MDI4OSA3LjIyMzEsLTIuMDExNDkgbCAwLjkzMDYsMS4wMjgwOSBjIDAsMC42NTU2IDAuMTQ3NywxLjQwMDYgMC40NDMxLDIuMjM1IGwgMS45NDk4LC0xLjQ3NTEgYyAxLjM1OSwtMS4wNDI5OSAyLjU4NSwtMS41NjQ0OSAzLjY3ODEsLTEuNTY0NDkgMi42ODgzLDAgNC42Njc3LDAuODE5NDkgNS45MzgsMi40NTg0OSAxLjI3MDMsMS42Mzg5OSAxLjkwNTUsMy45OTMyMiAxLjkwNTUsNy4wNjI2MiAwLDMuMDM5NSAtMC45NjAxLDUuNTg3NCAtMi44ODA0LDcuNjQzNiAtMS45MjAzLDIuMDU2MiAtNC4zODcxLDMuMDg0MyAtNy40MDA0LDMuMDg0MyAtMC45NzQ5LDAgLTEuOTk0MSwtMC4zMjc4IC0zLjA1NzYsLTAuOTgzNCB2IDcuODY3MiBjIDAsMC41NjYyIDAuMjM2MywxLjAxMzIgMC43MDksMS4zNDEgMC42Nzk1LDAuMjk4IDEuNTY1NywwLjUzNjQgMi42NTg4LDAuNzE1MiBsIDAuNDg3NSwwLjA4OTQgeiIKICAgICAgIGZpbGw9IiMyMzlkYWQiCiAgICAgICBpZD0icCIgLz4KICAgIDxwYXRoCiAgICAgICBkPSJtIDY3LjMzMzcsMjIuMjYwNSBjIDAuNzA5LDAgMS4yOTk5LC0wLjIyMzUgMS43NzI2LC0wLjY3MDUgMC40NzI2LC0wLjQ0NyAwLjcwOSwtMC45OTgzIDAuNzA5LC0xLjY1MzkgMCwtMC42ODU0IC0wLjA4ODYsLTEuMTkyIC0wLjI2NTksLTEuNTE5OCAtMC4xNzcyLC0wLjM1NzYgLTAuNDcyNywtMC42ODU0IC0wLjg4NjMsLTAuOTgzNCAtMC41OTA4LC0wLjQ3NjggLTEuNDMyOCwtMC45ODMzIC0yLjUyNTgsLTEuNTE5NyAtMS4wNjM2LC0wLjUzNjQgLTEuOTA1NSwtMC45OTgzIC0yLjUyNTksLTEuMzg1NyAtMC41OTA5LC0wLjM4NzQgLTEuMTgxNywtMS4wMTMyIC0xLjc3MjYsLTEuODc3NCAtMC41NjEzLC0wLjg5NCAtMC44NDE5LC0xLjkyMjEgLTAuODQxOSwtMy4wODQzMyAwLC0xLjY2ODc5IDAuNjQ5OSwtMi45Nzk5OSAxLjk0OTgsLTMuOTMzNTkgMS4zMjk0LC0wLjk4MzM5IDIuOTY5LC0xLjQ3NTA5IDQuOTE4OCwtMS40NzUwOSAxLjk0OTgsMCA0LjE2NTUsMC4zNDI3IDYuNjQ3MSwxLjAyODA5IC0wLjA4ODcsMS45MzcgLTAuMzM5OCwzLjU3NTk5IC0wLjc1MzQsNC45MTcwMiBsIC0xLjc3MjUsMC40MDIzIGMgLTAuNzA5LC0yLjg2MDgyIC0yLjA1MzIsLTQuMjkxMjIgLTQuMDMyNiwtNC4yOTEyMiAtMS4zMjk0LDAgLTEuOTk0MSwwLjc4OTcgLTEuOTk0MSwyLjM2OTA5IDAsMC42MjU4IDAuMjUxMSwxLjE2MjIgMC43NTMzLDEuNjA5MjMgMC41MzE4LDAuNDQ3IDEuMjk5OSwwLjkyMzggMi4zMDQzLDEuNDMwNCAxLjAwNDUsMC40NzY4IDEuNzI4MywwLjg0OTMgMi4xNzE0LDEuMTE3NSAwLjQ0MzIsMC4yMzg0IDEuMDM0LDAuNjQwNyAxLjc3MjYsMS4yMDY5IEMgNzQuMzIwNSwxNS4wMTkyIDc1LDE2LjUyNCA3NSwxOC40NjEgYyAwLDEuOTM3IC0wLjczODYsMy40MTIxIC0yLjIxNTcsNC40MjUzIC0xLjQ3NzEsMS4wMTMyIC0zLjQyNjksMS41MTk4IC01Ljg0OTQsMS41MTk4IC0yLjM5MjksMCAtNC40OTA1LC0wLjQwMjMgLTYuMjkyNiwtMS4yMDY5IC0wLjA1OSwtMC41MDY2IC0wLjA4ODYsLTEuMzg1NyAtMC4wODg2LC0yLjYzNzMgMCwtMS4yODE0IDAuMDI5NiwtMi4xNzU0IDAuMDg4NiwtMi42ODIgbCAyLjE3MTQsLTAuNDkxNiBjIDAuMjM2NCwxLjQ2MDEgMC43NTM0LDIuNjM3MiAxLjU1MSwzLjUzMTIgMC43OTc2LDAuODk0IDEuNzg3MywxLjM0MSAyLjk2OSwxLjM0MSB6IgogICAgICAgZmlsbD0iIzIzOWRhZCIKICAgICAgIGlkPSJzIiAvPgogICAgPHBhdGgKICAgICAgIGQ9Im0gODQuNDQxNiwxOC4xNDgxIGMgMCwxLjEzMjQgMC4xNjI0LDEuODkyMyAwLjQ4NzQsMi4yNzk3IDAuMzI1LDAuMzg3NCAwLjkxNTgsMC41ODExIDEuNzcyNiwwLjU4MTEgMC44ODYyLDAgMi4wMjM2LC0wLjQ0NyAzLjQxMjEsLTEuMzQxIEwgOTEsMjEuMTQzIGMgLTIuNTk5NywyLjE3NTQgLTQuNzQxNiwzLjI2MzEgLTYuNDI1NSwzLjI2MzEgLTEuNjgzOSwwIC0zLjAxMzMsLTAuNDAyMyAtMy45ODgyLC0xLjIwNjkgLTAuOTc0OSwtMC44MzQ0IC0xLjQ2MjQsLTIuMjk0NiAtMS40NjI0LC00LjM4MDYgViA3LjEwNzI4IEggNzYuOTA4MiBMIDc2LjU1MzcsNS40NTMzOCA3OS4xMjM5LDQuNjQ4NzkgViAyLjQ1ODQ5IEwgODQuNDQxNiwwIHYgNC45MTY5OSBsIDUuMjI5LC0wLjQwMjMgLTAuNDg3NSwyLjkwNTQ5IC00Ljc0MTUsLTAuMTc4OCB6IgogICAgICAgZmlsbD0iIzIzOWRhZCIKICAgICAgIGlkPSJ0IiAvPgogIDwvZz4KPC9zdmc+Cg==" alt="Typst logo" class="hero-typst-logo">
         </div>
+        <p><code class="hero-command">calepin compile notebook.typ</code></p>
+      </div>
+    </section>
+    <section class="calepin-website-features">
+      <article class="calepin-website-feature-card">
+        <h3 id="typst-native">Typst-native</h3>
+        <p>Write your notebooks directly in Typst, leveraging the simplicitly, flexibility, and elegance of this modern language.</p>
+      </article>
+      <article class="calepin-website-feature-card">
+        <h3 id="executable-code">Executable code</h3>
+        <p>Insert code blocks and inline code. These chunks are executed and resulting text and figures are inserted in the final document automatically.</p>
+      </article>
+      <article class="calepin-website-feature-card">
+        <h3 id="multiple-outputs">Multiple outputs</h3>
+        <p>Publish clean HTML, PDF, and Typst builds from the same source.</p>
+      </article>
+    </section>
+    <h3 id="what-is-calepin">What is Calepin?</h3>
+    <h5>Typst</h5>
+    <p><a href="https://typst.app/">Typst</a> is a modern typesetting system that compiles plain text markup into rich documents. Think of it as a simple Markdown-like syntax, with the scriptability of LaTeX, and the ability to export to PDF, SVG, and HTML files. Typst is ultra fast, easy to learn, and expressive, which makes it a comfortable tool for anything from short letters to full scientific manuscripts.</p>
+    <h5>Computational notebooks</h5>
+    <p>A computational notebook mixes prose with executable code. Figures, tables, and numbers are computed when the document is rendered, rather than pasted-in by hand. This allows analysts to create reproducible reports in the tradition of <a href="https://en.wikipedia.org/wiki/Literate_programming">literate programming</a>.</p>
+    <p>Some notebook tools can act as frontends for Typst, but they often superimpose their own syntax, language, and structure. For example, <a href="https://quarto.org/">Posit’s Quarto</a> supports an extended idiom of Markdown, which can be translated to Typst and then rendered as PDF.</p>
+    <h5>Calepin</h5>
+    <p><em>Calepin</em> is a Typst-native computational notebook. Rather than hide Typst behind Markdown, it embeds executable code chunks directly inside <code>.typ</code> documents. <em>Calepin</em> scans a <code>.typ</code> file for inline code or exectuable chunks, evaluates them, and lets Typst render the final document with computed results in place.</p>
+    <p><em>Calepin</em> is language-agnostic. It can execute code in Python, R, and any language with a Jupyter kernel. It can also render diagrams using engines like Mermaid, Graphviz, TikZ, and D2.</p>
+    <p><em>Calepin</em> comes with extensions for popular editors like VS-Code, Cursor, and Positron (via the Microsoft and VSX marketplaces).</p>
+    <ul>
+      <li>VS Code: <a href="https://marketplace.visualstudio.com/items?itemName=VincentArel-Bundock.calepin">VincentArel-Bundock.calepin</a></li>
+      <li>Open VSX: <a href="https://open-vsx.org/extension/VincentArel-Bundock/calepin">VincentArel-Bundock/calepin</a></li>
+    </ul>
+    <p>Here is a short video of a live editing session in VS-Code.</p>
+    <div class="calepin-video-block"><button class="calepin-video-thumb" type="button" data-video-dialog="calepin-video-dialog" aria-label="Open Calepin editor preview video"><video class="calepin-video-thumb__media" src="assets/calepin_vscode.mp4" muted playsinline preload="metadata" poster="assets/calepin_vscode-thumb.png"></video><p><span class="calepin-video-thumb__play" aria-hidden="true">▶</span></p></button></div>
+    <dialog id="calepin-video-dialog" class="calepin-video-dialog">
+      <article>
+        <header><button rel="prev" type="button" data-close-dialog aria-label="Close video preview"></button></header>
+        <video class="calepin-video-dialog__media" src="assets/calepin_vscode.mp4" muted autoplay controls playsinline preload="metadata"></video>
+      </article>
+    </dialog>
+    <h3 id="render">Render</h3>
+    <p>Use <code>calepin compile</code> when you want to execute code chunks and render the notebook. The command line shape is intentionally the same as <code>typst compile</code>: same output-first/format-driven arguments, with <code>--</code> pass-through for Typst flags, plus Calepin preprocessing.</p>
+    <pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile paper.typ --format pdf<br><span style="color: #4b69c6">calepin</span> compile paper.typ --format html<br><span style="color: #4b69c6">calepin</span> compile paper.typ {p}.svg --format svg<br><br><span style="color: #74747c">#</span><span style="color: #74747c"> explicit output path</span><br><span style="color: #4b69c6">calepin</span> compile paper.typ path/to/paper.pdf --format pdf</code></pre>
+    <p>Arguments after <code>--</code> are forwarded to Typst, so project-specific Typst flags can stay in the same command.</p>
+    <pre><code data-lang="sh"><span style="color: #74747c">#</span><span style="color: #74747c"> open pdf in system viewer</span><br><span style="color: #4b69c6">calepin</span> compile paper.typ<span style="color: #d73948"> --</span> --open <br><br><span style="color: #74747c">#</span><span style="color: #74747c"> set path to font directory</span><br><span style="color: #4b69c6">calepin</span> compile paper.typ<span style="color: #d73948"> --</span> --font-path fonts</code></pre>
+    <h3 id="watch">Watch</h3>
+    <p>Use <code>calepin watch</code> while editing. It watches your source for changes, re-runs preprocessing, and delegates recompilation and previewing to <code>typst watch</code>. The command form is the same as <code>typst watch</code>: same positional arguments and pass-through flags, with Calepin running its preprocessing step first.</p>
+    <pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch paper.typ<br><span style="color: #4b69c6">calepin</span> watch paper.typ --format html<br><span style="color: #4b69c6">calepin</span> watch paper.typ {p}.svg --format svg<br><br><span style="color: #4b69c6">Stop</span> a running watch from the same project.<br><span style="color: #4b69c6">calepin</span> stop paper.typ</code></pre>
+    <p>The default output format is PDF. Choose another format with <code>--format</code>, or let the output extension select the format.</p>
+    <p>Arguments after <code>--</code> are passed through to <code>typst watch</code>. Typst’s <code>--open</code> flag opens the rendered output in the operating system’s default viewer, and Typst’s <code>--port</code> flag chooses the HTML preview port.</p>
+    <pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch example.typ<span style="color: #d73948"> --</span> --open<br><span style="color: #4b69c6">calepin</span> watch paper.typ paper.html --format html<span style="color: #d73948"> --</span> --port 3001 --open</code></pre>
+    <h5>PDF viewer auto-refresh</h5>
+    <p>Some PDF viewers do not automatically refresh a document when it is regenerated on disk. For example, macOS Preview may keep showing an older PDF until the window is focused, the file is reopened, or the application is restarted.</p>
+    <p>For smoother live preview, use a PDF viewer that reloads the file when it changes. On macOS, Skim is a good option. Other platforms have similar auto-reloading viewers, which are useful when working with tools that repeatedly rebuild PDFs.</p>
+    <h3 id="example">Example</h3>
+    <p>Every document uses the runtime file <em>Calepin</em> writes to <code>.calepin/calepin.typ</code>. <code>calepin compile</code> and <code>calepin watch</code> run code chunks first, so the runtime and computed outputs are ready when Typst builds the document.</p>
+    <h4 id="preamble">Preamble</h4>
+    <p>Start by importing the runtime and setting document-wide defaults with <code>calepin.setup()</code>.</p>
+    <pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">".calepin/calepin.typ"</span><br><br><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">setup</span>(<br>  echo: <span style="color: #d73948">true</span>,<br>  eval: <span style="color: #d73948">true</span>,<br>)</code></pre>
+    <p>Define a short alias for Python inline computation.</p>
+    <pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">let</span> py <span style="color: #d73948">=</span> calepin.inline.<span style="color: #4b69c6">with</span>(<span style="color: #198810">"python"</span>)</code></pre>
+    <h4 id="chunks">Chunks</h4>
+    <p>A block chunk runs a piece of code and inserts its result. Start with a plain fenced block:</p>
+    <pre><code data-lang="typ"><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">x = 41</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">print(x + 1)</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span><br><br>Variables are persistent across chunks:<br><br><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">print(x + 2)</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span><br>]</code></pre>
+    <p>When you need extra control, use <code>#calepin.chunk</code> with options such as labels, captions, hiding source code, or changing how results are shown. If the body is a fenced block with a language, <code>#calepin.chunk</code> infers the engine from the fence:</p>
+    <pre><code data-lang="typ"><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">chunk</span>(label: <span style="color: #198810">"answer"</span>)[<br><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">x = 41</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">print(x + 1)</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span></code></pre>
+    <h4 id="inline">Inline</h4>
+    <p>An inline expression drops a computed value into the surrounding prose. It uses the same raw body contract and never takes a label.</p>
+    <pre><code data-lang="typ">The inline answer is <span style="color: #4b69c6">#</span><span style="color: #4b69c6">py</span>[<span style="color: #6b6b6f">`</span><span style="color: #6b6b6f">print(40 + 2)</span><span style="color: #6b6b6f">`</span>].</code></pre>
+    <h4 id="all-together-now">All together now</h4>
+    <p>Here is one full document example.</p>
+    <pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">".calepin/calepin.typ"</span><br><br><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">setup</span>(<br>  echo: <span style="color: #d73948">true</span>,<br>  results: <span style="color: #198810">"verbatim"</span>,<br>)<br><br><span style="color: #d73948">#</span><span style="color: #d73948">let</span> py <span style="color: #d73948">=</span> calepin.inline.<span style="color: #4b69c6">with</span>(<span style="color: #198810">"python"</span>)<br><br><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">x = 41</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">print(x + 1)</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span><br><br>Variables are persistent across chunks:<br><br><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">print(x + 2)</span><span style="color: #6b6b6f"></span><br><span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span><br><br>The inline answer is <span style="color: #4b69c6">#</span><span style="color: #4b69c6">py</span>[<span style="color: #6b6b6f">`</span><span style="color: #6b6b6f">print(40 + 2)</span><span style="color: #6b6b6f">`</span>].</code></pre>
+  
+        </main>
         
-          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
-  
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
-  Back to top
-</button>
+        <aside class="calepin-website-toc">
+            <p class="calepin-website-toc-title">On this page</p>
+            <nav aria-label="On this page">
+                <ul>
+                    
+                    <li class="level-3"><a href="#typst-native">Typst-native</a></li>
+                    
+                    <li class="level-3"><a href="#executable-code">Executable code</a></li>
+                    
+                    <li class="level-3"><a href="#multiple-outputs">Multiple outputs</a></li>
+                    
+                    <li class="level-3"><a href="#what-is-calepin">What is Calepin?</a></li>
+                    
+                    <li class="level-3"><a href="#render">Render</a></li>
+                    
+                    <li class="level-3"><a href="#watch">Watch</a></li>
+                    
+                    <li class="level-3"><a href="#example">Example</a></li>
+                    
+                    <li class="level-4"><a href="#preamble">Preamble</a></li>
+                    
+                    <li class="level-4"><a href="#chunks">Chunks</a></li>
+                    
+                    <li class="level-4"><a href="#inline">Inline</a></li>
+                    
+                    <li class="level-4"><a href="#all-together-now">All together now</a></li>
+                    
+                </ul>
+            </nav>
+        </aside>
         
-      </main>
-      
-        <footer class="md-footer">
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-copyright">
-  
-    <div class="md-copyright__highlight">
-      Calepin is distributed under the MIT License.
     </div>
-  
-  
-    Made with
-    <a href="https://zensical.org/" target="_blank" rel="noopener">
-      Zensical
-    </a>
-  
-</div>
-      
-    </div>
-  </div>
-</footer>
-      
-    </div>
-    <div class="md-dialog" data-md-component="dialog">
-      <div class="md-dialog__inner md-typeset"></div>
-    </div>
-    
-    
-    
-      
-      
-      <script id="__config" type="application/json">{"annotate":null,"base":".","features":["content.code.copy","navigation.top","navigation.tracking","search.highlight"],"search":"./assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
-    
-    
-  
-      <script src="./assets/javascripts/bundle.6e5f0216.min.js"></script>
-      
-    
-  <script>
-    (function () {
-      const logoLinks = document.querySelectorAll('[data-md-component="logo"]');
-      for (const link of logoLinks) {
-        link.href = ".";
-      }
-    })();
-  </script>
+<script>
+/* Calepin website behaviour, consolidated.
+ *
+ * One module-local script wires: theme toggle, view switcher (HTML/Source/PDF),
+ * the mobile sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal
+ * link state preservation, and the native <dialog> video lightbox.
+ *
+ * The Rust theme loader inlines this file into a <script> at the end of <body>,
+ * so the DOM already exists when it runs and no DOMContentLoaded guard is
+ * needed. Theme is applied first to keep any flash as short as possible. */
+(() => {
+  "use strict";
 
-  </body>
+  const THEME = {
+    storageKey: "calepin-website-theme",
+    param: "theme",
+    order: ["", "light", "dark"],
+    labels: { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" },
+  };
+
+  const VIEW = {
+    storageKey: "calepin-website-view-mode",
+    param: "view",
+    rendered: "rendered",
+    source: "source",
+    pdf: "pdf",
+  };
+
+  const MOBILE_QUERY = "(max-width: 56rem)";
+  const SOURCE_DATA_ID = "calepin-website-source-data";
+
+  const THEME_ICONS = {
+    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
+    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
+    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
+  };
+
+  const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
+  const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
+
+  // ---------------------------------------------------------------- helpers
+
+  const isMobile = () => window.matchMedia(MOBILE_QUERY).matches;
+
+  const isPlainLeftClick = (event) =>
+    event &&
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey;
+
+  const isInternalPageHref = (href) =>
+    Boolean(href) &&
+    !href.startsWith("#") &&
+    !href.startsWith("http://") &&
+    !href.startsWith("https://") &&
+    !href.startsWith("//") &&
+    !href.startsWith("mailto:") &&
+    !href.startsWith("tel:");
+
+  function setUrlParam(url, name, value) {
+    if (value) {
+      url.searchParams.set(name, value);
+    } else {
+      url.searchParams.delete(name);
+    }
+  }
+
+  function readUrlParam(name, normalize, fallback = "") {
+    try {
+      const url = new URL(window.location.href);
+      return normalize((url.searchParams.get(name) || "").toLowerCase());
+    } catch {
+      return fallback;
+    }
+  }
+
+  function updateCurrentUrlParam(name, value) {
+    try {
+      const url = new URL(window.location.href);
+      setUrlParam(url, name, value);
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      /* ignore URL errors */
+    }
+  }
+
+  function readStored(key, normalize, fallback = "") {
+    try {
+      return normalize(localStorage.getItem(key) || "");
+    } catch {
+      return fallback;
+    }
+  }
+
+  function writeStored(key, value, fallback = "") {
+    try {
+      if (value === fallback) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, value);
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+  }
+
+  const getMain = () => document.querySelector(".calepin-website-main");
+
+  // ------------------------------------------------------------------ theme
+
+  const normalizeTheme = (value) =>
+    value === "light" || value === "dark" ? value : "";
+
+  function currentTheme() {
+    return normalizeTheme(document.documentElement.dataset.theme || "");
+  }
+
+  function applyTheme(themeName, button) {
+    const next = normalizeTheme(themeName);
+    if (next) {
+      document.documentElement.dataset.theme = next;
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+    updateCurrentUrlParam(THEME.param, next);
+
+    if (button) {
+      const label = THEME.labels[next] || THEME.labels[""];
+      button.innerHTML = THEME_ICONS[next] || THEME_ICONS[""];
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    }
+  }
+
+  function readTheme() {
+    const fromUrl = readUrlParam(THEME.param, normalizeTheme);
+    if (fromUrl) {
+      writeStored(THEME.storageKey, fromUrl);
+      return fromUrl;
+    }
+    return readStored(THEME.storageKey, normalizeTheme, "");
+  }
+
+  function initTheme(button) {
+    applyTheme(readTheme(), button);
+    if (button && !button.dataset.calepinBound) {
+      button.dataset.calepinBound = "true";
+      button.addEventListener("click", () => {
+        const index = THEME.order.indexOf(currentTheme());
+        const next = THEME.order[(index + 1) % THEME.order.length];
+        applyTheme(next, button);
+        writeStored(THEME.storageKey, next);
+      });
+    }
+  }
+
+  // ------------------------------------------------------------------- view
+
+  const normalizeView = (value) =>
+    value === VIEW.source || value === VIEW.pdf ? value : VIEW.rendered;
+
+  function currentView(select) {
+    return normalizeView((select && select.value) || VIEW.rendered);
+  }
+
+  function pageAssetCandidates(extension) {
+    const { pathname } = window.location;
+    if (pathname.endsWith("/")) return [`${pathname}index.${extension}`];
+    if (pathname.endsWith(".html")) return [`${pathname.slice(0, -5)}.${extension}`];
+    if (!pathname || pathname.endsWith(".")) return [`index.${extension}`];
+    if (!pathname.includes(".")) return [`${pathname}/index.${extension}`];
+    return [`${pathname}.${extension}`];
+  }
+
+  function replaceMainContent(node) {
+    const main = getMain();
+    if (!main) return false;
+    main.innerHTML = "";
+    main.appendChild(node);
+    return true;
+  }
+
+  function showMainFallback(message) {
+    const main = getMain();
+    if (!main) return;
+    const fallback = document.createElement("p");
+    fallback.textContent = message;
+    main.prepend(fallback);
+  }
+
+  function renderSourceText(text) {
+    const container = document.createElement("div");
+    container.className = "calepin-website-source-view";
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.className = "language-typ";
+    code.textContent = text;
+    pre.appendChild(code);
+    container.appendChild(pre);
+    replaceMainContent(container);
+  }
+
+  async function renderSourceMode() {
+    const element = document.getElementById(SOURCE_DATA_ID);
+    if (element) {
+      try {
+        const inline = JSON.parse(element.textContent || "");
+        if (typeof inline === "string" && inline.length > 0) {
+          renderSourceText(inline);
+          return;
+        }
+      } catch {
+        /* fall through to fetch */
+      }
+    }
+
+    for (const sourcePath of pageAssetCandidates("typ")) {
+      try {
+        const response = await fetch(sourcePath);
+        if (!response.ok) continue;
+        renderSourceText(await response.text());
+        return;
+      } catch {
+        /* try next candidate */
+      }
+    }
+    showMainFallback("Could not load source view.");
+  }
+
+  async function renderPdfMode() {
+    const isLocal = window.location.protocol === "file:";
+    for (const pdfPath of pageAssetCandidates("pdf")) {
+      if (!isLocal) {
+        try {
+          const response = await fetch(pdfPath, { method: "HEAD" });
+          if (!response.ok && response.status !== 405) continue;
+        } catch {
+          /* probe failed; render directly */
+        }
+      }
+      const viewer = document.createElement("iframe");
+      viewer.className = "calepin-website-pdf-viewer";
+      try {
+        viewer.src = new URL(pdfPath, window.location.href).toString();
+      } catch {
+        viewer.src = pdfPath;
+      }
+      viewer.setAttribute("title", "Page PDF view");
+      viewer.setAttribute("loading", "lazy");
+      replaceMainContent(viewer);
+      return;
+    }
+    showMainFallback("Could not load PDF view.");
+  }
+
+  function applyView(mode, select) {
+    const value = normalizeView(mode);
+    if (select) select.value = value;
+    updateCurrentUrlParam(VIEW.param, value === VIEW.rendered ? "" : value);
+    if (value === VIEW.source) renderSourceMode();
+    else if (value === VIEW.pdf) renderPdfMode();
+  }
+
+  function initView(select) {
+    applyView(readUrlParam(VIEW.param, normalizeView, VIEW.rendered), select);
+    if (select && !select.dataset.calepinBound) {
+      select.dataset.calepinBound = "true";
+      select.addEventListener("change", (event) => {
+        const value = normalizeView(event.target.value);
+        const url = new URL(window.location.href);
+        setUrlParam(url, VIEW.param, value === VIEW.rendered ? "" : value);
+        writeStored(VIEW.storageKey, value, VIEW.rendered);
+        window.location.href = url.toString();
+      });
+    }
+  }
+
+  // ----------------------------------------------------------- nav drawer
+
+  function createNav() {
+    const shell = document.querySelector(".calepin-website-shell");
+    const backdrop = document.querySelector(".calepin-website-nav-backdrop");
+    const toggle = document.querySelector(".calepin-website-nav-toggle");
+
+    function setOpen(isOpen) {
+      if (!shell || !toggle) return;
+      shell.classList.toggle("nav-open", isOpen);
+      document.body.classList.toggle("calepin-website-nav-open", isOpen);
+      toggle.setAttribute("aria-expanded", String(isOpen));
+      if (backdrop) backdrop.setAttribute("aria-hidden", String(!isOpen));
+    }
+
+    const close = () => setOpen(false);
+
+    if (toggle) {
+      toggle.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (isMobile()) setOpen(!shell.classList.contains("nav-open"));
+      });
+    }
+    backdrop?.addEventListener("click", close);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close();
+    });
+    window.addEventListener("resize", () => {
+      if (!isMobile()) close();
+    });
+
+    return { close };
+  }
+
+  // ----------------------------------------------------------- copy buttons
+
+  function copyText(text) {
+    if (!text) return Promise.resolve();
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        if (document.execCommand("copy")) resolve();
+        else reject(new Error("copy failed"));
+      } catch (error) {
+        reject(error);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    });
+  }
+
+  function copyTextForBlock(block) {
+    const pre = block.matches("pre")
+      ? block
+      : block.querySelector("pre") || block.querySelector("code");
+    if (!pre) return "";
+    return (pre.innerText || pre.textContent || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/ /g, " ");
+  }
+
+  const COPY_WRAPPER_SELECTOR =
+    ".sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
+
+  function ensureCopyHost(block) {
+    if (block.parentElement && block.parentElement.classList.contains("calepin-website-copy-code-host")) {
+      return block.parentElement;
+    }
+
+    const host = document.createElement("div");
+    host.className = "calepin-website-copy-code-host";
+    block.parentNode.insertBefore(host, block);
+    host.appendChild(block);
+    return host;
+  }
+
+  function injectCopyButtons() {
+    const root = getMain();
+    if (!root) return;
+
+    const blocks = new Set();
+    root.querySelectorAll("pre").forEach((pre) => {
+      blocks.add(pre.closest(COPY_WRAPPER_SELECTOR) || pre);
+    });
+
+    blocks.forEach((block) => {
+      if (block.dataset.calepinCopyButton === "true") return;
+
+      block.classList.add("calepin-website-copy-code-scroll");
+
+      const host = ensureCopyHost(block);
+      if (host.dataset.calepinCopyButton === "true") return;
+
+      host.dataset.calepinCopyButton = "true";
+      host.classList.add("calepin-website-copy-code-block");
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "calepin-website-copy-code-button";
+      button.innerHTML = COPY_ICON;
+      button.setAttribute("aria-label", "Copy code block");
+      button.title = "Copy code";
+      host.appendChild(button);
+    });
+  }
+
+  function initCopy() {
+    injectCopyButtons();
+
+    const root = getMain();
+    if (!root || root.dataset.calepinCopyBound === "true") return;
+    root.dataset.calepinCopyBound = "true";
+
+    // One delegated listener for every copy button under <main>.
+    root.addEventListener("click", async (event) => {
+      const button = event.target.closest(".calepin-website-copy-code-button");
+      if (!button || !root.contains(button)) return;
+      event.preventDefault();
+
+      const block = button.closest(".calepin-website-copy-code-block");
+      const text = block ? copyTextForBlock(block) : "";
+      if (!text) return;
+
+      try {
+        await copyText(text);
+        button.innerHTML = COPIED_ICON;
+        button.classList.add("calepin-website-copy-code-button--copied");
+        button.title = "Copied";
+        window.setTimeout(() => {
+          button.innerHTML = COPY_ICON;
+          button.classList.remove("calepin-website-copy-code-button--copied");
+          button.title = "Copy code";
+        }, 1100);
+      } catch {
+        button.classList.add("calepin-website-copy-code-button--error");
+        button.title = "Copy failed";
+        window.setTimeout(() => {
+          button.classList.remove("calepin-website-copy-code-button--error");
+        }, 1100);
+      }
+    });
+  }
+
+  // ------------------------------------------------------------- inline svg
+
+  function svgTextFromSource(src) {
+    if (!src) return Promise.resolve("");
+    const prefix = "data:image/svg+xml";
+    if (src.startsWith(prefix)) {
+      const payload = src.slice(src.indexOf(",") + 1);
+      try {
+        return Promise.resolve(
+          src.startsWith(`${prefix};base64,`) ? atob(payload) : decodeURIComponent(payload),
+        );
+      } catch {
+        return Promise.resolve(payload);
+      }
+    }
+    return fetch(src)
+      .then((response) => response.text())
+      .catch(() => "");
+  }
+
+  function inlineSvgImage(image) {
+    const src = image.getAttribute("src");
+    return svgTextFromSource(src).then((text) => {
+      if (!text) return;
+      const svg = new DOMParser()
+        .parseFromString(text, "image/svg+xml")
+        .querySelector("svg");
+      if (!svg) return;
+
+      svg.removeAttribute("xmlns:xlink");
+      svg.removeAttribute("width");
+      svg.removeAttribute("height");
+      if (image.className) svg.setAttribute("class", image.className);
+      if (image.id) svg.setAttribute("id", image.id);
+
+      const alt = image.getAttribute("alt");
+      if (alt) {
+        svg.setAttribute("aria-label", alt);
+        svg.setAttribute("role", "img");
+      }
+      const ariaHidden = image.getAttribute("aria-hidden");
+      if (ariaHidden !== null) svg.setAttribute("aria-hidden", ariaHidden);
+
+      image.replaceWith(svg);
+    });
+  }
+
+  function inlineSvgs() {
+    document
+      .querySelectorAll("img[data-inline-svg]")
+      .forEach((image) => inlineSvgImage(image));
+  }
+
+  // --------------------------------------------------------- link state
+
+  function urlWithState(href, themeButton, viewSelect) {
+    if (!isInternalPageHref(href)) return href;
+    try {
+      const url = new URL(href, window.location.href);
+      setUrlParam(url, THEME.param, currentTheme());
+      const view = currentView(viewSelect);
+      setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
+      return url.toString();
+    } catch {
+      return href;
+    }
+  }
+
+  function preserveStateInLinks(themeButton, viewSelect) {
+    document.querySelectorAll("a[href]").forEach((link) => {
+      const href = link.getAttribute("href");
+      if (!isInternalPageHref(href)) return;
+      const next = urlWithState(href, themeButton, viewSelect);
+      if (next && next !== href) link.setAttribute("href", next);
+    });
+  }
+
+  function initLinkInterception(nav, themeButton, viewSelect) {
+    document.addEventListener("click", (event) => {
+      const tocLink = event.target.closest(".calepin-website-toc a");
+      if (tocLink) {
+        const href = tocLink.getAttribute("href");
+        if (href && href.startsWith("#")) {
+          let target = null;
+          try {
+            target = document.querySelector(href);
+          } catch {
+            target = null;
+          }
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        if (isMobile()) nav.close();
+        return;
+      }
+
+      const link = event.target.closest("a");
+      if (!link || !isPlainLeftClick(event)) return;
+
+      const isSidebar = Boolean(event.target.closest(".calepin-website-sidebar a"));
+      if (isSidebar && isMobile()) nav.close();
+
+      const href = link.getAttribute("href");
+      const next = urlWithState(href, themeButton, viewSelect);
+      if (next && next !== href) {
+        event.preventDefault();
+        window.location.href = next;
+      }
+    });
+  }
+
+  // ----------------------------------------------------- dialog lightbox
+
+  function initDialogs() {
+    document.querySelectorAll("[data-video-dialog]").forEach((trigger) => {
+      const dialog = document.getElementById(trigger.dataset.videoDialog);
+      if (!dialog || typeof dialog.showModal !== "function") return;
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        dialog.showModal();
+      });
+    });
+
+    document.querySelectorAll("dialog.calepin-video-dialog").forEach((dialog) => {
+      const stop = () => {
+        const video = dialog.querySelector("video");
+        if (video) video.pause();
+      };
+      dialog.addEventListener("click", (event) => {
+        // Clicking the dialog backdrop (the dialog element itself) closes it.
+        if (event.target === dialog) dialog.close();
+      });
+      dialog.querySelectorAll("[data-close-dialog]").forEach((button) => {
+        button.addEventListener("click", () => dialog.close());
+      });
+      dialog.addEventListener("close", stop);
+    });
+  }
+
+  // --------------------------------------------------------------- bootstrap
+
+  const themeButton = document.getElementById("calepin-website-theme-button");
+  const viewSelect = document.getElementById("calepin-website-view-mode");
+
+  initTheme(themeButton);
+  initView(viewSelect);
+  const nav = createNav();
+  initCopy();
+  inlineSvgs();
+  initDialogs();
+  preserveStateInLinks(themeButton, viewSelect);
+  initLinkInterception(nav, themeButton, viewSelect);
+
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
+    initTheme(themeButton);
+    initView(viewSelect);
+    initCopy();
+    preserveStateInLinks(themeButton, viewSelect);
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === THEME.storageKey) {
+      initTheme(themeButton);
+      preserveStateInLinks(themeButton, viewSelect);
+    } else if (event.key === VIEW.storageKey) {
+      initView(viewSelect);
+    }
+  });
+})();
+
+    </script>
+</body>
 </html>

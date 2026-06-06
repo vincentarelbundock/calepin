@@ -185,7 +185,7 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
         timeout: plan.timeout,
     };
     let mut pool = EnginePool::new(execution_config);
-    let mut chunk_results = Vec::with_capacity(plan.chunks.len());
+    let mut chunk_results: Vec<Option<ChunkResultDocument>> = vec![None; plan.chunks.len()];
 
     if !plan.quiet {
         eprintln!(
@@ -195,10 +195,18 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
         );
     }
 
-    for chunk in &plan.chunks {
+    for chunk_index in chunks_in_engine_order(&plan.chunks) {
+        let chunk = &plan.chunks[chunk_index];
         let result = execute_chunk_live(&mut pool, chunk, &staged_figures_dir, &plan.layout)?;
-        chunk_results.push(result);
+        chunk_results[chunk_index] = Some(result);
     }
+
+    let chunk_results = chunk_results
+        .into_iter()
+        .map(|result| {
+            result.context("chunk execution produced no result; this indicates a planner bug")
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     publish_staged_figures(&staged_figures_dir, &plan.layout.figures_dir)?;
     let document = build_results_document(&plan.layout.input_rel, chunk_results);
@@ -273,6 +281,27 @@ fn execute_chunk_live(
             path,
         )
     })
+}
+
+fn chunks_in_engine_order(chunks: &[ChunkSpec]) -> Vec<usize> {
+    let mut groups: Vec<(EngineName, Vec<usize>)> = Vec::new();
+
+    for (index, chunk) in chunks.iter().enumerate() {
+        if let Some((_, chunk_indexes)) = groups
+            .iter_mut()
+            .find(|(engine, _)| *engine == chunk.engine)
+        {
+            chunk_indexes.push(index);
+            continue;
+        }
+
+        groups.push((chunk.engine.clone(), vec![index]));
+    }
+
+    groups
+        .into_iter()
+        .flat_map(|(_, chunk_indexes)| chunk_indexes)
+        .collect()
 }
 
 fn execution_artifact_reference(
@@ -526,6 +555,37 @@ mod tests {
         )
         .unwrap();
         assert_ne!(baseline, executables_changed);
+    }
+
+    #[test]
+    fn chunks_are_executed_grouped_by_engine() {
+        let mut first_r = test_chunk("x <- 1");
+        first_r.label = "r-first".to_string();
+        first_r.engine = EngineName::R;
+
+        let mut first_py = test_chunk("print(1)");
+        first_py.label = "py-first".to_string();
+        first_py.engine = EngineName::Python;
+
+        let mut second_r = test_chunk("x <- 2");
+        second_r.label = "r-second".to_string();
+        second_r.engine = EngineName::R;
+
+        let mut second_py = test_chunk("print(2)");
+        second_py.label = "py-second".to_string();
+        second_py.engine = EngineName::Python;
+
+        let chunks = vec![first_r, first_py, second_r, second_py];
+        let grouped_indices = chunks_in_engine_order(&chunks);
+        let labels: Vec<&str> = grouped_indices
+            .iter()
+            .map(|&index| chunks[index].label.as_str())
+            .collect();
+
+        assert_eq!(
+            labels,
+            vec!["r-first", "r-second", "py-first", "py-second"]
+        );
     }
 
     #[test]

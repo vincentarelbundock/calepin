@@ -15,6 +15,7 @@ import sys, base64, os, traceback, re, json
 
 try:
     from jupyter_client import KernelManager
+    from jupyter_client.kernelspec import KernelSpecManager
 except ImportError:
     sys.stderr.write(
         "calepin: jupyter_client not found - "
@@ -23,6 +24,7 @@ except ImportError:
     sys.exit(1)
 
 _managers = {}  # kernel_name -> (km, kc)
+_resolved = {}  # requested name -> actual installed kernel name
 
 def _shutdown_all():
     for km, kc in list(_managers.values()):
@@ -33,15 +35,41 @@ def _shutdown_all():
             pass
     _managers.clear()
 
+def _resolve_kernel_name(name):
+    """Return the best matching installed kernel name for `name`.
+
+    Tries an exact match first. If that fails, looks for installed kernels
+    whose name starts with `name` followed by a period (e.g. "julia-1" ->
+    "julia-1.11"). When multiple candidates exist the lexicographically
+    largest one is returned so that the highest minor/patch version wins.
+    """
+    if name in _resolved:
+        return _resolved[name]
+    ksm = KernelSpecManager()
+    all_specs = list(ksm.get_all_specs().keys())
+    if name in all_specs:
+        _resolved[name] = name
+        return name
+    prefix = name + "."
+    candidates = [k for k in all_specs if k.startswith(prefix)]
+    if candidates:
+        best = sorted(candidates)[-1]
+        _resolved[name] = best
+        return best
+    # No match found; let KernelManager raise NoSuchKernel with the original name
+    _resolved[name] = name
+    return name
+
 def _get_kernel(kernel_name, timeout):
-    if kernel_name not in _managers:
-        km = KernelManager(kernel_name=kernel_name)
+    actual = _resolve_kernel_name(kernel_name)
+    if actual not in _managers:
+        km = KernelManager(kernel_name=actual)
         km.start_kernel()
         kc = km.client()
         kc.start_channels()
         kc.wait_for_ready(timeout=timeout)
-        _managers[kernel_name] = (km, kc)
-    return _managers[kernel_name]
+        _managers[actual] = (km, kc)
+    return _managers[actual]
 
 def _strip_ansi(text):
     return re.sub(r'\x1b\[[0-9;]*[mGKH]', '', text)

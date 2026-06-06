@@ -1,0 +1,53 @@
+[sidebar]
+
+[[sidebar.section]]
+title = "Getting started"
+
+  [[sidebar.section.item]]
+  path = "index.typ"
+  label = "Home"
+
+  [[sidebar.section.item]]
+  path = "install.typ"
+  label = "Install"
+
+  [[sidebar.section.item]]
+  path = "config.typ"
+  label = "Configuration"
+
+[[sidebar.section]]
+title = "Features"
+
+  [[sidebar.section.item]]
+  path = "options.typ"
+  label = "Global options"
+
+  [[sidebar.section.item]]
+  path = "supported-languages.typ"
+  label = "Supported Languages"
+
+  [[sidebar.section.item]]
+  path = "tables_and_figures.typ"
+  label = "Tables and figures"
+
+[[sidebar.section]]
+title = "Roadmap"
+
+  [[sidebar.section.item]]
+  path = "website.typ"
+  label = "Website generation"
+
+  [[sidebar.section.item]]
+  path = "templates.typ"
+  label = "Templates"
+
+[[sidebar.section]]
+title = "Reference"
+
+  [[sidebar.section.item]]
+  path = "cli.typ"
+  label = "CLI reference"
+
+  [[sidebar.section.item]]
+  path = "example.typ"
+  label = "Example notebook"

@@ -1,1142 +1,1448 @@
-
-<!doctype html>
-<html lang="en" class="no-js">
+<!DOCTYPE html>
+<html>
   <head>
-    
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      
-        <meta name="description" content="Experimental Typst preprocessor for executable code chunks.">
-      
-      
-        <meta name="author" content="Vincent Arel-Bundock">
-      
-      
-        <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/options.html">
-      
-      
-        <link rel="prev" href="./supported-languages.html">
-      
-      
-        <link rel="next" href="./tables_and_figures.html">
-      
-      
-        
-      
-      
-      <link rel="icon" href="./assets/logo_short_2.svg">
-      <meta name="generator" content="zensical-0.0.43">
-    
-    
-      
-        <title>Options - Calepin</title>
-      
-    
-    
-      
-        
-      
-      <link rel="stylesheet" href="./assets/stylesheets/modern/main.fba56155.min.css">
-      
-        
-          
-        
-        <link rel="stylesheet" href="./assets/stylesheets/modern/palette.dfe2e883.min.css">
-      
-      
-
-
-    
-    
-      
-    
-    
-      
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
-        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
-      
-    
-    
-      <link rel="stylesheet" href="./assets/stylesheets/extra.css">
-    
-    <script>__md_scope=new URL(".",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
-    
-      
-
-    
-    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
   
-  <link rel="icon" href="./assets/logo_short_2.png" type="image/png" sizes="32x32">
-  <link rel="shortcut icon" href="./assets/favicon.ico" type="image/x-icon">
+    <meta name="color-scheme" content="light dark">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
 
-  </head>
-  
-  
-    
-    
-      
-    
-    
-    
-    
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
-  
-    
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
-    <div data-md-component="skip">
-      
-        
-        <a href="#global-options" class="md-skip">
-          Skip to content
-        </a>
-      
-    </div>
-    <div data-md-component="announce">
-      
-    </div>
-    
-    
-      
+/* Calepin website theme — Pico-native overrides.
+ *
+ * Pico is loaded unlayered via <link> in layout.html; this stylesheet is
+ * inlined immediately after it, so plain rules win at equal specificity by
+ * source order (Pico uses zero-specificity :where() selectors throughout).
+ * That is why there is no @layer wrapping and no !important here: the cascade
+ * already favours these rules. Keep selectors class-scoped so we tune Pico
+ * rather than fight it. */
 
-  
+:root {
+    --calepin-syntax-foreground: #003b4f;
+  --calepin-syntax-background: #f7f7f5;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #4759ab;
+  --calepin-syntax-number: #ad0000;
+  --calepin-syntax-operator: #5e5e5e;
+  --calepin-syntax-parameter: #667321;
 
-<header class="md-header md-header--shadow" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="" title="Calepin" class="md-header__button md-logo" aria-label="Calepin" data-md-component="logo">
-      
-  
-  <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
 
-<svg
-   width="24.908279mm"
-   height="25.230688mm"
-   viewBox="0 0 24.90828 25.230688"
-   version="1.1"
-   id="svg1"
-   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
-   sodipodi:docname="logo_short_2.svg"
-   inkscape:export-filename="logo_long_text_2.png"
-   inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.98691752"
-     inkscape:cx="152.49501"
-     inkscape:cy="266.4863"
-     inkscape:window-width="1512"
-     inkscape:window-height="921"
-     inkscape:window-x="0"
-     inkscape:window-y="33"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="layer1" />
-  <defs
-     id="defs1" />
-  <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
-     id="layer1"
-     transform="translate(-40.950869,-44.061117)">
-    <path
-       d="m 59.186668,76.538231 h -0.565271 q -0.263792,-0.301478 -0.602955,-0.527586 -0.339162,-0.263793 -1.055171,-0.263793 -0.565271,0 -1.243595,0.226108 -0.64064,0.188424 -1.507388,0.452217 -0.829064,0.263793 -1.884235,0.452216 -1.055172,0.226108 -2.336452,0.226108 -2.374136,0 -4.635218,-0.866748 -2.223397,-0.866748 -4.220686,-2.826352 -1.846551,-1.846551 -3.090146,-4.371425 -1.243595,-2.524875 -1.243595,-5.841129 0,-2.826352 1.017487,-5.388912 1.017487,-2.56256 2.826353,-4.522164 1.808865,-1.959604 4.258371,-3.090145 2.449505,-1.168226 5.351227,-1.168226 1.168226,0 2.072659,0.226108 0.904432,0.226108 1.620442,0.527586 0.716009,0.263793 1.318964,0.489901 0.602955,0.226108 1.168226,0.226108 0.753694,0 1.055171,-0.226108 0.339163,-0.263793 0.602956,-0.565271 h 0.56527 v 7.53694 H 58.24455 Q 57.905388,55.811646 57.377802,54.417312 56.850217,53.022978 55.908099,51.967806 54.965982,50.87495 53.496278,50.23431 52.06426,49.555986 49.916232,49.555986 q -1.997289,0 -3.429308,0.64064 -1.432019,0.602955 -2.411821,1.658126 -0.979802,1.017487 -1.582757,2.411821 -0.565271,1.356649 -0.866748,2.901722 -0.301478,1.507388 -0.414532,3.090145 -0.07537,1.545073 -0.07537,2.939407 0,3.956894 0.64064,6.557138 0.640639,2.600244 1.77118,4.107632 1.168226,1.507388 2.788668,2.110343 1.620442,0.602956 3.580047,0.602956 2.524875,0 4.069947,-0.71601 1.545073,-0.716009 2.487191,-1.84655 0.942117,-1.168226 1.432018,-2.600244 0.489901,-1.469704 0.866748,-2.901722 h 0.414532 z"
-       id="text8"
-       style="font-size:37.6847px;font-family:Didot;-inkscape-font-specification:'Didot, Normal';letter-spacing:-1.70758px;word-spacing:0px;stroke-width:2.22546;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       transform="scale(1.1127362,0.8986856)"
-       aria-label="C" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:33.8667px;font-family:Courier;-inkscape-font-specification:Courier;letter-spacing:1.15887px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="55.226665"
-       y="54.690483"
-       id="text3"><tspan
-         sodipodi:role="line"
-         id="tspan3"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Courier;-inkscape-font-specification:Courier;stroke-width:1.99999"
-         x="55.226665"
-         y="54.690483" /></text>
-    <path
-       style="font-weight:500;font-size:12.3677px;font-family:'Hasklug Nerd Font';-inkscape-font-specification:'Hasklug Nerd Font, Medium';letter-spacing:-1.92141px;word-spacing:0px;stroke-width:2.50416;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       d="m 52.749381,60.203635 v -1.150196 l -3.611369,-2.386966 v -0.04947 l 3.611369,-2.386967 V 53.07984 l -4.662623,3.116661 v 0.890474 z m 0.515031,2.523011 h 1.063622 L 58.38464,51.966747 h -1.063623 z m 5.635259,-2.523011 4.662623,-3.11666 V 56.196501 L 58.899671,53.07984 v 1.150196 l 3.611368,2.386967 v 0.04947 l -3.611368,2.386966 z"
-       id="text4"
-       aria-label="&lt;/&gt;" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:9.87777px;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:-1.53458px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="45.843494"
-       y="78.282463"
-       id="text5"><tspan
-         sodipodi:role="line"
-         id="tspan5"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';stroke-width:1.99999"
-         x="45.843494"
-         y="78.282463" /></text>
-  </g>
-</svg>
+  /* Brand accent (mapped onto Pico's primary colour scale below). */
+  --calepin-accent: #1c9bad;
+  --calepin-accent-hover: #16808f;
 
-    </a>
-    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
-      
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
-    </label>
-    <div class="md-header__title" data-md-component="header-title">
-      <div class="md-header__ellipsis">
-        <div class="md-header__topic">
-          <span class="md-ellipsis">
-            Calepin
-          </span>
-        </div>
-        <div class="md-header__topic" data-md-component="header-topic">
-          <span class="md-ellipsis">
+  /* Layout */
+  --calepin-topbar-height: 3.5rem;
+  --calepin-topbar-z: 20;
+  --calepin-overlay-z: 25;
+  --calepin-drawer-z: 30;
+  --calepin-side-width: 12rem;
+  --calepin-shell-gap: 1.5rem;
+  --calepin-sidebar-mobile-width: min(18rem, 78vw);
+  --calepin-radius-sm: 4px;
+}
+
+/* Teal brand accent, the Pico-native way: override the primary colour scale for
+ * every scheme. `:root:not([data-theme="dark"])` matches the specificity of
+ * Pico's own light/auto selectors, and `[data-theme="dark"]` covers forced
+ * dark; both are later in source order than Pico, so our teal wins. We use the
+ * same accent in light and dark. */
+:root:not([data-theme="dark"]),
+[data-theme="dark"] {
+  --pico-primary: var(--calepin-accent);
+  --pico-primary-background: var(--calepin-accent);
+  --pico-primary-border: var(--calepin-accent);
+  --pico-primary-underline: rgba(28, 155, 173, 0.5);
+  --pico-primary-hover: var(--calepin-accent-hover);
+  --pico-primary-hover-background: var(--calepin-accent-hover);
+  --pico-primary-hover-border: var(--calepin-accent-hover);
+  --pico-primary-hover-underline: var(--calepin-accent-hover);
+  --pico-primary-focus: rgba(28, 155, 173, 0.4);
+  --pico-primary-inverse: #fff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+}
+
+/* ------------------------------------------------------------------ Shell */
+
+.calepin-website-shell.grid {
+  display: grid;
+  grid-template-columns: var(--calepin-side-width) minmax(0, 1fr) var(--calepin-side-width);
+  grid-template-areas: "sidebar main toc";
+  gap: var(--calepin-shell-gap);
+  width: min(100% - 2rem, 95rem);
+  margin: 0;
+  justify-items: stretch;
+  justify-content: start;
+  padding: 2rem 0 4rem;
+  padding-inline-start: 1rem;
+}
+
+.calepin-website-sidebar {
+  grid-area: sidebar;
+}
+
+.calepin-website-main {
+  grid-area: main;
+  min-width: 0;
+  padding-inline: 1rem;
+}
+
+.calepin-website-main > :first-child {
+  margin-top: 0;
+}
+
+.calepin-website-toc {
+  grid-area: toc;
+}
+
+.calepin-website-sidebar,
+.calepin-website-toc {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  align-self: start;
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow: auto;
+  text-align: left;
+}
+
+/* ----------------------------------------------------------- Topbar / nav */
+
+.calepin-website-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--calepin-topbar-z);
+  min-height: var(--calepin-topbar-height);
+  padding: 0 1.25rem;
+  background: color-mix(in srgb, var(--pico-background-color) 92%, transparent);
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  backdrop-filter: blur(12px);
+}
+
+/* Pico's <nav> already lays the two <ul> groups out with space-between. */
+.calepin-website-topbar nav {
+  min-height: var(--calepin-topbar-height);
+}
+
+.calepin-website-topbrand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.calepin-website-topbrand-logo {
+  display: block;
+  height: 1.4rem;
+  width: auto;
+}
+
+.calepin-website-topbrand svg {
+  fill: currentColor;
+}
+
+.calepin-website-view-mode {
+  width: auto;
+  min-width: 6rem;
+  margin: 0;
+  padding: 0.3rem 1.8rem 0.3rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.calepin-website-theme-button,
+.calepin-website-nav-toggle {
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: 0;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.calepin-website-theme-button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  stroke: currentColor;
+  fill: none;
+}
+
+.calepin-website-theme-button svg path[fill="currentColor"] {
+  fill: currentColor;
+}
+
+.calepin-website-nav-toggle {
+  display: none;
+  font-size: 1.2rem;
+}
+
+.calepin-website-github-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.calepin-website-github-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentColor;
+}
+
+
+/* --------------------------------------------------------- Sidebar + TOC */
+
+#calepin-website-sidebar,
+#calepin-website-sidebar nav,
+#calepin-website-sidebar nav ul,
+#calepin-website-sidebar nav li,
+#calepin-website-sidebar nav li a,
+#calepin-website-toc,
+#calepin-website-toc nav,
+#calepin-website-toc nav ul,
+#calepin-website-toc nav li,
+#calepin-website-toc nav li a {
+  text-align: left !important;
+}
+
+.calepin-website-sidebar nav,
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left !important;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.calepin-website-sidebar nav ul,
+.calepin-website-toc nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left !important;
+  width: 100%;
+}
+
+.calepin-website-sidebar nav li,
+.calepin-website-toc nav li {
+  display: block;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  text-align: left !important;
+}
+
+.calepin-website-sidebar a,
+.calepin-website-toc a {
+  display: block;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  text-decoration: none;
+  text-align: left !important;
+  width: 100%;
+  color: inherit;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.calepin-website-sidebar a:hover,
+.calepin-website-toc a:hover,
+.calepin-website-sidebar a:focus,
+.calepin-website-toc a:focus,
+.calepin-website-sidebar a:active,
+.calepin-website-toc a:active,
+.calepin-website-sidebar a:visited,
+.calepin-website-toc a:visited {
+  color: inherit;
+  background: color-mix(in srgb, var(--calepin-accent) 12%, transparent);
+}
+
+.calepin-website-sidebar a.active,
+.calepin-website-sidebar a[aria-current],
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-accent) 14%, transparent);
+  font-weight: 600;
+  color: inherit;
+}
+
+/* Section labels rendered as <p><strong>…</strong></p> by build_website.py. */
+.calepin-website-sidebar nav p,
+.calepin-website-toc-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+  text-align: left;
+  font-weight: 600;
+}
+
+.calepin-website-sidebar nav p {
+  margin: 0.85rem 0 0.9rem;
+}
+
+.calepin-website-sidebar nav p strong {
+  font-weight: inherit;
+}
+
+.calepin-website-sidebar nav p:first-child {
+  margin-top: 0;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.9rem;
+}
+
+.calepin-website-toc li.level-3 a {
+  padding-left: 1rem;
+}
+
+.calepin-website-toc li.level-4 a {
+  padding-left: 1.6rem;
+}
+
+/* ---------------------------------------------------- Code & cell output */
+
+.sourceCode,
+div.sourceCode,
+pre.sourceCode {
+  background: var(--calepin-syntax-background);
+  color: var(--calepin-syntax-foreground);
+  border: 1px solid var(--pico-muted-border-color);
+  border-left: 3px solid var(--pico-primary);
+  border-radius: var(--calepin-radius-sm);
+  font-family: var(--pico-font-family-monospace);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0.9rem 0 0.35rem;
+  padding: 0.65rem 0.8rem;
+  overflow: auto;
+}
+
+div.sourceCode pre {
+  background: transparent;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  line-height: inherit;
+}
+
+.sourceCode code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+.sourceCode .calepin-syntax-foreground {
+  color: var(--calepin-syntax-foreground);
+}
+
+.sourceCode .calepin-syntax-function {
+  color: var(--calepin-syntax-function);
+}
+
+.sourceCode .calepin-syntax-number {
+  color: var(--calepin-syntax-number);
+}
+
+.sourceCode .calepin-syntax-operator {
+  color: var(--calepin-syntax-operator);
+}
+
+.sourceCode .calepin-syntax-parameter {
+  color: var(--calepin-syntax-parameter);
+}
+
+
+
+.cell-output,
+.cell-output-stdout,
+.cell-output-stderr {
+  background: var(--pico-card-sectioning-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-left: 3px solid var(--pico-primary);
+  border-radius: var(--calepin-radius-sm);
+  font-family: var(--pico-font-family-monospace);
+  font-size: 0.86rem;
+  line-height: 1.4;
+  margin: 0.25rem 0 0.9rem;
+  padding: 0.5rem 0.7rem;
+  overflow: auto;
+}
+
+:is(.cell-output, .cell-output-stdout, .cell-output-stderr) pre {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+.cell-output-stderr {
+  background: #fff6f2;
+  border-left-color: #b75e43;
+  color: #663021;
+}
+
+html[data-theme="dark"] {
+  --calepin-syntax-foreground: #d8e7ef;
+  --calepin-syntax-background: #161b22;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #9db8ff;
+  --calepin-syntax-number: #ffb3a7;
+  --calepin-syntax-operator: #b5bdc9;
+  --calepin-syntax-parameter: #c3d86c;
+
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+  --calepin-syntax-foreground: #d8e7ef;
+  --calepin-syntax-background: #161b22;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #9db8ff;
+  --calepin-syntax-number: #ffb3a7;
+  --calepin-syntax-operator: #b5bdc9;
+  --calepin-syntax-parameter: #c3d86c;
+  }
+}
+
+figure > img {
+  display: block;
+  margin-inline: auto;
+  max-width: 100%;
+}
+
+/* ------------------------------------------------------ Home page (hero) */
+
+.hero {
+  text-align: center;
+  padding: 0.5rem 1rem 1.5rem;
+}
+
+.hero-wordmark {
+  display: block;
+  width: min(20rem, 82vw);
+  height: auto;
+  margin: 0 auto;
+  fill: currentColor;
+}
+
+.hero-subtitle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 1.4rem;
+}
+
+.hero-subtitle p {
+  margin: 0;
+  display: inline;
+  font-size: 1.4rem;
+}
+
+.hero-typst-logo {
+  height: 1.5em;
+  width: auto;
+}
+
+.hero-tagline {
+  margin: 0.8rem auto 0.4rem;
+  max-width: 44ch;
+  font-size: 1.1rem;
+}
+
+.hero-lede {
+  margin: 0.2rem auto 1rem;
+  max-width: 49ch;
+  color: var(--pico-muted-color);
+}
+
+.hero-command {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-family: var(--pico-font-family-monospace);
+}
+
+.calepin-website-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  max-width: 72rem;
+  margin: 0 auto 1.5rem;
+}
+
+.calepin-website-feature-card {
+  margin: 0;
+}
+
+.calepin-website-feature-card h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.calepin-website-feature-card p {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+/* -------------------------------------------------------- 404 */
+
+.calepin-website-404 {
+  text-align: center;
+  max-width: 40rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+
+.calepin-website-404-code {
+  margin: 0;
+  font-family: var(--pico-font-family-monospace);
+  font-weight: 700;
+  font-size: clamp(4rem, 18vw, 8rem);
+  line-height: 1;
+  color: var(--calepin-accent);
+}
+
+.calepin-website-404-title {
+  margin: 0.25rem 0 0;
+}
+
+.calepin-website-404-lede {
+  margin: 0.6rem auto 1.6rem;
+  max-width: 42ch;
+  color: var(--pico-muted-color);
+}
+
+.calepin-website-404-actions {
+  margin: 0 0 1.6rem;
+}
+
+.calepin-website-404-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* -------------------------------------------------------- Video preview */
+
+.calepin-video-block {
+  width: 400px;
+  max-width: 100%;
+  margin: 1.2rem auto 2rem;
+}
+
+.calepin-video-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--calepin-radius-sm);
+  background: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.calepin-video-thumb__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #0f111a;
+  pointer-events: none;
+}
+
+.calepin-video-thumb__play {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 3.4rem;
+  height: 3.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 1.3rem;
+  pointer-events: none;
+}
+
+.calepin-video-dialog article {
+  width: min(96vw, 76rem);
+  max-width: min(96vw, 76rem);
+  padding: 0;
+  overflow: hidden;
+}
+
+.calepin-video-dialog header {
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+}
+
+.calepin-video-dialog video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+/* --------------------------------------------------- Copy-to-clipboard */
+
+.calepin-website-copy-code-host {
+  position: relative;
+}
+
+.calepin-website-copy-code-scroll {
+  position: relative;
+}
+
+.calepin-website-copy-code-block {
+  position: relative;
+}
+
+.calepin-website-copy-code-button {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  margin: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--calepin-radius-sm);
+  background: none;
+  color: inherit;
+  opacity: 1;
+  cursor: pointer;
+  line-height: 1;
+  z-index: 1;
+}
+
+.calepin-website-copy-code-button:hover,
+.calepin-website-copy-code-button:focus-visible {
+  opacity: 0.95;
+  background: none;
+}
+
+.calepin-website-copy-code-button svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.calepin-website-copy-code-button--copied {
+  opacity: 0.95;
+  color: var(--pico-primary);
+}
+
+.calepin-website-copy-code-button--error {
+  opacity: 0.9;
+  color: #ef4444;
+}
+
+/* --------------------------------------------------------- Source / PDF */
+
+.calepin-website-source-view pre {
+  margin: 0;
+  overflow: auto;
+}
+
+.calepin-website-pdf-viewer {
+  display: block;
+  width: 100%;
+  height: 75vh;
+  border: 0;
+}
+
+/* ------------------------------------------------------------ Responsive */
+
+@media (max-width: 88rem) {
+  .calepin-website-shell.grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "sidebar"
+      "main"
+      "toc";
+  }
+
+  .calepin-website-sidebar,
+  .calepin-website-toc {
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (max-width: 56rem) {
+  .calepin-website-nav-toggle {
+    display: inline-grid;
+  }
+
+  .calepin-website-shell.grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "main";
+  }
+
+  .calepin-website-toc {
+    display: none;
+  }
+
+  .calepin-website-sidebar {
+    position: fixed;
+    top: var(--calepin-topbar-height);
+    left: 0;
+    width: var(--calepin-sidebar-mobile-width);
+    height: calc(100vh - var(--calepin-topbar-height));
+    padding: 0.8rem;
+    background: var(--pico-background-color);
+    border-right: 1px solid var(--pico-muted-border-color);
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.2);
+    overflow: auto;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+    z-index: var(--calepin-drawer-z);
+  }
+
+  .calepin-website-shell.nav-open .calepin-website-sidebar {
+    transform: translateX(0);
+  }
+
+  .calepin-website-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: var(--calepin-topbar-height) 0 0 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+    z-index: var(--calepin-overlay-z);
+  }
+
+  .calepin-website-shell.nav-open .calepin-website-nav-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  body.calepin-website-nav-open {
+    overflow: hidden;
+  }
+
+  .calepin-website-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calepin-website-nav-backdrop {
+  display: none;
+}
+
+    </style>
+
+<script id="calepin-website-source-data" type="application/json">"== Options\n\nCalepin options fall into three groups: **execution**, **result display**, and\n**figure output**. Set defaults with `#calepin.setup` and override per call with\n`#calepin.chunk(...)` or `#calepin.inline(...)`.\n\n```toml\n# Global/default values\n[setup]\n# Execution\n\necho   = true      # show source before output\neval   = true      # execute chunk\noutput = true      # include stdout/stderr output\nerror  = false     # record execution errors instead of failing\nwarning = true\nmessage = true\nlang   = \"python\"  # optional: scope defaults to one language\n\n# Result rendering\nresults = \"verbatim\"  # \"verbatim\", \"asis\", or \"hide\"\nformat  = \"auto\"     # preferred result format(s)\nitem    = \"all\"      # all, first, last, or an index\nkind    = \"auto\"     # output-kind hint for structured results\n\n# Figures\nfig-device-format     = \"svg\"     # png, pdf, html where supported\nfig-device-dpi        = 150\nfig-device-width      = 6\nfig-device-height     = \"auto\"\nfig-device-aspect     = 0.618\nfig-display-width     = \"70%\"\nfig-display-height    = \"auto\"\nfig-display-align     = \"center\"\nfig-display-responsive = true\nfig-caption           = \"none\"\nfig-caption-position  = \"auto\"\nfig-alt-text          = \"none\"\nfig-subcaptions       = \"none\"\nfig-layout-columns    = \"auto\"\nfig-layout-rows       = \"auto\"\nfig-layout-design     = \"auto\"\n\n# calepin.chunk-only\nengine = \"python\"  # force an engine instead of inferring from fence\nbody   = \"...\"      # raw code body when not in a fenced block\nlabel  = \"fit-summary\"  # stable reference id for results/figures\n```\n"</script>
+</head>
+  <body>
+    <header class="calepin-website-topbar">
+        <nav>
+            <ul>
+                <li>
+                    <button class="calepin-website-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
+                </li>
+                <li>
+                    <a class="calepin-website-topbrand contrast" href="index.html" aria-label="Calepin home">
+                        <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjQuOTA4Mjc5bW0iCiAgIGhlaWdodD0iMjUuMjMwNjg4bW0iCiAgIHZpZXdCb3g9IjAgMCAyNC45MDgyOCAyNS4yMzA2ODgiCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzEiCiAgIGlua3NjYXBlOnZlcnNpb249IjEuNC40IChkY2FmM2U3LCAyMDI2LTA1LTA1KSIKICAgc29kaXBvZGk6ZG9jbmFtZT0ibG9nb19zaG9ydF8yLnN2ZyIKICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSJsb2dvX2xvbmdfdGV4dF8yLnBuZyIKICAgaW5rc2NhcGU6ZXhwb3J0LXhkcGk9Ijk2IgogICBpbmtzY2FwZTpleHBvcnQteWRwaT0iOTYiCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iY3VycmVudENvbG9yIj4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgaW5rc2NhcGU6em9vbT0iMC45ODY5MTc1MiIKICAgICBpbmtzY2FwZTpjeD0iMTUyLjQ5NTAxIgogICAgIGlua3NjYXBlOmN5PSIyNjYuNDg2MyIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjE1MTIiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iOTIxIgogICAgIGlua3NjYXBlOndpbmRvdy14PSIwIgogICAgIGlua3NjYXBlOndpbmRvdy15PSIzMyIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIwIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSIKICAgICB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuOTUwODY5LC00NC4wNjExMTcpIj4KICAgIDxwYXRoCiAgICAgICBkPSJtIDU5LjE4NjY2OCw3Ni41MzgyMzEgaCAtMC41NjUyNzEgcSAtMC4yNjM3OTIsLTAuMzAxNDc4IC0wLjYwMjk1NSwtMC41Mjc1ODYgLTAuMzM5MTYyLC0wLjI2Mzc5MyAtMS4wNTUxNzEsLTAuMjYzNzkzIC0wLjU2NTI3MSwwIC0xLjI0MzU5NSwwLjIyNjEwOCAtMC42NDA2NCwwLjE4ODQyNCAtMS41MDczODgsMC40NTIyMTcgLTAuODI5MDY0LDAuMjYzNzkzIC0xLjg4NDIzNSwwLjQ1MjIxNiAtMS4wNTUxNzIsMC4yMjYxMDggLTIuMzM2NDUyLDAuMjI2MTA4IC0yLjM3NDEzNiwwIC00LjYzNTIxOCwtMC44NjY3NDggLTIuMjIzMzk3LC0wLjg2Njc0OCAtNC4yMjA2ODYsLTIuODI2MzUyIC0xLjg0NjU1MSwtMS44NDY1NTEgLTMuMDkwMTQ2LC00LjM3MTQyNSAtMS4yNDM1OTUsLTIuNTI0ODc1IC0xLjI0MzU5NSwtNS44NDExMjkgMCwtMi44MjYzNTIgMS4wMTc0ODcsLTUuMzg4OTEyIDEuMDE3NDg3LC0yLjU2MjU2IDIuODI2MzUzLC00LjUyMjE2NCAxLjgwODg2NSwtMS45NTk2MDQgNC4yNTgzNzEsLTMuMDkwMTQ1IDIuNDQ5NTA1LC0xLjE2ODIyNiA1LjM1MTIyNywtMS4xNjgyMjYgMS4xNjgyMjYsMCAyLjA3MjY1OSwwLjIyNjEwOCAwLjkwNDQzMiwwLjIyNjEwOCAxLjYyMDQ0MiwwLjUyNzU4NiAwLjcxNjAwOSwwLjI2Mzc5MyAxLjMxODk2NCwwLjQ4OTkwMSAwLjYwMjk1NSwwLjIyNjEwOCAxLjE2ODIyNiwwLjIyNjEwOCAwLjc1MzY5NCwwIDEuMDU1MTcxLC0wLjIyNjEwOCAwLjMzOTE2MywtMC4yNjM3OTMgMC42MDI5NTYsLTAuNTY1MjcxIGggMC41NjUyNyB2IDcuNTM2OTQgSCA1OC4yNDQ1NSBRIDU3LjkwNTM4OCw1NS44MTE2NDYgNTcuMzc3ODAyLDU0LjQxNzMxMiA1Ni44NTAyMTcsNTMuMDIyOTc4IDU1LjkwODA5OSw1MS45Njc4MDYgNTQuOTY1OTgyLDUwLjg3NDk1IDUzLjQ5NjI3OCw1MC4yMzQzMSA1Mi4wNjQyNiw0OS41NTU5ODYgNDkuOTE2MjMyLDQ5LjU1NTk4NiBxIC0xLjk5NzI4OSwwIC0zLjQyOTMwOCwwLjY0MDY0IC0xLjQzMjAxOSwwLjYwMjk1NSAtMi40MTE4MjEsMS42NTgxMjYgLTAuOTc5ODAyLDEuMDE3NDg3IC0xLjU4Mjc1NywyLjQxMTgyMSAtMC41NjUyNzEsMS4zNTY2NDkgLTAuODY2NzQ4LDIuOTAxNzIyIC0wLjMwMTQ3OCwxLjUwNzM4OCAtMC40MTQ1MzIsMy4wOTAxNDUgLTAuMDc1MzcsMS41NDUwNzMgLTAuMDc1MzcsMi45Mzk0MDcgMCwzLjk1Njg5NCAwLjY0MDY0LDYuNTU3MTM4IDAuNjQwNjM5LDIuNjAwMjQ0IDEuNzcxMTgsNC4xMDc2MzIgMS4xNjgyMjYsMS41MDczODggMi43ODg2NjgsMi4xMTAzNDMgMS42MjA0NDIsMC42MDI5NTYgMy41ODAwNDcsMC42MDI5NTYgMi41MjQ4NzUsMCA0LjA2OTk0NywtMC43MTYwMSAxLjU0NTA3MywtMC43MTYwMDkgMi40ODcxOTEsLTEuODQ2NTUgMC45NDIxMTcsLTEuMTY4MjI2IDEuNDMyMDE4LC0yLjYwMDI0NCAwLjQ4OTkwMSwtMS40Njk3MDQgMC44NjY3NDgsLTIuOTAxNzIyIGggMC40MTQ1MzIgeiIKICAgICAgIGlkPSJ0ZXh0OCIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MzcuNjg0N3B4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90LCBOb3JtYWwnO2xldHRlci1zcGFjaW5nOi0xLjcwNzU4cHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi4yMjU0NjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMS4xMTI3MzYyLDAuODk4Njg1NikiCiAgICAgICBhcmlhLWxhYmVsPSJDIiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpub3JtYWw7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6MzMuODY2N3B4O2ZvbnQtZmFtaWx5OkNvdXJpZXI7LWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjpDb3VyaWVyO2xldHRlci1zcGFjaW5nOjEuMTU4ODdweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNTUuMjI2NjY1IgogICAgICAgeT0iNTQuNjkwNDgzIgogICAgICAgaWQ9InRleHQzIj48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuMyIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6bm9ybWFsO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1mYW1pbHk6Q291cmllcjstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOkNvdXJpZXI7c3Ryb2tlLXdpZHRoOjEuOTk5OTkiCiAgICAgICAgIHg9IjU1LjIyNjY2NSIKICAgICAgICAgeT0iNTQuNjkwNDgzIiAvPjwvdGV4dD4KICAgIDxwYXRoCiAgICAgICBzdHlsZT0iZm9udC13ZWlnaHQ6NTAwO2ZvbnQtc2l6ZToxMi4zNjc3cHg7Zm9udC1mYW1pbHk6J0hhc2tsdWcgTmVyZCBGb250JzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidIYXNrbHVnIE5lcmQgRm9udCwgTWVkaXVtJztsZXR0ZXItc3BhY2luZzotMS45MjE0MXB4O3dvcmQtc3BhY2luZzowcHg7c3Ryb2tlLXdpZHRoOjIuNTA0MTY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICBkPSJtIDUyLjc0OTM4MSw2MC4yMDM2MzUgdiAtMS4xNTAxOTYgbCAtMy42MTEzNjksLTIuMzg2OTY2IHYgLTAuMDQ5NDcgbCAzLjYxMTM2OSwtMi4zODY5NjcgViA1My4wNzk4NCBsIC00LjY2MjYyMywzLjExNjY2MSB2IDAuODkwNDc0IHogbSAwLjUxNTAzMSwyLjUyMzAxMSBoIDEuMDYzNjIyIEwgNTguMzg0NjQsNTEuOTY2NzQ3IGggLTEuMDYzNjIzIHogbSA1LjYzNTI1OSwtMi41MjMwMTEgNC42NjI2MjMsLTMuMTE2NjYgViA1Ni4xOTY1MDEgTCA1OC44OTk2NzEsNTMuMDc5ODQgdiAxLjE1MDE5NiBsIDMuNjExMzY4LDIuMzg2OTY3IHYgMC4wNDk0NyBsIC0zLjYxMTM2OCwyLjM4Njk2NiB6IgogICAgICAgaWQ9InRleHQ0IgogICAgICAgYXJpYS1sYWJlbD0iJmx0Oy8mZ3Q7IiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpib2xkO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1zaXplOjkuODc3NzdweDtmb250LWZhbWlseTonRGlkb3QgSFRGJzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidEaWRvdCBIVEYgQm9sZCc7Zm9udC12YXJpYW50LWxpZ2F0dXJlczpub3JtYWw7Zm9udC12YXJpYW50LWNhcHM6bm9ybWFsO2ZvbnQtdmFyaWFudC1udW1lcmljOm5vcm1hbDtmb250LXZhcmlhbnQtZWFzdC1hc2lhbjpub3JtYWw7bGV0dGVyLXNwYWNpbmc6LTEuNTM0NThweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgeT0iNzguMjgyNDYzIgogICAgICAgaWQ9InRleHQ1Ij48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuNSIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6Ym9sZDtmb250LXN0cmV0Y2g6bm9ybWFsO2ZvbnQtZmFtaWx5OidEaWRvdCBIVEYnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90IEhURiBCb2xkJztzdHJva2Utd2lkdGg6MS45OTk5OSIKICAgICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgICB5PSI3OC4yODI0NjMiIC8+PC90ZXh0PgogIDwvZz4KPC9zdmc+Cg==" alt="Calepin" class="calepin-website-topbrand-logo" data-inline-svg="1">
+                    </a>
+                </li>
+            </ul>
+            <ul>
+                <li>
+                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
+                        <option value="rendered">HTML</option>
+                        <option value="source">Source</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </li>
+                <li>
+                    <button id="calepin-website-theme-button" class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme: Auto" title="Theme: Auto">
+                        <span aria-hidden="true">◐</span>
+                    </button>
+                </li>
+                <li>
+                    <a class="calepin-website-github-link contrast" href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub" title="GitHub">
+                        <svg viewBox="0 0 24 24" class="calepin-website-github-icon" aria-hidden="true" focusable="false">
+                            <path d="M12 .297C5.373.297 0 5.67 0 12.297c0 5.292 3.438 9.775 8.207 11.387.6.113.793-.26.793-.577 0-.285-.01-1.04-.016-2.042-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.086 1.838 1.238 1.838 1.238 1.072 1.836 2.813 1.306 3.5.999.108-.775.418-1.306.76-1.606-2.665-.304-5.466-1.333-5.466-5.932 0-1.31.467-2.381 1.235-3.221-.123-.304-.535-1.527.117-3.18 0 0 1.008-.323 3.3 1.23a11.36 11.36 0 0 1 3.003-.404c1.089.005 2.2.147 3.003.404 2.291-1.553 3.297-1.23 3.297-1.23.654 1.653.242 2.876.119 3.18.77.84 1.233 1.911 1.233 3.221 0 4.61-2.803 5.624-5.475 5.922.43.372.823 1.102.823 2.222 0 1.606-.014 2.897-.014 3.293 0 .32.19.694.8.576C20.565 22.07 24 17.59 24 12.297 24 5.67 18.627.297 12 .297z"/>
+                        </svg>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    <div class="calepin-website-shell grid">
+        <div class="calepin-website-nav-backdrop" aria-hidden="true"></div>
+        <aside id="calepin-website-sidebar" class="calepin-website-sidebar">
+            <nav aria-label="Documentation"><p><strong>Getting started</strong></p>
+<ul>
+<li><a href="index.html">Home</a></li>
+<li><a href="install.html">Install</a></li>
+<li><a href="config.html">Configuration</a></li>
+</ul>
+<p><strong>Features</strong></p>
+<ul>
+<li><a href="options.html" class="active" aria-current="page">Global options</a></li>
+<li><a href="supported-languages.html">Supported Languages</a></li>
+<li><a href="tables_and_figures.html">Tables and figures</a></li>
+</ul>
+<p><strong>Roadmap</strong></p>
+<ul>
+<li><a href="website.html">Website generation</a></li>
+<li><a href="templates.html">Templates</a></li>
+</ul>
+<p><strong>Reference</strong></p>
+<ul>
+<li><a href="cli.html">CLI reference</a></li>
+<li><a href="example.html">Example notebook</a></li>
+</ul></nav>
+        </aside>
+        <main class="calepin-website-main">
             
-              Options
-            
-          </span>
-        </div>
-      </div>
-    </div>
-    
-      
-        <form class="md-header__option" data-md-component="palette">
+    <h3 id="options">Options</h3>
+    <p>Calepin options fall into three groups: <strong></strong>execution<strong></strong>, <strong></strong>result display<strong></strong>, and <strong></strong>figure output<strong></strong>. Set defaults with <code>#calepin.setup</code> and override per call with <code>#calepin.chunk(...)</code> or <code>#calepin.inline(...)</code>.</p>
+    <pre><code data-lang="toml"><span style="color: #74747c">#</span><span style="color: #74747c"> Global/default values</span><br>[<span style="color: #4b69c6">setup</span>]<br><span style="color: #74747c">#</span><span style="color: #74747c"> Execution</span><br><br><span style="color: #4b69c6">echo</span>   = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> show source before output</span><br><span style="color: #4b69c6">eval</span>   = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> execute chunk</span><br><span style="color: #4b69c6">output</span> = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> include stdout/stderr output</span><br><span style="color: #4b69c6">error</span>  = <span style="color: #d73948">false</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> record execution errors instead of failing</span><br><span style="color: #4b69c6">warning</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">message</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">lang</span>   = <span style="color: #198810">"</span><span style="color: #198810">python</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> optional: scope defaults to one language</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> Result rendering</span><br><span style="color: #4b69c6">results</span> = <span style="color: #198810">"</span><span style="color: #198810">verbatim</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> "verbatim", "asis", or "hide"</span><br><span style="color: #4b69c6">format</span>  = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> preferred result format(s)</span><br><span style="color: #4b69c6">item</span>    = <span style="color: #198810">"</span><span style="color: #198810">all</span><span style="color: #198810">"</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> all, first, last, or an index</span><br><span style="color: #4b69c6">kind</span>    = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> output-kind hint for structured results</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> Figures</span><br><span style="color: #4b69c6">fig-device-format</span>     = <span style="color: #198810">"</span><span style="color: #198810">svg</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> png, pdf, html where supported</span><br><span style="color: #4b69c6">fig-device-dpi</span>        = <span style="color: #b60157">150</span><br><span style="color: #4b69c6">fig-device-width</span>      = <span style="color: #b60157">6</span><br><span style="color: #4b69c6">fig-device-height</span>     = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-device-aspect</span>     = <span style="color: #b60157">0.618</span><br><span style="color: #4b69c6">fig-display-width</span>     = <span style="color: #198810">"</span><span style="color: #198810">70%</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-height</span>    = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-align</span>     = <span style="color: #198810">"</span><span style="color: #198810">center</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-responsive</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">fig-caption</span>           = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-caption-position</span>  = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-alt-text</span>          = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-subcaptions</span>       = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-columns</span>    = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-rows</span>       = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-design</span>     = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> calepin.chunk-only</span><br><span style="color: #4b69c6">engine</span> = <span style="color: #198810">"</span><span style="color: #198810">python</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> force an engine instead of inferring from fence</span><br><span style="color: #4b69c6">body</span>   = <span style="color: #198810">"</span><span style="color: #198810">...</span><span style="color: #198810">"</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> raw code body when not in a fenced block</span><br><span style="color: #4b69c6">label</span>  = <span style="color: #198810">"</span><span style="color: #198810">fit-summary</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> stable reference id for results/figures</span></code></pre>
   
-    
-    
-    
-    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
-    
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-      </label>
-    
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
-    
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
-      </label>
-    
-  
-</form>
-      
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
-    
-    
-    
-      
-      
-        <label class="md-header__button md-icon" for="__search" aria-label="Search">
-          
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-        </label>
-        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
-  <button type="button" class="md-search__button">
-    Search
-  </button>
-</div>
-      
-    
-    <div class="md-header__source">
-      
-        <a href="https://github.com/vincentarelbundock/calepin" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
-  </div>
-  <div class="md-source__repository">
-    vincentarelbundock/calepin
-  </div>
-</a>
-      
-    </div>
-  </nav>
-  
-</header>
-    
-    <div class="md-container" data-md-component="container">
-      
-      
+        </main>
         
-          
-        
-      
-      <main class="md-main" data-md-component="main">
-        <div class="md-main__inner md-grid">
-          
-            
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
+        <aside class="calepin-website-toc">
+            <p class="calepin-website-toc-title">On this page</p>
+            <nav aria-label="On this page">
+                <ul>
                     
-
-
-
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
-  <label class="md-nav__title" for="__drawer">
-    <a href="" title="Calepin" class="md-nav__button md-logo" aria-label="Calepin" data-md-component="logo">
-      
-  
-  <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
-<svg
-   width="24.908279mm"
-   height="25.230688mm"
-   viewBox="0 0 24.90828 25.230688"
-   version="1.1"
-   id="svg1"
-   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
-   sodipodi:docname="logo_short_2.svg"
-   inkscape:export-filename="logo_long_text_2.png"
-   inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.98691752"
-     inkscape:cx="152.49501"
-     inkscape:cy="266.4863"
-     inkscape:window-width="1512"
-     inkscape:window-height="921"
-     inkscape:window-x="0"
-     inkscape:window-y="33"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="layer1" />
-  <defs
-     id="defs1" />
-  <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
-     id="layer1"
-     transform="translate(-40.950869,-44.061117)">
-    <path
-       d="m 59.186668,76.538231 h -0.565271 q -0.263792,-0.301478 -0.602955,-0.527586 -0.339162,-0.263793 -1.055171,-0.263793 -0.565271,0 -1.243595,0.226108 -0.64064,0.188424 -1.507388,0.452217 -0.829064,0.263793 -1.884235,0.452216 -1.055172,0.226108 -2.336452,0.226108 -2.374136,0 -4.635218,-0.866748 -2.223397,-0.866748 -4.220686,-2.826352 -1.846551,-1.846551 -3.090146,-4.371425 -1.243595,-2.524875 -1.243595,-5.841129 0,-2.826352 1.017487,-5.388912 1.017487,-2.56256 2.826353,-4.522164 1.808865,-1.959604 4.258371,-3.090145 2.449505,-1.168226 5.351227,-1.168226 1.168226,0 2.072659,0.226108 0.904432,0.226108 1.620442,0.527586 0.716009,0.263793 1.318964,0.489901 0.602955,0.226108 1.168226,0.226108 0.753694,0 1.055171,-0.226108 0.339163,-0.263793 0.602956,-0.565271 h 0.56527 v 7.53694 H 58.24455 Q 57.905388,55.811646 57.377802,54.417312 56.850217,53.022978 55.908099,51.967806 54.965982,50.87495 53.496278,50.23431 52.06426,49.555986 49.916232,49.555986 q -1.997289,0 -3.429308,0.64064 -1.432019,0.602955 -2.411821,1.658126 -0.979802,1.017487 -1.582757,2.411821 -0.565271,1.356649 -0.866748,2.901722 -0.301478,1.507388 -0.414532,3.090145 -0.07537,1.545073 -0.07537,2.939407 0,3.956894 0.64064,6.557138 0.640639,2.600244 1.77118,4.107632 1.168226,1.507388 2.788668,2.110343 1.620442,0.602956 3.580047,0.602956 2.524875,0 4.069947,-0.71601 1.545073,-0.716009 2.487191,-1.84655 0.942117,-1.168226 1.432018,-2.600244 0.489901,-1.469704 0.866748,-2.901722 h 0.414532 z"
-       id="text8"
-       style="font-size:37.6847px;font-family:Didot;-inkscape-font-specification:'Didot, Normal';letter-spacing:-1.70758px;word-spacing:0px;stroke-width:2.22546;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       transform="scale(1.1127362,0.8986856)"
-       aria-label="C" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:33.8667px;font-family:Courier;-inkscape-font-specification:Courier;letter-spacing:1.15887px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="55.226665"
-       y="54.690483"
-       id="text3"><tspan
-         sodipodi:role="line"
-         id="tspan3"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Courier;-inkscape-font-specification:Courier;stroke-width:1.99999"
-         x="55.226665"
-         y="54.690483" /></text>
-    <path
-       style="font-weight:500;font-size:12.3677px;font-family:'Hasklug Nerd Font';-inkscape-font-specification:'Hasklug Nerd Font, Medium';letter-spacing:-1.92141px;word-spacing:0px;stroke-width:2.50416;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       d="m 52.749381,60.203635 v -1.150196 l -3.611369,-2.386966 v -0.04947 l 3.611369,-2.386967 V 53.07984 l -4.662623,3.116661 v 0.890474 z m 0.515031,2.523011 h 1.063622 L 58.38464,51.966747 h -1.063623 z m 5.635259,-2.523011 4.662623,-3.11666 V 56.196501 L 58.899671,53.07984 v 1.150196 l 3.611368,2.386967 v 0.04947 l -3.611368,2.386966 z"
-       id="text4"
-       aria-label="&lt;/&gt;" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:9.87777px;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:-1.53458px;word-spacing:0px;writing-mode:lr-tb;direction:ltr;fill:currentColor;stroke-width:1.99999;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:0;paint-order:markers stroke fill"
-       x="45.843494"
-       y="78.282463"
-       id="text5"><tspan
-         sodipodi:role="line"
-         id="tspan5"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Didot HTF';-inkscape-font-specification:'Didot HTF Bold';stroke-width:1.99999"
-         x="45.843494"
-         y="78.282463" /></text>
-  </g>
-</svg>
-
-    </a>
-    Calepin
-  </label>
-  
-    <div class="md-nav__source">
-      <a href="https://github.com/vincentarelbundock/calepin" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
-  </div>
-  <div class="md-source__repository">
-    vincentarelbundock/calepin
-  </div>
-</a>
+                    <li class="level-3"><a href="#options">Options</a></li>
+                    
+                </ul>
+            </nav>
+        </aside>
+        
     </div>
-  
-  <ul class="md-nav__list" data-md-scrollfix>
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./index.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Home
+<script>
+/* Calepin website behaviour, consolidated.
+ *
+ * One module-local script wires: theme toggle, view switcher (HTML/Source/PDF),
+ * the mobile sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal
+ * link state preservation, and the native <dialog> video lightbox.
+ *
+ * The Rust theme loader inlines this file into a <script> at the end of <body>,
+ * so the DOM already exists when it runs and no DOMContentLoaded guard is
+ * needed. Theme is applied first to keep any flash as short as possible. */
+(() => {
+  "use strict";
 
-    
-  </span>
-  
-  
+  const THEME = {
+    storageKey: "calepin-website-theme",
+    param: "theme",
+    order: ["", "light", "dark"],
+    labels: { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" },
+  };
 
-      </a>
-    </li>
-  
+  const VIEW = {
+    storageKey: "calepin-website-view-mode",
+    param: "view",
+    rendered: "rendered",
+    source: "source",
+    pdf: "pdf",
+  };
 
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./supported-languages.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Supported Languages
+  const MOBILE_QUERY = "(max-width: 56rem)";
+  const SOURCE_DATA_ID = "calepin-website-source-data";
 
-    
-  </span>
-  
-  
+  const THEME_ICONS = {
+    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
+    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
+    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
+  };
 
-      </a>
-    </li>
-  
+  const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
+  const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
 
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Options
+  // ---------------------------------------------------------------- helpers
 
-    
-  </span>
-  
-  
+  const isMobile = () => window.matchMedia(MOBILE_QUERY).matches;
 
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="options.html" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Options
+  const isPlainLeftClick = (event) =>
+    event &&
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey;
 
-    
-  </span>
-  
-  
+  const isInternalPageHref = (href) =>
+    Boolean(href) &&
+    !href.startsWith("#") &&
+    !href.startsWith("http://") &&
+    !href.startsWith("https://") &&
+    !href.startsWith("//") &&
+    !href.startsWith("mailto:") &&
+    !href.startsWith("tel:");
 
-      </a>
-      
-        
+  function setUrlParam(url, name, value) {
+    if (value) {
+      url.searchParams.set(name, value);
+    } else {
+      url.searchParams.delete(name);
+    }
+  }
 
+  function readUrlParam(name, normalize, fallback = "") {
+    try {
+      const url = new URL(window.location.href);
+      return normalize((url.searchParams.get(name) || "").toLowerCase());
+    } catch {
+      return fallback;
+    }
+  }
 
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#global-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Global options
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#language-specific-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Language-specific options
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chunk-specific-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Chunk-specific options
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reference-table" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Reference table
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
+  function updateCurrentUrlParam(name, value) {
+    try {
+      const url = new URL(window.location.href);
+      setUrlParam(url, name, value);
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      /* ignore URL errors */
+    }
+  }
 
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./tables_and_figures.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Tables and Figures
+  function readStored(key, normalize, fallback = "") {
+    try {
+      return normalize(localStorage.getItem(key) || "");
+    } catch {
+      return fallback;
+    }
+  }
 
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./config.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Configuration
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./templates.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Templates
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./cli.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  CLI
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./example-typst.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  example.typ
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./example-pdf.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  example.pdf
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./example-html.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  example.html
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-  </ul>
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-            
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
-                <div class="md-sidebar__scrollwrap">
-                  
-                    
-                    
-                    
-                    
-                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-                      <div class="md-sidebar-button__wrapper">
-                        <label class="md-sidebar-button" for="__toc"></label>
-                      </div>
-                    
-                  
-                  <div class="md-sidebar__inner">
-                    
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#global-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Global options
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#language-specific-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Language-specific options
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chunk-specific-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Chunk-specific options
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reference-table" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Reference table
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-          
-          
-            <div class="md-content" data-md-component="content">
-              
-              <article class="md-content__inner md-typeset">
-                
-                  
-  
-  
-
-
-  <h1 id="__skip">Options</h1>
-
-<h2 id="global-options">Global options<a class="headerlink" href="#global-options" title="Permanent link">&para;</a></h2>
-<p><code>calepin.setup()</code> sets document-wide defaults for every chunk and inline expression that follows. For language-local defaults, add a second <code>calepin.setup</code> with <code>lang:</code>.</p>
-<p><code>calepin.chunk</code> and <code>calepin.inline</code> accept the same options and override those defaults per call, where <code>auto</code> means inherit the value set in <code>calepin.setup()</code>. The <code>engine</code> (inferred from the body fence's language when omitted), <code>body</code>, and <code>label</code> arguments apply to chunks only. For HTML themes, use the CLI <code>--template</code> flag.</p>
-<div class="language-text highlight"><pre><span></span><code>#calepin.setup(
-  echo: true,
-  eval: true,
-  results: &quot;verbatim&quot;,
-  fig-device-format: &quot;svg&quot;,
-  fig-display-width: 70%,
-)
-</code></pre></div>
-<h2 id="language-specific-options">Language-specific options<a class="headerlink" href="#language-specific-options" title="Permanent link">&para;</a></h2>
-<p>The next block demonstrates <code>calepin.setup</code> with language-local defaults and global fallback.</p>
-<div class="language-text highlight"><pre><span></span><code>#import &quot;.calepin/calepin.typ&quot;
-
-#set document(
-  title: [Language-specific setup],
-)
-
-#calepin.setup(
-  echo: false,
-  results: &quot;verbatim&quot;,
-)
-
-#calepin.setup(lang: &quot;python&quot;, echo: true)
-#calepin.setup(lang: &quot;r&quot;, eval: false)
-
-```python
-print(&quot;python: echoed + executed&quot;)
-```
-
-```r
-cat(&quot;r: not executed&quot;)
-```
-
-#calepin.chunk(&quot;r&quot;, eval: true, results: &quot;verbatim&quot;)[
-```r
-cat(&quot;r: forced by chunk override&quot;)
-```
-]
-</code></pre></div>
-<h2 id="chunk-specific-options">Chunk-specific options<a class="headerlink" href="#chunk-specific-options" title="Permanent link">&para;</a></h2>
-<p>The <code>engine</code>, <code>body</code>, and <code>label</code> arguments are specific to <code>#calepin.chunk</code>. Use <code>engine</code> to force or override inference from the fence language, <code>label</code> to give stable references, and <code>body</code> when calling chunks programmatically without a raw code block.</p>
-<p><div class="language-text highlight"><pre><span></span><code>#calepin.chunk(
-  engine: &quot;python&quot;,
-  label: &quot;fit-summary&quot;,
-  echo: true,
-  results: &quot;asis&quot;,
-)[
-```python
-print(&quot;This chunk is forced to use python and gets a stable label&quot;)
-</code></pre></div>
-]
-```</p>
-<h2 id="reference-table">Reference table<a class="headerlink" href="#reference-table" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Default</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>lang</code></td>
-<td><code>none</code></td>
-<td>Restrict setup defaults to this language (<code>"python"</code>, <code>"r"</code>, ...). Global defaults apply when a chunk's language has no language-specific setup entry.</td>
-</tr>
-<tr>
-<td><code>engine</code></td>
-<td>inferred</td>
-<td>Execution engine: <code>"python"</code>, <code>"r"</code>, <code>"mermaid"</code>, <code>"dot"</code>, <code>"tikz"</code>, <code>"d2"</code>, or any Jupyter kernel name (e.g. <code>"bash"</code>, <code>"julia"</code>, <code>"octave"</code>). Omit it to infer the engine from the fenced block's language (<code>```python</code>); pass it explicitly to override, or when the body fence has no language.</td>
-</tr>
-<tr>
-<td><code>body</code></td>
-<td>required</td>
-<td>Raw code body. It must contain exactly one raw element.</td>
-</tr>
-<tr>
-<td><code>label</code></td>
-<td>auto-generated</td>
-<td>Unique result label. Required for stable references and figures.</td>
-</tr>
-<tr>
-<td><code>echo</code></td>
-<td><code>true</code></td>
-<td>Show source code before results.</td>
-</tr>
-<tr>
-<td><code>eval</code></td>
-<td><code>true</code></td>
-<td>Execute code.</td>
-</tr>
-<tr>
-<td><code>output</code></td>
-<td><code>true</code></td>
-<td>Include chunk output in the rendered document.</td>
-</tr>
-<tr>
-<td><code>error</code></td>
-<td><code>false</code></td>
-<td>Capture execution errors as output instead of failing preprocessing.</td>
-</tr>
-<tr>
-<td><code>warning</code></td>
-<td><code>true</code></td>
-<td>Include warning diagnostics.</td>
-</tr>
-<tr>
-<td><code>message</code></td>
-<td><code>true</code></td>
-<td>Include message diagnostics.</td>
-</tr>
-<tr>
-<td><code>results</code></td>
-<td><code>"verbatim"</code></td>
-<td>Render text output as verbatim text. Use <code>"asis"</code> for Typst markup or <code>"hide"</code> to suppress results.</td>
-</tr>
-<tr>
-<td><code>format</code></td>
-<td><code>auto</code></td>
-<td>Preferred result formats for display.</td>
-</tr>
-<tr>
-<td><code>item</code></td>
-<td><code>"all"</code></td>
-<td>Which result item to render: <code>"all"</code>, <code>"first"</code>, <code>"last"</code>, or an index.</td>
-</tr>
-<tr>
-<td><code>kind</code></td>
-<td><code>auto</code></td>
-<td>Output kind hint, such as table handling for Typst markup results.</td>
-</tr>
-<tr>
-<td><code>fig-device-format</code></td>
-<td><code>"svg"</code></td>
-<td>Figure artifact format.</td>
-</tr>
-<tr>
-<td><code>fig-device-dpi</code></td>
-<td><code>150</code></td>
-<td>DPI for raster figure devices.</td>
-</tr>
-<tr>
-<td><code>fig-device-width</code></td>
-<td><code>6</code></td>
-<td>Figure device width in inches for engines that create graphics.</td>
-</tr>
-<tr>
-<td><code>fig-device-height</code></td>
-<td><code>auto</code></td>
-<td>Figure device height.</td>
-</tr>
-<tr>
-<td><code>fig-device-aspect</code></td>
-<td><code>0.618</code></td>
-<td>Aspect ratio used when height is automatic.</td>
-</tr>
-<tr>
-<td><code>fig-display-width</code></td>
-<td><code>70%</code></td>
-<td>Width used when displaying generated images.</td>
-</tr>
-<tr>
-<td><code>fig-display-height</code></td>
-<td><code>auto</code></td>
-<td>Height used when displaying generated images.</td>
-</tr>
-<tr>
-<td><code>fig-display-align</code></td>
-<td><code>center</code></td>
-<td>Alignment for displayed figures.</td>
-</tr>
-<tr>
-<td><code>fig-display-responsive</code></td>
-<td><code>true</code></td>
-<td>Constrain displayed figures to the available width in HTML.</td>
-</tr>
-<tr>
-<td><code>fig-caption</code></td>
-<td><code>none</code></td>
-<td>Figure caption.</td>
-</tr>
-<tr>
-<td><code>fig-caption-position</code></td>
-<td><code>auto</code></td>
-<td>Caption position when Typst can express it.</td>
-</tr>
-<tr>
-<td><code>fig-alt-text</code></td>
-<td><code>none</code></td>
-<td>Alternative text for generated images.</td>
-</tr>
-<tr>
-<td><code>fig-subcaptions</code></td>
-<td><code>none</code></td>
-<td>Subcaptions for multi-output figure layouts.</td>
-</tr>
-<tr>
-<td><code>fig-layout-columns</code></td>
-<td><code>auto</code></td>
-<td>Column tracks for multi-output figure layouts.</td>
-</tr>
-<tr>
-<td><code>fig-layout-rows</code></td>
-<td><code>auto</code></td>
-<td>Row tracks for multi-output figure layouts.</td>
-</tr>
-<tr>
-<td><code>fig-layout-design</code></td>
-<td><code>auto</code></td>
-<td>Layout design metadata for future multi-output figure layouts.</td>
-</tr>
-</tbody>
-</table>
-
-
-
-
-
-
-
-
-
-  
-  
-
-
-
-
-
-
-                
-              </article>
-            </div>
-          
-          
-<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
-        </div>
-        
-          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
-  
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
-  Back to top
-</button>
-        
-      </main>
-      
-        <footer class="md-footer">
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-copyright">
-  
-    <div class="md-copyright__highlight">
-      Calepin is distributed under the MIT License.
-    </div>
-  
-  
-    Made with
-    <a href="https://zensical.org/" target="_blank" rel="noopener">
-      Zensical
-    </a>
-  
-</div>
-      
-    </div>
-  </div>
-</footer>
-      
-    </div>
-    <div class="md-dialog" data-md-component="dialog">
-      <div class="md-dialog__inner md-typeset"></div>
-    </div>
-    
-    
-    
-      
-      
-      <script id="__config" type="application/json">{"annotate":null,"base":".","features":["content.code.copy","navigation.top","navigation.tracking","search.highlight"],"search":"./assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
-    
-    
-  
-      <script src="./assets/javascripts/bundle.6e5f0216.min.js"></script>
-      
-    
-  <script>
-    (function () {
-      const logoLinks = document.querySelectorAll('[data-md-component="logo"]');
-      for (const link of logoLinks) {
-        link.href = ".";
+  function writeStored(key, value, fallback = "") {
+    try {
+      if (value === fallback) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, value);
       }
-    })();
-  </script>
+    } catch {
+      /* ignore storage errors */
+    }
+  }
 
-  </body>
+  const getMain = () => document.querySelector(".calepin-website-main");
+
+  // ------------------------------------------------------------------ theme
+
+  const normalizeTheme = (value) =>
+    value === "light" || value === "dark" ? value : "";
+
+  function currentTheme() {
+    return normalizeTheme(document.documentElement.dataset.theme || "");
+  }
+
+  function applyTheme(themeName, button) {
+    const next = normalizeTheme(themeName);
+    if (next) {
+      document.documentElement.dataset.theme = next;
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+    updateCurrentUrlParam(THEME.param, next);
+
+    if (button) {
+      const label = THEME.labels[next] || THEME.labels[""];
+      button.innerHTML = THEME_ICONS[next] || THEME_ICONS[""];
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    }
+  }
+
+  function readTheme() {
+    const fromUrl = readUrlParam(THEME.param, normalizeTheme);
+    if (fromUrl) {
+      writeStored(THEME.storageKey, fromUrl);
+      return fromUrl;
+    }
+    return readStored(THEME.storageKey, normalizeTheme, "");
+  }
+
+  function initTheme(button) {
+    applyTheme(readTheme(), button);
+    if (button && !button.dataset.calepinBound) {
+      button.dataset.calepinBound = "true";
+      button.addEventListener("click", () => {
+        const index = THEME.order.indexOf(currentTheme());
+        const next = THEME.order[(index + 1) % THEME.order.length];
+        applyTheme(next, button);
+        writeStored(THEME.storageKey, next);
+      });
+    }
+  }
+
+  // ------------------------------------------------------------------- view
+
+  const normalizeView = (value) =>
+    value === VIEW.source || value === VIEW.pdf ? value : VIEW.rendered;
+
+  function currentView(select) {
+    return normalizeView((select && select.value) || VIEW.rendered);
+  }
+
+  function pageAssetCandidates(extension) {
+    const { pathname } = window.location;
+    if (pathname.endsWith("/")) return [`${pathname}index.${extension}`];
+    if (pathname.endsWith(".html")) return [`${pathname.slice(0, -5)}.${extension}`];
+    if (!pathname || pathname.endsWith(".")) return [`index.${extension}`];
+    if (!pathname.includes(".")) return [`${pathname}/index.${extension}`];
+    return [`${pathname}.${extension}`];
+  }
+
+  function replaceMainContent(node) {
+    const main = getMain();
+    if (!main) return false;
+    main.innerHTML = "";
+    main.appendChild(node);
+    return true;
+  }
+
+  function showMainFallback(message) {
+    const main = getMain();
+    if (!main) return;
+    const fallback = document.createElement("p");
+    fallback.textContent = message;
+    main.prepend(fallback);
+  }
+
+  function renderSourceText(text) {
+    const container = document.createElement("div");
+    container.className = "calepin-website-source-view";
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.className = "language-typ";
+    code.textContent = text;
+    pre.appendChild(code);
+    container.appendChild(pre);
+    replaceMainContent(container);
+  }
+
+  async function renderSourceMode() {
+    const element = document.getElementById(SOURCE_DATA_ID);
+    if (element) {
+      try {
+        const inline = JSON.parse(element.textContent || "");
+        if (typeof inline === "string" && inline.length > 0) {
+          renderSourceText(inline);
+          return;
+        }
+      } catch {
+        /* fall through to fetch */
+      }
+    }
+
+    for (const sourcePath of pageAssetCandidates("typ")) {
+      try {
+        const response = await fetch(sourcePath);
+        if (!response.ok) continue;
+        renderSourceText(await response.text());
+        return;
+      } catch {
+        /* try next candidate */
+      }
+    }
+    showMainFallback("Could not load source view.");
+  }
+
+  async function renderPdfMode() {
+    const isLocal = window.location.protocol === "file:";
+    for (const pdfPath of pageAssetCandidates("pdf")) {
+      if (!isLocal) {
+        try {
+          const response = await fetch(pdfPath, { method: "HEAD" });
+          if (!response.ok && response.status !== 405) continue;
+        } catch {
+          /* probe failed; render directly */
+        }
+      }
+      const viewer = document.createElement("iframe");
+      viewer.className = "calepin-website-pdf-viewer";
+      try {
+        viewer.src = new URL(pdfPath, window.location.href).toString();
+      } catch {
+        viewer.src = pdfPath;
+      }
+      viewer.setAttribute("title", "Page PDF view");
+      viewer.setAttribute("loading", "lazy");
+      replaceMainContent(viewer);
+      return;
+    }
+    showMainFallback("Could not load PDF view.");
+  }
+
+  function applyView(mode, select) {
+    const value = normalizeView(mode);
+    if (select) select.value = value;
+    updateCurrentUrlParam(VIEW.param, value === VIEW.rendered ? "" : value);
+    if (value === VIEW.source) renderSourceMode();
+    else if (value === VIEW.pdf) renderPdfMode();
+  }
+
+  function initView(select) {
+    applyView(readUrlParam(VIEW.param, normalizeView, VIEW.rendered), select);
+    if (select && !select.dataset.calepinBound) {
+      select.dataset.calepinBound = "true";
+      select.addEventListener("change", (event) => {
+        const value = normalizeView(event.target.value);
+        const url = new URL(window.location.href);
+        setUrlParam(url, VIEW.param, value === VIEW.rendered ? "" : value);
+        writeStored(VIEW.storageKey, value, VIEW.rendered);
+        window.location.href = url.toString();
+      });
+    }
+  }
+
+  // ----------------------------------------------------------- nav drawer
+
+  function createNav() {
+    const shell = document.querySelector(".calepin-website-shell");
+    const backdrop = document.querySelector(".calepin-website-nav-backdrop");
+    const toggle = document.querySelector(".calepin-website-nav-toggle");
+
+    function setOpen(isOpen) {
+      if (!shell || !toggle) return;
+      shell.classList.toggle("nav-open", isOpen);
+      document.body.classList.toggle("calepin-website-nav-open", isOpen);
+      toggle.setAttribute("aria-expanded", String(isOpen));
+      if (backdrop) backdrop.setAttribute("aria-hidden", String(!isOpen));
+    }
+
+    const close = () => setOpen(false);
+
+    if (toggle) {
+      toggle.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (isMobile()) setOpen(!shell.classList.contains("nav-open"));
+      });
+    }
+    backdrop?.addEventListener("click", close);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close();
+    });
+    window.addEventListener("resize", () => {
+      if (!isMobile()) close();
+    });
+
+    return { close };
+  }
+
+  // ----------------------------------------------------------- copy buttons
+
+  function copyText(text) {
+    if (!text) return Promise.resolve();
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        if (document.execCommand("copy")) resolve();
+        else reject(new Error("copy failed"));
+      } catch (error) {
+        reject(error);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    });
+  }
+
+  function copyTextForBlock(block) {
+    const pre = block.matches("pre")
+      ? block
+      : block.querySelector("pre") || block.querySelector("code");
+    if (!pre) return "";
+    return (pre.innerText || pre.textContent || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/ /g, " ");
+  }
+
+  const COPY_WRAPPER_SELECTOR =
+    ".sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
+
+  function ensureCopyHost(block) {
+    if (block.parentElement && block.parentElement.classList.contains("calepin-website-copy-code-host")) {
+      return block.parentElement;
+    }
+
+    const host = document.createElement("div");
+    host.className = "calepin-website-copy-code-host";
+    block.parentNode.insertBefore(host, block);
+    host.appendChild(block);
+    return host;
+  }
+
+  function injectCopyButtons() {
+    const root = getMain();
+    if (!root) return;
+
+    const blocks = new Set();
+    root.querySelectorAll("pre").forEach((pre) => {
+      blocks.add(pre.closest(COPY_WRAPPER_SELECTOR) || pre);
+    });
+
+    blocks.forEach((block) => {
+      if (block.dataset.calepinCopyButton === "true") return;
+
+      block.classList.add("calepin-website-copy-code-scroll");
+
+      const host = ensureCopyHost(block);
+      if (host.dataset.calepinCopyButton === "true") return;
+
+      host.dataset.calepinCopyButton = "true";
+      host.classList.add("calepin-website-copy-code-block");
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "calepin-website-copy-code-button";
+      button.innerHTML = COPY_ICON;
+      button.setAttribute("aria-label", "Copy code block");
+      button.title = "Copy code";
+      host.appendChild(button);
+    });
+  }
+
+  function initCopy() {
+    injectCopyButtons();
+
+    const root = getMain();
+    if (!root || root.dataset.calepinCopyBound === "true") return;
+    root.dataset.calepinCopyBound = "true";
+
+    // One delegated listener for every copy button under <main>.
+    root.addEventListener("click", async (event) => {
+      const button = event.target.closest(".calepin-website-copy-code-button");
+      if (!button || !root.contains(button)) return;
+      event.preventDefault();
+
+      const block = button.closest(".calepin-website-copy-code-block");
+      const text = block ? copyTextForBlock(block) : "";
+      if (!text) return;
+
+      try {
+        await copyText(text);
+        button.innerHTML = COPIED_ICON;
+        button.classList.add("calepin-website-copy-code-button--copied");
+        button.title = "Copied";
+        window.setTimeout(() => {
+          button.innerHTML = COPY_ICON;
+          button.classList.remove("calepin-website-copy-code-button--copied");
+          button.title = "Copy code";
+        }, 1100);
+      } catch {
+        button.classList.add("calepin-website-copy-code-button--error");
+        button.title = "Copy failed";
+        window.setTimeout(() => {
+          button.classList.remove("calepin-website-copy-code-button--error");
+        }, 1100);
+      }
+    });
+  }
+
+  // ------------------------------------------------------------- inline svg
+
+  function svgTextFromSource(src) {
+    if (!src) return Promise.resolve("");
+    const prefix = "data:image/svg+xml";
+    if (src.startsWith(prefix)) {
+      const payload = src.slice(src.indexOf(",") + 1);
+      try {
+        return Promise.resolve(
+          src.startsWith(`${prefix};base64,`) ? atob(payload) : decodeURIComponent(payload),
+        );
+      } catch {
+        return Promise.resolve(payload);
+      }
+    }
+    return fetch(src)
+      .then((response) => response.text())
+      .catch(() => "");
+  }
+
+  function inlineSvgImage(image) {
+    const src = image.getAttribute("src");
+    return svgTextFromSource(src).then((text) => {
+      if (!text) return;
+      const svg = new DOMParser()
+        .parseFromString(text, "image/svg+xml")
+        .querySelector("svg");
+      if (!svg) return;
+
+      svg.removeAttribute("xmlns:xlink");
+      svg.removeAttribute("width");
+      svg.removeAttribute("height");
+      if (image.className) svg.setAttribute("class", image.className);
+      if (image.id) svg.setAttribute("id", image.id);
+
+      const alt = image.getAttribute("alt");
+      if (alt) {
+        svg.setAttribute("aria-label", alt);
+        svg.setAttribute("role", "img");
+      }
+      const ariaHidden = image.getAttribute("aria-hidden");
+      if (ariaHidden !== null) svg.setAttribute("aria-hidden", ariaHidden);
+
+      image.replaceWith(svg);
+    });
+  }
+
+  function inlineSvgs() {
+    document
+      .querySelectorAll("img[data-inline-svg]")
+      .forEach((image) => inlineSvgImage(image));
+  }
+
+  // --------------------------------------------------------- link state
+
+  function urlWithState(href, themeButton, viewSelect) {
+    if (!isInternalPageHref(href)) return href;
+    try {
+      const url = new URL(href, window.location.href);
+      setUrlParam(url, THEME.param, currentTheme());
+      const view = currentView(viewSelect);
+      setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
+      return url.toString();
+    } catch {
+      return href;
+    }
+  }
+
+  function preserveStateInLinks(themeButton, viewSelect) {
+    document.querySelectorAll("a[href]").forEach((link) => {
+      const href = link.getAttribute("href");
+      if (!isInternalPageHref(href)) return;
+      const next = urlWithState(href, themeButton, viewSelect);
+      if (next && next !== href) link.setAttribute("href", next);
+    });
+  }
+
+  function initLinkInterception(nav, themeButton, viewSelect) {
+    document.addEventListener("click", (event) => {
+      const tocLink = event.target.closest(".calepin-website-toc a");
+      if (tocLink) {
+        const href = tocLink.getAttribute("href");
+        if (href && href.startsWith("#")) {
+          let target = null;
+          try {
+            target = document.querySelector(href);
+          } catch {
+            target = null;
+          }
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        if (isMobile()) nav.close();
+        return;
+      }
+
+      const link = event.target.closest("a");
+      if (!link || !isPlainLeftClick(event)) return;
+
+      const isSidebar = Boolean(event.target.closest(".calepin-website-sidebar a"));
+      if (isSidebar && isMobile()) nav.close();
+
+      const href = link.getAttribute("href");
+      const next = urlWithState(href, themeButton, viewSelect);
+      if (next && next !== href) {
+        event.preventDefault();
+        window.location.href = next;
+      }
+    });
+  }
+
+  // ----------------------------------------------------- dialog lightbox
+
+  function initDialogs() {
+    document.querySelectorAll("[data-video-dialog]").forEach((trigger) => {
+      const dialog = document.getElementById(trigger.dataset.videoDialog);
+      if (!dialog || typeof dialog.showModal !== "function") return;
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        dialog.showModal();
+      });
+    });
+
+    document.querySelectorAll("dialog.calepin-video-dialog").forEach((dialog) => {
+      const stop = () => {
+        const video = dialog.querySelector("video");
+        if (video) video.pause();
+      };
+      dialog.addEventListener("click", (event) => {
+        // Clicking the dialog backdrop (the dialog element itself) closes it.
+        if (event.target === dialog) dialog.close();
+      });
+      dialog.querySelectorAll("[data-close-dialog]").forEach((button) => {
+        button.addEventListener("click", () => dialog.close());
+      });
+      dialog.addEventListener("close", stop);
+    });
+  }
+
+  // --------------------------------------------------------------- bootstrap
+
+  const themeButton = document.getElementById("calepin-website-theme-button");
+  const viewSelect = document.getElementById("calepin-website-view-mode");
+
+  initTheme(themeButton);
+  initView(viewSelect);
+  const nav = createNav();
+  initCopy();
+  inlineSvgs();
+  initDialogs();
+  preserveStateInLinks(themeButton, viewSelect);
+  initLinkInterception(nav, themeButton, viewSelect);
+
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
+    initTheme(themeButton);
+    initView(viewSelect);
+    initCopy();
+    preserveStateInLinks(themeButton, viewSelect);
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === THEME.storageKey) {
+      initTheme(themeButton);
+      preserveStateInLinks(themeButton, viewSelect);
+    } else if (event.key === VIEW.storageKey) {
+      initView(viewSelect);
+    }
+  });
+})();
+
+    </script>
+</body>
 </html>

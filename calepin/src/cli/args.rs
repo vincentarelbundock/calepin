@@ -62,30 +62,6 @@ impl CompileFormat {
     }
 }
 
-#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CompileOutputTemplate {
-    /// Extract only `<head>` styles and `<body>` HTML for markdown embedding.
-    HtmlInMd,
-    /// Render HTML using the built-in `basic` theme.
-    Basic,
-    /// Render HTML using the built-in `pico` theme.
-    Pico,
-}
-
-impl CompileOutputTemplate {
-    pub fn html_template_name(self) -> Option<&'static str> {
-        match self {
-            Self::Basic => Some("basic"),
-            Self::Pico => Some("pico"),
-            Self::HtmlInMd => None,
-        }
-    }
-
-    pub fn is_html_in_markdown(&self) -> bool {
-        matches!(self, Self::HtmlInMd)
-    }
-}
-
 #[derive(clap::Args, Debug, Clone)]
 pub struct NewArgs {
     /// Path to the new .typ file
@@ -108,12 +84,11 @@ pub struct CompileArgs {
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
-    /// Output template applied after compilation.
+    /// Output template name applied after compilation.
     ///
-    /// Use `html-in-md` to embed only CSS and body content for markdown pages.
-    /// Use `basic` or `pico` to apply a built-in HTML theme.
-    #[arg(long, value_enum)]
-    pub template: Option<CompileOutputTemplate>,
+    /// Use `basic`, `pico`, or a directory name under the configured themes directory.
+    #[arg(long)]
+    pub template: Option<String>,
 
     #[command(flatten)]
     pub common: CommonArgs,
@@ -211,27 +186,6 @@ mod tests {
     }
 
     #[test]
-    fn test_typst_compile_args_template() {
-        let cli = Cli::try_parse_from([
-            "calepin",
-            "compile",
-            "paper.typ",
-            "--format",
-            "html",
-            "--template",
-            "html-in-md",
-        ])
-        .unwrap();
-
-        match cli.command {
-            Command::Compile(args) => {
-                assert_eq!(args.template, Some(CompileOutputTemplate::HtmlInMd));
-            }
-            other => panic!("expected compile command, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn test_typst_compile_args_template_theme_name() {
         let cli = Cli::try_parse_from([
             "calepin",
@@ -246,8 +200,28 @@ mod tests {
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.template, Some(CompileOutputTemplate::Pico));
-                assert_eq!(args.template.unwrap().html_template_name(), Some("pico"));
+                assert_eq!(args.template, Some("pico".to_string()));
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_compile_args_template_user_theme_name() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "--format",
+            "html",
+            "--template",
+            "zensical",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert_eq!(args.template, Some("zensical".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
         }
@@ -268,8 +242,7 @@ mod tests {
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.template, Some(CompileOutputTemplate::Basic));
-                assert_eq!(args.template.unwrap().html_template_name(), Some("basic"));
+                assert_eq!(args.template, Some("basic".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
         }

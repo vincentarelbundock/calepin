@@ -1,0 +1,708 @@
+@import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
+
+/* Calepin website theme — Pico-native overrides.
+ *
+ * Pico is loaded unlayered via <link> in layout.html; this stylesheet is
+ * inlined immediately after it, so plain rules win at equal specificity by
+ * source order (Pico uses zero-specificity :where() selectors throughout).
+ * That is why there is no @layer wrapping and no !important here: the cascade
+ * already favours these rules. Keep selectors class-scoped so we tune Pico
+ * rather than fight it. */
+
+:root {
+  __CALEPIN_SYNTAX_LIGHT__
+
+  /* Brand accent (mapped onto Pico's primary colour scale below). */
+  --calepin-accent: #1c9bad;
+  --calepin-accent-hover: #16808f;
+
+  /* Layout */
+  --calepin-topbar-height: 3.5rem;
+  --calepin-topbar-z: 20;
+  --calepin-overlay-z: 25;
+  --calepin-drawer-z: 30;
+  --calepin-side-width: 12rem;
+  --calepin-shell-gap: 1.5rem;
+  --calepin-sidebar-mobile-width: min(18rem, 78vw);
+  --calepin-radius-sm: 4px;
+}
+
+/* Teal brand accent, the Pico-native way: override the primary colour scale for
+ * every scheme. `:root:not([data-theme="dark"])` matches the specificity of
+ * Pico's own light/auto selectors, and `[data-theme="dark"]` covers forced
+ * dark; both are later in source order than Pico, so our teal wins. We use the
+ * same accent in light and dark. */
+:root:not([data-theme="dark"]),
+[data-theme="dark"] {
+  --pico-primary: var(--calepin-accent);
+  --pico-primary-background: var(--calepin-accent);
+  --pico-primary-border: var(--calepin-accent);
+  --pico-primary-underline: rgba(28, 155, 173, 0.5);
+  --pico-primary-hover: var(--calepin-accent-hover);
+  --pico-primary-hover-background: var(--calepin-accent-hover);
+  --pico-primary-hover-border: var(--calepin-accent-hover);
+  --pico-primary-hover-underline: var(--calepin-accent-hover);
+  --pico-primary-focus: rgba(28, 155, 173, 0.4);
+  --pico-primary-inverse: #fff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+}
+
+/* ------------------------------------------------------------------ Shell */
+
+.calepin-website-shell.grid {
+  display: grid;
+  grid-template-columns: var(--calepin-side-width) minmax(0, 1fr) var(--calepin-side-width);
+  grid-template-areas: "sidebar main toc";
+  gap: var(--calepin-shell-gap);
+  width: min(100% - 2rem, 95rem);
+  margin: 0;
+  justify-items: stretch;
+  justify-content: start;
+  padding: 2rem 0 4rem;
+  padding-inline-start: 1rem;
+}
+
+.calepin-website-sidebar {
+  grid-area: sidebar;
+}
+
+.calepin-website-main {
+  grid-area: main;
+  min-width: 0;
+  padding-inline: 1rem;
+}
+
+.calepin-website-main > :first-child {
+  margin-top: 0;
+}
+
+.calepin-website-toc {
+  grid-area: toc;
+}
+
+.calepin-website-sidebar,
+.calepin-website-toc {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  align-self: start;
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow: auto;
+  text-align: left;
+}
+
+/* ----------------------------------------------------------- Topbar / nav */
+
+.calepin-website-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--calepin-topbar-z);
+  min-height: var(--calepin-topbar-height);
+  padding: 0 1.25rem;
+  background: color-mix(in srgb, var(--pico-background-color) 92%, transparent);
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  backdrop-filter: blur(12px);
+}
+
+/* Pico's <nav> already lays the two <ul> groups out with space-between. */
+.calepin-website-topbar nav {
+  min-height: var(--calepin-topbar-height);
+}
+
+.calepin-website-topbrand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.calepin-website-topbrand-logo {
+  display: block;
+  height: 1.4rem;
+  width: auto;
+}
+
+.calepin-website-topbrand svg {
+  fill: currentColor;
+}
+
+.calepin-website-view-mode {
+  width: auto;
+  min-width: 6rem;
+  margin: 0;
+  padding: 0.3rem 1.8rem 0.3rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.calepin-website-theme-button,
+.calepin-website-nav-toggle {
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: 0;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.calepin-website-theme-button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  stroke: currentColor;
+  fill: none;
+}
+
+.calepin-website-theme-button svg path[fill="currentColor"] {
+  fill: currentColor;
+}
+
+.calepin-website-nav-toggle {
+  display: none;
+  font-size: 1.2rem;
+}
+
+.calepin-website-github-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.calepin-website-github-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentColor;
+}
+
+
+/* --------------------------------------------------------- Sidebar + TOC */
+
+#calepin-website-sidebar,
+#calepin-website-sidebar nav,
+#calepin-website-sidebar nav ul,
+#calepin-website-sidebar nav li,
+#calepin-website-sidebar nav li a,
+#calepin-website-toc,
+#calepin-website-toc nav,
+#calepin-website-toc nav ul,
+#calepin-website-toc nav li,
+#calepin-website-toc nav li a {
+  text-align: left !important;
+}
+
+.calepin-website-sidebar nav,
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left !important;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.calepin-website-sidebar nav ul,
+.calepin-website-toc nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left !important;
+  width: 100%;
+}
+
+.calepin-website-sidebar nav li,
+.calepin-website-toc nav li {
+  display: block;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  text-align: left !important;
+}
+
+.calepin-website-sidebar a,
+.calepin-website-toc a {
+  display: block;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  text-decoration: none;
+  text-align: left !important;
+  width: 100%;
+  color: inherit;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.calepin-website-sidebar a:hover,
+.calepin-website-toc a:hover,
+.calepin-website-sidebar a:focus,
+.calepin-website-toc a:focus,
+.calepin-website-sidebar a:active,
+.calepin-website-toc a:active,
+.calepin-website-sidebar a:visited,
+.calepin-website-toc a:visited {
+  color: inherit;
+  background: color-mix(in srgb, var(--calepin-accent) 12%, transparent);
+}
+
+.calepin-website-sidebar a.active,
+.calepin-website-sidebar a[aria-current],
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-accent) 14%, transparent);
+  font-weight: 600;
+  color: inherit;
+}
+
+/* Section labels rendered as <p><strong>…</strong></p> by build_website.py. */
+.calepin-website-sidebar nav p,
+.calepin-website-toc-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+  text-align: left;
+  font-weight: 600;
+}
+
+.calepin-website-sidebar nav p {
+  margin: 0.85rem 0 0.9rem;
+}
+
+.calepin-website-sidebar nav p strong {
+  font-weight: inherit;
+}
+
+.calepin-website-sidebar nav p:first-child {
+  margin-top: 0;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.9rem;
+}
+
+.calepin-website-toc li.level-3 a {
+  padding-left: 1rem;
+}
+
+.calepin-website-toc li.level-4 a {
+  padding-left: 1.6rem;
+}
+
+/* ---------------------------------------------------- Code & cell output */
+
+.sourceCode,
+div.sourceCode,
+pre.sourceCode {
+  background: var(--calepin-syntax-background);
+  color: var(--calepin-syntax-foreground);
+  border: 1px solid var(--pico-muted-border-color);
+  border-left: 3px solid var(--pico-primary);
+  border-radius: var(--calepin-radius-sm);
+  font-family: var(--pico-font-family-monospace);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0.9rem 0 0.35rem;
+  padding: 0.65rem 0.8rem;
+  overflow: auto;
+}
+
+div.sourceCode pre {
+  background: transparent;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  line-height: inherit;
+}
+
+.sourceCode code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+__CALEPIN_SYNTAX_CLASSES__
+
+.cell-output,
+.cell-output-stdout,
+.cell-output-stderr {
+  background: var(--pico-card-sectioning-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-left: 3px solid var(--pico-primary);
+  border-radius: var(--calepin-radius-sm);
+  font-family: var(--pico-font-family-monospace);
+  font-size: 0.86rem;
+  line-height: 1.4;
+  margin: 0.25rem 0 0.9rem;
+  padding: 0.5rem 0.7rem;
+  overflow: auto;
+}
+
+:is(.cell-output, .cell-output-stdout, .cell-output-stderr) pre {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+.cell-output-stderr {
+  background: #fff6f2;
+  border-left-color: #b75e43;
+  color: #663021;
+}
+
+html[data-theme="dark"] {
+__CALEPIN_SYNTAX_DARK__
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+__CALEPIN_SYNTAX_DARK__  }
+}
+
+figure > img {
+  display: block;
+  margin-inline: auto;
+  max-width: 100%;
+}
+
+/* ------------------------------------------------------ Home page (hero) */
+
+.hero {
+  text-align: center;
+  padding: 0.5rem 1rem 1.5rem;
+}
+
+.hero-wordmark {
+  display: block;
+  width: min(20rem, 82vw);
+  height: auto;
+  margin: 0 auto;
+  fill: currentColor;
+}
+
+.hero-subtitle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 1.4rem;
+}
+
+.hero-subtitle p {
+  margin: 0;
+  display: inline;
+  font-size: 1.4rem;
+}
+
+.hero-typst-logo {
+  height: 1.5em;
+  width: auto;
+}
+
+.hero-tagline {
+  margin: 0.8rem auto 0.4rem;
+  max-width: 44ch;
+  font-size: 1.1rem;
+}
+
+.hero-lede {
+  margin: 0.2rem auto 1rem;
+  max-width: 49ch;
+  color: var(--pico-muted-color);
+}
+
+.hero-command {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-family: var(--pico-font-family-monospace);
+}
+
+.calepin-website-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  max-width: 72rem;
+  margin: 0 auto 1.5rem;
+}
+
+.calepin-website-feature-card {
+  margin: 0;
+}
+
+.calepin-website-feature-card h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.calepin-website-feature-card p {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+/* -------------------------------------------------------- 404 */
+
+.calepin-website-404 {
+  text-align: center;
+  max-width: 40rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+
+.calepin-website-404-code {
+  margin: 0;
+  font-family: var(--pico-font-family-monospace);
+  font-weight: 700;
+  font-size: clamp(4rem, 18vw, 8rem);
+  line-height: 1;
+  color: var(--calepin-accent);
+}
+
+.calepin-website-404-title {
+  margin: 0.25rem 0 0;
+}
+
+.calepin-website-404-lede {
+  margin: 0.6rem auto 1.6rem;
+  max-width: 42ch;
+  color: var(--pico-muted-color);
+}
+
+.calepin-website-404-actions {
+  margin: 0 0 1.6rem;
+}
+
+.calepin-website-404-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* -------------------------------------------------------- Video preview */
+
+.calepin-video-block {
+  width: 400px;
+  max-width: 100%;
+  margin: 1.2rem auto 2rem;
+}
+
+.calepin-video-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--calepin-radius-sm);
+  background: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.calepin-video-thumb__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #0f111a;
+  pointer-events: none;
+}
+
+.calepin-video-thumb__play {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 3.4rem;
+  height: 3.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 1.3rem;
+  pointer-events: none;
+}
+
+.calepin-video-dialog article {
+  width: min(96vw, 76rem);
+  max-width: min(96vw, 76rem);
+  padding: 0;
+  overflow: hidden;
+}
+
+.calepin-video-dialog header {
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+}
+
+.calepin-video-dialog video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+/* --------------------------------------------------- Copy-to-clipboard */
+
+.calepin-website-copy-code-host {
+  position: relative;
+}
+
+.calepin-website-copy-code-scroll {
+  position: relative;
+}
+
+.calepin-website-copy-code-block {
+  position: relative;
+}
+
+.calepin-website-copy-code-button {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  margin: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--calepin-radius-sm);
+  background: none;
+  color: inherit;
+  opacity: 1;
+  cursor: pointer;
+  line-height: 1;
+  z-index: 1;
+}
+
+.calepin-website-copy-code-button:hover,
+.calepin-website-copy-code-button:focus-visible {
+  opacity: 0.95;
+  background: none;
+}
+
+.calepin-website-copy-code-button svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.calepin-website-copy-code-button--copied {
+  opacity: 0.95;
+  color: var(--pico-primary);
+}
+
+.calepin-website-copy-code-button--error {
+  opacity: 0.9;
+  color: #ef4444;
+}
+
+/* --------------------------------------------------------- Source / PDF */
+
+.calepin-website-source-view pre {
+  margin: 0;
+  overflow: auto;
+}
+
+.calepin-website-pdf-viewer {
+  display: block;
+  width: 100%;
+  height: 75vh;
+  border: 0;
+}
+
+/* ------------------------------------------------------------ Responsive */
+
+@media (max-width: 88rem) {
+  .calepin-website-shell.grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "sidebar"
+      "main"
+      "toc";
+  }
+
+  .calepin-website-sidebar,
+  .calepin-website-toc {
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (max-width: 56rem) {
+  .calepin-website-nav-toggle {
+    display: inline-grid;
+  }
+
+  .calepin-website-shell.grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "main";
+  }
+
+  .calepin-website-toc {
+    display: none;
+  }
+
+  .calepin-website-sidebar {
+    position: fixed;
+    top: var(--calepin-topbar-height);
+    left: 0;
+    width: var(--calepin-sidebar-mobile-width);
+    height: calc(100vh - var(--calepin-topbar-height));
+    padding: 0.8rem;
+    background: var(--pico-background-color);
+    border-right: 1px solid var(--pico-muted-border-color);
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.2);
+    overflow: auto;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+    z-index: var(--calepin-drawer-z);
+  }
+
+  .calepin-website-shell.nav-open .calepin-website-sidebar {
+    transform: translateX(0);
+  }
+
+  .calepin-website-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: var(--calepin-topbar-height) 0 0 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+    z-index: var(--calepin-overlay-z);
+  }
+
+  .calepin-website-shell.nav-open .calepin-website-nav-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  body.calepin-website-nav-open {
+    overflow: hidden;
+  }
+
+  .calepin-website-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calepin-website-nav-backdrop {
+  display: none;
+}

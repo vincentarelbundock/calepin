@@ -18,7 +18,7 @@ The binary crate is nested at `calepin/`, so direct cargo invocations need `--ma
 - `make check` for a fast `cargo check`
 - `cargo clippy --manifest-path calepin/Cargo.toml` for lints
 - `make cli-reference` regenerates `docs-src/cli.md` from clap `--help` output
-- `make website` / `make serve` build the docs site (zensical) into `docs/`
+- `make website` / `make serve` build the docs site via `build_website.py` into `docs/`
 - `make bump VERSION=x.y.z` then `make release` cuts a release (tags + pushes, which fires the cargo-dist and crates.io workflows). `make release` refuses a dirty tree.
 - `make editors` builds and installs the VS Code / Positron extension from `editors/vscode/`
 
