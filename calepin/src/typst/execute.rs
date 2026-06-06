@@ -142,7 +142,7 @@ impl EnginePool {
         match engine {
             EngineName::R => self.ensure_r_session()?,
             EngineName::Python => self.ensure_python_session()?,
-            EngineName::Mermaid | EngineName::Tikz | EngineName::Dot | EngineName::D2 => {
+            EngineName::Diagram(_) => {
                 return Err(anyhow!(
                     "diagram engine `{}` does not use a persistent context",
                     engine
@@ -424,7 +424,7 @@ mod tests {
     fn diagram_engines_always_use_svg_figures() {
         assert_eq!(
             FigureSpec::from_exec_options(
-                EngineName::Mermaid,
+                EngineName::parse("mermaid").unwrap(),
                 &ExecOptions {
                     fig_device_format: "png".to_string(),
                     ..chunk(ResultsMode::Verbatim).exec_options
@@ -435,7 +435,7 @@ mod tests {
         );
         assert_eq!(
             FigureSpec::from_exec_options(
-                EngineName::Tikz,
+                EngineName::parse("tikz").unwrap(),
                 &ExecOptions {
                     fig_device_format: "pdf".to_string(),
                     ..chunk(ResultsMode::Verbatim).exec_options

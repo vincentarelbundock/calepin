@@ -15,10 +15,7 @@ pub const RESULT_SCHEMA_VERSION: u8 = 1;
 pub enum EngineName {
     R,
     Python,
-    Mermaid,
-    Tikz,
-    Dot,
-    D2,
+    Diagram(String),
     Jupyter(String),
 }
 
@@ -31,45 +28,37 @@ impl serde::Serialize for EngineName {
 impl<'de> serde::Deserialize<'de> for EngineName {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Ok(match s.as_str() {
-            "r" => Self::R,
-            "python" => Self::Python,
-            "mermaid" => Self::Mermaid,
-            "tikz" => Self::Tikz,
-            "dot" => Self::Dot,
-            "d2" => Self::D2,
-            _ => Self::Jupyter(s),
-        })
+        Ok(Self::from_name(&s))
     }
 }
 
 impl EngineName {
     pub fn parse(value: &str) -> anyhow::Result<Self> {
-        Ok(match value {
+        Ok(Self::from_name(value))
+    }
+
+    fn from_name(value: &str) -> Self {
+        match value {
             "r" => Self::R,
             "python" => Self::Python,
-            "mermaid" => Self::Mermaid,
-            "tikz" => Self::Tikz,
-            "dot" => Self::Dot,
-            "d2" => Self::D2,
+            name if crate::engines::diagram::is_known_diagram_engine_name(name) => {
+                Self::Diagram(name.to_string())
+            }
             other => Self::Jupyter(other.to_string()),
-        })
+        }
     }
 
     pub fn as_str(&self) -> &str {
         match self {
             Self::R => "r",
             Self::Python => "python",
-            Self::Mermaid => "mermaid",
-            Self::Tikz => "tikz",
-            Self::Dot => "dot",
-            Self::D2 => "d2",
+            Self::Diagram(name) => name.as_str(),
             Self::Jupyter(name) => name.as_str(),
         }
     }
 
     pub fn is_diagram(&self) -> bool {
-        matches!(self, Self::Mermaid | Self::Tikz | Self::Dot | Self::D2)
+        matches!(self, Self::Diagram(_))
     }
 }
 

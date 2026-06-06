@@ -7,8 +7,6 @@ use super::{path_arg, run_checked_tool, run_tool, tool_error, DiagramRun};
 use crate::engines::EngineResult;
 use crate::utils::tools;
 
-pub(super) const INPUT_EXT: &str = "tex";
-
 pub(super) fn prepare_source(code: &str) -> Cow<'_, str> {
     if code.contains("\\documentclass") || code.contains("\\begin{document}") {
         return Cow::Borrowed(code);
@@ -148,7 +146,7 @@ printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$2"
         let source = vec!["\\begin{tikzpicture}".to_string()];
         let results = execute_diagram(
             "\\begin{tikzpicture}\n\\end{tikzpicture}",
-            EngineName::Tikz,
+            EngineName::parse("tikz").unwrap(),
             &fig_path,
             &source,
             &ExecutablePaths::defaults(),

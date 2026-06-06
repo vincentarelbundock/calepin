@@ -7,8 +7,6 @@ use super::{path_arg, run_tool, tool_error, DiagramRun};
 use crate::engines::EngineResult;
 use crate::utils::tools;
 
-pub(super) const INPUT_EXT: &str = "mmd";
-
 const SANDBOX_ERROR: &str = "No usable sandbox";
 const MISSING_CHROME_ERROR: &str = "Could not find Chrome";
 
@@ -177,7 +175,7 @@ printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$out"
         let source = vec!["flowchart LR".to_string(), "  A --> B".to_string()];
         let results = execute_diagram(
             "flowchart LR\n  A --> B",
-            EngineName::Mermaid,
+            EngineName::parse("mermaid").unwrap(),
             &fig_path,
             &source,
             &ExecutablePaths::defaults(),
@@ -229,7 +227,7 @@ printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$out"
         let source = vec!["flowchart LR".to_string(), "  A --> B".to_string()];
         let results = execute_diagram(
             "flowchart LR\n  A --> B",
-            EngineName::Mermaid,
+            EngineName::parse("mermaid").unwrap(),
             &fig_path,
             &source,
             &ExecutablePaths::defaults(),

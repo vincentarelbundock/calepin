@@ -1,7 +1,5 @@
 // Diagram engines: stateless CLI tools that convert source code to SVG.
 
-mod d2;
-mod dot;
 mod mermaid;
 mod tikz;
 
@@ -20,6 +18,7 @@ type PrepareSourceFn = for<'code> fn(&'code str) -> Cow<'code, str>;
 type RenderFn = for<'a> fn(&DiagramRun<'a>, &mut Vec<EngineResult>) -> Result<bool>;
 
 struct DiagramSpec {
+    name: &'static str,
     input_ext: &'static str,
     prepare_source: PrepareSourceFn,
     render: RenderFn,
@@ -31,6 +30,55 @@ pub(super) struct DiagramRun<'a> {
     pub(super) work_dir: &'a Path,
     pub(super) executables: &'a ExecutablePaths,
 }
+
+macro_rules! simple_diagram_renderer {
+    ($render:ident, $tool:expr, $program:ident, $args:expr) => {
+        fn $render(run: &DiagramRun<'_>, results: &mut Vec<EngineResult>) -> Result<bool> {
+            let args: Vec<OsString> = ($args)(run);
+            run_checked_tool($tool, &run.executables.$program, &args, results)
+        }
+    };
+}
+
+simple_diagram_renderer!(render_dot, &tools::DOT, dot, |run: &DiagramRun<'_>| {
+    vec![
+        "-Tsvg".into(),
+        "-o".into(),
+        path_arg(run.fig_path),
+        path_arg(run.input_path),
+    ]
+});
+
+simple_diagram_renderer!(render_d2, &tools::D2, d2, |run: &DiagramRun<'_>| {
+    vec![path_arg(run.input_path), path_arg(run.fig_path)]
+});
+
+static DIAGRAM_SPECS: &[DiagramSpec] = &[
+    DiagramSpec {
+        name: "mermaid",
+        input_ext: "mmd",
+        prepare_source: identity_source,
+        render: mermaid::render,
+    },
+    DiagramSpec {
+        name: "dot",
+        input_ext: "dot",
+        prepare_source: identity_source,
+        render: render_dot,
+    },
+    DiagramSpec {
+        name: "tikz",
+        input_ext: "tex",
+        prepare_source: tikz::prepare_source,
+        render: tikz::render,
+    },
+    DiagramSpec {
+        name: "d2",
+        input_ext: "d2",
+        prepare_source: identity_source,
+        render: render_d2,
+    },
+];
 
 pub fn execute_diagram(
     code: &str,
@@ -71,30 +119,14 @@ pub fn execute_diagram(
     Ok(results)
 }
 
-fn diagram_spec(engine: &EngineName) -> Option<DiagramSpec> {
-    match engine {
-        EngineName::Mermaid => Some(DiagramSpec {
-            input_ext: mermaid::INPUT_EXT,
-            prepare_source: identity_source,
-            render: mermaid::render,
-        }),
-        EngineName::Dot => Some(DiagramSpec {
-            input_ext: dot::INPUT_EXT,
-            prepare_source: identity_source,
-            render: dot::render,
-        }),
-        EngineName::Tikz => Some(DiagramSpec {
-            input_ext: tikz::INPUT_EXT,
-            prepare_source: tikz::prepare_source,
-            render: tikz::render,
-        }),
-        EngineName::D2 => Some(DiagramSpec {
-            input_ext: d2::INPUT_EXT,
-            prepare_source: identity_source,
-            render: d2::render,
-        }),
-        _ => None,
-    }
+pub(crate) fn is_known_diagram_engine_name(name: &str) -> bool {
+    DIAGRAM_SPECS.iter().any(|spec| spec.name == name)
+}
+
+fn diagram_spec(engine: &EngineName) -> Option<&'static DiagramSpec> {
+    DIAGRAM_SPECS
+        .iter()
+        .find(|spec| spec.name == engine.as_str())
 }
 
 fn identity_source(code: &str) -> Cow<'_, str> {
