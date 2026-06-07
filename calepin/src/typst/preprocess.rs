@@ -13,6 +13,7 @@ use crate::typst::paths::{artifact_reference, project_relative_path, resolve_lay
 use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
 use crate::typst::results::{build_results_document, write_results};
 use crate::typst::runtime::write_runtime;
+use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
 use crate::utils::{process, tools};
 
@@ -52,18 +53,16 @@ pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
 }
 
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
-    let mut layout = resolve_layout(
-        &options.input,
-        None,
-    )?;
+    let mut layout = resolve_layout(&options.input, None)?;
     let config = CalepinConfig::load(&layout.root, options.config.as_deref())?;
 
     write_runtime(&layout.root)?;
-    layout.render_input = write_render_wrapper(&layout, &[])?;
+    let staged_input = write_staged_source(&layout)?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
     let setup_json = typst_query(
         &config.executables.typst,
         &layout,
+        &staged_input,
         "<calepin-config>",
         &results_input,
     )?;
@@ -72,6 +71,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let chunks_json = typst_query(
         &config.executables.typst,
         &layout,
+        &staged_input,
         "raw.where(block: true).or(<calepin-chunk>)",
         &results_input,
     )?;
@@ -96,7 +96,9 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .collect();
     if !jupyter_kernels.is_empty() {
         let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
-        layout.render_input = write_render_wrapper(&layout, &kernels)?;
+        layout.render_input = write_render_wrapper(&layout, &staged_input, &kernels)?;
+    } else {
+        layout.render_input = write_render_wrapper(&layout, &staged_input, &[])?;
     }
 
     let cwd = layout.work_dir.clone();
@@ -116,7 +118,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     })
 }
 
-fn write_render_wrapper(layout: &LayoutPaths, jupyter_kernels: &[&str]) -> Result<PathBuf> {
+fn write_render_wrapper(
+    layout: &LayoutPaths,
+    include_input: &Path,
+    jupyter_kernels: &[&str],
+) -> Result<PathBuf> {
     let mut wrapper_relative = PathBuf::from(".calepin");
     let mut stem = layout.input_rel.clone();
     stem.set_extension("");
@@ -152,10 +158,7 @@ fn write_render_wrapper(layout: &LayoutPaths, jupyter_kernels: &[&str]) -> Resul
         ));
     }
 
-    lines.push_str(&format!(
-        "\n#include \"/{}\"\n",
-        slash_path(&layout.input_rel)
-    ));
+    lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
 
     if let Some(parent) = wrapper.parent() {
         fs::create_dir_all(parent)
@@ -236,13 +239,14 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
 pub fn typst_query(
     typst: &Path,
     layout: &LayoutPaths,
+    input: &Path,
     selector: &str,
     results_input: &str,
 ) -> Result<String> {
     process::validate_executable(typst, "run typst query", Some(&tools::TYPST))?;
     let output = Command::new(typst)
         .arg("query")
-        .arg(&layout.input_rel)
+        .arg(input)
         .arg(selector)
         .arg("--root")
         .arg(&layout.root)
@@ -572,10 +576,7 @@ mod tests {
             .map(|&index| chunks[index].label.as_str())
             .collect();
 
-        assert_eq!(
-            labels,
-            vec!["r-first", "r-second", "py-first", "py-second"]
-        );
+        assert_eq!(labels, vec!["r-first", "r-second", "py-first", "py-second"]);
     }
 
     #[test]

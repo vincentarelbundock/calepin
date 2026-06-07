@@ -1,6 +1,6 @@
 = Options
 
-#import ".calepin/calepin.typ" as calepin
+#import "@preview/calepin:0.0.1" as calepin
 #calepin.setup(eval: true, echo: true)
 
 Set defaults with `#calepin.setup` and override per call with `#calepin.chunk(...)` or `#calepin.inline(...)`.

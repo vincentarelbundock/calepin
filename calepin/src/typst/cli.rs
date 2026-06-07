@@ -9,7 +9,7 @@ use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, StopArgs, WatchArgs
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess, PreprocessOptions};
 
-const NEW_FILE_TEMPLATE: &str = r#"#import ".calepin/calepin.typ"
+const NEW_FILE_TEMPLATE: &str = r#"#import "@preview/calepin:0.0.1" as calepin
 
 #set document(title: [Calepin example])
 
@@ -165,7 +165,6 @@ fn find_calepin_dirs(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBu
     Ok(out)
 }
 
-
 fn confirm_deletion() -> Result<bool> {
     let mut line = String::new();
     let mut stdout = io::stdout();
@@ -200,7 +199,7 @@ mod tests {
         .unwrap();
 
         let content = fs::read_to_string(path).unwrap();
-        assert!(content.contains(r#"#import ".calepin/calepin.typ""#));
+        assert!(content.contains(r#"#import "@preview/calepin:0.0.1" as calepin"#));
         assert!(content.contains("calepin.inline.with(\"python\")"));
         assert!(content.contains("fenced-chunks: true"));
         assert!(content.contains("```python\n"));

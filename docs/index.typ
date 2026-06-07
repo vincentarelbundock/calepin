@@ -195,10 +195,10 @@ _Calepin_ notebooks are standard Typst documents with a few extra features.
 === Preamble
 <preamble>
 
-When a user calls `calepin` to compile a file, a hidden `.calepin/` directory is created to hold code artefacts and the special Typst functions and macros used to process code chunks. To build a notebook, we start by loading these functions into the document with `#import`. Then, we fix document-wide settings with `calepin.setup()`.
+When a user calls `calepin` to compile a file, a hidden `.calepin/` directory is created to hold code artefacts and the special Typst functions and macros used to process code chunks. To build a notebook, we start by loading the Calepin package with `#import`. Then, we fix document-wide settings with `calepin.setup()`.
 
 ```typ
-#import ".calepin/calepin.typ"
+#import "@preview/calepin:0.0.1" as calepin
 #calepin.setup(echo: true, eval: true,)
 ```
 
@@ -251,7 +251,7 @@ The inline answer is #py[`print(40 + 2)`].
 Here is one full document example.
 
 ````typ
-#import ".calepin/calepin.typ"
+#import "@preview/calepin:0.0.1" as calepin
 
 #calepin.setup(
   echo: true,
@@ -344,4 +344,3 @@ For smoother live preview, use a PDF viewer that reloads the file when
 it changes. On macOS, Skim is a good option. Other platforms have
 similar auto-reloading viewers, which are useful when working with tools
 that repeatedly rebuild PDFs.
-

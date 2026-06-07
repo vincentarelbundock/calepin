@@ -86,6 +86,55 @@ print(x + 1)
 }
 
 #[test]
+fn compile_rewrites_preview_package_import_to_runtime() {
+    if !has_command("typst") || !has_command("python3") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    let input = dir.path().join("paper.typ");
+    std::fs::write(
+        &input,
+        r##"#import "@preview/calepin:0.0.1" as cp
+
+#cp.chunk("python", label: "answer", echo: false)[```
+print(42)
+```]
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.pdf",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let staged = std::fs::read_to_string(dir.path().join(".calepin/paper/source.typ")).unwrap();
+    assert!(staged.contains(r#"#import "/.calepin/calepin.typ" as cp"#));
+    assert!(!staged.contains("@preview/calepin"));
+
+    let original = std::fs::read_to_string(input).unwrap();
+    assert!(original.contains(r#"#import "@preview/calepin:0.0.1" as cp"#));
+
+    let results_path = dir.path().join(".calepin/paper/results.json");
+    let results: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
+    assert_eq!(results["chunks"]["answer"]["items"][0]["text"], "42");
+}
+
+#[test]
 fn compile_runs_preprocess_and_typst_compile() {
     if !has_command("typst") || !has_command("python3") {
         return;

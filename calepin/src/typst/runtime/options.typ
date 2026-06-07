@@ -18,6 +18,7 @@
   fig-align: _base-options.at("fig-align"),
   fig-responsive: _base-options.at("fig-responsive"),
   fenced-chunks: true,
+  fallback-warning: true,
   ) = {
   let setup-opts = (
     echo: echo,
@@ -37,6 +38,7 @@
     "fig-align": fig-align,
     "fig-responsive": fig-responsive,
     "fenced-chunks": fenced-chunks,
+    "fallback-warning": fallback-warning,
   )
   _setup-defaults.update(defaults => (default: defaults.at("default") + setup-opts))
   if _mode == "query" {

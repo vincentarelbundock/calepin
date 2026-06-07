@@ -9,5 +9,6 @@ pub mod preprocess;
 pub mod query;
 pub mod results;
 pub mod runtime;
+pub mod source_rewrite;
 pub mod sync;
 pub mod watch;
