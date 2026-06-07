@@ -1,5 +1,34 @@
 {{ doc.head }}
     <meta name="color-scheme" content="light dark">
+    <script>
+(() => {
+  "use strict";
+  const storageKey = "calepin-website-theme";
+  const param = "theme";
+  const normalize = (value) => (value === "light" || value === "dark" ? value : "");
+  const root = document.documentElement;
+
+  let theme = "";
+  try {
+    theme = normalize(new URL(window.location.href).searchParams.get(param) || "");
+  } catch {
+    theme = "";
+  }
+
+  if (!theme) {
+    try {
+      theme = normalize(localStorage.getItem(storageKey) || "");
+    } catch {
+      theme = "";
+    }
+  }
+
+  if (theme) {
+    root.dataset.theme = theme;
+    root.style.colorScheme = theme;
+  }
+})();
+    </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 {% for style in styles -%}
     <style>

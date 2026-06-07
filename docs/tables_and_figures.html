@@ -1,5 +1,34 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
+    <script>
+(() => {
+  "use strict";
+  const storageKey = "calepin-website-theme";
+  const param = "theme";
+  const normalize = (value) => (value === "light" || value === "dark" ? value : "");
+  const root = document.documentElement;
+
+  let theme = "";
+  try {
+    theme = normalize(new URL(window.location.href).searchParams.get(param) || "");
+  } catch {
+    theme = "";
+  }
+
+  if (!theme) {
+    try {
+      theme = normalize(localStorage.getItem(storageKey) || "");
+    } catch {
+      theme = "";
+    }
+  }
+
+  if (theme) {
+    root.dataset.theme = theme;
+    root.style.colorScheme = theme;
+  }
+})();
+    </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
@@ -646,9 +675,11 @@ figure > img {
   margin: 0;
 }
 
-.calepin-website-feature-card h3 {
+.calepin-website-feature-card h3,
+.calepin-website-feature-card h4 {
   margin-top: 0;
   font-size: 1rem;
+  text-align: center;
 }
 
 .calepin-website-feature-card p {
@@ -1252,12 +1283,14 @@ figure > img {
 
   function applyTheme(themeName, button) {
     const next = normalizeTheme(themeName);
+    const root = document.documentElement;
     if (next) {
-      document.documentElement.dataset.theme = next;
+      root.dataset.theme = next;
+      root.style.colorScheme = next;
     } else {
-      delete document.documentElement.dataset.theme;
+      delete root.dataset.theme;
+      root.style.colorScheme = "";
     }
-    updateCurrentUrlParam(THEME.param, next);
 
     if (button) {
       const label = THEME.labels[next] || THEME.labels[""];
@@ -1271,6 +1304,7 @@ figure > img {
     const fromUrl = readUrlParam(THEME.param, normalizeTheme);
     if (fromUrl) {
       writeStored(THEME.storageKey, fromUrl);
+      updateCurrentUrlParam(THEME.param, "");
       return fromUrl;
     }
     return readStored(THEME.storageKey, normalizeTheme, "");
@@ -1278,15 +1312,13 @@ figure > img {
 
   function initTheme(button) {
     applyTheme(readTheme(), button);
-    if (button && !button.dataset.calepinBound) {
-      button.dataset.calepinBound = "true";
-      button.addEventListener("click", () => {
-        const index = THEME.order.indexOf(currentTheme());
-        const next = THEME.order[(index + 1) % THEME.order.length];
-        applyTheme(next, button);
-        writeStored(THEME.storageKey, next);
-      });
-    }
+    if (!button) return;
+    button.onclick = () => {
+      const index = THEME.order.indexOf(currentTheme());
+      const next = THEME.order[(index + 1) % THEME.order.length];
+      applyTheme(next, button);
+      writeStored(THEME.storageKey, next);
+    };
   }
 
   // ------------------------------------------------------------------- view
@@ -1620,7 +1652,7 @@ figure > img {
     if (!isInternalPageHref(href)) return href;
     try {
       const url = new URL(href, window.location.href);
-      setUrlParam(url, THEME.param, currentTheme());
+      setUrlParam(url, THEME.param, "");
       const view = currentView(viewSelect);
       setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
       return url.toString();

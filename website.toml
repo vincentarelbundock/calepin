@@ -24,12 +24,12 @@ title = "Getting started"
 title = "Code execution"
 
   [[sidebar.section.item]]
-  path = "options.typ"
-  label = "Options"
-
-  [[sidebar.section.item]]
   path = "supported-languages.typ"
   label = "Languages"
+
+  [[sidebar.section.item]]
+  path = "options.typ"
+  label = "Options"
 
   [[sidebar.section.item]]
   path = "tables_and_figures.typ"

@@ -202,7 +202,7 @@ When a user calls `calepin` to compile a file, a hidden `.calepin/` directory is
 #calepin.setup(echo: true, eval: true,)
 ```
 
-Now, we define a short alias for Python inline computation. This will be used to embed computation in prose (i.e., in the text rather than as a separate code block).
+Now, we define a short alias for Python inline computations. This will be used to embed computations in prose (i.e., in the text rather than as a separate code block).
 
 ```typ
 #let py = calepin.inline.with("python")
@@ -211,7 +211,7 @@ Now, we define a short alias for Python inline computation. This will be used to
 === Chunks
 <chunks>
 
-A block chunk runs a piece of code and inserts its result. Start with a plain fenced block:
+A code chunk runs a piece of code and inserts its result. Start with a plain fenced block:
 
 ````typ
 ```python
@@ -224,16 +224,12 @@ Variables are persistent across chunks:
 ```python
 print(x + 2)
 ```
-]
 ````
 
-When you need extra control, use `#calepin.chunk` with options such as
-labels, captions, hiding source code, or changing how results are shown.
-If the body is a fenced block with a language, `#calepin.chunk` infers
-the engine from the fence:
+When you need extra control, use `#calepin.chunk` [with options such as labels, captions, hiding source code, or changing how results are shown.](options.html) If the body is a fenced block with a language, `#calepin.chunk` infers the engine from the fence:
 
 ````typ
-#calepin.chunk(label: "answer")[
+#calepin.chunk(echo: true)[
 ```python
 x = 41
 print(x + 1)
@@ -243,8 +239,7 @@ print(x + 1)
 === Inline
 <inline>
 
-An inline expression drops a computed value into the surrounding prose.
-It uses the same raw body contract and never takes a label.
+An inline expression drops a computed value into the surrounding prose. It uses the same raw body contract and never takes a label.
 
 ```typ
 The inline answer is #py[`print(40 + 2)`].

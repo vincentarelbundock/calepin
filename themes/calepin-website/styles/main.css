@@ -601,9 +601,11 @@ figure > img {
   margin: 0;
 }
 
-.calepin-website-feature-card h3 {
+.calepin-website-feature-card h3,
+.calepin-website-feature-card h4 {
   margin-top: 0;
   font-size: 1rem;
+  text-align: center;
 }
 
 .calepin-website-feature-card p {

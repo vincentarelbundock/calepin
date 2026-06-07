@@ -118,12 +118,14 @@
 
   function applyTheme(themeName, button) {
     const next = normalizeTheme(themeName);
+    const root = document.documentElement;
     if (next) {
-      document.documentElement.dataset.theme = next;
+      root.dataset.theme = next;
+      root.style.colorScheme = next;
     } else {
-      delete document.documentElement.dataset.theme;
+      delete root.dataset.theme;
+      root.style.colorScheme = "";
     }
-    updateCurrentUrlParam(THEME.param, next);
 
     if (button) {
       const label = THEME.labels[next] || THEME.labels[""];
@@ -137,6 +139,7 @@
     const fromUrl = readUrlParam(THEME.param, normalizeTheme);
     if (fromUrl) {
       writeStored(THEME.storageKey, fromUrl);
+      updateCurrentUrlParam(THEME.param, "");
       return fromUrl;
     }
     return readStored(THEME.storageKey, normalizeTheme, "");
@@ -144,15 +147,13 @@
 
   function initTheme(button) {
     applyTheme(readTheme(), button);
-    if (button && !button.dataset.calepinBound) {
-      button.dataset.calepinBound = "true";
-      button.addEventListener("click", () => {
-        const index = THEME.order.indexOf(currentTheme());
-        const next = THEME.order[(index + 1) % THEME.order.length];
-        applyTheme(next, button);
-        writeStored(THEME.storageKey, next);
-      });
-    }
+    if (!button) return;
+    button.onclick = () => {
+      const index = THEME.order.indexOf(currentTheme());
+      const next = THEME.order[(index + 1) % THEME.order.length];
+      applyTheme(next, button);
+      writeStored(THEME.storageKey, next);
+    };
   }
 
   // ------------------------------------------------------------------- view
@@ -486,7 +487,7 @@
     if (!isInternalPageHref(href)) return href;
     try {
       const url = new URL(href, window.location.href);
-      setUrlParam(url, THEME.param, currentTheme());
+      setUrlParam(url, THEME.param, "");
       const view = currentView(viewSelect);
       setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
       return url.toString();
