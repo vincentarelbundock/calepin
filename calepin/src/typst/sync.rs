@@ -257,7 +257,7 @@ print(2)
                 fig_responsive: None,
                 fig_link: None,
                 fig_caption: None,
-                fig_caption_position: None,
+                fig_cap_location: None,
                 fig_alt_text: None,
                 fig_subcaptions: None,
                 fig_layout_columns: None,

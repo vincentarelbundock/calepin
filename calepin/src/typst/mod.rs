@@ -1,5 +1,6 @@
 pub mod cli;
 pub mod chunk_options;
+pub mod crossref;
 pub mod compile;
 pub mod execute;
 pub mod model;

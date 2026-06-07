@@ -729,7 +729,7 @@ mod tests {
         assert_eq!(chunk.label, "from-header");
         assert_eq!(chunk.code, "print(1)");
         assert!(!chunk.display_options.echo);
-        assert_eq!(chunk.display_options.fig_width.as_deref(), Some("80%"));
+        assert_eq!(chunk.display_options.fig_width.as_ref().and_then(|v| v.as_str()), Some("80%"));
         assert!(parsed.warnings.iter().any(|warning| warning.contains("translated to `fig-width`")));
     }
 
