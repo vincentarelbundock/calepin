@@ -13,8 +13,7 @@
 == Tables
 <tables>
 
-Tinytable emits raw Typst content directly. Keep `results: "asis"` to pass it
-through into the document:
+Tinytable emits raw Typst content directly. Keep `results: "asis"` to pass it through into the document. Note that at the time of writing, Typst HTML export did not support the complex type of table created below. Switch to PDF view to see the full effect.
 
 ````typ
 #calepin.chunk(results: "asis")[

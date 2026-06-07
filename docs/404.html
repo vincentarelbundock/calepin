@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 <style>
@@ -938,8 +933,7 @@ figure > img {
     </style>
 
 <script id="calepin-website-source-data" type="application/json">"#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" {\n  html.elem(\"section\", attrs: (class: \"calepin-website-404\"))[\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-code\", \"aria-hidden\": \"true\"))[404]\n    #html.elem(\"h1\", attrs: (class: \"calepin-website-404-title\"))[Page not found]\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-lede\"))[\n      Sorry, the page you are looking for does not exist or may have moved.\n    ]\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-actions\"))[\n      #html.elem(\"a\", attrs: (href: \"index.html\", role: \"button\"))[Back to home]\n    ]\n    #html.elem(\"nav\", attrs: (class: \"calepin-website-404-links\", \"aria-label\": \"Helpful links\"))[\n      #html.elem(\"a\", attrs: (href: \"index.html\"))[Home]\n      #html.elem(\"a\", attrs: (href: \"cli.html\"))[CLI reference]\n      #html.elem(\"a\", attrs: (href: \"example.html\"))[Example notebook]\n    ]\n  ]\n} else {\n  align(center + horizon)[\n    #text(size: 5em, weight: \"bold\")[404]\n    #v(0.1em)\n    #text(size: 1.5em, weight: \"bold\")[Page not found]\n    #v(0.4em)\n    Sorry, the page you are looking for does not exist or may have moved.\n  ]\n}\n"</script>
-</head>
-  <body>
+</head><body>
     <header class="calepin-website-topbar">
         <nav>
             <ul>
@@ -1002,15 +996,7 @@ figure > img {
 </ul></nav>
         </aside>
         <main class="calepin-website-main">
-            
-    <section class="calepin-website-404">
-      <p class="calepin-website-404-code" aria-hidden="true">404</p>
-      <h1 class="calepin-website-404-title" id="page-not-found">Page not found</h1>
-      <p class="calepin-website-404-lede">Sorry, the page you are looking for does not exist or may have moved.</p>
-      <p class="calepin-website-404-actions"><a href="index.html" role="button">Back to home</a></p>
-      <nav class="calepin-website-404-links" aria-label="Helpful links"><a href="index.html">Home</a> <a href="cli.html">CLI reference</a> <a href="example.html">Example notebook</a></nav>
-    </section>
-  
+            <section class="calepin-website-404"><p class="calepin-website-404-code" aria-hidden="true">404</p><h1 class="calepin-website-404-title" id="page-not-found">Page not found</h1><p class="calepin-website-404-lede">Sorry, the page you are looking for does not exist or may have moved.</p><p class="calepin-website-404-actions"><a href="index.html" role="button">Back to home</a></p><nav class="calepin-website-404-links" aria-label="Helpful links"><a href="index.html">Home</a> <a href="cli.html">CLI reference</a> <a href="example.html">Example notebook</a></nav></section>
         </main>
         
         <aside class="calepin-website-toc">
@@ -1717,5 +1703,4 @@ figure > img {
 })();
 
     </script>
-</body>
-</html>
+</body></html>

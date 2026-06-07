@@ -1,9 +1,11 @@
+use std::collections::VecDeque;
 use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use crate::cli::{set_quiet, CompileArgs, NewArgs, StopArgs, WatchArgs};
+use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, StopArgs, WatchArgs};
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess, PreprocessOptions};
 
@@ -70,6 +72,39 @@ pub fn handle_stop(args: StopArgs) -> Result<()> {
     crate::typst::watch::run_stop(args)
 }
 
+pub fn handle_clean(args: CleanArgs) -> Result<()> {
+    let root = std::env::current_dir()?;
+    let mut calepin_dirs = find_calepin_dirs(&root, args.depth)?;
+    calepin_dirs.sort();
+
+    if calepin_dirs.is_empty() {
+        eprintln!("No .calepin directories found under {}", root.display());
+        return Ok(());
+    }
+
+    eprintln!("The following directories will be removed:");
+    for path in &calepin_dirs {
+        eprintln!("  {}", path.display());
+    }
+
+    if !args.yes && !confirm_deletion()? {
+        return Ok(());
+    }
+
+    for path in calepin_dirs {
+        if args.include_config {
+            fs::remove_dir_all(&path)
+                .with_context(|| format!("failed to remove {}", path.display()))?;
+            continue;
+        }
+
+        remove_calepin_dir_contents_except_config(&path)
+            .with_context(|| format!("failed to clean {}", path.display()))?;
+    }
+
+    Ok(())
+}
+
 pub fn handle_compile(args: CompileArgs) -> Result<()> {
     set_quiet(args.common.quiet);
     let format = args.format.map(|format| format.as_str().to_string());
@@ -99,6 +134,83 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         },
     )?;
     Ok(())
+}
+
+fn find_calepin_dirs(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBuf>> {
+    let mut out = Vec::new();
+    let mut queue: VecDeque<(PathBuf, usize)> = VecDeque::from([(root.to_path_buf(), 0)]);
+
+    while let Some((dir, depth)) = queue.pop_front() {
+        if !dir.is_dir() {
+            continue;
+        }
+
+        if dir.file_name().is_some_and(|name| name == ".calepin") {
+            out.push(dir);
+            continue;
+        }
+
+        let skip_children = max_depth.is_some_and(|max| depth >= max);
+        if skip_children {
+            continue;
+        }
+
+        let entries = match fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(error.into()),
+        };
+
+        for entry in entries {
+            let entry = entry?;
+            if entry.file_type()?.is_dir() {
+                queue.push_back((entry.path(), depth + 1));
+            }
+        }
+    }
+
+    Ok(out)
+}
+
+fn remove_calepin_dir_contents_except_config(dir: &Path) -> Result<()> {
+    let config_path = dir.join("config.toml");
+    if !dir.is_dir() {
+        return Ok(());
+    }
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path == config_path {
+            continue;
+        }
+
+        if entry.file_type()?.is_dir() {
+            fs::remove_dir_all(path)?;
+        } else {
+            fs::remove_file(path)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn confirm_deletion() -> Result<bool> {
+    let mut line = String::new();
+    let mut stdout = io::stdout();
+
+    loop {
+        line.clear();
+        print!("Proceed with deletion? [y/N] ");
+        stdout.flush()?;
+        io::stdin().read_line(&mut line)?;
+
+        match line.trim().to_ascii_lowercase().as_str() {
+            "y" | "yes" => return Ok(true),
+            "" | "n" | "no" => return Ok(false),
+            _ => continue,
+        }
+    }
 }
 
 #[cfg(test)]

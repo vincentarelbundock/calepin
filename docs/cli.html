@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 <style>
@@ -938,8 +933,7 @@ figure > img {
     </style>
 
 <script id="calepin-website-source-data" type="application/json">"= CLI reference\n<cli-reference>\n\n== `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  stop     Stop a running calepin watch process\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n== `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file\n\n  [OUTPUT]\n          Output path passed to typst compile\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --template <TEMPLATE>\n          Output template applied after compilation.\n\n          Use `basic` or `pico` to apply a built-in HTML theme.\n\n          Possible values:\n          - basic: Render HTML using the built-in `basic` theme\n          - pico:  Render HTML using the built-in `pico` theme\n\n      --results <RESULTS>\n          Override results JSON path\n\n      --clean\n          Remove generated results and figures before preprocessing\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>          Input .typ file\n  [OUTPUT]         Output path passed to typst watch\n  [TYPST_ARGS]...  Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>    Output format passed to typst watch [possible values: pdf, png, svg, html]\n      --results <RESULTS>  Override results JSON path\n      --clean              Remove generated results and figures before preprocessing\n  -q, --quiet              Quiet mode\n      --timeout <TIMEOUT>  Per-chunk timeout in seconds\n  -h, --help               Print help\n```\n\n== `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n"</script>
-</head>
-  <body>
+</head><body>
     <header class="calepin-website-topbar">
         <nav>
             <ul>
@@ -1002,17 +996,85 @@ figure > img {
 </ul></nav>
         </aside>
         <main class="calepin-website-main">
-            
-    <h2 id="cli-reference">CLI reference</h2>
-    <h3 id="calepin"><code>calepin</code></h3>
-    <pre><code data-lang="text">Preprocess Typst documents with executable code chunks<br><br>Usage: calepin &lt;COMMAND><br><br>Commands:<br>  new      Create a new example Typst file<br>  compile  Preprocess, then invoke typst compile<br>  watch    Watch, preprocess, and delegate recompiles to typst watch<br>  stop     Stop a running calepin watch process<br>  help     Print this message or the help of the given subcommand(s)<br><br>Options:<br>  -v, --version  Print version<br>  -h, --help     Print help</code></pre>
-    <h3 id="calepin-compile"><code>calepin compile</code></h3>
-    <pre><code data-lang="text">Preprocess, then invoke typst compile<br><br>Usage: calepin compile [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...<br><br>Arguments:<br>  &lt;INPUT><br>          Input .typ file<br><br>  [OUTPUT]<br>          Output path passed to typst compile<br><br>  [TYPST_ARGS]...<br>          Arguments forwarded to typst compile after `--`<br><br>Options:<br>      --format &lt;FORMAT><br>          Output format passed to typst compile<br>          <br>          [possible values: pdf, png, svg, html]<br><br>      --template &lt;TEMPLATE><br>          Output template applied after compilation.<br><br>          Use `basic` or `pico` to apply a built-in HTML theme.<br><br>          Possible values:<br>          - basic: Render HTML using the built-in `basic` theme<br>          - pico:  Render HTML using the built-in `pico` theme<br><br>      --results &lt;RESULTS><br>          Override results JSON path<br><br>      --clean<br>          Remove generated results and figures before preprocessing<br><br>  -q, --quiet<br>          Quiet mode<br><br>      --timeout &lt;TIMEOUT><br>          Per-chunk timeout in seconds<br><br>  -h, --help<br>          Print help (see a summary with '-h')</code></pre>
-    <h3 id="calepin-watch"><code>calepin watch</code></h3>
-    <pre><code data-lang="text">Watch, preprocess, and delegate recompiles to typst watch<br><br>Usage: calepin watch [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...<br><br>Arguments:<br>  &lt;INPUT>          Input .typ file<br>  [OUTPUT]         Output path passed to typst watch<br>  [TYPST_ARGS]...  Arguments forwarded to typst watch after `--`<br><br>Options:<br>      --format &lt;FORMAT>    Output format passed to typst watch [possible values: pdf, png, svg, html]<br>      --results &lt;RESULTS>  Override results JSON path<br>      --clean              Remove generated results and figures before preprocessing<br>  -q, --quiet              Quiet mode<br>      --timeout &lt;TIMEOUT>  Per-chunk timeout in seconds<br>  -h, --help               Print help</code></pre>
-    <h3 id="calepin-stop"><code>calepin stop</code></h3>
-    <pre><code data-lang="text">Stop a running calepin watch process<br><br>Usage: calepin stop [INPUT]<br><br>Arguments:<br>  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory<br><br>Options:<br>  -h, --help  Print help</code></pre>
-  
+            <h2 id="cli-reference">CLI reference</h2><h3 id="calepin"><code>calepin</code></h3><pre><code data-lang="text">Preprocess Typst documents with executable code chunks
+
+Usage: calepin &lt;COMMAND>
+
+Commands:
+  new      Create a new example Typst file
+  compile  Preprocess, then invoke typst compile
+  watch    Watch, preprocess, and delegate recompiles to typst watch
+  stop     Stop a running calepin watch process
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --version  Print version
+  -h, --help     Print help</code></pre><h3 id="calepin-compile"><code>calepin compile</code></h3><pre><code data-lang="text">Preprocess, then invoke typst compile
+
+Usage: calepin compile [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...
+
+Arguments:
+  &lt;INPUT>
+          Input .typ file
+
+  [OUTPUT]
+          Output path passed to typst compile
+
+  [TYPST_ARGS]...
+          Arguments forwarded to typst compile after `--`
+
+Options:
+      --format &lt;FORMAT>
+          Output format passed to typst compile
+          
+          [possible values: pdf, png, svg, html]
+
+      --template &lt;TEMPLATE>
+          Output template applied after compilation.
+
+          Use `basic` or `pico` to apply a built-in HTML theme.
+
+          Possible values:
+          - basic: Render HTML using the built-in `basic` theme
+          - pico:  Render HTML using the built-in `pico` theme
+
+      --results &lt;RESULTS>
+          Override results JSON path
+
+      --clean
+          Remove generated results and figures before preprocessing
+
+  -q, --quiet
+          Quiet mode
+
+      --timeout &lt;TIMEOUT>
+          Per-chunk timeout in seconds
+
+  -h, --help
+          Print help (see a summary with '-h')</code></pre><h3 id="calepin-watch"><code>calepin watch</code></h3><pre><code data-lang="text">Watch, preprocess, and delegate recompiles to typst watch
+
+Usage: calepin watch [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...
+
+Arguments:
+  &lt;INPUT>          Input .typ file
+  [OUTPUT]         Output path passed to typst watch
+  [TYPST_ARGS]...  Arguments forwarded to typst watch after `--`
+
+Options:
+      --format &lt;FORMAT>    Output format passed to typst watch [possible values: pdf, png, svg, html]
+      --results &lt;RESULTS>  Override results JSON path
+      --clean              Remove generated results and figures before preprocessing
+  -q, --quiet              Quiet mode
+      --timeout &lt;TIMEOUT>  Per-chunk timeout in seconds
+  -h, --help               Print help</code></pre><h3 id="calepin-stop"><code>calepin stop</code></h3><pre><code data-lang="text">Stop a running calepin watch process
+
+Usage: calepin stop [INPUT]
+
+Arguments:
+  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory
+
+Options:
+  -h, --help  Print help</code></pre>
         </main>
         
         <aside class="calepin-website-toc">
@@ -1727,5 +1789,4 @@ figure > img {
 })();
 
     </script>
-</body>
-</html>
+</body></html>

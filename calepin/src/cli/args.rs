@@ -41,6 +41,9 @@ pub enum Command {
 
     /// Stop a running calepin watch process
     Stop(StopArgs),
+
+    /// Remove `.calepin` directories and generated artifacts
+    Clean(CleanArgs),
 }
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
@@ -123,6 +126,21 @@ pub struct StopArgs {
     /// Input .typ file to stop the matching calepin watch.
     /// Omit this value to stop all active watches under the current project's `.calepin` directory.
     pub input: Option<PathBuf>,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct CleanArgs {
+    /// Maximum recursion depth when searching for `.calepin` directories
+    #[arg(short, long)]
+    pub depth: Option<usize>,
+
+    /// Include `config.toml` when deleting `.calepin` directories
+    #[arg(long)]
+    pub include_config: bool,
+
+    /// Skip interactive confirmation and delete immediately
+    #[arg(short, long)]
+    pub yes: bool,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -305,6 +323,34 @@ mod tests {
                 assert_eq!(args.input, Some(PathBuf::from("paper.typ")));
             }
             other => panic!("expected stop command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_clean_args_depth() {
+        let cli = Cli::try_parse_from(["calepin", "clean", "--depth", "3", "--yes"]).unwrap();
+
+        match cli.command {
+            Command::Clean(args) => {
+                assert_eq!(args.depth, Some(3));
+                assert!(!args.include_config);
+                assert!(args.yes);
+            }
+            other => panic!("expected clean command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_clean_args_include_config() {
+        let cli = Cli::try_parse_from(["calepin", "clean", "--include-config"]).unwrap();
+
+        match cli.command {
+            Command::Clean(args) => {
+                assert!(args.include_config);
+                assert_eq!(args.depth, None);
+                assert!(!args.yes);
+            }
+            other => panic!("expected clean command, got {other:?}"),
         }
     }
 

@@ -203,9 +203,14 @@ Use regular Typst math when the expression should be typeset by the document
 renderer instead of executed by a language engine. These examples show the math
 syntax living next to executable chunks in the same notebook.
 
-$ A = pi r^2 $
-$ "area" = pi dot "radius"^4 $
-$ cal(A) :=
-    { x in RR | x "is natural" } $
 #let x = 5
+
+$ A = pi r^2 $
+
+$ "area" = pi dot "radius"^4 $
+
+$ cal(A) := { x in RR | x "is natural" } $
+
 $ #x < 17 $
+
+Warning: On 2026-06-06, math export in HTML was only supported in the development version of Typst, available from Github.

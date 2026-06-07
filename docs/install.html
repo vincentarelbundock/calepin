@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 <style>
@@ -938,8 +933,7 @@ figure > img {
     </style>
 
 <script id="calepin-website-source-data" type="application/json">"== Install calepin\n<install-calepin>\n\nMacOS and Linux:\n\n```sh\ncurl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh\n```\n\nWindows via powershell:\n\n```sh\npowershell -ExecutionPolicy Bypass -c \"irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex\"\n```\n\n== Jupyter support\n<jupyter-kernels>\n\nCalepin has built-in support for #strong[Python] and #strong[R], and can also\nrun many other languages through Jupyter kernels, but that requires installing\nthe language kernel and kernel client tooling.\n\nTo use a Jupyter kernel, install `jupyter_client` first:\n\n```sh\npip install jupyter_client\n```\n\nMost kernels then install with a single `pip install`:\n\n```sh\npip install bash_kernel       # Bash\npip install octave_kernel     # GNU Octave\npip install gnuplot_kernel    # Gnuplot\n```\n\nSome kernels are installed from their language's own package manager:\n\n```sh\n# Julia\njulia -e 'using Pkg; Pkg.add(\"IJulia\")'\n```\n\nRun `jupyter kernelspec list` to see what engines are registered and available.\n"</script>
-</head>
-  <body>
+</head><body>
     <header class="calepin-website-topbar">
         <nav>
             <ul>
@@ -1002,22 +996,10 @@ figure > img {
 </ul></nav>
         </aside>
         <main class="calepin-website-main">
-            
-    <h3 id="install-calepin">Install calepin</h3>
-    <p>MacOS and Linux:</p>
-    <pre><code data-lang="sh"><span style="color: #4b69c6">curl</span> --proto <span style="color: #198810">'</span><span style="color: #198810">=https</span><span style="color: #198810">'</span> --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh <span style="color: #d73948">|</span> <span style="color: #4b69c6">sh</span></code></pre>
-    <p>Windows via powershell:</p>
-    <pre><code data-lang="sh"><span style="color: #4b69c6">powershell</span> -ExecutionPolicy Bypass -c <span style="color: #198810">"</span><span style="color: #198810">irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex</span><span style="color: #198810">"</span></code></pre>
-    <h3 id="jupyter-support">Jupyter support</h3>
-    <p>Calepin has built-in support for <strong>Python</strong> and <strong>R</strong>, and can also run many other languages through Jupyter kernels, but that requires installing the language kernel and kernel client tooling.</p>
-    <p>To use a Jupyter kernel, install <code>jupyter_client</code> first:</p>
-    <pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install jupyter_client</code></pre>
-    <p>Most kernels then install with a single <code>pip install</code>:</p>
-    <pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install bash_kernel       <span style="color: #74747c">#</span><span style="color: #74747c"> Bash</span><br><span style="color: #4b69c6">pip</span> install octave_kernel     <span style="color: #74747c">#</span><span style="color: #74747c"> GNU Octave</span><br><span style="color: #4b69c6">pip</span> install gnuplot_kernel    <span style="color: #74747c">#</span><span style="color: #74747c"> Gnuplot</span></code></pre>
-    <p>Some kernels are installed from their language’s own package manager:</p>
-    <pre><code data-lang="sh"><span style="color: #74747c">#</span><span style="color: #74747c"> Julia</span><br><span style="color: #4b69c6">julia</span> -e <span style="color: #198810">'</span><span style="color: #198810">using Pkg; Pkg.add("IJulia")</span><span style="color: #198810">'</span></code></pre>
-    <p>Run <code>jupyter kernelspec list</code> to see what engines are registered and available.</p>
-  
+            <h3 id="install-calepin">Install calepin</h3><p>MacOS and Linux:</p><pre><code data-lang="sh"><span style="color: #4b69c6">curl</span> --proto <span style="color: #198810">'</span><span style="color: #198810">=https</span><span style="color: #198810">'</span> --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh <span style="color: #d73948">|</span> <span style="color: #4b69c6">sh</span></code></pre><p>Windows via powershell:</p><pre><code data-lang="sh"><span style="color: #4b69c6">powershell</span> -ExecutionPolicy Bypass -c <span style="color: #198810">"</span><span style="color: #198810">irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex</span><span style="color: #198810">"</span></code></pre><h3 id="jupyter-support">Jupyter support</h3><p>Calepin has built-in support for <strong>Python</strong> and <strong>R</strong>, and can also run many other languages through Jupyter kernels, but that requires installing the language kernel and kernel client tooling.</p><p>To use a Jupyter kernel, install <code>jupyter_client</code> first:</p><pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install jupyter_client</code></pre><p>Most kernels then install with a single <code>pip install</code>:</p><pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install bash_kernel       <span style="color: #74747c">#</span><span style="color: #74747c"> Bash</span>
+<span style="color: #4b69c6">pip</span> install octave_kernel     <span style="color: #74747c">#</span><span style="color: #74747c"> GNU Octave</span>
+<span style="color: #4b69c6">pip</span> install gnuplot_kernel    <span style="color: #74747c">#</span><span style="color: #74747c"> Gnuplot</span></code></pre><p>Some kernels are installed from their language’s own package manager:</p><pre><code data-lang="sh"><span style="color: #74747c">#</span><span style="color: #74747c"> Julia</span>
+<span style="color: #4b69c6">julia</span> -e <span style="color: #198810">'</span><span style="color: #198810">using Pkg; Pkg.add("IJulia")</span><span style="color: #198810">'</span></code></pre><p>Run <code>jupyter kernelspec list</code> to see what engines are registered and available.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -1726,5 +1708,4 @@ figure > img {
 })();
 
     </script>
-</body>
-</html>
+</body></html>
