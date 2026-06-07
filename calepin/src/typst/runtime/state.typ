@@ -80,6 +80,24 @@
   }
 }
 
+// Accept `label` as none | str | array of str. Returns the internal id (used
+// for results lookup + artifact filenames) and the raw label-name list.
+#let _derive-label(label-opt, generated-prefix, counter-value) = {
+  if label-opt == none {
+    (id: generated-prefix + "-" + str(counter-value), names: (), generated: true)
+  } else if type(label-opt) == str {
+    (id: label-opt, names: (label-opt,), generated: false)
+  } else if type(label-opt) == array {
+    if label-opt.len() == 0 { panic("calepin.chunk: label list must not be empty") }
+    for entry in label-opt {
+      if type(entry) != str { panic("calepin.chunk: label entries must be strings") }
+    }
+    (id: label-opt.first(), names: label-opt, generated: false)
+  } else {
+    panic("calepin.chunk: label must be a string or an array of strings")
+  }
+}
+
 #let _select-representation(data) = {
   for mime in ("image/svg+xml", "image/png", "text/x-typst", "text/plain", "application/json") {
     let value = data.at(mime, default: none)

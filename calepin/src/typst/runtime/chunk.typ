@@ -1,9 +1,10 @@
 
-#let _chunk-spec(body, engine, label, options) = {
+#let _chunk-spec(body, engine, label, crossref-labels, options) = {
   let out = (
     body: body,
     engine: engine,
     label: label,
+    "crossref-labels": crossref-labels,
   )
   for key in _base-options.keys() {
     if key != "fenced-chunks" {
@@ -35,18 +36,20 @@
 
 #let _emit-chunk(engine, body, ..args) = context {
   let options = _call-defaults + args.named()
-  let label = options.at("label")
-  let generated-label = label == none
+  let label-opt = options.at("label")
   let auto-label-state = options.at("auto-label-state")
   let auto-label-prefix = options.at("auto-label-prefix")
-  let label = if generated-label { auto-label-prefix + "-" + str(auto-label-state.get()) } else { label }
+  let derived = _derive-label(label-opt, auto-label-prefix, auto-label-state.get())
+  let label = derived.id
+  let crossref-labels = derived.names
+  let generated-label = derived.generated
   let label-step = if generated-label {
     auto-label-state.update(n => n + 1)
   } else {
     _sync-auto-label-counter(auto-label-state, label)
   }
   if _mode == "query" {
-    [#label-step #metadata(_chunk-spec(body, engine, label, options)) <calepin-chunk>]
+    [#label-step #metadata(_chunk-spec(body, engine, label, crossref-labels, options)) <calepin-chunk>]
   } else {
     let code = _raw-text(body)
     let code = if code.starts-with("\n") { code.slice(1) } else { code }
