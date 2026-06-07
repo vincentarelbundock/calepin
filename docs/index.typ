@@ -40,16 +40,20 @@
     attrs: (class: "calepin-website-features"),
   )[
     #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
-      #html.elem("h3", [Typst-native])
-      #html.elem("p", [Write your notebooks directly in Typst, leveraging the simplicitly, flexibility, and elegance of this modern language.])
+      #html.elem("h4", [Typst-native])
+      #html.elem("p", [Write notebooks in pure Typst, a simple, elegant, and incredibly powerful typsetting system. Not yet another _ad hoc_ markdown variant.])
     ]
     #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
-      #html.elem("h3", [Executable code])
-      #html.elem("p", [Insert code blocks and inline code. These chunks are executed and resulting text and figures are inserted in the final document automatically.])
+      #html.elem("h4", [Executable code])
+      #html.elem("p", [Insert code directly in your `.typ` files. These chunks are executed and the results are automatically inserted back in your final document.])
     ]
     #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
-      #html.elem("h3", [Multiple outputs])
-      #html.elem("p", [Publish clean HTML, PDF, and Typst builds from the same source.])
+      #html.elem("h4", [Several formats])
+      #html.elem("p", [Publish clean HTML, PDF, or image files from a single Typst source.])
+    ]
+    #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
+      #html.elem("h4", [Multi-lingual])
+      #html.elem("p", [Embed code written in Python, R, Julia, Bash, Mermaid, TikZ, or any language supported by Jupyter.])
     ]
   ]
 ]
@@ -80,6 +84,43 @@ Some notebook tools can act as frontends for Typst, but they often
 superimpose their own syntax, language, and structure. For example,
 #link("https://quarto.org/")[Posit's Quarto] supports an extended idiom
 of Markdown, which can be translated to Typst and then rendered as PDF.
+
+#if sys.inputs.at("calepin-target", default: "paged") == "html" [
+  #html.elem("div", attrs: (class: "calepin-screenshot-block"))[
+  #html.elem("button", attrs: (
+    class: "calepin-screenshot-thumb",
+    type: "button",
+    "data-lightbox-dialog": "calepin-screenshot-dialog",
+    "aria-label": "Open Calepin notebook screenshot",
+  ))[
+    #html.elem("img", attrs: (
+      src: "assets/screenshot_notebook.png",
+      alt: "Calepin notebook screenshot",
+      class: "calepin-screenshot-thumb__media",
+    ))
+    #html.elem("span", attrs: (class: "calepin-screenshot-thumb__zoom", "aria-hidden": "true"))[↗]
+  ]
+]
+
+#html.elem("dialog", attrs: (id: "calepin-screenshot-dialog", class: "calepin-screenshot-dialog"))[
+  #html.elem("article")[
+    #html.elem("header")[
+      #html.elem("button", attrs: (
+        rel: "prev",
+        type: "button",
+        "data-close-dialog": "",
+        "aria-label": "Close screenshot preview",
+      ))
+    ]
+    #html.elem("img", attrs: (
+      class: "calepin-screenshot-dialog__media",
+      src: "assets/screenshot_notebook.png",
+      alt: "Calepin notebook screenshot",
+    ))
+  ]
+]
+]
+
 
 ==== Calepin
 <calepin>

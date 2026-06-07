@@ -309,8 +309,95 @@ h6 {
   padding-left: 1rem;
 }
 
-.calepin-website-toc li.level-4 a {
-  padding-left: 1.6rem;
+.calepin-website-toc li.level-4,
+.calepin-website-toc li.level-5,
+.calepin-website-toc li.level-6 {
+  display: none;
+}
+
+/* ------------------------------------------------------ Page navigation */
+
+.calepin-website-page-nav {
+  margin: 2.4rem auto 2rem;
+  padding: 0 1rem;
+}
+
+.calepin-website-page-nav-inner {
+  max-width: 52rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.calepin-website-page-nav-link,
+.calepin-website-page-nav-empty {
+  min-height: 3.4rem;
+  border-radius: var(--calepin-radius-sm);
+}
+
+.calepin-website-page-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--pico-muted-border-color);
+  padding: 0.55rem 0.8rem;
+  text-decoration: none;
+  color: inherit;
+  background: color-mix(in srgb, var(--pico-background-color) 94%, transparent);
+}
+
+.calepin-website-page-nav-link:visited {
+  color: inherit;
+}
+
+.calepin-website-page-nav-link:hover,
+.calepin-website-page-nav-link:focus-visible {
+  transform: translateY(-1px);
+}
+
+.calepin-website-page-nav-empty {
+  display: block;
+}
+
+.calepin-website-page-nav-link--next {
+  text-align: right;
+}
+
+.calepin-website-page-nav-link--next .calepin-website-page-nav-arrow {
+  margin-left: auto;
+}
+
+.calepin-website-page-nav-link--prev .calepin-website-page-nav-arrow {
+  margin-right: auto;
+}
+
+.calepin-website-page-nav-content {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.calepin-website-page-nav-content .calepin-website-page-nav-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calepin-website-page-nav-kind {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.calepin-website-page-nav-arrow {
+  width: 0.95rem;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--pico-muted-color);
 }
 
 /* ---------------------------------------------------- Code & cell output */
@@ -434,6 +521,74 @@ figure > img {
   padding: 0.5rem 1rem 1.5rem;
 }
 
+.calepin-screenshot-block {
+  margin: 1.2rem auto 2rem;
+  width: min(100%, 400px);
+  max-width: 100%;
+}
+
+.calepin-screenshot-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 0.45rem;
+  overflow: hidden;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0;
+  background: transparent;
+}
+
+.calepin-screenshot-thumb__media {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.calepin-screenshot-thumb__zoom {
+  position: absolute;
+  inset: 0.6rem 0.6rem auto auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.calepin-screenshot-dialog article {
+  width: min(96vw, 76rem);
+  max-width: min(96vw, 76rem);
+  padding: 0;
+  overflow: hidden;
+}
+
+.calepin-screenshot-dialog header {
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+}
+
+.calepin-screenshot-dialog__media {
+  display: block;
+  width: 100%;
+  max-height: 85vh;
+  min-height: 18rem;
+  object-fit: contain;
+  aspect-ratio: auto;
+  background: #0f111a;
+}
+
 .hero-wordmark {
   display: block;
   width: min(20rem, 82vw);
@@ -455,6 +610,10 @@ figure > img {
   margin: 0;
   display: inline;
   font-size: 1.4rem;
+}
+
+.hero-subtitle-text {
+  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
 }
 
 .hero-typst-logo {
@@ -482,7 +641,7 @@ figure > img {
 
 .calepin-website-features {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
   max-width: 72rem;
   margin: 0 auto 1.5rem;
@@ -739,6 +898,25 @@ figure > img {
     z-index: var(--calepin-overlay-z);
   }
 
+  .calepin-website-page-nav {
+    margin-top: 1.8rem;
+    padding: 0 0.8rem;
+  }
+
+  .calepin-website-page-nav-inner {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .calepin-website-page-nav-link--next,
+  .calepin-website-page-nav-link--prev {
+    text-align: left;
+  }
+
+  .calepin-website-page-nav-link {
+    width: 100%;
+  }
+
   .calepin-website-shell.nav-open .calepin-website-nav-backdrop {
     opacity: 1;
     pointer-events: auto;
@@ -759,7 +937,7 @@ figure > img {
 
     </style>
 
-<script id="calepin-website-source-data" type="application/json">"== Options\n\nCalepin options fall into three groups: **execution**, **result display**, and\n**figure output**. Set defaults with `#calepin.setup` and override per call with\n`#calepin.chunk(...)` or `#calepin.inline(...)`.\n\n```toml\n# Global/default values\n[setup]\n# Execution\n\necho   = true      # show source before output\neval   = true      # execute chunk\noutput = true      # include stdout/stderr output\nerror  = false     # record execution errors instead of failing\nwarning = true\nmessage = true\nlang   = \"python\"  # optional: scope defaults to one language\n\n# Result rendering\nresults = \"verbatim\"  # \"verbatim\", \"asis\", or \"hide\"\nformat  = \"auto\"     # preferred result format(s)\nitem    = \"all\"      # all, first, last, or an index\nkind    = \"auto\"     # output-kind hint for structured results\n\n# Figures\nfig-device-format     = \"svg\"     # png, pdf, html where supported\nfig-device-dpi        = 150\nfig-device-width      = 6\nfig-device-height     = \"auto\"\nfig-device-aspect     = 0.618\nfig-display-width     = \"70%\"\nfig-display-height    = \"auto\"\nfig-display-align     = \"center\"\nfig-display-responsive = true\nfig-caption           = \"none\"\nfig-caption-position  = \"auto\"\nfig-alt-text          = \"none\"\nfig-subcaptions       = \"none\"\nfig-layout-columns    = \"auto\"\nfig-layout-rows       = \"auto\"\nfig-layout-design     = \"auto\"\n\n# calepin.chunk-only\nengine = \"python\"  # force an engine instead of inferring from fence\nbody   = \"...\"      # raw code body when not in a fenced block\nlabel  = \"fit-summary\"  # stable reference id for results/figures\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"== Options\n\nCalepin options fall into three groups: **execution**, **result display**, and\n**figure output**. Set defaults with `#calepin.setup` and override per call with\n`#calepin.chunk(...)` or `#calepin.inline(...)`.\n\n```toml\n# Global/default values\n[setup]\n# Execution\n\necho    = true      # show source before output\neval    = true      # execute chunk\noutput  = true      # include stdout/stderr output\nerror   = false     # record execution errors instead of failing\nwarning = true\nmessage = true\nlang    = \"python\"  # optional: scope defaults to one language\n\n# Result rendering\nresults = \"verbatim\" # \"verbatim\", \"asis\", or \"hide\"\nformat  = \"auto\"     # preferred result format(s)\nitem    = \"all\"      # all, first, last, or an index\nkind    = \"auto\"     # output-kind hint for structured results\n\n# Figures\nfig-device-format      = \"svg\"     # png, pdf, html where supported\nfig-device-dpi         = 150\nfig-device-width       = 6\nfig-device-height      = \"auto\"\nfig-device-aspect      = 0.618\nfig-display-width      = \"70%\"\nfig-display-height     = \"auto\"\nfig-display-align      = \"center\"\nfig-display-responsive = true\nfig-caption            = \"none\"\nfig-caption-position   = \"auto\"\nfig-alt-text           = \"none\"\nfig-subcaptions        = \"none\"\nfig-layout-columns     = \"auto\"\nfig-layout-rows        = \"auto\"\nfig-layout-design      = \"auto\"\n\n# calepin.chunk-only\nengine = \"python\"       # force an engine instead of inferring from fence\nbody   = \"...\"          # raw code body when not in a fenced block\nlabel  = \"fit-summary\"  # stable reference id for results/figures\n```\n"</script>
 </head>
   <body>
     <header class="calepin-website-topbar">
@@ -827,7 +1005,7 @@ figure > img {
             
     <h3 id="options">Options</h3>
     <p>Calepin options fall into three groups: <strong></strong>execution<strong></strong>, <strong></strong>result display<strong></strong>, and <strong></strong>figure output<strong></strong>. Set defaults with <code>#calepin.setup</code> and override per call with <code>#calepin.chunk(...)</code> or <code>#calepin.inline(...)</code>.</p>
-    <pre><code data-lang="toml"><span style="color: #74747c">#</span><span style="color: #74747c"> Global/default values</span><br>[<span style="color: #4b69c6">setup</span>]<br><span style="color: #74747c">#</span><span style="color: #74747c"> Execution</span><br><br><span style="color: #4b69c6">echo</span>   = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> show source before output</span><br><span style="color: #4b69c6">eval</span>   = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> execute chunk</span><br><span style="color: #4b69c6">output</span> = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> include stdout/stderr output</span><br><span style="color: #4b69c6">error</span>  = <span style="color: #d73948">false</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> record execution errors instead of failing</span><br><span style="color: #4b69c6">warning</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">message</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">lang</span>   = <span style="color: #198810">"</span><span style="color: #198810">python</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> optional: scope defaults to one language</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> Result rendering</span><br><span style="color: #4b69c6">results</span> = <span style="color: #198810">"</span><span style="color: #198810">verbatim</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> "verbatim", "asis", or "hide"</span><br><span style="color: #4b69c6">format</span>  = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> preferred result format(s)</span><br><span style="color: #4b69c6">item</span>    = <span style="color: #198810">"</span><span style="color: #198810">all</span><span style="color: #198810">"</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> all, first, last, or an index</span><br><span style="color: #4b69c6">kind</span>    = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> output-kind hint for structured results</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> Figures</span><br><span style="color: #4b69c6">fig-device-format</span>     = <span style="color: #198810">"</span><span style="color: #198810">svg</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> png, pdf, html where supported</span><br><span style="color: #4b69c6">fig-device-dpi</span>        = <span style="color: #b60157">150</span><br><span style="color: #4b69c6">fig-device-width</span>      = <span style="color: #b60157">6</span><br><span style="color: #4b69c6">fig-device-height</span>     = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-device-aspect</span>     = <span style="color: #b60157">0.618</span><br><span style="color: #4b69c6">fig-display-width</span>     = <span style="color: #198810">"</span><span style="color: #198810">70%</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-height</span>    = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-align</span>     = <span style="color: #198810">"</span><span style="color: #198810">center</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-responsive</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">fig-caption</span>           = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-caption-position</span>  = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-alt-text</span>          = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-subcaptions</span>       = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-columns</span>    = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-rows</span>       = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-design</span>     = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> calepin.chunk-only</span><br><span style="color: #4b69c6">engine</span> = <span style="color: #198810">"</span><span style="color: #198810">python</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> force an engine instead of inferring from fence</span><br><span style="color: #4b69c6">body</span>   = <span style="color: #198810">"</span><span style="color: #198810">...</span><span style="color: #198810">"</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> raw code body when not in a fenced block</span><br><span style="color: #4b69c6">label</span>  = <span style="color: #198810">"</span><span style="color: #198810">fit-summary</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> stable reference id for results/figures</span></code></pre>
+    <pre><code data-lang="toml"><span style="color: #74747c">#</span><span style="color: #74747c"> Global/default values</span><br>[<span style="color: #4b69c6">setup</span>]<br><span style="color: #74747c">#</span><span style="color: #74747c"> Execution</span><br><br><span style="color: #4b69c6">echo</span>    = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> show source before output</span><br><span style="color: #4b69c6">eval</span>    = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> execute chunk</span><br><span style="color: #4b69c6">output</span>  = <span style="color: #d73948">true</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> include stdout/stderr output</span><br><span style="color: #4b69c6">error</span>   = <span style="color: #d73948">false</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> record execution errors instead of failing</span><br><span style="color: #4b69c6">warning</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">message</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">lang</span>    = <span style="color: #198810">"</span><span style="color: #198810">python</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> optional: scope defaults to one language</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> Result rendering</span><br><span style="color: #4b69c6">results</span> = <span style="color: #198810">"</span><span style="color: #198810">verbatim</span><span style="color: #198810">"</span> <span style="color: #74747c">#</span><span style="color: #74747c"> "verbatim", "asis", or "hide"</span><br><span style="color: #4b69c6">format</span>  = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> preferred result format(s)</span><br><span style="color: #4b69c6">item</span>    = <span style="color: #198810">"</span><span style="color: #198810">all</span><span style="color: #198810">"</span>      <span style="color: #74747c">#</span><span style="color: #74747c"> all, first, last, or an index</span><br><span style="color: #4b69c6">kind</span>    = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> output-kind hint for structured results</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> Figures</span><br><span style="color: #4b69c6">fig-device-format</span>      = <span style="color: #198810">"</span><span style="color: #198810">svg</span><span style="color: #198810">"</span>     <span style="color: #74747c">#</span><span style="color: #74747c"> png, pdf, html where supported</span><br><span style="color: #4b69c6">fig-device-dpi</span>         = <span style="color: #b60157">150</span><br><span style="color: #4b69c6">fig-device-width</span>       = <span style="color: #b60157">6</span><br><span style="color: #4b69c6">fig-device-height</span>      = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-device-aspect</span>      = <span style="color: #b60157">0.618</span><br><span style="color: #4b69c6">fig-display-width</span>      = <span style="color: #198810">"</span><span style="color: #198810">70%</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-height</span>     = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-align</span>      = <span style="color: #198810">"</span><span style="color: #198810">center</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-display-responsive</span> = <span style="color: #d73948">true</span><br><span style="color: #4b69c6">fig-caption</span>            = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-caption-position</span>   = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-alt-text</span>           = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-subcaptions</span>        = <span style="color: #198810">"</span><span style="color: #198810">none</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-columns</span>     = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-rows</span>        = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><span style="color: #4b69c6">fig-layout-design</span>      = <span style="color: #198810">"</span><span style="color: #198810">auto</span><span style="color: #198810">"</span><br><br><span style="color: #74747c">#</span><span style="color: #74747c"> calepin.chunk-only</span><br><span style="color: #4b69c6">engine</span> = <span style="color: #198810">"</span><span style="color: #198810">python</span><span style="color: #198810">"</span>       <span style="color: #74747c">#</span><span style="color: #74747c"> force an engine instead of inferring from fence</span><br><span style="color: #4b69c6">body</span>   = <span style="color: #198810">"</span><span style="color: #198810">...</span><span style="color: #198810">"</span>          <span style="color: #74747c">#</span><span style="color: #74747c"> raw code body when not in a fenced block</span><br><span style="color: #4b69c6">label</span>  = <span style="color: #198810">"</span><span style="color: #198810">fit-summary</span><span style="color: #198810">"</span>  <span style="color: #74747c">#</span><span style="color: #74747c"> stable reference id for results/figures</span></code></pre>
   
         </main>
         
@@ -843,6 +1021,96 @@ figure > img {
         </aside>
         
     </div>
+
+    
+    
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+            
+            
+        
+        
+    
+        
+            
+            
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+
+    
+    <footer class="calepin-website-page-nav" aria-label="Page navigation">
+      <div class="calepin-website-page-nav-inner">
+        
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="install.html">
+          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
+          <span class="calepin-website-page-nav-content">
+            <span class="calepin-website-page-nav-kind">Previous</span>
+            <span class="calepin-website-page-nav-title">install.typ</span>
+          </span>
+        </a>
+        
+
+        
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="supported-languages.html">
+          <span class="calepin-website-page-nav-content">
+            <span class="calepin-website-page-nav-kind">Next</span>
+            <span class="calepin-website-page-nav-title">supported-languages.typ</span>
+          </span>
+          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        
+      </div>
+    </footer>
+    
+    
 <script>
 /* Calepin website behaviour, consolidated.
  *
@@ -1386,8 +1654,9 @@ figure > img {
   // ----------------------------------------------------- dialog lightbox
 
   function initDialogs() {
-    document.querySelectorAll("[data-video-dialog]").forEach((trigger) => {
-      const dialog = document.getElementById(trigger.dataset.videoDialog);
+    document.querySelectorAll("[data-video-dialog], [data-lightbox-dialog]").forEach((trigger) => {
+      const dialogId = trigger.dataset.videoDialog || trigger.dataset.lightboxDialog;
+      const dialog = document.getElementById(dialogId);
       if (!dialog || typeof dialog.showModal !== "function") return;
       trigger.addEventListener("click", (event) => {
         event.preventDefault();
@@ -1395,7 +1664,7 @@ figure > img {
       });
     });
 
-    document.querySelectorAll("dialog.calepin-video-dialog").forEach((dialog) => {
+    document.querySelectorAll("dialog.calepin-video-dialog, dialog.calepin-screenshot-dialog").forEach((dialog) => {
       const stop = () => {
         const video = dialog.querySelector("video");
         if (video) video.pause();

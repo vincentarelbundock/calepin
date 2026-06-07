@@ -442,8 +442,6 @@
   let fig-caption = opts.at("fig-caption")
   let fig-caption-position = opts.at("fig-caption-position")
   let fig-alt-text = opts.at("fig-alt-text")
-  let kind = opts.at("kind")
-
   let selected = _display-selection(item, opts)
   if selected == none {
     return none
@@ -483,20 +481,10 @@
     }
     _finalize-figure-display(rendered, fig-display-align, fig-display-link)
   } else if mime == "text/x-typst" {
-    let rendered = eval(value, mode: "markup")
-    if fig-caption != none or kind == "table" or label.starts-with("tbl-") {
-      _finalize-figure-display(
-        _attach-label(
-          figure(kind: table, caption: _figure-caption(fig-caption, fig-caption-position))[
-            #rendered
-          ],
-          label,
-        ),
-        fig-display-align,
-        fig-display-link,
-      )
+    if type(value) == dictionary and value.at("path", default: none) != none {
+      eval(read(_artifact-path(value), encoding: "utf8"), mode: "markup")
     } else {
-      rendered
+      eval(value, mode: "markup")
     }
   } else if mime == "application/json" {
     _output-block(repr(value))

@@ -71,6 +71,52 @@
         </aside>
         {% endif %}
     </div>
+
+    {% if site.nav %}
+    {% set ns = namespace(prev = none, next = none, active_found = false, previous = none) %}
+    {% for item in site.nav %}
+        {% if ns.active_found %}
+            {% set ns.next = item %}
+            {% set ns.active_found = false %}
+        {% elif item.active %}
+            {% set ns.prev = ns.previous %}
+            {% set ns.active_found = true %}
+        {% endif %}
+        {% if not item.active %}
+            {% set ns.previous = item %}
+        {% endif %}
+    {% endfor %}
+
+    {% if ns.prev or ns.next %}
+    <footer class="calepin-website-page-nav" aria-label="Page navigation">
+      <div class="calepin-website-page-nav-inner">
+        {% if ns.prev %}
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="{{ ns.prev.href }}">
+          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
+          <span class="calepin-website-page-nav-content">
+            <span class="calepin-website-page-nav-kind">Previous</span>
+            <span class="calepin-website-page-nav-title">{{ ns.prev.label }}</span>
+          </span>
+        </a>
+        {% else %}
+        <span class="calepin-website-page-nav-empty" aria-hidden="true"></span>
+        {% endif %}
+
+        {% if ns.next %}
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="{{ ns.next.href }}">
+          <span class="calepin-website-page-nav-content">
+            <span class="calepin-website-page-nav-kind">Next</span>
+            <span class="calepin-website-page-nav-title">{{ ns.next.label }}</span>
+          </span>
+          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        {% else %}
+        <span class="calepin-website-page-nav-empty" aria-hidden="true"></span>
+        {% endif %}
+      </div>
+    </footer>
+    {% endif %}
+    {% endif %}
 {% for script in scripts -%}
     <script>
 {{ script.content }}

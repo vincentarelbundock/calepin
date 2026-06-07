@@ -540,8 +540,9 @@
   // ----------------------------------------------------- dialog lightbox
 
   function initDialogs() {
-    document.querySelectorAll("[data-video-dialog]").forEach((trigger) => {
-      const dialog = document.getElementById(trigger.dataset.videoDialog);
+    document.querySelectorAll("[data-video-dialog], [data-lightbox-dialog]").forEach((trigger) => {
+      const dialogId = trigger.dataset.videoDialog || trigger.dataset.lightboxDialog;
+      const dialog = document.getElementById(dialogId);
       if (!dialog || typeof dialog.showModal !== "function") return;
       trigger.addEventListener("click", (event) => {
         event.preventDefault();
@@ -549,7 +550,7 @@
       });
     });
 
-    document.querySelectorAll("dialog.calepin-video-dialog").forEach((dialog) => {
+    document.querySelectorAll("dialog.calepin-video-dialog, dialog.calepin-screenshot-dialog").forEach((dialog) => {
       const stop = () => {
         const video = dialog.querySelector("video");
         if (video) video.pause();

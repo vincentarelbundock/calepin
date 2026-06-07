@@ -432,7 +432,7 @@ fn body_with_heading_ids(body: &str) -> (String, Vec<TocEntry>) {
         let Some(level_byte) = body.as_bytes().get(tag_start).copied() else {
             break;
         };
-        if !(b"1"[0]..=b"4"[0]).contains(&level_byte) {
+        if !(b"1"[0]..=b"6"[0]).contains(&level_byte) {
             out.push_str(&body[cursor..start + 2]);
             cursor = start + 2;
             continue;
@@ -482,11 +482,13 @@ fn body_with_heading_ids(body: &str) -> (String, Vec<TocEntry>) {
         }
         out.push_str(inner);
         out.push_str(&close_tag);
-        toc.push(TocEntry {
-            level,
-            href: format!("#{id}"),
-            label,
-        });
+        if level <= 3 {
+            toc.push(TocEntry {
+                level,
+                href: format!("#{id}"),
+                label,
+            });
+        }
         cursor = close_end;
     }
 

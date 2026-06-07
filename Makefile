@@ -60,6 +60,7 @@ release: ## Tag and push v$(VERSION); fires cargo-dist + crates.io workflows
 
 clean:  ## Remove build artifacts
 	cargo clean --manifest-path calepin/Cargo.toml
+	rm -rf .calepin docs/.calepin
 
 # ==============================================================================
 # Test targets

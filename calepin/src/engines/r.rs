@@ -40,13 +40,16 @@ const FORMAT_PLACEHOLDER: &str = "__CALEPIN_FORMAT__";
 /// sentinel-delimited results to stdout.
 const R_BOOTSTRAP: &str = r#"
 # Tell knitr-aware packages (tinytable, gt, etc.) what format we are rendering to.
-local({
-  fmt <- "__CALEPIN_FORMAT__"
-  options(knitr.in.progress = TRUE)
-  if (requireNamespace("knitr", quietly = TRUE)) {
-    knitr::opts_knit$set(rmarkdown.pandoc.to = fmt)
-  }
-})
+# Warning: commented out because it corrupts #block[. This may be tinytable magic behavior for Quarto.
+# local({
+#   options(knitr.in.progress = TRUE)
+#   tryCatch(
+#     if (requireNamespace("knitr", quietly = TRUE)) {
+#       try(knitr::opts_knit$set(rmarkdown.pandoc.to = "typst"), silent = TRUE)
+#     },
+#     error = function(e) NULL
+#   )
+# })
 
 .calepin_has_knitr <- requireNamespace("knitr", quietly = TRUE)
 
@@ -317,6 +320,9 @@ calepin.preamble <- function(text) {
                   } else if (length(r) == 0) {
                     r <- capture.output(print(.val$value))
                   }
+                } else if (inherits(.val$value, "knit_asis")) {
+                  is_asis <- TRUE
+                  r <- as.character(.val$value)
                 } else {
                   r <- capture.output(print(.val$value))
                 }

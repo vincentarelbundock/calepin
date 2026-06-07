@@ -293,8 +293,95 @@ h6 {
   padding-left: 1rem;
 }
 
-.calepin-website-toc li.level-4 a {
-  padding-left: 1.6rem;
+.calepin-website-toc li.level-4,
+.calepin-website-toc li.level-5,
+.calepin-website-toc li.level-6 {
+  display: none;
+}
+
+/* ------------------------------------------------------ Page navigation */
+
+.calepin-website-page-nav {
+  margin: 2.4rem auto 2rem;
+  padding: 0 1rem;
+}
+
+.calepin-website-page-nav-inner {
+  max-width: 52rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.calepin-website-page-nav-link,
+.calepin-website-page-nav-empty {
+  min-height: 3.4rem;
+  border-radius: var(--calepin-radius-sm);
+}
+
+.calepin-website-page-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--pico-muted-border-color);
+  padding: 0.55rem 0.8rem;
+  text-decoration: none;
+  color: inherit;
+  background: color-mix(in srgb, var(--pico-background-color) 94%, transparent);
+}
+
+.calepin-website-page-nav-link:visited {
+  color: inherit;
+}
+
+.calepin-website-page-nav-link:hover,
+.calepin-website-page-nav-link:focus-visible {
+  transform: translateY(-1px);
+}
+
+.calepin-website-page-nav-empty {
+  display: block;
+}
+
+.calepin-website-page-nav-link--next {
+  text-align: right;
+}
+
+.calepin-website-page-nav-link--next .calepin-website-page-nav-arrow {
+  margin-left: auto;
+}
+
+.calepin-website-page-nav-link--prev .calepin-website-page-nav-arrow {
+  margin-right: auto;
+}
+
+.calepin-website-page-nav-content {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.calepin-website-page-nav-content .calepin-website-page-nav-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calepin-website-page-nav-kind {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.calepin-website-page-nav-arrow {
+  width: 0.95rem;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--pico-muted-color);
 }
 
 /* ---------------------------------------------------- Code & cell output */
@@ -384,6 +471,74 @@ figure > img {
   padding: 0.5rem 1rem 1.5rem;
 }
 
+.calepin-screenshot-block {
+  margin: 1.2rem auto 2rem;
+  width: min(100%, 400px);
+  max-width: 100%;
+}
+
+.calepin-screenshot-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 0.45rem;
+  overflow: hidden;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0;
+  background: transparent;
+}
+
+.calepin-screenshot-thumb__media {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.calepin-screenshot-thumb__zoom {
+  position: absolute;
+  inset: 0.6rem 0.6rem auto auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.calepin-screenshot-dialog article {
+  width: min(96vw, 76rem);
+  max-width: min(96vw, 76rem);
+  padding: 0;
+  overflow: hidden;
+}
+
+.calepin-screenshot-dialog header {
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+}
+
+.calepin-screenshot-dialog__media {
+  display: block;
+  width: 100%;
+  max-height: 85vh;
+  min-height: 18rem;
+  object-fit: contain;
+  aspect-ratio: auto;
+  background: #0f111a;
+}
+
 .hero-wordmark {
   display: block;
   width: min(20rem, 82vw);
@@ -405,6 +560,10 @@ figure > img {
   margin: 0;
   display: inline;
   font-size: 1.4rem;
+}
+
+.hero-subtitle-text {
+  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
 }
 
 .hero-typst-logo {
@@ -432,7 +591,7 @@ figure > img {
 
 .calepin-website-features {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
   max-width: 72rem;
   margin: 0 auto 1.5rem;
@@ -687,6 +846,25 @@ figure > img {
     pointer-events: none;
     transition: opacity 180ms ease;
     z-index: var(--calepin-overlay-z);
+  }
+
+  .calepin-website-page-nav {
+    margin-top: 1.8rem;
+    padding: 0 0.8rem;
+  }
+
+  .calepin-website-page-nav-inner {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .calepin-website-page-nav-link--next,
+  .calepin-website-page-nav-link--prev {
+    text-align: left;
+  }
+
+  .calepin-website-page-nav-link {
+    width: 100%;
   }
 
   .calepin-website-shell.nav-open .calepin-website-nav-backdrop {

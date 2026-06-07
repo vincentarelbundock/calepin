@@ -11,7 +11,7 @@ use crate::engines::{
 };
 use crate::typst::model::{
     ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec, MimeData,
-    ResultItem, ResultItemName, ResultItemType,
+    ResultItem, ResultItemName, ResultItemType, ResultsMode,
 };
 
 #[derive(Debug, Clone)]
@@ -167,15 +167,42 @@ pub fn normalize_engine_results(
     artifact_path: impl Fn(&Path) -> String,
 ) -> Result<Vec<ResultItem>> {
     let mut items = Vec::new();
+    let mut typst_result_index = 1usize;
+    let mut write_typst_result = |text: String| -> Result<Value> {
+        let filename = if typst_result_index == 1 {
+            format!("{}.typ", chunk.label)
+        } else {
+            format!("{}-{}.typ", chunk.label, typst_result_index)
+        };
+        typst_result_index += 1;
+        let artifact = figures_dir.join(filename);
+        if let Some(parent) = artifact.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&artifact, text)?;
+        Ok(json!({ "path": artifact_path(&artifact) }))
+    };
     for result in engine_results {
         match result {
             EngineResult::Source(_) | EngineResult::Preamble(_) => {}
-            EngineResult::Output(text) => items.push(stream_item(ResultItemName::Stdout, text)),
+            EngineResult::Output(text) => {
+                if matches!(chunk.display_options.results, ResultsMode::Asis) {
+                    let value = write_typst_result(text)?;
+                    items.push(rich_text_item(
+                        ResultItemType::Display,
+                        "text/x-typst",
+                        value,
+                    ));
+                } else {
+                    items.push(stream_item(ResultItemName::Stdout, text));
+                }
+            }
             EngineResult::Asis(text) => {
+                let value = write_typst_result(text)?;
                 items.push(rich_text_item(
                     ResultItemType::Display,
                     "text/x-typst",
-                    Value::String(text),
+                    value,
                 ));
             }
             EngineResult::Warning(text) => {
@@ -393,11 +420,31 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Asis("#table()[x]".to_string())],
-            |_| "unused".to_string(),
+            |path| path.file_name().unwrap().to_string_lossy().to_string(),
         )
         .unwrap();
         let data = items[0].data.as_ref().unwrap();
-        assert_eq!(data.get("text/x-typst").unwrap(), "#table()[x]");
+        assert_eq!(data["text/x-typst"]["path"], "fig-demo.typ");
+        assert!(dir.path().join("fig-demo.typ").exists());
+    }
+
+    #[test]
+    fn asis_results_coerces_stdout_to_typst_mime() {
+        let dir = tempfile::tempdir().unwrap();
+        let chunk = chunk(ResultsMode::Asis);
+        let figure = figure_for(&chunk);
+        let items = normalize_engine_results(
+            &chunk,
+            dir.path(),
+            &figure,
+            vec![EngineResult::Output("#table()[x]".to_string())],
+            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+        )
+        .unwrap();
+
+        let data = items[0].data.as_ref().unwrap();
+        assert_eq!(data["text/x-typst"]["path"], "fig-demo.typ");
+        assert!(dir.path().join("fig-demo.typ").exists());
     }
 
     #[test]
