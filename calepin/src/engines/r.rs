@@ -27,9 +27,11 @@
 //                                 using the sentinel protocol.
 
 use anyhow::Result;
+use std::path::Path;
 
 use super::make_sentinel;
 use super::subprocess::{spawn_script, SubprocessSession};
+use crate::utils::tools;
 
 /// Format placeholder replaced at init time with the actual output format.
 const FORMAT_PLACEHOLDER: &str = "__CALEPIN_FORMAT__";
@@ -382,9 +384,9 @@ pub struct RSession {
 
 impl RSession {
     pub fn init_with_program(
-        program: &str,
+        program: &Path,
         format: &str,
-        cwd: Option<&std::path::Path>,
+        cwd: Option<&Path>,
         timeout: Option<std::time::Duration>,
     ) -> Result<Self> {
         let bootstrap = R_BOOTSTRAP.replace(FORMAT_PLACEHOLDER, format);
@@ -395,6 +397,7 @@ impl RSession {
             "R",
             cwd,
             timeout,
+            Some(&tools::RSCRIPT),
         )?;
         Ok(RSession {
             proc,
@@ -437,8 +440,13 @@ mod tests {
     }
 
     fn session() -> RSession {
-        RSession::init_with_program("Rscript", "typst", None, Some(Duration::from_secs(10)))
-            .unwrap()
+        RSession::init_with_program(
+            Path::new("Rscript"),
+            "typst",
+            None,
+            Some(Duration::from_secs(10)),
+        )
+        .unwrap()
     }
 
     #[test]

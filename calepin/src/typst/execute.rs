@@ -105,9 +105,8 @@ impl EnginePool {
 
     fn ensure_r_session(&mut self) -> Result<()> {
         if self.r.is_none() {
-            let program = self.config.executables.rscript.to_string_lossy();
             self.r = Some(RSession::init_with_program(
-                &program,
+                &self.config.executables.rscript,
                 "typst",
                 Some(&self.config.cwd),
                 self.config.timeout,
@@ -118,9 +117,8 @@ impl EnginePool {
 
     fn ensure_python_session(&mut self) -> Result<()> {
         if self.python.is_none() {
-            let program = self.config.executables.python.to_string_lossy();
             self.python = Some(PythonSession::init_with_program(
-                &program,
+                &self.config.executables.python,
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?);
@@ -130,9 +128,8 @@ impl EnginePool {
 
     fn ensure_jupyter_session(&mut self) -> Result<()> {
         if self.jupyter.is_none() {
-            let program = self.config.executables.python.to_string_lossy();
             self.jupyter = Some(JupyterBridgeSession::init_with_program(
-                &program,
+                &self.config.executables.python,
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?);
@@ -329,9 +326,7 @@ fn lines(code: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{
-        DisplayOptions, ExecOptions, ResultsMode, SetupDefaults,
-    };
+    use crate::typst::model::{DisplayOptions, ExecOptions, ResultsMode, SetupDefaults};
 
     fn chunk(results: ResultsMode) -> ChunkSpec {
         let defaults = SetupDefaults::default();

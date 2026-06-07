@@ -19,6 +19,7 @@ use crate::typst::paths::resolve_layout;
 use crate::typst::preprocess::{
     execute_preprocess_plan, prepare_preprocess_plan, preprocess, PreprocessOptions,
 };
+use crate::utils::{process, tools};
 
 const WATCH_PID_FILENAME: &str = "watch.pid";
 
@@ -78,6 +79,11 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         asset_server.as_ref().map(|server| server.base_url()),
     );
 
+    process::validate_executable(
+        &initial.executables.typst,
+        "start typst watch",
+        Some(&tools::TYPST),
+    )?;
     let child = Command::new(&initial.executables.typst)
         .args(&watch_args)
         .current_dir(&root)
@@ -85,10 +91,12 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .with_context(|| {
-            format!(
-                "failed to start {} watch",
-                initial.executables.typst.display()
+        .map_err(|error| {
+            process::spawn_error(
+                &initial.executables.typst,
+                "start typst watch",
+                error,
+                Some(&tools::TYPST),
             )
         });
     let mut child = match child {

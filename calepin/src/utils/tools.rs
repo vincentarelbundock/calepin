@@ -25,6 +25,14 @@ pub const PYTHON: Tool = Tool {
     install_hint: "install from https://www.python.org/downloads/",
 };
 
+pub const TYPST: Tool = Tool {
+    cmd: "typst",
+    install_hint: concat!(
+        "install from https://github.com/typst/typst ",
+        "or set `[executables] typst` to the Typst executable path"
+    ),
+};
+
 pub const JUPYTER_CLIENT: Tool = Tool {
     cmd: "python3",
     install_hint: "jupyter_client not found — install with: pip install jupyter_client",
@@ -59,17 +67,3 @@ pub const D2: Tool = Tool {
     cmd: "d2",
     install_hint: "install from https://d2lang.com/tour/install/",
 };
-
-// ---------------------------------------------------------------------------
-// Checks
-// ---------------------------------------------------------------------------
-
-/// Format a "not found" error message for a tool.
-pub fn not_found_message(tool: &Tool) -> String {
-    format!("{} not found on PATH. {}", tool.cmd, tool.install_hint)
-}
-
-/// Format a "not found" error for a configured tool path.
-pub fn configured_not_found_message(tool: &Tool, program: &std::path::Path) -> String {
-    format!("{} not found. {}", program.display(), tool.install_hint)
-}

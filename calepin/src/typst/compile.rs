@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -6,6 +6,7 @@ use std::process::Command;
 use crate::html::{apply_html_theme_file, inline_html_images_file, prepare_html_theme};
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
+use crate::utils::{process, tools};
 
 pub struct CompileOptions<'a> {
     pub output: Option<PathBuf>,
@@ -223,11 +224,12 @@ pub fn compile_with_typst(
         options.typst_args,
         prepared_theme.raw_theme_input.as_deref(),
     );
+    process::validate_executable(typst, "run typst compile", Some(&tools::TYPST))?;
     let mut command = Command::new(typst);
     command.args(args).current_dir(&layout.root);
-    let command_output = command
-        .output()
-        .with_context(|| format!("failed to run {}", typst.display()))?;
+    let command_output = command.output().map_err(|error| {
+        process::spawn_error(typst, "run typst compile", error, Some(&tools::TYPST))
+    })?;
     if !command_output.status.success() {
         return Err(anyhow!(
             "typst compile failed:\n{}",

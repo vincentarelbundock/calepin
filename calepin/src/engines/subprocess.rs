@@ -34,6 +34,9 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
+use crate::utils::process;
+use crate::utils::tools::Tool;
+
 /// A persistent subprocess that communicates via stdin/stdout.
 /// Used by both R and Python engines.
 pub struct SubprocessSession {
@@ -58,12 +61,14 @@ impl SubprocessSession {
     /// stderr is inherited (warnings go to terminal).
     /// A reader thread is spawned to enable timeout-based reads.
     pub fn spawn(
-        program: &str,
+        program: &Path,
         args: &[&str],
         env: &[(&str, &str)],
         cwd: Option<&std::path::Path>,
         timeout: Option<Duration>,
+        tool: Option<&Tool>,
     ) -> Result<Self> {
+        process::validate_executable(program, "start subprocess", tool)?;
         let mut cmd = Command::new(program);
         cmd.args(args)
             .stdin(Stdio::piped())
@@ -75,13 +80,9 @@ impl SubprocessSession {
         if let Some(dir) = cwd {
             cmd.current_dir(dir);
         }
-        let mut child = cmd.spawn().map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                anyhow::anyhow!("{} not found on PATH", program)
-            } else {
-                anyhow::anyhow!("Failed to spawn {}: {}", program, e)
-            }
-        })?;
+        let mut child = cmd
+            .spawn()
+            .map_err(|error| process::spawn_error(program, "start subprocess", error, tool))?;
 
         let stdin = BufWriter::new(child.stdin.take().unwrap());
         let stdout = child.stdout.take().unwrap();
@@ -187,12 +188,13 @@ impl SubprocessSession {
 }
 
 pub fn spawn_script(
-    program: &str,
+    program: &Path,
     args_before_script: &[&str],
     script: &str,
     context_name: &str,
     cwd: Option<&Path>,
     timeout: Option<Duration>,
+    tool: Option<&Tool>,
 ) -> Result<(SubprocessSession, tempfile::NamedTempFile)> {
     let script_file = tempfile::NamedTempFile::new()
         .with_context(|| format!("Failed to create temp file for {context_name} bootstrap"))?;
@@ -202,7 +204,7 @@ pub fn spawn_script(
     let mut args = Vec::with_capacity(args_before_script.len() + 1);
     args.extend(args_before_script.iter().copied());
     args.push(path_str.as_str());
-    let proc = SubprocessSession::spawn(program, &args, &[], cwd, timeout)
+    let proc = SubprocessSession::spawn(program, &args, &[], cwd, timeout, tool)
         .with_context(|| format!("Failed to start {context_name}"))?;
     Ok((proc, script_file))
 }

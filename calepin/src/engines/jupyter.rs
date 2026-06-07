@@ -6,9 +6,11 @@
 // types to sentinel tags and writes them back.
 
 use anyhow::{Context, Result};
+use std::path::Path;
 
 use super::make_sentinel;
 use super::subprocess::SubprocessSession;
+use crate::utils::tools;
 
 pub(crate) const JUPYTER_BRIDGE: &str = r#"
 import sys, base64, os, traceback, re, json
@@ -238,8 +240,8 @@ pub struct JupyterBridgeSession {
 
 impl JupyterBridgeSession {
     pub fn init_with_program(
-        program: &str,
-        cwd: Option<&std::path::Path>,
+        program: &Path,
+        cwd: Option<&Path>,
         timeout: Option<std::time::Duration>,
     ) -> Result<Self> {
         let mut proc = SubprocessSession::spawn(
@@ -248,6 +250,7 @@ impl JupyterBridgeSession {
             &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
             cwd,
             timeout,
+            Some(&tools::JUPYTER_CLIENT),
         )
         .context("failed to start Jupyter bridge")?;
         let sentinel = make_sentinel();
@@ -337,9 +340,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let fig_path = dir.path().join("bundle-1.svg");
         let fig_path = fig_path.to_string_lossy().replace('\\', "/");
-        let mut session =
-            JupyterBridgeSession::init_with_program("python3", None, Some(Duration::from_secs(10)))
-                .unwrap();
+        let mut session = JupyterBridgeSession::init_with_program(
+            Path::new("python3"),
+            None,
+            Some(Duration::from_secs(10)),
+        )
+        .unwrap();
 
         let raw = session
             .capture(
@@ -373,9 +379,12 @@ display({
         let second_fig_path = dir.path().join("bundle-2.svg");
         let fig_path = fig_path.to_string_lossy().replace('\\', "/");
         let second_fig_path = second_fig_path.to_string_lossy().replace('\\', "/");
-        let mut session =
-            JupyterBridgeSession::init_with_program("python3", None, Some(Duration::from_secs(10)))
-                .unwrap();
+        let mut session = JupyterBridgeSession::init_with_program(
+            Path::new("python3"),
+            None,
+            Some(Duration::from_secs(10)),
+        )
+        .unwrap();
 
         let raw = session
             .capture(

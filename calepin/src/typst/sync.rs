@@ -7,6 +7,7 @@ use std::process::Command;
 
 use crate::typst::model::{ChunkSpec, LayoutPaths};
 use crate::typst::paths::{artifact_reference, slash_path};
+use crate::utils::{process, tools};
 
 const PAGE_SYNC_SCHEMA_VERSION: u8 = 1;
 const PAGE_SYNC_SELECTOR: &str = "<calepin-page>";
@@ -68,6 +69,7 @@ pub fn write_page_sync(typst: &Path, layout: &LayoutPaths, chunks: &[ChunkSpec])
 
 fn query_page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<String> {
     let results_input = artifact_reference(&layout.root, &layout.results_path);
+    process::validate_executable(typst, "run typst page sync query", Some(&tools::TYPST))?;
     let output = Command::new(typst)
         .arg("query")
         .arg(&layout.render_input)
@@ -82,7 +84,14 @@ fn query_page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<String> {
         .arg("calepin-target=paged")
         .current_dir(&layout.root)
         .output()
-        .with_context(|| format!("failed to run {}", typst.display()))?;
+        .map_err(|error| {
+            process::spawn_error(
+                typst,
+                "run typst page sync query",
+                error,
+                Some(&tools::TYPST),
+            )
+        })?;
 
     if !output.status.success() {
         return Err(anyhow!(
@@ -173,7 +182,7 @@ fn write_page_sync_document(path: &Path, document: &PageSyncDocument) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-use crate::typst::model::{DisplayOptions, EngineName, ExecOptions, ResultsMode};
+    use crate::typst::model::{DisplayOptions, EngineName, ExecOptions, ResultsMode};
 
     #[test]
     fn parses_page_anchor_query_output() {

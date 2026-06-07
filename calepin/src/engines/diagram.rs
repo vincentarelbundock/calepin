@@ -12,6 +12,7 @@ use std::process::Output;
 use crate::config::ExecutablePaths;
 use crate::engines::EngineResult;
 use crate::typst::model::EngineName;
+use crate::utils::process;
 use crate::utils::tools::{self, Tool};
 
 type PrepareSourceFn = for<'code> fn(&'code str) -> Cow<'code, str>;
@@ -159,15 +160,28 @@ pub(super) fn run_tool(
     args: &[OsString],
     results: &mut Vec<EngineResult>,
 ) -> Result<Option<Output>> {
+    if let Err(error) = process::validate_executable(program, "run diagram tool", Some(tool)) {
+        results.push(EngineResult::Error(error.to_string()));
+        return Ok(None);
+    }
     match std::process::Command::new(program).args(args).output() {
         Ok(out) => Ok(Some(out)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            results.push(EngineResult::Error(tools::configured_not_found_message(
-                tool, program,
-            )));
+            results.push(EngineResult::Error(process::spawn_error(
+                program,
+                "run diagram tool",
+                error,
+                Some(tool),
+            )
+            .to_string()));
             Ok(None)
         }
-        Err(error) => Err(error).with_context(|| format!("failed to run {}", program.display())),
+        Err(error) => Err(process::spawn_error(
+            program,
+            "run diagram tool",
+            error,
+            Some(tool),
+        )),
     }
 }
 

@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 
 use crate::utils::tools;
 
-
 pub const PYTHON_EXECUTABLE_ENV_VAR: &str = "CALEPIN_PYTHON";
 #[cfg(windows)]
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
@@ -24,11 +23,7 @@ impl CalepinConfig {
         let Some(path) = config_path else {
             return Ok(Self::default_for_root(root));
         };
-        let path = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            root.join(path)
-        };
+        let path = resolve_config_path(path)?;
         if !path.exists() {
             return Err(anyhow!("config file not found: {}", path.display()));
         }
@@ -51,6 +46,14 @@ impl CalepinConfig {
             executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
             themes_dir: resolve_themes_dir(root, root, None),
         }
+    }
+}
+
+fn resolve_config_path(path: &Path) -> Result<PathBuf> {
+    if path.is_absolute() {
+        Ok(path.to_path_buf())
+    } else {
+        Ok(std::env::current_dir()?.join(path))
     }
 }
 
@@ -150,7 +153,6 @@ struct RawExecutablePaths {
     chrome: Option<PathBuf>,
 }
 
-
 fn tool_path(root: &Path, value: Option<PathBuf>, default: PathBuf) -> PathBuf {
     value
         .map(|path| resolve_tool_path(root, path))
@@ -164,10 +166,21 @@ fn project_venv_python(root: &Path) -> Option<PathBuf> {
 }
 
 fn resolve_tool_path(root: &Path, path: PathBuf) -> PathBuf {
+    let path = expand_home(path);
     if path.is_absolute() || !is_path_like(&path) {
         return path;
     }
     root.join(path)
+}
+
+fn expand_home(path: PathBuf) -> PathBuf {
+    let text = path.to_string_lossy();
+    let Some(rest) = text.strip_prefix("~/") else {
+        return path;
+    };
+    std::env::var_os("HOME")
+        .map(|home| PathBuf::from(home).join(rest))
+        .unwrap_or(path)
 }
 
 fn is_path_like(path: &Path) -> bool {
@@ -243,7 +256,8 @@ mod tests {
         )
         .unwrap();
 
-        let config = CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
+        let config =
+            CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
 
         // `site/themes` resolves relative to the config file's directory.
         assert_eq!(config.themes_dir, calepin_dir.join("site/themes"));
@@ -290,7 +304,8 @@ chrome = "tools/chrome"
         )
         .unwrap();
 
-        let config = CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
+        let config =
+            CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
 
         // Path-like values resolve relative to the config file's directory.
         assert_eq!(config.executables.typst, PathBuf::from("typst-dev"));
@@ -302,5 +317,53 @@ chrome = "tools/chrome"
             config.executables.chrome,
             Some(calepin_dir.join("tools/chrome"))
         );
+    }
+
+    #[test]
+    fn config_expands_home_in_executable_paths() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("home");
+        std::fs::create_dir(&home).unwrap();
+        let _home = EnvVarGuard::set("HOME", home.to_str().unwrap());
+        let calepin_dir = dir.path().join(".calepin");
+        std::fs::create_dir(&calepin_dir).unwrap();
+        std::fs::write(
+            calepin_dir.join("config.toml"),
+            r#"[executables]
+typst = "~/Downloads/typst"
+"#,
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
+
+        assert_eq!(config.executables.typst, home.join("Downloads/typst"));
+    }
+
+    #[test]
+    fn explicit_relative_config_path_resolves_from_current_directory() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let project = dir.path().join("project");
+        let docs = project.join("docs");
+        std::fs::create_dir_all(&docs).unwrap();
+        std::fs::write(
+            project.join("website.toml"),
+            r#"[executables]
+typst = "typst-dev"
+"#,
+        )
+        .unwrap();
+        let previous = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&project).unwrap();
+
+        let config = CalepinConfig::load(&docs, Some(Path::new("website.toml")));
+
+        std::env::set_current_dir(previous).unwrap();
+        let config = config.unwrap();
+
+        assert_eq!(config.executables.typst, PathBuf::from("typst-dev"));
     }
 }

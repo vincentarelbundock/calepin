@@ -14,6 +14,7 @@ use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
 use crate::typst::results::{build_results_document, write_results};
 use crate::typst::runtime::write_runtime;
 use crate::typst::sync::write_page_sync;
+use crate::utils::{process, tools};
 
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
@@ -238,6 +239,7 @@ pub fn typst_query(
     selector: &str,
     results_input: &str,
 ) -> Result<String> {
+    process::validate_executable(typst, "run typst query", Some(&tools::TYPST))?;
     let output = Command::new(typst)
         .arg("query")
         .arg(&layout.input_rel)
@@ -252,7 +254,9 @@ pub fn typst_query(
         .arg("calepin-target=paged")
         .current_dir(&layout.root)
         .output()
-        .with_context(|| format!("failed to run {}", typst.display()))?;
+        .map_err(|error| {
+            process::spawn_error(typst, "run typst query", error, Some(&tools::TYPST))
+        })?;
 
     if !output.status.success() {
         return Err(anyhow!(

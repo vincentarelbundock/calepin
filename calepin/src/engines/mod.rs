@@ -8,7 +8,6 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use crate::typst::model::{EngineName, FigureSpec};
-use crate::utils::tools;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum EngineResult {
@@ -58,7 +57,7 @@ pub fn execute_chunk(
         match engine {
             EngineName::Python => {
                 let session = ctx.python.as_mut().ok_or_else(|| {
-                    anyhow::anyhow!("{}", tools::not_found_message(&tools::PYTHON))
+                    anyhow::anyhow!("Python engine session was not initialized")
                 })?;
                 session.capture(
                     &code,
@@ -70,7 +69,7 @@ pub fn execute_chunk(
             }
             EngineName::R => {
                 let session = ctx.r.as_mut().ok_or_else(|| {
-                    anyhow::anyhow!("{}", tools::not_found_message(&tools::RSCRIPT))
+                    anyhow::anyhow!("R engine session was not initialized")
                 })?;
                 session.capture(
                     &code,
@@ -83,10 +82,7 @@ pub fn execute_chunk(
             }
             EngineName::Jupyter(ref kernel) => {
                 let session = ctx.jupyter.as_mut().ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "{}",
-                        crate::utils::tools::not_found_message(&crate::utils::tools::JUPYTER_CLIENT)
-                    )
+                    anyhow::anyhow!("Jupyter engine session was not initialized")
                 })?;
                 session.capture(
                     kernel,

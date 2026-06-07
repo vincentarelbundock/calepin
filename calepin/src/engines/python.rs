@@ -29,9 +29,11 @@
 //                                      capture using the sentinel protocol.
 
 use anyhow::{Context, Result};
+use std::path::Path;
 
 use super::make_sentinel;
 use super::subprocess::SubprocessSession;
+use crate::utils::tools;
 
 /// Bootstrap Python script sent once at startup.
 /// Sets up a read-eval loop that reads sentinel-delimited code blocks from stdin,
@@ -267,8 +269,8 @@ pub struct PythonSession {
 
 impl PythonSession {
     pub fn init_with_program(
-        program: &str,
-        cwd: Option<&std::path::Path>,
+        program: &Path,
+        cwd: Option<&Path>,
         timeout: Option<std::time::Duration>,
     ) -> Result<Self> {
         let proc = SubprocessSession::spawn(
@@ -277,6 +279,7 @@ impl PythonSession {
             &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
             cwd,
             timeout,
+            Some(&tools::PYTHON),
         )
         .context("Failed to start Python")?;
         Ok(PythonSession { proc })
@@ -316,7 +319,8 @@ mod tests {
     }
 
     fn session() -> PythonSession {
-        PythonSession::init_with_program("python3", None, Some(Duration::from_secs(10))).unwrap()
+        PythonSession::init_with_program(Path::new("python3"), None, Some(Duration::from_secs(10)))
+            .unwrap()
     }
 
     #[test]
