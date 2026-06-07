@@ -273,7 +273,11 @@ def load_website_config() -> dict:
 
 
 def embed_source_blob(html_output: Path, source_path: Path) -> None:
-    source_payload = json.dumps(source_path.read_text(encoding="utf-8"))
+    # Prevent accidental </script> termination in the injected JSON blob.
+    # `json.dumps` escapes most characters, but leaves forward-slash sequences
+    # intact, which can break the HTML parser if the source text contains
+    # `</script>`.
+    source_payload = json.dumps(source_path.read_text(encoding="utf-8")).replace("</", "<\\/")
     html_value = html_output.read_text(encoding="utf-8")
 
     embed_script = (
