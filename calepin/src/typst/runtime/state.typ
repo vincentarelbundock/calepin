@@ -15,25 +15,24 @@
   "fig-device-width": 6,
   "fig-device-height": auto,
   "fig-device-aspect": 0.618,
-  "fig-display-width": 70%,
-  "fig-display-height": auto,
-  "fig-display-align": center,
-  "fig-display-responsive": true,
-  "fig-display-link": auto,
+  "fig-width": 70%,
+  "fig-height": auto,
+  "fig-align": center,
+  "fig-responsive": true,
+  "fig-link": auto,
   "fig-caption": none,
-  "fig-caption-position": auto,
+  "fig-cap-location": auto,
   "fig-alt-text": none,
   "fig-subcaptions": none,
   "fig-layout-columns": auto,
   "fig-layout-rows": auto,
   kind: auto,
-  "raw-chunks": false,
+  "fenced-chunks": false,
 )
 #let _setup-defaults = state("calepin-setup-defaults", (default: _base-options))
 
 #let _call-extra-defaults = (
   label: none,
-  source-lang: auto,
   inline-output: false,
   auto-label-prefix: "chunk",
   auto-label-state: _auto-label-index,
@@ -44,7 +43,7 @@
   for key in defaults.keys() {
     out.insert(key, auto)
   }
-  out.insert("fig-display-link", none)
+  out.insert("fig-link", none)
   out.insert("fig-caption", none)
   out.insert("fig-alt-text", none)
   out.insert("fig-subcaptions", none)

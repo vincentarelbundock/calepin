@@ -49,6 +49,7 @@ impl EnginePool {
                 label: chunk.label.clone(),
                 engine: chunk.engine.clone(),
                 status: ChunkStatus::Skipped,
+                display_options: chunk.display_options.clone(),
                 items: Vec::new(),
             });
         }
@@ -97,6 +98,7 @@ impl EnginePool {
             } else {
                 ChunkStatus::Ok
             },
+            display_options: chunk.display_options.clone(),
             items,
         })
     }
@@ -353,11 +355,11 @@ mod tests {
                 warning: true,
                 message: true,
                 placeholder: true,
-                fig_display_width: None,
-                fig_display_height: None,
-                fig_display_align: None,
-                fig_display_responsive: None,
-                fig_display_link: None,
+                fig_width: None,
+                fig_height: None,
+                fig_align: None,
+                fig_responsive: None,
+                fig_link: None,
                 fig_caption: None,
                 fig_caption_position: None,
                 fig_alt_text: None,

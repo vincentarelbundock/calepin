@@ -104,10 +104,9 @@ Julia runs through a Jupyter kernel. Use the kernel name reported by
 
 The inline Julia result is #calepin.inline("julia-1.12")[`println(42)`].
 
-For block output, pass the Jupyter kernel name as the chunk engine and set the
-source language to `julia` for highlighting.
+For block output, pass the Jupyter kernel name as the chunk engine.
 
-#calepin.chunk("julia-1.12", source-lang: "julia")[
+#calepin.chunk("julia-1.12")[
 ```julia
 x = 40
 println(x + 2)

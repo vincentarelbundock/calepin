@@ -6,7 +6,9 @@
     label: label,
   )
   for key in _base-options.keys() {
-    out.insert(key, options.at(key))
+    if key != "fenced-chunks" {
+      out.insert(key, options.at(key))
+    }
   }
   out
 }
@@ -52,14 +54,13 @@
     let options = _resolve-options(engine, options)
     let show-echo = options.at("echo") == true
     let results-path = sys.inputs.at("calepin-results", default: "")
-    let display-lang = if options.at("source-lang") == auto { engine } else { options.at("source-lang") }
     label-step
     [#metadata((label: label, page: here().page())) <calepin-page>]
 
     if show-echo {
-      _input-block(code, lang: display-lang)
+      _input-block(code, lang: engine)
     } else if results-path == "" {
-      _input-block(code, lang: display-lang)
+      _input-block(code, lang: engine)
     }
     if results-path != "" {
       _render-results(label, options)
@@ -75,10 +76,12 @@
   rendered
 }
 
-// `raw-chunks` is the single switch for auto-running plain fenced blocks:
+// `fenced-chunks` is the single switch for auto-running plain fenced blocks:
 // `true` (every engine), an engine name, or a list of engine names.
-#let _raw-chunks-runs(engine, setting) = {
-  if setting == true {
+#let _fenced-chunks-runs(engine, setting) = {
+  if engine in ("typ", "typst") {
+    false
+  } else if setting == true {
     true
   } else if type(setting) == str {
     setting == engine
@@ -91,7 +94,7 @@
 
 #let chunk-from-raw-plain(engine, it) = {
   let defaults = _resolve-options(engine, _call-defaults)
-  if _raw-chunks-runs(engine, defaults.at("raw-chunks")) {
+  if _fenced-chunks-runs(engine, defaults.at("fenced-chunks")) {
     _emit-chunk(engine, it, ..defaults)
   } else {
     it
@@ -132,7 +135,6 @@
     panic("unexpected argument: label")
   }
   let defaults = (
-    source-lang: none,
     echo: false,
     inline-output: true,
     auto-label-prefix: "inline",

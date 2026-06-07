@@ -157,7 +157,7 @@ x <- 1
             &input,
             r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(raw-chunks: true)
+#calepin.setup(fenced-chunks: true)
 
 ```python
 print("hello")
@@ -194,7 +194,7 @@ print("hello")
     }
 
     #[test]
-    fn typst_query_supports_raw_chunks_engine_option() {
+    fn typst_query_supports_fenced_chunks_engine_option() {
         if Command::new("typst").arg("--version").output().is_err() {
             return;
         }
@@ -206,7 +206,7 @@ print("hello")
             &input,
             r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(raw-chunks: "python")
+#calepin.setup(fenced-chunks: "python")
 "##,
         )
         .unwrap();
@@ -229,11 +229,11 @@ print("hello")
             String::from_utf8_lossy(&output.stderr)
         );
         let stdout = String::from_utf8(output.stdout).unwrap();
-        assert!(stdout.contains(r#""raw-chunks": "python""#), "{}", stdout);
+        assert!(stdout.contains(r#""fenced-chunks": "python""#), "{}", stdout);
     }
 
     #[test]
-    fn typst_query_plain_raw_chunks_does_not_reprocess_chunk_body() {
+    fn typst_query_plain_fenced_chunks_does_not_reprocess_chunk_body() {
         if Command::new("typst").arg("--version").output().is_err() {
             return;
         }
@@ -245,7 +245,7 @@ print("hello")
             &input,
             r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(raw-chunks: "r", results: "verbatim")
+#calepin.setup(fenced-chunks: "r", results: "verbatim")
 
 ```r
 x <- 41
@@ -460,12 +460,12 @@ print("RESULT_12345")
   "python",
   label: "fig-demo",
   echo: false,
-  fig-display-width: 50%,
-  fig-display-align: center,
-  fig-display-responsive: true,
-  fig-display-link: "https://example.com",
+  fig-width: 50%,
+  fig-align: center,
+  fig-responsive: true,
+  fig-link: "https://example.com",
   fig-caption: [Runtime figure caption],
-  fig-caption-position: top,
+  fig-cap-location: top,
   fig-alt-text: "Runtime alt text",
   fig-subcaptions: ("A", "B"),
   fig-layout-columns: (1fr, 1fr),
@@ -675,8 +675,8 @@ print("ignored")
     "python",
     label: "fig-demo",
     echo: false,
-    fig-display-width: 37%,
-    fig-display-height: 44pt,
+    fig-width: 37%,
+    fig-height: 44pt,
     fig-caption: [HTML sized figure],
   )[`print("ignored")`]
 ]
@@ -775,8 +775,8 @@ print("ignored")
     "python",
     label: "fig-demo",
     echo: false,
-    fig-display-width: "37%",
-    fig-display-height: "44px",
+    fig-width: "37%",
+    fig-height: "44px",
     fig-caption: [HTML CSS sized figure],
   )[`print("ignored")`]
 ]

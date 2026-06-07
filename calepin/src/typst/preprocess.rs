@@ -10,7 +10,7 @@ use crate::config::{CalepinConfig, ExecutablePaths};
 use crate::typst::execute::{EnginePool, ExecutionConfig};
 use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, ExecOptions, LayoutPaths};
 use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout, slash_path};
-use crate::typst::query::{parse_chunks, parse_setup_config};
+use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
 use crate::typst::results::{build_results_document, write_results};
 use crate::typst::runtime::write_runtime;
 use crate::typst::sync::write_page_sync;
@@ -74,7 +74,13 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         "raw.where(block: true).or(<calepin-chunk>)",
         &results_input,
     )?;
-    let chunks = parse_chunks(&chunks_json, Some(setup_config.clone()))?;
+    let parsed_chunks = parse_chunks_with_warnings(&chunks_json, Some(setup_config.clone()))?;
+    let chunks = parsed_chunks.chunks;
+    if !options.quiet {
+        for warning in parsed_chunks.warnings {
+            cwarn!("{}", warning);
+        }
+    }
 
     // Collect unique Jupyter kernel names so the render wrapper gets their show rules.
     let jupyter_kernels: std::collections::BTreeSet<&str> = chunks
@@ -644,11 +650,11 @@ mod tests {
                 warning: true,
                 message: true,
                 placeholder: true,
-                fig_display_width: None,
-                fig_display_height: None,
-                fig_display_align: None,
-                fig_display_responsive: None,
-                fig_display_link: None,
+                fig_width: None,
+                fig_height: None,
+                fig_align: None,
+                fig_responsive: None,
+                fig_link: None,
                 fig_caption: None,
                 fig_caption_position: None,
                 fig_alt_text: None,

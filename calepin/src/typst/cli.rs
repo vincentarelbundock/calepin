@@ -17,7 +17,7 @@ const NEW_FILE_TEMPLATE: &str = r#"#import ".calepin/calepin.typ"
   echo: true,
   eval: true,
   results: "verbatim",
-  raw-chunks: true,
+  fenced-chunks: true,
 )
 
 #let py = calepin.inline.with("python")
@@ -202,7 +202,7 @@ mod tests {
         let content = fs::read_to_string(path).unwrap();
         assert!(content.contains(r#"#import ".calepin/calepin.typ""#));
         assert!(content.contains("calepin.inline.with(\"python\")"));
-        assert!(content.contains("raw-chunks: true"));
+        assert!(content.contains("fenced-chunks: true"));
         assert!(content.contains("```python\n"));
         assert!(content.contains("print(40 + 2)"));
         assert!(content.contains("hello from a code chunk"));

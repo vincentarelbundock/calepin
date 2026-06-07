@@ -37,7 +37,30 @@ pub fn write_results(path: &Path, document: &ResultsDocument) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{ChunkStatus, EngineName};
+    use crate::typst::model::{ChunkStatus, DisplayOptions, EngineName, ResultsMode};
+
+    fn display_options() -> DisplayOptions {
+        DisplayOptions {
+            echo: true,
+            output: true,
+            results: ResultsMode::Render,
+            warning: true,
+            message: true,
+            placeholder: true,
+            fig_width: None,
+            fig_height: None,
+            fig_align: None,
+            fig_responsive: None,
+            fig_link: None,
+            fig_caption: None,
+            fig_cap_location: None,
+            fig_alt_text: None,
+            fig_subcaptions: None,
+            fig_layout_columns: None,
+            fig_layout_rows: None,
+            kind: None,
+        }
+    }
 
     #[test]
     fn builds_results_document_keyed_by_label() {
@@ -47,6 +70,7 @@ mod tests {
                 label: "setup".to_string(),
                 engine: EngineName::Python,
                 status: ChunkStatus::Ok,
+                display_options: display_options(),
                 items: Vec::new(),
             }],
         );

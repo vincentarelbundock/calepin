@@ -1,12 +1,13 @@
 = Options
 
-Set defaults with `#calepin.setup` and override per call with
-`#calepin.chunk(...)` or `#calepin.inline(...)`.
+#import ".calepin/calepin.typ" as calepin
+#calepin.setup(eval: true, echo: true)
+
+Set defaults with `#calepin.setup` and override per call with `#calepin.chunk(...)` or `#calepin.inline(...)`.
 
 == Global + chunk options
 
-These options can be configured in `#calepin.setup` as document-wide defaults.
-Use one setup block to define defaults for all chunks unless overridden per chunk.
+These options can be configured in `#calepin.setup` as document-wide defaults. Use one setup block to define defaults for all chunks unless overridden per chunk.
 
 #table(
   columns: (1.1fr, 0.9fr, 2.2fr),
@@ -24,17 +25,15 @@ Use one setup block to define defaults for all chunks unless overridden per chun
   [fig-device-width], [`6`], [Width of the plotting device, in inches.],
   [fig-device-height], [`"auto"`], [Height of the plotting device, in inches. `auto` derives it from the width and `fig-device-aspect`.],
   [fig-device-aspect], [`0.618`], [Height-to-width ratio used when `fig-device-height` is `auto`: device height = `fig-device-width` × `fig-device-aspect`.],
-  [fig-display-width], [`"70%"`], [Width of the figure as rendered in the document. Accepts a Typst length or ratio (for example `70%` or `12cm`) or `auto`.],
-  [fig-display-height], [`"auto"`], [Height of the figure as rendered in the document. Accepts a Typst length or `auto`.],
-  [fig-display-align], [`"center"`], [Horizontal alignment of the figure in the document: `left`, `center`, or `right`.],
-  [fig-display-responsive], [`true`], [HTML output only: allow the figure to shrink to fit narrow viewports (sets `max-width: 100%`). No effect on paged output.],
+  [fig-width], [`"70%"`], [Width of the figure as rendered in the document. Accepts a Typst length or ratio (for example `70%` or `12cm`) or `auto`.],
+  [fig-height], [`"auto"`], [Height of the figure as rendered in the document. Accepts a Typst length or `auto`.],
+  [fig-align], [`"center"`], [Horizontal alignment of the figure in the document: `left`, `center`, or `right`.],
+  [fig-responsive], [`true`], [HTML output only: allow the figure to shrink to fit narrow viewports (sets `max-width: 100%`). No effect on paged output.],
 )
 
 == Chunk-only options
 
-These options are only understood on individual chunks; they are not valid as keys
-in `#calepin.setup`. The figure caption and layout options live here because they
-apply to one chunk's specific output.
+These options are only understood on individual chunks; they are not valid as keys in `#calepin.setup`. The figure caption and layout options live here because they apply to one chunk's specific output.
 
 #table(
   columns: (1.2fr, 0.9fr, 2.0fr),
@@ -45,40 +44,51 @@ apply to one chunk's specific output.
   [body], [from fence], [Provide the raw code body directly instead of writing a fenced block.],
   [label], [auto], [Assign a stable chunk identifier used for cross-references and result lookup.],
   [fig-caption], [`none`], [Caption text for the figure. When set, the output is wrapped in a numbered `figure` that can be cross-referenced.],
-  [fig-caption-position], [`"auto"`], [Where the caption sits relative to the figure: `top` or `bottom`. `auto` uses Typst's default placement.],
+  [fig-cap-location], [`"auto"`], [Where the caption sits relative to the figure: `top`, `bottom`, or `margin`. `auto` uses Typst's default placement.],
   [fig-alt-text], [`none`], [Accessibility (alt) text for generated images. Empty when unset.],
   [fig-subcaptions], [`none`], [Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).],
   [fig-layout-columns], [`"auto"`], [Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or `auto` to choose a count from the number of images.],
   [fig-layout-rows], [`"auto"`], [Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or `auto`.],
 )
 
-== Examples
+== Quarto-style header options
 
-Set defaults once near the top of your document:
+Quarto-style chunk headers are supported by placing option lines that begin with \#| at the top of a code fence. These lines are parsed as the same options as \#calepin.chunk options. For example,
 
-````typst
-#import ".calepin/calepin.typ": calepin
-
-#calepin.setup(
-  echo: true,
-  results: "render",
-  fig-display-width: "75%",
-)
-````
-
-Then override per chunk:
-
-````typst
-#calepin.chunk(
-  "python",
-  label: "fit-summary",
-  echo: false,
-  results: "typst",
-)[
-```python
-import numpy as np
-  a = np.array([1, 2, 3])
-  sum(a)
-]
+````typ
+```r
+#| fig-align: left
+plot(mpg ~ hp, data = mtcars)
 ```
 ````
+```r
+#| fig-align: left
+#| echo: false
+plot(mpg ~ hp, data = mtcars)
+```
+````typ
+```r
+#| fig-align: right
+plot(mpg ~ hp, data = mtcars)
+```
+````
+```r
+#| fig-align: right
+#| echo: false
+plot(mpg ~ hp, data = mtcars)
+plot(mpg ~ hp, data = mtcars)
+```
+
+The main disadvantage of Quarto-style headers is how they behave outside _Calepin_. If you compile the `.typ` file directly with `typst`, the `#|` lines are displayed as configuration artifacts inside the code block. When options are specified as arguments to `#calepin.chunk(...)`, direct `typst` compilation shows the nice unevaluated code chunk instead.
+
+Note that chunk options have different names in _Calepin_ and _Quarto_. Some aliases are supported, but using them is not recommended and _Calepin_ will emit a warning when it encounters an unsupported option name.
+
+- out-width maps to fig-width
+- out-height maps to fig-height
+- out-align maps to fig-align
+- fig-alt maps to fig-alt-text
+- fig-subcap maps to fig-subcaptions
+- fig-format maps to fig-device-format
+- fig-dpi maps to fig-device-dpi
+- layout-ncol maps to fig-layout-columns
+- layout-nrow maps to fig-layout-rows

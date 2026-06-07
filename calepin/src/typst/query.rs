@@ -3,22 +3,42 @@ use serde_json::Value;
 use std::collections::HashSet;
 
 use crate::typst::model::{
-    ChunkSpec, DisplayOptions, EngineName, ExecOptions, RawChunks, ResultsMode,
+    ChunkSpec, DisplayOptions, EngineName, ExecOptions, FencedChunks, ResultsMode,
     SetupDefaults,
 };
+use crate::typst::chunk_options::{
+    parse_chunk_body_with_qmd_header,
+    parse_chunk_source_with_qmd_header,
+    validate_chunk_arguments,
+};
 
+#[allow(dead_code)]
 pub fn parse_chunks(query_json: &str, defaults: Option<SetupConfig>) -> Result<Vec<ChunkSpec>> {
+    Ok(parse_chunks_with_warnings(query_json, defaults)?.chunks)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChunkParseResult {
+    pub chunks: Vec<ChunkSpec>,
+    pub warnings: Vec<String>,
+}
+
+pub fn parse_chunks_with_warnings(
+    query_json: &str,
+    defaults: Option<SetupConfig>,
+) -> Result<ChunkParseResult> {
     let config = defaults.unwrap_or_default();
     let values = parse_query_values(query_json)
         .context("failed to parse calepin chunk metadata from typst query output")?;
     let mut seen = HashSet::new();
     let mut chunks = Vec::with_capacity(values.len());
     let mut auto_label_index = 1usize;
+    let mut warnings = Vec::new();
 
     for (ordinal, value) in values.iter().enumerate() {
         if is_raw_code_block(value) {
             if let Some(chunk) =
-                parse_chunk_raw_block(value, &config, &mut seen, &mut auto_label_index, ordinal)?
+                parse_chunk_raw_block(value, &config, &mut seen, &mut auto_label_index, ordinal, &mut warnings)?
             {
                 chunks.push(chunk);
             }
@@ -34,12 +54,12 @@ pub fn parse_chunks(query_json: &str, defaults: Option<SetupConfig>) -> Result<V
             if !seen.insert(label.clone()) {
                 return Err(anyhow!("duplicate label `{}`", label));
             }
-            parse_chunk_metadata(value, &config, &label, &mut chunks, ordinal)?;
+            parse_chunk_metadata(value, &config, &label, &mut chunks, ordinal, &mut warnings)?;
             bump_auto_label(&mut auto_label_index, &label);
         }
     }
 
-    Ok(chunks)
+    Ok(ChunkParseResult { chunks, warnings })
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,23 +94,37 @@ fn parse_chunk_metadata(
     label: &str,
     chunks: &mut Vec<ChunkSpec>,
     ordinal: usize,
+    warnings: &mut Vec<String>,
 ) -> Result<()> {
-    let engine = parse_engine(value)?;
+    validate_chunk_arguments(value, label)?;
+
+    let (code, chunk_options, mut header_warnings) =
+        parse_chunk_body_with_qmd_header(value.get("body").unwrap_or(&Value::Null), label)?;
+    warnings.append(&mut header_warnings);
+    let mut value_with_options = value
+        .as_object()
+        .cloned()
+        .ok_or_else(|| anyhow!("chunk metadata is not an object"))?;
+    for (key, value) in chunk_options {
+        value_with_options.insert(key, value);
+    }
+
+    let value = Value::Object(value_with_options);
+    let engine = parse_engine(&value)?;
     let defaults = &config.defaults;
-    let code = extract_code(value.get("body").unwrap_or(&Value::Null), label)?;
-    let fig_display_width =
-        raw_option(value, "fig-display-width").or_else(|| defaults.fig_display_width.clone());
-    let fig_display_align =
-        raw_option(value, "fig-display-align").or_else(|| defaults.fig_display_align.clone());
-    let fig_display_responsive =
-        opt_bool_option(value, "fig-display-responsive")?.or(defaults.fig_display_responsive);
-    let exec_options = parse_exec_options(value, defaults, &fig_display_width)?;
+    let fig_width =
+        raw_option(&value, "fig-width").or_else(|| defaults.fig_width.clone());
+    let fig_align =
+        raw_option(&value, "fig-align").or_else(|| defaults.fig_align.clone());
+    let fig_responsive =
+        opt_bool_option(&value, "fig-responsive")?.or(defaults.fig_responsive);
+    let exec_options = parse_exec_options(&value, defaults, &fig_width)?;
     let display_options = parse_display_options(
-        value,
+        &value,
         defaults,
-        fig_display_width,
-        fig_display_align,
-        fig_display_responsive,
+        fig_width,
+        fig_align,
+        fig_responsive,
     )?;
     chunks.push(ChunkSpec {
         label: label.to_string(),
@@ -134,34 +168,55 @@ fn parse_chunk_raw_block(
     seen: &mut HashSet<String>,
     auto_label_index: &mut usize,
     ordinal: usize,
+    warnings: &mut Vec<String>,
 ) -> Result<Option<ChunkSpec>> {
     let Some(lang) = value.get("lang").and_then(Value::as_str) else {
         return Ok(None);
     };
+    if is_typst_fence(lang) {
+        return Ok(None);
+    }
     let Some(engine) = EngineName::parse(lang).ok() else {
         return Ok(None);
     };
     let raw_text = value.get("text").and_then(Value::as_str).unwrap_or("");
+    let label_hint = format!("chunk-{}", *auto_label_index);
+    let (raw_code, chunk_options, mut header_warnings) =
+        parse_chunk_source_with_qmd_header(raw_text, &label_hint)?;
+    warnings.append(&mut header_warnings);
+    let mut value_with_options = value
+        .as_object()
+        .cloned()
+        .ok_or_else(|| anyhow!("fenced chunk is not an object"))?;
+    for (key, value) in chunk_options {
+        value_with_options.insert(key, value);
+    }
+    let value = Value::Object(value_with_options);
+    let raw_text = raw_code;
+
     // Reattach any version suffix Typst split from the lang identifier
     // (e.g. ```julia-1.2 → lang="julia-1", text=".2\n...").
-    let (engine, code) = reattach_version_suffix(engine, lang, raw_text);
+    let (engine, code) = reattach_version_suffix(engine, lang, &raw_text);
     // Allow if the original lang OR the reattached engine name is permitted.
     let defaults = &config.defaults;
-    if !defaults.raw_chunks.allows(lang) && !defaults.raw_chunks.allows(engine.as_str()) {
+    if !defaults.fenced_chunks.allows(lang) && !defaults.fenced_chunks.allows(engine.as_str()) {
         return Ok(None);
     }
     let label = next_available_label(seen, auto_label_index);
     seen.insert(label.clone());
-    let fig_display_width = defaults.fig_display_width.clone();
-    let fig_display_align = defaults.fig_display_align.clone();
-    let fig_display_responsive = defaults.fig_display_responsive;
-    let exec_options = parse_exec_options(value, defaults, &fig_display_width)?;
+    let fig_width =
+        raw_option(&value, "fig-width").or_else(|| defaults.fig_width.clone());
+    let fig_align =
+        raw_option(&value, "fig-align").or_else(|| defaults.fig_align.clone());
+    let fig_responsive =
+        opt_bool_option(&value, "fig-responsive")?.or(defaults.fig_responsive);
+    let exec_options = parse_exec_options(&value, defaults, &fig_width)?;
     let display_options = parse_display_options(
-        value,
+        &value,
         defaults,
-        fig_display_width,
-        fig_display_align,
-        fig_display_responsive,
+        fig_width,
+        fig_align,
+        fig_responsive,
     )?;
     Ok(Some(ChunkSpec {
         label,
@@ -171,6 +226,10 @@ fn parse_chunk_raw_block(
         display_options,
         ordinal,
     }))
+}
+
+fn is_typst_fence(lang: &str) -> bool {
+    matches!(lang, "typ" | "typst")
 }
 
 fn bump_auto_label(auto_label_index: &mut usize, label: &str) {
@@ -218,7 +277,7 @@ pub fn parse_setup_config(query_json: &str) -> Result<Option<SetupConfig>> {
 fn parse_exec_options(
     value: &Value,
     defaults: &SetupDefaults,
-    fig_display_width: &Option<Value>,
+    fig_width: &Option<Value>,
 ) -> Result<ExecOptions> {
     Ok(ExecOptions {
         eval: bool_option(value, "eval", defaults.eval)?,
@@ -229,8 +288,8 @@ fn parse_exec_options(
             value,
             "fig-device-width",
             defaults.fig_device_width,
-            fig_display_width,
-            &defaults.fig_display_width,
+            fig_width,
+            &defaults.fig_width,
         )?,
         fig_device_height: opt_f64_option(value, "fig-device-height", defaults.fig_device_height)?,
         fig_device_aspect: f64_option(value, "fig-device-aspect", defaults.fig_device_aspect)?,
@@ -240,9 +299,9 @@ fn parse_exec_options(
 fn parse_display_options(
     value: &Value,
     defaults: &SetupDefaults,
-    fig_display_width: Option<Value>,
-    fig_display_align: Option<Value>,
-    fig_display_responsive: Option<bool>,
+    fig_width: Option<Value>,
+    fig_align: Option<Value>,
+    fig_responsive: Option<bool>,
 ) -> Result<DisplayOptions> {
     Ok(DisplayOptions {
         echo: bool_option(value, "echo", defaults.echo)?,
@@ -251,13 +310,13 @@ fn parse_display_options(
         warning: bool_option(value, "warning", defaults.warning)?,
         message: bool_option(value, "message", defaults.message)?,
         placeholder: bool_option(value, "placeholder", defaults.placeholder)?,
-        fig_display_width,
-        fig_display_height: raw_option(value, "fig-display-height"),
-        fig_display_align,
-        fig_display_responsive,
-        fig_display_link: raw_option(value, "fig-display-link"),
+        fig_width,
+        fig_height: raw_option(value, "fig-height"),
+        fig_align,
+        fig_responsive,
+        fig_link: raw_option(value, "fig-link"),
         fig_caption: caption_option(value, "fig-caption")?,
-        fig_caption_position: raw_option(value, "fig-caption-position"),
+        fig_cap_location: raw_option(value, "fig-cap-location"),
         fig_alt_text: caption_option(value, "fig-alt-text")?,
         fig_subcaptions: caption_list_option(value, "fig-subcaptions")?,
         fig_layout_columns: raw_option(value, "fig-layout-columns"),
@@ -281,31 +340,31 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         fig_device_width: f64_option(value, "fig-device-width", base.fig_device_width)?,
         fig_device_height: opt_f64_option(value, "fig-device-height", base.fig_device_height)?,
         fig_device_aspect: f64_option(value, "fig-device-aspect", base.fig_device_aspect)?,
-        fig_display_width: raw_option(value, "fig-display-width")
-            .or_else(|| base.fig_display_width.clone()),
-        fig_display_align: raw_option(value, "fig-display-align")
-            .or_else(|| base.fig_display_align.clone()),
-        fig_display_responsive: opt_bool_option(value, "fig-display-responsive")?
-            .or(base.fig_display_responsive),
-        raw_chunks: raw_chunks_option(value, &base.raw_chunks)?,
+        fig_width: raw_option(value, "fig-width")
+            .or_else(|| base.fig_width.clone()),
+        fig_align: raw_option(value, "fig-align")
+            .or_else(|| base.fig_align.clone()),
+        fig_responsive: opt_bool_option(value, "fig-responsive")?
+            .or(base.fig_responsive),
+        fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
     })
 }
 
-/// Parse the unified `raw-chunks` setting: `false`/absent, `true` (all engines),
+/// Parse the unified `fenced-chunks` setting: `false`/absent, `true` (all engines),
 /// an engine name, or a list of engine names.
-fn raw_chunks_option(value: &Value, base: &RawChunks) -> Result<RawChunks> {
-    match value.get("raw-chunks") {
+fn fenced_chunks_option(value: &Value, base: &FencedChunks) -> Result<FencedChunks> {
+    match value.get("fenced-chunks") {
         None | Some(Value::Null) => Ok(base.clone()),
-        Some(Value::Bool(false)) => Ok(RawChunks::Off),
-        Some(Value::Bool(true)) => Ok(RawChunks::All),
-        Some(Value::String(lang)) => Ok(RawChunks::Only(vec![lang.clone()])),
-        Some(Value::Array(items)) => Ok(RawChunks::Only(
+        Some(Value::Bool(false)) => Ok(FencedChunks::Off),
+        Some(Value::Bool(true)) => Ok(FencedChunks::All),
+        Some(Value::String(lang)) => Ok(FencedChunks::Only(vec![lang.clone()])),
+        Some(Value::Array(items)) => Ok(FencedChunks::Only(
             items
                 .iter()
                 .filter_map(|item| item.as_str().map(str::to_string))
                 .collect(),
         )),
-        Some(other) => Err(anyhow!("invalid `raw-chunks` value: {other}")),
+        Some(other) => Err(anyhow!("invalid `fenced-chunks` value: {other}")),
     }
 }
 
@@ -340,62 +399,6 @@ fn parse_engine(value: &Value) -> Result<EngineName> {
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow!("missing engine"))?;
     EngineName::parse(engine)
-}
-
-fn extract_code(body: &Value, label: &str) -> Result<String> {
-    let raw = extract_raw_node(body, label)?;
-    raw.get("text")
-        .and_then(Value::as_str)
-        .map(ToOwned::to_owned)
-        .ok_or_else(|| anyhow!("chunk `{}` raw element is missing text", label))
-}
-
-fn extract_raw_node<'a>(node: &'a Value, label: &str) -> Result<&'a Value> {
-    if node.get("func").and_then(Value::as_str) == Some("raw") {
-        return Ok(node);
-    }
-
-    let Some(children) = node.get("children").and_then(Value::as_array) else {
-        return Err(anyhow!(
-            "chunk `{}` body must contain exactly one raw element",
-            label
-        ));
-    };
-
-    let raw_children: Vec<&Value> = children
-        .iter()
-        .filter(|child| child.get("func").and_then(Value::as_str) == Some("raw"))
-        .collect();
-    if raw_children.len() != 1 {
-        return Err(anyhow!(
-            "chunk `{}` body must contain exactly one raw element",
-            label
-        ));
-    }
-
-    for child in children {
-        if child.get("func").and_then(Value::as_str) == Some("raw") {
-            continue;
-        }
-        if !is_whitespace_node(child) {
-            return Err(anyhow!(
-                "chunk `{}` body contains extra non-whitespace markup",
-                label
-            ));
-        }
-    }
-
-    Ok(raw_children[0])
-}
-
-fn is_whitespace_node(node: &Value) -> bool {
-    matches!(
-        node.get("func").and_then(Value::as_str),
-        Some("space") | Some("linebreak")
-    ) || node
-        .get("text")
-        .and_then(Value::as_str)
-        .is_some_and(|s| s.trim().is_empty())
 }
 
 fn value_for<'a>(object: &'a Value, key: &str) -> Option<&'a Value> {
@@ -477,8 +480,8 @@ fn fig_device_width_option(
     object: &Value,
     key: &str,
     default: f64,
-    fig_display_width: &Option<Value>,
-    default_fig_display_width: &Option<Value>,
+    fig_width: &Option<Value>,
+    default_fig_width: &Option<Value>,
 ) -> Result<f64> {
     match value_for(object, key) {
         Some(value) => value
@@ -486,21 +489,21 @@ fn fig_device_width_option(
             .ok_or_else(|| anyhow!("`{}` must be a number", key)),
         None => Ok(derived_fig_device_width(
             default,
-            fig_display_width,
-            default_fig_display_width,
+            fig_width,
+            default_fig_width,
         )),
     }
 }
 
 fn derived_fig_device_width(
     default: f64,
-    fig_display_width: &Option<Value>,
-    default_fig_display_width: &Option<Value>,
+    fig_width: &Option<Value>,
+    default_fig_width: &Option<Value>,
 ) -> f64 {
-    let Some(display_ratio) = display_width_ratio(fig_display_width) else {
+    let Some(display_ratio) = display_width_ratio(fig_width) else {
         return default;
     };
-    let Some(default_ratio) = display_width_ratio(default_fig_display_width) else {
+    let Some(default_ratio) = display_width_ratio(default_fig_width) else {
         return default;
     };
     if default_ratio <= 0.0 {
@@ -676,13 +679,13 @@ mod tests {
               "fig-device-width":"auto",
               "fig-device-height":"auto",
               "fig-device-aspect":"auto",
-              "fig-display-width":"70%",
-              "fig-display-height":"auto",
-              "fig-display-align":"center",
-              "fig-display-responsive":true,
-              "fig-display-link":"https://example.com",
+              "fig-width":"70%",
+              "fig-height":"auto",
+              "fig-align":"center",
+              "fig-responsive":true,
+              "fig-link":"https://example.com",
               "fig-caption":{"func":"text","text":"Caption"},
-              "fig-caption-position":"top",
+              "fig-cap-location":"top",
               "fig-alt-text":null,
               "fig-subcaptions":["A","B"],
               "fig-layout-columns":[1,1],
@@ -712,6 +715,143 @@ mod tests {
     }
 
     #[test]
+    fn parses_qmd_style_headers_in_metadata_chunks() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{"func":"raw","text":"#| echo: false\n#| out-width: 80%\nprint(1)","block":false},
+                "engine":"r",
+                "label":"from-header"
+            })
+            .to_string(),
+        );
+        let parsed = parse_chunks_with_warnings(&json, None).unwrap();
+        let chunk = &parsed.chunks[0];
+        assert_eq!(chunk.label, "from-header");
+        assert_eq!(chunk.code, "print(1)");
+        assert!(!chunk.display_options.echo);
+        assert_eq!(chunk.display_options.fig_width.as_deref(), Some("80%"));
+        assert!(parsed.warnings.iter().any(|warning| warning.contains("translated to `fig-width`")));
+    }
+
+    #[test]
+    fn parses_qmd_style_headers_in_fenced_chunks() {
+        let json = serde_json::json!([
+          {"func":"raw","text":"#| out-width: 90%\n#| fig-align: right\nprint(1)","block":true,"lang":"python"}
+        ])
+        .to_string();
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let parsed = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults))).unwrap();
+        let chunk = &parsed.chunks[0];
+        assert_eq!(chunk.label, "chunk-1");
+        assert_eq!(chunk.code, "print(1)");
+        assert_eq!(
+            chunk.display_options.fig_width.as_ref().unwrap(),
+            &Value::String("90%".to_string())
+        );
+        assert_eq!(
+            chunk.display_options.fig_align.as_ref().unwrap(),
+            &Value::String("right".to_string())
+        );
+        assert!(parsed.warnings.iter().any(|warning| warning.contains("translated to `fig-width`")));
+    }
+
+    #[test]
+    fn maps_additional_quarto_figure_options() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{"func":"raw","text":"#| fig-device-width: 8\n#| fig-device-height: 6\n#| fig-dpi: 200\n#| fig-format: \"svg\"\n#| fig-asp: 1.5\n#| fig-link: https://example.com\n#| fig.cap: \"Figure title\"\n#| fig-alt: This is alt text\n#| fig-subcap: [A, B]\n#| fig-cap-location: top\n#| fig-align: center\n#| layout-ncol: 2\n#| layout-nrow: 1\nprint(1)","block":false},
+                "engine":"python",
+                "label":"mapped-quarto-options"
+            })
+            .to_string(),
+        );
+        let parsed = parse_chunks(&json, None).unwrap();
+        let chunk = &parsed[0];
+        assert_eq!(
+            chunk.display_options.fig_caption.as_deref(),
+            Some("Figure title")
+        );
+        assert_eq!(
+            chunk.display_options.fig_alt_text.as_deref(),
+            Some("This is alt text")
+        );
+        assert_eq!(
+            chunk.display_options.fig_subcaptions.as_ref().unwrap(),
+            &vec!["A".to_string(), "B".to_string()]
+        );
+        assert_eq!(
+            chunk.display_options.fig_cap_location,
+            Some(Value::String("top".to_string()))
+        );
+        assert_eq!(
+            chunk.display_options.fig_align,
+            Some(Value::String("center".to_string()))
+        );
+        assert_eq!(
+            chunk.display_options.fig_layout_columns.as_ref().unwrap(),
+            &Value::from(2)
+        );
+        assert_eq!(chunk.display_options.fig_layout_rows.as_ref().unwrap(), &Value::from(1));
+        assert_eq!(chunk.exec_options.fig_device_width, 8.0);
+        assert_eq!(chunk.exec_options.fig_device_height, Some(6.0));
+        assert_eq!(chunk.exec_options.fig_device_dpi, 200);
+        assert_eq!(chunk.exec_options.fig_device_format, "svg");
+        assert_eq!(chunk.exec_options.fig_device_aspect, 1.5);
+        assert_eq!(
+            chunk.display_options.fig_link,
+            Some(Value::String("https://example.com/main".to_string()))
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_qmd_header_option() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{"func":"raw","text":"#| not-a-real-option: true\nprint(1)","block":false},
+                "engine":"r",
+                "label":"bad-header"
+            })
+            .to_string(),
+        );
+        let err = parse_chunks(&json, None).unwrap_err().to_string();
+        assert!(err.contains("chunk `bad-header` header line 1"));
+        assert!(err.contains("unsupported option `not-a-real-option`"));
+    }
+
+    #[test]
+    fn rejects_malformed_qmd_header_option() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{"func":"raw","text":"#| not-a-real-option true\nprint(1)","block":false},
+                "engine":"r",
+                "label":"bad-header-syntax"
+            })
+            .to_string(),
+        );
+        let err = parse_chunks(&json, None).unwrap_err().to_string();
+        assert!(err.contains("bad-header-syntax"));
+        assert!(err.contains("header line 1"));
+        assert!(err.contains("malformed option declaration"));
+    }
+
+    #[test]
+    fn rejects_unknown_calepin_chunk_argument() {
+        let json = metadata(
+            r#"{
+              "body":{"func":"raw","text":"print(1)","block":false},
+              "engine":"r",
+              "label":"bad-argument",
+              "not-a-real-argument":true
+            }"#,
+        );
+        let err = parse_chunks(&json, None).unwrap_err().to_string();
+        assert!(err.contains("chunk `bad-argument` has unsupported argument `not-a-real-argument`"));
+    }
+
+    #[test]
     fn merges_setup_defaults_and_chunk_overrides() {
         let json = metadata(
             r#"{
@@ -731,13 +871,13 @@ mod tests {
               "fig-device-width":"auto",
               "fig-device-height":"auto",
               "fig-device-aspect":"auto",
-              "fig-display-width":"auto",
-              "fig-display-height":"auto",
-              "fig-display-align":"auto",
-              "fig-display-responsive":"auto",
-              "fig-display-link":"auto",
+              "fig-width":"auto",
+              "fig-height":"auto",
+              "fig-align":"auto",
+              "fig-responsive":"auto",
+              "fig-link":"auto",
               "fig-caption":null,
-              "fig-caption-position":"auto",
+              "fig-cap-location":"auto",
               "fig-alt-text":null,
               "fig-subcaptions":null,
               "fig-layout-columns":"auto",
@@ -759,10 +899,10 @@ mod tests {
             fig_device_width: 8.0,
             fig_device_height: Some(4.0),
             fig_device_aspect: 0.5,
-            fig_display_width: Some(Value::String("70%".to_string())),
-            fig_display_align: Some(Value::String("center".to_string())),
-            fig_display_responsive: Some(true),
-            raw_chunks: RawChunks::Off,
+            fig_width: Some(Value::String("70%".to_string())),
+            fig_align: Some(Value::String("center".to_string())),
+            fig_responsive: Some(true),
+            fenced_chunks: FencedChunks::Off,
         };
         let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
         let chunk = &chunks[0];
@@ -784,7 +924,7 @@ mod tests {
               "engine":"r",
               "label":"wide",
               "fig-device-width":"auto",
-              "fig-display-width":"95%"
+              "fig-width":"95%"
             }"#,
         );
 
@@ -792,14 +932,14 @@ mod tests {
         let chunk = &chunks[0];
 
         assert_eq!(
-            chunk.display_options.fig_display_width.as_ref().unwrap(),
+            chunk.display_options.fig_width.as_ref().unwrap(),
             "95%"
         );
         assert_eq!(
-            chunk.display_options.fig_display_align.as_ref().unwrap(),
+            chunk.display_options.fig_align.as_ref().unwrap(),
             "center"
         );
-        assert_eq!(chunk.display_options.fig_display_responsive, Some(true));
+        assert_eq!(chunk.display_options.fig_responsive, Some(true));
         assert!((chunk.exec_options.fig_device_width - 8.142_857_142).abs() < 0.000_001);
     }
 
@@ -825,7 +965,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_setup_raw_chunks_option() {
+    fn parses_setup_fenced_chunks_option() {
         let json = setup_metadata(
             r#"{
               "echo":true,
@@ -841,16 +981,16 @@ mod tests {
               "fig-device-width":6,
               "fig-device-height":"auto",
               "fig-device-aspect":0.618,
-              "raw-chunks":true
+              "fenced-chunks":true
             }"#,
         );
 
         let config = parse_setup_config(&json).unwrap().unwrap();
-        assert_eq!(config.defaults.raw_chunks, RawChunks::All);
+        assert_eq!(config.defaults.fenced_chunks, FencedChunks::All);
     }
 
     #[test]
-    fn parses_setup_raw_chunks_single_engine() {
+    fn parses_setup_fenced_chunks_single_engine() {
         let json = setup_metadata(
             r#"{
               "echo":true,
@@ -866,19 +1006,19 @@ mod tests {
               "fig-device-width":6,
               "fig-device-height":"auto",
               "fig-device-aspect":0.618,
-              "raw-chunks":"python"
+              "fenced-chunks":"python"
             }"#,
         );
 
         let config = parse_setup_config(&json).unwrap().unwrap();
         assert_eq!(
-            config.defaults.raw_chunks,
-            RawChunks::Only(vec!["python".to_string()])
+            config.defaults.fenced_chunks,
+            FencedChunks::Only(vec!["python".to_string()])
         );
     }
 
     #[test]
-    fn parses_setup_raw_chunks_engine_list() {
+    fn parses_setup_fenced_chunks_engine_list() {
         let json = setup_metadata(
             r#"{
               "echo":true,
@@ -894,14 +1034,14 @@ mod tests {
               "fig-device-width":6,
               "fig-device-height":"auto",
               "fig-device-aspect":0.618,
-              "raw-chunks":["python","r"]
+              "fenced-chunks":["python","r"]
             }"#,
         );
 
         let config = parse_setup_config(&json).unwrap().unwrap();
         assert_eq!(
-            config.defaults.raw_chunks,
-            RawChunks::Only(vec!["python".to_string(), "r".to_string()])
+            config.defaults.fenced_chunks,
+            FencedChunks::Only(vec!["python".to_string(), "r".to_string()])
         );
     }
 
@@ -965,7 +1105,7 @@ mod tests {
     #[test]
     fn accepts_plain_language_raw_block_when_enabled() {
         let defaults = SetupDefaults {
-            raw_chunks: RawChunks::All,
+            fenced_chunks: FencedChunks::All,
             ..SetupDefaults::default()
         };
         let json = r#"[
@@ -980,7 +1120,7 @@ mod tests {
     #[test]
     fn accepts_plain_language_raw_block_when_lang_configured() {
         let defaults = SetupDefaults {
-            raw_chunks: RawChunks::Only(vec!["python".to_string()]),
+            fenced_chunks: FencedChunks::Only(vec!["python".to_string()]),
             ..SetupDefaults::default()
         };
         let json = r#"[
@@ -1002,7 +1142,7 @@ mod tests {
             ]"#,
             Some(SetupConfig {
                 defaults: SetupDefaults {
-                    raw_chunks: RawChunks::Only(vec!["python".to_string()]),
+                    fenced_chunks: FencedChunks::Only(vec!["python".to_string()]),
                     ..SetupDefaults::default()
                 },
             }),
@@ -1015,9 +1155,9 @@ mod tests {
     }
 
     #[test]
-    fn normalizes_implicit_chunk_labels_when_raw_chunks_configured() {
+    fn normalizes_implicit_chunk_labels_when_fenced_chunks_configured() {
         let defaults = SetupDefaults {
-            raw_chunks: RawChunks::Only(vec!["r".to_string()]),
+            fenced_chunks: FencedChunks::Only(vec!["r".to_string()]),
             ..SetupDefaults::default()
         };
         let json = r#"[
@@ -1040,9 +1180,26 @@ mod tests {
     }
 
     #[test]
+    fn ignores_typst_fences_even_when_fenced_chunks_enabled() {
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let json = r##"[
+          {"func":"raw","text":"#let x = 1","block":true,"lang":"typ"},
+          {"func":"raw","text":"#let y = 2","block":true,"lang":"typst"},
+          {"func":"raw","text":"print(1)","block":true,"lang":"python"}
+        ]"##;
+        let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].engine, EngineName::Python);
+        assert_eq!(chunks[0].code, "print(1)");
+    }
+
+    #[test]
     fn parses_chunked_raw_blocks() {
         let defaults = SetupDefaults {
-            raw_chunks: RawChunks::All,
+            fenced_chunks: FencedChunks::All,
             ..SetupDefaults::default()
         };
         let json = r#"[
@@ -1062,7 +1219,7 @@ mod tests {
     #[test]
     fn advances_auto_labels_around_explicit_chunk_labels() {
         let defaults = SetupDefaults {
-            raw_chunks: RawChunks::All,
+            fenced_chunks: FencedChunks::All,
             ..SetupDefaults::default()
         };
         let json = r#"[
@@ -1159,7 +1316,7 @@ mod tests {
         // Simulate what Typst produces for ```julia-1.2\nx = 41\n```
         // (lang truncated to "julia-1", ".2\n" prepended to text).
         let defaults = SetupDefaults {
-            raw_chunks: RawChunks::All,
+            fenced_chunks: FencedChunks::All,
             ..SetupDefaults::default()
         };
         let json = r#"[

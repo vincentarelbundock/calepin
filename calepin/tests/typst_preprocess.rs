@@ -280,7 +280,7 @@ fn compile_accepts_canonical_figure_options() {
   fig-display-link: "https://example.com",
   fig-caption: [Canonical caption],
   fig-short-caption: "Short caption",
-  fig-caption-position: top,
+  fig-cap-location: top,
   fig-alt-text: "Line plot alt text",
   fig-subcaptions: ("A", "B"),
   fig-layout-columns: (1fr, 1fr),

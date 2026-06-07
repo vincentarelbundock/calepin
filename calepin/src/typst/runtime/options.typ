@@ -13,11 +13,11 @@
   fig-device-width: _base-options.at("fig-device-width"),
   fig-device-height: _base-options.at("fig-device-height"),
   fig-device-aspect: _base-options.at("fig-device-aspect"),
-  fig-display-width: _base-options.at("fig-display-width"),
-  fig-display-height: _base-options.at("fig-display-height"),
-  fig-display-align: _base-options.at("fig-display-align"),
-  fig-display-responsive: _base-options.at("fig-display-responsive"),
-  raw-chunks: true,
+  fig-width: _base-options.at("fig-width"),
+  fig-height: _base-options.at("fig-height"),
+  fig-align: _base-options.at("fig-align"),
+  fig-responsive: _base-options.at("fig-responsive"),
+  fenced-chunks: true,
   ) = {
   let setup-opts = (
     echo: echo,
@@ -32,11 +32,11 @@
     "fig-device-width": fig-device-width,
     "fig-device-height": fig-device-height,
     "fig-device-aspect": fig-device-aspect,
-    "fig-display-width": fig-display-width,
-    "fig-display-height": fig-display-height,
-    "fig-display-align": fig-display-align,
-    "fig-display-responsive": fig-display-responsive,
-    "raw-chunks": raw-chunks,
+    "fig-width": fig-width,
+    "fig-height": fig-height,
+    "fig-align": fig-align,
+    "fig-responsive": fig-responsive,
+    "fenced-chunks": fenced-chunks,
   )
   _setup-defaults.update(defaults => (default: defaults.at("default") + setup-opts))
   if _mode == "query" {

@@ -4,7 +4,7 @@
   echo: true,
   eval: true,
   results: "verbatim",
-  raw-chunks: false,
+  fenced-chunks: false,
 )
 
 = Tables and figures
@@ -55,7 +55,7 @@ Chunks that produce multiple plots can be displayed as one figure. Use
   ),
   fig-layout-columns: (1fr, 1fr),
   fig-layout-rows: (auto, auto),
-  fig-display-width: 90%,
+  fig-width: 90%,
 )[```r
 model <- lm(mpg ~ wt + hp, data = mtcars)
 
@@ -79,7 +79,7 @@ plot(model, which = 4)
   ),
   fig-layout-columns: (1fr, 1fr),
   fig-layout-rows: (auto, auto),
-  fig-display-width: 90%,
+  fig-width: 90%,
 )[```r
 model <- lm(mpg ~ wt + hp, data = mtcars)
 

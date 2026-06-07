@@ -92,18 +92,18 @@ impl ResultsMode {
 /// Which plain fenced blocks auto-run as chunks: none, every engine, or a
 /// specific set of engine names.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum RawChunks {
+pub enum FencedChunks {
     Off,
     All,
     Only(Vec<String>),
 }
 
-impl RawChunks {
+impl FencedChunks {
     pub fn allows(&self, lang: &str) -> bool {
         match self {
-            RawChunks::Off => false,
-            RawChunks::All => true,
-            RawChunks::Only(langs) => langs.iter().any(|l| l == lang),
+            FencedChunks::Off => false,
+            FencedChunks::All => true,
+            FencedChunks::Only(langs) => langs.iter().any(|l| l == lang),
         }
     }
 }
@@ -123,10 +123,10 @@ pub struct SetupDefaults {
     pub fig_device_width: f64,
     pub fig_device_height: Option<f64>,
     pub fig_device_aspect: f64,
-    pub fig_display_width: Option<Value>,
-    pub fig_display_align: Option<Value>,
-    pub fig_display_responsive: Option<bool>,
-    pub raw_chunks: RawChunks,
+    pub fig_width: Option<Value>,
+    pub fig_align: Option<Value>,
+    pub fig_responsive: Option<bool>,
+    pub fenced_chunks: FencedChunks,
 }
 
 impl Default for SetupDefaults {
@@ -145,10 +145,10 @@ impl Default for SetupDefaults {
             fig_device_width: 6.0,
             fig_device_height: None,
             fig_device_aspect: 0.618,
-            fig_display_width: Some(Value::String("70%".to_string())),
-            fig_display_align: Some(Value::String("center".to_string())),
-            fig_display_responsive: Some(true),
-            raw_chunks: RawChunks::Off,
+            fig_width: Some(Value::String("70%".to_string())),
+            fig_align: Some(Value::String("center".to_string())),
+            fig_responsive: Some(true),
+            fenced_chunks: FencedChunks::Off,
         }
     }
 }
@@ -165,6 +165,7 @@ pub struct ExecOptions {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct DisplayOptions {
     pub echo: bool,
     pub output: bool,
@@ -172,13 +173,13 @@ pub struct DisplayOptions {
     pub warning: bool,
     pub message: bool,
     pub placeholder: bool,
-    pub fig_display_width: Option<Value>,
-    pub fig_display_height: Option<Value>,
-    pub fig_display_align: Option<Value>,
-    pub fig_display_responsive: Option<bool>,
-    pub fig_display_link: Option<Value>,
+    pub fig_width: Option<Value>,
+    pub fig_height: Option<Value>,
+    pub fig_align: Option<Value>,
+    pub fig_responsive: Option<bool>,
+    pub fig_link: Option<Value>,
     pub fig_caption: Option<String>,
-    pub fig_caption_position: Option<Value>,
+    pub fig_cap_location: Option<Value>,
     pub fig_alt_text: Option<String>,
     pub fig_subcaptions: Option<Vec<String>>,
     pub fig_layout_columns: Option<Value>,
@@ -309,6 +310,8 @@ pub struct ChunkResultDocument {
     pub label: String,
     pub engine: EngineName,
     pub status: ChunkStatus,
+    #[serde(rename = "options")]
+    pub display_options: DisplayOptions,
     pub items: Vec<ResultItem>,
 }
 

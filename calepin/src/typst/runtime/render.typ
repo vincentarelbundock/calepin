@@ -90,13 +90,13 @@
   }
 }
 
-#let _figure-caption(fig-caption, fig-caption-position) = {
+#let _figure-caption(fig-caption, fig-cap-location) = {
   if fig-caption == none {
     none
-  } else if fig-caption-position == auto or fig-caption-position == none {
+  } else if fig-cap-location == auto or fig-cap-location == none {
     fig-caption
   } else {
-    figure.caption(position: fig-caption-position)[#fig-caption]
+    figure.caption(position: fig-cap-location)[#fig-caption]
   }
 }
 
@@ -129,30 +129,48 @@
   }
 }
 
-#let _html-image-align-style(fig-display-align) = {
-  if fig-display-align == left or fig-display-align == start {
+#let _normalize-display-align(fig-align) = {
+  if fig-align == "left" {
+    left
+  } else if fig-align == "start" {
+    start
+  } else if fig-align == "right" {
+    right
+  } else if fig-align == "end" {
+    end
+  } else if fig-align == "center" {
+    center
+  } else {
+    fig-align
+  }
+}
+
+#let _html-image-align-style(fig-align) = {
+  let fig-align = _normalize-display-align(fig-align)
+  if fig-align == left or fig-align == start {
     "margin-inline: 0 auto;"
-  } else if fig-display-align == right or fig-display-align == end {
+  } else if fig-align == right or fig-align == end {
     "margin-inline: auto 0;"
   } else {
     "margin-inline: auto;"
   }
 }
 
-#let _html-block-align-style(fig-display-align) = {
-  if fig-display-align == left or fig-display-align == start {
+#let _html-block-align-style(fig-align) = {
+  let fig-align = _normalize-display-align(fig-align)
+  if fig-align == left or fig-align == start {
     "text-align: left;"
-  } else if fig-display-align == right or fig-display-align == end {
+  } else if fig-align == right or fig-align == end {
     "text-align: right;"
-  } else if fig-display-align == center {
+  } else if fig-align == center {
     "text-align: center;"
   } else {
     ""
   }
 }
 
-#let _html-image-style(width, height, responsive, fig-display-align) = {
-  let base = _append-css("display: block;", _html-image-align-style(fig-display-align))
+#let _html-image-style(width, height, responsive, fig-align) = {
+  let base = _append-css("display: block;", _html-image-align-style(fig-align))
   let with-width = _append-css(base, _css-decl("width", width))
   let with-height = _append-css(with-width, _css-decl("height", height))
   if responsive == true {
@@ -162,8 +180,8 @@
   }
 }
 
-#let _html-image(path, width, height, responsive, fig-display-align, alt) = {
-  let style = _html-image-style(width, height, responsive, fig-display-align)
+#let _html-image(path, width, height, responsive, fig-align, alt) = {
+  let style = _html-image-style(width, height, responsive, fig-align)
   if style == "" {
     std.html.elem("img", attrs: (src: path, alt: alt))
   } else {
@@ -176,28 +194,28 @@
   std.html.elem("img", attrs: (src: path, alt: alt, style: style))
 }
 
-#let _html-figure-style(width, responsive, fig-display-align) = {
+#let _html-figure-style(width, responsive, fig-align) = {
   let with-width = _css-decl("width", width)
   let with-responsive = if responsive == true {
     _append-css(with-width, "max-width: 100%;")
   } else {
     with-width
   }
-  _append-css(with-responsive, _html-image-align-style(fig-display-align))
+  _append-css(with-responsive, _html-image-align-style(fig-align))
 }
 
 #let _html-captioned-figure(
   img,
   width,
   responsive,
-  fig-display-align,
+  fig-align,
   fig-caption,
-  fig-caption-position,
+  fig-cap-location,
 ) = {
-  let style = _html-figure-style(width, responsive, fig-display-align)
+  let style = _html-figure-style(width, responsive, fig-align)
   let attrs = if style == "" { (:) } else { (style: style) }
   let caption = std.html.elem("figcaption")[#context [Figure #counter(figure).display(): #fig-caption]]
-  let content = if fig-caption-position == top {
+  let content = if fig-cap-location == top {
     [#caption #img]
   } else {
     [#img #caption]
@@ -208,23 +226,41 @@
   ]
 }
 
-#let _finalize-figure-display(content, fig-display-align, fig-display-link) = {
-  let linked = if fig-display-link == none or fig-display-link == auto {
+#let _finalize-figure-display(content, fig-align, fig-link) = {
+  let fig-align = _normalize-display-align(fig-align)
+  let linked = if fig-link == none or fig-link == auto {
     content
   } else {
-    link(fig-display-link)[#content]
+    link(fig-link)[#content]
   }
   if _html-target() {
-    let style = _html-block-align-style(fig-display-align)
+    let style = _html-block-align-style(fig-align)
     if style == "" {
       return linked
     }
     return std.html.elem("div", attrs: (style: style))[#linked]
   }
-  if fig-display-align == none or fig-display-align == auto {
+  if fig-align == none or fig-align == auto {
     linked
   } else {
-    align(fig-display-align)[#linked]
+    align(fig-align)[#linked]
+  }
+}
+
+#let _paged-result-options(options) = {
+  let out = (:)
+  if "fig-align" in options {
+    out.insert("fig-align", options.at("fig-align"))
+  }
+  out
+}
+
+#let _merge-result-options(opts, chunk) = {
+  let options = chunk.at("options", default: (:))
+  if _html-target() {
+    opts + options
+  } else {
+    opts + _paged-result-options(options)
   }
 }
 
@@ -358,14 +394,14 @@
   let value = selected.value
   let artifact-path = _artifact-path(value)
   let html-path = _resolve-asset-href(artifact-path)
-  let fig-display-height = opts.at("fig-display-height")
-  let fig-display-responsive = opts.at("fig-display-responsive")
+  let fig-height = opts.at("fig-height")
+  let fig-responsive = opts.at("fig-responsive")
   let fig-alt-text = opts.at("fig-alt-text")
   let alt = if fig-alt-text == none { "" } else { fig-alt-text }
   if _html-target() {
-    _html-image(html-path, 100%, fig-display-height, fig-display-responsive, center, alt)
+    _html-image(html-path, 100%, fig-height, fig-responsive, center, alt)
   } else {
-    image(artifact-path, width: 100%, height: fig-display-height, alt: alt)
+    image(artifact-path, width: 100%, height: fig-height, alt: alt)
   }
 }
 
@@ -400,12 +436,12 @@
 }
 
 #let _render-image-grid(items, label, opts) = {
-  let fig-display-width = opts.at("fig-display-width")
-  let fig-display-align = opts.at("fig-display-align")
-  let fig-display-responsive = opts.at("fig-display-responsive")
-  let fig-display-link = opts.at("fig-display-link")
+  let fig-width = opts.at("fig-width")
+  let fig-align = opts.at("fig-align")
+  let fig-responsive = opts.at("fig-responsive")
+  let fig-link = opts.at("fig-link")
   let fig-caption = opts.at("fig-caption")
-  let fig-caption-position = opts.at("fig-caption-position")
+  let fig-cap-location = opts.at("fig-cap-location")
   let fig-subcaptions = opts.at("fig-subcaptions")
   let fig-layout-columns = opts.at("fig-layout-columns")
   let fig-layout-rows = opts.at("fig-layout-rows")
@@ -418,29 +454,29 @@
   let columns = _grid-columns(items.len(), fig-layout-columns, fig-layout-rows)
   let content = _wrap-grid-display(
     _grid-content(columns, fig-layout-rows, cells),
-    fig-display-width,
-    fig-display-responsive,
-    fig-display-align,
+    fig-width,
+    fig-responsive,
+    fig-align,
   )
   let rendered = if fig-caption != none {
     _attach-label(
-      figure(content, caption: _figure-caption(fig-caption, fig-caption-position)),
+      figure(content, caption: _figure-caption(fig-caption, fig-cap-location)),
       label,
     )
   } else {
     content
   }
-  _finalize-figure-display(rendered, fig-display-align, fig-display-link)
+  _finalize-figure-display(rendered, fig-align, fig-link)
 }
 
 #let _render-display-item(item, label, opts) = {
-  let fig-display-width = opts.at("fig-display-width")
-  let fig-display-height = opts.at("fig-display-height")
-  let fig-display-align = opts.at("fig-display-align")
-  let fig-display-responsive = opts.at("fig-display-responsive")
-  let fig-display-link = opts.at("fig-display-link")
+  let fig-width = opts.at("fig-width")
+  let fig-height = opts.at("fig-height")
+  let fig-align = opts.at("fig-align")
+  let fig-responsive = opts.at("fig-responsive")
+  let fig-link = opts.at("fig-link")
   let fig-caption = opts.at("fig-caption")
-  let fig-caption-position = opts.at("fig-caption-position")
+  let fig-cap-location = opts.at("fig-cap-location")
   let fig-alt-text = opts.at("fig-alt-text")
   let selected = _display-selection(item, opts)
   if selected == none {
@@ -451,35 +487,35 @@
   if _is-image-mime(mime) {
     let artifact-path = _artifact-path(value)
     let html-path = _resolve-asset-href(artifact-path)
-    let display-width = if fig-display-width == auto and fig-display-responsive == true { 100% } else { fig-display-width }
+    let display-width = if fig-width == auto and fig-responsive == true { 100% } else { fig-width }
     let alt = if fig-alt-text == none { "" } else { fig-alt-text }
     if _html-target() and fig-caption != none {
-      let img = _html-captioned-image(html-path, fig-display-height, alt)
+      let img = _html-captioned-image(html-path, fig-height, alt)
       let rendered = _attach-label(
-        _html-captioned-figure(img, display-width, fig-display-responsive, fig-display-align, fig-caption, fig-caption-position),
+        _html-captioned-figure(img, display-width, fig-responsive, fig-align, fig-caption, fig-cap-location),
         label,
       )
-      return _finalize-figure-display(rendered, none, fig-display-link)
+      return _finalize-figure-display(rendered, none, fig-link)
     }
     let img = if _html-target() {
-      _html-image(html-path, display-width, fig-display-height, fig-display-responsive, fig-display-align, alt)
+      _html-image(html-path, display-width, fig-height, fig-responsive, fig-align, alt)
     } else {
       image(
         artifact-path,
         width: display-width,
-        height: fig-display-height,
+        height: fig-height,
         alt: alt,
       )
     }
     let rendered = if fig-caption != none {
       _attach-label(
-        figure(img, caption: _figure-caption(fig-caption, fig-caption-position)),
+        figure(img, caption: _figure-caption(fig-caption, fig-cap-location)),
         label,
       )
     } else {
       img
     }
-    _finalize-figure-display(rendered, fig-display-align, fig-display-link)
+    _finalize-figure-display(rendered, fig-align, fig-link)
   } else if mime == "text/x-typst" {
     if type(value) == dictionary and value.at("path", default: none) != none {
       eval(read(_artifact-path(value), encoding: "utf8"), mode: "markup")
@@ -535,6 +571,7 @@
   if chunk == none {
     panic("calepin results do not contain label `" + label + "`")
   }
+  let opts = _merge-result-options(opts, chunk)
   let items = chunk.at("items", default: ())
   let image-group = ()
   for result-item in items {
