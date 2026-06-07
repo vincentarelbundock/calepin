@@ -6,6 +6,7 @@ mod cli;
 mod config;
 mod engines;
 mod html;
+mod health;
 mod typst;
 mod utils;
 
@@ -23,6 +24,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Command::New(args) => typst::cli::handle_new(args),
+        Command::Health(args) => health::handle_health(args),
         Command::Compile(args) => typst::cli::handle_compile(args),
         Command::Watch(args) => typst::cli::handle_watch(args),
         Command::Stop(args) => typst::cli::handle_stop(args),

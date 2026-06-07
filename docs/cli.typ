@@ -11,6 +11,7 @@ Usage: calepin <COMMAND>
 
 Commands:
   new      Create a new example Typst file
+  health   Check Calepin's local runtime environment
   compile  Preprocess, then invoke typst compile
   watch    Watch, preprocess, and delegate recompiles to typst watch
   stop     Stop a running calepin watch process
@@ -36,6 +37,21 @@ Arguments:
 Options:
   -f, --force  Overwrite the file if it already exists
   -h, --help   Print help
+```
+
+== `calepin health`
+<calepin-health>
+
+```text
+Check Calepin's local runtime environment
+
+Usage: calepin health [OPTIONS]
+
+Options:
+      --config <CONFIG>  Path to project config TOML
+      --json             Print machine-readable JSON
+      --strict           Exit with an error when warnings are present
+  -h, --help             Print help
 ```
 
 == `calepin compile`

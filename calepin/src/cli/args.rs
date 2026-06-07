@@ -33,6 +33,9 @@ pub enum Command {
     /// Create a new example Typst file
     New(NewArgs),
 
+    /// Check Calepin's local runtime environment
+    Health(HealthArgs),
+
     /// Preprocess, then invoke typst compile
     Compile(CompileArgs),
 
@@ -73,6 +76,21 @@ pub struct NewArgs {
     /// Overwrite the file if it already exists
     #[arg(short, long)]
     pub force: bool,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct HealthArgs {
+    /// Path to project config TOML
+    #[arg(long)]
+    pub config: Option<PathBuf>,
+
+    /// Print machine-readable JSON
+    #[arg(long)]
+    pub json: bool,
+
+    /// Exit with an error when warnings are present
+    #[arg(long)]
+    pub strict: bool,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -166,6 +184,28 @@ macro_rules! cwarn {
 mod tests {
     use super::*;
     use clap::Parser;
+
+    #[test]
+    fn test_health_args() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "health",
+            "--config",
+            "config.toml",
+            "--json",
+            "--strict",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Health(args) => {
+                assert_eq!(args.config, Some(PathBuf::from("config.toml")));
+                assert!(args.json);
+                assert!(args.strict);
+            }
+            other => panic!("expected health command, got {other:?}"),
+        }
+    }
 
     #[test]
     fn test_typst_compile_args() {

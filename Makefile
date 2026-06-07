@@ -148,6 +148,9 @@ cli-reference: build  ## Generate docs/cli.typ from clap help output
 		printf '== `calepin new`\n<calepin-new>\n\n```text\n'; \
 		$$BIN new --help; \
 		printf '```\n\n'; \
+		printf '== `calepin health`\n<calepin-health>\n\n```text\n'; \
+		$$BIN health --help; \
+		printf '```\n\n'; \
 		printf '== `calepin compile`\n<calepin-compile>\n\n```text\n'; \
 		$$BIN compile --help; \
 		printf '```\n\n'; \
