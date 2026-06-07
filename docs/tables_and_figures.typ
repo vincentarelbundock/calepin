@@ -16,21 +16,27 @@
 Tinytable emits raw Typst content directly. Keep `results: "asis"` to pass it
 through into the document:
 
-#calepin.chunk(
-  "r",
-  label: "tinytable-iris",
-  fig-caption: [Hello world!],
-  echo: false,
-  results: "asis",
-  warning: false,
-  message: false,
-)[```r
-# Return raw Typst from tinytable::save_tt("typst").
+````typ
+#calepin.chunk(results: "asis")[
+```r
 library(tinytable)
-tt(head(iris), caption = "Hello world!") |> 
+dat <- head(iris)
+tt(dat, caption = "Hello world!") |> 
   style_tt(i = 1:2, j = 2:3, background = "teal", color = "white") |>
-  save_tt("typst") |> cat()
-```]
+  print('typst')
+```
+]
+````
+
+#calepin.chunk(echo: false, results: "asis")[
+```r
+library(tinytable)
+dat <- head(iris)
+tt(dat, caption = "Hello world!") |> 
+  style_tt(i = 1:2, j = 2:3, background = "teal", color = "white") |>
+  print('typst')
+```
+]
 
 == Multi-plot figures
 <multi-plot-figures>
@@ -41,8 +47,6 @@ Chunks that produce multiple plots can be displayed as one figure. Use
 
 ````typ
 #calepin.chunk(
-  "r",
-  echo: false,
   fig-caption: [Regression diagnostics],
   fig-subcaptions: (
     [Residuals vs fitted],

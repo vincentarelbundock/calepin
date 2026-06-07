@@ -197,14 +197,6 @@ pub fn normalize_engine_results(
                     items.push(stream_item(ResultItemName::Stdout, text));
                 }
             }
-            EngineResult::Asis(text) => {
-                let value = write_typst_result(text)?;
-                items.push(rich_text_item(
-                    ResultItemType::Display,
-                    "text/x-typst",
-                    value,
-                ));
-            }
             EngineResult::Warning(text) => {
                 items.push(diagnostic_item(DiagnosticLevel::Warning, text))
             }
@@ -408,24 +400,6 @@ mod tests {
         assert_eq!(items[0].text.as_deref(), Some("1"));
         assert_eq!(items[1].level, Some(DiagnosticLevel::Warning));
         assert_eq!(items[2].level, Some(DiagnosticLevel::Message));
-    }
-
-    #[test]
-    fn normalizes_engine_asis_to_typst_mime() {
-        let dir = tempfile::tempdir().unwrap();
-        let chunk = chunk(ResultsMode::Asis);
-        let figure = figure_for(&chunk);
-        let items = normalize_engine_results(
-            &chunk,
-            dir.path(),
-            &figure,
-            vec![EngineResult::Asis("#table()[x]".to_string())],
-            |path| path.file_name().unwrap().to_string_lossy().to_string(),
-        )
-        .unwrap();
-        let data = items[0].data.as_ref().unwrap();
-        assert_eq!(data["text/x-typst"]["path"], "fig-demo.typ");
-        assert!(dir.path().join("fig-demo.typ").exists());
     }
 
     #[test]

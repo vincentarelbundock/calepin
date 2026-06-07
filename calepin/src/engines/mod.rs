@@ -18,7 +18,6 @@ pub enum EngineResult {
     Message(String),
     Error(String),
     Plot(PathBuf),
-    Asis(String),
     Preamble(String),
 }
 
@@ -128,7 +127,6 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
 
     let source_prefix = format!("{}_SOURCE:", sentinel);
     let output_prefix = format!("{}_OUTPUT:", sentinel);
-    let asis_prefix = format!("{}_ASIS:", sentinel);
     let error_prefix = format!("{}_ERROR:", sentinel);
     let warning_prefix = format!("{}_WARNING:", sentinel);
     let message_prefix = format!("{}_MESSAGE:", sentinel);
@@ -149,10 +147,6 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
         } else if let Some(text) = part.strip_prefix(&error_prefix) {
             if !text.is_empty() {
                 results.push(EngineResult::Error(text.to_string()));
-            }
-        } else if let Some(text) = part.strip_prefix(&asis_prefix) {
-            if !text.is_empty() {
-                results.push(EngineResult::Asis(text.to_string()));
             }
         } else if let Some(text) = part.strip_prefix(&output_prefix) {
             if let Some(message) = text.strip_prefix(&error_prefix) {

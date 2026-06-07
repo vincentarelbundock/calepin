@@ -39,19 +39,8 @@ const FORMAT_PLACEHOLDER: &str = "__CALEPIN_FORMAT__";
 /// executes them with output/warning/message/error/plot capture, and writes
 /// sentinel-delimited results to stdout.
 const R_BOOTSTRAP: &str = r#"
-# Tell knitr-aware packages (tinytable, gt, etc.) what format we are rendering to.
-# Warning: commented out because it corrupts #block[. This may be tinytable magic behavior for Quarto.
-# local({
-#   options(knitr.in.progress = TRUE)
-#   tryCatch(
-#     if (requireNamespace("knitr", quietly = TRUE)) {
-#       try(knitr::opts_knit$set(rmarkdown.pandoc.to = "typst"), silent = TRUE)
-#     },
-#     error = function(e) NULL
-#   )
-# })
-
-.calepin_has_knitr <- requireNamespace("knitr", quietly = TRUE)
+# Signal to user code and packages that we are running inside calepin.
+options(calepin = TRUE)
 
 # Preamble buffer: R code can call calepin.preamble() to inject content
 # into the document preamble (e.g. \usepackage lines, HTML <head> elements).
@@ -126,7 +115,6 @@ calepin.preamble <- function(text) {
     parts <- character(0)
     warns <- character(0)
     msgs <- character(0)
-    .calepin_env <- environment()
     err_out <- NULL
     device_id <- NA_integer_
     last_plot_state <- NULL
@@ -310,30 +298,14 @@ calepin.preamble <- function(text) {
 
               # Then emit visible return value
               if (.val$visible) {
-                is_asis <- FALSE
-                r <- character(0)
-                if (.calepin_has_knitr) {
-                  r <- capture.output(assign("kp_val", knitr::knit_print(.val$value), envir = .calepin_env))
-                  if (inherits(kp_val, "knit_asis")) {
-                    is_asis <- TRUE
-                    r <- as.character(kp_val)
-                  } else if (length(r) == 0) {
-                    r <- capture.output(print(.val$value))
-                  }
-                } else if (inherits(.val$value, "knit_asis")) {
-                  is_asis <- TRUE
-                  r <- as.character(.val$value)
-                } else {
-                  r <- capture.output(print(.val$value))
-                }
+                r <- capture.output(print(.val$value))
                 if (length(r) > 0) {
                   if (plot_pending_before) .calepin_emit_plot_pending()
                   if (!has_output) {
                     parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
                     src_buf <- character(0)
                   }
-                  tag <- if (is_asis) "_ASIS:" else "_OUTPUT:"
-                  parts <- c(parts, paste0(sentinel, tag, paste(r, collapse = "\n")))
+                  parts <- c(parts, paste0(sentinel, "_OUTPUT:", paste(r, collapse = "\n")))
                 }
               }
             }
@@ -373,37 +345,6 @@ calepin.preamble <- function(text) {
       sz <- file.info(device_path)$size
       has_plot <- is.finite(sz) && sz > .calepin_plot_threshold(dev_name)
       suppressWarnings(file.remove(device_path))
-    }
-
-    # Collect knitr::knit_meta (used by tinytable, gt, etc. for LaTeX dependencies)
-    if (.calepin_has_knitr) {
-      .km <- knitr::knit_meta("get")
-      if (length(.km) > 0) {
-        for (m in .km) {
-          if (inherits(m, "latex_dependency")) {
-            pkg <- m$name
-            opts <- m$options
-            extra <- m$extra_lines
-            if (isTRUE(nzchar(pkg))) {
-              if (!is.null(opts) && length(opts) > 0) {
-                .calepin_preamble_buf <<- c(.calepin_preamble_buf,
-                  paste0("\\usepackage[", paste(opts, collapse = ","), "]{", pkg, "}"))
-              } else {
-                .calepin_preamble_buf <<- c(.calepin_preamble_buf,
-                  paste0("\\usepackage{", pkg, "}"))
-              }
-              if (!is.null(extra) && length(extra) > 0) {
-                .calepin_preamble_buf <<- c(.calepin_preamble_buf, extra)
-              }
-            }
-          } else if (inherits(m, "html_dependency")) {
-            if (!is.null(m$head) && nzchar(m$head)) {
-              .calepin_preamble_buf <<- c(.calepin_preamble_buf, m$head)
-            }
-          }
-        }
-        knitr::knit_meta("clear")
-      }
     }
 
     if (has_plot) {
