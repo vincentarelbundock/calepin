@@ -67,11 +67,8 @@ Options:
           
           Use `basic`, `pico`, or a directory name under the configured themes directory.
 
-      --results <RESULTS>
-          Override results JSON path
-
-      --clean
-          Remove generated results and figures before preprocessing
+      --config <CONFIG>
+          Path to project config TOML
 
   -q, --quiet
           Quiet mode
@@ -98,8 +95,7 @@ Arguments:
 
 Options:
       --format <FORMAT>    Output format passed to typst watch [possible values: pdf, png, svg, html]
-      --results <RESULTS>  Override results JSON path
-      --clean              Remove generated results and figures before preprocessing
+      --config <CONFIG>    Path to project config TOML
   -q, --quiet              Quiet mode
       --timeout <TIMEOUT>  Per-chunk timeout in seconds
   -h, --help               Print help
@@ -129,8 +125,7 @@ Remove `.calepin` directories and generated artifacts
 Usage: calepin clean [OPTIONS]
 
 Options:
-  -d, --depth <DEPTH>   Maximum recursion depth when searching for `.calepin` directories
-      --include-config  Include `config.toml` when deleting `.calepin` directories
-  -y, --yes             Skip interactive confirmation and delete immediately
-  -h, --help            Print help
+  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories
+  -y, --yes            Skip interactive confirmation and delete immediately
+  -h, --help           Print help
 ```

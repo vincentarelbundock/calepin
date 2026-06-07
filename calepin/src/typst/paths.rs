@@ -6,7 +6,6 @@ use crate::typst::model::LayoutPaths;
 pub fn resolve_layout(
     input: &Path,
     root: Option<&Path>,
-    results: Option<&Path>,
 ) -> Result<LayoutPaths> {
     let input_abs =
         absolutize(input).with_context(|| format!("failed to resolve {}", input.display()))?;
@@ -32,11 +31,7 @@ pub fn resolve_layout(
         })?;
     let stem = input_stem(&input_rel)?;
     let base = root_abs.join(".calepin").join(&stem);
-    let results_path = match results {
-        Some(path) if path.is_absolute() => path.to_path_buf(),
-        Some(path) => root_abs.join(path),
-        None => base.join("results.json"),
-    };
+    let results_path = base.join("results.json");
     let work_dir = input_abs
         .parent()
         .map(Path::to_path_buf)
@@ -109,7 +104,7 @@ mod tests {
         std::fs::write(&input, "").unwrap();
         let root = std::fs::canonicalize(dir.path()).unwrap();
 
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         assert_eq!(layout.input_rel, PathBuf::from("chapters/intro.typ"));
         assert_eq!(
@@ -129,7 +124,7 @@ mod tests {
         std::fs::write(&input, "").unwrap();
         let root = std::fs::canonicalize(dir.path()).unwrap();
 
-        let layout = resolve_layout(&input, None, None).unwrap();
+        let layout = resolve_layout(&input, None).unwrap();
 
         assert_eq!(layout.input_rel, PathBuf::from("paper.typ"));
         assert_eq!(

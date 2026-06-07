@@ -1,12 +1,14 @@
 == `config.toml`
 
-`Calepin` looks for `.calepin/config.toml` in the project root to override:
+`Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:
 
-- executable paths (`[executables]`)
-- optional `themes_dir` for user HTML templates
+```bash
+calepin compile --config .calepin/config.toml paper.typ
+```
 
-Anything omitted falls back to Calepin defaults. Relative paths are resolved from
-your project root; plain names like `python3` or `typst` keep using `PATH`.
+If `--config` is omitted, `Calepin` uses defaults.
+
+If provided, `PATH` can be relative to the project root or absolute.
 
 ```toml
 # .calepin/config.toml

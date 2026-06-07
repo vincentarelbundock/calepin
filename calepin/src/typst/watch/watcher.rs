@@ -8,7 +8,6 @@ use anyhow::{Context, Result};
 use notify::RecursiveMode;
 use notify_debouncer_full::new_debouncer;
 
-use crate::config::CONFIG_RELATIVE_PATH;
 
 pub(crate) fn is_write_event(kind: &notify::EventKind) -> bool {
     matches!(
@@ -20,7 +19,12 @@ pub(crate) fn is_write_event(kind: &notify::EventKind) -> bool {
     )
 }
 
-pub(crate) fn is_watch_candidate(root: &Path, preview_output: &Path, path: &Path) -> bool {
+pub(crate) fn is_watch_candidate(
+    root: &Path,
+    preview_output: &Path,
+    config_path: Option<&Path>,
+    path: &Path,
+) -> bool {
     if path == preview_output
         || is_typst_temporary_output(preview_output, path)
         || is_editor_backup(path)
@@ -29,8 +33,11 @@ pub(crate) fn is_watch_candidate(root: &Path, preview_output: &Path, path: &Path
     }
 
     let rel = path.strip_prefix(root).unwrap_or(path);
-    if rel == Path::new(CONFIG_RELATIVE_PATH) {
-        return true;
+    
+    if let Some(config_path) = config_path {
+        if path == config_path {
+            return true;
+        }
     }
 
     let Some(first) = rel.components().next() else {
@@ -80,6 +87,7 @@ fn is_editor_backup(path: &Path) -> bool {
 pub(crate) fn watch_root(
     root: &Path,
     preview_output: &Path,
+    config_path: Option<&Path>,
     stop: Arc<AtomicBool>,
     mut on_change: impl FnMut(&[PathBuf]),
 ) -> Result<()> {
@@ -91,6 +99,14 @@ pub(crate) fn watch_root(
         .canonicalize()
         .with_context(|| format!("watch root not found: {}", root.display()))?;
     let preview_output = preview_output.to_path_buf();
+    let config_path = config_path.map(|path| {
+        let path = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            root.join(path)
+        };
+        path.canonicalize().unwrap_or(path)
+    });
 
     debouncer
         .watch(&root, RecursiveMode::Recursive)
@@ -109,7 +125,7 @@ pub(crate) fn watch_root(
                     }
                     for path in event.event.paths {
                         let path = path.canonicalize().unwrap_or(path);
-                        if is_watch_candidate(&root, &excluded, &path) && !changed.contains(&path) {
+                        if is_watch_candidate(&root, &excluded, config_path.as_deref(), &path) && !changed.contains(&path) {
                             changed.push(path);
                         }
                     }
@@ -144,44 +160,51 @@ mod tests {
     fn watcher_ignores_generated_and_repository_paths() {
         let root = Path::new("/tmp/project");
         let output = root.join("paper.pdf");
-        assert!(!is_watch_candidate(root, &output, &output));
-        assert!(!is_watch_candidate(root, &output, &root.join("XXfo4zsx")));
-        assert!(!is_watch_candidate(root, &output, &root.join("paper.typ~")));
-        assert!(!is_watch_candidate(root, &output, &root.join(".git/index")));
+        assert!(!is_watch_candidate(root, &output, None, &output));
+        assert!(!is_watch_candidate(root, &output, None, &root.join("XXfo4zsx")));
+        assert!(!is_watch_candidate(root, &output, None, &root.join("paper.typ~")));
+        assert!(!is_watch_candidate(root, &output, None, &root.join(".git/index")));
         assert!(!is_watch_candidate(
             root,
             &output,
+            None,
             &root.join("target/debug/x")
         ));
         assert!(!is_watch_candidate(
             root,
             &output,
+            None,
             &root.join("node_modules/pkg/index.js")
         ));
         assert!(!is_watch_candidate(
             root,
             &output,
+            None,
             &root.join(".venv/bin/python")
         ));
         assert!(!is_watch_candidate(
             root,
             &output,
+            None,
             &root.join("editors/vscode/out/extension.js")
         ));
         assert!(!is_watch_candidate(
             root,
             &output,
+            None,
             &root.join("editors/vscode/media/pdfjs/build/pdf.min.mjs")
         ));
         assert!(!is_watch_candidate(
             root,
             &output,
+            None,
             &root.join("editors/vscode/dist/calepin.vsix")
         ));
-        assert!(is_watch_candidate(root, &output, &root.join("paper.typ")));
+        assert!(is_watch_candidate(root, &output, None, &root.join("paper.typ")));
         assert!(is_watch_candidate(
             root,
             &output,
+            None,
             &root.join("data/input.csv")
         ));
     }

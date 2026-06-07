@@ -932,7 +932,7 @@ figure > img {
 
     </style>
 
-<script id="calepin-website-source-data" type="application/json">"== `config.toml`\n\n`Calepin` looks for `.calepin/config.toml` in the project root to override:\n\n- executable paths (`[executables]`)\n- optional `themes_dir` for user HTML templates\n\nAnything omitted falls back to Calepin defaults. Relative paths are resolved from\nyour project root; plain names like `python3` or `typst` keep using `PATH`.\n\n```toml\n# .calepin/config.toml\n\n[executables]\ntypst = \"typst\"                    # Typst binary (can be name or full path)\npython = \".venv/bin/python\"         # Python interpreter\nrscript = \"Rscript\"                # R executable\nmmdc = \"mmdc\"                      # Mermaid\n#dot = \"/opt/homebrew/bin/dot\"     # optional, if needed\n#d2 = \"d2\"                          # optional\n#tectonic = \"tectonic\"              # optional\n#dvisvgm = \"dvisvgm\"                # optional\n#pdf2svg = \"pdf2svg\"                # optional\n\nthemes_dir = \"themes\"               # folder for user template themes\n```\n\nIf `python` is not configured, set `CALEPIN_PYTHON` in the environment to\npick it. If that is absent, Calepin uses a local `.venv` interpreter when\navailable.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"== `config.toml`\n\n`Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:\n\n```bash\ncalepin compile --config .calepin/config.toml paper.typ\n```\n\nIf `--config` is omitted, `Calepin` uses defaults.\n\nIf provided, `PATH` can be relative to the project root or absolute.\n\n```toml\n# .calepin/config.toml\n\n[executables]\ntypst = \"typst\"                    # Typst binary (can be name or full path)\npython = \".venv/bin/python\"         # Python interpreter\nrscript = \"Rscript\"                # R executable\nmmdc = \"mmdc\"                      # Mermaid\n#dot = \"/opt/homebrew/bin/dot\"     # optional, if needed\n#d2 = \"d2\"                          # optional\n#tectonic = \"tectonic\"              # optional\n#dvisvgm = \"dvisvgm\"                # optional\n#pdf2svg = \"pdf2svg\"                # optional\n\nthemes_dir = \"themes\"               # folder for user template themes\n```\n\nIf `python` is not configured, set `CALEPIN_PYTHON` in the environment to\npick it. If that is absent, Calepin uses a local `.venv` interpreter when\navailable."</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -978,25 +978,25 @@ figure > img {
 <li><a href="install.html">Install</a></li>
 <li><a href="config.html" class="active" aria-current="page">Configuration</a></li>
 </ul>
-<p><strong>Features</strong></p>
+<p><strong>Code execution</strong></p>
 <ul>
 <li><a href="options.html">Options</a></li>
-<li><a href="supported-languages.html">Supported Languages</a></li>
+<li><a href="supported-languages.html">Languages</a></li>
 <li><a href="tables_and_figures.html">Tables and figures</a></li>
 </ul>
 <p><strong>Roadmap</strong></p>
 <ul>
-<li><a href="website.html">Website generation</a></li>
+<li><a href="website.html">Website generator</a></li>
 <li><a href="templates.html">Templates</a></li>
 </ul>
 <p><strong>Reference</strong></p>
 <ul>
-<li><a href="cli.html">CLI reference</a></li>
+<li><a href="cli.html">Command line</a></li>
 <li><a href="example.html">Example notebook</a></li>
 </ul></nav>
         </aside>
         <main class="calepin-website-main">
-            <h3 id="config-toml"><code>config.toml</code></h3><p><code>Calepin</code> looks for <code>.calepin/config.toml</code> in the project root to override:</p><ul><li>executable paths (<code>[executables]</code>)</li><li>optional <code>themes_dir</code> for user HTML templates</li></ul><p>Anything omitted falls back to Calepin defaults. Relative paths are resolved from your project root; plain names like <code>python3</code> or <code>typst</code> keep using <code>PATH</code>.</p><pre><code data-lang="toml"><span style="color: #74747c">#</span><span style="color: #74747c"> .calepin/config.toml</span>
+            <h3 id="config-toml"><code>config.toml</code></h3><p><code>Calepin</code> does not auto-discover configuration. For <code>compile</code> and <code>watch</code>, pass the config path explicitly with <code>--config=PATH</code>:</p><pre><code data-lang="bash"><span style="color: #4b69c6">calepin</span> compile --config .calepin/config.toml paper.typ</code></pre><p>If <code>--config</code> is omitted, <code>Calepin</code> uses defaults.</p><p>If provided, <code>PATH</code> can be relative to the project root or absolute.</p><pre><code data-lang="toml"><span style="color: #74747c">#</span><span style="color: #74747c"> .calepin/config.toml</span>
 
 [<span style="color: #4b69c6">executables</span>]
 <span style="color: #4b69c6">typst</span> = <span style="color: #198810">"</span><span style="color: #198810">typst</span><span style="color: #198810">"</span>                    <span style="color: #74747c">#</span><span style="color: #74747c"> Typst binary (can be name or full path)</span>

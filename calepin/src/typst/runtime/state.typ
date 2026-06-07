@@ -9,7 +9,6 @@
   warning: true,
   message: true,
   error: false,
-  item: "all",
   placeholder: auto,
   "fig-device-format": "svg",
   "fig-device-dpi": 150,

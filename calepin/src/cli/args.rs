@@ -134,10 +134,6 @@ pub struct CleanArgs {
     #[arg(short, long)]
     pub depth: Option<usize>,
 
-    /// Include `config.toml` when deleting `.calepin` directories
-    #[arg(long)]
-    pub include_config: bool,
-
     /// Skip interactive confirmation and delete immediately
     #[arg(short, long)]
     pub yes: bool,
@@ -145,13 +141,9 @@ pub struct CleanArgs {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct CommonArgs {
-    /// Override results JSON path
+    /// Path to project config TOML
     #[arg(long)]
-    pub results: Option<PathBuf>,
-
-    /// Remove generated results and figures before preprocessing
-    #[arg(long)]
-    pub clean: bool,
+    pub config: Option<PathBuf>,
 
     /// Quiet mode
     #[arg(short, long)]
@@ -275,9 +267,6 @@ mod tests {
             "out/paper.html",
             "--format",
             "html",
-            "--results",
-            "out/results.json",
-            "--clean",
             "--quiet",
             "--timeout",
             "42",
@@ -292,8 +281,6 @@ mod tests {
                 assert_eq!(args.input, PathBuf::from("paper.typ"));
                 assert_eq!(args.output, Some(PathBuf::from("out/paper.html")));
                 assert_eq!(args.format, Some(CompileFormat::Html));
-                assert_eq!(args.common.results, Some(PathBuf::from("out/results.json")));
-                assert!(args.common.clean);
                 assert!(args.common.quiet);
                 assert_eq!(args.common.timeout, Some(42));
                 assert_eq!(args.typst_args, vec!["--font-path", "fonts"]);
@@ -333,22 +320,7 @@ mod tests {
         match cli.command {
             Command::Clean(args) => {
                 assert_eq!(args.depth, Some(3));
-                assert!(!args.include_config);
                 assert!(args.yes);
-            }
-            other => panic!("expected clean command, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn test_clean_args_include_config() {
-        let cli = Cli::try_parse_from(["calepin", "clean", "--include-config"]).unwrap();
-
-        match cli.command {
-            Command::Clean(args) => {
-                assert!(args.include_config);
-                assert_eq!(args.depth, None);
-                assert!(!args.yes);
             }
             other => panic!("expected clean command, got {other:?}"),
         }

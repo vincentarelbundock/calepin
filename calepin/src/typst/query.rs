@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::collections::HashSet;
 
 use crate::typst::model::{
-    ChunkSpec, DisplayOptions, EngineName, ExecOptions, ItemSelector, RawChunks, ResultsMode,
+    ChunkSpec, DisplayOptions, EngineName, ExecOptions, RawChunks, ResultsMode,
     SetupDefaults,
 };
 
@@ -250,7 +250,6 @@ fn parse_display_options(
         results: results_option(value, "results", &defaults.results)?,
         warning: bool_option(value, "warning", defaults.warning)?,
         message: bool_option(value, "message", defaults.message)?,
-        item: item_option(value, "item", &defaults.item)?,
         placeholder: bool_option(value, "placeholder", defaults.placeholder)?,
         fig_display_width,
         fig_display_height: raw_option(value, "fig-display-height"),
@@ -276,7 +275,6 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         warning: bool_option(value, "warning", base.warning)?,
         message: bool_option(value, "message", base.message)?,
         error: bool_option(value, "error", base.error)?,
-        item: item_option(value, "item", &base.item)?,
         placeholder: bool_option(value, "placeholder", base.placeholder)?,
         fig_device_format: string_option(value, "fig-device-format", &base.fig_device_format)?,
         fig_device_dpi: u32_option(value, "fig-device-dpi", base.fig_device_dpi)?,
@@ -547,14 +545,6 @@ fn results_option(object: &Value, key: &str, default: &str) -> Result<ResultsMod
     let value = string_option(object, key, default)?;
     ResultsMode::parse(&value)
 }
-
-fn item_option(object: &Value, key: &str, default: &ItemSelector) -> Result<ItemSelector> {
-    match value_for(object, key) {
-        None => Ok(default.clone()),
-        Some(value) => ItemSelector::parse(value),
-    }
-}
-
 fn caption_option(object: &Value, key: &str) -> Result<Option<String>> {
     let Some(value) = value_for(object, key) else {
         return Ok(None);
@@ -649,7 +639,7 @@ fn reattach_version_suffix(engine: EngineName, lang: &str, raw_text: &str) -> (E
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{EngineName, ItemSelector, ResultsMode, SetupDefaults};
+    use crate::typst::model::{EngineName, ResultsMode, SetupDefaults};
 
     fn metadata(value: &str) -> String {
         format!(r#"[{{"func":"metadata","value":{value},"label":"<calepin-chunk>"}}]"#)
@@ -680,7 +670,6 @@ mod tests {
               "warning":"auto",
               "message":"auto",
               "error":"auto",
-              "item":"auto",
               "placeholder":"auto",
               "fig-device-format":"auto",
               "fig-device-dpi":"auto",
@@ -736,7 +725,6 @@ mod tests {
               "warning":"auto",
               "message":"auto",
               "error":"auto",
-              "item":"auto",
               "placeholder":"auto",
               "fig-device-format":"auto",
               "fig-device-dpi":"auto",
@@ -765,7 +753,6 @@ mod tests {
             warning: false,
             message: false,
             error: true,
-            item: ItemSelector::LAST,
             placeholder: true,
             fig_device_format: "png".to_string(),
             fig_device_dpi: 300,
@@ -848,7 +835,6 @@ mod tests {
               "warning":true,
               "message":true,
               "error":false,
-              "item":"all",
               "placeholder":false,
               "fig-device-format":"svg",
               "fig-device-dpi":150,
@@ -874,7 +860,6 @@ mod tests {
               "warning":true,
               "message":true,
               "error":false,
-              "item":"all",
               "placeholder":false,
               "fig-device-format":"svg",
               "fig-device-dpi":150,
@@ -903,7 +888,6 @@ mod tests {
               "warning":true,
               "message":true,
               "error":false,
-              "item":"all",
               "placeholder":false,
               "fig-device-format":"svg",
               "fig-device-dpi":150,

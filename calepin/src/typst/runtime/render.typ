@@ -530,32 +530,12 @@
   if results-path == "" {
     return none
   }
-  let item = opts.at("item")
   let results-doc = json(results-path)
   let chunk = results-doc.at("chunks", default: (:)).at(label, default: none)
   if chunk == none {
     panic("calepin results do not contain label `" + label + "`")
   }
   let items = chunk.at("items", default: ())
-  if item == "first" {
-    if items.len() > 0 {
-      return _render-item(items.first(), label, opts)
-    }
-    return none
-  }
-  if item == "last" {
-    if items.len() > 0 {
-      return _render-item(items.last(), label, opts)
-    }
-    return none
-  }
-  if type(item) == int {
-    let idx = if item < 0 { items.len() + item } else { item }
-    if idx >= 0 and idx < items.len() {
-      return _render-item(items.at(idx), label, opts)
-    }
-    return none
-  }
   let image-group = ()
   for result-item in items {
     if _is-image-display-item(result-item, opts) {

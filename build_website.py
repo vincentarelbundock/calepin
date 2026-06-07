@@ -272,21 +272,6 @@ def load_website_config() -> dict:
         raise SystemExit(f"failed to parse {CONFIG_PATH}: {exc}")
 
 
-def write_calepin_config(src_dir: Path) -> None:
-    (src_dir / ".calepin").mkdir(parents=True, exist_ok=True)
-    (src_dir / ".calepin" / "config.toml").write_text(
-        "\n".join(
-            [
-                'themes_dir = "../themes"',
-                "",
-                "[executables]",
-                'python = "../.venv/bin/python"',
-                "",
-            ]
-        )
-    )
-
-
 def embed_source_blob(html_output: Path, source_path: Path) -> None:
     source_payload = json.dumps(source_path.read_text(encoding="utf-8"))
     html_value = html_output.read_text(encoding="utf-8")
@@ -358,6 +343,7 @@ def _compile_document(
             str(html_output),
             "--format=html",
             f"--template={template}",
+            f"--config={CONFIG_PATH}",
             "--quiet",
         ],
         cwd=ROOT,
@@ -375,6 +361,7 @@ def _compile_document(
             str(input_path),
             str(pdf_output),
             "--format=pdf",
+            f"--config={CONFIG_PATH}",
             "--quiet",
         ],
         cwd=ROOT,
@@ -478,8 +465,6 @@ def main() -> None:
 
     clear_previous_outputs(src_dir, out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    write_calepin_config(src_dir)
 
     sidebar_sections, typ_files = build_navigation(src_dir, config)
 

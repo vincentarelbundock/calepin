@@ -92,14 +92,8 @@ pub fn handle_clean(args: CleanArgs) -> Result<()> {
     }
 
     for path in calepin_dirs {
-        if args.include_config {
-            fs::remove_dir_all(&path)
-                .with_context(|| format!("failed to remove {}", path.display()))?;
-            continue;
-        }
-
-        remove_calepin_dir_contents_except_config(&path)
-            .with_context(|| format!("failed to clean {}", path.display()))?;
+        fs::remove_dir_all(&path)
+            .with_context(|| format!("failed to remove {}", path.display()))?;
     }
 
     Ok(())
@@ -116,8 +110,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     }
     let output = preprocess(PreprocessOptions {
         input: args.input,
-        results: args.common.results,
-        clean: args.common.clean,
+        config: args.common.config,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         sync_pages: false,
@@ -172,28 +165,6 @@ fn find_calepin_dirs(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBu
     Ok(out)
 }
 
-fn remove_calepin_dir_contents_except_config(dir: &Path) -> Result<()> {
-    let config_path = dir.join("config.toml");
-    if !dir.is_dir() {
-        return Ok(());
-    }
-
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path == config_path {
-            continue;
-        }
-
-        if entry.file_type()?.is_dir() {
-            fs::remove_dir_all(path)?;
-        } else {
-            fs::remove_file(path)?;
-        }
-    }
-
-    Ok(())
-}
 
 fn confirm_deletion() -> Result<bool> {
     let mut line = String::new();

@@ -1,4 +1,4 @@
-== Options
+= Options
 
 Set defaults with `#calepin.setup` and override per call with
 `#calepin.chunk(...)` or `#calepin.inline(...)`.
@@ -19,7 +19,6 @@ Use one setup block to define defaults for all chunks unless overridden per chun
   [warning], [`true`], [Include warnings emitted by the engine in the output. When `false`, they are suppressed.],
   [message], [`true`], [Include informational messages emitted by the engine (for example R's `message()` output). When `false`, they are suppressed.],
   [results], [`"render"`], [How results are shown: `render` (pretty display of values, images, and tables), `verbatim` (raw output in a code block), `typst` (treat output text as Typst markup and render it), or `hide` (run the code but omit its output).],
-  [item], [`"all"`], [Which result(s) to display: `all`, `first`, `last`, or a 0-based integer index. Negative indices count from the end, so `-1` is the last result.],
   [fig-device-format], [`"svg"`], [Format for figure files written by the engine: `svg`, `png`, `jpeg` (alias `jpg`), or `pdf`. Diagram engines always emit `svg` regardless of this setting.],
   [fig-device-dpi], [`150`], [Resolution in dots per inch for raster formats (`png`, `jpeg`). Ignored for vector formats (`svg`, `pdf`).],
   [fig-device-width], [`6`], [Width of the plotting device, in inches.],
@@ -57,7 +56,7 @@ apply to one chunk's specific output.
 
 Set defaults once near the top of your document:
 
-```typst
+````typst
 #import ".calepin/calepin.typ": calepin
 
 #calepin.setup(
@@ -65,19 +64,21 @@ Set defaults once near the top of your document:
   results: "render",
   fig-display-width: "75%",
 )
-```
+````
 
 Then override per chunk:
 
-```typst
+````typst
 #calepin.chunk(
   "python",
   label: "fit-summary",
   echo: false,
   results: "typst",
 )[
-  import numpy as np
+```python
+import numpy as np
   a = np.array([1, 2, 3])
   sum(a)
 ]
 ```
+````

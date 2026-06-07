@@ -1,10 +1,10 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
 use crate::utils::tools;
 
-pub const CONFIG_RELATIVE_PATH: &str = ".calepin/config.toml";
+
 pub const PYTHON_EXECUTABLE_ENV_VAR: &str = "CALEPIN_PYTHON";
 #[cfg(windows)]
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
@@ -20,12 +20,18 @@ pub struct CalepinConfig {
 }
 
 impl CalepinConfig {
-    pub fn load(root: &Path) -> Result<Self> {
-        let path = config_path(root);
-        if !path.exists() {
+    pub fn load(root: &Path, config_path: Option<&Path>) -> Result<Self> {
+        let Some(path) = config_path else {
             return Ok(Self::default_for_root(root));
+        };
+        let path = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            root.join(path)
+        };
+        if !path.exists() {
+            return Err(anyhow!("config file not found: {}", path.display()));
         }
-
         let contents = std::fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
         let raw: RawCalepinConfig = toml::from_str(&contents)
@@ -134,9 +140,6 @@ struct RawExecutablePaths {
     chrome: Option<PathBuf>,
 }
 
-pub fn config_path(root: &Path) -> PathBuf {
-    root.join(CONFIG_RELATIVE_PATH)
-}
 
 fn tool_path(root: &Path, value: Option<PathBuf>, default: PathBuf) -> PathBuf {
     value
@@ -202,7 +205,7 @@ mod tests {
         let _env_lock = ENV_LOCK.lock().unwrap();
         let _env = EnvVarGuard::unset(PYTHON_EXECUTABLE_ENV_VAR);
         let dir = tempfile::tempdir().unwrap();
-        let config = CalepinConfig::load(dir.path()).unwrap();
+        let config = CalepinConfig::load(dir.path(), None).unwrap();
 
         assert_eq!(config.executables.typst, PathBuf::from("typst"));
         assert_eq!(config.executables.python, PathBuf::from("python3"));
@@ -213,7 +216,7 @@ mod tests {
     fn missing_config_uses_default_themes_dir() {
         let _env_lock = ENV_LOCK.lock().unwrap();
         let dir = tempfile::tempdir().unwrap();
-        let config = CalepinConfig::load(dir.path()).unwrap();
+        let config = CalepinConfig::load(dir.path(), None).unwrap();
 
         assert_eq!(config.themes_dir, dir.path().join("themes"));
     }
@@ -230,7 +233,7 @@ mod tests {
         )
         .unwrap();
 
-        let config = CalepinConfig::load(dir.path()).unwrap();
+        let config = CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
 
         assert_eq!(config.themes_dir, dir.path().join("site/themes"));
     }
@@ -240,7 +243,7 @@ mod tests {
         let _env_lock = ENV_LOCK.lock().unwrap();
         let _env = EnvVarGuard::set(PYTHON_EXECUTABLE_ENV_VAR, "env-python");
         let dir = tempfile::tempdir().unwrap();
-        let config = CalepinConfig::load(dir.path()).unwrap();
+        let config = CalepinConfig::load(dir.path(), None).unwrap();
 
         assert_eq!(config.executables.python, PathBuf::from("env-python"));
     }
@@ -254,7 +257,7 @@ mod tests {
         std::fs::create_dir_all(python.parent().unwrap()).unwrap();
         std::fs::write(&python, "").unwrap();
 
-        let config = CalepinConfig::load(dir.path()).unwrap();
+        let config = CalepinConfig::load(dir.path(), None).unwrap();
 
         assert_eq!(config.executables.python, python);
     }
@@ -276,7 +279,7 @@ chrome = "tools/chrome"
         )
         .unwrap();
 
-        let config = CalepinConfig::load(dir.path()).unwrap();
+        let config = CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
 
         assert_eq!(config.executables.typst, PathBuf::from("typst-dev"));
         assert_eq!(

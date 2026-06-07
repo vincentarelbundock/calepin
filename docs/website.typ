@@ -1,10 +1,6 @@
 = Static website generator
 
-Using Calepin as a static website generator, Calepin can generate a documentation-style site directly from `.typ` sources.
+_Calepin_ can be used as a lightweight static website generator. In fact, the entire _Calepin_ website was itself built using _Calepin_ itself, with the help of a few simple auxiliary scripts.
 
-The current Calepin website was built with Calepin itself, using a few helper
-scripts to compile and assemble the pages.
-
-In the near term, these helpers are planned to become first-class features of the
-`calepin` app, so Calepin will continue as both a computational notebook and
-static site generator.
+In the near term, these scripts will be ported to become first-class features of the
+_Calepin_ app, which will then continue as both a computational notebook and static site generator.

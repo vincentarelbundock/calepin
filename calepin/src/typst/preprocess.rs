@@ -18,8 +18,7 @@ use crate::typst::sync::write_page_sync;
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
     pub input: PathBuf,
-    pub results: Option<PathBuf>,
-    pub clean: bool,
+    pub config: Option<PathBuf>,
     pub quiet: bool,
     pub timeout: Option<u64>,
     pub sync_pages: bool,
@@ -42,7 +41,6 @@ pub struct PreprocessPlan {
     chunks: Vec<ChunkSpec>,
     cwd: PathBuf,
     timeout: Option<Duration>,
-    clean: bool,
     quiet: bool,
     sync_pages: bool,
 }
@@ -56,9 +54,8 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let mut layout = resolve_layout(
         &options.input,
         None,
-        options.results.as_deref(),
     )?;
-    let config = CalepinConfig::load(&layout.root)?;
+    let config = CalepinConfig::load(&layout.root, options.config.as_deref())?;
 
     write_runtime(&layout.root)?;
     layout.render_input = write_render_wrapper(&layout, &[])?;
@@ -107,7 +104,6 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         chunks,
         cwd,
         timeout,
-        clean: options.clean,
         quiet: options.quiet,
         sync_pages: options.sync_pages,
     })
@@ -167,10 +163,6 @@ fn write_render_wrapper(layout: &LayoutPaths, jupyter_kernels: &[&str]) -> Resul
 }
 
 pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
-    if plan.clean {
-        clean_outputs(&plan.layout)?;
-    }
-
     let staged = tempfile::Builder::new()
         .prefix("calepin-figures-")
         .tempdir()
@@ -447,22 +439,10 @@ fn path_fingerprint(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
-fn clean_outputs(layout: &LayoutPaths) -> Result<()> {
-    if layout.results_path.exists() {
-        std::fs::remove_file(&layout.results_path)
-            .with_context(|| format!("failed to remove {}", layout.results_path.display()))?;
-    }
-    if layout.figures_dir.exists() {
-        std::fs::remove_dir_all(&layout.figures_dir)
-            .with_context(|| format!("failed to remove {}", layout.figures_dir.display()))?;
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{DisplayOptions, ItemSelector, ResultsMode};
+    use crate::typst::model::{DisplayOptions, ResultsMode};
     use crate::typst::paths::slash_path;
 
     #[test]
@@ -470,7 +450,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
         assert_eq!(slash_path(&layout.input_rel), "paper.typ");
     }
 
@@ -663,7 +643,6 @@ mod tests {
                 results: ResultsMode::Verbatim,
                 warning: true,
                 message: true,
-                item: ItemSelector::ALL,
                 placeholder: true,
                 fig_display_width: None,
                 fig_display_height: None,

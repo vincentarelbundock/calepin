@@ -328,7 +328,7 @@ fn lines(code: &str) -> Vec<String> {
 mod tests {
     use super::*;
     use crate::typst::model::{
-        DisplayOptions, ExecOptions, ItemSelector, ResultsMode, SetupDefaults,
+        DisplayOptions, ExecOptions, ResultsMode, SetupDefaults,
     };
 
     fn chunk(results: ResultsMode) -> ChunkSpec {
@@ -352,7 +352,6 @@ mod tests {
                 results,
                 warning: true,
                 message: true,
-                item: ItemSelector::ALL,
                 placeholder: true,
                 fig_display_width: None,
                 fig_display_height: None,

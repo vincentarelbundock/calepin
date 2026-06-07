@@ -307,7 +307,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         let args = typst_compile_args(
             &layout,
@@ -333,7 +333,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         let args = typst_compile_args(
             &layout,
@@ -360,7 +360,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         let args = typst_compile_args(
             &layout,
@@ -386,7 +386,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         assert_eq!(
             resolve_output_path(&layout, Some(Path::new("out/report.pdf")), Some("pdf")),
@@ -410,7 +410,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         let args = typst_compile_args(&layout, None, Some("pdf"), &[], None);
         let args: Vec<_> = args
@@ -426,7 +426,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         let args = typst_watch_args(
             &layout,
@@ -457,7 +457,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         let args = typst_watch_args(
             &layout,
@@ -480,7 +480,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
         std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path()), None).unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         let args = typst_watch_args(
             &layout,

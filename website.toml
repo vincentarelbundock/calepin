@@ -1,3 +1,8 @@
+themes_dir = "../themes"
+
+[executables]
+python = "../.venv/bin/python"
+
 [sidebar]
 
 [[sidebar.section]]
@@ -16,7 +21,7 @@ title = "Getting started"
   label = "Configuration"
 
 [[sidebar.section]]
-title = "Features"
+title = "Code execution"
 
   [[sidebar.section.item]]
   path = "options.typ"
@@ -24,7 +29,7 @@ title = "Features"
 
   [[sidebar.section.item]]
   path = "supported-languages.typ"
-  label = "Supported Languages"
+  label = "Languages"
 
   [[sidebar.section.item]]
   path = "tables_and_figures.typ"
@@ -35,7 +40,7 @@ title = "Roadmap"
 
   [[sidebar.section.item]]
   path = "website.typ"
-  label = "Website generation"
+  label = "Website generator"
 
   [[sidebar.section.item]]
   path = "templates.typ"
@@ -46,7 +51,7 @@ title = "Reference"
 
   [[sidebar.section.item]]
   path = "cli.typ"
-  label = "CLI reference"
+  label = "Command line"
 
   [[sidebar.section.item]]
   path = "example.typ"

@@ -89,44 +89,6 @@ impl ResultsMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ItemSelector {
-    Named(ItemSelectorName),
-    Index(isize),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ItemSelectorName {
-    All,
-    First,
-    Last,
-}
-
-impl ItemSelector {
-    pub const ALL: Self = Self::Named(ItemSelectorName::All);
-    pub const FIRST: Self = Self::Named(ItemSelectorName::First);
-    pub const LAST: Self = Self::Named(ItemSelectorName::Last);
-
-    pub fn parse(value: &Value) -> anyhow::Result<Self> {
-        if let Some(n) = value.as_i64() {
-            return Ok(Self::Index(n as isize));
-        }
-        let Some(s) = value.as_str() else {
-            return Err(anyhow::anyhow!(
-                "item must be `all`, `first`, `last`, or an integer"
-            ));
-        };
-        match s {
-            "all" => Ok(Self::ALL),
-            "first" => Ok(Self::FIRST),
-            "last" => Ok(Self::LAST),
-            other => Err(anyhow::anyhow!("unsupported item selector `{}`", other)),
-        }
-    }
-}
-
 /// Which plain fenced blocks auto-run as chunks: none, every engine, or a
 /// specific set of engine names.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -155,7 +117,6 @@ pub struct SetupDefaults {
     pub warning: bool,
     pub message: bool,
     pub error: bool,
-    pub item: ItemSelector,
     pub placeholder: bool,
     pub fig_device_format: String,
     pub fig_device_dpi: u32,
@@ -178,7 +139,6 @@ impl Default for SetupDefaults {
             warning: true,
             message: true,
             error: false,
-            item: ItemSelector::ALL,
             placeholder: true,
             fig_device_format: "svg".to_string(),
             fig_device_dpi: 150,
@@ -211,7 +171,6 @@ pub struct DisplayOptions {
     pub results: ResultsMode,
     pub warning: bool,
     pub message: bool,
-    pub item: ItemSelector,
     pub placeholder: bool,
     pub fig_display_width: Option<Value>,
     pub fig_display_height: Option<Value>,

@@ -25,8 +25,7 @@ const WATCH_PID_FILENAME: &str = "watch.pid";
 fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
     PreprocessOptions {
         input: args.input.clone(),
-        results: args.common.results.clone(),
-        clean: args.common.clean,
+        config: args.common.config.clone(),
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         sync_pages,
@@ -128,6 +127,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         let result = watcher::watch_root(
             &watcher_root,
             &watcher_output,
+            watcher_args.common.config.as_deref(),
             Arc::clone(&watcher_stop),
             move |changed| match prepare_preprocess_plan(options.clone()) {
                 Ok(plan) => {
@@ -192,7 +192,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
 pub fn run_stop(args: StopArgs) -> Result<()> {
     match args.input {
         Some(input) => {
-            let layout = resolve_layout(&input, None, None)
+            let layout = resolve_layout(&input, None)
                 .with_context(|| format!("failed to resolve watch context from {}", input.display()))?;
             let watch_pid_path = watch_pid_file_path(&layout.results_path);
             stop_watch_from_pid_file(&watch_pid_path)?;
