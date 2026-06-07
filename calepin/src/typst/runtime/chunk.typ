@@ -56,17 +56,13 @@
     label-step
     [#metadata((label: label, page: here().page())) <calepin-page>]
 
-    if options.at("output") == false {
-      none
-    } else {
-      if show-echo {
-        _input-block(code, lang: display-lang)
-      } else if results-path == "" {
-        _input-block(code, lang: display-lang)
-      }
-      if results-path != "" {
-        _render-results(label, options)
-      }
+    if show-echo {
+      _input-block(code, lang: display-lang)
+    } else if results-path == "" {
+      _input-block(code, lang: display-lang)
+    }
+    if results-path != "" {
+      _render-results(label, options)
     }
   }
 }

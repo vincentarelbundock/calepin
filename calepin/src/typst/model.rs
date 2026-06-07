@@ -72,15 +72,17 @@ impl fmt::Display for EngineName {
 #[serde(rename_all = "lowercase")]
 pub enum ResultsMode {
     Verbatim,
-    Asis,
+    Render,
+    Typst,
     Hide,
 }
 
 impl ResultsMode {
     pub fn parse(value: &str) -> anyhow::Result<Self> {
         match value {
-            "verbatim" | "markup" => Ok(Self::Verbatim),
-            "asis" => Ok(Self::Asis),
+            "verbatim" => Ok(Self::Verbatim),
+            "render" => Ok(Self::Render),
+            "typst" => Ok(Self::Typst),
             "hide" => Ok(Self::Hide),
             other => Err(anyhow::anyhow!("unsupported results mode `{}`", other)),
         }
@@ -153,7 +155,6 @@ pub struct SetupDefaults {
     pub warning: bool,
     pub message: bool,
     pub error: bool,
-    pub format: Vec<String>,
     pub item: ItemSelector,
     pub placeholder: bool,
     pub fig_device_format: String,
@@ -173,11 +174,10 @@ impl Default for SetupDefaults {
             echo: true,
             eval: true,
             output: true,
-            results: "verbatim".to_string(),
+            results: "render".to_string(),
             warning: true,
             message: true,
             error: false,
-            format: default_format_order(),
             item: ItemSelector::ALL,
             placeholder: true,
             fig_device_format: "svg".to_string(),
@@ -191,16 +191,6 @@ impl Default for SetupDefaults {
             raw_chunks: RawChunks::Off,
         }
     }
-}
-
-pub fn default_format_order() -> Vec<String> {
-    vec![
-        "image/svg+xml".to_string(),
-        "image/png".to_string(),
-        "text/x-typst".to_string(),
-        "text/plain".to_string(),
-        "application/json".to_string(),
-    ]
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -221,7 +211,6 @@ pub struct DisplayOptions {
     pub results: ResultsMode,
     pub warning: bool,
     pub message: bool,
-    pub format: Vec<String>,
     pub item: ItemSelector,
     pub placeholder: bool,
     pub fig_display_width: Option<Value>,
@@ -235,7 +224,6 @@ pub struct DisplayOptions {
     pub fig_subcaptions: Option<Vec<String>>,
     pub fig_layout_columns: Option<Value>,
     pub fig_layout_rows: Option<Value>,
-    pub fig_layout_design: Option<Value>,
     pub kind: Option<String>,
 }
 

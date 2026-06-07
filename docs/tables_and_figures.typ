@@ -13,10 +13,10 @@
 == Tables
 <tables>
 
-Tinytable emits raw Typst content directly. Keep `results: "asis"` to pass it through into the document. Note that at the time of writing, Typst HTML export did not support the complex type of table created below. Switch to PDF view to see the full effect.
+Tinytable emits raw Typst content directly. Keep `results: "typst"` to pass it through into the document. Note that at the time of writing, Typst HTML export did not support the complex type of table created below. Switch to PDF view to see the full effect.
 
 ````typ
-#calepin.chunk(results: "asis")[
+#calepin.chunk(results: "typst")[
 ```r
 library(tinytable)
 dat <- head(iris)
@@ -27,7 +27,7 @@ tt(dat, caption = "Hello world!") |>
 ]
 ````
 
-#calepin.chunk(echo: false, results: "asis")[
+#calepin.chunk(echo: false, results: "typst")[
 ```r
 library(tinytable)
 dat <- head(iris)

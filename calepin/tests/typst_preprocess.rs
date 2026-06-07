@@ -285,8 +285,7 @@ fn compile_accepts_canonical_figure_options() {
   fig-subcaptions: ("A", "B"),
   fig-layout-columns: (1fr, 1fr),
   fig-layout-rows: auto,
-  fig-layout-design: "A B",
-)[`
+)[` 
 import matplotlib.pyplot as plt
 plt.plot([1, 2, 3], [1, 4, 9])
 `]

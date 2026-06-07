@@ -173,9 +173,7 @@ fn write_page_sync_document(path: &Path, document: &PageSyncDocument) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{
-        default_format_order, DisplayOptions, EngineName, ExecOptions, ItemSelector, ResultsMode,
-    };
+use crate::typst::model::{DisplayOptions, EngineName, ExecOptions, ItemSelector, ResultsMode};
 
     #[test]
     fn parses_page_anchor_query_output() {
@@ -243,7 +241,6 @@ print(2)
                 results: ResultsMode::Verbatim,
                 warning: true,
                 message: true,
-                format: default_format_order(),
                 item: ItemSelector::ALL,
                 placeholder: true,
                 fig_display_width: None,
@@ -257,7 +254,6 @@ print(2)
                 fig_subcaptions: None,
                 fig_layout_columns: None,
                 fig_layout_rows: None,
-                fig_layout_design: None,
                 kind: None,
             },
             ordinal: 0,

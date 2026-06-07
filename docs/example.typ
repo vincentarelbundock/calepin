@@ -8,7 +8,7 @@
 #calepin.setup(
   echo: true,
   eval: true,
-  results: "verbatim",
+  results: "render",
 )
 
 #title()
@@ -17,9 +17,7 @@ This notebook demonstrates the #emph[Calepin] executable Typst workflow: code ch
 
 = Language-specific settings
 
-`#calepin.setup()` sets document-wide defaults. Pass `lang:` to narrow those defaults to chunks of a specific language.
-
-#calepin.setup(lang: "python", echo: true)
+`#calepin.setup()` sets document-wide defaults for all chunks unless overridden per chunk.
 
 #calepin.chunk("python", label: "python-lang-default")[
 ```python
@@ -45,10 +43,10 @@ print("#strong[42]")
 ```
 
 When the generated result should become part of the Typst document, set
-`results` to `"asis"`. Hiding the source lets the rendered document read like
+`results` to `"typst"`. Hiding the source lets the rendered document read like
 authored Typst while still keeping the value produced by the chunk.
 
-#calepin.chunk(echo: false, results: "asis")[
+#calepin.chunk(echo: false, results: "typst")[
 ```python
 print("#strong[42 in Typst]")
 ```

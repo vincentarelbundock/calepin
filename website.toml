@@ -20,7 +20,7 @@ title = "Features"
 
   [[sidebar.section.item]]
   path = "options.typ"
-  label = "Global options"
+  label = "Options"
 
   [[sidebar.section.item]]
   path = "supported-languages.typ"

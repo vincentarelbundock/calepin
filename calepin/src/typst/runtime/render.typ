@@ -230,7 +230,7 @@
 
 #let _display-selection(item, opts) = {
   let data = item.at("data", default: (:))
-  _select-representation(data, opts.at("format"))
+  _select-representation(data)
 }
 
 #let _is-image-mime(mime) = mime == "image/svg+xml" or mime == "image/png"
@@ -504,12 +504,10 @@
     let text = item.at("text", default: "")
     if results-mode == "hide" {
       none
-    } else if inline-output and results-mode == "asis" {
+    } else if results-mode == "typst" {
       eval(text, mode: "markup")
     } else if inline-output {
       text
-    } else if results-mode == "asis" {
-      eval(text, mode: "markup")
     } else {
       _output-block(text)
     }

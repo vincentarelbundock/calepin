@@ -186,7 +186,7 @@ pub fn normalize_engine_results(
         match result {
             EngineResult::Source(_) | EngineResult::Preamble(_) => {}
             EngineResult::Output(text) => {
-                if matches!(chunk.display_options.results, ResultsMode::Asis) {
+                if matches!(chunk.display_options.results, ResultsMode::Typst) {
                     let value = write_typst_result(text)?;
                     items.push(rich_text_item(
                         ResultItemType::Display,
@@ -352,7 +352,6 @@ mod tests {
                 results,
                 warning: true,
                 message: true,
-                format: defaults.format,
                 item: ItemSelector::ALL,
                 placeholder: true,
                 fig_display_width: None,
@@ -366,7 +365,6 @@ mod tests {
                 fig_subcaptions: None,
                 fig_layout_columns: None,
                 fig_layout_rows: None,
-                fig_layout_design: None,
                 kind: None,
             },
             ordinal: 0,
@@ -403,9 +401,9 @@ mod tests {
     }
 
     #[test]
-    fn asis_results_coerces_stdout_to_typst_mime() {
+    fn typst_results_coerces_stdout_to_typst_mime() {
         let dir = tempfile::tempdir().unwrap();
-        let chunk = chunk(ResultsMode::Asis);
+        let chunk = chunk(ResultsMode::Typst);
         let figure = figure_for(&chunk);
         let items = normalize_engine_results(
             &chunk,

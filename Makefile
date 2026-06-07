@@ -6,7 +6,6 @@ VSCODE_DIR := editors/vscode
 VSCODE_OUT := $(VSCODE_DIR)/dist
 VSCODE_BIN_PATH ?= $(if $(BIN_PATH),$(BIN_PATH),target/release/calepin)
 VSCODE_CLI := code
-CALEPIN := uv run calepin
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
   POSITRON_CLI := /Applications/Positron.app/Contents/Resources/app/bin/code
@@ -140,23 +139,28 @@ positron: vscode-package  ## Install Calepin for Typst in Positron
 # Documentation targets
 # ==============================================================================
 
-cli-reference:  ## Generate docs-src/cli.md from clap help output
-	@set -eu; { \
-		printf '%s\n' '---' 'title: CLI reference' '---' ''; \
-		printf '# CLI reference\n\n'; \
-		printf '## `calepin`\n\n```text\n'; \
-		$(CALEPIN) --help; \
+cli-reference: build  ## Generate docs/cli.typ from clap help output
+	@set -eu; BIN=target/debug/calepin; { \
+		printf '= CLI reference\n<cli-reference>\n\n'; \
+		printf '== `calepin`\n<calepin>\n\n```text\n'; \
+		$$BIN --help; \
 		printf '```\n\n'; \
-		printf '## `calepin compile`\n\n```text\n'; \
-		$(CALEPIN) compile --help; \
+		printf '== `calepin new`\n<calepin-new>\n\n```text\n'; \
+		$$BIN new --help; \
 		printf '```\n\n'; \
-		printf '## `calepin watch`\n\n```text\n'; \
-		$(CALEPIN) watch --help; \
+		printf '== `calepin compile`\n<calepin-compile>\n\n```text\n'; \
+		$$BIN compile --help; \
 		printf '```\n\n'; \
-		printf '## `calepin stop`\n\n```text\n'; \
-		$(CALEPIN) stop --help; \
+		printf '== `calepin watch`\n<calepin-watch>\n\n```text\n'; \
+		$$BIN watch --help; \
+		printf '```\n\n'; \
+		printf '== `calepin stop`\n<calepin-stop>\n\n```text\n'; \
+		$$BIN stop --help; \
+		printf '```\n\n'; \
+		printf '== `calepin clean`\n<calepin-clean>\n\n```text\n'; \
+		$$BIN clean --help; \
 		printf '```\n'; \
-	} > docs-src/cli.md
+	} > docs/cli.typ
 
 website:  ## Render docs/ via build_website.py
 	@set -eu; \

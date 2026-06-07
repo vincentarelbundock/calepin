@@ -932,7 +932,7 @@ figure > img {
 
     </style>
 
-<script id="calepin-website-source-data" type="application/json">"= CLI reference\n<cli-reference>\n\n== `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  stop     Stop a running calepin watch process\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n== `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file\n\n  [OUTPUT]\n          Output path passed to typst compile\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --template <TEMPLATE>\n          Output template applied after compilation.\n\n          Use `basic` or `pico` to apply a built-in HTML theme.\n\n          Possible values:\n          - basic: Render HTML using the built-in `basic` theme\n          - pico:  Render HTML using the built-in `pico` theme\n\n      --results <RESULTS>\n          Override results JSON path\n\n      --clean\n          Remove generated results and figures before preprocessing\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>          Input .typ file\n  [OUTPUT]         Output path passed to typst watch\n  [TYPST_ARGS]...  Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>    Output format passed to typst watch [possible values: pdf, png, svg, html]\n      --results <RESULTS>  Override results JSON path\n      --clean              Remove generated results and figures before preprocessing\n  -q, --quiet              Quiet mode\n      --timeout <TIMEOUT>  Per-chunk timeout in seconds\n  -h, --help               Print help\n```\n\n== `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"= CLI reference\n<cli-reference>\n\n== `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  stop     Stop a running calepin watch process\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n== `calepin new`\n<calepin-new>\n\n```text\nCreate a new example Typst file\n\nUsage: calepin new [OPTIONS] <PATH>\n\nArguments:\n  <PATH>  Path to the new .typ file\n\nOptions:\n  -f, --force  Overwrite the file if it already exists\n  -h, --help   Print help\n```\n\n== `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file\n\n  [OUTPUT]\n          Output path passed to typst compile\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --template <TEMPLATE>\n          Output template name applied after compilation.\n          \n          Use `basic`, `pico`, or a directory name under the configured themes directory.\n\n      --results <RESULTS>\n          Override results JSON path\n\n      --clean\n          Remove generated results and figures before preprocessing\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>          Input .typ file\n  [OUTPUT]         Output path passed to typst watch\n  [TYPST_ARGS]...  Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>    Output format passed to typst watch [possible values: pdf, png, svg, html]\n      --results <RESULTS>  Override results JSON path\n      --clean              Remove generated results and figures before preprocessing\n  -q, --quiet              Quiet mode\n      --timeout <TIMEOUT>  Per-chunk timeout in seconds\n  -h, --help               Print help\n```\n\n== `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n\n== `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>   Maximum recursion depth when searching for `.calepin` directories\n      --include-config  Include `config.toml` when deleting `.calepin` directories\n  -y, --yes             Skip interactive confirmation and delete immediately\n  -h, --help            Print help\n```\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -980,7 +980,7 @@ figure > img {
 </ul>
 <p><strong>Features</strong></p>
 <ul>
-<li><a href="options.html">Global options</a></li>
+<li><a href="options.html">Options</a></li>
 <li><a href="supported-languages.html">Supported Languages</a></li>
 <li><a href="tables_and_figures.html">Tables and figures</a></li>
 </ul>
@@ -1005,11 +1005,21 @@ Commands:
   compile  Preprocess, then invoke typst compile
   watch    Watch, preprocess, and delegate recompiles to typst watch
   stop     Stop a running calepin watch process
+  clean    Remove `.calepin` directories and generated artifacts
   help     Print this message or the help of the given subcommand(s)
 
 Options:
   -v, --version  Print version
-  -h, --help     Print help</code></pre><h3 id="calepin-compile"><code>calepin compile</code></h3><pre><code data-lang="text">Preprocess, then invoke typst compile
+  -h, --help     Print help</code></pre><h3 id="calepin-new"><code>calepin new</code></h3><pre><code data-lang="text">Create a new example Typst file
+
+Usage: calepin new [OPTIONS] &lt;PATH>
+
+Arguments:
+  &lt;PATH>  Path to the new .typ file
+
+Options:
+  -f, --force  Overwrite the file if it already exists
+  -h, --help   Print help</code></pre><h3 id="calepin-compile"><code>calepin compile</code></h3><pre><code data-lang="text">Preprocess, then invoke typst compile
 
 Usage: calepin compile [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...
 
@@ -1030,13 +1040,9 @@ Options:
           [possible values: pdf, png, svg, html]
 
       --template &lt;TEMPLATE>
-          Output template applied after compilation.
-
-          Use `basic` or `pico` to apply a built-in HTML theme.
-
-          Possible values:
-          - basic: Render HTML using the built-in `basic` theme
-          - pico:  Render HTML using the built-in `pico` theme
+          Output template name applied after compilation.
+          
+          Use `basic`, `pico`, or a directory name under the configured themes directory.
 
       --results &lt;RESULTS>
           Override results JSON path
@@ -1074,7 +1080,15 @@ Arguments:
   [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory
 
 Options:
-  -h, --help  Print help</code></pre>
+  -h, --help  Print help</code></pre><h3 id="calepin-clean"><code>calepin clean</code></h3><pre><code data-lang="text">Remove `.calepin` directories and generated artifacts
+
+Usage: calepin clean [OPTIONS]
+
+Options:
+  -d, --depth &lt;DEPTH>   Maximum recursion depth when searching for `.calepin` directories
+      --include-config  Include `config.toml` when deleting `.calepin` directories
+  -y, --yes             Skip interactive confirmation and delete immediately
+  -h, --help            Print help</code></pre>
         </main>
         
         <aside class="calepin-website-toc">
@@ -1086,11 +1100,15 @@ Options:
                     
                     <li class="level-3"><a href="#calepin">calepin</a></li>
                     
+                    <li class="level-3"><a href="#calepin-new">calepin new</a></li>
+                    
                     <li class="level-3"><a href="#calepin-compile">calepin compile</a></li>
                     
                     <li class="level-3"><a href="#calepin-watch">calepin watch</a></li>
                     
                     <li class="level-3"><a href="#calepin-stop">calepin stop</a></li>
+                    
+                    <li class="level-3"><a href="#calepin-clean">calepin clean</a></li>
                     
                 </ul>
             </nav>

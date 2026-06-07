@@ -5,12 +5,10 @@
 #let _base-options = (
   echo: true,
   eval: true,
-  output: true,
-  results: "verbatim",
+  results: "render",
   warning: true,
   message: true,
   error: false,
-  format: auto,
   item: "all",
   placeholder: auto,
   "fig-device-format": "svg",
@@ -29,11 +27,10 @@
   "fig-subcaptions": none,
   "fig-layout-columns": auto,
   "fig-layout-rows": auto,
-  "fig-layout-design": auto,
   kind: auto,
   "raw-chunks": false,
 )
-#let _setup-defaults = state("calepin-setup-defaults", (default: _base-options, langs: (:)))
+#let _setup-defaults = state("calepin-setup-defaults", (default: _base-options))
 
 #let _call-extra-defaults = (
   label: none,
@@ -85,10 +82,7 @@
   }
 }
 
-#let _select-representation(data, format) = {
-  if format != auto {
-    return data.at(format, default: none)
-  }
+#let _select-representation(data) = {
   for mime in ("image/svg+xml", "image/png", "text/x-typst", "text/plain", "application/json") {
     let value = data.at(mime, default: none)
     if value != none {

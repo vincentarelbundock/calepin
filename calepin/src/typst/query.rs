@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use serde_json::Value;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 
 use crate::typst::model::{
     ChunkSpec, DisplayOptions, EngineName, ExecOptions, ItemSelector, RawChunks, ResultsMode,
@@ -45,23 +45,13 @@ pub fn parse_chunks(query_json: &str, defaults: Option<SetupConfig>) -> Result<V
 #[derive(Debug, Clone, PartialEq)]
 pub struct SetupConfig {
     pub defaults: SetupDefaults,
-    pub lang_defaults: BTreeMap<String, SetupDefaults>,
 }
 
 impl Default for SetupConfig {
     fn default() -> Self {
         Self {
             defaults: SetupDefaults::default(),
-            lang_defaults: BTreeMap::new(),
         }
-    }
-}
-
-impl SetupConfig {
-    fn defaults_for_engine<'a>(&'a self, engine: &EngineName) -> &'a SetupDefaults {
-        self.lang_defaults
-            .get(engine.as_str())
-            .unwrap_or(&self.defaults)
     }
 }
 
@@ -86,7 +76,7 @@ fn parse_chunk_metadata(
     ordinal: usize,
 ) -> Result<()> {
     let engine = parse_engine(value)?;
-    let defaults = config.defaults_for_engine(&engine);
+    let defaults = &config.defaults;
     let code = extract_code(value.get("body").unwrap_or(&Value::Null), label)?;
     let fig_display_width =
         raw_option(value, "fig-display-width").or_else(|| defaults.fig_display_width.clone());
@@ -156,7 +146,7 @@ fn parse_chunk_raw_block(
     // (e.g. ```julia-1.2 → lang="julia-1", text=".2\n...").
     let (engine, code) = reattach_version_suffix(engine, lang, raw_text);
     // Allow if the original lang OR the reattached engine name is permitted.
-    let defaults = config.defaults_for_engine(&engine);
+    let defaults = &config.defaults;
     if !defaults.raw_chunks.allows(lang) && !defaults.raw_chunks.allows(engine.as_str()) {
         return Ok(None);
     }
@@ -214,19 +204,12 @@ pub fn parse_setup_config(query_json: &str) -> Result<Option<SetupConfig>> {
 
     let mut config = SetupConfig::default();
     for value in values {
-        if let Some(lang) = opt_string_option(&value, "lang")? {
-            let lang = EngineName::parse(&lang)?.as_str().to_string();
-            let base = config
-                .lang_defaults
-                .get(&lang)
-                .unwrap_or(&config.defaults)
-                .clone();
-            config
-                .lang_defaults
-                .insert(lang, parse_setup_defaults(&value, &base)?);
-        } else {
-            config.defaults = parse_setup_defaults(&value, &config.defaults)?;
+        if value.get("lang").is_some() {
+            return Err(anyhow!(
+                "`lang` is no longer supported in #calepin.setup; use a single setup call for document-wide defaults"
+            ));
         }
+        config.defaults = parse_setup_defaults(&value, &config.defaults)?;
     }
 
     Ok(Some(config))
@@ -267,7 +250,6 @@ fn parse_display_options(
         results: results_option(value, "results", &defaults.results)?,
         warning: bool_option(value, "warning", defaults.warning)?,
         message: bool_option(value, "message", defaults.message)?,
-        format: format_option(value, "format", &defaults.format)?,
         item: item_option(value, "item", &defaults.item)?,
         placeholder: bool_option(value, "placeholder", defaults.placeholder)?,
         fig_display_width,
@@ -281,7 +263,6 @@ fn parse_display_options(
         fig_subcaptions: caption_list_option(value, "fig-subcaptions")?,
         fig_layout_columns: raw_option(value, "fig-layout-columns"),
         fig_layout_rows: raw_option(value, "fig-layout-rows"),
-        fig_layout_design: raw_option(value, "fig-layout-design"),
         kind: opt_string_option(value, "kind")?,
     })
 }
@@ -295,7 +276,6 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         warning: bool_option(value, "warning", base.warning)?,
         message: bool_option(value, "message", base.message)?,
         error: bool_option(value, "error", base.error)?,
-        format: format_option(value, "format", &base.format)?,
         item: item_option(value, "item", &base.item)?,
         placeholder: bool_option(value, "placeholder", base.placeholder)?,
         fig_device_format: string_option(value, "fig-device-format", &base.fig_device_format)?,
@@ -568,28 +548,6 @@ fn results_option(object: &Value, key: &str, default: &str) -> Result<ResultsMod
     ResultsMode::parse(&value)
 }
 
-fn format_option(object: &Value, key: &str, default: &[String]) -> Result<Vec<String>> {
-    match value_for(object, key) {
-        None => Ok(default.to_vec()),
-        Some(value) => {
-            if let Some(s) = value.as_str() {
-                return Ok(vec![s.to_string()]);
-            }
-            let Some(array) = value.as_array() else {
-                return Err(anyhow!("`{}` must be a string, array, or auto", key));
-            };
-            array
-                .iter()
-                .map(|item| {
-                    item.as_str()
-                        .map(ToOwned::to_owned)
-                        .ok_or_else(|| anyhow!("`{}` array values must be strings", key))
-                })
-                .collect()
-        }
-    }
-}
-
 fn item_option(object: &Value, key: &str, default: &ItemSelector) -> Result<ItemSelector> {
     match value_for(object, key) {
         None => Ok(default.clone()),
@@ -704,7 +662,6 @@ mod tests {
     fn setup_config_with(defaults: SetupDefaults) -> SetupConfig {
         SetupConfig {
             defaults,
-            lang_defaults: BTreeMap::new(),
         }
     }
 
@@ -719,11 +676,10 @@ mod tests {
               "echo":false,
               "eval":"auto",
               "output":"auto",
-              "results":"auto",
+              "results":"render",
               "warning":"auto",
               "message":"auto",
               "error":"auto",
-              "format":"auto",
               "item":"auto",
               "placeholder":"auto",
               "fig-device-format":"auto",
@@ -742,7 +698,6 @@ mod tests {
               "fig-subcaptions":["A","B"],
               "fig-layout-columns":[1,1],
               "fig-layout-rows":"auto",
-              "fig-layout-design":"A B",
               "kind":"auto"
             }"#,
         );
@@ -777,11 +732,10 @@ mod tests {
               "echo":"auto",
               "eval":false,
               "output":"auto",
-              "results":"auto",
+              "results":"render",
               "warning":"auto",
               "message":"auto",
               "error":"auto",
-              "format":"auto",
               "item":"auto",
               "placeholder":"auto",
               "fig-device-format":"auto",
@@ -800,7 +754,6 @@ mod tests {
               "fig-subcaptions":null,
               "fig-layout-columns":"auto",
               "fig-layout-rows":"auto",
-              "fig-layout-design":"auto",
               "kind":"auto"
             }"#,
         );
@@ -808,11 +761,10 @@ mod tests {
             echo: false,
             eval: true,
             output: true,
-            results: "asis".to_string(),
+            results: "typst".to_string(),
             warning: false,
             message: false,
             error: true,
-            format: vec!["text/plain".to_string()],
             item: ItemSelector::LAST,
             placeholder: true,
             fig_device_format: "png".to_string(),
@@ -829,7 +781,7 @@ mod tests {
         let chunk = &chunks[0];
         assert_eq!(chunk.engine, EngineName::Python);
         assert!(!chunk.exec_options.eval);
-        assert_eq!(chunk.display_options.results, ResultsMode::Asis);
+        assert_eq!(chunk.display_options.results, ResultsMode::Typst);
         assert_eq!(chunk.exec_options.fig_device_format, "png");
         assert_eq!(chunk.exec_options.fig_device_dpi, 300);
         assert_eq!(chunk.exec_options.fig_device_width, 8.0);
@@ -865,20 +817,24 @@ mod tests {
     }
 
     #[test]
-    fn parses_setup_language_specific_defaults() {
+    fn setup_config_is_merged_in_order() {
         let json = r#"[
           {"func":"metadata","value":{"echo":false,"eval":false},"label":"<calepin-config>"},
-          {"func":"metadata","value":{"lang":"python","echo":true},"label":"<calepin-config>"}
+          {"func":"metadata","value":{"echo":true},"label":"<calepin-config>"}
         ]"#;
         let config = parse_setup_config(json).unwrap().unwrap();
 
-        assert_eq!(config.defaults.echo, false);
+        assert_eq!(config.defaults.echo, true);
         assert_eq!(config.defaults.eval, false);
-        assert_eq!(
-            config.lang_defaults.get("python").unwrap().echo,
-            true
-        );
-        assert_eq!(config.lang_defaults.get("python").unwrap().eval, false);
+    }
+
+    #[test]
+    fn rejects_setup_lang_option() {
+        let json = r#"[
+          {"func":"metadata","value":{"lang":"python","echo":true},"label":"<calepin-config>"}
+        ]"#;
+        let err = parse_setup_config(json).unwrap_err();
+        assert!(err.to_string().contains("`lang` is no longer supported"));
     }
 
     #[test]
@@ -892,7 +848,6 @@ mod tests {
               "warning":true,
               "message":true,
               "error":false,
-              "format":"auto",
               "item":"all",
               "placeholder":false,
               "fig-device-format":"svg",
@@ -919,7 +874,6 @@ mod tests {
               "warning":true,
               "message":true,
               "error":false,
-              "format":"auto",
               "item":"all",
               "placeholder":false,
               "fig-device-format":"svg",
@@ -949,7 +903,6 @@ mod tests {
               "warning":true,
               "message":true,
               "error":false,
-              "format":"auto",
               "item":"all",
               "placeholder":false,
               "fig-device-format":"svg",
@@ -1058,14 +1011,6 @@ mod tests {
 
     #[test]
     fn uses_language_specific_defaults_for_raw_blocks() {
-        let mut lang_defaults = BTreeMap::new();
-        lang_defaults.insert(
-            "python".to_string(),
-            SetupDefaults {
-                raw_chunks: RawChunks::Only(vec!["python".to_string()]),
-                ..SetupDefaults::default()
-            },
-        );
         let chunks = parse_chunks(
             r#"[
               {"func":"raw","text":"x","block":true,"lang":"r"},
@@ -1073,10 +1018,9 @@ mod tests {
             ]"#,
             Some(SetupConfig {
                 defaults: SetupDefaults {
-                    raw_chunks: RawChunks::Off,
+                    raw_chunks: RawChunks::Only(vec!["python".to_string()]),
                     ..SetupDefaults::default()
                 },
-                lang_defaults,
             }),
         )
         .unwrap();

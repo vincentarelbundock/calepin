@@ -41,7 +41,7 @@
   )[
     #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
       #html.elem("h4", [Typst-native])
-      #html.elem("p", [Write notebooks in pure Typst, a simple, elegant, and incredibly powerful typsetting system. Not another _ad hoc_ markdown variant.])
+      #html.elem("p", [Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typsetting system. Not another _ad hoc_ markdown variant.])
     ]
     #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
       #html.elem("h4", [Executable code])

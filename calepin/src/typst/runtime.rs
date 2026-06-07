@@ -260,7 +260,7 @@ y + 2
 
 The inline sum is #calepin.inline("r", eval: true)[`x <- 10; x + 5`]
 
-#calepin.chunk("python", echo: false, results: "asis")[
+#calepin.chunk("python", echo: false, results: "typst")[
 ```python
 print("hello from python")
 ```]
@@ -470,7 +470,6 @@ print("RESULT_12345")
   fig-subcaptions: ("A", "B"),
   fig-layout-columns: (1fr, 1fr),
   fig-layout-rows: auto,
-  fig-layout-design: "A B",
 )[`
 print("ignored")
 `]
