@@ -76,7 +76,6 @@ plot(mpg ~ hp, data = mtcars)
 #| fig-align: right
 #| echo: false
 plot(mpg ~ hp, data = mtcars)
-plot(mpg ~ hp, data = mtcars)
 ```
 
 The main disadvantage of Quarto-style headers is how they behave outside _Calepin_. If you compile the `.typ` file directly with `typst`, the `#|` lines are displayed as configuration artifacts inside the code block. When options are specified as arguments to `#calepin.chunk(...)`, direct `typst` compilation shows the nice unevaluated code chunk instead.
