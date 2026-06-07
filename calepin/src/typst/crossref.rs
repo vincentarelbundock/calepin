@@ -22,6 +22,25 @@ pub struct CrossrefLabel {
     pub name: String,
 }
 
+impl CrossrefKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CrossrefKind::Fig => "fig",
+            CrossrefKind::Tbl => "tbl",
+            CrossrefKind::Lst => "lst",
+        }
+    }
+}
+
+impl CrossrefLabel {
+    pub fn to_doc(&self) -> crate::typst::model::CrossrefLabelDoc {
+        crate::typst::model::CrossrefLabelDoc {
+            kind: self.kind.as_str().to_string(),
+            name: self.name.clone(),
+        }
+    }
+}
+
 /// Classify one label name by its prefix. Strict: an unrecognized prefix is an error.
 pub fn classify_label(name: &str) -> Result<CrossrefLabel> {
     for (prefix, kind) in PREFIXES {

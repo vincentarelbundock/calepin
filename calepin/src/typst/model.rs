@@ -195,6 +195,8 @@ pub struct ChunkSpec {
     pub exec_options: ExecOptions,
     pub display_options: DisplayOptions,
     pub ordinal: usize,
+    #[serde(default)]
+    pub crossref_labels: Vec<CrossrefLabelDoc>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -305,6 +307,14 @@ pub struct ResultItem {
 
 pub type MimeData = IndexMap<String, Value>;
 
+/// Serialized form of a routed cross-reference label, written into results.json
+/// and read back by the Typst runtime. `kind` is one of "fig" | "tbl" | "lst".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CrossrefLabelDoc {
+    pub kind: String,
+    pub name: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChunkResultDocument {
     pub label: String,
@@ -313,6 +323,8 @@ pub struct ChunkResultDocument {
     #[serde(rename = "options")]
     pub display_options: DisplayOptions,
     pub items: Vec<ResultItem>,
+    #[serde(rename = "crossref-labels", default, skip_serializing_if = "Vec::is_empty")]
+    pub crossref_labels: Vec<CrossrefLabelDoc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -345,6 +357,31 @@ pub struct LayoutPaths {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn chunk_result_document_serializes_crossref_labels() {
+        let doc = ChunkResultDocument {
+            label: "fig-x".to_string(),
+            engine: EngineName::R,
+            status: ChunkStatus::Ok,
+            display_options: serde_json::from_str(
+                r#"{"echo":true,"output":true,"results":"render","warning":true,
+                    "message":true,"placeholder":true,"fig-width":null,"fig-height":null,
+                    "fig-align":null,"fig-responsive":null,"fig-link":null,"fig-caption":null,
+                    "fig-cap-location":null,"fig-alt-text":null,"fig-subcaptions":null,
+                    "fig-layout-columns":null,"fig-layout-rows":null,"kind":null}"#,
+            )
+            .unwrap(),
+            items: vec![],
+            crossref_labels: vec![CrossrefLabelDoc {
+                kind: "fig".to_string(),
+                name: "fig-x".to_string(),
+            }],
+        };
+        let json = serde_json::to_string(&doc).unwrap();
+        assert!(json.contains(r#""crossref-labels""#), "{json}");
+        assert!(json.contains(r#""fig-x""#), "{json}");
+    }
 
     #[test]
     fn parses_typed_diagram_engines() {

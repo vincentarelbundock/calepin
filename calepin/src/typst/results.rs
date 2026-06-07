@@ -72,6 +72,7 @@ mod tests {
                 status: ChunkStatus::Ok,
                 display_options: display_options(),
                 items: Vec::new(),
+                crossref_labels: vec![],
             }],
         );
 

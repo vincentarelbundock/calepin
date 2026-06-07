@@ -133,6 +133,7 @@ fn parse_chunk_metadata(
         exec_options,
         display_options,
         ordinal,
+        crossref_labels: vec![],
     });
     Ok(())
 }
@@ -225,6 +226,7 @@ fn parse_chunk_raw_block(
         exec_options,
         display_options,
         ordinal,
+        crossref_labels: vec![],
     }))
 }
 

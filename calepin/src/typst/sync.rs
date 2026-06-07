@@ -265,6 +265,7 @@ print(2)
                 kind: None,
             },
             ordinal: 0,
+            crossref_labels: vec![],
         }
     }
 }

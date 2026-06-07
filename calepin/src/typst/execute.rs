@@ -51,6 +51,7 @@ impl EnginePool {
                 status: ChunkStatus::Skipped,
                 display_options: chunk.display_options.clone(),
                 items: Vec::new(),
+                crossref_labels: vec![],
             });
         }
 
@@ -100,6 +101,7 @@ impl EnginePool {
             },
             display_options: chunk.display_options.clone(),
             items,
+            crossref_labels: vec![],
         })
     }
 
@@ -364,6 +366,7 @@ mod tests {
                 kind: None,
             },
             ordinal: 0,
+            crossref_labels: vec![],
         }
     }
 

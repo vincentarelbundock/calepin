@@ -669,6 +669,7 @@ mod tests {
                 kind: None,
             },
             ordinal: 0,
+            crossref_labels: vec![],
         }
     }
 }
