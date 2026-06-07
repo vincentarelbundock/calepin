@@ -27,7 +27,7 @@
   "fig-layout-columns": auto,
   "fig-layout-rows": auto,
   kind: auto,
-  "fenced-chunks": false,
+  "fenced-chunks": true,
 )
 #let _setup-defaults = state("calepin-setup-defaults", (default: _base-options))
 
@@ -130,3 +130,21 @@
 #let _attach-label(content, id) = [
   #content #label(id)
 ]
+
+#let _attach-labels(content, ids) = {
+  let out = content
+  for id in ids {
+    out = [#out #label(id)]
+  }
+  out
+}
+
+#let _crossref-labels-for(chunk, kind) = {
+  let labels = ()
+  for entry in chunk.at("crossref-labels", default: ()) {
+    if entry.at("kind", default: "") == kind {
+      labels.push(entry.at("name"))
+    }
+  }
+  labels
+}

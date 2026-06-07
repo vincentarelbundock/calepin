@@ -8,7 +8,6 @@ use anyhow::{Context, Result};
 use notify::RecursiveMode;
 use notify_debouncer_full::new_debouncer;
 
-
 pub(crate) fn is_write_event(kind: &notify::EventKind) -> bool {
     matches!(
         kind,
@@ -33,7 +32,7 @@ pub(crate) fn is_watch_candidate(
     }
 
     let rel = path.strip_prefix(root).unwrap_or(path);
-    
+
     if let Some(config_path) = config_path {
         if path == config_path {
             return true;
@@ -125,7 +124,9 @@ pub(crate) fn watch_root(
                     }
                     for path in event.event.paths {
                         let path = path.canonicalize().unwrap_or(path);
-                        if is_watch_candidate(&root, &excluded, config_path.as_deref(), &path) && !changed.contains(&path) {
+                        if is_watch_candidate(&root, &excluded, config_path.as_deref(), &path)
+                            && !changed.contains(&path)
+                        {
                             changed.push(path);
                         }
                     }
@@ -161,9 +162,24 @@ mod tests {
         let root = Path::new("/tmp/project");
         let output = root.join("paper.pdf");
         assert!(!is_watch_candidate(root, &output, None, &output));
-        assert!(!is_watch_candidate(root, &output, None, &root.join("XXfo4zsx")));
-        assert!(!is_watch_candidate(root, &output, None, &root.join("paper.typ~")));
-        assert!(!is_watch_candidate(root, &output, None, &root.join(".git/index")));
+        assert!(!is_watch_candidate(
+            root,
+            &output,
+            None,
+            &root.join("XXfo4zsx")
+        ));
+        assert!(!is_watch_candidate(
+            root,
+            &output,
+            None,
+            &root.join("paper.typ~")
+        ));
+        assert!(!is_watch_candidate(
+            root,
+            &output,
+            None,
+            &root.join(".git/index")
+        ));
         assert!(!is_watch_candidate(
             root,
             &output,
@@ -200,7 +216,12 @@ mod tests {
             None,
             &root.join("editors/vscode/dist/calepin.vsix")
         ));
-        assert!(is_watch_candidate(root, &output, None, &root.join("paper.typ")));
+        assert!(is_watch_candidate(
+            root,
+            &output,
+            None,
+            &root.join("paper.typ")
+        ));
         assert!(is_watch_candidate(
             root,
             &output,

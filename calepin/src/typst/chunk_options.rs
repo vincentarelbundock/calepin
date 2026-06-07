@@ -55,7 +55,9 @@ pub fn parse_chunk_source_with_qmd_header(
         if did_translate {
             warnings.push(format!(
                 "chunk `{}` option `{}` was translated to `{}`",
-                label, raw_key.trim(), key
+                label,
+                raw_key.trim(),
+                key
             ));
         }
         let value = parse_qmd_value(raw_value.trim())?;
@@ -133,7 +135,15 @@ fn is_whitespace_node(node: &Value) -> bool {
 }
 
 fn supported_chunk_argument_names() -> String {
-    let mut names: Vec<&str> = vec!["body", "code", "engine", "label", "kind", "lang"];
+    let mut names: Vec<&str> = vec![
+        "body",
+        "code",
+        "crossref-labels",
+        "engine",
+        "label",
+        "kind",
+        "lang",
+    ];
     names.extend_from_slice(native_chunk_option_names());
     names.sort_unstable();
     names.dedup();
@@ -141,11 +151,16 @@ fn supported_chunk_argument_names() -> String {
 }
 
 fn is_supported_chunk_key(name: &str) -> bool {
-    matches!(name, "body" | "code" | "engine" | "label" | "kind" | "lang")
-        || is_native_chunk_option(name)
+    matches!(
+        name,
+        "body" | "code" | "crossref-labels" | "engine" | "label" | "kind" | "lang"
+    ) || is_native_chunk_option(name)
 }
 
 fn resolve_chunk_option_name(raw_key: &str, label: &str, line_no: usize) -> Result<(String, bool)> {
+    if raw_key == "label" {
+        return Ok((raw_key.to_string(), false));
+    }
     if let Some(canonical) = translate_chunk_option_name(raw_key) {
         return Ok((canonical.to_string(), canonical != raw_key));
     }
@@ -214,6 +229,7 @@ fn native_chunk_option_names() -> &'static [&'static str] {
 
 fn supported_qmd_options() -> String {
     let mut names: Vec<&str> = native_chunk_option_names().to_vec();
+    names.push("label");
 
     names.extend(CHUNK_OPTION_ALIASES.iter().map(|(alias, _)| *alias));
     names.sort_unstable();

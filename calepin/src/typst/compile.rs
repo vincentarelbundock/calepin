@@ -200,23 +200,10 @@ pub fn compile_with_typst(
 ) -> Result<()> {
     let html_theme = options.template_theme;
     reject_reserved_typst_inputs(options.typst_args)?;
-    let prepared_theme = prepare_html_theme(
-        &layout.root,
-        options.format,
-        html_theme,
-        None,
-        None,
-    )?;
-    let output_path = resolve_default_output_path(
-        layout,
-        options.output.as_deref(),
-        options.format,
-    );
-    let html_output = html_output_path(
-        layout,
-        Some(output_path.as_path()),
-        options.format,
-    );
+    let prepared_theme = prepare_html_theme(&layout.root, options.format, html_theme, None, None)?;
+    let output_path =
+        resolve_default_output_path(layout, options.output.as_deref(), options.format);
+    let html_output = html_output_path(layout, Some(output_path.as_path()), options.format);
     let args = typst_compile_args(
         layout,
         Some(output_path.as_path()),
@@ -245,7 +232,6 @@ pub fn compile_with_typst(
             &layout.root,
         )?;
         inline_html_images_file(&path, &layout.root)?;
-
     }
     Ok(())
 }
@@ -402,7 +388,8 @@ mod tests {
             resolve_output_path(&layout, None, Some("html")),
             layout.root.join("paper.html")
         );
-        assert_eq!(resolve_output_path(&layout, None, None),
+        assert_eq!(
+            resolve_output_path(&layout, None, None),
             layout.root.join("paper.pdf")
         );
     }
@@ -461,14 +448,7 @@ mod tests {
         std::fs::write(&input, "").unwrap();
         let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
-        let args = typst_watch_args(
-            &layout,
-            None,
-            Some("pdf"),
-            &[],
-            None,
-            None,
-        );
+        let args = typst_watch_args(&layout, None, Some("pdf"), &[], None, None);
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())

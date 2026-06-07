@@ -39,13 +39,8 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     reject_reserved_typst_inputs(&args.typst_args)?;
 
     let initial = preprocess(preprocess_options(&args, sync_pages))?;
-    let prepared_theme = prepare_html_theme(
-        &initial.layout.root,
-        format.as_deref(),
-        None,
-        None,
-        None,
-    )?;
+    let prepared_theme =
+        prepare_html_theme(&initial.layout.root, format.as_deref(), None, None, None)?;
 
     let stop = Arc::new(AtomicBool::new(false));
     let stop_for_handler = Arc::clone(&stop);
@@ -54,11 +49,8 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     })
     .context("failed to set Ctrl+C handler")?;
 
-    let resolved_output = resolve_output_path(
-        &initial.layout,
-        args.output.as_deref(),
-        format.as_deref(),
-    );
+    let resolved_output =
+        resolve_output_path(&initial.layout, args.output.as_deref(), format.as_deref());
     let root = initial.layout.root.clone();
     let asset_server = if format.as_deref() == Some("html") {
         let server = assets::start(root.clone(), Arc::clone(&stop))?;
@@ -111,7 +103,11 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     };
     let watch_pid_path = watch_pid_file_path(&initial.layout.results_path);
     if let Err(error) = write_watch_pid_file(&watch_pid_path, child.id()) {
-        cwarn!("failed to write watch pid file {}: {}", watch_pid_path.display(), error);
+        cwarn!(
+            "failed to write watch pid file {}: {}",
+            watch_pid_path.display(),
+            error
+        );
     }
     let stdout = child
         .stdout
@@ -200,8 +196,9 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
 pub fn run_stop(args: StopArgs) -> Result<()> {
     match args.input {
         Some(input) => {
-            let layout = resolve_layout(&input, None)
-                .with_context(|| format!("failed to resolve watch context from {}", input.display()))?;
+            let layout = resolve_layout(&input, None).with_context(|| {
+                format!("failed to resolve watch context from {}", input.display())
+            })?;
             let watch_pid_path = watch_pid_file_path(&layout.results_path);
             stop_watch_from_pid_file(&watch_pid_path)?;
         }

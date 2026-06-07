@@ -435,7 +435,7 @@
   }
 }
 
-#let _render-image-grid(items, label, opts) = {
+#let _render-image-grid(items, label, opts, fig-labels) = {
   let fig-width = opts.at("fig-width")
   let fig-align = opts.at("fig-align")
   let fig-responsive = opts.at("fig-responsive")
@@ -458,18 +458,20 @@
     fig-responsive,
     fig-align,
   )
-  let rendered = if fig-caption != none {
-    _attach-label(
-      figure(content, caption: _figure-caption(fig-caption, fig-cap-location)),
-      label,
-    )
+  let rendered = if fig-caption != none or fig-labels.len() > 0 {
+    let fig = figure(content, caption: _figure-caption(fig-caption, fig-cap-location))
+    if fig-labels.len() > 0 {
+      _attach-labels(fig, fig-labels)
+    } else {
+      _attach-label(fig, label)
+    }
   } else {
     content
   }
   _finalize-figure-display(rendered, fig-align, fig-link)
 }
 
-#let _render-display-item(item, label, opts) = {
+#let _render-display-item(item, label, opts, fig-labels) = {
   let fig-width = opts.at("fig-width")
   let fig-height = opts.at("fig-height")
   let fig-align = opts.at("fig-align")
@@ -491,10 +493,16 @@
     let alt = if fig-alt-text == none { "" } else { fig-alt-text }
     if _html-target() and fig-caption != none {
       let img = _html-captioned-image(html-path, fig-height, alt)
-      let rendered = _attach-label(
-        _html-captioned-figure(img, display-width, fig-responsive, fig-align, fig-caption, fig-cap-location),
-        label,
-      )
+      let fig = if fig-labels.len() > 0 {
+        figure(img, caption: _figure-caption(fig-caption, fig-cap-location))
+      } else {
+        _html-captioned-figure(img, display-width, fig-responsive, fig-align, fig-caption, fig-cap-location)
+      }
+      let rendered = if fig-labels.len() > 0 {
+        _attach-labels(fig, fig-labels)
+      } else {
+        _attach-label(fig, label)
+      }
       return _finalize-figure-display(rendered, none, fig-link)
     }
     let img = if _html-target() {
@@ -507,11 +515,13 @@
         alt: alt,
       )
     }
-    let rendered = if fig-caption != none {
-      _attach-label(
-        figure(img, caption: _figure-caption(fig-caption, fig-cap-location)),
-        label,
-      )
+    let rendered = if fig-caption != none or fig-labels.len() > 0 {
+      let fig = figure(img, caption: _figure-caption(fig-caption, fig-cap-location))
+      if fig-labels.len() > 0 {
+        _attach-labels(fig, fig-labels)
+      } else {
+        _attach-label(fig, label)
+      }
     } else {
       img
     }
@@ -529,7 +539,7 @@
   }
 }
 
-#let _render-item(item, label, opts) = {
+#let _render-item(item, label, opts, fig-labels) = {
   let results-mode = opts.at("results")
   let inline-output = opts.at("inline-output")
   let warning = opts.at("warning")
@@ -557,7 +567,7 @@
   } else if item-type == "error" {
     _output-block(item.at("message", default: ""), stream: "stderr")
   } else if item-type == "display" or item-type == "result" {
-    _render-display-item(item, label, opts)
+    _render-display-item(item, label, opts, fig-labels)
   }
 }
 
@@ -572,6 +582,7 @@
     panic("calepin results do not contain label `" + label + "`")
   }
   let opts = _merge-result-options(opts, chunk)
+  let fig-labels = _crossref-labels-for(chunk, "fig")
   let items = chunk.at("items", default: ())
   let image-group = ()
   for result-item in items {
@@ -580,20 +591,20 @@
     } else {
       if image-group.len() > 0 {
         if image-group.len() == 1 {
-          _render-item(image-group.first(), label, opts)
+          _render-item(image-group.first(), label, opts, fig-labels)
         } else {
-          _render-image-grid(image-group, label, opts)
+          _render-image-grid(image-group, label, opts, fig-labels)
         }
         image-group = ()
       }
-      _render-item(result-item, label, opts)
+      _render-item(result-item, label, opts, fig-labels)
     }
   }
   if image-group.len() > 0 {
     if image-group.len() == 1 {
-      _render-item(image-group.first(), label, opts)
+      _render-item(image-group.first(), label, opts, fig-labels)
     } else {
-      _render-image-grid(image-group, label, opts)
+      _render-image-grid(image-group, label, opts, fig-labels)
     }
   }
 }

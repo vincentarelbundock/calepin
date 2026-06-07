@@ -229,7 +229,11 @@ print("hello")
             String::from_utf8_lossy(&output.stderr)
         );
         let stdout = String::from_utf8(output.stdout).unwrap();
-        assert!(stdout.contains(r#""fenced-chunks": "python""#), "{}", stdout);
+        assert!(
+            stdout.contains(r#""fenced-chunks": "python""#),
+            "{}",
+            stdout
+        );
     }
 
     #[test]
@@ -392,6 +396,56 @@ print("RESULT_12345")
             extracted.contains("RESULT_12345"),
             "expected execution output in PDF output"
         );
+    }
+
+    #[test]
+    fn typst_compile_echo_strips_qmd_header_lines() {
+        if Command::new("typst").arg("--version").output().is_err() {
+            return;
+        }
+        if Command::new("pdftotext").arg("-v").output().is_err() {
+            return;
+        }
+
+        let dir = typst_accessible_tempdir();
+        write_runtime(dir.path()).unwrap();
+        let input = dir.path().join("paper.typ");
+        let output = dir.path().join("paper.pdf");
+        std::fs::write(
+            &input,
+            r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(echo: true)
+
+#calepin.chunk("python")[```
+#| label: fig-clean-echo
+#| echo: true
+print("VISIBLE_CODE_12345")
+```]
+"##,
+        )
+        .unwrap();
+
+        let status = Command::new("typst")
+            .arg("compile")
+            .arg(&input)
+            .arg(&output)
+            .arg("--root")
+            .arg(dir.path())
+            .status()
+            .unwrap();
+
+        assert!(status.success());
+        let text = Command::new("pdftotext")
+            .arg(&output)
+            .arg("-")
+            .output()
+            .unwrap();
+        assert!(text.status.success());
+        let extracted = String::from_utf8(text.stdout).unwrap();
+        assert!(extracted.contains("print(\"VISIBLE_CODE_12345\")"));
+        assert!(!extracted.contains("#| label"));
+        assert!(!extracted.contains("#| echo"));
     }
 
     #[test]
@@ -902,6 +956,50 @@ print("ignored")
         assert!(stdout.contains(r#""crossref-labels""#), "{stdout}");
         assert!(stdout.contains(r#""fig-solo""#), "{stdout}");
         assert!(stdout.contains(r#""label": "fig-solo""#), "{stdout}");
+    }
+
+    #[test]
+    fn typst_query_emits_crossref_labels_for_qmd_label() {
+        if Command::new("typst").arg("--version").output().is_err() {
+            return;
+        }
+
+        let dir = typst_accessible_tempdir();
+        write_runtime(dir.path()).unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(
+            &input,
+            r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("r")[```r
+#| label: fig-qmd
+1+1
+```]
+"##,
+        )
+        .unwrap();
+
+        let output = Command::new("typst")
+            .arg("query")
+            .arg(&input)
+            .arg("<calepin-chunk>")
+            .arg("--root")
+            .arg(dir.path())
+            .arg("--input")
+            .arg("calepin-mode=query")
+            .arg("--pretty")
+            .output()
+            .unwrap();
+
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.contains(r#""crossref-labels""#), "{stdout}");
+        assert!(stdout.contains(r#""fig-qmd""#), "{stdout}");
+        assert!(stdout.contains(r#""label": "fig-qmd""#), "{stdout}");
     }
 
     #[test]

@@ -5,8 +5,8 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 mod cli;
 mod config;
 mod engines;
-mod html;
 mod health;
+mod html;
 mod typst;
 mod utils;
 

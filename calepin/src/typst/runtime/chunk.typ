@@ -14,6 +14,83 @@
   out
 }
 
+#let _query-crossref-placeholders(crossref-labels) = {
+  let out = []
+  for name in crossref-labels {
+    if type(name) == str and name.starts-with("fig-") {
+      out += [#figure(box(width: 0pt, height: 0pt), caption: none) #label(name)]
+    }
+  }
+  out
+}
+
+#let _strip-qmd-label-quotes(value) = {
+  let value = value.trim()
+  if value.len() >= 2 and (
+    (value.starts-with("\"") and value.ends-with("\"")) or
+    (value.starts-with("'") and value.ends-with("'"))
+  ) {
+    value.slice(1, value.len() - 1)
+  } else {
+    value
+  }
+}
+
+#let _parse-qmd-label-value(value) = {
+  let value = value.trim()
+  if value.starts-with("[") and value.ends-with("]") {
+    let inner = value.slice(1, value.len() - 1).trim()
+    if inner == "" {
+      return ()
+    }
+    let labels = ()
+    for item in inner.split(",") {
+      labels.push(_strip-qmd-label-quotes(item))
+    }
+    labels
+  } else {
+    _strip-qmd-label-quotes(value)
+  }
+}
+
+#let _qmd-label-from-body(body) = {
+  let code = _raw-text(body)
+  let code = if code.starts-with("\n") { code.slice(1) } else { code }
+  for line in code.split("\n") {
+    let trimmed = line.trim()
+    if not trimmed.starts-with("#|") {
+      return none
+    }
+    let directive = trimmed.slice(2).trim()
+    let colon = directive.position(":")
+    if colon == none {
+      continue
+    }
+    let key = directive.slice(0, colon).trim()
+    if key == "label" {
+      return _parse-qmd-label-value(directive.slice(colon + 1))
+    }
+  }
+  none
+}
+
+#let _strip-qmd-header(code) = {
+  let out = ""
+  let reading-header = true
+  for line in code.split("\n") {
+    if reading-header and line.trim().starts-with("#|") {
+      continue
+    }
+    reading-header = false
+    if out == "" {
+      out = line
+    } else {
+      out += "\n" + line
+    }
+  }
+  out
+}
+
 // Detect and strip a version suffix that Typst's fence parser split from
 // the lang identifier.  For example, ```julia-1.2 produces lang="julia-1"
 // with ".2\n" prepended to the code text.  This mirrors the
@@ -37,6 +114,20 @@
 #let _emit-chunk(engine, body, ..args) = context {
   let options = _call-defaults + args.named()
   let label-opt = options.at("label")
+  let qmd-label-opt = _qmd-label-from-body(body)
+  let label-count = (
+    if label-opt != none { 1 } else { 0 }
+  ) + (
+    if qmd-label-opt != none { 1 } else { 0 }
+  )
+  if label-count > 1 {
+    panic("calepin.chunk: label supplied more than once")
+  }
+  let label-opt = if qmd-label-opt != none {
+    qmd-label-opt
+  } else {
+    label-opt
+  }
   let auto-label-state = options.at("auto-label-state")
   let auto-label-prefix = options.at("auto-label-prefix")
   let derived = _derive-label(label-opt, auto-label-prefix, auto-label-state.get())
@@ -49,11 +140,16 @@
     _sync-auto-label-counter(auto-label-state, label)
   }
   if _mode == "query" {
-    [#label-step #metadata(_chunk-spec(body, engine, label, crossref-labels, options)) <calepin-chunk>]
+    [
+      #label-step
+      #metadata(_chunk-spec(body, engine, label, crossref-labels, options)) <calepin-chunk>
+      #_query-crossref-placeholders(crossref-labels)
+    ]
   } else {
     let code = _raw-text(body)
     let code = if code.starts-with("\n") { code.slice(1) } else { code }
     let code = _strip-lang-version-suffix(engine, code)
+    let code = _strip-qmd-header(code)
     let options = _resolve-options(engine, options)
     let show-echo = options.at("echo") == true
     let results-path = sys.inputs.at("calepin-results", default: "")

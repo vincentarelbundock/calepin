@@ -53,49 +53,51 @@ pub fn execute_chunk(
         fig_abs.to_string_lossy().replace('\\', "/")
     };
 
-    let captured =
-        match engine {
-            EngineName::Python => {
-                let session = ctx.python.as_mut().ok_or_else(|| {
-                    anyhow::anyhow!("Python engine session was not initialized")
-                })?;
-                session.capture(
-                    &code,
-                    &fig_full_str,
-                    figure.width,
-                    figure.height,
-                    f64::from(figure.dpi),
-                )?
-            }
-            EngineName::R => {
-                let session = ctx.r.as_mut().ok_or_else(|| {
-                    anyhow::anyhow!("R engine session was not initialized")
-                })?;
-                session.capture(
-                    &code,
-                    &fig_full_str,
-                    figure.r_device(),
-                    figure.width,
-                    figure.height,
-                    f64::from(figure.dpi),
-                )?
-            }
-            EngineName::Jupyter(ref kernel) => {
-                let session = ctx.jupyter.as_mut().ok_or_else(|| {
-                    anyhow::anyhow!("Jupyter engine session was not initialized")
-                })?;
-                session.capture(
-                    kernel,
-                    &code,
-                    &fig_full_str,
-                    &figure.format,
-                    figure.width,
-                    figure.height,
-                    f64::from(figure.dpi),
-                )?
-            }
-            other => return Err(anyhow::anyhow!("unsupported engine `{}`", other)),
-        };
+    let captured = match engine {
+        EngineName::Python => {
+            let session = ctx
+                .python
+                .as_mut()
+                .ok_or_else(|| anyhow::anyhow!("Python engine session was not initialized"))?;
+            session.capture(
+                &code,
+                &fig_full_str,
+                figure.width,
+                figure.height,
+                f64::from(figure.dpi),
+            )?
+        }
+        EngineName::R => {
+            let session = ctx
+                .r
+                .as_mut()
+                .ok_or_else(|| anyhow::anyhow!("R engine session was not initialized"))?;
+            session.capture(
+                &code,
+                &fig_full_str,
+                figure.r_device(),
+                figure.width,
+                figure.height,
+                f64::from(figure.dpi),
+            )?
+        }
+        EngineName::Jupyter(ref kernel) => {
+            let session = ctx
+                .jupyter
+                .as_mut()
+                .ok_or_else(|| anyhow::anyhow!("Jupyter engine session was not initialized"))?;
+            session.capture(
+                kernel,
+                &code,
+                &fig_full_str,
+                &figure.format,
+                figure.width,
+                figure.height,
+                f64::from(figure.dpi),
+            )?
+        }
+        other => return Err(anyhow::anyhow!("unsupported engine `{}`", other)),
+    };
 
     process_results(&captured, &fig_full_path, &mut results)?;
 

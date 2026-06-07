@@ -3,10 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::typst::model::LayoutPaths;
 
-pub fn resolve_layout(
-    input: &Path,
-    root: Option<&Path>,
-) -> Result<LayoutPaths> {
+pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> {
     let input_abs =
         absolutize(input).with_context(|| format!("failed to resolve {}", input.display()))?;
     let root_abs = match root {

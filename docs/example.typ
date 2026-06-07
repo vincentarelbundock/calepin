@@ -19,7 +19,7 @@ This notebook demonstrates the #emph[Calepin] executable Typst workflow: code ch
 
 `#calepin.setup()` sets document-wide defaults for all chunks unless overridden per chunk.
 
-#calepin.chunk("python", label: "python-lang-default")[
+#calepin.chunk("python")[
 ```python
 print(40 + 2)
 ```

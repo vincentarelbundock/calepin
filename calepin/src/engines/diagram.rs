@@ -167,13 +167,9 @@ pub(super) fn run_tool(
     match std::process::Command::new(program).args(args).output() {
         Ok(out) => Ok(Some(out)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            results.push(EngineResult::Error(process::spawn_error(
-                program,
-                "run diagram tool",
-                error,
-                Some(tool),
-            )
-            .to_string()));
+            results.push(EngineResult::Error(
+                process::spawn_error(program, "run diagram tool", error, Some(tool)).to_string(),
+            ));
             Ok(None)
         }
         Err(error) => Err(process::spawn_error(

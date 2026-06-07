@@ -1,7 +1,7 @@
-pub mod cli;
 pub mod chunk_options;
-pub mod crossref;
+pub mod cli;
 pub mod compile;
+pub mod crossref;
 pub mod execute;
 pub mod model;
 pub mod paths;

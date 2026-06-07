@@ -58,12 +58,7 @@ print(x + 1)
     .unwrap();
 
     let output = Command::new(calepin_bin())
-        .args([
-            "compile",
-            "paper.typ",
-            "paper.pdf",
-            "--quiet",
-        ])
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");
@@ -105,12 +100,7 @@ print(42)
     .unwrap();
 
     let output = Command::new(calepin_bin())
-        .args([
-            "compile",
-            "paper.typ",
-            "paper.pdf",
-            "--quiet",
-        ])
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");
@@ -155,12 +145,7 @@ print("#strong[42]")
     .unwrap();
 
     let output = Command::new(calepin_bin())
-        .args([
-            "compile",
-            "paper.typ",
-            "paper.pdf",
-            "--quiet",
-        ])
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");
@@ -221,10 +206,7 @@ Theme is a compile-time concern.
         html.contains("href=\"https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css\""),
         "{html}"
     );
-    assert!(
-        html.contains("<main class=\"container\">"),
-        "{html}"
-    );
+    assert!(html.contains("<main class=\"container\">"), "{html}");
 }
 
 #[test]
@@ -343,12 +325,7 @@ plt.plot([1, 2, 3], [1, 4, 9])
     .unwrap();
 
     let output = Command::new(calepin_bin())
-        .args([
-            "compile",
-            "paper.typ",
-            "paper.pdf",
-            "--quiet",
-        ])
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");
@@ -452,6 +429,66 @@ fig
 }
 
 #[test]
+fn compile_resolves_captionless_fig_label_crossref() {
+    if !has_command("typst")
+        || !has_command("python3")
+        || !has_pdftotext()
+        || !has_python_module("matplotlib")
+    {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+See @fig-cross.
+
+#calepin.chunk("python", label: "fig-cross", echo: false)[```
+import matplotlib.pyplot as plt
+plt.plot([1, 2, 3], [1, 4, 9])
+```
+]
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results_path = dir.path().join(".calepin/paper/results.json");
+    let results: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
+    assert_eq!(
+        results["chunks"]["fig-cross"]["crossref-labels"][0]["name"],
+        "fig-cross"
+    );
+    assert_eq!(
+        results["chunks"]["fig-cross"]["crossref-labels"][0]["kind"],
+        "fig"
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .expect("failed to run pdftotext");
+    assert!(text.status.success());
+    let extracted = String::from_utf8(text.stdout).unwrap();
+    assert!(extracted.contains("See Figure 1."), "{extracted}");
+}
+
+#[test]
 fn compile_renders_inline_output_in_surrounding_text() {
     if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
         return;
@@ -470,12 +507,7 @@ The inline result is #py[`print("#strong[INLINEVALUE12345]")`] right here.
     .unwrap();
 
     let output = Command::new(calepin_bin())
-        .args([
-            "compile",
-            "paper.typ",
-            "paper.pdf",
-            "--quiet",
-        ])
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");
@@ -529,12 +561,7 @@ print(42)
     .unwrap();
 
     let output = Command::new(calepin_bin())
-        .args([
-            "compile",
-            "paper.typ",
-            "paper.pdf",
-            "--quiet",
-        ])
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");
@@ -571,12 +598,7 @@ cat(x + 1)
     .unwrap();
 
     let first = Command::new(calepin_bin())
-        .args([
-            "compile",
-            "paper.typ",
-            "paper.pdf",
-            "--quiet",
-        ])
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");
@@ -590,12 +612,7 @@ cat(x + 1)
     std::fs::write(&input, source.replace("cat(x + 1)", "cat(x + 2)")).unwrap();
 
     let second = Command::new(calepin_bin())
-        .args([
-            "compile",
-            "paper.typ",
-            "paper.pdf",
-            "--quiet",
-        ])
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");
@@ -633,12 +650,7 @@ print(42)
 
     for run in ["first", "second"] {
         let output = Command::new(calepin_bin())
-            .args([
-                "compile",
-                "paper.typ",
-                "paper.pdf",
-                "--quiet",
-            ])
+            .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
             .current_dir(dir.path())
             .output()
             .unwrap_or_else(|error| panic!("failed to run {run} compile: {error}"));

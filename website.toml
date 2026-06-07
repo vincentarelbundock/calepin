@@ -36,6 +36,10 @@ title = "Code execution"
   path = "tables_and_figures.typ"
   label = "Tables and figures"
 
+  [[sidebar.section.item]]
+  path = "crossreferences.typ"
+  label = "Cross-references"
+
 [[sidebar.section]]
 title = "Roadmap"
 

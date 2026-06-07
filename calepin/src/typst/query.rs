@@ -2,14 +2,13 @@ use anyhow::{anyhow, Context, Result};
 use serde_json::Value;
 use std::collections::HashSet;
 
-use crate::typst::model::{
-    ChunkSpec, DisplayOptions, EngineName, ExecOptions, FencedChunks, ResultsMode,
-    SetupDefaults,
-};
 use crate::typst::chunk_options::{
-    parse_chunk_body_with_qmd_header,
-    parse_chunk_source_with_qmd_header,
-    validate_chunk_arguments,
+    parse_chunk_body_with_qmd_header, parse_chunk_source_with_qmd_header, validate_chunk_arguments,
+};
+use crate::typst::crossref::parse_label_names;
+use crate::typst::model::{
+    ChunkSpec, CrossrefLabelDoc, DisplayOptions, EngineName, ExecOptions, FencedChunks,
+    ResultsMode, SetupDefaults,
 };
 
 #[allow(dead_code)]
@@ -30,16 +29,25 @@ pub fn parse_chunks_with_warnings(
     let config = defaults.unwrap_or_default();
     let values = parse_query_values(query_json)
         .context("failed to parse calepin chunk metadata from typst query output")?;
+    let has_chunk_metadata = values.iter().any(is_calepin_chunk_metadata);
     let mut seen = HashSet::new();
+    let mut raw_labels = HashSet::new();
     let mut chunks = Vec::with_capacity(values.len());
     let mut auto_label_index = 1usize;
     let mut warnings = Vec::new();
 
     for (ordinal, value) in values.iter().enumerate() {
         if is_raw_code_block(value) {
-            if let Some(chunk) =
-                parse_chunk_raw_block(value, &config, &mut seen, &mut auto_label_index, ordinal, &mut warnings)?
-            {
+            if let Some(chunk) = parse_chunk_raw_block(
+                value,
+                &config,
+                &mut seen,
+                &mut auto_label_index,
+                ordinal,
+                has_chunk_metadata,
+                &mut warnings,
+            )? {
+                raw_labels.insert(chunk.label.clone());
                 chunks.push(chunk);
             }
             continue;
@@ -52,7 +60,11 @@ pub fn parse_chunks_with_warnings(
             let label = parse_label(value)?;
             let label = normalize_chunk_label(label.as_str(), &mut seen, &mut auto_label_index);
             if !seen.insert(label.clone()) {
-                return Err(anyhow!("duplicate label `{}`", label));
+                if raw_labels.remove(&label) {
+                    chunks.retain(|chunk| chunk.label != label);
+                } else {
+                    return Err(anyhow!("duplicate label `{}`", label));
+                }
             }
             parse_chunk_metadata(value, &config, &label, &mut chunks, ordinal, &mut warnings)?;
             bump_auto_label(&mut auto_label_index, &label);
@@ -112,20 +124,14 @@ fn parse_chunk_metadata(
     let value = Value::Object(value_with_options);
     let engine = parse_engine(&value)?;
     let defaults = &config.defaults;
-    let fig_width =
-        raw_option(&value, "fig-width").or_else(|| defaults.fig_width.clone());
-    let fig_align =
-        raw_option(&value, "fig-align").or_else(|| defaults.fig_align.clone());
-    let fig_responsive =
-        opt_bool_option(&value, "fig-responsive")?.or(defaults.fig_responsive);
+    let fig_width = raw_option(&value, "fig-width").or_else(|| defaults.fig_width.clone());
+    let fig_align = raw_option(&value, "fig-align").or_else(|| defaults.fig_align.clone());
+    let fig_responsive = opt_bool_option(&value, "fig-responsive")?.or(defaults.fig_responsive);
     let exec_options = parse_exec_options(&value, defaults, &fig_width)?;
-    let display_options = parse_display_options(
-        &value,
-        defaults,
-        fig_width,
-        fig_align,
-        fig_responsive,
-    )?;
+    let display_options =
+        parse_display_options(&value, defaults, fig_width, fig_align, fig_responsive)?;
+    let crossref_labels = parse_crossref_labels(&value)
+        .map_err(|err| anyhow!("invalid cross-reference labels for chunk `{label}`: {err}"))?;
     chunks.push(ChunkSpec {
         label: label.to_string(),
         engine,
@@ -133,7 +139,7 @@ fn parse_chunk_metadata(
         exec_options,
         display_options,
         ordinal,
-        crossref_labels: vec![],
+        crossref_labels,
     });
     Ok(())
 }
@@ -169,6 +175,7 @@ fn parse_chunk_raw_block(
     seen: &mut HashSet<String>,
     auto_label_index: &mut usize,
     ordinal: usize,
+    has_chunk_metadata: bool,
     warnings: &mut Vec<String>,
 ) -> Result<Option<ChunkSpec>> {
     let Some(lang) = value.get("lang").and_then(Value::as_str) else {
@@ -203,22 +210,44 @@ fn parse_chunk_raw_block(
     if !defaults.fenced_chunks.allows(lang) && !defaults.fenced_chunks.allows(engine.as_str()) {
         return Ok(None);
     }
-    let label = next_available_label(seen, auto_label_index);
-    seen.insert(label.clone());
-    let fig_width =
-        raw_option(&value, "fig-width").or_else(|| defaults.fig_width.clone());
-    let fig_align =
-        raw_option(&value, "fig-align").or_else(|| defaults.fig_align.clone());
-    let fig_responsive =
-        opt_bool_option(&value, "fig-responsive")?.or(defaults.fig_responsive);
+    if matches!(defaults.fenced_chunks, FencedChunks::All)
+        && matches!(engine, EngineName::Jupyter(_))
+    {
+        return Ok(None);
+    }
+    if has_chunk_metadata && !matches!(engine, EngineName::Jupyter(_)) {
+        return Ok(None);
+    }
+    let (label, crossref_labels) = if let Some(label_value) = value_for(&value, "label") {
+        let names = label_names_from_value(label_value)?;
+        let labels = parse_label_names(&names)
+            .map_err(|err| anyhow!("invalid cross-reference labels for fenced chunk: {err}"))?;
+        let label = names
+            .first()
+            .cloned()
+            .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
+        if !seen.insert(label.clone()) {
+            return Err(anyhow!("duplicate label `{}`", label));
+        }
+        bump_auto_label(auto_label_index, &label);
+        (
+            label,
+            labels
+                .into_iter()
+                .map(|label| label.to_doc())
+                .collect::<Vec<_>>(),
+        )
+    } else {
+        let label = next_available_label(seen, auto_label_index);
+        seen.insert(label.clone());
+        (label, vec![])
+    };
+    let fig_width = raw_option(&value, "fig-width").or_else(|| defaults.fig_width.clone());
+    let fig_align = raw_option(&value, "fig-align").or_else(|| defaults.fig_align.clone());
+    let fig_responsive = opt_bool_option(&value, "fig-responsive")?.or(defaults.fig_responsive);
     let exec_options = parse_exec_options(&value, defaults, &fig_width)?;
-    let display_options = parse_display_options(
-        &value,
-        defaults,
-        fig_width,
-        fig_align,
-        fig_responsive,
-    )?;
+    let display_options =
+        parse_display_options(&value, defaults, fig_width, fig_align, fig_responsive)?;
     Ok(Some(ChunkSpec {
         label,
         engine,
@@ -226,7 +255,7 @@ fn parse_chunk_raw_block(
         exec_options,
         display_options,
         ordinal,
-        crossref_labels: vec![],
+        crossref_labels,
     }))
 }
 
@@ -342,12 +371,9 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         fig_device_width: f64_option(value, "fig-device-width", base.fig_device_width)?,
         fig_device_height: opt_f64_option(value, "fig-device-height", base.fig_device_height)?,
         fig_device_aspect: f64_option(value, "fig-device-aspect", base.fig_device_aspect)?,
-        fig_width: raw_option(value, "fig-width")
-            .or_else(|| base.fig_width.clone()),
-        fig_align: raw_option(value, "fig-align")
-            .or_else(|| base.fig_align.clone()),
-        fig_responsive: opt_bool_option(value, "fig-responsive")?
-            .or(base.fig_responsive),
+        fig_width: raw_option(value, "fig-width").or_else(|| base.fig_width.clone()),
+        fig_align: raw_option(value, "fig-align").or_else(|| base.fig_align.clone()),
+        fig_responsive: opt_bool_option(value, "fig-responsive")?.or(base.fig_responsive),
         fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
     })
 }
@@ -401,6 +427,48 @@ fn parse_engine(value: &Value) -> Result<EngineName> {
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow!("missing engine"))?;
     EngineName::parse(engine)
+}
+
+fn parse_crossref_labels(value: &Value) -> Result<Vec<CrossrefLabelDoc>> {
+    let Some(raw) = value.get("crossref-labels") else {
+        return Ok(Vec::new());
+    };
+    if is_auto(raw) || raw.is_null() {
+        return Ok(Vec::new());
+    }
+
+    let names = match raw {
+        Value::String(name) => vec![name.clone()],
+        Value::Array(items) => items
+            .iter()
+            .map(|item| {
+                item.as_str()
+                    .map(ToOwned::to_owned)
+                    .ok_or_else(|| anyhow!("`crossref-labels` entries must be strings"))
+            })
+            .collect::<Result<Vec<_>>>()?,
+        _ => return Err(anyhow!("`crossref-labels` must be a string or an array")),
+    };
+    if names.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    parse_label_names(&names).map(|labels| labels.into_iter().map(|label| label.to_doc()).collect())
+}
+
+fn label_names_from_value(value: &Value) -> Result<Vec<String>> {
+    match value {
+        Value::String(name) => Ok(vec![name.clone()]),
+        Value::Array(items) => items
+            .iter()
+            .map(|item| {
+                item.as_str()
+                    .map(ToOwned::to_owned)
+                    .ok_or_else(|| anyhow!("label entries must be strings"))
+            })
+            .collect::<Result<Vec<_>>>(),
+        _ => Err(anyhow!("label must be a string or an array")),
+    }
 }
 
 fn value_for<'a>(object: &'a Value, key: &str) -> Option<&'a Value> {
@@ -629,7 +697,9 @@ fn reattach_version_suffix(engine: EngineName, lang: &str, raw_text: &str) -> (E
     // The first line must look like ".<digits>[.<digits>]*" – pure version.
     let is_version_suffix = first_line.starts_with('.')
         && first_line.len() > 1
-        && first_line[1..].split('.').all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()));
+        && first_line[1..]
+            .split('.')
+            .all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()));
 
     if !is_version_suffix {
         return (engine, text.to_string());
@@ -655,9 +725,7 @@ mod tests {
     }
 
     fn setup_config_with(defaults: SetupDefaults) -> SetupConfig {
-        SetupConfig {
-            defaults,
-        }
+        SetupConfig { defaults }
     }
 
     #[test]
@@ -731,8 +799,57 @@ mod tests {
         assert_eq!(chunk.label, "from-header");
         assert_eq!(chunk.code, "print(1)");
         assert!(!chunk.display_options.echo);
-        assert_eq!(chunk.display_options.fig_width.as_ref().and_then(|v| v.as_str()), Some("80%"));
-        assert!(parsed.warnings.iter().any(|warning| warning.contains("translated to `fig-width`")));
+        assert_eq!(
+            chunk
+                .display_options
+                .fig_width
+                .as_ref()
+                .and_then(|v| v.as_str()),
+            Some("80%")
+        );
+        assert!(parsed
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("translated to `fig-width`")));
+    }
+
+    #[test]
+    fn parses_crossref_labels_from_metadata_chunks() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{"func":"raw","text":"plot(1)","block":false},
+                "engine":"r",
+                "label":"fig-plot",
+                "crossref-labels":["fig-plot","lst-plot"]
+            })
+            .to_string(),
+        );
+        let chunks = parse_chunks(&json, None).unwrap();
+        assert_eq!(chunks[0].label, "fig-plot");
+        assert_eq!(chunks[0].crossref_labels.len(), 2);
+        assert_eq!(chunks[0].crossref_labels[0].kind, "fig");
+        assert_eq!(chunks[0].crossref_labels[0].name, "fig-plot");
+        assert_eq!(chunks[0].crossref_labels[1].kind, "lst");
+    }
+
+    #[test]
+    fn rejects_unprefixed_crossref_labels_from_metadata_chunks() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{"func":"raw","text":"plot(1)","block":false},
+                "engine":"r",
+                "label":"plot",
+                "crossref-labels":["plot"]
+            })
+            .to_string(),
+        );
+        let err = parse_chunks(&json, None).unwrap_err().to_string();
+        assert!(
+            err.contains("invalid cross-reference labels for chunk `plot`"),
+            "{err}"
+        );
+        assert!(err.contains("plot"), "{err}");
+        assert!(err.contains("fig-"), "{err}");
     }
 
     #[test]
@@ -757,7 +874,47 @@ mod tests {
             chunk.display_options.fig_align.as_ref().unwrap(),
             &Value::String("right".to_string())
         );
-        assert!(parsed.warnings.iter().any(|warning| warning.contains("translated to `fig-width`")));
+        assert!(parsed
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("translated to `fig-width`")));
+    }
+
+    #[test]
+    fn parses_qmd_label_in_fenced_chunks() {
+        let json = serde_json::json!([
+          {"func":"raw","text":"#| label: fig-fenced\n#| fig-caption: Fenced plot\nplot(1)","block":true,"lang":"r"}
+        ])
+        .to_string();
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let parsed = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults))).unwrap();
+        let chunk = &parsed.chunks[0];
+        assert_eq!(chunk.label, "fig-fenced");
+        assert_eq!(chunk.crossref_labels.len(), 1);
+        assert_eq!(chunk.crossref_labels[0].kind, "fig");
+        assert_eq!(chunk.crossref_labels[0].name, "fig-fenced");
+        assert_eq!(chunk.code, "plot(1)");
+        assert_eq!(
+            chunk.display_options.fig_caption.as_deref(),
+            Some("Fenced plot")
+        );
+    }
+
+    #[test]
+    fn ignores_unknown_fences_when_all_fenced_chunks_enabled() {
+        let json = serde_json::json!([
+          {"func":"raw","text":"not executable","block":true,"lang":"text"}
+        ])
+        .to_string();
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let parsed = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults))).unwrap();
+        assert!(parsed.chunks.is_empty());
     }
 
     #[test]
@@ -796,7 +953,10 @@ mod tests {
             chunk.display_options.fig_layout_columns.as_ref().unwrap(),
             &Value::from(2)
         );
-        assert_eq!(chunk.display_options.fig_layout_rows.as_ref().unwrap(), &Value::from(1));
+        assert_eq!(
+            chunk.display_options.fig_layout_rows.as_ref().unwrap(),
+            &Value::from(1)
+        );
         assert_eq!(chunk.exec_options.fig_device_width, 8.0);
         assert_eq!(chunk.exec_options.fig_device_height, Some(6.0));
         assert_eq!(chunk.exec_options.fig_device_dpi, 200);
@@ -933,14 +1093,8 @@ mod tests {
         let chunks = parse_chunks(&json, None).unwrap();
         let chunk = &chunks[0];
 
-        assert_eq!(
-            chunk.display_options.fig_width.as_ref().unwrap(),
-            "95%"
-        );
-        assert_eq!(
-            chunk.display_options.fig_align.as_ref().unwrap(),
-            "center"
-        );
+        assert_eq!(chunk.display_options.fig_width.as_ref().unwrap(), "95%");
+        assert_eq!(chunk.display_options.fig_align.as_ref().unwrap(), "center");
         assert_eq!(chunk.display_options.fig_responsive, Some(true));
         assert!((chunk.exec_options.fig_device_width - 8.142_857_142).abs() < 0.000_001);
     }
@@ -1159,11 +1313,11 @@ mod tests {
     #[test]
     fn normalizes_implicit_chunk_labels_when_fenced_chunks_configured() {
         let defaults = SetupDefaults {
-            fenced_chunks: FencedChunks::Only(vec!["r".to_string()]),
+            fenced_chunks: FencedChunks::Only(vec!["ir".to_string()]),
             ..SetupDefaults::default()
         };
         let json = r#"[
-          {"func":"raw","text":"x <- 1","block":true,"lang":"r"},
+          {"func":"raw","text":"x <- 1","block":true,"lang":"ir"},
           {"func":"metadata","value":{"body":{"func":"raw","text":"print(1)","block":false},"engine":"r","label":"chunk-1"},"label":"<calepin-chunk>"}
         ]"#;
         let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
@@ -1201,21 +1355,38 @@ mod tests {
     #[test]
     fn parses_chunked_raw_blocks() {
         let defaults = SetupDefaults {
-            fenced_chunks: FencedChunks::All,
+            fenced_chunks: FencedChunks::Only(vec!["julia".to_string()]),
             ..SetupDefaults::default()
         };
         let json = r#"[
-          {"func":"raw","text":"print(1)","block":true,"lang":"python"},
+          {"func":"raw","text":"println(1)","block":true,"lang":"julia"},
           {"func":"metadata","value":{"body":{"func":"raw","text":"print(2)","block":true},"engine":"r","label":"answer"},"label":"<calepin-chunk>"}
         ]"#;
         let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
         assert_eq!(chunks.len(), 2);
-        assert_eq!(chunks[0].engine, EngineName::Python);
+        assert_eq!(chunks[0].engine, EngineName::Jupyter("julia".to_string()));
         assert_eq!(chunks[0].label, "chunk-1");
-        assert_eq!(chunks[0].code, "print(1)");
+        assert_eq!(chunks[0].code, "println(1)");
         assert_eq!(chunks[1].engine, EngineName::R);
         assert_eq!(chunks[1].label, "answer");
         assert_eq!(chunks[1].code, "print(2)");
+    }
+
+    #[test]
+    fn metadata_query_skips_wrapper_managed_raw_builtin_blocks() {
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let json = r#"[
+          {"func":"raw","text":"plot(1)","block":true,"lang":"r"},
+          {"func":"metadata","value":{"body":{"func":"raw","text":"plot(2)","block":true},"engine":"r","label":"chunk-1"},"label":"<calepin-chunk>"}
+        ]"#;
+        let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].engine, EngineName::R);
+        assert_eq!(chunks[0].label, "chunk-1");
+        assert_eq!(chunks[0].code, "plot(2)");
     }
 
     #[test]
@@ -1295,11 +1466,8 @@ mod tests {
     #[test]
     fn no_reattach_when_first_line_is_not_version() {
         // A leading newline with normal code (no version suffix to strip).
-        let (engine, code) = reattach_version_suffix(
-            EngineName::Jupyter("julia-1".into()),
-            "julia-1",
-            "\nx = 41",
-        );
+        let (engine, code) =
+            reattach_version_suffix(EngineName::Jupyter("julia-1".into()), "julia-1", "\nx = 41");
         assert_eq!(engine, EngineName::Jupyter("julia-1".into()));
         assert_eq!(code, "x = 41");
     }
@@ -1307,8 +1475,7 @@ mod tests {
     #[test]
     fn no_reattach_for_builtin_engine() {
         // Built-in engines like Python are not Jupyter and must not be touched.
-        let (engine, code) =
-            reattach_version_suffix(EngineName::Python, "python", ".2\nprint(1)");
+        let (engine, code) = reattach_version_suffix(EngineName::Python, "python", ".2\nprint(1)");
         assert_eq!(engine, EngineName::Python);
         assert_eq!(code, ".2\nprint(1)");
     }

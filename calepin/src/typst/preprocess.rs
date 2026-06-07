@@ -58,11 +58,12 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
 
     write_runtime(&layout.root)?;
     let staged_input = write_staged_source(&layout)?;
+    let query_input = write_render_wrapper(&layout, &staged_input, &[])?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
     let setup_json = typst_query(
         &config.executables.typst,
         &layout,
-        &staged_input,
+        &query_input,
         "<calepin-config>",
         &results_input,
     )?;
@@ -71,7 +72,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let chunks_json = typst_query(
         &config.executables.typst,
         &layout,
-        &staged_input,
+        &query_input,
         "raw.where(block: true).or(<calepin-chunk>)",
         &results_input,
     )?;
@@ -135,6 +136,12 @@ fn write_render_wrapper(
 
     lines.push('\n');
     lines.push('\n');
+
+    for lang in ["typ", "typst"] {
+        lines.push_str(&format!(
+            "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => _without-raw-chunk-transforms(() => it)\n"
+        ));
+    }
 
     let engines: [(&str, &str); 6] = [
         ("python", "python"),

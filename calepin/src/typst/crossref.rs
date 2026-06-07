@@ -45,7 +45,10 @@ impl CrossrefLabel {
 pub fn classify_label(name: &str) -> Result<CrossrefLabel> {
     for (prefix, kind) in PREFIXES {
         if name.starts_with(prefix) && name.len() > prefix.len() {
-            return Ok(CrossrefLabel { kind, name: name.to_string() });
+            return Ok(CrossrefLabel {
+                kind,
+                name: name.to_string(),
+            });
         }
     }
     Err(anyhow!(

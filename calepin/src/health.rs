@@ -53,16 +53,14 @@ impl HealthReport {
     }
 
     fn counts(&self) -> (usize, usize, usize) {
-        self.checks
-            .iter()
-            .fold((0, 0, 0), |mut counts, check| {
-                match check.status {
-                    HealthStatus::Ok => counts.0 += 1,
-                    HealthStatus::Warning => counts.1 += 1,
-                    HealthStatus::Error => counts.2 += 1,
-                }
-                counts
-            })
+        self.checks.iter().fold((0, 0, 0), |mut counts, check| {
+            match check.status {
+                HealthStatus::Ok => counts.0 += 1,
+                HealthStatus::Warning => counts.1 += 1,
+                HealthStatus::Error => counts.2 += 1,
+            }
+            counts
+        })
     }
 }
 
@@ -238,7 +236,7 @@ fn jupyter_client_check(python: &Path, python_available: bool) -> HealthCheck {
                 hint: Some(tools::JUPYTER_CLIENT.install_hint.to_string()),
                 details: Vec::new(),
             }
-        },
+        }
         Err(error) => HealthCheck {
             name: "jupyter_client".to_string(),
             status: HealthStatus::Warning,
@@ -249,7 +247,6 @@ fn jupyter_client_check(python: &Path, python_available: bool) -> HealthCheck {
         },
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 struct JupyterKernelspecList {
@@ -373,7 +370,8 @@ fn jupyter_kernels_json_check(stdout: &[u8]) -> HealthCheck {
         status,
         path: Some("jupyter".to_string()),
         message,
-        hint: (warnings > 0).then(|| "fix the kernelspec argv executable or reinstall the kernel".to_string()),
+        hint: (warnings > 0)
+            .then(|| "fix the kernelspec argv executable or reinstall the kernel".to_string()),
         details,
     }
 }

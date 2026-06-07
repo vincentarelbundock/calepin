@@ -148,7 +148,7 @@ impl Default for SetupDefaults {
             fig_width: Some(Value::String("70%".to_string())),
             fig_align: Some(Value::String("center".to_string())),
             fig_responsive: Some(true),
-            fenced_chunks: FencedChunks::Off,
+            fenced_chunks: FencedChunks::All,
         }
     }
 }
@@ -323,7 +323,11 @@ pub struct ChunkResultDocument {
     #[serde(rename = "options")]
     pub display_options: DisplayOptions,
     pub items: Vec<ResultItem>,
-    #[serde(rename = "crossref-labels", default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        rename = "crossref-labels",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub crossref_labels: Vec<CrossrefLabelDoc>,
 }
 
