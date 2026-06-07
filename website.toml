@@ -1,7 +1,7 @@
-themes_dir = "../themes"
+themes_dir = "themes"
 
 [executables]
-python = "../.venv/bin/python"
+python = ".venv/bin/python"
 
 [sidebar]
 

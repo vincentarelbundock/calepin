@@ -3,15 +3,17 @@
 `Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:
 
 ```bash
-calepin compile --config .calepin/config.toml paper.typ
+calepin compile --config config.toml paper.typ
 ```
 
 If `--config` is omitted, `Calepin` uses defaults.
 
-If provided, `PATH` can be relative to the project root or absolute.
+Relative paths written inside the config (the executables and `themes_dir`)
+resolve relative to the config file's own directory, not the document being
+compiled. Absolute paths are used as is.
 
 ```toml
-# .calepin/config.toml
+# config.toml
 
 [executables]
 typst = "typst"                    # Typst binary (can be name or full path)

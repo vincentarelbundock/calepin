@@ -36,28 +36,33 @@ impl CalepinConfig {
             .with_context(|| format!("failed to read {}", path.display()))?;
         let raw: RawCalepinConfig = toml::from_str(&contents)
             .with_context(|| format!("failed to parse {}", path.display()))?;
+        // Relative paths written in the config resolve against the config
+        // file's own directory, so a config can live anywhere and still point
+        // at its siblings without `../` gymnastics.
+        let config_dir = path.parent().unwrap_or(root);
         Ok(Self {
-            executables: ExecutablePaths::from_raw(root, raw.executables),
-            themes_dir: resolve_themes_dir(root, raw.themes_dir),
+            executables: ExecutablePaths::from_raw(root, config_dir, raw.executables),
+            themes_dir: resolve_themes_dir(root, config_dir, raw.themes_dir),
         })
     }
 
     fn default_for_root(root: &Path) -> Self {
         Self {
-            executables: ExecutablePaths::from_raw(root, RawExecutablePaths::default()),
-            themes_dir: resolve_themes_dir(root, None),
+            executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
+            themes_dir: resolve_themes_dir(root, root, None),
         }
     }
 }
 
-/// The themes directory always resolves relative to the project root unless
-/// absolute. Unlike executable names, a bare `themes` is a directory, not a
-/// `PATH` lookup, so it is joined to the root rather than left untouched.
-fn resolve_themes_dir(root: &Path, value: Option<PathBuf>) -> PathBuf {
+/// A configured `themes_dir` resolves relative to the config file's directory
+/// (`config_dir`); the built-in default resolves relative to the project root.
+/// Unlike executable names, a bare `themes` is a directory, not a `PATH`
+/// lookup, so it is joined rather than left untouched.
+fn resolve_themes_dir(project_root: &Path, config_dir: &Path, value: Option<PathBuf>) -> PathBuf {
     match value {
         Some(path) if path.is_absolute() => path,
-        Some(path) => root.join(path),
-        None => root.join(DEFAULT_THEMES_DIR),
+        Some(path) => config_dir.join(path),
+        None => project_root.join(DEFAULT_THEMES_DIR),
     }
 }
 
@@ -91,29 +96,34 @@ impl ExecutablePaths {
         }
     }
 
-    fn from_raw(root: &Path, raw: RawExecutablePaths) -> Self {
+    fn from_raw(project_root: &Path, config_dir: &Path, raw: RawExecutablePaths) -> Self {
         let defaults = Self::defaults();
         // The VS Code extension uses this as a process-local default for the
         // selected interpreter; an explicit project config still takes priority.
         let env_python = std::env::var_os(PYTHON_EXECUTABLE_ENV_VAR)
             .filter(|value| !value.is_empty())
             .map(PathBuf::from);
-        let project_venv_python = project_venv_python(root);
+        // Paths written in the config resolve against the config file's
+        // directory. The env var and the autodetected project `.venv` are not
+        // values from the file, so they stay relative to the project root.
+        let python = match raw.python {
+            Some(path) => resolve_tool_path(config_dir, path),
+            None => env_python
+                .or_else(|| project_venv_python(project_root))
+                .map(|path| resolve_tool_path(project_root, path))
+                .unwrap_or(defaults.python),
+        };
         Self {
-            typst: tool_path(root, raw.typst, defaults.typst),
-            rscript: tool_path(root, raw.rscript, defaults.rscript),
-            python: tool_path(
-                root,
-                raw.python.or(env_python).or(project_venv_python),
-                defaults.python,
-            ),
-            mmdc: tool_path(root, raw.mmdc, defaults.mmdc),
-            dot: tool_path(root, raw.dot, defaults.dot),
-            tectonic: tool_path(root, raw.tectonic, defaults.tectonic),
-            dvisvgm: tool_path(root, raw.dvisvgm, defaults.dvisvgm),
-            pdf2svg: tool_path(root, raw.pdf2svg, defaults.pdf2svg),
-            d2: tool_path(root, raw.d2, defaults.d2),
-            chrome: raw.chrome.map(|path| resolve_tool_path(root, path)),
+            typst: tool_path(config_dir, raw.typst, defaults.typst),
+            rscript: tool_path(config_dir, raw.rscript, defaults.rscript),
+            python,
+            mmdc: tool_path(config_dir, raw.mmdc, defaults.mmdc),
+            dot: tool_path(config_dir, raw.dot, defaults.dot),
+            tectonic: tool_path(config_dir, raw.tectonic, defaults.tectonic),
+            dvisvgm: tool_path(config_dir, raw.dvisvgm, defaults.dvisvgm),
+            pdf2svg: tool_path(config_dir, raw.pdf2svg, defaults.pdf2svg),
+            d2: tool_path(config_dir, raw.d2, defaults.d2),
+            chrome: raw.chrome.map(|path| resolve_tool_path(config_dir, path)),
         }
     }
 }
@@ -235,7 +245,8 @@ mod tests {
 
         let config = CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
 
-        assert_eq!(config.themes_dir, dir.path().join("site/themes"));
+        // `site/themes` resolves relative to the config file's directory.
+        assert_eq!(config.themes_dir, calepin_dir.join("site/themes"));
     }
 
     #[test]
@@ -281,14 +292,15 @@ chrome = "tools/chrome"
 
         let config = CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
 
+        // Path-like values resolve relative to the config file's directory.
         assert_eq!(config.executables.typst, PathBuf::from("typst-dev"));
         assert_eq!(
             config.executables.python,
-            dir.path().join(".venv/bin/python")
+            calepin_dir.join(".venv/bin/python")
         );
         assert_eq!(
             config.executables.chrome,
-            Some(dir.path().join("tools/chrome"))
+            Some(calepin_dir.join("tools/chrome"))
         );
     }
 }

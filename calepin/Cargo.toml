@@ -8,6 +8,12 @@ repository = "https://github.com/vincentarelbundock/calepin"
 homepage = "https://vincentarelbundock.github.io/calepin"
 exclude = []
 
+# Release build with debug symbols, for profiling with samply/flamegraph.
+# Build with: cargo build --profile profiling --manifest-path calepin/Cargo.toml
+[profile.profiling]
+inherits = "release"
+debug = true
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
