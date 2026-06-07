@@ -187,6 +187,97 @@ Cursor, and Positron (via the Microsoft and VSX marketplaces).
   ]
 ]
 
+== Example
+<example>
+
+_Calepin_ notebooks are standard Typst documents with a few extra features. 
+
+=== Preamble
+<preamble>
+
+When a user calls `calepin` to compile a file, a hidden `.calepin/` directory is created to hold code artefacts and the special Typst functions and macros used to process code chunks. To build a notebook, we start by loading these functions into the document with `#import`. Then, we fix document-wide settings with `calepin.setup()`.
+
+```typ
+#import ".calepin/calepin.typ"
+#calepin.setup(echo: true, eval: true,)
+```
+
+Now, we define a short alias for Python inline computation. This will be used to embed computation in prose (i.e., in the text rather than as a separate code block).
+
+```typ
+#let py = calepin.inline.with("python")
+```
+
+=== Chunks
+<chunks>
+
+A block chunk runs a piece of code and inserts its result. Start with a plain fenced block:
+
+````typ
+```python
+x = 41
+print(x + 1)
+```
+
+Variables are persistent across chunks:
+
+```python
+print(x + 2)
+```
+]
+````
+
+When you need extra control, use `#calepin.chunk` with options such as
+labels, captions, hiding source code, or changing how results are shown.
+If the body is a fenced block with a language, `#calepin.chunk` infers
+the engine from the fence:
+
+````typ
+#calepin.chunk(label: "answer")[
+```python
+x = 41
+print(x + 1)
+```
+````
+
+=== Inline
+<inline>
+
+An inline expression drops a computed value into the surrounding prose.
+It uses the same raw body contract and never takes a label.
+
+```typ
+The inline answer is #py[`print(40 + 2)`].
+```
+
+=== All together now
+<all-together-now>
+
+Here is one full document example.
+
+````typ
+#import ".calepin/calepin.typ"
+
+#calepin.setup(
+  echo: true,
+  results: "verbatim",
+)
+
+#let py = calepin.inline.with("python")
+
+```python
+x = 41
+print(x + 1)
+```
+
+Variables are persistent across chunks:
+
+```python
+print(x + 2)
+```
+
+The inline answer is #py[`print(40 + 2)`].
+````
 
 == Render
 <render>
@@ -259,103 +350,3 @@ it changes. On macOS, Skim is a good option. Other platforms have
 similar auto-reloading viewers, which are useful when working with tools
 that repeatedly rebuild PDFs.
 
-== Example
-<example>
-
-Every document uses the runtime file #emph[Calepin] writes to
-`.calepin/calepin.typ`. `calepin compile` and `calepin watch` run code
-chunks first, so the runtime and computed outputs are ready when Typst
-builds the document.
-
-=== Preamble
-<preamble>
-
-Start by importing the runtime and setting document-wide defaults with
-`calepin.setup()`.
-
-```typ
-#import ".calepin/calepin.typ"
-
-#calepin.setup(
-  echo: true,
-  eval: true,
-)
-```
-
-Define a short alias for Python inline computation.
-
-```typ
-#let py = calepin.inline.with("python")
-```
-
-=== Chunks
-<chunks>
-
-A block chunk runs a piece of code and inserts its result. Start with a
-plain fenced block:
-
-````typ
-```python
-x = 41
-print(x + 1)
-```
-
-Variables are persistent across chunks:
-
-```python
-print(x + 2)
-```
-]
-````
-
-When you need extra control, use `#calepin.chunk` with options such as
-labels, captions, hiding source code, or changing how results are shown.
-If the body is a fenced block with a language, `#calepin.chunk` infers
-the engine from the fence:
-
-````typ
-#calepin.chunk(label: "answer")[
-```python
-x = 41
-print(x + 1)
-```
-````
-
-=== Inline
-<inline>
-
-An inline expression drops a computed value into the surrounding prose.
-It uses the same raw body contract and never takes a label.
-
-```typ
-The inline answer is #py[`print(40 + 2)`].
-```
-
-=== All together now
-<all-together-now>
-
-Here is one full document example.
-
-````typ
-#import ".calepin/calepin.typ"
-
-#calepin.setup(
-  echo: true,
-  results: "verbatim",
-)
-
-#let py = calepin.inline.with("python")
-
-```python
-x = 41
-print(x + 1)
-```
-
-Variables are persistent across chunks:
-
-```python
-print(x + 2)
-```
-
-The inline answer is #py[`print(40 + 2)`].
-````
