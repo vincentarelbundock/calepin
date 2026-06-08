@@ -1,6 +1,8 @@
 == Install calepin
 <install-calepin>
 
+Calepin requires Typst 0.14.2 or newer. Install or update Typst from the #link("https://github.com/typst/typst#installation")[Typst installation instructions].
+
 == Typst CLI
 <typst-cli>
 

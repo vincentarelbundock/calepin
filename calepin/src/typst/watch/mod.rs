@@ -19,6 +19,7 @@ use crate::typst::paths::resolve_layout;
 use crate::typst::preprocess::{
     execute_preprocess_plan, prepare_preprocess_plan, preprocess, PreprocessOptions,
 };
+use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
 const WATCH_PID_FILENAME: &str = "watch.pid";
@@ -72,6 +73,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         asset_server.as_ref().map(|server| server.base_url()),
     );
 
+    assert_supported_typst(&initial.executables.typst)?;
     process::validate_executable(
         &initial.executables.typst,
         "start typst watch",

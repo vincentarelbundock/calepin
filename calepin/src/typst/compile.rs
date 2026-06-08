@@ -6,6 +6,7 @@ use std::process::Command;
 use crate::html::{apply_html_theme_file, inline_html_images_file, prepare_html_theme};
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
+use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
 pub struct CompileOptions<'a> {
@@ -211,6 +212,7 @@ pub fn compile_with_typst(
         options.typst_args,
         prepared_theme.raw_theme_input.as_deref(),
     );
+    assert_supported_typst(typst)?;
     process::validate_executable(typst, "run typst compile", Some(&tools::TYPST))?;
     let mut command = Command::new(typst);
     command.args(args).current_dir(&layout.root);

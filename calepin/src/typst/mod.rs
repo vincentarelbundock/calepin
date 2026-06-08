@@ -11,4 +11,5 @@ pub mod results;
 pub mod runtime;
 pub mod source_rewrite;
 pub mod sync;
+pub mod version;
 pub mod watch;

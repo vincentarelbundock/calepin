@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::cli::HealthArgs;
 use crate::config::CalepinConfig;
+use crate::typst::version::{typst_version, version_is_too_old, REQUIRED_TYPST_VERSION};
 use crate::utils::process::validate_executable;
 use crate::utils::tools::{self, Tool};
 
@@ -85,7 +86,7 @@ pub fn build_report(config_path: Option<&Path>) -> Result<HealthReport> {
     let config = CalepinConfig::load(&root, config_path)?;
     let mut checks = Vec::new();
 
-    checks.push(tool_check(
+    checks.push(typst_check(
         "typst",
         &config.executables.typst,
         Some(&tools::TYPST),
@@ -193,6 +194,44 @@ fn tool_check(
             path: Some(path.display().to_string()),
             message: error.to_string(),
             hint: tool.map(|tool| tool.install_hint.to_string()),
+            details: Vec::new(),
+        },
+    }
+}
+
+fn typst_check(
+    name: &str,
+    path: &Path,
+    tool: Option<&Tool>,
+    required: bool,
+    action: &str,
+) -> HealthCheck {
+    let mut check = tool_check(name, path, tool, required, action);
+    if check.status != HealthStatus::Ok {
+        return check;
+    }
+
+    match typst_version(path) {
+        Ok(version) if version_is_too_old(&version) => HealthCheck {
+            name: name.to_string(),
+            status: HealthStatus::Error,
+            path: Some(path.display().to_string()),
+            message: format!(
+                "Typst {version} is too old; Calepin requires Typst {REQUIRED_TYPST_VERSION} or newer"
+            ),
+            hint: Some(tools::TYPST.install_hint.to_string()),
+            details: Vec::new(),
+        },
+        Ok(version) => {
+            check.message = format!("found Typst {version}");
+            check
+        }
+        Err(error) => HealthCheck {
+            name: name.to_string(),
+            status: HealthStatus::Error,
+            path: Some(path.display().to_string()),
+            message: error.to_string(),
+            hint: Some(tools::TYPST.install_hint.to_string()),
             details: Vec::new(),
         },
     }

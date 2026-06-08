@@ -15,6 +15,7 @@ use crate::typst::results::{build_results_document, write_results};
 use crate::typst::runtime::write_runtime;
 use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
+use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
 #[derive(Debug, Clone)]
@@ -58,6 +59,7 @@ pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
     let mut layout = resolve_layout(&options.input, None)?;
     let config = CalepinConfig::load(&layout.root, options.config.as_deref())?;
+    assert_supported_typst(&config.executables.typst)?;
 
     write_runtime(&layout.root)?;
     let staged_input = write_staged_source(&layout)?;
