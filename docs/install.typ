@@ -1,14 +1,12 @@
-== Install calepin
-<install-calepin>
-
-Calepin requires Typst 0.14.2 or newer. Install or update Typst from the #link("https://github.com/typst/typst#installation")[Typst installation instructions].
-
 == Typst CLI
 <typst-cli>
 
-Calepin invokes the `typst` command to compile and watch documents, so the
-#link("https://github.com/typst/typst#installation")[Typst CLI app] must be
-installed and available on your `PATH`.
+Calepin requires Typst 0.14.2 or newer of the `typst` command. Install or update Typst from the #link("https://github.com/typst/typst#installation")[Typst installation instructions], and make sure it is available on your `PATH`.
+
+== Calepin
+<calepin-cli>
+
+
 
 MacOS and Linux:
 
