@@ -47,6 +47,8 @@ source = { virtual = "." }
 dependencies = [
     { name = "bash-kernel" },
     { name = "jupyter-client" },
+    { name = "matplotlib" },
+    { name = "numpy" },
     { name = "plotnine" },
     { name = "zensical" },
 ]
@@ -55,6 +57,8 @@ dependencies = [
 requires-dist = [
     { name = "bash-kernel" },
     { name = "jupyter-client", specifier = ">=8" },
+    { name = "matplotlib", specifier = ">=3.10.9" },
+    { name = "numpy", specifier = ">=2.4.6" },
     { name = "plotnine", specifier = ">=0.15.5" },
     { name = "zensical", specifier = ">=0.0.43" },
 ]

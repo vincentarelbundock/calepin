@@ -1,11 +1,15 @@
-Templates are not quite supported yet, but much of the infrastructure
-for partials and `minijinja` templates is there. At the CLI, things
-could look like:
+HTML templates can wrap Typst's HTML export in a built-in or user-defined
+layout. At the CLI:
 
 ```sh
 calepin compile paper.typ --format html --template pico
 calepin compile paper.typ --format html --template basic
+calepin compile paper.typ --format html --template tufte
 ```
 
-`--template` is optional and only applies to HTML output. Use `pico` and
-`basic` to force either built-in theme on HTML output.
+`--template` is optional and only applies to HTML output. The built-in themes
+are `pico`, `basic`, and `tufte`. The `tufte` theme uses a Palatino-style
+serif face and reserves a right margin for `.sidenote`, `.marginnote`, and
+`.margin-figure` elements. A directory under the configured `themes_dir` can
+also provide a custom `layout.html` plus optional `styles/`, `scripts/`, and
+`partials/`.

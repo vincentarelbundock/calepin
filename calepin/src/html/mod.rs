@@ -197,6 +197,18 @@ mod tests {
     }
 
     #[test]
+    fn tufte_html_theme_wraps_body_with_margin_support() {
+        let themed = apply_html_theme(SAMPLE_HTML, Some("tufte")).unwrap();
+
+        assert!(themed.contains(r#"<main class="calepin-tufte">"#));
+        assert!(themed.contains("Palatino"));
+        assert!(themed.contains(".margin-figure"));
+        assert!(themed.contains(".sidenote"));
+        assert!(themed.contains("doc-noteref"));
+        assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
+    }
+
+    #[test]
     fn no_html_theme_returns_raw_typst_html_without_calepin_css_or_template() {
         let themed = apply_html_theme(SAMPLE_HTML, None).unwrap();
 
@@ -256,7 +268,6 @@ mod tests {
         assert_eq!(inlined, html);
     }
 
-    #[test]
     #[test]
     fn html_custom_syntax_themes_require_html_theme() {
         let dir = tempfile::tempdir().unwrap();

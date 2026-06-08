@@ -1,0 +1,16 @@
+{{ doc.head }}
+{% for style in styles -%}
+<style>
+{{ style.css }}
+</style>
+{% endfor -%}
+{{ doc.body_open }}
+<main class="calepin-tufte">
+{{ doc.body }}
+</main>
+{% for script in scripts -%}
+<script>
+{{ script.content }}
+</script>
+{% endfor -%}
+{{ doc.body_close }}

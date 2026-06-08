@@ -1,0 +1,279 @@
+:root {
+__CALEPIN_SYNTAX_LIGHT__}
+
+html {
+  background: #fffff8;
+  color: #12110f;
+  font-family: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 18px;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  background: #fffff8;
+  color: #12110f;
+  overflow-x: hidden;
+}
+
+.calepin-tufte {
+  --main-width: 690px;
+  --gutter-width: 280px;
+  --gutter-gap: 40px;
+  max-width: calc(var(--main-width) + var(--gutter-width) + var(--gutter-gap));
+  margin: 0 auto;
+  padding: 4rem clamp(1.25rem, 4vw, 3rem) 5rem;
+  line-height: 1.55;
+  counter-reset: tufte-sidenote;
+  box-sizing: border-box;
+}
+
+.calepin-tufte *,
+.calepin-tufte *::before,
+.calepin-tufte *::after {
+  box-sizing: border-box;
+}
+
+.calepin-tufte > * {
+  max-width: var(--main-width);
+}
+
+.calepin-tufte h1,
+.calepin-tufte h2,
+.calepin-tufte h3,
+.calepin-tufte h4 {
+  max-width: var(--main-width);
+  font-weight: 400;
+  line-height: 1.1;
+  color: #12110f;
+}
+
+.calepin-tufte h1 {
+  margin: 0 0 1.7rem;
+  font-size: 3rem;
+}
+
+.calepin-tufte h2 {
+  margin: 2.6rem 0 0.9rem;
+  font-size: 1.85rem;
+}
+
+.calepin-tufte h3 {
+  margin: 2rem 0 0.65rem;
+  font-size: 1.35rem;
+}
+
+.calepin-tufte p,
+.calepin-tufte li {
+  font-size: 1.08rem;
+}
+
+.calepin-tufte p {
+  margin: 1rem 0;
+}
+
+.calepin-tufte a {
+  color: #7a2e2a;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.16em;
+}
+
+.calepin-tufte img,
+.calepin-tufte svg {
+  max-width: 100%;
+}
+
+.calepin-tufte figure {
+  margin: 1.6rem 0;
+}
+
+.calepin-tufte figcaption {
+  margin-top: 0.45rem;
+  color: #5a5650;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.calepin-tufte .calepin-math-inline {
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.calepin-tufte .calepin-math-display {
+  max-width: var(--main-width);
+  margin: 1.1rem 0;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+  font-style: italic;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.calepin-tufte .sidenote,
+.calepin-tufte .marginnote,
+.calepin-tufte .margin-figure {
+  float: right;
+  clear: right;
+  width: var(--gutter-width);
+  margin-right: calc(-1 * (var(--gutter-width) + var(--gutter-gap)));
+  margin-top: 0.25rem;
+  margin-bottom: 0.8rem;
+  color: #5a5650;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.calepin-tufte .sidenote {
+  counter-increment: tufte-sidenote;
+}
+
+.calepin-tufte .sidenote::before {
+  content: counter(tufte-sidenote);
+  vertical-align: super;
+  margin-right: 0.25em;
+  color: #7a2e2a;
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+.calepin-tufte .tufte-generated-sidenote::before {
+  content: attr(data-note-ref);
+}
+
+.calepin-tufte a[role="doc-noteref"] {
+  color: #7a2e2a;
+  text-decoration: none;
+}
+
+.calepin-tufte section[role="doc-endnotes"] {
+  margin-top: 2.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d8d1c3;
+  color: #5a5650;
+  font-size: 0.86rem;
+}
+
+.calepin-tufte .margin-figure {
+  margin-top: 0.4rem;
+}
+
+.calepin-tufte .margin-figure figure,
+.calepin-tufte .margin-figure .cell-output,
+.calepin-tufte .margin-figure .sourceCode {
+  margin-top: 0;
+}
+
+.calepin-tufte .margin-figure table {
+  width: 100%;
+  font-size: 0.78rem;
+}
+
+.calepin-tufte table {
+  border-collapse: collapse;
+  margin: 1.1rem 0;
+  font-size: 0.95rem;
+}
+
+.calepin-tufte th,
+.calepin-tufte td {
+  padding: 0.22rem 0.5rem 0.22rem 0;
+  border-bottom: 1px solid #ded8ca;
+  text-align: left;
+}
+
+.sourceCode,
+div.sourceCode,
+pre.sourceCode {
+  position: relative;
+  max-width: var(--main-width);
+  overflow-x: auto;
+  background: var(--calepin-syntax-background);
+  border: 1px solid var(--calepin-syntax-border);
+  border-radius: 4px;
+  padding: 0.45rem 0.6rem;
+  margin: 0.65rem 0 0.25rem 0;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--calepin-syntax-foreground);
+}
+
+__CALEPIN_SYNTAX_CLASSES__
+div.sourceCode pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  line-height: inherit;
+}
+
+.cell-output {
+  position: relative;
+  max-width: var(--main-width);
+  overflow-x: auto;
+  background: #fffdf0;
+  border: 1px solid #ded8ca;
+  border-left: 3px solid #b6aa90;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  margin: 0.25rem 0 0.85rem 0;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.38;
+  color: #2f2b25;
+}
+
+.cell-output pre,
+.cell-output-stdout pre,
+.cell-output-stderr pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.cell-output-stderr {
+  background: #fff6f2;
+  border-color: #d9b8a9;
+  border-left-color: #9f4b3e;
+  color: #5d2d27;
+}
+
+.calepin-tufte > pre {
+  max-width: var(--main-width);
+  overflow-x: auto;
+}
+
+@media (max-width: 1080px) {
+  .calepin-tufte {
+    max-width: var(--main-width);
+  }
+
+  .calepin-tufte .sidenote,
+  .calepin-tufte .marginnote,
+  .calepin-tufte .margin-figure {
+    float: none;
+    display: block;
+    width: auto;
+    max-width: var(--main-width);
+    margin: 0.8rem 0;
+    padding-left: 1rem;
+    border-left: 2px solid #d8d1c3;
+  }
+}
+
+@media (max-width: 680px) {
+  html {
+    font-size: 16px;
+  }
+
+  .calepin-tufte {
+    padding: 2.5rem 1rem 3.5rem;
+  }
+
+  .calepin-tufte h1 {
+    font-size: 2.3rem;
+  }
+}

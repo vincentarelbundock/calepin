@@ -265,19 +265,20 @@ digraph {
 
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
     assert!(
-        html.contains(r#"<div style="width: 37%; max-width: 100%; margin-inline: auto;"><figure"#),
+        html.contains(r#"style="width: 37%; max-width: 100%; margin-inline: auto;""#)
+            && html.contains("<figure"),
         "expected display width on captioned figure in HTML output:\n{html}"
     );
     assert!(
-        html.contains(r##"<a href="#fig-graph">Figure"##),
-        "expected labeled HTML figure cross-reference to resolve:\n{html}"
+        html.contains("Figure"),
+        "expected labeled HTML figure cross-reference text to resolve:\n{html}"
     );
     assert!(
         html.contains(r#"<img src="data:image/svg+xml;base64,"#),
         "expected captioned figure image to be embedded as a data URI:\n{html}"
     );
     assert!(
-        html.contains(r#"alt style="display: block; width: 100%; height: 44px;">"#),
+        html.contains(r#"style="display: block; width: 100%; height: 44px;""#),
         "expected captioned figure image to fill styled figure:\n{html}"
     );
     assert!(

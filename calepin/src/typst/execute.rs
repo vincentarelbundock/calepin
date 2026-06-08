@@ -369,10 +369,9 @@ fn lines(code: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{DisplayOptions, ExecOptions, ResultsMode, SetupDefaults};
+    use crate::typst::model::{DisplayOptions, ExecOptions, ResultsMode};
 
     fn chunk(results: ResultsMode) -> ChunkSpec {
-        let defaults = SetupDefaults::default();
         ChunkSpec {
             label: "fig-demo".to_string(),
             engine: EngineName::R,

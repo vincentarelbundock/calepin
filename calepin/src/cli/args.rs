@@ -107,7 +107,7 @@ pub struct CompileArgs {
 
     /// Output template name applied after compilation.
     ///
-    /// Use `basic`, `pico`, or a directory name under the configured themes directory.
+    /// Use `basic`, `pico`, `tufte`, or a directory name under the configured themes directory.
     #[arg(long)]
     pub template: Option<String>,
 
@@ -300,6 +300,27 @@ mod tests {
         match cli.command {
             Command::Compile(args) => {
                 assert_eq!(args.template, Some("basic".to_string()));
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_compile_args_template_tufte() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "--format",
+            "html",
+            "--template",
+            "tufte",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert_eq!(args.template, Some("tufte".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
         }

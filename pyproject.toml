@@ -7,6 +7,8 @@ dependencies = [
   "bash_kernel",
   "plotnine>=0.15.5",
   "zensical>=0.0.43",
+  "numpy>=2.4.6",
+  "matplotlib>=3.10.9",
 ]
 
 [tool.uv]

@@ -55,8 +55,26 @@ static BASIC: BuiltinTheme = BuiltinTheme {
     ],
 };
 
+static TUFTE: BuiltinTheme = BuiltinTheme {
+    name: "tufte",
+    files: &[
+        TemplateFile {
+            path: "layout.html",
+            source: include_str!("../templates/html/tufte/layout.html"),
+        },
+        TemplateFile {
+            path: "styles/main.css",
+            source: include_str!("../templates/html/tufte/styles/main.css"),
+        },
+        TemplateFile {
+            path: "scripts/sidenotes.js",
+            source: include_str!("../templates/html/tufte/scripts/sidenotes.js"),
+        },
+    ],
+};
+
 // Keep "pico" first so existing docs that compare full HTML structure stay stable.
-static BUILTINS: &[&BuiltinTheme] = &[&PICO, &BASIC];
+static BUILTINS: &[&BuiltinTheme] = &[&PICO, &BASIC, &TUFTE];
 
 fn builtin(name: &str) -> Option<&'static BuiltinTheme> {
     BUILTINS.iter().copied().find(|theme| theme.name == name)

@@ -81,7 +81,7 @@ Options:
       --template <TEMPLATE>
           Output template name applied after compilation.
           
-          Use `basic`, `pico`, or a directory name under the configured themes directory.
+          Use `basic`, `pico`, `tufte`, or a directory name under the configured themes directory.
 
       --config <CONFIG>
           Path to project config TOML
