@@ -110,10 +110,12 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     }
     let output = preprocess(PreprocessOptions {
         input: args.input,
+        source: None,
         config: args.common.config,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         sync_pages: false,
+        no_exec: false,
         param_overrides: args.common.params,
     })?;
     compile_with_typst(

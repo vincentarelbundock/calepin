@@ -2,7 +2,7 @@
   "name": "calepin",
   "displayName": "Calepin for Typst",
   "description": "Calepin brings computational notebooks to Typst",
-  "version": "0.0.2",
+  "version": "0.0.11",
   "publisher": "VincentArel-Bundock",
   "license": "MIT",
   "icon": "logo_short_2.png",
@@ -44,7 +44,11 @@
     "onCommand:calepin.watch",
     "onCommand:calepin.compile",
     "onCommand:calepin.stop",
-    "onCommand:calepin.new"
+    "onCommand:calepin.new",
+    "onCommand:calepin.openPreview",
+    "onCommand:calepin.restartPreview",
+    "onCommand:calepin.stopPreview",
+    "onCommand:calepin.refreshExecution"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -64,6 +68,22 @@
       {
         "command": "calepin.new",
         "title": "Calepin Typst New"
+      },
+      {
+        "command": "calepin.openPreview",
+        "title": "Calepin: Open Preview"
+      },
+      {
+        "command": "calepin.restartPreview",
+        "title": "Calepin: Restart Preview"
+      },
+      {
+        "command": "calepin.stopPreview",
+        "title": "Calepin: Stop Preview"
+      },
+      {
+        "command": "calepin.refreshExecution",
+        "title": "Calepin: Refresh Execution"
       }
     ],
     "menus": {
@@ -79,6 +99,18 @@
         },
         {
           "command": "calepin.new"
+        },
+        {
+          "command": "calepin.openPreview"
+        },
+        {
+          "command": "calepin.restartPreview"
+        },
+        {
+          "command": "calepin.stopPreview"
+        },
+        {
+          "command": "calepin.refreshExecution"
         }
       ]
     },
@@ -108,6 +140,37 @@
           },
           "default": [],
           "description": "Arguments forwarded to typst watch after --, such as --port, --open, or --font-path."
+        },
+        "calepin.preview.debounceMs": {
+          "type": "number",
+          "default": 250,
+          "description": "Delay before sending editor changes to the live preview."
+        },
+        "calepin.preview.format": {
+          "type": "string",
+          "enum": [
+            "pdf"
+          ],
+          "default": "pdf",
+          "description": "Output format for Calepin live preview."
+        },
+        "calepin.preview.noExec": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reuse cached chunk outputs instead of executing code during live preview."
+        },
+        "calepin.preview.preserveScroll": {
+          "type": "boolean",
+          "default": true,
+          "description": "Preserve preview scroll position across updates."
+        },
+        "calepin.preview.extraTypstArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional arguments forwarded to Typst after -- during live preview."
         }
       }
     }

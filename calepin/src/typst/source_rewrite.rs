@@ -5,15 +5,19 @@ use crate::typst::model::LayoutPaths;
 const RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
 
 pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
+    let source = std::fs::read_to_string(&layout.input)
+        .with_context(|| format!("failed to read {}", layout.input.display()))?;
+    write_staged_source_text(layout, &source)
+}
+
+pub fn write_staged_source_text(layout: &LayoutPaths, source: &str) -> Result<PathBuf> {
     let mut staged_relative = PathBuf::from(".calepin");
     let mut stem = layout.input_rel.clone();
     stem.set_extension("");
     staged_relative.push(stem);
     staged_relative.push("source.typ");
 
-    let source = std::fs::read_to_string(&layout.input)
-        .with_context(|| format!("failed to read {}", layout.input.display()))?;
-    let staged = rewrite_calepin_imports(&source);
+    let staged = rewrite_calepin_imports(source);
     let staged_path = layout.root.join(&staged_relative);
 
     if let Some(parent) = staged_path.parent() {

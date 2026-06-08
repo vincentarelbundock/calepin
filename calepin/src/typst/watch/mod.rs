@@ -1,4 +1,5 @@
 mod assets;
+mod editor_live;
 mod watcher;
 
 use std::fs;
@@ -27,15 +28,21 @@ const WATCH_PID_FILENAME: &str = "watch.pid";
 fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
     PreprocessOptions {
         input: args.input.clone(),
+        source: None,
         config: args.common.config.clone(),
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         sync_pages,
+        no_exec: args.no_exec,
         param_overrides: args.common.params.clone(),
     }
 }
 
 pub fn run_watch(args: WatchArgs) -> Result<()> {
+    if args.editor_live {
+        return editor_live::run_editor_live(args);
+    }
+
     let format = args.format.map(|format| format.as_str().to_string());
     let sync_pages = format.as_deref().unwrap_or("pdf") == "pdf";
     reject_reserved_typst_inputs(&args.typst_args)?;

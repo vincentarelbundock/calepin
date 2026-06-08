@@ -13,9 +13,13 @@
 
 #title()
 
+this is a test, I'm not sure  this is ok. Perhaps it is. 
+
 This notebook demonstrates the #emph[Calepin] executable Typst workflow: code chunks and inline snippets are collected during preprocessing, run with the requested engine, and rendered back into the document alongside the source that produced them.
 
 = Language-specific settings
+
+live preview is kind of slow, but I guess we'll get used to it. I hope the workflow is worth the wait!
 
 `#calepin.setup()` sets document-wide defaults for all chunks unless overridden per chunk.
 
@@ -66,7 +70,7 @@ from plotnine.data import mtcars
 
 (
     ggplot(mtcars, aes("mpg", "hp"))
-    + geom_point(color = "orange")
+    + geom_point(color = "bleu")
     + labs(x="Miles per gallon", y="Horsepower")
 ).show()
 ```

@@ -1,5 +1,8 @@
 import * as path from "path";
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
+import * as crypto from "crypto";
+import * as fs from "fs/promises";
+import * as os from "os";
 import * as vscode from "vscode";
 
 let watchProcess: ChildProcessWithoutNullStreams | null = null;
@@ -11,6 +14,7 @@ let watchInput: vscode.Uri | null = null;
 let watchPageSyncPath: vscode.Uri | null = null;
 let watchPageSyncEntries: PageSyncEntry[] = [];
 let editorSyncTimer: ReturnType<typeof setTimeout> | null = null;
+let previewManager: PreviewManager | null = null;
 
 const CALEPIN_PYTHON_ENV = "CALEPIN_PYTHON";
 
@@ -33,9 +37,448 @@ type PythonExtensionApi = {
   };
 };
 
+type LiveDiagnostic = {
+  path?: string;
+  line?: number;
+  column?: number;
+  endLine?: number;
+  endColumn?: number;
+  severity?: string;
+  message?: string;
+  source?: string;
+};
+
+type LiveMessage = {
+  type?: string;
+  version?: number;
+  input?: string;
+  output?: string;
+  format?: string;
+  message?: string;
+  diagnostics?: LiveDiagnostic[];
+};
+
+class PreviewManager implements vscode.Disposable {
+  private readonly sessions = new Map<string, PreviewSession>();
+  private readonly diagnostics = vscode.languages.createDiagnosticCollection("calepin");
+  private readonly subscriptions: vscode.Disposable[] = [];
+
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly output: vscode.OutputChannel,
+  ) {
+    this.subscriptions.push(
+      this.diagnostics,
+      vscode.workspace.onDidChangeTextDocument((event) => {
+        const session = this.sessions.get(event.document.uri.toString());
+        session?.scheduleSnapshot();
+      }),
+      vscode.workspace.onDidCloseTextDocument((document) => {
+        const session = this.sessions.get(document.uri.toString());
+        if (session?.isDisposed()) {
+          this.sessions.delete(document.uri.toString());
+        }
+      }),
+    );
+  }
+
+  async openPreview(uri?: vscode.Uri): Promise<void> {
+    const input = await resolveTypstFile(uri);
+    if (!input) return;
+
+    const key = input.toString();
+    const existing = this.sessions.get(key);
+    if (existing && !existing.isDisposed()) {
+      existing.reveal();
+      existing.sendSnapshotNow(false);
+      return;
+    }
+
+    const document = await vscode.workspace.openTextDocument(input);
+    const binary = await findBinary(this.context);
+    if (!binary) return;
+    const outputPath = await livePreviewOutputPath(input);
+    const env = await calepinProcessEnv(input);
+    const session = new PreviewSession(
+      this.context,
+      document,
+      binary,
+      outputPath,
+      env,
+      this.output,
+      this.diagnostics,
+      () => this.sessions.delete(key),
+    );
+    this.sessions.set(key, session);
+    await session.start();
+  }
+
+  async restartPreview(uri?: vscode.Uri): Promise<void> {
+    const input = await resolveTypstFile(uri);
+    if (!input) return;
+    this.sessions.get(input.toString())?.dispose();
+    this.sessions.delete(input.toString());
+    await this.openPreview(input);
+  }
+
+  async refreshExecution(uri?: vscode.Uri): Promise<void> {
+    const input = await resolveTypstFile(uri);
+    if (!input) return;
+    let session = this.sessions.get(input.toString());
+    if (!session || session.isDisposed()) {
+      await this.openPreview(input);
+      session = this.sessions.get(input.toString());
+    }
+    session?.sendSnapshotNow(true);
+  }
+
+  async stopPreview(uri?: vscode.Uri): Promise<void> {
+    const input = uri ?? vscode.window.activeTextEditor?.document.uri;
+    if (input) {
+      const session = this.sessions.get(input.toString());
+      if (session) {
+        session.dispose();
+        this.sessions.delete(input.toString());
+      }
+      return;
+    }
+    this.disposeSessions();
+  }
+
+  dispose(): void {
+    this.disposeSessions();
+    for (const subscription of this.subscriptions) {
+      subscription.dispose();
+    }
+  }
+
+  private disposeSessions(): void {
+    for (const session of this.sessions.values()) {
+      session.dispose();
+    }
+    this.sessions.clear();
+  }
+}
+
+class PreviewSession implements vscode.Disposable {
+  private panel: vscode.WebviewPanel | null = null;
+  private process: ChildProcessWithoutNullStreams | null = null;
+  private stdoutBuffer = "";
+  private version = 0;
+  private latestSentVersion = 0;
+  private latestRenderedVersion = 0;
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private compileInFlight = false;
+  private pendingSnapshot = false;
+  private pendingExec = false;
+  private disposed = false;
+
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly document: vscode.TextDocument,
+    private readonly binary: string,
+    private readonly outputPath: vscode.Uri,
+    private readonly processEnv: NodeJS.ProcessEnv | undefined,
+    private readonly output: vscode.OutputChannel,
+    private readonly diagnostics: vscode.DiagnosticCollection,
+    private readonly onDispose: () => void,
+  ) {}
+
+  async start(): Promise<void> {
+    this.panel = vscode.window.createWebviewPanel(
+      "calepinPreview",
+      `Calepin Preview: ${path.basename(this.document.uri.fsPath)}`,
+      vscode.ViewColumn.Beside,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(this.context.extensionUri, "media", "pdfjs"),
+          vscode.Uri.file(path.dirname(this.outputPath.fsPath)),
+        ],
+      },
+    );
+    this.panel.onDidDispose(() => this.dispose());
+    this.panel.webview.onDidReceiveMessage((message: { type?: string; message?: string }) => {
+      if (message.type === "timing" && message.message) {
+        this.output.appendLine(message.message);
+      }
+    });
+    this.panel.webview.html = pdfWatchWebviewHtml(
+      this.context,
+      this.panel.webview,
+      this.outputPath,
+    );
+    this.startProcess();
+    this.sendSnapshotNow(false);
+  }
+
+  reveal(): void {
+    this.panel?.reveal(vscode.ViewColumn.Beside);
+  }
+
+  isDisposed(): boolean {
+    return this.disposed;
+  }
+
+  scheduleSnapshot(): void {
+    if (this.disposed) return;
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+    const cfg = vscode.workspace.getConfiguration("calepin");
+    const debounceMs = cfg.get<number>("preview.debounceMs", 250);
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = null;
+      this.sendSnapshotNow(false);
+    }, debounceMs);
+  }
+
+  sendSnapshotNow(exec = false): void {
+    if (this.disposed || !this.process?.stdin.writable) return;
+    if (this.compileInFlight) {
+      this.pendingSnapshot = true;
+      this.pendingExec = this.pendingExec || exec;
+      return;
+    }
+    this.version += 1;
+    this.latestSentVersion = this.version;
+    const message = {
+      type: "snapshot",
+      version: this.version,
+      path: this.document.uri.fsPath,
+      text: this.document.getText(),
+      exec,
+    };
+    this.compileInFlight = true;
+    this.process.stdin.write(`${JSON.stringify(message)}\n`);
+  }
+
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+    this.diagnostics.delete(this.document.uri);
+    if (this.process) {
+      const proc = this.process;
+      this.process = null;
+      if (proc.stdin.writable) {
+        proc.stdin.write(`${JSON.stringify({ type: "shutdown" })}\n`);
+      }
+      proc.kill();
+    }
+    const panel = this.panel;
+    this.panel = null;
+    panel?.dispose();
+    this.onDispose();
+  }
+
+  private startProcess(): void {
+    const cfg = vscode.workspace.getConfiguration("calepin");
+    const format = cfg.get<string>("preview.format", "pdf");
+    const noExec = cfg.get<boolean>("preview.noExec", true);
+    const extraTypstArgs = cfg
+      .get<string[]>("preview.extraTypstArgs", [])
+      .filter((arg) => arg.length > 0);
+    const args = [
+      "watch",
+      this.document.uri.fsPath,
+      this.outputPath.fsPath,
+      "--editor-live",
+      "--format",
+      format,
+      "--diagnostics",
+      "json",
+      "--quiet",
+    ];
+    if (noExec) {
+      args.push("--no-exec");
+    }
+    if (extraTypstArgs.length > 0) {
+      args.push("--", ...extraTypstArgs);
+    }
+
+    const cwd = workspaceCwd(this.document.uri);
+    const spawnOptions = this.processEnv
+      ? { cwd, env: { ...process.env, ...this.processEnv } }
+      : { cwd };
+    this.output.appendLine(`$ ${formatCommand(this.binary, args, this.processEnv)}`);
+    const proc = spawn(this.binary, args, spawnOptions);
+    this.process = proc;
+
+    proc.stdout.on("data", (chunk: Buffer) => this.handleStdout(chunk));
+    proc.stderr.on("data", (chunk: Buffer) => this.output.append(chunk.toString()));
+    proc.on("error", (error) => {
+      this.output.appendLine(`Failed to start Calepin Preview: ${error.message}`);
+      this.showError(`Failed to start Calepin Preview: ${error.message}`);
+    });
+    proc.on("exit", (code) => {
+      if (this.disposed || this.process !== proc) return;
+      this.process = null;
+      const message = `Calepin live preview exited with code ${code ?? "null"}.`;
+      this.output.appendLine(message);
+      this.showError(`${message} Run "Calepin: Restart Preview" to start it again.`);
+    });
+  }
+
+  private handleStdout(chunk: Buffer): void {
+    this.stdoutBuffer += chunk.toString();
+    let newline = this.stdoutBuffer.indexOf("\n");
+    while (newline >= 0) {
+      const line = this.stdoutBuffer.slice(0, newline).trim();
+      this.stdoutBuffer = this.stdoutBuffer.slice(newline + 1);
+      if (line.length > 0) {
+        this.handleJsonLine(line);
+      }
+      newline = this.stdoutBuffer.indexOf("\n");
+    }
+  }
+
+  private handleJsonLine(line: string): void {
+    let message: LiveMessage;
+    try {
+      message = JSON.parse(line) as LiveMessage;
+    } catch (error) {
+      this.output.appendLine(`Failed to parse Calepin preview JSON: ${String(error)}`);
+      this.output.appendLine(line);
+      return;
+    }
+
+    if (message.type === "compiled") {
+      this.handleCompiled(message);
+    } else if (message.type === "error") {
+      this.handleError(message);
+    } else if (message.type === "compiling") {
+      this.panel?.webview.postMessage({ type: "showCompiling", version: message.version });
+    }
+  }
+
+  private handleCompiled(message: LiveMessage): void {
+    const version = typeof message.version === "number" ? message.version : 0;
+    try {
+      if (version < this.latestSentVersion || version < this.latestRenderedVersion) return;
+      this.latestRenderedVersion = version;
+      this.applyDiagnostics(message.diagnostics ?? []);
+      const preserveScroll = vscode.workspace
+        .getConfiguration("calepin")
+        .get<boolean>("preview.preserveScroll", true);
+      void this.panel?.webview.postMessage({
+        type: "reload",
+        version: String(version),
+        preserveScroll,
+      });
+    } finally {
+      this.finishCompile();
+    }
+  }
+
+  private handleError(message: LiveMessage): void {
+    const version = typeof message.version === "number" ? message.version : this.latestSentVersion;
+    try {
+      if (version < this.latestSentVersion) return;
+      this.applyDiagnostics(message.diagnostics ?? []);
+      this.showError(message.message ?? "Compilation failed", message.diagnostics ?? []);
+    } finally {
+      this.finishCompile();
+    }
+  }
+
+  private finishCompile(): void {
+    this.compileInFlight = false;
+    if (!this.pendingSnapshot || this.disposed) return;
+    const exec = this.pendingExec;
+    this.pendingSnapshot = false;
+    this.pendingExec = false;
+    this.sendSnapshotNow(exec);
+  }
+
+  private applyDiagnostics(items: LiveDiagnostic[]): void {
+    const grouped = new Map<string, vscode.Diagnostic[]>();
+    for (const item of items) {
+      const target = item.path ? vscode.Uri.file(item.path) : this.document.uri;
+      const list = grouped.get(target.toString()) ?? [];
+      list.push(toVscodeDiagnostic(item));
+      grouped.set(target.toString(), list);
+    }
+    if (grouped.size === 0) {
+      this.diagnostics.set(this.document.uri, []);
+      return;
+    }
+    for (const [key, value] of grouped) {
+      this.diagnostics.set(vscode.Uri.parse(key), value);
+    }
+  }
+
+  private showError(message: string, diagnostics: LiveDiagnostic[] = []): void {
+    void this.panel?.webview.postMessage({
+      type: "showError",
+      message,
+      diagnostics,
+    });
+  }
+}
+
+function toVscodeDiagnostic(item: LiveDiagnostic): vscode.Diagnostic {
+  const line = positiveProtocolInteger(item.line) ?? 1;
+  const column = positiveProtocolInteger(item.column) ?? 1;
+  const endLine = positiveProtocolInteger(item.endLine) ?? line;
+  const endColumn = positiveProtocolInteger(item.endColumn) ?? column + 1;
+  const startLine = Math.max(0, line - 1);
+  const startCol = Math.max(0, column - 1);
+  const range = new vscode.Range(
+    startLine,
+    startCol,
+    Math.max(startLine, endLine - 1),
+    Math.max(startCol + 1, endColumn - 1),
+  );
+  const diagnostic = new vscode.Diagnostic(
+    range,
+    item.message ?? "Calepin preview error",
+    protocolSeverity(item.severity),
+  );
+  diagnostic.source = item.source ?? "calepin";
+  return diagnostic;
+}
+
+function positiveProtocolInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function protocolSeverity(value: unknown): vscode.DiagnosticSeverity {
+  switch (value) {
+    case "warning":
+      return vscode.DiagnosticSeverity.Warning;
+    case "info":
+      return vscode.DiagnosticSeverity.Information;
+    case "hint":
+      return vscode.DiagnosticSeverity.Hint;
+    case "error":
+    default:
+      return vscode.DiagnosticSeverity.Error;
+  }
+}
+
+async function livePreviewOutputPath(input: vscode.Uri): Promise<vscode.Uri> {
+  const workspace = vscode.workspace.getWorkspaceFolder(input)?.uri.fsPath ?? path.dirname(input.fsPath);
+  const hash = crypto
+    .createHash("sha256")
+    .update(`${workspace}\0${input.fsPath}`)
+    .digest("hex")
+    .slice(0, 16);
+  const dir = path.join(os.tmpdir(), "calepin-vscode", hash);
+  await fs.mkdir(dir, { recursive: true });
+  return vscode.Uri.file(path.join(dir, "preview.pdf"));
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   watchOutput = vscode.window.createOutputChannel("Calepin Typst Watch");
+  const previewOutput = vscode.window.createOutputChannel("Calepin Preview");
+  previewManager = new PreviewManager(context, previewOutput);
   context.subscriptions.push(watchOutput);
+  context.subscriptions.push(previewOutput, previewManager);
   context.subscriptions.push(
     vscode.commands.registerCommand("calepin.watch", (uri?: vscode.Uri) =>
       runWatch(context, uri),
@@ -45,6 +488,18 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand("calepin.stop", () => runStop(context)),
     vscode.commands.registerCommand("calepin.new", () => runNew(context)),
+    vscode.commands.registerCommand("calepin.openPreview", (uri?: vscode.Uri) =>
+      previewManager?.openPreview(uri),
+    ),
+    vscode.commands.registerCommand("calepin.restartPreview", (uri?: vscode.Uri) =>
+      previewManager?.restartPreview(uri),
+    ),
+    vscode.commands.registerCommand("calepin.stopPreview", (uri?: vscode.Uri) =>
+      previewManager?.stopPreview(uri),
+    ),
+    vscode.commands.registerCommand("calepin.refreshExecution", (uri?: vscode.Uri) =>
+      previewManager?.refreshExecution(uri),
+    ),
     vscode.window.onDidChangeTextEditorSelection((event) =>
       scheduleEditorToPdfSync(event.textEditor),
     ),
@@ -56,6 +511,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {
   stopWatch();
+  previewManager?.dispose();
 }
 
 async function runWatch(
@@ -757,7 +1213,16 @@ function pdfWatchWebviewHtml(
     window.addEventListener("message", (event) => {
       const message = event.data;
       if (message && message.type === "reload") {
-        void loadVersion(String(message.version || Date.now()), snapshotState());
+        const state = message.preserveScroll === false
+          ? { page: 1, scaleValue: "auto", scrollTop: 0, scrollLeft: 0 }
+          : snapshotState();
+        void loadVersion(String(message.version || Date.now()), state);
+      }
+      if (message && message.type === "showCompiling") {
+        status.textContent = "Compiling snapshot " + String(message.version || "") + "...";
+      }
+      if (message && message.type === "showError") {
+        status.textContent = "Calepin preview failed: " + String(message.message || "Compilation failed");
       }
       if (message && message.type === "syncToPdf" && autoScroll.checked) {
         const page = Number(message.page);

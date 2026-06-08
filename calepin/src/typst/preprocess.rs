@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -8,12 +9,15 @@ use xxhash_rust::xxh3::xxh3_64;
 
 use crate::config::{CalepinConfig, ExecutablePaths};
 use crate::typst::execute::{EnginePool, ExecutionConfig};
-use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, ExecOptions, LayoutPaths};
+use crate::typst::model::{
+    ChunkResultDocument, ChunkSpec, ChunkStatus, EngineName, ExecOptions, LayoutPaths, ResultItem,
+    ResultItemName, ResultItemType, ResultsDocument,
+};
 use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout, slash_path};
 use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
 use crate::typst::results::{build_results_document, write_results};
 use crate::typst::runtime::write_runtime;
-use crate::typst::source_rewrite::write_staged_source;
+use crate::typst::source_rewrite::{write_staged_source, write_staged_source_text};
 use crate::typst::sync::write_page_sync;
 use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
@@ -21,12 +25,20 @@ use crate::utils::{process, tools};
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
     pub input: PathBuf,
+    pub source: Option<SourceInput>,
     pub config: Option<PathBuf>,
     pub quiet: bool,
     pub timeout: Option<u64>,
     pub sync_pages: bool,
+    pub no_exec: bool,
     /// `key=value` document-parameter overrides from the CLI (`-P`).
     pub param_overrides: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SourceInput {
+    pub logical_path: PathBuf,
+    pub text: String,
 }
 
 #[derive(Debug)]
@@ -48,6 +60,7 @@ pub struct PreprocessPlan {
     timeout: Option<Duration>,
     quiet: bool,
     sync_pages: bool,
+    no_exec: bool,
     params: serde_json::Value,
 }
 
@@ -57,12 +70,20 @@ pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
 }
 
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
-    let mut layout = resolve_layout(&options.input, None)?;
+    let input = options
+        .source
+        .as_ref()
+        .map(|source| source.logical_path.as_path())
+        .unwrap_or(options.input.as_path());
+    let mut layout = resolve_layout(input, None)?;
     let config = CalepinConfig::load(&layout.root, options.config.as_deref())?;
     assert_supported_typst(&config.executables.typst)?;
 
     write_runtime(&layout.root)?;
-    let staged_input = write_staged_source(&layout)?;
+    let staged_input = match options.source.as_ref() {
+        Some(source) => write_staged_source_text(&layout, &source.text)?,
+        None => write_staged_source(&layout)?,
+    };
     let query_input = write_render_wrapper(&layout, &staged_input, &[])?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
     let setup_json = typst_query(
@@ -130,6 +151,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         timeout,
         quiet: options.quiet,
         sync_pages: options.sync_pages,
+        no_exec: options.no_exec,
         params,
     })
 }
@@ -208,36 +230,40 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
     // reproducibility record. Native R/Python read their literal prelude instead.
     let params_path = write_params_file(&plan.layout, &plan.params)?;
 
-    let execution_config = ExecutionConfig {
-        cwd: plan.cwd.clone(),
-        executables: plan.executables.clone(),
-        timeout: plan.timeout,
-        params: plan.params.clone(),
-        params_path,
+    let chunk_results = if plan.no_exec {
+        reuse_cached_chunk_results(&plan)?
+    } else {
+        let execution_config = ExecutionConfig {
+            cwd: plan.cwd.clone(),
+            executables: plan.executables.clone(),
+            timeout: plan.timeout,
+            params: plan.params.clone(),
+            params_path,
+        };
+        let mut pool = EnginePool::new(execution_config);
+        let mut chunk_results: Vec<Option<ChunkResultDocument>> = vec![None; plan.chunks.len()];
+
+        if !plan.quiet {
+            eprintln!(
+                "calepin executing {} chunk{}",
+                plan.chunks.len(),
+                if plan.chunks.len() == 1 { "" } else { "s" },
+            );
+        }
+
+        for chunk_index in chunks_in_engine_order(&plan.chunks) {
+            let chunk = &plan.chunks[chunk_index];
+            let result = execute_chunk_live(&mut pool, chunk, &staged_figures_dir, &plan.layout)?;
+            chunk_results[chunk_index] = Some(result);
+        }
+
+        chunk_results
+            .into_iter()
+            .map(|result| {
+                result.context("chunk execution produced no result; this indicates a planner bug")
+            })
+            .collect::<Result<Vec<_>>>()?
     };
-    let mut pool = EnginePool::new(execution_config);
-    let mut chunk_results: Vec<Option<ChunkResultDocument>> = vec![None; plan.chunks.len()];
-
-    if !plan.quiet {
-        eprintln!(
-            "calepin executing {} chunk{}",
-            plan.chunks.len(),
-            if plan.chunks.len() == 1 { "" } else { "s" },
-        );
-    }
-
-    for chunk_index in chunks_in_engine_order(&plan.chunks) {
-        let chunk = &plan.chunks[chunk_index];
-        let result = execute_chunk_live(&mut pool, chunk, &staged_figures_dir, &plan.layout)?;
-        chunk_results[chunk_index] = Some(result);
-    }
-
-    let chunk_results = chunk_results
-        .into_iter()
-        .map(|result| {
-            result.context("chunk execution produced no result; this indicates a planner bug")
-        })
-        .collect::<Result<Vec<_>>>()?;
 
     publish_staged_figures(&staged_figures_dir, &plan.layout.figures_dir)?;
     let document = build_results_document(&plan.layout.input_rel, chunk_results);
@@ -263,6 +289,79 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
         themes_dir: plan.themes_dir,
         fingerprint: plan.fingerprint,
     })
+}
+
+fn reuse_cached_chunk_results(plan: &PreprocessPlan) -> Result<Vec<ChunkResultDocument>> {
+    let cached = read_cached_results(&plan.layout.results_path)?;
+    Ok(plan
+        .chunks
+        .iter()
+        .map(|chunk| {
+            if !chunk.exec_options.eval {
+                return skipped_chunk_result(chunk);
+            }
+            cached
+                .as_ref()
+                .and_then(|document| document.chunks.get(&chunk.label))
+                .map(|result| cached_chunk_result(chunk, result))
+                .unwrap_or_else(|| stale_placeholder_result(chunk))
+        })
+        .collect())
+}
+
+fn read_cached_results(path: &Path) -> Result<Option<ResultsDocument>> {
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(error).with_context(|| format!("failed to read {}", path.display()))
+        }
+    };
+    let document = serde_json::from_str(&text)
+        .with_context(|| format!("failed to parse cached results {}", path.display()))?;
+    Ok(Some(document))
+}
+
+fn cached_chunk_result(chunk: &ChunkSpec, cached: &ChunkResultDocument) -> ChunkResultDocument {
+    ChunkResultDocument {
+        label: chunk.label.clone(),
+        engine: chunk.engine.clone(),
+        status: cached.status.clone(),
+        display_options: chunk.display_options.clone(),
+        items: cached.items.clone(),
+        crossref_labels: chunk.crossref_labels.clone(),
+    }
+}
+
+fn skipped_chunk_result(chunk: &ChunkSpec) -> ChunkResultDocument {
+    ChunkResultDocument {
+        label: chunk.label.clone(),
+        engine: chunk.engine.clone(),
+        status: ChunkStatus::Skipped,
+        display_options: chunk.display_options.clone(),
+        items: Vec::new(),
+        crossref_labels: chunk.crossref_labels.clone(),
+    }
+}
+
+fn stale_placeholder_result(chunk: &ChunkSpec) -> ChunkResultDocument {
+    ChunkResultDocument {
+        label: chunk.label.clone(),
+        engine: chunk.engine.clone(),
+        status: ChunkStatus::Skipped,
+        display_options: chunk.display_options.clone(),
+        items: vec![ResultItem {
+            item_type: ResultItemType::Stream,
+            name: Some(ResultItemName::Stdout),
+            text: Some("[stale output: save or run Calepin compile to refresh]".to_string()),
+            level: None,
+            message: None,
+            traceback: None,
+            data: None,
+            metadata: BTreeMap::new(),
+        }],
+        crossref_labels: chunk.crossref_labels.clone(),
+    }
 }
 
 pub fn typst_query(

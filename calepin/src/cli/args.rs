@@ -57,6 +57,12 @@ pub enum CompileFormat {
     Html,
 }
 
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiagnosticsFormat {
+    Human,
+    Json,
+}
+
 impl CompileFormat {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -130,6 +136,22 @@ pub struct WatchArgs {
     /// Output format passed to typst watch
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
+
+    /// Start a persistent editor integration process.
+    ///
+    /// In this mode, Calepin receives unsaved document snapshots as
+    /// newline-delimited JSON over stdin and emits machine-readable status
+    /// messages over stdout.
+    #[arg(long)]
+    pub editor_live: bool,
+
+    /// Do not execute code chunks. Reuse cached outputs when available.
+    #[arg(long)]
+    pub no_exec: bool,
+
+    /// Diagnostic output format
+    #[arg(long, value_enum, default_value_t = DiagnosticsFormat::Human)]
+    pub diagnostics: DiagnosticsFormat,
 
     #[command(flatten)]
     pub common: CommonArgs,
@@ -363,6 +385,39 @@ mod tests {
                 assert_eq!(args.format, Some(CompileFormat::Html));
                 assert!(args.common.quiet);
                 assert_eq!(args.common.timeout, Some(42));
+                assert_eq!(args.typst_args, vec!["--font-path", "fonts"]);
+            }
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_watch_editor_live_args() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "watch",
+            "paper.typ",
+            "preview.pdf",
+            "--editor-live",
+            "--no-exec",
+            "--format",
+            "pdf",
+            "--diagnostics",
+            "json",
+            "--",
+            "--font-path",
+            "fonts",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Watch(args) => {
+                assert_eq!(args.input, PathBuf::from("paper.typ"));
+                assert_eq!(args.output, Some(PathBuf::from("preview.pdf")));
+                assert!(args.editor_live);
+                assert!(args.no_exec);
+                assert_eq!(args.format, Some(CompileFormat::Pdf));
+                assert_eq!(args.diagnostics, DiagnosticsFormat::Json);
                 assert_eq!(args.typst_args, vec!["--font-path", "fonts"]);
             }
             other => panic!("expected watch command, got {other:?}"),
