@@ -204,6 +204,19 @@
   _append-css(with-responsive, _html-image-align-style(fig-align))
 }
 
+// A labeled figure must stay a native `figure` so `@label` cross-references
+// resolve, and a native figure cannot carry the display-width style itself.
+// Wrap it in a styled block that applies the same width/responsive/alignment as
+// an unlabeled captioned figure, so both honor `fig-width`.
+#let _wrap-html-figure-width(content, width, responsive, fig-align) = {
+  let style = _html-figure-style(width, responsive, fig-align)
+  if style == "" {
+    content
+  } else {
+    std.html.elem("div", attrs: (style: style))[#content]
+  }
+}
+
 #let _html-captioned-figure(
   img,
   width,
@@ -499,7 +512,12 @@
         _html-captioned-figure(img, display-width, fig-responsive, fig-align, fig-caption, fig-cap-location)
       }
       let rendered = if fig-labels.len() > 0 {
-        _attach-labels(fig, fig-labels)
+        _wrap-html-figure-width(
+          _attach-labels(fig, fig-labels),
+          display-width,
+          fig-responsive,
+          fig-align,
+        )
       } else {
         _attach-label(fig, label)
       }

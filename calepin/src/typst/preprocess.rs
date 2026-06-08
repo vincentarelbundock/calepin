@@ -24,6 +24,8 @@ pub struct PreprocessOptions {
     pub quiet: bool,
     pub timeout: Option<u64>,
     pub sync_pages: bool,
+    /// `key=value` document-parameter overrides from the CLI (`-P`).
+    pub param_overrides: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -45,6 +47,7 @@ pub struct PreprocessPlan {
     timeout: Option<Duration>,
     quiet: bool,
     sync_pages: bool,
+    params: serde_json::Value,
 }
 
 pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
@@ -73,7 +76,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &config.executables.typst,
         &layout,
         &query_input,
-        "raw.where(block: true).or(<calepin-chunk>)",
+        "raw.where(block: true).or(<calepin-fence-label>).or(<calepin-chunk>)",
         &results_input,
     )?;
     let parsed_chunks = parse_chunks_with_warnings(&chunks_json, Some(setup_config.clone()))?;
@@ -102,9 +105,18 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         layout.render_input = write_render_wrapper(&layout, &staged_input, &[])?;
     }
 
+    let params = resolve_params(&setup_config.defaults.params, &options.param_overrides)?;
+
     let cwd = layout.work_dir.clone();
     let timeout = options.timeout.map(Duration::from_secs);
-    let fingerprint = preprocess_fingerprint(&layout, &config.executables, &chunks, &cwd, timeout)?;
+    let fingerprint = preprocess_fingerprint(
+        &layout,
+        &config.executables,
+        &chunks,
+        &cwd,
+        timeout,
+        &params,
+    )?;
 
     Ok(PreprocessPlan {
         layout,
@@ -116,6 +128,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         timeout,
         quiet: options.quiet,
         sync_pages: options.sync_pages,
+        params,
     })
 }
 
@@ -188,10 +201,17 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
     std::fs::create_dir_all(&staged_figures_dir)
         .with_context(|| format!("failed to create {}", staged_figures_dir.display()))?;
 
+    // Always write params.json when there are parameters: it is the universal
+    // transport for Jupyter kernels Calepin cannot auto-bind, and a useful
+    // reproducibility record. Native R/Python read their literal prelude instead.
+    let params_path = write_params_file(&plan.layout, &plan.params)?;
+
     let execution_config = ExecutionConfig {
         cwd: plan.cwd.clone(),
         executables: plan.executables.clone(),
         timeout: plan.timeout,
+        params: plan.params.clone(),
+        params_path,
     };
     let mut pool = EnginePool::new(execution_config);
     let mut chunk_results: Vec<Option<ChunkResultDocument>> = vec![None; plan.chunks.len()];
@@ -368,12 +388,48 @@ fn publish_staged_file(source: &Path, target: &Path) -> Result<()> {
     std::fs::write(target, bytes).with_context(|| format!("failed to write {}", target.display()))
 }
 
+/// Write `params.json` next to `results.json` when there are parameters, and
+/// return its path. Returns `None` (and removes any stale file) when empty.
+fn write_params_file(layout: &LayoutPaths, params: &serde_json::Value) -> Result<Option<PathBuf>> {
+    let path = layout.results_path.with_file_name("params.json");
+    let is_empty = params.as_object().is_none_or(|map| map.is_empty());
+    if is_empty {
+        let _ = fs::remove_file(&path);
+        return Ok(None);
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    let json = serde_json::to_string_pretty(params)?;
+    fs::write(&path, json).with_context(|| format!("failed to write {}", path.display()))?;
+    Ok(Some(path))
+}
+
+/// Merge `-P key=value` CLI overrides onto the document's `setup(params: ...)`.
+/// CLI values win, and inherit the same scalar typing as `#|` option values.
+fn resolve_params(base: &serde_json::Value, overrides: &[String]) -> Result<serde_json::Value> {
+    let mut map = match base {
+        serde_json::Value::Object(map) => map.clone(),
+        _ => serde_json::Map::new(),
+    };
+    for entry in overrides {
+        let (key, raw_value) = entry
+            .split_once('=')
+            .ok_or_else(|| anyhow!("invalid --param `{entry}` (expected `key=value`)"))?;
+        let value = crate::typst::chunk_options::parse_qmd_value(raw_value.trim())?;
+        map.insert(key.trim().to_string(), value);
+    }
+    Ok(serde_json::Value::Object(map))
+}
+
 fn preprocess_fingerprint(
     layout: &LayoutPaths,
     executables: &ExecutablePaths,
     chunks: &[ChunkSpec],
     cwd: &Path,
     timeout: Option<Duration>,
+    params: &serde_json::Value,
 ) -> Result<u64> {
     let payload = PreprocessFingerprint {
         schema: crate::typst::model::RESULT_SCHEMA_VERSION,
@@ -387,6 +443,7 @@ fn preprocess_fingerprint(
             .iter()
             .map(ChunkFingerprint::from)
             .collect::<Vec<_>>(),
+        params: params.clone(),
     };
     let bytes = serde_json::to_vec(&payload)?;
     Ok(xxh3_64(&bytes))
@@ -402,6 +459,7 @@ struct PreprocessFingerprint {
     timeout_secs: Option<u64>,
     executables: ExecutableFingerprint,
     chunks: Vec<ChunkFingerprint>,
+    params: serde_json::Value,
 }
 
 #[derive(Serialize)]
@@ -467,6 +525,38 @@ mod tests {
     use crate::typst::paths::slash_path;
 
     #[test]
+    fn cli_params_override_setup_params() {
+        let base = serde_json::json!({"region": "NY", "min_count": 10});
+        let resolved = resolve_params(
+            &base,
+            &[
+                "region=CA".to_string(),
+                "alpha=0.5".to_string(),
+                "active=true".to_string(),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            resolved,
+            serde_json::json!({"region":"CA","min_count":10,"alpha":0.5,"active":true})
+        );
+    }
+
+    #[test]
+    fn cli_param_without_equals_is_rejected() {
+        let err = resolve_params(&serde_json::json!({}), &["bad".to_string()])
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("bad"), "{err}");
+    }
+
+    #[test]
+    fn resolve_params_with_no_overrides_returns_base() {
+        let base = serde_json::json!({"a": 1});
+        assert_eq!(resolve_params(&base, &[]).unwrap(), base);
+    }
+
+    #[test]
     fn query_command_uses_root_relative_input() {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
@@ -488,6 +578,7 @@ mod tests {
             std::slice::from_ref(&chunk),
             dir.path(),
             Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
         )
         .unwrap();
 
@@ -502,10 +593,38 @@ mod tests {
             &[chunk],
             dir.path(),
             Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
         )
         .unwrap();
 
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn preprocess_fingerprint_tracks_params() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+        let executables = ExecutablePaths::defaults();
+        let chunk = test_chunk("print(1)");
+        let baseline = preprocess_fingerprint(
+            &layout,
+            &executables,
+            std::slice::from_ref(&chunk),
+            dir.path(),
+            Some(Duration::from_secs(5)),
+            &serde_json::json!({"region": "NY"}),
+        )
+        .unwrap();
+        let changed = preprocess_fingerprint(
+            &layout,
+            &executables,
+            &[chunk],
+            dir.path(),
+            Some(Duration::from_secs(5)),
+            &serde_json::json!({"region": "CA"}),
+        )
+        .unwrap();
+        assert_ne!(baseline, changed);
     }
 
     #[test]
@@ -520,6 +639,7 @@ mod tests {
             std::slice::from_ref(&chunk),
             dir.path(),
             Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
         )
         .unwrap();
 
@@ -529,6 +649,7 @@ mod tests {
             &[test_chunk("print(2)")],
             dir.path(),
             Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
         )
         .unwrap();
         assert_ne!(baseline, code_changed);
@@ -541,6 +662,7 @@ mod tests {
             &[exec_changed],
             dir.path(),
             Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
         )
         .unwrap();
         assert_ne!(baseline, exec_changed);
@@ -553,6 +675,7 @@ mod tests {
             &[chunk],
             dir.path(),
             Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
         )
         .unwrap();
         assert_ne!(baseline, executables_changed);

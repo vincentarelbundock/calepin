@@ -3,7 +3,8 @@ use serde_json::Value;
 use std::collections::HashSet;
 
 use crate::typst::chunk_options::{
-    parse_chunk_body_with_qmd_header, parse_chunk_source_with_qmd_header, validate_chunk_arguments,
+    fence_label_from_chunk_body, parse_chunk_body_with_qmd_header,
+    parse_chunk_source_with_qmd_header, validate_chunk_arguments,
 };
 use crate::typst::crossref::parse_label_names;
 use crate::typst::model::{
@@ -36,8 +37,16 @@ pub fn parse_chunks_with_warnings(
     let mut auto_label_index = 1usize;
     let mut warnings = Vec::new();
 
-    for (ordinal, value) in values.iter().enumerate() {
+    let mut index = 0usize;
+    while index < values.len() {
+        let ordinal = index;
+        let value = &values[index];
         if is_raw_code_block(value) {
+            let lookahead_fence_label = values
+                .get(index + 1)
+                .filter(|value| is_calepin_fence_label_metadata(value))
+                .map(parse_fence_label_metadata)
+                .transpose()?;
             if let Some(chunk) = parse_chunk_raw_block(
                 value,
                 &config,
@@ -46,10 +55,21 @@ pub fn parse_chunks_with_warnings(
                 ordinal,
                 has_chunk_metadata,
                 &mut warnings,
+                lookahead_fence_label.clone(),
             )? {
                 raw_labels.insert(chunk.label.clone());
                 chunks.push(chunk);
             }
+            if lookahead_fence_label.is_some() {
+                index += 2;
+            } else {
+                index += 1;
+            }
+            continue;
+        }
+
+        if is_calepin_fence_label_metadata(value) {
+            index += 1;
             continue;
         }
 
@@ -69,6 +89,7 @@ pub fn parse_chunks_with_warnings(
             parse_chunk_metadata(value, &config, &label, &mut chunks, ordinal, &mut warnings)?;
             bump_auto_label(&mut auto_label_index, &label);
         }
+        index += 1;
     }
 
     Ok(ChunkParseResult { chunks, warnings })
@@ -100,6 +121,45 @@ fn is_raw_code_block(value: &Value) -> bool {
         && value.get("block").and_then(Value::as_bool) == Some(true)
 }
 
+fn is_calepin_fence_label_metadata(value: &Value) -> bool {
+    value.get("func") == Some(&Value::String("metadata".into()))
+        && value
+            .get("label")
+            .and_then(Value::as_str)
+            .is_some_and(|value| value == "<calepin-fence-label>")
+}
+
+fn parse_fence_label_metadata(value: &Value) -> Result<String> {
+    let label = value
+        .get("value")
+        .and_then(|value| value.get("label"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("calepin fence label metadata is missing `label`"))?;
+    query_label_name(label)
+}
+
+fn raw_block_query_label(value: &Value) -> Result<Option<String>> {
+    value
+        .get("label")
+        .and_then(Value::as_str)
+        .map(query_label_name)
+        .transpose()
+}
+
+fn query_label_name(value: &str) -> Result<String> {
+    if value.starts_with('<') && value.ends_with('>') && value.len() >= 2 {
+        let name = &value[1..value.len() - 1];
+        if name.is_empty() {
+            return Err(anyhow!("fence label must not be empty"));
+        }
+        Ok(name.to_string())
+    } else if value.is_empty() {
+        Err(anyhow!("fence label must not be empty"))
+    } else {
+        Ok(value.to_string())
+    }
+}
+
 fn parse_chunk_metadata(
     value: &Value,
     config: &SetupConfig,
@@ -112,6 +172,8 @@ fn parse_chunk_metadata(
 
     let (code, chunk_options, mut header_warnings) =
         parse_chunk_body_with_qmd_header(value.get("body").unwrap_or(&Value::Null), label)?;
+    let fence_label =
+        fence_label_from_chunk_body(value.get("body").unwrap_or(&Value::Null), label)?;
     warnings.append(&mut header_warnings);
     let mut value_with_options = value
         .as_object()
@@ -130,8 +192,23 @@ fn parse_chunk_metadata(
     let exec_options = parse_exec_options(&value, defaults, &fig_width)?;
     let display_options =
         parse_display_options(&value, defaults, fig_width, fig_align, fig_responsive)?;
-    let crossref_labels = parse_crossref_labels(&value)
+    let mut crossref_labels = parse_crossref_labels(&value)
         .map_err(|err| anyhow!("invalid cross-reference labels for chunk `{label}`: {err}"))?;
+    if let Some(fence_label) = fence_label {
+        let names = vec![fence_label];
+        let routed_fence_labels = parse_label_names(&names)
+            .map_err(|err| anyhow!("invalid trailing fence label for chunk `{label}`: {err}"))?
+            .into_iter()
+            .map(|label| label.to_doc())
+            .collect::<Vec<_>>();
+        if crossref_labels.is_empty() {
+            crossref_labels = routed_fence_labels;
+        } else if crossref_labels != routed_fence_labels {
+            return Err(anyhow!(
+                "chunk `{label}` supplied a trailing fence label and another label channel"
+            ));
+        }
+    }
     chunks.push(ChunkSpec {
         label: label.to_string(),
         engine,
@@ -177,6 +254,7 @@ fn parse_chunk_raw_block(
     ordinal: usize,
     has_chunk_metadata: bool,
     warnings: &mut Vec<String>,
+    lookahead_fence_label: Option<String>,
 ) -> Result<Option<ChunkSpec>> {
     let Some(lang) = value.get("lang").and_then(Value::as_str) else {
         return Ok(None);
@@ -187,6 +265,7 @@ fn parse_chunk_raw_block(
     let Some(engine) = EngineName::parse(lang).ok() else {
         return Ok(None);
     };
+    let raw_fence_label = raw_block_query_label(value)?;
     let raw_text = value.get("text").and_then(Value::as_str).unwrap_or("");
     let label_hint = format!("chunk-{}", *auto_label_index);
     let (raw_code, chunk_options, mut header_warnings) =
@@ -196,6 +275,7 @@ fn parse_chunk_raw_block(
         .as_object()
         .cloned()
         .ok_or_else(|| anyhow!("fenced chunk is not an object"))?;
+    value_with_options.remove("label");
     for (key, value) in chunk_options {
         value_with_options.insert(key, value);
     }
@@ -218,10 +298,43 @@ fn parse_chunk_raw_block(
     if has_chunk_metadata && !matches!(engine, EngineName::Jupyter(_)) {
         return Ok(None);
     }
+    let fence_label = match (lookahead_fence_label, raw_fence_label) {
+        (Some(a), Some(b)) => {
+            return Err(anyhow!(
+                "fenced chunk supplied more than one trailing fence label (`{a}` and `{b}`)"
+            ));
+        }
+        (Some(label), None) | (None, Some(label)) => Some(label),
+        (None, None) => None,
+    };
     let (label, crossref_labels) = if let Some(label_value) = value_for(&value, "label") {
+        if let Some(fence_label) = fence_label {
+            return Err(anyhow!(
+                "fenced chunk supplied both `#| label:` and trailing fence label `{fence_label}`"
+            ));
+        }
         let names = label_names_from_value(label_value)?;
         let labels = parse_label_names(&names)
             .map_err(|err| anyhow!("invalid cross-reference labels for fenced chunk: {err}"))?;
+        let label = names
+            .first()
+            .cloned()
+            .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
+        if !seen.insert(label.clone()) {
+            return Err(anyhow!("duplicate label `{}`", label));
+        }
+        bump_auto_label(auto_label_index, &label);
+        (
+            label,
+            labels
+                .into_iter()
+                .map(|label| label.to_doc())
+                .collect::<Vec<_>>(),
+        )
+    } else if let Some(fence_label) = fence_label {
+        let names = vec![fence_label];
+        let labels = parse_label_names(&names)
+            .map_err(|err| anyhow!("invalid trailing fence label for fenced chunk: {err}"))?;
         let label = names
             .first()
             .cloned()
@@ -375,7 +488,20 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         fig_align: raw_option(value, "fig-align").or_else(|| base.fig_align.clone()),
         fig_responsive: opt_bool_option(value, "fig-responsive")?.or(base.fig_responsive),
         fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
+        params: params_option(value, "params", &base.params)?,
     })
+}
+
+/// Read document-level `params` as a JSON object. An absent or empty value keeps
+/// the base (so a later `setup` without `params` does not clobber an earlier one);
+/// a present non-empty object replaces it.
+fn params_option(value: &Value, key: &str, base: &Value) -> Result<Value> {
+    match value.get(key) {
+        None | Some(Value::Null) => Ok(base.clone()),
+        Some(Value::Object(map)) if map.is_empty() => Ok(base.clone()),
+        Some(Value::Object(map)) => Ok(Value::Object(map.clone())),
+        Some(_) => Err(anyhow!("`{}` must be a dictionary", key)),
+    }
 }
 
 /// Parse the unified `fenced-chunks` setting: `false`/absent, `true` (all engines),
@@ -904,6 +1030,91 @@ mod tests {
     }
 
     #[test]
+    fn parses_trailing_label_metadata_in_fenced_chunks() {
+        let json = serde_json::json!([
+          {"func":"raw","text":"plot(1)","block":true,"lang":"r"},
+          {"func":"metadata","value":{"label":"fig-trailing"},"label":"<calepin-fence-label>"}
+        ])
+        .to_string();
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let parsed = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults))).unwrap();
+        let chunk = &parsed.chunks[0];
+        assert_eq!(chunk.label, "fig-trailing");
+        assert_eq!(chunk.crossref_labels.len(), 1);
+        assert_eq!(chunk.crossref_labels[0].kind, "fig");
+        assert_eq!(chunk.crossref_labels[0].name, "fig-trailing");
+        assert_eq!(chunk.code, "plot(1)");
+    }
+
+    #[test]
+    fn parses_trailing_label_metadata_in_wrapped_chunks() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{
+                    "func":"sequence",
+                    "children":[
+                        {"func":"raw","text":"plot(1)","block":true,"lang":"r"},
+                        {"func":"space"},
+                        {"func":"metadata","value":{"label":"fig-wrapped"},"label":"<calepin-fence-label>"}
+                    ]
+                },
+                "engine":"r",
+                "label":"fig-wrapped",
+                "crossref-labels":["fig-wrapped"]
+            })
+            .to_string(),
+        );
+        let chunks = parse_chunks(&json, None).unwrap();
+        let chunk = &chunks[0];
+        assert_eq!(chunk.label, "fig-wrapped");
+        assert_eq!(chunk.crossref_labels.len(), 1);
+        assert_eq!(chunk.crossref_labels[0].kind, "fig");
+        assert_eq!(chunk.crossref_labels[0].name, "fig-wrapped");
+        assert_eq!(chunk.code, "plot(1)");
+    }
+
+    #[test]
+    fn rejects_unprefixed_trailing_label_in_fenced_chunks() {
+        let json = serde_json::json!([
+          {"func":"raw","text":"plot(1)","block":true,"lang":"r","label":"<plot>"}
+        ])
+        .to_string();
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let err = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults)))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("invalid trailing fence label"), "{err}");
+        assert!(err.contains("plot"), "{err}");
+        assert!(err.contains("fig-"), "{err}");
+    }
+
+    #[test]
+    fn rejects_qmd_and_trailing_label_conflict_in_fenced_chunks() {
+        let json = serde_json::json!([
+          {"func":"raw","text":"#| label: fig-qmd\nplot(1)","block":true,"lang":"r"},
+          {"func":"metadata","value":{"label":"fig-trailing"},"label":"<calepin-fence-label>"}
+        ])
+        .to_string();
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let err = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults)))
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("both `#| label:` and trailing fence label"),
+            "{err}"
+        );
+    }
+
+    #[test]
     fn ignores_unknown_fences_when_all_fenced_chunks_enabled() {
         let json = serde_json::json!([
           {"func":"raw","text":"not executable","block":true,"lang":"text"}
@@ -964,7 +1175,7 @@ mod tests {
         assert_eq!(chunk.exec_options.fig_device_aspect, 1.5);
         assert_eq!(
             chunk.display_options.fig_link,
-            Some(Value::String("https://example.com/main".to_string()))
+            Some(Value::String("https://example.com".to_string()))
         );
     }
 
@@ -1065,12 +1276,15 @@ mod tests {
             fig_align: Some(Value::String("center".to_string())),
             fig_responsive: Some(true),
             fenced_chunks: FencedChunks::Off,
+            params: serde_json::json!({}),
         };
         let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
         let chunk = &chunks[0];
         assert_eq!(chunk.engine, EngineName::Python);
         assert!(!chunk.exec_options.eval);
-        assert_eq!(chunk.display_options.results, ResultsMode::Typst);
+        // The chunk's explicit `results: "render"` overrides the setup default
+        // (`"typst"`), matching how its explicit `eval: false` overrides above.
+        assert_eq!(chunk.display_options.results, ResultsMode::Render);
         assert_eq!(chunk.exec_options.fig_device_format, "png");
         assert_eq!(chunk.exec_options.fig_device_dpi, 300);
         assert_eq!(chunk.exec_options.fig_device_width, 8.0);
@@ -1109,6 +1323,35 @@ mod tests {
 
         assert_eq!(config.defaults.echo, true);
         assert_eq!(config.defaults.eval, false);
+    }
+
+    #[test]
+    fn parses_setup_params_object() {
+        let json = setup_metadata(
+            r#"{
+              "echo":true,
+              "params":{"region":"NY","min_count":25,"active":true}
+            }"#,
+        );
+        let config = parse_setup_config(&json).unwrap().unwrap();
+        assert_eq!(
+            config.defaults.params,
+            serde_json::json!({"region":"NY","min_count":25,"active":true})
+        );
+    }
+
+    #[test]
+    fn setup_params_default_to_empty_object() {
+        let json = setup_metadata(r#"{"echo":true}"#);
+        let config = parse_setup_config(&json).unwrap().unwrap();
+        assert_eq!(config.defaults.params, serde_json::json!({}));
+    }
+
+    #[test]
+    fn rejects_non_object_setup_params() {
+        let json = setup_metadata(r#"{"params":[1,2,3]}"#);
+        let err = parse_setup_config(&json).unwrap_err().to_string();
+        assert!(err.contains("params"), "{err}");
     }
 
     #[test]
@@ -1327,11 +1570,15 @@ mod tests {
     }
 
     #[test]
-    fn rejects_plain_language_raw_blocks_by_default() {
+    fn rejects_plain_language_raw_blocks_when_disabled() {
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::Off,
+            ..SetupDefaults::default()
+        };
         let json = r#"[
           {"func":"raw","text":"x","block":true,"lang":"r"}
         ]"#;
-        let chunks = parse_chunks(&json, None).unwrap();
+        let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
         assert_eq!(chunks.len(), 0);
     }
 
@@ -1391,14 +1638,16 @@ mod tests {
 
     #[test]
     fn advances_auto_labels_around_explicit_chunk_labels() {
+        // Built-in fenced blocks are not auto-run alongside metadata chunks, so
+        // this coexistence scenario uses a Jupyter kernel (opted in by name).
         let defaults = SetupDefaults {
-            fenced_chunks: FencedChunks::All,
+            fenced_chunks: FencedChunks::Only(vec!["julia".to_string()]),
             ..SetupDefaults::default()
         };
         let json = r#"[
-          {"func":"raw","text":"print(1)","block":true,"lang":"python"},
-          {"func":"metadata","value":{"body":{"func":"raw","text":"print(2)","block":true},"engine":"r","label":"chunk-1"},"label":"<calepin-chunk>"},
-          {"func":"raw","text":"print(3)","block":true,"lang":"python"}
+          {"func":"raw","text":"println(1)","block":true,"lang":"julia"},
+          {"func":"metadata","value":{"body":{"func":"raw","text":"println(2)","block":true},"engine":"julia","label":"chunk-1"},"label":"<calepin-chunk>"},
+          {"func":"raw","text":"println(3)","block":true,"lang":"julia"}
         ]"#;
         let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
         assert_eq!(chunks.len(), 3);
@@ -1483,9 +1732,10 @@ mod tests {
     #[test]
     fn raw_block_with_period_in_lang_parsed_correctly() {
         // Simulate what Typst produces for ```julia-1.2\nx = 41\n```
-        // (lang truncated to "julia-1", ".2\n" prepended to text).
+        // (lang truncated to "julia-1", ".2\n" prepended to text). Jupyter
+        // kernels are opted in by name (they are not auto-run under `All`).
         let defaults = SetupDefaults {
-            fenced_chunks: FencedChunks::All,
+            fenced_chunks: FencedChunks::Only(vec!["julia-1.2".to_string()]),
             ..SetupDefaults::default()
         };
         let json = r#"[

@@ -5,7 +5,7 @@ pub fn parse_chunk_body_with_qmd_header(
     body: &Value,
     label: &str,
 ) -> Result<(String, Vec<(String, Value)>, Vec<String>)> {
-    let raw = extract_raw_node(body, label)?;
+    let (raw, _) = extract_raw_node_and_fence_label(body, label)?;
     parse_chunk_source_with_qmd_header(
         raw.get("text")
             .and_then(Value::as_str)
@@ -86,9 +86,17 @@ pub fn validate_chunk_arguments(value: &Value, label: &str) -> Result<()> {
     Ok(())
 }
 
-fn extract_raw_node<'a>(node: &'a Value, label: &str) -> Result<&'a Value> {
+pub fn fence_label_from_chunk_body(body: &Value, label: &str) -> Result<Option<String>> {
+    let (_, fence_label) = extract_raw_node_and_fence_label(body, label)?;
+    Ok(fence_label)
+}
+
+fn extract_raw_node_and_fence_label<'a>(
+    node: &'a Value,
+    label: &str,
+) -> Result<(&'a Value, Option<String>)> {
     if node.get("func").and_then(Value::as_str) == Some("raw") {
-        return Ok(node);
+        return Ok((node, raw_node_label(node)?));
     }
 
     let Some(children) = node.get("children").and_then(Value::as_array) else {
@@ -109,8 +117,16 @@ fn extract_raw_node<'a>(node: &'a Value, label: &str) -> Result<&'a Value> {
         ));
     }
 
+    let mut fence_label = None;
     for child in children {
         if child.get("func").and_then(Value::as_str) == Some("raw") {
+            if let Some(raw_label) = raw_node_label(child)? {
+                set_fence_label(&mut fence_label, raw_label, label)?;
+            }
+            continue;
+        }
+        if let Some(metadata_label) = calepin_fence_label_metadata(child)? {
+            set_fence_label(&mut fence_label, metadata_label, label)?;
             continue;
         }
         if !is_whitespace_node(child) {
@@ -121,7 +137,55 @@ fn extract_raw_node<'a>(node: &'a Value, label: &str) -> Result<&'a Value> {
         }
     }
 
-    Ok(raw_children[0])
+    Ok((raw_children[0], fence_label))
+}
+
+fn raw_node_label(node: &Value) -> Result<Option<String>> {
+    node.get("label")
+        .and_then(Value::as_str)
+        .map(query_label_name)
+        .transpose()
+}
+
+fn query_label_name(value: &str) -> Result<String> {
+    if value.starts_with('<') && value.ends_with('>') && value.len() >= 2 {
+        let name = &value[1..value.len() - 1];
+        if name.is_empty() {
+            return Err(anyhow!("fence label must not be empty"));
+        }
+        Ok(name.to_string())
+    } else if value.is_empty() {
+        Err(anyhow!("fence label must not be empty"))
+    } else {
+        Ok(value.to_string())
+    }
+}
+
+fn calepin_fence_label_metadata(node: &Value) -> Result<Option<String>> {
+    if node.get("func").and_then(Value::as_str) != Some("metadata")
+        || node.get("label").and_then(Value::as_str) != Some("<calepin-fence-label>")
+    {
+        return Ok(None);
+    }
+    let value = node
+        .get("value")
+        .and_then(|value| value.get("label"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("calepin fence label metadata is missing `label`"))?;
+    Ok(Some(query_label_name(value)?))
+}
+
+fn set_fence_label(slot: &mut Option<String>, next: String, label: &str) -> Result<()> {
+    if let Some(existing) = slot {
+        return Err(anyhow!(
+            "chunk `{}` has more than one trailing fence label (`{}` and `{}`)",
+            label,
+            existing,
+            next
+        ));
+    }
+    *slot = Some(next);
+    Ok(())
 }
 
 fn is_whitespace_node(node: &Value) -> bool {
@@ -237,7 +301,7 @@ fn supported_qmd_options() -> String {
     names.join(", ")
 }
 
-fn parse_qmd_value(value: &str) -> Result<Value> {
+pub(crate) fn parse_qmd_value(value: &str) -> Result<Value> {
     let value = value.trim();
     if value.eq_ignore_ascii_case("true") {
         return Ok(Value::Bool(true));

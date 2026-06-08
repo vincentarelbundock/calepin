@@ -30,7 +30,7 @@ pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
 
 fn rewrite_calepin_imports(source: &str) -> String {
     let mut out = String::with_capacity(source.len());
-    let mut in_raw_block = false;
+    let mut raw_block: Option<RawBlock> = None;
 
     for segment in source.split_inclusive('\n') {
         let (line, newline) = segment
@@ -38,20 +38,160 @@ fn rewrite_calepin_imports(source: &str) -> String {
             .map(|line| (line, "\n"))
             .unwrap_or((segment, ""));
         let trimmed = line.trim_start();
-        if trimmed.starts_with("```") {
-            in_raw_block = !in_raw_block;
-            out.push_str(line);
-            out.push_str(newline);
+
+        if let Some(block) = raw_block.as_mut() {
+            block.segments.push(segment.to_string());
+            if is_closing_fence(trimmed, block.fence_len) {
+                let block = raw_block.take().expect("raw block exists");
+                out.push_str(&rewrite_raw_block(block));
+            }
             continue;
         }
-        if in_raw_block {
-            out.push_str(line);
+
+        if let Some((fence_len, lang)) = opening_fence(trimmed) {
+            raw_block = Some(RawBlock {
+                fence_len,
+                lang: lang.map(str::to_string),
+                segments: vec![segment.to_string()],
+            });
         } else {
             out.push_str(&rewrite_calepin_imports_in_line(line));
+            out.push_str(newline);
         }
-        out.push_str(newline);
     }
 
+    if let Some(block) = raw_block {
+        out.push_str(&block.segments.concat());
+    }
+    out
+}
+
+struct RawBlock {
+    fence_len: usize,
+    lang: Option<String>,
+    segments: Vec<String>,
+}
+
+fn opening_fence(trimmed_line: &str) -> Option<(usize, Option<&str>)> {
+    let fence_len = leading_backtick_count(trimmed_line);
+    if fence_len < 3 {
+        return None;
+    }
+    let rest = trimmed_line[fence_len..].trim_start();
+    let lang = if rest.is_empty() {
+        None
+    } else {
+        rest.split_whitespace().next()
+    };
+    Some((fence_len, lang))
+}
+
+fn is_closing_fence(trimmed_line: &str, fence_len: usize) -> bool {
+    let closing_len = leading_backtick_count(trimmed_line);
+    if closing_len < fence_len {
+        return false;
+    }
+    let rest = trimmed_line[closing_len..].trim_start();
+    rest.is_empty() || rest.starts_with('<')
+}
+
+fn leading_backtick_count(value: &str) -> usize {
+    value.chars().take_while(|ch| *ch == '`').count()
+}
+
+fn rewrite_raw_block(mut block: RawBlock) -> String {
+    if !is_executable_label_candidate_lang(block.lang.as_deref()) {
+        return block.segments.concat();
+    }
+    let Some(last) = block.segments.last() else {
+        return String::new();
+    };
+    let (line, newline) = split_segment(last);
+    let Some((prefix, label)) = trailing_fence_label(line) else {
+        return block.segments.concat();
+    };
+    if !is_routed_crossref_label(label) {
+        return block.segments.concat();
+    }
+    let label = label.to_string();
+
+    let closing = format!(
+        "{}{}{}",
+        prefix,
+        line_suffix_after_trimmed_end(line),
+        newline
+    );
+    let last_index = block.segments.len() - 1;
+    block.segments[last_index] = closing;
+
+    let mut out = String::with_capacity(block.segments.concat().len() + label.len() + 16);
+    out.push_str(&block.segments[0]);
+    out.push_str("#| label: ");
+    out.push_str(&qmd_string_literal(&label));
+    out.push('\n');
+    for segment in block.segments.iter().skip(1) {
+        out.push_str(segment);
+    }
+    out
+}
+
+fn split_segment(segment: &str) -> (&str, &str) {
+    segment
+        .strip_suffix('\n')
+        .map(|line| (line, "\n"))
+        .unwrap_or((segment, ""))
+}
+
+fn qmd_string_literal(value: &str) -> String {
+    format!("\"{}\"", typst_string_escape(value))
+}
+
+fn trailing_fence_label(line: &str) -> Option<(&str, &str)> {
+    let trimmed_end = line.trim_end();
+    if !trimmed_end.ends_with('>') {
+        return None;
+    }
+    let label_start = trimmed_end.rfind('<')?;
+    let label = &trimmed_end[label_start + 1..trimmed_end.len() - 1];
+    let before_label = &trimmed_end[..label_start];
+    let fence = before_label.trim();
+    if fence.len() < 3 || !fence.chars().all(|ch| ch == '`') {
+        return None;
+    }
+    if label.is_empty() {
+        return None;
+    }
+    let prefix = &line[..label_start];
+    Some((prefix, label))
+}
+
+fn line_suffix_after_trimmed_end(line: &str) -> &str {
+    let trimmed_len = line.trim_end().len();
+    &line[trimmed_len..]
+}
+
+fn is_executable_label_candidate_lang(raw_lang: Option<&str>) -> bool {
+    !matches!(raw_lang, None | Some("typ" | "typst"))
+}
+
+fn is_routed_crossref_label(label: &str) -> bool {
+    ["fig-", "tbl-", "lst-"]
+        .iter()
+        .any(|prefix| label.starts_with(prefix) && label.len() > prefix.len())
+}
+
+fn typst_string_escape(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            other => out.push(other),
+        }
+    }
     out
 }
 
@@ -194,5 +334,26 @@ mod tests {
 #import "/.calepin/calepin.typ" as calepin
 "#
         );
+    }
+
+    #[test]
+    fn rewrites_routed_executable_fence_label_to_qmd_header() {
+        let source = "```r\nplot(1)\n```<fig-plot>\n";
+        let rewritten = rewrite_calepin_imports(source);
+        assert_eq!(rewritten, "```r\n#| label: \"fig-plot\"\nplot(1)\n```\n");
+    }
+
+    #[test]
+    fn leaves_unrouted_and_typst_fence_labels_for_strict_query_validation() {
+        let source = "```r\nplot(1)\n```<plot>\n```typ\n#strong[x]\n```<fig-typ>\n";
+        let rewritten = rewrite_calepin_imports(source);
+        assert_eq!(rewritten, source);
+    }
+
+    #[test]
+    fn does_not_rewrite_nested_fences_inside_typst_examples() {
+        let source = "````typ\n```r\nplot(1)\n```<fig-example>\n````\n";
+        let rewritten = rewrite_calepin_imports(source);
+        assert_eq!(rewritten, source);
     }
 }

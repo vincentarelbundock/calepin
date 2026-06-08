@@ -49,7 +49,7 @@ fn preprocess_writes_runtime_and_results() {
         &input,
         r##"#import ".calepin/calepin.typ"
 
-#calepin.chunk("python", label: "answer", echo: false)[```
+#calepin.chunk("python", echo: false)[```
 x = 41
 print(x + 1)
 ```]
@@ -74,10 +74,10 @@ print(x + 1)
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
     assert_eq!(results["schema"], 1);
-    assert_eq!(results["chunks"]["answer"]["engine"], "python");
-    assert!(results["chunks"]["answer"].get("cached").is_none());
-    assert_eq!(results["chunks"]["answer"]["items"][0]["type"], "stream");
-    assert_eq!(results["chunks"]["answer"]["items"][0]["text"], "42");
+    assert_eq!(results["chunks"]["chunk-1"]["engine"], "python");
+    assert!(results["chunks"]["chunk-1"].get("cached").is_none());
+    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["type"], "stream");
+    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "42");
 }
 
 #[test]
@@ -92,7 +92,7 @@ fn compile_rewrites_preview_package_import_to_runtime() {
         &input,
         r##"#import "@preview/calepin:0.0.1" as cp
 
-#cp.chunk("python", label: "answer", echo: false)[```
+#cp.chunk("python", echo: false)[```
 print(42)
 ```]
 "##,
@@ -121,7 +121,7 @@ print(42)
     let results_path = dir.path().join(".calepin/paper/results.json");
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
-    assert_eq!(results["chunks"]["answer"]["items"][0]["text"], "42");
+    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "42");
 }
 
 #[test]
@@ -137,7 +137,7 @@ fn compile_runs_preprocess_and_typst_compile() {
 
 = Calepin
 
-#calepin.chunk("python", label: "answer", echo: false, results: "asis")[```
+#calepin.chunk("python", echo: false, results: "typst")[```
 print("#strong[42]")
 ```]
 "##,
@@ -226,12 +226,14 @@ fn compile_html_respects_canonical_figure_display_dimensions() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
+See @fig-graph.
+
 #calepin.chunk(
   "dot",
   label: "fig-graph",
   echo: false,
-  fig-display-width: "37%",
-  fig-display-height: "44px",
+  fig-width: "37%",
+  fig-height: "44px",
   fig-caption: [HTML graph],
 )[```
 digraph {
@@ -263,8 +265,12 @@ digraph {
 
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
     assert!(
-        html.contains(r#"<figure style="width: 37%; max-width: 100%; margin-inline: auto;">"#),
+        html.contains(r#"<div style="width: 37%; max-width: 100%; margin-inline: auto;"><figure"#),
         "expected display width on captioned figure in HTML output:\n{html}"
+    );
+    assert!(
+        html.contains(r##"<a href="#fig-graph">Figure"##),
+        "expected labeled HTML figure cross-reference to resolve:\n{html}"
     );
     assert!(
         html.contains(r#"<img src="data:image/svg+xml;base64,"#),
@@ -275,7 +281,7 @@ digraph {
         "expected captioned figure image to fill styled figure:\n{html}"
     );
     assert!(
-        !html.contains(r#"src="/.calepin/paper/figures/fig-graph.svg""#),
+        !html.contains(r#"src="/.calepin/paper/figures/chunk-1.svg""#),
         "HTML compile should inline generated figure assets:\n{html}"
     );
     assert!(
@@ -489,6 +495,69 @@ plt.plot([1, 2, 3], [1, 4, 9])
 }
 
 #[test]
+fn compile_resolves_trailing_fence_fig_label_crossref() {
+    if !has_command("typst")
+        || !has_command("python3")
+        || !has_pdftotext()
+        || !has_python_module("matplotlib")
+    {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+See @fig-trailing.
+
+```python
+import matplotlib.pyplot as plt
+plt.plot([1, 2, 3], [1, 4, 9])
+```<fig-trailing>
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let staged = std::fs::read_to_string(dir.path().join(".calepin/paper/source.typ")).unwrap();
+    assert!(staged.contains(r#"#metadata((label: "fig-trailing")) <calepin-fence-label>"#));
+    assert!(!staged.contains("```<fig-trailing>"));
+
+    let results_path = dir.path().join(".calepin/paper/results.json");
+    let results: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
+    assert_eq!(
+        results["chunks"]["fig-trailing"]["crossref-labels"][0]["name"],
+        "fig-trailing"
+    );
+    assert_eq!(
+        results["chunks"]["fig-trailing"]["crossref-labels"][0]["kind"],
+        "fig"
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .expect("failed to run pdftotext");
+    assert!(text.status.success());
+    let extracted = String::from_utf8(text.stdout).unwrap();
+    assert!(extracted.contains("See Figure 1."), "{extracted}");
+}
+
+#[test]
 fn compile_renders_inline_output_in_surrounding_text() {
     if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
         return;
@@ -586,11 +655,11 @@ fn r_chunks_execute_live_without_cache_state() {
         &input,
         r##"#import ".calepin/calepin.typ"
 
-#calepin.chunk("r", label: "setup", echo: false)[```
+#calepin.chunk("r", echo: false)[```
 x <- 41
 ```]
 
-#calepin.chunk("r", label: "answer", echo: false)[```
+#calepin.chunk("r", echo: false)[```
 cat(x + 1)
 ```]
 "##,
@@ -625,9 +694,9 @@ cat(x + 1)
     let results_path = dir.path().join(".calepin/paper/results.json");
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
-    assert!(results["chunks"]["setup"].get("cached").is_none());
-    assert!(results["chunks"]["answer"].get("cached").is_none());
-    assert_eq!(results["chunks"]["answer"]["items"][0]["text"], "43");
+    assert!(results["chunks"]["chunk-1"].get("cached").is_none());
+    assert!(results["chunks"]["chunk-2"].get("cached").is_none());
+    assert_eq!(results["chunks"]["chunk-2"]["items"][0]["text"], "43");
 }
 
 #[test]
@@ -641,7 +710,7 @@ fn python_chunks_execute_without_cache_state() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.chunk("python", label: "answer", echo: false)[```
+#calepin.chunk("python", echo: false)[```
 print(42)
 ```]
 "##,
@@ -664,5 +733,122 @@ print(42)
     let results_path = dir.path().join(".calepin/paper/results.json");
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
-    assert!(results["chunks"]["answer"].get("cached").is_none());
+    assert!(results["chunks"]["chunk-1"].get("cached").is_none());
+}
+
+#[test]
+fn compile_injects_setup_params_into_python() {
+    if !has_command("typst") || !has_command("python3") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(params: (region: "NY", min_count: 25))
+
+#calepin.chunk("python", echo: false)[```
+print(params["region"], params["min_count"])
+```]
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "NY 25");
+    // params.json is written as the universal transport / reproducibility record.
+    assert!(dir.path().join(".calepin/paper/params.json").exists());
+}
+
+#[test]
+fn compile_param_override_beats_setup_params() {
+    if !has_command("typst") || !has_command("python3") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(params: (region: "NY"))
+
+#calepin.chunk("python", echo: false)[```
+print(params["region"])
+```]
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.pdf",
+            "-P",
+            "region=CA",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "CA");
+}
+
+#[test]
+fn compile_rejects_unsupported_param_type() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(params: (bad: red))
+
+Body text.
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+
+    assert!(!output.status.success(), "compile unexpectedly succeeded");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unsupported parameter") && stderr.contains("bad"),
+        "{stderr}"
+    );
 }

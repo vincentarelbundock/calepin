@@ -33,6 +33,10 @@ title = "Code execution"
   label = "Options"
 
   [[sidebar.section.item]]
+  path = "parameterized_notebooks.typ"
+  label = "Parameterized notebooks"
+
+  [[sidebar.section.item]]
   path = "tables_and_figures.typ"
   label = "Tables and figures"
 

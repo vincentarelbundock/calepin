@@ -1,5 +1,6 @@
 pub mod diagram;
 pub mod jupyter;
+pub mod prelude;
 pub mod python;
 pub mod r;
 pub mod subprocess;

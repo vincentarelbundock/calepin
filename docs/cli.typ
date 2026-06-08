@@ -92,6 +92,11 @@ Options:
       --timeout <TIMEOUT>
           Per-chunk timeout in seconds
 
+  -P, --param <KEY=VALUE>
+          Override a document parameter as `key=value` (repeatable).
+          
+          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.
+
   -h, --help
           Print help (see a summary with '-h')
 ```
@@ -105,16 +110,37 @@ Watch, preprocess, and delegate recompiles to typst watch
 Usage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...
 
 Arguments:
-  <INPUT>          Input .typ file
-  [OUTPUT]         Output path passed to typst watch
-  [TYPST_ARGS]...  Arguments forwarded to typst watch after `--`
+  <INPUT>
+          Input .typ file
+
+  [OUTPUT]
+          Output path passed to typst watch
+
+  [TYPST_ARGS]...
+          Arguments forwarded to typst watch after `--`
 
 Options:
-      --format <FORMAT>    Output format passed to typst watch [possible values: pdf, png, svg, html]
-      --config <CONFIG>    Path to project config TOML
-  -q, --quiet              Quiet mode
-      --timeout <TIMEOUT>  Per-chunk timeout in seconds
-  -h, --help               Print help
+      --format <FORMAT>
+          Output format passed to typst watch
+          
+          [possible values: pdf, png, svg, html]
+
+      --config <CONFIG>
+          Path to project config TOML
+
+  -q, --quiet
+          Quiet mode
+
+      --timeout <TIMEOUT>
+          Per-chunk timeout in seconds
+
+  -P, --param <KEY=VALUE>
+          Override a document parameter as `key=value` (repeatable).
+          
+          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```
 
 == `calepin stop`

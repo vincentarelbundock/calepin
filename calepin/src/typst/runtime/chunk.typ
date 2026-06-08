@@ -74,6 +74,50 @@
   none
 }
 
+#let _label-name(value) = {
+  let value = str(value)
+  if value.starts-with("<") and value.ends-with(">") and value.len() >= 2 {
+    value.slice(1, value.len() - 1)
+  } else {
+    value
+  }
+}
+
+#let _metadata-fence-label(node) = {
+  if node.has("label") and node.label == <calepin-fence-label> {
+    let value = node.value
+    if type(value) == dictionary and value.at("label", default: none) != none {
+      return _label-name(value.at("label"))
+    }
+    panic("calepin.chunk: trailing fence label metadata is malformed")
+  }
+  none
+}
+
+#let _fence-label-from-body(body) = {
+  let labels = ()
+  let raw = _raw-node(body)
+  if raw.has("label") {
+    labels.push(_label-name(raw.label))
+  }
+  if body.has("children") {
+    for child in body.children {
+      let label = _metadata-fence-label(child)
+      if label != none {
+        labels.push(label)
+      }
+    }
+  }
+  if labels.len() > 1 {
+    panic("calepin.chunk: label supplied more than once")
+  }
+  if labels.len() == 1 {
+    labels.first()
+  } else {
+    none
+  }
+}
+
 #let _strip-qmd-header(code) = {
   let out = ""
   let reading-header = true
@@ -115,16 +159,21 @@
   let options = _call-defaults + args.named()
   let label-opt = options.at("label")
   let qmd-label-opt = _qmd-label-from-body(body)
+  let fence-label-opt = _fence-label-from-body(body)
   let label-count = (
     if label-opt != none { 1 } else { 0 }
   ) + (
     if qmd-label-opt != none { 1 } else { 0 }
+  ) + (
+    if fence-label-opt != none { 1 } else { 0 }
   )
   if label-count > 1 {
     panic("calepin.chunk: label supplied more than once")
   }
   let label-opt = if qmd-label-opt != none {
     qmd-label-opt
+  } else if fence-label-opt != none {
+    fence-label-opt
   } else {
     label-opt
   }

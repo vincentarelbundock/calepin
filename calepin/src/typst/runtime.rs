@@ -1003,6 +1003,49 @@ print("ignored")
     }
 
     #[test]
+    fn typst_query_emits_crossref_labels_for_trailing_fence_label_metadata() {
+        if Command::new("typst").arg("--version").output().is_err() {
+            return;
+        }
+
+        let dir = typst_accessible_tempdir();
+        write_runtime(dir.path()).unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(
+            &input,
+            r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("r")[```r
+1+1
+``` #metadata((label: "fig-trailing")) <calepin-fence-label>]
+"##,
+        )
+        .unwrap();
+
+        let output = Command::new("typst")
+            .arg("query")
+            .arg(&input)
+            .arg("<calepin-chunk>")
+            .arg("--root")
+            .arg(dir.path())
+            .arg("--input")
+            .arg("calepin-mode=query")
+            .arg("--pretty")
+            .output()
+            .unwrap();
+
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.contains(r#""crossref-labels""#), "{stdout}");
+        assert!(stdout.contains(r#""fig-trailing""#), "{stdout}");
+        assert!(stdout.contains(r#""label": "fig-trailing""#), "{stdout}");
+    }
+
+    #[test]
     fn typst_compile_html_applies_default_figure_display_options_from_results() {
         if Command::new("typst").arg("--version").output().is_err() {
             return;

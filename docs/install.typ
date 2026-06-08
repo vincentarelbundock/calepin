@@ -1,6 +1,13 @@
 == Install calepin
 <install-calepin>
 
+== Typst CLI
+<typst-cli>
+
+Calepin invokes the `typst` command to compile and watch documents, so the
+#link("https://github.com/typst/typst#installation")[Typst CLI app] must be
+installed and available on your `PATH`.
+
 MacOS and Linux:
 
 ```sh

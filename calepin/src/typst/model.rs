@@ -127,6 +127,10 @@ pub struct SetupDefaults {
     pub fig_align: Option<Value>,
     pub fig_responsive: Option<bool>,
     pub fenced_chunks: FencedChunks,
+    /// Document-level parameters from `calepin.setup(params: (...))`, kept as a
+    /// JSON object. Injected once per engine so chunks can read a `params` value.
+    #[serde(default)]
+    pub params: Value,
 }
 
 impl Default for SetupDefaults {
@@ -149,6 +153,7 @@ impl Default for SetupDefaults {
             fig_align: Some(Value::String("center".to_string())),
             fig_responsive: Some(true),
             fenced_chunks: FencedChunks::All,
+            params: Value::Object(serde_json::Map::new()),
         }
     }
 }

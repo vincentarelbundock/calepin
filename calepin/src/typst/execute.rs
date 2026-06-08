@@ -19,6 +19,34 @@ pub struct ExecutionConfig {
     pub cwd: PathBuf,
     pub executables: ExecutablePaths,
     pub timeout: Option<Duration>,
+    /// Document-level parameters, injected once per engine at session startup.
+    pub params: Value,
+    /// Path to the on-disk `params.json`, exposed to Jupyter kernels via
+    /// `CALEPIN_PARAMS_PATH` for kernels Calepin cannot auto-bind.
+    pub params_path: Option<PathBuf>,
+}
+
+impl ExecutionConfig {
+    fn params_object(&self) -> Option<&serde_json::Map<String, Value>> {
+        self.params.as_object().filter(|map| !map.is_empty())
+    }
+}
+
+/// A prelude that errored is a Calepin bug (we generate the literal), so surface
+/// the raw engine output rather than letting later chunks fail mysteriously.
+///
+/// The error tag is matched with its per-run sentinel prefix so a parameter
+/// string value that happens to contain `_ERROR:` cannot trigger a false alarm
+/// (the engine echoes the prelude source back as a tagged line).
+fn check_prelude_output(raw: &str, engine: &str) -> Result<()> {
+    let sentinel = raw.split_once('\n').map_or("", |(first, _)| first);
+    if !sentinel.is_empty() && raw.contains(&format!("{sentinel}_ERROR:")) {
+        return Err(anyhow!(
+            "failed to inject document parameters into the {engine} engine: {}",
+            raw.trim()
+        ));
+    }
+    Ok(())
 }
 
 pub struct EnginePool {
@@ -107,23 +135,35 @@ impl EnginePool {
 
     fn ensure_r_session(&mut self) -> Result<()> {
         if self.r.is_none() {
-            self.r = Some(RSession::init_with_program(
+            let mut session = RSession::init_with_program(
                 &self.config.executables.rscript,
                 "typst",
                 Some(&self.config.cwd),
                 self.config.timeout,
-            )?);
+            )?;
+            if self.config.params_object().is_some() {
+                let code = engines::prelude::r_prelude("params", &self.config.params);
+                let raw = session.capture(&code, "", "svg", 6.0, 3.708, 150.0)?;
+                check_prelude_output(&raw, "R")?;
+            }
+            self.r = Some(session);
         }
         Ok(())
     }
 
     fn ensure_python_session(&mut self) -> Result<()> {
         if self.python.is_none() {
-            self.python = Some(PythonSession::init_with_program(
+            let mut session = PythonSession::init_with_program(
                 &self.config.executables.python,
                 Some(&self.config.cwd),
                 self.config.timeout,
-            )?);
+            )?;
+            if self.config.params_object().is_some() {
+                let code = engines::prelude::python_prelude("params", &self.config.params);
+                let raw = session.capture(&code, "", 6.0, 3.708, 150.0)?;
+                check_prelude_output(&raw, "Python")?;
+            }
+            self.python = Some(session);
         }
         Ok(())
     }
@@ -134,6 +174,7 @@ impl EnginePool {
                 &self.config.executables.python,
                 Some(&self.config.cwd),
                 self.config.timeout,
+                self.config.params_path.as_deref(),
             )?);
         }
         Ok(())
@@ -533,6 +574,8 @@ mod tests {
             cwd: dir.path().to_path_buf(),
             executables,
             timeout: Some(std::time::Duration::from_secs(5)),
+            params: Value::Object(serde_json::Map::new()),
+            params_path: None,
         };
         let mut pool = EnginePool::new(config);
         let mut octave_chunk = chunk(ResultsMode::Verbatim);
@@ -546,5 +589,113 @@ mod tests {
                 || err.contains(missing_python.to_string_lossy().as_ref()),
             "expected Jupyter bridge startup error, got: {err}"
         );
+    }
+
+    fn tool_available(cmd: &str) -> bool {
+        std::process::Command::new(cmd)
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+
+    fn pool_with_params(dir: &Path, params: Value) -> EnginePool {
+        EnginePool::new(ExecutionConfig {
+            cwd: dir.to_path_buf(),
+            executables: ExecutablePaths::defaults(),
+            timeout: Some(std::time::Duration::from_secs(20)),
+            params,
+            params_path: None,
+        })
+    }
+
+    fn run_chunk(pool: &mut EnginePool, dir: &Path, engine: EngineName, code: &str) -> String {
+        let mut chunk = chunk(ResultsMode::Verbatim);
+        chunk.engine = engine;
+        chunk.label = "params-chunk".to_string();
+        chunk.code = code.to_string();
+        let result = pool
+            .execute_chunk(&chunk, dir, |_| "unused".to_string())
+            .unwrap();
+        result
+            .items
+            .iter()
+            .filter_map(|item| item.text.clone())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn r_engine_reads_injected_params() {
+        if !tool_available("Rscript") {
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let mut pool = pool_with_params(
+            dir.path(),
+            serde_json::json!({"label": "baseline", "alpha": 0.1, "n": 3, "flag": true}),
+        );
+        let out = run_chunk(
+            &mut pool,
+            dir.path(),
+            EngineName::R,
+            "cat(params$label, params$alpha, params$n, params$flag)",
+        );
+        assert!(out.contains("baseline"), "{out:?}");
+        assert!(out.contains("0.1"), "{out:?}");
+        assert!(out.contains('3'), "{out:?}");
+        assert!(out.contains("TRUE"), "{out:?}");
+    }
+
+    #[test]
+    fn r_params_with_quotes_do_not_break_injection() {
+        if !tool_available("Rscript") {
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let mut pool = pool_with_params(dir.path(), serde_json::json!({"q": "a\"b"}));
+        let out = run_chunk(&mut pool, dir.path(), EngineName::R, "cat(params$q)");
+        assert!(out.contains("a\"b"), "{out:?}");
+    }
+
+    #[test]
+    fn python_engine_reads_injected_params() {
+        if !tool_available("python3") {
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let mut pool = pool_with_params(
+            dir.path(),
+            serde_json::json!({"label": "baseline", "years": [2020, 2021], "active": true}),
+        );
+        let out = run_chunk(
+            &mut pool,
+            dir.path(),
+            EngineName::Python,
+            "print(params['label'], params['years'][1], params['active'])",
+        );
+        assert!(out.contains("baseline"), "{out:?}");
+        assert!(out.contains("2021"), "{out:?}");
+        assert!(out.contains("True"), "{out:?}");
+    }
+
+    #[test]
+    fn empty_params_inject_nothing() {
+        if !tool_available("python3") {
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        // No params: a chunk referencing `params` should raise a NameError,
+        // proving nothing was injected.
+        let mut pool = pool_with_params(dir.path(), serde_json::json!({}));
+        let mut chunk = chunk(ResultsMode::Verbatim);
+        chunk.engine = EngineName::Python;
+        chunk.label = "no-params".to_string();
+        chunk.code = "print(params)".to_string();
+        let err = pool
+            .execute_chunk(&chunk, dir.path(), |_| "unused".to_string())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("NameError") || err.contains("params"), "{err}");
     }
 }

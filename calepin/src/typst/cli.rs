@@ -114,6 +114,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         sync_pages: false,
+        param_overrides: args.common.params,
     })?;
     compile_with_typst(
         &output.executables.typst,

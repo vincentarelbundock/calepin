@@ -1,3 +1,27 @@
+// Validate that document parameters only contain JSON-serializable leaves
+// (none, bool, int, float, str) nested in arrays/dictionaries. Anything else
+// (content, functions, lengths, colors, ...) fails fast with the offending path.
+#let _validate-params(value, path) = {
+  let t = type(value)
+  if value == none or t == bool or t == int or t == float or t == str {
+    // supported scalar leaf
+  } else if t == array {
+    for (i, item) in value.enumerate() {
+      _validate-params(item, path + "[" + str(i) + "]")
+    }
+  } else if t == dictionary {
+    for (k, v) in value.pairs() {
+      _validate-params(v, if path == "" { k } else { path + "." + k })
+    }
+  } else {
+    panic(
+      "calepin.setup: unsupported parameter `" + path + "`: values of type " + str(t)
+        + " cannot be passed as parameters; use none, a boolean, a number, a string, "
+        + "an array, or a dictionary",
+    )
+  }
+}
+
 // Per-option defaults come from `_base-options` so there is a single source of
 // truth for all document-level configuration.
 #let setup(
@@ -19,7 +43,9 @@
   fig-responsive: _base-options.at("fig-responsive"),
   fenced-chunks: true,
   fallback-warning: true,
+  params: (:),
   ) = {
+  _validate-params(params, "")
   let setup-opts = (
     echo: echo,
     eval: eval,
@@ -39,6 +65,7 @@
     "fig-responsive": fig-responsive,
     "fenced-chunks": fenced-chunks,
     "fallback-warning": fallback-warning,
+    params: params,
   )
   _setup-defaults.update(defaults => (default: defaults.at("default") + setup-opts))
   if _mode == "query" {

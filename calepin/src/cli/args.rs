@@ -170,6 +170,13 @@ pub struct CommonArgs {
     /// Per-chunk timeout in seconds
     #[arg(long)]
     pub timeout: Option<u64>,
+
+    /// Override a document parameter as `key=value` (repeatable).
+    ///
+    /// Takes precedence over `calepin.setup(params: ...)`, so the same document
+    /// can render with different values without editing the source.
+    #[arg(short = 'P', long = "param", value_name = "KEY=VALUE")]
+    pub params: Vec<String>,
 }
 
 /// Print a yellow warning to stderr.
@@ -295,6 +302,39 @@ mod tests {
                 assert_eq!(args.template, Some("basic".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_compile_param_overrides() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "-P",
+            "region=NY",
+            "--param",
+            "min_count=25",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert_eq!(args.common.params, vec!["region=NY", "min_count=25"]);
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_watch_param_overrides() {
+        let cli =
+            Cli::try_parse_from(["calepin", "watch", "paper.typ", "-P", "region=CA"]).unwrap();
+        match cli.command {
+            Command::Watch(args) => {
+                assert_eq!(args.common.params, vec!["region=CA"]);
+            }
+            other => panic!("expected watch command, got {other:?}"),
         }
     }
 
