@@ -105,17 +105,43 @@ struct ThemeContext {
     target: String,
 }
 
-#[derive(Serialize)]
-struct SiteContext {
-    nav: Vec<NavEntry>,
-    toc: Vec<TocEntry>,
+#[derive(Serialize, Debug, Clone, Default)]
+pub(crate) struct SiteContextInput {
+    pub(crate) nav: Vec<SiteNavEntry>,
+    pub(crate) nav_sections: Vec<SiteNavSection>,
 }
 
 #[derive(Serialize)]
+struct SiteContext {
+    nav: Vec<NavEntry>,
+    nav_sections: Vec<NavSection>,
+    toc: Vec<TocEntry>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub(crate) struct SiteNavSection {
+    pub(crate) title: Option<String>,
+    pub(crate) items: Vec<SiteNavEntry>,
+}
+
+#[derive(Serialize)]
+struct NavSection {
+    title: Option<String>,
+    items: Vec<NavEntry>,
+}
+
+#[derive(Serialize, Clone)]
 struct NavEntry {
     href: String,
     label: String,
     active: bool,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub(crate) struct SiteNavEntry {
+    pub(crate) href: String,
+    pub(crate) label: String,
+    pub(crate) active: bool,
 }
 
 #[derive(Serialize)]
@@ -140,6 +166,7 @@ pub(super) fn apply_html_theme(
     syntax_theme: &HtmlSyntaxTheme,
     output_path: Option<&Path>,
     project_root: Option<&Path>,
+    site_context: Option<&SiteContextInput>,
 ) -> Result<String> {
     let Some(name) = html_theme else {
         return Ok(html.to_string());
@@ -162,7 +189,14 @@ pub(super) fn apply_html_theme(
         )
     };
     let parts = html_document_parts(&normalized)?;
-    render_theme(loaded, &parts, syntax_theme, output_path, project_root)
+    render_theme(
+        loaded,
+        &parts,
+        syntax_theme,
+        output_path,
+        project_root,
+        site_context,
+    )
 }
 
 fn load_theme(
@@ -327,6 +361,7 @@ fn render_theme(
     syntax_theme: &HtmlSyntaxTheme,
     output_path: Option<&Path>,
     project_root: Option<&Path>,
+    site_context_input: Option<&SiteContextInput>,
 ) -> Result<String> {
     let name = loaded.name;
     let mut env = Environment::new();
@@ -349,7 +384,7 @@ fn render_theme(
             body_close: parts.body_close.to_string(),
             title: parts.title.clone().unwrap_or_default(),
         },
-        site: site_context(project_root, output_path, toc),
+        site: site_context(project_root, output_path, toc, site_context_input),
         styles: loaded.styles,
         scripts: loaded.scripts,
         syntax_css: syntax_css(syntax_theme),
@@ -369,9 +404,50 @@ fn site_context(
     project_root: Option<&Path>,
     output_path: Option<&Path>,
     toc: Vec<TocEntry>,
+    site_context_input: Option<&SiteContextInput>,
 ) -> SiteContext {
+    if let Some(input) = site_context_input {
+        return SiteContext {
+            nav: input
+                .nav
+                .iter()
+                .map(|item| NavEntry {
+                    href: item.href.clone(),
+                    label: item.label.clone(),
+                    active: item.active,
+                })
+                .collect(),
+            nav_sections: input
+                .nav_sections
+                .iter()
+                .map(|section| NavSection {
+                    title: section.title.clone(),
+                    items: section
+                        .items
+                        .iter()
+                        .map(|item| NavEntry {
+                            href: item.href.clone(),
+                            label: item.label.clone(),
+                            active: item.active,
+                        })
+                        .collect(),
+                })
+                .collect(),
+            toc,
+        };
+    }
+
+    let nav = nav_entries(project_root, output_path);
     SiteContext {
-        nav: nav_entries(project_root, output_path),
+        nav_sections: if nav.is_empty() {
+            Vec::new()
+        } else {
+            vec![NavSection {
+                title: None,
+                items: nav.clone(),
+            }]
+        },
+        nav,
         toc,
     }
 }

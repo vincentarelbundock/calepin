@@ -6,6 +6,8 @@ VSCODE_DIR := editors/vscode
 VSCODE_OUT := $(VSCODE_DIR)/dist
 VSCODE_BIN_PATH ?= $(if $(BIN_PATH),$(BIN_PATH),target/release/calepin)
 VSCODE_CLI := code
+HOST ?= 127.0.0.1
+PORT ?= 8000
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
   POSITRON_CLI := /Applications/Positron.app/Contents/Resources/app/bin/code
@@ -157,6 +159,9 @@ cli-reference: build  ## Generate docs/cli.typ from clap help output
 		printf '== `calepin watch`\n<calepin-watch>\n\n```text\n'; \
 		$$BIN watch --help; \
 		printf '```\n\n'; \
+		printf '== `calepin serve`\n<calepin-serve>\n\n```text\n'; \
+		$$BIN serve --help; \
+		printf '```\n\n'; \
 		printf '== `calepin stop`\n<calepin-stop>\n\n```text\n'; \
 		$$BIN stop --help; \
 		printf '```\n\n'; \
@@ -165,10 +170,10 @@ cli-reference: build  ## Generate docs/cli.typ from clap help output
 		printf '```\n'; \
 	} > docs/cli.typ
 
-website:  ## Render docs/ via build_website.py
+website:  ## Render docs/ via calepin compile directory mode
 	@set -eu; \
-	uv run python build_website.py
+	cargo run --manifest-path calepin/Cargo.toml -- compile docs --config website.toml
 
-serve:  ## Build and serve the website at http://localhost:8000
+serve:  ## Build and serve the website at http://$(HOST):$(PORT)
 	$(MAKE) website
-	uv run python -m http.server 8000 --directory docs
+	cargo run --manifest-path calepin/Cargo.toml -- serve docs --host $(HOST) --port $(PORT)

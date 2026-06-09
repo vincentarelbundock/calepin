@@ -9,6 +9,7 @@ mod health;
 mod html;
 mod typst;
 mod utils;
+mod website;
 
 use anyhow::Result;
 use clap::Parser;
@@ -27,6 +28,7 @@ fn main() -> Result<()> {
         Command::Health(args) => health::handle_health(args),
         Command::Compile(args) => typst::cli::handle_compile(args),
         Command::Watch(args) => typst::cli::handle_watch(args),
+        Command::Serve(args) => website::serve(args),
         Command::Stop(args) => typst::cli::handle_stop(args),
         Command::Clean(args) => typst::cli::handle_clean(args),
     }

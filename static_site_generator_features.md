@@ -1,0 +1,414 @@
+# Zola Feature Inventory
+
+- **Core generator**
+  - Rust static site generator.
+  - Produces static files with no server or database runtime.
+  - Uses the Tera template engine.
+  - Comparable in purpose to Hugo, Pelican, and Jekyll.
+
+- **CLI and build workflow**
+  - `zola init`: scaffold a new site.
+  - `zola build`: render the site, usually into `public/`.
+  - `zola serve`: build, serve locally, watch files, and live reload.
+  - `zola check`: check the site without writing output and validate Markdown links.
+  - Override `base_url` at build or serve time.
+  - Override output directory.
+  - Use an alternate config file with `--config`.
+  - Build from a different root with `--root`.
+  - Include drafts with `--drafts`.
+  - Serve on a custom interface or port.
+  - Open the browser automatically with `--open`.
+  - Debounce live reload with `--debounce`.
+  - Control colored terminal output with `NO_COLOR`, `CLICOLOR`, and `CLICOLOR_FORCE`.
+  - Use `RUST_LOG` for detailed logging.
+
+- **Project structure**
+  - `zola.toml`: site configuration.
+  - `content/`: Markdown content.
+  - `sass/`: Sass and SCSS files.
+  - `static/`: files copied as-is.
+  - `templates/`: Tera templates.
+  - `themes/`: optional themes.
+  - `public/`: default build output directory.
+
+- **Configuration**
+  - Uses `zola.toml`.
+  - Falls back to older `config.toml` if `zola.toml` is absent.
+  - Requires only `base_url`.
+  - Supports main site settings.
+  - Supports Markdown settings.
+  - Supports link checker settings.
+  - Supports slugification settings.
+  - Supports search settings.
+  - Supports translations.
+  - Supports language-specific settings.
+  - Supports arbitrary custom data in `[extra]`.
+  - Configure `base_url`.
+  - Configure `title`.
+  - Configure `description`.
+  - Configure `default_language`.
+  - Configure `theme`.
+  - Configure `output_dir`.
+  - Preserve or omit root dotfiles in output.
+  - Enable or disable Sass compilation.
+  - Enable or disable HTML minification.
+  - Ignore content files with glob patterns.
+  - Ignore static files with glob patterns.
+  - Enable feed generation.
+  - Configure feed filenames.
+  - Configure feed item limit.
+  - Enable hard-linking for static files.
+  - Configure default author.
+  - Configure taxonomies.
+  - Configure taxonomy root path.
+  - Enable or disable search index generation.
+  - Enable or disable sitemap generation.
+  - Enable or disable robots.txt generation.
+
+- **Content model**
+  - Directory structure determines site structure.
+  - Markdown files become pages.
+  - `_index.md` files define sections.
+  - The homepage is a section.
+  - Sections can be nested indefinitely.
+  - Pages can be orphaned when a directory has no `_index.md`.
+  - Page URLs can be customized with `path`.
+  - Page URLs can be customized with `slug`.
+  - Page and section assets can be colocated.
+  - Non-Markdown files in content directories can be copied beside generated output.
+  - Files in `static/` are copied without modification.
+  - Selected colocated assets can be ignored with `ignored_content`.
+
+- **Pages**
+  - Any `.md` file except `_index.md` is a page.
+  - `index.md` creates a page at the directory path.
+  - `about.md` and `about/index.md` can create equivalent routes.
+  - `about/index.md` supports colocated assets.
+  - Filenames starting with dates can set page dates automatically.
+  - Date prefixes can be stripped from slugs.
+  - Output paths can come from front matter `slug`.
+  - Output paths can come from filename.
+  - Output paths can follow configured slugification.
+  - Pages expose rendered HTML content to templates.
+  - Pages expose title.
+  - Pages expose description.
+  - Pages expose date.
+  - Pages expose updated date.
+  - Pages expose slug.
+  - Pages expose path.
+  - Pages expose authors.
+  - Pages expose draft status.
+  - Pages expose URL components.
+  - Pages expose permalink.
+  - Pages expose summary.
+  - Pages expose taxonomies.
+  - Pages expose extra metadata.
+  - Pages expose table of contents.
+  - Pages expose word count.
+  - Pages expose reading time.
+  - Pages expose previous and next page links.
+  - Pages expose year, month, and day.
+  - Pages expose colocated assets.
+  - Pages expose ancestors.
+  - Pages expose relative path.
+  - Pages expose language.
+  - Pages expose translations.
+  - Pages expose backlinks.
+
+- **Sections**
+  - `_index.md` creates a section.
+  - Sections can have metadata.
+  - Sections can have Markdown content.
+  - Sections can be marked as drafts.
+  - Draft parent sections suppress descendants unless drafts are enabled.
+  - Sections can sort pages by date.
+  - Sections can sort pages by updated date.
+  - Sections can sort pages by title.
+  - Sections can sort pages by title bytes.
+  - Sections can sort pages by weight.
+  - Sections can sort pages by slug.
+  - Sections can disable sorting.
+  - Sections can have weights for ordering subsections.
+  - Sections can choose custom templates.
+  - Section directories expose non-Markdown assets.
+
+- **Drafts**
+  - Pages can be marked `draft`.
+  - Sections can be marked `draft`.
+  - Drafts are excluded by default.
+  - `--drafts` includes drafts in `build`.
+  - `--drafts` includes drafts in `serve`.
+  - `--drafts` includes drafts in `check`.
+  - Draft parent sections hide descendants unless drafts are enabled.
+
+- **Markdown rendering**
+  - Render emoji aliases.
+  - Add CSS classes to external links.
+  - Open external links in a new tab.
+  - Add `rel="noopener"` automatically when target blank is enabled.
+  - Add `nofollow` to external links.
+  - Add `noreferrer` to external links.
+  - Add `rel="external"` to external links.
+  - Enable smart punctuation.
+  - Enable definition lists.
+  - Add lazy image attributes.
+  - Add async image attributes.
+  - Render footnotes at the bottom.
+  - Render GitHub-style alerts or callouts.
+  - Insert anchor links for headings.
+  - Place heading anchors on the left.
+  - Place heading anchors on the right.
+  - Wrap heading text with anchors.
+  - Disable heading anchors.
+  - Customize heading anchors with `anchor-link.html`.
+
+- **Internal links and deep links**
+  - Generate automatic unique heading IDs.
+  - Configure slugification for anchors.
+  - Add numeric suffixes for duplicate heading IDs.
+  - Set manual heading IDs with `{#id}`.
+  - Set heading CSS classes with `{.class}`.
+  - Use special internal link syntax with `@/path/to/file.md`.
+  - Link directly to headings.
+
+- **Table of contents**
+  - Generate page tables of contents automatically from Markdown headings.
+  - Generate section tables of contents automatically from Markdown headings.
+  - Expose page TOC as `page.toc`.
+  - Expose section TOC as `section.toc`.
+
+- **Shortcodes**
+  - Store shortcodes in `templates/shortcodes`.
+  - Use shortcodes inside Markdown.
+  - Inject complex HTML through shortcodes.
+  - Reduce repetitive data-driven content with shortcodes.
+  - Define HTML shortcodes.
+  - Define Markdown shortcodes.
+  - Allow Markdown shortcode headings to appear in the table of contents.
+  - Use Tera macros as the template-side analogue.
+
+- **Syntax highlighting**
+  - Built-in highlighting for Markdown code fences.
+  - Highlighting can be enabled or disabled.
+  - Uses Giallo.
+  - Uses VS Code syntaxes and themes.
+  - Supports one configured theme.
+  - Supports separate light and dark themes.
+  - Supports custom JSON TextMate grammars.
+  - Supports custom JSON TextMate themes.
+  - Renders highlighting inline.
+  - Renders highlighting with CSS classes.
+  - Generates `giallo.css`.
+  - Generates `giallo-light.css`.
+  - Generates `giallo-dark.css`.
+  - Can treat missing highlighting languages as errors.
+
+- **Taxonomies**
+  - Supports built-in-style taxonomy use cases such as tags.
+  - Supports categories.
+  - Supports authors.
+  - Supports arbitrary custom taxonomy names.
+  - Generates taxonomy list pages.
+  - Generates taxonomy term pages.
+  - Supports taxonomy term pagination.
+  - Supports taxonomy term feeds.
+  - Supports language-specific taxonomies.
+  - Allows taxonomy rendering to be disabled with `render = false`.
+  - Does not slugify taxonomy names.
+  - Slugifies taxonomy terms by default.
+  - Treats taxonomy terms as case-insensitive when they produce the same slug.
+  - Supports `taxonomy_root` URL prefixes.
+
+- **Pagination**
+  - Paginate sections.
+  - Paginate taxonomy term pages.
+  - Enable pagination with `paginate_by`.
+  - Configure pagination path.
+  - Expose a `paginator` template variable.
+  - Expose items per page.
+  - Expose base URL.
+  - Expose number of pagers.
+  - Expose first page link.
+  - Expose last page link.
+  - Expose previous page link.
+  - Expose next page link.
+  - Expose current page items.
+  - Expose current page index.
+  - Expose total pages.
+
+- **Search**
+  - Build a search index from page and section content.
+  - Enable search with `build_search_index = true`.
+  - Use generated index with frontend JavaScript.
+  - Use Elasticlunr-compatible output.
+  - Use Fuse-compatible output.
+  - Generate `elasticlunr_javascript`.
+  - Generate `elasticlunr_json`.
+  - Generate `fuse_javascript`.
+  - Generate `fuse_json`.
+  - Include titles in the search index.
+  - Include descriptions in the search index.
+  - Include dates in the search index.
+  - Include paths in the search index.
+  - Include rendered content in the search index.
+  - Truncate content to reduce index size.
+  - Configure indexing language from `default_language`.
+  - Optional Chinese indexing support through cargo features.
+  - Optional Japanese indexing support through cargo features.
+  - Leaves search UI implementation to the site author.
+
+- **Sass and SCSS**
+  - Compile Sass.
+  - Compile SCSS.
+  - Enable root Sass compilation with `compile_sass = true`.
+  - Always compile theme Sass.
+  - Uses `grass`, a Rust Sass implementation.
+  - Preserves Sass directory structure in output CSS paths.
+
+- **Image processing**
+  - Built-in `resize_image` function.
+  - Use image processing in templates.
+  - Use image processing in shortcodes.
+  - Search images in project root.
+  - Search images in `static`.
+  - Search images in `content`.
+  - Search images in `public`.
+  - Search images in the current theme static directory.
+  - Resize with `scale`.
+  - Resize with `fit_width`.
+  - Resize with `fit_height`.
+  - Resize with `fit`.
+  - Resize with `fill`.
+  - Output images as `auto`.
+  - Output images as `jpg`.
+  - Output images as `png`.
+  - Output images as `webp`.
+  - Output images as `avif`.
+  - Configure width.
+  - Configure height.
+  - Configure quality.
+  - Configure speed.
+
+- **Multilingual sites**
+  - Configure multiple languages.
+  - Set per-language title.
+  - Set per-language description.
+  - Set per-language feeds.
+  - Set per-language feed filenames.
+  - Set per-language taxonomies.
+  - Set per-language search index.
+  - Set per-language search configuration.
+  - Set per-language translations.
+  - Detect content language from filenames such as `article.fr.md`.
+  - Define translated sections with `_index.{code}.md`.
+  - Output translated content under `{base_url}/{code}/`.
+  - Override translated page paths in front matter.
+
+- **Templates**
+  - Uses the Tera template engine.
+  - Supports `index.html`.
+  - Supports `section.html`.
+  - Supports `page.html`.
+  - Supports custom templates assigned in front matter.
+  - Allows templates in subdirectories.
+  - Provides built-in `atom.xml`.
+  - Provides built-in `rss.xml`.
+  - Provides built-in `sitemap.xml`.
+  - Provides built-in `robots.txt`.
+  - Allows project templates to override built-in templates.
+  - Allows project templates to override theme templates.
+  - Adds extra filters beyond Tera’s built-ins.
+
+- **Feeds**
+  - Generate site-wide feeds.
+  - Enable feeds with `generate_feeds = true`.
+  - Default feed filename is `atom.xml`.
+  - Built-in Atom 1.0 template.
+  - Built-in RSS 2.0 template.
+  - Support custom feed filenames.
+  - Support custom feed templates.
+  - Configure feed item limit.
+  - Include only dated pages in feeds.
+  - Generate taxonomy term feeds when taxonomy `feed = true`.
+
+- **Sitemap**
+  - Generate `sitemap.xml`.
+  - Disable sitemap generation.
+  - Override the built-in sitemap with `templates/sitemap.xml`.
+  - Automatically split sitemaps above large page counts.
+  - Use `split_sitemap_index.xml` for split sitemap indexes.
+  - Include page permalinks.
+  - Include updated dates.
+  - Include extra metadata.
+
+- **Robots.txt**
+  - Generate `robots.txt`.
+  - Disable robots.txt generation.
+  - Override with `templates/robots.txt`.
+  - Expose `config` to the robots template.
+  - Include sitemap URL by default.
+  - Include or extend other Tera templates.
+
+- **404 page**
+  - Provides built-in fallback `404.html`.
+  - Override with `templates/404.html`.
+  - Exposes `config` to the 404 template.
+
+- **Archive pages**
+  - No special built-in archive generator.
+  - Archive pages can be implemented in templates.
+  - Tera grouping can be used to group pages by year or other fields.
+
+- **Themes**
+  - Supports themes.
+  - Themes can provide templates.
+  - Themes can provide content.
+  - Themes can provide styles.
+  - Themes can provide static assets.
+  - Themes can use shortcodes.
+  - Themes can use Sass compilation.
+  - Project templates can override theme templates.
+  - Zola website provides a theme gallery.
+
+- **Deployment documentation**
+  - Deployment guide for Sourcehut Pages.
+  - Deployment guide for Netlify.
+  - Deployment guide for GitHub Pages.
+  - Deployment guide for GitLab Pages.
+  - Deployment guide for Codeberg Pages.
+  - Deployment guide for Edgio.
+  - Deployment guide for Vercel.
+  - Deployment guide for Zeabur.
+  - Deployment guide for Azure Static Web Apps.
+  - Deployment guide for Cloudflare Pages.
+  - Deployment guide for Cloudflare Workers.
+  - Deployment guide for Fly.io.
+  - Deployment guide for AWS S3 Bucket.
+  - Deployment guide for Docker image.
+
+- **Link checking**
+  - Check external Markdown links with `zola check`.
+  - Skip external link checking with `--skip-external-links`.
+  - Configure skipped URL prefixes.
+  - Configure skipped anchor-check prefixes.
+  - Treat internal link failures as errors or warnings.
+  - Treat external link failures as errors or warnings.
+
+- **URL and slug control**
+  - Slugify paths.
+  - Slugify taxonomies.
+  - Slugify anchors.
+  - Use slugification strategy `on`.
+  - Use slugification strategy `safe`.
+  - Use slugification strategy `off`.
+  - Preserve or strip date prefixes in paths with `paths_keep_dates`.
+  - Use escaping when relaxed slugification affects internal links.
+
+- **Performance and static-site conveniences**
+  - Static output.
+  - No database runtime.
+  - No server runtime.
+  - Optional HTML minification.
+  - Optional hard-linking of static files.
+  - Automatic cleanup and recreation of output on build or serve unless configured otherwise.
+  - Live reload in development.

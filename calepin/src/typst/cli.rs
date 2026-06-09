@@ -33,6 +33,14 @@ print(message)
 "#;
 
 pub fn handle_new(args: NewArgs) -> Result<()> {
+    if args.path == Path::new("website") {
+        crate::website::scaffold_website(Path::new("."), args.force)?;
+        if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
+            eprintln!("Created website scaffold in .");
+        }
+        return Ok(());
+    }
+
     if let Some(parent) = args
         .path
         .parent()
@@ -65,6 +73,14 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
 
 pub fn handle_watch(args: WatchArgs) -> Result<()> {
     set_quiet(args.common.quiet);
+    if args.input.is_dir() {
+        return crate::website::watch_from_watch_args(args);
+    }
+    if args.serve {
+        return Err(anyhow::anyhow!(
+            "`calepin watch --serve` can only be used when watching a website directory"
+        ));
+    }
     crate::typst::watch::run_watch(args)
 }
 
@@ -101,6 +117,10 @@ pub fn handle_clean(args: CleanArgs) -> Result<()> {
 
 pub fn handle_compile(args: CompileArgs) -> Result<()> {
     set_quiet(args.common.quiet);
+    if args.input.is_dir() {
+        return crate::website::build_from_compile_args(args);
+    }
+
     let format = args.format.map(|format| format.as_str().to_string());
     let template_name = args.template.as_deref();
     if args.template.is_some() && format.as_deref() != Some("html") {
@@ -125,6 +145,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             typst_args: &args.typst_args,
             template_theme: template_name,
             themes_dir: &output.themes_dir,
+            site_context: None,
         },
     )?;
     Ok(())

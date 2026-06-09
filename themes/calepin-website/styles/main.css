@@ -262,7 +262,7 @@ h6 {
   color: inherit;
 }
 
-/* Section labels rendered as <p><strong>…</strong></p> by build_website.py. */
+/* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
 .calepin-website-sidebar nav p,
 .calepin-website-toc-title {
   font-size: 0.72rem;

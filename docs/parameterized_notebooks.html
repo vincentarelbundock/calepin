@@ -302,7 +302,7 @@ h6 {
   color: inherit;
 }
 
-/* Section labels rendered as <p><strong>…</strong></p> by build_website.py. */
+/* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
 .calepin-website-sidebar nav p,
 .calepin-website-toc-title {
   font-size: 0.72rem;
@@ -1003,30 +1003,71 @@ figure > img {
     <div class="calepin-website-shell grid">
         <div class="calepin-website-nav-backdrop" aria-hidden="true"></div>
         <aside id="calepin-website-sidebar" class="calepin-website-sidebar">
-            <nav aria-label="Documentation"><p><strong>Getting started</strong></p>
-<ul>
-<li><a href="index.html">Home</a></li>
-<li><a href="install.html">Install</a></li>
-<li><a href="config.html">Configuration</a></li>
-</ul>
-<p><strong>Code execution</strong></p>
-<ul>
-<li><a href="supported-languages.html">Languages</a></li>
-<li><a href="options.html">Options</a></li>
-<li><a href="parameterized_notebooks.html" class="active" aria-current="page">Parameterized notebooks</a></li>
-<li><a href="tables_and_figures.html">Tables and figures</a></li>
-<li><a href="crossreferences.html">Cross-references</a></li>
-</ul>
-<p><strong>Roadmap</strong></p>
-<ul>
-<li><a href="website.html">Website generator</a></li>
-<li><a href="templates.html">Templates</a></li>
-</ul>
-<p><strong>Reference</strong></p>
-<ul>
-<li><a href="cli.html">Command line</a></li>
-<li><a href="example.html">Example notebook</a></li>
-</ul></nav>
+            <nav aria-label="Documentation">
+                
+                    
+                    
+                    
+                    <p><strong>Getting started</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="index.html">Home</a></li>
+                        
+                        <li><a href="install.html">Install</a></li>
+                        
+                        <li><a href="config.html">Configuration</a></li>
+                        
+                    </ul>
+                    
+                    
+                    
+                    
+                    <p><strong>Code execution</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="supported-languages.html">Languages</a></li>
+                        
+                        <li><a href="options.html">Options</a></li>
+                        
+                        <li><a href="parameterized_notebooks.html" class="active" aria-current="page">Parameterized notebooks</a></li>
+                        
+                        <li><a href="tables_and_figures.html">Tables and figures</a></li>
+                        
+                        <li><a href="crossreferences.html">Cross-references</a></li>
+                        
+                    </ul>
+                    
+                    
+                    
+                    
+                    <p><strong>Roadmap</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="website.html">Website generator</a></li>
+                        
+                        <li><a href="templates.html">Templates</a></li>
+                        
+                    </ul>
+                    
+                    
+                    
+                    
+                    <p><strong>Reference</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="cli.html">Command line</a></li>
+                        
+                        <li><a href="example.html">Example notebook</a></li>
+                        
+                    </ul>
+                    
+                    
+                
+            </nav>
         </aside>
         <main class="calepin-website-main">
             <h2 id="parameterized-notebooks">Parameterized notebooks</h2><p>It is often useful to render the same notebook with different inputs. Calepin document parameters let Typst source code or command-line flags pass values to execution engines. Code chunks can then read those values through a <code>params</code> object.</p><p>For the <code>r</code> and <code>python</code> engines, Calepin creates the binding automatically: R receives a named <code>list</code> read as <code>params$Species</code>, and Python receives a <code>dict</code> read as <code>params["Species"]</code>.</p><p>This complete document filters the built-in R <code>iris</code> data to one species and a minimum petal length, then uses another parameter to choose the color palette.</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"@preview/calepin:0.0.1"</span> <span style="color: #d73948">as</span> calepin
@@ -1119,6 +1160,15 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
         
     
         
+            
+            
+        
+        
+    
+        
+            
+            
+        
         
             
         
@@ -1128,20 +1178,6 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
             
         
     
-        
-        
-            
-        
-    
-        
-            
-            
-        
-        
-    
-        
-            
-            
         
         
             
@@ -1171,16 +1207,16 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">options.typ</span>
+            <span class="calepin-website-page-nav-title">Options</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="supported-languages.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="tables_and_figures.html">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">supported-languages.typ</span>
+            <span class="calepin-website-page-nav-title">Tables and figures</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

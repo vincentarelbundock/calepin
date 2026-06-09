@@ -30,7 +30,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// Create a new example Typst file
+    /// Create a new example Typst file or website scaffold
     New(NewArgs),
 
     /// Check Calepin's local runtime environment
@@ -41,6 +41,9 @@ pub enum Command {
 
     /// Watch, preprocess, and delegate recompiles to typst watch
     Watch(WatchArgs),
+
+    /// Serve static files locally
+    Serve(ServeArgs),
 
     /// Stop a running calepin watch process
     Stop(StopArgs),
@@ -70,7 +73,7 @@ impl CompileFormat {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct NewArgs {
-    /// Path to the new .typ file
+    /// Path to the new .typ file, or `website` to scaffold a website
     pub path: PathBuf,
 
     /// Overwrite the file if it already exists
@@ -95,10 +98,10 @@ pub struct HealthArgs {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct CompileArgs {
-    /// Input .typ file
+    /// Input .typ file, or a website source directory when --config is supplied
     pub input: PathBuf,
 
-    /// Output path passed to typst compile
+    /// Output path passed to typst compile, or website output directory
     pub output: Option<PathBuf>,
 
     /// Output format passed to typst compile
@@ -131,12 +134,38 @@ pub struct WatchArgs {
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
+    /// Serve the website while watching a directory
+    #[arg(long)]
+    pub serve: bool,
+
+    /// Interface to bind when serving a watched website
+    #[arg(long, default_value = "127.0.0.1")]
+    pub host: String,
+
+    /// Port to bind when serving a watched website
+    #[arg(long, default_value_t = 8000)]
+    pub port: u16,
+
     #[command(flatten)]
     pub common: CommonArgs,
 
     /// Arguments forwarded to typst watch after `--`
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     pub typst_args: Vec<String>,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct ServeArgs {
+    /// Directory containing static files to serve
+    pub dir: PathBuf,
+
+    /// Interface to bind
+    #[arg(long, default_value = "127.0.0.1")]
+    pub host: String,
+
+    /// Port to bind
+    #[arg(short, long, default_value_t = 8000)]
+    pub port: u16,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -361,11 +390,57 @@ mod tests {
                 assert_eq!(args.input, PathBuf::from("paper.typ"));
                 assert_eq!(args.output, Some(PathBuf::from("out/paper.html")));
                 assert_eq!(args.format, Some(CompileFormat::Html));
+                assert!(!args.serve);
                 assert!(args.common.quiet);
                 assert_eq!(args.common.timeout, Some(42));
                 assert_eq!(args.typst_args, vec!["--font-path", "fonts"]);
             }
             other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_watch_website_serve_args() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "watch",
+            "docs",
+            "--config",
+            "website.toml",
+            "--serve",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "3000",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Watch(args) => {
+                assert_eq!(args.input, PathBuf::from("docs"));
+                assert_eq!(args.common.config, Some(PathBuf::from("website.toml")));
+                assert!(args.serve);
+                assert_eq!(args.host, "0.0.0.0");
+                assert_eq!(args.port, 3000);
+            }
+            other => panic!("expected watch command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_serve_args() {
+        let cli = Cli::try_parse_from([
+            "calepin", "serve", "docs", "--host", "0.0.0.0", "--port", "3000",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Serve(args) => {
+                assert_eq!(args.dir, PathBuf::from("docs"));
+                assert_eq!(args.host, "0.0.0.0");
+                assert_eq!(args.port, 3000);
+            }
+            other => panic!("expected serve command, got {other:?}"),
         }
     }
 
@@ -413,6 +488,19 @@ mod tests {
         match cli.command {
             Command::New(args) => {
                 assert_eq!(args.path, PathBuf::from("paper.typ"));
+                assert!(args.force);
+            }
+            other => panic!("expected new command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_new_website_args() {
+        let cli = Cli::try_parse_from(["calepin", "new", "website", "--force"]).unwrap();
+
+        match cli.command {
+            Command::New(args) => {
+                assert_eq!(args.path, PathBuf::from("website"));
                 assert!(args.force);
             }
             other => panic!("expected new command, got {other:?}"),

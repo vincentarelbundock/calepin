@@ -3,7 +3,10 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::html::{apply_html_theme_file, inline_html_images_file, prepare_html_theme};
+use crate::html::{
+    apply_html_theme_file, apply_html_theme_file_with_site_context, inline_html_images_file,
+    prepare_html_theme, SiteContextInput,
+};
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
 use crate::typst::version::assert_supported_typst;
@@ -15,6 +18,7 @@ pub struct CompileOptions<'a> {
     pub typst_args: &'a [String],
     pub template_theme: Option<&'a str>,
     pub themes_dir: &'a Path,
+    pub site_context: Option<&'a SiteContextInput>,
 }
 
 pub fn reject_reserved_typst_inputs(args: &[String]) -> Result<()> {
@@ -226,13 +230,24 @@ pub fn compile_with_typst(
         ));
     }
     if let Some(path) = html_output {
-        apply_html_theme_file(
-            &path,
-            html_theme,
-            options.themes_dir,
-            &prepared_theme.syntax_theme,
-            &layout.root,
-        )?;
+        if let Some(site_context) = options.site_context {
+            apply_html_theme_file_with_site_context(
+                &path,
+                html_theme,
+                options.themes_dir,
+                &prepared_theme.syntax_theme,
+                &layout.root,
+                Some(site_context),
+            )?;
+        } else {
+            apply_html_theme_file(
+                &path,
+                html_theme,
+                options.themes_dir,
+                &prepared_theme.syntax_theme,
+                &layout.root,
+            )?;
+        }
         inline_html_images_file(&path, &layout.root)?;
     }
     Ok(())

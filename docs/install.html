@@ -302,7 +302,7 @@ h6 {
   color: inherit;
 }
 
-/* Section labels rendered as <p><strong>…</strong></p> by build_website.py. */
+/* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
 .calepin-website-sidebar nav p,
 .calepin-website-toc-title {
   font-size: 0.72rem;
@@ -1003,30 +1003,71 @@ figure > img {
     <div class="calepin-website-shell grid">
         <div class="calepin-website-nav-backdrop" aria-hidden="true"></div>
         <aside id="calepin-website-sidebar" class="calepin-website-sidebar">
-            <nav aria-label="Documentation"><p><strong>Getting started</strong></p>
-<ul>
-<li><a href="index.html">Home</a></li>
-<li><a href="install.html" class="active" aria-current="page">Install</a></li>
-<li><a href="config.html">Configuration</a></li>
-</ul>
-<p><strong>Code execution</strong></p>
-<ul>
-<li><a href="supported-languages.html">Languages</a></li>
-<li><a href="options.html">Options</a></li>
-<li><a href="parameterized_notebooks.html">Parameterized notebooks</a></li>
-<li><a href="tables_and_figures.html">Tables and figures</a></li>
-<li><a href="crossreferences.html">Cross-references</a></li>
-</ul>
-<p><strong>Roadmap</strong></p>
-<ul>
-<li><a href="website.html">Website generator</a></li>
-<li><a href="templates.html">Templates</a></li>
-</ul>
-<p><strong>Reference</strong></p>
-<ul>
-<li><a href="cli.html">Command line</a></li>
-<li><a href="example.html">Example notebook</a></li>
-</ul></nav>
+            <nav aria-label="Documentation">
+                
+                    
+                    
+                    
+                    <p><strong>Getting started</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="index.html">Home</a></li>
+                        
+                        <li><a href="install.html" class="active" aria-current="page">Install</a></li>
+                        
+                        <li><a href="config.html">Configuration</a></li>
+                        
+                    </ul>
+                    
+                    
+                    
+                    
+                    <p><strong>Code execution</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="supported-languages.html">Languages</a></li>
+                        
+                        <li><a href="options.html">Options</a></li>
+                        
+                        <li><a href="parameterized_notebooks.html">Parameterized notebooks</a></li>
+                        
+                        <li><a href="tables_and_figures.html">Tables and figures</a></li>
+                        
+                        <li><a href="crossreferences.html">Cross-references</a></li>
+                        
+                    </ul>
+                    
+                    
+                    
+                    
+                    <p><strong>Roadmap</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="website.html">Website generator</a></li>
+                        
+                        <li><a href="templates.html">Templates</a></li>
+                        
+                    </ul>
+                    
+                    
+                    
+                    
+                    <p><strong>Reference</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="cli.html">Command line</a></li>
+                        
+                        <li><a href="example.html">Example notebook</a></li>
+                        
+                    </ul>
+                    
+                    
+                
+            </nav>
         </aside>
         <main class="calepin-website-main">
             <h3 id="typst-cli">Typst CLI</h3><p>Calepin requires Typst 0.14.2 or newer. Install or update the Typst CLI from the <a href="https://github.com/typst/typst#installation">Typst installation instructions</a>, and make sure it is available on your <code>PATH</code>.</p><h3 id="calepin">Calepin</h3><p>MacOS and Linux:</p><pre><code data-lang="sh"><span style="color: #4b69c6">curl</span> --proto <span style="color: #198810">'</span><span style="color: #198810">=https</span><span style="color: #198810">'</span> --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh <span style="color: #d73948">|</span> <span style="color: #4b69c6">sh</span></code></pre><p>Windows via powershell:</p><pre><code data-lang="sh"><span style="color: #4b69c6">powershell</span> -ExecutionPolicy Bypass -c <span style="color: #198810">"</span><span style="color: #198810">irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex</span><span style="color: #198810">"</span></code></pre><h3 id="jupyter-support">Jupyter support</h3><p>Calepin has built-in support for <strong>Python</strong> and <strong>R</strong>, and can also run many other languages through Jupyter kernels, but that requires installing the language kernel and kernel client tooling.</p><p>To use a Jupyter kernel, install <code>jupyter_client</code> first:</p><pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install jupyter_client</code></pre><p>Most kernels then install with a single <code>pip install</code>:</p><pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install bash_kernel       <span style="color: #74747c">#</span><span style="color: #74747c"> Bash</span>
@@ -1061,6 +1102,15 @@ figure > img {
         
     
         
+            
+            
+        
+        
+    
+        
+            
+            
+        
         
             
         
@@ -1080,20 +1130,6 @@ figure > img {
             
         
     
-        
-        
-            
-        
-    
-        
-            
-            
-        
-        
-    
-        
-            
-            
         
         
             
@@ -1129,20 +1165,20 @@ figure > img {
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="example.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="index.html">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">example.typ</span>
+            <span class="calepin-website-page-nav-title">Home</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="options.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="config.html">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">options.typ</span>
+            <span class="calepin-website-page-nav-title">Configuration</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

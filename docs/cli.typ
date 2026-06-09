@@ -10,10 +10,11 @@ Preprocess Typst documents with executable code chunks
 Usage: calepin <COMMAND>
 
 Commands:
-  new      Create a new example Typst file
+  new      Create a new example Typst file or website scaffold
   health   Check Calepin's local runtime environment
   compile  Preprocess, then invoke typst compile
   watch    Watch, preprocess, and delegate recompiles to typst watch
+  serve    Serve static files locally
   stop     Stop a running calepin watch process
   clean    Remove `.calepin` directories and generated artifacts
   help     Print this message or the help of the given subcommand(s)
@@ -27,12 +28,12 @@ Options:
 <calepin-new>
 
 ```text
-Create a new example Typst file
+Create a new example Typst file or website scaffold
 
 Usage: calepin new [OPTIONS] <PATH>
 
 Arguments:
-  <PATH>  Path to the new .typ file
+  <PATH>  Path to the new .typ file, or `website` to scaffold a website
 
 Options:
   -f, --force  Overwrite the file if it already exists
@@ -64,10 +65,10 @@ Usage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...
 
 Arguments:
   <INPUT>
-          Input .typ file
+          Input .typ file, or a website source directory when --config is supplied
 
   [OUTPUT]
-          Output path passed to typst compile
+          Output path passed to typst compile, or website output directory
 
   [TYPST_ARGS]...
           Arguments forwarded to typst compile after `--`
@@ -125,6 +126,19 @@ Options:
           
           [possible values: pdf, png, svg, html]
 
+      --serve
+          Serve the website while watching a directory
+
+      --host <HOST>
+          Interface to bind when serving a watched website
+          
+          [default: 127.0.0.1]
+
+      --port <PORT>
+          Port to bind when serving a watched website
+          
+          [default: 8000]
+
       --config <CONFIG>
           Path to project config TOML
 
@@ -141,6 +155,23 @@ Options:
 
   -h, --help
           Print help (see a summary with '-h')
+```
+
+== `calepin serve`
+<calepin-serve>
+
+```text
+Serve static files locally
+
+Usage: calepin serve [OPTIONS] <DIR>
+
+Arguments:
+  <DIR>  Directory containing static files to serve
+
+Options:
+      --host <HOST>  Interface to bind [default: 127.0.0.1]
+  -p, --port <PORT>  Port to bind [default: 8000]
+  -h, --help         Print help
 ```
 
 == `calepin stop`

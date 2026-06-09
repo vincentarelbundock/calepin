@@ -75,12 +75,25 @@
         <div class="calepin-website-nav-backdrop" aria-hidden="true"></div>
         <aside id="calepin-website-sidebar" class="calepin-website-sidebar">
             <nav aria-label="Documentation">
-                {% if site.nav %}
-                <ul>
-                    {% for item in site.nav %}
-                    <li><a href="{{ item.href }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a></li>
+                {% if site.nav_sections %}
+                    {% for section in site.nav_sections %}
+                    {% if section.items %}
+                    {% if section.title %}
+                    <p><strong>{{ section.title }}</strong></p>
+                    {% endif %}
+                    <ul>
+                        {% for item in section.items %}
+                        <li><a href="{{ item.href }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                     {% endfor %}
-                </ul>
+                {% elif site.nav %}
+                    <ul>
+                        {% for item in site.nav %}
+                        <li><a href="{{ item.href }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a></li>
+                        {% endfor %}
+                    </ul>
                 {% endif %}
             </nav>
         </aside>

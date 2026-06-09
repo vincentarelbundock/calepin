@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 
 use syntax::HtmlSyntaxTheme;
 
+pub(crate) use theme::{SiteContextInput, SiteNavEntry, SiteNavSection};
+
 const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
 const HTML_INPUT_LIGHT_THEME_REF: &str = "/.calepin/calepin-input-light.tmTheme";
 
@@ -75,6 +77,17 @@ pub(crate) fn apply_html_theme_file(
     syntax_theme: &HtmlSyntaxTheme,
     root: &Path,
 ) -> Result<()> {
+    apply_html_theme_file_with_site_context(path, html_theme, themes_dir, syntax_theme, root, None)
+}
+
+pub(crate) fn apply_html_theme_file_with_site_context(
+    path: &Path,
+    html_theme: Option<&str>,
+    themes_dir: &Path,
+    syntax_theme: &HtmlSyntaxTheme,
+    root: &Path,
+    site_context: Option<&SiteContextInput>,
+) -> Result<()> {
     let html = std::fs::read_to_string(path)
         .with_context(|| format!("failed to read {}", path.display()))?;
     let themed = theme::apply_html_theme(
@@ -84,6 +97,7 @@ pub(crate) fn apply_html_theme_file(
         syntax_theme,
         Some(path),
         Some(root),
+        site_context,
     )?;
     if themed != html {
         std::fs::write(path, themed)
@@ -128,6 +142,7 @@ mod tests {
             html_theme,
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
+            None,
             None,
             None,
         )
@@ -175,6 +190,7 @@ mod tests {
             &HtmlSyntaxTheme::builtin(),
             Some(&output),
             Some(dir.path()),
+            None,
         )
         .unwrap();
 
@@ -257,7 +273,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
     fn html_custom_syntax_themes_require_html_theme() {
         let dir = tempfile::tempdir().unwrap();
 
@@ -299,6 +314,7 @@ mod tests {
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
+            None,
         )
         .unwrap();
 
@@ -335,6 +351,7 @@ mod tests {
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
+            None,
         )
         .unwrap();
 
@@ -353,6 +370,7 @@ mod tests {
             Some("bare"),
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
+            None,
             None,
             None,
         )
@@ -379,6 +397,7 @@ mod tests {
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
+            None,
         )
         .unwrap_err()
         .to_string();
@@ -401,6 +420,7 @@ mod tests {
             Some("title-only"),
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
+            None,
             None,
             None,
         )
