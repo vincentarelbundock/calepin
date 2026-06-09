@@ -168,11 +168,14 @@ logo = "assets/logo.svg"
 logo_alt = "My Site"
 home = "index.html"
 github_url = "https://github.com/user/repo"
+pdf_theme = "docs/assets/pdf-theme.typ"
 ```
 
 Source and output directories are positional CLI arguments, not website config fields. This mirrors normal single-file compilation, where `calepin compile file.typ file.pdf` takes input and output from the first two positional arguments.
 
 `template` selects the HTML theme. It can be a built-in theme such as `pico`, or a theme directory under the configured `themes_dir`.
+
+`pdf_theme` selects a Typst theme file for PDF and other paged output. If it is omitted, _Calepin_ uses the bundled PDF theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. Set `pdf_theme = false` to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as `pdf_theme = "docs/assets/pdf-theme.typ"` when `website.toml` lives at the project root.
 
 `title`, `description`, `base_url`, `logo`, `logo_alt`, `home`, and `github_url` are optional. The bundled website theme uses these values to emit:
 
@@ -291,7 +294,25 @@ themes_dir = "themes"
 template = "my-theme"
 ```
 
-Use `website.toml` for ordinary site branding and navigation changes. Create a local theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.
+Use `website.toml` for ordinary site branding and navigation changes. Create a local HTML theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.
+
+PDF themes are Typst files. Their source is inserted after Calepin's executable-fence rules and before each page source, so they can add show rules for paged output without changing the original `.typ` files. A minimal theme can replace the default source-block styling:
+
+```typ
+#show raw.where(block: true): it => {
+  if sys.inputs.at("calepin-target", default: "paged") == "html" {
+    it
+  } else {
+    block(
+      width: 100%,
+      fill: rgb("#f7f7f5"),
+      stroke: 0.5pt + rgb("#d8d8d2"),
+      radius: 2pt,
+      inset: (x: 0.65em, y: 0.45em),
+    )[#it]
+  }
+}
+```
 
 == Source and PDF views
 

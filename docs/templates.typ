@@ -50,3 +50,13 @@ Templates can access:
 - `syntax_css`
 - `theme`
 - `target`
+
+PDF themes are Typst files, not MiniJinja templates. The bundled PDF theme is
+enabled by default for `calepin compile` and website PDF builds. Configure a
+replacement in `config.toml` or `website.toml`:
+
+```toml
+pdf_theme = "themes/pdf.typ"
+```
+
+Set `pdf_theme = false` to disable the bundled PDF theme.

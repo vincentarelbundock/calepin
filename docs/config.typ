@@ -8,7 +8,7 @@ calepin compile --config config.toml paper.typ
 
 If `--config` is omitted, `Calepin` uses defaults.
 
-Relative paths written inside the config (the executables and `themes_dir`)
+Relative paths written inside the config (the executables, `themes_dir`, and `pdf_theme`)
 resolve relative to the config file's own directory, not the document being
 compiled. Absolute paths are used as is.
 
@@ -27,7 +27,12 @@ mmdc = "mmdc"                      # Mermaid
 #pdf2svg = "pdf2svg"                # optional
 
 themes_dir = "themes"               # folder for user template themes
+pdf_theme = "themes/pdf.typ"         # optional Typst theme for PDF/paged output
 ```
+
+If `pdf_theme` is omitted, Calepin uses its bundled PDF theme. Set
+`pdf_theme = false` to disable the bundled theme and let Typst render source
+blocks with its defaults.
 
 If `python` is not configured, set `CALEPIN_PYTHON` in the environment to
 pick it. If that is absent, Calepin uses a local `.venv` interpreter when

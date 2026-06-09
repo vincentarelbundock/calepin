@@ -6,7 +6,7 @@ use std::process::Command;
 use std::time::Duration;
 use xxhash_rust::xxh3::xxh3_64;
 
-use crate::config::{CalepinConfig, ExecutablePaths};
+use crate::config::{CalepinConfig, ExecutablePaths, PdfTheme};
 use crate::typst::execute::{EnginePool, ExecutionConfig};
 use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, ExecOptions, LayoutPaths};
 use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout, slash_path};
@@ -19,6 +19,7 @@ use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
 const PREPROCESS_FINGERPRINT_FILE: &str = "fingerprint.xxh3";
+const DEFAULT_PDF_THEME_SOURCE: &str = include_str!("../assets/themes/pdf/default.typ");
 
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
@@ -81,7 +82,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
 
     write_runtime(&layout.root)?;
     let staged_input = write_staged_source(&layout)?;
-    let query_input = write_render_wrapper(&layout, &staged_input, &[])?;
+    let query_input = write_render_wrapper(&layout, &staged_input, &[], None)?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
     let setup_json = typst_query(
         &config.executables.typst,
@@ -118,11 +119,14 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
             }
         })
         .collect();
+    let pdf_theme = load_pdf_theme_source(&config.pdf_theme)?;
     if !jupyter_kernels.is_empty() {
         let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
-        layout.render_input = write_render_wrapper(&layout, &staged_input, &kernels)?;
+        layout.render_input =
+            write_render_wrapper(&layout, &staged_input, &kernels, pdf_theme.as_deref())?;
     } else {
-        layout.render_input = write_render_wrapper(&layout, &staged_input, &[])?;
+        layout.render_input =
+            write_render_wrapper(&layout, &staged_input, &[], pdf_theme.as_deref())?;
     }
 
     let params = resolve_params(&setup_config.defaults.params, &options.param_overrides)?;
@@ -156,6 +160,7 @@ fn write_render_wrapper(
     layout: &LayoutPaths,
     include_input: &Path,
     jupyter_kernels: &[&str],
+    pdf_theme: Option<&str>,
 ) -> Result<PathBuf> {
     let mut wrapper_relative = PathBuf::from(".calepin");
     let mut stem = layout.input_rel.clone();
@@ -198,6 +203,14 @@ fn write_render_wrapper(
         ));
     }
 
+    if let Some(pdf_theme) = pdf_theme {
+        lines.push_str("\n// PDF theme\n");
+        lines.push_str(pdf_theme);
+        if !pdf_theme.ends_with('\n') {
+            lines.push('\n');
+        }
+    }
+
     lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
 
     if let Some(parent) = wrapper.parent() {
@@ -210,6 +223,18 @@ fn write_render_wrapper(
 
     fs::write(&wrapper, lines).with_context(|| format!("failed to write {}", wrapper.display()))?;
     Ok(wrapper_relative)
+}
+
+fn load_pdf_theme_source(pdf_theme: &PdfTheme) -> Result<Option<String>> {
+    match pdf_theme {
+        PdfTheme::Disabled => Ok(None),
+        PdfTheme::Default => Ok(Some(DEFAULT_PDF_THEME_SOURCE.to_string())),
+        PdfTheme::Path(path) => {
+            let source = fs::read_to_string(path)
+                .with_context(|| format!("failed to read pdf_theme {}", path.display()))?;
+            Ok(Some(source))
+        }
+    }
 }
 
 pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
@@ -825,6 +850,43 @@ mod tests {
         std::fs::write(&layout.results_path, "{}\n").unwrap();
         assert!(preprocess_cache_hit(&layout, 0x2a).unwrap());
         assert!(!preprocess_cache_hit(&layout, 0x2b).unwrap());
+    }
+
+    #[test]
+    fn render_wrapper_includes_pdf_theme_before_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+        let staged_input = PathBuf::from(".calepin/paper/source.typ");
+        let pdf_theme = "#let pdf-theme-marker = true\n";
+
+        let wrapper = write_render_wrapper(&layout, &staged_input, &[], Some(pdf_theme)).unwrap();
+        let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
+
+        let theme_marker = contents.find("#let pdf-theme-marker = true").unwrap();
+        let source_include = contents
+            .find("#include \"/.calepin/paper/source.typ\"")
+            .unwrap();
+        assert!(theme_marker < source_include);
+    }
+
+    #[test]
+    fn default_pdf_theme_source_is_loaded() {
+        let source = load_pdf_theme_source(&PdfTheme::Default).unwrap().unwrap();
+
+        assert_eq!(source, DEFAULT_PDF_THEME_SOURCE);
+    }
+
+    #[test]
+    fn custom_pdf_theme_source_is_loaded() {
+        let theme_dir = tempfile::tempdir().unwrap();
+        let theme = theme_dir.path().join("pdf.typ");
+        std::fs::write(&theme, "#let custom = true\n").unwrap();
+
+        let source = load_pdf_theme_source(&PdfTheme::Path(theme))
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(source, "#let custom = true\n");
     }
 
     fn test_layout(root: &Path) -> LayoutPaths {

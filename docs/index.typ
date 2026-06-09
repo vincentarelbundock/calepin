@@ -1,4 +1,4 @@
-#import "/typst/design.typ": target, asset-path, hero, feature-card, feature-card-grid
+#import "/assets/design.typ": target, asset-path, hero, feature-card, feature-card-grid
 
 #hero[
   #if target() == "html" [

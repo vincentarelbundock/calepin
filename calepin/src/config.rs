@@ -16,6 +16,14 @@ pub const DEFAULT_THEMES_DIR: &str = "themes";
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
     pub themes_dir: PathBuf,
+    pub pdf_theme: PdfTheme,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PdfTheme {
+    Default,
+    Disabled,
+    Path(PathBuf),
 }
 
 impl CalepinConfig {
@@ -38,6 +46,7 @@ impl CalepinConfig {
         Ok(Self {
             executables: ExecutablePaths::from_raw(root, config_dir, raw.executables),
             themes_dir: resolve_themes_dir(root, config_dir, raw.themes_dir),
+            pdf_theme: resolve_pdf_theme(config_dir, raw.pdf_theme),
         })
     }
 
@@ -45,6 +54,7 @@ impl CalepinConfig {
         Self {
             executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
             themes_dir: resolve_themes_dir(root, root, None),
+            pdf_theme: PdfTheme::Default,
         }
     }
 }
@@ -66,6 +76,16 @@ fn resolve_themes_dir(project_root: &Path, config_dir: &Path, value: Option<Path
         Some(path) if path.is_absolute() => path,
         Some(path) => config_dir.join(path),
         None => project_root.join(DEFAULT_THEMES_DIR),
+    }
+}
+
+fn resolve_pdf_theme(config_dir: &Path, value: Option<RawPdfTheme>) -> PdfTheme {
+    match value {
+        None => PdfTheme::Default,
+        Some(RawPdfTheme::Bool(true)) => PdfTheme::Default,
+        Some(RawPdfTheme::Bool(false)) => PdfTheme::Disabled,
+        Some(RawPdfTheme::Path(path)) if path.is_absolute() => PdfTheme::Path(path),
+        Some(RawPdfTheme::Path(path)) => PdfTheme::Path(config_dir.join(path)),
     }
 }
 
@@ -136,6 +156,14 @@ impl ExecutablePaths {
 struct RawCalepinConfig {
     executables: RawExecutablePaths,
     themes_dir: Option<PathBuf>,
+    pdf_theme: Option<RawPdfTheme>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(untagged)]
+enum RawPdfTheme {
+    Bool(bool),
+    Path(PathBuf),
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -261,6 +289,39 @@ mod tests {
 
         // `site/themes` resolves relative to the config file's directory.
         assert_eq!(config.themes_dir, calepin_dir.join("site/themes"));
+    }
+
+    #[test]
+    fn config_overrides_pdf_theme_path() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let calepin_dir = dir.path().join(".calepin");
+        std::fs::create_dir(&calepin_dir).unwrap();
+        std::fs::write(
+            calepin_dir.join("config.toml"),
+            "pdf_theme = \"themes/pdf.typ\"\n",
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
+
+        assert_eq!(
+            config.pdf_theme,
+            PdfTheme::Path(calepin_dir.join("themes/pdf.typ"))
+        );
+    }
+
+    #[test]
+    fn config_disables_pdf_theme() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+        std::fs::write(&config_path, "pdf_theme = false\n").unwrap();
+
+        let config = CalepinConfig::load(dir.path(), Some(&config_path)).unwrap();
+
+        assert_eq!(config.pdf_theme, PdfTheme::Disabled);
     }
 
     #[test]
