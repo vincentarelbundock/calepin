@@ -68,7 +68,7 @@ Arguments:
           Input .typ file, or a website source directory when --config is supplied
 
   [OUTPUT]
-          Output path passed to typst compile, or website output directory
+          Output file path, or website output directory when INPUT is a directory
 
   [TYPST_ARGS]...
           Arguments forwarded to typst compile after `--`
@@ -112,10 +112,10 @@ Usage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...
 
 Arguments:
   <INPUT>
-          Input .typ file
+          Input .typ file, or a website source directory when --config is supplied
 
   [OUTPUT]
-          Output path passed to typst watch
+          Output file path, or website output directory when INPUT is a directory
 
   [TYPST_ARGS]...
           Arguments forwarded to typst watch after `--`

@@ -3,12 +3,12 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 pub const RUNTIME_SOURCE: &str = concat!(
-    include_str!("runtime/template.typ"),
-    include_str!("runtime/themes.typ"),
-    include_str!("runtime/state.typ"),
-    include_str!("runtime/render.typ"),
-    include_str!("runtime/options.typ"),
-    include_str!("runtime/chunk.typ"),
+    include_str!("../assets/typst-runtime/template.typ"),
+    include_str!("../assets/typst-runtime/themes.typ"),
+    include_str!("../assets/typst-runtime/state.typ"),
+    include_str!("../assets/typst-runtime/render.typ"),
+    include_str!("../assets/typst-runtime/options.typ"),
+    include_str!("../assets/typst-runtime/chunk.typ"),
 );
 
 pub fn write_runtime(root: &Path) -> Result<PathBuf> {

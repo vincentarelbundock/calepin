@@ -5,17 +5,18 @@ _Calepin_ can build a Typst document directory as a static website. This is the 
 == Feature summary
 
 - Scaffold a new website with `calepin new website`.
-- Compile a directory with `calepin compile docs --config website.toml`.
+- Compile a directory with `calepin compile docs docs --config website.toml`.
 - Render HTML for each page.
 - Render matching PDFs for each page by default.
 - Render HTML only with `--format html`.
 - Build in place, so GitHub Pages can publish from `docs/`.
-- Watch a website directory with `calepin watch docs --config website.toml`.
+- Reuse cached chunk results across repeated `compile`, `website`, and `serve` runs.
+- Watch a website directory with `calepin watch docs docs --config website.toml`.
 - Rebuild only changed existing `.typ` pages during watch using xxh3 fingerprints.
 - Skip rebuilds when watched `.typ` files are touched but their content hash has not changed.
 - Fall back to a full rebuild for structural changes.
 - Serve a static output directory with `calepin serve docs`.
-- Watch and serve together with `calepin watch docs --config website.toml --serve`.
+- Watch and serve together with `calepin watch docs docs --config website.toml --serve`.
 - Auto-refresh browser pages after successful watched rebuilds when `--serve` is enabled.
 - Configure navigation manually with `website.toml`.
 - Generate navigation automatically when no sidebar is configured.
@@ -46,17 +47,29 @@ This creates:
 - `docs/index.typ`
 - `docs/404.typ`
 
-The scaffold writes to `public/` by default so it is safe for new projects. For GitHub Pages publishing from `docs/`, set `out = "docs"` in `website.toml`.
+The scaffold separates site settings from build paths. Pass the source directory as the first positional argument and the output directory as the second positional argument when compiling.
 
 == Build
 
 Compile a website directory with the same `compile` command used for a single Typst document:
 
 ```sh
-calepin compile docs --config website.toml
+calepin compile docs public --config website.toml
 ```
 
-When the input path is a directory, `--config website.toml` is required. The config tells _Calepin_ which directory is the website source, where output should be written, which theme to use, and how navigation should be built.
+When the input path is a directory, `--config website.toml` is required. The first positional argument is the website source directory. The optional second positional argument is the website output directory.
+
+For GitHub Pages publishing from `docs/`, build in place by passing `docs` as both the input and output directory:
+
+```sh
+calepin compile docs docs --config website.toml
+```
+
+If the output directory is omitted, _Calepin_ writes output beside the source files:
+
+```sh
+calepin compile docs --config website.toml
+```
 
 By default, each `.typ` page produces two outputs:
 
@@ -66,20 +79,22 @@ By default, each `.typ` page produces two outputs:
 Use `--format html` to write only HTML:
 
 ```sh
-calepin compile docs --config website.toml --format html
+calepin compile docs public --config website.toml --format html
 ```
 
 Directory website builds do not support `--format pdf`, `--format png`, or `--format svg`; those formats are for single-document `calepin compile`.
+
+Website builds use the same preprocess cache as single-document compilation. After a successful page build, _Calepin_ writes a fingerprint next to the page's `results.json`. Later builds reuse that file when the chunk code, parameters, execution options, configured tools, and source-relative cache paths match. This means `make serve` does not need to re-execute expensive chunks in pages such as `example.typ` when nothing relevant changed.
 
 == Watch
 
 During development, watch the website source directory:
 
 ```sh
-calepin watch docs --config website.toml
+calepin watch docs docs --config website.toml
 ```
 
-The initial watch build renders the whole site. After that, existing `.typ` page edits go through a fast xxh3 fingerprint lookup:
+As with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing `.typ` page edits go through a fast xxh3 fingerprint lookup:
 
 - If the changed page hash is new, _Calepin_ rebuilds only that page.
 - If the file was touched but the hash is unchanged, _Calepin_ skips the rebuild.
@@ -100,7 +115,7 @@ _Calepin_ also falls back to a full rebuild for changes that can affect more tha
 To rebuild and serve in one command:
 
 ```sh
-calepin watch docs --config website.toml --serve
+calepin watch docs docs --config website.toml --serve
 ```
 
 The server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds.
@@ -108,13 +123,13 @@ The server injects a small reload script into HTML responses. Open browser pages
 The default bind address is `127.0.0.1:8000`. If that port is busy, choose another one:
 
 ```sh
-calepin watch docs --config website.toml --serve --port 8001
+calepin watch docs docs --config website.toml --serve --port 8001
 ```
 
 You can also bind another interface:
 
 ```sh
-calepin watch docs --config website.toml --serve --host 0.0.0.0 --port 8001
+calepin watch docs docs --config website.toml --serve --host 0.0.0.0 --port 8001
 ```
 
 == Serve
@@ -145,8 +160,6 @@ calepin serve docs --host 127.0.0.1 --port 8001
 Website settings live in `website.toml`:
 
 ```toml
-src = "docs"
-out = "docs"
 template = "calepin-website"
 title = "My Site"
 description = "A website built with Calepin."
@@ -154,7 +167,7 @@ base_url = "https://example.com"
 github_url = "https://github.com/user/repo"
 ```
 
-`src` is the directory containing source `.typ` files. `out` is the directory where rendered files are written. If `out` is omitted, _Calepin_ writes output beside the source files.
+Source and output directories are positional CLI arguments, not website config fields. This mirrors normal single-file compilation, where `calepin compile file.typ file.pdf` takes input and output from the first two positional arguments.
 
 `template` selects the HTML theme. It can be a built-in theme such as `pico`, or a theme directory under the configured `themes_dir`.
 

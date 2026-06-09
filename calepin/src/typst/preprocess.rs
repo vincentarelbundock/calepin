@@ -18,6 +18,8 @@ use crate::typst::sync::write_page_sync;
 use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
+const PREPROCESS_FINGERPRINT_FILE: &str = "fingerprint.xxh3";
+
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
     pub input: PathBuf,
@@ -53,6 +55,22 @@ pub struct PreprocessPlan {
 
 pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
     let plan = prepare_preprocess_plan(options)?;
+    execute_preprocess_plan(plan)
+}
+
+pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput> {
+    let plan = prepare_preprocess_plan(options)?;
+    if preprocess_cache_hit(&plan.layout, plan.fingerprint)? {
+        if !plan.quiet {
+            eprintln!("calepin [cache] {}", display_input(&plan.layout));
+        }
+        return Ok(PreprocessOutput {
+            layout: plan.layout,
+            executables: plan.executables,
+            themes_dir: plan.themes_dir,
+            fingerprint: plan.fingerprint,
+        });
+    }
     execute_preprocess_plan(plan)
 }
 
@@ -220,7 +238,8 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
 
     if !plan.quiet {
         eprintln!(
-            "calepin executing {} chunk{}",
+            "calepin [run] {}: {} chunk{}",
+            display_input(&plan.layout),
             plan.chunks.len(),
             if plan.chunks.len() == 1 { "" } else { "s" },
         );
@@ -242,19 +261,13 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
     publish_staged_figures(&staged_figures_dir, &plan.layout.figures_dir)?;
     let document = build_results_document(&plan.layout.input_rel, chunk_results);
     write_results(&plan.layout.results_path, &document)?;
+    write_preprocess_fingerprint(&plan.layout, plan.fingerprint)?;
     if plan.sync_pages {
         if let Err(error) = write_page_sync(&plan.executables.typst, &plan.layout, &plan.chunks) {
             if !plan.quiet {
                 cwarn!("page sync failed: {}", error);
             }
         }
-    }
-
-    if !plan.quiet {
-        eprintln!(
-            "output saved to {}",
-            project_relative_path(&plan.layout.root, &plan.layout.results_path)
-        );
     }
 
     Ok(PreprocessOutput {
@@ -350,6 +363,10 @@ fn execution_artifact_reference(
         .map(|relative| final_figures_dir.join(relative))
         .unwrap_or_else(|_| path.to_path_buf());
     artifact_reference(root, &final_path)
+}
+
+fn display_input(layout: &LayoutPaths) -> String {
+    project_relative_path(&layout.root, &layout.input)
 }
 
 fn publish_staged_figures(staged: &Path, final_dir: &Path) -> Result<()> {
@@ -449,6 +466,48 @@ fn preprocess_fingerprint(
     };
     let bytes = serde_json::to_vec(&payload)?;
     Ok(xxh3_64(&bytes))
+}
+
+fn preprocess_cache_hit(layout: &LayoutPaths, fingerprint: u64) -> Result<bool> {
+    if !layout.results_path.is_file() {
+        return Ok(false);
+    }
+    Ok(read_preprocess_fingerprint(layout)? == Some(fingerprint))
+}
+
+fn preprocess_fingerprint_path(layout: &LayoutPaths) -> PathBuf {
+    layout
+        .results_path
+        .with_file_name(PREPROCESS_FINGERPRINT_FILE)
+}
+
+fn read_preprocess_fingerprint(layout: &LayoutPaths) -> Result<Option<u64>> {
+    let path = preprocess_fingerprint_path(layout);
+    let text = match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(error).with_context(|| format!("failed to read {}", path.display()))
+        }
+    };
+    let text = text.trim();
+    if text.is_empty() {
+        return Ok(None);
+    }
+    Ok(u64::from_str_radix(text, 16).ok())
+}
+
+fn write_preprocess_fingerprint(layout: &LayoutPaths, fingerprint: u64) -> Result<()> {
+    let path = preprocess_fingerprint_path(layout);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    let text = format!("{fingerprint:016x}\n");
+    if fs::read_to_string(&path).is_ok_and(|existing| existing == text) {
+        return Ok(());
+    }
+    fs::write(&path, text).with_context(|| format!("failed to write {}", path.display()))
 }
 
 #[derive(Serialize)]
@@ -752,6 +811,20 @@ mod tests {
             std::fs::read_to_string(final_dir.path().join("nested/detail.svg")).unwrap(),
             "<svg>detail</svg>"
         );
+    }
+
+    #[test]
+    fn preprocess_cache_requires_results_and_matching_fingerprint() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+
+        write_preprocess_fingerprint(&layout, 0x2a).unwrap();
+        assert!(!preprocess_cache_hit(&layout, 0x2a).unwrap());
+
+        std::fs::create_dir_all(layout.results_path.parent().unwrap()).unwrap();
+        std::fs::write(&layout.results_path, "{}\n").unwrap();
+        assert!(preprocess_cache_hit(&layout, 0x2a).unwrap());
+        assert!(!preprocess_cache_hit(&layout, 0x2b).unwrap());
     }
 
     fn test_layout(root: &Path) -> LayoutPaths {

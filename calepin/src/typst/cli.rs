@@ -7,30 +7,9 @@ use anyhow::{Context, Result};
 
 use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, StopArgs, WatchArgs};
 use crate::typst::compile::{compile_with_typst, CompileOptions};
-use crate::typst::preprocess::{preprocess, PreprocessOptions};
+use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
-const NEW_FILE_TEMPLATE: &str = r#"#import "@preview/calepin:0.0.1" as calepin
-
-#set document(title: [Calepin example])
-
-#calepin.setup(
-  echo: true,
-  eval: true,
-  results: "verbatim",
-  fenced-chunks: true,
-)
-
-#let py = calepin.inline.with("python")
-
-= Calepin example
-
-Inline Python result: #py[`print(40 + 2)`].
-
-```python
-message = "hello from a code chunk"
-print(message)
-```
-"#;
+const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/notebook.typ");
 
 pub fn handle_new(args: NewArgs) -> Result<()> {
     if args.path == Path::new("website") {
@@ -128,7 +107,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             "`--template` can only be used with `--format html`"
         ));
     }
-    let output = preprocess(PreprocessOptions {
+    let output = preprocess_cached(PreprocessOptions {
         input: args.input,
         config: args.common.config,
         quiet: args.common.quiet,

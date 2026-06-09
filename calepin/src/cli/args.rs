@@ -101,7 +101,7 @@ pub struct CompileArgs {
     /// Input .typ file, or a website source directory when --config is supplied
     pub input: PathBuf,
 
-    /// Output path passed to typst compile, or website output directory
+    /// Output file path, or website output directory when INPUT is a directory
     pub output: Option<PathBuf>,
 
     /// Output format passed to typst compile
@@ -124,10 +124,10 @@ pub struct CompileArgs {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct WatchArgs {
-    /// Input .typ file
+    /// Input .typ file, or a website source directory when --config is supplied
     pub input: PathBuf,
 
-    /// Output path passed to typst watch
+    /// Output file path, or website output directory when INPUT is a directory
     pub output: Option<PathBuf>,
 
     /// Output format passed to typst watch

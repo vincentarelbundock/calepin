@@ -1,0 +1,14 @@
+template = "calepin-website"
+title = "My Calepin Site"
+description = "A website built with Calepin."
+# base_url = "https://example.com"
+# github_url = "https://github.com/user/repo"
+
+[sidebar]
+
+[[sidebar.section]]
+title = "Pages"
+
+  [[sidebar.section.item]]
+  path = "index.typ"
+  label = "Home"

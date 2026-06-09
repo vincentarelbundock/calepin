@@ -24,19 +24,21 @@ static PICO: BuiltinTheme = BuiltinTheme {
     files: &[
         TemplateFile {
             path: "layout.html",
-            source: include_str!("../templates/html/pico/layout.html"),
+            source: include_str!("../assets/themes/html/document/pico/layout.html"),
         },
         TemplateFile {
             path: "partials/theme-switcher.html",
-            source: include_str!("../templates/html/pico/partials/theme-switcher.html"),
+            source: include_str!(
+                "../assets/themes/html/document/pico/partials/theme-switcher.html"
+            ),
         },
         TemplateFile {
             path: "styles/main.css",
-            source: include_str!("../templates/html/pico/styles/main.css"),
+            source: include_str!("../assets/themes/html/document/pico/styles/main.css"),
         },
         TemplateFile {
             path: "scripts/main.js",
-            source: include_str!("../templates/html/pico/scripts/main.js"),
+            source: include_str!("../assets/themes/html/document/pico/scripts/main.js"),
         },
     ],
 };
@@ -46,17 +48,35 @@ static BASIC: BuiltinTheme = BuiltinTheme {
     files: &[
         TemplateFile {
             path: "layout.html",
-            source: include_str!("../templates/html/basic/layout.html"),
+            source: include_str!("../assets/themes/html/document/basic/layout.html"),
         },
         TemplateFile {
             path: "styles/main.css",
-            source: include_str!("../templates/html/basic/styles/main.css"),
+            source: include_str!("../assets/themes/html/document/basic/styles/main.css"),
+        },
+    ],
+};
+
+static CALEPIN_WEBSITE: BuiltinTheme = BuiltinTheme {
+    name: "calepin-website",
+    files: &[
+        TemplateFile {
+            path: "layout.html",
+            source: include_str!("../assets/themes/html/website/calepin-website/layout.html"),
+        },
+        TemplateFile {
+            path: "styles/main.css",
+            source: include_str!("../assets/themes/html/website/calepin-website/styles/main.css"),
+        },
+        TemplateFile {
+            path: "scripts/app.js",
+            source: include_str!("../assets/themes/html/website/calepin-website/scripts/app.js"),
         },
     ],
 };
 
 // Keep "pico" first so existing docs that compare full HTML structure stay stable.
-static BUILTINS: &[&BuiltinTheme] = &[&PICO, &BASIC];
+static BUILTINS: &[&BuiltinTheme] = &[&PICO, &BASIC, &CALEPIN_WEBSITE];
 
 fn builtin(name: &str) -> Option<&'static BuiltinTheme> {
     BUILTINS.iter().copied().find(|theme| theme.name == name)

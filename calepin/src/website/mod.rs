@@ -20,7 +20,7 @@ use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
 use crate::html::{SiteContextInput, SiteNavEntry, SiteNavSection};
 use crate::typst::compile::{compile_with_typst, CompileOptions};
-use crate::typst::preprocess::{preprocess, PreprocessOptions};
+use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
 const DEFAULT_CONFIG: &str = "website.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
@@ -154,18 +154,17 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let current_dir = std::env::current_dir()?;
     let config_path = resolve_config_path(&current_dir, Some(args.config.as_path()))?;
     let config = load_website_config(&config_path, true)?;
-    let config_dir = config_path.parent().unwrap_or(&current_dir);
 
-    let src_dir = resolve_configured_path(
-        config_dir,
-        args.src.as_ref().or(config.src.as_ref()),
-        Path::new(DEFAULT_SRC_DIR),
+    let src_dir = resolve_cli_path(
+        &current_dir,
+        args.src
+            .as_deref()
+            .unwrap_or_else(|| Path::new(DEFAULT_SRC_DIR)),
     );
-    let out_dir = resolve_configured_path(
-        config_dir,
-        args.out.as_ref().or(config.out.as_ref()),
-        src_dir.as_path(),
-    );
+    let out_dir = match args.out.as_deref() {
+        Some(out) => resolve_cli_path(&current_dir, out),
+        None => src_dir.clone(),
+    };
     let template = args
         .template
         .as_deref()
@@ -488,8 +487,6 @@ fn changed_typ_pages(
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 struct WebsiteConfig {
-    src: Option<PathBuf>,
-    out: Option<PathBuf>,
     template: Option<String>,
     title: Option<String>,
     description: Option<String>,
@@ -647,12 +644,11 @@ fn resolve_config_path(current_dir: &Path, value: Option<&Path>) -> Result<PathB
     absolutize_from(current_dir, path)
 }
 
-fn resolve_configured_path(config_dir: &Path, value: Option<&PathBuf>, default: &Path) -> PathBuf {
-    let path = value.map(PathBuf::as_path).unwrap_or(default);
+fn resolve_cli_path(current_dir: &Path, path: &Path) -> PathBuf {
     if path.is_absolute() {
         path.to_path_buf()
     } else {
-        config_dir.join(path)
+        current_dir.join(path)
     }
 }
 
@@ -896,7 +892,7 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
             .with_context(|| format!("failed to create {}", parent.display()))?;
     }
 
-    let preprocessed = preprocess(PreprocessOptions {
+    let preprocessed = preprocess_cached(PreprocessOptions {
         input: input_path.to_path_buf(),
         config: Some(context.config_path.clone()),
         quiet: context.quiet,
@@ -1287,42 +1283,9 @@ fn write_scaffold_file(path: &Path, contents: &str, force: bool) -> Result<()> {
     fs::write(path, contents).with_context(|| format!("failed to write {}", path.display()))
 }
 
-const WEBSITE_TOML_TEMPLATE: &str = r#"src = "docs"
-out = "public"
-template = "pico"
-title = "My Calepin Site"
-description = "A website built with Calepin."
-# base_url = "https://example.com"
-# github_url = "https://github.com/user/repo"
-
-[sidebar]
-
-[[sidebar.section]]
-title = "Pages"
-
-  [[sidebar.section.item]]
-  path = "index.typ"
-  label = "Home"
-"#;
-
-const INDEX_TYP_TEMPLATE: &str = r#"#import "@preview/calepin:0.0.1" as calepin
-
-#calepin.setup(
-  echo: true,
-  eval: true,
-  results: "verbatim",
-  fenced-chunks: true,
-)
-
-= Home
-
-Welcome to your Calepin website.
-"#;
-
-const NOT_FOUND_TYP_TEMPLATE: &str = r#"= Not found
-
-The requested page does not exist.
-"#;
+const WEBSITE_TOML_TEMPLATE: &str = include_str!("../assets/scaffolds/website/website.toml");
+const INDEX_TYP_TEMPLATE: &str = include_str!("../assets/scaffolds/website/docs/index.typ");
+const NOT_FOUND_TYP_TEMPLATE: &str = include_str!("../assets/scaffolds/website/docs/404.typ");
 
 #[cfg(test)]
 mod tests {
