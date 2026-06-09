@@ -491,6 +491,9 @@ struct WebsiteConfig {
     title: Option<String>,
     description: Option<String>,
     base_url: Option<String>,
+    logo: Option<String>,
+    logo_alt: Option<String>,
+    home: Option<String>,
     github_url: Option<String>,
     sidebar: Option<SidebarConfig>,
 }
@@ -534,6 +537,9 @@ struct SiteMetadata {
     title: Option<String>,
     description: Option<String>,
     base_url: Option<String>,
+    logo: Option<String>,
+    logo_alt: Option<String>,
+    home: Option<String>,
     github_url: Option<String>,
 }
 
@@ -544,6 +550,11 @@ impl SiteMetadata {
             description: clean_optional_string(config.description.as_deref()),
             base_url: clean_optional_string(config.base_url.as_deref())
                 .map(|url| url.trim_end_matches('/').to_string()),
+            logo: clean_optional_string(config.logo.as_deref()),
+            logo_alt: clean_optional_string(config.logo_alt.as_deref())
+                .or_else(|| clean_optional_string(config.title.as_deref())),
+            home: clean_optional_string(config.home.as_deref())
+                .or_else(|| Some("index.html".to_string())),
             github_url: clean_optional_string(config.github_url.as_deref()),
         }
     }
@@ -595,6 +606,17 @@ impl SiteModel {
             title: self.metadata.title.as_deref().map(html_escape),
             description: self.metadata.description.as_deref().map(html_escape),
             base_url: self.metadata.base_url.as_deref().map(html_escape),
+            logo: self
+                .metadata
+                .logo
+                .as_deref()
+                .map(|logo| html_escape(&page_relative_url(current_href, logo))),
+            logo_alt: self.metadata.logo_alt.as_deref().map(html_escape),
+            home_url: self
+                .metadata
+                .home
+                .as_deref()
+                .map(|home| html_escape(&page_relative_url(current_href, home))),
             github_url: self.metadata.github_url.as_deref().map(html_escape),
             current_url: self
                 .metadata
@@ -1253,6 +1275,35 @@ fn absolute_site_url(base_url: &str, href: &str) -> String {
     }
 }
 
+fn page_relative_url(current_href: &str, target: &str) -> String {
+    if is_absolute_or_special_url(target) {
+        return target.to_string();
+    }
+
+    let target = target.trim_start_matches("./");
+    let parent_depth = current_href
+        .split('/')
+        .filter(|part| !part.is_empty())
+        .count()
+        .saturating_sub(1);
+    if parent_depth == 0 {
+        target.to_string()
+    } else {
+        format!("{}{}", "../".repeat(parent_depth), target)
+    }
+}
+
+fn is_absolute_or_special_url(value: &str) -> bool {
+    value.starts_with('/')
+        || value.starts_with('#')
+        || value.starts_with("data:")
+        || value.starts_with("http://")
+        || value.starts_with("https://")
+        || value.starts_with("//")
+        || value.starts_with("mailto:")
+        || value.starts_with("tel:")
+}
+
 fn absolutize_from(root: &Path, path: &Path) -> Result<PathBuf> {
     if path.is_absolute() {
         Ok(path.to_path_buf())
@@ -1399,6 +1450,34 @@ mod tests {
         let sitemap = fs::read_to_string(temp.path().join("sitemap.xml")).unwrap();
         assert!(sitemap.contains("<loc>https://example.com/project/index.html</loc>"));
         assert!(sitemap.contains("<loc>https://example.com/project/guide/usage.html</loc>"));
+    }
+
+    #[test]
+    fn theme_context_rewrites_brand_urls_relative_to_current_page() {
+        let site = SiteModel::new(
+            vec![NavSectionModel {
+                title: Some("Guide".to_string()),
+                items: vec![NavItemModel {
+                    href: "guide/usage.html".to_string(),
+                    label: "Usage".to_string(),
+                }],
+            }],
+            SiteMetadata {
+                title: Some("Example".to_string()),
+                description: None,
+                base_url: None,
+                logo: Some("assets/logo.svg".to_string()),
+                logo_alt: Some("Example".to_string()),
+                home: Some("index.html".to_string()),
+                github_url: None,
+            },
+        );
+
+        let context = site.theme_context("guide/usage.html");
+
+        assert_eq!(context.logo.as_deref(), Some("../assets/logo.svg"));
+        assert_eq!(context.home_url.as_deref(), Some("../index.html"));
+        assert_eq!(context.logo_alt.as_deref(), Some("Example"));
     }
 
     #[test]

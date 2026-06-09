@@ -22,7 +22,7 @@ _Calepin_ can build a Typst document directory as a static website. This is the 
 - Generate navigation automatically when no sidebar is configured.
 - Render `404.typ` as a fallback page when present.
 - Exclude `404.typ` from automatic navigation and sitemap output.
-- Configure `title`, `description`, `base_url`, and `github_url`.
+- Configure `title`, `description`, `base_url`, `logo`, `logo_alt`, `home`, and `github_url`.
 - Emit page titles, description metadata, Open Graph metadata, and canonical URLs in the bundled website theme.
 - Generate `sitemap.xml` when `base_url` is configured.
 - Remove stale generated files after pages are deleted or renamed.
@@ -162,8 +162,11 @@ Website settings live in `website.toml`:
 ```toml
 template = "calepin-website"
 title = "My Site"
-description = "A website built with Calepin."
+description = "A static website built from Typst documents."
 base_url = "https://example.com"
+logo = "assets/logo.svg"
+logo_alt = "My Site"
+home = "index.html"
 github_url = "https://github.com/user/repo"
 ```
 
@@ -171,13 +174,16 @@ Source and output directories are positional CLI arguments, not website config f
 
 `template` selects the HTML theme. It can be a built-in theme such as `pico`, or a theme directory under the configured `themes_dir`.
 
-`title`, `description`, `base_url`, and `github_url` are optional. The bundled website theme uses these values to emit:
+`title`, `description`, `base_url`, `logo`, `logo_alt`, `home`, and `github_url` are optional. The bundled website theme uses these values to emit:
 
 - browser page titles
 - description metadata
 - Open Graph metadata
 - canonical URLs
+- a logo or text brand link in the top bar
 - a GitHub link in the top bar
+
+`logo` is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so `logo = "assets/logo.svg"` works from nested pages too. `logo_alt` controls the image alt text. `home` controls the top-bar brand link destination and defaults to `index.html`.
 
 When `base_url` is set, _Calepin_ writes `sitemap.xml`.
 
@@ -257,11 +263,35 @@ Website builds pass site data into HTML themes. Theme templates can access:
 - `site.title`
 - `site.description`
 - `site.base_url`
+- `site.logo`
+- `site.logo_alt`
+- `site.home_url`
 - `site.github_url`
 - `site.current_url`
 - `site.page_title`
 
-The bundled `calepin-website` theme uses this data for sidebar navigation, previous and next page links, table of contents, metadata, and the GitHub link.
+The bundled `calepin-website` theme uses this data for sidebar navigation, previous and next page links, table of contents, metadata, the top-bar brand link, and the GitHub link.
+
+== Theme customization
+
+HTML themes are MiniJinja templates loaded from the configured `themes_dir`. A theme directory contains a required `layout.html` file and optional `partials/`, `styles/`, and `scripts/` directories:
+
+```text
+themes/my-theme/
+  layout.html
+  partials/
+  styles/main.css
+  scripts/main.js
+```
+
+Select a local theme with:
+
+```toml
+themes_dir = "themes"
+template = "my-theme"
+```
+
+Use `website.toml` for ordinary site branding and navigation changes. Create a local theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.
 
 == Source and PDF views
 

@@ -1,63 +1,58 @@
-#let hero(
-  logo,
-  subtitle,
-  typst-logo,
-) = {
-  let target = sys.inputs.at("calepin-target", default: "paged");
+#import "/typst/design.typ": target, asset-path, hero, feature-card, feature-card-grid
 
-  if target == "html" {
-    html.elem("section", attrs: (class: "hero"))[
-      #html.elem("div", attrs: (class: "hero-text"))[
-        #html.elem("div", attrs: (class: "hero-title"))[
-          #html.elem("img", attrs: (
-            src: logo,
-            alt: "Calepin logo",
-            class: "hero-wordmark",
-            "data-inline-svg": "1",
-          ))
-        ]
-        #html.elem("div", attrs: (class: "hero-subtitle"))[
-          #html.elem("span", attrs: (class: "hero-subtitle-text"))[#text(subtitle)]
-          #html.elem("img", attrs: (src: typst-logo, alt: "Typst logo", class: "hero-typst-logo"))
-        ]
-        #html.elem("code", attrs: (class: "hero-command"))[calepin compile notebook.typ]
+#hero[
+  #if target() == "html" [
+    #html.elem("div", attrs: (class: "hero-text"))[
+      #html.elem("div", attrs: (class: "hero-title"))[
+        #html.elem("img", attrs: (
+          src: "assets/logo_long_2.svg",
+          alt: "Calepin logo",
+          class: "hero-wordmark",
+          "data-inline-svg": "1",
+        ))
       ]
+      #html.elem("div", attrs: (class: "hero-subtitle"))[
+        #html.elem("span", attrs: (class: "hero-subtitle-text"))[Computational Notebooks in]
+        #html.elem("img", attrs: (
+          src: "assets/logo_typst.svg",
+          alt: "Typst logo",
+          class: "hero-typst-logo",
+        ))
+      ]
+      #html.elem("code", attrs: (class: "hero-command"))[calepin compile notebook.typ]
     ]
-  } else if target == "paged" {
-    let paged-logo = if logo.starts-with("/") { logo } else { "/" + logo }
-    align(center, image(paged-logo, width: 40%, alt: "Calepin logo"))
-  }
-}
-
-#hero(
-  "assets/logo_long_2.svg",
-  "Computational Notebooks in",
-  "assets/logo_typst.svg",
-)
-
-#if sys.inputs.at("calepin-target", default: "paged") == "html" [
-  #html.elem(
-    "section",
-    attrs: (class: "calepin-website-features"),
-  )[
-    #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
-      #html.elem("h4", [Typst-native])
-      #html.elem("p", [Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typsetting system. Not another _ad hoc_ markdown variant.])
+  ] else [
+    #image(asset-path("assets/logo_long_2.svg"), width: 46%, alt: "Calepin logo")
+    #v(0.7em)
+    #text(size: 1.15em, weight: "medium")[
+      Computational Notebooks in #h(0.35em)#box(image(asset-path("assets/logo_typst.svg"), height: 0.95em, alt: "Typst logo"))
     ]
-    #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
-      #html.elem("h4", [Executable code])
-      #html.elem("p", [Insert code directly in your `.typ` files. These chunks are executed and the results are automatically inserted back in your final document.])
-    ]
-    #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
-      #html.elem("h4", [Several formats])
-      #html.elem("p", [Publish clean HTML, PDF, or image files from a single Typst source.])
-    ]
-    #html.elem("article", attrs: (class: "calepin-website-feature-card"))[
-      #html.elem("h4", [Multi-lingual])
-      #html.elem("p", [Embed code written in Python, R, Julia, Bash, Mermaid, TikZ, or any language supported by Jupyter.])
+    #v(0.8em)
+    #box(
+      inset: (x: 0.7em, y: 0.35em),
+      radius: 3pt,
+      stroke: rgb("#dfe3e8"),
+      fill: rgb("#f8fafc"),
+    )[
+      #raw("calepin compile notebook.typ", lang: "sh")
     ]
   ]
 ]
+
+#feature-card-grid(
+  feature-card[Typst-native][
+    Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typesetting system. Not another _ad hoc_ markdown variant.
+  ],
+  feature-card[Executable code][
+    Insert code directly in your `.typ` files. These chunks are executed and the results are automatically inserted back in your final document.
+  ],
+  feature-card[Several formats][
+    Publish clean HTML, PDF, or image files from a single Typst source.
+  ],
+  feature-card[Multi-lingual][
+    Embed code written in Python, R, Julia, Bash, Mermaid, TikZ, or any language supported by Jupyter.
+  ],
+)
 
 == What is Calepin?
 <what-is-calepin>

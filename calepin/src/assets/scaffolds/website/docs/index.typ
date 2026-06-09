@@ -9,4 +9,4 @@
 
 = Home
 
-Welcome to your Calepin website.
+Welcome to your website.

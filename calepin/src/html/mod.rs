@@ -406,6 +406,40 @@ mod tests {
     }
 
     #[test]
+    fn bundled_website_theme_uses_configured_logo() {
+        let dir = tempfile::tempdir().unwrap();
+        let site_context = SiteContextInput {
+            nav: Vec::new(),
+            nav_sections: Vec::new(),
+            title: Some("Example".to_string()),
+            description: None,
+            base_url: None,
+            logo: Some("assets/logo.svg".to_string()),
+            logo_alt: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            github_url: None,
+            current_url: None,
+            page_title: None,
+        };
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some("calepin-website"),
+            dir.path(),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains(r#"<img src="assets/logo.svg" alt="Example""#));
+        assert!(themed.contains(r#"aria-label="Example home""#));
+        assert!(!themed.contains("logo_short_2.svg"));
+        assert!(!themed.contains("Calepin home"));
+    }
+
+    #[test]
     fn title_is_not_double_escaped() {
         let dir = tempfile::tempdir().unwrap();
         write_theme(

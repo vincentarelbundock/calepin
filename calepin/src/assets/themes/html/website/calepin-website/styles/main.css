@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
 
-/* Calepin website theme — Pico-native overrides.
+/* Bundled website theme — Pico-native overrides.
  *
  * Pico is loaded unlayered via <link> in layout.html; this stylesheet is
  * inlined immediately after it, so plain rules win at equal specificity by
@@ -133,6 +133,10 @@ h6 {
 
 .calepin-website-topbrand svg {
   fill: currentColor;
+}
+
+.calepin-website-topbrand-text {
+  font-weight: 600;
 }
 
 .calepin-website-view-mode {
@@ -592,20 +596,27 @@ figure > img {
 .calepin-website-features {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 0.8rem;
   max-width: 72rem;
   margin: 0 auto 1.5rem;
 }
 
 .calepin-website-feature-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 9.5rem;
   margin: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--pico-card-border-color, var(--pico-muted-border-color));
+  border-radius: var(--calepin-radius-sm);
+  background: var(--pico-card-background-color, var(--pico-background-color));
 }
 
-.calepin-website-feature-card h3,
 .calepin-website-feature-card h4 {
-  margin-top: 0;
+  margin: 0 0 0.4rem;
   font-size: 1rem;
-  text-align: center;
+  font-weight: 600;
 }
 
 .calepin-website-feature-card p {
