@@ -108,11 +108,11 @@ pub struct CompileArgs {
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
-    /// Output template name applied after compilation.
+    /// HTML theme name applied after compilation.
     ///
-    /// Use `basic`, `pico`, or a directory name under the configured themes directory.
-    #[arg(long)]
-    pub template: Option<String>,
+    /// Use `calepin-html`, `calepin-website`, or a directory name under the configured themes directory.
+    #[arg(long = "theme", alias = "template")]
+    pub theme: Option<String>,
 
     #[command(flatten)]
     pub common: CommonArgs,
@@ -272,49 +272,49 @@ mod tests {
     }
 
     #[test]
-    fn test_typst_compile_args_template_theme_name() {
+    fn test_typst_compile_args_theme_name() {
         let cli = Cli::try_parse_from([
             "calepin",
             "compile",
             "paper.typ",
             "--format",
             "html",
-            "--template",
-            "pico",
+            "--theme",
+            "calepin-html",
         ])
         .unwrap();
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.template, Some("pico".to_string()));
+                assert_eq!(args.theme, Some("calepin-html".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
         }
     }
 
     #[test]
-    fn test_typst_compile_args_template_user_theme_name() {
+    fn test_typst_compile_args_theme_user_theme_name() {
         let cli = Cli::try_parse_from([
             "calepin",
             "compile",
             "paper.typ",
             "--format",
             "html",
-            "--template",
+            "--theme",
             "zensical",
         ])
         .unwrap();
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.template, Some("zensical".to_string()));
+                assert_eq!(args.theme, Some("zensical".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
         }
     }
 
     #[test]
-    fn test_typst_compile_args_template_basic() {
+    fn test_typst_compile_args_template_alias() {
         let cli = Cli::try_parse_from([
             "calepin",
             "compile",
@@ -322,13 +322,13 @@ mod tests {
             "--format",
             "html",
             "--template",
-            "basic",
+            "calepin-html",
         ])
         .unwrap();
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.template, Some("basic".to_string()));
+                assert_eq!(args.theme, Some("calepin-html".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
         }

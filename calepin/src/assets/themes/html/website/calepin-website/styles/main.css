@@ -10,8 +10,6 @@
  * rather than fight it. */
 
 :root {
-  __CALEPIN_SYNTAX_LIGHT__
-
   /* Brand accent (mapped onto Pico's primary colour scale below). */
   --calepin-accent: #1c9bad;
   --calepin-accent-hover: #16808f;
@@ -25,6 +23,27 @@
   --calepin-shell-gap: 1.5rem;
   --calepin-sidebar-mobile-width: min(18rem, 78vw);
   --calepin-radius-sm: 4px;
+
+  /* Shared code/output snippet tuning. */
+  --calepin-code-border: 1px solid var(--pico-muted-border-color);
+  --calepin-code-border-left: 3px solid var(--pico-primary);
+  --calepin-code-radius: var(--calepin-radius-sm);
+  --calepin-code-padding: 0.65rem 0.8rem;
+  --calepin-code-padding-right: 0.8rem;
+  --calepin-code-margin: 0.9rem 0 0.35rem;
+  --calepin-code-font-family: var(--pico-font-family-monospace);
+  --calepin-code-line-height: 1.45;
+  --calepin-output-background: var(--pico-card-sectioning-background-color);
+  --calepin-output-border: 1px solid var(--pico-muted-border-color);
+  --calepin-output-border-left: 3px solid var(--pico-primary);
+  --calepin-output-padding: 0.5rem 0.7rem;
+  --calepin-output-padding-right: 0.7rem;
+  --calepin-output-margin: 0.25rem 0 0.9rem;
+  --calepin-output-font-family: var(--pico-font-family-monospace);
+  --calepin-output-line-height: 1.4;
+  --calepin-stderr-background: #fff6f2;
+  --calepin-stderr-border-left-color: #b75e43;
+  --calepin-stderr-color: #663021;
 }
 
 /* Teal brand accent, the Pico-native way: override the primary colour scale for
@@ -386,80 +405,6 @@ h6 {
   line-height: 1;
   font-weight: 600;
   color: var(--pico-muted-color);
-}
-
-/* ---------------------------------------------------- Code & cell output */
-
-.sourceCode,
-div.sourceCode,
-pre.sourceCode {
-  background: var(--calepin-syntax-background);
-  color: var(--calepin-syntax-foreground);
-  border: 1px solid var(--pico-muted-border-color);
-  border-left: 3px solid var(--pico-primary);
-  border-radius: var(--calepin-radius-sm);
-  font-family: var(--pico-font-family-monospace);
-  font-size: 0.9rem;
-  line-height: 1.45;
-  margin: 0.9rem 0 0.35rem;
-  padding: 0.65rem 0.8rem;
-  overflow: auto;
-}
-
-div.sourceCode pre {
-  background: transparent;
-  border: 0;
-  margin: 0;
-  padding: 0;
-  line-height: inherit;
-}
-
-.sourceCode code {
-  background: none;
-  padding: 0;
-  font-size: inherit;
-  color: inherit;
-}
-
-__CALEPIN_SYNTAX_CLASSES__
-
-.cell-output,
-.cell-output-stdout,
-.cell-output-stderr {
-  background: var(--pico-card-sectioning-background-color);
-  border: 1px solid var(--pico-muted-border-color);
-  border-left: 3px solid var(--pico-primary);
-  border-radius: var(--calepin-radius-sm);
-  font-family: var(--pico-font-family-monospace);
-  font-size: 0.86rem;
-  line-height: 1.4;
-  margin: 0.25rem 0 0.9rem;
-  padding: 0.5rem 0.7rem;
-  overflow: auto;
-}
-
-:is(.cell-output, .cell-output-stdout, .cell-output-stderr) pre {
-  background: transparent;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  margin: 0;
-  padding: 0;
-}
-
-.cell-output-stderr {
-  background: #fff6f2;
-  border-left-color: #b75e43;
-  color: #663021;
-}
-
-html[data-theme="dark"] {
-__CALEPIN_SYNTAX_DARK__
-}
-
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme]) {
-__CALEPIN_SYNTAX_DARK__  }
 }
 
 figure > img {

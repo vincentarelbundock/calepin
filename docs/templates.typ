@@ -1,15 +1,13 @@
-HTML themes are supported for HTML output. Select a built-in theme with
-`--template`:
+HTML themes are supported for HTML output. Select a theme with `--theme`:
 
 ```sh
-calepin compile paper.typ --format html --template pico
-calepin compile paper.typ --format html --template basic
+calepin compile paper.typ --format html --theme calepin-html
 ```
 
-`--template` is optional and only applies to HTML output. Use `pico` and
-`basic` to force either built-in document theme on HTML output. Website
-directory builds use `template` in `website.toml`; the bundled website theme is
-`calepin-website`.
+`--theme` is optional and only applies to HTML output. Single-document HTML
+builds use `calepin-html` by default. Website directory builds use `theme` in
+`website.toml` and default to `calepin-website`. `--template` and `template`
+are accepted as backward-compatible aliases.
 
 Local themes live under the configured `themes_dir`:
 
@@ -45,18 +43,41 @@ Templates can access:
 - `site.github_url`
 - `site.current_url`
 - `site.page_title`
+- `snippets.css.code`
+- `snippets.js.copy_code`
+- `snippets.js.theme_toggle`
+- `snippets.typst.code_block`
 - `styles`
 - `scripts`
 - `syntax_css`
 - `theme`
 - `target`
 
-PDF themes are Typst files, not MiniJinja templates. The bundled PDF theme is
-enabled by default for `calepin compile` and website PDF builds. Configure a
-replacement in `config.toml` or `website.toml`:
+Bundled snippets are small reusable pieces that can be used across local themes.
+For example, an HTML theme can add shared code/output styling and copy buttons
+without maintaining its own CSS or JavaScript:
+
+```html
+<style>{{ snippets.css.code }}</style>
+<script>{{ snippets.js.copy_code }}</script>
+```
+
+PDF themes are Typst files, not MiniJinja templates. The bundled `calepin-pdf`
+theme is enabled by default for `calepin compile` and website PDF builds.
+Configure a replacement in `config.toml` or `website.toml`:
 
 ```toml
 pdf_theme = "themes/pdf.typ"
 ```
 
-Set `pdf_theme = false` to disable the bundled PDF theme.
+You can also write `pdf_theme = "calepin-pdf"` explicitly; omitting
+`pdf_theme` has the same effect.
+
+`calepin-pdf` imports `/.calepin/snippets/typst/code-block.typ` and applies it
+to raw source blocks. Custom PDF themes can import the same general snippet:
+
+```typ
+#import "/.calepin/snippets/typst/code-block.typ": code-block
+```
+
+Set `pdf_theme = false` to disable `calepin-pdf`.

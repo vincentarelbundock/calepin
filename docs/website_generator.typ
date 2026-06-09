@@ -160,7 +160,7 @@ calepin serve docs --host 127.0.0.1 --port 8001
 Website settings live in `website.toml`:
 
 ```toml
-template = "calepin-website"
+theme = "calepin-website"
 title = "My Site"
 description = "A static website built from Typst documents."
 base_url = "https://example.com"
@@ -173,9 +173,9 @@ pdf_theme = "docs/assets/pdf-theme.typ"
 
 Source and output directories are positional CLI arguments, not website config fields. This mirrors normal single-file compilation, where `calepin compile file.typ file.pdf` takes input and output from the first two positional arguments.
 
-`template` selects the HTML theme. It can be a built-in theme such as `pico`, or a theme directory under the configured `themes_dir`.
+`theme` selects the HTML theme. It can be the built-in `calepin-website` theme or a theme directory under the configured `themes_dir`. If omitted, website builds use `calepin-website`. `template` is accepted as a backward-compatible alias.
 
-`pdf_theme` selects a Typst theme file for PDF and other paged output. If it is omitted, _Calepin_ uses the bundled PDF theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. Set `pdf_theme = false` to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as `pdf_theme = "docs/assets/pdf-theme.typ"` when `website.toml` lives at the project root.
+`pdf_theme` selects a Typst theme file for PDF and other paged output. If it is omitted, _Calepin_ uses the bundled `calepin-pdf` theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. You can also write `pdf_theme = "calepin-pdf"` explicitly. Set `pdf_theme = false` to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as `pdf_theme = "docs/assets/pdf-theme.typ"` when `website.toml` lives at the project root.
 
 `title`, `description`, `base_url`, `logo`, `logo_alt`, `home`, and `github_url` are optional. The bundled website theme uses these values to emit:
 
@@ -272,6 +272,10 @@ Website builds pass site data into HTML themes. Theme templates can access:
 - `site.github_url`
 - `site.current_url`
 - `site.page_title`
+- `snippets.css.code`
+- `snippets.js.copy_code`
+- `snippets.js.theme_toggle`
+- `snippets.typst.code_block`
 
 The bundled `calepin-website` theme uses this data for sidebar navigation, previous and next page links, table of contents, metadata, the top-bar brand link, and the GitHub link.
 
@@ -291,25 +295,28 @@ Select a local theme with:
 
 ```toml
 themes_dir = "themes"
-template = "my-theme"
+theme = "my-theme"
 ```
 
 Use `website.toml` for ordinary site branding and navigation changes. Create a local HTML theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.
 
-PDF themes are Typst files. Their source is inserted after Calepin's executable-fence rules and before each page source, so they can add show rules for paged output without changing the original `.typ` files. A minimal theme can replace the default source-block styling:
+Bundled snippets are available to local HTML themes through the `snippets` object. For example, include reusable code/output styling and copy-button behavior with:
+
+```html
+<style>{{ snippets.css.code }}</style>
+<script>{{ snippets.js.copy_code }}</script>
+```
+
+PDF themes are Typst files. Their source is inserted after Calepin's executable-fence rules and before each page source, so they can add show rules for paged output without changing the original `.typ` files. Calepin also stages reusable Typst snippets under `/.calepin/snippets/typst/`; the bundled `calepin-pdf` theme imports `code-block.typ` from there. A minimal theme can replace the default source-block styling:
 
 ```typ
+#import "/.calepin/snippets/typst/code-block.typ": code-block
+
 #show raw.where(block: true): it => {
   if sys.inputs.at("calepin-target", default: "paged") == "html" {
     it
   } else {
-    block(
-      width: 100%,
-      fill: rgb("#f7f7f5"),
-      stroke: 0.5pt + rgb("#d8d8d2"),
-      radius: 2pt,
-      inset: (x: 0.65em, y: 0.45em),
-    )[#it]
+    code-block(it)
   }
 }
 ```

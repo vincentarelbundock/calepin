@@ -161,7 +161,7 @@ print("#strong[42]")
 }
 
 #[test]
-fn compile_html_uses_template_theme() {
+fn compile_html_uses_default_theme() {
     if !has_command("typst") {
         return;
     }
@@ -187,8 +187,6 @@ Theme is a compile-time concern.
             "paper.html",
             "--format",
             "html",
-            "--template",
-            "pico",
             "--quiet",
         ])
         .current_dir(dir.path())

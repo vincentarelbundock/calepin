@@ -50,6 +50,247 @@
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 <style>
+:root {
+  --calepin-syntax-foreground: #003b4f;
+  --calepin-syntax-background: #f7f7f5;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #4759ab;
+  --calepin-syntax-number: #ad0000;
+  --calepin-syntax-operator: #5e5e5e;
+  --calepin-syntax-parameter: #667321;
+
+  --calepin-code-border: 1px solid var(--calepin-syntax-border);
+  --calepin-code-border-left: var(--calepin-code-border);
+  --calepin-code-radius: 4px;
+  --calepin-code-padding: 0.35rem 0.5rem;
+  --calepin-code-padding-right: 1.6rem;
+  --calepin-code-margin: 0.55rem 0 0.2rem 0;
+  --calepin-code-font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --calepin-code-font-size: 0.9rem;
+  --calepin-code-line-height: 1.35;
+  --calepin-output-background: #fbfbfa;
+  --calepin-output-border: 1px solid #ddddda;
+  --calepin-output-border-left: 3px solid #cfcfc8;
+  --calepin-output-color: #333;
+  --calepin-output-padding: 0.3rem 0.5rem;
+  --calepin-output-padding-right: 1.6rem;
+  --calepin-output-margin: 0.2rem 0 0.7rem 0;
+  --calepin-output-font-family: var(--calepin-code-font-family);
+  --calepin-output-font-size: 0.86rem;
+  --calepin-output-line-height: 1.35;
+  --calepin-stderr-background: #fffaf7;
+  --calepin-stderr-border-color: #e2c7ba;
+  --calepin-stderr-border-left-color: #c48672;
+  --calepin-stderr-color: #5f3328;
+}
+
+.sourceCode,
+div.sourceCode,
+pre.sourceCode {
+  position: relative;
+  background: var(--calepin-syntax-background);
+  border: var(--calepin-code-border);
+  border-left: var(--calepin-code-border-left);
+  border-radius: var(--calepin-code-radius);
+  color: var(--calepin-syntax-foreground);
+  font-family: var(--calepin-code-font-family);
+  font-size: var(--calepin-code-font-size);
+  line-height: var(--calepin-code-line-height);
+  margin: var(--calepin-code-margin);
+  padding: var(--calepin-code-padding);
+  padding-right: var(--calepin-code-padding-right);
+  overflow: auto;
+}
+
+.sourceCode .calepin-syntax-foreground {
+  color: var(--calepin-syntax-foreground);
+}
+
+.sourceCode .calepin-syntax-function {
+  color: var(--calepin-syntax-function);
+}
+
+.sourceCode .calepin-syntax-number {
+  color: var(--calepin-syntax-number);
+}
+
+.sourceCode .calepin-syntax-operator {
+  color: var(--calepin-syntax-operator);
+}
+
+.sourceCode .calepin-syntax-parameter {
+  color: var(--calepin-syntax-parameter);
+}
+
+
+
+div.sourceCode pre {
+  background: transparent;
+  border: 0;
+  line-height: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+.sourceCode code {
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  padding: 0;
+}
+
+pre.numberSource code > span > a:first-child::before {
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
+.cell-output,
+.cell-output-stdout,
+.cell-output-stderr {
+  position: relative;
+  background: var(--calepin-output-background);
+  border: var(--calepin-output-border);
+  border-left: var(--calepin-output-border-left);
+  border-radius: var(--calepin-code-radius);
+  color: var(--calepin-output-color);
+  font-family: var(--calepin-output-font-family);
+  font-size: var(--calepin-output-font-size);
+  line-height: var(--calepin-output-line-height);
+  margin: var(--calepin-output-margin);
+  padding: var(--calepin-output-padding);
+  padding-right: var(--calepin-output-padding-right);
+  overflow: auto;
+}
+
+:is(.cell-output, .cell-output-stdout, .cell-output-stderr) pre {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+.cell-output-stderr {
+  background: var(--calepin-stderr-background);
+  border-color: var(--calepin-stderr-border-color);
+  border-left-color: var(--calepin-stderr-border-left-color);
+  color: var(--calepin-stderr-color);
+}
+
+.calepin-copy-code {
+  appearance: none;
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--calepin-code-radius);
+  background: rgba(31, 41, 51, 0.07);
+  color: rgba(31, 41, 51, 0.58);
+  box-shadow: none;
+  opacity: 0.62;
+  cursor: pointer;
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+div.sourceCode:hover .calepin-copy-code,
+.cell-output:hover .calepin-copy-code,
+.cell-output-stdout:hover .calepin-copy-code,
+.cell-output-stderr:hover .calepin-copy-code,
+.calepin-copy-code:focus-visible {
+  background: rgba(31, 41, 51, 0.12);
+  color: rgba(31, 41, 51, 0.82);
+  opacity: 1;
+}
+
+.calepin-copy-code svg {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+.calepin-copy-code.copied {
+  background: rgba(31, 122, 77, 0.12);
+  color: #1f7a4d;
+  opacity: 1;
+}
+
+html[data-theme="dark"] {
+  --calepin-syntax-foreground: #d8e7ef;
+  --calepin-syntax-background: #161b22;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #9db8ff;
+  --calepin-syntax-number: #ffb3a7;
+  --calepin-syntax-operator: #b5bdc9;
+  --calepin-syntax-parameter: #c3d86c;
+
+  --calepin-output-background: #11161d;
+  --calepin-output-border: 1px solid #2c3440;
+  --calepin-output-border-left: 3px solid #53606e;
+  --calepin-output-color: #d8dee9;
+  --calepin-stderr-background: #211612;
+  --calepin-stderr-border-color: #5a3428;
+  --calepin-stderr-border-left-color: #c48672;
+  --calepin-stderr-color: #f0d5cb;
+}
+
+html[data-theme="dark"] .calepin-copy-code {
+  background: rgba(216, 222, 233, 0.08);
+  color: rgba(216, 222, 233, 0.68);
+}
+
+html[data-theme="dark"] div.sourceCode:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output-stdout:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output-stderr:hover .calepin-copy-code,
+html[data-theme="dark"] .calepin-copy-code:focus-visible {
+  background: rgba(216, 222, 233, 0.14);
+  color: rgba(216, 222, 233, 0.92);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+  --calepin-syntax-foreground: #d8e7ef;
+  --calepin-syntax-background: #161b22;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --calepin-syntax-function: #9db8ff;
+  --calepin-syntax-number: #ffb3a7;
+  --calepin-syntax-operator: #b5bdc9;
+  --calepin-syntax-parameter: #c3d86c;
+
+    --calepin-output-background: #11161d;
+    --calepin-output-border: 1px solid #2c3440;
+    --calepin-output-border-left: 3px solid #53606e;
+    --calepin-output-color: #d8dee9;
+    --calepin-stderr-background: #211612;
+    --calepin-stderr-border-color: #5a3428;
+    --calepin-stderr-border-left-color: #c48672;
+    --calepin-stderr-color: #f0d5cb;
+  }
+
+  html:not([data-theme]) .calepin-copy-code {
+    background: rgba(216, 222, 233, 0.08);
+    color: rgba(216, 222, 233, 0.68);
+  }
+
+  html:not([data-theme]) div.sourceCode:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output-stdout:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output-stderr:hover .calepin-copy-code,
+  html:not([data-theme]) .calepin-copy-code:focus-visible {
+    background: rgba(216, 222, 233, 0.14);
+    color: rgba(216, 222, 233, 0.92);
+  }
+}
+
+    </style>
+<style>
 @import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
 
 /* Bundled website theme — Pico-native overrides.
@@ -62,15 +303,6 @@
  * rather than fight it. */
 
 :root {
-    --calepin-syntax-foreground: #003b4f;
-  --calepin-syntax-background: #f7f7f5;
-  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
-  --calepin-syntax-function: #4759ab;
-  --calepin-syntax-number: #ad0000;
-  --calepin-syntax-operator: #5e5e5e;
-  --calepin-syntax-parameter: #667321;
-
-
   /* Brand accent (mapped onto Pico's primary colour scale below). */
   --calepin-accent: #1c9bad;
   --calepin-accent-hover: #16808f;
@@ -84,6 +316,27 @@
   --calepin-shell-gap: 1.5rem;
   --calepin-sidebar-mobile-width: min(18rem, 78vw);
   --calepin-radius-sm: 4px;
+
+  /* Shared code/output snippet tuning. */
+  --calepin-code-border: 1px solid var(--pico-muted-border-color);
+  --calepin-code-border-left: 3px solid var(--pico-primary);
+  --calepin-code-radius: var(--calepin-radius-sm);
+  --calepin-code-padding: 0.65rem 0.8rem;
+  --calepin-code-padding-right: 0.8rem;
+  --calepin-code-margin: 0.9rem 0 0.35rem;
+  --calepin-code-font-family: var(--pico-font-family-monospace);
+  --calepin-code-line-height: 1.45;
+  --calepin-output-background: var(--pico-card-sectioning-background-color);
+  --calepin-output-border: 1px solid var(--pico-muted-border-color);
+  --calepin-output-border-left: 3px solid var(--pico-primary);
+  --calepin-output-padding: 0.5rem 0.7rem;
+  --calepin-output-padding-right: 0.7rem;
+  --calepin-output-margin: 0.25rem 0 0.9rem;
+  --calepin-output-font-family: var(--pico-font-family-monospace);
+  --calepin-output-line-height: 1.4;
+  --calepin-stderr-background: #fff6f2;
+  --calepin-stderr-border-left-color: #b75e43;
+  --calepin-stderr-color: #663021;
 }
 
 /* Teal brand accent, the Pico-native way: override the primary colour scale for
@@ -445,114 +698,6 @@ h6 {
   line-height: 1;
   font-weight: 600;
   color: var(--pico-muted-color);
-}
-
-/* ---------------------------------------------------- Code & cell output */
-
-.sourceCode,
-div.sourceCode,
-pre.sourceCode {
-  background: var(--calepin-syntax-background);
-  color: var(--calepin-syntax-foreground);
-  border: 1px solid var(--pico-muted-border-color);
-  border-left: 3px solid var(--pico-primary);
-  border-radius: var(--calepin-radius-sm);
-  font-family: var(--pico-font-family-monospace);
-  font-size: 0.9rem;
-  line-height: 1.45;
-  margin: 0.9rem 0 0.35rem;
-  padding: 0.65rem 0.8rem;
-  overflow: auto;
-}
-
-div.sourceCode pre {
-  background: transparent;
-  border: 0;
-  margin: 0;
-  padding: 0;
-  line-height: inherit;
-}
-
-.sourceCode code {
-  background: none;
-  padding: 0;
-  font-size: inherit;
-  color: inherit;
-}
-
-.sourceCode .calepin-syntax-foreground {
-  color: var(--calepin-syntax-foreground);
-}
-
-.sourceCode .calepin-syntax-function {
-  color: var(--calepin-syntax-function);
-}
-
-.sourceCode .calepin-syntax-number {
-  color: var(--calepin-syntax-number);
-}
-
-.sourceCode .calepin-syntax-operator {
-  color: var(--calepin-syntax-operator);
-}
-
-.sourceCode .calepin-syntax-parameter {
-  color: var(--calepin-syntax-parameter);
-}
-
-
-
-.cell-output,
-.cell-output-stdout,
-.cell-output-stderr {
-  background: var(--pico-card-sectioning-background-color);
-  border: 1px solid var(--pico-muted-border-color);
-  border-left: 3px solid var(--pico-primary);
-  border-radius: var(--calepin-radius-sm);
-  font-family: var(--pico-font-family-monospace);
-  font-size: 0.86rem;
-  line-height: 1.4;
-  margin: 0.25rem 0 0.9rem;
-  padding: 0.5rem 0.7rem;
-  overflow: auto;
-}
-
-:is(.cell-output, .cell-output-stdout, .cell-output-stderr) pre {
-  background: transparent;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  margin: 0;
-  padding: 0;
-}
-
-.cell-output-stderr {
-  background: #fff6f2;
-  border-left-color: #b75e43;
-  color: #663021;
-}
-
-html[data-theme="dark"] {
-  --calepin-syntax-foreground: #d8e7ef;
-  --calepin-syntax-background: #161b22;
-  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
-  --calepin-syntax-function: #9db8ff;
-  --calepin-syntax-number: #ffb3a7;
-  --calepin-syntax-operator: #b5bdc9;
-  --calepin-syntax-parameter: #c3d86c;
-
-}
-
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme]) {
-  --calepin-syntax-foreground: #d8e7ef;
-  --calepin-syntax-background: #161b22;
-  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
-  --calepin-syntax-function: #9db8ff;
-  --calepin-syntax-number: #ffb3a7;
-  --calepin-syntax-operator: #b5bdc9;
-  --calepin-syntax-parameter: #c3d86c;
-  }
 }
 
 figure > img {

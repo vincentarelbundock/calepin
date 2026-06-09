@@ -19,7 +19,11 @@ use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
 const PREPROCESS_FINGERPRINT_FILE: &str = "fingerprint.xxh3";
-const DEFAULT_PDF_THEME_SOURCE: &str = include_str!("../assets/themes/pdf/default.typ");
+const DEFAULT_PDF_THEME_SOURCE: &str = include_str!("../assets/themes/pdf/calepin-pdf.typ");
+const TYPST_SNIPPETS: &[(&str, &str)] = &[(
+    "code-block.typ",
+    include_str!("../assets/snippets/typst/code-block.typ"),
+)];
 
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
@@ -81,6 +85,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     assert_supported_typst(&config.executables.typst)?;
 
     write_runtime(&layout.root)?;
+    write_typst_snippets(&layout.root)?;
     let staged_input = write_staged_source(&layout)?;
     let query_input = write_render_wrapper(&layout, &staged_input, &[], None)?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
@@ -235,6 +240,19 @@ fn load_pdf_theme_source(pdf_theme: &PdfTheme) -> Result<Option<String>> {
             Ok(Some(source))
         }
     }
+}
+
+fn write_typst_snippets(root: &Path) -> Result<()> {
+    let dir = root.join(".calepin/snippets/typst");
+    fs::create_dir_all(&dir).with_context(|| format!("failed to create {}", dir.display()))?;
+    for (name, source) in TYPST_SNIPPETS {
+        let path = dir.join(name);
+        if fs::read_to_string(&path).is_ok_and(|existing| existing == *source) {
+            continue;
+        }
+        fs::write(&path, source).with_context(|| format!("failed to write {}", path.display()))?;
+    }
+    Ok(())
 }
 
 pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
@@ -874,6 +892,19 @@ mod tests {
         let source = load_pdf_theme_source(&PdfTheme::Default).unwrap().unwrap();
 
         assert_eq!(source, DEFAULT_PDF_THEME_SOURCE);
+    }
+
+    #[test]
+    fn typst_snippets_are_staged_under_calepin_dir() {
+        let dir = tempfile::tempdir().unwrap();
+
+        write_typst_snippets(dir.path()).unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(".calepin/snippets/typst/code-block.typ"))
+                .unwrap(),
+            TYPST_SNIPPETS[0].1
+        );
     }
 
     #[test]

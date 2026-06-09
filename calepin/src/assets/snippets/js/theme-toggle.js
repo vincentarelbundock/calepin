@@ -1,0 +1,64 @@
+(() => {
+  "use strict";
+
+  const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
+  if (!buttons.length) return;
+
+  const order = ["", "light", "dark"];
+  const labels = { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" };
+  const icons = {
+    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
+    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
+    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
+  };
+
+  const normalize = (value) => value === "light" || value === "dark" ? value : "";
+  const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
+
+  function readStored(button) {
+    try {
+      return normalize(localStorage.getItem(storageKey(button)) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function writeStored(button, value) {
+    try {
+      if (value) localStorage.setItem(storageKey(button), value);
+      else localStorage.removeItem(storageKey(button));
+    } catch {
+      /* ignore storage errors */
+    }
+  }
+
+  function applyTheme(value) {
+    const theme = normalize(value);
+    if (theme) {
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+    } else {
+      delete document.documentElement.dataset.theme;
+      document.documentElement.style.colorScheme = "";
+    }
+    buttons.forEach((button) => {
+      const label = labels[theme] || labels[""];
+      button.innerHTML = icons[theme] || icons[""];
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    });
+  }
+
+  applyTheme(readStored(buttons[0]));
+
+  buttons.forEach((button) => {
+    if (button.dataset.calepinThemeBound === "true") return;
+    button.dataset.calepinThemeBound = "true";
+    button.addEventListener("click", () => {
+      const current = normalize(document.documentElement.dataset.theme || "");
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      applyTheme(next);
+      writeStored(button, next);
+    });
+  });
+})();

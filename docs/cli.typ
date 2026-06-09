@@ -79,10 +79,10 @@ Options:
           
           [possible values: pdf, png, svg, html]
 
-      --template <TEMPLATE>
-          Output template name applied after compilation.
+      --theme <THEME>
+          HTML theme name applied after compilation.
           
-          Use `basic`, `pico`, or a directory name under the configured themes directory.
+          Use `calepin-html`, `calepin-website`, or a directory name under the configured themes directory.
 
       --config <CONFIG>
           Path to project config TOML

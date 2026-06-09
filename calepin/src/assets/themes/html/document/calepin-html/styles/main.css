@@ -1,0 +1,43 @@
+figure {
+  text-align: center;
+}
+
+figure > img {
+  display: block;
+  margin-inline: auto;
+}
+
+.calepin-theme-switcher {
+  max-width: 1120px;
+  margin: 1rem auto 0 auto;
+  padding: 0 1rem;
+  color: var(--pico-color);
+  justify-content: flex-end;
+}
+
+.calepin-theme-button {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 999px;
+  background: var(--pico-card-background-color);
+  color: inherit;
+  box-shadow: none;
+}
+
+.calepin-theme-button:hover,
+.calepin-theme-button:focus-visible {
+  background: var(--pico-card-background-color);
+  color: inherit;
+}
+
+.calepin-theme-button svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: inherit;
+}

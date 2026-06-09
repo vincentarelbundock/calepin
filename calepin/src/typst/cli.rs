@@ -101,10 +101,10 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     }
 
     let format = args.format.map(|format| format.as_str().to_string());
-    let template_name = args.template.as_deref();
-    if args.template.is_some() && format.as_deref() != Some("html") {
+    let theme_name = args.theme.as_deref();
+    if args.theme.is_some() && format.as_deref() != Some("html") {
         return Err(anyhow::anyhow!(
-            "`--template` can only be used with `--format html`"
+            "`--theme` can only be used with `--format html`"
         ));
     }
     let output = preprocess_cached(PreprocessOptions {
@@ -122,7 +122,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             output: args.output,
             format: format.as_deref(),
             typst_args: &args.typst_args,
-            template_theme: template_name,
+            html_theme: theme_name,
             themes_dir: &output.themes_dir,
             site_context: None,
         },

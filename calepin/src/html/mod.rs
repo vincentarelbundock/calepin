@@ -11,6 +11,7 @@ pub(crate) use theme::{SiteContextInput, SiteNavEntry, SiteNavSection};
 
 const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
 const HTML_INPUT_LIGHT_THEME_REF: &str = "/.calepin/calepin-input-light.tmTheme";
+pub(crate) const DEFAULT_HTML_THEME: &str = "calepin-html";
 
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedHtmlTheme {
@@ -155,18 +156,45 @@ mod tests {
     }
 
     #[test]
-    fn pico_html_theme_preserves_title_and_wraps_body() {
-        let themed = apply_html_theme(SAMPLE_HTML, Some("pico")).unwrap();
+    fn calepin_html_theme_preserves_title_and_wraps_body() {
+        let themed = apply_html_theme(SAMPLE_HTML, Some("calepin-html")).unwrap();
 
         assert!(themed.contains("<title>Standard Title</title>"));
         assert!(themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
         assert!(themed.contains("<main class=\"container\">"));
         assert!(themed.contains(".sourceCode,"));
-        assert!(themed.contains(".cell-output {"));
+        assert!(themed.contains(".cell-output,"));
         assert!(themed.contains("calepin-copy-code"));
         assert!(themed.contains(r#"<nav class="calepin-theme-switcher""#));
-        assert!(themed.contains("const themeOrder = [\"\", \"light\", \"dark\"]"));
+        assert!(themed.contains("data-calepin-theme-storage-key=\"calepin-html-theme\""));
+        assert!(themed.contains("data-calepin-theme-toggle"));
+        assert!(themed.contains("const order = [\"\", \"light\", \"dark\"]"));
         assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
+    }
+
+    #[test]
+    fn user_html_theme_can_include_builtin_snippets() {
+        let dir = tempfile::tempdir().unwrap();
+        write_theme(
+            dir.path(),
+            "with-snippets",
+            r#"{{ doc.body_open }}<style>{{ snippets.css.code }}</style><main>{{ doc.body }}</main><script>{{ snippets.js.copy_code }}</script><script type="text/plain">{{ snippets.typst.code_block }}</script>{{ doc.body_close }}"#,
+        );
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some("with-snippets"),
+            dir.path(),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        assert!(themed.contains(".sourceCode,"));
+        assert!(themed.contains("window.CalepinCopyCode"));
+        assert!(themed.contains("#let code-block("));
     }
 
     #[test]
@@ -203,16 +231,6 @@ mod tests {
     }
 
     #[test]
-    fn basic_html_theme_wraps_body_without_pico_artifacts() {
-        let themed = apply_html_theme(SAMPLE_HTML, Some("basic")).unwrap();
-
-        assert!(themed.contains("Standard Title"));
-        assert!(themed.contains("sourceCode"));
-        assert!(!themed.contains("cdn.jsdelivr.net/npm/@picocss/pico"));
-        assert!(themed.contains("calepin-syntax-foreground"));
-    }
-
-    #[test]
     fn no_html_theme_returns_raw_typst_html_without_calepin_css_or_template() {
         let themed = apply_html_theme(SAMPLE_HTML, None).unwrap();
 
@@ -223,11 +241,11 @@ mod tests {
     }
 
     #[test]
-    fn pico_theme_applies_to_bare_html_fragment() {
+    fn calepin_html_theme_applies_to_bare_html_fragment() {
         // Typst emits a fragment (no <html>/<head>/<body>) for documents that
         // don't call #calepin.html[...].  The theme must still apply.
         let fragment = "<h1>Hello</h1><p>World</p>";
-        let themed = apply_html_theme(fragment, Some("pico")).unwrap();
+        let themed = apply_html_theme(fragment, Some("calepin-html")).unwrap();
 
         assert!(themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
         assert!(themed.contains("<main class=\"container\">"));
@@ -303,13 +321,13 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         write_theme(
             dir.path(),
-            "pico",
+            "calepin-html",
             "<custom-shell>{{ doc.body }}</custom-shell>",
         );
 
         let themed = theme::apply_html_theme(
             SAMPLE_HTML,
-            Some("pico"),
+            Some("calepin-html"),
             dir.path(),
             &HtmlSyntaxTheme::builtin(),
             None,
@@ -320,7 +338,7 @@ mod tests {
 
         assert!(themed.contains("<custom-shell>"));
         assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
-        // The built-in pico theme is not used when a user theme shadows it.
+        // The built-in calepin-html theme is not used when a user theme shadows it.
         assert!(!themed.contains("cdn.jsdelivr.net/npm/@picocss/pico"));
     }
 

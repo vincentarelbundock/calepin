@@ -5,7 +5,7 @@ use std::process::Command;
 
 use crate::html::{
     apply_html_theme_file, apply_html_theme_file_with_site_context, inline_html_images_file,
-    prepare_html_theme, SiteContextInput,
+    prepare_html_theme, SiteContextInput, DEFAULT_HTML_THEME,
 };
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
@@ -16,7 +16,7 @@ pub struct CompileOptions<'a> {
     pub output: Option<PathBuf>,
     pub format: Option<&'a str>,
     pub typst_args: &'a [String],
-    pub template_theme: Option<&'a str>,
+    pub html_theme: Option<&'a str>,
     pub themes_dir: &'a Path,
     pub site_context: Option<&'a SiteContextInput>,
 }
@@ -203,7 +203,7 @@ pub fn compile_with_typst(
     layout: &LayoutPaths,
     options: CompileOptions<'_>,
 ) -> Result<()> {
-    let html_theme = options.template_theme;
+    let html_theme = effective_html_theme(options.format, options.html_theme);
     reject_reserved_typst_inputs(options.typst_args)?;
     let prepared_theme = prepare_html_theme(&layout.root, options.format, html_theme, None, None)?;
     let output_path =
@@ -251,6 +251,14 @@ pub fn compile_with_typst(
         inline_html_images_file(&path, &layout.root)?;
     }
     Ok(())
+}
+
+fn effective_html_theme<'a>(format: Option<&str>, html_theme: Option<&'a str>) -> Option<&'a str> {
+    if format == Some("html") {
+        Some(html_theme.unwrap_or(DEFAULT_HTML_THEME))
+    } else {
+        html_theme
+    }
 }
 
 #[cfg(test)]

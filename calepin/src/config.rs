@@ -11,6 +11,7 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 
 pub const DEFAULT_THEMES_DIR: &str = "themes";
+pub const DEFAULT_PDF_THEME_NAME: &str = "calepin-pdf";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalepinConfig {
@@ -84,6 +85,9 @@ fn resolve_pdf_theme(config_dir: &Path, value: Option<RawPdfTheme>) -> PdfTheme 
         None => PdfTheme::Default,
         Some(RawPdfTheme::Bool(true)) => PdfTheme::Default,
         Some(RawPdfTheme::Bool(false)) => PdfTheme::Disabled,
+        Some(RawPdfTheme::Path(path)) if path == Path::new(DEFAULT_PDF_THEME_NAME) => {
+            PdfTheme::Default
+        }
         Some(RawPdfTheme::Path(path)) if path.is_absolute() => PdfTheme::Path(path),
         Some(RawPdfTheme::Path(path)) => PdfTheme::Path(config_dir.join(path)),
     }
@@ -310,6 +314,18 @@ mod tests {
             config.pdf_theme,
             PdfTheme::Path(calepin_dir.join("themes/pdf.typ"))
         );
+    }
+
+    #[test]
+    fn config_accepts_builtin_pdf_theme_name() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+        std::fs::write(&config_path, "pdf_theme = \"calepin-pdf\"\n").unwrap();
+
+        let config = CalepinConfig::load(dir.path(), Some(&config_path)).unwrap();
+
+        assert_eq!(config.pdf_theme, PdfTheme::Default);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
@@ -19,40 +19,34 @@ struct TemplateFile {
     source: &'static str,
 }
 
-static PICO: BuiltinTheme = BuiltinTheme {
-    name: "pico",
+static CALEPIN_HTML: BuiltinTheme = BuiltinTheme {
+    name: "calepin-html",
     files: &[
         TemplateFile {
             path: "layout.html",
-            source: include_str!("../assets/themes/html/document/pico/layout.html"),
+            source: include_str!("../assets/themes/html/document/calepin-html/layout.html"),
         },
         TemplateFile {
             path: "partials/theme-switcher.html",
             source: include_str!(
-                "../assets/themes/html/document/pico/partials/theme-switcher.html"
+                "../assets/themes/html/document/calepin-html/partials/theme-switcher.html"
             ),
         },
         TemplateFile {
-            path: "styles/main.css",
-            source: include_str!("../assets/themes/html/document/pico/styles/main.css"),
-        },
-        TemplateFile {
-            path: "scripts/main.js",
-            source: include_str!("../assets/themes/html/document/pico/scripts/main.js"),
-        },
-    ],
-};
-
-static BASIC: BuiltinTheme = BuiltinTheme {
-    name: "basic",
-    files: &[
-        TemplateFile {
-            path: "layout.html",
-            source: include_str!("../assets/themes/html/document/basic/layout.html"),
+            path: "styles/00-code.css",
+            source: include_str!("../assets/snippets/css/code.css"),
         },
         TemplateFile {
             path: "styles/main.css",
-            source: include_str!("../assets/themes/html/document/basic/styles/main.css"),
+            source: include_str!("../assets/themes/html/document/calepin-html/styles/main.css"),
+        },
+        TemplateFile {
+            path: "scripts/01-theme-toggle.js",
+            source: include_str!("../assets/snippets/js/theme-toggle.js"),
+        },
+        TemplateFile {
+            path: "scripts/02-copy-code.js",
+            source: include_str!("../assets/snippets/js/copy-code.js"),
         },
     ],
 };
@@ -65,6 +59,10 @@ static CALEPIN_WEBSITE: BuiltinTheme = BuiltinTheme {
             source: include_str!("../assets/themes/html/website/calepin-website/layout.html"),
         },
         TemplateFile {
+            path: "styles/00-code.css",
+            source: include_str!("../assets/snippets/css/code.css"),
+        },
+        TemplateFile {
             path: "styles/main.css",
             source: include_str!("../assets/themes/html/website/calepin-website/styles/main.css"),
         },
@@ -75,8 +73,7 @@ static CALEPIN_WEBSITE: BuiltinTheme = BuiltinTheme {
     ],
 };
 
-// Keep "pico" first so existing docs that compare full HTML structure stay stable.
-static BUILTINS: &[&BuiltinTheme] = &[&PICO, &BASIC, &CALEPIN_WEBSITE];
+static BUILTINS: &[&BuiltinTheme] = &[&CALEPIN_HTML, &CALEPIN_WEBSITE];
 
 fn builtin(name: &str) -> Option<&'static BuiltinTheme> {
     BUILTINS.iter().copied().find(|theme| theme.name == name)
@@ -118,11 +115,19 @@ struct DocContext {
 struct ThemeContext {
     doc: DocContext,
     site: SiteContext,
+    snippets: SnippetContext,
     styles: Vec<StyleEntry>,
     scripts: Vec<ScriptEntry>,
     syntax_css: String,
     theme: String,
     target: String,
+}
+
+#[derive(Serialize)]
+struct SnippetContext {
+    css: BTreeMap<String, String>,
+    js: BTreeMap<String, String>,
+    typst: BTreeMap<String, String>,
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
@@ -423,6 +428,7 @@ fn render_theme(
             title: parts.title.clone().unwrap_or_default(),
         },
         site: site_context(project_root, output_path, toc, site_context_input),
+        snippets: snippet_context(),
         styles: loaded.styles,
         scripts: loaded.scripts,
         syntax_css: syntax_css(syntax_theme),
@@ -436,6 +442,29 @@ fn render_theme(
     template
         .render(&context)
         .map_err(|error| theme_error(&name, error))
+}
+
+fn snippet_context() -> SnippetContext {
+    SnippetContext {
+        css: BTreeMap::from([(
+            "code".to_string(),
+            include_str!("../assets/snippets/css/code.css").to_string(),
+        )]),
+        js: BTreeMap::from([
+            (
+                "copy_code".to_string(),
+                include_str!("../assets/snippets/js/copy-code.js").to_string(),
+            ),
+            (
+                "theme_toggle".to_string(),
+                include_str!("../assets/snippets/js/theme-toggle.js").to_string(),
+            ),
+        ]),
+        typst: BTreeMap::from([(
+            "code_block".to_string(),
+            include_str!("../assets/snippets/typst/code-block.typ").to_string(),
+        )]),
+    }
 }
 
 fn site_context(

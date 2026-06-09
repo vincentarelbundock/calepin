@@ -26,13 +26,13 @@ mmdc = "mmdc"                      # Mermaid
 #dvisvgm = "dvisvgm"                # optional
 #pdf2svg = "pdf2svg"                # optional
 
-themes_dir = "themes"               # folder for user template themes
+themes_dir = "themes"               # folder for user themes
 pdf_theme = "themes/pdf.typ"         # optional Typst theme for PDF/paged output
 ```
 
-If `pdf_theme` is omitted, Calepin uses its bundled PDF theme. Set
-`pdf_theme = false` to disable the bundled theme and let Typst render source
-blocks with its defaults.
+If `pdf_theme` is omitted, Calepin uses its bundled `calepin-pdf` theme. You can
+also write `pdf_theme = "calepin-pdf"` explicitly. Set `pdf_theme = false` to
+disable `calepin-pdf` and let Typst render source blocks with its defaults.
 
 If `python` is not configured, set `CALEPIN_PYTHON` in the environment to
 pick it. If that is absent, Calepin uses a local `.venv` interpreter when

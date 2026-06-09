@@ -24,7 +24,7 @@ use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
 const DEFAULT_CONFIG: &str = "website.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
-const DEFAULT_TEMPLATE: &str = "calepin-website";
+const DEFAULT_WEBSITE_THEME: &str = "calepin-website";
 const FALLBACK_PAGE: &str = "404.typ";
 const SITE_METADATA_LABEL: &str = "website-metadata";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
@@ -62,7 +62,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         config: config_path,
         src: Some(args.input),
         out: args.output,
-        template: args.template,
+        theme: args.theme,
         parallelism: None,
         render_pdf,
         quiet: args.common.quiet,
@@ -92,7 +92,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         config: config_path,
         src: Some(args.input.clone()),
         out: args.output.clone(),
-        template: None,
+        theme: None,
         parallelism: None,
         render_pdf: true,
         quiet: args.common.quiet,
@@ -129,7 +129,7 @@ struct WebsiteBuildOptions {
     config: PathBuf,
     src: Option<PathBuf>,
     out: Option<PathBuf>,
-    template: Option<String>,
+    theme: Option<String>,
     parallelism: Option<usize>,
     render_pdf: bool,
     quiet: bool,
@@ -165,11 +165,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         Some(out) => resolve_cli_path(&current_dir, out),
         None => src_dir.clone(),
     };
-    let template = args
-        .template
+    let theme = args
+        .theme
         .as_deref()
+        .or(config.theme.as_deref())
         .or(config.template.as_deref())
-        .unwrap_or(DEFAULT_TEMPLATE)
+        .unwrap_or(DEFAULT_WEBSITE_THEME)
         .to_string();
 
     if !src_dir.is_dir() {
@@ -236,7 +237,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             out_dir: out_dir.clone(),
             config_path: config_path.clone(),
             typst: calepin_config.executables.typst,
-            template,
+            theme,
             quiet: args.quiet,
             timeout: args.timeout,
             params: args.params,
@@ -487,6 +488,8 @@ fn changed_typ_pages(
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 struct WebsiteConfig {
+    theme: Option<String>,
+    // Backward-compatible alias for configs written before `theme`.
     template: Option<String>,
     title: Option<String>,
     description: Option<String>,
@@ -639,7 +642,7 @@ struct BuildContext {
     out_dir: PathBuf,
     config_path: PathBuf,
     typst: PathBuf,
-    template: String,
+    theme: String,
     quiet: bool,
     timeout: Option<u64>,
     params: Vec<String>,
@@ -934,7 +937,7 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
             output: Some(html_output.clone()),
             format: Some("html"),
             typst_args: &context.typst_args,
-            template_theme: Some(&context.template),
+            html_theme: Some(&context.theme),
             themes_dir: &context.themes_dir,
             site_context: Some(&site_context),
         },
@@ -950,7 +953,7 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
                 output: Some(pdf_output),
                 format: Some("pdf"),
                 typst_args: &context.typst_args,
-                template_theme: None,
+                html_theme: None,
                 themes_dir: &context.themes_dir,
                 site_context: None,
             },
