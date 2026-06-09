@@ -9,7 +9,7 @@ builds use `calepin-html` by default. Website directory builds use `theme` in
 `website.toml` and default to `calepin-website`. `--template` and `template`
 are accepted as backward-compatible aliases.
 
-Local themes live under the configured `themes_dir`:
+Local themes are selected by pointing `--theme` or `theme` at the directory containing `layout.html`:
 
 ```text
 themes/my-theme/

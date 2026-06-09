@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, StopArgs, WatchArgs};
+use crate::html::is_theme_path_like;
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
@@ -101,7 +102,16 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     }
 
     let format = args.format.map(|format| format.as_str().to_string());
-    let theme_name = args.theme.as_deref();
+    let current_dir = std::env::current_dir()?;
+    let theme_name = args.theme.as_deref().map(|theme| {
+        if is_theme_path_like(theme) {
+            resolve_cli_theme_path(&current_dir, theme)
+                .to_string_lossy()
+                .to_string()
+        } else {
+            theme.to_string()
+        }
+    });
     if args.theme.is_some() && format.as_deref() != Some("html") {
         return Err(anyhow::anyhow!(
             "`--theme` can only be used with `--format html`"
@@ -122,12 +132,20 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             output: args.output,
             format: format.as_deref(),
             typst_args: &args.typst_args,
-            html_theme: theme_name,
-            themes_dir: &output.themes_dir,
+            html_theme: theme_name.as_deref(),
             site_context: None,
         },
     )?;
     Ok(())
+}
+
+fn resolve_cli_theme_path(current_dir: &Path, value: &str) -> PathBuf {
+    let path = Path::new(value);
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        current_dir.join(path)
+    }
 }
 
 fn find_calepin_dirs(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBuf>> {

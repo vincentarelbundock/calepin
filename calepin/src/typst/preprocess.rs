@@ -40,7 +40,6 @@ pub struct PreprocessOptions {
 pub struct PreprocessOutput {
     pub layout: LayoutPaths,
     pub executables: ExecutablePaths,
-    pub themes_dir: PathBuf,
     pub fingerprint: u64,
 }
 
@@ -48,7 +47,6 @@ pub struct PreprocessOutput {
 pub struct PreprocessPlan {
     pub layout: LayoutPaths,
     pub executables: ExecutablePaths,
-    pub themes_dir: PathBuf,
     pub fingerprint: u64,
     chunks: Vec<ChunkSpec>,
     cwd: PathBuf,
@@ -72,7 +70,6 @@ pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput>
         return Ok(PreprocessOutput {
             layout: plan.layout,
             executables: plan.executables,
-            themes_dir: plan.themes_dir,
             fingerprint: plan.fingerprint,
         });
     }
@@ -150,7 +147,6 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     Ok(PreprocessPlan {
         layout,
         executables: config.executables,
-        themes_dir: config.themes_dir,
         fingerprint,
         chunks,
         cwd,
@@ -316,7 +312,6 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
     Ok(PreprocessOutput {
         layout: plan.layout,
         executables: plan.executables,
-        themes_dir: plan.themes_dir,
         fingerprint: plan.fingerprint,
     })
 }

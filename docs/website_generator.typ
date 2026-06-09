@@ -173,7 +173,7 @@ pdf_theme = "docs/assets/pdf-theme.typ"
 
 Source and output directories are positional CLI arguments, not website config fields. This mirrors normal single-file compilation, where `calepin compile file.typ file.pdf` takes input and output from the first two positional arguments.
 
-`theme` selects the HTML theme. It can be the built-in `calepin-website` theme or a theme directory under the configured `themes_dir`. If omitted, website builds use `calepin-website`. `template` is accepted as a backward-compatible alias.
+`theme` selects the HTML theme. It can be the built-in `calepin-website` theme or a path to a theme directory containing `layout.html`. If omitted, website builds use `calepin-website`. `template` is accepted as a backward-compatible alias.
 
 `pdf_theme` selects a Typst theme file for PDF and other paged output. If it is omitted, _Calepin_ uses the bundled `calepin-pdf` theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. You can also write `pdf_theme = "calepin-pdf"` explicitly. Set `pdf_theme = false` to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as `pdf_theme = "docs/assets/pdf-theme.typ"` when `website.toml` lives at the project root.
 
@@ -281,7 +281,7 @@ The bundled `calepin-website` theme uses this data for sidebar navigation, previ
 
 == Theme customization
 
-HTML themes are MiniJinja templates loaded from the configured `themes_dir`. A theme directory contains a required `layout.html` file and optional `partials/`, `styles/`, and `scripts/` directories:
+HTML themes are MiniJinja templates. A theme directory contains a required `layout.html` file and optional `partials/`, `styles/`, and `scripts/` directories:
 
 ```text
 themes/my-theme/
@@ -294,8 +294,7 @@ themes/my-theme/
 Select a local theme with:
 
 ```toml
-themes_dir = "themes"
-theme = "my-theme"
+theme = "themes/my-theme"
 ```
 
 Use `website.toml` for ordinary site branding and navigation changes. Create a local HTML theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.

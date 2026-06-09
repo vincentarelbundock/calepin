@@ -1,4 +1,3 @@
-themes_dir = "themes"
 title = "Calepin"
 description = "A Typst-native computational notebook and static website generator."
 base_url = "https://vincentarelbundock.github.io/calepin"

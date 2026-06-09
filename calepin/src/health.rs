@@ -159,7 +159,6 @@ pub fn build_report(config_path: Option<&Path>) -> Result<HealthReport> {
         python_available,
     ));
     checks.push(jupyter_kernels_check());
-    checks.push(themes_dir_check(&config.themes_dir));
 
     Ok(HealthReport {
         root: root.display().to_string(),
@@ -412,28 +411,6 @@ fn jupyter_kernels_json_check(stdout: &[u8]) -> HealthCheck {
         hint: (warnings > 0)
             .then(|| "fix the kernelspec argv executable or reinstall the kernel".to_string()),
         details,
-    }
-}
-
-fn themes_dir_check(path: &Path) -> HealthCheck {
-    if path.is_dir() {
-        HealthCheck {
-            name: "themes_dir".to_string(),
-            status: HealthStatus::Ok,
-            path: Some(path.display().to_string()),
-            message: "directory exists".to_string(),
-            hint: None,
-            details: Vec::new(),
-        }
-    } else {
-        HealthCheck {
-            name: "themes_dir".to_string(),
-            status: HealthStatus::Warning,
-            path: Some(path.display().to_string()),
-            message: "directory does not exist".to_string(),
-            hint: Some("create it before using custom HTML themes".to_string()),
-            details: Vec::new(),
-        }
     }
 }
 

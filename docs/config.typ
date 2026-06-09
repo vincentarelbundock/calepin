@@ -8,7 +8,7 @@ calepin compile --config config.toml paper.typ
 
 If `--config` is omitted, `Calepin` uses defaults.
 
-Relative paths written inside the config (the executables, `themes_dir`, and `pdf_theme`)
+Relative paths written inside the config (the executables and `pdf_theme`)
 resolve relative to the config file's own directory, not the document being
 compiled. Absolute paths are used as is.
 
@@ -26,7 +26,6 @@ mmdc = "mmdc"                      # Mermaid
 #dvisvgm = "dvisvgm"                # optional
 #pdf2svg = "pdf2svg"                # optional
 
-themes_dir = "themes"               # folder for user themes
 pdf_theme = "themes/pdf.typ"         # optional Typst theme for PDF/paged output
 ```
 

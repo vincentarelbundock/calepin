@@ -53,11 +53,15 @@
 })();
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+{% if site.stylesheet %}
+    <link rel="stylesheet" href="{{ site.stylesheet }}">
+{% else %}
 {% for style in styles -%}
     <style>
 {{ style.css }}
     </style>
 {% endfor -%}
+{% endif %}
 {{ doc.body_open }}
     <header class="calepin-website-topbar">
         <nav>

@@ -17,7 +17,6 @@ pub struct CompileOptions<'a> {
     pub format: Option<&'a str>,
     pub typst_args: &'a [String],
     pub html_theme: Option<&'a str>,
-    pub themes_dir: &'a Path,
     pub site_context: Option<&'a SiteContextInput>,
 }
 
@@ -234,7 +233,6 @@ pub fn compile_with_typst(
             apply_html_theme_file_with_site_context(
                 &path,
                 html_theme,
-                options.themes_dir,
                 &prepared_theme.syntax_theme,
                 &layout.root,
                 Some(site_context),
@@ -243,7 +241,6 @@ pub fn compile_with_typst(
             apply_html_theme_file(
                 &path,
                 html_theme,
-                options.themes_dir,
                 &prepared_theme.syntax_theme,
                 &layout.root,
             )?;

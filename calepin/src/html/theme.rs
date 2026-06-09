@@ -79,6 +79,18 @@ fn builtin(name: &str) -> Option<&'static BuiltinTheme> {
     BUILTINS.iter().copied().find(|theme| theme.name == name)
 }
 
+pub(crate) fn is_builtin_html_theme(name: &str) -> bool {
+    builtin(name).is_some()
+}
+
+pub(crate) fn is_theme_path_like(value: &str) -> bool {
+    let path = Path::new(value);
+    path.is_absolute()
+        || path.components().count() > 1
+        || value.starts_with('.')
+        || value.contains('\\')
+}
+
 #[derive(Serialize)]
 struct StyleEntry {
     name: String,
@@ -143,6 +155,7 @@ pub(crate) struct SiteContextInput {
     pub(crate) github_url: Option<String>,
     pub(crate) current_url: Option<String>,
     pub(crate) page_title: Option<String>,
+    pub(crate) stylesheet: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -159,6 +172,7 @@ struct SiteContext {
     github_url: Option<String>,
     current_url: Option<String>,
     page_title: Option<String>,
+    stylesheet: Option<String>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -205,7 +219,6 @@ struct HtmlDocumentParts<'a> {
 pub(super) fn apply_html_theme(
     html: &str,
     html_theme: Option<&str>,
-    themes_dir: &Path,
     syntax_theme: &HtmlSyntaxTheme,
     output_path: Option<&Path>,
     project_root: Option<&Path>,
@@ -214,7 +227,7 @@ pub(super) fn apply_html_theme(
     let Some(name) = html_theme else {
         return Ok(html.to_string());
     };
-    let loaded = load_theme(name, themes_dir, syntax_theme)?;
+    let loaded = load_theme(name, syntax_theme)?;
     // Rewrite Typst's inline `style="color: ..."` spans to syntax classes so
     // the theme's syntax CSS (placeholders or `syntax_css`) can drive colors.
     let rewritten = syntax_theme.rewrite_classes(html);
@@ -242,18 +255,26 @@ pub(super) fn apply_html_theme(
     )
 }
 
-fn load_theme(
-    name: &str,
-    themes_dir: &Path,
-    syntax_theme: &HtmlSyntaxTheme,
-) -> Result<LoadedTheme> {
-    let dir = themes_dir.join(name);
-    if dir.is_dir() {
-        load_directory_theme(name, &dir, syntax_theme)
-    } else if let Some(theme) = builtin(name) {
+fn load_theme(name: &str, syntax_theme: &HtmlSyntaxTheme) -> Result<LoadedTheme> {
+    if let Some(theme) = builtin(name) {
         load_builtin_theme(theme, syntax_theme)
+    } else if is_theme_path_like(name) {
+        let dir = Path::new(name);
+        if dir.is_dir() {
+            load_directory_theme(
+                dir.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or(name),
+                dir,
+                syntax_theme,
+            )
+        } else {
+            Err(anyhow!("HTML theme directory not found: {}", dir.display()))
+        }
     } else {
-        Err(anyhow!("unknown HTML theme `{name}`"))
+        Err(anyhow!(
+            "unknown HTML theme `{name}`; use a built-in theme name or a path to a theme directory"
+        ))
     }
 }
 
@@ -369,6 +390,25 @@ fn load_directory_theme(
         styles,
         scripts,
     })
+}
+
+pub(super) fn theme_stylesheet(name: &str) -> Result<Option<String>> {
+    let loaded = load_theme(name, &HtmlSyntaxTheme::builtin())?;
+    if loaded.styles.is_empty() {
+        return Ok(None);
+    }
+
+    let mut css = String::new();
+    for style in loaded.styles {
+        if !css.is_empty() {
+            css.push_str("\n\n");
+        }
+        css.push_str(&style.css);
+        if !style.css.ends_with('\n') {
+            css.push('\n');
+        }
+    }
+    Ok(Some(css))
 }
 
 /// Read every `*.<ext>` file in `dir`, sorted by filename for deterministic
@@ -510,6 +550,7 @@ fn site_context(
             github_url: input.github_url.clone(),
             current_url: input.current_url.clone(),
             page_title: input.page_title.clone(),
+            stylesheet: input.stylesheet.clone(),
         };
     }
 
@@ -534,6 +575,7 @@ fn site_context(
         github_url: None,
         current_url: None,
         page_title: None,
+        stylesheet: None,
     }
 }
 

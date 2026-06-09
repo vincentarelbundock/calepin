@@ -18,13 +18,17 @@ use xxhash_rust::xxh3::xxh3_64;
 
 use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
-use crate::html::{SiteContextInput, SiteNavEntry, SiteNavSection};
+use crate::html::{
+    is_builtin_html_theme, is_theme_path_like, write_html_theme_stylesheet, SiteContextInput,
+    SiteNavEntry, SiteNavSection,
+};
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
 const DEFAULT_CONFIG: &str = "website.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
 const DEFAULT_WEBSITE_THEME: &str = "calepin-website";
+const WEBSITE_STYLESHEET_PATH: &str = ".calepin/calepin-website.css";
 const FALLBACK_PAGE: &str = "404.typ";
 const SITE_METADATA_LABEL: &str = "website-metadata";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
@@ -145,7 +149,7 @@ struct WebsiteBuildResult {
     src_dir: PathBuf,
     out_dir: PathBuf,
     config_path: PathBuf,
-    themes_dir: PathBuf,
+    theme_dir: Option<PathBuf>,
     page_fingerprints: BTreeMap<PathBuf, u64>,
     nav_signature: u64,
 }
@@ -165,7 +169,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         Some(out) => resolve_cli_path(&current_dir, out),
         None => src_dir.clone(),
     };
-    let theme = args
+    let raw_theme = args
         .theme
         .as_deref()
         .or(config.theme.as_deref())
@@ -178,6 +182,11 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     }
 
     let calepin_config = CalepinConfig::load(&src_dir, Some(&config_path))?;
+    let config_dir = config_path.parent().unwrap_or(&current_dir);
+    let theme = resolve_html_theme_ref(config_dir, &raw_theme);
+    let theme_dir = html_theme_dir(&theme);
+    let theme_stylesheet_path =
+        (theme == DEFAULT_WEBSITE_THEME).then(|| PathBuf::from(WEBSITE_STYLESHEET_PATH));
     let (nav_sections, mut typ_files) = build_navigation(&src_dir, config.sidebar.as_ref())?;
     let fallback = src_dir.join(FALLBACK_PAGE);
     if fallback.is_file() {
@@ -198,6 +207,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         &typ_files,
         args.render_pdf,
         &sitemap_path,
+        theme_stylesheet_path.as_deref(),
     );
     let previous_manifest = load_manifest(&out_dir)?;
 
@@ -215,6 +225,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     }
     fs::create_dir_all(&out_dir)
         .with_context(|| format!("failed to create {}", out_dir.display()))?;
+    if let Some(path) = theme_stylesheet_path.as_deref() {
+        write_html_theme_stylesheet(&theme, &out_dir, path)?;
+    }
 
     if out_dir != src_dir {
         if args.incremental_inputs.is_none() {
@@ -242,7 +255,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             timeout: args.timeout,
             params: args.params,
             render_pdf: args.render_pdf,
-            themes_dir: calepin_config.themes_dir.clone(),
+            theme_stylesheet: theme_stylesheet_path.map(|path| slash_path(&path)),
             parallelism: args.parallelism,
             typst_args: args.typst_args,
         },
@@ -255,7 +268,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         src_dir,
         out_dir,
         config_path,
-        themes_dir: calepin_config.themes_dir,
+        theme_dir,
         page_fingerprints,
         nav_signature,
     })
@@ -284,10 +297,10 @@ fn watch_site(
     debouncer
         .watch(&current.config_path, RecursiveMode::NonRecursive)
         .with_context(|| format!("failed to watch {}", current.config_path.display()))?;
-    if current.themes_dir.is_dir() {
+    if let Some(theme_dir) = current.theme_dir.as_deref() {
         debouncer
-            .watch(&current.themes_dir, RecursiveMode::Recursive)
-            .with_context(|| format!("failed to watch {}", current.themes_dir.display()))?;
+            .watch(theme_dir, RecursiveMode::Recursive)
+            .with_context(|| format!("failed to watch {}", theme_dir.display()))?;
     }
 
     if !quiet {
@@ -364,8 +377,10 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     if path == initial.config_path {
         return true;
     }
-    if initial.themes_dir.is_dir() && path.starts_with(&initial.themes_dir) {
-        return true;
+    if let Some(theme_dir) = initial.theme_dir.as_deref() {
+        if path.starts_with(theme_dir) {
+            return true;
+        }
     }
     if !path.starts_with(&initial.src_dir) {
         return false;
@@ -627,6 +642,7 @@ impl SiteModel {
                 .as_deref()
                 .map(|base_url| html_escape(&absolute_site_url(base_url, current_href))),
             page_title,
+            stylesheet: None,
         }
     }
 }
@@ -647,7 +663,7 @@ struct BuildContext {
     timeout: Option<u64>,
     params: Vec<String>,
     render_pdf: bool,
-    themes_dir: PathBuf,
+    theme_stylesheet: Option<String>,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
 }
@@ -675,6 +691,28 @@ fn resolve_cli_path(current_dir: &Path, path: &Path) -> PathBuf {
     } else {
         current_dir.join(path)
     }
+}
+
+fn resolve_html_theme_ref(config_dir: &Path, value: &str) -> String {
+    if is_builtin_html_theme(value) {
+        return value.to_string();
+    }
+    if is_theme_path_like(value) {
+        let path = Path::new(value);
+        return if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            config_dir.join(path)
+        }
+        .to_string_lossy()
+        .to_string();
+    }
+    value.to_string()
+}
+
+fn html_theme_dir(value: &str) -> Option<PathBuf> {
+    let path = Path::new(value);
+    path.is_dir().then(|| path.to_path_buf())
 }
 
 fn build_navigation(
@@ -929,7 +967,10 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
         .with_extension("html")
         .to_string_lossy()
         .replace('\\', "/");
-    let site_context = site.theme_context(&current_href);
+    let mut site_context = site.theme_context(&current_href);
+    if let Some(stylesheet) = context.theme_stylesheet.as_deref() {
+        site_context.stylesheet = Some(html_escape(&page_relative_url(&current_href, stylesheet)));
+    }
     compile_with_typst(
         &context.typst,
         &preprocessed.layout,
@@ -938,7 +979,6 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
             format: Some("html"),
             typst_args: &context.typst_args,
             html_theme: Some(&context.theme),
-            themes_dir: &context.themes_dir,
             site_context: Some(&site_context),
         },
     )?;
@@ -954,7 +994,6 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
                 format: Some("pdf"),
                 typst_args: &context.typst_args,
                 html_theme: None,
-                themes_dir: &context.themes_dir,
                 site_context: None,
             },
         )?;
@@ -986,6 +1025,7 @@ fn expected_generated_outputs(
     typ_files: &[PathBuf],
     render_pdf: bool,
     sitemap_path: &Option<PathBuf>,
+    theme_stylesheet_path: Option<&Path>,
 ) -> BTreeSet<PathBuf> {
     let mut outputs = BTreeSet::new();
     for input_path in typ_files {
@@ -997,6 +1037,9 @@ fn expected_generated_outputs(
     }
     if let Some(path) = sitemap_path {
         outputs.insert(path.clone());
+    }
+    if let Some(path) = theme_stylesheet_path {
+        outputs.insert(out_dir.join(path));
     }
     outputs
 }
@@ -1350,7 +1393,7 @@ mod tests {
             src_dir: root.to_path_buf(),
             out_dir: root.to_path_buf(),
             config_path: root.join("website.toml"),
-            themes_dir: root.join("themes"),
+            theme_dir: None,
             page_fingerprints: fingerprint_files(pages).unwrap(),
             nav_signature: 0,
         }
@@ -1481,6 +1524,36 @@ mod tests {
         assert_eq!(context.logo.as_deref(), Some("../assets/logo.svg"));
         assert_eq!(context.home_url.as_deref(), Some("../index.html"));
         assert_eq!(context.logo_alt.as_deref(), Some("Example"));
+        assert_eq!(context.stylesheet, None);
+    }
+
+    #[test]
+    fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
+        assert_eq!(
+            page_relative_url("guide/usage.html", WEBSITE_STYLESHEET_PATH),
+            "../.calepin/calepin-website.css"
+        );
+        assert_eq!(
+            page_relative_url("index.html", WEBSITE_STYLESHEET_PATH),
+            ".calepin/calepin-website.css"
+        );
+    }
+
+    #[test]
+    fn resolve_html_theme_ref_accepts_builtin_name_or_theme_directory_path() {
+        let temp = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            resolve_html_theme_ref(temp.path(), "calepin-website"),
+            "calepin-website"
+        );
+        assert_eq!(
+            resolve_html_theme_ref(temp.path(), "themes/my-theme"),
+            temp.path()
+                .join("themes/my-theme")
+                .to_string_lossy()
+                .to_string()
+        );
     }
 
     #[test]

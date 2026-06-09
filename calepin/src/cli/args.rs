@@ -108,9 +108,9 @@ pub struct CompileArgs {
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
-    /// HTML theme name applied after compilation.
+    /// HTML theme applied after compilation.
     ///
-    /// Use `calepin-html`, `calepin-website`, or a directory name under the configured themes directory.
+    /// Use `calepin-html`, `calepin-website`, or a path to a theme directory.
     #[arg(long = "theme", alias = "template")]
     pub theme: Option<String>,
 

@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use syntax::HtmlSyntaxTheme;
 
+pub(crate) use theme::{is_builtin_html_theme, is_theme_path_like};
 pub(crate) use theme::{SiteContextInput, SiteNavEntry, SiteNavSection};
 
 const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
@@ -74,17 +75,15 @@ pub(crate) fn prepare_html_theme(
 pub(crate) fn apply_html_theme_file(
     path: &Path,
     html_theme: Option<&str>,
-    themes_dir: &Path,
     syntax_theme: &HtmlSyntaxTheme,
     root: &Path,
 ) -> Result<()> {
-    apply_html_theme_file_with_site_context(path, html_theme, themes_dir, syntax_theme, root, None)
+    apply_html_theme_file_with_site_context(path, html_theme, syntax_theme, root, None)
 }
 
 pub(crate) fn apply_html_theme_file_with_site_context(
     path: &Path,
     html_theme: Option<&str>,
-    themes_dir: &Path,
     syntax_theme: &HtmlSyntaxTheme,
     root: &Path,
     site_context: Option<&SiteContextInput>,
@@ -94,7 +93,6 @@ pub(crate) fn apply_html_theme_file_with_site_context(
     let themed = theme::apply_html_theme(
         &html,
         html_theme,
-        themes_dir,
         syntax_theme,
         Some(path),
         Some(root),
@@ -119,6 +117,23 @@ pub(crate) fn inline_html_images_file(path: &Path, root: &Path) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn write_html_theme_stylesheet(
+    html_theme: &str,
+    out_dir: &Path,
+    rel_path: &Path,
+) -> Result<bool> {
+    let Some(css) = theme::theme_stylesheet(html_theme)? else {
+        return Ok(false);
+    };
+    let path = out_dir.join(rel_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    std::fs::write(&path, css).with_context(|| format!("failed to write {}", path.display()))?;
+    Ok(true)
+}
+
 fn resolve_setup_theme_path(root: &Path, value: &str) -> PathBuf {
     let path = Path::new(value);
     if path.is_absolute() {
@@ -134,14 +149,10 @@ mod tests {
 
     const SAMPLE_HTML: &str = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1></body></html>";
 
-    // Render with the builtin syntax theme against an empty themes dir, so a
-    // bare name resolves to the embedded built-in theme.
     fn apply_html_theme(html: &str, html_theme: Option<&str>) -> Result<String> {
-        let dir = tempfile::tempdir().unwrap();
         theme::apply_html_theme(
             html,
             html_theme,
-            dir.path(),
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
@@ -149,8 +160,8 @@ mod tests {
         )
     }
 
-    fn write_theme(themes_dir: &Path, name: &str, layout: &str) {
-        let dir = themes_dir.join(name);
+    fn write_theme(parent: &Path, name: &str, layout: &str) {
+        let dir = parent.join(name);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("layout.html"), layout).unwrap();
     }
@@ -180,11 +191,12 @@ mod tests {
             "with-snippets",
             r#"{{ doc.body_open }}<style>{{ snippets.css.code }}</style><main>{{ doc.body }}</main><script>{{ snippets.js.copy_code }}</script><script type="text/plain">{{ snippets.typst.code_block }}</script>{{ doc.body_close }}"#,
         );
+        let theme_path = dir.path().join("with-snippets");
+        let theme_path = theme_path.to_string_lossy();
 
         let themed = theme::apply_html_theme(
             SAMPLE_HTML,
-            Some("with-snippets"),
-            dir.path(),
+            Some(&theme_path),
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
@@ -210,11 +222,12 @@ mod tests {
             r#"{{ doc.body_open }}<aside>{% for item in site.nav %}<a href="{{ item.href }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>{% endfor %}</aside><nav>{% for item in site.toc %}<a href="{{ item.href }}">{{ item.label }}</a>{% endfor %}</nav><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
         );
         let output = dir.path().join("docs-src2-build/html/cli.html");
+        let theme_path = dir.path().join("zensical");
+        let theme_path = theme_path.to_string_lossy();
 
         let themed = theme::apply_html_theme(
             SAMPLE_HTML,
-            Some("zensical"),
-            dir.path(),
+            Some(&theme_path),
             &HtmlSyntaxTheme::builtin(),
             Some(&output),
             Some(dir.path()),
@@ -317,18 +330,35 @@ mod tests {
     }
 
     #[test]
-    fn user_theme_directory_shadows_builtin() {
+    fn builtin_theme_names_resolve_to_builtin_theme() {
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some("calepin-html"),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        assert!(themed.contains("<main class=\"container\">"));
+        assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
+    }
+
+    #[test]
+    fn user_theme_directory_can_be_referenced_directly() {
         let dir = tempfile::tempdir().unwrap();
         write_theme(
             dir.path(),
             "calepin-html",
             "<custom-shell>{{ doc.body }}</custom-shell>",
         );
+        let theme_path = dir.path().join("calepin-html");
+        let theme_path = theme_path.to_string_lossy();
 
         let themed = theme::apply_html_theme(
             SAMPLE_HTML,
-            Some("calepin-html"),
-            dir.path(),
+            Some(&theme_path),
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
@@ -337,9 +367,6 @@ mod tests {
         .unwrap();
 
         assert!(themed.contains("<custom-shell>"));
-        assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
-        // The built-in calepin-html theme is not used when a user theme shadows it.
-        assert!(!themed.contains("cdn.jsdelivr.net/npm/@picocss/pico"));
     }
 
     #[test]
@@ -361,11 +388,11 @@ mod tests {
         .unwrap();
         std::fs::write(theme_dir.join("styles/main.css"), "body{color:red}").unwrap();
         std::fs::write(theme_dir.join("scripts/main.js"), "console.log(1)").unwrap();
+        let theme_path = theme_dir.to_string_lossy();
 
         let themed = theme::apply_html_theme(
             SAMPLE_HTML,
-            Some("mini"),
-            dir.path(),
+            Some(&theme_path),
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
@@ -382,11 +409,12 @@ mod tests {
     fn theme_directory_missing_layout_errors() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("bare")).unwrap();
+        let theme_path = dir.path().join("bare");
+        let theme_path = theme_path.to_string_lossy();
 
         let err = theme::apply_html_theme(
             SAMPLE_HTML,
-            Some("bare"),
-            dir.path(),
+            Some(&theme_path),
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
@@ -407,11 +435,12 @@ mod tests {
             "broken",
             "{% include \"partials/missing.html\" %}",
         );
+        let theme_path = dir.path().join("broken");
+        let theme_path = theme_path.to_string_lossy();
 
         let err = theme::apply_html_theme(
             SAMPLE_HTML,
-            Some("broken"),
-            dir.path(),
+            Some(&theme_path),
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
@@ -425,7 +454,6 @@ mod tests {
 
     #[test]
     fn bundled_website_theme_uses_configured_logo() {
-        let dir = tempfile::tempdir().unwrap();
         let site_context = SiteContextInput {
             nav: Vec::new(),
             nav_sections: Vec::new(),
@@ -438,12 +466,12 @@ mod tests {
             github_url: None,
             current_url: None,
             page_title: None,
+            stylesheet: None,
         };
 
         let themed = theme::apply_html_theme(
             SAMPLE_HTML,
             Some("calepin-website"),
-            dir.path(),
             &HtmlSyntaxTheme::builtin(),
             None,
             None,
@@ -458,6 +486,54 @@ mod tests {
     }
 
     #[test]
+    fn bundled_website_theme_can_link_external_stylesheet() {
+        let site_context = SiteContextInput {
+            nav: Vec::new(),
+            nav_sections: Vec::new(),
+            title: Some("Example".to_string()),
+            description: None,
+            base_url: None,
+            logo: None,
+            logo_alt: None,
+            home_url: Some("index.html".to_string()),
+            github_url: None,
+            current_url: None,
+            page_title: None,
+            stylesheet: Some("../.calepin/calepin-website.css".to_string()),
+        };
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some("calepin-website"),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(
+            themed.contains(r#"<link rel="stylesheet" href="../.calepin/calepin-website.css">"#)
+        );
+        assert!(!themed.contains("--calepin-code-border"));
+        assert!(!themed.contains("--calepin-topbar-height"));
+    }
+
+    #[test]
+    fn writes_bundled_website_stylesheet() {
+        let dir = tempfile::tempdir().unwrap();
+        let rel = Path::new(".calepin/calepin-website.css");
+
+        let wrote = write_html_theme_stylesheet("calepin-website", dir.path(), rel).unwrap();
+
+        assert!(wrote);
+        let css = std::fs::read_to_string(dir.path().join(rel)).unwrap();
+        assert!(css.contains(".cell-output,"));
+        assert!(css.contains(".calepin-website-shell"));
+        assert!(css.contains("--calepin-syntax-foreground"));
+    }
+
+    #[test]
     fn title_is_not_double_escaped() {
         let dir = tempfile::tempdir().unwrap();
         write_theme(
@@ -466,11 +542,12 @@ mod tests {
             "<h1>{{ doc.title }}</h1>{{ doc.body_open }}{{ doc.body }}{{ doc.body_close }}",
         );
         let html = "<html><head><title>Foo &amp; Bar</title></head><body><p>x</p></body></html>";
+        let theme_path = dir.path().join("title-only");
+        let theme_path = theme_path.to_string_lossy();
 
         let themed = theme::apply_html_theme(
             html,
-            Some("title-only"),
-            dir.path(),
+            Some(&theme_path),
             &HtmlSyntaxTheme::builtin(),
             None,
             None,

@@ -10,13 +10,11 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
 #[cfg(not(windows))]
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 
-pub const DEFAULT_THEMES_DIR: &str = "themes";
 pub const DEFAULT_PDF_THEME_NAME: &str = "calepin-pdf";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
-    pub themes_dir: PathBuf,
     pub pdf_theme: PdfTheme,
 }
 
@@ -46,7 +44,6 @@ impl CalepinConfig {
         let config_dir = path.parent().unwrap_or(root);
         Ok(Self {
             executables: ExecutablePaths::from_raw(root, config_dir, raw.executables),
-            themes_dir: resolve_themes_dir(root, config_dir, raw.themes_dir),
             pdf_theme: resolve_pdf_theme(config_dir, raw.pdf_theme),
         })
     }
@@ -54,7 +51,6 @@ impl CalepinConfig {
     fn default_for_root(root: &Path) -> Self {
         Self {
             executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
-            themes_dir: resolve_themes_dir(root, root, None),
             pdf_theme: PdfTheme::Default,
         }
     }
@@ -65,18 +61,6 @@ fn resolve_config_path(path: &Path) -> Result<PathBuf> {
         Ok(path.to_path_buf())
     } else {
         Ok(std::env::current_dir()?.join(path))
-    }
-}
-
-/// A configured `themes_dir` resolves relative to the config file's directory
-/// (`config_dir`); the built-in default resolves relative to the project root.
-/// Unlike executable names, a bare `themes` is a directory, not a `PATH`
-/// lookup, so it is joined rather than left untouched.
-fn resolve_themes_dir(project_root: &Path, config_dir: &Path, value: Option<PathBuf>) -> PathBuf {
-    match value {
-        Some(path) if path.is_absolute() => path,
-        Some(path) => config_dir.join(path),
-        None => project_root.join(DEFAULT_THEMES_DIR),
     }
 }
 
@@ -159,7 +143,6 @@ impl ExecutablePaths {
 #[serde(default)]
 struct RawCalepinConfig {
     executables: RawExecutablePaths,
-    themes_dir: Option<PathBuf>,
     pdf_theme: Option<RawPdfTheme>,
 }
 
@@ -265,34 +248,6 @@ mod tests {
         assert_eq!(config.executables.typst, PathBuf::from("typst"));
         assert_eq!(config.executables.python, PathBuf::from("python3"));
         assert_eq!(config.executables.rscript, PathBuf::from("Rscript"));
-    }
-
-    #[test]
-    fn missing_config_uses_default_themes_dir() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        let dir = tempfile::tempdir().unwrap();
-        let config = CalepinConfig::load(dir.path(), None).unwrap();
-
-        assert_eq!(config.themes_dir, dir.path().join("themes"));
-    }
-
-    #[test]
-    fn config_overrides_themes_dir() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        let dir = tempfile::tempdir().unwrap();
-        let calepin_dir = dir.path().join(".calepin");
-        std::fs::create_dir(&calepin_dir).unwrap();
-        std::fs::write(
-            calepin_dir.join("config.toml"),
-            "themes_dir = \"site/themes\"\n",
-        )
-        .unwrap();
-
-        let config =
-            CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
-
-        // `site/themes` resolves relative to the config file's directory.
-        assert_eq!(config.themes_dir, calepin_dir.join("site/themes"));
     }
 
     #[test]

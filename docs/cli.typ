@@ -80,9 +80,9 @@ Options:
           [possible values: pdf, png, svg, html]
 
       --theme <THEME>
-          HTML theme name applied after compilation.
+          HTML theme applied after compilation.
           
-          Use `calepin-html`, `calepin-website`, or a directory name under the configured themes directory.
+          Use `calepin-html`, `calepin-website`, or a path to a theme directory.
 
       --config <CONFIG>
           Path to project config TOML
