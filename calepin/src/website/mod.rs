@@ -13,7 +13,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Context, Result};
 use notify::RecursiveMode;
 use notify_debouncer_full::new_debouncer;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use xxhash_rust::xxh3::xxh3_64;
 
 use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
@@ -28,6 +28,7 @@ const DEFAULT_TEMPLATE: &str = "calepin-website";
 const FALLBACK_PAGE: &str = "404.typ";
 const SITE_METADATA_LABEL: &str = "website-metadata";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
+const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
 
 pub(crate) fn scaffold_website(root: &Path, force: bool) -> Result<()> {
     let root = absolutize_for_create(root)?;
@@ -186,6 +187,19 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     typ_files.dedup();
     let page_fingerprints = fingerprint_files(&typ_files)?;
     let nav_signature = navigation_signature(&nav_sections);
+    let metadata = SiteMetadata::from_config(&config);
+    let sitemap_path = metadata
+        .base_url
+        .as_ref()
+        .map(|_| out_dir.join("sitemap.xml"));
+    let expected_outputs = expected_generated_outputs(
+        &src_dir,
+        &out_dir,
+        &typ_files,
+        args.render_pdf,
+        &sitemap_path,
+    );
+    let previous_manifest = load_manifest(&out_dir)?;
 
     if let Some(inputs) = &args.incremental_inputs {
         let wanted = inputs.iter().cloned().collect::<BTreeSet<_>>();
@@ -194,6 +208,10 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
 
     if args.clean {
         clear_previous_outputs(&src_dir, &out_dir)?;
+    }
+    reconcile_manifest_outputs(&out_dir, &previous_manifest, &expected_outputs)?;
+    if args.clean {
+        remove_unexpected_rendered_outputs(&out_dir, &expected_outputs)?;
     }
     fs::create_dir_all(&out_dir)
         .with_context(|| format!("failed to create {}", out_dir.display()))?;
@@ -212,7 +230,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         copy_typ_sources(&src_dir, &out_dir, &source_files)?;
     }
 
-    let site = Arc::new(SiteModel::new(nav_sections));
+    let site = Arc::new(SiteModel::new(nav_sections, metadata.clone()));
     compile_documents(
         BuildContext {
             src_dir: src_dir.clone(),
@@ -229,8 +247,10 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             typst_args: args.typst_args,
         },
         typ_files,
-        site,
+        Arc::clone(&site),
     )?;
+    write_sitemap(&out_dir, metadata.base_url.as_deref(), site.nav_sections())?;
+    write_manifest(&out_dir, &expected_outputs)?;
     Ok(WebsiteBuildResult {
         src_dir,
         out_dir,
@@ -471,6 +491,10 @@ struct WebsiteConfig {
     src: Option<PathBuf>,
     out: Option<PathBuf>,
     template: Option<String>,
+    title: Option<String>,
+    description: Option<String>,
+    base_url: Option<String>,
+    github_url: Option<String>,
     sidebar: Option<SidebarConfig>,
 }
 
@@ -508,23 +532,52 @@ struct NavItemModel {
     label: String,
 }
 
+#[derive(Debug, Clone, Default)]
+struct SiteMetadata {
+    title: Option<String>,
+    description: Option<String>,
+    base_url: Option<String>,
+    github_url: Option<String>,
+}
+
+impl SiteMetadata {
+    fn from_config(config: &WebsiteConfig) -> Self {
+        Self {
+            title: clean_optional_string(config.title.as_deref()),
+            description: clean_optional_string(config.description.as_deref()),
+            base_url: clean_optional_string(config.base_url.as_deref())
+                .map(|url| url.trim_end_matches('/').to_string()),
+            github_url: clean_optional_string(config.github_url.as_deref()),
+        }
+    }
+}
+
 #[derive(Debug)]
 struct SiteModel {
     sections: Vec<NavSectionModel>,
+    metadata: SiteMetadata,
 }
 
 impl SiteModel {
-    fn new(sections: Vec<NavSectionModel>) -> Self {
-        Self { sections }
+    fn new(sections: Vec<NavSectionModel>, metadata: SiteMetadata) -> Self {
+        Self { sections, metadata }
+    }
+
+    fn nav_sections(&self) -> &[NavSectionModel] {
+        &self.sections
     }
 
     fn theme_context(&self, current_href: &str) -> SiteContextInput {
         let mut nav = Vec::new();
         let mut nav_sections = Vec::new();
+        let mut page_title = None;
 
         for section in &self.sections {
             let mut items = Vec::new();
             for item in &section.items {
+                if item.href == current_href {
+                    page_title = Some(html_escape(&item.label));
+                }
                 let entry = SiteNavEntry {
                     href: html_escape(&item.href),
                     label: html_escape(&item.label),
@@ -539,8 +592,26 @@ impl SiteModel {
             });
         }
 
-        SiteContextInput { nav, nav_sections }
+        SiteContextInput {
+            nav,
+            nav_sections,
+            title: self.metadata.title.as_deref().map(html_escape),
+            description: self.metadata.description.as_deref().map(html_escape),
+            base_url: self.metadata.base_url.as_deref().map(html_escape),
+            github_url: self.metadata.github_url.as_deref().map(html_escape),
+            current_url: self
+                .metadata
+                .base_url
+                .as_deref()
+                .map(|base_url| html_escape(&absolute_site_url(base_url, current_href))),
+            page_title,
+        }
     }
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+struct WebsiteManifest {
+    outputs: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -888,6 +959,147 @@ fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
         .with_context(|| format!("failed to write {}", html_output.display()))
 }
 
+fn expected_generated_outputs(
+    src_dir: &Path,
+    out_dir: &Path,
+    typ_files: &[PathBuf],
+    render_pdf: bool,
+    sitemap_path: &Option<PathBuf>,
+) -> BTreeSet<PathBuf> {
+    let mut outputs = BTreeSet::new();
+    for input_path in typ_files {
+        let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
+        outputs.insert(out_dir.join(rel).with_extension("html"));
+        if render_pdf {
+            outputs.insert(out_dir.join(rel).with_extension("pdf"));
+        }
+    }
+    if let Some(path) = sitemap_path {
+        outputs.insert(path.clone());
+    }
+    outputs
+}
+
+fn load_manifest(out_dir: &Path) -> Result<WebsiteManifest> {
+    let path = out_dir.join(MANIFEST_PATH);
+    if !path.is_file() {
+        return Ok(WebsiteManifest::default());
+    }
+    let contents =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
+    serde_json::from_str(&contents).with_context(|| format!("failed to parse {}", path.display()))
+}
+
+fn reconcile_manifest_outputs(
+    out_dir: &Path,
+    manifest: &WebsiteManifest,
+    expected_outputs: &BTreeSet<PathBuf>,
+) -> Result<()> {
+    for rel in &manifest.outputs {
+        let path = out_dir.join(Path::new(rel));
+        if expected_outputs.contains(&path) || !path.exists() {
+            continue;
+        }
+        if path.is_file() {
+            fs::remove_file(&path)
+                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
+        }
+    }
+    Ok(())
+}
+
+fn remove_unexpected_rendered_outputs(
+    out_dir: &Path,
+    expected_outputs: &BTreeSet<PathBuf>,
+) -> Result<()> {
+    if !out_dir.is_dir() {
+        return Ok(());
+    }
+    remove_unexpected_rendered_outputs_in(out_dir, out_dir, expected_outputs)
+}
+
+fn remove_unexpected_rendered_outputs_in(
+    root: &Path,
+    dir: &Path,
+    expected_outputs: &BTreeSet<PathBuf>,
+) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
+        let entry = entry?;
+        let path = entry.path();
+        let rel = path.strip_prefix(root).unwrap_or(&path);
+        let Some(first) = rel.components().next() else {
+            continue;
+        };
+        if matches!(
+            first.as_os_str().to_str(),
+            Some(".calepin" | ".git" | "target" | "node_modules" | ".venv" | "assets")
+        ) {
+            continue;
+        }
+        if path.is_dir() {
+            remove_unexpected_rendered_outputs_in(root, &path, expected_outputs)?;
+        } else if matches!(
+            path.extension().and_then(|extension| extension.to_str()),
+            Some("html" | "pdf")
+        ) && !expected_outputs.contains(&path)
+        {
+            fs::remove_file(&path)
+                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
+        }
+    }
+    Ok(())
+}
+
+fn write_manifest(out_dir: &Path, expected_outputs: &BTreeSet<PathBuf>) -> Result<()> {
+    let path = out_dir.join(MANIFEST_PATH);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    let manifest = WebsiteManifest {
+        outputs: expected_outputs
+            .iter()
+            .map(|path| rel_posix(out_dir, path))
+            .collect(),
+    };
+    let contents = serde_json::to_string_pretty(&manifest)?;
+    fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
+}
+
+fn write_sitemap(
+    out_dir: &Path,
+    base_url: Option<&str>,
+    nav_sections: &[NavSectionModel],
+) -> Result<()> {
+    let path = out_dir.join("sitemap.xml");
+    let Some(base_url) = base_url else {
+        if path.exists() {
+            fs::remove_file(&path)
+                .with_context(|| format!("failed to remove stale sitemap {}", path.display()))?;
+        }
+        return Ok(());
+    };
+
+    let mut hrefs = BTreeSet::new();
+    for section in nav_sections {
+        for item in &section.items {
+            hrefs.insert(item.href.clone());
+        }
+    }
+
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+    );
+    for href in hrefs {
+        xml.push_str("  <url><loc>");
+        xml.push_str(&xml_escape(&absolute_site_url(base_url, &href)));
+        xml.push_str("</loc></url>\n");
+    }
+    xml.push_str("</urlset>\n");
+
+    fs::write(&path, xml).with_context(|| format!("failed to write {}", path.display()))
+}
+
 fn clear_previous_outputs(src_dir: &Path, out_dir: &Path) -> Result<()> {
     if out_dir == src_dir {
         for input_path in iter_typ_files(src_dir, true, &[])? {
@@ -1019,6 +1231,32 @@ fn html_escape(value: &str) -> String {
         .replace('"', "&quot;")
 }
 
+fn xml_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+fn clean_optional_string(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn absolute_site_url(base_url: &str, href: &str) -> String {
+    let base = base_url.trim_end_matches('/');
+    let href = href.trim_start_matches('/');
+    if href.is_empty() {
+        base.to_string()
+    } else {
+        format!("{base}/{href}")
+    }
+}
+
 fn absolutize_from(root: &Path, path: &Path) -> Result<PathBuf> {
     if path.is_absolute() {
         Ok(path.to_path_buf())
@@ -1052,6 +1290,10 @@ fn write_scaffold_file(path: &Path, contents: &str, force: bool) -> Result<()> {
 const WEBSITE_TOML_TEMPLATE: &str = r#"src = "docs"
 out = "public"
 template = "pico"
+title = "My Calepin Site"
+description = "A website built with Calepin."
+# base_url = "https://example.com"
+# github_url = "https://github.com/user/repo"
 
 [sidebar]
 
@@ -1152,5 +1394,66 @@ mod tests {
 
         assert_eq!(new_changed, None);
         assert_eq!(removed_changed, None);
+    }
+
+    #[test]
+    fn reconcile_manifest_outputs_removes_only_stale_generated_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let stale = temp.path().join("old.html");
+        let current = temp.path().join("index.html");
+        fs::write(&stale, "old").unwrap();
+        fs::write(&current, "current").unwrap();
+        let manifest = WebsiteManifest {
+            outputs: vec!["old.html".to_string(), "index.html".to_string()],
+        };
+        let expected = BTreeSet::from([current.clone()]);
+
+        reconcile_manifest_outputs(temp.path(), &manifest, &expected).unwrap();
+
+        assert!(!stale.exists());
+        assert!(current.exists());
+    }
+
+    #[test]
+    fn write_sitemap_uses_absolute_navigation_urls() {
+        let temp = tempfile::tempdir().unwrap();
+        let sections = vec![NavSectionModel {
+            title: Some("Guide".to_string()),
+            items: vec![
+                NavItemModel {
+                    href: "index.html".to_string(),
+                    label: "Home".to_string(),
+                },
+                NavItemModel {
+                    href: "guide/usage.html".to_string(),
+                    label: "Usage".to_string(),
+                },
+            ],
+        }];
+
+        write_sitemap(temp.path(), Some("https://example.com/project/"), &sections).unwrap();
+
+        let sitemap = fs::read_to_string(temp.path().join("sitemap.xml")).unwrap();
+        assert!(sitemap.contains("<loc>https://example.com/project/index.html</loc>"));
+        assert!(sitemap.contains("<loc>https://example.com/project/guide/usage.html</loc>"));
+    }
+
+    #[test]
+    fn remove_unexpected_rendered_outputs_keeps_assets() {
+        let temp = tempfile::tempdir().unwrap();
+        let expected_page = temp.path().join("index.html");
+        let stale_page = temp.path().join("old.html");
+        let asset_pdf = temp.path().join("assets").join("manual.pdf");
+        fs::create_dir_all(asset_pdf.parent().unwrap()).unwrap();
+        fs::write(&expected_page, "index").unwrap();
+        fs::write(&stale_page, "old").unwrap();
+        fs::write(&asset_pdf, "asset").unwrap();
+        let expected = BTreeSet::from([expected_page.clone()]);
+
+        remove_unexpected_rendered_outputs(temp.path(), &expected).unwrap();
+
+        assert!(expected_page.exists());
+        assert!(!stale_page.exists());
+        assert!(asset_pdf.exists());
     }
 }

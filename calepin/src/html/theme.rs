@@ -109,6 +109,12 @@ struct ThemeContext {
 pub(crate) struct SiteContextInput {
     pub(crate) nav: Vec<SiteNavEntry>,
     pub(crate) nav_sections: Vec<SiteNavSection>,
+    pub(crate) title: Option<String>,
+    pub(crate) description: Option<String>,
+    pub(crate) base_url: Option<String>,
+    pub(crate) github_url: Option<String>,
+    pub(crate) current_url: Option<String>,
+    pub(crate) page_title: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -116,6 +122,12 @@ struct SiteContext {
     nav: Vec<NavEntry>,
     nav_sections: Vec<NavSection>,
     toc: Vec<TocEntry>,
+    title: Option<String>,
+    description: Option<String>,
+    base_url: Option<String>,
+    github_url: Option<String>,
+    current_url: Option<String>,
+    page_title: Option<String>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -434,6 +446,12 @@ fn site_context(
                 })
                 .collect(),
             toc,
+            title: input.title.clone(),
+            description: input.description.clone(),
+            base_url: input.base_url.clone(),
+            github_url: input.github_url.clone(),
+            current_url: input.current_url.clone(),
+            page_title: input.page_title.clone(),
         };
     }
 
@@ -449,6 +467,12 @@ fn site_context(
         },
         nav,
         toc,
+        title: None,
+        description: None,
+        base_url: None,
+        github_url: None,
+        current_url: None,
+        page_title: None,
     }
 }
 

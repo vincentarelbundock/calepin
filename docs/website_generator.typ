@@ -1,0 +1,276 @@
+= Static website generator
+
+_Calepin_ can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source `.typ` files live in `docs/`, and the generated `.html`, `.pdf`, and `sitemap.xml` files are written back into `docs/` for GitHub Pages.
+
+== Feature summary
+
+- Scaffold a new website with `calepin new website`.
+- Compile a directory with `calepin compile docs --config website.toml`.
+- Render HTML for each page.
+- Render matching PDFs for each page by default.
+- Render HTML only with `--format html`.
+- Build in place, so GitHub Pages can publish from `docs/`.
+- Watch a website directory with `calepin watch docs --config website.toml`.
+- Rebuild only changed existing `.typ` pages during watch using xxh3 fingerprints.
+- Skip rebuilds when watched `.typ` files are touched but their content hash has not changed.
+- Fall back to a full rebuild for structural changes.
+- Serve a static output directory with `calepin serve docs`.
+- Watch and serve together with `calepin watch docs --config website.toml --serve`.
+- Auto-refresh browser pages after successful watched rebuilds when `--serve` is enabled.
+- Configure navigation manually with `website.toml`.
+- Generate navigation automatically when no sidebar is configured.
+- Render `404.typ` as a fallback page when present.
+- Exclude `404.typ` from automatic navigation and sitemap output.
+- Configure `title`, `description`, `base_url`, and `github_url`.
+- Emit page titles, description metadata, Open Graph metadata, and canonical URLs in the bundled website theme.
+- Generate `sitemap.xml` when `base_url` is configured.
+- Remove stale generated files after pages are deleted or renamed.
+- Track generated outputs locally with `.calepin/website-manifest.json`.
+- Preserve unrelated static assets while cleaning stale generated `.html` and `.pdf` files.
+- Use Calepin HTML themes, including the bundled `calepin-website` theme.
+- Expose site navigation, sectioned navigation, TOC, metadata, and current URL to HTML themes.
+- Embed each page's source `.typ` content in the generated HTML for the source view in the bundled website theme.
+- Inline local images referenced by Typst HTML output.
+
+== Create a website
+
+Use `calepin new website` to scaffold a minimal site:
+
+```sh
+calepin new website
+```
+
+This creates:
+
+- `website.toml`
+- `docs/index.typ`
+- `docs/404.typ`
+
+The scaffold writes to `public/` by default so it is safe for new projects. For GitHub Pages publishing from `docs/`, set `out = "docs"` in `website.toml`.
+
+== Build
+
+Compile a website directory with the same `compile` command used for a single Typst document:
+
+```sh
+calepin compile docs --config website.toml
+```
+
+When the input path is a directory, `--config website.toml` is required. The config tells _Calepin_ which directory is the website source, where output should be written, which theme to use, and how navigation should be built.
+
+By default, each `.typ` page produces two outputs:
+
+- `page.html`
+- `page.pdf`
+
+Use `--format html` to write only HTML:
+
+```sh
+calepin compile docs --config website.toml --format html
+```
+
+Directory website builds do not support `--format pdf`, `--format png`, or `--format svg`; those formats are for single-document `calepin compile`.
+
+== Watch
+
+During development, watch the website source directory:
+
+```sh
+calepin watch docs --config website.toml
+```
+
+The initial watch build renders the whole site. After that, existing `.typ` page edits go through a fast xxh3 fingerprint lookup:
+
+- If the changed page hash is new, _Calepin_ rebuilds only that page.
+- If the file was touched but the hash is unchanged, _Calepin_ skips the rebuild.
+- If navigation changed after an incremental rebuild, _Calepin_ falls back to a full rebuild.
+
+_Calepin_ also falls back to a full rebuild for changes that can affect more than one page:
+
+- `website.toml`
+- theme files
+- assets
+- new `.typ` pages
+- removed `.typ` pages
+- renamed `.typ` pages
+- unknown or non-page inputs
+
+== Watch and serve
+
+To rebuild and serve in one command:
+
+```sh
+calepin watch docs --config website.toml --serve
+```
+
+The server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds.
+
+The default bind address is `127.0.0.1:8000`. If that port is busy, choose another one:
+
+```sh
+calepin watch docs --config website.toml --serve --port 8001
+```
+
+You can also bind another interface:
+
+```sh
+calepin watch docs --config website.toml --serve --host 0.0.0.0 --port 8001
+```
+
+== Serve
+
+Serve an already-built static directory with:
+
+```sh
+calepin serve docs
+```
+
+The static server:
+
+- serves files from the requested directory
+- maps directory requests to `index.html`
+- rejects path traversal
+- supports `GET` and `HEAD`
+- guesses content types from file extensions
+- reports a clear error when the port is already in use
+
+Use `--host` and `--port` to change the bind address:
+
+```sh
+calepin serve docs --host 127.0.0.1 --port 8001
+```
+
+== Configuration
+
+Website settings live in `website.toml`:
+
+```toml
+src = "docs"
+out = "docs"
+template = "calepin-website"
+title = "My Site"
+description = "A website built with Calepin."
+base_url = "https://example.com"
+github_url = "https://github.com/user/repo"
+```
+
+`src` is the directory containing source `.typ` files. `out` is the directory where rendered files are written. If `out` is omitted, _Calepin_ writes output beside the source files.
+
+`template` selects the HTML theme. It can be a built-in theme such as `pico`, or a theme directory under the configured `themes_dir`.
+
+`title`, `description`, `base_url`, and `github_url` are optional. The bundled website theme uses these values to emit:
+
+- browser page titles
+- description metadata
+- Open Graph metadata
+- canonical URLs
+- a GitHub link in the top bar
+
+When `base_url` is set, _Calepin_ writes `sitemap.xml`.
+
+== Navigation
+
+Navigation can be explicit:
+
+```toml
+[sidebar]
+
+[[sidebar.section]]
+title = "Guide"
+
+  [[sidebar.section.item]]
+  path = "index.typ"
+  label = "Home"
+
+  [[sidebar.section.item]]
+  path = "usage.typ"
+  label = "Usage"
+```
+
+Each section can contain any number of `item` entries. An item can point to one file with `path`:
+
+```toml
+[[sidebar.section.item]]
+path = "install.typ"
+label = "Install"
+```
+
+An item can also include files with a simple glob:
+
+```toml
+[[sidebar.section.item]]
+glob = "guide/*.typ"
+```
+
+If no sidebar is configured, _Calepin_ builds navigation from `.typ` files in the source directory. Hidden paths are skipped by default. Set `show_hidden = true` under `[sidebar]` to include hidden paths in manual navigation file discovery.
+
+== Special pages
+
+If `404.typ` exists, _Calepin_ renders it as `404.html` and `404.pdf`.
+
+`404.typ` is excluded from automatic navigation and from `sitemap.xml`. This keeps the error page available to GitHub Pages without presenting it as a normal documentation page.
+
+== Sitemap
+
+When `base_url` is configured, _Calepin_ writes `sitemap.xml` in the output directory:
+
+```toml
+base_url = "https://example.com/project"
+```
+
+The sitemap is built from navigation entries. URLs are absolute and use `base_url` plus the page's generated `.html` path.
+
+If `base_url` is removed from the config, a stale generated sitemap is removed on the next build.
+
+== Generated file cleanup
+
+_Calepin_ writes a local manifest to:
+
+```text
+.calepin/website-manifest.json
+```
+
+The manifest records generated website outputs. Later builds use it to remove stale generated files when pages are deleted or renamed.
+
+Full builds also scan the output directory for unexpected generated `.html` and `.pdf` files. The scan skips directories such as `assets/`, `.calepin/`, `.git/`, `target/`, `node_modules/`, and `.venv/`, so static assets are preserved.
+
+== Theme context
+
+Website builds pass site data into HTML themes. Theme templates can access:
+
+- `site.nav`
+- `site.nav_sections`
+- `site.toc`
+- `site.title`
+- `site.description`
+- `site.base_url`
+- `site.github_url`
+- `site.current_url`
+- `site.page_title`
+
+The bundled `calepin-website` theme uses this data for sidebar navigation, previous and next page links, table of contents, metadata, and the GitHub link.
+
+== Source and PDF views
+
+The bundled website theme includes a view switcher for rendered HTML, source, and PDF.
+
+The source view is powered by a JSON script embedded in each generated HTML page. The PDF view expects the matching `.pdf` output generated by the default website build.
+
+If you build with `--format html`, the PDF files are not generated. In that mode, the theme can still render HTML and source views, but the PDF view will not have a matching file.
+
+== Current limitations
+
+The website generator is intentionally small. It does not yet implement:
+
+- dependency-aware rebuilds for imported shared `.typ` files
+- drafts
+- taxonomies
+- pagination
+- search indexes
+- feeds
+- robots.txt generation
+- Sass or SCSS compilation
+- link checking
+- automatic browser opening
+
+These can be added without changing the current command shape: `new`, `compile`, `watch`, and `serve`.

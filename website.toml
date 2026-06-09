@@ -1,4 +1,8 @@
 themes_dir = "themes"
+title = "Calepin"
+description = "A Typst-native computational notebook and static website generator."
+base_url = "https://vincentarelbundock.github.io/calepin"
+github_url = "https://github.com/vincentarelbundock/calepin"
 
 [executables]
 python = ".venv/bin/python"
@@ -48,7 +52,7 @@ title = "Code execution"
 title = "Roadmap"
 
   [[sidebar.section.item]]
-  path = "website.typ"
+  path = "website_generator.typ"
   label = "Website generator"
 
   [[sidebar.section.item]]
