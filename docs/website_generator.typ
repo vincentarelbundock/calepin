@@ -43,7 +43,19 @@ By default, each `.typ` page produces two outputs:
 - `page.html`
 - `page.pdf`
 
-Use `--format html` to write only HTML:
+PDF rendering can be disabled for the whole site in `website.toml`:
+
+```toml
+pdf = false
+```
+
+Individual pages can override the site setting with a `pdf` entry in their `<website-metadata>` metadata. This is useful to skip the PDF for a few heavy pages, or to render PDFs only for selected pages when the site default is off:
+
+```typ
+#metadata((pdf: false)) <website-metadata>
+```
+
+Use `--format html` to write only HTML, regardless of configuration and page metadata:
 
 ```sh
 calepin compile docs public --config website.toml --format html
@@ -87,9 +99,9 @@ To rebuild and serve in one command:
 calepin watch docs docs --config website.toml --serve
 ```
 
-The server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds.
+The server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds. When a rebuild fails, the open pages display the build error as an overlay, and reload automatically once a later rebuild succeeds.
 
-The default bind address is `127.0.0.1:8000`. If that port is busy, choose another one:
+The default bind address is `127.0.0.1`, on the first free port starting at 8000. Use `--port` to pin a specific port; _Calepin_ then fails instead of falling back to another port:
 
 ```sh
 calepin watch docs docs --config website.toml --serve --port 8001
@@ -116,7 +128,7 @@ The static server:
 - rejects path traversal
 - supports `GET` and `HEAD`
 - guesses content types from file extensions
-- reports a clear error when the port is already in use
+- picks the first free port from 8000 when `--port` is not given, and reports a clear error when a pinned port is already in use
 
 Use `--host` and `--port` to change the bind address:
 
@@ -137,6 +149,7 @@ logo = "assets/logo.svg"
 logo_alt = "My Site"
 home = "index.html"
 github_url = "https://github.com/user/repo"
+pdf = true
 pdf_theme = "docs/assets/pdf-theme.typ"
 ```
 
@@ -152,6 +165,10 @@ If `html_theme` is omitted, website builds use `calepin-website`. `theme` and `t
 ```toml
 html_theme = "calepin-website"
 ```
+
+=== PDF outputs
+
+`pdf` controls whether website builds also render a `.pdf` for every page. It defaults to `true`. Pages can override the site setting through the `pdf` entry of their `<website-metadata>` metadata, and `--format html` disables PDF rendering for one build regardless of configuration.
 
 === PDF theme
 

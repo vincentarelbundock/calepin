@@ -142,9 +142,9 @@ pub struct WatchArgs {
     #[arg(long, default_value = "127.0.0.1")]
     pub host: String,
 
-    /// Port to bind when serving a watched website
-    #[arg(long, default_value_t = 8000)]
-    pub port: u16,
+    /// Port to bind when serving a watched website (default: first free port from 8000)
+    #[arg(long)]
+    pub port: Option<u16>,
 
     #[command(flatten)]
     pub common: CommonArgs,
@@ -163,9 +163,9 @@ pub struct ServeArgs {
     #[arg(long, default_value = "127.0.0.1")]
     pub host: String,
 
-    /// Port to bind
-    #[arg(short, long, default_value_t = 8000)]
-    pub port: u16,
+    /// Port to bind (default: first free port from 8000)
+    #[arg(short, long)]
+    pub port: Option<u16>,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -421,7 +421,7 @@ mod tests {
                 assert_eq!(args.common.config, Some(PathBuf::from("website.toml")));
                 assert!(args.serve);
                 assert_eq!(args.host, "0.0.0.0");
-                assert_eq!(args.port, 3000);
+                assert_eq!(args.port, Some(3000));
             }
             other => panic!("expected watch command, got {other:?}"),
         }
@@ -438,7 +438,7 @@ mod tests {
             Command::Serve(args) => {
                 assert_eq!(args.dir, PathBuf::from("docs"));
                 assert_eq!(args.host, "0.0.0.0");
-                assert_eq!(args.port, 3000);
+                assert_eq!(args.port, Some(3000));
             }
             other => panic!("expected serve command, got {other:?}"),
         }

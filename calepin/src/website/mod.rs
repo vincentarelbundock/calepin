@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -33,6 +33,7 @@ const FALLBACK_PAGE: &str = "404.typ";
 const SITE_METADATA_LABEL: &str = "website-metadata";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
 const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
+const SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
 
 pub(crate) fn scaffold_website(root: &Path, force: bool) -> Result<()> {
     let root = absolutize_for_create(root)?;
@@ -52,8 +53,8 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         ));
     };
     let render_pdf = match args.format {
-        None => true,
-        Some(CompileFormat::Html) => false,
+        None => None,
+        Some(CompileFormat::Html) => Some(false),
         Some(format) => {
             return Err(anyhow!(
                 "website directory builds only support `--format html` or no `--format`, got `{}`",
@@ -75,6 +76,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         typst_args: args.typst_args,
         incremental_inputs: None,
         clean: true,
+        meta_cache: PageMetaCache::new(),
     })?;
     Ok(())
 }
@@ -98,28 +100,29 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         out: args.output.clone(),
         theme: None,
         parallelism: None,
-        render_pdf: true,
+        render_pdf: None,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         params: args.common.params.clone(),
         typst_args: args.typst_args.clone(),
         incremental_inputs: None,
         clean: true,
+        meta_cache: PageMetaCache::new(),
     };
     let initial = build_site(options.clone())?;
-    let reload_version = Arc::new(AtomicU64::new(1));
+    let live = serve::LiveReload::new();
     let server = if args.serve {
         Some(serve::start(
             &initial.out_dir,
             &args.host,
             args.port,
-            Arc::clone(&reload_version),
+            Arc::clone(&live),
         )?)
     } else {
         None
     };
 
-    let result = watch_site(options, initial, reload_version, args.common.quiet);
+    let result = watch_site(options, initial, live, args.common.quiet);
     if let Some(server) = server {
         server.stop();
     }
@@ -135,14 +138,26 @@ struct WebsiteBuildOptions {
     out: Option<PathBuf>,
     theme: Option<String>,
     parallelism: Option<usize>,
-    render_pdf: bool,
+    /// `None` defers to the `pdf` key in website.toml (default: render PDFs).
+    render_pdf: Option<bool>,
     quiet: bool,
     timeout: Option<u64>,
     params: Vec<String>,
     typst_args: Vec<String>,
     incremental_inputs: Option<Vec<PathBuf>>,
     clean: bool,
+    meta_cache: PageMetaCache,
 }
+
+/// Per-page metadata exposed through the `<website-metadata>` Typst label.
+#[derive(Debug, Clone, Default, PartialEq)]
+struct PageMeta {
+    title: Option<String>,
+    pdf: Option<bool>,
+}
+
+/// Page metadata keyed by page path, with the content hash it was derived from.
+type PageMetaCache = BTreeMap<PathBuf, (u64, PageMeta)>;
 
 #[derive(Debug, Clone)]
 struct WebsiteBuildResult {
@@ -151,6 +166,7 @@ struct WebsiteBuildResult {
     config_path: PathBuf,
     theme_dir: Option<PathBuf>,
     page_fingerprints: BTreeMap<PathBuf, u64>,
+    page_meta: PageMetaCache,
     nav_signature: u64,
 }
 
@@ -181,7 +197,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let theme_dir = html_theme_dir(&theme);
     let theme_stylesheet_path =
         (theme == DEFAULT_WEBSITE_THEME).then(|| PathBuf::from(WEBSITE_STYLESHEET_PATH));
-    let (nav_sections, mut typ_files) = build_navigation(&src_dir, config.sidebar.as_ref())?;
+    let (nav_sections, mut typ_files, page_meta) = build_navigation(
+        &src_dir,
+        config.sidebar.as_ref(),
+        &calepin_config.executables.typst,
+        &args.meta_cache,
+    )?;
     let fallback = src_dir.join(FALLBACK_PAGE);
     if fallback.is_file() {
         typ_files.push(fallback);
@@ -195,11 +216,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .base_url
         .as_ref()
         .map(|_| out_dir.join("sitemap.xml"));
+    let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
     let expected_outputs = expected_generated_outputs(
         &src_dir,
         &out_dir,
         &typ_files,
-        args.render_pdf,
+        &pdf_files,
         &sitemap_path,
         theme_stylesheet_path.as_deref(),
     );
@@ -248,7 +270,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             quiet: args.quiet,
             timeout: args.timeout,
             params: args.params,
-            render_pdf: args.render_pdf,
+            pdf_files,
             theme_stylesheet: theme_stylesheet_path.map(|path| slash_path(&path)),
             parallelism: args.parallelism,
             typst_args: args.typst_args,
@@ -264,6 +286,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config_path,
         theme_dir,
         page_fingerprints,
+        page_meta,
         nav_signature,
     })
 }
@@ -271,7 +294,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
 fn watch_site(
     options: WebsiteBuildOptions,
     initial: WebsiteBuildResult,
-    reload_version: serve::ReloadVersion,
+    live: Arc<serve::LiveReload>,
     quiet: bool,
 ) -> Result<()> {
     let mut current = initial;
@@ -335,11 +358,12 @@ fn watch_site(
                 match rebuild_changed_pages(&options, &current, &changed) {
                     Ok(Some(next)) => {
                         current = next;
-                        reload_version.fetch_add(1, Ordering::Relaxed);
+                        live.rebuilt();
                     }
                     Ok(None) => {}
                     Err(error) => {
                         cwarn!("website rebuild failed: {}", error);
+                        live.set_error(format!("{error:#}"));
                     }
                 }
             }
@@ -376,6 +400,11 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
             return true;
         }
     }
+    // A distinct output directory only ever receives generated copies; reacting
+    // to them would re-trigger the build that produced them.
+    if initial.out_dir != initial.src_dir && path.starts_with(&initial.out_dir) {
+        return false;
+    }
     if !path.starts_with(&initial.src_dir) {
         return false;
     }
@@ -383,16 +412,16 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     let Some(first) = rel.components().next() else {
         return false;
     };
-    if matches!(
-        first.as_os_str().to_str(),
-        Some(".calepin" | ".git" | "target" | "node_modules" | ".venv")
-    ) {
+    if first
+        .as_os_str()
+        .to_str()
+        .is_some_and(|name| SKIP_DIRS.contains(&name))
+    {
         return false;
     }
     if path.starts_with(&initial.out_dir) {
-        match path.extension().and_then(|extension| extension.to_str()) {
-            Some("html" | "pdf") => return false,
-            _ => {}
+        if let Some("html" | "pdf") = path.extension().and_then(|extension| extension.to_str()) {
+            return false;
         }
     }
     matches!(
@@ -420,22 +449,25 @@ fn rebuild_changed_pages(
     changed: &[PathBuf],
 ) -> Result<Option<WebsiteBuildResult>> {
     let Some(pages) = changed_typ_pages(current, changed)? else {
-        let next = build_site(options.clone())?;
-        return Ok(Some(next));
+        let mut full_options = options.clone();
+        full_options.meta_cache = current.page_meta.clone();
+        return Ok(Some(build_site(full_options)?));
     };
     if pages.is_empty() {
         return Ok(None);
     }
 
     let mut incremental_options = options.clone();
+    incremental_options.meta_cache = current.page_meta.clone();
     incremental_options.incremental_inputs = Some(pages);
     incremental_options.clean = false;
     let next = build_site(incremental_options)?;
     if next.nav_signature != current.nav_signature
-        || next.page_fingerprints.keys().collect::<Vec<_>>()
-            != current.page_fingerprints.keys().collect::<Vec<_>>()
+        || next.page_fingerprints.keys().ne(current.page_fingerprints.keys())
     {
-        return Ok(Some(build_site(options.clone())?));
+        let mut full_options = options.clone();
+        full_options.meta_cache = next.page_meta.clone();
+        return Ok(Some(build_site(full_options)?));
     }
     Ok(Some(next))
 }
@@ -508,7 +540,34 @@ struct WebsiteConfig {
     logo_alt: Option<String>,
     home: Option<String>,
     github_url: Option<String>,
+    /// Also render a PDF for every page; pages can override with `pdf` in
+    /// their `<website-metadata>`.
+    pdf: Option<bool>,
     sidebar: Option<SidebarConfig>,
+}
+
+fn pdf_enabled_files(
+    typ_files: &[PathBuf],
+    page_meta: &PageMetaCache,
+    cli_render_pdf: Option<bool>,
+    config_pdf: Option<bool>,
+) -> BTreeSet<PathBuf> {
+    // `--format html` is one-shot format control; page metadata cannot
+    // override it.
+    if cli_render_pdf == Some(false) {
+        return BTreeSet::new();
+    }
+    let default = cli_render_pdf.unwrap_or_else(|| config_pdf.unwrap_or(true));
+    typ_files
+        .iter()
+        .filter(|path| {
+            page_meta
+                .get(*path)
+                .and_then(|(_, meta)| meta.pdf)
+                .unwrap_or(default)
+        })
+        .cloned()
+        .collect()
 }
 
 fn configured_html_theme<'a>(cli_theme: Option<&'a str>, config: &'a WebsiteConfig) -> &'a str {
@@ -665,7 +724,7 @@ struct BuildContext {
     quiet: bool,
     timeout: Option<u64>,
     params: Vec<String>,
-    render_pdf: bool,
+    pdf_files: BTreeSet<PathBuf>,
     theme_stylesheet: Option<String>,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
@@ -721,34 +780,46 @@ fn html_theme_dir(value: &str) -> Option<PathBuf> {
 fn build_navigation(
     src_dir: &Path,
     sidebar: Option<&SidebarConfig>,
-) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>)> {
+    typst: &Path,
+    meta_cache: &PageMetaCache,
+) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>, PageMetaCache)> {
     match sidebar {
-        Some(sidebar) => build_manual_navigation(src_dir, sidebar),
-        None => build_auto_navigation(src_dir, false),
+        Some(sidebar) => build_manual_navigation(src_dir, sidebar, typst, meta_cache),
+        None => build_auto_navigation(src_dir, false, typst, meta_cache),
     }
 }
 
 fn build_auto_navigation(
     src_dir: &Path,
     include_hidden: bool,
-) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>)> {
+    typst: &Path,
+    meta_cache: &PageMetaCache,
+) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>, PageMetaCache)> {
     let files = iter_typ_files(src_dir, include_hidden, &[PathBuf::from(FALLBACK_PAGE)])?;
+    let mut fresh_meta = PageMetaCache::new();
     let items = files
         .iter()
         .map(|path| {
+            let meta = resolved_page_meta(path, typst, meta_cache, &mut fresh_meta)?;
             Ok(NavItemModel {
                 href: rel_html_path(src_dir, path),
-                label: title_from_typst_file(path)?,
+                label: meta.title.unwrap_or_else(|| stem_label(path)),
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    Ok((vec![NavSectionModel { title: None, items }], files))
+    Ok((
+        vec![NavSectionModel { title: None, items }],
+        files,
+        fresh_meta,
+    ))
 }
 
 fn build_manual_navigation(
     src_dir: &Path,
     sidebar: &SidebarConfig,
-) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>)> {
+    typst: &Path,
+    meta_cache: &PageMetaCache,
+) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>, PageMetaCache)> {
     let all_typ_files = iter_typ_files(
         src_dir,
         sidebar.show_hidden,
@@ -757,6 +828,7 @@ fn build_manual_navigation(
     let mut used = BTreeSet::new();
     let mut sections = Vec::new();
     let mut build_files = Vec::new();
+    let mut fresh_meta = PageMetaCache::new();
 
     for section_config in &sidebar.section {
         let mut items = Vec::new();
@@ -771,9 +843,10 @@ fn build_manual_navigation(
                 if !used.insert(path.clone()) {
                     continue;
                 }
+                let meta = resolved_page_meta(&path, typst, meta_cache, &mut fresh_meta)?;
                 let label = match configured_label {
                     Some(label) => label.to_string(),
-                    None => title_from_typst_file(&path)?,
+                    None => meta.title.unwrap_or_else(|| stem_label(&path)),
                 };
                 items.push(NavItemModel {
                     href: rel_html_path(src_dir, &path),
@@ -788,7 +861,7 @@ fn build_manual_navigation(
         });
     }
 
-    Ok((sections, build_files))
+    Ok((sections, build_files, fresh_meta))
 }
 
 fn resolve_file_list(
@@ -862,42 +935,63 @@ fn collect_typ_files(
     Ok(())
 }
 
-fn title_from_typst_file(path: &Path) -> Result<String> {
-    Ok(title_from_metadata(path)?.unwrap_or_else(|| {
-        path.file_stem()
-            .and_then(|stem| stem.to_str())
-            .unwrap_or_default()
-            .replace(['-', '_'], " ")
-    }))
+/// Querying page metadata runs a full `typst` compile of the page, so results
+/// are cached by content hash. Metadata computed from an imported file can go
+/// stale until the page itself changes; a config change resets the cache.
+fn resolved_page_meta(
+    path: &Path,
+    typst: &Path,
+    meta_cache: &PageMetaCache,
+    fresh_meta: &mut PageMetaCache,
+) -> Result<PageMeta> {
+    let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let fingerprint = xxh3_64(&bytes);
+    let meta = match meta_cache.get(path) {
+        Some((cached, meta)) if *cached == fingerprint => meta.clone(),
+        _ => query_page_meta(path, typst),
+    };
+    fresh_meta.insert(path.to_path_buf(), (fingerprint, meta.clone()));
+    Ok(meta)
 }
 
-fn title_from_metadata(path: &Path) -> Result<Option<String>> {
-    let output = Command::new("typst")
-        .args([
-            "query",
-            path.as_os_str().to_string_lossy().as_ref(),
-            &format!("label(\"{SITE_METADATA_LABEL}\")"),
-            "--field",
-            "value",
-        ])
+fn stem_label(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or_default()
+        .replace(['-', '_'], " ")
+}
+
+/// Failures (no typst, page does not compile standalone, no metadata label)
+/// degrade to an empty `PageMeta` rather than failing the build.
+fn query_page_meta(path: &Path, typst: &Path) -> PageMeta {
+    let output = Command::new(typst)
+        .arg("query")
+        .arg(path)
+        .arg(format!("label(\"{SITE_METADATA_LABEL}\")"))
+        .args(["--field", "value"])
         .output();
-    let output = match output {
-        Ok(output) if output.status.success() => output,
-        _ => return Ok(None),
+    match output {
+        Ok(output) if output.status.success() => parse_page_meta(&output.stdout),
+        _ => PageMeta::default(),
+    }
+}
+
+fn parse_page_meta(stdout: &[u8]) -> PageMeta {
+    let Ok(values) = serde_json::from_slice::<serde_json::Value>(stdout) else {
+        return PageMeta::default();
     };
-    let values: serde_json::Value = match serde_json::from_slice(&output.stdout) {
-        Ok(values) => values,
-        Err(_) => return Ok(None),
+    let Some(value) = values.as_array().and_then(|values| values.first()) else {
+        return PageMeta::default();
     };
-    let title = values
-        .as_array()
-        .and_then(|values| values.first())
-        .and_then(|value| value.get("title"))
-        .and_then(|value| value.as_str())
-        .map(str::trim)
-        .filter(|title| !title.is_empty())
-        .map(str::to_string);
-    Ok(title)
+    PageMeta {
+        title: value
+            .get("title")
+            .and_then(|title| title.as_str())
+            .map(str::trim)
+            .filter(|title| !title.is_empty())
+            .map(str::to_string),
+        pdf: value.get("pdf").and_then(|pdf| pdf.as_bool()),
+    }
 }
 
 fn compile_documents(
@@ -952,7 +1046,8 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
         .strip_prefix(&context.src_dir)
         .unwrap_or(input_path)
         .with_extension("");
-    let html_output = context.out_dir.join(rel_output.with_extension("html"));
+    let html_rel = rel_output.with_extension("html");
+    let html_output = context.out_dir.join(&html_rel);
     if let Some(parent) = html_output.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("failed to create {}", parent.display()))?;
@@ -966,10 +1061,7 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
         sync_pages: false,
         param_overrides: context.params.clone(),
     })?;
-    let current_href = rel_output
-        .with_extension("html")
-        .to_string_lossy()
-        .replace('\\', "/");
+    let current_href = html_rel.to_string_lossy().replace('\\', "/");
     let mut site_context = site.theme_context(&current_href);
     if let Some(stylesheet) = context.theme_stylesheet.as_deref() {
         site_context.stylesheet = Some(html_escape(&page_relative_url(&current_href, stylesheet)));
@@ -987,7 +1079,7 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
     )?;
     embed_source_blob(&html_output, input_path)?;
 
-    if context.render_pdf {
+    if context.pdf_files.contains(input_path) {
         let pdf_output = context.out_dir.join(rel_output.with_extension("pdf"));
         compile_with_typst(
             &context.typst,
@@ -1026,7 +1118,7 @@ fn expected_generated_outputs(
     src_dir: &Path,
     out_dir: &Path,
     typ_files: &[PathBuf],
-    render_pdf: bool,
+    pdf_files: &BTreeSet<PathBuf>,
     sitemap_path: &Option<PathBuf>,
     theme_stylesheet_path: Option<&Path>,
 ) -> BTreeSet<PathBuf> {
@@ -1034,7 +1126,7 @@ fn expected_generated_outputs(
     for input_path in typ_files {
         let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
         outputs.insert(out_dir.join(rel).with_extension("html"));
-        if render_pdf {
+        if pdf_files.contains(input_path) {
             outputs.insert(out_dir.join(rel).with_extension("pdf"));
         }
     }
@@ -1097,10 +1189,11 @@ fn remove_unexpected_rendered_outputs_in(
         let Some(first) = rel.components().next() else {
             continue;
         };
-        if matches!(
-            first.as_os_str().to_str(),
-            Some(".calepin" | ".git" | "target" | "node_modules" | ".venv" | "assets")
-        ) {
+        if first
+            .as_os_str()
+            .to_str()
+            .is_some_and(|name| name == "assets" || SKIP_DIRS.contains(&name))
+        {
             continue;
         }
         if path.is_dir() {
@@ -1184,12 +1277,17 @@ fn clear_previous_outputs(src_dir: &Path, out_dir: &Path) -> Result<()> {
             .with_context(|| format!("failed to read {}", out_dir.display()))?
         {
             let path = entry?.path();
-            if path.is_file() && path.file_name().and_then(|name| name.to_str()) != Some(".gitkeep")
-            {
-                fs::remove_file(&path)
-                    .with_context(|| format!("failed to remove {}", path.display()))?;
-            } else if path.is_dir() {
+            let name = path.file_name().and_then(|name| name.to_str());
+            if path.is_dir() {
+                // The output directory may be a git checkout (e.g. a gh-pages
+                // worktree) or hold regenerable state; never delete those.
+                if name.is_some_and(|name| SKIP_DIRS.contains(&name)) {
+                    continue;
+                }
                 fs::remove_dir_all(&path)
+                    .with_context(|| format!("failed to remove {}", path.display()))?;
+            } else if name != Some(".gitkeep") {
+                fs::remove_file(&path)
                     .with_context(|| format!("failed to remove {}", path.display()))?;
             }
         }
@@ -1299,12 +1397,7 @@ fn html_escape(value: &str) -> String {
 }
 
 fn xml_escape(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&apos;")
+    html_escape(value).replace('\'', "&apos;")
 }
 
 fn clean_optional_string(value: Option<&str>) -> Option<String> {
@@ -1398,6 +1491,7 @@ mod tests {
             config_path: root.join("website.toml"),
             theme_dir: None,
             page_fingerprints: fingerprint_files(pages).unwrap(),
+            page_meta: PageMetaCache::new(),
             nav_signature: 0,
         }
     }
@@ -1589,6 +1683,119 @@ mod tests {
                 .to_string_lossy()
                 .to_string()
         );
+    }
+
+    #[test]
+    fn resolved_page_meta_reuses_cached_meta_for_unchanged_content() {
+        let temp = tempfile::tempdir().unwrap();
+        let page = temp.path().join("index.typ");
+        fs::write(&page, "= Home\n").unwrap();
+        let fingerprint = xxh3_64(&fs::read(&page).unwrap());
+        let cached_meta = PageMeta {
+            title: Some("Cached Title".to_string()),
+            pdf: Some(false),
+        };
+        let cache = PageMetaCache::from([(page.clone(), (fingerprint, cached_meta.clone()))]);
+        let missing_typst = Path::new("calepin-no-such-typst-binary");
+
+        let mut fresh = PageMetaCache::new();
+        let meta = resolved_page_meta(&page, missing_typst, &cache, &mut fresh).unwrap();
+        assert_eq!(meta, cached_meta);
+        assert_eq!(fresh.get(&page), Some(&(fingerprint, cached_meta)));
+
+        fs::write(&page, "= Changed\n").unwrap();
+        let mut fresh = PageMetaCache::new();
+        let meta = resolved_page_meta(&page, missing_typst, &cache, &mut fresh).unwrap();
+        assert_eq!(meta, PageMeta::default());
+    }
+
+    #[test]
+    fn parse_page_meta_reads_title_and_pdf_flag() {
+        let meta = parse_page_meta(br#"[{"title": " My Page ", "pdf": false}]"#);
+        assert_eq!(meta.title.as_deref(), Some("My Page"));
+        assert_eq!(meta.pdf, Some(false));
+
+        assert_eq!(parse_page_meta(br#"[{"title": ""}]"#), PageMeta::default());
+        assert_eq!(parse_page_meta(b"[]"), PageMeta::default());
+        assert_eq!(parse_page_meta(b"not json"), PageMeta::default());
+        assert_eq!(
+            parse_page_meta(br#"[{"pdf": true}]"#),
+            PageMeta {
+                title: None,
+                pdf: Some(true)
+            }
+        );
+    }
+
+    #[test]
+    fn pdf_enabled_files_honors_per_page_override_over_site_default() {
+        let on = PathBuf::from("on.typ");
+        let off = PathBuf::from("off.typ");
+        let plain = PathBuf::from("plain.typ");
+        let files = vec![on.clone(), off.clone(), plain.clone()];
+        let meta = PageMetaCache::from([
+            (
+                on.clone(),
+                (
+                    0,
+                    PageMeta {
+                        title: None,
+                        pdf: Some(true),
+                    },
+                ),
+            ),
+            (
+                off.clone(),
+                (
+                    0,
+                    PageMeta {
+                        title: None,
+                        pdf: Some(false),
+                    },
+                ),
+            ),
+        ]);
+
+        let with_site_off = pdf_enabled_files(&files, &meta, None, Some(false));
+        assert_eq!(with_site_off, BTreeSet::from([on.clone()]));
+
+        let with_default = pdf_enabled_files(&files, &meta, None, None);
+        assert_eq!(with_default, BTreeSet::from([on.clone(), plain]));
+
+        let with_cli_off = pdf_enabled_files(&files, &meta, Some(false), Some(true));
+        assert!(with_cli_off.is_empty());
+    }
+
+    #[test]
+    fn should_rebuild_for_path_ignores_distinct_output_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let out = src.join("_site");
+        fs::create_dir_all(&out).unwrap();
+        let mut current = test_build_result(&src, &[]);
+        current.out_dir = out.clone();
+
+        assert!(!should_rebuild_for_path(&current, &out.join("index.typ")));
+        assert!(!should_rebuild_for_path(&current, &out.join("style.css")));
+        assert!(should_rebuild_for_path(&current, &src.join("index.typ")));
+    }
+
+    #[test]
+    fn clear_previous_outputs_preserves_git_directory_in_output_dir() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let out = temp.path().join("site");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(out.join(".git")).unwrap();
+        fs::write(out.join(".git").join("HEAD"), "ref: refs/heads/main").unwrap();
+        fs::write(out.join("stale.html"), "old").unwrap();
+        fs::write(out.join(".gitkeep"), "").unwrap();
+
+        clear_previous_outputs(&src, &out).unwrap();
+
+        assert!(out.join(".git").join("HEAD").exists());
+        assert!(out.join(".gitkeep").exists());
+        assert!(!out.join("stale.html").exists());
     }
 
     #[test]

@@ -4,6 +4,7 @@ base_url = "https://vincentarelbundock.github.io/calepin"
 logo = "assets/logo_short_2.svg"
 logo_alt = "Calepin"
 github_url = "https://github.com/vincentarelbundock/calepin"
+pdf = true
 
 [executables]
 python = ".venv/bin/python"

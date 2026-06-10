@@ -135,9 +135,7 @@ Options:
           [default: 127.0.0.1]
 
       --port <PORT>
-          Port to bind when serving a watched website
-          
-          [default: 8000]
+          Port to bind when serving a watched website (default: first free port from 8000)
 
       --config <CONFIG>
           Path to project config TOML
@@ -170,7 +168,7 @@ Arguments:
 
 Options:
       --host <HOST>  Interface to bind [default: 127.0.0.1]
-  -p, --port <PORT>  Port to bind [default: 8000]
+  -p, --port <PORT>  Port to bind (default: first free port from 8000)
   -h, --help         Print help
 ```
 

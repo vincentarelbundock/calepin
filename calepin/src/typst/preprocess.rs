@@ -19,7 +19,7 @@ use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
 const PREPROCESS_FINGERPRINT_FILE: &str = "fingerprint.xxh3";
-const DEFAULT_PDF_THEME_SOURCE: &str = include_str!("../assets/themes/pdf/calepin-pdf.typ");
+const DEFAULT_PDF_THEME_SOURCE: &str = include_str!("../assets/themes/calepin-pdf.typ");
 const TYPST_SNIPPETS: &[(&str, &str)] = &[(
     "code-block.typ",
     include_str!("../assets/snippets/typst/code-block.typ"),

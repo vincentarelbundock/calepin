@@ -6,6 +6,7 @@ description = "A static website built from Typst documents."
 # logo_alt = "My Site"
 # home = "index.html"
 # github_url = "https://github.com/user/repo"
+# pdf = false # skip the PDF version of every page
 
 [sidebar]
 

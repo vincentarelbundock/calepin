@@ -24,13 +24,11 @@ static CALEPIN_HTML: BuiltinTheme = BuiltinTheme {
     files: &[
         TemplateFile {
             path: "layout.html",
-            source: include_str!("../assets/themes/html/document/calepin-html/layout.html"),
+            source: include_str!("../assets/themes/calepin-html/layout.html"),
         },
         TemplateFile {
             path: "partials/theme-switcher.html",
-            source: include_str!(
-                "../assets/themes/html/document/calepin-html/partials/theme-switcher.html"
-            ),
+            source: include_str!("../assets/themes/calepin-html/partials/theme-switcher.html"),
         },
         TemplateFile {
             path: "styles/00-code.css",
@@ -38,7 +36,7 @@ static CALEPIN_HTML: BuiltinTheme = BuiltinTheme {
         },
         TemplateFile {
             path: "styles/main.css",
-            source: include_str!("../assets/themes/html/document/calepin-html/styles/main.css"),
+            source: include_str!("../assets/themes/calepin-html/styles/main.css"),
         },
         TemplateFile {
             path: "scripts/01-theme-toggle.js",
@@ -56,7 +54,7 @@ static CALEPIN_WEBSITE: BuiltinTheme = BuiltinTheme {
     files: &[
         TemplateFile {
             path: "layout.html",
-            source: include_str!("../assets/themes/html/website/calepin-website/layout.html"),
+            source: include_str!("../assets/themes/calepin-website/layout.html"),
         },
         TemplateFile {
             path: "styles/00-code.css",
@@ -64,11 +62,11 @@ static CALEPIN_WEBSITE: BuiltinTheme = BuiltinTheme {
         },
         TemplateFile {
             path: "styles/main.css",
-            source: include_str!("../assets/themes/html/website/calepin-website/styles/main.css"),
+            source: include_str!("../assets/themes/calepin-website/styles/main.css"),
         },
         TemplateFile {
             path: "scripts/app.js",
-            source: include_str!("../assets/themes/html/website/calepin-website/scripts/app.js"),
+            source: include_str!("../assets/themes/calepin-website/scripts/app.js"),
         },
     ],
 };
