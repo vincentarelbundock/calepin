@@ -18,6 +18,7 @@
     <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/templates.html">
     <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/templates.html">
     
+    
     <meta name="color-scheme" content="light dark">
     <script>
 (() => {
@@ -53,7 +54,7 @@
     <link rel="stylesheet" href=".calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"HTML themes are supported for HTML output. Select a theme with `--theme`:\n\n```sh\ncalepin compile paper.typ --format html --theme calepin-html\n```\n\n`--theme` is optional and only applies to HTML output. Single-document HTML\nbuilds use `calepin-html` by default. Website directory builds use\n`html_theme` in `website.toml` and default to `calepin-website`. `theme` and\n`template` are accepted as backward-compatible config aliases.\n\nLocal themes are selected by pointing `--theme` or `html_theme` at the directory containing `layout.html`:\n\n```text\nthemes/my-theme/\n  layout.html\n  partials/\n  styles/main.css\n  scripts/main.js\n```\n\n`layout.html` is a MiniJinja template. `partials/` files can be included with\n`{% include \"partials/name.html\" %}`. CSS files in `styles/` and JavaScript\nfiles in `scripts/` are loaded in filename order and exposed as `styles` and\n`scripts` arrays.\n\nTemplates can access:\n\n- `doc.head`\n- `doc.body_open`\n- `doc.body`\n- `doc.body_close`\n- `doc.title`\n- `site.nav`\n- `site.nav_sections`\n- `site.toc`\n- `site.title`\n- `site.description`\n- `site.base_url`\n- `site.logo`\n- `site.logo_alt`\n- `site.home_url`\n- `site.github_url`\n- `site.current_url`\n- `site.page_title`\n- `snippets.css.code`\n- `snippets.js.copy_code`\n- `snippets.js.theme_toggle`\n- `snippets.typst.code_block`\n- `styles`\n- `scripts`\n- `syntax_css`\n- `theme`\n- `target`\n\nBundled snippets are small reusable pieces that can be used across local themes.\nFor example, an HTML theme can add shared code/output styling and copy buttons\nwithout maintaining its own CSS or JavaScript:\n\n```html\n<style>{{ snippets.css.code }}<\/style>\n<script>{{ snippets.js.copy_code }}<\/script>\n```\n\nPDF themes are Typst files, not MiniJinja templates. The bundled `calepin-pdf`\ntheme is enabled by default for `calepin compile` and website PDF builds.\nConfigure a replacement in `config.toml` or `website.toml`:\n\n```toml\npdf_theme = \"themes/pdf.typ\"\n```\n\nYou can also write `pdf_theme = \"calepin-pdf\"` explicitly; omitting\n`pdf_theme` has the same effect.\n\n`calepin-pdf` imports `/.calepin/snippets/typst/code-block.typ` and applies it\nto raw source blocks. Custom PDF themes can import the same general snippet:\n\n```typ\n#import \"/.calepin/snippets/typst/code-block.typ\": code-block\n```\n\nSet `pdf_theme = false` to disable `calepin-pdf`.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"HTML themes are supported for HTML output. Select a theme with `--theme`:\n\n```sh\ncalepin compile paper.typ --format html --theme calepin-html\n```\n\n`--theme` is optional and only applies to HTML output. Single-document HTML\nbuilds use `calepin-html` by default. Website directory builds use\n`html_theme` in `calepin.toml` and default to `calepin-website`. `theme` and\n`template` are accepted as backward-compatible config aliases.\n\nLocal themes are selected by pointing `--theme` or `html_theme` at the directory containing `layout.html`:\n\n```text\nthemes/my-theme/\n  layout.html\n  partials/\n  styles/main.css\n  scripts/main.js\n```\n\n`layout.html` is a MiniJinja template. `partials/` files can be included with\n`{% include \"partials/name.html\" %}`. CSS files in `styles/` and JavaScript\nfiles in `scripts/` are loaded in filename order and exposed as `styles` and\n`scripts` arrays.\n\nTemplates can access:\n\n- `doc.head`\n- `doc.body_open`\n- `doc.body`\n- `doc.body_close`\n- `doc.title`\n- `site.nav`\n- `site.nav_sections`\n- `site.navbar_left`\n- `site.navbar_center`\n- `site.navbar_right`\n- `site.languages`\n- `site.translations`\n- `site.language`\n- `site.toc`\n- `site.title`\n- `site.description`\n- `site.base_url`\n- `site.logo`\n- `site.logo_alt`\n- `site.home_url`\n- `site.github_url`\n- `site.current_url`\n- `site.page_title`\n- `snippets.css.theme`\n- `snippets.css.code`\n- `snippets.css.widgets`\n- `snippets.js.copy_code`\n- `snippets.js.language_picker`\n- `snippets.js.theme_toggle`\n- `snippets.typst.code_block`\n- `styles`\n- `scripts`\n- `syntax_css`\n- `theme`\n- `target`\n\nNavigation entries expose `href`, `label`, `label_html`, `active`, and `widget`. Ordinary links have `widget = none`; widget entries preserve the configured string. The bundled themes understand `widget = \"theme\"` and `widget = \"language\"`, and custom themes can define their own widget names.\n\nBundled snippets are small reusable pieces that can be used across local themes.\nFor example, an HTML theme can add shared base styling, widget styling,\ncode/output styling, and widget behavior without maintaining its own CSS or\nJavaScript:\n\n```html\n<style>{{ snippets.css.theme }}<\/style>\n<style>{{ snippets.css.code }}<\/style>\n<style>{{ snippets.css.widgets }}<\/style>\n<script>{{ snippets.js.copy_code }}<\/script>\n<script>{{ snippets.js.language_picker }}<\/script>\n<script>{{ snippets.js.theme_toggle }}<\/script>\n```\n\n`snippets.css.theme` is the shared visual base used by `calepin-html`,\n`calepin-website`, and `academic`. It defines common typography, heading sizes,\naccent variables, Pico primary colors, code/output variables, figure defaults,\nand global document defaults. Theme-specific CSS should generally be limited to\nthe HTML shell and layout differences that cannot be shared.\n\n`snippets.css.widgets` pairs with the shared JavaScript widgets:\n\n- `snippets.js.theme_toggle` enhances controls marked with `data-calepin-theme-toggle`\n- `snippets.js.language_picker` enhances selects marked with `data-calepin-language-picker`\n\nUse these snippets in custom HTML themes to keep the dark-mode control, language\npicker, code blocks, and base typography consistent with the bundled themes.\n\nPDF themes are Typst files, not MiniJinja templates. The bundled `calepin-pdf`\ntheme is enabled by default for `calepin compile` and website PDF builds.\nConfigure a replacement in `config.toml` or `calepin.toml`:\n\n```toml\npdf_theme = \"themes/pdf.typ\"\n```\n\nYou can also write `pdf_theme = \"calepin-pdf\"` explicitly; omitting\n`pdf_theme` has the same effect.\n\n`calepin-pdf` imports `/.calepin/snippets/typst/code-block.typ` and applies it\nto raw source blocks. Custom PDF themes can import the same general snippet:\n\n```typ\n#import \"/.calepin/snippets/typst/code-block.typ\": code-block\n```\n\nSet `pdf_theme = false` to disable `calepin-pdf`.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -68,19 +69,27 @@
                         
                     </a>
                 </li>
+                
+                
             </ul>
+            
             <ul>
+                
+                
+                
+                <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
+                
+                
+                
+                
+                
+                
                 <li>
                     <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
                         <option value="rendered">HTML</option>
                         <option value="source">Source</option>
                         <option value="pdf">PDF</option>
                     </select>
-                </li>
-                <li>
-                    <button id="calepin-website-theme-button" class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme: Auto" title="Theme: Auto">
-                        <span aria-hidden="true">◐</span>
-                    </button>
                 </li>
                 
                 <li>
@@ -106,11 +115,11 @@
                     
                     <ul>
                         
-                        <li><a href="index.html">Home</a></li>
+                        <li><a href="index.html" aria-label="Home">Home</a></li>
                         
-                        <li><a href="install.html">Install</a></li>
+                        <li><a href="install.html" aria-label="Install">Install</a></li>
                         
-                        <li><a href="config.html">Configuration</a></li>
+                        <li><a href="config.html" aria-label="Configuration">Configuration</a></li>
                         
                     </ul>
                     
@@ -121,15 +130,15 @@
                     
                     <ul>
                         
-                        <li><a href="parameterized_notebooks.html">Parameterized notebooks</a></li>
+                        <li><a href="parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
                         
-                        <li><a href="tables_and_figures.html">Tables and figures</a></li>
+                        <li><a href="tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
                         
-                        <li><a href="crossreferences.html">Cross-references</a></li>
+                        <li><a href="crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
                         
-                        <li><a href="templates.html" class="active" aria-current="page">HTML themes</a></li>
+                        <li><a href="templates.html" aria-label="HTML themes" class="active" aria-current="page">HTML themes</a></li>
                         
-                        <li><a href="example.html">Example notebook</a></li>
+                        <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
                         
                     </ul>
                     
@@ -140,9 +149,9 @@
                     
                     <ul>
                         
-                        <li><a href="supported-languages.html">Languages</a></li>
+                        <li><a href="supported-languages.html" aria-label="Languages">Languages</a></li>
                         
-                        <li><a href="options.html">Options</a></li>
+                        <li><a href="options.html" aria-label="Options">Options</a></li>
                         
                     </ul>
                     
@@ -153,13 +162,13 @@
                     
                     <ul>
                         
-                        <li><a href="websites.html">Overview</a></li>
+                        <li><a href="websites.html" aria-label="Overview">Overview</a></li>
                         
-                        <li><a href="website-config.html">Configuration</a></li>
+                        <li><a href="website-config.html" aria-label="Configuration">Configuration</a></li>
                         
-                        <li><a href="website-pages.html">Navigation and listings</a></li>
+                        <li><a href="website-pages.html" aria-label="Navigation and listings">Navigation and listings</a></li>
                         
-                        <li><a href="website-themes.html">Themes</a></li>
+                        <li><a href="website-themes.html" aria-label="Themes">Themes</a></li>
                         
                     </ul>
                     
@@ -170,7 +179,7 @@
                     
                     <ul>
                         
-                        <li><a href="cli.html">Command line</a></li>
+                        <li><a href="cli.html" aria-label="Command line">Command line</a></li>
                         
                     </ul>
                     
@@ -179,12 +188,16 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <p>HTML themes are supported for HTML output. Select a theme with <code>--theme</code>:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile paper.typ --format html --theme calepin-html</code></pre><p><code>--theme</code> is optional and only applies to HTML output. Single-document HTML builds use <code>calepin-html</code> by default. Website directory builds use <code>html_theme</code> in <code>website.toml</code> and default to <code>calepin-website</code>. <code>theme</code> and <code>template</code> are accepted as backward-compatible config aliases.</p><p>Local themes are selected by pointing <code>--theme</code> or <code>html_theme</code> at the directory containing <code>layout.html</code>:</p><pre><code data-lang="text">themes/my-theme/
+            <p>HTML themes are supported for HTML output. Select a theme with <code>--theme</code>:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile paper.typ --format html --theme calepin-html</code></pre><p><code>--theme</code> is optional and only applies to HTML output. Single-document HTML builds use <code>calepin-html</code> by default. Website directory builds use <code>html_theme</code> in <code>calepin.toml</code> and default to <code>calepin-website</code>. <code>theme</code> and <code>template</code> are accepted as backward-compatible config aliases.</p><p>Local themes are selected by pointing <code>--theme</code> or <code>html_theme</code> at the directory containing <code>layout.html</code>:</p><pre><code data-lang="text">themes/my-theme/
   layout.html
   partials/
   styles/main.css
-  scripts/main.js</code></pre><p><code>layout.html</code> is a MiniJinja template. <code>partials/</code> files can be included with <code>{% include "partials/name.html" %}</code>. CSS files in <code>styles/</code> and JavaScript files in <code>scripts/</code> are loaded in filename order and exposed as <code>styles</code> and <code>scripts</code> arrays.</p><p>Templates can access:</p><ul><li><code>doc.head</code></li><li><code>doc.body_open</code></li><li><code>doc.body</code></li><li><code>doc.body_close</code></li><li><code>doc.title</code></li><li><code>site.nav</code></li><li><code>site.nav_sections</code></li><li><code>site.toc</code></li><li><code>site.title</code></li><li><code>site.description</code></li><li><code>site.base_url</code></li><li><code>site.logo</code></li><li><code>site.logo_alt</code></li><li><code>site.home_url</code></li><li><code>site.github_url</code></li><li><code>site.current_url</code></li><li><code>site.page_title</code></li><li><code>snippets.css.code</code></li><li><code>snippets.js.copy_code</code></li><li><code>snippets.js.theme_toggle</code></li><li><code>snippets.typst.code_block</code></li><li><code>styles</code></li><li><code>scripts</code></li><li><code>syntax_css</code></li><li><code>theme</code></li><li><code>target</code></li></ul><p>Bundled snippets are small reusable pieces that can be used across local themes. For example, an HTML theme can add shared code/output styling and copy buttons without maintaining its own CSS or JavaScript:</p><pre><code data-lang="html">&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.code }}&lt;/<span style="color: #4b69c6">style</span>>
-&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.copy_code }}&lt;/<span style="color: #4b69c6">script</span>></code></pre><p>PDF themes are Typst files, not MiniJinja templates. The bundled <code>calepin-pdf</code> theme is enabled by default for <code>calepin compile</code> and website PDF builds. Configure a replacement in <code>config.toml</code> or <code>website.toml</code>:</p><pre><code data-lang="toml"><span style="color: #4b69c6">pdf_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/pdf.typ</span><span style="color: #198810">"</span></code></pre><p>You can also write <code>pdf_theme = "calepin-pdf"</code> explicitly; omitting <code>pdf_theme</code> has the same effect.</p><p><code>calepin-pdf</code> imports <code>/.calepin/snippets/typst/code-block.typ</code> and applies it to raw source blocks. Custom PDF themes can import the same general snippet:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"/.calepin/snippets/typst/code-block.typ"</span>: code-block</code></pre><p>Set <code>pdf_theme = false</code> to disable <code>calepin-pdf</code>.</p>
+  scripts/main.js</code></pre><p><code>layout.html</code> is a MiniJinja template. <code>partials/</code> files can be included with <code>{% include "partials/name.html" %}</code>. CSS files in <code>styles/</code> and JavaScript files in <code>scripts/</code> are loaded in filename order and exposed as <code>styles</code> and <code>scripts</code> arrays.</p><p>Templates can access:</p><ul><li><code>doc.head</code></li><li><code>doc.body_open</code></li><li><code>doc.body</code></li><li><code>doc.body_close</code></li><li><code>doc.title</code></li><li><code>site.nav</code></li><li><code>site.nav_sections</code></li><li><code>site.navbar_left</code></li><li><code>site.navbar_center</code></li><li><code>site.navbar_right</code></li><li><code>site.languages</code></li><li><code>site.translations</code></li><li><code>site.language</code></li><li><code>site.toc</code></li><li><code>site.title</code></li><li><code>site.description</code></li><li><code>site.base_url</code></li><li><code>site.logo</code></li><li><code>site.logo_alt</code></li><li><code>site.home_url</code></li><li><code>site.github_url</code></li><li><code>site.current_url</code></li><li><code>site.page_title</code></li><li><code>snippets.css.theme</code></li><li><code>snippets.css.code</code></li><li><code>snippets.css.widgets</code></li><li><code>snippets.js.copy_code</code></li><li><code>snippets.js.language_picker</code></li><li><code>snippets.js.theme_toggle</code></li><li><code>snippets.typst.code_block</code></li><li><code>styles</code></li><li><code>scripts</code></li><li><code>syntax_css</code></li><li><code>theme</code></li><li><code>target</code></li></ul><p>Navigation entries expose <code>href</code>, <code>label</code>, <code>label_html</code>, <code>active</code>, and <code>widget</code>. Ordinary links have <code>widget = none</code>; widget entries preserve the configured string. The bundled themes understand <code>widget = "theme"</code> and <code>widget = "language"</code>, and custom themes can define their own widget names.</p><p>Bundled snippets are small reusable pieces that can be used across local themes. For example, an HTML theme can add shared base styling, widget styling, code/output styling, and widget behavior without maintaining its own CSS or JavaScript:</p><pre><code data-lang="html">&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.theme }}&lt;/<span style="color: #4b69c6">style</span>>
+&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.code }}&lt;/<span style="color: #4b69c6">style</span>>
+&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.widgets }}&lt;/<span style="color: #4b69c6">style</span>>
+&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.copy_code }}&lt;/<span style="color: #4b69c6">script</span>>
+&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.language_picker }}&lt;/<span style="color: #4b69c6">script</span>>
+&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.theme_toggle }}&lt;/<span style="color: #4b69c6">script</span>></code></pre><p><code>snippets.css.theme</code> is the shared visual base used by <code>calepin-html</code>, <code>calepin-website</code>, and <code>academic</code>. It defines common typography, heading sizes, accent variables, Pico primary colors, code/output variables, figure defaults, and global document defaults. Theme-specific CSS should generally be limited to the HTML shell and layout differences that cannot be shared.</p><p><code>snippets.css.widgets</code> pairs with the shared JavaScript widgets:</p><ul><li><code>snippets.js.theme_toggle</code> enhances controls marked with <code>data-calepin-theme-toggle</code></li><li><code>snippets.js.language_picker</code> enhances selects marked with <code>data-calepin-language-picker</code></li></ul><p>Use these snippets in custom HTML themes to keep the dark-mode control, language picker, code blocks, and base typography consistent with the bundled themes.</p><p>PDF themes are Typst files, not MiniJinja templates. The bundled <code>calepin-pdf</code> theme is enabled by default for <code>calepin compile</code> and website PDF builds. Configure a replacement in <code>config.toml</code> or <code>calepin.toml</code>:</p><pre><code data-lang="toml"><span style="color: #4b69c6">pdf_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/pdf.typ</span><span style="color: #198810">"</span></code></pre><p>You can also write <code>pdf_theme = "calepin-pdf"</code> explicitly; omitting <code>pdf_theme</code> has the same effect.</p><p><code>calepin-pdf</code> imports <code>/.calepin/snippets/typst/code-block.typ</code> and applies it to raw source blocks. Custom PDF themes can import the same general snippet:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"/.calepin/snippets/typst/code-block.typ"</span>: code-block</code></pre><p>Set <code>pdf_theme = false</code> to disable <code>calepin-pdf</code>.</p>
         </main>
         
     </div>
@@ -299,24 +312,212 @@
     
     
 <script>
-/* Calepin website behaviour, consolidated.
- *
- * One module-local script wires: theme toggle, view switcher (HTML/Source/PDF),
- * the mobile sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal
- * link state preservation, and the native <dialog> video lightbox.
- *
- * The Rust theme loader inlines this file into a <script> at the end of <body>,
- * so the DOM already exists when it runs and no DOMContentLoaded guard is
- * needed. Theme is applied first to keep any flash as short as possible. */
 (() => {
   "use strict";
 
-  const THEME = {
-    storageKey: "calepin-website-theme",
-    param: "theme",
-    order: ["", "light", "dark"],
-    labels: { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" },
+  const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
+  if (!buttons.length) return;
+
+  const order = ["", "light", "dark"];
+  const labels = { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" };
+  const icons = {
+    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
+    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
+    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
   };
+
+  const normalize = (value) => value === "light" || value === "dark" ? value : "";
+  const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
+  const urlParam = (button) => button.dataset.calepinThemeParam || "";
+
+  function readUrl(button) {
+    const param = urlParam(button);
+    if (!param) return "";
+    try {
+      return normalize(new URL(window.location.href).searchParams.get(param) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function clearUrl(button) {
+    const param = urlParam(button);
+    if (!param) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete(param);
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      /* ignore URL errors */
+    }
+  }
+
+  function readStored(button) {
+    try {
+      return normalize(localStorage.getItem(storageKey(button)) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function writeStored(button, value) {
+    try {
+      if (value) localStorage.setItem(storageKey(button), value);
+      else localStorage.removeItem(storageKey(button));
+    } catch {
+      /* ignore storage errors */
+    }
+  }
+
+  function readTheme(button) {
+    const fromUrl = readUrl(button);
+    if (fromUrl) {
+      writeStored(button, fromUrl);
+      clearUrl(button);
+      return fromUrl;
+    }
+    return readStored(button);
+  }
+
+  function applyTheme(value) {
+    const theme = normalize(value);
+    if (theme) {
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+    } else {
+      delete document.documentElement.dataset.theme;
+      document.documentElement.style.colorScheme = "";
+    }
+    buttons.forEach((button) => {
+      const label = labels[theme] || labels[""];
+      button.innerHTML = icons[theme] || icons[""];
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    });
+  }
+
+  applyTheme(readTheme(buttons[0]));
+
+  buttons.forEach((button) => {
+    if (button.dataset.calepinThemeBound === "true") return;
+    button.dataset.calepinThemeBound = "true";
+    button.addEventListener("click", () => {
+      const current = normalize(document.documentElement.dataset.theme || "");
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      applyTheme(next);
+      writeStored(button, next);
+    });
+  });
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) applyTheme(readTheme(buttons[0]));
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
+  });
+})();
+
+    </script>
+<script>
+(() => {
+  "use strict";
+
+  const selects = document.querySelectorAll("select[data-calepin-language-picker]");
+  if (!selects.length) return;
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function languageIcon() {
+    return `<svg class="calepin-language-picker-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a13.5 13.5 0 0 1 0 18"></path><path d="M12 3a13.5 13.5 0 0 0 0 18"></path></svg>`;
+  }
+
+  function closeAll(except) {
+    document.querySelectorAll(".calepin-language-picker.is-open").forEach((picker) => {
+      if (picker === except) return;
+      picker.classList.remove("is-open");
+      const button = picker.querySelector("button");
+      if (button) button.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function enhance(select) {
+    if (select.dataset.calepinLanguageBound === "true") return;
+    select.dataset.calepinLanguageBound = "true";
+
+    const options = Array.from(select.options).filter((option) => option.value);
+    if (options.length <= 1) return;
+
+    const selected = options.find((option) => option.selected) || options[0];
+    const picker = document.createElement("div");
+    picker.className = "calepin-language-picker";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "calepin-language-picker-button outline secondary";
+    button.setAttribute("aria-haspopup", "menu");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-label", select.getAttribute("aria-label") || "Language");
+    button.innerHTML = `${languageIcon()}<span>${escapeHtml(selected.textContent)}</span>`;
+
+    const menu = document.createElement("div");
+    menu.className = "calepin-language-picker-menu";
+    menu.setAttribute("role", "menu");
+
+    options.forEach((option) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.dataset.href = option.value;
+      item.innerHTML = `${languageIcon()}<span>${escapeHtml(option.textContent)}</span>`;
+      if (option.selected) item.setAttribute("aria-current", "true");
+      item.addEventListener("click", () => {
+        window.location.href = option.value;
+      });
+      menu.appendChild(item);
+    });
+
+    button.addEventListener("click", () => {
+      const open = !picker.classList.contains("is-open");
+      closeAll(open ? picker : null);
+      picker.classList.toggle("is-open", open);
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    picker.append(button, menu);
+    select.hidden = true;
+    select.insertAdjacentElement("afterend", picker);
+  }
+
+  selects.forEach(enhance);
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".calepin-language-picker")) closeAll();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAll();
+  });
+})();
+
+    </script>
+<script>
+/* Calepin website behaviour, consolidated.
+ *
+ * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
+ * sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal link state
+ * preservation, and the native <dialog> video lightbox.
+ *
+ * The Rust theme loader inlines this file into a <script> at the end of <body>,
+ * so the DOM already exists when it runs and no DOMContentLoaded guard is
+ * needed. */
+(() => {
+  "use strict";
 
   const VIEW = {
     storageKey: "calepin-website-view-mode",
@@ -328,12 +529,6 @@
 
   const MOBILE_QUERY = "(max-width: 56rem)";
   const SOURCE_DATA_ID = "calepin-website-source-data";
-
-  const THEME_ICONS = {
-    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
-    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
-    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
-  };
 
   const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
   const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
@@ -407,55 +602,6 @@
   }
 
   const getMain = () => document.querySelector(".calepin-website-main");
-
-  // ------------------------------------------------------------------ theme
-
-  const normalizeTheme = (value) =>
-    value === "light" || value === "dark" ? value : "";
-
-  function currentTheme() {
-    return normalizeTheme(document.documentElement.dataset.theme || "");
-  }
-
-  function applyTheme(themeName, button) {
-    const next = normalizeTheme(themeName);
-    const root = document.documentElement;
-    if (next) {
-      root.dataset.theme = next;
-      root.style.colorScheme = next;
-    } else {
-      delete root.dataset.theme;
-      root.style.colorScheme = "";
-    }
-
-    if (button) {
-      const label = THEME.labels[next] || THEME.labels[""];
-      button.innerHTML = THEME_ICONS[next] || THEME_ICONS[""];
-      button.setAttribute("aria-label", label);
-      button.setAttribute("title", label);
-    }
-  }
-
-  function readTheme() {
-    const fromUrl = readUrlParam(THEME.param, normalizeTheme);
-    if (fromUrl) {
-      writeStored(THEME.storageKey, fromUrl);
-      updateCurrentUrlParam(THEME.param, "");
-      return fromUrl;
-    }
-    return readStored(THEME.storageKey, normalizeTheme, "");
-  }
-
-  function initTheme(button) {
-    applyTheme(readTheme(), button);
-    if (!button) return;
-    button.onclick = () => {
-      const index = THEME.order.indexOf(currentTheme());
-      const next = THEME.order[(index + 1) % THEME.order.length];
-      applyTheme(next, button);
-      writeStored(THEME.storageKey, next);
-    };
-  }
 
   // ------------------------------------------------------------------- view
 
@@ -784,11 +930,10 @@
 
   // --------------------------------------------------------- link state
 
-  function urlWithState(href, themeButton, viewSelect) {
+  function urlWithState(href, viewSelect) {
     if (!isInternalPageHref(href)) return href;
     try {
       const url = new URL(href, window.location.href);
-      setUrlParam(url, THEME.param, "");
       const view = currentView(viewSelect);
       setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
       return url.toString();
@@ -797,16 +942,16 @@
     }
   }
 
-  function preserveStateInLinks(themeButton, viewSelect) {
+  function preserveStateInLinks(viewSelect) {
     document.querySelectorAll("a[href]").forEach((link) => {
       const href = link.getAttribute("href");
       if (!isInternalPageHref(href)) return;
-      const next = urlWithState(href, themeButton, viewSelect);
+      const next = urlWithState(href, viewSelect);
       if (next && next !== href) link.setAttribute("href", next);
     });
   }
 
-  function initLinkInterception(nav, themeButton, viewSelect) {
+  function initLinkInterception(nav, viewSelect) {
     document.addEventListener("click", (event) => {
       const tocLink = event.target.closest(".calepin-website-toc a");
       if (tocLink) {
@@ -831,7 +976,7 @@
       if (isSidebar && isMobile()) nav.close();
 
       const href = link.getAttribute("href");
-      const next = urlWithState(href, themeButton, viewSelect);
+      const next = urlWithState(href, viewSelect);
       if (next && next !== href) {
         event.preventDefault();
         window.location.href = next;
@@ -870,31 +1015,25 @@
 
   // --------------------------------------------------------------- bootstrap
 
-  const themeButton = document.getElementById("calepin-website-theme-button");
   const viewSelect = document.getElementById("calepin-website-view-mode");
 
-  initTheme(themeButton);
   initView(viewSelect);
   const nav = createNav();
   initCopy();
   inlineSvgs();
   initDialogs();
-  preserveStateInLinks(themeButton, viewSelect);
-  initLinkInterception(nav, themeButton, viewSelect);
+  preserveStateInLinks(viewSelect);
+  initLinkInterception(nav, viewSelect);
 
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
-    initTheme(themeButton);
     initView(viewSelect);
     initCopy();
-    preserveStateInLinks(themeButton, viewSelect);
+    preserveStateInLinks(viewSelect);
   });
 
   window.addEventListener("storage", (event) => {
-    if (event.key === THEME.storageKey) {
-      initTheme(themeButton);
-      preserveStateInLinks(themeButton, viewSelect);
-    } else if (event.key === VIEW.storageKey) {
+    if (event.key === VIEW.storageKey) {
       initView(viewSelect);
     }
   });

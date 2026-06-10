@@ -53,6 +53,52 @@ When `base_url` is set, _Calepin_ also writes `sitemap.xml`.
 
 `logo_alt` controls the image alt text. If no logo is configured, the bundled theme uses `title` as a text brand. `home` controls the brand link destination and defaults to `index.html`. `github_url` adds a GitHub link to the top bar.
 
+== Build page selection
+
+Sidebar and navbar settings control navigation, not the complete build set. When a sidebar is configured, use `[pages]` to add pages that should be rendered even though they are not listed in the navigation:
+
+```toml
+[pages]
+include = ["landing/*.typ", "legal/privacy.typ"]
+exclude = ["drafts/**"]
+```
+
+`include` and `exclude` entries are paths or glob patterns relative to the website source directory. In multilingual sites, the same patterns apply relative to each language's `content_dir`. `exclude` removes matching pages from the build set and from generated navigation.
+
+Each content root's `index.typ` and `404.typ` are always rendered when present, even if they are not listed in the sidebar or navbar. This applies to the site root in a single-language site, and to each configured language `content_dir` in a multilingual site. Nested files such as `blog/index.typ` are not implicit; add them through navigation or `[pages].include` when they should be built.
+
+== Multilingual sites
+
+Configure languages in `calepin.toml` with one content directory per language:
+
+```toml
+default_language = "en"
+
+[languages.en]
+label = "English"
+content_dir = "."
+
+[languages.fr]
+label = "Français"
+content_dir = "fr"
+```
+
+With this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; non-default languages use their language code as the URL prefix by default, such as `fr/about.html`.
+
+Use page metadata to keep translations linked when files move or slugs differ:
+
+```typ
+#metadata((
+  title: "À propos",
+  translation_key: "about",
+  slug: "a-propos",
+)) <website-metadata>
+```
+
+The bundled website themes render a language picker when more than one language is configured. The picker shows each configured `label`; write labels in the language itself, such as `English`, `Français`, or `Deutsch`. The picker links to the matching translated page when one exists, and otherwise falls back to that language's home page. Pages with translations also emit alternate links. `url_prefix` can override a language's URL prefix.
+
+Navigation is language-aware. Sidebar and navbar links to local pages are shown only for the current page's language, while external navbar links remain global. This lets each language directory keep parallel navigation without showing both `about.html` and `fr/about.html` in the same bar.
+
 == Sitemap
 
 When `base_url` is configured, _Calepin_ writes `sitemap.xml` in the output directory:

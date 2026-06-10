@@ -1,0 +1,102 @@
+[data-calepin-theme-toggle] {
+  display: inline-grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  line-height: 1;
+}
+
+[data-calepin-theme-toggle] svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: inherit;
+  stroke: currentColor;
+  fill: none;
+}
+
+[data-calepin-theme-toggle] svg path[fill="currentColor"] {
+  fill: currentColor;
+}
+
+.calepin-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  width: 1.05em;
+  height: 1.05em;
+  flex: 0 0 auto;
+}
+
+.calepin-nav-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+a:has(.calepin-nav-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.calepin-language-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.calepin-language-picker-button,
+.calepin-language-picker-menu button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.calepin-language-picker-button {
+  min-height: 2.2rem;
+  margin: 0;
+  padding: 0.25rem 0.55rem;
+}
+
+.calepin-language-picker-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.calepin-language-picker-menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 40;
+  display: none;
+  min-width: 100%;
+  padding: 0.25rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 6px;
+  background: var(--pico-background-color);
+  box-shadow: var(--pico-card-box-shadow);
+}
+
+.calepin-language-picker.is-open .calepin-language-picker-menu {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.calepin-language-picker-menu button {
+  width: 100%;
+  min-height: 2rem;
+  margin: 0;
+  padding: 0.25rem 0.45rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.calepin-language-picker-menu button:hover,
+.calepin-language-picker-menu button:focus-visible,
+.calepin-language-picker-menu button[aria-current="true"] {
+  background: var(--pico-muted-border-color);
+}

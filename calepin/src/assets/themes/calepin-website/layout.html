@@ -1,3 +1,22 @@
+{%- macro navbar_items(items, languages) %}
+                {% for item in items %}
+                {% if item.widget == "theme" %}
+                <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="{{ item.label }}" title="{{ item.label }}" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">{{ item.label_html }}</button></li>
+                {% elif item.widget == "language" %}
+                {% if languages and languages | length > 1 %}
+                <li>
+                    <select class="calepin-website-view-mode" aria-label="{{ item.label }}" data-calepin-language-picker>
+                        {% for language in languages %}
+                        <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
+                        {% endfor %}
+                    </select>
+                </li>
+                {% endif %}
+                {% else %}
+                <li><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
+                {% endif %}
+                {% endfor %}
+{%- endmacro -%}
 {{ doc.head }}
     {% if not doc.title %}
     {% if site.page_title or site.title %}
@@ -22,6 +41,9 @@
     <link rel="canonical" href="{{ site.current_url }}">
     <meta property="og:url" content="{{ site.current_url }}">
     {% endif %}
+    {% for translation in site.translations %}
+    <link rel="alternate" hreflang="{{ translation.code }}" href="{{ translation.href }}">
+    {% endfor %}
     <meta name="color-scheme" content="light dark">
     <script>
 (() => {
@@ -80,19 +102,21 @@
                         {% endif %}
                     </a>
                 </li>
+                {{ navbar_items(site.navbar_left, site.languages) }}
             </ul>
+            {% if site.navbar_center %}
+            <ul class="calepin-website-navbar-center">
+                {{ navbar_items(site.navbar_center, site.languages) }}
+            </ul>
+            {% endif %}
             <ul>
+                {{ navbar_items(site.navbar_right, site.languages) }}
                 <li>
                     <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
                         <option value="rendered">HTML</option>
                         <option value="source">Source</option>
                         <option value="pdf">PDF</option>
                     </select>
-                </li>
-                <li>
-                    <button id="calepin-website-theme-button" class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme: Auto" title="Theme: Auto">
-                        <span aria-hidden="true">◐</span>
-                    </button>
                 </li>
                 {% if site.github_url %}
                 <li>
@@ -118,7 +142,7 @@
                     {% endif %}
                     <ul>
                         {% for item in section.items %}
-                        <li><a href="{{ item.href }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a></li>
+                        <li><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
                         {% endfor %}
                     </ul>
                     {% endif %}
@@ -126,7 +150,7 @@
                 {% elif site.nav %}
                     <ul>
                         {% for item in site.nav %}
-                        <li><a href="{{ item.href }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a></li>
+                        <li><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
                         {% endfor %}
                     </ul>
                 {% endif %}

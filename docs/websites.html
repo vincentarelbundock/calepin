@@ -18,6 +18,7 @@
     <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/websites.html">
     <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/websites.html">
     
+    
     <meta name="color-scheme" content="light dark">
     <script>
 (() => {
@@ -53,7 +54,7 @@
     <link rel="stylesheet" href=".calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"= Static website generator\n\n_Calepin_ can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source `.typ` files live in `docs/`, and the generated `.html`, `.pdf`, and `sitemap.xml` files are written back into `docs/` for GitHub Pages.\n\nThis page covers the build workflow. See also:\n\n- #link(\"website-config.html\")[Site configuration] for `website.toml` settings\n- #link(\"website-pages.html\")[Navigation and listings] for the sidebar, page titles, and blog-style page listings\n- #link(\"website-themes.html\")[Themes] for HTML theme customization\n\n== Create a website\n\nUse `calepin new website` to scaffold a minimal site:\n\n```sh\ncalepin new website\n```\n\nThis creates:\n\n- `website.toml`\n- `docs/index.typ`\n- `docs/404.typ`\n\n== Build pages\n\nCompile a website directory with the same `compile` command used for a single Typst document:\n\n```sh\ncalepin compile docs public --config website.toml\n```\n\nWhen the input path is a directory, `--config website.toml` is required. The first positional argument is the website source directory. The optional second positional argument is the website output directory.\n\nFor GitHub Pages publishing from `docs/`, build in place by passing `docs` as both the input and output directory:\n\n```sh\ncalepin compile docs docs --config website.toml\n```\n\nIf the output directory is omitted, _Calepin_ writes output beside the source files:\n\n```sh\ncalepin compile docs --config website.toml\n```\n\nBy default, each `.typ` page produces two outputs:\n\n- `page.html`\n- `page.pdf`\n\nPDF rendering can be disabled for the whole site in `website.toml`:\n\n```toml\npdf = false\n```\n\nIndividual pages can override the site setting with a `pdf` entry in their `<website-metadata>` metadata. This is useful to skip the PDF for a few heavy pages, or to render PDFs only for selected pages when the site default is off:\n\n```typ\n#metadata((pdf: false)) <website-metadata>\n```\n\nUse `--format html` to write only HTML, regardless of configuration and page metadata:\n\n```sh\ncalepin compile docs public --config website.toml --format html\n```\n\nDirectory website builds do not support `--format pdf`, `--format png`, or `--format svg`; those formats are for single-document `calepin compile`.\n\nWebsite builds use the same preprocess cache as single-document compilation. After a successful page build, _Calepin_ writes a fingerprint next to the page's `results.json`. Later builds reuse that file when the chunk code, parameters, execution options, configured tools, and source-relative cache paths match. This means `make serve` does not need to re-execute expensive chunks in pages such as `example.typ` when nothing relevant changed.\n\nGenerated outputs are tracked in `.calepin/website-manifest.json`. Later builds use that manifest to remove stale generated files when pages are deleted or renamed. Full builds also scan the output directory for unexpected generated `.html` and `.pdf` files, while preserving static assets in directories such as `assets/`, `.calepin/`, `.git/`, `target/`, `node_modules/`, and `.venv/`.\n\n== Watch changes\n\nDuring development, watch the website source directory:\n\n```sh\ncalepin watch docs docs --config website.toml\n```\n\nAs with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing `.typ` page edits go through a fast xxh3 fingerprint lookup:\n\n- If the changed page hash is new, _Calepin_ rebuilds only that page.\n- If the file was touched but the hash is unchanged, _Calepin_ skips the rebuild.\n- If navigation or page metadata changed after an incremental rebuild, _Calepin_ falls back to a full rebuild.\n\n_Calepin_ also falls back to a full rebuild for changes that can affect more than one page:\n\n- `website.toml`\n- theme files\n- assets\n- new `.typ` pages\n- removed `.typ` pages\n- renamed `.typ` pages\n- unknown or non-page inputs\n\n== Watch and serve locally\n\nTo rebuild and serve in one command:\n\n```sh\ncalepin watch docs docs --config website.toml --serve\n```\n\nThe server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds. When a rebuild fails, the open pages display the build error as an overlay, and reload automatically once a later rebuild succeeds.\n\nThe default bind address is `127.0.0.1`, on the first free port starting at 8000. Use `--port` to pin a specific port; _Calepin_ then fails instead of falling back to another port:\n\n```sh\ncalepin watch docs docs --config website.toml --serve --port 8001\n```\n\nYou can also bind another interface:\n\n```sh\ncalepin watch docs docs --config website.toml --serve --host 0.0.0.0 --port 8001\n```\n\n== Serve built files\n\nServe an already-built static directory with:\n\n```sh\ncalepin serve docs\n```\n\nThe static server:\n\n- serves files from the requested directory\n- maps directory requests to `index.html`\n- rejects path traversal\n- supports `GET` and `HEAD`\n- guesses content types from file extensions\n- picks the first free port from 8000 when `--port` is not given, and reports a clear error when a pinned port is already in use\n\nUse `--host` and `--port` to change the bind address:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\n== Current limitations\n\nThe website generator is intentionally small. It does not yet implement:\n\n- dependency-aware rebuilds for imported shared `.typ` files\n- drafts\n- taxonomies\n- pagination\n- search indexes\n- feeds\n- robots.txt generation\n- Sass or SCSS compilation\n- link checking\n- automatic browser opening\n\nThese can be added without changing the current command shape: `new`, `compile`, `watch`, and `serve`.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"= Static website generator\n\n_Calepin_ can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source `.typ` files live in `docs/`, and the generated `.html`, `.pdf`, and `sitemap.xml` files are written back into `docs/` for GitHub Pages.\n\nThis page covers the build workflow. See also:\n\n- #link(\"website-config.html\")[Site configuration] for `calepin.toml` settings\n- #link(\"website-pages.html\")[Navigation and listings] for the sidebar, page titles, and blog-style page listings\n- #link(\"website-themes.html\")[Themes] for HTML theme customization\n\n== Create a website\n\nUse `calepin new website` to scaffold a minimal site:\n\n```sh\ncalepin new website\n```\n\nThis creates:\n\n- `docs/calepin.toml`\n- `docs/index.typ`\n- `docs/404.typ`\n\n== Build pages\n\nCompile a website directory with the same `compile` command used for a single Typst document:\n\n```sh\ncalepin compile docs public\n```\n\nWhen the input path is a directory, _Calepin_ looks for `calepin.toml` at the root of that directory (`website.toml` is accepted as a deprecated fallback). An explicit `--config <path>` supersedes the automatic lookup; if no config is found either way, the build fails. The first positional argument is the website source directory. The optional second positional argument is the website output directory.\n\nFor GitHub Pages publishing from `docs/`, build in place by passing `docs` as both the input and output directory:\n\n```sh\ncalepin compile docs docs\n```\n\nIf the output directory is omitted, _Calepin_ writes output beside the source files:\n\n```sh\ncalepin compile docs\n```\n\nBy default, each `.typ` page produces two outputs:\n\n- `page.html`\n- `page.pdf`\n\nPDF rendering can be disabled for the whole site in `calepin.toml`:\n\n```toml\npdf = false\n```\n\nIndividual pages can override the site setting with a `pdf` entry in their `<website-metadata>` metadata. This is useful to skip the PDF for a few heavy pages, or to render PDFs only for selected pages when the site default is off:\n\n```typ\n#metadata((pdf: false)) <website-metadata>\n```\n\nUse `--format html` to write only HTML, regardless of configuration and page metadata:\n\n```sh\ncalepin compile docs public --format html\n```\n\nDirectory website builds do not support `--format pdf`, `--format png`, or `--format svg`; those formats are for single-document `calepin compile`.\n\nWebsite builds use the same preprocess cache as single-document compilation. After a successful page build, _Calepin_ writes a fingerprint next to the page's `results.json`. Later builds reuse that file when the chunk code, parameters, execution options, configured tools, and source-relative cache paths match. This means `make serve` does not need to re-execute expensive chunks in pages such as `example.typ` when nothing relevant changed.\n\nGenerated outputs are tracked in `.calepin/website-manifest.json`. Later builds use that manifest to remove stale generated files when pages are deleted or renamed.\n\nWhen the source and output directories are different, full builds also scan the output directory for unexpected generated `.html` and `.pdf` files, while preserving static assets in directories such as `assets/`, `.calepin/`, `.git/`, `target/`, `node_modules/`, and `.venv/`. In-place builds are more conservative: _Calepin_ overwrites the pages it renders, but does not delete every `.html` or `.pdf` file in the source directory. This avoids removing files that were checked in, copied by another tool, or intentionally managed outside the current website build.\n\n== Watch changes\n\nDuring development, watch the website source directory:\n\n```sh\ncalepin watch docs docs\n```\n\nAs with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing `.typ` page edits go through a fast xxh3 fingerprint lookup:\n\n- If the changed page hash is new, _Calepin_ rebuilds only that page.\n- If the file was touched but the hash is unchanged, _Calepin_ skips the rebuild.\n- If navigation or page metadata changed after an incremental rebuild, _Calepin_ falls back to a full rebuild.\n\n_Calepin_ also falls back to a full rebuild for changes that can affect more than one page:\n\n- `calepin.toml`\n- theme files\n- assets\n- new `.typ` pages\n- removed `.typ` pages\n- renamed `.typ` pages\n- unknown or non-page inputs\n\n== Watch and serve locally\n\nTo rebuild and serve in one command:\n\n```sh\ncalepin watch docs docs --serve\n```\n\nThe server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds. When a rebuild fails, the open pages display the build error as an overlay, and reload automatically once a later rebuild succeeds.\n\nThe default bind address is `127.0.0.1`, on the first free port starting at 8000. Use `--port` to pin a specific port; _Calepin_ then fails instead of falling back to another port:\n\n```sh\ncalepin watch docs docs --serve --port 8001\n```\n\nYou can also bind another interface:\n\n```sh\ncalepin watch docs docs --serve --host 0.0.0.0 --port 8001\n```\n\n== Serve built files\n\nServe an already-built static directory with:\n\n```sh\ncalepin serve docs\n```\n\nThe static server:\n\n- serves files from the requested directory\n- maps directory requests to `index.html`\n- rejects path traversal\n- supports `GET` and `HEAD`\n- guesses content types from file extensions\n- picks the first free port from 8000 when `--port` is not given, and reports a clear error when a pinned port is already in use\n\nUse `--host` and `--port` to change the bind address:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\n== Current limitations\n\nThe website generator is intentionally small. It does not yet implement:\n\n- dependency-aware rebuilds for imported shared `.typ` files\n- drafts\n- taxonomies\n- pagination\n- search indexes\n- feeds\n- robots.txt generation\n- Sass or SCSS compilation\n- link checking\n- automatic browser opening\n\nThese can be added without changing the current command shape: `new`, `compile`, `watch`, and `serve`.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -68,19 +69,27 @@
                         
                     </a>
                 </li>
+                
+                
             </ul>
+            
             <ul>
+                
+                
+                
+                <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
+                
+                
+                
+                
+                
+                
                 <li>
                     <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
                         <option value="rendered">HTML</option>
                         <option value="source">Source</option>
                         <option value="pdf">PDF</option>
                     </select>
-                </li>
-                <li>
-                    <button id="calepin-website-theme-button" class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme: Auto" title="Theme: Auto">
-                        <span aria-hidden="true">◐</span>
-                    </button>
                 </li>
                 
                 <li>
@@ -106,11 +115,11 @@
                     
                     <ul>
                         
-                        <li><a href="index.html">Home</a></li>
+                        <li><a href="index.html" aria-label="Home">Home</a></li>
                         
-                        <li><a href="install.html">Install</a></li>
+                        <li><a href="install.html" aria-label="Install">Install</a></li>
                         
-                        <li><a href="config.html">Configuration</a></li>
+                        <li><a href="config.html" aria-label="Configuration">Configuration</a></li>
                         
                     </ul>
                     
@@ -121,15 +130,15 @@
                     
                     <ul>
                         
-                        <li><a href="parameterized_notebooks.html">Parameterized notebooks</a></li>
+                        <li><a href="parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
                         
-                        <li><a href="tables_and_figures.html">Tables and figures</a></li>
+                        <li><a href="tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
                         
-                        <li><a href="crossreferences.html">Cross-references</a></li>
+                        <li><a href="crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
                         
-                        <li><a href="templates.html">HTML themes</a></li>
+                        <li><a href="templates.html" aria-label="HTML themes">HTML themes</a></li>
                         
-                        <li><a href="example.html">Example notebook</a></li>
+                        <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
                         
                     </ul>
                     
@@ -140,9 +149,9 @@
                     
                     <ul>
                         
-                        <li><a href="supported-languages.html">Languages</a></li>
+                        <li><a href="supported-languages.html" aria-label="Languages">Languages</a></li>
                         
-                        <li><a href="options.html">Options</a></li>
+                        <li><a href="options.html" aria-label="Options">Options</a></li>
                         
                     </ul>
                     
@@ -153,13 +162,13 @@
                     
                     <ul>
                         
-                        <li><a href="websites.html" class="active" aria-current="page">Overview</a></li>
+                        <li><a href="websites.html" aria-label="Overview" class="active" aria-current="page">Overview</a></li>
                         
-                        <li><a href="website-config.html">Configuration</a></li>
+                        <li><a href="website-config.html" aria-label="Configuration">Configuration</a></li>
                         
-                        <li><a href="website-pages.html">Navigation and listings</a></li>
+                        <li><a href="website-pages.html" aria-label="Navigation and listings">Navigation and listings</a></li>
                         
-                        <li><a href="website-themes.html">Themes</a></li>
+                        <li><a href="website-themes.html" aria-label="Themes">Themes</a></li>
                         
                     </ul>
                     
@@ -170,7 +179,7 @@
                     
                     <ul>
                         
-                        <li><a href="cli.html">Command line</a></li>
+                        <li><a href="cli.html" aria-label="Command line">Command line</a></li>
                         
                     </ul>
                     
@@ -179,7 +188,7 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h2 id="static-website-generator">Static website generator</h2><p><em>Calepin</em> can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source <code>.typ</code> files live in <code>docs/</code>, and the generated <code>.html</code>, <code>.pdf</code>, and <code>sitemap.xml</code> files are written back into <code>docs/</code> for GitHub Pages.</p><p>This page covers the build workflow. See also:</p><ul><li><a href="website-config.html">Site configuration</a> for <code>website.toml</code> settings</li><li><a href="website-pages.html">Navigation and listings</a> for the sidebar, page titles, and blog-style page listings</li><li><a href="website-themes.html">Themes</a> for HTML theme customization</li></ul><h3 id="create-a-website">Create a website</h3><p>Use <code>calepin new website</code> to scaffold a minimal site:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> new website</code></pre><p>This creates:</p><ul><li><code>website.toml</code></li><li><code>docs/index.typ</code></li><li><code>docs/404.typ</code></li></ul><h3 id="build-pages">Build pages</h3><p>Compile a website directory with the same <code>compile</code> command used for a single Typst document:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs public --config website.toml</code></pre><p>When the input path is a directory, <code>--config website.toml</code> is required. The first positional argument is the website source directory. The optional second positional argument is the website output directory.</p><p>For GitHub Pages publishing from <code>docs/</code>, build in place by passing <code>docs</code> as both the input and output directory:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs docs --config website.toml</code></pre><p>If the output directory is omitted, <em>Calepin</em> writes output beside the source files:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs --config website.toml</code></pre><p>By default, each <code>.typ</code> page produces two outputs:</p><ul><li><code>page.html</code></li><li><code>page.pdf</code></li></ul><p>PDF rendering can be disabled for the whole site in <code>website.toml</code>:</p><pre><code data-lang="toml"><span style="color: #4b69c6">pdf</span> = <span style="color: #d73948">false</span></code></pre><p>Individual pages can override the site setting with a <code>pdf</code> entry in their <code>&lt;website-metadata></code> metadata. This is useful to skip the PDF for a few heavy pages, or to render PDFs only for selected pages when the site default is off:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((pdf: <span style="color: #d73948">false</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p>Use <code>--format html</code> to write only HTML, regardless of configuration and page metadata:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs public --config website.toml --format html</code></pre><p>Directory website builds do not support <code>--format pdf</code>, <code>--format png</code>, or <code>--format svg</code>; those formats are for single-document <code>calepin compile</code>.</p><p>Website builds use the same preprocess cache as single-document compilation. After a successful page build, <em>Calepin</em> writes a fingerprint next to the page’s <code>results.json</code>. Later builds reuse that file when the chunk code, parameters, execution options, configured tools, and source-relative cache paths match. This means <code>make serve</code> does not need to re-execute expensive chunks in pages such as <code>example.typ</code> when nothing relevant changed.</p><p>Generated outputs are tracked in <code>.calepin/website-manifest.json</code>. Later builds use that manifest to remove stale generated files when pages are deleted or renamed. Full builds also scan the output directory for unexpected generated <code>.html</code> and <code>.pdf</code> files, while preserving static assets in directories such as <code>assets/</code>, <code>.calepin/</code>, <code>.git/</code>, <code>target/</code>, <code>node_modules/</code>, and <code>.venv/</code>.</p><h3 id="watch-changes">Watch changes</h3><p>During development, watch the website source directory:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --config website.toml</code></pre><p>As with <code>compile</code>, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing <code>.typ</code> page edits go through a fast xxh3 fingerprint lookup:</p><ul><li>If the changed page hash is new, <em>Calepin</em> rebuilds only that page.</li><li>If the file was touched but the hash is unchanged, <em>Calepin</em> skips the rebuild.</li><li>If navigation or page metadata changed after an incremental rebuild, <em>Calepin</em> falls back to a full rebuild.</li></ul><p><em>Calepin</em> also falls back to a full rebuild for changes that can affect more than one page:</p><ul><li><code>website.toml</code></li><li>theme files</li><li>assets</li><li>new <code>.typ</code> pages</li><li>removed <code>.typ</code> pages</li><li>renamed <code>.typ</code> pages</li><li>unknown or non-page inputs</li></ul><h3 id="watch-and-serve-locally">Watch and serve locally</h3><p>To rebuild and serve in one command:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --config website.toml --serve</code></pre><p>The server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds. When a rebuild fails, the open pages display the build error as an overlay, and reload automatically once a later rebuild succeeds.</p><p>The default bind address is <code>127.0.0.1</code>, on the first free port starting at 8000. Use <code>--port</code> to pin a specific port; <em>Calepin</em> then fails instead of falling back to another port:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --config website.toml --serve --port 8001</code></pre><p>You can also bind another interface:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --config website.toml --serve --host 0.0.0.0 --port 8001</code></pre><h3 id="serve-built-files">Serve built files</h3><p>Serve an already-built static directory with:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> serve docs</code></pre><p>The static server:</p><ul><li>serves files from the requested directory</li><li>maps directory requests to <code>index.html</code></li><li>rejects path traversal</li><li>supports <code>GET</code> and <code>HEAD</code></li><li>guesses content types from file extensions</li><li>picks the first free port from 8000 when <code>--port</code> is not given, and reports a clear error when a pinned port is already in use</li></ul><p>Use <code>--host</code> and <code>--port</code> to change the bind address:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> serve docs --host 127.0.0.1 --port 8001</code></pre><h3 id="current-limitations">Current limitations</h3><p>The website generator is intentionally small. It does not yet implement:</p><ul><li>dependency-aware rebuilds for imported shared <code>.typ</code> files</li><li>drafts</li><li>taxonomies</li><li>pagination</li><li>search indexes</li><li>feeds</li><li>robots.txt generation</li><li>Sass or SCSS compilation</li><li>link checking</li><li>automatic browser opening</li></ul><p>These can be added without changing the current command shape: <code>new</code>, <code>compile</code>, <code>watch</code>, and <code>serve</code>.</p>
+            <h2 id="static-website-generator">Static website generator</h2><p><em>Calepin</em> can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source <code>.typ</code> files live in <code>docs/</code>, and the generated <code>.html</code>, <code>.pdf</code>, and <code>sitemap.xml</code> files are written back into <code>docs/</code> for GitHub Pages.</p><p>This page covers the build workflow. See also:</p><ul><li><a href="website-config.html">Site configuration</a> for <code>calepin.toml</code> settings</li><li><a href="website-pages.html">Navigation and listings</a> for the sidebar, page titles, and blog-style page listings</li><li><a href="website-themes.html">Themes</a> for HTML theme customization</li></ul><h3 id="create-a-website">Create a website</h3><p>Use <code>calepin new website</code> to scaffold a minimal site:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> new website</code></pre><p>This creates:</p><ul><li><code>docs/calepin.toml</code></li><li><code>docs/index.typ</code></li><li><code>docs/404.typ</code></li></ul><h3 id="build-pages">Build pages</h3><p>Compile a website directory with the same <code>compile</code> command used for a single Typst document:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs public</code></pre><p>When the input path is a directory, <em>Calepin</em> looks for <code>calepin.toml</code> at the root of that directory (<code>website.toml</code> is accepted as a deprecated fallback). An explicit <code>--config &lt;path></code> supersedes the automatic lookup; if no config is found either way, the build fails. The first positional argument is the website source directory. The optional second positional argument is the website output directory.</p><p>For GitHub Pages publishing from <code>docs/</code>, build in place by passing <code>docs</code> as both the input and output directory:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs docs</code></pre><p>If the output directory is omitted, <em>Calepin</em> writes output beside the source files:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs</code></pre><p>By default, each <code>.typ</code> page produces two outputs:</p><ul><li><code>page.html</code></li><li><code>page.pdf</code></li></ul><p>PDF rendering can be disabled for the whole site in <code>calepin.toml</code>:</p><pre><code data-lang="toml"><span style="color: #4b69c6">pdf</span> = <span style="color: #d73948">false</span></code></pre><p>Individual pages can override the site setting with a <code>pdf</code> entry in their <code>&lt;website-metadata></code> metadata. This is useful to skip the PDF for a few heavy pages, or to render PDFs only for selected pages when the site default is off:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((pdf: <span style="color: #d73948">false</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p>Use <code>--format html</code> to write only HTML, regardless of configuration and page metadata:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs public --format html</code></pre><p>Directory website builds do not support <code>--format pdf</code>, <code>--format png</code>, or <code>--format svg</code>; those formats are for single-document <code>calepin compile</code>.</p><p>Website builds use the same preprocess cache as single-document compilation. After a successful page build, <em>Calepin</em> writes a fingerprint next to the page’s <code>results.json</code>. Later builds reuse that file when the chunk code, parameters, execution options, configured tools, and source-relative cache paths match. This means <code>make serve</code> does not need to re-execute expensive chunks in pages such as <code>example.typ</code> when nothing relevant changed.</p><p>Generated outputs are tracked in <code>.calepin/website-manifest.json</code>. Later builds use that manifest to remove stale generated files when pages are deleted or renamed.</p><p>When the source and output directories are different, full builds also scan the output directory for unexpected generated <code>.html</code> and <code>.pdf</code> files, while preserving static assets in directories such as <code>assets/</code>, <code>.calepin/</code>, <code>.git/</code>, <code>target/</code>, <code>node_modules/</code>, and <code>.venv/</code>. In-place builds are more conservative: <em>Calepin</em> overwrites the pages it renders, but does not delete every <code>.html</code> or <code>.pdf</code> file in the source directory. This avoids removing files that were checked in, copied by another tool, or intentionally managed outside the current website build.</p><h3 id="watch-changes">Watch changes</h3><p>During development, watch the website source directory:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs</code></pre><p>As with <code>compile</code>, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing <code>.typ</code> page edits go through a fast xxh3 fingerprint lookup:</p><ul><li>If the changed page hash is new, <em>Calepin</em> rebuilds only that page.</li><li>If the file was touched but the hash is unchanged, <em>Calepin</em> skips the rebuild.</li><li>If navigation or page metadata changed after an incremental rebuild, <em>Calepin</em> falls back to a full rebuild.</li></ul><p><em>Calepin</em> also falls back to a full rebuild for changes that can affect more than one page:</p><ul><li><code>calepin.toml</code></li><li>theme files</li><li>assets</li><li>new <code>.typ</code> pages</li><li>removed <code>.typ</code> pages</li><li>renamed <code>.typ</code> pages</li><li>unknown or non-page inputs</li></ul><h3 id="watch-and-serve-locally">Watch and serve locally</h3><p>To rebuild and serve in one command:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --serve</code></pre><p>The server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds. When a rebuild fails, the open pages display the build error as an overlay, and reload automatically once a later rebuild succeeds.</p><p>The default bind address is <code>127.0.0.1</code>, on the first free port starting at 8000. Use <code>--port</code> to pin a specific port; <em>Calepin</em> then fails instead of falling back to another port:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --serve --port 8001</code></pre><p>You can also bind another interface:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --serve --host 0.0.0.0 --port 8001</code></pre><h3 id="serve-built-files">Serve built files</h3><p>Serve an already-built static directory with:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> serve docs</code></pre><p>The static server:</p><ul><li>serves files from the requested directory</li><li>maps directory requests to <code>index.html</code></li><li>rejects path traversal</li><li>supports <code>GET</code> and <code>HEAD</code></li><li>guesses content types from file extensions</li><li>picks the first free port from 8000 when <code>--port</code> is not given, and reports a clear error when a pinned port is already in use</li></ul><p>Use <code>--host</code> and <code>--port</code> to change the bind address:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> serve docs --host 127.0.0.1 --port 8001</code></pre><h3 id="current-limitations">Current limitations</h3><p>The website generator is intentionally small. It does not yet implement:</p><ul><li>dependency-aware rebuilds for imported shared <code>.typ</code> files</li><li>drafts</li><li>taxonomies</li><li>pagination</li><li>search indexes</li><li>feeds</li><li>robots.txt generation</li><li>Sass or SCSS compilation</li><li>link checking</li><li>automatic browser opening</li></ul><p>These can be added without changing the current command shape: <code>new</code>, <code>compile</code>, <code>watch</code>, and <code>serve</code>.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -317,24 +326,212 @@
     
     
 <script>
-/* Calepin website behaviour, consolidated.
- *
- * One module-local script wires: theme toggle, view switcher (HTML/Source/PDF),
- * the mobile sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal
- * link state preservation, and the native <dialog> video lightbox.
- *
- * The Rust theme loader inlines this file into a <script> at the end of <body>,
- * so the DOM already exists when it runs and no DOMContentLoaded guard is
- * needed. Theme is applied first to keep any flash as short as possible. */
 (() => {
   "use strict";
 
-  const THEME = {
-    storageKey: "calepin-website-theme",
-    param: "theme",
-    order: ["", "light", "dark"],
-    labels: { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" },
+  const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
+  if (!buttons.length) return;
+
+  const order = ["", "light", "dark"];
+  const labels = { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" };
+  const icons = {
+    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
+    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
+    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
   };
+
+  const normalize = (value) => value === "light" || value === "dark" ? value : "";
+  const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
+  const urlParam = (button) => button.dataset.calepinThemeParam || "";
+
+  function readUrl(button) {
+    const param = urlParam(button);
+    if (!param) return "";
+    try {
+      return normalize(new URL(window.location.href).searchParams.get(param) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function clearUrl(button) {
+    const param = urlParam(button);
+    if (!param) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete(param);
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      /* ignore URL errors */
+    }
+  }
+
+  function readStored(button) {
+    try {
+      return normalize(localStorage.getItem(storageKey(button)) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function writeStored(button, value) {
+    try {
+      if (value) localStorage.setItem(storageKey(button), value);
+      else localStorage.removeItem(storageKey(button));
+    } catch {
+      /* ignore storage errors */
+    }
+  }
+
+  function readTheme(button) {
+    const fromUrl = readUrl(button);
+    if (fromUrl) {
+      writeStored(button, fromUrl);
+      clearUrl(button);
+      return fromUrl;
+    }
+    return readStored(button);
+  }
+
+  function applyTheme(value) {
+    const theme = normalize(value);
+    if (theme) {
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+    } else {
+      delete document.documentElement.dataset.theme;
+      document.documentElement.style.colorScheme = "";
+    }
+    buttons.forEach((button) => {
+      const label = labels[theme] || labels[""];
+      button.innerHTML = icons[theme] || icons[""];
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    });
+  }
+
+  applyTheme(readTheme(buttons[0]));
+
+  buttons.forEach((button) => {
+    if (button.dataset.calepinThemeBound === "true") return;
+    button.dataset.calepinThemeBound = "true";
+    button.addEventListener("click", () => {
+      const current = normalize(document.documentElement.dataset.theme || "");
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      applyTheme(next);
+      writeStored(button, next);
+    });
+  });
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) applyTheme(readTheme(buttons[0]));
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
+  });
+})();
+
+    </script>
+<script>
+(() => {
+  "use strict";
+
+  const selects = document.querySelectorAll("select[data-calepin-language-picker]");
+  if (!selects.length) return;
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function languageIcon() {
+    return `<svg class="calepin-language-picker-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a13.5 13.5 0 0 1 0 18"></path><path d="M12 3a13.5 13.5 0 0 0 0 18"></path></svg>`;
+  }
+
+  function closeAll(except) {
+    document.querySelectorAll(".calepin-language-picker.is-open").forEach((picker) => {
+      if (picker === except) return;
+      picker.classList.remove("is-open");
+      const button = picker.querySelector("button");
+      if (button) button.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function enhance(select) {
+    if (select.dataset.calepinLanguageBound === "true") return;
+    select.dataset.calepinLanguageBound = "true";
+
+    const options = Array.from(select.options).filter((option) => option.value);
+    if (options.length <= 1) return;
+
+    const selected = options.find((option) => option.selected) || options[0];
+    const picker = document.createElement("div");
+    picker.className = "calepin-language-picker";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "calepin-language-picker-button outline secondary";
+    button.setAttribute("aria-haspopup", "menu");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-label", select.getAttribute("aria-label") || "Language");
+    button.innerHTML = `${languageIcon()}<span>${escapeHtml(selected.textContent)}</span>`;
+
+    const menu = document.createElement("div");
+    menu.className = "calepin-language-picker-menu";
+    menu.setAttribute("role", "menu");
+
+    options.forEach((option) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.dataset.href = option.value;
+      item.innerHTML = `${languageIcon()}<span>${escapeHtml(option.textContent)}</span>`;
+      if (option.selected) item.setAttribute("aria-current", "true");
+      item.addEventListener("click", () => {
+        window.location.href = option.value;
+      });
+      menu.appendChild(item);
+    });
+
+    button.addEventListener("click", () => {
+      const open = !picker.classList.contains("is-open");
+      closeAll(open ? picker : null);
+      picker.classList.toggle("is-open", open);
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    picker.append(button, menu);
+    select.hidden = true;
+    select.insertAdjacentElement("afterend", picker);
+  }
+
+  selects.forEach(enhance);
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".calepin-language-picker")) closeAll();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAll();
+  });
+})();
+
+    </script>
+<script>
+/* Calepin website behaviour, consolidated.
+ *
+ * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
+ * sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal link state
+ * preservation, and the native <dialog> video lightbox.
+ *
+ * The Rust theme loader inlines this file into a <script> at the end of <body>,
+ * so the DOM already exists when it runs and no DOMContentLoaded guard is
+ * needed. */
+(() => {
+  "use strict";
 
   const VIEW = {
     storageKey: "calepin-website-view-mode",
@@ -346,12 +543,6 @@
 
   const MOBILE_QUERY = "(max-width: 56rem)";
   const SOURCE_DATA_ID = "calepin-website-source-data";
-
-  const THEME_ICONS = {
-    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
-    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
-    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
-  };
 
   const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
   const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
@@ -425,55 +616,6 @@
   }
 
   const getMain = () => document.querySelector(".calepin-website-main");
-
-  // ------------------------------------------------------------------ theme
-
-  const normalizeTheme = (value) =>
-    value === "light" || value === "dark" ? value : "";
-
-  function currentTheme() {
-    return normalizeTheme(document.documentElement.dataset.theme || "");
-  }
-
-  function applyTheme(themeName, button) {
-    const next = normalizeTheme(themeName);
-    const root = document.documentElement;
-    if (next) {
-      root.dataset.theme = next;
-      root.style.colorScheme = next;
-    } else {
-      delete root.dataset.theme;
-      root.style.colorScheme = "";
-    }
-
-    if (button) {
-      const label = THEME.labels[next] || THEME.labels[""];
-      button.innerHTML = THEME_ICONS[next] || THEME_ICONS[""];
-      button.setAttribute("aria-label", label);
-      button.setAttribute("title", label);
-    }
-  }
-
-  function readTheme() {
-    const fromUrl = readUrlParam(THEME.param, normalizeTheme);
-    if (fromUrl) {
-      writeStored(THEME.storageKey, fromUrl);
-      updateCurrentUrlParam(THEME.param, "");
-      return fromUrl;
-    }
-    return readStored(THEME.storageKey, normalizeTheme, "");
-  }
-
-  function initTheme(button) {
-    applyTheme(readTheme(), button);
-    if (!button) return;
-    button.onclick = () => {
-      const index = THEME.order.indexOf(currentTheme());
-      const next = THEME.order[(index + 1) % THEME.order.length];
-      applyTheme(next, button);
-      writeStored(THEME.storageKey, next);
-    };
-  }
 
   // ------------------------------------------------------------------- view
 
@@ -802,11 +944,10 @@
 
   // --------------------------------------------------------- link state
 
-  function urlWithState(href, themeButton, viewSelect) {
+  function urlWithState(href, viewSelect) {
     if (!isInternalPageHref(href)) return href;
     try {
       const url = new URL(href, window.location.href);
-      setUrlParam(url, THEME.param, "");
       const view = currentView(viewSelect);
       setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
       return url.toString();
@@ -815,16 +956,16 @@
     }
   }
 
-  function preserveStateInLinks(themeButton, viewSelect) {
+  function preserveStateInLinks(viewSelect) {
     document.querySelectorAll("a[href]").forEach((link) => {
       const href = link.getAttribute("href");
       if (!isInternalPageHref(href)) return;
-      const next = urlWithState(href, themeButton, viewSelect);
+      const next = urlWithState(href, viewSelect);
       if (next && next !== href) link.setAttribute("href", next);
     });
   }
 
-  function initLinkInterception(nav, themeButton, viewSelect) {
+  function initLinkInterception(nav, viewSelect) {
     document.addEventListener("click", (event) => {
       const tocLink = event.target.closest(".calepin-website-toc a");
       if (tocLink) {
@@ -849,7 +990,7 @@
       if (isSidebar && isMobile()) nav.close();
 
       const href = link.getAttribute("href");
-      const next = urlWithState(href, themeButton, viewSelect);
+      const next = urlWithState(href, viewSelect);
       if (next && next !== href) {
         event.preventDefault();
         window.location.href = next;
@@ -888,31 +1029,25 @@
 
   // --------------------------------------------------------------- bootstrap
 
-  const themeButton = document.getElementById("calepin-website-theme-button");
   const viewSelect = document.getElementById("calepin-website-view-mode");
 
-  initTheme(themeButton);
   initView(viewSelect);
   const nav = createNav();
   initCopy();
   inlineSvgs();
   initDialogs();
-  preserveStateInLinks(themeButton, viewSelect);
-  initLinkInterception(nav, themeButton, viewSelect);
+  preserveStateInLinks(viewSelect);
+  initLinkInterception(nav, viewSelect);
 
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
-    initTheme(themeButton);
     initView(viewSelect);
     initCopy();
-    preserveStateInLinks(themeButton, viewSelect);
+    preserveStateInLinks(viewSelect);
   });
 
   window.addEventListener("storage", (event) => {
-    if (event.key === THEME.storageKey) {
-      initTheme(themeButton);
-      preserveStateInLinks(themeButton, viewSelect);
-    } else if (event.key === VIEW.storageKey) {
+    if (event.key === VIEW.storageKey) {
       initView(viewSelect);
     }
   });

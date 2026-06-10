@@ -73,7 +73,7 @@ impl CompileFormat {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct NewArgs {
-    /// Path to the new .typ file, or `website` to scaffold a website
+    /// Path to the new .typ file, or `website`/`academic` to scaffold a website
     pub path: PathBuf,
 
     /// Overwrite the file if it already exists

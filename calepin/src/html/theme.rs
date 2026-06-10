@@ -31,8 +31,16 @@ static CALEPIN_HTML: BuiltinTheme = BuiltinTheme {
             source: include_str!("../assets/themes/calepin-html/partials/theme-switcher.html"),
         },
         TemplateFile {
-            path: "styles/00-code.css",
+            path: "styles/00-theme.css",
+            source: include_str!("../assets/snippets/css/theme.css"),
+        },
+        TemplateFile {
+            path: "styles/01-code.css",
             source: include_str!("../assets/snippets/css/code.css"),
+        },
+        TemplateFile {
+            path: "styles/02-widgets.css",
+            source: include_str!("../assets/snippets/css/widgets.css"),
         },
         TemplateFile {
             path: "styles/main.css",
@@ -57,12 +65,28 @@ static CALEPIN_WEBSITE: BuiltinTheme = BuiltinTheme {
             source: include_str!("../assets/themes/calepin-website/layout.html"),
         },
         TemplateFile {
-            path: "styles/00-code.css",
+            path: "styles/00-theme.css",
+            source: include_str!("../assets/snippets/css/theme.css"),
+        },
+        TemplateFile {
+            path: "styles/01-code.css",
             source: include_str!("../assets/snippets/css/code.css"),
+        },
+        TemplateFile {
+            path: "styles/02-widgets.css",
+            source: include_str!("../assets/snippets/css/widgets.css"),
         },
         TemplateFile {
             path: "styles/main.css",
             source: include_str!("../assets/themes/calepin-website/styles/main.css"),
+        },
+        TemplateFile {
+            path: "scripts/01-theme-toggle.js",
+            source: include_str!("../assets/snippets/js/theme-toggle.js"),
+        },
+        TemplateFile {
+            path: "scripts/02-language-picker.js",
+            source: include_str!("../assets/snippets/js/language-picker.js"),
         },
         TemplateFile {
             path: "scripts/app.js",
@@ -71,7 +95,49 @@ static CALEPIN_WEBSITE: BuiltinTheme = BuiltinTheme {
     ],
 };
 
-static BUILTINS: &[&BuiltinTheme] = &[&CALEPIN_HTML, &CALEPIN_WEBSITE];
+static ACADEMIC: BuiltinTheme = BuiltinTheme {
+    name: "academic",
+    files: &[
+        TemplateFile {
+            path: "layout.html",
+            source: include_str!("../assets/themes/academic/layout.html"),
+        },
+        TemplateFile {
+            path: "styles/00-theme.css",
+            source: include_str!("../assets/snippets/css/theme.css"),
+        },
+        TemplateFile {
+            path: "styles/01-code.css",
+            source: include_str!("../assets/snippets/css/code.css"),
+        },
+        TemplateFile {
+            path: "styles/02-widgets.css",
+            source: include_str!("../assets/snippets/css/widgets.css"),
+        },
+        TemplateFile {
+            path: "styles/main.css",
+            source: include_str!("../assets/themes/academic/styles/main.css"),
+        },
+        TemplateFile {
+            path: "scripts/01-theme-toggle.js",
+            source: include_str!("../assets/snippets/js/theme-toggle.js"),
+        },
+        TemplateFile {
+            path: "scripts/02-language-picker.js",
+            source: include_str!("../assets/snippets/js/language-picker.js"),
+        },
+        TemplateFile {
+            path: "scripts/03-copy-code.js",
+            source: include_str!("../assets/snippets/js/copy-code.js"),
+        },
+        TemplateFile {
+            path: "scripts/main.js",
+            source: include_str!("../assets/themes/academic/scripts/main.js"),
+        },
+    ],
+};
+
+static BUILTINS: &[&BuiltinTheme] = &[&CALEPIN_HTML, &CALEPIN_WEBSITE, &ACADEMIC];
 
 fn builtin(name: &str) -> Option<&'static BuiltinTheme> {
     BUILTINS.iter().copied().find(|theme| theme.name == name)
@@ -144,6 +210,12 @@ struct SnippetContext {
 pub(crate) struct SiteContextInput {
     pub(crate) nav: Vec<SiteNavEntry>,
     pub(crate) nav_sections: Vec<SiteNavSection>,
+    pub(crate) navbar_left: Vec<SiteNavEntry>,
+    pub(crate) navbar_center: Vec<SiteNavEntry>,
+    pub(crate) navbar_right: Vec<SiteNavEntry>,
+    pub(crate) languages: Vec<SiteLanguageEntry>,
+    pub(crate) translations: Vec<SiteLanguageEntry>,
+    pub(crate) language: Option<String>,
     pub(crate) title: Option<String>,
     pub(crate) description: Option<String>,
     pub(crate) base_url: Option<String>,
@@ -160,6 +232,12 @@ pub(crate) struct SiteContextInput {
 struct SiteContext {
     nav: Vec<NavEntry>,
     nav_sections: Vec<NavSection>,
+    navbar_left: Vec<NavEntry>,
+    navbar_center: Vec<NavEntry>,
+    navbar_right: Vec<NavEntry>,
+    languages: Vec<LanguageEntry>,
+    translations: Vec<LanguageEntry>,
+    language: Option<String>,
     toc: Vec<TocEntry>,
     title: Option<String>,
     description: Option<String>,
@@ -179,6 +257,14 @@ pub(crate) struct SiteNavSection {
     pub(crate) items: Vec<SiteNavEntry>,
 }
 
+#[derive(Serialize, Debug, Clone)]
+pub(crate) struct SiteLanguageEntry {
+    pub(crate) code: String,
+    pub(crate) label: String,
+    pub(crate) href: String,
+    pub(crate) active: bool,
+}
+
 #[derive(Serialize)]
 struct NavSection {
     title: Option<String>,
@@ -186,9 +272,19 @@ struct NavSection {
 }
 
 #[derive(Serialize, Clone)]
+struct LanguageEntry {
+    code: String,
+    label: String,
+    href: String,
+    active: bool,
+}
+
+#[derive(Serialize, Clone)]
 struct NavEntry {
     href: String,
     label: String,
+    label_html: String,
+    widget: Option<String>,
     active: bool,
 }
 
@@ -196,6 +292,8 @@ struct NavEntry {
 pub(crate) struct SiteNavEntry {
     pub(crate) href: String,
     pub(crate) label: String,
+    pub(crate) label_html: String,
+    pub(crate) widget: Option<String>,
     pub(crate) active: bool,
 }
 
@@ -484,14 +582,28 @@ fn render_theme(
 
 fn snippet_context() -> SnippetContext {
     SnippetContext {
-        css: BTreeMap::from([(
-            "code".to_string(),
-            include_str!("../assets/snippets/css/code.css").to_string(),
-        )]),
+        css: BTreeMap::from([
+            (
+                "theme".to_string(),
+                include_str!("../assets/snippets/css/theme.css").to_string(),
+            ),
+            (
+                "code".to_string(),
+                include_str!("../assets/snippets/css/code.css").to_string(),
+            ),
+            (
+                "widgets".to_string(),
+                include_str!("../assets/snippets/css/widgets.css").to_string(),
+            ),
+        ]),
         js: BTreeMap::from([
             (
                 "copy_code".to_string(),
                 include_str!("../assets/snippets/js/copy-code.js").to_string(),
+            ),
+            (
+                "language_picker".to_string(),
+                include_str!("../assets/snippets/js/language-picker.js").to_string(),
             ),
             (
                 "theme_toggle".to_string(),
@@ -513,31 +625,33 @@ fn site_context(
 ) -> SiteContext {
     if let Some(input) = site_context_input {
         return SiteContext {
-            nav: input
-                .nav
-                .iter()
-                .map(|item| NavEntry {
-                    href: item.href.clone(),
-                    label: item.label.clone(),
-                    active: item.active,
-                })
-                .collect(),
+            nav: input.nav.iter().map(nav_entry_from_input).collect(),
             nav_sections: input
                 .nav_sections
                 .iter()
                 .map(|section| NavSection {
                     title: section.title.clone(),
-                    items: section
-                        .items
-                        .iter()
-                        .map(|item| NavEntry {
-                            href: item.href.clone(),
-                            label: item.label.clone(),
-                            active: item.active,
-                        })
-                        .collect(),
+                    items: section.items.iter().map(nav_entry_from_input).collect(),
                 })
                 .collect(),
+            navbar_left: input.navbar_left.iter().map(nav_entry_from_input).collect(),
+            navbar_center: input
+                .navbar_center
+                .iter()
+                .map(nav_entry_from_input)
+                .collect(),
+            navbar_right: input
+                .navbar_right
+                .iter()
+                .map(nav_entry_from_input)
+                .collect(),
+            languages: input.languages.iter().map(language_entry_from_input).collect(),
+            translations: input
+                .translations
+                .iter()
+                .map(language_entry_from_input)
+                .collect(),
+            language: input.language.clone(),
             toc,
             title: input.title.clone(),
             description: input.description.clone(),
@@ -563,6 +677,12 @@ fn site_context(
             }]
         },
         nav,
+        navbar_left: Vec::new(),
+        navbar_center: Vec::new(),
+        navbar_right: Vec::new(),
+        languages: Vec::new(),
+        translations: Vec::new(),
+        language: None,
         toc,
         title: None,
         description: None,
@@ -574,6 +694,25 @@ fn site_context(
         current_url: None,
         page_title: None,
         stylesheet: None,
+    }
+}
+
+fn language_entry_from_input(entry: &SiteLanguageEntry) -> LanguageEntry {
+    LanguageEntry {
+        code: entry.code.clone(),
+        label: entry.label.clone(),
+        href: entry.href.clone(),
+        active: entry.active,
+    }
+}
+
+fn nav_entry_from_input(item: &SiteNavEntry) -> NavEntry {
+    NavEntry {
+        href: item.href.clone(),
+        label: item.label.clone(),
+        label_html: item.label_html.clone(),
+        widget: item.widget.clone(),
+        active: item.active,
     }
 }
 
@@ -616,6 +755,8 @@ fn nav_entries(project_root: Option<&Path>, output_path: Option<&Path>) -> Vec<N
         .map(|stem| NavEntry {
             href: format!("{stem}.html"),
             label: html_escape(&format!("{stem}.typ")),
+            label_html: html_escape(&format!("{stem}.typ")),
+            widget: None,
             active: stem == current_stem,
         })
         .collect()

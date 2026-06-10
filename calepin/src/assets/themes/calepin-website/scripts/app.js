@@ -1,21 +1,14 @@
 /* Calepin website behaviour, consolidated.
  *
- * One module-local script wires: theme toggle, view switcher (HTML/Source/PDF),
- * the mobile sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal
- * link state preservation, and the native <dialog> video lightbox.
+ * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
+ * sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal link state
+ * preservation, and the native <dialog> video lightbox.
  *
  * The Rust theme loader inlines this file into a <script> at the end of <body>,
  * so the DOM already exists when it runs and no DOMContentLoaded guard is
- * needed. Theme is applied first to keep any flash as short as possible. */
+ * needed. */
 (() => {
   "use strict";
-
-  const THEME = {
-    storageKey: "calepin-website-theme",
-    param: "theme",
-    order: ["", "light", "dark"],
-    labels: { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" },
-  };
 
   const VIEW = {
     storageKey: "calepin-website-view-mode",
@@ -27,12 +20,6 @@
 
   const MOBILE_QUERY = "(max-width: 56rem)";
   const SOURCE_DATA_ID = "calepin-website-source-data";
-
-  const THEME_ICONS = {
-    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
-    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
-    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
-  };
 
   const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
   const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
@@ -106,55 +93,6 @@
   }
 
   const getMain = () => document.querySelector(".calepin-website-main");
-
-  // ------------------------------------------------------------------ theme
-
-  const normalizeTheme = (value) =>
-    value === "light" || value === "dark" ? value : "";
-
-  function currentTheme() {
-    return normalizeTheme(document.documentElement.dataset.theme || "");
-  }
-
-  function applyTheme(themeName, button) {
-    const next = normalizeTheme(themeName);
-    const root = document.documentElement;
-    if (next) {
-      root.dataset.theme = next;
-      root.style.colorScheme = next;
-    } else {
-      delete root.dataset.theme;
-      root.style.colorScheme = "";
-    }
-
-    if (button) {
-      const label = THEME.labels[next] || THEME.labels[""];
-      button.innerHTML = THEME_ICONS[next] || THEME_ICONS[""];
-      button.setAttribute("aria-label", label);
-      button.setAttribute("title", label);
-    }
-  }
-
-  function readTheme() {
-    const fromUrl = readUrlParam(THEME.param, normalizeTheme);
-    if (fromUrl) {
-      writeStored(THEME.storageKey, fromUrl);
-      updateCurrentUrlParam(THEME.param, "");
-      return fromUrl;
-    }
-    return readStored(THEME.storageKey, normalizeTheme, "");
-  }
-
-  function initTheme(button) {
-    applyTheme(readTheme(), button);
-    if (!button) return;
-    button.onclick = () => {
-      const index = THEME.order.indexOf(currentTheme());
-      const next = THEME.order[(index + 1) % THEME.order.length];
-      applyTheme(next, button);
-      writeStored(THEME.storageKey, next);
-    };
-  }
 
   // ------------------------------------------------------------------- view
 
@@ -483,11 +421,10 @@
 
   // --------------------------------------------------------- link state
 
-  function urlWithState(href, themeButton, viewSelect) {
+  function urlWithState(href, viewSelect) {
     if (!isInternalPageHref(href)) return href;
     try {
       const url = new URL(href, window.location.href);
-      setUrlParam(url, THEME.param, "");
       const view = currentView(viewSelect);
       setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
       return url.toString();
@@ -496,16 +433,16 @@
     }
   }
 
-  function preserveStateInLinks(themeButton, viewSelect) {
+  function preserveStateInLinks(viewSelect) {
     document.querySelectorAll("a[href]").forEach((link) => {
       const href = link.getAttribute("href");
       if (!isInternalPageHref(href)) return;
-      const next = urlWithState(href, themeButton, viewSelect);
+      const next = urlWithState(href, viewSelect);
       if (next && next !== href) link.setAttribute("href", next);
     });
   }
 
-  function initLinkInterception(nav, themeButton, viewSelect) {
+  function initLinkInterception(nav, viewSelect) {
     document.addEventListener("click", (event) => {
       const tocLink = event.target.closest(".calepin-website-toc a");
       if (tocLink) {
@@ -530,7 +467,7 @@
       if (isSidebar && isMobile()) nav.close();
 
       const href = link.getAttribute("href");
-      const next = urlWithState(href, themeButton, viewSelect);
+      const next = urlWithState(href, viewSelect);
       if (next && next !== href) {
         event.preventDefault();
         window.location.href = next;
@@ -569,31 +506,25 @@
 
   // --------------------------------------------------------------- bootstrap
 
-  const themeButton = document.getElementById("calepin-website-theme-button");
   const viewSelect = document.getElementById("calepin-website-view-mode");
 
-  initTheme(themeButton);
   initView(viewSelect);
   const nav = createNav();
   initCopy();
   inlineSvgs();
   initDialogs();
-  preserveStateInLinks(themeButton, viewSelect);
-  initLinkInterception(nav, themeButton, viewSelect);
+  preserveStateInLinks(viewSelect);
+  initLinkInterception(nav, viewSelect);
 
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
-    initTheme(themeButton);
     initView(viewSelect);
     initCopy();
-    preserveStateInLinks(themeButton, viewSelect);
+    preserveStateInLinks(viewSelect);
   });
 
   window.addEventListener("storage", (event) => {
-    if (event.key === THEME.storageKey) {
-      initTheme(themeButton);
-      preserveStateInLinks(themeButton, viewSelect);
-    } else if (event.key === VIEW.storageKey) {
+    if (event.key === VIEW.storageKey) {
       initView(viewSelect);
     }
   });

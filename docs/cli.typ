@@ -33,7 +33,7 @@ Create a new example Typst file or website scaffold
 Usage: calepin new [OPTIONS] <PATH>
 
 Arguments:
-  <PATH>  Path to the new .typ file, or `website` to scaffold a website
+  <PATH>  Path to the new .typ file, or `website`/`academic` to scaffold a website
 
 Options:
   -f, --force  Overwrite the file if it already exists

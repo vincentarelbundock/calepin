@@ -8,7 +8,9 @@ use std::path::{Path, PathBuf};
 use syntax::HtmlSyntaxTheme;
 
 pub(crate) use theme::{is_builtin_html_theme, is_theme_path_like};
-pub(crate) use theme::{SiteContextInput, SiteNavEntry, SiteNavSection};
+pub(crate) use theme::{
+    SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection,
+};
 
 const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
 const HTML_INPUT_LIGHT_THEME_REF: &str = "/.calepin/calepin-input-light.tmTheme";
@@ -457,6 +459,12 @@ mod tests {
         let site_context = SiteContextInput {
             nav: Vec::new(),
             nav_sections: Vec::new(),
+            navbar_left: Vec::new(),
+            navbar_center: Vec::new(),
+            navbar_right: Vec::new(),
+            languages: Vec::new(),
+            translations: Vec::new(),
+            language: None,
             title: Some("Example".to_string()),
             description: None,
             base_url: None,
@@ -486,10 +494,103 @@ mod tests {
     }
 
     #[test]
+    fn bundled_themes_render_navbar_widgets_links_and_language_picker() {
+        let site_context = SiteContextInput {
+            nav: Vec::new(),
+            nav_sections: Vec::new(),
+            navbar_left: vec![SiteNavEntry {
+                href: "about.html".to_string(),
+                label: "About".to_string(),
+                label_html: "About".to_string(),
+                widget: None,
+                active: true,
+            }],
+            navbar_center: Vec::new(),
+            navbar_right: vec![
+                SiteNavEntry {
+                    href: String::new(),
+                    label: "Theme".to_string(),
+                    label_html: "Theme".to_string(),
+                    widget: Some("theme".to_string()),
+                    active: false,
+                },
+                SiteNavEntry {
+                    href: String::new(),
+                    label: "Language".to_string(),
+                    label_html: "Language".to_string(),
+                    widget: Some("language".to_string()),
+                    active: false,
+                },
+            ],
+            languages: vec![
+                SiteLanguageEntry {
+                    code: "en".to_string(),
+                    label: "English".to_string(),
+                    href: "index.html".to_string(),
+                    active: true,
+                },
+                SiteLanguageEntry {
+                    code: "fr".to_string(),
+                    label: "Français".to_string(),
+                    href: "fr/index.html".to_string(),
+                    active: false,
+                },
+            ],
+            translations: Vec::new(),
+            language: Some("en".to_string()),
+            title: Some("Example".to_string()),
+            description: None,
+            base_url: None,
+            logo: None,
+            logo_alt: None,
+            home_url: Some("index.html".to_string()),
+            github_url: None,
+            current_url: None,
+            page_title: None,
+            stylesheet: None,
+        };
+
+        for theme_name in ["calepin-website", "academic"] {
+            let themed = theme::apply_html_theme(
+                SAMPLE_HTML,
+                Some(theme_name),
+                &HtmlSyntaxTheme::builtin(),
+                None,
+                None,
+                Some(&site_context),
+            )
+            .unwrap();
+
+            assert!(
+                themed.contains(r#"href="about.html" aria-label="About""#),
+                "{theme_name}: missing navbar page link"
+            );
+            assert!(
+                themed.contains("data-calepin-theme-toggle"),
+                "{theme_name}: missing theme widget"
+            );
+            assert!(
+                themed.contains("data-calepin-language-picker"),
+                "{theme_name}: missing language picker"
+            );
+            assert!(
+                themed.contains(r#"<option value="fr/index.html" data-calepin-language-code="fr""#),
+                "{theme_name}: missing language option"
+            );
+        }
+    }
+
+    #[test]
     fn bundled_website_theme_can_link_external_stylesheet() {
         let site_context = SiteContextInput {
             nav: Vec::new(),
             nav_sections: Vec::new(),
+            navbar_left: Vec::new(),
+            navbar_center: Vec::new(),
+            navbar_right: Vec::new(),
+            languages: Vec::new(),
+            translations: Vec::new(),
+            language: None,
             title: Some("Example".to_string()),
             description: None,
             base_url: None,

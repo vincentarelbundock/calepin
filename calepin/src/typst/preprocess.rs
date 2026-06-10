@@ -29,6 +29,7 @@ const TYPST_SNIPPETS: &[(&str, &str)] = &[(
 pub struct PreprocessOptions {
     pub input: PathBuf,
     pub config: Option<PathBuf>,
+    pub display_root: Option<PathBuf>,
     pub quiet: bool,
     pub timeout: Option<u64>,
     pub sync_pages: bool,
@@ -53,6 +54,7 @@ pub struct PreprocessPlan {
     timeout: Option<Duration>,
     quiet: bool,
     sync_pages: bool,
+    display_root: Option<PathBuf>,
     params: serde_json::Value,
 }
 
@@ -65,7 +67,7 @@ pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput>
     let plan = prepare_preprocess_plan(options)?;
     if preprocess_cache_hit(&plan.layout, plan.fingerprint)? {
         if !plan.quiet {
-            eprintln!("calepin [cache] {}", display_input(&plan.layout));
+            eprintln!("calepin [cache] {}", display_input(&plan));
         }
         return Ok(PreprocessOutput {
             layout: plan.layout,
@@ -147,6 +149,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         timeout,
         quiet: options.quiet,
         sync_pages: options.sync_pages,
+        display_root: options.display_root,
         params,
     })
 }
@@ -272,7 +275,7 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
     if !plan.quiet {
         eprintln!(
             "calepin [run] {}: {} chunk{}",
-            display_input(&plan.layout),
+            display_input(&plan),
             plan.chunks.len(),
             if plan.chunks.len() == 1 { "" } else { "s" },
         );
@@ -405,8 +408,12 @@ fn execution_artifact_reference(
     artifact_reference(root, &final_path)
 }
 
-fn display_input(layout: &LayoutPaths) -> String {
-    project_relative_path(&layout.root, &layout.input)
+fn display_input(plan: &PreprocessPlan) -> String {
+    display_input_path(&plan.layout, plan.display_root.as_deref())
+}
+
+fn display_input_path(layout: &LayoutPaths, display_root: Option<&Path>) -> String {
+    project_relative_path(display_root.unwrap_or(&layout.root), &layout.input)
 }
 
 fn publish_staged_figures(staged: &Path, final_dir: &Path) -> Result<()> {
@@ -691,6 +698,21 @@ mod tests {
         std::fs::write(&input, "").unwrap();
         let layout = resolve_layout(&input, Some(dir.path())).unwrap();
         assert_eq!(slash_path(&layout.input_rel), "paper.typ");
+    }
+
+    #[test]
+    fn display_input_uses_explicit_display_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let docs = dir.path().join("docs");
+        let language_dir = docs.join("fr");
+        let input = language_dir.join("index.typ");
+        std::fs::create_dir_all(&language_dir).unwrap();
+        std::fs::write(&input, "").unwrap();
+        let layout = resolve_layout(&input, Some(&language_dir)).unwrap();
+
+        assert_eq!(display_input_path(&layout, None), "index.typ");
+        let docs = std::fs::canonicalize(docs).unwrap();
+        assert_eq!(display_input_path(&layout, Some(&docs)), "fr/index.typ");
     }
 
     #[test]

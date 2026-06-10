@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
+
+:root {
+  --calepin-accent: #1c9bad;
+  --calepin-accent-hover: #16808f;
+  --calepin-radius-sm: 4px;
+  --calepin-topbar-height: 3.5rem;
+
+  --calepin-code-border: 1px solid var(--pico-muted-border-color);
+  --calepin-code-border-left: 3px solid var(--pico-primary);
+  --calepin-code-radius: var(--calepin-radius-sm);
+  --calepin-code-padding: 0.65rem 0.8rem;
+  --calepin-code-padding-right: 0.8rem;
+  --calepin-code-margin: 0.9rem 0 0.35rem;
+  --calepin-code-font-family: var(--pico-font-family-monospace);
+  --calepin-code-line-height: 1.45;
+  --calepin-output-background: var(--pico-card-sectioning-background-color);
+  --calepin-output-border: 1px solid var(--pico-muted-border-color);
+  --calepin-output-border-left: 3px solid var(--pico-primary);
+  --calepin-output-padding: 0.5rem 0.7rem;
+  --calepin-output-padding-right: 0.7rem;
+  --calepin-output-margin: 0.25rem 0 0.9rem;
+  --calepin-output-font-family: var(--pico-font-family-monospace);
+  --calepin-output-line-height: 1.4;
+  --calepin-stderr-background: #fff6f2;
+  --calepin-stderr-border-left-color: #b75e43;
+  --calepin-stderr-color: #663021;
+}
+
+:root:not([data-theme="dark"]),
+[data-theme="dark"] {
+  --pico-primary: var(--calepin-accent);
+  --pico-primary-background: var(--calepin-accent);
+  --pico-primary-border: var(--calepin-accent);
+  --pico-primary-underline: rgba(28, 155, 173, 0.5);
+  --pico-primary-hover: var(--calepin-accent-hover);
+  --pico-primary-hover-background: var(--calepin-accent-hover);
+  --pico-primary-hover-border: var(--calepin-accent-hover);
+  --pico-primary-hover-underline: var(--calepin-accent-hover);
+  --pico-primary-focus: rgba(28, 155, 173, 0.4);
+  --pico-primary-inverse: #fff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-variant-numeric: oldstyle-nums;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+}
+
+h1 {
+  font-size: clamp(1.85rem, 5vw, 2.55rem);
+  line-height: 1.15;
+}
+
+figure {
+  text-align: center;
+}
+
+figure > img {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+}

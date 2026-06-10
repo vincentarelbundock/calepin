@@ -21,6 +21,14 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
         return Ok(());
     }
 
+    if args.path == Path::new("academic") {
+        crate::website::scaffold_academic_website(Path::new("."), args.force)?;
+        if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
+            eprintln!("Created academic website scaffold in .");
+        }
+        return Ok(());
+    }
+
     if let Some(parent) = args
         .path
         .parent()
@@ -120,6 +128,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
         config: args.common.config,
+        display_root: None,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         sync_pages: false,

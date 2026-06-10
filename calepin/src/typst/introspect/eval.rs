@@ -13,7 +13,11 @@ static EVAL_AVAILABLE: OnceLock<Mutex<HashMap<PathBuf, bool>>> = OnceLock::new()
 
 pub fn is_available(typst: &Path) -> bool {
     let cache = EVAL_AVAILABLE.get_or_init(|| Mutex::new(HashMap::new()));
-    if let Some(available) = cache.lock().ok().and_then(|cache| cache.get(typst).copied()) {
+    if let Some(available) = cache
+        .lock()
+        .ok()
+        .and_then(|cache| cache.get(typst).copied())
+    {
         return available;
     }
 

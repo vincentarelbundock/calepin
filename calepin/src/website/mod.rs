@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use notify::RecursiveMode;
 use notify_debouncer_full::new_debouncer;
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
 use crate::html::{
     is_builtin_html_theme, is_theme_path_like, write_html_theme_stylesheet, SiteContextInput,
-    SiteNavEntry, SiteNavSection,
+    SiteLanguageEntry, SiteNavEntry, SiteNavSection,
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{
@@ -32,8 +32,12 @@ const DEFAULT_SRC_DIR: &str = "docs";
 const DEFAULT_WEBSITE_THEME: &str = "calepin-website";
 const WEBSITE_STYLESHEET_PATH: &str = ".calepin/calepin-website.css";
 const FALLBACK_PAGE: &str = "404.typ";
+const INDEX_PAGE: &str = "index.typ";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
 const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
+const ICON_CACHE_DIR: &str = ".calepin/icons";
+const DEFAULT_ICON_PREFIX: &str = "lucide";
+const ICON_DOWNLOAD_TIMEOUT_SECS: u64 = 5;
 const PAGES_INDEX_FILE: &str = "website-pages.json";
 /// Root-relative reference to the pages index. Each page renders with
 /// `--root` at its own directory, so the index is written into every page
@@ -49,6 +53,17 @@ pub(crate) fn scaffold_website(root: &Path, force: bool) -> Result<()> {
     write_scaffold_file(&docs.join(DEFAULT_CONFIG), WEBSITE_TOML_TEMPLATE, force)?;
     write_scaffold_file(&docs.join("index.typ"), INDEX_TYP_TEMPLATE, force)?;
     write_scaffold_file(&docs.join("404.typ"), NOT_FOUND_TYP_TEMPLATE, force)?;
+    Ok(())
+}
+
+pub(crate) fn scaffold_academic_website(root: &Path, force: bool) -> Result<()> {
+    let root = absolutize_for_create(root)?;
+    let docs = root.join(DEFAULT_SRC_DIR);
+    fs::create_dir_all(&docs).with_context(|| format!("failed to create {}", docs.display()))?;
+
+    for (path, contents) in ACADEMIC_SCAFFOLD_FILES {
+        write_scaffold_file(&docs.join(path), contents, force)?;
+    }
     Ok(())
 }
 
@@ -157,10 +172,32 @@ struct PageMeta {
     title: Option<String>,
     pdf: Option<bool>,
     hidden: bool,
+    translation_key: Option<String>,
+    slug: Option<String>,
+    url: Option<String>,
     raw: serde_json::Value,
 }
 
 type PageMetaMap = BTreeMap<PathBuf, PageMeta>;
+
+#[derive(Debug, Clone)]
+struct LanguageInfo {
+    code: String,
+    label: String,
+    content_dir: PathBuf,
+    url_prefix: String,
+    default: bool,
+}
+
+#[derive(Debug, Clone)]
+struct PageInfo {
+    language: Option<String>,
+    translation_key: String,
+    href: String,
+    pdf_href: Option<String>,
+}
+
+type PageInfoMap = BTreeMap<PathBuf, PageInfo>;
 
 #[derive(Debug, Clone)]
 struct WebsiteBuildResult {
@@ -202,13 +239,27 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let theme_dir = html_theme_dir(&theme);
     let theme_stylesheet_path =
         (theme == DEFAULT_WEBSITE_THEME).then(|| PathBuf::from(WEBSITE_STYLESHEET_PATH));
-    let (section_plans, mut typ_files) = discover_pages(&src_dir, config.sidebar.as_ref())?;
-    let fallback = src_dir.join(FALLBACK_PAGE);
-    if fallback.is_file() {
-        typ_files.push(fallback.clone());
-    }
+    let languages = configured_languages(&src_dir, &config)?;
+    let (section_plans, mut typ_files) = discover_site_pages(
+        &src_dir,
+        config.sidebar.as_ref(),
+        config.pages.as_ref(),
+        &languages,
+    )?;
+    let (navbar_plan, mut navbar_files) = discover_site_navbar(
+        &src_dir,
+        config.navbar.as_ref(),
+        config.pages.as_ref(),
+        &languages,
+    )?;
+    typ_files.append(&mut navbar_files);
+    let mut included_pages =
+        discover_site_build_pages(&src_dir, config.pages.as_ref(), &languages)?;
+    typ_files.append(&mut included_pages);
+    typ_files.extend(implicit_build_pages(&src_dir, &languages));
     typ_files.sort_by_key(|path| rel_posix(&src_dir, path));
     typ_files.dedup();
+    let fallback_files = fallback_pages(&src_dir, &languages);
     let page_fingerprints = fingerprint_files(&typ_files)?;
 
     let build_set = match &args.incremental_inputs {
@@ -228,6 +279,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     // imports resolve.
     let preprocessed = preprocess_documents(
         &build_set,
+        &src_dir,
         &config_path,
         args.quiet,
         args.timeout,
@@ -236,23 +288,26 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     )?;
 
     let page_meta = load_page_meta(&typ_files);
-    let nav_sections = nav_from_plans(&src_dir, &section_plans, &page_meta);
-    let nav_signature = navigation_signature(&nav_sections);
     let metadata = SiteMetadata::from_config(&config);
     let sitemap_path = metadata
         .base_url
         .as_ref()
         .map(|_| out_dir.join("sitemap.xml"));
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
-    let pages_index = build_pages_index(&src_dir, &typ_files, &section_plans, &page_meta, &pdf_files);
+    let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
+    let mut icon_cache = IconCache::new(src_dir.join(ICON_CACHE_DIR));
+    let nav_sections = nav_from_plans(&section_plans, &page_meta, &page_info, &mut icon_cache)?;
+    let navbar = navbar_from_plan(&navbar_plan, &page_meta, &page_info, &mut icon_cache)?;
+    let nav_signature = navigation_signature(&nav_sections) ^ navbar_signature(&navbar);
+    let pages_index =
+        build_pages_index(&src_dir, &typ_files, &section_plans, &page_meta, &page_info);
     let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
     let pages_signature = xxh3_64(pages_index_json.as_bytes());
     write_pages_index(&typ_files, &pages_index_json)?;
     let expected_outputs = expected_generated_outputs(
-        &src_dir,
         &out_dir,
         &typ_files,
-        &pdf_files,
+        &page_info,
         &sitemap_path,
         theme_stylesheet_path.as_deref(),
     );
@@ -262,7 +317,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         clear_previous_outputs(&src_dir, &out_dir)?;
     }
     reconcile_manifest_outputs(&out_dir, &previous_manifest, &expected_outputs)?;
-    if args.clean {
+    if args.clean && out_dir != src_dir {
         remove_unexpected_rendered_outputs(&out_dir, &expected_outputs)?;
     }
     fs::create_dir_all(&out_dir)
@@ -286,14 +341,15 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     }
 
     // Phase 2: render the preprocessed pages with full site context.
-    let site = SiteModel::new(nav_sections, metadata.clone());
+    let site = SiteModel::new(nav_sections, navbar, metadata.clone());
     render_documents(
         &BuildContext {
-            src_dir: src_dir.clone(),
             out_dir: out_dir.clone(),
             typst: calepin_config.executables.typst,
             theme,
             pdf_files,
+            page_info: page_info.clone(),
+            languages: languages.clone(),
             theme_stylesheet: theme_stylesheet_path.map(|path| slash_path(&path)),
             parallelism: args.parallelism,
             typst_args: args.typst_args,
@@ -304,8 +360,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     )?;
     let sitemap_hrefs = typ_files
         .iter()
-        .filter(|path| **path != fallback)
-        .map(|path| rel_html_path(&src_dir, path))
+        .filter(|path| !fallback_files.contains(path))
+        .filter_map(|path| page_info.get(path).map(|info| info.href.clone()))
         .collect::<BTreeSet<_>>();
     write_sitemap(&out_dir, metadata.base_url.as_deref(), &sitemap_hrefs)?;
     write_manifest(&out_dir, &expected_outputs)?;
@@ -490,7 +546,10 @@ fn rebuild_changed_pages(
     let next = build_site(incremental_options)?;
     if next.nav_signature != current.nav_signature
         || next.pages_signature != current.pages_signature
-        || next.page_fingerprints.keys().ne(current.page_fingerprints.keys())
+        || next
+            .page_fingerprints
+            .keys()
+            .ne(current.page_fingerprints.keys())
     {
         return Ok(Some(build_site(options.clone())?));
     }
@@ -511,6 +570,10 @@ fn fingerprint_files(paths: &[PathBuf]) -> Result<BTreeMap<PathBuf, u64>> {
 fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
     let mut bytes = Vec::new();
     for section in sections {
+        if let Some(language) = &section.language {
+            bytes.extend_from_slice(language.as_bytes());
+        }
+        bytes.push(0);
         if let Some(title) = &section.title {
             bytes.extend_from_slice(title.as_bytes());
         }
@@ -519,6 +582,28 @@ fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
             bytes.extend_from_slice(item.href.as_bytes());
             bytes.push(0);
             bytes.extend_from_slice(item.label.as_bytes());
+            bytes.push(0);
+            bytes.extend_from_slice(item.label_html.as_bytes());
+            bytes.push(0);
+        }
+        bytes.push(0xff);
+    }
+    xxh3_64(&bytes)
+}
+
+fn navbar_signature(navbar: &NavbarModel) -> u64 {
+    let mut bytes = Vec::new();
+    for items in [&navbar.left, &navbar.center, &navbar.right] {
+        for item in items {
+            if let Some(language) = &item.language {
+                bytes.extend_from_slice(language.as_bytes());
+            }
+            bytes.push(0);
+            bytes.extend_from_slice(item.href.as_bytes());
+            bytes.push(0);
+            bytes.extend_from_slice(item.label.as_bytes());
+            bytes.push(0);
+            bytes.extend_from_slice(item.label_html.as_bytes());
             bytes.push(0);
         }
         bytes.push(0xff);
@@ -554,6 +639,8 @@ fn changed_typ_pages(
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 struct WebsiteConfig {
+    default_language: Option<String>,
+    languages: BTreeMap<String, LanguageConfig>,
     html_theme: Option<String>,
     // Backward-compatible aliases for older website configs.
     theme: Option<String>,
@@ -568,7 +655,17 @@ struct WebsiteConfig {
     /// Also render a PDF for every page; pages can override with `pdf` in
     /// their `<website-metadata>`.
     pdf: Option<bool>,
+    pages: Option<PagesConfig>,
+    navbar: Option<NavbarConfig>,
     sidebar: Option<SidebarConfig>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct LanguageConfig {
+    label: Option<String>,
+    content_dir: Option<PathBuf>,
+    url_prefix: Option<String>,
 }
 
 fn pdf_enabled_files(
@@ -603,6 +700,73 @@ fn configured_html_theme<'a>(cli_theme: Option<&'a str>, config: &'a WebsiteConf
         .unwrap_or(DEFAULT_WEBSITE_THEME)
 }
 
+fn configured_languages(
+    src_dir: &Path,
+    config: &WebsiteConfig,
+) -> Result<Option<Vec<LanguageInfo>>> {
+    if config.languages.is_empty() {
+        return Ok(None);
+    }
+    let default_language = match config.default_language.as_deref() {
+        Some(default_language) => default_language,
+        None if config.languages.len() == 1 => {
+            config.languages.keys().next().map(String::as_str).unwrap()
+        }
+        None => {
+            return Err(anyhow!(
+                "set default_language when more than one language is configured in [languages]"
+            ))
+        }
+    };
+    if !config.languages.contains_key(default_language) {
+        return Err(anyhow!(
+            "default_language `{default_language}` is not present in [languages]"
+        ));
+    }
+
+    let mut languages = Vec::new();
+    for (code, language) in &config.languages {
+        let default = code == default_language;
+        let content_dir = language.content_dir.clone().unwrap_or_else(|| {
+            if default {
+                PathBuf::from(".")
+            } else {
+                PathBuf::from(code)
+            }
+        });
+        let content_dir = if content_dir == Path::new(".") {
+            src_dir.to_path_buf()
+        } else if content_dir.is_absolute() {
+            content_dir
+        } else {
+            src_dir.join(content_dir)
+        };
+        let url_prefix = clean_optional_string(language.url_prefix.as_deref())
+            .unwrap_or_else(|| if default { String::new() } else { code.clone() });
+        let url_prefix = clean_url_prefix(&url_prefix);
+        if !is_safe_output_route(&url_prefix) {
+            bail!("url_prefix for language `{code}` must stay inside the output directory: `{url_prefix}`");
+        }
+        languages.push(LanguageInfo {
+            code: code.clone(),
+            label: clean_optional_string(language.label.as_deref()).unwrap_or_else(|| code.clone()),
+            content_dir,
+            url_prefix,
+            default,
+        });
+    }
+    languages.sort_by_key(|language| (!language.default, language.code.clone()));
+    Ok(Some(languages))
+}
+
+fn clean_url_prefix(value: &str) -> String {
+    value
+        .trim()
+        .trim_matches('/')
+        .trim_start_matches("./")
+        .to_string()
+}
+
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 struct SidebarConfig {
@@ -622,19 +786,96 @@ struct SidebarSectionConfig {
 struct SidebarItemConfig {
     path: Option<PathBuf>,
     glob: Option<String>,
+    url: Option<String>,
     label: Option<String>,
+    icon: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct PagesConfig {
+    include: Vec<String>,
+    exclude: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct NavbarConfig {
+    show_hidden: bool,
+    item: Vec<NavbarItemConfig>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct NavbarItemConfig {
+    position: NavbarPosition,
+    path: Option<PathBuf>,
+    glob: Option<String>,
+    url: Option<String>,
+    widget: Option<String>,
+    label: Option<String>,
+    icon: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum NavbarPosition {
+    #[default]
+    Left,
+    Center,
+    Right,
 }
 
 #[derive(Debug, Clone)]
 struct NavSectionModel {
+    language: Option<String>,
     title: Option<String>,
     items: Vec<NavItemModel>,
 }
 
 #[derive(Debug, Clone)]
 struct NavItemModel {
+    language: Option<String>,
     href: String,
     label: String,
+    label_html: String,
+    widget: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct NavbarModel {
+    left: Vec<NavItemModel>,
+    center: Vec<NavItemModel>,
+    right: Vec<NavItemModel>,
+}
+
+impl NavbarModel {
+    fn entries_for_current_page(
+        &self,
+        current_href: &str,
+        items: &[NavItemModel],
+        current_language: Option<&str>,
+    ) -> Vec<SiteNavEntry> {
+        items
+            .iter()
+            .filter(|item| {
+                item.language
+                    .as_deref()
+                    .is_none_or(|language| Some(language) == current_language)
+            })
+            .map(|item| SiteNavEntry {
+                href: item
+                    .widget
+                    .as_ref()
+                    .map(|_| String::new())
+                    .unwrap_or_else(|| html_escape(&page_relative_url(current_href, &item.href))),
+                label: html_escape(&item.label),
+                label_html: item.label_html.clone(),
+                widget: item.widget.clone(),
+                active: item.href == current_href,
+            })
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -668,28 +909,45 @@ impl SiteMetadata {
 #[derive(Debug)]
 struct SiteModel {
     sections: Vec<NavSectionModel>,
+    navbar: NavbarModel,
     metadata: SiteMetadata,
 }
 
 impl SiteModel {
-    fn new(sections: Vec<NavSectionModel>, metadata: SiteMetadata) -> Self {
-        Self { sections, metadata }
+    fn new(sections: Vec<NavSectionModel>, navbar: NavbarModel, metadata: SiteMetadata) -> Self {
+        Self {
+            sections,
+            navbar,
+            metadata,
+        }
     }
 
-    fn theme_context(&self, current_href: &str) -> SiteContextInput {
+    fn theme_context(
+        &self,
+        current_href: &str,
+        page_info: Option<&PageInfo>,
+        page_info_map: &PageInfoMap,
+        languages: Option<&[LanguageInfo]>,
+    ) -> SiteContextInput {
         let mut nav = Vec::new();
         let mut nav_sections = Vec::new();
         let mut page_title = None;
+        let current_language = page_info.and_then(|info| info.language.as_deref());
 
         for section in &self.sections {
+            if section.language.as_deref() != current_language {
+                continue;
+            }
             let mut items = Vec::new();
             for item in &section.items {
                 if item.href == current_href {
                     page_title = Some(html_escape(&item.label));
                 }
                 let entry = SiteNavEntry {
-                    href: html_escape(&item.href),
+                    href: html_escape(&page_relative_url(current_href, &item.href)),
                     label: html_escape(&item.label),
+                    label_html: item.label_html.clone(),
+                    widget: None,
                     active: item.href == current_href,
                 };
                 nav.push(entry.clone());
@@ -700,10 +958,38 @@ impl SiteModel {
                 items,
             });
         }
+        let language_entries = languages
+            .map(|languages| language_entries(current_href, page_info, page_info_map, languages))
+            .unwrap_or_default();
+        let translations = page_info
+            .and_then(|info| {
+                languages.map(|languages| {
+                    translation_entries(current_href, info, page_info_map, languages)
+                })
+            })
+            .unwrap_or_default();
 
         SiteContextInput {
             nav,
             nav_sections,
+            navbar_left: self.navbar.entries_for_current_page(
+                current_href,
+                &self.navbar.left,
+                current_language,
+            ),
+            navbar_center: self.navbar.entries_for_current_page(
+                current_href,
+                &self.navbar.center,
+                current_language,
+            ),
+            navbar_right: self.navbar.entries_for_current_page(
+                current_href,
+                &self.navbar.right,
+                current_language,
+            ),
+            languages: language_entries,
+            translations,
+            language: current_language.map(str::to_string),
             title: self.metadata.title.as_deref().map(html_escape),
             description: self.metadata.description.as_deref().map(html_escape),
             base_url: self.metadata.base_url.as_deref().map(html_escape),
@@ -730,6 +1016,69 @@ impl SiteModel {
     }
 }
 
+fn language_entries(
+    current_href: &str,
+    current: Option<&PageInfo>,
+    page_info: &PageInfoMap,
+    languages: &[LanguageInfo],
+) -> Vec<SiteLanguageEntry> {
+    languages
+        .iter()
+        .map(|language| {
+            let href = current
+                .and_then(|current| {
+                    page_info.values().find(|info| {
+                        info.translation_key == current.translation_key
+                            && info.language.as_deref() == Some(language.code.as_str())
+                    })
+                })
+                .map(|info| info.href.clone())
+                .unwrap_or_else(|| language_home_href(language));
+            SiteLanguageEntry {
+                code: language.code.clone(),
+                label: html_escape(&language.label),
+                href: html_escape(&page_relative_url(current_href, &href)),
+                active: current
+                    .and_then(|info| info.language.as_deref())
+                    .is_some_and(|code| code == language.code),
+            }
+        })
+        .collect()
+}
+
+fn language_home_href(language: &LanguageInfo) -> String {
+    if language.url_prefix.is_empty() {
+        "index.html".to_string()
+    } else {
+        format!("{}/index.html", language.url_prefix)
+    }
+}
+
+fn translation_entries(
+    current_href: &str,
+    current: &PageInfo,
+    page_info: &PageInfoMap,
+    languages: &[LanguageInfo],
+) -> Vec<SiteLanguageEntry> {
+    languages
+        .iter()
+        .filter_map(|language| {
+            page_info
+                .values()
+                .find(|info| {
+                    info.translation_key == current.translation_key
+                        && info.language.as_deref() == Some(language.code.as_str())
+                })
+                .map(|info| SiteLanguageEntry {
+                    code: language.code.clone(),
+                    label: html_escape(&language.label),
+                    href: html_escape(&page_relative_url(current_href, &info.href)),
+                    active: info.language == current.language,
+                })
+        })
+        .collect()
+}
+
 #[derive(Debug, Deserialize, Serialize, Default)]
 struct WebsiteManifest {
     outputs: Vec<String>,
@@ -737,11 +1086,12 @@ struct WebsiteManifest {
 
 #[derive(Clone)]
 struct BuildContext {
-    src_dir: PathBuf,
     out_dir: PathBuf,
     typst: PathBuf,
     theme: String,
     pdf_files: BTreeSet<PathBuf>,
+    page_info: PageInfoMap,
+    languages: Option<Vec<LanguageInfo>>,
     theme_stylesheet: Option<String>,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
@@ -831,28 +1181,179 @@ fn html_theme_dir(value: &str) -> Option<PathBuf> {
 struct NavItemPlan {
     path: PathBuf,
     configured_label: Option<String>,
+    icon: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 struct NavSectionPlan {
+    language: Option<String>,
     title: Option<String>,
     items: Vec<NavItemPlan>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct NavbarPlan {
+    left: Vec<NavbarItemPlan>,
+    center: Vec<NavbarItemPlan>,
+    right: Vec<NavbarItemPlan>,
+}
+
+#[derive(Debug, Clone)]
+struct NavbarItemPlan {
+    path: Option<PathBuf>,
+    url: Option<String>,
+    widget: Option<String>,
+    configured_label: Option<String>,
+    icon: Option<String>,
+}
+
+fn discover_site_pages(
+    src_dir: &Path,
+    sidebar: Option<&SidebarConfig>,
+    pages: Option<&PagesConfig>,
+    languages: &Option<Vec<LanguageInfo>>,
+) -> Result<(Vec<NavSectionPlan>, Vec<PathBuf>)> {
+    let Some(languages) = languages else {
+        return discover_pages(src_dir, sidebar, pages, None);
+    };
+    let mut sections = Vec::new();
+    let mut files = Vec::new();
+    for language in languages {
+        let (mut language_sections, mut language_files) = discover_pages(
+            &language.content_dir,
+            sidebar,
+            pages,
+            Some(language.code.clone()),
+        )?;
+        language_files.retain(|path| !is_nested_language_page(path, language, languages));
+        for section in &mut language_sections {
+            section
+                .items
+                .retain(|item| !is_nested_language_page(&item.path, language, languages));
+        }
+        sections.append(&mut language_sections);
+        files.append(&mut language_files);
+    }
+    Ok((sections, files))
+}
+
+fn discover_site_navbar(
+    src_dir: &Path,
+    navbar: Option<&NavbarConfig>,
+    pages: Option<&PagesConfig>,
+    languages: &Option<Vec<LanguageInfo>>,
+) -> Result<(NavbarPlan, Vec<PathBuf>)> {
+    let Some(navbar) = navbar else {
+        return Ok((default_navbar_plan(), Vec::new()));
+    };
+    let Some(languages) = languages else {
+        return discover_navbar(src_dir, navbar, pages);
+    };
+    let mut plan = NavbarPlan::default();
+    let mut files = Vec::new();
+    for language in languages {
+        let (mut language_plan, mut language_files) =
+            discover_navbar(&language.content_dir, navbar, pages)?;
+        language_files.retain(|path| !is_nested_language_page(path, language, languages));
+        retain_navbar_language_items(&mut language_plan, language, languages);
+        if !language.default {
+            retain_language_specific_navbar_items(&mut language_plan);
+        }
+        plan.left.append(&mut language_plan.left);
+        plan.center.append(&mut language_plan.center);
+        plan.right.append(&mut language_plan.right);
+        files.append(&mut language_files);
+    }
+    Ok((plan, files))
+}
+
+fn default_navbar_plan() -> NavbarPlan {
+    NavbarPlan {
+        right: vec![
+            NavbarItemPlan {
+                path: None,
+                url: None,
+                widget: Some("theme".to_string()),
+                configured_label: None,
+                icon: None,
+            },
+            NavbarItemPlan {
+                path: None,
+                url: None,
+                widget: Some("language".to_string()),
+                configured_label: None,
+                icon: None,
+            },
+        ],
+        ..NavbarPlan::default()
+    }
+}
+
+fn default_widget_label(widget: &str) -> String {
+    match widget {
+        "theme" => "Theme".to_string(),
+        "language" => "Language".to_string(),
+        _ => widget.replace(['-', '_'], " "),
+    }
+}
+
+fn retain_navbar_language_items(
+    plan: &mut NavbarPlan,
+    current: &LanguageInfo,
+    languages: &[LanguageInfo],
+) {
+    for items in [&mut plan.left, &mut plan.center, &mut plan.right] {
+        items.retain(|item| {
+            item.path
+                .as_ref()
+                .is_none_or(|path| !is_nested_language_page(path, current, languages))
+        });
+    }
+}
+
+fn retain_language_specific_navbar_items(plan: &mut NavbarPlan) {
+    for items in [&mut plan.left, &mut plan.center, &mut plan.right] {
+        items.retain(|item| item.path.is_some());
+    }
+}
+
+fn is_nested_language_page(
+    path: &Path,
+    current: &LanguageInfo,
+    languages: &[LanguageInfo],
+) -> bool {
+    languages.iter().any(|language| {
+        language.code != current.code
+            && language.content_dir.starts_with(&current.content_dir)
+            && path.starts_with(&language.content_dir)
+    })
 }
 
 fn discover_pages(
     src_dir: &Path,
     sidebar: Option<&SidebarConfig>,
+    pages: Option<&PagesConfig>,
+    language: Option<String>,
 ) -> Result<(Vec<NavSectionPlan>, Vec<PathBuf>)> {
     let Some(sidebar) = sidebar else {
-        let files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)])?;
+        let mut files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)])?;
+        files.retain(|path| !page_is_excluded(src_dir, path, pages));
         let items = files
             .iter()
             .map(|path| NavItemPlan {
                 path: path.clone(),
                 configured_label: None,
+                icon: None,
             })
             .collect();
-        return Ok((vec![NavSectionPlan { title: None, items }], files));
+        return Ok((
+            vec![NavSectionPlan {
+                language,
+                title: None,
+                items,
+            }],
+            files,
+        ));
     };
 
     let all_typ_files = iter_typ_files(
@@ -860,6 +1361,10 @@ fn discover_pages(
         sidebar.show_hidden,
         &[PathBuf::from(FALLBACK_PAGE)],
     )?;
+    let all_typ_files = all_typ_files
+        .into_iter()
+        .filter(|path| !page_is_excluded(src_dir, path, pages))
+        .collect::<Vec<_>>();
     let mut used = BTreeSet::new();
     let mut sections = Vec::new();
     let mut build_files = Vec::new();
@@ -867,24 +1372,33 @@ fn discover_pages(
     for section_config in &sidebar.section {
         let mut items = Vec::new();
         for item_config in &section_config.item {
-            let candidates = resolve_file_list(src_dir, item_config, &all_typ_files)?;
-            let configured_label = item_config
-                .label
-                .as_deref()
-                .map(str::trim)
-                .filter(|label| !label.is_empty());
+            let candidates = resolve_file_list(
+                "sidebar",
+                src_dir,
+                item_config.path.as_ref(),
+                item_config.glob.as_deref(),
+                &all_typ_files,
+            )?;
+            let candidates = candidates
+                .into_iter()
+                .filter(|path| !page_is_excluded(src_dir, path, pages))
+                .collect::<Vec<_>>();
+            let configured_label = clean_optional_string(item_config.label.as_deref());
+            let icon = clean_optional_string(item_config.icon.as_deref());
             for path in candidates {
                 if !used.insert(path.clone()) {
                     continue;
                 }
                 items.push(NavItemPlan {
                     path: path.clone(),
-                    configured_label: configured_label.map(str::to_string),
+                    configured_label: configured_label.clone(),
+                    icon: icon.clone(),
                 });
                 build_files.push(path);
             }
         }
         sections.push(NavSectionPlan {
+            language: language.clone(),
             title: section_config.title.clone(),
             items,
         });
@@ -893,29 +1407,696 @@ fn discover_pages(
     Ok((sections, build_files))
 }
 
-fn nav_from_plans(
+fn discover_navbar(
     src_dir: &Path,
+    navbar: &NavbarConfig,
+    pages: Option<&PagesConfig>,
+) -> Result<(NavbarPlan, Vec<PathBuf>)> {
+    let all_typ_files =
+        iter_typ_files(src_dir, navbar.show_hidden, &[PathBuf::from(FALLBACK_PAGE)])?;
+    let all_typ_files = all_typ_files
+        .into_iter()
+        .filter(|path| !page_is_excluded(src_dir, path, pages))
+        .collect::<Vec<_>>();
+    let mut files = Vec::new();
+    let mut used = BTreeSet::new();
+
+    let mut resolve = |items: &[&NavbarItemConfig]| -> Result<Vec<NavbarItemPlan>> {
+        let mut out = Vec::new();
+        for item in items {
+            let configured_label = clean_optional_string(item.label.as_deref());
+            let icon = clean_optional_string(item.icon.as_deref());
+            if let Some(widget) = clean_optional_string(item.widget.as_deref()) {
+                if item.path.is_some()
+                    || item
+                        .glob
+                        .as_deref()
+                        .is_some_and(|glob| !glob.trim().is_empty())
+                    || item
+                        .url
+                        .as_deref()
+                        .is_some_and(|url| !url.trim().is_empty())
+                {
+                    bail!("navbar widget items cannot also set path, glob, or url");
+                }
+                out.push(NavbarItemPlan {
+                    path: None,
+                    url: None,
+                    widget: Some(widget.clone()),
+                    configured_label: configured_label.clone(),
+                    icon: icon.clone(),
+                });
+                continue;
+            }
+            if let Some(url) = item
+                .url
+                .as_deref()
+                .map(str::trim)
+                .filter(|url| !url.is_empty())
+            {
+                if item.path.is_some()
+                    || item
+                        .glob
+                        .as_deref()
+                        .is_some_and(|glob| !glob.trim().is_empty())
+                {
+                    bail!("navbar url items cannot also set path or glob");
+                }
+                out.push(NavbarItemPlan {
+                    path: None,
+                    url: Some(url.to_string()),
+                    widget: None,
+                    configured_label: configured_label.clone(),
+                    icon: icon.clone(),
+                });
+                continue;
+            }
+            for path in resolve_file_list(
+                "navbar",
+                src_dir,
+                item.path.as_ref(),
+                item.glob.as_deref(),
+                &all_typ_files,
+            )?
+            .into_iter()
+            .filter(|path| !page_is_excluded(src_dir, path, pages))
+            {
+                if used.insert(path.clone()) {
+                    files.push(path.clone());
+                }
+                out.push(NavbarItemPlan {
+                    path: Some(path),
+                    url: None,
+                    widget: None,
+                    configured_label: configured_label.clone(),
+                    icon: icon.clone(),
+                });
+            }
+        }
+        Ok(out)
+    };
+    let left = navbar
+        .item
+        .iter()
+        .filter(|item| item.position == NavbarPosition::Left)
+        .collect::<Vec<_>>();
+    let center = navbar
+        .item
+        .iter()
+        .filter(|item| item.position == NavbarPosition::Center)
+        .collect::<Vec<_>>();
+    let right = navbar
+        .item
+        .iter()
+        .filter(|item| item.position == NavbarPosition::Right)
+        .collect::<Vec<_>>();
+
+    Ok((
+        NavbarPlan {
+            left: resolve(&left)?,
+            center: resolve(&center)?,
+            right: resolve(&right)?,
+        },
+        files,
+    ))
+}
+
+fn fallback_pages(src_dir: &Path, languages: &Option<Vec<LanguageInfo>>) -> Vec<PathBuf> {
+    languages
+        .as_ref()
+        .map(|languages| {
+            languages
+                .iter()
+                .map(|language| language.content_dir.join(FALLBACK_PAGE))
+                .collect()
+        })
+        .unwrap_or_else(|| vec![src_dir.join(FALLBACK_PAGE)])
+}
+
+fn implicit_build_pages(src_dir: &Path, languages: &Option<Vec<LanguageInfo>>) -> Vec<PathBuf> {
+    let roots = languages
+        .as_ref()
+        .map(|languages| {
+            languages
+                .iter()
+                .map(|language| language.content_dir.as_path())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_else(|| vec![src_dir]);
+    roots
+        .into_iter()
+        .flat_map(|root| [root.join(INDEX_PAGE), root.join(FALLBACK_PAGE)])
+        .filter(|path| path.is_file())
+        .collect()
+}
+
+fn discover_site_build_pages(
+    src_dir: &Path,
+    pages: Option<&PagesConfig>,
+    languages: &Option<Vec<LanguageInfo>>,
+) -> Result<Vec<PathBuf>> {
+    let Some(languages) = languages else {
+        return discover_build_pages(src_dir, pages);
+    };
+    let mut files = Vec::new();
+    for language in languages {
+        let mut language_files = discover_build_pages(&language.content_dir, pages)?;
+        language_files.retain(|path| !is_nested_language_page(path, language, languages));
+        files.append(&mut language_files);
+    }
+    Ok(files)
+}
+
+fn discover_build_pages(src_dir: &Path, pages: Option<&PagesConfig>) -> Result<Vec<PathBuf>> {
+    let Some(pages) = pages else {
+        return Ok(Vec::new());
+    };
+    let all_typ_files = iter_typ_files(src_dir, true, &[PathBuf::from(FALLBACK_PAGE)])?;
+    let mut files = BTreeSet::new();
+    for pattern in page_patterns(&pages.include) {
+        let matches = if has_glob_chars(&pattern) {
+            all_typ_files
+                .iter()
+                .filter(|path| wildcard_match(&pattern, &rel_posix(src_dir, path)))
+                .cloned()
+                .collect::<Vec<_>>()
+        } else {
+            let candidate = src_dir.join(Path::new(&pattern));
+            if candidate.is_file()
+                && candidate.extension().and_then(|ext| ext.to_str()) == Some("typ")
+            {
+                vec![candidate]
+            } else {
+                cwarn!(
+                    "pages.include path does not exist or is not a .typ file: {}",
+                    pattern
+                );
+                Vec::new()
+            }
+        };
+        for path in matches {
+            if !page_is_excluded(src_dir, &path, Some(pages)) {
+                files.insert(path);
+            }
+        }
+    }
+    Ok(files.into_iter().collect())
+}
+
+fn page_is_excluded(src_dir: &Path, path: &Path, pages: Option<&PagesConfig>) -> bool {
+    let Some(pages) = pages else {
+        return false;
+    };
+    let rel = rel_posix(src_dir, path);
+    page_patterns(&pages.exclude)
+        .into_iter()
+        .any(|pattern| wildcard_match(&pattern, &rel))
+}
+
+fn page_patterns(patterns: &[String]) -> Vec<String> {
+    patterns
+        .iter()
+        .filter_map(|pattern| clean_optional_string(Some(pattern.as_str())))
+        .map(|pattern| slash_path(Path::new(&pattern)))
+        .collect()
+}
+
+fn has_glob_chars(pattern: &str) -> bool {
+    pattern.contains('*') || pattern.contains('?')
+}
+
+fn build_page_info(
+    src_dir: &Path,
+    typ_files: &[PathBuf],
+    page_meta: &PageMetaMap,
+    pdf_files: &BTreeSet<PathBuf>,
+    languages: &Option<Vec<LanguageInfo>>,
+) -> Result<PageInfoMap> {
+    let mut out = PageInfoMap::new();
+    for path in typ_files {
+        let language = page_language(path, languages)?;
+        let meta = page_meta.get(path);
+        for (key, value, route) in [
+            ("slug", meta.and_then(|meta| meta.slug.as_deref()), false),
+            ("url", meta.and_then(|meta| meta.url.as_deref()), true),
+        ] {
+            if let Some(value) = value {
+                // `url` values are interpreted relative to the output root, so a
+                // leading `/` is harmless there; a slug is joined onto the page's
+                // directory and must be relative.
+                let checked = if route { value.trim_start_matches('/') } else { value };
+                if !is_safe_output_route(checked) {
+                    bail!(
+                        "page {key} must stay inside the output directory: `{value}` ({})",
+                        path.display()
+                    );
+                }
+            }
+        }
+        let rel = page_relative_source_path(src_dir, path, language);
+        let translation_key = meta
+            .and_then(|meta| meta.translation_key.clone())
+            .unwrap_or_else(|| slash_path(&rel.with_extension("")));
+        let href = page_output_href(&rel, language, meta, "html");
+        let pdf_href = pdf_files
+            .contains(path)
+            .then(|| page_output_href(&rel, language, meta, "pdf"));
+        out.insert(
+            path.clone(),
+            PageInfo {
+                language: language.map(|language| language.code.clone()),
+                translation_key,
+                href,
+                pdf_href,
+            },
+        );
+    }
+    Ok(out)
+}
+
+fn page_language<'a>(
+    path: &Path,
+    languages: &'a Option<Vec<LanguageInfo>>,
+) -> Result<Option<&'a LanguageInfo>> {
+    let Some(languages) = languages else {
+        return Ok(None);
+    };
+    languages
+        .iter()
+        .filter(|language| path.starts_with(&language.content_dir))
+        .max_by_key(|language| language.content_dir.components().count())
+        .map(Some)
+        .ok_or_else(|| {
+            anyhow!(
+                "page is outside configured language content directories: {}",
+                path.display()
+            )
+        })
+}
+
+fn page_relative_source_path(
+    src_dir: &Path,
+    path: &Path,
+    language: Option<&LanguageInfo>,
+) -> PathBuf {
+    let root = language
+        .map(|language| language.content_dir.as_path())
+        .unwrap_or(src_dir);
+    path.strip_prefix(root).unwrap_or(path).to_path_buf()
+}
+
+fn page_output_href(
+    rel_source: &Path,
+    language: Option<&LanguageInfo>,
+    meta: Option<&PageMeta>,
+    extension: &str,
+) -> String {
+    if let Some(url) = meta.and_then(|meta| meta.url.as_deref()) {
+        return output_href_with_extension(url, extension);
+    }
+    let rel = if let Some(slug) = meta.and_then(|meta| meta.slug.as_deref()) {
+        let mut rel = rel_source
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .join(slug);
+        rel.set_extension(extension);
+        rel
+    } else {
+        rel_source.with_extension(extension)
+    };
+    let rel = slash_path(&rel);
+    match language
+        .map(|language| language.url_prefix.as_str())
+        .filter(|prefix| !prefix.is_empty())
+    {
+        Some(prefix) if rel.is_empty() => prefix.to_string(),
+        Some(prefix) => format!("{prefix}/{rel}"),
+        None => rel,
+    }
+}
+
+fn output_href_with_extension(url: &str, extension: &str) -> String {
+    let url = url.trim().trim_start_matches('/').trim_start_matches("./");
+    if url.ends_with('/') {
+        return format!("{url}index.{extension}");
+    }
+    // Replace any author-provided extension so the HTML and PDF outputs of the
+    // same page never collide on one path.
+    let mut path = PathBuf::from(url);
+    path.set_extension(extension);
+    slash_path(&path)
+}
+
+/// True when `value` is a relative route that cannot escape the output
+/// directory once joined onto it.
+fn is_safe_output_route(value: &str) -> bool {
+    let path = Path::new(value);
+    !path.is_absolute()
+        && path
+            .components()
+            .all(|component| matches!(component, std::path::Component::Normal(_) | std::path::Component::CurDir))
+}
+
+struct IconCache {
+    dir: PathBuf,
+    agent: ureq::Agent,
+    /// Icons that already failed this build; avoids repeating slow download
+    /// attempts (and duplicate warnings) for every nav item that uses them.
+    unavailable: BTreeSet<String>,
+}
+
+impl IconCache {
+    fn new(dir: PathBuf) -> Self {
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(ICON_DOWNLOAD_TIMEOUT_SECS))
+            .build();
+        Self {
+            dir,
+            agent,
+            unavailable: BTreeSet::new(),
+        }
+    }
+
+    /// Returns the icon's inline SVG, or `None` (after a warning) when it
+    /// cannot be fetched or is unsafe to inline. Only a malformed icon spec is
+    /// an error: a missing network must not fail the whole site build.
+    fn resolve(&mut self, spec: Option<&str>) -> Result<Option<String>> {
+        let Some(spec) = spec else {
+            return Ok(None);
+        };
+        let icon = parse_icon_spec(spec)?;
+        if self.unavailable.contains(spec) {
+            return Ok(None);
+        }
+        let path = self
+            .dir
+            .join(&icon.prefix)
+            .join(format!("{}.svg", icon.name));
+        if path.is_file() {
+            let svg = fs::read_to_string(&path)
+                .with_context(|| format!("failed to read cached icon {}", path.display()))?;
+            return Ok(self.sanitized_or_warn(&svg, spec));
+        }
+
+        fs::create_dir_all(path.parent().unwrap())
+            .with_context(|| format!("failed to create icon cache {}", self.dir.display()))?;
+        let url = format!(
+            "https://api.iconify.design/{}/{}.svg",
+            icon.prefix, icon.name
+        );
+        let svg = match self.agent.get(&url).call() {
+            Ok(response) => match response.into_string() {
+                Ok(svg) => svg,
+                Err(error) => {
+                    cwarn!("failed to read downloaded icon `{spec}`: {error}");
+                    self.unavailable.insert(spec.to_string());
+                    return Ok(None);
+                }
+            },
+            Err(error) => {
+                cwarn!("failed to download icon `{spec}` from {url}: {error}");
+                self.unavailable.insert(spec.to_string());
+                return Ok(None);
+            }
+        };
+        let Some(svg) = self.sanitized_or_warn(&svg, spec) else {
+            return Ok(None);
+        };
+        fs::write(&path, &svg)
+            .with_context(|| format!("failed to cache icon `{spec}` at {}", path.display()))?;
+        Ok(Some(svg))
+    }
+
+    fn sanitized_or_warn(&mut self, svg: &str, spec: &str) -> Option<String> {
+        match sanitize_icon_svg(svg, spec) {
+            Ok(svg) => Some(svg),
+            Err(error) => {
+                cwarn!("{error}");
+                self.unavailable.insert(spec.to_string());
+                None
+            }
+        }
+    }
+}
+
+struct IconSpec {
+    prefix: String,
+    name: String,
+}
+
+fn parse_icon_spec(value: &str) -> Result<IconSpec> {
+    let value = value.trim();
+    let (prefix, name) = value
+        .split_once(':')
+        .map(|(prefix, name)| (prefix.trim(), name.trim()))
+        .unwrap_or((DEFAULT_ICON_PREFIX, value));
+    if !valid_icon_component(prefix) || !valid_icon_component(name) {
+        return Err(anyhow!(
+            "invalid icon `{value}`; use `name` or `prefix:name` with lowercase letters, digits, and hyphens"
+        ));
+    }
+    Ok(IconSpec {
+        prefix: prefix.to_string(),
+        name: name.to_string(),
+    })
+}
+
+fn valid_icon_component(value: &str) -> bool {
+    !value.is_empty()
+        && !value.starts_with('-')
+        && !value.ends_with('-')
+        && !value.contains("--")
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+}
+
+fn sanitize_icon_svg(svg: &str, spec: &str) -> Result<String> {
+    let svg = svg.trim();
+    let lower = svg.to_ascii_lowercase();
+    if !lower.starts_with("<svg")
+        || !lower.contains("</svg>")
+        || lower.contains("<script")
+        || lower.contains("<foreignobject")
+        || lower.contains("javascript:")
+        || contains_event_handler_attribute(&lower)
+    {
+        return Err(anyhow!("downloaded icon `{spec}` is not a safe inline SVG"));
+    }
+    Ok(svg.to_string())
+}
+
+/// Detects `on...=` event-handler attributes (`onload=`, `onclick=`, ...) in
+/// lowercased SVG source. May reject rare benign content (e.g. text mentioning
+/// `on x=`); for icons that trade-off is fine.
+fn contains_event_handler_attribute(lower: &str) -> bool {
+    lower.match_indices("on").any(|(index, _)| {
+        let preceded_by_whitespace = lower[..index]
+            .chars()
+            .next_back()
+            .is_some_and(|c| c.is_ascii_whitespace());
+        if !preceded_by_whitespace {
+            return false;
+        }
+        let rest = &lower[index + "on".len()..];
+        let name_len = rest.chars().take_while(char::is_ascii_alphanumeric).count();
+        name_len > 0 && rest[name_len..].trim_start().starts_with('=')
+    })
+}
+
+fn nav_label_html(
+    label: &str,
+    fallback_icon: Option<&str>,
+    icon_cache: &mut IconCache,
+) -> Result<String> {
+    let mut html = String::new();
+    if let Some(icon) = fallback_icon {
+        if !label_contains_icon_token(label) {
+            push_nav_icon(&mut html, icon, icon_cache)?;
+        }
+    }
+    let mut rest = label;
+    while let Some(start) = rest.find("{icon:") {
+        html.push_str(&html_escape(&rest[..start]));
+        let after_start = &rest[start + "{icon:".len()..];
+        let Some(end) = after_start.find('}') else {
+            html.push_str(&html_escape(&rest[start..]));
+            return Ok(html);
+        };
+        let icon = after_start[..end].trim();
+        push_nav_icon(&mut html, icon, icon_cache)?;
+        rest = &after_start[end + 1..];
+    }
+    html.push_str(&html_escape(rest));
+    Ok(html)
+}
+
+fn label_contains_icon_token(label: &str) -> bool {
+    label.contains("{icon:")
+}
+
+fn push_nav_icon(html: &mut String, icon: &str, icon_cache: &mut IconCache) -> Result<()> {
+    if let Some(svg) = icon_cache.resolve(Some(icon))? {
+        html.push_str(r#"<span class="calepin-nav-icon">"#);
+        html.push_str(&svg);
+        html.push_str("</span>");
+    }
+    Ok(())
+}
+
+fn accessible_nav_label(label: &str, fallback: &str) -> String {
+    let stripped = strip_icon_tokens(label).trim().to_string();
+    if stripped.is_empty() {
+        fallback.to_string()
+    } else {
+        stripped
+    }
+}
+
+fn strip_icon_tokens(label: &str) -> String {
+    let mut out = String::new();
+    let mut rest = label;
+    while let Some(start) = rest.find("{icon:") {
+        out.push_str(&rest[..start]);
+        let after_start = &rest[start + "{icon:".len()..];
+        let Some(end) = after_start.find('}') else {
+            out.push_str(&rest[start..]);
+            return out;
+        };
+        rest = &after_start[end + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+fn nav_from_plans(
     sections: &[NavSectionPlan],
     page_meta: &PageMetaMap,
-) -> Vec<NavSectionModel> {
+    page_info: &PageInfoMap,
+    icon_cache: &mut IconCache,
+) -> Result<Vec<NavSectionModel>> {
     let is_hidden = |path: &PathBuf| page_meta.get(path).is_some_and(|meta| meta.hidden);
     sections
         .iter()
-        .map(|section| NavSectionModel {
-            title: section.title.clone(),
-            items: section
+        .map(|section| {
+            let items = section
                 .items
                 .iter()
                 .filter(|item| !is_hidden(&item.path))
-                .map(|item| NavItemModel {
-                    href: rel_html_path(src_dir, &item.path),
-                    label: item
+                .map(|item| {
+                    let raw_label = item
                         .configured_label
                         .clone()
-                        .or_else(|| page_meta.get(&item.path).and_then(|meta| meta.title.clone()))
-                        .unwrap_or_else(|| stem_label(&item.path)),
+                        .or_else(|| {
+                            page_meta
+                                .get(&item.path)
+                                .and_then(|meta| meta.title.clone())
+                        })
+                        .unwrap_or_else(|| stem_label(&item.path));
+                    let fallback = page_meta
+                        .get(&item.path)
+                        .and_then(|meta| meta.title.clone())
+                        .unwrap_or_else(|| stem_label(&item.path));
+                    let label = accessible_nav_label(&raw_label, &fallback);
+                    let label_html = nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
+                    Ok(NavItemModel {
+                        language: section.language.clone(),
+                        href: page_info
+                            .get(&item.path)
+                            .map(|info| info.href.clone())
+                            .unwrap_or_default(),
+                        label,
+                        label_html,
+                        widget: None,
+                    })
                 })
-                .collect(),
+                .collect::<Result<Vec<_>>>()?;
+            Ok(NavSectionModel {
+                language: section.language.clone(),
+                title: section.title.clone(),
+                items,
+            })
+        })
+        .collect()
+}
+
+fn navbar_from_plan(
+    plan: &NavbarPlan,
+    page_meta: &PageMetaMap,
+    page_info: &PageInfoMap,
+    icon_cache: &mut IconCache,
+) -> Result<NavbarModel> {
+    Ok(NavbarModel {
+        left: navbar_items_from_plan(&plan.left, page_meta, page_info, icon_cache)?,
+        center: navbar_items_from_plan(&plan.center, page_meta, page_info, icon_cache)?,
+        right: navbar_items_from_plan(&plan.right, page_meta, page_info, icon_cache)?,
+    })
+}
+
+fn navbar_items_from_plan(
+    items: &[NavbarItemPlan],
+    page_meta: &PageMetaMap,
+    page_info: &PageInfoMap,
+    icon_cache: &mut IconCache,
+) -> Result<Vec<NavItemModel>> {
+    items
+        .iter()
+        .filter_map(|item| {
+            if let Some(widget) = item.widget.as_deref() {
+                let fallback = default_widget_label(widget);
+                let raw_label = item
+                    .configured_label
+                    .clone()
+                    .unwrap_or_else(|| fallback.clone());
+                return Some(
+                    nav_label_html(&raw_label, item.icon.as_deref(), icon_cache).map(
+                        |label_html| NavItemModel {
+                            language: None,
+                            href: String::new(),
+                            label: accessible_nav_label(&raw_label, &fallback),
+                            label_html,
+                            widget: Some(widget.to_string()),
+                        },
+                    ),
+                );
+            }
+            if let Some(path) = &item.path {
+                let raw_label = item
+                    .configured_label
+                    .clone()
+                    .or_else(|| page_meta.get(path).and_then(|meta| meta.title.clone()))
+                    .unwrap_or_else(|| stem_label(path));
+                let fallback = page_meta
+                    .get(path)
+                    .and_then(|meta| meta.title.clone())
+                    .unwrap_or_else(|| stem_label(path));
+                return Some(
+                    nav_label_html(&raw_label, item.icon.as_deref(), icon_cache).map(
+                        |label_html| NavItemModel {
+                            language: page_info.get(path).and_then(|info| info.language.clone()),
+                            href: page_info
+                                .get(path)
+                                .map(|info| info.href.clone())
+                                .unwrap_or_default(),
+                            label: accessible_nav_label(&raw_label, &fallback),
+                            label_html,
+                            widget: None,
+                        },
+                    ),
+                );
+            }
+            item.url.as_ref().map(|url| {
+                let raw_label = item.configured_label.clone().unwrap_or_else(|| url.clone());
+                nav_label_html(&raw_label, item.icon.as_deref(), icon_cache).map(|label_html| {
+                    NavItemModel {
+                        language: None,
+                        href: url.clone(),
+                        label: accessible_nav_label(&raw_label, url),
+                        label_html,
+                        widget: None,
+                    }
+                })
+            })
         })
         .collect()
 }
@@ -928,7 +2109,7 @@ fn build_pages_index(
     typ_files: &[PathBuf],
     sections: &[NavSectionPlan],
     page_meta: &PageMetaMap,
-    pdf_files: &BTreeSet<PathBuf>,
+    page_info: &PageInfoMap,
 ) -> serde_json::Value {
     let configured_labels = sections
         .iter()
@@ -939,10 +2120,9 @@ fn build_pages_index(
                 .map(|label| (&item.path, label))
         })
         .collect::<BTreeMap<_, _>>();
-    let fallback = src_dir.join(FALLBACK_PAGE);
     let entries = typ_files
         .iter()
-        .filter(|path| **path != fallback)
+        .filter(|path| path.file_name().and_then(|name| name.to_str()) != Some(FALLBACK_PAGE))
         .map(|path| {
             let meta = page_meta.get(path);
             let title = configured_labels
@@ -956,16 +2136,34 @@ fn build_pages_index(
                 .unwrap_or_else(|| serde_json::json!({}));
             serde_json::json!({
                 "path": rel_posix(src_dir, path),
-                "href": rel_html_path(src_dir, path),
+                "href": page_info.get(path).map(|info| info.href.clone()).unwrap_or_default(),
                 "title": title,
-                "pdf": pdf_files
-                    .contains(path)
-                    .then(|| rel_output_path(src_dir, path, "pdf")),
+                "language": page_info.get(path).and_then(|info| info.language.clone()),
+                "translation_key": page_info.get(path).map(|info| info.translation_key.clone()).unwrap_or_default(),
+                "translations": page_translations_json(path, page_info),
+                "pdf": page_info.get(path).and_then(|info| info.pdf_href.clone()),
                 "meta": raw,
             })
         })
         .collect::<Vec<_>>();
     serde_json::Value::Array(entries)
+}
+
+fn page_translations_json(path: &Path, page_info: &PageInfoMap) -> serde_json::Value {
+    let Some(current) = page_info.get(path) else {
+        return serde_json::json!({});
+    };
+    let translations = page_info
+        .values()
+        .filter(|info| info.translation_key == current.translation_key)
+        .filter_map(|info| {
+            info.language
+                .as_ref()
+                .map(|language| (language, &info.href))
+        })
+        .map(|(language, href)| (language.clone(), serde_json::Value::String(href.clone())))
+        .collect::<serde_json::Map<_, _>>();
+    serde_json::Value::Object(translations)
 }
 
 /// Writes the pages index into every page directory's `.calepin`, so the
@@ -988,24 +2186,26 @@ fn write_pages_index(typ_files: &[PathBuf], index_json: &str) -> Result<()> {
 }
 
 fn resolve_file_list(
+    context: &str,
     src_dir: &Path,
-    item: &SidebarItemConfig,
+    item_path: Option<&PathBuf>,
+    item_glob: Option<&str>,
     all_typ_files: &[PathBuf],
 ) -> Result<Vec<PathBuf>> {
-    if let Some(path) = &item.path {
+    if let Some(path) = item_path {
         let candidate = src_dir.join(path);
         if candidate.is_file() && candidate.extension().and_then(|ext| ext.to_str()) == Some("typ")
         {
             return Ok(vec![candidate]);
         }
         cwarn!(
-            "sidebar item path does not exist or is not a .typ file: {}",
+            "{context} item path does not exist or is not a .typ file: {}",
             path.display()
         );
         return Ok(Vec::new());
     }
 
-    if let Some(pattern) = &item.glob {
+    if let Some(pattern) = item_glob {
         let pattern = slash_path(Path::new(pattern));
         return Ok(all_typ_files
             .iter()
@@ -1092,6 +2292,25 @@ fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
             .get("hidden")
             .and_then(|hidden| hidden.as_bool())
             .unwrap_or(false),
+        translation_key: value
+            .get("translation_key")
+            .or_else(|| value.get("translationKey"))
+            .and_then(|key| key.as_str())
+            .map(str::trim)
+            .filter(|key| !key.is_empty())
+            .map(str::to_string),
+        slug: value
+            .get("slug")
+            .and_then(|slug| slug.as_str())
+            .map(str::trim)
+            .filter(|slug| !slug.is_empty())
+            .map(str::to_string),
+        url: value
+            .get("url")
+            .and_then(|url| url.as_str())
+            .map(str::trim)
+            .filter(|url| !url.is_empty())
+            .map(str::to_string),
         raw: if value.is_object() {
             value.clone()
         } else {
@@ -1149,16 +2368,19 @@ fn run_parallel<T: Send>(
 
 fn preprocess_documents(
     typ_files: &[PathBuf],
+    src_dir: &Path,
     config_path: &Path,
     quiet: bool,
     timeout: Option<u64>,
     params: &[String],
     parallelism: Option<usize>,
 ) -> Result<BTreeMap<PathBuf, PreprocessOutput>> {
+    let display_root = fs::canonicalize(src_dir).unwrap_or_else(|_| src_dir.to_path_buf());
     let outputs = run_parallel(typ_files.to_vec(), parallelism, |input| {
         preprocess_cached(PreprocessOptions {
             input: input.to_path_buf(),
             config: Some(config_path.to_path_buf()),
+            display_root: Some(display_root.clone()),
             quiet,
             timeout,
             sync_pages: false,
@@ -1191,19 +2413,23 @@ fn render_document(
     let preprocessed = preprocessed
         .get(input_path)
         .ok_or_else(|| anyhow!("page was not preprocessed: {}", input_path.display()))?;
-    let rel_output = input_path
-        .strip_prefix(&context.src_dir)
-        .unwrap_or(input_path)
-        .with_extension("");
-    let html_rel = rel_output.with_extension("html");
-    let html_output = context.out_dir.join(&html_rel);
+    let page_info = context
+        .page_info
+        .get(input_path)
+        .ok_or_else(|| anyhow!("page output was not planned: {}", input_path.display()))?;
+    let html_output = context.out_dir.join(&page_info.href);
     if let Some(parent) = html_output.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("failed to create {}", parent.display()))?;
     }
 
-    let current_href = html_rel.to_string_lossy().replace('\\', "/");
-    let mut site_context = site.theme_context(&current_href);
+    let current_href = page_info.href.clone();
+    let mut site_context = site.theme_context(
+        &current_href,
+        Some(page_info),
+        &context.page_info,
+        context.languages.as_deref(),
+    );
     if let Some(stylesheet) = context.theme_stylesheet.as_deref() {
         site_context.stylesheet = Some(html_escape(&page_relative_url(&current_href, stylesheet)));
     }
@@ -1223,7 +2449,11 @@ fn render_document(
     embed_source_blob(&html_output, input_path)?;
 
     if context.pdf_files.contains(input_path) {
-        let pdf_output = context.out_dir.join(rel_output.with_extension("pdf"));
+        let pdf_href = page_info
+            .pdf_href
+            .as_ref()
+            .ok_or_else(|| anyhow!("PDF output was not planned: {}", input_path.display()))?;
+        let pdf_output = context.out_dir.join(pdf_href);
         compile_with_typst(
             &context.typst,
             &preprocessed.layout,
@@ -1260,19 +2490,19 @@ fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
 }
 
 fn expected_generated_outputs(
-    src_dir: &Path,
     out_dir: &Path,
     typ_files: &[PathBuf],
-    pdf_files: &BTreeSet<PathBuf>,
+    page_info: &PageInfoMap,
     sitemap_path: &Option<PathBuf>,
     theme_stylesheet_path: Option<&Path>,
 ) -> BTreeSet<PathBuf> {
     let mut outputs = BTreeSet::new();
     for input_path in typ_files {
-        let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
-        outputs.insert(out_dir.join(rel).with_extension("html"));
-        if pdf_files.contains(input_path) {
-            outputs.insert(out_dir.join(rel).with_extension("pdf"));
+        if let Some(info) = page_info.get(input_path) {
+            outputs.insert(out_dir.join(&info.href));
+            if let Some(pdf_href) = &info.pdf_href {
+                outputs.insert(out_dir.join(pdf_href));
+            }
         }
     }
     if let Some(path) = sitemap_path {
@@ -1398,16 +2628,7 @@ fn write_sitemap(out_dir: &Path, base_url: Option<&str>, hrefs: &BTreeSet<String
 
 fn clear_previous_outputs(src_dir: &Path, out_dir: &Path) -> Result<()> {
     if out_dir == src_dir {
-        for input_path in iter_typ_files(src_dir, true, &[])? {
-            let rel = input_path.strip_prefix(src_dir).unwrap_or(&input_path);
-            for extension in ["html", "pdf"] {
-                let output = out_dir.join(rel).with_extension(extension);
-                if output.exists() {
-                    fs::remove_file(&output)
-                        .with_context(|| format!("failed to remove {}", output.display()))?;
-                }
-            }
-        }
+        return Ok(());
     } else if out_dir.exists() {
         for entry in fs::read_dir(out_dir)
             .with_context(|| format!("failed to read {}", out_dir.display()))?
@@ -1478,18 +2699,6 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn rel_html_path(src_dir: &Path, path: &Path) -> String {
-    rel_output_path(src_dir, path, "html")
-}
-
-fn rel_output_path(src_dir: &Path, path: &Path, extension: &str) -> String {
-    path.strip_prefix(src_dir)
-        .unwrap_or(path)
-        .with_extension(extension)
-        .to_string_lossy()
-        .replace('\\', "/")
 }
 
 fn rel_posix(src_dir: &Path, path: &Path) -> String {
@@ -1563,15 +2772,30 @@ fn page_relative_url(current_href: &str, target: &str) -> String {
     }
 
     let target = target.trim_start_matches("./");
-    let parent_depth = current_href
+    let current_dir = current_href
         .split('/')
         .filter(|part| !part.is_empty())
-        .count()
-        .saturating_sub(1);
-    if parent_depth == 0 {
-        target.to_string()
-    } else {
-        format!("{}{}", "../".repeat(parent_depth), target)
+        .collect::<Vec<_>>();
+    let current_dir = current_dir
+        .get(..current_dir.len().saturating_sub(1))
+        .unwrap_or(&[]);
+    let target_parts = target
+        .split('/')
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>();
+    let common_len = current_dir
+        .iter()
+        .zip(target_parts.iter())
+        .take_while(|(left, right)| left == right)
+        .count();
+    let up_levels = current_dir.len().saturating_sub(common_len);
+    let remaining_target = target_parts.get(common_len..).unwrap_or(&[]).join("/");
+
+    match (up_levels, remaining_target.is_empty()) {
+        (0, false) => remaining_target,
+        (0, true) => target.to_string(),
+        (_, false) => format!("{}{}", "../".repeat(up_levels), remaining_target),
+        (_, true) => "../".repeat(up_levels).trim_end_matches('/').to_string(),
     }
 }
 
@@ -1620,6 +2844,93 @@ const WEBSITE_TOML_TEMPLATE: &str = include_str!("../assets/scaffolds/website/ca
 const INDEX_TYP_TEMPLATE: &str = include_str!("../assets/scaffolds/website/docs/index.typ");
 const NOT_FOUND_TYP_TEMPLATE: &str = include_str!("../assets/scaffolds/website/docs/404.typ");
 
+const ACADEMIC_SCAFFOLD_FILES: &[(&str, &str)] = &[
+    (
+        "calepin.toml",
+        include_str!("../assets/scaffolds/academic/docs/calepin.toml"),
+    ),
+    (
+        "index.typ",
+        include_str!("../assets/scaffolds/academic/docs/index.typ"),
+    ),
+    (
+        "assets/academic.typ",
+        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
+    ),
+    (
+        "assets/profile.svg",
+        include_str!("../assets/scaffolds/academic/docs/assets/profile.svg"),
+    ),
+    (
+        "publications/index.typ",
+        include_str!("../assets/scaffolds/academic/docs/publications/index.typ"),
+    ),
+    (
+        "publications/assets/academic.typ",
+        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
+    ),
+    (
+        "publications/example-paper.typ",
+        include_str!("../assets/scaffolds/academic/docs/publications/example-paper.typ"),
+    ),
+    (
+        "talks/index.typ",
+        include_str!("../assets/scaffolds/academic/docs/talks/index.typ"),
+    ),
+    (
+        "talks/assets/academic.typ",
+        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
+    ),
+    (
+        "talks/example-talk.typ",
+        include_str!("../assets/scaffolds/academic/docs/talks/example-talk.typ"),
+    ),
+    (
+        "teaching/index.typ",
+        include_str!("../assets/scaffolds/academic/docs/teaching/index.typ"),
+    ),
+    (
+        "teaching/assets/academic.typ",
+        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
+    ),
+    (
+        "teaching/pol6021.typ",
+        include_str!("../assets/scaffolds/academic/docs/teaching/pol6021.typ"),
+    ),
+    (
+        "projects/index.typ",
+        include_str!("../assets/scaffolds/academic/docs/projects/index.typ"),
+    ),
+    (
+        "projects/assets/academic.typ",
+        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
+    ),
+    (
+        "projects/example-project.typ",
+        include_str!("../assets/scaffolds/academic/docs/projects/example-project.typ"),
+    ),
+    (
+        "posts/index.typ",
+        include_str!("../assets/scaffolds/academic/docs/posts/index.typ"),
+    ),
+    (
+        "posts/assets/academic.typ",
+        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
+    ),
+    (
+        "posts/welcome.typ",
+        include_str!("../assets/scaffolds/academic/docs/posts/welcome.typ"),
+    ),
+    (
+        "cv.typ",
+        include_str!("../assets/scaffolds/academic/docs/cv.typ"),
+    ),
+    (
+        "404.typ",
+        include_str!("../assets/scaffolds/academic/docs/404.typ"),
+    ),
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1634,6 +2945,10 @@ mod tests {
             nav_signature: 0,
             pages_signature: 0,
         }
+    }
+
+    fn test_page_info(src: &Path, files: &[PathBuf], pdf_files: &BTreeSet<PathBuf>) -> PageInfoMap {
+        build_page_info(src, files, &PageMetaMap::new(), pdf_files, &None).unwrap()
     }
 
     #[test]
@@ -1666,6 +2981,478 @@ mod tests {
             configured_html_theme(None, &template_config),
             "legacy-template"
         );
+    }
+
+    #[test]
+    fn configured_languages_defaults_to_directory_per_language() {
+        let src = Path::new("/site/docs");
+        let config = WebsiteConfig {
+            default_language: Some("en".to_string()),
+            languages: BTreeMap::from([
+                (
+                    "en".to_string(),
+                    LanguageConfig {
+                        label: Some("English".to_string()),
+                        content_dir: Some(PathBuf::from(".")),
+                        ..LanguageConfig::default()
+                    },
+                ),
+                (
+                    "fr".to_string(),
+                    LanguageConfig {
+                        label: Some("Français".to_string()),
+                        ..LanguageConfig::default()
+                    },
+                ),
+            ]),
+            ..WebsiteConfig::default()
+        };
+
+        let languages = configured_languages(src, &config).unwrap().unwrap();
+
+        assert_eq!(languages[0].code, "en");
+        assert_eq!(languages[0].content_dir, src);
+        assert_eq!(languages[0].url_prefix, "");
+        assert!(languages[0].default);
+        assert_eq!(languages[1].code, "fr");
+        assert_eq!(languages[1].content_dir, src.join("fr"));
+        assert_eq!(languages[1].url_prefix, "fr");
+        assert_eq!(languages[1].label, "Français");
+    }
+
+    #[test]
+    fn configured_languages_requires_explicit_default_for_multiple_languages() {
+        let src = Path::new("/site/docs");
+        let config = WebsiteConfig {
+            languages: BTreeMap::from([
+                ("en".to_string(), LanguageConfig::default()),
+                ("fr".to_string(), LanguageConfig::default()),
+            ]),
+            ..WebsiteConfig::default()
+        };
+
+        let error = configured_languages(src, &config).unwrap_err();
+        assert!(error.to_string().contains("default_language"));
+
+        let single = WebsiteConfig {
+            languages: BTreeMap::from([("fr".to_string(), LanguageConfig::default())]),
+            ..WebsiteConfig::default()
+        };
+        let languages = configured_languages(src, &single).unwrap().unwrap();
+        assert!(languages[0].default);
+    }
+
+    #[test]
+    fn configured_languages_rejects_url_prefix_escaping_output_directory() {
+        let src = Path::new("/site/docs");
+        let config = WebsiteConfig {
+            default_language: Some("en".to_string()),
+            languages: BTreeMap::from([(
+                "en".to_string(),
+                LanguageConfig {
+                    url_prefix: Some("../outside".to_string()),
+                    ..LanguageConfig::default()
+                },
+            )]),
+            ..WebsiteConfig::default()
+        };
+
+        let error = configured_languages(src, &config).unwrap_err();
+        assert!(error.to_string().contains("url_prefix"));
+    }
+
+    #[test]
+    fn discover_site_pages_does_not_treat_language_dirs_as_default_pages() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        fs::write(src.join("about.typ"), "= About\n").unwrap();
+        fs::create_dir_all(src.join("fr")).unwrap();
+        fs::write(src.join("fr").join("index.typ"), "= Accueil\n").unwrap();
+        fs::write(src.join("fr").join("about.typ"), "= À propos\n").unwrap();
+        let languages = Some(vec![
+            LanguageInfo {
+                code: "en".to_string(),
+                label: "English".to_string(),
+                content_dir: src.to_path_buf(),
+                url_prefix: String::new(),
+                default: true,
+            },
+            LanguageInfo {
+                code: "fr".to_string(),
+                label: "Français".to_string(),
+                content_dir: src.join("fr"),
+                url_prefix: "fr".to_string(),
+                default: false,
+            },
+        ]);
+
+        let (_sections, files) = discover_site_pages(src, None, None, &languages).unwrap();
+        let mut rel = files
+            .iter()
+            .map(|path| rel_posix(src, path))
+            .collect::<Vec<_>>();
+        rel.sort();
+
+        assert_eq!(
+            rel,
+            vec!["about.typ", "fr/about.typ", "fr/index.typ", "index.typ"]
+        );
+    }
+
+    #[test]
+    fn implicit_build_pages_include_root_home_and_fallback_outside_configured_navigation() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        fs::write(src.join("404.typ"), "= Not Found\n").unwrap();
+        fs::write(src.join("about.typ"), "= About\n").unwrap();
+        let sidebar = SidebarConfig {
+            section: vec![SidebarSectionConfig {
+                item: vec![SidebarItemConfig {
+                    path: Some(PathBuf::from("about.typ")),
+                    ..SidebarItemConfig::default()
+                }],
+                ..SidebarSectionConfig::default()
+            }],
+            ..SidebarConfig::default()
+        };
+
+        let (_sections, files) = discover_site_pages(src, Some(&sidebar), None, &None).unwrap();
+        assert_eq!(
+            files
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["about.typ"]
+        );
+
+        let mut build_files = files;
+        build_files.extend(implicit_build_pages(src, &None));
+        build_files.sort_by_key(|path| rel_posix(src, path));
+
+        assert_eq!(
+            build_files
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["404.typ", "about.typ", "index.typ"]
+        );
+    }
+
+    #[test]
+    fn implicit_build_pages_include_each_language_home_and_fallback() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        fs::write(src.join("404.typ"), "= Not Found\n").unwrap();
+        fs::create_dir_all(src.join("fr")).unwrap();
+        fs::write(src.join("fr").join("index.typ"), "= Accueil\n").unwrap();
+        fs::write(src.join("fr").join("404.typ"), "= Introuvable\n").unwrap();
+        let languages = Some(vec![
+            LanguageInfo {
+                code: "en".to_string(),
+                label: "English".to_string(),
+                content_dir: src.to_path_buf(),
+                url_prefix: String::new(),
+                default: true,
+            },
+            LanguageInfo {
+                code: "fr".to_string(),
+                label: "Français".to_string(),
+                content_dir: src.join("fr"),
+                url_prefix: "fr".to_string(),
+                default: false,
+            },
+        ]);
+
+        let mut pages = implicit_build_pages(src, &languages);
+        pages.sort_by_key(|path| rel_posix(src, path));
+
+        assert_eq!(
+            pages
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["404.typ", "fr/404.typ", "fr/index.typ", "index.typ"]
+        );
+    }
+
+    #[test]
+    fn pages_include_adds_build_only_pages() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        fs::write(src.join("about.typ"), "= About\n").unwrap();
+        fs::create_dir_all(src.join("landing")).unwrap();
+        fs::write(src.join("landing").join("campaign.typ"), "= Campaign\n").unwrap();
+        let pages = PagesConfig {
+            include: vec!["landing/*.typ".to_string()],
+            ..PagesConfig::default()
+        };
+        let sidebar = SidebarConfig {
+            section: vec![SidebarSectionConfig {
+                item: vec![SidebarItemConfig {
+                    path: Some(PathBuf::from("about.typ")),
+                    ..SidebarItemConfig::default()
+                }],
+                ..SidebarSectionConfig::default()
+            }],
+            ..SidebarConfig::default()
+        };
+
+        let (_sections, nav_files) =
+            discover_site_pages(src, Some(&sidebar), Some(&pages), &None).unwrap();
+        let include_files = discover_site_build_pages(src, Some(&pages), &None).unwrap();
+
+        assert_eq!(
+            nav_files
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["about.typ"]
+        );
+        assert_eq!(
+            include_files
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["landing/campaign.typ"]
+        );
+    }
+
+    #[test]
+    fn pages_exclude_removes_pages_from_navigation_and_includes() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        fs::write(src.join("about.typ"), "= About\n").unwrap();
+        fs::create_dir_all(src.join("drafts")).unwrap();
+        fs::write(src.join("drafts").join("idea.typ"), "= Draft\n").unwrap();
+        let pages = PagesConfig {
+            include: vec!["drafts/*.typ".to_string()],
+            exclude: vec!["drafts/**".to_string(), "about.typ".to_string()],
+        };
+
+        let (_sections, nav_files) = discover_site_pages(src, None, Some(&pages), &None).unwrap();
+        let include_files = discover_site_build_pages(src, Some(&pages), &None).unwrap();
+        let required = implicit_build_pages(src, &None);
+
+        assert_eq!(
+            nav_files
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["index.typ"]
+        );
+        assert!(include_files.is_empty());
+        assert_eq!(
+            required
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["index.typ"]
+        );
+    }
+
+    #[test]
+    fn build_page_info_uses_language_prefixes_slugs_and_translation_keys() {
+        let src = Path::new("/site/docs");
+        let en = PathBuf::from("/site/docs/about.typ");
+        let fr = PathBuf::from("/site/docs/fr/about.typ");
+        let languages = Some(vec![
+            LanguageInfo {
+                code: "en".to_string(),
+                label: "English".to_string(),
+                content_dir: src.to_path_buf(),
+                url_prefix: String::new(),
+                default: true,
+            },
+            LanguageInfo {
+                code: "fr".to_string(),
+                label: "Français".to_string(),
+                content_dir: src.join("fr"),
+                url_prefix: "fr".to_string(),
+                default: false,
+            },
+        ]);
+        let meta = PageMetaMap::from([(
+            fr.clone(),
+            page_meta_from_value(
+                &serde_json::json!({"translation_key": "about", "slug": "a-propos"}),
+            ),
+        )]);
+        let pdf_files = BTreeSet::from([fr.clone()]);
+
+        let info = build_page_info(
+            src,
+            &[en.clone(), fr.clone()],
+            &meta,
+            &pdf_files,
+            &languages,
+        )
+        .unwrap();
+
+        assert_eq!(info[&en].language.as_deref(), Some("en"));
+        assert_eq!(info[&en].translation_key, "about");
+        assert_eq!(info[&en].href, "about.html");
+        assert_eq!(info[&fr].language.as_deref(), Some("fr"));
+        assert_eq!(info[&fr].translation_key, "about");
+        assert_eq!(info[&fr].href, "fr/a-propos.html");
+        assert_eq!(info[&fr].pdf_href.as_deref(), Some("fr/a-propos.pdf"));
+    }
+
+    #[test]
+    fn build_page_info_keeps_pdf_distinct_from_custom_url_with_extension() {
+        let src = Path::new("/site/docs");
+        let page = PathBuf::from("/site/docs/about.typ");
+        let meta = PageMetaMap::from([(
+            page.clone(),
+            page_meta_from_value(&serde_json::json!({"url": "info/about.html"})),
+        )]);
+        let pdf_files = BTreeSet::from([page.clone()]);
+
+        let info =
+            build_page_info(src, std::slice::from_ref(&page), &meta, &pdf_files, &None).unwrap();
+
+        assert_eq!(info[&page].href, "info/about.html");
+        assert_eq!(info[&page].pdf_href.as_deref(), Some("info/about.pdf"));
+    }
+
+    #[test]
+    fn build_page_info_rejects_slug_and_url_escaping_output_directory() {
+        let src = Path::new("/site/docs");
+        let page = PathBuf::from("/site/docs/about.typ");
+
+        for value in [
+            serde_json::json!({"slug": "../escape"}),
+            serde_json::json!({"slug": "/absolute"}),
+            serde_json::json!({"url": "../escape.html"}),
+        ] {
+            let meta = PageMetaMap::from([(page.clone(), page_meta_from_value(&value))]);
+            let error = build_page_info(
+                src,
+                std::slice::from_ref(&page),
+                &meta,
+                &BTreeSet::new(),
+                &None,
+            )
+            .unwrap_err();
+            assert!(
+                error.to_string().contains("output directory"),
+                "expected rejection for {value}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn sanitize_icon_svg_accepts_plain_icons_and_rejects_scripting_vectors() {
+        let plain = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/></svg>"#;
+        assert_eq!(sanitize_icon_svg(plain, "home").unwrap(), plain);
+
+        for bad in [
+            r#"<svg><script>alert(1)</script></svg>"#,
+            r#"<svg onclick="alert(1)"></svg>"#,
+            r#"<svg ONLOAD = "alert(1)"></svg>"#,
+            r#"<svg><a href="javascript:alert(1)">x</a></svg>"#,
+            r#"<svg><foreignObject></foreignObject></svg>"#,
+            "not svg at all",
+        ] {
+            assert!(sanitize_icon_svg(bad, "home").is_err(), "accepted: {bad}");
+        }
+    }
+
+    #[test]
+    fn translation_entries_are_relative_to_current_page() {
+        let en = PathBuf::from("/site/docs/about.typ");
+        let fr = PathBuf::from("/site/docs/fr/about.typ");
+        let page_info = PageInfoMap::from([
+            (
+                en,
+                PageInfo {
+                    language: Some("en".to_string()),
+                    translation_key: "about".to_string(),
+                    href: "about.html".to_string(),
+                    pdf_href: None,
+                },
+            ),
+            (
+                fr.clone(),
+                PageInfo {
+                    language: Some("fr".to_string()),
+                    translation_key: "about".to_string(),
+                    href: "fr/a-propos.html".to_string(),
+                    pdf_href: None,
+                },
+            ),
+        ]);
+        let languages = vec![
+            LanguageInfo {
+                code: "en".to_string(),
+                label: "English".to_string(),
+                content_dir: PathBuf::from("/site/docs"),
+                url_prefix: String::new(),
+                default: true,
+            },
+            LanguageInfo {
+                code: "fr".to_string(),
+                label: "Français".to_string(),
+                content_dir: PathBuf::from("/site/docs/fr"),
+                url_prefix: "fr".to_string(),
+                default: false,
+            },
+        ];
+
+        let entries = translation_entries(
+            "fr/a-propos.html",
+            page_info.get(&fr).unwrap(),
+            &page_info,
+            &languages,
+        );
+
+        assert_eq!(entries[0].href, "../about.html");
+        assert_eq!(entries[0].label, "English");
+        assert!(!entries[0].active);
+        assert_eq!(entries[1].href, "a-propos.html");
+        assert!(entries[1].active);
+    }
+
+    #[test]
+    fn language_entries_include_all_languages_with_home_fallbacks() {
+        let en = PathBuf::from("/site/docs/about.typ");
+        let page_info = PageInfoMap::from([(
+            en.clone(),
+            PageInfo {
+                language: Some("en".to_string()),
+                translation_key: "about".to_string(),
+                href: "about.html".to_string(),
+                pdf_href: None,
+            },
+        )]);
+        let languages = vec![
+            LanguageInfo {
+                code: "en".to_string(),
+                label: "English".to_string(),
+                content_dir: PathBuf::from("/site/docs"),
+                url_prefix: String::new(),
+                default: true,
+            },
+            LanguageInfo {
+                code: "fr".to_string(),
+                label: "Français".to_string(),
+                content_dir: PathBuf::from("/site/docs/fr"),
+                url_prefix: "fr".to_string(),
+                default: false,
+            },
+        ];
+
+        let entries = language_entries("about.html", page_info.get(&en), &page_info, &languages);
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].href, "about.html");
+        assert!(entries[0].active);
+        assert_eq!(entries[1].href, "fr/index.html");
+        assert!(!entries[1].active);
     }
 
     #[test]
@@ -1746,10 +3533,7 @@ mod tests {
     #[test]
     fn write_sitemap_uses_absolute_page_urls() {
         let temp = tempfile::tempdir().unwrap();
-        let hrefs = BTreeSet::from([
-            "index.html".to_string(),
-            "guide/usage.html".to_string(),
-        ]);
+        let hrefs = BTreeSet::from(["index.html".to_string(), "guide/usage.html".to_string()]);
 
         write_sitemap(temp.path(), Some("https://example.com/project/"), &hrefs).unwrap();
 
@@ -1762,12 +3546,17 @@ mod tests {
     fn theme_context_rewrites_brand_urls_relative_to_current_page() {
         let site = SiteModel::new(
             vec![NavSectionModel {
+                language: None,
                 title: Some("Guide".to_string()),
                 items: vec![NavItemModel {
+                    language: None,
                     href: "guide/usage.html".to_string(),
                     label: "Usage".to_string(),
+                    label_html: html_escape("Usage"),
+                    widget: None,
                 }],
             }],
+            NavbarModel::default(),
             SiteMetadata {
                 title: Some("Example".to_string()),
                 description: None,
@@ -1779,7 +3568,7 @@ mod tests {
             },
         );
 
-        let context = site.theme_context("guide/usage.html");
+        let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None);
 
         assert_eq!(context.logo.as_deref(), Some("../assets/logo.svg"));
         assert_eq!(context.home_url.as_deref(), Some("../index.html"));
@@ -1788,10 +3577,70 @@ mod tests {
     }
 
     #[test]
+    fn theme_context_rewrites_nav_urls_relative_to_current_page() {
+        let site = SiteModel::new(
+            vec![NavSectionModel {
+                language: None,
+                title: None,
+                items: vec![
+                    NavItemModel {
+                        language: None,
+                        href: "index.html".to_string(),
+                        label: "Home".to_string(),
+                        label_html: html_escape("Home"),
+                        widget: None,
+                    },
+                    NavItemModel {
+                        language: None,
+                        href: "publications/index.html".to_string(),
+                        label: "Publications".to_string(),
+                        label_html: html_escape("Publications"),
+                        widget: None,
+                    },
+                    NavItemModel {
+                        language: None,
+                        href: "posts/welcome.html".to_string(),
+                        label: "Welcome".to_string(),
+                        label_html: html_escape("Welcome"),
+                        widget: None,
+                    },
+                ],
+            }],
+            NavbarModel::default(),
+            SiteMetadata::default(),
+        );
+
+        let context = site.theme_context("posts/welcome.html", None, &PageInfoMap::new(), None);
+        let hrefs = context
+            .nav
+            .iter()
+            .map(|item| item.href.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            hrefs,
+            vec![
+                "../index.html",
+                "../publications/index.html",
+                "welcome.html"
+            ]
+        );
+        assert!(context.nav[2].active);
+    }
+
+    #[test]
     fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
         assert_eq!(
             page_relative_url("guide/usage.html", WEBSITE_STYLESHEET_PATH),
             "../.calepin/calepin-website.css"
+        );
+        assert_eq!(
+            page_relative_url("guide/usage.html", "guide/advanced.html"),
+            "advanced.html"
+        );
+        assert_eq!(
+            page_relative_url("posts/welcome.html", "publications/index.html"),
+            "../publications/index.html"
         );
         assert_eq!(
             page_relative_url("index.html", WEBSITE_STYLESHEET_PATH),
@@ -1823,32 +3672,36 @@ mod tests {
         let titled = PathBuf::from("/site/docs/b-page.typ");
         let bare = PathBuf::from("/site/docs/c_page.typ");
         let sections = vec![NavSectionPlan {
+            language: None,
             title: Some("Guide".to_string()),
             items: vec![
                 NavItemPlan {
                     path: labeled.clone(),
                     configured_label: Some("Configured".to_string()),
+                    icon: None,
                 },
                 NavItemPlan {
                     path: titled.clone(),
                     configured_label: None,
+                    icon: None,
                 },
                 NavItemPlan {
-                    path: bare,
+                    path: bare.clone(),
                     configured_label: None,
+                    icon: None,
                 },
             ],
         }];
         let meta = PageMetaMap::from([
             (
-                labeled,
+                labeled.clone(),
                 PageMeta {
                     title: Some("Ignored".to_string()),
                     ..PageMeta::default()
                 },
             ),
             (
-                titled,
+                titled.clone(),
                 PageMeta {
                     title: Some("From Metadata".to_string()),
                     ..PageMeta::default()
@@ -1856,7 +3709,11 @@ mod tests {
             ),
         ]);
 
-        let nav = nav_from_plans(src, &sections, &meta);
+        let files = vec![labeled.clone(), titled.clone(), bare.clone()];
+        let page_info = test_page_info(src, &files, &BTreeSet::new());
+        let icon_temp = tempfile::tempdir().unwrap();
+        let mut icon_cache = IconCache::new(icon_temp.path().join(".calepin/icons"));
+        let nav = nav_from_plans(&sections, &meta, &page_info, &mut icon_cache).unwrap();
 
         let labels = nav[0]
             .items
@@ -1864,6 +3721,312 @@ mod tests {
             .map(|item| item.label.as_str())
             .collect::<Vec<_>>();
         assert_eq!(labels, vec!["Configured", "From Metadata", "c page"]);
+    }
+
+    #[test]
+    fn nav_from_plans_interpolates_cached_icons_in_labels() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        let home = src.join("index.typ");
+        fs::write(&home, "= Home\n").unwrap();
+        let icon_path = src.join(".calepin/icons/lucide/home.svg");
+        fs::create_dir_all(icon_path.parent().unwrap()).unwrap();
+        fs::write(
+            &icon_path,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/></svg>"#,
+        )
+        .unwrap();
+        let sections = vec![NavSectionPlan {
+            language: None,
+            title: None,
+            items: vec![NavItemPlan {
+                path: home.clone(),
+                configured_label: Some("{icon:home} Home".to_string()),
+                icon: None,
+            }],
+        }];
+        let page_info = test_page_info(src, std::slice::from_ref(&home), &BTreeSet::new());
+        let mut icon_cache = IconCache::new(src.join(ICON_CACHE_DIR));
+
+        let nav =
+            nav_from_plans(&sections, &PageMetaMap::new(), &page_info, &mut icon_cache).unwrap();
+
+        assert_eq!(nav[0].items[0].label, "Home");
+        assert!(nav[0].items[0]
+            .label_html
+            .contains(r#"<span class="calepin-nav-icon">"#));
+        assert!(nav[0].items[0].label_html.contains("viewBox=\"0 0 24 24\""));
+        assert!(nav[0].items[0].label_html.ends_with(" Home"));
+    }
+
+    #[test]
+    fn discover_navbar_resolves_left_center_right_items() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        fs::create_dir_all(src.join("guide")).unwrap();
+        fs::write(src.join("guide").join("usage.typ"), "= Usage\n").unwrap();
+        let navbar = NavbarConfig {
+            item: vec![
+                NavbarItemConfig {
+                    position: NavbarPosition::Left,
+                    path: Some(PathBuf::from("index.typ")),
+                    label: Some("Home".to_string()),
+                    ..NavbarItemConfig::default()
+                },
+                NavbarItemConfig {
+                    position: NavbarPosition::Center,
+                    glob: Some("guide/*.typ".to_string()),
+                    ..NavbarItemConfig::default()
+                },
+                NavbarItemConfig {
+                    position: NavbarPosition::Right,
+                    url: Some("https://github.com/example/project".to_string()),
+                    label: Some("GitHub".to_string()),
+                    ..NavbarItemConfig::default()
+                },
+            ],
+            ..NavbarConfig::default()
+        };
+
+        let (plan, files) = discover_navbar(src, &navbar, None).unwrap();
+
+        assert_eq!(plan.left.len(), 1);
+        assert_eq!(plan.center.len(), 1);
+        assert_eq!(plan.right.len(), 1);
+        assert_eq!(
+            plan.right[0].url.as_deref(),
+            Some("https://github.com/example/project")
+        );
+        assert_eq!(
+            files
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["index.typ", "guide/usage.typ"]
+        );
+    }
+
+    #[test]
+    fn discover_navbar_preserves_widget_names() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        let navbar: NavbarConfig = toml::from_str(
+            r#"
+            [[item]]
+            position = "right"
+            widget = "language"
+
+            [[item]]
+            position = "right"
+            widget = "custom-search"
+            label = "{icon:search} Search"
+            "#,
+        )
+        .unwrap();
+
+        let (plan, files) = discover_navbar(src, &navbar, None).unwrap();
+
+        assert!(files.is_empty());
+        assert_eq!(plan.right.len(), 2);
+        assert_eq!(plan.right[0].widget.as_deref(), Some("language"));
+        assert_eq!(plan.right[1].widget.as_deref(), Some("custom-search"));
+        assert_eq!(
+            plan.right[1].configured_label.as_deref(),
+            Some("{icon:search} Search")
+        );
+    }
+
+    #[test]
+    fn discover_navbar_rejects_widget_link_fields() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        let navbar = NavbarConfig {
+            item: vec![NavbarItemConfig {
+                widget: Some("theme".to_string()),
+                path: Some(PathBuf::from("index.typ")),
+                ..NavbarItemConfig::default()
+            }],
+            ..NavbarConfig::default()
+        };
+
+        let err = discover_navbar(src, &navbar, None).unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("navbar widget items cannot also set path, glob, or url"));
+    }
+
+    #[test]
+    fn discover_navbar_rejects_url_combined_with_local_pages() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        let navbar = NavbarConfig {
+            item: vec![NavbarItemConfig {
+                url: Some("https://example.com".to_string()),
+                path: Some(PathBuf::from("index.typ")),
+                ..NavbarItemConfig::default()
+            }],
+            ..NavbarConfig::default()
+        };
+
+        let err = discover_navbar(src, &navbar, None).unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("navbar url items cannot also set path or glob"));
+    }
+
+    #[test]
+    fn navbar_from_plan_uses_page_metadata_and_external_labels() {
+        let src = Path::new("/site/docs");
+        let home = PathBuf::from("/site/docs/index.typ");
+        let usage = PathBuf::from("/site/docs/guide/usage.typ");
+        let plan = NavbarPlan {
+            left: vec![NavbarItemPlan {
+                path: Some(home.clone()),
+                url: None,
+                widget: None,
+                configured_label: Some("Home".to_string()),
+                icon: None,
+            }],
+            center: vec![NavbarItemPlan {
+                path: Some(usage.clone()),
+                url: None,
+                widget: None,
+                configured_label: None,
+                icon: None,
+            }],
+            right: vec![NavbarItemPlan {
+                path: None,
+                url: Some("https://example.com".to_string()),
+                widget: None,
+                configured_label: Some("External".to_string()),
+                icon: None,
+            }],
+        };
+        let meta = PageMetaMap::from([(
+            usage.clone(),
+            PageMeta {
+                title: Some("Usage Guide".to_string()),
+                ..PageMeta::default()
+            },
+        )]);
+        let page_info = test_page_info(src, &[home, usage], &BTreeSet::new());
+
+        let icon_temp = tempfile::tempdir().unwrap();
+        let mut icon_cache = IconCache::new(icon_temp.path().join(".calepin/icons"));
+        let navbar = navbar_from_plan(&plan, &meta, &page_info, &mut icon_cache).unwrap();
+
+        assert_eq!(navbar.left[0].href, "index.html");
+        assert_eq!(navbar.left[0].label, "Home");
+        assert_eq!(navbar.center[0].href, "guide/usage.html");
+        assert_eq!(navbar.center[0].label, "Usage Guide");
+        assert_eq!(navbar.right[0].href, "https://example.com");
+        assert_eq!(navbar.right[0].label, "External");
+    }
+
+    #[test]
+    fn theme_context_exposes_relative_navbar_regions() {
+        let site = SiteModel::new(
+            Vec::new(),
+            NavbarModel {
+                left: vec![NavItemModel {
+                    language: None,
+                    href: "index.html".to_string(),
+                    label: "Home".to_string(),
+                    label_html: html_escape("Home"),
+                    widget: None,
+                }],
+                center: vec![NavItemModel {
+                    language: None,
+                    href: "guide/usage.html".to_string(),
+                    label: "Usage".to_string(),
+                    label_html: html_escape("Usage"),
+                    widget: None,
+                }],
+                right: vec![NavItemModel {
+                    language: None,
+                    href: "https://example.com".to_string(),
+                    label: "External".to_string(),
+                    label_html: html_escape("External"),
+                    widget: None,
+                }],
+            },
+            SiteMetadata::default(),
+        );
+
+        let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None);
+
+        assert_eq!(context.navbar_left[0].href, "../index.html");
+        assert_eq!(context.navbar_center[0].href, "usage.html");
+        assert!(context.navbar_center[0].active);
+        assert_eq!(context.navbar_right[0].href, "https://example.com");
+    }
+
+    #[test]
+    fn theme_context_filters_navbar_page_links_by_language() {
+        let en = PathBuf::from("/site/docs/index.typ");
+        let fr = PathBuf::from("/site/docs/fr/index.typ");
+        let page_info = PageInfoMap::from([
+            (
+                en.clone(),
+                PageInfo {
+                    language: Some("en".to_string()),
+                    translation_key: "index".to_string(),
+                    href: "index.html".to_string(),
+                    pdf_href: None,
+                },
+            ),
+            (
+                fr.clone(),
+                PageInfo {
+                    language: Some("fr".to_string()),
+                    translation_key: "index".to_string(),
+                    href: "fr/index.html".to_string(),
+                    pdf_href: None,
+                },
+            ),
+        ]);
+        let site = SiteModel::new(
+            Vec::new(),
+            NavbarModel {
+                left: vec![
+                    NavItemModel {
+                        language: Some("en".to_string()),
+                        href: "index.html".to_string(),
+                        label: "Home".to_string(),
+                        label_html: html_escape("Home"),
+                        widget: None,
+                    },
+                    NavItemModel {
+                        language: Some("fr".to_string()),
+                        href: "fr/index.html".to_string(),
+                        label: "Accueil".to_string(),
+                        label_html: html_escape("Accueil"),
+                        widget: None,
+                    },
+                ],
+                center: Vec::new(),
+                right: vec![NavItemModel {
+                    language: None,
+                    href: "https://example.com".to_string(),
+                    label: "External".to_string(),
+                    label_html: html_escape("External"),
+                    widget: None,
+                }],
+            },
+            SiteMetadata::default(),
+        );
+
+        let context = site.theme_context("fr/index.html", page_info.get(&fr), &page_info, None);
+
+        assert_eq!(context.navbar_left.len(), 1);
+        assert_eq!(context.navbar_left[0].label, "Accueil");
+        assert_eq!(context.navbar_left[0].href, "index.html");
+        assert_eq!(context.navbar_right.len(), 1);
+        assert_eq!(context.navbar_right[0].href, "https://example.com");
     }
 
     #[test]
@@ -1924,17 +4087,20 @@ mod tests {
         let fallback = PathBuf::from("/site/docs/404.typ");
         let typ_files = vec![fallback, post.clone(), home.clone()];
         let sections = vec![NavSectionPlan {
+            language: None,
             title: None,
             items: vec![NavItemPlan {
                 path: home.clone(),
                 configured_label: Some("Home".to_string()),
+                icon: None,
             }],
         }];
         let raw = serde_json::json!({"title": "First Post", "date": "2026-06-10", "hidden": true});
         let meta = PageMetaMap::from([(post.clone(), page_meta_from_value(&raw))]);
         let pdf_files = BTreeSet::from([post.clone()]);
 
-        let index = build_pages_index(src, &typ_files, &sections, &meta, &pdf_files);
+        let page_info = build_page_info(src, &typ_files, &meta, &pdf_files, &None).unwrap();
+        let index = build_pages_index(src, &typ_files, &sections, &meta, &page_info);
 
         let entries = index.as_array().unwrap();
         assert_eq!(entries.len(), 2);
@@ -1954,24 +4120,30 @@ mod tests {
         let visible = PathBuf::from("/site/docs/index.typ");
         let hidden = PathBuf::from("/site/docs/blog/post.typ");
         let sections = vec![NavSectionPlan {
+            language: None,
             title: None,
             items: vec![
                 NavItemPlan {
                     path: visible.clone(),
                     configured_label: None,
+                    icon: None,
                 },
                 NavItemPlan {
                     path: hidden.clone(),
                     configured_label: None,
+                    icon: None,
                 },
             ],
         }];
         let meta = PageMetaMap::from([(
-            hidden,
+            hidden.clone(),
             page_meta_from_value(&serde_json::json!({"hidden": true})),
         )]);
 
-        let nav = nav_from_plans(src, &sections, &meta);
+        let page_info = test_page_info(src, &[visible.clone(), hidden.clone()], &BTreeSet::new());
+        let icon_temp = tempfile::tempdir().unwrap();
+        let mut icon_cache = IconCache::new(icon_temp.path().join(".calepin/icons"));
+        let nav = nav_from_plans(&sections, &meta, &page_info, &mut icon_cache).unwrap();
 
         assert_eq!(nav[0].items.len(), 1);
         assert_eq!(nav[0].items[0].href, "index.html");
@@ -2059,5 +4231,20 @@ mod tests {
         assert!(expected_page.exists());
         assert!(!stale_page.exists());
         assert!(asset_pdf.exists());
+    }
+
+    #[test]
+    fn clear_previous_outputs_preserves_in_place_rendered_files() {
+        let temp = tempfile::tempdir().unwrap();
+        fs::write(temp.path().join("index.typ"), "= Home\n").unwrap();
+        fs::write(temp.path().join("index.html"), "previous html").unwrap();
+        fs::write(temp.path().join("index.pdf"), "previous pdf").unwrap();
+        fs::write(temp.path().join("notes.html"), "user html").unwrap();
+
+        clear_previous_outputs(temp.path(), temp.path()).unwrap();
+
+        assert!(temp.path().join("index.html").exists());
+        assert!(temp.path().join("index.pdf").exists());
+        assert!(temp.path().join("notes.html").exists());
     }
 }

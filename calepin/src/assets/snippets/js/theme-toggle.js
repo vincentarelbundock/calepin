@@ -14,6 +14,29 @@
 
   const normalize = (value) => value === "light" || value === "dark" ? value : "";
   const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
+  const urlParam = (button) => button.dataset.calepinThemeParam || "";
+
+  function readUrl(button) {
+    const param = urlParam(button);
+    if (!param) return "";
+    try {
+      return normalize(new URL(window.location.href).searchParams.get(param) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function clearUrl(button) {
+    const param = urlParam(button);
+    if (!param) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete(param);
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      /* ignore URL errors */
+    }
+  }
 
   function readStored(button) {
     try {
@@ -30,6 +53,16 @@
     } catch {
       /* ignore storage errors */
     }
+  }
+
+  function readTheme(button) {
+    const fromUrl = readUrl(button);
+    if (fromUrl) {
+      writeStored(button, fromUrl);
+      clearUrl(button);
+      return fromUrl;
+    }
+    return readStored(button);
   }
 
   function applyTheme(value) {
@@ -49,7 +82,7 @@
     });
   }
 
-  applyTheme(readStored(buttons[0]));
+  applyTheme(readTheme(buttons[0]));
 
   buttons.forEach((button) => {
     if (button.dataset.calepinThemeBound === "true") return;
@@ -60,5 +93,13 @@
       applyTheme(next);
       writeStored(button, next);
     });
+  });
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) applyTheme(readTheme(buttons[0]));
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
   });
 })();

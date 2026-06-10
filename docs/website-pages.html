@@ -18,6 +18,7 @@
     <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/website-pages.html">
     <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/website-pages.html">
     
+    
     <meta name="color-scheme" content="light dark">
     <script>
 (() => {
@@ -53,7 +54,7 @@
     <link rel="stylesheet" href=".calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"= Navigation and listings\n\n== Sidebar\n\nNavigation can be explicit:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  path = \"index.typ\"\n  label = \"Home\"\n\n  [[sidebar.section.item]]\n  path = \"usage.typ\"\n  label = \"Usage\"\n```\n\nEach section can contain any number of `item` entries. An item can point to one file with `path`:\n\n```toml\n[[sidebar.section.item]]\npath = \"install.typ\"\nlabel = \"Install\"\n```\n\nAn item can also include files with a simple glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nIf no sidebar is configured, _Calepin_ builds navigation from `.typ` files in the source directory. Hidden paths are skipped by default. Set `show_hidden = true` under `[sidebar]` to include hidden paths in manual navigation file discovery.\n\n== Page titles\n\nNavigation labels are resolved in this order:\n\n1. the `label` configured on the sidebar item\n2. the `title` entry of the page's `<website-metadata>` metadata\n3. the file name, with `-` and `_` replaced by spaces\n\nTo set a page title in the document itself:\n\n```typ\n#metadata((title: \"Getting started\")) <website-metadata>\n```\n\nPage metadata is extracted while the page is preprocessed, from the same staged source used for rendering. Package imports such as `@preview/calepin` are already rewritten at that point, so metadata works in pages that do not compile standalone.\n\n== Page listings\n\nPages can list other pages of the website, for example to build a blog index. During a website build, every page can call `calepin.pages()`:\n\n```typ\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#for post in calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev() [\n  - #link(post.href)[#post.title] (#post.meta.at(\"date\", default: \"\"))\n]\n```\n\nEach entry is a dictionary:\n\n- `path`: the source file, relative to the website source directory (`blog/first.typ`)\n- `href`: a link to the page, already relative to the current page\n- `title`: the resolved display title, matching the navigation\n- `pdf`: a link to the page's PDF, or `none` when no PDF is rendered\n- `meta`: the page's `<website-metadata>` dictionary, verbatim\n\n_Calepin_ interprets only the `title`, `pdf`, and `hidden` keys of page metadata. Everything else in `meta` (dates, tags, authors, categories) is yours to define and filter on. Outside a website build, `calepin.pages()` returns an empty array, so pages compile standalone.\n\nBlog posts usually should not appear in the sidebar. Include them in the build with a sidebar `glob`, then mark each post:\n\n```typ\n#metadata((title: \"First Post\", date: \"2026-06-01\", hidden: true)) <website-metadata>\n```\n\n`hidden: true` removes a page from the navigation while keeping it built, listed in `calepin.pages()`, and present in `sitemap.xml`.\n\nWhen any page's metadata changes, _Calepin_ rebuilds the whole site during watch so that listing pages never go stale.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"= Navigation and listings\n\n== Sidebar\n\nNavigation can be explicit:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  path = \"index.typ\"\n  label = \"{icon:home} Home\"\n\n  [[sidebar.section.item]]\n  path = \"usage.typ\"\n  label = \"Usage\"\n```\n\nEach section can contain any number of `item` entries. An item can point to one file with `path`:\n\n```toml\n[[sidebar.section.item]]\npath = \"install.typ\"\nlabel = \"{icon:lucide:download} Install\"\n```\n\nAn item can also include files with a simple glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nIf no sidebar is configured, _Calepin_ builds navigation from `.typ` files in the source directory. Hidden paths are skipped by default. Set `show_hidden = true` under `[sidebar]` to include hidden paths in manual navigation file discovery.\n\nSidebar entries are not the full build list. Use `[pages].include` in `calepin.toml` for pages that should be rendered but not linked from navigation.\n\nIn multilingual sites, sidebar entries are resolved separately inside each configured language `content_dir`. Generated navigation only shows entries for the current page's language.\n\n== Navbar\n\nThe top navigation bar can be configured with three regions:\n\n```toml\n[navbar]\n\n[[navbar.item]]\nposition = \"left\"\npath = \"index.typ\"\nlabel = \"Home\"\n\n[[navbar.item]]\nposition = \"center\"\npath = \"install.typ\"\nlabel = \"Install\"\n\n[[navbar.item]]\nposition = \"right\"\nurl = \"https://github.com/user/repo\"\nlabel = \"{icon:simple-icons:github} GitHub\"\n\n[[navbar.item]]\nposition = \"right\"\nwidget = \"language\"\n\n[[navbar.item]]\nposition = \"right\"\nwidget = \"theme\"\n```\n\nNavbar entries use the same `path`, `glob`, and `label` fields as sidebar entries. A navbar entry can also use `url` for an external link, or `widget` for a built-in control. `position` can be `left`, `center`, or `right` and defaults to `left`. Pages referenced only from the navbar are still included in the website build.\n\nUse `path` for one local page, `glob` for several local pages, and `url` for an external destination. Local page links are rewritten relative to each generated page, and external URLs are passed through unchanged.\n\nIn multilingual sites, local navbar links are language-aware and external navbar links are global. This means a `url` item can appear for every language, while local page entries are filtered to the current page's language.\n\nWidget names are open-ended theme hooks. The bundled themes understand `widget = \"theme\"` for the light/dark/auto selector and `widget = \"language\"` for the language picker when more than one language is configured. Custom themes can define their own widget names, such as `widget = \"search\"` or `widget = \"profile-menu\"`, and render them by checking `item.widget` in the theme template. A widget item cannot also set `path`, `glob`, or `url`. When `[navbar]` is omitted, the bundled website themes include the default `theme` and `language` widgets on the right. When `[navbar]` is configured, include these widget items explicitly wherever you want them.\n\n== Navigation icons\n\nSidebar and navbar labels can include icon tokens with `{icon:prefix:name}`. Icon names use Iconify syntax, such as `{icon:lucide:download}` or `{icon:simple-icons:github}`. If the prefix is omitted, _Calepin_ uses `lucide`, so `{icon:home}` means `{icon:lucide:home}`.\n\n_Calepin_ downloads icons from Iconify during the build with a short timeout, stores them under `.calepin/icons/`, and inlines the cached SVG in generated HTML. Later builds use the cache without downloading again. To render an icon without visible text, use a label that contains only the icon token, such as `label = \"{icon:simple-icons:github}\"`; _Calepin_ keeps the resolved page title or URL as the accessible label. For compatibility, an item can also use `icon = \"lucide:home\"` as shorthand for prepending an icon to the resolved label. _Calepin_ does not grant rights to third-party icons; check the license and trademark rules for the icon sets you use.\n\n== Page titles\n\nNavigation labels are resolved in this order:\n\n1. the `label` configured on the sidebar or navbar item\n2. the `title` entry of the page's `<website-metadata>` metadata\n3. the file name, with `-` and `_` replaced by spaces\n\nTo set a page title in the document itself:\n\n```typ\n#metadata((title: \"Getting started\")) <website-metadata>\n```\n\nPage metadata is extracted while the page is preprocessed, from the same staged source used for rendering. Package imports such as `@preview/calepin` are already rewritten at that point, so metadata works in pages that do not compile standalone.\n\n== Page listings\n\nPages can list other pages of the website, for example to build a blog index. During a website build, every page can call `calepin.pages()`:\n\n```typ\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#for post in calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev() [\n  - #link(post.href)[#post.title] (#post.meta.at(\"date\", default: \"\"))\n]\n```\n\nEach entry is a dictionary:\n\n- `path`: the source file, relative to the website source directory (`blog/first.typ`)\n- `href`: a link to the page, already relative to the current page\n- `title`: the resolved display title, matching the navigation\n- `language`: the configured language code, or `none` for a single-language site\n- `translation_key`: the key used to connect translations of the same page\n- `translations`: a dictionary mapping language code to that translation's generated `href`\n- `pdf`: a link to the page's PDF, or `none` when no PDF is rendered\n- `meta`: the page's `<website-metadata>` dictionary, verbatim\n\n_Calepin_ interprets only the `title`, `pdf`, `hidden`, `slug`, `url`, and `translation_key` keys of page metadata. `slug` renames the generated file inside the page's directory, and `url` sets the full output path relative to the site root; both stay inside the output directory. Everything else in `meta` (dates, tags, authors, categories) is yours to define and filter on. Outside a website build, `calepin.pages()` returns an empty array, so pages compile standalone.\n\nBlog posts usually should not appear in the sidebar. Include them in the build with `[pages]`:\n\n```toml\n[pages]\ninclude = [\"blog/*.typ\"]\n```\n\nThen mark each post:\n\n```typ\n#metadata((title: \"First Post\", date: \"2026-06-01\", hidden: true)) <website-metadata>\n```\n\n`hidden: true` removes a page from automatic navigation. Pages included through `[pages].include` are built, listed in `calepin.pages()`, and present in `sitemap.xml` without needing to appear in the sidebar or navbar.\n\nWhen any page's metadata changes, _Calepin_ rebuilds the whole site during watch so that listing pages never go stale.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -68,19 +69,27 @@
                         
                     </a>
                 </li>
+                
+                
             </ul>
+            
             <ul>
+                
+                
+                
+                <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
+                
+                
+                
+                
+                
+                
                 <li>
                     <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
                         <option value="rendered">HTML</option>
                         <option value="source">Source</option>
                         <option value="pdf">PDF</option>
                     </select>
-                </li>
-                <li>
-                    <button id="calepin-website-theme-button" class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme: Auto" title="Theme: Auto">
-                        <span aria-hidden="true">◐</span>
-                    </button>
                 </li>
                 
                 <li>
@@ -106,11 +115,11 @@
                     
                     <ul>
                         
-                        <li><a href="index.html">Home</a></li>
+                        <li><a href="index.html" aria-label="Home">Home</a></li>
                         
-                        <li><a href="install.html">Install</a></li>
+                        <li><a href="install.html" aria-label="Install">Install</a></li>
                         
-                        <li><a href="config.html">Configuration</a></li>
+                        <li><a href="config.html" aria-label="Configuration">Configuration</a></li>
                         
                     </ul>
                     
@@ -121,15 +130,15 @@
                     
                     <ul>
                         
-                        <li><a href="parameterized_notebooks.html">Parameterized notebooks</a></li>
+                        <li><a href="parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
                         
-                        <li><a href="tables_and_figures.html">Tables and figures</a></li>
+                        <li><a href="tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
                         
-                        <li><a href="crossreferences.html">Cross-references</a></li>
+                        <li><a href="crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
                         
-                        <li><a href="templates.html">HTML themes</a></li>
+                        <li><a href="templates.html" aria-label="HTML themes">HTML themes</a></li>
                         
-                        <li><a href="example.html">Example notebook</a></li>
+                        <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
                         
                     </ul>
                     
@@ -140,9 +149,9 @@
                     
                     <ul>
                         
-                        <li><a href="supported-languages.html">Languages</a></li>
+                        <li><a href="supported-languages.html" aria-label="Languages">Languages</a></li>
                         
-                        <li><a href="options.html">Options</a></li>
+                        <li><a href="options.html" aria-label="Options">Options</a></li>
                         
                     </ul>
                     
@@ -153,13 +162,13 @@
                     
                     <ul>
                         
-                        <li><a href="websites.html">Overview</a></li>
+                        <li><a href="websites.html" aria-label="Overview">Overview</a></li>
                         
-                        <li><a href="website-config.html">Configuration</a></li>
+                        <li><a href="website-config.html" aria-label="Configuration">Configuration</a></li>
                         
-                        <li><a href="website-pages.html" class="active" aria-current="page">Navigation and listings</a></li>
+                        <li><a href="website-pages.html" aria-label="Navigation and listings" class="active" aria-current="page">Navigation and listings</a></li>
                         
-                        <li><a href="website-themes.html">Themes</a></li>
+                        <li><a href="website-themes.html" aria-label="Themes">Themes</a></li>
                         
                     </ul>
                     
@@ -170,7 +179,7 @@
                     
                     <ul>
                         
-                        <li><a href="cli.html">Command line</a></li>
+                        <li><a href="cli.html" aria-label="Command line">Command line</a></li>
                         
                     </ul>
                     
@@ -186,21 +195,45 @@
 
   [[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
   <span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">index.typ</span><span style="color: #198810">"</span>
-  <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Home</span><span style="color: #198810">"</span>
+  <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">{icon:home} Home</span><span style="color: #198810">"</span>
 
   [[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
   <span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">usage.typ</span><span style="color: #198810">"</span>
   <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Usage</span><span style="color: #198810">"</span></code></pre><p>Each section can contain any number of <code>item</code> entries. An item can point to one file with <code>path</code>:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
 <span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">install.typ</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Install</span><span style="color: #198810">"</span></code></pre><p>An item can also include files with a simple glob:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
-<span style="color: #4b69c6">glob</span> = <span style="color: #198810">"</span><span style="color: #198810">guide/*.typ</span><span style="color: #198810">"</span></code></pre><p>If no sidebar is configured, <em>Calepin</em> builds navigation from <code>.typ</code> files in the source directory. Hidden paths are skipped by default. Set <code>show_hidden = true</code> under <code>[sidebar]</code> to include hidden paths in manual navigation file discovery.</p><h3 id="page-titles">Page titles</h3><p>Navigation labels are resolved in this order:</p><ol><li value="1">the <code>label</code> configured on the sidebar item</li><li value="2">the <code>title</code> entry of the page’s <code>&lt;website-metadata></code> metadata</li><li value="3">the file name, with <code>-</code> and <code>_</code> replaced by spaces</li></ol><p>To set a page title in the document itself:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((title: <span style="color: #198810">"Getting started"</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p>Page metadata is extracted while the page is preprocessed, from the same staged source used for rendering. Package imports such as <code>@preview/calepin</code> are already rewritten at that point, so metadata works in pages that do not compile standalone.</p><h3 id="page-listings">Page listings</h3><p>Pages can list other pages of the website, for example to build a blog index. During a website build, every page can call <code>calepin.pages()</code>:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"@preview/calepin:0.0.1"</span> <span style="color: #d73948">as</span> calepin
+<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">{icon:lucide:download} Install</span><span style="color: #198810">"</span></code></pre><p>An item can also include files with a simple glob:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">glob</span> = <span style="color: #198810">"</span><span style="color: #198810">guide/*.typ</span><span style="color: #198810">"</span></code></pre><p>If no sidebar is configured, <em>Calepin</em> builds navigation from <code>.typ</code> files in the source directory. Hidden paths are skipped by default. Set <code>show_hidden = true</code> under <code>[sidebar]</code> to include hidden paths in manual navigation file discovery.</p><p>Sidebar entries are not the full build list. Use <code>[pages].include</code> in <code>calepin.toml</code> for pages that should be rendered but not linked from navigation.</p><p>In multilingual sites, sidebar entries are resolved separately inside each configured language <code>content_dir</code>. Generated navigation only shows entries for the current page’s language.</p><h3 id="navbar">Navbar</h3><p>The top navigation bar can be configured with three regions:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">navbar</span>]
+
+[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">left</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">index.typ</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Home</span><span style="color: #198810">"</span>
+
+[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">center</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">install.typ</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Install</span><span style="color: #198810">"</span>
+
+[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">right</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://github.com/user/repo</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">{icon:simple-icons:github} GitHub</span><span style="color: #198810">"</span>
+
+[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">right</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">widget</span> = <span style="color: #198810">"</span><span style="color: #198810">language</span><span style="color: #198810">"</span>
+
+[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">right</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">widget</span> = <span style="color: #198810">"</span><span style="color: #198810">theme</span><span style="color: #198810">"</span></code></pre><p>Navbar entries use the same <code>path</code>, <code>glob</code>, and <code>label</code> fields as sidebar entries. A navbar entry can also use <code>url</code> for an external link, or <code>widget</code> for a built-in control. <code>position</code> can be <code>left</code>, <code>center</code>, or <code>right</code> and defaults to <code>left</code>. Pages referenced only from the navbar are still included in the website build.</p><p>Use <code>path</code> for one local page, <code>glob</code> for several local pages, and <code>url</code> for an external destination. Local page links are rewritten relative to each generated page, and external URLs are passed through unchanged.</p><p>In multilingual sites, local navbar links are language-aware and external navbar links are global. This means a <code>url</code> item can appear for every language, while local page entries are filtered to the current page’s language.</p><p>Widget names are open-ended theme hooks. The bundled themes understand <code>widget = "theme"</code> for the light/dark/auto selector and <code>widget = "language"</code> for the language picker when more than one language is configured. Custom themes can define their own widget names, such as <code>widget = "search"</code> or <code>widget = "profile-menu"</code>, and render them by checking <code>item.widget</code> in the theme template. A widget item cannot also set <code>path</code>, <code>glob</code>, or <code>url</code>. When <code>[navbar]</code> is omitted, the bundled website themes include the default <code>theme</code> and <code>language</code> widgets on the right. When <code>[navbar]</code> is configured, include these widget items explicitly wherever you want them.</p><h3 id="navigation-icons">Navigation icons</h3><p>Sidebar and navbar labels can include icon tokens with <code>{icon:prefix:name}</code>. Icon names use Iconify syntax, such as <code>{icon:lucide:download}</code> or <code>{icon:simple-icons:github}</code>. If the prefix is omitted, <em>Calepin</em> uses <code>lucide</code>, so <code>{icon:home}</code> means <code>{icon:lucide:home}</code>.</p><p><em>Calepin</em> downloads icons from Iconify during the build with a short timeout, stores them under <code>.calepin/icons/</code>, and inlines the cached SVG in generated HTML. Later builds use the cache without downloading again. To render an icon without visible text, use a label that contains only the icon token, such as <code>label = "{icon:simple-icons:github}"</code>; <em>Calepin</em> keeps the resolved page title or URL as the accessible label. For compatibility, an item can also use <code>icon = "lucide:home"</code> as shorthand for prepending an icon to the resolved label. <em>Calepin</em> does not grant rights to third-party icons; check the license and trademark rules for the icon sets you use.</p><h3 id="page-titles">Page titles</h3><p>Navigation labels are resolved in this order:</p><ol><li value="1">the <code>label</code> configured on the sidebar or navbar item</li><li value="2">the <code>title</code> entry of the page’s <code>&lt;website-metadata></code> metadata</li><li value="3">the file name, with <code>-</code> and <code>_</code> replaced by spaces</li></ol><p>To set a page title in the document itself:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((title: <span style="color: #198810">"Getting started"</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p>Page metadata is extracted while the page is preprocessed, from the same staged source used for rendering. Package imports such as <code>@preview/calepin</code> are already rewritten at that point, so metadata works in pages that do not compile standalone.</p><h3 id="page-listings">Page listings</h3><p>Pages can list other pages of the website, for example to build a blog index. During a website build, every page can call <code>calepin.pages()</code>:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"@preview/calepin:0.0.1"</span> <span style="color: #d73948">as</span> calepin
 
 <span style="color: #d73948">#</span><span style="color: #d73948">for</span> post <span style="color: #d73948">in</span> calepin.<span style="color: #4b69c6">pages</span>()
   .filter(p => p.path.starts-with("blog/"))
   .sorted(key: p => p.meta.at("date", default: ""))
   .rev() [
   <span style="color: #8b41b1">-</span> <span style="color: #4b69c6">#</span><span style="color: #4b69c6">link</span>(post.href)[<span style="color: #8b41b1">#</span><span style="color: #8b41b1">post</span>.<span style="color: #8b41b1">title</span>] (<span style="color: #8b41b1">#</span><span style="color: #8b41b1">post</span>.<span style="color: #8b41b1">meta</span>.<span style="color: #4b69c6">at</span>(<span style="color: #198810">"date"</span>, default: <span style="color: #198810">""</span>))
-]</code></pre><p>Each entry is a dictionary:</p><ul><li><code>path</code>: the source file, relative to the website source directory (<code>blog/first.typ</code>)</li><li><code>href</code>: a link to the page, already relative to the current page</li><li><code>title</code>: the resolved display title, matching the navigation</li><li><code>pdf</code>: a link to the page’s PDF, or <code>none</code> when no PDF is rendered</li><li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, verbatim</li></ul><p><em>Calepin</em> interprets only the <code>title</code>, <code>pdf</code>, and <code>hidden</code> keys of page metadata. Everything else in <code>meta</code> (dates, tags, authors, categories) is yours to define and filter on. Outside a website build, <code>calepin.pages()</code> returns an empty array, so pages compile standalone.</p><p>Blog posts usually should not appear in the sidebar. Include them in the build with a sidebar <code>glob</code>, then mark each post:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((title: <span style="color: #198810">"First Post"</span>, date: <span style="color: #198810">"2026-06-01"</span>, hidden: <span style="color: #d73948">true</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p><code>hidden: true</code> removes a page from the navigation while keeping it built, listed in <code>calepin.pages()</code>, and present in <code>sitemap.xml</code>.</p><p>When any page’s metadata changes, <em>Calepin</em> rebuilds the whole site during watch so that listing pages never go stale.</p>
+]</code></pre><p>Each entry is a dictionary:</p><ul><li><code>path</code>: the source file, relative to the website source directory (<code>blog/first.typ</code>)</li><li><code>href</code>: a link to the page, already relative to the current page</li><li><code>title</code>: the resolved display title, matching the navigation</li><li><code>language</code>: the configured language code, or <code>none</code> for a single-language site</li><li><code>translation_key</code>: the key used to connect translations of the same page</li><li><code>translations</code>: a dictionary mapping language code to that translation’s generated <code>href</code></li><li><code>pdf</code>: a link to the page’s PDF, or <code>none</code> when no PDF is rendered</li><li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, verbatim</li></ul><p><em>Calepin</em> interprets only the <code>title</code>, <code>pdf</code>, <code>hidden</code>, <code>slug</code>, <code>url</code>, and <code>translation_key</code> keys of page metadata. <code>slug</code> renames the generated file inside the page’s directory, and <code>url</code> sets the full output path relative to the site root; both stay inside the output directory. Everything else in <code>meta</code> (dates, tags, authors, categories) is yours to define and filter on. Outside a website build, <code>calepin.pages()</code> returns an empty array, so pages compile standalone.</p><p>Blog posts usually should not appear in the sidebar. Include them in the build with <code>[pages]</code>:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">pages</span>]
+<span style="color: #4b69c6">include</span> = [<span style="color: #198810">"</span><span style="color: #198810">blog/*.typ</span><span style="color: #198810">"</span>]</code></pre><p>Then mark each post:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((title: <span style="color: #198810">"First Post"</span>, date: <span style="color: #198810">"2026-06-01"</span>, hidden: <span style="color: #d73948">true</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p><code>hidden: true</code> removes a page from automatic navigation. Pages included through <code>[pages].include</code> are built, listed in <code>calepin.pages()</code>, and present in <code>sitemap.xml</code> without needing to appear in the sidebar or navbar.</p><p>When any page’s metadata changes, <em>Calepin</em> rebuilds the whole site during watch so that listing pages never go stale.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -211,6 +244,10 @@
                     <li class="level-2"><a href="#navigation-and-listings">Navigation and listings</a></li>
                     
                     <li class="level-3"><a href="#sidebar">Sidebar</a></li>
+                    
+                    <li class="level-3"><a href="#navbar">Navbar</a></li>
+                    
+                    <li class="level-3"><a href="#navigation-icons">Navigation icons</a></li>
                     
                     <li class="level-3"><a href="#page-titles">Page titles</a></li>
                     
@@ -332,24 +369,212 @@
     
     
 <script>
-/* Calepin website behaviour, consolidated.
- *
- * One module-local script wires: theme toggle, view switcher (HTML/Source/PDF),
- * the mobile sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal
- * link state preservation, and the native <dialog> video lightbox.
- *
- * The Rust theme loader inlines this file into a <script> at the end of <body>,
- * so the DOM already exists when it runs and no DOMContentLoaded guard is
- * needed. Theme is applied first to keep any flash as short as possible. */
 (() => {
   "use strict";
 
-  const THEME = {
-    storageKey: "calepin-website-theme",
-    param: "theme",
-    order: ["", "light", "dark"],
-    labels: { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" },
+  const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
+  if (!buttons.length) return;
+
+  const order = ["", "light", "dark"];
+  const labels = { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" };
+  const icons = {
+    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
+    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
+    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
   };
+
+  const normalize = (value) => value === "light" || value === "dark" ? value : "";
+  const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
+  const urlParam = (button) => button.dataset.calepinThemeParam || "";
+
+  function readUrl(button) {
+    const param = urlParam(button);
+    if (!param) return "";
+    try {
+      return normalize(new URL(window.location.href).searchParams.get(param) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function clearUrl(button) {
+    const param = urlParam(button);
+    if (!param) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete(param);
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      /* ignore URL errors */
+    }
+  }
+
+  function readStored(button) {
+    try {
+      return normalize(localStorage.getItem(storageKey(button)) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function writeStored(button, value) {
+    try {
+      if (value) localStorage.setItem(storageKey(button), value);
+      else localStorage.removeItem(storageKey(button));
+    } catch {
+      /* ignore storage errors */
+    }
+  }
+
+  function readTheme(button) {
+    const fromUrl = readUrl(button);
+    if (fromUrl) {
+      writeStored(button, fromUrl);
+      clearUrl(button);
+      return fromUrl;
+    }
+    return readStored(button);
+  }
+
+  function applyTheme(value) {
+    const theme = normalize(value);
+    if (theme) {
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+    } else {
+      delete document.documentElement.dataset.theme;
+      document.documentElement.style.colorScheme = "";
+    }
+    buttons.forEach((button) => {
+      const label = labels[theme] || labels[""];
+      button.innerHTML = icons[theme] || icons[""];
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    });
+  }
+
+  applyTheme(readTheme(buttons[0]));
+
+  buttons.forEach((button) => {
+    if (button.dataset.calepinThemeBound === "true") return;
+    button.dataset.calepinThemeBound = "true";
+    button.addEventListener("click", () => {
+      const current = normalize(document.documentElement.dataset.theme || "");
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      applyTheme(next);
+      writeStored(button, next);
+    });
+  });
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) applyTheme(readTheme(buttons[0]));
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
+  });
+})();
+
+    </script>
+<script>
+(() => {
+  "use strict";
+
+  const selects = document.querySelectorAll("select[data-calepin-language-picker]");
+  if (!selects.length) return;
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function languageIcon() {
+    return `<svg class="calepin-language-picker-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a13.5 13.5 0 0 1 0 18"></path><path d="M12 3a13.5 13.5 0 0 0 0 18"></path></svg>`;
+  }
+
+  function closeAll(except) {
+    document.querySelectorAll(".calepin-language-picker.is-open").forEach((picker) => {
+      if (picker === except) return;
+      picker.classList.remove("is-open");
+      const button = picker.querySelector("button");
+      if (button) button.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function enhance(select) {
+    if (select.dataset.calepinLanguageBound === "true") return;
+    select.dataset.calepinLanguageBound = "true";
+
+    const options = Array.from(select.options).filter((option) => option.value);
+    if (options.length <= 1) return;
+
+    const selected = options.find((option) => option.selected) || options[0];
+    const picker = document.createElement("div");
+    picker.className = "calepin-language-picker";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "calepin-language-picker-button outline secondary";
+    button.setAttribute("aria-haspopup", "menu");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-label", select.getAttribute("aria-label") || "Language");
+    button.innerHTML = `${languageIcon()}<span>${escapeHtml(selected.textContent)}</span>`;
+
+    const menu = document.createElement("div");
+    menu.className = "calepin-language-picker-menu";
+    menu.setAttribute("role", "menu");
+
+    options.forEach((option) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.dataset.href = option.value;
+      item.innerHTML = `${languageIcon()}<span>${escapeHtml(option.textContent)}</span>`;
+      if (option.selected) item.setAttribute("aria-current", "true");
+      item.addEventListener("click", () => {
+        window.location.href = option.value;
+      });
+      menu.appendChild(item);
+    });
+
+    button.addEventListener("click", () => {
+      const open = !picker.classList.contains("is-open");
+      closeAll(open ? picker : null);
+      picker.classList.toggle("is-open", open);
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    picker.append(button, menu);
+    select.hidden = true;
+    select.insertAdjacentElement("afterend", picker);
+  }
+
+  selects.forEach(enhance);
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".calepin-language-picker")) closeAll();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAll();
+  });
+})();
+
+    </script>
+<script>
+/* Calepin website behaviour, consolidated.
+ *
+ * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
+ * sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal link state
+ * preservation, and the native <dialog> video lightbox.
+ *
+ * The Rust theme loader inlines this file into a <script> at the end of <body>,
+ * so the DOM already exists when it runs and no DOMContentLoaded guard is
+ * needed. */
+(() => {
+  "use strict";
 
   const VIEW = {
     storageKey: "calepin-website-view-mode",
@@ -361,12 +586,6 @@
 
   const MOBILE_QUERY = "(max-width: 56rem)";
   const SOURCE_DATA_ID = "calepin-website-source-data";
-
-  const THEME_ICONS = {
-    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
-    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
-    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
-  };
 
   const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
   const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
@@ -440,55 +659,6 @@
   }
 
   const getMain = () => document.querySelector(".calepin-website-main");
-
-  // ------------------------------------------------------------------ theme
-
-  const normalizeTheme = (value) =>
-    value === "light" || value === "dark" ? value : "";
-
-  function currentTheme() {
-    return normalizeTheme(document.documentElement.dataset.theme || "");
-  }
-
-  function applyTheme(themeName, button) {
-    const next = normalizeTheme(themeName);
-    const root = document.documentElement;
-    if (next) {
-      root.dataset.theme = next;
-      root.style.colorScheme = next;
-    } else {
-      delete root.dataset.theme;
-      root.style.colorScheme = "";
-    }
-
-    if (button) {
-      const label = THEME.labels[next] || THEME.labels[""];
-      button.innerHTML = THEME_ICONS[next] || THEME_ICONS[""];
-      button.setAttribute("aria-label", label);
-      button.setAttribute("title", label);
-    }
-  }
-
-  function readTheme() {
-    const fromUrl = readUrlParam(THEME.param, normalizeTheme);
-    if (fromUrl) {
-      writeStored(THEME.storageKey, fromUrl);
-      updateCurrentUrlParam(THEME.param, "");
-      return fromUrl;
-    }
-    return readStored(THEME.storageKey, normalizeTheme, "");
-  }
-
-  function initTheme(button) {
-    applyTheme(readTheme(), button);
-    if (!button) return;
-    button.onclick = () => {
-      const index = THEME.order.indexOf(currentTheme());
-      const next = THEME.order[(index + 1) % THEME.order.length];
-      applyTheme(next, button);
-      writeStored(THEME.storageKey, next);
-    };
-  }
 
   // ------------------------------------------------------------------- view
 
@@ -817,11 +987,10 @@
 
   // --------------------------------------------------------- link state
 
-  function urlWithState(href, themeButton, viewSelect) {
+  function urlWithState(href, viewSelect) {
     if (!isInternalPageHref(href)) return href;
     try {
       const url = new URL(href, window.location.href);
-      setUrlParam(url, THEME.param, "");
       const view = currentView(viewSelect);
       setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
       return url.toString();
@@ -830,16 +999,16 @@
     }
   }
 
-  function preserveStateInLinks(themeButton, viewSelect) {
+  function preserveStateInLinks(viewSelect) {
     document.querySelectorAll("a[href]").forEach((link) => {
       const href = link.getAttribute("href");
       if (!isInternalPageHref(href)) return;
-      const next = urlWithState(href, themeButton, viewSelect);
+      const next = urlWithState(href, viewSelect);
       if (next && next !== href) link.setAttribute("href", next);
     });
   }
 
-  function initLinkInterception(nav, themeButton, viewSelect) {
+  function initLinkInterception(nav, viewSelect) {
     document.addEventListener("click", (event) => {
       const tocLink = event.target.closest(".calepin-website-toc a");
       if (tocLink) {
@@ -864,7 +1033,7 @@
       if (isSidebar && isMobile()) nav.close();
 
       const href = link.getAttribute("href");
-      const next = urlWithState(href, themeButton, viewSelect);
+      const next = urlWithState(href, viewSelect);
       if (next && next !== href) {
         event.preventDefault();
         window.location.href = next;
@@ -903,31 +1072,25 @@
 
   // --------------------------------------------------------------- bootstrap
 
-  const themeButton = document.getElementById("calepin-website-theme-button");
   const viewSelect = document.getElementById("calepin-website-view-mode");
 
-  initTheme(themeButton);
   initView(viewSelect);
   const nav = createNav();
   initCopy();
   inlineSvgs();
   initDialogs();
-  preserveStateInLinks(themeButton, viewSelect);
-  initLinkInterception(nav, themeButton, viewSelect);
+  preserveStateInLinks(viewSelect);
+  initLinkInterception(nav, viewSelect);
 
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
-    initTheme(themeButton);
     initView(viewSelect);
     initCopy();
-    preserveStateInLinks(themeButton, viewSelect);
+    preserveStateInLinks(viewSelect);
   });
 
   window.addEventListener("storage", (event) => {
-    if (event.key === THEME.storageKey) {
-      initTheme(themeButton);
-      preserveStateInLinks(themeButton, viewSelect);
-    } else if (event.key === VIEW.storageKey) {
+    if (event.key === VIEW.storageKey) {
       initView(viewSelect);
     }
   });

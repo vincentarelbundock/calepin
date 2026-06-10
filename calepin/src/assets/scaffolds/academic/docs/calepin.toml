@@ -1,0 +1,54 @@
+html_theme = "academic"
+title = "Academic Site"
+description = "Research, teaching, publications, and notes."
+# base_url = "https://example.edu"
+# home = "index.html"
+# pdf = false
+
+[sidebar]
+
+[[sidebar.section]]
+title = "Site"
+
+  [[sidebar.section.item]]
+  path = "index.typ"
+  label = "About"
+
+  [[sidebar.section.item]]
+  path = "publications/index.typ"
+  label = "Publications"
+
+  [[sidebar.section.item]]
+  path = "teaching/index.typ"
+  label = "Teaching"
+
+  [[sidebar.section.item]]
+  path = "projects/index.typ"
+  label = "Projects"
+
+  [[sidebar.section.item]]
+  path = "talks/index.typ"
+  label = "Talks"
+
+  [[sidebar.section.item]]
+  path = "posts/index.typ"
+  label = "Posts"
+
+  [[sidebar.section.item]]
+  path = "cv.typ"
+  label = "CV"
+
+  [[sidebar.section.item]]
+  glob = "publications/*.typ"
+
+  [[sidebar.section.item]]
+  glob = "teaching/*.typ"
+
+  [[sidebar.section.item]]
+  glob = "projects/*.typ"
+
+  [[sidebar.section.item]]
+  glob = "talks/*.typ"
+
+  [[sidebar.section.item]]
+  glob = "posts/*.typ"

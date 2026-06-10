@@ -1,0 +1,114 @@
+{%- macro navbar_items(items, languages) %}
+                {% for item in items %}
+                {% if item.widget == "theme" %}
+                <button class="academic-theme-toggle outline secondary" type="button" aria-label="{{ item.label }}" title="{{ item.label }}" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-academic-theme">{{ item.label_html }}</button>
+                {% elif item.widget == "language" %}
+                {% if languages and languages | length > 1 %}
+                <select class="academic-language-picker" aria-label="{{ item.label }}" data-calepin-language-picker>
+                    {% for language in languages %}
+                    <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+                {% else %}
+                <a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a>
+                {% endif %}
+                {% endfor %}
+{%- endmacro -%}
+{{ doc.head }}
+    {% if not doc.title %}
+    {% if site.page_title or site.title %}
+    <title>{% if site.page_title %}{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}{% elif site.title %}{{ site.title }}{% endif %}</title>
+    {% endif %}
+    {% endif %}
+    {% if site.description %}
+    <meta name="description" content="{{ site.description }}">
+    <meta property="og:description" content="{{ site.description }}">
+    {% endif %}
+    {% if site.title %}
+    <meta property="og:site_name" content="{{ site.title }}">
+    {% endif %}
+    {% if doc.title %}
+    <meta property="og:title" content="{{ doc.title }}{% if site.title %} | {{ site.title }}{% endif %}">
+    {% elif site.page_title %}
+    <meta property="og:title" content="{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}">
+    {% elif site.title %}
+    <meta property="og:title" content="{{ site.title }}">
+    {% endif %}
+    {% if site.current_url %}
+    <link rel="canonical" href="{{ site.current_url }}">
+    <meta property="og:url" content="{{ site.current_url }}">
+    {% endif %}
+    {% for translation in site.translations %}
+    <link rel="alternate" hreflang="{{ translation.code }}" href="{{ translation.href }}">
+    {% endfor %}
+    <meta name="color-scheme" content="light dark">
+    <script>
+(() => {
+  "use strict";
+  let value = "";
+  try {
+    value = localStorage.getItem("calepin-academic-theme") || "";
+  } catch {
+    value = "";
+  }
+  if (value === "light" || value === "dark") {
+    document.documentElement.dataset.theme = value;
+    document.documentElement.style.colorScheme = value;
+  }
+})();
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+{% if site.stylesheet %}
+    <link rel="stylesheet" href="{{ site.stylesheet }}">
+{% else %}
+{% for style in styles -%}
+    <style>
+{{ style.css }}
+    </style>
+{% endfor -%}
+{% endif %}
+{{ doc.body_open }}
+    <header class="academic-topbar">
+        <nav class="academic-nav" aria-label="Site">
+            <a class="academic-brand contrast" href="{% if site.home_url %}{{ site.home_url }}{% else %}index.html{% endif %}">
+                {% if site.logo %}
+                <img src="{{ site.logo }}" alt="{% if site.logo_alt %}{{ site.logo_alt }}{% elif site.title %}{{ site.title }}{% endif %}" class="academic-logo">
+                {% elif site.title %}
+                <span>{{ site.title }}</span>
+                {% else %}
+                <span>Home</span>
+                {% endif %}
+            </a>
+            <button class="academic-nav-toggle outline secondary" type="button" aria-controls="academic-menu" aria-expanded="false" aria-label="Toggle navigation">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </button>
+            <div id="academic-menu" class="academic-menu">
+                {{ navbar_items(site.navbar_left, site.languages) }}
+                {{ navbar_items(site.navbar_center, site.languages) }}
+                {{ navbar_items(site.navbar_right, site.languages) }}
+                {% if site.nav_sections %}
+                    {% for section in site.nav_sections %}
+                    {% for item in section.items %}
+                    <a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a>
+                    {% endfor %}
+                    {% endfor %}
+                {% elif site.nav %}
+                    {% for item in site.nav %}
+                    <a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+    <main class="academic-main">
+        {{ doc.body }}
+    </main>
+{% for script in scripts -%}
+    <script>
+{{ script.content }}
+    </script>
+{% endfor -%}
+{{ doc.body_close }}
