@@ -4,34 +4,15 @@ _Calepin_ can build a Typst document directory as a static website. This is the 
 
 == Feature summary
 
-- Scaffold a new website with `calepin new website`.
-- Compile a directory with `calepin compile docs docs --config website.toml`.
-- Render HTML for each page.
-- Render matching PDFs for each page by default.
-- Render HTML only with `--format html`.
-- Build in place, so GitHub Pages can publish from `docs/`.
-- Reuse cached chunk results across repeated `compile`, `website`, and `serve` runs.
-- Watch a website directory with `calepin watch docs docs --config website.toml`.
-- Rebuild only changed existing `.typ` pages during watch using xxh3 fingerprints.
-- Skip rebuilds when watched `.typ` files are touched but their content hash has not changed.
-- Fall back to a full rebuild for structural changes.
-- Serve a static output directory with `calepin serve docs`.
-- Watch and serve together with `calepin watch docs docs --config website.toml --serve`.
-- Auto-refresh browser pages after successful watched rebuilds when `--serve` is enabled.
-- Configure navigation manually with `website.toml`.
-- Generate navigation automatically when no sidebar is configured.
-- Render `404.typ` as a fallback page when present.
-- Exclude `404.typ` from automatic navigation and sitemap output.
-- Configure `title`, `description`, `base_url`, `logo`, `logo_alt`, `home`, and `github_url`.
-- Emit page titles, description metadata, Open Graph metadata, and canonical URLs in the bundled website theme.
-- Generate `sitemap.xml` when `base_url` is configured.
-- Remove stale generated files after pages are deleted or renamed.
-- Track generated outputs locally with `.calepin/website-manifest.json`.
-- Preserve unrelated static assets while cleaning stale generated `.html` and `.pdf` files.
-- Use Calepin HTML themes, including the bundled `calepin-website` theme.
-- Expose site navigation, sectioned navigation, TOC, metadata, and current URL to HTML themes.
-- Embed each page's source `.typ` content in the generated HTML for the source view in the bundled website theme.
-- Inline local images referenced by Typst HTML output.
+The website generator is intentionally small. It handles the common static documentation workflow:
+
+- scaffold a site with `calepin new website`
+- compile a `.typ` directory to HTML, with matching PDFs by default
+- build in place for GitHub Pages or write to a separate output directory
+- watch and serve during development, with browser refresh after successful rebuilds
+- configure navigation, metadata, HTML themes, PDF themes, and sitemap output from `website.toml`
+
+Generated outputs are tracked in `.calepin/website-manifest.json`, which lets later builds remove stale generated pages while preserving unrelated static assets.
 
 == Create a website
 
@@ -171,24 +152,55 @@ github_url = "https://github.com/user/repo"
 pdf_theme = "docs/assets/pdf-theme.typ"
 ```
 
-Source and output directories are positional CLI arguments, not website config fields. This mirrors normal single-file compilation, where `calepin compile file.typ file.pdf` takes input and output from the first two positional arguments.
+=== Build paths
 
-`theme` selects the HTML theme. It can be the built-in `calepin-website` theme or a path to a theme directory containing `layout.html`. If omitted, website builds use `calepin-website`. `template` is accepted as a backward-compatible alias.
+The first positional argument is the source directory. The optional second positional argument is the output directory:
+
+```sh
+calepin compile docs public --config website.toml
+```
+
+If the output directory is omitted, _Calepin_ writes output beside the source files. To publish directly from `docs/`, pass `docs` as both the source and output directory:
+
+```sh
+calepin compile docs docs --config website.toml
+```
+
+=== HTML theme
+
+`theme` selects the HTML theme. It can be:
+
+- `calepin-website` for the bundled website theme
+- a path to a theme directory containing `layout.html`
+
+If `theme` is omitted, website builds use `calepin-website`. `template` is accepted as a backward-compatible alias.
+
+```toml
+theme = "calepin-website"
+# or
+theme = "themes/my-theme"
+```
+
+=== PDF theme
 
 `pdf_theme` selects a Typst theme file for PDF and other paged output. If it is omitted, _Calepin_ uses the bundled `calepin-pdf` theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. You can also write `pdf_theme = "calepin-pdf"` explicitly. Set `pdf_theme = false` to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as `pdf_theme = "docs/assets/pdf-theme.typ"` when `website.toml` lives at the project root.
 
-`title`, `description`, `base_url`, `logo`, `logo_alt`, `home`, and `github_url` are optional. The bundled website theme uses these values to emit:
+=== Metadata
+
+`title`, `description`, and `base_url` are optional. The bundled website theme uses them for:
 
 - browser page titles
 - description metadata
 - Open Graph metadata
 - canonical URLs
-- a logo or text brand link in the top bar
-- a GitHub link in the top bar
 
-`logo` is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so `logo = "assets/logo.svg"` works from nested pages too. `logo_alt` controls the image alt text. `home` controls the top-bar brand link destination and defaults to `index.html`.
+When `base_url` is set, _Calepin_ also writes `sitemap.xml`.
 
-When `base_url` is set, _Calepin_ writes `sitemap.xml`.
+=== Branding
+
+`logo` is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so `logo = "assets/logo.svg"` works from nested pages too.
+
+`logo_alt` controls the image alt text. If no logo is configured, the bundled theme uses `title` as a text brand. `home` controls the brand link destination and defaults to `index.html`. `github_url` adds a GitHub link to the top bar.
 
 == Navigation
 
