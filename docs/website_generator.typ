@@ -2,18 +2,6 @@
 
 _Calepin_ can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source `.typ` files live in `docs/`, and the generated `.html`, `.pdf`, and `sitemap.xml` files are written back into `docs/` for GitHub Pages.
 
-== Feature summary
-
-The website generator is intentionally small. It handles the common static documentation workflow:
-
-- scaffold a site with `calepin new website`
-- compile a `.typ` directory to HTML, with matching PDFs by default
-- build in place for GitHub Pages or write to a separate output directory
-- watch and serve during development, with browser refresh after successful rebuilds
-- configure navigation, metadata, HTML themes, PDF themes, and sitemap output from `website.toml`
-
-Generated outputs are tracked in `.calepin/website-manifest.json`, which lets later builds remove stale generated pages while preserving unrelated static assets.
-
 == Create a website
 
 Use `calepin new website` to scaffold a minimal site:
@@ -28,9 +16,7 @@ This creates:
 - `docs/index.typ`
 - `docs/404.typ`
 
-The scaffold separates site settings from build paths. Pass the source directory as the first positional argument and the output directory as the second positional argument when compiling.
-
-== Build
+== Build pages
 
 Compile a website directory with the same `compile` command used for a single Typst document:
 
@@ -67,7 +53,9 @@ Directory website builds do not support `--format pdf`, `--format png`, or `--fo
 
 Website builds use the same preprocess cache as single-document compilation. After a successful page build, _Calepin_ writes a fingerprint next to the page's `results.json`. Later builds reuse that file when the chunk code, parameters, execution options, configured tools, and source-relative cache paths match. This means `make serve` does not need to re-execute expensive chunks in pages such as `example.typ` when nothing relevant changed.
 
-== Watch
+Generated outputs are tracked in `.calepin/website-manifest.json`. Later builds use that manifest to remove stale generated files when pages are deleted or renamed. Full builds also scan the output directory for unexpected generated `.html` and `.pdf` files, while preserving static assets in directories such as `assets/`, `.calepin/`, `.git/`, `target/`, `node_modules/`, and `.venv/`.
+
+== Watch changes
 
 During development, watch the website source directory:
 
@@ -91,7 +79,7 @@ _Calepin_ also falls back to a full rebuild for changes that can affect more tha
 - renamed `.typ` pages
 - unknown or non-page inputs
 
-== Watch and serve
+== Watch and serve locally
 
 To rebuild and serve in one command:
 
@@ -113,7 +101,7 @@ You can also bind another interface:
 calepin watch docs docs --config website.toml --serve --host 0.0.0.0 --port 8001
 ```
 
-== Serve
+== Serve built files
 
 Serve an already-built static directory with:
 
@@ -141,7 +129,7 @@ calepin serve docs --host 127.0.0.1 --port 8001
 Website settings live in `website.toml`:
 
 ```toml
-theme = "calepin-website"
+html_theme = "calepin-website"
 title = "My Site"
 description = "A static website built from Typst documents."
 base_url = "https://example.com"
@@ -152,33 +140,17 @@ github_url = "https://github.com/user/repo"
 pdf_theme = "docs/assets/pdf-theme.typ"
 ```
 
-=== Build paths
-
-The first positional argument is the source directory. The optional second positional argument is the output directory:
-
-```sh
-calepin compile docs public --config website.toml
-```
-
-If the output directory is omitted, _Calepin_ writes output beside the source files. To publish directly from `docs/`, pass `docs` as both the source and output directory:
-
-```sh
-calepin compile docs docs --config website.toml
-```
-
 === HTML theme
 
-`theme` selects the HTML theme. It can be:
+`html_theme` selects the HTML theme. It can be:
 
 - `calepin-website` for the bundled website theme
 - a path to a theme directory containing `layout.html`
 
-If `theme` is omitted, website builds use `calepin-website`. `template` is accepted as a backward-compatible alias.
+If `html_theme` is omitted, website builds use `calepin-website`. `theme` and `template` are accepted as backward-compatible aliases.
 
 ```toml
-theme = "calepin-website"
-# or
-theme = "themes/my-theme"
+html_theme = "calepin-website"
 ```
 
 === PDF theme
@@ -256,21 +228,27 @@ The sitemap is built from navigation entries. URLs are absolute and use `base_ur
 
 If `base_url` is removed from the config, a stale generated sitemap is removed on the next build.
 
-== Generated file cleanup
+== Theme customization
 
-_Calepin_ writes a local manifest to:
+HTML themes are MiniJinja templates. A theme directory contains a required `layout.html` file and optional `partials/`, `styles/`, and `scripts/` directories:
 
 ```text
-.calepin/website-manifest.json
+themes/my-theme/
+  layout.html
+  partials/
+  styles/main.css
+  scripts/main.js
 ```
 
-The manifest records generated website outputs. Later builds use it to remove stale generated files when pages are deleted or renamed.
+Select a local theme with:
 
-Full builds also scan the output directory for unexpected generated `.html` and `.pdf` files. The scan skips directories such as `assets/`, `.calepin/`, `.git/`, `target/`, `node_modules/`, and `.venv/`, so static assets are preserved.
+```toml
+html_theme = "themes/my-theme"
+```
 
-== Theme context
+Use `website.toml` for ordinary site branding and navigation changes. Create a local HTML theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.
 
-Website builds pass site data into HTML themes. Theme templates can access:
+Website builds pass site data into HTML themes. The bundled `calepin-website` theme uses this data for sidebar navigation, previous and next page links, table of contents, metadata, the top-bar brand link, and the GitHub link. Local theme templates can access:
 
 - `site.nav`
 - `site.nav_sections`
@@ -288,28 +266,6 @@ Website builds pass site data into HTML themes. Theme templates can access:
 - `snippets.js.copy_code`
 - `snippets.js.theme_toggle`
 - `snippets.typst.code_block`
-
-The bundled `calepin-website` theme uses this data for sidebar navigation, previous and next page links, table of contents, metadata, the top-bar brand link, and the GitHub link.
-
-== Theme customization
-
-HTML themes are MiniJinja templates. A theme directory contains a required `layout.html` file and optional `partials/`, `styles/`, and `scripts/` directories:
-
-```text
-themes/my-theme/
-  layout.html
-  partials/
-  styles/main.css
-  scripts/main.js
-```
-
-Select a local theme with:
-
-```toml
-theme = "themes/my-theme"
-```
-
-Use `website.toml` for ordinary site branding and navigation changes. Create a local HTML theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.
 
 Bundled snippets are available to local HTML themes through the `snippets` object. For example, include reusable code/output styling and copy-button behavior with:
 

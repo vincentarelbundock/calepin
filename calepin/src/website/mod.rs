@@ -169,13 +169,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         Some(out) => resolve_cli_path(&current_dir, out),
         None => src_dir.clone(),
     };
-    let raw_theme = args
-        .theme
-        .as_deref()
-        .or(config.theme.as_deref())
-        .or(config.template.as_deref())
-        .unwrap_or(DEFAULT_WEBSITE_THEME)
-        .to_string();
+    let raw_theme = configured_html_theme(args.theme.as_deref(), &config).to_string();
 
     if !src_dir.is_dir() {
         return Err(anyhow!("source directory not found: {}", src_dir.display()));
@@ -503,8 +497,9 @@ fn changed_typ_pages(
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 struct WebsiteConfig {
+    html_theme: Option<String>,
+    // Backward-compatible aliases for older website configs.
     theme: Option<String>,
-    // Backward-compatible alias for configs written before `theme`.
     template: Option<String>,
     title: Option<String>,
     description: Option<String>,
@@ -514,6 +509,14 @@ struct WebsiteConfig {
     home: Option<String>,
     github_url: Option<String>,
     sidebar: Option<SidebarConfig>,
+}
+
+fn configured_html_theme<'a>(cli_theme: Option<&'a str>, config: &'a WebsiteConfig) -> &'a str {
+    cli_theme
+        .or(config.html_theme.as_deref())
+        .or(config.theme.as_deref())
+        .or(config.template.as_deref())
+        .unwrap_or(DEFAULT_WEBSITE_THEME)
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -1397,6 +1400,38 @@ mod tests {
             page_fingerprints: fingerprint_files(pages).unwrap(),
             nav_signature: 0,
         }
+    }
+
+    #[test]
+    fn configured_html_theme_prefers_explicit_html_theme_and_keeps_aliases() {
+        let config = WebsiteConfig {
+            html_theme: Some("html-theme".to_string()),
+            theme: Some("legacy-theme".to_string()),
+            template: Some("legacy-template".to_string()),
+            ..WebsiteConfig::default()
+        };
+
+        assert_eq!(configured_html_theme(None, &config), "html-theme");
+        assert_eq!(
+            configured_html_theme(Some("cli-theme"), &config),
+            "cli-theme"
+        );
+
+        let legacy_config = WebsiteConfig {
+            theme: Some("legacy-theme".to_string()),
+            template: Some("legacy-template".to_string()),
+            ..WebsiteConfig::default()
+        };
+        assert_eq!(configured_html_theme(None, &legacy_config), "legacy-theme");
+
+        let template_config = WebsiteConfig {
+            template: Some("legacy-template".to_string()),
+            ..WebsiteConfig::default()
+        };
+        assert_eq!(
+            configured_html_theme(None, &template_config),
+            "legacy-template"
+        );
     }
 
     #[test]

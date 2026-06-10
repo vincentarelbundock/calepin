@@ -5,11 +5,11 @@ calepin compile paper.typ --format html --theme calepin-html
 ```
 
 `--theme` is optional and only applies to HTML output. Single-document HTML
-builds use `calepin-html` by default. Website directory builds use `theme` in
-`website.toml` and default to `calepin-website`. `--template` and `template`
-are accepted as backward-compatible aliases.
+builds use `calepin-html` by default. Website directory builds use
+`html_theme` in `website.toml` and default to `calepin-website`. `theme` and
+`template` are accepted as backward-compatible config aliases.
 
-Local themes are selected by pointing `--theme` or `theme` at the directory containing `layout.html`:
+Local themes are selected by pointing `--theme` or `html_theme` at the directory containing `layout.html`:
 
 ```text
 themes/my-theme/
