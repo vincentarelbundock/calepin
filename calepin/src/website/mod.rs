@@ -3,7 +3,6 @@ mod serve;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
@@ -23,16 +22,22 @@ use crate::html::{
     SiteNavEntry, SiteNavSection,
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
-use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
+use crate::typst::preprocess::{
+    preprocess_cached, read_page_meta, PreprocessOptions, PreprocessOutput,
+};
 
 const DEFAULT_CONFIG: &str = "website.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
 const DEFAULT_WEBSITE_THEME: &str = "calepin-website";
 const WEBSITE_STYLESHEET_PATH: &str = ".calepin/calepin-website.css";
 const FALLBACK_PAGE: &str = "404.typ";
-const SITE_METADATA_LABEL: &str = "website-metadata";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
 const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
+const PAGES_INDEX_FILE: &str = "website-pages.json";
+/// Root-relative reference to the pages index. Each page renders with
+/// `--root` at its own directory, so the index is written into every page
+/// directory's `.calepin` and this reference resolves for all of them.
+const PAGES_INDEX_REF: &str = "/.calepin/website-pages.json";
 const SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
 
 pub(crate) fn scaffold_website(root: &Path, force: bool) -> Result<()> {
@@ -76,7 +81,6 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         typst_args: args.typst_args,
         incremental_inputs: None,
         clean: true,
-        meta_cache: PageMetaCache::new(),
     })?;
     Ok(())
 }
@@ -107,7 +111,6 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         typst_args: args.typst_args.clone(),
         incremental_inputs: None,
         clean: true,
-        meta_cache: PageMetaCache::new(),
     };
     let initial = build_site(options.clone())?;
     let live = serve::LiveReload::new();
@@ -146,18 +149,21 @@ struct WebsiteBuildOptions {
     typst_args: Vec<String>,
     incremental_inputs: Option<Vec<PathBuf>>,
     clean: bool,
-    meta_cache: PageMetaCache,
 }
 
-/// Per-page metadata exposed through the `<website-metadata>` Typst label.
+/// Per-page metadata exposed through the `<website-metadata>` Typst label,
+/// extracted during preprocessing and persisted under `.calepin/`. `title`,
+/// `pdf`, and `hidden` are the keys calepin interprets; `raw` carries the
+/// author's whole dictionary verbatim for the pages index.
 #[derive(Debug, Clone, Default, PartialEq)]
 struct PageMeta {
     title: Option<String>,
     pdf: Option<bool>,
+    hidden: bool,
+    raw: serde_json::Value,
 }
 
-/// Page metadata keyed by page path, with the content hash it was derived from.
-type PageMetaCache = BTreeMap<PathBuf, (u64, PageMeta)>;
+type PageMetaMap = BTreeMap<PathBuf, PageMeta>;
 
 #[derive(Debug, Clone)]
 struct WebsiteBuildResult {
@@ -166,8 +172,10 @@ struct WebsiteBuildResult {
     config_path: PathBuf,
     theme_dir: Option<PathBuf>,
     page_fingerprints: BTreeMap<PathBuf, u64>,
-    page_meta: PageMetaCache,
     nav_signature: u64,
+    /// Hash of the pages index; when it changes, every page may render
+    /// differently (listings), so incremental rebuilds fall back to full.
+    pages_signature: u64,
 }
 
 fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
@@ -197,19 +205,41 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let theme_dir = html_theme_dir(&theme);
     let theme_stylesheet_path =
         (theme == DEFAULT_WEBSITE_THEME).then(|| PathBuf::from(WEBSITE_STYLESHEET_PATH));
-    let (nav_sections, mut typ_files, page_meta) = build_navigation(
-        &src_dir,
-        config.sidebar.as_ref(),
-        &calepin_config.executables.typst,
-        &args.meta_cache,
-    )?;
+    let (section_plans, mut typ_files) = discover_pages(&src_dir, config.sidebar.as_ref())?;
     let fallback = src_dir.join(FALLBACK_PAGE);
     if fallback.is_file() {
-        typ_files.push(fallback);
+        typ_files.push(fallback.clone());
     }
     typ_files.sort_by_key(|path| rel_posix(&src_dir, path));
     typ_files.dedup();
     let page_fingerprints = fingerprint_files(&typ_files)?;
+
+    let build_set = match &args.incremental_inputs {
+        Some(inputs) => {
+            let wanted = inputs.iter().cloned().collect::<BTreeSet<_>>();
+            typ_files
+                .iter()
+                .filter(|path| wanted.contains(*path))
+                .cloned()
+                .collect::<Vec<_>>()
+        }
+        None => typ_files.clone(),
+    };
+
+    // Phase 1: preprocess the build set. This executes code chunks and also
+    // extracts each page's `<website-metadata>` from the staged source, where
+    // imports resolve.
+    let preprocessed = preprocess_documents(
+        &build_set,
+        &config_path,
+        args.quiet,
+        args.timeout,
+        &args.params,
+        args.parallelism,
+    )?;
+
+    let page_meta = load_page_meta(&typ_files);
+    let nav_sections = nav_from_plans(&src_dir, &section_plans, &page_meta);
     let nav_signature = navigation_signature(&nav_sections);
     let metadata = SiteMetadata::from_config(&config);
     let sitemap_path = metadata
@@ -217,6 +247,10 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .as_ref()
         .map(|_| out_dir.join("sitemap.xml"));
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
+    let pages_index = build_pages_index(&src_dir, &typ_files, &section_plans, &page_meta, &pdf_files);
+    let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
+    let pages_signature = xxh3_64(pages_index_json.as_bytes());
+    write_pages_index(&typ_files, &pages_index_json)?;
     let expected_outputs = expected_generated_outputs(
         &src_dir,
         &out_dir,
@@ -226,11 +260,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         theme_stylesheet_path.as_deref(),
     );
     let previous_manifest = load_manifest(&out_dir)?;
-
-    if let Some(inputs) = &args.incremental_inputs {
-        let wanted = inputs.iter().cloned().collect::<BTreeSet<_>>();
-        typ_files.retain(|path| wanted.contains(path));
-    }
 
     if args.clean {
         clear_previous_outputs(&src_dir, &out_dir)?;
@@ -249,8 +278,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         if args.incremental_inputs.is_none() {
             copy_assets(&src_dir, &out_dir)?;
         }
-        let source_files = if let Some(inputs) = &args.incremental_inputs {
-            inputs.clone()
+        let source_files = if args.incremental_inputs.is_some() {
+            build_set.clone()
         } else if config.sidebar.is_some() {
             typ_files.clone()
         } else {
@@ -259,26 +288,29 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         copy_typ_sources(&src_dir, &out_dir, &source_files)?;
     }
 
-    let site = Arc::new(SiteModel::new(nav_sections, metadata.clone()));
-    compile_documents(
-        BuildContext {
+    // Phase 2: render the preprocessed pages with full site context.
+    let site = SiteModel::new(nav_sections, metadata.clone());
+    render_documents(
+        &BuildContext {
             src_dir: src_dir.clone(),
             out_dir: out_dir.clone(),
-            config_path: config_path.clone(),
             typst: calepin_config.executables.typst,
             theme,
-            quiet: args.quiet,
-            timeout: args.timeout,
-            params: args.params,
             pdf_files,
             theme_stylesheet: theme_stylesheet_path.map(|path| slash_path(&path)),
             parallelism: args.parallelism,
             typst_args: args.typst_args,
         },
-        typ_files,
-        Arc::clone(&site),
+        build_set,
+        &site,
+        &preprocessed,
     )?;
-    write_sitemap(&out_dir, metadata.base_url.as_deref(), site.nav_sections())?;
+    let sitemap_hrefs = typ_files
+        .iter()
+        .filter(|path| **path != fallback)
+        .map(|path| rel_html_path(&src_dir, path))
+        .collect::<BTreeSet<_>>();
+    write_sitemap(&out_dir, metadata.base_url.as_deref(), &sitemap_hrefs)?;
     write_manifest(&out_dir, &expected_outputs)?;
     Ok(WebsiteBuildResult {
         src_dir,
@@ -286,8 +318,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config_path,
         theme_dir,
         page_fingerprints,
-        page_meta,
         nav_signature,
+        pages_signature,
     })
 }
 
@@ -449,25 +481,21 @@ fn rebuild_changed_pages(
     changed: &[PathBuf],
 ) -> Result<Option<WebsiteBuildResult>> {
     let Some(pages) = changed_typ_pages(current, changed)? else {
-        let mut full_options = options.clone();
-        full_options.meta_cache = current.page_meta.clone();
-        return Ok(Some(build_site(full_options)?));
+        return Ok(Some(build_site(options.clone())?));
     };
     if pages.is_empty() {
         return Ok(None);
     }
 
     let mut incremental_options = options.clone();
-    incremental_options.meta_cache = current.page_meta.clone();
     incremental_options.incremental_inputs = Some(pages);
     incremental_options.clean = false;
     let next = build_site(incremental_options)?;
     if next.nav_signature != current.nav_signature
+        || next.pages_signature != current.pages_signature
         || next.page_fingerprints.keys().ne(current.page_fingerprints.keys())
     {
-        let mut full_options = options.clone();
-        full_options.meta_cache = next.page_meta.clone();
-        return Ok(Some(build_site(full_options)?));
+        return Ok(Some(build_site(options.clone())?));
     }
     Ok(Some(next))
 }
@@ -548,7 +576,7 @@ struct WebsiteConfig {
 
 fn pdf_enabled_files(
     typ_files: &[PathBuf],
-    page_meta: &PageMetaCache,
+    page_meta: &PageMetaMap,
     cli_render_pdf: Option<bool>,
     config_pdf: Option<bool>,
 ) -> BTreeSet<PathBuf> {
@@ -563,7 +591,7 @@ fn pdf_enabled_files(
         .filter(|path| {
             page_meta
                 .get(*path)
-                .and_then(|(_, meta)| meta.pdf)
+                .and_then(|meta| meta.pdf)
                 .unwrap_or(default)
         })
         .cloned()
@@ -651,10 +679,6 @@ impl SiteModel {
         Self { sections, metadata }
     }
 
-    fn nav_sections(&self) -> &[NavSectionModel] {
-        &self.sections
-    }
-
     fn theme_context(&self, current_href: &str) -> SiteContextInput {
         let mut nav = Vec::new();
         let mut nav_sections = Vec::new();
@@ -718,12 +742,8 @@ struct WebsiteManifest {
 struct BuildContext {
     src_dir: PathBuf,
     out_dir: PathBuf,
-    config_path: PathBuf,
     typst: PathBuf,
     theme: String,
-    quiet: bool,
-    timeout: Option<u64>,
-    params: Vec<String>,
     pdf_files: BTreeSet<PathBuf>,
     theme_stylesheet: Option<String>,
     parallelism: Option<usize>,
@@ -777,49 +797,36 @@ fn html_theme_dir(value: &str) -> Option<PathBuf> {
     path.is_dir().then(|| path.to_path_buf())
 }
 
-fn build_navigation(
+/// Plan for one sidebar entry: the page and its explicitly configured label,
+/// resolved before metadata is available.
+#[derive(Debug, Clone)]
+struct NavItemPlan {
+    path: PathBuf,
+    configured_label: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct NavSectionPlan {
+    title: Option<String>,
+    items: Vec<NavItemPlan>,
+}
+
+fn discover_pages(
     src_dir: &Path,
     sidebar: Option<&SidebarConfig>,
-    typst: &Path,
-    meta_cache: &PageMetaCache,
-) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>, PageMetaCache)> {
-    match sidebar {
-        Some(sidebar) => build_manual_navigation(src_dir, sidebar, typst, meta_cache),
-        None => build_auto_navigation(src_dir, false, typst, meta_cache),
-    }
-}
-
-fn build_auto_navigation(
-    src_dir: &Path,
-    include_hidden: bool,
-    typst: &Path,
-    meta_cache: &PageMetaCache,
-) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>, PageMetaCache)> {
-    let files = iter_typ_files(src_dir, include_hidden, &[PathBuf::from(FALLBACK_PAGE)])?;
-    let mut fresh_meta = PageMetaCache::new();
-    let items = files
-        .iter()
-        .map(|path| {
-            let meta = resolved_page_meta(path, typst, meta_cache, &mut fresh_meta)?;
-            Ok(NavItemModel {
-                href: rel_html_path(src_dir, path),
-                label: meta.title.unwrap_or_else(|| stem_label(path)),
+) -> Result<(Vec<NavSectionPlan>, Vec<PathBuf>)> {
+    let Some(sidebar) = sidebar else {
+        let files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)])?;
+        let items = files
+            .iter()
+            .map(|path| NavItemPlan {
+                path: path.clone(),
+                configured_label: None,
             })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    Ok((
-        vec![NavSectionModel { title: None, items }],
-        files,
-        fresh_meta,
-    ))
-}
+            .collect();
+        return Ok((vec![NavSectionPlan { title: None, items }], files));
+    };
 
-fn build_manual_navigation(
-    src_dir: &Path,
-    sidebar: &SidebarConfig,
-    typst: &Path,
-    meta_cache: &PageMetaCache,
-) -> Result<(Vec<NavSectionModel>, Vec<PathBuf>, PageMetaCache)> {
     let all_typ_files = iter_typ_files(
         src_dir,
         sidebar.show_hidden,
@@ -828,7 +835,6 @@ fn build_manual_navigation(
     let mut used = BTreeSet::new();
     let mut sections = Vec::new();
     let mut build_files = Vec::new();
-    let mut fresh_meta = PageMetaCache::new();
 
     for section_config in &sidebar.section {
         let mut items = Vec::new();
@@ -843,25 +849,114 @@ fn build_manual_navigation(
                 if !used.insert(path.clone()) {
                     continue;
                 }
-                let meta = resolved_page_meta(&path, typst, meta_cache, &mut fresh_meta)?;
-                let label = match configured_label {
-                    Some(label) => label.to_string(),
-                    None => meta.title.unwrap_or_else(|| stem_label(&path)),
-                };
-                items.push(NavItemModel {
-                    href: rel_html_path(src_dir, &path),
-                    label,
+                items.push(NavItemPlan {
+                    path: path.clone(),
+                    configured_label: configured_label.map(str::to_string),
                 });
                 build_files.push(path);
             }
         }
-        sections.push(NavSectionModel {
+        sections.push(NavSectionPlan {
             title: section_config.title.clone(),
             items,
         });
     }
 
-    Ok((sections, build_files, fresh_meta))
+    Ok((sections, build_files))
+}
+
+fn nav_from_plans(
+    src_dir: &Path,
+    sections: &[NavSectionPlan],
+    page_meta: &PageMetaMap,
+) -> Vec<NavSectionModel> {
+    let is_hidden = |path: &PathBuf| page_meta.get(path).is_some_and(|meta| meta.hidden);
+    sections
+        .iter()
+        .map(|section| NavSectionModel {
+            title: section.title.clone(),
+            items: section
+                .items
+                .iter()
+                .filter(|item| !is_hidden(&item.path))
+                .map(|item| NavItemModel {
+                    href: rel_html_path(src_dir, &item.path),
+                    label: item
+                        .configured_label
+                        .clone()
+                        .or_else(|| page_meta.get(&item.path).and_then(|meta| meta.title.clone()))
+                        .unwrap_or_else(|| stem_label(&item.path)),
+                })
+                .collect(),
+        })
+        .collect()
+}
+
+/// Builds the site-wide pages index consumed by `calepin.pages()` in the
+/// Typst runtime: one entry per built page (the 404 page excluded), with
+/// resolved `title`/`pdf` and the raw author metadata under `meta`.
+fn build_pages_index(
+    src_dir: &Path,
+    typ_files: &[PathBuf],
+    sections: &[NavSectionPlan],
+    page_meta: &PageMetaMap,
+    pdf_files: &BTreeSet<PathBuf>,
+) -> serde_json::Value {
+    let configured_labels = sections
+        .iter()
+        .flat_map(|section| section.items.iter())
+        .filter_map(|item| {
+            item.configured_label
+                .as_deref()
+                .map(|label| (&item.path, label))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let fallback = src_dir.join(FALLBACK_PAGE);
+    let entries = typ_files
+        .iter()
+        .filter(|path| **path != fallback)
+        .map(|path| {
+            let meta = page_meta.get(path);
+            let title = configured_labels
+                .get(path)
+                .map(|label| label.to_string())
+                .or_else(|| meta.and_then(|meta| meta.title.clone()))
+                .unwrap_or_else(|| stem_label(path));
+            let raw = meta
+                .map(|meta| meta.raw.clone())
+                .filter(serde_json::Value::is_object)
+                .unwrap_or_else(|| serde_json::json!({}));
+            serde_json::json!({
+                "path": rel_posix(src_dir, path),
+                "href": rel_html_path(src_dir, path),
+                "title": title,
+                "pdf": pdf_files
+                    .contains(path)
+                    .then(|| rel_output_path(src_dir, path, "pdf")),
+                "meta": raw,
+            })
+        })
+        .collect::<Vec<_>>();
+    serde_json::Value::Array(entries)
+}
+
+/// Writes the pages index into every page directory's `.calepin`, so the
+/// constant root-relative `PAGES_INDEX_REF` resolves for each page's typst
+/// root (the page's own directory).
+fn write_pages_index(typ_files: &[PathBuf], index_json: &str) -> Result<()> {
+    let dirs = typ_files
+        .iter()
+        .filter_map(|path| path.parent())
+        .collect::<BTreeSet<_>>();
+    for dir in dirs {
+        let target_dir = dir.join(".calepin");
+        fs::create_dir_all(&target_dir)
+            .with_context(|| format!("failed to create {}", target_dir.display()))?;
+        let target = target_dir.join(PAGES_INDEX_FILE);
+        fs::write(&target, index_json)
+            .with_context(|| format!("failed to write {}", target.display()))?;
+    }
+    Ok(())
 }
 
 fn resolve_file_list(
@@ -935,25 +1030,6 @@ fn collect_typ_files(
     Ok(())
 }
 
-/// Querying page metadata runs a full `typst` compile of the page, so results
-/// are cached by content hash. Metadata computed from an imported file can go
-/// stale until the page itself changes; a config change resets the cache.
-fn resolved_page_meta(
-    path: &Path,
-    typst: &Path,
-    meta_cache: &PageMetaCache,
-    fresh_meta: &mut PageMetaCache,
-) -> Result<PageMeta> {
-    let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
-    let fingerprint = xxh3_64(&bytes);
-    let meta = match meta_cache.get(path) {
-        Some((cached, meta)) if *cached == fingerprint => meta.clone(),
-        _ => query_page_meta(path, typst),
-    };
-    fresh_meta.insert(path.to_path_buf(), (fingerprint, meta.clone()));
-    Ok(meta)
-}
-
 fn stem_label(path: &Path) -> String {
     path.file_stem()
         .and_then(|stem| stem.to_str())
@@ -961,28 +1037,21 @@ fn stem_label(path: &Path) -> String {
         .replace(['-', '_'], " ")
 }
 
-/// Failures (no typst, page does not compile standalone, no metadata label)
-/// degrade to an empty `PageMeta` rather than failing the build.
-fn query_page_meta(path: &Path, typst: &Path) -> PageMeta {
-    let output = Command::new(typst)
-        .arg("query")
-        .arg(path)
-        .arg(format!("label(\"{SITE_METADATA_LABEL}\")"))
-        .args(["--field", "value"])
-        .output();
-    match output {
-        Ok(output) if output.status.success() => parse_page_meta(&output.stdout),
-        _ => PageMeta::default(),
-    }
+/// Reads the page metadata persisted by preprocessing. Missing or stale
+/// entries degrade to an empty `PageMeta` rather than failing the build.
+fn load_page_meta(typ_files: &[PathBuf]) -> PageMetaMap {
+    typ_files
+        .iter()
+        .map(|path| {
+            let meta = read_page_meta(path)
+                .map(|value| page_meta_from_value(&value))
+                .unwrap_or_default();
+            (path.clone(), meta)
+        })
+        .collect()
 }
 
-fn parse_page_meta(stdout: &[u8]) -> PageMeta {
-    let Ok(values) = serde_json::from_slice::<serde_json::Value>(stdout) else {
-        return PageMeta::default();
-    };
-    let Some(value) = values.as_array().and_then(|values| values.first()) else {
-        return PageMeta::default();
-    };
+fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
     PageMeta {
         title: value
             .get("title")
@@ -991,19 +1060,29 @@ fn parse_page_meta(stdout: &[u8]) -> PageMeta {
             .filter(|title| !title.is_empty())
             .map(str::to_string),
         pdf: value.get("pdf").and_then(|pdf| pdf.as_bool()),
+        hidden: value
+            .get("hidden")
+            .and_then(|hidden| hidden.as_bool())
+            .unwrap_or(false),
+        raw: if value.is_object() {
+            value.clone()
+        } else {
+            serde_json::json!({})
+        },
     }
 }
 
-fn compile_documents(
-    context: BuildContext,
-    typ_files: Vec<PathBuf>,
-    site: Arc<SiteModel>,
-) -> Result<()> {
-    if typ_files.is_empty() {
-        return Ok(());
+/// Runs `task` over `items` on a small worker pool, failing on the first
+/// error. Results are returned in completion order.
+fn run_parallel<T: Send>(
+    items: Vec<PathBuf>,
+    parallelism: Option<usize>,
+    task: impl Fn(&Path) -> Result<T> + Sync,
+) -> Result<Vec<(PathBuf, T)>> {
+    if items.is_empty() {
+        return Ok(Vec::new());
     }
-    let worker_count = context
-        .parallelism
+    let worker_count = parallelism
         .unwrap_or_else(|| {
             thread::available_parallelism()
                 .map(usize::from)
@@ -1011,22 +1090,20 @@ fn compile_documents(
                 .min(32)
         })
         .max(1)
-        .min(typ_files.len().max(1));
-    let queue = Arc::new(Mutex::new(VecDeque::from(typ_files)));
+        .min(items.len());
+    let queue = Mutex::new(VecDeque::from(items));
+    let results = Mutex::new(Vec::new());
 
     thread::scope(|scope| {
         let mut handles = Vec::new();
         for _ in 0..worker_count {
-            let queue = Arc::clone(&queue);
-            let site = Arc::clone(&site);
-            let context = context.clone();
-            handles.push(scope.spawn(move || -> Result<()> {
+            handles.push(scope.spawn(|| -> Result<()> {
                 loop {
-                    let Some(input_path) = queue.lock().unwrap().pop_front() else {
+                    let Some(item) = queue.lock().unwrap().pop_front() else {
                         return Ok(());
                     };
-                    compile_document(&context, &site, &input_path)
-                        .with_context(|| format!("failed to render {}", input_path.display()))?;
+                    let value = task(&item)?;
+                    results.lock().unwrap().push((item, value));
                 }
             }));
         }
@@ -1038,10 +1115,54 @@ fn compile_documents(
             }
         }
         Ok(())
-    })
+    })?;
+    Ok(results.into_inner().unwrap())
 }
 
-fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path) -> Result<()> {
+fn preprocess_documents(
+    typ_files: &[PathBuf],
+    config_path: &Path,
+    quiet: bool,
+    timeout: Option<u64>,
+    params: &[String],
+    parallelism: Option<usize>,
+) -> Result<BTreeMap<PathBuf, PreprocessOutput>> {
+    let outputs = run_parallel(typ_files.to_vec(), parallelism, |input| {
+        preprocess_cached(PreprocessOptions {
+            input: input.to_path_buf(),
+            config: Some(config_path.to_path_buf()),
+            quiet,
+            timeout,
+            sync_pages: false,
+            param_overrides: params.to_vec(),
+        })
+        .with_context(|| format!("failed to preprocess {}", input.display()))
+    })?;
+    Ok(outputs.into_iter().collect())
+}
+
+fn render_documents(
+    context: &BuildContext,
+    typ_files: Vec<PathBuf>,
+    site: &SiteModel,
+    preprocessed: &BTreeMap<PathBuf, PreprocessOutput>,
+) -> Result<()> {
+    run_parallel(typ_files, context.parallelism, |input_path| {
+        render_document(context, site, input_path, preprocessed)
+            .with_context(|| format!("failed to render {}", input_path.display()))
+    })
+    .map(|_| ())
+}
+
+fn render_document(
+    context: &BuildContext,
+    site: &SiteModel,
+    input_path: &Path,
+    preprocessed: &BTreeMap<PathBuf, PreprocessOutput>,
+) -> Result<()> {
+    let preprocessed = preprocessed
+        .get(input_path)
+        .ok_or_else(|| anyhow!("page was not preprocessed: {}", input_path.display()))?;
     let rel_output = input_path
         .strip_prefix(&context.src_dir)
         .unwrap_or(input_path)
@@ -1053,14 +1174,6 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
             .with_context(|| format!("failed to create {}", parent.display()))?;
     }
 
-    let preprocessed = preprocess_cached(PreprocessOptions {
-        input: input_path.to_path_buf(),
-        config: Some(context.config_path.clone()),
-        quiet: context.quiet,
-        timeout: context.timeout,
-        sync_pages: false,
-        param_overrides: context.params.clone(),
-    })?;
     let current_href = html_rel.to_string_lossy().replace('\\', "/");
     let mut site_context = site.theme_context(&current_href);
     if let Some(stylesheet) = context.theme_stylesheet.as_deref() {
@@ -1075,6 +1188,8 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
             typst_args: &context.typst_args,
             html_theme: Some(&context.theme),
             site_context: Some(&site_context),
+            pages_input: Some(PAGES_INDEX_REF),
+            current_href_input: Some(&current_href),
         },
     )?;
     embed_source_blob(&html_output, input_path)?;
@@ -1090,6 +1205,8 @@ fn compile_document(context: &BuildContext, site: &SiteModel, input_path: &Path)
                 typst_args: &context.typst_args,
                 html_theme: None,
                 site_context: None,
+                pages_input: Some(PAGES_INDEX_REF),
+                current_href_input: Some(&current_href),
             },
         )?;
     }
@@ -1226,11 +1343,9 @@ fn write_manifest(out_dir: &Path, expected_outputs: &BTreeSet<PathBuf>) -> Resul
     fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
 }
 
-fn write_sitemap(
-    out_dir: &Path,
-    base_url: Option<&str>,
-    nav_sections: &[NavSectionModel],
-) -> Result<()> {
+/// Writes the sitemap from every built page except the 404 page. Pages with
+/// `hidden: true` metadata stay out of the navigation but remain indexed.
+fn write_sitemap(out_dir: &Path, base_url: Option<&str>, hrefs: &BTreeSet<String>) -> Result<()> {
     let path = out_dir.join("sitemap.xml");
     let Some(base_url) = base_url else {
         if path.exists() {
@@ -1239,13 +1354,6 @@ fn write_sitemap(
         }
         return Ok(());
     };
-
-    let mut hrefs = BTreeSet::new();
-    for section in nav_sections {
-        for item in &section.items {
-            hrefs.insert(item.href.clone());
-        }
-    }
 
     let mut xml = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
@@ -1345,9 +1453,13 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
 }
 
 fn rel_html_path(src_dir: &Path, path: &Path) -> String {
+    rel_output_path(src_dir, path, "html")
+}
+
+fn rel_output_path(src_dir: &Path, path: &Path, extension: &str) -> String {
     path.strip_prefix(src_dir)
         .unwrap_or(path)
-        .with_extension("html")
+        .with_extension(extension)
         .to_string_lossy()
         .replace('\\', "/")
 }
@@ -1491,8 +1603,8 @@ mod tests {
             config_path: root.join("website.toml"),
             theme_dir: None,
             page_fingerprints: fingerprint_files(pages).unwrap(),
-            page_meta: PageMetaCache::new(),
             nav_signature: 0,
+            pages_signature: 0,
         }
     }
 
@@ -1604,23 +1716,14 @@ mod tests {
     }
 
     #[test]
-    fn write_sitemap_uses_absolute_navigation_urls() {
+    fn write_sitemap_uses_absolute_page_urls() {
         let temp = tempfile::tempdir().unwrap();
-        let sections = vec![NavSectionModel {
-            title: Some("Guide".to_string()),
-            items: vec![
-                NavItemModel {
-                    href: "index.html".to_string(),
-                    label: "Home".to_string(),
-                },
-                NavItemModel {
-                    href: "guide/usage.html".to_string(),
-                    label: "Usage".to_string(),
-                },
-            ],
-        }];
+        let hrefs = BTreeSet::from([
+            "index.html".to_string(),
+            "guide/usage.html".to_string(),
+        ]);
 
-        write_sitemap(temp.path(), Some("https://example.com/project/"), &sections).unwrap();
+        write_sitemap(temp.path(), Some("https://example.com/project/"), &hrefs).unwrap();
 
         let sitemap = fs::read_to_string(temp.path().join("sitemap.xml")).unwrap();
         assert!(sitemap.contains("<loc>https://example.com/project/index.html</loc>"));
@@ -1686,45 +1789,133 @@ mod tests {
     }
 
     #[test]
-    fn resolved_page_meta_reuses_cached_meta_for_unchanged_content() {
-        let temp = tempfile::tempdir().unwrap();
-        let page = temp.path().join("index.typ");
-        fs::write(&page, "= Home\n").unwrap();
-        let fingerprint = xxh3_64(&fs::read(&page).unwrap());
-        let cached_meta = PageMeta {
-            title: Some("Cached Title".to_string()),
-            pdf: Some(false),
-        };
-        let cache = PageMetaCache::from([(page.clone(), (fingerprint, cached_meta.clone()))]);
-        let missing_typst = Path::new("calepin-no-such-typst-binary");
+    fn nav_from_plans_prefers_configured_label_then_metadata_title_then_stem() {
+        let src = Path::new("/site/docs");
+        let labeled = PathBuf::from("/site/docs/a.typ");
+        let titled = PathBuf::from("/site/docs/b-page.typ");
+        let bare = PathBuf::from("/site/docs/c_page.typ");
+        let sections = vec![NavSectionPlan {
+            title: Some("Guide".to_string()),
+            items: vec![
+                NavItemPlan {
+                    path: labeled.clone(),
+                    configured_label: Some("Configured".to_string()),
+                },
+                NavItemPlan {
+                    path: titled.clone(),
+                    configured_label: None,
+                },
+                NavItemPlan {
+                    path: bare,
+                    configured_label: None,
+                },
+            ],
+        }];
+        let meta = PageMetaMap::from([
+            (
+                labeled,
+                PageMeta {
+                    title: Some("Ignored".to_string()),
+                    ..PageMeta::default()
+                },
+            ),
+            (
+                titled,
+                PageMeta {
+                    title: Some("From Metadata".to_string()),
+                    ..PageMeta::default()
+                },
+            ),
+        ]);
 
-        let mut fresh = PageMetaCache::new();
-        let meta = resolved_page_meta(&page, missing_typst, &cache, &mut fresh).unwrap();
-        assert_eq!(meta, cached_meta);
-        assert_eq!(fresh.get(&page), Some(&(fingerprint, cached_meta)));
+        let nav = nav_from_plans(src, &sections, &meta);
 
-        fs::write(&page, "= Changed\n").unwrap();
-        let mut fresh = PageMetaCache::new();
-        let meta = resolved_page_meta(&page, missing_typst, &cache, &mut fresh).unwrap();
-        assert_eq!(meta, PageMeta::default());
+        let labels = nav[0]
+            .items
+            .iter()
+            .map(|item| item.label.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(labels, vec!["Configured", "From Metadata", "c page"]);
     }
 
     #[test]
-    fn parse_page_meta_reads_title_and_pdf_flag() {
-        let meta = parse_page_meta(br#"[{"title": " My Page ", "pdf": false}]"#);
+    fn page_meta_from_value_reads_calepin_keys_and_keeps_raw_dict() {
+        let value = serde_json::json!({"title": " My Page ", "pdf": false, "date": "2026-06-10"});
+        let meta = page_meta_from_value(&value);
         assert_eq!(meta.title.as_deref(), Some("My Page"));
         assert_eq!(meta.pdf, Some(false));
+        assert!(!meta.hidden);
+        assert_eq!(meta.raw, value);
 
-        assert_eq!(parse_page_meta(br#"[{"title": ""}]"#), PageMeta::default());
-        assert_eq!(parse_page_meta(b"[]"), PageMeta::default());
-        assert_eq!(parse_page_meta(b"not json"), PageMeta::default());
-        assert_eq!(
-            parse_page_meta(br#"[{"pdf": true}]"#),
-            PageMeta {
-                title: None,
-                pdf: Some(true)
-            }
-        );
+        let blank_title = page_meta_from_value(&serde_json::json!({"title": ""}));
+        assert_eq!(blank_title.title, None);
+
+        let not_a_dict = page_meta_from_value(&serde_json::json!("not a dict"));
+        assert_eq!(not_a_dict.raw, serde_json::json!({}));
+
+        let hidden = page_meta_from_value(&serde_json::json!({"hidden": true}));
+        assert!(hidden.hidden);
+    }
+
+    #[test]
+    fn build_pages_index_resolves_titles_and_excludes_fallback_page() {
+        let src = Path::new("/site/docs");
+        let post = PathBuf::from("/site/docs/blog/first.typ");
+        let home = PathBuf::from("/site/docs/index.typ");
+        let fallback = PathBuf::from("/site/docs/404.typ");
+        let typ_files = vec![fallback, post.clone(), home.clone()];
+        let sections = vec![NavSectionPlan {
+            title: None,
+            items: vec![NavItemPlan {
+                path: home.clone(),
+                configured_label: Some("Home".to_string()),
+            }],
+        }];
+        let raw = serde_json::json!({"title": "First Post", "date": "2026-06-10", "hidden": true});
+        let meta = PageMetaMap::from([(post.clone(), page_meta_from_value(&raw))]);
+        let pdf_files = BTreeSet::from([post.clone()]);
+
+        let index = build_pages_index(src, &typ_files, &sections, &meta, &pdf_files);
+
+        let entries = index.as_array().unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0]["path"], "blog/first.typ");
+        assert_eq!(entries[0]["href"], "blog/first.html");
+        assert_eq!(entries[0]["title"], "First Post");
+        assert_eq!(entries[0]["pdf"], "blog/first.pdf");
+        assert_eq!(entries[0]["meta"], raw);
+        assert_eq!(entries[1]["title"], "Home");
+        assert_eq!(entries[1]["pdf"], serde_json::Value::Null);
+        assert_eq!(entries[1]["meta"], serde_json::json!({}));
+    }
+
+    #[test]
+    fn nav_from_plans_drops_hidden_pages() {
+        let src = Path::new("/site/docs");
+        let visible = PathBuf::from("/site/docs/index.typ");
+        let hidden = PathBuf::from("/site/docs/blog/post.typ");
+        let sections = vec![NavSectionPlan {
+            title: None,
+            items: vec![
+                NavItemPlan {
+                    path: visible.clone(),
+                    configured_label: None,
+                },
+                NavItemPlan {
+                    path: hidden.clone(),
+                    configured_label: None,
+                },
+            ],
+        }];
+        let meta = PageMetaMap::from([(
+            hidden,
+            page_meta_from_value(&serde_json::json!({"hidden": true})),
+        )]);
+
+        let nav = nav_from_plans(src, &sections, &meta);
+
+        assert_eq!(nav[0].items.len(), 1);
+        assert_eq!(nav[0].items[0].href, "index.html");
     }
 
     #[test]
@@ -1733,26 +1924,20 @@ mod tests {
         let off = PathBuf::from("off.typ");
         let plain = PathBuf::from("plain.typ");
         let files = vec![on.clone(), off.clone(), plain.clone()];
-        let meta = PageMetaCache::from([
+        let meta = PageMetaMap::from([
             (
                 on.clone(),
-                (
-                    0,
-                    PageMeta {
-                        title: None,
-                        pdf: Some(true),
-                    },
-                ),
+                PageMeta {
+                    pdf: Some(true),
+                    ..PageMeta::default()
+                },
             ),
             (
                 off.clone(),
-                (
-                    0,
-                    PageMeta {
-                        title: None,
-                        pdf: Some(false),
-                    },
-                ),
+                PageMeta {
+                    pdf: Some(false),
+                    ..PageMeta::default()
+                },
             ),
         ]);
 

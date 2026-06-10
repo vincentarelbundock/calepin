@@ -1,16 +1,13 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use serde::Serialize;
-use serde_json::Value;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
+use crate::typst::introspect::page_anchors;
 use crate::typst::model::{ChunkSpec, LayoutPaths};
-use crate::typst::paths::{artifact_reference, slash_path};
-use crate::utils::{process, tools};
+use crate::typst::paths::slash_path;
 
 const PAGE_SYNC_SCHEMA_VERSION: u8 = 1;
-const PAGE_SYNC_SELECTOR: &str = "<calepin-page>";
 
 #[derive(Serialize)]
 struct PageSyncDocument {
@@ -36,8 +33,7 @@ pub fn page_sync_path(layout: &LayoutPaths) -> PathBuf {
 }
 
 pub fn write_page_sync(typst: &Path, layout: &LayoutPaths, chunks: &[ChunkSpec]) -> Result<()> {
-    let page_json = query_page_anchors(typst, layout)?;
-    let pages = parse_page_anchors(&page_json)?;
+    let pages = page_anchors(typst, layout)?;
     let lines = source_lines_for_chunks(layout, chunks)?;
     let input = slash_path(&layout.input_rel);
     let mut entries = Vec::new();
@@ -65,70 +61,6 @@ pub fn write_page_sync(typst: &Path, layout: &LayoutPaths, chunks: &[ChunkSpec])
             entries,
         },
     )
-}
-
-fn query_page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<String> {
-    let results_input = artifact_reference(&layout.root, &layout.results_path);
-    process::validate_executable(typst, "run typst page sync query", Some(&tools::TYPST))?;
-    let output = Command::new(typst)
-        .arg("query")
-        .arg(&layout.render_input)
-        .arg(PAGE_SYNC_SELECTOR)
-        .arg("--root")
-        .arg(&layout.root)
-        .arg("--input")
-        .arg("calepin-mode=render")
-        .arg("--input")
-        .arg(format!("calepin-results={results_input}"))
-        .arg("--input")
-        .arg("calepin-target=paged")
-        .current_dir(&layout.root)
-        .output()
-        .map_err(|error| {
-            process::spawn_error(
-                typst,
-                "run typst page sync query",
-                error,
-                Some(&tools::TYPST),
-            )
-        })?;
-
-    if !output.status.success() {
-        return Err(anyhow!(
-            "typst query {} failed:\n{}",
-            PAGE_SYNC_SELECTOR,
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-
-    String::from_utf8(output.stdout).context("typst page sync query output was not UTF-8")
-}
-
-fn parse_page_anchors(query_json: &str) -> Result<HashMap<String, usize>> {
-    let root: Value = serde_json::from_str(query_json)?;
-    let array = root
-        .as_array()
-        .ok_or_else(|| anyhow!("typst page sync query output must be an array"))?;
-    let mut pages = HashMap::new();
-
-    for item in array {
-        let Some(value) = item.get("value") else {
-            continue;
-        };
-        let Some(label) = value.get("label").and_then(Value::as_str) else {
-            continue;
-        };
-        let Some(page) = value
-            .get("page")
-            .and_then(Value::as_u64)
-            .and_then(|page| usize::try_from(page).ok())
-        else {
-            continue;
-        };
-        pages.entry(label.to_string()).or_insert(page);
-    }
-
-    Ok(pages)
 }
 
 fn source_lines_for_chunks(
@@ -183,16 +115,6 @@ fn write_page_sync_document(path: &Path, document: &PageSyncDocument) -> Result<
 mod tests {
     use super::*;
     use crate::typst::model::{DisplayOptions, EngineName, ExecOptions, ResultsMode};
-
-    #[test]
-    fn parses_page_anchor_query_output() {
-        let pages = parse_page_anchors(
-            r#"[{"func":"metadata","value":{"label":"chunk-1","page":3},"label":"<calepin-page>"}]"#,
-        )
-        .unwrap();
-
-        assert_eq!(pages.get("chunk-1"), Some(&3));
-    }
 
     #[test]
     fn maps_chunks_to_source_lines_in_document_order() {

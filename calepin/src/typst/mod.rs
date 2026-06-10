@@ -3,6 +3,7 @@ pub mod cli;
 pub mod compile;
 pub mod crossref;
 pub mod execute;
+pub mod introspect;
 pub mod model;
 pub mod paths;
 pub mod preprocess;

@@ -1,0 +1,24 @@
+html_theme = "calepin-website"
+title = "Calepin Blog Example"
+description = "A small example site with a blog listing page."
+pdf = false
+
+[sidebar]
+
+[[sidebar.section]]
+title = "Example"
+
+  [[sidebar.section.item]]
+  path = "index.typ"
+  label = "Home"
+
+  [[sidebar.section.item]]
+  path = "blog.typ"
+  label = "Blog"
+
+# Posts are built and listed on the blog page via `calepin.pages()`, but
+# their `hidden: true` metadata keeps them out of the sidebar.
+[[sidebar.section]]
+
+  [[sidebar.section.item]]
+  glob = "posts/*/index.typ"

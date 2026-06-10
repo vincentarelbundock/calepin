@@ -53,7 +53,7 @@ pub fn version_is_too_old(version: &str) -> bool {
 }
 
 fn version_parts(token: &str) -> Option<(u64, u64, u64)> {
-    let version = token.trim_start_matches('v');
+    let version = token.trim_start_matches('v').split('-').next()?;
     let mut parts = version.split('.');
     Some((
         parts.next()?.parse().ok()?,
@@ -80,9 +80,18 @@ mod tests {
     }
 
     #[test]
+    fn parses_prerelease_version_token() {
+        assert_eq!(
+            parse_typst_version("typst 0.15.0-rc.1 (abc123)").unwrap(),
+            "0.15.0-rc.1"
+        );
+    }
+
+    #[test]
     fn compares_versions() {
         assert!(version_is_too_old("0.14.1"));
         assert!(!version_is_too_old("0.14.2"));
+        assert!(!version_is_too_old("0.15.0-rc.1"));
         assert!(!version_is_too_old("0.15.0"));
     }
 

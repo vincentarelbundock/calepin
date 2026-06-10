@@ -2,12 +2,12 @@ use anyhow::{anyhow, Context, Result};
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 use xxhash_rust::xxh3::xxh3_64;
 
 use crate::config::{CalepinConfig, ExecutablePaths, PdfTheme};
 use crate::typst::execute::{EnginePool, ExecutionConfig};
+use crate::typst::introspect::preprocess_metadata;
 use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, ExecOptions, LayoutPaths};
 use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout, slash_path};
 use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
@@ -16,9 +16,9 @@ use crate::typst::runtime::write_runtime;
 use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
 use crate::typst::version::assert_supported_typst;
-use crate::utils::{process, tools};
 
 const PREPROCESS_FINGERPRINT_FILE: &str = "fingerprint.xxh3";
+const PAGE_META_FILE: &str = "page-meta.json";
 const DEFAULT_PDF_THEME_SOURCE: &str = include_str!("../assets/themes/calepin-pdf.typ");
 const TYPST_SNIPPETS: &[(&str, &str)] = &[(
     "code-block.typ",
@@ -86,23 +86,17 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let staged_input = write_staged_source(&layout)?;
     let query_input = write_render_wrapper(&layout, &staged_input, &[], None)?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
-    let setup_json = typst_query(
+    let metadata = preprocess_metadata(
         &config.executables.typst,
         &layout,
         &query_input,
-        "<calepin-config>",
         &results_input,
     )?;
-    let setup_config = parse_setup_config(&setup_json)?;
+    write_page_meta(&layout, metadata.page_meta.as_ref())?;
+    let setup_config = parse_setup_config(&metadata.setup_json)?;
     let setup_config = setup_config.unwrap_or_default();
-    let chunks_json = typst_query(
-        &config.executables.typst,
-        &layout,
-        &query_input,
-        "raw.where(block: true).or(<calepin-fence-label>).or(<calepin-chunk>)",
-        &results_input,
-    )?;
-    let parsed_chunks = parse_chunks_with_warnings(&chunks_json, Some(setup_config.clone()))?;
+    let parsed_chunks =
+        parse_chunks_with_warnings(&metadata.chunks_json, Some(setup_config.clone()))?;
     let chunks = parsed_chunks.chunks;
     if !options.quiet {
         for warning in parsed_chunks.warnings {
@@ -316,41 +310,49 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
     })
 }
 
-pub fn typst_query(
-    typst: &Path,
-    layout: &LayoutPaths,
-    input: &Path,
-    selector: &str,
-    results_input: &str,
-) -> Result<String> {
-    process::validate_executable(typst, "run typst query", Some(&tools::TYPST))?;
-    let output = Command::new(typst)
-        .arg("query")
-        .arg(input)
-        .arg(selector)
-        .arg("--root")
-        .arg(&layout.root)
-        .arg("--input")
-        .arg("calepin-mode=query")
-        .arg("--input")
-        .arg(format!("calepin-results={results_input}"))
-        .arg("--input")
-        .arg("calepin-target=paged")
-        .current_dir(&layout.root)
-        .output()
-        .map_err(|error| {
-            process::spawn_error(typst, "run typst query", error, Some(&tools::TYPST))
-        })?;
+fn page_meta_path(layout: &LayoutPaths) -> PathBuf {
+    layout.results_path.with_file_name(PAGE_META_FILE)
+}
 
-    if !output.status.success() {
-        return Err(anyhow!(
-            "typst query {} failed:\n{}",
-            selector,
-            String::from_utf8_lossy(&output.stderr)
-        ));
+fn source_fingerprint(input: &Path) -> Result<String> {
+    let bytes = fs::read(input).with_context(|| format!("failed to read {}", input.display()))?;
+    Ok(format!("{:016x}", xxh3_64(&bytes)))
+}
+
+/// Persists the page's `<website-metadata>` value next to its results, tagged
+/// with the source content hash so readers can detect staleness.
+fn write_page_meta(layout: &LayoutPaths, value: Option<&serde_json::Value>) -> Result<()> {
+    let document = serde_json::json!({
+        "source_xxh3": source_fingerprint(&layout.input)?,
+        "value": value,
+    });
+    let path = page_meta_path(layout);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
     }
+    fs::write(&path, serde_json::to_string(&document)?)
+        .with_context(|| format!("failed to write {}", path.display()))
+}
 
-    String::from_utf8(output.stdout).context("typst query output was not UTF-8")
+/// Returns the `<website-metadata>` value persisted by the last preprocess of
+/// `input`, or `None` when it is missing or stale for the current content.
+pub fn read_page_meta(input: &Path) -> Option<serde_json::Value> {
+    let layout = resolve_layout(input, None).ok()?;
+    let contents = fs::read_to_string(page_meta_path(&layout)).ok()?;
+    let document: serde_json::Value = serde_json::from_str(&contents).ok()?;
+    let current = source_fingerprint(&layout.input).ok()?;
+    if document
+        .get("source_xxh3")
+        .and_then(serde_json::Value::as_str)
+        != Some(current.as_str())
+    {
+        return None;
+    }
+    document
+        .get("value")
+        .cloned()
+        .filter(|value| !value.is_null())
 }
 
 fn execute_chunk_live(
@@ -622,6 +624,33 @@ mod tests {
     use super::*;
     use crate::typst::model::{DisplayOptions, ResultsMode};
     use crate::typst::paths::slash_path;
+
+    #[test]
+    fn page_meta_roundtrips_and_detects_stale_source() {
+        let temp = tempfile::tempdir().unwrap();
+        let input = temp.path().join("page.typ");
+        fs::write(&input, "= Home\n").unwrap();
+        let layout = resolve_layout(&input, None).unwrap();
+        let value = serde_json::json!({"title": "Home", "pdf": false});
+
+        write_page_meta(&layout, Some(&value)).unwrap();
+        assert_eq!(read_page_meta(&input), Some(value));
+
+        fs::write(&input, "= Changed\n").unwrap();
+        assert_eq!(read_page_meta(&input), None);
+    }
+
+    #[test]
+    fn page_meta_absent_when_document_exposes_none() {
+        let temp = tempfile::tempdir().unwrap();
+        let input = temp.path().join("page.typ");
+        fs::write(&input, "= Home\n").unwrap();
+        let layout = resolve_layout(&input, None).unwrap();
+
+        write_page_meta(&layout, None).unwrap();
+
+        assert_eq!(read_page_meta(&input), None);
+    }
 
     #[test]
     fn cli_params_override_setup_params() {

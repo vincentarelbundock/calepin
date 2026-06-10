@@ -2,6 +2,36 @@
 #let _auto-label-index = state("calepin-auto-label-index", 1)
 #let _auto-inline-label-index = state("calepin-auto-inline-label-index", 1)
 
+// Website pages index, provided by `calepin compile` during website builds.
+#let _pages-index-path = sys.inputs.at("calepin-pages", default: "")
+#let _current-page-href = sys.inputs.at("calepin-current-href", default: "")
+
+// Relative URL prefix from the current page back to the site root.
+#let _site-root-prefix() = {
+  let depth = _current-page-href.split("/").filter(part => part != "").len() - 1
+  if depth <= 0 { "" } else { "../" * depth }
+}
+
+// Returns one entry per page of the website: a dictionary with `path` (source
+// file), `href` (link to the page, relative to the current page), `title`
+// (resolved display title), `pdf` (link to the PDF twin, or none), and `meta`
+// (the page's raw `<website-metadata>` dictionary, verbatim). Returns an
+// empty array outside website builds.
+#let pages() = {
+  if _pages-index-path == "" { return () }
+  let prefix = _site-root-prefix()
+  json(_pages-index-path).map(entry => {
+    let entry = entry
+    if type(entry.at("href", default: none)) == str {
+      entry.insert("href", prefix + entry.href)
+    }
+    if type(entry.at("pdf", default: none)) == str {
+      entry.insert("pdf", prefix + entry.pdf)
+    }
+    entry
+  })
+}
+
 #let _base-options = (
   echo: true,
   eval: true,

@@ -18,6 +18,21 @@ pub struct CompileOptions<'a> {
     pub typst_args: &'a [String],
     pub html_theme: Option<&'a str>,
     pub site_context: Option<&'a SiteContextInput>,
+    /// Root-relative path to the website pages index, exposed to the runtime
+    /// as the `calepin-pages` input.
+    pub pages_input: Option<&'a str>,
+    /// Site-relative html path of the page being rendered, exposed as the
+    /// `calepin-current-href` input.
+    pub current_href_input: Option<&'a str>,
+}
+
+/// Optional reserved `--input` values forwarded to the typst subcommand.
+#[derive(Default, Clone, Copy)]
+pub(crate) struct ReservedInputs<'a> {
+    pub raw_theme: Option<&'a str>,
+    pub asset_base: Option<&'a str>,
+    pub pages: Option<&'a str>,
+    pub current_href: Option<&'a str>,
 }
 
 pub fn reject_reserved_typst_inputs(args: &[String]) -> Result<()> {
@@ -43,6 +58,8 @@ fn reject_reserved_input_value(value: &str) -> Result<()> {
         || value.starts_with("calepin-target=")
         || value.starts_with("calepin-raw-theme=")
         || value.starts_with("calepin-assets=")
+        || value.starts_with("calepin-pages=")
+        || value.starts_with("calepin-current-href=")
     {
         return Err(anyhow!(
             "forwarded Typst args may not override reserved Calepin input `{}`",
@@ -58,8 +75,7 @@ fn typst_subcommand_args(
     output: Option<&Path>,
     format: Option<&str>,
     typst_args: &[String],
-    raw_theme_input: Option<&str>,
-    asset_base_input: Option<&str>,
+    inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
     let results_input = artifact_reference(&layout.root, &layout.results_path);
     let target = if format == Some("html") {
@@ -85,15 +101,23 @@ fn typst_subcommand_args(
         args.push(format.into());
         if format == "html" {
             args.push("--features=html".into());
-            if let Some(raw_theme_input) = raw_theme_input {
+            if let Some(raw_theme_input) = inputs.raw_theme {
                 args.push("--input".into());
                 args.push(format!("calepin-raw-theme={raw_theme_input}").into());
             }
         }
     }
-    if let Some(asset_base_input) = asset_base_input {
+    if let Some(asset_base_input) = inputs.asset_base {
         args.push("--input".into());
         args.push(format!("calepin-assets={asset_base_input}").into());
+    }
+    if let Some(pages_input) = inputs.pages {
+        args.push("--input".into());
+        args.push(format!("calepin-pages={pages_input}").into());
+    }
+    if let Some(current_href_input) = inputs.current_href {
+        args.push("--input".into());
+        args.push(format!("calepin-current-href={current_href_input}").into());
     }
 
     args.push(layout.render_input.as_os_str().into());
@@ -112,17 +136,9 @@ pub(crate) fn typst_compile_args(
     output: Option<&Path>,
     format: Option<&str>,
     typst_args: &[String],
-    raw_theme_input: Option<&str>,
+    inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
-    typst_subcommand_args(
-        "compile",
-        layout,
-        output,
-        format,
-        typst_args,
-        raw_theme_input,
-        None,
-    )
+    typst_subcommand_args("compile", layout, output, format, typst_args, inputs)
 }
 
 pub(crate) fn typst_watch_args(
@@ -130,18 +146,9 @@ pub(crate) fn typst_watch_args(
     output: Option<&Path>,
     format: Option<&str>,
     typst_args: &[String],
-    raw_theme_input: Option<&str>,
-    asset_base_input: Option<&str>,
+    inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
-    typst_subcommand_args(
-        "watch",
-        layout,
-        output,
-        format,
-        typst_args,
-        raw_theme_input,
-        asset_base_input,
-    )
+    typst_subcommand_args("watch", layout, output, format, typst_args, inputs)
 }
 
 fn html_output_path(
@@ -213,7 +220,12 @@ pub fn compile_with_typst(
         Some(output_path.as_path()),
         options.format,
         options.typst_args,
-        prepared_theme.raw_theme_input.as_deref(),
+        ReservedInputs {
+            raw_theme: prepared_theme.raw_theme_input.as_deref(),
+            asset_base: None,
+            pages: options.pages_input,
+            current_href: options.current_href_input,
+        },
     );
     assert_supported_typst(typst)?;
     process::validate_executable(typst, "run typst compile", Some(&tools::TYPST))?;
@@ -324,7 +336,7 @@ mod tests {
             Some(&PathBuf::from("paper.html")),
             Some("html"),
             &[],
-            None,
+            ReservedInputs::default(),
         );
         let args: Vec<_> = args
             .into_iter()
@@ -350,7 +362,10 @@ mod tests {
             Some(&PathBuf::from("paper.html")),
             Some("html"),
             &[],
-            Some("/.calepin/calepin-input-light.tmTheme"),
+            ReservedInputs {
+                raw_theme: Some("/.calepin/calepin-input-light.tmTheme"),
+                ..ReservedInputs::default()
+            },
         );
         let args: Vec<_> = args
             .into_iter()
@@ -377,7 +392,7 @@ mod tests {
             Some(&PathBuf::from("paper.pdf")),
             Some("pdf"),
             &[],
-            None,
+            ReservedInputs::default(),
         );
         let args: Vec<_> = args
             .into_iter()
@@ -423,7 +438,7 @@ mod tests {
         std::fs::write(&input, "").unwrap();
         let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
-        let args = typst_compile_args(&layout, None, Some("pdf"), &[], None);
+        let args = typst_compile_args(&layout, None, Some("pdf"), &[], ReservedInputs::default());
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
@@ -444,8 +459,7 @@ mod tests {
             Some(&PathBuf::from("paper.pdf")),
             Some("pdf"),
             &[],
-            None,
-            None,
+            ReservedInputs::default(),
         );
         let args: Vec<_> = args
             .into_iter()
@@ -470,7 +484,7 @@ mod tests {
         std::fs::write(&input, "").unwrap();
         let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
-        let args = typst_watch_args(&layout, None, Some("pdf"), &[], None, None);
+        let args = typst_watch_args(&layout, None, Some("pdf"), &[], ReservedInputs::default());
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
@@ -491,8 +505,10 @@ mod tests {
             Some(&PathBuf::from("paper.html")),
             Some("html"),
             &[],
-            None,
-            Some("http://127.0.0.1:3002"),
+            ReservedInputs {
+                asset_base: Some("http://127.0.0.1:3002"),
+                ..ReservedInputs::default()
+            },
         );
         let args: Vec<_> = args
             .into_iter()

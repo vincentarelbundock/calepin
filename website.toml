@@ -28,15 +28,7 @@ title = "Getting started"
   label = "Configuration"
 
 [[sidebar.section]]
-title = "Code execution"
-
-  [[sidebar.section.item]]
-  path = "supported-languages.typ"
-  label = "Languages"
-
-  [[sidebar.section.item]]
-  path = "options.typ"
-  label = "Options"
+title = "Notebooks"
 
   [[sidebar.section.item]]
   path = "parameterized_notebooks.typ"
@@ -50,16 +42,43 @@ title = "Code execution"
   path = "crossreferences.typ"
   label = "Cross-references"
 
-[[sidebar.section]]
-title = "Roadmap"
-
-  [[sidebar.section.item]]
-  path = "website_generator.typ"
-  label = "Website generator"
-
   [[sidebar.section.item]]
   path = "templates.typ"
-  label = "Templates"
+  label = "HTML themes"
+
+  [[sidebar.section.item]]
+  path = "example.typ"
+  label = "Example notebook"
+
+[[sidebar.section]]
+title = "Code execution"
+
+  [[sidebar.section.item]]
+  path = "supported-languages.typ"
+  label = "Languages"
+
+  [[sidebar.section.item]]
+  path = "options.typ"
+  label = "Options"
+
+[[sidebar.section]]
+title = "Website generator"
+
+  [[sidebar.section.item]]
+  path = "websites.typ"
+  label = "Overview"
+
+  [[sidebar.section.item]]
+  path = "website-config.typ"
+  label = "Configuration"
+
+  [[sidebar.section.item]]
+  path = "website-pages.typ"
+  label = "Navigation and listings"
+
+  [[sidebar.section.item]]
+  path = "website-themes.typ"
+  label = "Themes"
 
 [[sidebar.section]]
 title = "Reference"
@@ -67,7 +86,3 @@ title = "Reference"
   [[sidebar.section.item]]
   path = "cli.typ"
   label = "Command line"
-
-  [[sidebar.section.item]]
-  path = "example.typ"
-  label = "Example notebook"

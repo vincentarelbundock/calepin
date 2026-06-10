@@ -14,7 +14,9 @@ use anyhow::{anyhow, Context, Result};
 
 use crate::cli::{StopArgs, WatchArgs};
 use crate::html::prepare_html_theme;
-use crate::typst::compile::{reject_reserved_typst_inputs, resolve_output_path, typst_watch_args};
+use crate::typst::compile::{
+    reject_reserved_typst_inputs, resolve_output_path, typst_watch_args, ReservedInputs,
+};
 use crate::typst::paths::resolve_layout;
 use crate::typst::preprocess::{
     execute_preprocess_plan, prepare_preprocess_plan, preprocess, PreprocessOptions,
@@ -69,8 +71,11 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         args.output.as_deref(),
         format.as_deref(),
         &args.typst_args,
-        prepared_theme.raw_theme_input.as_deref(),
-        asset_server.as_ref().map(|server| server.base_url()),
+        ReservedInputs {
+            raw_theme: prepared_theme.raw_theme_input.as_deref(),
+            asset_base: asset_server.as_ref().map(|server| server.base_url()),
+            ..ReservedInputs::default()
+        },
     );
 
     assert_supported_typst(&initial.executables.typst)?;

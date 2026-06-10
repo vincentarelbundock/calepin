@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     
     
-    <title>Website generator | Calepin</title>
+    <title>Navigation and listings | Calepin</title>
     
     
     
@@ -12,11 +12,11 @@
     <meta property="og:site_name" content="Calepin">
     
     
-    <meta property="og:title" content="Website generator | Calepin">
+    <meta property="og:title" content="Navigation and listings | Calepin">
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/website_generator.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/website_generator.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/website-pages.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/website-pages.html">
     
     <meta name="color-scheme" content="light dark">
     <script>
@@ -53,7 +53,7 @@
     <link rel="stylesheet" href=".calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"= Static website generator\n\n_Calepin_ can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source `.typ` files live in `docs/`, and the generated `.html`, `.pdf`, and `sitemap.xml` files are written back into `docs/` for GitHub Pages.\n\n== Create a website\n\nUse `calepin new website` to scaffold a minimal site:\n\n```sh\ncalepin new website\n```\n\nThis creates:\n\n- `website.toml`\n- `docs/index.typ`\n- `docs/404.typ`\n\n== Build pages\n\nCompile a website directory with the same `compile` command used for a single Typst document:\n\n```sh\ncalepin compile docs public --config website.toml\n```\n\nWhen the input path is a directory, `--config website.toml` is required. The first positional argument is the website source directory. The optional second positional argument is the website output directory.\n\nFor GitHub Pages publishing from `docs/`, build in place by passing `docs` as both the input and output directory:\n\n```sh\ncalepin compile docs docs --config website.toml\n```\n\nIf the output directory is omitted, _Calepin_ writes output beside the source files:\n\n```sh\ncalepin compile docs --config website.toml\n```\n\nBy default, each `.typ` page produces two outputs:\n\n- `page.html`\n- `page.pdf`\n\nUse `--format html` to write only HTML:\n\n```sh\ncalepin compile docs public --config website.toml --format html\n```\n\nDirectory website builds do not support `--format pdf`, `--format png`, or `--format svg`; those formats are for single-document `calepin compile`.\n\nWebsite builds use the same preprocess cache as single-document compilation. After a successful page build, _Calepin_ writes a fingerprint next to the page's `results.json`. Later builds reuse that file when the chunk code, parameters, execution options, configured tools, and source-relative cache paths match. This means `make serve` does not need to re-execute expensive chunks in pages such as `example.typ` when nothing relevant changed.\n\nGenerated outputs are tracked in `.calepin/website-manifest.json`. Later builds use that manifest to remove stale generated files when pages are deleted or renamed. Full builds also scan the output directory for unexpected generated `.html` and `.pdf` files, while preserving static assets in directories such as `assets/`, `.calepin/`, `.git/`, `target/`, `node_modules/`, and `.venv/`.\n\n== Watch changes\n\nDuring development, watch the website source directory:\n\n```sh\ncalepin watch docs docs --config website.toml\n```\n\nAs with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing `.typ` page edits go through a fast xxh3 fingerprint lookup:\n\n- If the changed page hash is new, _Calepin_ rebuilds only that page.\n- If the file was touched but the hash is unchanged, _Calepin_ skips the rebuild.\n- If navigation changed after an incremental rebuild, _Calepin_ falls back to a full rebuild.\n\n_Calepin_ also falls back to a full rebuild for changes that can affect more than one page:\n\n- `website.toml`\n- theme files\n- assets\n- new `.typ` pages\n- removed `.typ` pages\n- renamed `.typ` pages\n- unknown or non-page inputs\n\n== Watch and serve locally\n\nTo rebuild and serve in one command:\n\n```sh\ncalepin watch docs docs --config website.toml --serve\n```\n\nThe server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds.\n\nThe default bind address is `127.0.0.1:8000`. If that port is busy, choose another one:\n\n```sh\ncalepin watch docs docs --config website.toml --serve --port 8001\n```\n\nYou can also bind another interface:\n\n```sh\ncalepin watch docs docs --config website.toml --serve --host 0.0.0.0 --port 8001\n```\n\n== Serve built files\n\nServe an already-built static directory with:\n\n```sh\ncalepin serve docs\n```\n\nThe static server:\n\n- serves files from the requested directory\n- maps directory requests to `index.html`\n- rejects path traversal\n- supports `GET` and `HEAD`\n- guesses content types from file extensions\n- reports a clear error when the port is already in use\n\nUse `--host` and `--port` to change the bind address:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\n== Configuration\n\nWebsite settings live in `website.toml`:\n\n```toml\nhtml_theme = \"calepin-website\"\ntitle = \"My Site\"\ndescription = \"A static website built from Typst documents.\"\nbase_url = \"https://example.com\"\nlogo = \"assets/logo.svg\"\nlogo_alt = \"My Site\"\nhome = \"index.html\"\ngithub_url = \"https://github.com/user/repo\"\npdf_theme = \"docs/assets/pdf-theme.typ\"\n```\n\n=== HTML theme\n\n`html_theme` selects the HTML theme. It can be:\n\n- `calepin-website` for the bundled website theme\n- a path to a theme directory containing `layout.html`\n\nIf `html_theme` is omitted, website builds use `calepin-website`. `theme` and `template` are accepted as backward-compatible aliases.\n\n```toml\nhtml_theme = \"calepin-website\"\n```\n\n=== PDF theme\n\n`pdf_theme` selects a Typst theme file for PDF and other paged output. If it is omitted, _Calepin_ uses the bundled `calepin-pdf` theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. You can also write `pdf_theme = \"calepin-pdf\"` explicitly. Set `pdf_theme = false` to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as `pdf_theme = \"docs/assets/pdf-theme.typ\"` when `website.toml` lives at the project root.\n\n=== Metadata\n\n`title`, `description`, and `base_url` are optional. The bundled website theme uses them for:\n\n- browser page titles\n- description metadata\n- Open Graph metadata\n- canonical URLs\n\nWhen `base_url` is set, _Calepin_ also writes `sitemap.xml`.\n\n=== Branding\n\n`logo` is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so `logo = \"assets/logo.svg\"` works from nested pages too.\n\n`logo_alt` controls the image alt text. If no logo is configured, the bundled theme uses `title` as a text brand. `home` controls the brand link destination and defaults to `index.html`. `github_url` adds a GitHub link to the top bar.\n\n== Navigation\n\nNavigation can be explicit:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  path = \"index.typ\"\n  label = \"Home\"\n\n  [[sidebar.section.item]]\n  path = \"usage.typ\"\n  label = \"Usage\"\n```\n\nEach section can contain any number of `item` entries. An item can point to one file with `path`:\n\n```toml\n[[sidebar.section.item]]\npath = \"install.typ\"\nlabel = \"Install\"\n```\n\nAn item can also include files with a simple glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nIf no sidebar is configured, _Calepin_ builds navigation from `.typ` files in the source directory. Hidden paths are skipped by default. Set `show_hidden = true` under `[sidebar]` to include hidden paths in manual navigation file discovery.\n\n== Special pages\n\nIf `404.typ` exists, _Calepin_ renders it as `404.html` and `404.pdf`.\n\n`404.typ` is excluded from automatic navigation and from `sitemap.xml`. This keeps the error page available to GitHub Pages without presenting it as a normal documentation page.\n\n== Sitemap\n\nWhen `base_url` is configured, _Calepin_ writes `sitemap.xml` in the output directory:\n\n```toml\nbase_url = \"https://example.com/project\"\n```\n\nThe sitemap is built from navigation entries. URLs are absolute and use `base_url` plus the page's generated `.html` path.\n\nIf `base_url` is removed from the config, a stale generated sitemap is removed on the next build.\n\n== Theme customization\n\nHTML themes are MiniJinja templates. A theme directory contains a required `layout.html` file and optional `partials/`, `styles/`, and `scripts/` directories:\n\n```text\nthemes/my-theme/\n  layout.html\n  partials/\n  styles/main.css\n  scripts/main.js\n```\n\nSelect a local theme with:\n\n```toml\nhtml_theme = \"themes/my-theme\"\n```\n\nUse `website.toml` for ordinary site branding and navigation changes. Create a local HTML theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.\n\nWebsite builds pass site data into HTML themes. The bundled `calepin-website` theme uses this data for sidebar navigation, previous and next page links, table of contents, metadata, the top-bar brand link, and the GitHub link. Local theme templates can access:\n\n- `site.nav`\n- `site.nav_sections`\n- `site.toc`\n- `site.title`\n- `site.description`\n- `site.base_url`\n- `site.logo`\n- `site.logo_alt`\n- `site.home_url`\n- `site.github_url`\n- `site.current_url`\n- `site.page_title`\n- `snippets.css.code`\n- `snippets.js.copy_code`\n- `snippets.js.theme_toggle`\n- `snippets.typst.code_block`\n\nBundled snippets are available to local HTML themes through the `snippets` object. For example, include reusable code/output styling and copy-button behavior with:\n\n```html\n<style>{{ snippets.css.code }}<\/style>\n<script>{{ snippets.js.copy_code }}<\/script>\n```\n\nPDF themes are Typst files. Their source is inserted after Calepin's executable-fence rules and before each page source, so they can add show rules for paged output without changing the original `.typ` files. Calepin also stages reusable Typst snippets under `/.calepin/snippets/typst/`; the bundled `calepin-pdf` theme imports `code-block.typ` from there. A minimal theme can replace the default source-block styling:\n\n```typ\n#import \"/.calepin/snippets/typst/code-block.typ\": code-block\n\n#show raw.where(block: true): it => {\n  if sys.inputs.at(\"calepin-target\", default: \"paged\") == \"html\" {\n    it\n  } else {\n    code-block(it)\n  }\n}\n```\n\n== Source and PDF views\n\nThe bundled website theme includes a view switcher for rendered HTML, source, and PDF.\n\nThe source view is powered by a JSON script embedded in each generated HTML page. The PDF view expects the matching `.pdf` output generated by the default website build.\n\nIf you build with `--format html`, the PDF files are not generated. In that mode, the theme can still render HTML and source views, but the PDF view will not have a matching file.\n\n== Current limitations\n\nThe website generator is intentionally small. It does not yet implement:\n\n- dependency-aware rebuilds for imported shared `.typ` files\n- drafts\n- taxonomies\n- pagination\n- search indexes\n- feeds\n- robots.txt generation\n- Sass or SCSS compilation\n- link checking\n- automatic browser opening\n\nThese can be added without changing the current command shape: `new`, `compile`, `watch`, and `serve`.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"= Navigation and listings\n\n== Sidebar\n\nNavigation can be explicit:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  path = \"index.typ\"\n  label = \"Home\"\n\n  [[sidebar.section.item]]\n  path = \"usage.typ\"\n  label = \"Usage\"\n```\n\nEach section can contain any number of `item` entries. An item can point to one file with `path`:\n\n```toml\n[[sidebar.section.item]]\npath = \"install.typ\"\nlabel = \"Install\"\n```\n\nAn item can also include files with a simple glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nIf no sidebar is configured, _Calepin_ builds navigation from `.typ` files in the source directory. Hidden paths are skipped by default. Set `show_hidden = true` under `[sidebar]` to include hidden paths in manual navigation file discovery.\n\n== Page titles\n\nNavigation labels are resolved in this order:\n\n1. the `label` configured on the sidebar item\n2. the `title` entry of the page's `<website-metadata>` metadata\n3. the file name, with `-` and `_` replaced by spaces\n\nTo set a page title in the document itself:\n\n```typ\n#metadata((title: \"Getting started\")) <website-metadata>\n```\n\nPage metadata is extracted while the page is preprocessed, from the same staged source used for rendering. Package imports such as `@preview/calepin` are already rewritten at that point, so metadata works in pages that do not compile standalone.\n\n== Page listings\n\nPages can list other pages of the website, for example to build a blog index. During a website build, every page can call `calepin.pages()`:\n\n```typ\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#for post in calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev() [\n  - #link(post.href)[#post.title] (#post.meta.at(\"date\", default: \"\"))\n]\n```\n\nEach entry is a dictionary:\n\n- `path`: the source file, relative to the website source directory (`blog/first.typ`)\n- `href`: a link to the page, already relative to the current page\n- `title`: the resolved display title, matching the navigation\n- `pdf`: a link to the page's PDF, or `none` when no PDF is rendered\n- `meta`: the page's `<website-metadata>` dictionary, verbatim\n\n_Calepin_ interprets only the `title`, `pdf`, and `hidden` keys of page metadata. Everything else in `meta` (dates, tags, authors, categories) is yours to define and filter on. Outside a website build, `calepin.pages()` returns an empty array, so pages compile standalone.\n\nBlog posts usually should not appear in the sidebar. Include them in the build with a sidebar `glob`, then mark each post:\n\n```typ\n#metadata((title: \"First Post\", date: \"2026-06-01\", hidden: true)) <website-metadata>\n```\n\n`hidden: true` removes a page from the navigation while keeping it built, listed in `calepin.pages()`, and present in `sitemap.xml`.\n\nWhen any page's metadata changes, _Calepin_ rebuilds the whole site during watch so that listing pages never go stale.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -117,6 +117,25 @@
                     
                     
                     
+                    <p><strong>Notebooks</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="parameterized_notebooks.html">Parameterized notebooks</a></li>
+                        
+                        <li><a href="tables_and_figures.html">Tables and figures</a></li>
+                        
+                        <li><a href="crossreferences.html">Cross-references</a></li>
+                        
+                        <li><a href="templates.html">HTML themes</a></li>
+                        
+                        <li><a href="example.html">Example notebook</a></li>
+                        
+                    </ul>
+                    
+                    
+                    
+                    
                     <p><strong>Code execution</strong></p>
                     
                     <ul>
@@ -125,24 +144,22 @@
                         
                         <li><a href="options.html">Options</a></li>
                         
-                        <li><a href="parameterized_notebooks.html">Parameterized notebooks</a></li>
-                        
-                        <li><a href="tables_and_figures.html">Tables and figures</a></li>
-                        
-                        <li><a href="crossreferences.html">Cross-references</a></li>
-                        
                     </ul>
                     
                     
                     
                     
-                    <p><strong>Roadmap</strong></p>
+                    <p><strong>Website generator</strong></p>
                     
                     <ul>
                         
-                        <li><a href="website_generator.html" class="active" aria-current="page">Website generator</a></li>
+                        <li><a href="websites.html">Overview</a></li>
                         
-                        <li><a href="templates.html">Templates</a></li>
+                        <li><a href="website-config.html">Configuration</a></li>
+                        
+                        <li><a href="website-pages.html" class="active" aria-current="page">Navigation and listings</a></li>
+                        
+                        <li><a href="website-themes.html">Themes</a></li>
                         
                     </ul>
                     
@@ -155,8 +172,6 @@
                         
                         <li><a href="cli.html">Command line</a></li>
                         
-                        <li><a href="example.html">Example notebook</a></li>
-                        
                     </ul>
                     
                     
@@ -164,15 +179,7 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h2 id="static-website-generator">Static website generator</h2><p><em>Calepin</em> can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source <code>.typ</code> files live in <code>docs/</code>, and the generated <code>.html</code>, <code>.pdf</code>, and <code>sitemap.xml</code> files are written back into <code>docs/</code> for GitHub Pages.</p><h3 id="create-a-website">Create a website</h3><p>Use <code>calepin new website</code> to scaffold a minimal site:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> new website</code></pre><p>This creates:</p><ul><li><code>website.toml</code></li><li><code>docs/index.typ</code></li><li><code>docs/404.typ</code></li></ul><h3 id="build-pages">Build pages</h3><p>Compile a website directory with the same <code>compile</code> command used for a single Typst document:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs public --config website.toml</code></pre><p>When the input path is a directory, <code>--config website.toml</code> is required. The first positional argument is the website source directory. The optional second positional argument is the website output directory.</p><p>For GitHub Pages publishing from <code>docs/</code>, build in place by passing <code>docs</code> as both the input and output directory:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs docs --config website.toml</code></pre><p>If the output directory is omitted, <em>Calepin</em> writes output beside the source files:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs --config website.toml</code></pre><p>By default, each <code>.typ</code> page produces two outputs:</p><ul><li><code>page.html</code></li><li><code>page.pdf</code></li></ul><p>Use <code>--format html</code> to write only HTML:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile docs public --config website.toml --format html</code></pre><p>Directory website builds do not support <code>--format pdf</code>, <code>--format png</code>, or <code>--format svg</code>; those formats are for single-document <code>calepin compile</code>.</p><p>Website builds use the same preprocess cache as single-document compilation. After a successful page build, <em>Calepin</em> writes a fingerprint next to the page’s <code>results.json</code>. Later builds reuse that file when the chunk code, parameters, execution options, configured tools, and source-relative cache paths match. This means <code>make serve</code> does not need to re-execute expensive chunks in pages such as <code>example.typ</code> when nothing relevant changed.</p><p>Generated outputs are tracked in <code>.calepin/website-manifest.json</code>. Later builds use that manifest to remove stale generated files when pages are deleted or renamed. Full builds also scan the output directory for unexpected generated <code>.html</code> and <code>.pdf</code> files, while preserving static assets in directories such as <code>assets/</code>, <code>.calepin/</code>, <code>.git/</code>, <code>target/</code>, <code>node_modules/</code>, and <code>.venv/</code>.</p><h3 id="watch-changes">Watch changes</h3><p>During development, watch the website source directory:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --config website.toml</code></pre><p>As with <code>compile</code>, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing <code>.typ</code> page edits go through a fast xxh3 fingerprint lookup:</p><ul><li>If the changed page hash is new, <em>Calepin</em> rebuilds only that page.</li><li>If the file was touched but the hash is unchanged, <em>Calepin</em> skips the rebuild.</li><li>If navigation changed after an incremental rebuild, <em>Calepin</em> falls back to a full rebuild.</li></ul><p><em>Calepin</em> also falls back to a full rebuild for changes that can affect more than one page:</p><ul><li><code>website.toml</code></li><li>theme files</li><li>assets</li><li>new <code>.typ</code> pages</li><li>removed <code>.typ</code> pages</li><li>renamed <code>.typ</code> pages</li><li>unknown or non-page inputs</li></ul><h3 id="watch-and-serve-locally">Watch and serve locally</h3><p>To rebuild and serve in one command:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --config website.toml --serve</code></pre><p>The server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds.</p><p>The default bind address is <code>127.0.0.1:8000</code>. If that port is busy, choose another one:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --config website.toml --serve --port 8001</code></pre><p>You can also bind another interface:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> watch docs docs --config website.toml --serve --host 0.0.0.0 --port 8001</code></pre><h3 id="serve-built-files">Serve built files</h3><p>Serve an already-built static directory with:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> serve docs</code></pre><p>The static server:</p><ul><li>serves files from the requested directory</li><li>maps directory requests to <code>index.html</code></li><li>rejects path traversal</li><li>supports <code>GET</code> and <code>HEAD</code></li><li>guesses content types from file extensions</li><li>reports a clear error when the port is already in use</li></ul><p>Use <code>--host</code> and <code>--port</code> to change the bind address:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> serve docs --host 127.0.0.1 --port 8001</code></pre><h3 id="configuration">Configuration</h3><p>Website settings live in <code>website.toml</code>:</p><pre><code data-lang="toml"><span style="color: #4b69c6">html_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">calepin-website</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">My Site</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">description</span> = <span style="color: #198810">"</span><span style="color: #198810">A static website built from Typst documents.</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">base_url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://example.com</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">logo</span> = <span style="color: #198810">"</span><span style="color: #198810">assets/logo.svg</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">logo_alt</span> = <span style="color: #198810">"</span><span style="color: #198810">My Site</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">home</span> = <span style="color: #198810">"</span><span style="color: #198810">index.html</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">github_url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://github.com/user/repo</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">pdf_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">docs/assets/pdf-theme.typ</span><span style="color: #198810">"</span></code></pre><h4 id="html-theme">HTML theme</h4><p><code>html_theme</code> selects the HTML theme. It can be:</p><ul><li><code>calepin-website</code> for the bundled website theme</li><li>a path to a theme directory containing <code>layout.html</code></li></ul><p>If <code>html_theme</code> is omitted, website builds use <code>calepin-website</code>. <code>theme</code> and <code>template</code> are accepted as backward-compatible aliases.</p><pre><code data-lang="toml"><span style="color: #4b69c6">html_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">calepin-website</span><span style="color: #198810">"</span></code></pre><h4 id="pdf-theme">PDF theme</h4><p><code>pdf_theme</code> selects a Typst theme file for PDF and other paged output. If it is omitted, <em>Calepin</em> uses the bundled <code>calepin-pdf</code> theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. You can also write <code>pdf_theme = "calepin-pdf"</code> explicitly. Set <code>pdf_theme = false</code> to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as <code>pdf_theme = "docs/assets/pdf-theme.typ"</code> when <code>website.toml</code> lives at the project root.</p><h4 id="metadata">Metadata</h4><p><code>title</code>, <code>description</code>, and <code>base_url</code> are optional. The bundled website theme uses them for:</p><ul><li>browser page titles</li><li>description metadata</li><li>Open Graph metadata</li><li>canonical URLs</li></ul><p>When <code>base_url</code> is set, <em>Calepin</em> also writes <code>sitemap.xml</code>.</p><h4 id="branding">Branding</h4><p><code>logo</code> is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so <code>logo = "assets/logo.svg"</code> works from nested pages too.</p><p><code>logo_alt</code> controls the image alt text. If no logo is configured, the bundled theme uses <code>title</code> as a text brand. <code>home</code> controls the brand link destination and defaults to <code>index.html</code>. <code>github_url</code> adds a GitHub link to the top bar.</p><h3 id="navigation">Navigation</h3><p>Navigation can be explicit:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">sidebar</span>]
+            <h2 id="navigation-and-listings">Navigation and listings</h2><h3 id="sidebar">Sidebar</h3><p>Navigation can be explicit:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">sidebar</span>]
 
 [[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>]]
 <span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">Guide</span><span style="color: #198810">"</span>
@@ -186,20 +193,14 @@
   <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Usage</span><span style="color: #198810">"</span></code></pre><p>Each section can contain any number of <code>item</code> entries. An item can point to one file with <code>path</code>:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
 <span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">install.typ</span><span style="color: #198810">"</span>
 <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Install</span><span style="color: #198810">"</span></code></pre><p>An item can also include files with a simple glob:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
-<span style="color: #4b69c6">glob</span> = <span style="color: #198810">"</span><span style="color: #198810">guide/*.typ</span><span style="color: #198810">"</span></code></pre><p>If no sidebar is configured, <em>Calepin</em> builds navigation from <code>.typ</code> files in the source directory. Hidden paths are skipped by default. Set <code>show_hidden = true</code> under <code>[sidebar]</code> to include hidden paths in manual navigation file discovery.</p><h3 id="special-pages">Special pages</h3><p>If <code>404.typ</code> exists, <em>Calepin</em> renders it as <code>404.html</code> and <code>404.pdf</code>.</p><p><code>404.typ</code> is excluded from automatic navigation and from <code>sitemap.xml</code>. This keeps the error page available to GitHub Pages without presenting it as a normal documentation page.</p><h3 id="sitemap">Sitemap</h3><p>When <code>base_url</code> is configured, <em>Calepin</em> writes <code>sitemap.xml</code> in the output directory:</p><pre><code data-lang="toml"><span style="color: #4b69c6">base_url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://example.com/project</span><span style="color: #198810">"</span></code></pre><p>The sitemap is built from navigation entries. URLs are absolute and use <code>base_url</code> plus the page’s generated <code>.html</code> path.</p><p>If <code>base_url</code> is removed from the config, a stale generated sitemap is removed on the next build.</p><h3 id="theme-customization">Theme customization</h3><p>HTML themes are MiniJinja templates. A theme directory contains a required <code>layout.html</code> file and optional <code>partials/</code>, <code>styles/</code>, and <code>scripts/</code> directories:</p><pre><code data-lang="text">themes/my-theme/
-  layout.html
-  partials/
-  styles/main.css
-  scripts/main.js</code></pre><p>Select a local theme with:</p><pre><code data-lang="toml"><span style="color: #4b69c6">html_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/my-theme</span><span style="color: #198810">"</span></code></pre><p>Use <code>website.toml</code> for ordinary site branding and navigation changes. Create a local HTML theme when you need to change the HTML shell, top bar, sidebar, table of contents, page navigation, CSS, or JavaScript.</p><p>Website builds pass site data into HTML themes. The bundled <code>calepin-website</code> theme uses this data for sidebar navigation, previous and next page links, table of contents, metadata, the top-bar brand link, and the GitHub link. Local theme templates can access:</p><ul><li><code>site.nav</code></li><li><code>site.nav_sections</code></li><li><code>site.toc</code></li><li><code>site.title</code></li><li><code>site.description</code></li><li><code>site.base_url</code></li><li><code>site.logo</code></li><li><code>site.logo_alt</code></li><li><code>site.home_url</code></li><li><code>site.github_url</code></li><li><code>site.current_url</code></li><li><code>site.page_title</code></li><li><code>snippets.css.code</code></li><li><code>snippets.js.copy_code</code></li><li><code>snippets.js.theme_toggle</code></li><li><code>snippets.typst.code_block</code></li></ul><p>Bundled snippets are available to local HTML themes through the <code>snippets</code> object. For example, include reusable code/output styling and copy-button behavior with:</p><pre><code data-lang="html">&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.code }}&lt;/<span style="color: #4b69c6">style</span>>
-&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.copy_code }}&lt;/<span style="color: #4b69c6">script</span>></code></pre><p>PDF themes are Typst files. Their source is inserted after Calepin’s executable-fence rules and before each page source, so they can add show rules for paged output without changing the original <code>.typ</code> files. Calepin also stages reusable Typst snippets under <code>/.calepin/snippets/typst/</code>; the bundled <code>calepin-pdf</code> theme imports <code>code-block.typ</code> from there. A minimal theme can replace the default source-block styling:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"/.calepin/snippets/typst/code-block.typ"</span>: code-block
+<span style="color: #4b69c6">glob</span> = <span style="color: #198810">"</span><span style="color: #198810">guide/*.typ</span><span style="color: #198810">"</span></code></pre><p>If no sidebar is configured, <em>Calepin</em> builds navigation from <code>.typ</code> files in the source directory. Hidden paths are skipped by default. Set <code>show_hidden = true</code> under <code>[sidebar]</code> to include hidden paths in manual navigation file discovery.</p><h3 id="page-titles">Page titles</h3><p>Navigation labels are resolved in this order:</p><ol><li value="1">the <code>label</code> configured on the sidebar item</li><li value="2">the <code>title</code> entry of the page’s <code>&lt;website-metadata></code> metadata</li><li value="3">the file name, with <code>-</code> and <code>_</code> replaced by spaces</li></ol><p>To set a page title in the document itself:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((title: <span style="color: #198810">"Getting started"</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p>Page metadata is extracted while the page is preprocessed, from the same staged source used for rendering. Package imports such as <code>@preview/calepin</code> are already rewritten at that point, so metadata works in pages that do not compile standalone.</p><h3 id="page-listings">Page listings</h3><p>Pages can list other pages of the website, for example to build a blog index. During a website build, every page can call <code>calepin.pages()</code>:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"@preview/calepin:0.0.1"</span> <span style="color: #d73948">as</span> calepin
 
-<span style="color: #d73948">#</span><span style="color: #d73948">show</span> raw.<span style="color: #4b69c6">where</span>(block: <span style="color: #d73948">true</span>): it <span style="color: #d73948">=></span> {
-  <span style="color: #d73948">if</span> sys.inputs.<span style="color: #4b69c6">at</span>(<span style="color: #198810">"calepin-target"</span>, default: <span style="color: #198810">"paged"</span>) <span style="color: #d73948">==</span> <span style="color: #198810">"html"</span> {
-    it
-  } <span style="color: #d73948">else</span> {
-    <span style="color: #4b69c6">code-block</span>(it)
-  }
-}</code></pre><h3 id="source-and-pdf-views">Source and PDF views</h3><p>The bundled website theme includes a view switcher for rendered HTML, source, and PDF.</p><p>The source view is powered by a JSON script embedded in each generated HTML page. The PDF view expects the matching <code>.pdf</code> output generated by the default website build.</p><p>If you build with <code>--format html</code>, the PDF files are not generated. In that mode, the theme can still render HTML and source views, but the PDF view will not have a matching file.</p><h3 id="current-limitations">Current limitations</h3><p>The website generator is intentionally small. It does not yet implement:</p><ul><li>dependency-aware rebuilds for imported shared <code>.typ</code> files</li><li>drafts</li><li>taxonomies</li><li>pagination</li><li>search indexes</li><li>feeds</li><li>robots.txt generation</li><li>Sass or SCSS compilation</li><li>link checking</li><li>automatic browser opening</li></ul><p>These can be added without changing the current command shape: <code>new</code>, <code>compile</code>, <code>watch</code>, and <code>serve</code>.</p>
+<span style="color: #d73948">#</span><span style="color: #d73948">for</span> post <span style="color: #d73948">in</span> calepin.<span style="color: #4b69c6">pages</span>()
+  .filter(p => p.path.starts-with("blog/"))
+  .sorted(key: p => p.meta.at("date", default: ""))
+  .rev() [
+  <span style="color: #8b41b1">-</span> <span style="color: #4b69c6">#</span><span style="color: #4b69c6">link</span>(post.href)[<span style="color: #8b41b1">#</span><span style="color: #8b41b1">post</span>.<span style="color: #8b41b1">title</span>] (<span style="color: #8b41b1">#</span><span style="color: #8b41b1">post</span>.<span style="color: #8b41b1">meta</span>.<span style="color: #4b69c6">at</span>(<span style="color: #198810">"date"</span>, default: <span style="color: #198810">""</span>))
+]</code></pre><p>Each entry is a dictionary:</p><ul><li><code>path</code>: the source file, relative to the website source directory (<code>blog/first.typ</code>)</li><li><code>href</code>: a link to the page, already relative to the current page</li><li><code>title</code>: the resolved display title, matching the navigation</li><li><code>pdf</code>: a link to the page’s PDF, or <code>none</code> when no PDF is rendered</li><li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, verbatim</li></ul><p><em>Calepin</em> interprets only the <code>title</code>, <code>pdf</code>, and <code>hidden</code> keys of page metadata. Everything else in <code>meta</code> (dates, tags, authors, categories) is yours to define and filter on. Outside a website build, <code>calepin.pages()</code> returns an empty array, so pages compile standalone.</p><p>Blog posts usually should not appear in the sidebar. Include them in the build with a sidebar <code>glob</code>, then mark each post:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((title: <span style="color: #198810">"First Post"</span>, date: <span style="color: #198810">"2026-06-01"</span>, hidden: <span style="color: #d73948">true</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p><code>hidden: true</code> removes a page from the navigation while keeping it built, listed in <code>calepin.pages()</code>, and present in <code>sitemap.xml</code>.</p><p>When any page’s metadata changes, <em>Calepin</em> rebuilds the whole site during watch so that listing pages never go stale.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -207,31 +208,13 @@
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#static-website-generator">Static website generator</a></li>
+                    <li class="level-2"><a href="#navigation-and-listings">Navigation and listings</a></li>
                     
-                    <li class="level-3"><a href="#create-a-website">Create a website</a></li>
+                    <li class="level-3"><a href="#sidebar">Sidebar</a></li>
                     
-                    <li class="level-3"><a href="#build-pages">Build pages</a></li>
+                    <li class="level-3"><a href="#page-titles">Page titles</a></li>
                     
-                    <li class="level-3"><a href="#watch-changes">Watch changes</a></li>
-                    
-                    <li class="level-3"><a href="#watch-and-serve-locally">Watch and serve locally</a></li>
-                    
-                    <li class="level-3"><a href="#serve-built-files">Serve built files</a></li>
-                    
-                    <li class="level-3"><a href="#configuration">Configuration</a></li>
-                    
-                    <li class="level-3"><a href="#navigation">Navigation</a></li>
-                    
-                    <li class="level-3"><a href="#special-pages">Special pages</a></li>
-                    
-                    <li class="level-3"><a href="#sitemap">Sitemap</a></li>
-                    
-                    <li class="level-3"><a href="#theme-customization">Theme customization</a></li>
-                    
-                    <li class="level-3"><a href="#source-and-pdf-views">Source and PDF views</a></li>
-                    
-                    <li class="level-3"><a href="#current-limitations">Current limitations</a></li>
+                    <li class="level-3"><a href="#page-listings">Page listings</a></li>
                     
                 </ul>
             </nav>
@@ -283,6 +266,26 @@
         
     
         
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
             
             
         
@@ -291,11 +294,6 @@
         
             
             
-        
-        
-            
-        
-    
         
         
             
@@ -311,20 +309,20 @@
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="crossreferences.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="website-config.html">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Cross-references</span>
+            <span class="calepin-website-page-nav-title">Configuration</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="templates.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="website-themes.html">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Templates</span>
+            <span class="calepin-website-page-nav-title">Themes</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

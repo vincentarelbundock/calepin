@@ -134,6 +134,8 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             typst_args: &args.typst_args,
             html_theme: theme_name.as_deref(),
             site_context: None,
+            pages_input: None,
+            current_href_input: None,
         },
     )?;
     Ok(())
