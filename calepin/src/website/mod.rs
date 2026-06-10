@@ -26,7 +26,8 @@ use crate::typst::preprocess::{
     preprocess_cached, read_page_meta, PreprocessOptions, PreprocessOutput,
 };
 
-const DEFAULT_CONFIG: &str = "website.toml";
+const DEFAULT_CONFIG: &str = "calepin.toml";
+const LEGACY_CONFIG: &str = "website.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
 const DEFAULT_WEBSITE_THEME: &str = "calepin-website";
 const WEBSITE_STYLESHEET_PATH: &str = ".calepin/calepin-website.css";
@@ -45,18 +46,16 @@ pub(crate) fn scaffold_website(root: &Path, force: bool) -> Result<()> {
     let docs = root.join(DEFAULT_SRC_DIR);
     fs::create_dir_all(&docs).with_context(|| format!("failed to create {}", docs.display()))?;
 
-    write_scaffold_file(&root.join(DEFAULT_CONFIG), WEBSITE_TOML_TEMPLATE, force)?;
+    write_scaffold_file(&docs.join(DEFAULT_CONFIG), WEBSITE_TOML_TEMPLATE, force)?;
     write_scaffold_file(&docs.join("index.typ"), INDEX_TYP_TEMPLATE, force)?;
     write_scaffold_file(&docs.join("404.typ"), NOT_FOUND_TYP_TEMPLATE, force)?;
     Ok(())
 }
 
 pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
-    let Some(config_path) = args.common.config.clone() else {
-        return Err(anyhow!(
-            "compiling a website directory requires `--config website.toml`"
-        ));
-    };
+    let current_dir = std::env::current_dir()?;
+    let config_path =
+        discover_website_config(&current_dir, &args.input, args.common.config.as_deref())?;
     let render_pdf = match args.format {
         None => None,
         Some(CompileFormat::Html) => Some(false),
@@ -86,11 +85,9 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
 }
 
 pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
-    let Some(config_path) = args.common.config.clone() else {
-        return Err(anyhow!(
-            "watching a website directory requires `--config website.toml`"
-        ));
-    };
+    let current_dir = std::env::current_dir()?;
+    let config_path =
+        discover_website_config(&current_dir, &args.input, args.common.config.as_deref())?;
     if args.format.is_some() {
         return Err(anyhow!(
             "website directory watch does not support `--format`; use `calepin compile` for one-shot format control"
@@ -141,7 +138,7 @@ struct WebsiteBuildOptions {
     out: Option<PathBuf>,
     theme: Option<String>,
     parallelism: Option<usize>,
-    /// `None` defers to the `pdf` key in website.toml (default: render PDFs).
+    /// `None` defers to the `pdf` key in calepin.toml (default: render PDFs).
     render_pdf: Option<bool>,
     quiet: bool,
     timeout: Option<u64>,
@@ -760,6 +757,37 @@ fn load_website_config(path: &Path, required: bool) -> Result<WebsiteConfig> {
     let contents =
         fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
     toml::from_str(&contents).with_context(|| format!("failed to parse {}", path.display()))
+}
+
+/// Resolves the website config: an explicit `--config` path wins, otherwise
+/// the input directory is searched for `calepin.toml` (with `website.toml`
+/// accepted as a deprecated fallback).
+fn discover_website_config(
+    current_dir: &Path,
+    input: &Path,
+    explicit: Option<&Path>,
+) -> Result<PathBuf> {
+    if let Some(config) = explicit {
+        return absolutize_from(current_dir, config);
+    }
+    let input_dir = resolve_cli_path(current_dir, input);
+    let preferred = input_dir.join(DEFAULT_CONFIG);
+    if preferred.is_file() {
+        return Ok(preferred);
+    }
+    let legacy = input_dir.join(LEGACY_CONFIG);
+    if legacy.is_file() {
+        cwarn!(
+            "{} is deprecated; rename it to {}",
+            legacy.display(),
+            DEFAULT_CONFIG
+        );
+        return Ok(legacy);
+    }
+    Err(anyhow!(
+        "no {DEFAULT_CONFIG} found in {}; create one with `calepin new website` or pass `--config <path>`",
+        input_dir.display()
+    ))
 }
 
 fn resolve_config_path(current_dir: &Path, value: Option<&Path>) -> Result<PathBuf> {
@@ -1588,7 +1616,7 @@ fn write_scaffold_file(path: &Path, contents: &str, force: bool) -> Result<()> {
     fs::write(path, contents).with_context(|| format!("failed to write {}", path.display()))
 }
 
-const WEBSITE_TOML_TEMPLATE: &str = include_str!("../assets/scaffolds/website/website.toml");
+const WEBSITE_TOML_TEMPLATE: &str = include_str!("../assets/scaffolds/website/calepin.toml");
 const INDEX_TYP_TEMPLATE: &str = include_str!("../assets/scaffolds/website/docs/index.typ");
 const NOT_FOUND_TYP_TEMPLATE: &str = include_str!("../assets/scaffolds/website/docs/404.typ");
 
@@ -1855,6 +1883,37 @@ mod tests {
 
         let hidden = page_meta_from_value(&serde_json::json!({"hidden": true}));
         assert!(hidden.hidden);
+    }
+
+    #[test]
+    fn discover_website_config_prefers_explicit_then_calepin_then_legacy() {
+        let temp = tempfile::tempdir().unwrap();
+        let input = temp.path().join("site");
+        fs::create_dir_all(&input).unwrap();
+
+        let missing = discover_website_config(temp.path(), &input, None);
+        assert!(missing.is_err());
+        assert!(missing.unwrap_err().to_string().contains("calepin.toml"));
+
+        fs::write(input.join("website.toml"), "").unwrap();
+        assert_eq!(
+            discover_website_config(temp.path(), &input, None).unwrap(),
+            input.join("website.toml")
+        );
+
+        fs::write(input.join("calepin.toml"), "").unwrap();
+        assert_eq!(
+            discover_website_config(temp.path(), &input, None).unwrap(),
+            input.join("calepin.toml")
+        );
+
+        let explicit = discover_website_config(
+            temp.path(),
+            &input,
+            Some(Path::new("elsewhere/custom.toml")),
+        )
+        .unwrap();
+        assert_eq!(explicit, temp.path().join("elsewhere/custom.toml"));
     }
 
     #[test]

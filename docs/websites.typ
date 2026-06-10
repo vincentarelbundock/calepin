@@ -4,7 +4,7 @@ _Calepin_ can build a Typst document directory as a static website. This is the 
 
 This page covers the build workflow. See also:
 
-- #link("website-config.html")[Site configuration] for `website.toml` settings
+- #link("website-config.html")[Site configuration] for `calepin.toml` settings
 - #link("website-pages.html")[Navigation and listings] for the sidebar, page titles, and blog-style page listings
 - #link("website-themes.html")[Themes] for HTML theme customization
 
@@ -18,7 +18,7 @@ calepin new website
 
 This creates:
 
-- `website.toml`
+- `docs/calepin.toml`
 - `docs/index.typ`
 - `docs/404.typ`
 
@@ -27,21 +27,21 @@ This creates:
 Compile a website directory with the same `compile` command used for a single Typst document:
 
 ```sh
-calepin compile docs public --config website.toml
+calepin compile docs public
 ```
 
-When the input path is a directory, `--config website.toml` is required. The first positional argument is the website source directory. The optional second positional argument is the website output directory.
+When the input path is a directory, _Calepin_ looks for `calepin.toml` at the root of that directory (`website.toml` is accepted as a deprecated fallback). An explicit `--config <path>` supersedes the automatic lookup; if no config is found either way, the build fails. The first positional argument is the website source directory. The optional second positional argument is the website output directory.
 
 For GitHub Pages publishing from `docs/`, build in place by passing `docs` as both the input and output directory:
 
 ```sh
-calepin compile docs docs --config website.toml
+calepin compile docs docs
 ```
 
 If the output directory is omitted, _Calepin_ writes output beside the source files:
 
 ```sh
-calepin compile docs --config website.toml
+calepin compile docs
 ```
 
 By default, each `.typ` page produces two outputs:
@@ -49,7 +49,7 @@ By default, each `.typ` page produces two outputs:
 - `page.html`
 - `page.pdf`
 
-PDF rendering can be disabled for the whole site in `website.toml`:
+PDF rendering can be disabled for the whole site in `calepin.toml`:
 
 ```toml
 pdf = false
@@ -64,7 +64,7 @@ Individual pages can override the site setting with a `pdf` entry in their `<web
 Use `--format html` to write only HTML, regardless of configuration and page metadata:
 
 ```sh
-calepin compile docs public --config website.toml --format html
+calepin compile docs public --format html
 ```
 
 Directory website builds do not support `--format pdf`, `--format png`, or `--format svg`; those formats are for single-document `calepin compile`.
@@ -78,7 +78,7 @@ Generated outputs are tracked in `.calepin/website-manifest.json`. Later builds 
 During development, watch the website source directory:
 
 ```sh
-calepin watch docs docs --config website.toml
+calepin watch docs docs
 ```
 
 As with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing `.typ` page edits go through a fast xxh3 fingerprint lookup:
@@ -89,7 +89,7 @@ As with `compile`, the first positional argument is the source directory and the
 
 _Calepin_ also falls back to a full rebuild for changes that can affect more than one page:
 
-- `website.toml`
+- `calepin.toml`
 - theme files
 - assets
 - new `.typ` pages
@@ -102,7 +102,7 @@ _Calepin_ also falls back to a full rebuild for changes that can affect more tha
 To rebuild and serve in one command:
 
 ```sh
-calepin watch docs docs --config website.toml --serve
+calepin watch docs docs --serve
 ```
 
 The server injects a small reload script into HTML responses. Open browser pages poll the server and refresh after successful rebuilds. When a rebuild fails, the open pages display the build error as an overlay, and reload automatically once a later rebuild succeeds.
@@ -110,13 +110,13 @@ The server injects a small reload script into HTML responses. Open browser pages
 The default bind address is `127.0.0.1`, on the first free port starting at 8000. Use `--port` to pin a specific port; _Calepin_ then fails instead of falling back to another port:
 
 ```sh
-calepin watch docs docs --config website.toml --serve --port 8001
+calepin watch docs docs --serve --port 8001
 ```
 
 You can also bind another interface:
 
 ```sh
-calepin watch docs docs --config website.toml --serve --host 0.0.0.0 --port 8001
+calepin watch docs docs --serve --host 0.0.0.0 --port 8001
 ```
 
 == Serve built files

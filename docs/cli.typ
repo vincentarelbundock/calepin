@@ -65,7 +65,7 @@ Usage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...
 
 Arguments:
   <INPUT>
-          Input .typ file, or a website source directory when --config is supplied
+          Input .typ file, or a website source directory containing calepin.toml
 
   [OUTPUT]
           Output file path, or website output directory when INPUT is a directory
@@ -112,7 +112,7 @@ Usage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...
 
 Arguments:
   <INPUT>
-          Input .typ file, or a website source directory when --config is supplied
+          Input .typ file, or a website source directory containing calepin.toml
 
   [OUTPUT]
           Output file path, or website output directory when INPUT is a directory

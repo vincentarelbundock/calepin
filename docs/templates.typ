@@ -6,7 +6,7 @@ calepin compile paper.typ --format html --theme calepin-html
 
 `--theme` is optional and only applies to HTML output. Single-document HTML
 builds use `calepin-html` by default. Website directory builds use
-`html_theme` in `website.toml` and default to `calepin-website`. `theme` and
+`html_theme` in `calepin.toml` and default to `calepin-website`. `theme` and
 `template` are accepted as backward-compatible config aliases.
 
 Local themes are selected by pointing `--theme` or `html_theme` at the directory containing `layout.html`:
@@ -64,7 +64,7 @@ without maintaining its own CSS or JavaScript:
 
 PDF themes are Typst files, not MiniJinja templates. The bundled `calepin-pdf`
 theme is enabled by default for `calepin compile` and website PDF builds.
-Configure a replacement in `config.toml` or `website.toml`:
+Configure a replacement in `config.toml` or `calepin.toml`:
 
 ```toml
 pdf_theme = "themes/pdf.typ"

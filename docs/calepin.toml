@@ -7,7 +7,7 @@ github_url = "https://github.com/vincentarelbundock/calepin"
 pdf = true
 
 [executables]
-python = ".venv/bin/python"
+python = "../.venv/bin/python"
 typst = "typst"
 
 [sidebar]

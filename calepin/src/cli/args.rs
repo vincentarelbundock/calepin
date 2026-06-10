@@ -98,7 +98,7 @@ pub struct HealthArgs {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct CompileArgs {
-    /// Input .typ file, or a website source directory when --config is supplied
+    /// Input .typ file, or a website source directory containing calepin.toml
     pub input: PathBuf,
 
     /// Output file path, or website output directory when INPUT is a directory
@@ -124,7 +124,7 @@ pub struct CompileArgs {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct WatchArgs {
-    /// Input .typ file, or a website source directory when --config is supplied
+    /// Input .typ file, or a website source directory containing calepin.toml
     pub input: PathBuf,
 
     /// Output file path, or website output directory when INPUT is a directory
