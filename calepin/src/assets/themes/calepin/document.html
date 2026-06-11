@@ -1,5 +1,8 @@
 {{ doc.head }}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>{{ snippets.css.theme }}</style>
+    <style>{{ snippets.css.code }}</style>
+    <style>{{ snippets.css.widgets }}</style>
 {% for style in styles -%}
     <style>
 {{ style.css }}
@@ -8,6 +11,8 @@
 {{ doc.body_open }}
 {% include "partials/theme-switcher.html" %}
     <main class="container">{{ doc.body }}</main>
+    <script>{{ snippets.js.theme_toggle }}</script>
+    <script>{{ snippets.js.copy_code }}</script>
 {% for script in scripts -%}
     <script>
 {{ script.content }}

@@ -6,13 +6,34 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, StopArgs, WatchArgs};
-use crate::html::is_theme_path_like;
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
 const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/notebook.typ");
 
 pub fn handle_new(args: NewArgs) -> Result<()> {
+    if args.path == Path::new("theme") {
+        let name = args
+            .theme
+            .as_deref()
+            .unwrap_or(crate::theme::DEFAULT_THEME_NAME);
+        let dest = crate::theme::eject_builtin(name, Path::new("themes"), args.force)?;
+        if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
+            eprintln!("Created {}", dest.display());
+            eprintln!(
+                "Select it with `theme = \"{}\"` in calepin.toml,",
+                dest.display()
+            );
+            eprintln!("or `--theme {}` on calepin compile/watch.", dest.display());
+        }
+        return Ok(());
+    }
+    if args.theme.is_some() {
+        return Err(anyhow::anyhow!(
+            "`--theme` only applies to `calepin new theme`"
+        ));
+    }
+
     if args.path == Path::new("website") {
         crate::website::scaffold_website(Path::new("."), args.force)?;
         if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
@@ -111,20 +132,11 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
 
     let format = args.format.map(|format| format.as_str().to_string());
     let current_dir = std::env::current_dir()?;
-    let theme_name = args.theme.as_deref().map(|theme| {
-        if is_theme_path_like(theme) {
-            resolve_cli_theme_path(&current_dir, theme)
-                .to_string_lossy()
-                .to_string()
-        } else {
-            theme.to_string()
-        }
-    });
-    if args.theme.is_some() && format.as_deref() != Some("html") {
-        return Err(anyhow::anyhow!(
-            "`--theme` can only be used with `--format html`"
-        ));
-    }
+    let theme = args
+        .theme
+        .as_deref()
+        .map(|value| crate::theme::ThemeSelection::parse(value, &current_dir))
+        .transpose()?;
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
         config: args.common.config,
@@ -132,6 +144,8 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         sync_pages: false,
+        theme,
+        fallback_theme: crate::theme::ThemeSelection::Default,
         param_overrides: args.common.params,
     })?;
     compile_with_typst(
@@ -141,22 +155,14 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             output: args.output,
             format: format.as_deref(),
             typst_args: &args.typst_args,
-            html_theme: theme_name.as_deref(),
+            theme: &output.theme,
+            html_scope: crate::theme::HtmlScope::Document,
             site_context: None,
             pages_input: None,
             current_href_input: None,
         },
     )?;
     Ok(())
-}
-
-fn resolve_cli_theme_path(current_dir: &Path, value: &str) -> PathBuf {
-    let path = Path::new(value);
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        current_dir.join(path)
-    }
 }
 
 fn find_calepin_dirs(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBuf>> {
@@ -225,6 +231,7 @@ mod tests {
         handle_new(NewArgs {
             path: path.clone(),
             force: false,
+            theme: None,
         })
         .unwrap();
 
@@ -246,6 +253,7 @@ mod tests {
         let err = handle_new(NewArgs {
             path: path.clone(),
             force: false,
+            theme: None,
         })
         .unwrap_err();
 
@@ -262,11 +270,25 @@ mod tests {
         handle_new(NewArgs {
             path: path.clone(),
             force: true,
+            theme: None,
         })
         .unwrap();
 
         assert!(fs::read_to_string(path)
             .unwrap()
             .contains("Calepin example"));
+    }
+
+    #[test]
+    fn new_rejects_theme_flag_for_plain_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let err = handle_new(NewArgs {
+            path: dir.path().join("x.typ"),
+            force: false,
+            theme: Some("calepin".to_string()),
+        })
+        .unwrap_err();
+
+        assert!(err.to_string().contains("--theme"));
     }
 }

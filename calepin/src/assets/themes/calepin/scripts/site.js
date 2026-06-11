@@ -10,6 +10,9 @@
 (() => {
   "use strict";
 
+  // Single-document render: website shell behaviors do not apply.
+  if (!document.querySelector(".calepin-website-shell")) return;
+
   const VIEW = {
     storageKey: "calepin-website-view-mode",
     param: "view",

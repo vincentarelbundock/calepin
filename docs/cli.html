@@ -54,7 +54,7 @@
     <link rel="stylesheet" href=".calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"= CLI reference\n<cli-reference>\n\n== `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file or website scaffold\n  health   Check Calepin's local runtime environment\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  serve    Serve static files locally\n  stop     Stop a running calepin watch process\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n== `calepin new`\n<calepin-new>\n\n```text\nCreate a new example Typst file or website scaffold\n\nUsage: calepin new [OPTIONS] <PATH>\n\nArguments:\n  <PATH>  Path to the new .typ file, or `website`/`academic` to scaffold a website\n\nOptions:\n  -f, --force  Overwrite the file if it already exists\n  -h, --help   Print help\n```\n\n== `calepin health`\n<calepin-health>\n\n```text\nCheck Calepin's local runtime environment\n\nUsage: calepin health [OPTIONS]\n\nOptions:\n      --config <CONFIG>  Path to project config TOML\n      --json             Print machine-readable JSON\n      --strict           Exit with an error when warnings are present\n  -h, --help             Print help\n```\n\n== `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --theme <THEME>\n          HTML theme applied after compilation.\n          \n          Use `calepin-html`, `calepin-website`, or a path to a theme directory.\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst watch\n          \n          [possible values: pdf, png, svg, html]\n\n      --serve\n          Serve the website while watching a directory\n\n      --host <HOST>\n          Interface to bind when serving a watched website\n          \n          [default: 127.0.0.1]\n\n      --port <PORT>\n          Port to bind when serving a watched website (default: first free port from 8000)\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin serve`\n<calepin-serve>\n\n```text\nServe static files locally\n\nUsage: calepin serve [OPTIONS] <DIR>\n\nArguments:\n  <DIR>  Directory containing static files to serve\n\nOptions:\n      --host <HOST>  Interface to bind [default: 127.0.0.1]\n  -p, --port <PORT>  Port to bind (default: first free port from 8000)\n  -h, --help         Print help\n```\n\n== `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n\n== `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"= CLI reference\n<cli-reference>\n\n== `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file or website scaffold\n  health   Check Calepin's local runtime environment\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  serve    Serve static files locally\n  stop     Stop a running calepin watch process\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n== `calepin new`\n<calepin-new>\n\n```text\nCreate a new example Typst file or website scaffold\n\nUsage: calepin new [OPTIONS] <PATH>\n\nArguments:\n  <PATH>  Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files\n\nOptions:\n  -f, --force          Overwrite the file if it already exists\n      --theme <THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)\n  -h, --help           Print help\n```\n\n== `calepin health`\n<calepin-health>\n\n```text\nCheck Calepin's local runtime environment\n\nUsage: calepin health [OPTIONS]\n\nOptions:\n      --config <CONFIG>  Path to project config TOML\n      --json             Print machine-readable JSON\n      --strict           Exit with an error when warnings are present\n  -h, --help             Print help\n```\n\n== `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --theme <THEME>\n          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst watch\n          \n          [possible values: pdf, png, svg, html]\n\n      --serve\n          Serve the website while watching a directory\n\n      --host <HOST>\n          Interface to bind when serving a watched website\n          \n          [default: 127.0.0.1]\n\n      --port <PORT>\n          Port to bind when serving a watched website (default: first free port from 8000)\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin serve`\n<calepin-serve>\n\n```text\nServe static files locally\n\nUsage: calepin serve [OPTIONS] <DIR>\n\nArguments:\n  <DIR>  Directory containing static files to serve\n\nOptions:\n      --host <HOST>  Interface to bind [default: 127.0.0.1]\n  -p, --port <PORT>  Port to bind (default: first free port from 8000)\n  -h, --help         Print help\n```\n\n== `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n\n== `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help\n```\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -209,11 +209,12 @@ Options:
 Usage: calepin new [OPTIONS] &lt;PATH>
 
 Arguments:
-  &lt;PATH>  Path to the new .typ file, or `website`/`academic` to scaffold a website
+  &lt;PATH>  Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
 
 Options:
-  -f, --force  Overwrite the file if it already exists
-  -h, --help   Print help</code></pre><h3 id="calepin-health"><code>calepin health</code></h3><pre><code data-lang="text">Check Calepin's local runtime environment
+  -f, --force          Overwrite the file if it already exists
+      --theme &lt;THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)
+  -h, --help           Print help</code></pre><h3 id="calepin-health"><code>calepin health</code></h3><pre><code data-lang="text">Check Calepin's local runtime environment
 
 Usage: calepin health [OPTIONS]
 
@@ -242,9 +243,7 @@ Options:
           [possible values: pdf, png, svg, html]
 
       --theme &lt;THEME>
-          HTML theme applied after compilation.
-          
-          Use `calepin-html`, `calepin-website`, or a path to a theme directory.
+          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false
 
       --config &lt;CONFIG>
           Path to project config TOML
@@ -464,8 +463,7 @@ Options:
     </footer>
     
     
-<script>
-(() => {
+    <script>(() => {
   "use strict";
 
   const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
@@ -570,10 +568,8 @@ Options:
     if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
   });
 })();
-
-    </script>
-<script>
-(() => {
+</script>
+    <script>(() => {
   "use strict";
 
   const selects = document.querySelectorAll("select[data-calepin-language-picker]");
@@ -657,8 +653,70 @@ Options:
     if (event.key === "Escape") closeAll();
   });
 })();
+</script>
+    <script>(() => {
+  "use strict";
 
-    </script>
+  const selector = window.CalepinCopyCode?.selector ||
+    "div.sourceCode, pre.sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
+  const buttonClass = window.CalepinCopyCode?.buttonClass || "calepin-copy-code";
+  const copiedClass = window.CalepinCopyCode?.copiedClass || "copied";
+  const icon = window.CalepinCopyCode?.icon ||
+    `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+
+  function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      textarea.remove();
+    }
+    return Promise.resolve();
+  }
+
+  function codeText(node) {
+    if (!node) return "";
+    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    if (node.tagName === "BR") return "\n";
+    return Array.from(node.childNodes).map(codeText).join("");
+  }
+
+  document.querySelectorAll(selector).forEach((block) => {
+    if (block.dataset.calepinCopyBound === "true" || block.querySelector(`:scope > .${buttonClass}`)) {
+      return;
+    }
+    block.dataset.calepinCopyBound = "true";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = buttonClass;
+    button.setAttribute("aria-label", "Copy code");
+    button.setAttribute("title", "Copy code");
+    button.innerHTML = icon;
+    button.addEventListener("click", async () => {
+      const code = block.querySelector("pre code, code, pre");
+      const text = codeText(code);
+      try {
+        await copyText(text);
+        button.classList.add(copiedClass);
+        window.setTimeout(() => button.classList.remove(copiedClass), 900);
+      } catch {
+        button.classList.remove(copiedClass);
+      }
+    });
+    block.prepend(button);
+  });
+})();
+</script>
 <script>
 /* Calepin website behaviour, consolidated.
  *
@@ -671,6 +729,9 @@ Options:
  * needed. */
 (() => {
   "use strict";
+
+  // Single-document render: website shell behaviors do not apply.
+  if (!document.querySelector(".calepin-website-shell")) return;
 
   const VIEW = {
     storageKey: "calepin-website-view-mode",

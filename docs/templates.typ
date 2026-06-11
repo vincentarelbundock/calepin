@@ -1,25 +1,27 @@
-HTML themes are supported for HTML output. Select a theme with `--theme`:
+Theme bundles apply to HTML and paged output. Select a theme with `--theme`,
+`theme` in `calepin.toml`, or `#calepin.setup(theme: ...)`:
 
 ```sh
-calepin compile paper.typ --format html --theme calepin-html
+calepin compile paper.typ --theme calepin
 ```
 
-`--theme` is optional and only applies to HTML output. Single-document HTML
-builds use `calepin-html` by default. Website directory builds use
-`html_theme` in `calepin.toml` and default to `calepin-website`. `theme` and
-`template` are accepted as backward-compatible config aliases.
+`--theme` is optional. Builds use the builtin `calepin` bundle by default.
+The builtin `academic` bundle customizes website pages and falls back to
+`calepin` for single-document HTML and paged output.
 
-Local themes are selected by pointing `--theme` or `html_theme` at the directory containing `layout.html`:
+Local themes are selected by pointing `--theme` or `theme` at a theme bundle:
 
 ```text
 themes/my-theme/
-  layout.html
+  paged.typ
+  document.html
+  site.html
   partials/
-  styles/main.css
-  scripts/main.js
+  styles/
+  scripts/
 ```
 
-`layout.html` is a MiniJinja template. `partials/` files can be included with
+`document.html` and `site.html` are MiniJinja templates. `partials/` files can be included with
 `{% include "partials/name.html" %}`. CSS files in `styles/` and JavaScript
 files in `scripts/` are loaded in filename order and exposed as `styles` and
 `scripts` arrays.
@@ -31,8 +33,8 @@ Templates can access:
 - `doc.body`
 - `doc.body_close`
 - `doc.title`
-- `site.nav`
-- `site.nav_sections`
+- `site.sidebar`
+- `site.sidebar_sections`
 - `site.navbar_left`
 - `site.navbar_center`
 - `site.navbar_right`
@@ -78,8 +80,8 @@ JavaScript:
 <script>{{ snippets.js.theme_toggle }}</script>
 ```
 
-`snippets.css.theme` is the shared visual base used by `calepin-html`,
-`calepin-website`, and `academic`. It defines common typography, heading sizes,
+`snippets.css.theme` is the shared visual base used by `calepin` and
+`academic`. It defines common typography, heading sizes,
 accent variables, Pico primary colors, code/output variables, figure defaults,
 and global document defaults. Theme-specific CSS should generally be limited to
 the HTML shell and layout differences that cannot be shared.
@@ -92,22 +94,19 @@ the HTML shell and layout differences that cannot be shared.
 Use these snippets in custom HTML themes to keep the dark-mode control, language
 picker, code blocks, and base typography consistent with the bundled themes.
 
-PDF themes are Typst files, not MiniJinja templates. The bundled `calepin-pdf`
-theme is enabled by default for `calepin compile` and website PDF builds.
-Configure a replacement in `config.toml` or `calepin.toml`:
+`paged.typ` is a Typst file, not a MiniJinja template. The bundled `calepin`
+theme's `paged.typ` is enabled by default for `calepin compile` and website
+PDF/SVG/PNG builds. Customize it by ejecting a bundle:
 
-```toml
-pdf_theme = "themes/pdf.typ"
+```sh
+calepin new theme
 ```
 
-You can also write `pdf_theme = "calepin-pdf"` explicitly; omitting
-`pdf_theme` has the same effect.
-
-`calepin-pdf` imports `/.calepin/snippets/typst/code-block.typ` and applies it
-to raw source blocks. Custom PDF themes can import the same general snippet:
+The default `paged.typ` imports `/.calepin/snippets/typst/code-block.typ` and applies it
+to raw source blocks. Custom paged themes can import the same general snippet:
 
 ```typ
 #import "/.calepin/snippets/typst/code-block.typ": code-block
 ```
 
-Set `pdf_theme = false` to disable `calepin-pdf`.
+Set `theme = false` or use an empty `paged.typ` to disable paged styling.

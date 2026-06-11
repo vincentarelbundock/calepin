@@ -5,7 +5,7 @@ use std::process::Command;
 
 use crate::html::{
     apply_html_theme_file, apply_html_theme_file_with_site_context, inline_html_images_file,
-    prepare_html_theme, SiteContextInput, DEFAULT_HTML_THEME,
+    prepare_html_theme, SiteContextInput,
 };
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
@@ -16,7 +16,10 @@ pub struct CompileOptions<'a> {
     pub output: Option<PathBuf>,
     pub format: Option<&'a str>,
     pub typst_args: &'a [String],
-    pub html_theme: Option<&'a str>,
+    pub theme: &'a crate::theme::ThemeSelection,
+    /// Which HTML layout the theme provides for this render: a standalone
+    /// document or a website page.
+    pub html_scope: crate::theme::HtmlScope,
     pub site_context: Option<&'a SiteContextInput>,
     /// Root-relative path to the website pages index, exposed to the runtime
     /// as the `calepin-pages` input.
@@ -209,9 +212,19 @@ pub fn compile_with_typst(
     layout: &LayoutPaths,
     options: CompileOptions<'_>,
 ) -> Result<()> {
-    let html_theme = effective_html_theme(options.format, options.html_theme);
+    let html_entry = if options.format == Some("html") {
+        crate::theme::resolve_html_entry(options.theme, options.html_scope)?
+    } else {
+        None
+    };
     reject_reserved_typst_inputs(options.typst_args)?;
-    let prepared_theme = prepare_html_theme(&layout.root, options.format, html_theme, None, None)?;
+    let prepared_theme = prepare_html_theme(
+        &layout.root,
+        options.format,
+        html_entry.as_ref().map(|entry| entry.theme_name.as_str()),
+        None,
+        None,
+    )?;
     let output_path =
         resolve_default_output_path(layout, options.output.as_deref(), options.format);
     let html_output = html_output_path(layout, Some(output_path.as_path()), options.format);
@@ -244,7 +257,7 @@ pub fn compile_with_typst(
         if let Some(site_context) = options.site_context {
             apply_html_theme_file_with_site_context(
                 &path,
-                html_theme,
+                html_entry.as_ref(),
                 &prepared_theme.syntax_theme,
                 &layout.root,
                 Some(site_context),
@@ -252,7 +265,7 @@ pub fn compile_with_typst(
         } else {
             apply_html_theme_file(
                 &path,
-                html_theme,
+                html_entry.as_ref(),
                 &prepared_theme.syntax_theme,
                 &layout.root,
             )?;
@@ -260,14 +273,6 @@ pub fn compile_with_typst(
         inline_html_images_file(&path, &layout.root)?;
     }
     Ok(())
-}
-
-fn effective_html_theme<'a>(format: Option<&str>, html_theme: Option<&'a str>) -> Option<&'a str> {
-    if format == Some("html") {
-        Some(html_theme.unwrap_or(DEFAULT_HTML_THEME))
-    } else {
-        html_theme
-    }
 }
 
 #[cfg(test)]

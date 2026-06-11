@@ -54,7 +54,7 @@
     <link rel="stylesheet" href=".calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"= Site configuration\n\nWebsite settings live in `calepin.toml`, at the root of the website source directory. `website.toml` is accepted as a deprecated fallback name, and `--config <path>` points a build at a config stored elsewhere.\n\n```toml\nhtml_theme = \"calepin-website\"\ntitle = \"My Site\"\ndescription = \"A static website built from Typst documents.\"\nbase_url = \"https://example.com\"\nlogo = \"assets/logo.svg\"\nlogo_alt = \"My Site\"\nhome = \"index.html\"\ngithub_url = \"https://github.com/user/repo\"\npdf = true\npdf_theme = \"docs/assets/pdf-theme.typ\"\n```\n\n== HTML theme\n\n`html_theme` selects the HTML theme. It can be:\n\n- `calepin-website` for the bundled website theme\n- a path to a theme directory containing `layout.html`\n\nIf `html_theme` is omitted, website builds use `calepin-website`. `theme` and `template` are accepted as backward-compatible aliases.\n\n```toml\nhtml_theme = \"calepin-website\"\n```\n\n== PDF outputs\n\n`pdf` controls whether website builds also render a `.pdf` for every page. It defaults to `true`. Pages can override the site setting through the `pdf` entry of their `<website-metadata>` metadata, and `--format html` disables PDF rendering for one build regardless of configuration.\n\n== PDF theme\n\n`pdf_theme` selects a Typst theme file for PDF and other paged output. If it is omitted, _Calepin_ uses the bundled `calepin-pdf` theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. You can also write `pdf_theme = \"calepin-pdf\"` explicitly. Set `pdf_theme = false` to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as `pdf_theme = \"assets/pdf-theme.typ\"` from the `calepin.toml` in the source directory.\n\n== Metadata\n\n`title`, `description`, and `base_url` are optional. The bundled website theme uses them for:\n\n- browser page titles\n- description metadata\n- Open Graph metadata\n- canonical URLs\n\nWhen `base_url` is set, _Calepin_ also writes `sitemap.xml`.\n\n== Branding\n\n`logo` is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so `logo = \"assets/logo.svg\"` works from nested pages too.\n\n`logo_alt` controls the image alt text. If no logo is configured, the bundled theme uses `title` as a text brand. `home` controls the brand link destination and defaults to `index.html`. `github_url` adds a GitHub link to the top bar.\n\n== Build page selection\n\nSidebar and navbar settings control navigation, not the complete build set. When a sidebar is configured, use `[pages]` to add pages that should be rendered even though they are not listed in the navigation:\n\n```toml\n[pages]\ninclude = [\"landing/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\n`include` and `exclude` entries are paths or glob patterns relative to the website source directory. In multilingual sites, the same patterns apply relative to each language's `content_dir`. `exclude` removes matching pages from the build set and from generated navigation.\n\nEach content root's `index.typ` and `404.typ` are always rendered when present, even if they are not listed in the sidebar or navbar. This applies to the site root in a single-language site, and to each configured language `content_dir` in a multilingual site. Nested files such as `blog/index.typ` are not implicit; add them through navigation or `[pages].include` when they should be built.\n\n== Multilingual sites\n\nConfigure languages in `calepin.toml` with one content directory per language:\n\n```toml\ndefault_language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent_dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent_dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; non-default languages use their language code as the URL prefix by default, such as `fr/about.html`.\n\nUse page metadata to keep translations linked when files move or slugs differ:\n\n```typ\n#metadata((\n  title: \"À propos\",\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) <website-metadata>\n```\n\nThe bundled website themes render a language picker when more than one language is configured. The picker shows each configured `label`; write labels in the language itself, such as `English`, `Français`, or `Deutsch`. The picker links to the matching translated page when one exists, and otherwise falls back to that language's home page. Pages with translations also emit alternate links. `url_prefix` can override a language's URL prefix.\n\nNavigation is language-aware. Sidebar and navbar links to local pages are shown only for the current page's language, while external navbar links remain global. This lets each language directory keep parallel navigation without showing both `about.html` and `fr/about.html` in the same bar.\n\n== Sitemap\n\nWhen `base_url` is configured, _Calepin_ writes `sitemap.xml` in the output directory:\n\n```toml\nbase_url = \"https://example.com/project\"\n```\n\nThe sitemap lists every built page except `404.typ`, including pages with `hidden: true` metadata. URLs are absolute and use `base_url` plus the page's generated `.html` path.\n\nIf `base_url` is removed from the config, a stale generated sitemap is removed on the next build.\n\n== Special pages\n\nIf `404.typ` exists, _Calepin_ renders it as `404.html` and `404.pdf`.\n\n`404.typ` is excluded from automatic navigation and from `sitemap.xml`. This keeps the error page available to GitHub Pages without presenting it as a normal documentation page.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"= Site configuration\n\nWebsite settings live in `calepin.toml`, at the root of the website source directory. `website.toml` is accepted as a deprecated fallback name, and `--config <path>` points a build at a config stored elsewhere.\n\n```toml\ntitle = \"My Site\"\ndescription = \"A static website built from Typst documents.\"\nbase_url = \"https://example.com\"\nlogo = \"assets/logo.svg\"\nlogo_alt = \"My Site\"\nhome = \"index.html\"\ngithub_url = \"https://github.com/user/repo\"\npdf = true\ntheme = \"academic\"\n```\n\n== Theme\n\n`theme` selects one theme bundle for website HTML and paged output. It can be:\n\n- `calepin` for the bundled default theme\n- `academic` for the bundled academic website theme\n- a path to a theme bundle directory\n- `false` for raw output with no theme\n\nIf `theme` is omitted, website builds use `calepin`. Per-document\n`#calepin.setup(theme: ...)` can override the config value, and CLI `--theme`\noverrides both.\n\n```toml\ntheme = \"themes/my-theme\"\n```\n\n== PDF outputs\n\n`pdf` controls whether website builds also render a `.pdf` for every page. It defaults to `true`. Pages can override the site setting through the `pdf` entry of their `<website-metadata>` metadata, and `--format html` disables PDF rendering for one build regardless of configuration.\n\nPaged styling lives in the selected bundle's `paged.typ`. An absent\n`paged.typ` inherits the default styling; an empty `paged.typ` disables paged\nstyling for that bundle.\n\n== Metadata\n\n`title`, `description`, and `base_url` are optional. The bundled website theme uses them for:\n\n- browser page titles\n- description metadata\n- Open Graph metadata\n- canonical URLs\n\nWhen `base_url` is set, _Calepin_ also writes `sitemap.xml`.\n\n== Branding\n\n`logo` is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so `logo = \"assets/logo.svg\"` works from nested pages too.\n\n`logo_alt` controls the image alt text. If no logo is configured, the bundled theme uses `title` as a text brand. `home` controls the brand link destination and defaults to `index.html`. `github_url` adds a GitHub link to the top bar.\n\n== Build page selection\n\nSidebar and navbar settings control navigation, not the complete build set. When a sidebar is configured, use `[pages]` to add pages that should be rendered even though they are not listed in the navigation:\n\n```toml\n[pages]\ninclude = [\"landing/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\n`include` and `exclude` entries are paths or glob patterns relative to the website source directory. In multilingual sites, the same patterns apply relative to each language's `content_dir`. `exclude` removes matching pages from the build set and from generated navigation.\n\nEach content root's `index.typ` and `404.typ` are always rendered when present, even if they are not listed in the sidebar or navbar. This applies to the site root in a single-language site, and to each configured language `content_dir` in a multilingual site. Nested files such as `blog/index.typ` are not implicit; add them through navigation or `[pages].include` when they should be built.\n\n== Multilingual sites\n\nConfigure languages in `calepin.toml` with one content directory per language:\n\n```toml\ndefault_language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent_dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent_dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; non-default languages use their language code as the URL prefix by default, such as `fr/about.html`.\n\nUse page metadata to keep translations linked when files move or slugs differ:\n\n```typ\n#metadata((\n  title: \"À propos\",\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) <website-metadata>\n```\n\nThe bundled website themes render a language picker when more than one language is configured. The picker shows each configured `label`; write labels in the language itself, such as `English`, `Français`, or `Deutsch`. The picker links to the matching translated page when one exists, and otherwise falls back to that language's home page. Pages with translations also emit alternate links. `url_prefix` can override a language's URL prefix.\n\nNavigation is language-aware. Sidebar and navbar links to local pages are shown only for the current page's language, while external navbar links remain global. This lets each language directory keep parallel navigation without showing both `about.html` and `fr/about.html` in the same bar.\n\n== Sitemap\n\nWhen `base_url` is configured, _Calepin_ writes `sitemap.xml` in the output directory:\n\n```toml\nbase_url = \"https://example.com/project\"\n```\n\nThe sitemap lists every built page except `404.typ`, including pages with `hidden: true` metadata. URLs are absolute and use `base_url` plus the page's generated `.html` path.\n\nIf `base_url` is removed from the config, a stale generated sitemap is removed on the next build.\n\n== Special pages\n\nIf `404.typ` exists, _Calepin_ renders it as `404.html` and `404.pdf`.\n\n`404.typ` is excluded from automatic navigation and from `sitemap.xml`. This keeps the error page available to GitHub Pages without presenting it as a normal documentation page.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -188,8 +188,7 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h2 id="site-configuration">Site configuration</h2><p>Website settings live in <code>calepin.toml</code>, at the root of the website source directory. <code>website.toml</code> is accepted as a deprecated fallback name, and <code>--config &lt;path></code> points a build at a config stored elsewhere.</p><pre><code data-lang="toml"><span style="color: #4b69c6">html_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">calepin-website</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">My Site</span><span style="color: #198810">"</span>
+            <h2 id="site-configuration">Site configuration</h2><p>Website settings live in <code>calepin.toml</code>, at the root of the website source directory. <code>website.toml</code> is accepted as a deprecated fallback name, and <code>--config &lt;path></code> points a build at a config stored elsewhere.</p><pre><code data-lang="toml"><span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">My Site</span><span style="color: #198810">"</span>
 <span style="color: #4b69c6">description</span> = <span style="color: #198810">"</span><span style="color: #198810">A static website built from Typst documents.</span><span style="color: #198810">"</span>
 <span style="color: #4b69c6">base_url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://example.com</span><span style="color: #198810">"</span>
 <span style="color: #4b69c6">logo</span> = <span style="color: #198810">"</span><span style="color: #198810">assets/logo.svg</span><span style="color: #198810">"</span>
@@ -197,7 +196,7 @@
 <span style="color: #4b69c6">home</span> = <span style="color: #198810">"</span><span style="color: #198810">index.html</span><span style="color: #198810">"</span>
 <span style="color: #4b69c6">github_url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://github.com/user/repo</span><span style="color: #198810">"</span>
 <span style="color: #4b69c6">pdf</span> = <span style="color: #d73948">true</span>
-<span style="color: #4b69c6">pdf_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">docs/assets/pdf-theme.typ</span><span style="color: #198810">"</span></code></pre><h3 id="html-theme">HTML theme</h3><p><code>html_theme</code> selects the HTML theme. It can be:</p><ul><li><code>calepin-website</code> for the bundled website theme</li><li>a path to a theme directory containing <code>layout.html</code></li></ul><p>If <code>html_theme</code> is omitted, website builds use <code>calepin-website</code>. <code>theme</code> and <code>template</code> are accepted as backward-compatible aliases.</p><pre><code data-lang="toml"><span style="color: #4b69c6">html_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">calepin-website</span><span style="color: #198810">"</span></code></pre><h3 id="pdf-outputs">PDF outputs</h3><p><code>pdf</code> controls whether website builds also render a <code>.pdf</code> for every page. It defaults to <code>true</code>. Pages can override the site setting through the <code>pdf</code> entry of their <code>&lt;website-metadata></code> metadata, and <code>--format html</code> disables PDF rendering for one build regardless of configuration.</p><h3 id="pdf-theme">PDF theme</h3><p><code>pdf_theme</code> selects a Typst theme file for PDF and other paged output. If it is omitted, <em>Calepin</em> uses the bundled <code>calepin-pdf</code> theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. You can also write <code>pdf_theme = "calepin-pdf"</code> explicitly. Set <code>pdf_theme = false</code> to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as <code>pdf_theme = "assets/pdf-theme.typ"</code> from the <code>calepin.toml</code> in the source directory.</p><h3 id="metadata">Metadata</h3><p><code>title</code>, <code>description</code>, and <code>base_url</code> are optional. The bundled website theme uses them for:</p><ul><li>browser page titles</li><li>description metadata</li><li>Open Graph metadata</li><li>canonical URLs</li></ul><p>When <code>base_url</code> is set, <em>Calepin</em> also writes <code>sitemap.xml</code>.</p><h3 id="branding">Branding</h3><p><code>logo</code> is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so <code>logo = "assets/logo.svg"</code> works from nested pages too.</p><p><code>logo_alt</code> controls the image alt text. If no logo is configured, the bundled theme uses <code>title</code> as a text brand. <code>home</code> controls the brand link destination and defaults to <code>index.html</code>. <code>github_url</code> adds a GitHub link to the top bar.</p><h3 id="build-page-selection">Build page selection</h3><p>Sidebar and navbar settings control navigation, not the complete build set. When a sidebar is configured, use <code>[pages]</code> to add pages that should be rendered even though they are not listed in the navigation:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">pages</span>]
+<span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">academic</span><span style="color: #198810">"</span></code></pre><h3 id="theme">Theme</h3><p><code>theme</code> selects one theme bundle for website HTML and paged output. It can be:</p><ul><li><code>calepin</code> for the bundled default theme</li><li><code>academic</code> for the bundled academic website theme</li><li>a path to a theme bundle directory</li><li><code>false</code> for raw output with no theme</li></ul><p>If <code>theme</code> is omitted, website builds use <code>calepin</code>. Per-document <code>#calepin.setup(theme: ...)</code> can override the config value, and CLI <code>--theme</code> overrides both.</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/my-theme</span><span style="color: #198810">"</span></code></pre><h3 id="pdf-outputs">PDF outputs</h3><p><code>pdf</code> controls whether website builds also render a <code>.pdf</code> for every page. It defaults to <code>true</code>. Pages can override the site setting through the <code>pdf</code> entry of their <code>&lt;website-metadata></code> metadata, and <code>--format html</code> disables PDF rendering for one build regardless of configuration.</p><p>Paged styling lives in the selected bundle’s <code>paged.typ</code>. An absent <code>paged.typ</code> inherits the default styling; an empty <code>paged.typ</code> disables paged styling for that bundle.</p><h3 id="metadata">Metadata</h3><p><code>title</code>, <code>description</code>, and <code>base_url</code> are optional. The bundled website theme uses them for:</p><ul><li>browser page titles</li><li>description metadata</li><li>Open Graph metadata</li><li>canonical URLs</li></ul><p>When <code>base_url</code> is set, <em>Calepin</em> also writes <code>sitemap.xml</code>.</p><h3 id="branding">Branding</h3><p><code>logo</code> is a path or URL for the top-bar brand image. Relative paths are interpreted from the website output root and rewritten relative to each generated page, so <code>logo = "assets/logo.svg"</code> works from nested pages too.</p><p><code>logo_alt</code> controls the image alt text. If no logo is configured, the bundled theme uses <code>title</code> as a text brand. <code>home</code> controls the brand link destination and defaults to <code>index.html</code>. <code>github_url</code> adds a GitHub link to the top bar.</p><h3 id="build-page-selection">Build page selection</h3><p>Sidebar and navbar settings control navigation, not the complete build set. When a sidebar is configured, use <code>[pages]</code> to add pages that should be rendered even though they are not listed in the navigation:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">pages</span>]
 <span style="color: #4b69c6">include</span> = [<span style="color: #198810">"</span><span style="color: #198810">landing/*.typ</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">legal/privacy.typ</span><span style="color: #198810">"</span>]
 <span style="color: #4b69c6">exclude</span> = [<span style="color: #198810">"</span><span style="color: #198810">drafts/**</span><span style="color: #198810">"</span>]</code></pre><p><code>include</code> and <code>exclude</code> entries are paths or glob patterns relative to the website source directory. In multilingual sites, the same patterns apply relative to each language’s <code>content_dir</code>. <code>exclude</code> removes matching pages from the build set and from generated navigation.</p><p>Each content root’s <code>index.typ</code> and <code>404.typ</code> are always rendered when present, even if they are not listed in the sidebar or navbar. This applies to the site root in a single-language site, and to each configured language <code>content_dir</code> in a multilingual site. Nested files such as <code>blog/index.typ</code> are not implicit; add them through navigation or <code>[pages].include</code> when they should be built.</p><h3 id="multilingual-sites">Multilingual sites</h3><p>Configure languages in <code>calepin.toml</code> with one content directory per language:</p><pre><code data-lang="toml"><span style="color: #4b69c6">default_language</span> = <span style="color: #198810">"</span><span style="color: #198810">en</span><span style="color: #198810">"</span>
 
@@ -221,11 +220,9 @@
                     
                     <li class="level-2"><a href="#site-configuration">Site configuration</a></li>
                     
-                    <li class="level-3"><a href="#html-theme">HTML theme</a></li>
+                    <li class="level-3"><a href="#theme">Theme</a></li>
                     
                     <li class="level-3"><a href="#pdf-outputs">PDF outputs</a></li>
-                    
-                    <li class="level-3"><a href="#pdf-theme">PDF theme</a></li>
                     
                     <li class="level-3"><a href="#metadata">Metadata</a></li>
                     
@@ -354,8 +351,7 @@
     </footer>
     
     
-<script>
-(() => {
+    <script>(() => {
   "use strict";
 
   const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
@@ -460,10 +456,8 @@
     if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
   });
 })();
-
-    </script>
-<script>
-(() => {
+</script>
+    <script>(() => {
   "use strict";
 
   const selects = document.querySelectorAll("select[data-calepin-language-picker]");
@@ -547,8 +541,70 @@
     if (event.key === "Escape") closeAll();
   });
 })();
+</script>
+    <script>(() => {
+  "use strict";
 
-    </script>
+  const selector = window.CalepinCopyCode?.selector ||
+    "div.sourceCode, pre.sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
+  const buttonClass = window.CalepinCopyCode?.buttonClass || "calepin-copy-code";
+  const copiedClass = window.CalepinCopyCode?.copiedClass || "copied";
+  const icon = window.CalepinCopyCode?.icon ||
+    `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+
+  function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      textarea.remove();
+    }
+    return Promise.resolve();
+  }
+
+  function codeText(node) {
+    if (!node) return "";
+    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    if (node.tagName === "BR") return "\n";
+    return Array.from(node.childNodes).map(codeText).join("");
+  }
+
+  document.querySelectorAll(selector).forEach((block) => {
+    if (block.dataset.calepinCopyBound === "true" || block.querySelector(`:scope > .${buttonClass}`)) {
+      return;
+    }
+    block.dataset.calepinCopyBound = "true";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = buttonClass;
+    button.setAttribute("aria-label", "Copy code");
+    button.setAttribute("title", "Copy code");
+    button.innerHTML = icon;
+    button.addEventListener("click", async () => {
+      const code = block.querySelector("pre code, code, pre");
+      const text = codeText(code);
+      try {
+        await copyText(text);
+        button.classList.add(copiedClass);
+        window.setTimeout(() => button.classList.remove(copiedClass), 900);
+      } catch {
+        button.classList.remove(copiedClass);
+      }
+    });
+    block.prepend(button);
+  });
+})();
+</script>
 <script>
 /* Calepin website behaviour, consolidated.
  *
@@ -561,6 +617,9 @@
  * needed. */
 (() => {
   "use strict";
+
+  // Single-document render: website shell behaviors do not apply.
+  if (!document.querySelector(".calepin-website-shell")) return;
 
   const VIEW = {
     storageKey: "calepin-website-view-mode",

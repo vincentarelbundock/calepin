@@ -1,4 +1,3 @@
-html_theme = "calepin-website"
 title = "My Site"
 description = "A static website built from Typst documents."
 # base_url = "https://example.com"

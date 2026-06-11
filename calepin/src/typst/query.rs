@@ -489,6 +489,7 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         fig_responsive: opt_bool_option(value, "fig-responsive")?.or(base.fig_responsive),
         fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
         params: params_option(value, "params", &base.params)?,
+        theme: raw_option(value, "theme").or_else(|| base.theme.clone()),
     })
 }
 
@@ -1277,6 +1278,7 @@ mod tests {
             fig_responsive: Some(true),
             fenced_chunks: FencedChunks::Off,
             params: serde_json::json!({}),
+            theme: None,
         };
         let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
         let chunk = &chunks[0];

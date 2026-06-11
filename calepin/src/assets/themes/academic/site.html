@@ -62,6 +62,9 @@
 {% if site.stylesheet %}
     <link rel="stylesheet" href="{{ site.stylesheet }}">
 {% else %}
+    <style>{{ snippets.css.theme }}</style>
+    <style>{{ snippets.css.code }}</style>
+    <style>{{ snippets.css.widgets }}</style>
 {% for style in styles -%}
     <style>
 {{ style.css }}
@@ -89,14 +92,14 @@
                 {{ navbar_items(site.navbar_left, site.languages) }}
                 {{ navbar_items(site.navbar_center, site.languages) }}
                 {{ navbar_items(site.navbar_right, site.languages) }}
-                {% if site.nav_sections %}
-                    {% for section in site.nav_sections %}
+                {% if site.sidebar_sections %}
+                    {% for section in site.sidebar_sections %}
                     {% for item in section.items %}
                     <a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a>
                     {% endfor %}
                     {% endfor %}
-                {% elif site.nav %}
-                    {% for item in site.nav %}
+                {% elif site.sidebar %}
+                    {% for item in site.sidebar %}
                     <a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a>
                     {% endfor %}
                 {% endif %}
@@ -106,6 +109,9 @@
     <main class="academic-main">
         {{ doc.body }}
     </main>
+    <script>{{ snippets.js.theme_toggle }}</script>
+    <script>{{ snippets.js.language_picker }}</script>
+    <script>{{ snippets.js.copy_code }}</script>
 {% for script in scripts -%}
     <script>
 {{ script.content }}

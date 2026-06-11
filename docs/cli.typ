@@ -33,11 +33,12 @@ Create a new example Typst file or website scaffold
 Usage: calepin new [OPTIONS] <PATH>
 
 Arguments:
-  <PATH>  Path to the new .typ file, or `website`/`academic` to scaffold a website
+  <PATH>  Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
 
 Options:
-  -f, --force  Overwrite the file if it already exists
-  -h, --help   Print help
+  -f, --force          Overwrite the file if it already exists
+      --theme <THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)
+  -h, --help           Print help
 ```
 
 == `calepin health`
@@ -80,9 +81,7 @@ Options:
           [possible values: pdf, png, svg, html]
 
       --theme <THEME>
-          HTML theme applied after compilation.
-          
-          Use `calepin-html`, `calepin-website`, or a path to a theme directory.
+          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false
 
       --config <CONFIG>
           Path to project config TOML

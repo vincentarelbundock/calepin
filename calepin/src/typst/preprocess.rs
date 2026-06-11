@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use xxhash_rust::xxh3::xxh3_64;
 
-use crate::config::{CalepinConfig, ExecutablePaths, PdfTheme};
+use crate::config::{CalepinConfig, ExecutablePaths};
 use crate::typst::execute::{EnginePool, ExecutionConfig};
 use crate::typst::introspect::preprocess_metadata;
 use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, ExecOptions, LayoutPaths};
@@ -19,7 +19,6 @@ use crate::typst::version::assert_supported_typst;
 
 const PREPROCESS_FINGERPRINT_FILE: &str = "fingerprint.xxh3";
 const PAGE_META_FILE: &str = "page-meta.json";
-const DEFAULT_PDF_THEME_SOURCE: &str = include_str!("../assets/themes/calepin-pdf.typ");
 const TYPST_SNIPPETS: &[(&str, &str)] = &[(
     "code-block.typ",
     include_str!("../assets/snippets/typst/code-block.typ"),
@@ -33,6 +32,10 @@ pub struct PreprocessOptions {
     pub quiet: bool,
     pub timeout: Option<u64>,
     pub sync_pages: bool,
+    /// CLI-level theme selection. `None` allows document setup and then
+    /// `fallback_theme` to decide.
+    pub theme: Option<crate::theme::ThemeSelection>,
+    pub fallback_theme: crate::theme::ThemeSelection,
     /// `key=value` document-parameter overrides from the CLI (`-P`).
     pub param_overrides: Vec<String>,
 }
@@ -42,6 +45,7 @@ pub struct PreprocessOutput {
     pub layout: LayoutPaths,
     pub executables: ExecutablePaths,
     pub fingerprint: u64,
+    pub theme: crate::theme::ThemeSelection,
 }
 
 #[derive(Debug)]
@@ -56,6 +60,7 @@ pub struct PreprocessPlan {
     sync_pages: bool,
     display_root: Option<PathBuf>,
     params: serde_json::Value,
+    theme: crate::theme::ThemeSelection,
 }
 
 pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
@@ -73,6 +78,7 @@ pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput>
             layout: plan.layout,
             executables: plan.executables,
             fingerprint: plan.fingerprint,
+            theme: plan.theme,
         });
     }
     execute_preprocess_plan(plan)
@@ -117,14 +123,19 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
             }
         })
         .collect();
-    let pdf_theme = load_pdf_theme_source(&config.pdf_theme)?;
+    let effective_theme = options
+        .theme
+        .clone()
+        .or(setup_config.defaults.theme_selection(&layout.root)?)
+        .unwrap_or_else(|| options.fallback_theme.clone());
+    let paged_theme = crate::theme::paged_source(&effective_theme)?;
     if !jupyter_kernels.is_empty() {
         let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
         layout.render_input =
-            write_render_wrapper(&layout, &staged_input, &kernels, pdf_theme.as_deref())?;
+            write_render_wrapper(&layout, &staged_input, &kernels, paged_theme.as_deref())?;
     } else {
         layout.render_input =
-            write_render_wrapper(&layout, &staged_input, &[], pdf_theme.as_deref())?;
+            write_render_wrapper(&layout, &staged_input, &[], paged_theme.as_deref())?;
     }
 
     let params = resolve_params(&setup_config.defaults.params, &options.param_overrides)?;
@@ -138,6 +149,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &cwd,
         timeout,
         &params,
+        &effective_theme,
     )?;
 
     Ok(PreprocessPlan {
@@ -151,6 +163,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         sync_pages: options.sync_pages,
         display_root: options.display_root,
         params,
+        theme: effective_theme,
     })
 }
 
@@ -158,7 +171,7 @@ fn write_render_wrapper(
     layout: &LayoutPaths,
     include_input: &Path,
     jupyter_kernels: &[&str],
-    pdf_theme: Option<&str>,
+    paged_theme: Option<&str>,
 ) -> Result<PathBuf> {
     let mut wrapper_relative = PathBuf::from(".calepin");
     let mut stem = layout.input_rel.clone();
@@ -201,10 +214,10 @@ fn write_render_wrapper(
         ));
     }
 
-    if let Some(pdf_theme) = pdf_theme {
-        lines.push_str("\n// PDF theme\n");
-        lines.push_str(pdf_theme);
-        if !pdf_theme.ends_with('\n') {
+    if let Some(paged_theme) = paged_theme {
+        lines.push_str("\n// Paged theme\n");
+        lines.push_str(paged_theme);
+        if !paged_theme.ends_with('\n') {
             lines.push('\n');
         }
     }
@@ -221,18 +234,6 @@ fn write_render_wrapper(
 
     fs::write(&wrapper, lines).with_context(|| format!("failed to write {}", wrapper.display()))?;
     Ok(wrapper_relative)
-}
-
-fn load_pdf_theme_source(pdf_theme: &PdfTheme) -> Result<Option<String>> {
-    match pdf_theme {
-        PdfTheme::Disabled => Ok(None),
-        PdfTheme::Default => Ok(Some(DEFAULT_PDF_THEME_SOURCE.to_string())),
-        PdfTheme::Path(path) => {
-            let source = fs::read_to_string(path)
-                .with_context(|| format!("failed to read pdf_theme {}", path.display()))?;
-            Ok(Some(source))
-        }
-    }
 }
 
 fn write_typst_snippets(root: &Path) -> Result<()> {
@@ -310,6 +311,7 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
         layout: plan.layout,
         executables: plan.executables,
         fingerprint: plan.fingerprint,
+        theme: plan.theme,
     })
 }
 
@@ -496,6 +498,7 @@ fn preprocess_fingerprint(
     cwd: &Path,
     timeout: Option<Duration>,
     params: &serde_json::Value,
+    theme: &crate::theme::ThemeSelection,
 ) -> Result<u64> {
     let payload = PreprocessFingerprint {
         schema: crate::typst::model::RESULT_SCHEMA_VERSION,
@@ -510,6 +513,7 @@ fn preprocess_fingerprint(
             .map(ChunkFingerprint::from)
             .collect::<Vec<_>>(),
         params: params.clone(),
+        theme: theme_fingerprint(theme),
     };
     let bytes = serde_json::to_vec(&payload)?;
     Ok(xxh3_64(&bytes))
@@ -568,6 +572,7 @@ struct PreprocessFingerprint {
     executables: ExecutableFingerprint,
     chunks: Vec<ChunkFingerprint>,
     params: serde_json::Value,
+    theme: String,
 }
 
 #[derive(Serialize)]
@@ -624,6 +629,15 @@ impl From<&ExecutablePaths> for ExecutableFingerprint {
 
 fn path_fingerprint(path: &Path) -> String {
     path.to_string_lossy().into_owned()
+}
+
+fn theme_fingerprint(theme: &crate::theme::ThemeSelection) -> String {
+    match theme {
+        crate::theme::ThemeSelection::Default => "default".to_string(),
+        crate::theme::ThemeSelection::Disabled => "disabled".to_string(),
+        crate::theme::ThemeSelection::Builtin(name) => format!("builtin:{name}"),
+        crate::theme::ThemeSelection::Dir(path) => format!("dir:{}", path.display()),
+    }
 }
 
 #[cfg(test)]
@@ -729,6 +743,7 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
         )
         .unwrap();
 
@@ -744,6 +759,7 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
         )
         .unwrap();
 
@@ -763,6 +779,7 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({"region": "NY"}),
+            &crate::theme::ThemeSelection::Default,
         )
         .unwrap();
         let changed = preprocess_fingerprint(
@@ -772,6 +789,7 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({"region": "CA"}),
+            &crate::theme::ThemeSelection::Default,
         )
         .unwrap();
         assert_ne!(baseline, changed);
@@ -790,6 +808,7 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
         )
         .unwrap();
 
@@ -800,6 +819,7 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
         )
         .unwrap();
         assert_ne!(baseline, code_changed);
@@ -813,6 +833,7 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
         )
         .unwrap();
         assert_ne!(baseline, exec_changed);
@@ -826,9 +847,39 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
         )
         .unwrap();
         assert_ne!(baseline, executables_changed);
+    }
+
+    #[test]
+    fn preprocess_fingerprint_tracks_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+        let executables = ExecutablePaths::defaults();
+        let chunk = test_chunk("print(1)");
+        let baseline = preprocess_fingerprint(
+            &layout,
+            &executables,
+            std::slice::from_ref(&chunk),
+            dir.path(),
+            Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
+        )
+        .unwrap();
+        let changed = preprocess_fingerprint(
+            &layout,
+            &executables,
+            &[chunk],
+            dir.path(),
+            Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Disabled,
+        )
+        .unwrap();
+        assert_ne!(baseline, changed);
     }
 
     #[test]
@@ -917,16 +968,16 @@ mod tests {
     }
 
     #[test]
-    fn render_wrapper_includes_pdf_theme_before_source() {
+    fn render_wrapper_includes_paged_theme_before_source() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
         let staged_input = PathBuf::from(".calepin/paper/source.typ");
-        let pdf_theme = "#let pdf-theme-marker = true\n";
+        let paged_theme = "#let paged-theme-marker = true\n";
 
-        let wrapper = write_render_wrapper(&layout, &staged_input, &[], Some(pdf_theme)).unwrap();
+        let wrapper = write_render_wrapper(&layout, &staged_input, &[], Some(paged_theme)).unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
-        let theme_marker = contents.find("#let pdf-theme-marker = true").unwrap();
+        let theme_marker = contents.find("#let paged-theme-marker = true").unwrap();
         let source_include = contents
             .find("#include \"/.calepin/paper/source.typ\"")
             .unwrap();
@@ -934,10 +985,16 @@ mod tests {
     }
 
     #[test]
-    fn default_pdf_theme_source_is_loaded() {
-        let source = load_pdf_theme_source(&PdfTheme::Default).unwrap().unwrap();
-
-        assert_eq!(source, DEFAULT_PDF_THEME_SOURCE);
+    fn paged_theme_comes_from_theme_selection() {
+        let source = crate::theme::paged_source(&crate::theme::ThemeSelection::Default)
+            .unwrap()
+            .unwrap();
+        assert!(source.contains("code-block"));
+        assert!(
+            crate::theme::paged_source(&crate::theme::ThemeSelection::Disabled)
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -951,19 +1008,6 @@ mod tests {
                 .unwrap(),
             TYPST_SNIPPETS[0].1
         );
-    }
-
-    #[test]
-    fn custom_pdf_theme_source_is_loaded() {
-        let theme_dir = tempfile::tempdir().unwrap();
-        let theme = theme_dir.path().join("pdf.typ");
-        std::fs::write(&theme, "#let custom = true\n").unwrap();
-
-        let source = load_pdf_theme_source(&PdfTheme::Path(theme))
-            .unwrap()
-            .unwrap();
-
-        assert_eq!(source, "#let custom = true\n");
     }
 
     fn test_layout(root: &Path) -> LayoutPaths {

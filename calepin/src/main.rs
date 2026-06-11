@@ -7,6 +7,7 @@ mod config;
 mod engines;
 mod health;
 mod html;
+mod theme;
 mod typst;
 mod utils;
 mod website;

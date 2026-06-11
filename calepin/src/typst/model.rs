@@ -1,9 +1,10 @@
+use anyhow::{anyhow, Result};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub const RESULT_SCHEMA_VERSION: u8 = 1;
 
@@ -131,6 +132,10 @@ pub struct SetupDefaults {
     /// JSON object. Injected once per engine so chunks can read a `params` value.
     #[serde(default)]
     pub params: Value,
+    /// Document-level theme from `calepin.setup(theme: ...)`: a builtin name, a
+    /// project-relative path, or `false` to disable.
+    #[serde(default)]
+    pub theme: Option<Value>,
 }
 
 impl Default for SetupDefaults {
@@ -154,6 +159,21 @@ impl Default for SetupDefaults {
             fig_responsive: Some(true),
             fenced_chunks: FencedChunks::All,
             params: Value::Object(serde_json::Map::new()),
+            theme: None,
+        }
+    }
+}
+
+impl SetupDefaults {
+    pub fn theme_selection(&self, root: &Path) -> Result<Option<crate::theme::ThemeSelection>> {
+        match &self.theme {
+            None | Some(Value::Null) => Ok(None),
+            Some(Value::Bool(false)) => Ok(Some(crate::theme::ThemeSelection::Disabled)),
+            Some(Value::Bool(true)) => Ok(Some(crate::theme::ThemeSelection::Default)),
+            Some(Value::String(value)) => {
+                Ok(Some(crate::theme::ThemeSelection::parse(value, root)?))
+            }
+            Some(other) => Err(anyhow!("invalid setup theme value: {other}")),
         }
     }
 }

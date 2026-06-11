@@ -1,4 +1,4 @@
-html_theme = "academic"
+theme = "academic"
 title = "Academic Site"
 description = "Research, teaching, publications, and notes."
 # base_url = "https://example.edu"

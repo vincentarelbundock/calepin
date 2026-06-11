@@ -1,159 +1,11 @@
 use std::collections::{BTreeMap, HashMap};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use minijinja::{AutoEscape, Environment};
 use serde::Serialize;
 
 use super::syntax::HtmlSyntaxTheme;
-
-/// A theme bundled into the binary. User themes on disk mirror this shape:
-/// a `layout.html`, plus optional `partials/`, `styles/`, and `scripts/`.
-struct BuiltinTheme {
-    name: &'static str,
-    files: &'static [TemplateFile],
-}
-
-struct TemplateFile {
-    path: &'static str,
-    source: &'static str,
-}
-
-static CALEPIN_HTML: BuiltinTheme = BuiltinTheme {
-    name: "calepin-html",
-    files: &[
-        TemplateFile {
-            path: "layout.html",
-            source: include_str!("../assets/themes/calepin-html/layout.html"),
-        },
-        TemplateFile {
-            path: "partials/theme-switcher.html",
-            source: include_str!("../assets/themes/calepin-html/partials/theme-switcher.html"),
-        },
-        TemplateFile {
-            path: "styles/00-theme.css",
-            source: include_str!("../assets/snippets/css/theme.css"),
-        },
-        TemplateFile {
-            path: "styles/01-code.css",
-            source: include_str!("../assets/snippets/css/code.css"),
-        },
-        TemplateFile {
-            path: "styles/02-widgets.css",
-            source: include_str!("../assets/snippets/css/widgets.css"),
-        },
-        TemplateFile {
-            path: "styles/main.css",
-            source: include_str!("../assets/themes/calepin-html/styles/main.css"),
-        },
-        TemplateFile {
-            path: "scripts/01-theme-toggle.js",
-            source: include_str!("../assets/snippets/js/theme-toggle.js"),
-        },
-        TemplateFile {
-            path: "scripts/02-copy-code.js",
-            source: include_str!("../assets/snippets/js/copy-code.js"),
-        },
-    ],
-};
-
-static CALEPIN_WEBSITE: BuiltinTheme = BuiltinTheme {
-    name: "calepin-website",
-    files: &[
-        TemplateFile {
-            path: "layout.html",
-            source: include_str!("../assets/themes/calepin-website/layout.html"),
-        },
-        TemplateFile {
-            path: "styles/00-theme.css",
-            source: include_str!("../assets/snippets/css/theme.css"),
-        },
-        TemplateFile {
-            path: "styles/01-code.css",
-            source: include_str!("../assets/snippets/css/code.css"),
-        },
-        TemplateFile {
-            path: "styles/02-widgets.css",
-            source: include_str!("../assets/snippets/css/widgets.css"),
-        },
-        TemplateFile {
-            path: "styles/main.css",
-            source: include_str!("../assets/themes/calepin-website/styles/main.css"),
-        },
-        TemplateFile {
-            path: "scripts/01-theme-toggle.js",
-            source: include_str!("../assets/snippets/js/theme-toggle.js"),
-        },
-        TemplateFile {
-            path: "scripts/02-language-picker.js",
-            source: include_str!("../assets/snippets/js/language-picker.js"),
-        },
-        TemplateFile {
-            path: "scripts/app.js",
-            source: include_str!("../assets/themes/calepin-website/scripts/app.js"),
-        },
-    ],
-};
-
-static ACADEMIC: BuiltinTheme = BuiltinTheme {
-    name: "academic",
-    files: &[
-        TemplateFile {
-            path: "layout.html",
-            source: include_str!("../assets/themes/academic/layout.html"),
-        },
-        TemplateFile {
-            path: "styles/00-theme.css",
-            source: include_str!("../assets/snippets/css/theme.css"),
-        },
-        TemplateFile {
-            path: "styles/01-code.css",
-            source: include_str!("../assets/snippets/css/code.css"),
-        },
-        TemplateFile {
-            path: "styles/02-widgets.css",
-            source: include_str!("../assets/snippets/css/widgets.css"),
-        },
-        TemplateFile {
-            path: "styles/main.css",
-            source: include_str!("../assets/themes/academic/styles/main.css"),
-        },
-        TemplateFile {
-            path: "scripts/01-theme-toggle.js",
-            source: include_str!("../assets/snippets/js/theme-toggle.js"),
-        },
-        TemplateFile {
-            path: "scripts/02-language-picker.js",
-            source: include_str!("../assets/snippets/js/language-picker.js"),
-        },
-        TemplateFile {
-            path: "scripts/03-copy-code.js",
-            source: include_str!("../assets/snippets/js/copy-code.js"),
-        },
-        TemplateFile {
-            path: "scripts/main.js",
-            source: include_str!("../assets/themes/academic/scripts/main.js"),
-        },
-    ],
-};
-
-static BUILTINS: &[&BuiltinTheme] = &[&CALEPIN_HTML, &CALEPIN_WEBSITE, &ACADEMIC];
-
-fn builtin(name: &str) -> Option<&'static BuiltinTheme> {
-    BUILTINS.iter().copied().find(|theme| theme.name == name)
-}
-
-pub(crate) fn is_builtin_html_theme(name: &str) -> bool {
-    builtin(name).is_some()
-}
-
-pub(crate) fn is_theme_path_like(value: &str) -> bool {
-    let path = Path::new(value);
-    path.is_absolute()
-        || path.components().count() > 1
-        || value.starts_with('.')
-        || value.contains('\\')
-}
 
 #[derive(Serialize)]
 struct StyleEntry {
@@ -165,17 +17,6 @@ struct StyleEntry {
 struct ScriptEntry {
     name: String,
     content: String,
-}
-
-/// A theme resolved to concrete, render-ready sources.
-struct LoadedTheme {
-    name: String,
-    layout: String,
-    /// `(template name, source)` where the name is `partials/<file>.html`, so
-    /// `{% include "partials/<file>.html" %}` resolves it.
-    partials: Vec<(String, String)>,
-    styles: Vec<StyleEntry>,
-    scripts: Vec<ScriptEntry>,
 }
 
 #[derive(Serialize)]
@@ -208,8 +49,8 @@ struct SnippetContext {
 
 #[derive(Serialize, Debug, Clone, Default)]
 pub(crate) struct SiteContextInput {
-    pub(crate) nav: Vec<SiteNavEntry>,
-    pub(crate) nav_sections: Vec<SiteNavSection>,
+    pub(crate) sidebar: Vec<SiteNavEntry>,
+    pub(crate) sidebar_sections: Vec<SiteNavSection>,
     pub(crate) navbar_left: Vec<SiteNavEntry>,
     pub(crate) navbar_center: Vec<SiteNavEntry>,
     pub(crate) navbar_right: Vec<SiteNavEntry>,
@@ -230,8 +71,8 @@ pub(crate) struct SiteContextInput {
 
 #[derive(Serialize)]
 struct SiteContext {
-    nav: Vec<NavEntry>,
-    nav_sections: Vec<NavSection>,
+    sidebar: Vec<NavEntry>,
+    sidebar_sections: Vec<NavSection>,
     navbar_left: Vec<NavEntry>,
     navbar_center: Vec<NavEntry>,
     navbar_right: Vec<NavEntry>,
@@ -314,16 +155,15 @@ struct HtmlDocumentParts<'a> {
 
 pub(super) fn apply_html_theme(
     html: &str,
-    html_theme: Option<&str>,
+    entry: Option<&crate::theme::HtmlEntry>,
     syntax_theme: &HtmlSyntaxTheme,
     output_path: Option<&Path>,
     project_root: Option<&Path>,
     site_context: Option<&SiteContextInput>,
 ) -> Result<String> {
-    let Some(name) = html_theme else {
+    let Some(entry) = entry else {
         return Ok(html.to_string());
     };
-    let loaded = load_theme(name, syntax_theme)?;
     // Rewrite Typst's inline `style="color: ..."` spans to syntax classes so
     // the theme's syntax CSS (placeholders or `syntax_css`) can drive colors.
     let rewritten = syntax_theme.rewrite_classes(html);
@@ -342,7 +182,7 @@ pub(super) fn apply_html_theme(
     };
     let parts = html_document_parts(&normalized)?;
     render_theme(
-        loaded,
+        entry,
         &parts,
         syntax_theme,
         output_path,
@@ -351,208 +191,75 @@ pub(super) fn apply_html_theme(
     )
 }
 
-fn load_theme(name: &str, syntax_theme: &HtmlSyntaxTheme) -> Result<LoadedTheme> {
-    if let Some(theme) = builtin(name) {
-        load_builtin_theme(theme, syntax_theme)
-    } else if is_theme_path_like(name) {
-        let dir = Path::new(name);
-        if dir.is_dir() {
-            load_directory_theme(
-                dir.file_name()
-                    .and_then(|name| name.to_str())
-                    .unwrap_or(name),
-                dir,
-                syntax_theme,
-            )
-        } else {
-            Err(anyhow!("HTML theme directory not found: {}", dir.display()))
-        }
-    } else {
-        Err(anyhow!(
-            "unknown HTML theme `{name}`; use a built-in theme name or a path to a theme directory"
-        ))
-    }
-}
-
-fn load_builtin_theme(theme: &BuiltinTheme, syntax_theme: &HtmlSyntaxTheme) -> Result<LoadedTheme> {
-    let layout_path = theme
-        .files
-        .iter()
-        .find(|file| file.path == "layout.html")
-        .map(|file| file.source)
-        .ok_or_else(|| anyhow!("missing `layout.html` for builtin theme `{}`", theme.name))?;
-
-    let mut styles = theme
-        .files
-        .iter()
-        .filter(|file| file.path.starts_with("styles/") && file.path.ends_with(".css"))
-        .map(|file| {
-            let name = file
-                .path
-                .rsplit_once('/')
-                .map(|(_, name)| name)
-                .unwrap_or(file.path);
-            (name, file.source)
-        })
-        .collect::<Vec<_>>();
-    styles.sort_by_key(|(name, _)| *name);
-
-    let mut scripts = theme
-        .files
-        .iter()
-        .filter(|file| file.path.starts_with("scripts/") && file.path.ends_with(".js"))
-        .map(|file| {
-            let name = file
-                .path
-                .rsplit_once('/')
-                .map(|(_, name)| name)
-                .unwrap_or(file.path);
-            (name, file.source)
-        })
-        .collect::<Vec<_>>();
-    scripts.sort_by_key(|(name, _)| *name);
-
-    let mut partials = theme
-        .files
-        .iter()
-        .filter(|file| file.path.starts_with("partials/") && file.path.ends_with(".html"))
-        .map(|file| {
-            let name = file
-                .path
-                .rsplit_once('/')
-                .map(|(_, name)| name)
-                .unwrap_or(file.path);
-            (name, file.source.to_string())
-        })
-        .collect::<Vec<_>>();
-    partials.sort_by(|a, b| a.0.cmp(&b.0));
-
-    Ok(LoadedTheme {
-        name: theme.name.to_string(),
-        layout: layout_path.to_string(),
-        partials: partials
-            .into_iter()
-            .map(|(file, source)| (format!("partials/{file}"), source))
-            .collect(),
-        styles: styles
-            .into_iter()
-            .map(|(file, css)| StyleEntry {
-                name: file.to_string(),
-                css: theme_css(css, syntax_theme),
-            })
-            .collect(),
-        scripts: scripts
-            .into_iter()
-            .map(|(file, content)| ScriptEntry {
-                name: file.to_string(),
-                content: content.to_string(),
-            })
-            .collect(),
-    })
-}
-
-fn load_directory_theme(
-    name: &str,
-    dir: &Path,
-    syntax_theme: &HtmlSyntaxTheme,
-) -> Result<LoadedTheme> {
-    let layout_path = dir.join("layout.html");
-    let layout = std::fs::read_to_string(&layout_path)
-        .with_context(|| format!("theme `{name}`: failed to read {}", layout_path.display()))?;
-
-    let partials = read_theme_files(&dir.join("partials"), "html")?
-        .into_iter()
-        .map(|(file, source)| (format!("partials/{file}"), source))
-        .collect();
-    let styles = read_theme_files(&dir.join("styles"), "css")?
-        .into_iter()
-        .map(|(file, css)| StyleEntry {
-            name: file,
-            css: theme_css(&css, syntax_theme),
-        })
-        .collect();
-    let scripts = read_theme_files(&dir.join("scripts"), "js")?
-        .into_iter()
-        .map(|(file, content)| ScriptEntry {
-            name: file,
-            content,
-        })
-        .collect();
-
-    Ok(LoadedTheme {
-        name: name.to_string(),
-        layout,
-        partials,
-        styles,
-        scripts,
-    })
-}
-
-pub(super) fn theme_stylesheet(name: &str) -> Result<Option<String>> {
-    let loaded = load_theme(name, &HtmlSyntaxTheme::builtin())?;
-    if loaded.styles.is_empty() {
-        return Ok(None);
-    }
-
+/// Build the shared website stylesheet from a resolved Site entry. The site
+/// layouts skip ALL inline CSS when `site.stylesheet` is set, so the shared
+/// stylesheet carries the snippet CSS as well as the bundle's own styles.
+pub(super) fn theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<Option<String>> {
+    let syntax_theme = HtmlSyntaxTheme::builtin();
     let mut css = String::new();
-    for style in loaded.styles {
+    let mut push = |chunk: &str| {
         if !css.is_empty() {
             css.push_str("\n\n");
         }
-        css.push_str(&style.css);
-        if !style.css.ends_with('\n') {
+        css.push_str(chunk);
+        if !chunk.ends_with('\n') {
             css.push('\n');
         }
+    };
+    push(&theme_css(
+        include_str!("../assets/snippets/css/theme.css"),
+        &syntax_theme,
+    ));
+    push(&theme_css(
+        include_str!("../assets/snippets/css/code.css"),
+        &syntax_theme,
+    ));
+    push(&theme_css(
+        include_str!("../assets/snippets/css/widgets.css"),
+        &syntax_theme,
+    ));
+    for (_, style) in &entry.styles {
+        push(&theme_css(style, &syntax_theme));
     }
-    Ok(Some(css))
-}
-
-/// Read every `*.<ext>` file in `dir`, sorted by filename for deterministic
-/// order. A missing directory yields no files.
-fn read_theme_files(dir: &Path, ext: &str) -> Result<Vec<(String, String)>> {
-    if !dir.is_dir() {
-        return Ok(Vec::new());
-    }
-
-    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
-        .with_context(|| format!("failed to read {}", dir.display()))?
-        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-        .filter(|path| path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some(ext))
-        .collect();
-    paths.sort();
-
-    let mut files = Vec::with_capacity(paths.len());
-    for path in paths {
-        let name = path
-            .file_name()
-            .map(|name| name.to_string_lossy().to_string())
-            .unwrap_or_default();
-        let contents = std::fs::read_to_string(&path)
-            .with_context(|| format!("failed to read {}", path.display()))?;
-        files.push((name, contents));
-    }
-    Ok(files)
+    Ok((!css.is_empty()).then_some(css))
 }
 
 fn render_theme(
-    loaded: LoadedTheme,
+    entry: &crate::theme::HtmlEntry,
     parts: &HtmlDocumentParts<'_>,
     syntax_theme: &HtmlSyntaxTheme,
     output_path: Option<&Path>,
     project_root: Option<&Path>,
     site_context_input: Option<&SiteContextInput>,
 ) -> Result<String> {
-    let name = loaded.name;
+    let name = entry.theme_name.clone();
     let mut env = Environment::new();
     // Every injected fragment is already-escaped Typst HTML or trusted theme
     // content, so emit raw and avoid double-escaping (e.g. of an escaped title).
     env.set_auto_escape_callback(|_| AutoEscape::None);
-    env.add_template_owned("layout.html", loaded.layout)
+    env.add_template_owned("layout.html", entry.layout.clone())
         .map_err(|error| theme_error(&name, error))?;
-    for (template_name, source) in loaded.partials {
-        env.add_template_owned(template_name, source)
+    for (template_name, source) in &entry.partials {
+        env.add_template_owned(template_name.clone(), source.clone())
             .map_err(|error| theme_error(&name, error))?;
     }
+
+    let styles: Vec<StyleEntry> = entry
+        .styles
+        .iter()
+        .map(|(name, css)| StyleEntry {
+            name: name.clone(),
+            css: theme_css(css, syntax_theme),
+        })
+        .collect();
+    let scripts: Vec<ScriptEntry> = entry
+        .scripts
+        .iter()
+        .map(|(name, content)| ScriptEntry {
+            name: name.clone(),
+            content: content.clone(),
+        })
+        .collect();
 
     let (body, toc) = body_with_heading_ids(parts.body);
     let context = ThemeContext {
@@ -564,9 +271,9 @@ fn render_theme(
             title: parts.title.clone().unwrap_or_default(),
         },
         site: site_context(project_root, output_path, toc, site_context_input),
-        snippets: snippet_context(),
-        styles: loaded.styles,
-        scripts: loaded.scripts,
+        snippets: snippet_context(syntax_theme),
+        styles,
+        scripts,
         syntax_css: syntax_css(syntax_theme),
         theme: name.clone(),
         target: "html".to_string(),
@@ -580,20 +287,29 @@ fn render_theme(
         .map_err(|error| theme_error(&name, error))
 }
 
-fn snippet_context() -> SnippetContext {
+fn snippet_context(syntax_theme: &HtmlSyntaxTheme) -> SnippetContext {
     SnippetContext {
         css: BTreeMap::from([
             (
                 "theme".to_string(),
-                include_str!("../assets/snippets/css/theme.css").to_string(),
+                theme_css(
+                    include_str!("../assets/snippets/css/theme.css"),
+                    syntax_theme,
+                ),
             ),
             (
                 "code".to_string(),
-                include_str!("../assets/snippets/css/code.css").to_string(),
+                theme_css(
+                    include_str!("../assets/snippets/css/code.css"),
+                    syntax_theme,
+                ),
             ),
             (
                 "widgets".to_string(),
-                include_str!("../assets/snippets/css/widgets.css").to_string(),
+                theme_css(
+                    include_str!("../assets/snippets/css/widgets.css"),
+                    syntax_theme,
+                ),
             ),
         ]),
         js: BTreeMap::from([
@@ -625,9 +341,9 @@ fn site_context(
 ) -> SiteContext {
     if let Some(input) = site_context_input {
         return SiteContext {
-            nav: input.nav.iter().map(nav_entry_from_input).collect(),
-            nav_sections: input
-                .nav_sections
+            sidebar: input.sidebar.iter().map(nav_entry_from_input).collect(),
+            sidebar_sections: input
+                .sidebar_sections
                 .iter()
                 .map(|section| NavSection {
                     title: section.title.clone(),
@@ -645,7 +361,11 @@ fn site_context(
                 .iter()
                 .map(nav_entry_from_input)
                 .collect(),
-            languages: input.languages.iter().map(language_entry_from_input).collect(),
+            languages: input
+                .languages
+                .iter()
+                .map(language_entry_from_input)
+                .collect(),
             translations: input
                 .translations
                 .iter()
@@ -668,7 +388,7 @@ fn site_context(
 
     let nav = nav_entries(project_root, output_path);
     SiteContext {
-        nav_sections: if nav.is_empty() {
+        sidebar_sections: if nav.is_empty() {
             Vec::new()
         } else {
             vec![NavSection {
@@ -676,7 +396,7 @@ fn site_context(
                 items: nav.clone(),
             }]
         },
-        nav,
+        sidebar: nav,
         navbar_left: Vec::new(),
         navbar_center: Vec::new(),
         navbar_right: Vec::new(),

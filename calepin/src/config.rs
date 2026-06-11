@@ -10,19 +10,9 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
 #[cfg(not(windows))]
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 
-pub const DEFAULT_PDF_THEME_NAME: &str = "calepin-pdf";
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
-    pub pdf_theme: PdfTheme,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PdfTheme {
-    Default,
-    Disabled,
-    Path(PathBuf),
 }
 
 impl CalepinConfig {
@@ -44,14 +34,12 @@ impl CalepinConfig {
         let config_dir = path.parent().unwrap_or(root);
         Ok(Self {
             executables: ExecutablePaths::from_raw(root, config_dir, raw.executables),
-            pdf_theme: resolve_pdf_theme(config_dir, raw.pdf_theme),
         })
     }
 
     fn default_for_root(root: &Path) -> Self {
         Self {
             executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
-            pdf_theme: PdfTheme::Default,
         }
     }
 }
@@ -61,19 +49,6 @@ fn resolve_config_path(path: &Path) -> Result<PathBuf> {
         Ok(path.to_path_buf())
     } else {
         Ok(std::env::current_dir()?.join(path))
-    }
-}
-
-fn resolve_pdf_theme(config_dir: &Path, value: Option<RawPdfTheme>) -> PdfTheme {
-    match value {
-        None => PdfTheme::Default,
-        Some(RawPdfTheme::Bool(true)) => PdfTheme::Default,
-        Some(RawPdfTheme::Bool(false)) => PdfTheme::Disabled,
-        Some(RawPdfTheme::Path(path)) if path == Path::new(DEFAULT_PDF_THEME_NAME) => {
-            PdfTheme::Default
-        }
-        Some(RawPdfTheme::Path(path)) if path.is_absolute() => PdfTheme::Path(path),
-        Some(RawPdfTheme::Path(path)) => PdfTheme::Path(config_dir.join(path)),
     }
 }
 
@@ -143,14 +118,6 @@ impl ExecutablePaths {
 #[serde(default)]
 struct RawCalepinConfig {
     executables: RawExecutablePaths,
-    pdf_theme: Option<RawPdfTheme>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(untagged)]
-enum RawPdfTheme {
-    Bool(bool),
-    Path(PathBuf),
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -248,51 +215,6 @@ mod tests {
         assert_eq!(config.executables.typst, PathBuf::from("typst"));
         assert_eq!(config.executables.python, PathBuf::from("python3"));
         assert_eq!(config.executables.rscript, PathBuf::from("Rscript"));
-    }
-
-    #[test]
-    fn config_overrides_pdf_theme_path() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        let dir = tempfile::tempdir().unwrap();
-        let calepin_dir = dir.path().join(".calepin");
-        std::fs::create_dir(&calepin_dir).unwrap();
-        std::fs::write(
-            calepin_dir.join("config.toml"),
-            "pdf_theme = \"themes/pdf.typ\"\n",
-        )
-        .unwrap();
-
-        let config =
-            CalepinConfig::load(dir.path(), Some(&calepin_dir.join("config.toml"))).unwrap();
-
-        assert_eq!(
-            config.pdf_theme,
-            PdfTheme::Path(calepin_dir.join("themes/pdf.typ"))
-        );
-    }
-
-    #[test]
-    fn config_accepts_builtin_pdf_theme_name() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("config.toml");
-        std::fs::write(&config_path, "pdf_theme = \"calepin-pdf\"\n").unwrap();
-
-        let config = CalepinConfig::load(dir.path(), Some(&config_path)).unwrap();
-
-        assert_eq!(config.pdf_theme, PdfTheme::Default);
-    }
-
-    #[test]
-    fn config_disables_pdf_theme() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("config.toml");
-        std::fs::write(&config_path, "pdf_theme = false\n").unwrap();
-
-        let config = CalepinConfig::load(dir.path(), Some(&config_path)).unwrap();
-
-        assert_eq!(config.pdf_theme, PdfTheme::Disabled);
     }
 
     #[test]

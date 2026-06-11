@@ -43,6 +43,7 @@
   fig-responsive: _base-options.at("fig-responsive"),
   fenced-chunks: true,
   fallback-warning: true,
+  theme: none,
   params: (:),
   ) = {
   _validate-params(params, "")
@@ -65,6 +66,7 @@
     "fig-responsive": fig-responsive,
     "fenced-chunks": fenced-chunks,
     "fallback-warning": fallback-warning,
+    theme: theme,
     params: params,
   )
   _setup-defaults.update(defaults => (default: defaults.at("default") + setup-opts))

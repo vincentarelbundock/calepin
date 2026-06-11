@@ -54,7 +54,7 @@
     <link rel="stylesheet" href=".calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"== `config.toml`\n\n`Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:\n\n```bash\ncalepin compile --config config.toml paper.typ\n```\n\nIf `--config` is omitted, `Calepin` uses defaults.\n\nRelative paths written inside the config (the executables and `pdf_theme`)\nresolve relative to the config file's own directory, not the document being\ncompiled. Absolute paths are used as is.\n\n```toml\n# config.toml\n\n[executables]\ntypst = \"typst\"                    # Typst binary (can be name or full path)\npython = \".venv/bin/python\"         # Python interpreter\nrscript = \"Rscript\"                # R executable\nmmdc = \"mmdc\"                      # Mermaid\n#dot = \"/opt/homebrew/bin/dot\"     # optional, if needed\n#d2 = \"d2\"                          # optional\n#tectonic = \"tectonic\"              # optional\n#dvisvgm = \"dvisvgm\"                # optional\n#pdf2svg = \"pdf2svg\"                # optional\n\npdf_theme = \"themes/pdf.typ\"         # optional Typst theme for PDF/paged output\n```\n\nIf `pdf_theme` is omitted, Calepin uses its bundled `calepin-pdf` theme. You can\nalso write `pdf_theme = \"calepin-pdf\"` explicitly. Set `pdf_theme = false` to\ndisable `calepin-pdf` and let Typst render source blocks with its defaults.\n\nIf `python` is not configured, set `CALEPIN_PYTHON` in the environment to\npick it. If that is absent, Calepin uses a local `.venv` interpreter when\navailable.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"== `config.toml`\n\n`Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:\n\n```bash\ncalepin compile --config config.toml paper.typ\n```\n\nIf `--config` is omitted, `Calepin` uses defaults.\n\nRelative paths written inside the config resolve relative to the config file's\nown directory, not the document being compiled. Absolute paths are used as is.\n\n```toml\n# config.toml\n\n[executables]\ntypst = \"typst\"                    # Typst binary (can be name or full path)\npython = \".venv/bin/python\"         # Python interpreter\nrscript = \"Rscript\"                # R executable\nmmdc = \"mmdc\"                      # Mermaid\n#dot = \"/opt/homebrew/bin/dot\"     # optional, if needed\n#d2 = \"d2\"                          # optional\n#tectonic = \"tectonic\"              # optional\n#dvisvgm = \"dvisvgm\"                # optional\n#pdf2svg = \"pdf2svg\"                # optional\n```\n\nIf `python` is not configured, set `CALEPIN_PYTHON` in the environment to\npick it. If that is absent, Calepin uses a local `.venv` interpreter when\navailable.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -188,7 +188,7 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h3 id="config-toml"><code>config.toml</code></h3><p><code>Calepin</code> does not auto-discover configuration. For <code>compile</code> and <code>watch</code>, pass the config path explicitly with <code>--config=PATH</code>:</p><pre><code data-lang="bash"><span style="color: #4b69c6">calepin</span> compile --config config.toml paper.typ</code></pre><p>If <code>--config</code> is omitted, <code>Calepin</code> uses defaults.</p><p>Relative paths written inside the config (the executables and <code>pdf_theme</code>) resolve relative to the config file’s own directory, not the document being compiled. Absolute paths are used as is.</p><pre><code data-lang="toml"><span style="color: #74747c">#</span><span style="color: #74747c"> config.toml</span>
+            <h3 id="config-toml"><code>config.toml</code></h3><p><code>Calepin</code> does not auto-discover configuration. For <code>compile</code> and <code>watch</code>, pass the config path explicitly with <code>--config=PATH</code>:</p><pre><code data-lang="bash"><span style="color: #4b69c6">calepin</span> compile --config config.toml paper.typ</code></pre><p>If <code>--config</code> is omitted, <code>Calepin</code> uses defaults.</p><p>Relative paths written inside the config resolve relative to the config file’s own directory, not the document being compiled. Absolute paths are used as is.</p><pre><code data-lang="toml"><span style="color: #74747c">#</span><span style="color: #74747c"> config.toml</span>
 
 [<span style="color: #4b69c6">executables</span>]
 <span style="color: #4b69c6">typst</span> = <span style="color: #198810">"</span><span style="color: #198810">typst</span><span style="color: #198810">"</span>                    <span style="color: #74747c">#</span><span style="color: #74747c"> Typst binary (can be name or full path)</span>
@@ -199,9 +199,7 @@
 <span style="color: #74747c">#</span><span style="color: #74747c">d2 = "d2"                          # optional</span>
 <span style="color: #74747c">#</span><span style="color: #74747c">tectonic = "tectonic"              # optional</span>
 <span style="color: #74747c">#</span><span style="color: #74747c">dvisvgm = "dvisvgm"                # optional</span>
-<span style="color: #74747c">#</span><span style="color: #74747c">pdf2svg = "pdf2svg"                # optional</span>
-
-<span style="color: #4b69c6">pdf_theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/pdf.typ</span><span style="color: #198810">"</span>         <span style="color: #74747c">#</span><span style="color: #74747c"> optional Typst theme for PDF/paged output</span></code></pre><p>If <code>pdf_theme</code> is omitted, Calepin uses its bundled <code>calepin-pdf</code> theme. You can also write <code>pdf_theme = "calepin-pdf"</code> explicitly. Set <code>pdf_theme = false</code> to disable <code>calepin-pdf</code> and let Typst render source blocks with its defaults.</p><p>If <code>python</code> is not configured, set <code>CALEPIN_PYTHON</code> in the environment to pick it. If that is absent, Calepin uses a local <code>.venv</code> interpreter when available.</p>
+<span style="color: #74747c">#</span><span style="color: #74747c">pdf2svg = "pdf2svg"                # optional</span></code></pre><p>If <code>python</code> is not configured, set <code>CALEPIN_PYTHON</code> in the environment to pick it. If that is absent, Calepin uses a local <code>.venv</code> interpreter when available.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -326,8 +324,7 @@
     </footer>
     
     
-<script>
-(() => {
+    <script>(() => {
   "use strict";
 
   const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
@@ -432,10 +429,8 @@
     if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
   });
 })();
-
-    </script>
-<script>
-(() => {
+</script>
+    <script>(() => {
   "use strict";
 
   const selects = document.querySelectorAll("select[data-calepin-language-picker]");
@@ -519,8 +514,70 @@
     if (event.key === "Escape") closeAll();
   });
 })();
+</script>
+    <script>(() => {
+  "use strict";
 
-    </script>
+  const selector = window.CalepinCopyCode?.selector ||
+    "div.sourceCode, pre.sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
+  const buttonClass = window.CalepinCopyCode?.buttonClass || "calepin-copy-code";
+  const copiedClass = window.CalepinCopyCode?.copiedClass || "copied";
+  const icon = window.CalepinCopyCode?.icon ||
+    `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+
+  function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      textarea.remove();
+    }
+    return Promise.resolve();
+  }
+
+  function codeText(node) {
+    if (!node) return "";
+    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    if (node.tagName === "BR") return "\n";
+    return Array.from(node.childNodes).map(codeText).join("");
+  }
+
+  document.querySelectorAll(selector).forEach((block) => {
+    if (block.dataset.calepinCopyBound === "true" || block.querySelector(`:scope > .${buttonClass}`)) {
+      return;
+    }
+    block.dataset.calepinCopyBound = "true";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = buttonClass;
+    button.setAttribute("aria-label", "Copy code");
+    button.setAttribute("title", "Copy code");
+    button.innerHTML = icon;
+    button.addEventListener("click", async () => {
+      const code = block.querySelector("pre code, code, pre");
+      const text = codeText(code);
+      try {
+        await copyText(text);
+        button.classList.add(copiedClass);
+        window.setTimeout(() => button.classList.remove(copiedClass), 900);
+      } catch {
+        button.classList.remove(copiedClass);
+      }
+    });
+    block.prepend(button);
+  });
+})();
+</script>
 <script>
 /* Calepin website behaviour, consolidated.
  *
@@ -533,6 +590,9 @@
  * needed. */
 (() => {
   "use strict";
+
+  // Single-document render: website shell behaviors do not apply.
+  if (!document.querySelector(".calepin-website-shell")) return;
 
   const VIEW = {
     storageKey: "calepin-website-view-mode",

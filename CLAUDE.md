@@ -65,9 +65,15 @@ For input `paper.typ` under a project root, artifacts live under `.calepin/<stem
 
 `calepin watch` preprocesses once, then spawns a child `typst watch` for live re-rendering and runs its own filesystem watcher (`notify`) over the project root. On a source change, the watcher re-runs `preprocess` (regenerating `results.json`); the child `typst watch` notices the changed results and re-renders. Calepin owns no HTTP server or port. Ctrl+C stops both.
 
-### HTML theming (`typst/html_theme.rs`)
+### Theme bundles (`theme.rs`, `html/theme.rs`)
 
-For HTML output, Calepin post-processes the Typst HTML: applies a Pico CSS theme, generates light/dark syntax-highlighting CSS from `.tmTheme` files (embedded under `templates/html-theme/`), and inlines images. The selected theme name comes from `calepin.setup` and travels into the render pass via the reserved `calepin-raw-theme` input.
+Themes are bundles under `calepin/src/assets/themes/<name>/` with well-known
+entry files: `document.html`, `site.html`, and `paged.typ`. `theme.rs` owns
+selection, builtin bundle metadata, fallback to the default `calepin` bundle,
+and `calepin new theme` ejection. HTML rendering resolves a bundle entry before
+calling `html/theme.rs`; paged rendering injects the effective bundle
+`paged.typ` during preprocessing. User-owned themes live outside `.calepin/`;
+`.calepin/` remains regenerable and overwritten by builds.
 
 ## Conventions
 

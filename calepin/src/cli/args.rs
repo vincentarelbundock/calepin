@@ -73,12 +73,16 @@ impl CompileFormat {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct NewArgs {
-    /// Path to the new .typ file, or `website`/`academic` to scaffold a website
+    /// Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
     pub path: PathBuf,
 
     /// Overwrite the file if it already exists
     #[arg(short, long)]
     pub force: bool,
+
+    /// Builtin theme to copy when PATH is `theme` (default: calepin)
+    #[arg(long = "theme")]
+    pub theme: Option<String>,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -108,9 +112,7 @@ pub struct CompileArgs {
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
-    /// HTML theme applied after compilation.
-    ///
-    /// Use `calepin-html`, `calepin-website`, or a path to a theme directory.
+    /// Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false.
     #[arg(long = "theme", alias = "template")]
     pub theme: Option<String>,
 
@@ -280,13 +282,13 @@ mod tests {
             "--format",
             "html",
             "--theme",
-            "calepin-html",
+            "calepin",
         ])
         .unwrap();
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.theme, Some("calepin-html".to_string()));
+                assert_eq!(args.theme, Some("calepin".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
         }
@@ -322,13 +324,13 @@ mod tests {
             "--format",
             "html",
             "--template",
-            "calepin-html",
+            "calepin",
         ])
         .unwrap();
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.theme, Some("calepin-html".to_string()));
+                assert_eq!(args.theme, Some("calepin".to_string()));
             }
             other => panic!("expected compile command, got {other:?}"),
         }

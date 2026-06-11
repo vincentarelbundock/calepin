@@ -78,6 +78,9 @@
 {% if site.stylesheet %}
     <link rel="stylesheet" href="{{ site.stylesheet }}">
 {% else %}
+    <style>{{ snippets.css.theme }}</style>
+    <style>{{ snippets.css.code }}</style>
+    <style>{{ snippets.css.widgets }}</style>
 {% for style in styles -%}
     <style>
 {{ style.css }}
@@ -134,8 +137,8 @@
         <div class="calepin-website-nav-backdrop" aria-hidden="true"></div>
         <aside id="calepin-website-sidebar" class="calepin-website-sidebar">
             <nav aria-label="Documentation">
-                {% if site.nav_sections %}
-                    {% for section in site.nav_sections %}
+                {% if site.sidebar_sections %}
+                    {% for section in site.sidebar_sections %}
                     {% if section.items %}
                     {% if section.title %}
                     <p><strong>{{ section.title }}</strong></p>
@@ -147,9 +150,9 @@
                     </ul>
                     {% endif %}
                     {% endfor %}
-                {% elif site.nav %}
+                {% elif site.sidebar %}
                     <ul>
-                        {% for item in site.nav %}
+                        {% for item in site.sidebar %}
                         <li><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
                         {% endfor %}
                     </ul>
@@ -173,9 +176,9 @@
         {% endif %}
     </div>
 
-    {% if site.nav %}
+    {% if site.sidebar %}
     {% set ns = namespace(prev = none, next = none, active_found = false, previous = none) %}
-    {% for item in site.nav %}
+    {% for item in site.sidebar %}
         {% if ns.active_found %}
             {% set ns.next = item %}
             {% set ns.active_found = false %}
@@ -218,6 +221,9 @@
     </footer>
     {% endif %}
     {% endif %}
+    <script>{{ snippets.js.theme_toggle }}</script>
+    <script>{{ snippets.js.language_picker }}</script>
+    <script>{{ snippets.js.copy_code }}</script>
 {% for script in scripts -%}
     <script>
 {{ script.content }}

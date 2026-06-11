@@ -3,7 +3,6 @@
 Website settings live in `calepin.toml`, at the root of the website source directory. `website.toml` is accepted as a deprecated fallback name, and `--config <path>` points a build at a config stored elsewhere.
 
 ```toml
-html_theme = "calepin-website"
 title = "My Site"
 description = "A static website built from Typst documents."
 base_url = "https://example.com"
@@ -12,29 +11,33 @@ logo_alt = "My Site"
 home = "index.html"
 github_url = "https://github.com/user/repo"
 pdf = true
-pdf_theme = "docs/assets/pdf-theme.typ"
+theme = "academic"
 ```
 
-== HTML theme
+== Theme
 
-`html_theme` selects the HTML theme. It can be:
+`theme` selects one theme bundle for website HTML and paged output. It can be:
 
-- `calepin-website` for the bundled website theme
-- a path to a theme directory containing `layout.html`
+- `calepin` for the bundled default theme
+- `academic` for the bundled academic website theme
+- a path to a theme bundle directory
+- `false` for raw output with no theme
 
-If `html_theme` is omitted, website builds use `calepin-website`. `theme` and `template` are accepted as backward-compatible aliases.
+If `theme` is omitted, website builds use `calepin`. Per-document
+`#calepin.setup(theme: ...)` can override the config value, and CLI `--theme`
+overrides both.
 
 ```toml
-html_theme = "calepin-website"
+theme = "themes/my-theme"
 ```
 
 == PDF outputs
 
 `pdf` controls whether website builds also render a `.pdf` for every page. It defaults to `true`. Pages can override the site setting through the `pdf` entry of their `<website-metadata>` metadata, and `--format html` disables PDF rendering for one build regardless of configuration.
 
-== PDF theme
-
-`pdf_theme` selects a Typst theme file for PDF and other paged output. If it is omitted, _Calepin_ uses the bundled `calepin-pdf` theme, which styles ordinary fenced source blocks as boxes to match rendered chunk source and output blocks. You can also write `pdf_theme = "calepin-pdf"` explicitly. Set `pdf_theme = false` to disable this default. Relative paths resolve from the config file, so a theme stored with website assets can be referenced as `pdf_theme = "assets/pdf-theme.typ"` from the `calepin.toml` in the source directory.
+Paged styling lives in the selected bundle's `paged.typ`. An absent
+`paged.typ` inherits the default styling; an empty `paged.typ` disables paged
+styling for that bundle.
 
 == Metadata
 

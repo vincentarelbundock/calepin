@@ -34,6 +34,8 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         sync_pages,
+        theme: None,
+        fallback_theme: crate::theme::ThemeSelection::Default,
         param_overrides: args.common.params.clone(),
     }
 }

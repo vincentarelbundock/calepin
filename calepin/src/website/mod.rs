@@ -18,8 +18,7 @@ use xxhash_rust::xxh3::xxh3_64;
 use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
 use crate::html::{
-    is_builtin_html_theme, is_theme_path_like, write_html_theme_stylesheet, SiteContextInput,
-    SiteLanguageEntry, SiteNavEntry, SiteNavSection,
+    write_html_theme_stylesheet, SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection,
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{
@@ -29,7 +28,6 @@ use crate::typst::preprocess::{
 const DEFAULT_CONFIG: &str = "calepin.toml";
 const LEGACY_CONFIG: &str = "website.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
-const DEFAULT_WEBSITE_THEME: &str = "calepin-website";
 const WEBSITE_STYLESHEET_PATH: &str = ".calepin/calepin-website.css";
 const FALLBACK_PAGE: &str = "404.typ";
 const INDEX_PAGE: &str = "index.typ";
@@ -227,18 +225,28 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         Some(out) => resolve_cli_path(&current_dir, out),
         None => src_dir.clone(),
     };
-    let raw_theme = configured_html_theme(args.theme.as_deref(), &config).to_string();
-
     if !src_dir.is_dir() {
         return Err(anyhow!("source directory not found: {}", src_dir.display()));
     }
 
     let calepin_config = CalepinConfig::load(&src_dir, Some(&config_path))?;
     let config_dir = config_path.parent().unwrap_or(&current_dir);
-    let theme = resolve_html_theme_ref(config_dir, &raw_theme);
-    let theme_dir = html_theme_dir(&theme);
-    let theme_stylesheet_path =
-        (theme == DEFAULT_WEBSITE_THEME).then(|| PathBuf::from(WEBSITE_STYLESHEET_PATH));
+    let cli_theme = args
+        .theme
+        .as_deref()
+        .map(|value| crate::theme::ThemeSelection::parse(value, &current_dir))
+        .transpose()?;
+    let config_theme = config.theme_selection(config_dir)?;
+    let site_theme = cli_theme.clone().unwrap_or_else(|| config_theme.clone());
+    let theme_dir = match &site_theme {
+        crate::theme::ThemeSelection::Dir(dir) => Some(dir.clone()),
+        _ => None,
+    };
+    let site_entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?;
+    let mut theme_stylesheet_path = site_entry
+        .as_ref()
+        .filter(|entry| entry.is_default)
+        .map(|_| PathBuf::from(WEBSITE_STYLESHEET_PATH));
     let languages = configured_languages(&src_dir, &config)?;
     let (section_plans, mut typ_files) = discover_site_pages(
         &src_dir,
@@ -277,15 +285,27 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     // Phase 1: preprocess the build set. This executes code chunks and also
     // extracts each page's `<website-metadata>` from the staged source, where
     // imports resolve.
-    let preprocessed = preprocess_documents(
-        &build_set,
-        &src_dir,
-        &config_path,
-        args.quiet,
-        args.timeout,
-        &args.params,
-        args.parallelism,
-    )?;
+    let preprocessed = preprocess_documents(WebsitePreprocessOptions {
+        typ_files: &build_set,
+        src_dir: &src_dir,
+        config_path: &config_path,
+        quiet: args.quiet,
+        timeout: args.timeout,
+        params: &args.params,
+        cli_theme: cli_theme.clone(),
+        fallback_theme: config_theme.clone(),
+        parallelism: args.parallelism,
+    })?;
+    if theme_stylesheet_path.is_none()
+        && preprocessed.values().any(|output| {
+            crate::theme::resolve_html_entry(&output.theme, crate::theme::HtmlScope::Site)
+                .ok()
+                .flatten()
+                .is_some_and(|entry| entry.is_default)
+        })
+    {
+        theme_stylesheet_path = Some(PathBuf::from(WEBSITE_STYLESHEET_PATH));
+    }
 
     let page_meta = load_page_meta(&typ_files);
     let metadata = SiteMetadata::from_config(&config);
@@ -296,9 +316,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
     let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
     let mut icon_cache = IconCache::new(src_dir.join(ICON_CACHE_DIR));
-    let nav_sections = nav_from_plans(&section_plans, &page_meta, &page_info, &mut icon_cache)?;
+    let sidebar_sections = nav_from_plans(&section_plans, &page_meta, &page_info, &mut icon_cache)?;
     let navbar = navbar_from_plan(&navbar_plan, &page_meta, &page_info, &mut icon_cache)?;
-    let nav_signature = navigation_signature(&nav_sections) ^ navbar_signature(&navbar);
+    let nav_signature = navigation_signature(&sidebar_sections) ^ navbar_signature(&navbar);
     let pages_index =
         build_pages_index(&src_dir, &typ_files, &section_plans, &page_meta, &page_info);
     let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
@@ -323,7 +343,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     fs::create_dir_all(&out_dir)
         .with_context(|| format!("failed to create {}", out_dir.display()))?;
     if let Some(path) = theme_stylesheet_path.as_deref() {
-        write_html_theme_stylesheet(&theme, &out_dir, path)?;
+        let entry = crate::theme::resolve_html_entry(
+            &crate::theme::ThemeSelection::Default,
+            crate::theme::HtmlScope::Site,
+        )?
+        .expect("default theme must provide a site entry");
+        write_html_theme_stylesheet(&entry, &out_dir, path)?;
     }
 
     if out_dir != src_dir {
@@ -341,12 +366,11 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     }
 
     // Phase 2: render the preprocessed pages with full site context.
-    let site = SiteModel::new(nav_sections, navbar, metadata.clone());
+    let site = SiteModel::new(sidebar_sections, navbar, metadata.clone());
     render_documents(
         &BuildContext {
             out_dir: out_dir.clone(),
             typst: calepin_config.executables.typst,
-            theme,
             pdf_files,
             page_info: page_info.clone(),
             languages: languages.clone(),
@@ -637,14 +661,13 @@ fn changed_typ_pages(
 }
 
 #[derive(Debug, Deserialize, Default)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 struct WebsiteConfig {
     default_language: Option<String>,
     languages: BTreeMap<String, LanguageConfig>,
-    html_theme: Option<String>,
-    // Backward-compatible aliases for older website configs.
-    theme: Option<String>,
-    template: Option<String>,
+    #[serde(rename = "executables")]
+    _executables: Option<toml::Value>,
+    theme: Option<RawThemeValue>,
     title: Option<String>,
     description: Option<String>,
     base_url: Option<String>,
@@ -658,6 +681,26 @@ struct WebsiteConfig {
     pages: Option<PagesConfig>,
     navbar: Option<NavbarConfig>,
     sidebar: Option<SidebarConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
+enum RawThemeValue {
+    Enabled(String),
+    Toggle(bool),
+}
+
+impl WebsiteConfig {
+    fn theme_selection(&self, config_dir: &Path) -> Result<crate::theme::ThemeSelection> {
+        match &self.theme {
+            None => Ok(crate::theme::ThemeSelection::Default),
+            Some(RawThemeValue::Toggle(false)) => Ok(crate::theme::ThemeSelection::Disabled),
+            Some(RawThemeValue::Toggle(true)) => Ok(crate::theme::ThemeSelection::Default),
+            Some(RawThemeValue::Enabled(value)) => {
+                crate::theme::ThemeSelection::parse(value, config_dir)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -690,14 +733,6 @@ fn pdf_enabled_files(
         })
         .cloned()
         .collect()
-}
-
-fn configured_html_theme<'a>(cli_theme: Option<&'a str>, config: &'a WebsiteConfig) -> &'a str {
-    cli_theme
-        .or(config.html_theme.as_deref())
-        .or(config.theme.as_deref())
-        .or(config.template.as_deref())
-        .unwrap_or(DEFAULT_WEBSITE_THEME)
 }
 
 fn configured_languages(
@@ -929,8 +964,8 @@ impl SiteModel {
         page_info_map: &PageInfoMap,
         languages: Option<&[LanguageInfo]>,
     ) -> SiteContextInput {
-        let mut nav = Vec::new();
-        let mut nav_sections = Vec::new();
+        let mut sidebar = Vec::new();
+        let mut sidebar_sections = Vec::new();
         let mut page_title = None;
         let current_language = page_info.and_then(|info| info.language.as_deref());
 
@@ -950,10 +985,10 @@ impl SiteModel {
                     widget: None,
                     active: item.href == current_href,
                 };
-                nav.push(entry.clone());
+                sidebar.push(entry.clone());
                 items.push(entry);
             }
-            nav_sections.push(SiteNavSection {
+            sidebar_sections.push(SiteNavSection {
                 title: section.title.as_ref().map(|title| html_escape(title)),
                 items,
             });
@@ -970,8 +1005,8 @@ impl SiteModel {
             .unwrap_or_default();
 
         SiteContextInput {
-            nav,
-            nav_sections,
+            sidebar,
+            sidebar_sections,
             navbar_left: self.navbar.entries_for_current_page(
                 current_href,
                 &self.navbar.left,
@@ -1088,7 +1123,6 @@ struct WebsiteManifest {
 struct BuildContext {
     out_dir: PathBuf,
     typst: PathBuf,
-    theme: String,
     pdf_files: BTreeSet<PathBuf>,
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
@@ -1151,28 +1185,6 @@ fn resolve_cli_path(current_dir: &Path, path: &Path) -> PathBuf {
     } else {
         current_dir.join(path)
     }
-}
-
-fn resolve_html_theme_ref(config_dir: &Path, value: &str) -> String {
-    if is_builtin_html_theme(value) {
-        return value.to_string();
-    }
-    if is_theme_path_like(value) {
-        let path = Path::new(value);
-        return if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            config_dir.join(path)
-        }
-        .to_string_lossy()
-        .to_string();
-    }
-    value.to_string()
-}
-
-fn html_theme_dir(value: &str) -> Option<PathBuf> {
-    let path = Path::new(value);
-    path.is_dir().then(|| path.to_path_buf())
 }
 
 /// Plan for one sidebar entry: the page and its explicitly configured label,
@@ -1644,7 +1656,11 @@ fn build_page_info(
                 // `url` values are interpreted relative to the output root, so a
                 // leading `/` is harmless there; a slug is joined onto the page's
                 // directory and must be relative.
-                let checked = if route { value.trim_start_matches('/') } else { value };
+                let checked = if route {
+                    value.trim_start_matches('/')
+                } else {
+                    value
+                };
                 if !is_safe_output_route(checked) {
                     bail!(
                         "page {key} must stay inside the output directory: `{value}` ({})",
@@ -1752,9 +1768,12 @@ fn output_href_with_extension(url: &str, extension: &str) -> String {
 fn is_safe_output_route(value: &str) -> bool {
     let path = Path::new(value);
     !path.is_absolute()
-        && path
-            .components()
-            .all(|component| matches!(component, std::path::Component::Normal(_) | std::path::Component::CurDir))
+        && path.components().all(|component| {
+            matches!(
+                component,
+                std::path::Component::Normal(_) | std::path::Component::CurDir
+            )
+        })
 }
 
 struct IconCache {
@@ -2366,25 +2385,34 @@ fn run_parallel<T: Send>(
     Ok(results.into_inner().unwrap())
 }
 
-fn preprocess_documents(
-    typ_files: &[PathBuf],
-    src_dir: &Path,
-    config_path: &Path,
+struct WebsitePreprocessOptions<'a> {
+    typ_files: &'a [PathBuf],
+    src_dir: &'a Path,
+    config_path: &'a Path,
     quiet: bool,
     timeout: Option<u64>,
-    params: &[String],
+    params: &'a [String],
+    cli_theme: Option<crate::theme::ThemeSelection>,
+    fallback_theme: crate::theme::ThemeSelection,
     parallelism: Option<usize>,
+}
+
+fn preprocess_documents(
+    options: WebsitePreprocessOptions<'_>,
 ) -> Result<BTreeMap<PathBuf, PreprocessOutput>> {
-    let display_root = fs::canonicalize(src_dir).unwrap_or_else(|_| src_dir.to_path_buf());
-    let outputs = run_parallel(typ_files.to_vec(), parallelism, |input| {
+    let display_root =
+        fs::canonicalize(options.src_dir).unwrap_or_else(|_| options.src_dir.to_path_buf());
+    let outputs = run_parallel(options.typ_files.to_vec(), options.parallelism, |input| {
         preprocess_cached(PreprocessOptions {
             input: input.to_path_buf(),
-            config: Some(config_path.to_path_buf()),
+            config: Some(options.config_path.to_path_buf()),
             display_root: Some(display_root.clone()),
-            quiet,
-            timeout,
+            quiet: options.quiet,
+            timeout: options.timeout,
             sync_pages: false,
-            param_overrides: params.to_vec(),
+            theme: options.cli_theme.clone(),
+            fallback_theme: options.fallback_theme.clone(),
+            param_overrides: options.params.to_vec(),
         })
         .with_context(|| format!("failed to preprocess {}", input.display()))
     })?;
@@ -2430,8 +2458,16 @@ fn render_document(
         &context.page_info,
         context.languages.as_deref(),
     );
-    if let Some(stylesheet) = context.theme_stylesheet.as_deref() {
-        site_context.stylesheet = Some(html_escape(&page_relative_url(&current_href, stylesheet)));
+    let page_site_entry =
+        crate::theme::resolve_html_entry(&preprocessed.theme, crate::theme::HtmlScope::Site)?;
+    if page_site_entry
+        .as_ref()
+        .is_some_and(|entry| entry.is_default)
+    {
+        if let Some(stylesheet) = context.theme_stylesheet.as_deref() {
+            site_context.stylesheet =
+                Some(html_escape(&page_relative_url(&current_href, stylesheet)));
+        }
     }
     compile_with_typst(
         &context.typst,
@@ -2440,7 +2476,8 @@ fn render_document(
             output: Some(html_output.clone()),
             format: Some("html"),
             typst_args: &context.typst_args,
-            html_theme: Some(&context.theme),
+            theme: &preprocessed.theme,
+            html_scope: crate::theme::HtmlScope::Site,
             site_context: Some(&site_context),
             pages_input: Some(PAGES_INDEX_REF),
             current_href_input: Some(&current_href),
@@ -2461,7 +2498,8 @@ fn render_document(
                 output: Some(pdf_output),
                 format: Some("pdf"),
                 typst_args: &context.typst_args,
-                html_theme: None,
+                theme: &preprocessed.theme,
+                html_scope: crate::theme::HtmlScope::Site,
                 site_context: None,
                 pages_input: Some(PAGES_INDEX_REF),
                 current_href_input: Some(&current_href),
@@ -2951,36 +2989,44 @@ mod tests {
         build_page_info(src, files, &PageMetaMap::new(), pdf_files, &None).unwrap()
     }
 
+    fn website_config_from_toml(toml: &str) -> WebsiteConfig {
+        try_website_config_from_toml(toml).unwrap()
+    }
+
+    fn try_website_config_from_toml(toml: &str) -> Result<WebsiteConfig, toml::de::Error> {
+        toml::from_str(toml)
+    }
+
     #[test]
-    fn configured_html_theme_prefers_explicit_html_theme_and_keeps_aliases() {
-        let config = WebsiteConfig {
-            html_theme: Some("html-theme".to_string()),
-            theme: Some("legacy-theme".to_string()),
-            template: Some("legacy-template".to_string()),
-            ..WebsiteConfig::default()
-        };
-
-        assert_eq!(configured_html_theme(None, &config), "html-theme");
+    fn theme_key_parses_builtin_name() {
+        let config = website_config_from_toml(r#"theme = "academic""#);
         assert_eq!(
-            configured_html_theme(Some("cli-theme"), &config),
-            "cli-theme"
+            config.theme_selection(Path::new("/tmp")).unwrap(),
+            crate::theme::ThemeSelection::Builtin("academic")
         );
+    }
 
-        let legacy_config = WebsiteConfig {
-            theme: Some("legacy-theme".to_string()),
-            template: Some("legacy-template".to_string()),
-            ..WebsiteConfig::default()
-        };
-        assert_eq!(configured_html_theme(None, &legacy_config), "legacy-theme");
-
-        let template_config = WebsiteConfig {
-            template: Some("legacy-template".to_string()),
-            ..WebsiteConfig::default()
-        };
+    #[test]
+    fn theme_key_false_disables() {
+        let config = website_config_from_toml("theme = false");
         assert_eq!(
-            configured_html_theme(None, &template_config),
-            "legacy-template"
+            config.theme_selection(Path::new("/tmp")).unwrap(),
+            crate::theme::ThemeSelection::Disabled
         );
+    }
+
+    #[test]
+    fn missing_theme_key_is_default() {
+        let config = website_config_from_toml("");
+        assert_eq!(
+            config.theme_selection(Path::new("/tmp")).unwrap(),
+            crate::theme::ThemeSelection::Default
+        );
+    }
+
+    #[test]
+    fn html_theme_key_is_rejected() {
+        assert!(try_website_config_from_toml(r#"html_theme = "academic""#).is_err());
     }
 
     #[test]
@@ -3612,7 +3658,7 @@ mod tests {
 
         let context = site.theme_context("posts/welcome.html", None, &PageInfoMap::new(), None);
         let hrefs = context
-            .nav
+            .sidebar
             .iter()
             .map(|item| item.href.as_str())
             .collect::<Vec<_>>();
@@ -3625,7 +3671,7 @@ mod tests {
                 "welcome.html"
             ]
         );
-        assert!(context.nav[2].active);
+        assert!(context.sidebar[2].active);
     }
 
     #[test]
@@ -3649,19 +3695,19 @@ mod tests {
     }
 
     #[test]
-    fn resolve_html_theme_ref_accepts_builtin_name_or_theme_directory_path() {
+    fn theme_key_resolves_local_directory_against_config_dir() {
         let temp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(temp.path().join("themes/my-theme")).unwrap();
+        std::fs::write(
+            temp.path().join("themes/my-theme/site.html"),
+            "{{ doc.body }}",
+        )
+        .unwrap();
+        let config = website_config_from_toml(r#"theme = "themes/my-theme""#);
 
         assert_eq!(
-            resolve_html_theme_ref(temp.path(), "calepin-website"),
-            "calepin-website"
-        );
-        assert_eq!(
-            resolve_html_theme_ref(temp.path(), "themes/my-theme"),
-            temp.path()
-                .join("themes/my-theme")
-                .to_string_lossy()
-                .to_string()
+            config.theme_selection(temp.path()).unwrap(),
+            crate::theme::ThemeSelection::Dir(temp.path().join("themes/my-theme"))
         );
     }
 

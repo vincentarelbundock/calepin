@@ -6,7 +6,7 @@ This page covers the build workflow. See also:
 
 - #link("website-config.html")[Site configuration] for `calepin.toml` settings
 - #link("website-pages.html")[Navigation and listings] for the sidebar, page titles, and blog-style page listings
-- #link("website-themes.html")[Themes] for HTML theme customization
+- #link("website-themes.html")[Themes] for theme bundle customization
 
 == Create a website
 
