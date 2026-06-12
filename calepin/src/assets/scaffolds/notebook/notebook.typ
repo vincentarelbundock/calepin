@@ -11,7 +11,7 @@
 
 #let py = calepin.inline.with("python")
 
-= Calepin example
+#title()
 
 Inline Python result: #py[`print(40 + 2)`].
 

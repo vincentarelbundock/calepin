@@ -2,7 +2,8 @@ theme = "academic"
 title = "Academic Site"
 description = "Research, teaching, publications, and notes."
 # base_url = "https://example.edu"
-# home = "index.html"
+# Omit favicon to use the generated default.
+# favicon = "assets/favicon.ico"
 pdf = false
 
 [sidebar]
@@ -11,44 +12,38 @@ pdf = false
 title = "Site"
 
   [[sidebar.section.item]]
-  path = "index.typ"
+  target = "index.typ"
   label = "About"
 
   [[sidebar.section.item]]
-  path = "publications/index.typ"
+  target = "publications/index.typ"
   label = "Publications"
 
   [[sidebar.section.item]]
-  path = "teaching/index.typ"
+  target = "teaching/index.typ"
   label = "Teaching"
 
   [[sidebar.section.item]]
-  path = "projects/index.typ"
+  target = "projects/index.typ"
   label = "Projects"
 
   [[sidebar.section.item]]
-  path = "talks/index.typ"
+  target = "talks/index.typ"
   label = "Talks"
 
   [[sidebar.section.item]]
-  path = "posts/index.typ"
+  target = "posts/index.typ"
   label = "Posts"
 
   [[sidebar.section.item]]
-  path = "cv.typ"
+  target = "cv.typ"
   label = "CV"
 
-  [[sidebar.section.item]]
-  glob = "publications/*.typ"
-
-  [[sidebar.section.item]]
-  glob = "teaching/*.typ"
-
-  [[sidebar.section.item]]
-  glob = "projects/*.typ"
-
-  [[sidebar.section.item]]
-  glob = "talks/*.typ"
-
-  [[sidebar.section.item]]
-  glob = "posts/*.typ"
+[pages]
+include = [
+  "publications/*.typ",
+  "teaching/*.typ",
+  "projects/*.typ",
+  "talks/*.typ",
+  "posts/*.typ",
+]

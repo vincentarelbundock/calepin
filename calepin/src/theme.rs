@@ -84,6 +84,33 @@ static ACADEMIC: BundleDef = BundleDef {
 
 static BUILTINS: [&BundleDef; 2] = [&CALEPIN, &ACADEMIC];
 
+static EJECTED_SNIPPET_FILES: &[BundleFile] = &[
+    BundleFile {
+        path: "styles/00-theme.css",
+        source: include_str!("assets/snippets/css/theme.css"),
+    },
+    BundleFile {
+        path: "styles/01-code.css",
+        source: include_str!("assets/snippets/css/code.css"),
+    },
+    BundleFile {
+        path: "styles/02-widgets.css",
+        source: include_str!("assets/snippets/css/widgets.css"),
+    },
+    BundleFile {
+        path: "scripts/00-theme-toggle.js",
+        source: include_str!("assets/snippets/js/theme-toggle.js"),
+    },
+    BundleFile {
+        path: "scripts/01-language-picker.js",
+        source: include_str!("assets/snippets/js/language-picker.js"),
+    },
+    BundleFile {
+        path: "scripts/02-copy-code.js",
+        source: include_str!("assets/snippets/js/copy-code.js"),
+    },
+];
+
 pub fn builtin_names() -> Vec<&'static str> {
     BUILTINS.iter().map(|bundle| bundle.name).collect()
 }
@@ -108,16 +135,39 @@ pub fn eject_builtin(name: &str, themes_dir: &Path, force: bool) -> Result<PathB
             dest.display()
         ));
     }
-    for file in bundle.files {
-        let path = dest.join(file.path);
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        std::fs::write(&path, file.source)
-            .with_context(|| format!("failed to write {}", path.display()))?;
+    for file in bundle.files.iter().chain(EJECTED_SNIPPET_FILES) {
+        let source = ejected_theme_source(file.path, file.source);
+        write_theme_file(&dest, file.path, &source)?;
     }
     Ok(dest)
+}
+
+fn write_theme_file(dest: &Path, relative: &str, source: &str) -> Result<()> {
+    let path = dest.join(relative);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    std::fs::write(&path, source).with_context(|| format!("failed to write {}", path.display()))
+}
+
+fn ejected_theme_source(path: &str, source: &str) -> String {
+    if !path.ends_with(".html") {
+        return source.to_string();
+    }
+    source
+        .replace(
+            "    <style>{{ snippets.css.theme }}</style>\n    <style>{{ snippets.css.code }}</style>\n    <style>{{ snippets.css.widgets }}</style>\n",
+            "",
+        )
+        .replace(
+            "    <script>{{ snippets.js.theme_toggle }}</script>\n    <script>{{ snippets.js.language_picker }}</script>\n    <script>{{ snippets.js.copy_code }}</script>\n",
+            "",
+        )
+        .replace(
+            "    <script>{{ snippets.js.theme_toggle }}</script>\n    <script>{{ snippets.js.copy_code }}</script>\n",
+            "",
+        )
 }
 
 impl ThemeSelection {
@@ -496,7 +546,21 @@ mod tests {
         assert!(dest.join("document.html").is_file());
         assert!(dest.join("site.html").is_file());
         assert!(dest.join("paged.typ").is_file());
+        assert!(dest.join("styles/00-theme.css").is_file());
+        assert!(dest.join("styles/01-code.css").is_file());
+        assert!(dest.join("styles/02-widgets.css").is_file());
         assert!(dest.join("styles/site.css").is_file());
+        assert!(dest.join("scripts/00-theme-toggle.js").is_file());
+        assert!(dest.join("scripts/01-language-picker.js").is_file());
+        assert!(dest.join("scripts/02-copy-code.js").is_file());
+        assert!(dest.join("scripts/site.js").is_file());
+
+        let site = std::fs::read_to_string(dest.join("site.html")).unwrap();
+        let document = std::fs::read_to_string(dest.join("document.html")).unwrap();
+        assert!(!site.contains("snippets.css"));
+        assert!(!site.contains("snippets.js"));
+        assert!(!document.contains("snippets.css"));
+        assert!(!document.contains("snippets.js"));
     }
 
     #[test]

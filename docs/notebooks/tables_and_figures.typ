@@ -1,5 +1,7 @@
 #import "@preview/calepin:0.0.1" as calepin
 
+#set document(title: [Tables and figures])
+
 #calepin.setup(
   echo: true,
   eval: true,
@@ -7,10 +9,9 @@
   fenced-chunks: false,
 )
 
-= Tables and figures
-<tables-and-figures>
+#title() <tables-and-figures>
 
-== Tables
+= Tables
 <tables>
 
 Tinytable emits raw Typst content directly. Keep `results: "typst"` to pass it through into the document. Note that at the time of writing, Typst HTML export did not support the complex type of table created below. Switch to PDF view to see the full effect.
@@ -37,7 +38,7 @@ tt(dat, caption = "Hello world!") |>
 ```
 ]
 
-== Multi-plot figures
+= Multi-plot figures
 <multi-plot-figures>
 
 Chunks that produce multiple plots can be displayed as one figure. Use

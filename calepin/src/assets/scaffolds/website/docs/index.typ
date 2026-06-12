@@ -1,5 +1,7 @@
 #import "@preview/calepin:0.0.1" as calepin
 
+#set document(title: [Home])
+
 #calepin.setup(
   echo: true,
   eval: true,
@@ -7,6 +9,6 @@
   fenced-chunks: true,
 )
 
-= Home
+#title()
 
 Welcome to your website.

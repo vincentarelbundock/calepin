@@ -2,7 +2,9 @@
 #let _pages-index-path = sys.inputs.at("calepin-pages", default: "")
 #let _current-page-href = sys.inputs.at("calepin-current-href", default: "")
 
-#metadata((title: "Academic widgets", hidden: true, pdf: false)) <website-metadata>
+#set document(title: [Academic widgets])
+
+#metadata((pdf: false)) <website-metadata>
 
 #let _site-root-prefix() = {
   let depth = _current-page-href.split("/").filter(part => part != "").len() - 1

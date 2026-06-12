@@ -1,16 +1,19 @@
-= Options
-
 #import "@preview/calepin:0.0.1" as calepin
+
+#set document(title: [Options])
+
 #calepin.setup(eval: true, echo: true)
+
+#title()
 
 Set defaults with `#calepin.setup` and override per call with `#calepin.chunk(...)` or `#calepin.inline(...)`.
 
-== Global + chunk options
+= Global + chunk options
 
 These options can be configured in `#calepin.setup` as document-wide defaults. Use one setup block to define defaults for all chunks unless overridden per chunk.
 
 #table(
-  columns: (1.1fr, 0.9fr, 2.2fr),
+  columns: (1.5fr, 0.9fr, 2.2fr),
   stroke: none,
   inset: 0.55em,
   [*Option*], [*Default*], [*Meaning*],
@@ -31,7 +34,7 @@ These options can be configured in `#calepin.setup` as document-wide defaults. U
   [fig-responsive], [`true`], [HTML output only: allow the figure to shrink to fit narrow viewports (sets `max-width: 100%`). No effect on paged output.],
 )
 
-== Chunk-only options
+= Chunk-only options
 
 These options are only understood on individual chunks; they are not valid as keys in `#calepin.setup`. The figure caption and layout options live here because they apply to one chunk's specific output.
 
@@ -51,7 +54,7 @@ These options are only understood on individual chunks; they are not valid as ke
   [fig-layout-rows], [`"auto"`], [Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or `auto`.],
 )
 
-== Quarto-style header options
+= Quarto-style options
 
 Quarto-style chunk headers are supported by placing option lines that begin with \#| at the top of a code fence. These lines are parsed as the same options as \#calepin.chunk options. For example,
 

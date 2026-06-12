@@ -3,8 +3,22 @@ description = "A Typst-native computational notebook and static website generato
 base_url = "https://vincentarelbundock.github.io/calepin"
 logo = "assets/logo_short_2.svg"
 logo_alt = "Calepin"
-github_url = "https://github.com/vincentarelbundock/calepin"
 pdf = true
+
+[navbar]
+
+[[navbar.item]]
+position = "right"
+target = "https://github.com/vincentarelbundock/calepin"
+label = "{icon:github} GitHub"
+
+[[navbar.item]]
+position = "right"
+widget = "theme"
+
+[[navbar.item]]
+position = "right"
+widget = "language"
 
 [executables]
 python = "../.venv/bin/python"
@@ -16,69 +30,69 @@ typst = "typst"
 title = "Getting started"
 
   [[sidebar.section.item]]
-  path = "index.typ"
+  target = "index.typ"
   label = "Home"
 
   [[sidebar.section.item]]
-  path = "getting-started/install.typ"
+  target = "getting-started/install.typ"
   label = "Install"
 
   [[sidebar.section.item]]
-  path = "getting-started/config.typ"
+  target = "getting-started/config.typ"
   label = "Configuration"
-
-[[sidebar.section]]
-title = "Notebooks"
-
-  [[sidebar.section.item]]
-  path = "notebooks/parameterized_notebooks.typ"
-  label = "Parameterized notebooks"
-
-  [[sidebar.section.item]]
-  path = "notebooks/tables_and_figures.typ"
-  label = "Tables and figures"
-
-  [[sidebar.section.item]]
-  path = "notebooks/crossreferences.typ"
-  label = "Cross-references"
-
-  [[sidebar.section.item]]
-  path = "notebooks/templates.typ"
-  label = "HTML themes"
-
-  [[sidebar.section.item]]
-  path = "notebooks/example.typ"
-  label = "Example notebook"
 
 [[sidebar.section]]
 title = "Code execution"
 
   [[sidebar.section.item]]
-  path = "execution/supported-languages.typ"
+  target = "execution/supported-languages.typ"
   label = "Languages"
 
   [[sidebar.section.item]]
-  path = "execution/options.typ"
+  target = "execution/options.typ"
   label = "Options"
+
+[[sidebar.section]]
+title = "Notebooks"
+
+  [[sidebar.section.item]]
+  target = "notebooks/parameterized_notebooks.typ"
+  label = "Parameterized notebooks"
+
+  [[sidebar.section.item]]
+  target = "notebooks/tables_and_figures.typ"
+  label = "Tables and figures"
+
+  [[sidebar.section.item]]
+  target = "notebooks/crossreferences.typ"
+  label = "Cross-references"
+
+  [[sidebar.section.item]]
+  target = "notebooks/templates.typ"
+  label = "HTML themes"
+
+  [[sidebar.section.item]]
+  target = "notebooks/example.typ"
+  label = "Example notebook"
 
 [[sidebar.section]]
 title = "Website generator"
 
   [[sidebar.section.item]]
-  path = "websites/websites.typ"
+  target = "websites/websites.typ"
   label = "Overview"
 
   [[sidebar.section.item]]
-  path = "websites/website-config.typ"
+  target = "websites/website-config.typ"
   label = "Configuration"
 
   [[sidebar.section.item]]
-  path = "websites/website-themes.typ"
+  target = "websites/website-themes.typ"
   label = "Themes"
 
 [[sidebar.section]]
 title = "Reference"
 
   [[sidebar.section.item]]
-  path = "reference/cli.typ"
+  target = "reference/cli.typ"
   label = "Command line"

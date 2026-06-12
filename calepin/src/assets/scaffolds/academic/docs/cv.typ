@@ -1,8 +1,8 @@
 #import "/assets/academic.typ" as site
 
-#metadata((title: "CV")) <website-metadata>
+#set document(title: [Curriculum Vitae])
 
-= Curriculum Vitae
+#title()
 
 == Appointments
 

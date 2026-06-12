@@ -1,8 +1,10 @@
-= Static website generator
+#set document(title: [Static website generator])
+
+#title()
 
 _Calepin_ can build a Typst document directory as a static website. This is the same workflow used to render this documentation site: source `.typ` files live in `docs/`, and the generated `.html`, `.pdf`, and `sitemap.xml` files are written back into `docs/` for GitHub Pages.
 
-== New website
+= New website
 
 Use this command to scaffold a minimal site:
 
@@ -16,7 +18,7 @@ This creates:
 - `docs/index.typ`: the home page source file, which builds to `index.html`.
 - `docs/404.typ`: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.
 
-== Build
+= Build
 
 Compile a website directory with the same `compile` command used for a single Typst document:
 
@@ -36,7 +38,7 @@ When the input path is a directory, _Calepin_ looks for `calepin.toml` at the ro
 
 By default, website pages render to HTML. Configure PDF output and page selection in #link("website-config.html")[Site configuration].
 
-== Serve
+= Serve
 
 Serve the built site locally with:
 
@@ -52,7 +54,7 @@ Use `--host` and `--port` when you need a specific address:
 calepin serve docs --host 127.0.0.1 --port 8001
 ```
 
-== Watch
+= Watch
 
 During development, watch the website source directory:
 
@@ -60,38 +62,12 @@ During development, watch the website source directory:
 calepin watch docs docs
 ```
 
-As with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The initial watch build renders the whole site. After that, existing `.typ` page edits go through a fast xxh3 fingerprint lookup:
+As with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The first build renders the whole site. After that, _Calepin_ hashes each edited page and rebuilds only the pages whose content actually changed; files that were touched but not modified are skipped.
 
-- If the changed page hash is new, _Calepin_ rebuilds only that page.
-- If the file was touched but the hash is unchanged, _Calepin_ skips the rebuild.
-- If navigation or page metadata changed after an incremental rebuild, _Calepin_ falls back to a full rebuild.
-
-_Calepin_ also falls back to a full rebuild for changes that can affect more than one page:
-
-- `calepin.toml`
-- theme files
-- assets
-- new `.typ` pages
-- removed `.typ` pages
-- renamed `.typ` pages
-- unknown or non-page inputs
+Changes that can affect more than one page trigger a full rebuild instead. This includes edits to `calepin.toml`, themes, or assets, pages that are added, removed, or renamed, and edits that change the site navigation or page metadata.
 
 Add `--serve` to run the local server while watching; it uses the same `--host` and `--port` options as `calepin serve`.
 
 ```sh
 calepin watch docs docs --serve
 ```
-
-== Roadmap
-
-Planned website features include:
-
-- dependency-aware rebuilds for imported shared `.typ` files
-- drafts
-- taxonomies
-- pagination
-- search
-- feeds
-- robots.txt generation
-- llms.txt generation
-- link checking

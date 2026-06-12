@@ -1,20 +1,21 @@
 #import "@preview/calepin:0.0.1" as calepin
 
+#set document(title: [Cross-references])
+
 #calepin.setup(
   echo: true,
   eval: true,
   results: "verbatim",
 )
 
-= Cross-references
-<cross-references>
+#title() <cross-references>
 
 Calepin supports three mechanisms for specifying labels: arguments in the `#calepin.chunk()` function, `#|` Quarto-style syntax at the top of the code block, and a compact trailing label on plain executable fences. Use Quarto-style prefixes so Calepin knows what the label refers to; `fig-` labels attach to figure output.
 
-== `label` argument
+= `label` argument
 <label-argument>
 
-=== Single figure
+== Single figure
 <label-argument-single-figure>
 
 ````typ
@@ -33,10 +34,10 @@ In prose we mention @fig-cross-scatter.
 plot(mpg ~ hp, data = mtcars)
 ```]
 
-== `#|` syntax
+= `#|` syntax
 <qmd-syntax>
 
-=== Quarto-style `#| label:`
+== Quarto-style `#| label:`
 <qmd-label-syntax>
 
 Put `#| label:` at the top of the code block when you want the label next to
@@ -60,7 +61,7 @@ In prose we mention @fig-cross-qmd.
 hist(mtcars$wt, col = "gray80", border = "white")
 ```
 
-== Trailing fence labels
+= Trailing fence labels
 <trailing-fence-labels>
 
 For plain executable fences, you can also put a single routed label after the
@@ -81,7 +82,7 @@ In prose we mention @fig-cross-trailing.
 plot(dist ~ speed, data = cars)
 ```<fig-cross-trailing>
 
-=== Label rules
+== Label rules
 <label-rules>
 
 Use recognized prefixes so Calepin knows where the label belongs:
@@ -96,7 +97,7 @@ Use recognized prefixes so Calepin knows where the label belongs:
   [`lst-`], [Code listing output], [Reserved for listing cross-references in a later milestone.],
 )
 
-=== Roadmap
+== Roadmap
 <cross-reference-roadmap>
 
 Future cross-reference work includes independent labels for subcaptioned panels, so multi-plot figures can support references such as `@fig-name-2` or rendered forms like "Figure 2b". That requires subfigure semantics: each panel needs a stable label, numbering, and rendering behavior instead of only caption text inside a shared figure grid.

@@ -1,5 +1,7 @@
 #import "/assets/design.typ": target, asset-path, hero, feature-card, feature-card-grid
 
+#set document(title: [Calepin])
+
 #hero[
   #if target() == "html" [
     #html.elem("div", attrs: (class: "hero-text"))[
@@ -54,10 +56,10 @@
   ],
 )
 
-== What is Calepin?
+= What is Calepin?
 <what-is-calepin>
 
-==== Typst
+=== Typst
 <typst>
 
 #link("https://typst.app/")[Typst] is a modern typesetting system that
@@ -67,7 +69,7 @@ to export to PDF, SVG, and HTML files. Typst is ultra fast, easy to
 learn, and expressive, which makes it a comfortable tool for anything
 from short letters to full scientific manuscripts.
 
-==== Computational notebooks
+=== Computational notebooks
 <computational-notebooks>
 
 A computational notebook mixes prose with executable code. Figures,
@@ -118,7 +120,7 @@ of Markdown, which can be translated to Typst and then rendered as PDF.
 ]
 
 
-==== Calepin
+=== Calepin
 <calepin>
 
 #emph[Calepin] is a Typst-native computational notebook. Rather than
@@ -183,12 +185,12 @@ Cursor, and Positron (via the Microsoft and VSX marketplaces).
   ]
 ]
 
-== Example
+= Example
 <example>
 
 _Calepin_ notebooks are standard Typst documents with a few extra features. 
 
-=== Preamble
+== Preamble
 <preamble>
 
 When a user calls `calepin` to compile a file, a hidden `.calepin/` directory is created to hold code artefacts and the special Typst functions and macros used to process code chunks. To build a notebook, we start by loading the Calepin package with `#import`. Then, we fix document-wide settings with `calepin.setup()`.
@@ -204,7 +206,7 @@ Now, we define a short alias for Python inline computations. This will be used t
 #let py = calepin.inline.with("python")
 ```
 
-=== Chunks
+== Chunks
 <chunks>
 
 A code chunk runs a piece of code and inserts its result. Start with a plain fenced block:
@@ -232,7 +234,7 @@ print(x + 1)
 ```
 ````
 
-=== Inline
+== Inline
 <inline>
 
 An inline expression drops a computed value into the surrounding prose. It uses the same raw body contract and never takes a label.
@@ -241,7 +243,7 @@ An inline expression drops a computed value into the surrounding prose. It uses 
 The inline answer is #py[`print(40 + 2)`].
 ```
 
-=== All together now
+== All together now
 <all-together-now>
 
 Here is one full document example.
@@ -270,7 +272,7 @@ print(x + 2)
 The inline answer is #py[`print(40 + 2)`].
 ````
 
-== Render
+= Render
 <render>
 
 Use `calepin compile` when you want to execute code chunks and render
@@ -298,7 +300,7 @@ calepin compile paper.typ -- --open
 calepin compile paper.typ -- --font-path fonts
 ```
 
-== Watch
+= Watch
 <watch>
 
 Use `calepin watch` while editing. It watches your source for changes,
@@ -328,7 +330,7 @@ calepin watch example.typ -- --open
 calepin watch paper.typ paper.html --format html -- --port 3001 --open
 ```
 
-==== PDF viewer auto-refresh
+=== PDF viewer auto-refresh
 <pdf-viewer-auto-refresh>
 
 Some PDF viewers do not automatically refresh a document when it is

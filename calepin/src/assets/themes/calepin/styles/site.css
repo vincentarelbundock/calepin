@@ -102,6 +102,19 @@
   font-weight: 600;
 }
 
+/* Navbar links keep the standard text color instead of the accent. */
+.calepin-website-topbar nav a:not(.calepin-website-topbrand),
+.calepin-website-topbar nav a:not(.calepin-website-topbrand):hover,
+.calepin-website-topbar nav a:not(.calepin-website-topbrand):focus,
+.calepin-website-topbar nav a:not(.calepin-website-topbrand):focus-visible,
+.calepin-website-topbar nav a:not(.calepin-website-topbrand):active,
+.calepin-website-topbar nav a:not(.calepin-website-topbrand):visited,
+.calepin-website-topbar nav a:not(.calepin-website-topbrand).active,
+.calepin-website-topbar nav a:not(.calepin-website-topbrand)[aria-current] {
+  color: inherit;
+  text-decoration: none;
+}
+
 .calepin-website-view-mode {
   width: auto;
   min-width: 6rem;
@@ -124,17 +137,6 @@
 .calepin-website-nav-toggle {
   display: none;
   font-size: 1.2rem;
-}
-
-.calepin-website-github-link {
-  display: inline-flex;
-  align-items: center;
-}
-
-.calepin-website-github-icon {
-  width: 1.1rem;
-  height: 1.1rem;
-  fill: currentColor;
 }
 
 
@@ -239,6 +241,71 @@
 
 .calepin-website-sidebar nav p:first-child {
   margin-top: 0;
+}
+
+/* Foldable sections (<details>/<summary>); only the section holding the
+   current page is open on load. Overrides Pico's accordion styling. */
+.calepin-website-sidebar nav details {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-sidebar nav details[open] {
+  margin-bottom: 0.5rem;
+}
+
+.calepin-website-sidebar nav summary {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+  font-weight: 600;
+  margin: 0.4rem 0;
+  padding: 0;
+  line-height: inherit;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.calepin-website-sidebar nav summary::-webkit-details-marker {
+  display: none;
+}
+
+.calepin-website-sidebar nav summary::after {
+  content: "";
+  background-image: none;
+  float: none;
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.3rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.calepin-website-sidebar nav details[open] > summary::after {
+  transform: rotate(45deg);
+}
+
+.calepin-website-sidebar nav details[open] > summary {
+  margin-bottom: 0.55rem;
+}
+
+.calepin-website-sidebar nav details:first-child > summary {
+  margin-top: 0;
+}
+
+.calepin-website-sidebar nav details > ul {
+  margin-bottom: 0;
 }
 
 .calepin-website-toc-title {

@@ -1,8 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    
-    <title>Command line | Calepin</title>
-    
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CLI reference</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -12,11 +8,14 @@
     <meta property="og:site_name" content="Calepin">
     
     
-    <meta property="og:title" content="Command line | Calepin">
+    <meta property="og:title" content="CLI reference | Calepin">
     
     
     <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/reference/cli.html">
     <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/reference/cli.html">
+    
+    
+    <link rel="icon" href="../.calepin/favicon.svg">
     
     
     <meta name="color-scheme" content="light dark">
@@ -54,7 +53,7 @@
     <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"= CLI reference\n<cli-reference>\n\n== `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file or website scaffold\n  health   Check Calepin's local runtime environment\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  serve    Serve static files locally\n  stop     Stop a running calepin watch process\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n== `calepin new`\n<calepin-new>\n\n```text\nCreate a new example Typst file or website scaffold\n\nUsage: calepin new [OPTIONS] <PATH>\n\nArguments:\n  <PATH>  Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files\n\nOptions:\n  -f, --force          Overwrite the file if it already exists\n      --theme <THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)\n  -h, --help           Print help\n```\n\n== `calepin health`\n<calepin-health>\n\n```text\nCheck Calepin's local runtime environment\n\nUsage: calepin health [OPTIONS]\n\nOptions:\n      --config <CONFIG>  Path to project config TOML\n      --json             Print machine-readable JSON\n      --strict           Exit with an error when warnings are present\n  -h, --help             Print help\n```\n\n== `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --theme <THEME>\n          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst watch\n          \n          [possible values: pdf, png, svg, html]\n\n      --serve\n          Serve the website while watching a directory\n\n      --host <HOST>\n          Interface to bind when serving a watched website\n          \n          [default: 127.0.0.1]\n\n      --port <PORT>\n          Port to bind when serving a watched website (default: first free port from 8000)\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n== `calepin serve`\n<calepin-serve>\n\n```text\nServe static files locally\n\nUsage: calepin serve [OPTIONS] <DIR>\n\nArguments:\n  <DIR>  Directory containing static files to serve\n\nOptions:\n      --host <HOST>  Interface to bind [default: 127.0.0.1]\n  -p, --port <PORT>  Port to bind (default: first free port from 8000)\n  -h, --help         Print help\n```\n\n== `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n\n== `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [CLI reference])\n\n#title() <cli-reference>\n\n= `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file or website scaffold\n  health   Check Calepin's local runtime environment\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  serve    Serve static files locally\n  stop     Stop a running calepin watch process\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n= `calepin new`\n<calepin-new>\n\n```text\nCreate a new example Typst file or website scaffold\n\nUsage: calepin new [OPTIONS] <PATH>\n\nArguments:\n  <PATH>  Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files\n\nOptions:\n  -f, --force          Overwrite the file if it already exists\n      --theme <THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)\n  -h, --help           Print help\n```\n\n= `calepin health`\n<calepin-health>\n\n```text\nCheck Calepin's local runtime environment\n\nUsage: calepin health [OPTIONS]\n\nOptions:\n      --config <CONFIG>  Path to project config TOML\n      --json             Print machine-readable JSON\n      --strict           Exit with an error when warnings are present\n  -h, --help             Print help\n```\n\n= `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --theme <THEME>\n          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst watch\n          \n          [possible values: pdf, png, svg, html]\n\n      --serve\n          Serve the website while watching a directory\n\n      --host <HOST>\n          Interface to bind when serving a watched website\n          \n          [default: 127.0.0.1]\n\n      --port <PORT>\n          Port to bind when serving a watched website (default: first free port from 8000)\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin serve`\n<calepin-serve>\n\n```text\nServe static files locally\n\nUsage: calepin serve [OPTIONS] <DIR>\n\nArguments:\n  <DIR>  Directory containing static files to serve\n\nOptions:\n      --host <HOST>  Interface to bind [default: 127.0.0.1]\n  -p, --port <PORT>  Port to bind (default: first free port from 8000)\n  -h, --help         Print help\n```\n\n= `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n\n= `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help\n```\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -77,6 +76,10 @@
                 
                 
                 
+                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span> GitHub</a></li>
+                
+                
+                
                 <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
                 
                 
@@ -91,15 +94,6 @@
                         <option value="pdf">PDF</option>
                     </select>
                 </li>
-                
-                <li>
-                    <a class="calepin-website-github-link contrast" href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub" title="GitHub">
-                        <svg viewBox="0 0 24 24" class="calepin-website-github-icon" aria-hidden="true" focusable="false">
-                            <path d="M12 .297C5.373.297 0 5.67 0 12.297c0 5.292 3.438 9.775 8.207 11.387.6.113.793-.26.793-.577 0-.285-.01-1.04-.016-2.042-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.086 1.838 1.238 1.838 1.238 1.072 1.836 2.813 1.306 3.5.999.108-.775.418-1.306.76-1.606-2.665-.304-5.466-1.333-5.466-5.932 0-1.31.467-2.381 1.235-3.221-.123-.304-.535-1.527.117-3.18 0 0 1.008-.323 3.3 1.23a11.36 11.36 0 0 1 3.003-.404c1.089.005 2.2.147 3.003.404 2.291-1.553 3.297-1.23 3.297-1.23.654 1.653.242 2.876.119 3.18.77.84 1.233 1.911 1.233 3.221 0 4.61-2.803 5.624-5.475 5.922.43.372.823 1.102.823 2.222 0 1.606-.014 2.897-.014 3.293 0 .32.19.694.8.576C20.565 22.07 24 17.59 24 12.297 24 5.67 18.627.297 12 .297z"/>
-                        </svg>
-                    </a>
-                </li>
-                
             </ul>
         </nav>
     </header>
@@ -111,82 +105,92 @@
                     
                     
                     
-                    <p><strong>Getting started</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../index.html" aria-label="Home">Home</a></li>
-                        
-                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
-                        
-                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    <p><strong>Notebooks</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
-                        
-                        <li><a href="../notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
-                        
-                        <li><a href="../notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
-                        
-                        <li><a href="../notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
-                        
-                        <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Getting started</summary>
+                        <ul>
+                            
+                            <li><a href="../index.html" aria-label="Home">Home</a></li>
+                            
+                            <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
+                            
+                            <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+                            
+                        </ul>
+                    </details>
                     
                     
                     
                     
-                    <p><strong>Code execution</strong></p>
                     
-                    <ul>
-                        
-                        <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
-                        
-                        <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    <p><strong>Website generator</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
-                        
-                        <li><a href="../websites/website-config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                        <li><a href="../websites/website-themes.html" aria-label="Themes">Themes</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Code execution</summary>
+                        <ul>
+                            
+                            <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
+                            
+                            <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
+                            
+                        </ul>
+                    </details>
                     
                     
                     
                     
-                    <p><strong>Reference</strong></p>
                     
-                    <ul>
-                        
-                        <li><a href="cli.html" aria-label="Command line" class="active" aria-current="page">Command line</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Notebooks</summary>
+                        <ul>
+                            
+                            <li><a href="../notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
+                            
+                            <li><a href="../notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
+                            
+                            <li><a href="../notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
+                            
+                            <li><a href="../notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
+                            
+                            <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Website generator</summary>
+                        <ul>
+                            
+                            <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
+                            
+                            <li><a href="../websites/website-config.html" aria-label="Configuration">Configuration</a></li>
+                            
+                            <li><a href="../websites/website-themes.html" aria-label="Themes">Themes</a></li>
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section" open>
+                        <summary>Reference</summary>
+                        <ul>
+                            
+                            <li><a href="cli.html" aria-label="Command line" class="active" aria-current="page">Command line</a></li>
+                            
+                        </ul>
+                    </details>
+                    
                     
                     
                 
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h2 id="cli-reference">CLI reference</h2><h3 id="calepin"><code>calepin</code></h3><pre><code data-lang="text">Preprocess Typst documents with executable code chunks
+            <h1 id="cli-reference">CLI reference</h1><h2 id="calepin"><code>calepin</code></h2><pre><code data-lang="text">Preprocess Typst documents with executable code chunks
 
 Usage: calepin &lt;COMMAND>
 
@@ -202,7 +206,7 @@ Commands:
 
 Options:
   -v, --version  Print version
-  -h, --help     Print help</code></pre><h3 id="calepin-new"><code>calepin new</code></h3><pre><code data-lang="text">Create a new example Typst file or website scaffold
+  -h, --help     Print help</code></pre><h2 id="calepin-new"><code>calepin new</code></h2><pre><code data-lang="text">Create a new example Typst file or website scaffold
 
 Usage: calepin new [OPTIONS] &lt;PATH>
 
@@ -212,7 +216,7 @@ Arguments:
 Options:
   -f, --force          Overwrite the file if it already exists
       --theme &lt;THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)
-  -h, --help           Print help</code></pre><h3 id="calepin-health"><code>calepin health</code></h3><pre><code data-lang="text">Check Calepin's local runtime environment
+  -h, --help           Print help</code></pre><h2 id="calepin-health"><code>calepin health</code></h2><pre><code data-lang="text">Check Calepin's local runtime environment
 
 Usage: calepin health [OPTIONS]
 
@@ -220,7 +224,7 @@ Options:
       --config &lt;CONFIG>  Path to project config TOML
       --json             Print machine-readable JSON
       --strict           Exit with an error when warnings are present
-  -h, --help             Print help</code></pre><h3 id="calepin-compile"><code>calepin compile</code></h3><pre><code data-lang="text">Preprocess, then invoke typst compile
+  -h, --help             Print help</code></pre><h2 id="calepin-compile"><code>calepin compile</code></h2><pre><code data-lang="text">Preprocess, then invoke typst compile
 
 Usage: calepin compile [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...
 
@@ -258,7 +262,7 @@ Options:
           Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.
 
   -h, --help
-          Print help (see a summary with '-h')</code></pre><h3 id="calepin-watch"><code>calepin watch</code></h3><pre><code data-lang="text">Watch, preprocess, and delegate recompiles to typst watch
+          Print help (see a summary with '-h')</code></pre><h2 id="calepin-watch"><code>calepin watch</code></h2><pre><code data-lang="text">Watch, preprocess, and delegate recompiles to typst watch
 
 Usage: calepin watch [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...
 
@@ -304,7 +308,7 @@ Options:
           Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.
 
   -h, --help
-          Print help (see a summary with '-h')</code></pre><h3 id="calepin-serve"><code>calepin serve</code></h3><pre><code data-lang="text">Serve static files locally
+          Print help (see a summary with '-h')</code></pre><h2 id="calepin-serve"><code>calepin serve</code></h2><pre><code data-lang="text">Serve static files locally
 
 Usage: calepin serve [OPTIONS] &lt;DIR>
 
@@ -314,7 +318,7 @@ Arguments:
 Options:
       --host &lt;HOST>  Interface to bind [default: 127.0.0.1]
   -p, --port &lt;PORT>  Port to bind (default: first free port from 8000)
-  -h, --help         Print help</code></pre><h3 id="calepin-stop"><code>calepin stop</code></h3><pre><code data-lang="text">Stop a running calepin watch process
+  -h, --help         Print help</code></pre><h2 id="calepin-stop"><code>calepin stop</code></h2><pre><code data-lang="text">Stop a running calepin watch process
 
 Usage: calepin stop [INPUT]
 
@@ -322,7 +326,7 @@ Arguments:
   [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory
 
 Options:
-  -h, --help  Print help</code></pre><h3 id="calepin-clean"><code>calepin clean</code></h3><pre><code data-lang="text">Remove `.calepin` directories and generated artifacts
+  -h, --help  Print help</code></pre><h2 id="calepin-clean"><code>calepin clean</code></h2><pre><code data-lang="text">Remove `.calepin` directories and generated artifacts
 
 Usage: calepin clean [OPTIONS]
 
@@ -337,23 +341,23 @@ Options:
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#cli-reference">CLI reference</a></li>
+                    <li class="level-1"><a href="#cli-reference">CLI reference</a></li>
                     
-                    <li class="level-3"><a href="#calepin">calepin</a></li>
+                    <li class="level-2"><a href="#calepin">calepin</a></li>
                     
-                    <li class="level-3"><a href="#calepin-new">calepin new</a></li>
+                    <li class="level-2"><a href="#calepin-new">calepin new</a></li>
                     
-                    <li class="level-3"><a href="#calepin-health">calepin health</a></li>
+                    <li class="level-2"><a href="#calepin-health">calepin health</a></li>
                     
-                    <li class="level-3"><a href="#calepin-compile">calepin compile</a></li>
+                    <li class="level-2"><a href="#calepin-compile">calepin compile</a></li>
                     
-                    <li class="level-3"><a href="#calepin-watch">calepin watch</a></li>
+                    <li class="level-2"><a href="#calepin-watch">calepin watch</a></li>
                     
-                    <li class="level-3"><a href="#calepin-serve">calepin serve</a></li>
+                    <li class="level-2"><a href="#calepin-serve">calepin serve</a></li>
                     
-                    <li class="level-3"><a href="#calepin-stop">calepin stop</a></li>
+                    <li class="level-2"><a href="#calepin-stop">calepin stop</a></li>
                     
-                    <li class="level-3"><a href="#calepin-clean">calepin clean</a></li>
+                    <li class="level-2"><a href="#calepin-clean">calepin clean</a></li>
                     
                 </ul>
             </nav>

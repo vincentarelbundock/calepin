@@ -1,5 +1,6 @@
+#set document(title: [A Reproducible Article From One Typst Source])
+
 #metadata((
-  title: "A Reproducible Article From One Typst Source",
   kind: "publication",
   authors: "Ada Scholar and Coauthor Name",
   year: "2026",
@@ -14,10 +15,9 @@
   abstract: "A short example of structured publication metadata rendered as a normal page and reused in lists.",
   tags: ("reproducibility", "typst"),
   featured: true,
-  hidden: true,
 )) <website-metadata>
 
-= A Reproducible Article From One Typst Source
+#title()
 
 Ada Scholar and Coauthor Name. 2026. _Journal of Reproducible Research_.
 

@@ -39,6 +39,9 @@
     <link rel="canonical" href="{{ site.current_url }}">
     <meta property="og:url" content="{{ site.current_url }}">
     {% endif %}
+    {% if site.favicon %}
+    <link rel="icon" href="{{ site.favicon }}">
+    {% endif %}
     {% for translation in site.translations %}
     <link rel="alternate" hreflang="{{ translation.code }}" href="{{ translation.href }}">
     {% endfor %}

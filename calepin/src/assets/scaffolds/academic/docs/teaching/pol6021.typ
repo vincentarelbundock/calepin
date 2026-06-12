@@ -1,15 +1,15 @@
+#set document(title: [POL6021: Computational Social Science])
+
 #metadata((
-  title: "POL6021: Computational Social Science",
   kind: "teaching",
   term: "Winter 2026",
   role: "Instructor",
   syllabus: "pol6021-syllabus.pdf",
   date: "2026-01-12",
   summary: "Graduate course on reproducible computational research workflows.",
-  hidden: true,
 )) <website-metadata>
 
-= POL6021: Computational Social Science
+#title()
 
 == Schedule
 

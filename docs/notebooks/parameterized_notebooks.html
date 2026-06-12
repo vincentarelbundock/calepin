@@ -1,8 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    
-    <title>Parameterized notebooks | Calepin</title>
-    
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Parameterized notebooks</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -17,6 +13,9 @@
     
     <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/notebooks/parameterized_notebooks.html">
     <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/notebooks/parameterized_notebooks.html">
+    
+    
+    <link rel="icon" href="../.calepin/favicon.svg">
     
     
     <meta name="color-scheme" content="light dark">
@@ -54,7 +53,7 @@
     <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"= Parameterized notebooks\n<parameterized-notebooks>\n\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#calepin.setup(\n  eval: true,\n  echo: true,\n  params: (\n    Species: \"versicolor\",\n    min_petal_length: 4.5,\n    palette: \"viridis\",\n  ),\n)\n\nIt is often useful to render the same notebook with different inputs. Calepin\ndocument parameters let Typst source code or command-line flags pass values to\nexecution engines. Code chunks can then read those values through a `params`\nobject.\n\nFor the `r` and `python` engines, Calepin creates the binding automatically: R\nreceives a named `list` read as `params$Species`, and Python receives a `dict`\nread as `params[\"Species\"]`.\n\nThis complete document filters the built-in R `iris` data to one species and a\nminimum petal length, then uses another parameter to choose the color palette.\n\n````typ\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#calepin.setup(\n  params: (\n    Species: \"versicolor\",\n    min_petal_length: 4.5,\n    palette: \"viridis\",\n  ),\n)\n\nThe selected species is #calepin.inline(\"r\")[`cat(params$Species)`].\n\n```r\n#| fig-caption: Iris rows selected by document parameters\nfiltered <- subset(\n  iris,\n  Species == params$Species & Petal.Length >= params$min_petal_length\n)\n\ncolors <- hcl.colors(3, palette = params$palette)\n\nplot(\n  Sepal.Length ~ Petal.Length,\n  data = filtered,\n  pch = 19,\n  col = colors[2],\n  xlab = \"Petal length\",\n  ylab = \"Sepal length\",\n  main = paste(params$Species, \"with Petal.Length >=\", params$min_petal_length)\n)\n```\n````\n\nThe selected species is #calepin.inline(\"r\")[`cat(params$Species)`].\n\n```r\n#| fig-caption: Iris rows selected by document parameters\nfiltered <- subset(\n  iris,\n  Species == params$Species & Petal.Length >= params$min_petal_length\n)\n\ncolors <- hcl.colors(3, palette = params$palette)\n\nplot(\n  Sepal.Length ~ Petal.Length,\n  data = filtered,\n  pch = 19,\n  col = colors[2],\n  xlab = \"Petal length\",\n  ylab = \"Sepal length\",\n  main = paste(params$Species, \"with Petal.Length >=\", params$min_petal_length)\n)\n```\n\nBecause parameters are defined in `#calepin.setup`, command-line values can\noverride them at render time with `-P key=value` (repeatable). This renders the\nsame source with different inputs without editing the notebook:\n\n```sh\ncalepin compile iris.typ -P Species=setosa -P min_petal_length=1.5 -P palette=magma\n```\n\nCommand-line values are typed the same way as Quarto-style header values, so\n`1.5` is a number, `true` is a boolean, and `setosa` is a string.\n\nParameter values may be `none`, a boolean, an integer, a float, a string, an\narray, or a dictionary, nested freely. Other Typst values such as content,\nfunctions, lengths, colors, and dates cannot be passed directly; supply them as\nstrings or numbers instead. Unsupported values fail the build with a message\nnaming the offending parameter.\n\nParameters are also written to `.calepin/<document>/params.json`. Engines\nreached through a Jupyter kernel, including `julia` and any other kernel, do not\nyet receive an automatic `params` binding. Read that JSON file yourself using\nthe `CALEPIN_PARAMS_PATH` environment variable that Calepin sets in the kernel.\nParameters are not secret: treat them as build inputs that are written to disk.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#import \"@preview/calepin:0.0.1\" as calepin\n\n#set document(title: [Parameterized notebooks])\n\n#calepin.setup(\n  eval: true,\n  echo: true,\n  params: (\n    Species: \"versicolor\",\n    min_petal_length: 4.5,\n    palette: \"viridis\",\n  ),\n)\n\n#title() <parameterized-notebooks>\n\nIt is often useful to render the same notebook with different inputs. Calepin\ndocument parameters let Typst source code or command-line flags pass values to\nexecution engines. Code chunks can then read those values through a `params`\nobject.\n\nFor the `r` and `python` engines, Calepin creates the binding automatically: R\nreceives a named `list` read as `params$Species`, and Python receives a `dict`\nread as `params[\"Species\"]`.\n\nThis complete document filters the built-in R `iris` data to one species and a\nminimum petal length, then uses another parameter to choose the color palette.\n\n````typ\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#calepin.setup(\n  params: (\n    Species: \"versicolor\",\n    min_petal_length: 4.5,\n    palette: \"viridis\",\n  ),\n)\n\nThe selected species is #calepin.inline(\"r\")[`cat(params$Species)`].\n\n```r\n#| fig-caption: Iris rows selected by document parameters\nfiltered <- subset(\n  iris,\n  Species == params$Species & Petal.Length >= params$min_petal_length\n)\n\ncolors <- hcl.colors(3, palette = params$palette)\n\nplot(\n  Sepal.Length ~ Petal.Length,\n  data = filtered,\n  pch = 19,\n  col = colors[2],\n  xlab = \"Petal length\",\n  ylab = \"Sepal length\",\n  main = paste(params$Species, \"with Petal.Length >=\", params$min_petal_length)\n)\n```\n````\n\nThe selected species is #calepin.inline(\"r\")[`cat(params$Species)`].\n\n```r\n#| fig-caption: Iris rows selected by document parameters\nfiltered <- subset(\n  iris,\n  Species == params$Species & Petal.Length >= params$min_petal_length\n)\n\ncolors <- hcl.colors(3, palette = params$palette)\n\nplot(\n  Sepal.Length ~ Petal.Length,\n  data = filtered,\n  pch = 19,\n  col = colors[2],\n  xlab = \"Petal length\",\n  ylab = \"Sepal length\",\n  main = paste(params$Species, \"with Petal.Length >=\", params$min_petal_length)\n)\n```\n\nBecause parameters are defined in `#calepin.setup`, command-line values can\noverride them at render time with `-P key=value` (repeatable). This renders the\nsame source with different inputs without editing the notebook:\n\n```sh\ncalepin compile iris.typ -P Species=setosa -P min_petal_length=1.5 -P palette=magma\n```\n\nCommand-line values are typed the same way as Quarto-style header values, so\n`1.5` is a number, `true` is a boolean, and `setosa` is a string.\n\nParameter values may be `none`, a boolean, an integer, a float, a string, an\narray, or a dictionary, nested freely. Other Typst values such as content,\nfunctions, lengths, colors, and dates cannot be passed directly; supply them as\nstrings or numbers instead. Unsupported values fail the build with a message\nnaming the offending parameter.\n\nParameters are also written to `.calepin/<document>/params.json`. Engines\nreached through a Jupyter kernel, including `julia` and any other kernel, do not\nyet receive an automatic `params` binding. Read that JSON file yourself using\nthe `CALEPIN_PARAMS_PATH` environment variable that Calepin sets in the kernel.\nParameters are not secret: treat them as build inputs that are written to disk.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -77,6 +76,10 @@
                 
                 
                 
+                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span> GitHub</a></li>
+                
+                
+                
                 <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
                 
                 
@@ -91,15 +94,6 @@
                         <option value="pdf">PDF</option>
                     </select>
                 </li>
-                
-                <li>
-                    <a class="calepin-website-github-link contrast" href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub" title="GitHub">
-                        <svg viewBox="0 0 24 24" class="calepin-website-github-icon" aria-hidden="true" focusable="false">
-                            <path d="M12 .297C5.373.297 0 5.67 0 12.297c0 5.292 3.438 9.775 8.207 11.387.6.113.793-.26.793-.577 0-.285-.01-1.04-.016-2.042-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.086 1.838 1.238 1.838 1.238 1.072 1.836 2.813 1.306 3.5.999.108-.775.418-1.306.76-1.606-2.665-.304-5.466-1.333-5.466-5.932 0-1.31.467-2.381 1.235-3.221-.123-.304-.535-1.527.117-3.18 0 0 1.008-.323 3.3 1.23a11.36 11.36 0 0 1 3.003-.404c1.089.005 2.2.147 3.003.404 2.291-1.553 3.297-1.23 3.297-1.23.654 1.653.242 2.876.119 3.18.77.84 1.233 1.911 1.233 3.221 0 4.61-2.803 5.624-5.475 5.922.43.372.823 1.102.823 2.222 0 1.606-.014 2.897-.014 3.293 0 .32.19.694.8.576C20.565 22.07 24 17.59 24 12.297 24 5.67 18.627.297 12 .297z"/>
-                        </svg>
-                    </a>
-                </li>
-                
             </ul>
         </nav>
     </header>
@@ -111,82 +105,92 @@
                     
                     
                     
-                    <p><strong>Getting started</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../index.html" aria-label="Home">Home</a></li>
-                        
-                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
-                        
-                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    <p><strong>Notebooks</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="parameterized_notebooks.html" aria-label="Parameterized notebooks" class="active" aria-current="page">Parameterized notebooks</a></li>
-                        
-                        <li><a href="tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
-                        
-                        <li><a href="crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
-                        
-                        <li><a href="templates.html" aria-label="HTML themes">HTML themes</a></li>
-                        
-                        <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Getting started</summary>
+                        <ul>
+                            
+                            <li><a href="../index.html" aria-label="Home">Home</a></li>
+                            
+                            <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
+                            
+                            <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+                            
+                        </ul>
+                    </details>
                     
                     
                     
                     
-                    <p><strong>Code execution</strong></p>
                     
-                    <ul>
-                        
-                        <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
-                        
-                        <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    <p><strong>Website generator</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
-                        
-                        <li><a href="../websites/website-config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                        <li><a href="../websites/website-themes.html" aria-label="Themes">Themes</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Code execution</summary>
+                        <ul>
+                            
+                            <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
+                            
+                            <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
+                            
+                        </ul>
+                    </details>
                     
                     
                     
                     
-                    <p><strong>Reference</strong></p>
                     
-                    <ul>
-                        
-                        <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section" open>
+                        <summary>Notebooks</summary>
+                        <ul>
+                            
+                            <li><a href="parameterized_notebooks.html" aria-label="Parameterized notebooks" class="active" aria-current="page">Parameterized notebooks</a></li>
+                            
+                            <li><a href="tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
+                            
+                            <li><a href="crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
+                            
+                            <li><a href="templates.html" aria-label="HTML themes">HTML themes</a></li>
+                            
+                            <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Website generator</summary>
+                        <ul>
+                            
+                            <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
+                            
+                            <li><a href="../websites/website-config.html" aria-label="Configuration">Configuration</a></li>
+                            
+                            <li><a href="../websites/website-themes.html" aria-label="Themes">Themes</a></li>
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Reference</summary>
+                        <ul>
+                            
+                            <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
+                            
+                        </ul>
+                    </details>
+                    
                     
                     
                 
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h2 id="parameterized-notebooks">Parameterized notebooks</h2><p>It is often useful to render the same notebook with different inputs. Calepin document parameters let Typst source code or command-line flags pass values to execution engines. Code chunks can then read those values through a <code>params</code> object.</p><p>For the <code>r</code> and <code>python</code> engines, Calepin creates the binding automatically: R receives a named <code>list</code> read as <code>params$Species</code>, and Python receives a <code>dict</code> read as <code>params["Species"]</code>.</p><p>This complete document filters the built-in R <code>iris</code> data to one species and a minimum petal length, then uses another parameter to choose the color palette.</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"@preview/calepin:0.0.1"</span> <span style="color: #d73948">as</span> calepin
+            <h1 id="parameterized-notebooks">Parameterized notebooks</h1><p>It is often useful to render the same notebook with different inputs. Calepin document parameters let Typst source code or command-line flags pass values to execution engines. Code chunks can then read those values through a <code>params</code> object.</p><p>For the <code>r</code> and <code>python</code> engines, Calepin creates the binding automatically: R receives a named <code>list</code> read as <code>params$Species</code>, and Python receives a <code>dict</code> read as <code>params["Species"]</code>.</p><p>This complete document filters the built-in R <code>iris</code> data to one species and a minimum petal length, then uses another parameter to choose the color palette.</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"@preview/calepin:0.0.1"</span> <span style="color: #d73948">as</span> calepin
 
 <span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">setup</span>(
   params: (
@@ -239,7 +243,7 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#parameterized-notebooks">Parameterized notebooks</a></li>
+                    <li class="level-1"><a href="#parameterized-notebooks">Parameterized notebooks</a></li>
                     
                 </ul>
             </nav>
@@ -266,15 +270,6 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
         
     
         
-            
-            
-        
-        
-    
-        
-            
-            
-        
         
             
         
@@ -284,6 +279,15 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
             
         
     
+        
+            
+            
+        
+        
+    
+        
+            
+            
         
         
             
@@ -329,11 +333,11 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="../getting-started/config.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="../execution/options.html">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Configuration</span>
+            <span class="calepin-website-page-nav-title">Options</span>
           </span>
         </a>
         

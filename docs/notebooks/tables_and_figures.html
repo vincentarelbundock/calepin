@@ -1,8 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    
-    <title>Tables and figures | Calepin</title>
-    
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tables and figures</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -17,6 +13,9 @@
     
     <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/notebooks/tables_and_figures.html">
     <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/notebooks/tables_and_figures.html">
+    
+    
+    <link rel="icon" href="../.calepin/favicon.svg">
     
     
     <meta name="color-scheme" content="light dark">
@@ -54,7 +53,7 @@
     <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"#import \"@preview/calepin:0.0.1\" as calepin\n\n#calepin.setup(\n  echo: true,\n  eval: true,\n  results: \"verbatim\",\n  fenced-chunks: false,\n)\n\n= Tables and figures\n<tables-and-figures>\n\n== Tables\n<tables>\n\nTinytable emits raw Typst content directly. Keep `results: \"typst\"` to pass it through into the document. Note that at the time of writing, Typst HTML export did not support the complex type of table created below. Switch to PDF view to see the full effect.\n\n````typ\n#calepin.chunk(results: \"typst\")[\n```r\nlibrary(tinytable)\ndat <- head(iris)\ntt(dat, caption = \"Hello world!\") |> \n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\") |>\n  print('typst')\n```\n]\n````\n\n#calepin.chunk(echo: false, results: \"typst\")[\n```r\nlibrary(tinytable)\ndat <- head(iris)\ntt(dat, caption = \"Hello world!\") |> \n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\") |>\n  print('typst')\n```\n]\n\n== Multi-plot figures\n<multi-plot-figures>\n\nChunks that produce multiple plots can be displayed as one figure. Use\n`fig-layout-columns` and `fig-layout-rows` to control the grid, and\n`fig-subcaptions` to add per-panel captions.\n\n````typ\n#calepin.chunk(\n  fig-caption: [Regression diagnostics],\n  fig-subcaptions: (\n    [Residuals vs fitted],\n    [Normal Q-Q],\n    [Scale-location],\n    [Cook's distance],\n  ),\n  fig-layout-columns: (1fr, 1fr),\n  fig-layout-rows: (auto, auto),\n  fig-width: 90%,\n)[```r\nmodel <- lm(mpg ~ wt + hp, data = mtcars)\n\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)\n```]\n````\n\n#calepin.chunk(\n  \"r\",\n  label: \"fig-diagnostics\",\n  echo: false,\n  fig-caption: [Regression diagnostics],\n  fig-subcaptions: (\n    [Residuals vs fitted],\n    [Normal Q-Q],\n    [Scale-location],\n    [Cook's distance],\n  ),\n  fig-layout-columns: (1fr, 1fr),\n  fig-layout-rows: (auto, auto),\n  fig-width: 90%,\n)[```r\nmodel <- lm(mpg ~ wt + hp, data = mtcars)\n\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)\n```]\n\nWith `fig-layout-columns: (1fr, 1fr)`, Calepin displays the four plots\nin a two-column grid. The first plot is saved with the chunk label, and\nlater plots use numbered artifact names such as `fig-diagnostics-2.svg`.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#import \"@preview/calepin:0.0.1\" as calepin\n\n#set document(title: [Tables and figures])\n\n#calepin.setup(\n  echo: true,\n  eval: true,\n  results: \"verbatim\",\n  fenced-chunks: false,\n)\n\n#title() <tables-and-figures>\n\n= Tables\n<tables>\n\nTinytable emits raw Typst content directly. Keep `results: \"typst\"` to pass it through into the document. Note that at the time of writing, Typst HTML export did not support the complex type of table created below. Switch to PDF view to see the full effect.\n\n````typ\n#calepin.chunk(results: \"typst\")[\n```r\nlibrary(tinytable)\ndat <- head(iris)\ntt(dat, caption = \"Hello world!\") |> \n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\") |>\n  print('typst')\n```\n]\n````\n\n#calepin.chunk(echo: false, results: \"typst\")[\n```r\nlibrary(tinytable)\ndat <- head(iris)\ntt(dat, caption = \"Hello world!\") |> \n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\") |>\n  print('typst')\n```\n]\n\n= Multi-plot figures\n<multi-plot-figures>\n\nChunks that produce multiple plots can be displayed as one figure. Use\n`fig-layout-columns` and `fig-layout-rows` to control the grid, and\n`fig-subcaptions` to add per-panel captions.\n\n````typ\n#calepin.chunk(\n  fig-caption: [Regression diagnostics],\n  fig-subcaptions: (\n    [Residuals vs fitted],\n    [Normal Q-Q],\n    [Scale-location],\n    [Cook's distance],\n  ),\n  fig-layout-columns: (1fr, 1fr),\n  fig-layout-rows: (auto, auto),\n  fig-width: 90%,\n)[```r\nmodel <- lm(mpg ~ wt + hp, data = mtcars)\n\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)\n```]\n````\n\n#calepin.chunk(\n  \"r\",\n  label: \"fig-diagnostics\",\n  echo: false,\n  fig-caption: [Regression diagnostics],\n  fig-subcaptions: (\n    [Residuals vs fitted],\n    [Normal Q-Q],\n    [Scale-location],\n    [Cook's distance],\n  ),\n  fig-layout-columns: (1fr, 1fr),\n  fig-layout-rows: (auto, auto),\n  fig-width: 90%,\n)[```r\nmodel <- lm(mpg ~ wt + hp, data = mtcars)\n\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)\n```]\n\nWith `fig-layout-columns: (1fr, 1fr)`, Calepin displays the four plots\nin a two-column grid. The first plot is saved with the chunk label, and\nlater plots use numbered artifact names such as `fig-diagnostics-2.svg`.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -77,6 +76,10 @@
                 
                 
                 
+                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span> GitHub</a></li>
+                
+                
+                
                 <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
                 
                 
@@ -91,15 +94,6 @@
                         <option value="pdf">PDF</option>
                     </select>
                 </li>
-                
-                <li>
-                    <a class="calepin-website-github-link contrast" href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub" title="GitHub">
-                        <svg viewBox="0 0 24 24" class="calepin-website-github-icon" aria-hidden="true" focusable="false">
-                            <path d="M12 .297C5.373.297 0 5.67 0 12.297c0 5.292 3.438 9.775 8.207 11.387.6.113.793-.26.793-.577 0-.285-.01-1.04-.016-2.042-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.086 1.838 1.238 1.838 1.238 1.072 1.836 2.813 1.306 3.5.999.108-.775.418-1.306.76-1.606-2.665-.304-5.466-1.333-5.466-5.932 0-1.31.467-2.381 1.235-3.221-.123-.304-.535-1.527.117-3.18 0 0 1.008-.323 3.3 1.23a11.36 11.36 0 0 1 3.003-.404c1.089.005 2.2.147 3.003.404 2.291-1.553 3.297-1.23 3.297-1.23.654 1.653.242 2.876.119 3.18.77.84 1.233 1.911 1.233 3.221 0 4.61-2.803 5.624-5.475 5.922.43.372.823 1.102.823 2.222 0 1.606-.014 2.897-.014 3.293 0 .32.19.694.8.576C20.565 22.07 24 17.59 24 12.297 24 5.67 18.627.297 12 .297z"/>
-                        </svg>
-                    </a>
-                </li>
-                
             </ul>
         </nav>
     </header>
@@ -111,82 +105,92 @@
                     
                     
                     
-                    <p><strong>Getting started</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../index.html" aria-label="Home">Home</a></li>
-                        
-                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
-                        
-                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    <p><strong>Notebooks</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
-                        
-                        <li><a href="tables_and_figures.html" aria-label="Tables and figures" class="active" aria-current="page">Tables and figures</a></li>
-                        
-                        <li><a href="crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
-                        
-                        <li><a href="templates.html" aria-label="HTML themes">HTML themes</a></li>
-                        
-                        <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Getting started</summary>
+                        <ul>
+                            
+                            <li><a href="../index.html" aria-label="Home">Home</a></li>
+                            
+                            <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
+                            
+                            <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+                            
+                        </ul>
+                    </details>
                     
                     
                     
                     
-                    <p><strong>Code execution</strong></p>
                     
-                    <ul>
-                        
-                        <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
-                        
-                        <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    <p><strong>Website generator</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
-                        
-                        <li><a href="../websites/website-config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                        <li><a href="../websites/website-themes.html" aria-label="Themes">Themes</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Code execution</summary>
+                        <ul>
+                            
+                            <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
+                            
+                            <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
+                            
+                        </ul>
+                    </details>
                     
                     
                     
                     
-                    <p><strong>Reference</strong></p>
                     
-                    <ul>
-                        
-                        <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section" open>
+                        <summary>Notebooks</summary>
+                        <ul>
+                            
+                            <li><a href="parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
+                            
+                            <li><a href="tables_and_figures.html" aria-label="Tables and figures" class="active" aria-current="page">Tables and figures</a></li>
+                            
+                            <li><a href="crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
+                            
+                            <li><a href="templates.html" aria-label="HTML themes">HTML themes</a></li>
+                            
+                            <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Website generator</summary>
+                        <ul>
+                            
+                            <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
+                            
+                            <li><a href="../websites/website-config.html" aria-label="Configuration">Configuration</a></li>
+                            
+                            <li><a href="../websites/website-themes.html" aria-label="Themes">Themes</a></li>
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Reference</summary>
+                        <ul>
+                            
+                            <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
+                            
+                        </ul>
+                    </details>
+                    
                     
                     
                 
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h2 id="tables-and-figures">Tables and figures</h2><h3 id="tables">Tables</h3><p>Tinytable emits raw Typst content directly. Keep <code>results: "typst"</code> to pass it through into the document. Note that at the time of writing, Typst HTML export did not support the complex type of table created below. Switch to PDF view to see the full effect.</p><pre><code data-lang="typ"><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">chunk</span>(results: <span style="color: #198810">"typst"</span>)[
+            <h1 id="tables-and-figures">Tables and figures</h1><h2 id="tables">Tables</h2><p>Tinytable emits raw Typst content directly. Keep <code>results: "typst"</code> to pass it through into the document. Note that at the time of writing, Typst HTML export did not support the complex type of table created below. Switch to PDF view to see the full effect.</p><pre><code data-lang="typ"><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">chunk</span>(results: <span style="color: #198810">"typst"</span>)[
 <span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">r</span><span style="color: #6b6b6f"></span>
 <span style="color: #6b6b6f"></span><span style="color: #6b6b6f">library(tinytable)</span><span style="color: #6b6b6f"></span>
 <span style="color: #6b6b6f"></span><span style="color: #6b6b6f">dat &lt;- head(iris)</span><span style="color: #6b6b6f"></span>
@@ -194,7 +198,7 @@
 <span style="color: #6b6b6f"></span><span style="color: #6b6b6f">  style_tt(i = 1:2, j = 2:3, background = "teal", color = "white") |></span><span style="color: #6b6b6f"></span>
 <span style="color: #6b6b6f"></span><span style="color: #6b6b6f">  print('typst')</span><span style="color: #6b6b6f"></span>
 <span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span>
-]</code></pre><figure><div></div><figcaption>Table 1: Hello world!</figcaption></figure><h3 id="multi-plot-figures">Multi-plot figures</h3><p>Chunks that produce multiple plots can be displayed as one figure. Use <code>fig-layout-columns</code> and <code>fig-layout-rows</code> to control the grid, and <code>fig-subcaptions</code> to add per-panel captions.</p><pre><code data-lang="typ"><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">chunk</span>(
+]</code></pre><figure><div></div><figcaption>Table 1: Hello world!</figcaption></figure><h2 id="multi-plot-figures">Multi-plot figures</h2><p>Chunks that produce multiple plots can be displayed as one figure. Use <code>fig-layout-columns</code> and <code>fig-layout-rows</code> to control the grid, and <code>fig-subcaptions</code> to add per-panel captions.</p><pre><code data-lang="typ"><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">chunk</span>(
   fig-caption: [Regression diagnostics],
   fig-subcaptions: (
     [Residuals vs fitted],
@@ -220,11 +224,11 @@
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#tables-and-figures">Tables and figures</a></li>
+                    <li class="level-1"><a href="#tables-and-figures">Tables and figures</a></li>
                     
-                    <li class="level-3"><a href="#tables">Tables</a></li>
+                    <li class="level-2"><a href="#tables">Tables</a></li>
                     
-                    <li class="level-3"><a href="#multi-plot-figures">Multi-plot figures</a></li>
+                    <li class="level-2"><a href="#multi-plot-figures">Multi-plot figures</a></li>
                     
                 </ul>
             </nav>
@@ -256,15 +260,6 @@
         
     
         
-            
-            
-        
-        
-    
-        
-            
-            
-        
         
             
         
@@ -274,6 +269,15 @@
             
         
     
+        
+            
+            
+        
+        
+    
+        
+            
+            
         
         
             

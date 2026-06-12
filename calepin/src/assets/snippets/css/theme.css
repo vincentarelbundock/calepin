@@ -59,8 +59,9 @@ h6 {
 }
 
 h1 {
-  font-size: clamp(1.85rem, 5vw, 2.55rem);
-  line-height: 1.15;
+  font-size: 1.9rem;
+  line-height: 1.2;
+  margin-bottom: 1rem;
 }
 
 figure {

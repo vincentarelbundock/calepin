@@ -1,3 +1,7 @@
+#set document(title: [HTML themes])
+
+#title()
+
 Theme bundles apply to HTML and paged output. Select a theme with `--theme`,
 `theme` in `calepin.toml`, or `#calepin.setup(theme: ...)`:
 
@@ -48,7 +52,7 @@ Templates can access:
 - `site.logo`
 - `site.logo_alt`
 - `site.home_url`
-- `site.github_url`
+- `site.favicon`
 - `site.current_url`
 - `site.page_title`
 - `snippets.css.theme`

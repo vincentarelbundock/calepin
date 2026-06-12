@@ -1,8 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    
-    <title>Themes | Calepin</title>
-    
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Website themes</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -12,11 +8,14 @@
     <meta property="og:site_name" content="Calepin">
     
     
-    <meta property="og:title" content="Themes | Calepin">
+    <meta property="og:title" content="Website themes | Calepin">
     
     
     <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/websites/website-themes.html">
     <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/websites/website-themes.html">
+    
+    
+    <link rel="icon" href="../.calepin/favicon.svg">
     
     
     <meta name="color-scheme" content="light dark">
@@ -54,7 +53,7 @@
     <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"= Website themes\n\nA theme controls how your website looks: layout, navigation, colors, and typography. Every _Calepin_ site uses one. The default theme works with zero configuration, and when you want more control, you can copy any built-in theme into your project and edit it like the rest of your source files.\n\n== Built-in themes\n\n_Calepin_ ships with two themes:\n\n- *calepin* (the default): a documentation site layout with sidebar navigation, a top bar with your logo and a GitHub link, previous and next page links, a table of contents, a dark mode toggle, copy buttons on code blocks, and a view switcher that shows each page as rendered HTML, Typst source, or PDF. This documentation site uses it.\n- *academic*: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, and publication lists. Run `calepin new academic` to scaffold a complete starter site built on it.\n\n== Choosing a theme\n\nSet `theme` in your site's `calepin.toml`. It accepts three kinds of values:\n\n```toml\ntheme = \"academic\"          # a built-in theme: calepin or academic\ntheme = \"themes/my-theme\"   # a theme directory in your project\ntheme = false               # no theme: raw, unstyled output\n```\n\nThe same values work with `--theme` on `calepin compile` and `calepin watch`, and inside a document with `#calepin.setup(theme: ...)`. When several are set, the command line wins, then the document, then `calepin.toml`.\n\n== Customizing a theme\n\nBuilt-in themes are compiled into the _Calepin_ binary, so you cannot edit them directly. Instead, copy one into your project and edit the copy:\n\n```sh\ncalepin new theme                     # copies the default theme to themes/calepin/\ncalepin new theme --theme academic    # copies the academic theme to themes/academic/\n```\n\nThen point your site at the copy:\n\n```toml\ntheme = \"themes/calepin\"\n```\n\nThe copy is yours: edit its HTML, CSS, JavaScript, and Typst files freely, and check them into version control. _Calepin_ upgrades will never touch them.\n\nTwo tips:\n\n- Keep only the files you actually change. Anything you delete from your copy falls back to the built-in default, so a theme directory containing a single CSS file is perfectly valid, and the remaining files document exactly what you customized.\n- Never edit files under `.calepin/`. That directory is regenerated on every build, and changes there are silently lost.\n\n== Inside a theme\n\nA theme is just a directory. _Calepin_ looks for three entry files, one per kind of output:\n\n```text\nthemes/my-theme/\n  site.html         # layout for website pages\n  document.html     # layout for a single document rendered to HTML\n  paged.typ         # Typst styling for PDF, SVG, and PNG output\n  partials/         # reusable template fragments\n  styles/           # CSS files, loaded in filename order\n  scripts/          # JavaScript files, loaded in filename order\n```\n\nEvery file is optional. When an entry file is missing, that kind of output uses the default `calepin` theme instead, including the default's own partials, styles, and scripts. The built-in `academic` theme works this way: it only provides `site.html`, and falls back to the default for single-document HTML and paged output.\n\nOne special case: an empty `paged.typ` turns paged styling off entirely, while a missing one inherits the default styling.\n\n== Writing templates\n\n`site.html` and `document.html` use the MiniJinja template language, which follows the familiar Jinja2 syntax. Files in `partials/` can be included with `{% include \"partials/name.html\" %}`.\n\nOn website builds, templates receive a `site` object describing the site and the current page:\n\n- `site.title`, `site.description`, `site.base_url`: site identity from `calepin.toml`\n- `site.logo`, `site.logo_alt`, `site.home_url`, `site.github_url`: branding and top-bar links\n- `site.sidebar`, `site.sidebar_sections`: sidebar navigation entries\n- `site.navbar_left`, `site.navbar_center`, `site.navbar_right`: navbar entries by region\n- `site.toc`: table of contents for the current page\n- `site.page_title`, `site.current_url`: current page metadata\n- `site.language`, `site.languages`, `site.translations`: multilingual site data\n\nEach entry in `site.sidebar`, `site.sidebar_sections`, and the navbar regions exposes `href`, `label`, `label_html`, `active`, and `widget`. Plain links have `widget = none`. Widget entries carry whatever string was configured: the built-in themes recognize `widget = \"theme\"` (dark mode toggle) and `widget = \"language\"` (language picker), and a custom theme can invent its own names, such as `search`, and render them by checking `item.widget`.\n\nFor the variables available when rendering a single document, see #link(\"../notebooks/templates.html\")[HTML themes].\n\n== Reusable snippets\n\nYou do not have to write all the CSS and JavaScript yourself. _Calepin_ exposes its own building blocks to every theme through the `snippets` object:\n\n```html\n<style>{{ snippets.css.theme }}<\/style>\n<style>{{ snippets.css.code }}<\/style>\n<style>{{ snippets.css.widgets }}<\/style>\n<script>{{ snippets.js.copy_code }}<\/script>\n<script>{{ snippets.js.language_picker }}<\/script>\n<script>{{ snippets.js.theme_toggle }}<\/script>\n```\n\n- `snippets.css.theme` is the shared visual base of the built-in themes: typography, heading scale, colors, and code, output, and figure defaults.\n- `snippets.css.code` styles code blocks and computed output.\n- `snippets.css.widgets`, together with `snippets.js.theme_toggle` and `snippets.js.language_picker`, powers the dark mode toggle (elements marked `data-calepin-theme-toggle`) and the language picker (selects marked `data-calepin-language-picker`).\n- `snippets.js.copy_code` adds copy buttons to code blocks.\n\nPrefer these snippets over copying CSS or JavaScript out of the built-in themes: your theme stays small, and it inherits fixes and improvements from future _Calepin_ releases.\n\n== Styling PDF output\n\n`paged.typ` is a plain Typst file, not a template. When rendering PDF, SVG, or PNG output, _Calepin_ inserts it ahead of each page's source, after its own code chunk rules, so your `set` and `show` rules apply to the whole document.\n\n_Calepin_ also stages reusable Typst snippets under `/.calepin/snippets/typst/`. The default theme's `paged.typ` imports `code-block.typ` from there to style source blocks. A minimal `paged.typ` that does the same:\n\n```typ\n#import \"/.calepin/snippets/typst/code-block.typ\": code-block\n\n#show raw.where(block: true): it => {\n  if sys.inputs.at(\"calepin-target\", default: \"paged\") == \"html\" {\n    it\n  } else {\n    code-block(it)\n  }\n}\n```\n\n== Source and PDF views\n\nThe default theme's view switcher shows each page as rendered HTML, Typst source, or PDF.\n\nThe source view reads a JSON script embedded in each generated HTML page, so it always works. The PDF view links to the matching `.pdf` file, which only exists when PDF rendering is enabled. If you build with `--format html`, no PDF files are generated, and the PDF view has nothing to show.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Website themes])\n\n#title()\n\nA theme controls how your website looks: layout, navigation, colors, typography, and output-specific styling. Every _Calepin_ site uses one. The default theme works with zero configuration, and when you want more control, you can copy any built-in theme into your project and edit it like the rest of your source files.\n\n= Choosing\n\nSet `theme` in your site's `calepin.toml`:\n\n```toml\ntheme = \"calepin\"           # the default documentation theme\ntheme = \"academic\"          # a built-in academic site theme\ntheme = \"themes/my-theme\"   # a local theme directory\ntheme = false               # no theme: raw, unstyled output\n```\n\nThe same values work with `--theme` on `calepin compile` and `calepin watch`, and inside a document with `#calepin.setup(theme: ...)`. When several are set, the command line wins, then the document, then `calepin.toml`.\n\n== Built-in\n\n_Calepin_ ships with two built-in themes:\n\n- *calepin*: the default documentation site layout, with sidebar navigation, a top bar, previous and next page links, a table of contents, dark mode, copy buttons on code blocks, and a view switcher for rendered HTML, Typst source, and PDF.\n- *academic*: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, publication lists, projects, talks, and posts. Run `calepin new academic` to scaffold a complete starter site built on it.\n\n== Local directory\n\nA local theme is a directory in your project. Point `theme` at that directory:\n\n```toml\ntheme = \"themes/my-theme\"\n```\n\nUse a local directory when you want project-specific HTML, CSS, JavaScript, or paged Typst styling. Missing files fall back to the built-in `calepin` theme, so a small local theme can override just one file.\n\n= Customizing\n\nBuilt-in themes are compiled into the _Calepin_ binary, so you cannot edit them directly. Instead, copy one into your project and edit the copy:\n\n```sh\ncalepin new theme                     # copies the default theme to themes/calepin/\ncalepin new theme --theme academic    # copies the academic theme to themes/academic/\n```\n\nThen point your site at the copy:\n\n```toml\ntheme = \"themes/calepin\"\n```\n\nThe copy is yours: edit its HTML, CSS, JavaScript, and Typst files freely, and check them into version control. _Calepin_ upgrades will never touch them.\n\nKeep only the files you actually change. Anything you delete from your copy falls back to the built-in default, so a theme directory containing a single CSS file is valid and makes the customization obvious. Never edit files under `.calepin/`; that directory is regenerated on every build.\n\n= Structure and files\n\nA theme can provide three entry files, one per kind of output:\n\n```text\nthemes/my-theme/\n  site.html         # layout for website pages\n  document.html     # layout for a single document rendered to HTML\n  paged.typ         # Typst styling for PDF, SVG, and PNG output\n  partials/         # reusable template fragments\n  styles/           # CSS files, loaded in filename order\n  scripts/          # JavaScript files, loaded in filename order\n```\n\nEvery file is optional. When an entry file is missing, that kind of output uses the default `calepin` theme instead, including the default's own partials, styles, and scripts. The built-in `academic` theme works this way: it only provides `site.html`, and falls back to the default for single-document HTML and paged output.\n\nOne special case: an empty `paged.typ` turns paged styling off entirely, while a missing `paged.typ` inherits the default styling.\n\n`site.html` and `document.html` use the MiniJinja template language, which follows familiar Jinja2 syntax. On website builds, templates receive a `site` object describing the site and current page:\n\n- `site.title`, `site.description`, `site.base_url`: site identity from `calepin.toml`\n- `site.logo`, `site.logo_alt`, `site.home_url`, `site.favicon`: branding and site assets\n- `site.sidebar`, `site.sidebar_sections`: sidebar navigation entries\n- `site.navbar_left`, `site.navbar_center`, `site.navbar_right`: navbar entries by region\n- `site.toc`: table of contents for the current page\n- `site.page_title`, `site.current_url`: current page metadata\n- `site.language`, `site.languages`, `site.translations`: multilingual site data\n\nFor the variables available when rendering a single document, see #link(\"../notebooks/templates.html\")[HTML themes].\n\nHere is a small but complete `site.html`:\n\n```html\n{{ doc.head }}\n  {% if site.page_title or site.title %}\n  <title>{% if site.page_title %}{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}{% else %}{{ site.title }}{% endif %}<\/title>\n  {% endif %}\n  {% if site.description %}\n  <meta name=\"description\" content=\"{{ site.description }}\">\n  {% endif %}\n  {% if site.favicon %}\n  <link rel=\"icon\" href=\"{{ site.favicon }}\">\n  {% endif %}\n  <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css\">\n  {% for style in styles %}\n  <style>\n{{ style.css }}\n  <\/style>\n  {% endfor %}\n{{ doc.body_open }}\n  {% include \"partials/site-header.html\" %}\n  <div class=\"site-shell\">\n    {% include \"partials/sidebar.html\" %}\n    <main class=\"site-main\">\n      {{ doc.body }}\n    <\/main>\n    {% if site.toc %}\n    <aside class=\"site-toc\">\n      <strong>On this page<\/strong>\n      <ul>\n        {% for item in site.toc %}\n        <li class=\"level-{{ item.level }}\"><a href=\"{{ item.href }}\">{{ item.label }}<\/a><\/li>\n        {% endfor %}\n      <\/ul>\n    <\/aside>\n    {% endif %}\n  <\/div>\n  {% for script in scripts %}\n  <script>\n{{ script.content }}\n  <\/script>\n  {% endfor %}\n{{ doc.body_close }}\n```\n\nAnd a minimal `document.html` for single-file HTML output:\n\n```html\n{{ doc.head }}\n  <title>{{ doc.title }}<\/title>\n  <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css\">\n  {% for style in styles %}\n  <style>\n{{ style.css }}\n  <\/style>\n  {% endfor %}\n{{ doc.body_open }}\n  <header class=\"document-header\">\n    <a href=\"index.html\">Home<\/a>\n    <button type=\"button\" data-calepin-theme-toggle>Theme<\/button>\n  <\/header>\n  <main class=\"container\">\n    {{ doc.body }}\n  <\/main>\n  {% for script in scripts %}\n  <script>\n{{ script.content }}\n  <\/script>\n  {% endfor %}\n{{ doc.body_close }}\n```\n\n`doc.head`, `doc.body_open`, and `doc.body_close` come from Typst's generated HTML. Keep them in the template unless you are deliberately replacing the whole document shell.\n\n= Partials\n\nA partial is a reusable MiniJinja template fragment stored under `partials/`. Use partials for repeated HTML such as a header, footer, navigation list, search box, or analytics snippet.\n\nInclude a partial from `site.html`, `document.html`, or another partial:\n\n```html\n{% include \"partials/header.html\" %}\n```\n\nPartials receive the same template context as the file that includes them, so a partial included by `site.html` can read `site.title`, `site.navbar_left`, `styles`, `scripts`, and the other website template variables.\n\nFor example, `partials/site-header.html` can render the brand and top navigation:\n\n```html\n<header class=\"site-header\">\n  <nav>\n    <ul>\n      <li>\n        <a href=\"{{ site.home_url }}\">\n          {% if site.logo %}\n          <img src=\"{{ site.logo }}\" alt=\"{{ site.logo_alt }}\">\n          {% elif site.title %}\n          {{ site.title }}\n          {% else %}\n          Home\n          {% endif %}\n        <\/a>\n      <\/li>\n      {% for item in site.navbar_left %}\n      {% include \"partials/nav-item.html\" %}\n      {% endfor %}\n    <\/ul>\n    <ul>\n      {% for item in site.navbar_right %}\n      {% include \"partials/nav-item.html\" %}\n      {% endfor %}\n    <\/ul>\n  <\/nav>\n<\/header>\n```\n\nThen `partials/nav-item.html` can handle links and widgets in one place:\n\n```html\n{% if item.widget == \"theme\" %}\n<li>\n  <button type=\"button\" aria-label=\"{{ item.label }}\" data-calepin-theme-toggle>\n    {{ item.label_html }}\n  <\/button>\n<\/li>\n{% elif item.widget == \"language\" and site.languages | length > 1 %}\n<li>\n  <select aria-label=\"{{ item.label }}\" data-calepin-language-picker>\n    {% for language in site.languages %}\n    <option value=\"{{ language.href }}\" data-calepin-language-code=\"{{ language.code }}\"{% if language.active %} selected{% endif %}>{{ language.label }}<\/option>\n    {% endfor %}\n  <\/select>\n<\/li>\n{% else %}\n<li>\n  <a href=\"{{ item.href }}\" aria-label=\"{{ item.label }}\"{% if item.active %} aria-current=\"page\"{% endif %}>\n    {{ item.label_html }}\n  <\/a>\n<\/li>\n{% endif %}\n```\n\n`partials/sidebar.html` can use section state to render foldable navigation:\n\n```html\n{% if site.sidebar_sections %}\n<aside class=\"site-sidebar\">\n  {% for section in site.sidebar_sections %}\n  {% if section.items %}\n  <details{% if section.active %} open{% endif %}>\n    <summary>{{ section.title }}<\/summary>\n    <ul>\n      {% for item in section.items %}\n      <li><a href=\"{{ item.href }}\"{% if item.active %} aria-current=\"page\"{% endif %}>{{ item.label_html }}<\/a><\/li>\n      {% endfor %}\n    <\/ul>\n  <\/details>\n  {% endif %}\n  {% endfor %}\n<\/aside>\n{% endif %}\n```\n\n= Snippets\n\nWhen you run `calepin new theme`, _Calepin_ writes the shared CSS and JavaScript as normal files in your theme:\n\n```text\nthemes/calepin/\n  styles/00-theme.css\n  styles/01-code.css\n  styles/02-widgets.css\n  scripts/00-theme-toggle.js\n  scripts/01-language-picker.js\n  scripts/02-copy-code.js\n```\n\nThese files are the pieces that the built-in themes use for typography, syntax highlighting, code output, dark mode, language selection, and copy buttons. They are copied into your theme so you can inspect, edit, delete, or replace them directly.\n\nThe numeric prefixes matter only for load order. Theme CSS and JavaScript are loaded in filename order. Put broad variables and base rules first, then component rules, then project-specific overrides:\n\n```text\nstyles/\n  00-theme.css\n  01-code.css\n  02-widgets.css\n  90-overrides.css\n```\n\nThe older `snippets` template object is still available for compatibility with existing custom themes, but new ejected themes do not need it. Prefer editing the files in `styles/` and `scripts/` because they are explicit and version-controlled with your theme.\n\n= Widgets\n\nEach entry in `site.sidebar`, `site.sidebar_sections`, and the navbar regions exposes `href`, `label`, `label_html`, `active`, and `widget`. Plain links have `widget = none`.\n\nWidget entries carry whatever string was configured in `calepin.toml`:\n\n```toml\n[[navbar.item]]\nposition = \"right\"\nwidget = \"theme\"\n\n[[navbar.item]]\nposition = \"right\"\nwidget = \"language\"\n```\n\nThe built-in themes recognize `widget = \"theme\"` for the dark mode toggle and `widget = \"language\"` for the language picker. A custom theme can invent its own widget names, such as `search`, and render them by checking `item.widget`.\n\nThe bundled widget snippets expect these attributes:\n\n```html\n<button data-calepin-theme-toggle>Theme<\/button>\n<select data-calepin-language-picker><\/select>\n```\n\n= Conditional output\n\n`paged.typ` is a plain Typst file, not a template. When rendering PDF, SVG, or PNG output, _Calepin_ inserts it ahead of each page's source, after its own code chunk rules, so your `set` and `show` rules apply to the whole document.\n\n_Calepin_ also stages reusable Typst snippets under `/.calepin/snippets/typst/`. The default theme's `paged.typ` imports `code-block.typ` from there to style source blocks. Use `sys.inputs.at(\"calepin-target\", default: \"paged\")` when a rule should behave differently for HTML and paged output:\n\n```typ\n#import \"/.calepin/snippets/typst/code-block.typ\": code-block\n\n#show raw.where(block: true): it => {\n  if sys.inputs.at(\"calepin-target\", default: \"paged\") == \"html\" {\n    it\n  } else {\n    code-block(it)\n  }\n}\n```\n\nThe default theme's view switcher shows each website page as rendered HTML, Typst source, or PDF. The source view reads a JSON script embedded in each generated HTML page, so it always works. The PDF view links to the matching `.pdf` file, which only exists when PDF rendering is enabled. If you build with `--format html`, no PDF files are generated, and the PDF view has nothing to show.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -77,6 +76,10 @@
                 
                 
                 
+                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span> GitHub</a></li>
+                
+                
+                
                 <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
                 
                 
@@ -91,15 +94,6 @@
                         <option value="pdf">PDF</option>
                     </select>
                 </li>
-                
-                <li>
-                    <a class="calepin-website-github-link contrast" href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub" title="GitHub">
-                        <svg viewBox="0 0 24 24" class="calepin-website-github-icon" aria-hidden="true" focusable="false">
-                            <path d="M12 .297C5.373.297 0 5.67 0 12.297c0 5.292 3.438 9.775 8.207 11.387.6.113.793-.26.793-.577 0-.285-.01-1.04-.016-2.042-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.086 1.838 1.238 1.838 1.238 1.072 1.836 2.813 1.306 3.5.999.108-.775.418-1.306.76-1.606-2.665-.304-5.466-1.333-5.466-5.932 0-1.31.467-2.381 1.235-3.221-.123-.304-.535-1.527.117-3.18 0 0 1.008-.323 3.3 1.23a11.36 11.36 0 0 1 3.003-.404c1.089.005 2.2.147 3.003.404 2.291-1.553 3.297-1.23 3.297-1.23.654 1.653.242 2.876.119 3.18.77.84 1.233 1.911 1.233 3.221 0 4.61-2.803 5.624-5.475 5.922.43.372.823 1.102.823 2.222 0 1.606-.014 2.897-.014 3.293 0 .32.19.694.8.576C20.565 22.07 24 17.59 24 12.297 24 5.67 18.627.297 12 .297z"/>
-                        </svg>
-                    </a>
-                </li>
-                
             </ul>
         </nav>
     </header>
@@ -111,96 +105,238 @@
                     
                     
                     
-                    <p><strong>Getting started</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../index.html" aria-label="Home">Home</a></li>
-                        
-                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
-                        
-                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    <p><strong>Notebooks</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
-                        
-                        <li><a href="../notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
-                        
-                        <li><a href="../notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
-                        
-                        <li><a href="../notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
-                        
-                        <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Getting started</summary>
+                        <ul>
+                            
+                            <li><a href="../index.html" aria-label="Home">Home</a></li>
+                            
+                            <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
+                            
+                            <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+                            
+                        </ul>
+                    </details>
                     
                     
                     
                     
-                    <p><strong>Code execution</strong></p>
                     
-                    <ul>
-                        
-                        <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
-                        
-                        <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    <p><strong>Website generator</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="websites.html" aria-label="Overview">Overview</a></li>
-                        
-                        <li><a href="website-config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                        <li><a href="website-themes.html" aria-label="Themes" class="active" aria-current="page">Themes</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Code execution</summary>
+                        <ul>
+                            
+                            <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
+                            
+                            <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
+                            
+                        </ul>
+                    </details>
                     
                     
                     
                     
-                    <p><strong>Reference</strong></p>
                     
-                    <ul>
-                        
-                        <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
-                        
-                    </ul>
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Notebooks</summary>
+                        <ul>
+                            
+                            <li><a href="../notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
+                            
+                            <li><a href="../notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
+                            
+                            <li><a href="../notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
+                            
+                            <li><a href="../notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
+                            
+                            <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section" open>
+                        <summary>Website generator</summary>
+                        <ul>
+                            
+                            <li><a href="websites.html" aria-label="Overview">Overview</a></li>
+                            
+                            <li><a href="website-config.html" aria-label="Configuration">Configuration</a></li>
+                            
+                            <li><a href="website-themes.html" aria-label="Themes" class="active" aria-current="page">Themes</a></li>
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>Reference</summary>
+                        <ul>
+                            
+                            <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
+                            
+                        </ul>
+                    </details>
+                    
                     
                     
                 
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h2 id="website-themes">Website themes</h2><p>A theme controls how your website looks: layout, navigation, colors, and typography. Every <em>Calepin</em> site uses one. The default theme works with zero configuration, and when you want more control, you can copy any built-in theme into your project and edit it like the rest of your source files.</p><h3 id="built-in-themes">Built-in themes</h3><p><em>Calepin</em> ships with two themes:</p><ul><li><strong>calepin</strong> (the default): a documentation site layout with sidebar navigation, a top bar with your logo and a GitHub link, previous and next page links, a table of contents, a dark mode toggle, copy buttons on code blocks, and a view switcher that shows each page as rendered HTML, Typst source, or PDF. This documentation site uses it.</li><li><strong>academic</strong>: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, and publication lists. Run <code>calepin new academic</code> to scaffold a complete starter site built on it.</li></ul><h3 id="choosing-a-theme">Choosing a theme</h3><p>Set <code>theme</code> in your site’s <code>calepin.toml</code>. It accepts three kinds of values:</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">academic</span><span style="color: #198810">"</span>          <span style="color: #74747c">#</span><span style="color: #74747c"> a built-in theme: calepin or academic</span>
-<span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/my-theme</span><span style="color: #198810">"</span>   <span style="color: #74747c">#</span><span style="color: #74747c"> a theme directory in your project</span>
-<span style="color: #4b69c6">theme</span> = <span style="color: #d73948">false</span>               <span style="color: #74747c">#</span><span style="color: #74747c"> no theme: raw, unstyled output</span></code></pre><p>The same values work with <code>--theme</code> on <code>calepin compile</code> and <code>calepin watch</code>, and inside a document with <code>#calepin.setup(theme: ...)</code>. When several are set, the command line wins, then the document, then <code>calepin.toml</code>.</p><h3 id="customizing-a-theme">Customizing a theme</h3><p>Built-in themes are compiled into the <em>Calepin</em> binary, so you cannot edit them directly. Instead, copy one into your project and edit the copy:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> new theme                     <span style="color: #74747c">#</span><span style="color: #74747c"> copies the default theme to themes/calepin/</span>
-<span style="color: #4b69c6">calepin</span> new theme --theme academic    <span style="color: #74747c">#</span><span style="color: #74747c"> copies the academic theme to themes/academic/</span></code></pre><p>Then point your site at the copy:</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/calepin</span><span style="color: #198810">"</span></code></pre><p>The copy is yours: edit its HTML, CSS, JavaScript, and Typst files freely, and check them into version control. <em>Calepin</em> upgrades will never touch them.</p><p>Two tips:</p><ul><li>Keep only the files you actually change. Anything you delete from your copy falls back to the built-in default, so a theme directory containing a single CSS file is perfectly valid, and the remaining files document exactly what you customized.</li><li>Never edit files under <code>.calepin/</code>. That directory is regenerated on every build, and changes there are silently lost.</li></ul><h3 id="inside-a-theme">Inside a theme</h3><p>A theme is just a directory. <em>Calepin</em> looks for three entry files, one per kind of output:</p><pre><code data-lang="text">themes/my-theme/
+            <h1 id="website-themes">Website themes</h1><p>A theme controls how your website looks: layout, navigation, colors, typography, and output-specific styling. Every <em>Calepin</em> site uses one. The default theme works with zero configuration, and when you want more control, you can copy any built-in theme into your project and edit it like the rest of your source files.</p><h2 id="choosing">Choosing</h2><p>Set <code>theme</code> in your site’s <code>calepin.toml</code>:</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">calepin</span><span style="color: #198810">"</span>           <span style="color: #74747c">#</span><span style="color: #74747c"> the default documentation theme</span>
+<span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">academic</span><span style="color: #198810">"</span>          <span style="color: #74747c">#</span><span style="color: #74747c"> a built-in academic site theme</span>
+<span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/my-theme</span><span style="color: #198810">"</span>   <span style="color: #74747c">#</span><span style="color: #74747c"> a local theme directory</span>
+<span style="color: #4b69c6">theme</span> = <span style="color: #d73948">false</span>               <span style="color: #74747c">#</span><span style="color: #74747c"> no theme: raw, unstyled output</span></code></pre><p>The same values work with <code>--theme</code> on <code>calepin compile</code> and <code>calepin watch</code>, and inside a document with <code>#calepin.setup(theme: ...)</code>. When several are set, the command line wins, then the document, then <code>calepin.toml</code>.</p><h3 id="built-in">Built-in</h3><p><em>Calepin</em> ships with two built-in themes:</p><ul><li><strong>calepin</strong>: the default documentation site layout, with sidebar navigation, a top bar, previous and next page links, a table of contents, dark mode, copy buttons on code blocks, and a view switcher for rendered HTML, Typst source, and PDF.</li><li><strong>academic</strong>: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, publication lists, projects, talks, and posts. Run <code>calepin new academic</code> to scaffold a complete starter site built on it.</li></ul><h3 id="local-directory">Local directory</h3><p>A local theme is a directory in your project. Point <code>theme</code> at that directory:</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/my-theme</span><span style="color: #198810">"</span></code></pre><p>Use a local directory when you want project-specific HTML, CSS, JavaScript, or paged Typst styling. Missing files fall back to the built-in <code>calepin</code> theme, so a small local theme can override just one file.</p><h2 id="customizing">Customizing</h2><p>Built-in themes are compiled into the <em>Calepin</em> binary, so you cannot edit them directly. Instead, copy one into your project and edit the copy:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> new theme                     <span style="color: #74747c">#</span><span style="color: #74747c"> copies the default theme to themes/calepin/</span>
+<span style="color: #4b69c6">calepin</span> new theme --theme academic    <span style="color: #74747c">#</span><span style="color: #74747c"> copies the academic theme to themes/academic/</span></code></pre><p>Then point your site at the copy:</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/calepin</span><span style="color: #198810">"</span></code></pre><p>The copy is yours: edit its HTML, CSS, JavaScript, and Typst files freely, and check them into version control. <em>Calepin</em> upgrades will never touch them.</p><p>Keep only the files you actually change. Anything you delete from your copy falls back to the built-in default, so a theme directory containing a single CSS file is valid and makes the customization obvious. Never edit files under <code>.calepin/</code>; that directory is regenerated on every build.</p><h2 id="structure-and-files">Structure and files</h2><p>A theme can provide three entry files, one per kind of output:</p><pre><code data-lang="text">themes/my-theme/
   site.html         # layout for website pages
   document.html     # layout for a single document rendered to HTML
   paged.typ         # Typst styling for PDF, SVG, and PNG output
   partials/         # reusable template fragments
   styles/           # CSS files, loaded in filename order
-  scripts/          # JavaScript files, loaded in filename order</code></pre><p>Every file is optional. When an entry file is missing, that kind of output uses the default <code>calepin</code> theme instead, including the default’s own partials, styles, and scripts. The built-in <code>academic</code> theme works this way: it only provides <code>site.html</code>, and falls back to the default for single-document HTML and paged output.</p><p>One special case: an empty <code>paged.typ</code> turns paged styling off entirely, while a missing one inherits the default styling.</p><h3 id="writing-templates">Writing templates</h3><p><code>site.html</code> and <code>document.html</code> use the MiniJinja template language, which follows the familiar Jinja2 syntax. Files in <code>partials/</code> can be included with <code>{% include "partials/name.html" %}</code>.</p><p>On website builds, templates receive a <code>site</code> object describing the site and the current page:</p><ul><li><code>site.title</code>, <code>site.description</code>, <code>site.base_url</code>: site identity from <code>calepin.toml</code></li><li><code>site.logo</code>, <code>site.logo_alt</code>, <code>site.home_url</code>, <code>site.github_url</code>: branding and top-bar links</li><li><code>site.sidebar</code>, <code>site.sidebar_sections</code>: sidebar navigation entries</li><li><code>site.navbar_left</code>, <code>site.navbar_center</code>, <code>site.navbar_right</code>: navbar entries by region</li><li><code>site.toc</code>: table of contents for the current page</li><li><code>site.page_title</code>, <code>site.current_url</code>: current page metadata</li><li><code>site.language</code>, <code>site.languages</code>, <code>site.translations</code>: multilingual site data</li></ul><p>Each entry in <code>site.sidebar</code>, <code>site.sidebar_sections</code>, and the navbar regions exposes <code>href</code>, <code>label</code>, <code>label_html</code>, <code>active</code>, and <code>widget</code>. Plain links have <code>widget = none</code>. Widget entries carry whatever string was configured: the built-in themes recognize <code>widget = "theme"</code> (dark mode toggle) and <code>widget = "language"</code> (language picker), and a custom theme can invent its own names, such as <code>search</code>, and render them by checking <code>item.widget</code>.</p><p>For the variables available when rendering a single document, see <a href="../notebooks/templates.html">HTML themes</a>.</p><h3 id="reusable-snippets">Reusable snippets</h3><p>You do not have to write all the CSS and JavaScript yourself. <em>Calepin</em> exposes its own building blocks to every theme through the <code>snippets</code> object:</p><pre><code data-lang="html">&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.theme }}&lt;/<span style="color: #4b69c6">style</span>>
-&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.code }}&lt;/<span style="color: #4b69c6">style</span>>
-&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.widgets }}&lt;/<span style="color: #4b69c6">style</span>>
-&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.copy_code }}&lt;/<span style="color: #4b69c6">script</span>>
-&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.language_picker }}&lt;/<span style="color: #4b69c6">script</span>>
-&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.theme_toggle }}&lt;/<span style="color: #4b69c6">script</span>></code></pre><ul><li><code>snippets.css.theme</code> is the shared visual base of the built-in themes: typography, heading scale, colors, and code, output, and figure defaults.</li><li><code>snippets.css.code</code> styles code blocks and computed output.</li><li><code>snippets.css.widgets</code>, together with <code>snippets.js.theme_toggle</code> and <code>snippets.js.language_picker</code>, powers the dark mode toggle (elements marked <code>data-calepin-theme-toggle</code>) and the language picker (selects marked <code>data-calepin-language-picker</code>).</li><li><code>snippets.js.copy_code</code> adds copy buttons to code blocks.</li></ul><p>Prefer these snippets over copying CSS or JavaScript out of the built-in themes: your theme stays small, and it inherits fixes and improvements from future <em>Calepin</em> releases.</p><h3 id="styling-pdf-output">Styling PDF output</h3><p><code>paged.typ</code> is a plain Typst file, not a template. When rendering PDF, SVG, or PNG output, <em>Calepin</em> inserts it ahead of each page’s source, after its own code chunk rules, so your <code>set</code> and <code>show</code> rules apply to the whole document.</p><p><em>Calepin</em> also stages reusable Typst snippets under <code>/.calepin/snippets/typst/</code>. The default theme’s <code>paged.typ</code> imports <code>code-block.typ</code> from there to style source blocks. A minimal <code>paged.typ</code> that does the same:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"/.calepin/snippets/typst/code-block.typ"</span>: code-block
+  scripts/          # JavaScript files, loaded in filename order</code></pre><p>Every file is optional. When an entry file is missing, that kind of output uses the default <code>calepin</code> theme instead, including the default’s own partials, styles, and scripts. The built-in <code>academic</code> theme works this way: it only provides <code>site.html</code>, and falls back to the default for single-document HTML and paged output.</p><p>One special case: an empty <code>paged.typ</code> turns paged styling off entirely, while a missing <code>paged.typ</code> inherits the default styling.</p><p><code>site.html</code> and <code>document.html</code> use the MiniJinja template language, which follows familiar Jinja2 syntax. On website builds, templates receive a <code>site</code> object describing the site and current page:</p><ul><li><code>site.title</code>, <code>site.description</code>, <code>site.base_url</code>: site identity from <code>calepin.toml</code></li><li><code>site.logo</code>, <code>site.logo_alt</code>, <code>site.home_url</code>, <code>site.favicon</code>: branding and site assets</li><li><code>site.sidebar</code>, <code>site.sidebar_sections</code>: sidebar navigation entries</li><li><code>site.navbar_left</code>, <code>site.navbar_center</code>, <code>site.navbar_right</code>: navbar entries by region</li><li><code>site.toc</code>: table of contents for the current page</li><li><code>site.page_title</code>, <code>site.current_url</code>: current page metadata</li><li><code>site.language</code>, <code>site.languages</code>, <code>site.translations</code>: multilingual site data</li></ul><p>For the variables available when rendering a single document, see <a href="../notebooks/templates.html">HTML themes</a>.</p><p>Here is a small but complete <code>site.html</code>:</p><pre><code data-lang="html">{{ doc.head }}
+  {% if site.page_title or site.title %}
+  &lt;<span style="color: #4b69c6">title</span>>{% if site.page_title %}{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}{% else %}{{ site.title }}{% endif %}&lt;/<span style="color: #4b69c6">title</span>>
+  {% endif %}
+  {% if site.description %}
+  &lt;<span style="color: #4b69c6">meta</span> <span style="color: #8b41b1">name</span>=<span style="color: #198810">"</span><span style="color: #198810">description</span><span style="color: #198810">"</span> <span style="color: #8b41b1">content</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ site.description }}</span><span style="color: #198810">"</span>>
+  {% endif %}
+  {% if site.favicon %}
+  &lt;<span style="color: #4b69c6">link</span> <span style="color: #8b41b1">rel</span>=<span style="color: #198810">"</span><span style="color: #198810">icon</span><span style="color: #198810">"</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ site.favicon }}</span><span style="color: #198810">"</span>>
+  {% endif %}
+  &lt;<span style="color: #4b69c6">link</span> <span style="color: #8b41b1">rel</span>=<span style="color: #198810">"</span><span style="color: #198810">stylesheet</span><span style="color: #198810">"</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css</span><span style="color: #198810">"</span>>
+  {% for style in styles %}
+  &lt;<span style="color: #4b69c6">style</span>>
+{{ style.css }}
+  &lt;/<span style="color: #4b69c6">style</span>>
+  {% endfor %}
+{{ doc.body_open }}
+  {% include "partials/site-header.html" %}
+  &lt;<span style="color: #4b69c6">div</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">site-shell</span><span style="color: #198810">"</span>>
+    {% include "partials/sidebar.html" %}
+    &lt;<span style="color: #4b69c6">main</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">site-main</span><span style="color: #198810">"</span>>
+      {{ doc.body }}
+    &lt;/<span style="color: #4b69c6">main</span>>
+    {% if site.toc %}
+    &lt;<span style="color: #4b69c6">aside</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">site-toc</span><span style="color: #198810">"</span>>
+      &lt;<span style="color: #4b69c6">strong</span>>On this page&lt;/<span style="color: #4b69c6">strong</span>>
+      &lt;<span style="color: #4b69c6">ul</span>>
+        {% for item in site.toc %}
+        &lt;<span style="color: #4b69c6">li</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">level-{{</span><span style="color: #198810"> </span><span style="color: #198810">item.level</span><span style="color: #198810"> </span><span style="color: #198810">}}</span><span style="color: #198810">"</span>>&lt;<span style="color: #4b69c6">a</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ item.href }}</span><span style="color: #198810">"</span>>{{ item.label }}&lt;/<span style="color: #4b69c6">a</span>>&lt;/<span style="color: #4b69c6">li</span>>
+        {% endfor %}
+      &lt;/<span style="color: #4b69c6">ul</span>>
+    &lt;/<span style="color: #4b69c6">aside</span>>
+    {% endif %}
+  &lt;/<span style="color: #4b69c6">div</span>>
+  {% for script in scripts %}
+  &lt;<span style="color: #4b69c6">script</span>>
+{{ script.content }}
+  &lt;/<span style="color: #4b69c6">script</span>>
+  {% endfor %}
+{{ doc.body_close }}</code></pre><p>And a minimal <code>document.html</code> for single-file HTML output:</p><pre><code data-lang="html">{{ doc.head }}
+  &lt;<span style="color: #4b69c6">title</span>>{{ doc.title }}&lt;/<span style="color: #4b69c6">title</span>>
+  &lt;<span style="color: #4b69c6">link</span> <span style="color: #8b41b1">rel</span>=<span style="color: #198810">"</span><span style="color: #198810">stylesheet</span><span style="color: #198810">"</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css</span><span style="color: #198810">"</span>>
+  {% for style in styles %}
+  &lt;<span style="color: #4b69c6">style</span>>
+{{ style.css }}
+  &lt;/<span style="color: #4b69c6">style</span>>
+  {% endfor %}
+{{ doc.body_open }}
+  &lt;<span style="color: #4b69c6">header</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">document-header</span><span style="color: #198810">"</span>>
+    &lt;<span style="color: #4b69c6">a</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">index.html</span><span style="color: #198810">"</span>>Home&lt;/<span style="color: #4b69c6">a</span>>
+    &lt;<span style="color: #4b69c6">button</span> <span style="color: #8b41b1">type</span>=<span style="color: #198810">"</span><span style="color: #198810">button</span><span style="color: #198810">"</span> <span style="color: #8b41b1">data-calepin-theme-toggle</span>>Theme&lt;/<span style="color: #4b69c6">button</span>>
+  &lt;/<span style="color: #4b69c6">header</span>>
+  &lt;<span style="color: #4b69c6">main</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">container</span><span style="color: #198810">"</span>>
+    {{ doc.body }}
+  &lt;/<span style="color: #4b69c6">main</span>>
+  {% for script in scripts %}
+  &lt;<span style="color: #4b69c6">script</span>>
+{{ script.content }}
+  &lt;/<span style="color: #4b69c6">script</span>>
+  {% endfor %}
+{{ doc.body_close }}</code></pre><p><code>doc.head</code>, <code>doc.body_open</code>, and <code>doc.body_close</code> come from Typst’s generated HTML. Keep them in the template unless you are deliberately replacing the whole document shell.</p><h2 id="partials">Partials</h2><p>A partial is a reusable MiniJinja template fragment stored under <code>partials/</code>. Use partials for repeated HTML such as a header, footer, navigation list, search box, or analytics snippet.</p><p>Include a partial from <code>site.html</code>, <code>document.html</code>, or another partial:</p><pre><code data-lang="html">{% include "partials/header.html" %}</code></pre><p>Partials receive the same template context as the file that includes them, so a partial included by <code>site.html</code> can read <code>site.title</code>, <code>site.navbar_left</code>, <code>styles</code>, <code>scripts</code>, and the other website template variables.</p><p>For example, <code>partials/site-header.html</code> can render the brand and top navigation:</p><pre><code data-lang="html">&lt;<span style="color: #4b69c6">header</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">site-header</span><span style="color: #198810">"</span>>
+  &lt;<span style="color: #4b69c6">nav</span>>
+    &lt;<span style="color: #4b69c6">ul</span>>
+      &lt;<span style="color: #4b69c6">li</span>>
+        &lt;<span style="color: #4b69c6">a</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ site.home_url }}</span><span style="color: #198810">"</span>>
+          {% if site.logo %}
+          &lt;<span style="color: #4b69c6">img</span> <span style="color: #8b41b1">src</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ site.logo }}</span><span style="color: #198810">"</span> <span style="color: #8b41b1">alt</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ site.logo_alt }}</span><span style="color: #198810">"</span>>
+          {% elif site.title %}
+          {{ site.title }}
+          {% else %}
+          Home
+          {% endif %}
+        &lt;/<span style="color: #4b69c6">a</span>>
+      &lt;/<span style="color: #4b69c6">li</span>>
+      {% for item in site.navbar_left %}
+      {% include "partials/nav-item.html" %}
+      {% endfor %}
+    &lt;/<span style="color: #4b69c6">ul</span>>
+    &lt;<span style="color: #4b69c6">ul</span>>
+      {% for item in site.navbar_right %}
+      {% include "partials/nav-item.html" %}
+      {% endfor %}
+    &lt;/<span style="color: #4b69c6">ul</span>>
+  &lt;/<span style="color: #4b69c6">nav</span>>
+&lt;/<span style="color: #4b69c6">header</span>></code></pre><p>Then <code>partials/nav-item.html</code> can handle links and widgets in one place:</p><pre><code data-lang="html">{% if item.widget == "theme" %}
+&lt;<span style="color: #4b69c6">li</span>>
+  &lt;<span style="color: #4b69c6">button</span> <span style="color: #8b41b1">type</span>=<span style="color: #198810">"</span><span style="color: #198810">button</span><span style="color: #198810">"</span> <span style="color: #8b41b1">aria-label</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ item.label }}</span><span style="color: #198810">"</span> <span style="color: #8b41b1">data-calepin-theme-toggle</span>>
+    {{ item.label_html }}
+  &lt;/<span style="color: #4b69c6">button</span>>
+&lt;/<span style="color: #4b69c6">li</span>>
+{% elif item.widget == "language" and site.languages | length > 1 %}
+&lt;<span style="color: #4b69c6">li</span>>
+  &lt;<span style="color: #4b69c6">select</span> <span style="color: #8b41b1">aria-label</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ item.label }}</span><span style="color: #198810">"</span> <span style="color: #8b41b1">data-calepin-language-picker</span>>
+    {% for language in site.languages %}
+    &lt;<span style="color: #4b69c6">option</span> <span style="color: #8b41b1">value</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ language.href }}</span><span style="color: #198810">"</span> <span style="color: #8b41b1">data-calepin-language-code</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ language.code }}</span><span style="color: #198810">"</span><span style="color: #8b41b1">{%</span> <span style="color: #8b41b1">if</span> <span style="color: #8b41b1">language.active</span> <span style="color: #8b41b1">%}</span> <span style="color: #8b41b1">selected{%</span> <span style="color: #8b41b1">endif</span> <span style="color: #8b41b1">%}</span>>{{ language.label }}&lt;/<span style="color: #4b69c6">option</span>>
+    {% endfor %}
+  &lt;/<span style="color: #4b69c6">select</span>>
+&lt;/<span style="color: #4b69c6">li</span>>
+{% else %}
+&lt;<span style="color: #4b69c6">li</span>>
+  &lt;<span style="color: #4b69c6">a</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ item.href }}</span><span style="color: #198810">"</span> <span style="color: #8b41b1">aria-label</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ item.label }}</span><span style="color: #198810">"</span><span style="color: #8b41b1">{%</span> <span style="color: #8b41b1">if</span> <span style="color: #8b41b1">item.active</span> <span style="color: #8b41b1">%}</span> <span style="color: #8b41b1">aria-current</span>=<span style="color: #198810">"</span><span style="color: #198810">page</span><span style="color: #198810">"</span><span style="color: #8b41b1">{%</span> <span style="color: #8b41b1">endif</span> <span style="color: #8b41b1">%}</span>>
+    {{ item.label_html }}
+  &lt;/<span style="color: #4b69c6">a</span>>
+&lt;/<span style="color: #4b69c6">li</span>>
+{% endif %}</code></pre><p><code>partials/sidebar.html</code> can use section state to render foldable navigation:</p><pre><code data-lang="html">{% if site.sidebar_sections %}
+&lt;<span style="color: #4b69c6">aside</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">site-sidebar</span><span style="color: #198810">"</span>>
+  {% for section in site.sidebar_sections %}
+  {% if section.items %}
+  &lt;<span style="color: #4b69c6">details{%</span> <span style="color: #8b41b1">if</span> <span style="color: #8b41b1">section.active</span> <span style="color: #8b41b1">%}</span> <span style="color: #8b41b1">open{%</span> <span style="color: #8b41b1">endif</span> <span style="color: #8b41b1">%}</span>>
+    &lt;<span style="color: #4b69c6">summary</span>>{{ section.title }}&lt;/<span style="color: #4b69c6">summary</span>>
+    &lt;<span style="color: #4b69c6">ul</span>>
+      {% for item in section.items %}
+      &lt;<span style="color: #4b69c6">li</span>>&lt;<span style="color: #4b69c6">a</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">{{ item.href }}</span><span style="color: #198810">"</span><span style="color: #8b41b1">{%</span> <span style="color: #8b41b1">if</span> <span style="color: #8b41b1">item.active</span> <span style="color: #8b41b1">%}</span> <span style="color: #8b41b1">aria-current</span>=<span style="color: #198810">"</span><span style="color: #198810">page</span><span style="color: #198810">"</span><span style="color: #8b41b1">{%</span> <span style="color: #8b41b1">endif</span> <span style="color: #8b41b1">%}</span>>{{ item.label_html }}&lt;/<span style="color: #4b69c6">a</span>>&lt;/<span style="color: #4b69c6">li</span>>
+      {% endfor %}
+    &lt;/<span style="color: #4b69c6">ul</span>>
+  &lt;/<span style="color: #4b69c6">details</span>>
+  {% endif %}
+  {% endfor %}
+&lt;/<span style="color: #4b69c6">aside</span>>
+{% endif %}</code></pre><h2 id="snippets">Snippets</h2><p>When you run <code>calepin new theme</code>, <em>Calepin</em> writes the shared CSS and JavaScript as normal files in your theme:</p><pre><code data-lang="text">themes/calepin/
+  styles/00-theme.css
+  styles/01-code.css
+  styles/02-widgets.css
+  scripts/00-theme-toggle.js
+  scripts/01-language-picker.js
+  scripts/02-copy-code.js</code></pre><p>These files are the pieces that the built-in themes use for typography, syntax highlighting, code output, dark mode, language selection, and copy buttons. They are copied into your theme so you can inspect, edit, delete, or replace them directly.</p><p>The numeric prefixes matter only for load order. Theme CSS and JavaScript are loaded in filename order. Put broad variables and base rules first, then component rules, then project-specific overrides:</p><pre><code data-lang="text">styles/
+  00-theme.css
+  01-code.css
+  02-widgets.css
+  90-overrides.css</code></pre><p>The older <code>snippets</code> template object is still available for compatibility with existing custom themes, but new ejected themes do not need it. Prefer editing the files in <code>styles/</code> and <code>scripts/</code> because they are explicit and version-controlled with your theme.</p><h2 id="widgets">Widgets</h2><p>Each entry in <code>site.sidebar</code>, <code>site.sidebar_sections</code>, and the navbar regions exposes <code>href</code>, <code>label</code>, <code>label_html</code>, <code>active</code>, and <code>widget</code>. Plain links have <code>widget = none</code>.</p><p>Widget entries carry whatever string was configured in <code>calepin.toml</code>:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">right</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">widget</span> = <span style="color: #198810">"</span><span style="color: #198810">theme</span><span style="color: #198810">"</span>
+
+[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">right</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">widget</span> = <span style="color: #198810">"</span><span style="color: #198810">language</span><span style="color: #198810">"</span></code></pre><p>The built-in themes recognize <code>widget = "theme"</code> for the dark mode toggle and <code>widget = "language"</code> for the language picker. A custom theme can invent its own widget names, such as <code>search</code>, and render them by checking <code>item.widget</code>.</p><p>The bundled widget snippets expect these attributes:</p><pre><code data-lang="html">&lt;<span style="color: #4b69c6">button</span> <span style="color: #8b41b1">data-calepin-theme-toggle</span>>Theme&lt;/<span style="color: #4b69c6">button</span>>
+&lt;<span style="color: #4b69c6">select</span> <span style="color: #8b41b1">data-calepin-language-picker</span>>&lt;/<span style="color: #4b69c6">select</span>></code></pre><h2 id="conditional-output">Conditional output</h2><p><code>paged.typ</code> is a plain Typst file, not a template. When rendering PDF, SVG, or PNG output, <em>Calepin</em> inserts it ahead of each page’s source, after its own code chunk rules, so your <code>set</code> and <code>show</code> rules apply to the whole document.</p><p><em>Calepin</em> also stages reusable Typst snippets under <code>/.calepin/snippets/typst/</code>. The default theme’s <code>paged.typ</code> imports <code>code-block.typ</code> from there to style source blocks. Use <code>sys.inputs.at("calepin-target", default: "paged")</code> when a rule should behave differently for HTML and paged output:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"/.calepin/snippets/typst/code-block.typ"</span>: code-block
 
 <span style="color: #d73948">#</span><span style="color: #d73948">show</span> raw.<span style="color: #4b69c6">where</span>(block: <span style="color: #d73948">true</span>): it <span style="color: #d73948">=></span> {
   <span style="color: #d73948">if</span> sys.inputs.<span style="color: #4b69c6">at</span>(<span style="color: #198810">"calepin-target"</span>, default: <span style="color: #198810">"paged"</span>) <span style="color: #d73948">==</span> <span style="color: #198810">"html"</span> {
@@ -208,7 +344,7 @@
   } <span style="color: #d73948">else</span> {
     <span style="color: #4b69c6">code-block</span>(it)
   }
-}</code></pre><h3 id="source-and-pdf-views">Source and PDF views</h3><p>The default theme’s view switcher shows each page as rendered HTML, Typst source, or PDF.</p><p>The source view reads a JSON script embedded in each generated HTML page, so it always works. The PDF view links to the matching <code>.pdf</code> file, which only exists when PDF rendering is enabled. If you build with <code>--format html</code>, no PDF files are generated, and the PDF view has nothing to show.</p>
+}</code></pre><p>The default theme’s view switcher shows each website page as rendered HTML, Typst source, or PDF. The source view reads a JSON script embedded in each generated HTML page, so it always works. The PDF view links to the matching <code>.pdf</code> file, which only exists when PDF rendering is enabled. If you build with <code>--format html</code>, no PDF files are generated, and the PDF view has nothing to show.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -216,23 +352,25 @@
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#website-themes">Website themes</a></li>
+                    <li class="level-1"><a href="#website-themes">Website themes</a></li>
                     
-                    <li class="level-3"><a href="#built-in-themes">Built-in themes</a></li>
+                    <li class="level-2"><a href="#choosing">Choosing</a></li>
                     
-                    <li class="level-3"><a href="#choosing-a-theme">Choosing a theme</a></li>
+                    <li class="level-3"><a href="#built-in">Built-in</a></li>
                     
-                    <li class="level-3"><a href="#customizing-a-theme">Customizing a theme</a></li>
+                    <li class="level-3"><a href="#local-directory">Local directory</a></li>
                     
-                    <li class="level-3"><a href="#inside-a-theme">Inside a theme</a></li>
+                    <li class="level-2"><a href="#customizing">Customizing</a></li>
                     
-                    <li class="level-3"><a href="#writing-templates">Writing templates</a></li>
+                    <li class="level-2"><a href="#structure-and-files">Structure and files</a></li>
                     
-                    <li class="level-3"><a href="#reusable-snippets">Reusable snippets</a></li>
+                    <li class="level-2"><a href="#partials">Partials</a></li>
                     
-                    <li class="level-3"><a href="#styling-pdf-output">Styling PDF output</a></li>
+                    <li class="level-2"><a href="#snippets">Snippets</a></li>
                     
-                    <li class="level-3"><a href="#source-and-pdf-views">Source and PDF views</a></li>
+                    <li class="level-2"><a href="#widgets">Widgets</a></li>
+                    
+                    <li class="level-2"><a href="#conditional-output">Conditional output</a></li>
                     
                 </ul>
             </nav>

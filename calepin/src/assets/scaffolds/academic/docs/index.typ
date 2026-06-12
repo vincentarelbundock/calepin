@@ -1,14 +1,14 @@
 #import "@preview/calepin:0.0.1" as calepin
 #import "/assets/academic.typ" as site
 
+#set document(title: [About])
+
 #calepin.setup(
   echo: true,
   eval: true,
   results: "render",
   fenced-chunks: true,
 )
-
-#metadata((title: "About")) <website-metadata>
 
 #site.profile(
   "Ada Scholar",

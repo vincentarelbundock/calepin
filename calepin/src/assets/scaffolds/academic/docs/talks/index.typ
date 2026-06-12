@@ -1,7 +1,7 @@
 #import "/assets/academic.typ" as site
 
-#metadata((title: "Talks")) <website-metadata>
+#set document(title: [Talks])
 
-= Talks
+#title()
 
 #site.listing("Recent talks", kind: "talk")

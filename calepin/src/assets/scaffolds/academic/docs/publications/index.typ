@@ -1,8 +1,8 @@
 #import "/assets/academic.typ" as site
 
-#metadata((title: "Publications")) <website-metadata>
+#set document(title: [Publications])
 
-= Publications
+#title()
 
 #site.listing("Featured", kind: "publication", featured: true)
 

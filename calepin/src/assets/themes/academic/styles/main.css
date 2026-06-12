@@ -73,7 +73,7 @@
 .academic-menu a.active,
 .academic-menu a[aria-current] {
   border-bottom-color: var(--pico-primary);
-  color: var(--pico-primary);
+  color: inherit;
 }
 
 .academic-theme-toggle,

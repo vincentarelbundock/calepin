@@ -1,7 +1,8 @@
-= CLI reference
-<cli-reference>
+#set document(title: [CLI reference])
 
-== `calepin`
+#title() <cli-reference>
+
+= `calepin`
 <calepin>
 
 ```text
@@ -24,7 +25,7 @@ Options:
   -h, --help     Print help
 ```
 
-== `calepin new`
+= `calepin new`
 <calepin-new>
 
 ```text
@@ -41,7 +42,7 @@ Options:
   -h, --help           Print help
 ```
 
-== `calepin health`
+= `calepin health`
 <calepin-health>
 
 ```text
@@ -56,7 +57,7 @@ Options:
   -h, --help             Print help
 ```
 
-== `calepin compile`
+= `calepin compile`
 <calepin-compile>
 
 ```text
@@ -101,7 +102,7 @@ Options:
           Print help (see a summary with '-h')
 ```
 
-== `calepin watch`
+= `calepin watch`
 <calepin-watch>
 
 ```text
@@ -154,7 +155,7 @@ Options:
           Print help (see a summary with '-h')
 ```
 
-== `calepin serve`
+= `calepin serve`
 <calepin-serve>
 
 ```text
@@ -171,7 +172,7 @@ Options:
   -h, --help         Print help
 ```
 
-== `calepin stop`
+= `calepin stop`
 <calepin-stop>
 
 ```text
@@ -186,7 +187,7 @@ Options:
   -h, --help  Print help
 ```
 
-== `calepin clean`
+= `calepin clean`
 <calepin-clean>
 
 ```text

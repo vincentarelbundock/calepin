@@ -28,6 +28,8 @@ use crate::typst::preprocess::{
 const DEFAULT_CONFIG: &str = "calepin.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
 const WEBSITE_STYLESHEET_PATH: &str = ".calepin/calepin-website.css";
+const DEFAULT_FAVICON_PATH: &str = ".calepin/favicon.svg";
+const DEFAULT_FAVICON_SVG: &str = include_str!("../assets/default-favicon.svg");
 const FALLBACK_PAGE: &str = "404.typ";
 const INDEX_PAGE: &str = "index.typ";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
@@ -161,14 +163,13 @@ struct WebsiteBuildOptions {
 }
 
 /// Per-page metadata exposed through the `<website-metadata>` Typst label,
-/// extracted during preprocessing and persisted under `.calepin/`. `title`,
-/// `pdf`, and `hidden` are the keys calepin interprets; `raw` carries the
-/// author's whole dictionary verbatim for the pages index.
+/// extracted during preprocessing and persisted under `.calepin/`. `title` and
+/// `pdf` are the keys calepin interprets; `raw` carries the author's whole
+/// dictionary verbatim for the pages index.
 #[derive(Debug, Clone, Default, PartialEq)]
 struct PageMeta {
     title: Option<String>,
     pdf: Option<bool>,
-    hidden: bool,
     translation_key: Option<String>,
     slug: Option<String>,
     url: Option<String>,
@@ -227,6 +228,14 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     if !src_dir.is_dir() {
         return Err(anyhow!("source directory not found: {}", src_dir.display()));
     }
+    let src_dir = fs::canonicalize(&src_dir)
+        .with_context(|| format!("failed to resolve {}", src_dir.display()))?;
+    let out_dir = if out_dir.exists() {
+        fs::canonicalize(&out_dir)
+            .with_context(|| format!("failed to resolve {}", out_dir.display()))?
+    } else {
+        out_dir
+    };
 
     let calepin_config = CalepinConfig::load(&src_dir, Some(&config_path))?;
     let config_dir = config_path.parent().unwrap_or(&current_dir);
@@ -307,7 +316,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     }
 
     let page_meta = load_page_meta(&typ_files);
-    let metadata = SiteMetadata::from_config(&config);
+    let metadata = SiteMetadata::from_config(&config, &src_dir)?;
+    let default_favicon_path = if clean_optional_string(config.favicon.as_deref()).is_none() {
+        Some(PathBuf::from(DEFAULT_FAVICON_PATH))
+    } else {
+        None
+    };
     let sitemap_path = metadata
         .base_url
         .as_ref()
@@ -329,6 +343,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         &page_info,
         &sitemap_path,
         theme_stylesheet_path.as_deref(),
+        default_favicon_path.as_deref(),
     );
     let previous_manifest = load_manifest(&out_dir)?;
 
@@ -349,6 +364,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .expect("default theme must provide a site entry");
         write_html_theme_stylesheet(&entry, &out_dir, path)?;
     }
+    if let Some(path) = default_favicon_path.as_deref() {
+        write_default_favicon(&out_dir, path)?;
+    }
 
     if out_dir != src_dir {
         if args.incremental_inputs.is_none() {
@@ -365,7 +383,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     }
 
     // Phase 2: render the preprocessed pages with full site context.
-    let site = SiteModel::new(sidebar_sections, navbar, metadata.clone());
+    let site = SiteModel::new(
+        sidebar_sections,
+        navbar,
+        metadata.clone(),
+        config.sidebar.as_ref().is_none_or(|sidebar| sidebar.fold),
+    );
     render_documents(
         &BuildContext {
             out_dir: out_dir.clone(),
@@ -517,14 +540,15 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
         return false;
     }
     let rel = path.strip_prefix(&initial.src_dir).unwrap_or(path);
-    let Some(first) = rel.components().next() else {
+    if rel.components().next().is_none() {
         return false;
-    };
-    if first
-        .as_os_str()
-        .to_str()
-        .is_some_and(|name| SKIP_DIRS.contains(&name))
-    {
+    }
+    if rel.components().any(|component| {
+        component
+            .as_os_str()
+            .to_str()
+            .is_some_and(|name| SKIP_DIRS.contains(&name))
+    }) {
         return false;
     }
     if path.starts_with(&initial.out_dir) {
@@ -672,8 +696,7 @@ struct WebsiteConfig {
     base_url: Option<String>,
     logo: Option<String>,
     logo_alt: Option<String>,
-    home: Option<String>,
-    github_url: Option<String>,
+    favicon: Option<String>,
     /// Also render a PDF for every page; pages can override with `pdf` in
     /// their `<website-metadata>`.
     pdf: Option<bool>,
@@ -801,11 +824,22 @@ fn clean_url_prefix(value: &str) -> String {
         .to_string()
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 #[serde(default)]
 struct SidebarConfig {
     show_hidden: bool,
+    fold: bool,
     section: Vec<SidebarSectionConfig>,
+}
+
+impl Default for SidebarConfig {
+    fn default() -> Self {
+        Self {
+            show_hidden: false,
+            fold: true,
+            section: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -818,9 +852,9 @@ struct SidebarSectionConfig {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 struct SidebarItemConfig {
-    path: Option<PathBuf>,
+    #[serde(alias = "path", alias = "url")]
+    target: Option<String>,
     glob: Option<String>,
-    url: Option<String>,
     label: Option<String>,
     icon: Option<String>,
 }
@@ -843,9 +877,9 @@ struct NavbarConfig {
 #[serde(default)]
 struct NavbarItemConfig {
     position: NavbarPosition,
-    path: Option<PathBuf>,
+    #[serde(alias = "path", alias = "url")]
+    target: Option<String>,
     glob: Option<String>,
-    url: Option<String>,
     widget: Option<String>,
     label: Option<String>,
     icon: Option<String>,
@@ -919,25 +953,48 @@ struct SiteMetadata {
     base_url: Option<String>,
     logo: Option<String>,
     logo_alt: Option<String>,
-    home: Option<String>,
-    github_url: Option<String>,
+    favicon: Option<String>,
 }
 
 impl SiteMetadata {
-    fn from_config(config: &WebsiteConfig) -> Self {
-        Self {
+    fn from_config(config: &WebsiteConfig, src_dir: &Path) -> Result<Self> {
+        Ok(Self {
             title: clean_optional_string(config.title.as_deref()),
             description: clean_optional_string(config.description.as_deref()),
             base_url: clean_optional_string(config.base_url.as_deref())
                 .map(|url| url.trim_end_matches('/').to_string()),
-            logo: clean_optional_string(config.logo.as_deref()),
+            logo: source_asset_output_path(src_dir, config.logo.as_deref(), "logo")?,
             logo_alt: clean_optional_string(config.logo_alt.as_deref())
                 .or_else(|| clean_optional_string(config.title.as_deref())),
-            home: clean_optional_string(config.home.as_deref())
-                .or_else(|| Some("index.html".to_string())),
-            github_url: clean_optional_string(config.github_url.as_deref()),
-        }
+            favicon: source_asset_output_path(src_dir, config.favicon.as_deref(), "favicon")?
+                .or_else(|| Some(DEFAULT_FAVICON_PATH.to_string())),
+        })
     }
+}
+
+fn source_asset_output_path(
+    src_dir: &Path,
+    value: Option<&str>,
+    key: &str,
+) -> Result<Option<String>> {
+    let Some(value) = clean_optional_string(value) else {
+        return Ok(None);
+    };
+    if is_absolute_or_special_url(&value) {
+        return Ok(Some(value));
+    }
+    let path = Path::new(&value);
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        src_dir.join(path)
+    };
+    let normalized = normalize_path(&absolute);
+    let src_dir = normalize_path(src_dir);
+    let rel = normalized.strip_prefix(&src_dir).with_context(|| {
+        format!("website `{key}` path must stay inside the source directory: {value}")
+    })?;
+    Ok(Some(slash_path(rel)))
 }
 
 #[derive(Debug)]
@@ -945,14 +1002,21 @@ struct SiteModel {
     sections: Vec<NavSectionModel>,
     navbar: NavbarModel,
     metadata: SiteMetadata,
+    sidebar_fold: bool,
 }
 
 impl SiteModel {
-    fn new(sections: Vec<NavSectionModel>, navbar: NavbarModel, metadata: SiteMetadata) -> Self {
+    fn new(
+        sections: Vec<NavSectionModel>,
+        navbar: NavbarModel,
+        metadata: SiteMetadata,
+        sidebar_fold: bool,
+    ) -> Self {
         Self {
             sections,
             navbar,
             metadata,
+            sidebar_fold,
         }
     }
 
@@ -989,6 +1053,7 @@ impl SiteModel {
             }
             sidebar_sections.push(SiteNavSection {
                 title: section.title.as_ref().map(|title| html_escape(title)),
+                active: items.iter().any(|item| item.active),
                 items,
             });
         }
@@ -1006,6 +1071,7 @@ impl SiteModel {
         SiteContextInput {
             sidebar,
             sidebar_sections,
+            sidebar_fold: self.sidebar_fold,
             navbar_left: self.navbar.entries_for_current_page(
                 current_href,
                 &self.navbar.left,
@@ -1033,12 +1099,12 @@ impl SiteModel {
                 .as_deref()
                 .map(|logo| html_escape(&page_relative_url(current_href, logo))),
             logo_alt: self.metadata.logo_alt.as_deref().map(html_escape),
-            home_url: self
+            home_url: Some(html_escape(&page_relative_url(current_href, "index.html"))),
+            favicon: self
                 .metadata
-                .home
+                .favicon
                 .as_deref()
-                .map(|home| html_escape(&page_relative_url(current_href, home))),
-            github_url: self.metadata.github_url.as_deref().map(html_escape),
+                .map(|favicon| html_escape(&page_relative_url(current_href, favicon))),
             current_url: self
                 .metadata
                 .base_url
@@ -1180,7 +1246,8 @@ fn resolve_cli_path(current_dir: &Path, path: &Path) -> PathBuf {
 /// resolved before metadata is available.
 #[derive(Debug, Clone)]
 struct NavItemPlan {
-    path: PathBuf,
+    path: Option<PathBuf>,
+    url: Option<String>,
     configured_label: Option<String>,
     icon: Option<String>,
 }
@@ -1228,9 +1295,11 @@ fn discover_site_pages(
         )?;
         language_files.retain(|path| !is_nested_language_page(path, language, languages));
         for section in &mut language_sections {
-            section
-                .items
-                .retain(|item| !is_nested_language_page(&item.path, language, languages));
+            section.items.retain(|item| {
+                item.path
+                    .as_ref()
+                    .is_none_or(|path| !is_nested_language_page(path, language, languages))
+            });
         }
         sections.append(&mut language_sections);
         files.append(&mut language_files);
@@ -1342,7 +1411,8 @@ fn discover_pages(
         let items = files
             .iter()
             .map(|path| NavItemPlan {
-                path: path.clone(),
+                path: Some(path.clone()),
+                url: None,
                 configured_label: None,
                 icon: None,
             })
@@ -1373,10 +1443,49 @@ fn discover_pages(
     for section_config in &sidebar.section {
         let mut items = Vec::new();
         for item_config in &section_config.item {
+            let configured_label = clean_optional_string(item_config.label.as_deref());
+            let icon = clean_optional_string(item_config.icon.as_deref());
+            if let Some(target) = item_config
+                .target
+                .as_deref()
+                .map(str::trim)
+                .filter(|target| !target.is_empty())
+            {
+                if item_config
+                    .glob
+                    .as_deref()
+                    .is_some_and(|glob| !glob.trim().is_empty())
+                {
+                    bail!("sidebar target items cannot also set glob");
+                }
+                match resolve_nav_target("sidebar", src_dir, target) {
+                    Some(NavTarget::Url(url)) => {
+                        items.push(NavItemPlan {
+                            path: None,
+                            url: Some(url),
+                            configured_label,
+                            icon,
+                        });
+                    }
+                    Some(NavTarget::Page(path)) => {
+                        if used.insert(path.clone()) {
+                            items.push(NavItemPlan {
+                                path: Some(path.clone()),
+                                url: None,
+                                configured_label,
+                                icon,
+                            });
+                            build_files.push(path);
+                        }
+                    }
+                    None => {}
+                }
+                continue;
+            }
             let candidates = resolve_file_list(
                 "sidebar",
                 src_dir,
-                item_config.path.as_ref(),
+                None,
                 item_config.glob.as_deref(),
                 &all_typ_files,
             )?;
@@ -1384,14 +1493,13 @@ fn discover_pages(
                 .into_iter()
                 .filter(|path| !page_is_excluded(src_dir, path, pages))
                 .collect::<Vec<_>>();
-            let configured_label = clean_optional_string(item_config.label.as_deref());
-            let icon = clean_optional_string(item_config.icon.as_deref());
             for path in candidates {
                 if !used.insert(path.clone()) {
                     continue;
                 }
                 items.push(NavItemPlan {
-                    path: path.clone(),
+                    path: Some(path.clone()),
+                    url: None,
                     configured_label: configured_label.clone(),
                     icon: icon.clone(),
                 });
@@ -1428,17 +1536,16 @@ fn discover_navbar(
             let configured_label = clean_optional_string(item.label.as_deref());
             let icon = clean_optional_string(item.icon.as_deref());
             if let Some(widget) = clean_optional_string(item.widget.as_deref()) {
-                if item.path.is_some()
+                if item
+                    .target
+                    .as_deref()
+                    .is_some_and(|target| !target.trim().is_empty())
                     || item
                         .glob
                         .as_deref()
                         .is_some_and(|glob| !glob.trim().is_empty())
-                    || item
-                        .url
-                        .as_deref()
-                        .is_some_and(|url| !url.trim().is_empty())
                 {
-                    bail!("navbar widget items cannot also set path, glob, or url");
+                    bail!("navbar widget items cannot also set target or glob");
                 }
                 out.push(NavbarItemPlan {
                     path: None,
@@ -1449,33 +1556,49 @@ fn discover_navbar(
                 });
                 continue;
             }
-            if let Some(url) = item
-                .url
+            if let Some(target) = item
+                .target
                 .as_deref()
                 .map(str::trim)
-                .filter(|url| !url.is_empty())
+                .filter(|target| !target.is_empty())
             {
-                if item.path.is_some()
-                    || item
-                        .glob
-                        .as_deref()
-                        .is_some_and(|glob| !glob.trim().is_empty())
+                if item
+                    .glob
+                    .as_deref()
+                    .is_some_and(|glob| !glob.trim().is_empty())
                 {
-                    bail!("navbar url items cannot also set path or glob");
+                    bail!("navbar target items cannot also set glob");
                 }
-                out.push(NavbarItemPlan {
-                    path: None,
-                    url: Some(url.to_string()),
-                    widget: None,
-                    configured_label: configured_label.clone(),
-                    icon: icon.clone(),
-                });
+                match resolve_nav_target("navbar", src_dir, target) {
+                    Some(NavTarget::Url(url)) => {
+                        out.push(NavbarItemPlan {
+                            path: None,
+                            url: Some(url),
+                            widget: None,
+                            configured_label: configured_label.clone(),
+                            icon: icon.clone(),
+                        });
+                    }
+                    Some(NavTarget::Page(path)) => {
+                        if used.insert(path.clone()) {
+                            files.push(path.clone());
+                        }
+                        out.push(NavbarItemPlan {
+                            path: Some(path),
+                            url: None,
+                            widget: None,
+                            configured_label: configured_label.clone(),
+                            icon: icon.clone(),
+                        });
+                    }
+                    None => {}
+                }
                 continue;
             }
             for path in resolve_file_list(
                 "navbar",
                 src_dir,
-                item.path.as_ref(),
+                None,
                 item.glob.as_deref(),
                 &all_typ_files,
             )?
@@ -1983,34 +2106,44 @@ fn nav_from_plans(
     page_info: &PageInfoMap,
     icon_cache: &mut IconCache,
 ) -> Result<Vec<NavSectionModel>> {
-    let is_hidden = |path: &PathBuf| page_meta.get(path).is_some_and(|meta| meta.hidden);
     sections
         .iter()
         .map(|section| {
             let items = section
                 .items
                 .iter()
-                .filter(|item| !is_hidden(&item.path))
                 .map(|item| {
+                    if let Some(url) = item.url.as_ref() {
+                        let raw_label =
+                            item.configured_label.clone().unwrap_or_else(|| url.clone());
+                        let label_html =
+                            nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
+                        return Ok(NavItemModel {
+                            language: None,
+                            href: url.clone(),
+                            label: accessible_nav_label(&raw_label, url),
+                            label_html,
+                            widget: None,
+                        });
+                    }
+                    let Some(path) = item.path.as_ref() else {
+                        return Err(anyhow!("sidebar item must set path, glob, or url"));
+                    };
                     let raw_label = item
                         .configured_label
                         .clone()
-                        .or_else(|| {
-                            page_meta
-                                .get(&item.path)
-                                .and_then(|meta| meta.title.clone())
-                        })
-                        .unwrap_or_else(|| stem_label(&item.path));
+                        .or_else(|| page_meta.get(path).and_then(|meta| meta.title.clone()))
+                        .unwrap_or_else(|| stem_label(path));
                     let fallback = page_meta
-                        .get(&item.path)
+                        .get(path)
                         .and_then(|meta| meta.title.clone())
-                        .unwrap_or_else(|| stem_label(&item.path));
+                        .unwrap_or_else(|| stem_label(path));
                     let label = accessible_nav_label(&raw_label, &fallback);
                     let label_html = nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
                     Ok(NavItemModel {
                         language: section.language.clone(),
                         href: page_info
-                            .get(&item.path)
+                            .get(path)
                             .map(|info| info.href.clone())
                             .unwrap_or_default(),
                         label,
@@ -2122,11 +2255,7 @@ fn build_pages_index(
     let configured_labels = sections
         .iter()
         .flat_map(|section| section.items.iter())
-        .filter_map(|item| {
-            item.configured_label
-                .as_deref()
-                .map(|label| (&item.path, label))
-        })
+        .filter_map(|item| item.path.as_ref().zip(item.configured_label.as_deref()))
         .collect::<BTreeMap<_, _>>();
     let entries = typ_files
         .iter()
@@ -2193,14 +2322,39 @@ fn write_pages_index(typ_files: &[PathBuf], index_json: &str) -> Result<()> {
     Ok(())
 }
 
+enum NavTarget {
+    Page(PathBuf),
+    Url(String),
+}
+
+fn resolve_nav_target(context: &str, src_dir: &Path, target: &str) -> Option<NavTarget> {
+    let target = target.trim();
+    if is_absolute_or_special_url(target) {
+        return Some(NavTarget::Url(target.to_string()));
+    }
+    let path = Path::new(target);
+    if path.extension().and_then(|ext| ext.to_str()) != Some("typ") {
+        return Some(NavTarget::Url(target.to_string()));
+    }
+
+    let candidate = src_dir.join(path);
+    if candidate.is_file() && candidate.extension().and_then(|ext| ext.to_str()) == Some("typ") {
+        return Some(NavTarget::Page(candidate));
+    }
+
+    cwarn!("{context} target does not exist or is not a .typ file: {target}");
+    None
+}
+
 fn resolve_file_list(
     context: &str,
     src_dir: &Path,
-    item_path: Option<&PathBuf>,
+    item_path: Option<&str>,
     item_glob: Option<&str>,
     all_typ_files: &[PathBuf],
 ) -> Result<Vec<PathBuf>> {
     if let Some(path) = item_path {
+        let path = Path::new(path);
         let candidate = src_dir.join(path);
         if candidate.is_file() && candidate.extension().and_then(|ext| ext.to_str()) == Some("typ")
         {
@@ -2279,12 +2433,168 @@ fn load_page_meta(typ_files: &[PathBuf]) -> PageMetaMap {
     typ_files
         .iter()
         .map(|path| {
-            let meta = read_page_meta(path)
+            let mut meta = read_page_meta(path)
                 .map(|value| page_meta_from_value(&value))
                 .unwrap_or_default();
+            if meta.title.is_none() {
+                meta.title = document_title_from_source(path);
+            }
             (path.clone(), meta)
         })
         .collect()
+}
+
+fn document_title_from_source(path: &Path) -> Option<String> {
+    let source = fs::read_to_string(path).ok()?;
+    extract_document_title(&source)
+}
+
+fn extract_document_title(source: &str) -> Option<String> {
+    let mut offset = 0;
+    while let Some(relative) = source[offset..].find("#set") {
+        let start = offset + relative;
+        let mut rest_start = start + "#set".len();
+        rest_start = skip_ws(source, rest_start);
+        if !source[rest_start..].starts_with("document") {
+            offset = rest_start;
+            continue;
+        }
+        let after_document = rest_start + "document".len();
+        if source[after_document..]
+            .chars()
+            .next()
+            .is_some_and(is_identifier_char)
+        {
+            offset = after_document;
+            continue;
+        }
+        let open = skip_ws(source, after_document);
+        if source[open..].chars().next() != Some('(') {
+            offset = after_document;
+            continue;
+        }
+        let close = find_matching_delimiter(source, open, '(', ')')?;
+        let args = &source[open + 1..close];
+        return title_argument(args).and_then(title_value_to_text);
+    }
+    None
+}
+
+fn title_argument(args: &str) -> Option<&str> {
+    let mut index = 0;
+    while index < args.len() {
+        index = skip_ws(args, index);
+        if args[index..].starts_with("title") {
+            let after_name = index + "title".len();
+            if !args[after_name..]
+                .chars()
+                .next()
+                .is_some_and(is_identifier_char)
+            {
+                let colon = skip_ws(args, after_name);
+                if args[colon..].chars().next() == Some(':') {
+                    let value_start = skip_ws(args, colon + 1);
+                    return Some(args[value_start..].trim());
+                }
+            }
+        }
+        index += args[index..].chars().next()?.len_utf8();
+    }
+    None
+}
+
+fn title_value_to_text(value: &str) -> Option<String> {
+    if value.starts_with('[') {
+        let close = find_matching_delimiter(value, 0, '[', ']')?;
+        return clean_optional_string(Some(&typst_content_to_plain_text(&value[1..close])));
+    }
+    if value.starts_with('"') {
+        let close = find_string_end(value, 0)?;
+        let raw = &value[..=close];
+        let parsed = serde_json::from_str::<String>(raw).ok()?;
+        return clean_optional_string(Some(&parsed));
+    }
+    let value = value.split(',').next().unwrap_or(value);
+    clean_optional_string(Some(&typst_content_to_plain_text(value)))
+}
+
+fn typst_content_to_plain_text(value: &str) -> String {
+    let mut out = String::new();
+    let mut chars = value.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '#' => {
+                while chars.peek().is_some_and(|next| is_identifier_char(*next)) {
+                    chars.next();
+                }
+            }
+            '[' | ']' => {}
+            '\n' | '\r' | '\t' => out.push(' '),
+            _ => out.push(ch),
+        }
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn find_matching_delimiter(
+    value: &str,
+    open_index: usize,
+    open: char,
+    close: char,
+) -> Option<usize> {
+    let mut depth = 0usize;
+    let mut index = open_index;
+    while index < value.len() {
+        let ch = value[index..].chars().next()?;
+        if ch == '"' {
+            index = find_string_end(value, index)? + 1;
+            continue;
+        }
+        if ch == open {
+            depth += 1;
+        } else if ch == close {
+            depth = depth.saturating_sub(1);
+            if depth == 0 {
+                return Some(index);
+            }
+        }
+        index += ch.len_utf8();
+    }
+    None
+}
+
+fn find_string_end(value: &str, quote_index: usize) -> Option<usize> {
+    let mut escaped = false;
+    let mut index = quote_index + 1;
+    while index < value.len() {
+        let ch = value[index..].chars().next()?;
+        if escaped {
+            escaped = false;
+        } else if ch == '\\' {
+            escaped = true;
+        } else if ch == '"' {
+            return Some(index);
+        }
+        index += ch.len_utf8();
+    }
+    None
+}
+
+fn skip_ws(value: &str, mut index: usize) -> usize {
+    while index < value.len() {
+        let Some(ch) = value[index..].chars().next() else {
+            break;
+        };
+        if !ch.is_whitespace() {
+            break;
+        }
+        index += ch.len_utf8();
+    }
+    index
+}
+
+fn is_identifier_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'
 }
 
 fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
@@ -2296,10 +2606,6 @@ fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
             .filter(|title| !title.is_empty())
             .map(str::to_string),
         pdf: value.get("pdf").and_then(|pdf| pdf.as_bool()),
-        hidden: value
-            .get("hidden")
-            .and_then(|hidden| hidden.as_bool())
-            .unwrap_or(false),
         translation_key: value
             .get("translation_key")
             .or_else(|| value.get("translationKey"))
@@ -2522,6 +2828,7 @@ fn expected_generated_outputs(
     page_info: &PageInfoMap,
     sitemap_path: &Option<PathBuf>,
     theme_stylesheet_path: Option<&Path>,
+    default_favicon_path: Option<&Path>,
 ) -> BTreeSet<PathBuf> {
     let mut outputs = BTreeSet::new();
     for input_path in typ_files {
@@ -2538,7 +2845,20 @@ fn expected_generated_outputs(
     if let Some(path) = theme_stylesheet_path {
         outputs.insert(out_dir.join(path));
     }
+    if let Some(path) = default_favicon_path {
+        outputs.insert(out_dir.join(path));
+    }
     outputs
+}
+
+fn write_default_favicon(out_dir: &Path, path: &Path) -> Result<()> {
+    let path = out_dir.join(path);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    fs::write(&path, DEFAULT_FAVICON_SVG)
+        .with_context(|| format!("failed to write {}", path.display()))
 }
 
 fn load_manifest(out_dir: &Path) -> Result<WebsiteManifest> {
@@ -2628,8 +2948,7 @@ fn write_manifest(out_dir: &Path, expected_outputs: &BTreeSet<PathBuf>) -> Resul
     fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
 }
 
-/// Writes the sitemap from every built page except the 404 page. Pages with
-/// `hidden: true` metadata stay out of the navigation but remain indexed.
+/// Writes the sitemap from every built page except the 404 page.
 fn write_sitemap(out_dir: &Path, base_url: Option<&str>, hrefs: &BTreeSet<String>) -> Result<()> {
     let path = out_dir.join("sitemap.xml");
     let Some(base_url) = base_url else {
@@ -2740,6 +3059,20 @@ fn slash_path(path: &Path) -> String {
         .map(|component| component.as_os_str().to_string_lossy())
         .collect::<Vec<_>>()
         .join("/")
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                out.pop();
+            }
+            _ => out.push(component.as_os_str()),
+        }
+    }
+    out
 }
 
 fn wildcard_match(pattern: &str, value: &str) -> bool {
@@ -3019,6 +3352,43 @@ mod tests {
     }
 
     #[test]
+    fn home_config_key_is_rejected() {
+        assert!(try_website_config_from_toml(r#"home = "index.html""#).is_err());
+    }
+
+    #[test]
+    fn favicon_config_parses_and_defaults_to_generated_asset() {
+        let src = Path::new("/site/docs");
+        let config = website_config_from_toml(r#"favicon = "assets/favicon.ico""#);
+        let metadata = SiteMetadata::from_config(&config, src).unwrap();
+        assert_eq!(metadata.favicon.as_deref(), Some("assets/favicon.ico"));
+
+        let config = website_config_from_toml("");
+        let metadata = SiteMetadata::from_config(&config, src).unwrap();
+        assert_eq!(metadata.favicon.as_deref(), Some(DEFAULT_FAVICON_PATH));
+    }
+
+    #[test]
+    fn logo_and_favicon_paths_resolve_from_source_directory() {
+        let src = Path::new("/site/docs");
+        let config = website_config_from_toml(
+            r#"
+logo = "./assets/logo.svg"
+favicon = "assets/favicon.ico"
+"#,
+        );
+
+        let metadata = SiteMetadata::from_config(&config, src).unwrap();
+
+        assert_eq!(metadata.logo.as_deref(), Some("assets/logo.svg"));
+        assert_eq!(metadata.favicon.as_deref(), Some("assets/favicon.ico"));
+
+        let config = website_config_from_toml(r#"logo = "../logo.svg""#);
+        let err = SiteMetadata::from_config(&config, src).unwrap_err();
+        assert!(err.to_string().contains("source directory"));
+    }
+
+    #[test]
     fn configured_languages_defaults_to_directory_per_language() {
         let src = Path::new("/site/docs");
         let config = WebsiteConfig {
@@ -3145,7 +3515,7 @@ mod tests {
         let sidebar = SidebarConfig {
             section: vec![SidebarSectionConfig {
                 item: vec![SidebarItemConfig {
-                    path: Some(PathBuf::from("about.typ")),
+                    target: Some("about.typ".to_string()),
                     ..SidebarItemConfig::default()
                 }],
                 ..SidebarSectionConfig::default()
@@ -3228,7 +3598,7 @@ mod tests {
         let sidebar = SidebarConfig {
             section: vec![SidebarSectionConfig {
                 item: vec![SidebarItemConfig {
-                    path: Some(PathBuf::from("about.typ")),
+                    target: Some("about.typ".to_string()),
                     ..SidebarItemConfig::default()
                 }],
                 ..SidebarSectionConfig::default()
@@ -3598,15 +3968,16 @@ mod tests {
                 base_url: None,
                 logo: Some("assets/logo.svg".to_string()),
                 logo_alt: Some("Example".to_string()),
-                home: Some("index.html".to_string()),
-                github_url: None,
+                favicon: Some("assets/favicon.ico".to_string()),
             },
+            true,
         );
 
         let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None);
 
         assert_eq!(context.logo.as_deref(), Some("../assets/logo.svg"));
         assert_eq!(context.home_url.as_deref(), Some("../index.html"));
+        assert_eq!(context.favicon.as_deref(), Some("../assets/favicon.ico"));
         assert_eq!(context.logo_alt.as_deref(), Some("Example"));
         assert_eq!(context.stylesheet, None);
     }
@@ -3643,6 +4014,7 @@ mod tests {
             }],
             NavbarModel::default(),
             SiteMetadata::default(),
+            true,
         );
 
         let context = site.theme_context("posts/welcome.html", None, &PageInfoMap::new(), None);
@@ -3661,6 +4033,36 @@ mod tests {
             ]
         );
         assert!(context.sidebar[2].active);
+    }
+
+    #[test]
+    fn theme_context_marks_section_containing_current_page_active() {
+        let section = |title: &str, href: &str| NavSectionModel {
+            language: None,
+            title: Some(title.to_string()),
+            items: vec![NavItemModel {
+                language: None,
+                href: href.to_string(),
+                label: title.to_string(),
+                label_html: html_escape(title),
+                widget: None,
+            }],
+        };
+        let site = SiteModel::new(
+            vec![
+                section("Guide", "guide/usage.html"),
+                section("Reference", "reference/cli.html"),
+            ],
+            NavbarModel::default(),
+            SiteMetadata::default(),
+            true,
+        );
+
+        let context = site.theme_context("reference/cli.html", None, &PageInfoMap::new(), None);
+
+        assert!(context.sidebar_fold);
+        assert!(!context.sidebar_sections[0].active);
+        assert!(context.sidebar_sections[1].active);
     }
 
     #[test]
@@ -3711,17 +4113,20 @@ mod tests {
             title: Some("Guide".to_string()),
             items: vec![
                 NavItemPlan {
-                    path: labeled.clone(),
+                    path: Some(labeled.clone()),
+                    url: None,
                     configured_label: Some("Configured".to_string()),
                     icon: None,
                 },
                 NavItemPlan {
-                    path: titled.clone(),
+                    path: Some(titled.clone()),
+                    url: None,
                     configured_label: None,
                     icon: None,
                 },
                 NavItemPlan {
-                    path: bare.clone(),
+                    path: Some(bare.clone()),
+                    url: None,
                     configured_label: None,
                     icon: None,
                 },
@@ -3775,7 +4180,8 @@ mod tests {
             language: None,
             title: None,
             items: vec![NavItemPlan {
-                path: home.clone(),
+                path: Some(home.clone()),
+                url: None,
                 configured_label: Some("{icon:home} Home".to_string()),
                 icon: None,
             }],
@@ -3795,6 +4201,73 @@ mod tests {
     }
 
     #[test]
+    fn discover_pages_resolves_sidebar_page_and_external_targets() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        let sidebar = SidebarConfig {
+            section: vec![SidebarSectionConfig {
+                item: vec![
+                    SidebarItemConfig {
+                        target: Some("index.typ".to_string()),
+                        label: Some("Home".to_string()),
+                        ..SidebarItemConfig::default()
+                    },
+                    SidebarItemConfig {
+                        target: Some("https://example.com".to_string()),
+                        label: Some("External".to_string()),
+                        ..SidebarItemConfig::default()
+                    },
+                ],
+                ..SidebarSectionConfig::default()
+            }],
+            ..SidebarConfig::default()
+        };
+
+        let (sections, files) = discover_pages(src, Some(&sidebar), None, None).unwrap();
+
+        assert_eq!(
+            files
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["index.typ"]
+        );
+        assert_eq!(
+            sections[0].items[0].path.as_deref(),
+            Some(src.join("index.typ").as_path())
+        );
+        assert_eq!(
+            sections[0].items[1].url.as_deref(),
+            Some("https://example.com")
+        );
+    }
+
+    #[test]
+    fn discover_pages_rejects_target_combined_with_glob() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        let sidebar = SidebarConfig {
+            section: vec![SidebarSectionConfig {
+                item: vec![SidebarItemConfig {
+                    target: Some("index.typ".to_string()),
+                    glob: Some("*.typ".to_string()),
+                    ..SidebarItemConfig::default()
+                }],
+                ..SidebarSectionConfig::default()
+            }],
+            ..SidebarConfig::default()
+        };
+
+        let err = discover_pages(src, Some(&sidebar), None, None).unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("sidebar target items cannot also set glob"));
+    }
+
+    #[test]
     fn discover_navbar_resolves_left_center_right_items() {
         let temp = tempfile::tempdir().unwrap();
         let src = temp.path();
@@ -3805,7 +4278,7 @@ mod tests {
             item: vec![
                 NavbarItemConfig {
                     position: NavbarPosition::Left,
-                    path: Some(PathBuf::from("index.typ")),
+                    target: Some("index.typ".to_string()),
                     label: Some("Home".to_string()),
                     ..NavbarItemConfig::default()
                 },
@@ -3816,7 +4289,7 @@ mod tests {
                 },
                 NavbarItemConfig {
                     position: NavbarPosition::Right,
-                    url: Some("https://github.com/example/project".to_string()),
+                    target: Some("https://github.com/example/project".to_string()),
                     label: Some("GitHub".to_string()),
                     ..NavbarItemConfig::default()
                 },
@@ -3879,7 +4352,7 @@ mod tests {
         let navbar = NavbarConfig {
             item: vec![NavbarItemConfig {
                 widget: Some("theme".to_string()),
-                path: Some(PathBuf::from("index.typ")),
+                target: Some("index.typ".to_string()),
                 ..NavbarItemConfig::default()
             }],
             ..NavbarConfig::default()
@@ -3889,18 +4362,18 @@ mod tests {
 
         assert!(err
             .to_string()
-            .contains("navbar widget items cannot also set path, glob, or url"));
+            .contains("navbar widget items cannot also set target or glob"));
     }
 
     #[test]
-    fn discover_navbar_rejects_url_combined_with_local_pages() {
+    fn discover_navbar_rejects_target_combined_with_glob() {
         let temp = tempfile::tempdir().unwrap();
         let src = temp.path();
         fs::write(src.join("index.typ"), "= Home\n").unwrap();
         let navbar = NavbarConfig {
             item: vec![NavbarItemConfig {
-                url: Some("https://example.com".to_string()),
-                path: Some(PathBuf::from("index.typ")),
+                target: Some("https://example.com".to_string()),
+                glob: Some("*.typ".to_string()),
                 ..NavbarItemConfig::default()
             }],
             ..NavbarConfig::default()
@@ -3910,7 +4383,7 @@ mod tests {
 
         assert!(err
             .to_string()
-            .contains("navbar url items cannot also set path or glob"));
+            .contains("navbar target items cannot also set glob"));
     }
 
     #[test]
@@ -3990,6 +4463,7 @@ mod tests {
                 }],
             },
             SiteMetadata::default(),
+            true,
         );
 
         let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None);
@@ -4053,6 +4527,7 @@ mod tests {
                 }],
             },
             SiteMetadata::default(),
+            true,
         );
 
         let context = site.theme_context("fr/index.html", page_info.get(&fr), &page_info, None);
@@ -4070,7 +4545,6 @@ mod tests {
         let meta = page_meta_from_value(&value);
         assert_eq!(meta.title.as_deref(), Some("My Page"));
         assert_eq!(meta.pdf, Some(false));
-        assert!(!meta.hidden);
         assert_eq!(meta.raw, value);
 
         let blank_title = page_meta_from_value(&serde_json::json!({"title": ""}));
@@ -4078,9 +4552,47 @@ mod tests {
 
         let not_a_dict = page_meta_from_value(&serde_json::json!("not a dict"));
         assert_eq!(not_a_dict.raw, serde_json::json!({}));
+    }
 
-        let hidden = page_meta_from_value(&serde_json::json!({"hidden": true}));
-        assert!(hidden.hidden);
+    #[test]
+    fn extract_document_title_reads_set_document_title() {
+        assert_eq!(
+            extract_document_title(
+                r#"
+#set document(title: [Site configuration])
+
+#title()
+"#
+            )
+            .as_deref(),
+            Some("Site configuration")
+        );
+        assert_eq!(
+            extract_document_title(
+                r#"
+#set document(
+  title: [#emph[Calepin]: Computational notebooks in Typst],
+)
+"#
+            )
+            .as_deref(),
+            Some("Calepin: Computational notebooks in Typst")
+        );
+        assert_eq!(
+            extract_document_title(r#"#set document(title: "CLI reference")"#).as_deref(),
+            Some("CLI reference")
+        );
+    }
+
+    #[test]
+    fn load_page_meta_falls_back_to_document_title() {
+        let temp = tempfile::tempdir().unwrap();
+        let page = temp.path().join("page.typ");
+        fs::write(&page, "#set document(title: [From document])").unwrap();
+
+        let meta = load_page_meta(std::slice::from_ref(&page));
+
+        assert_eq!(meta[&page].title.as_deref(), Some("From document"));
     }
 
     #[test]
@@ -4119,12 +4631,13 @@ mod tests {
             language: None,
             title: None,
             items: vec![NavItemPlan {
-                path: home.clone(),
+                path: Some(home.clone()),
+                url: None,
                 configured_label: Some("Home".to_string()),
                 icon: None,
             }],
         }];
-        let raw = serde_json::json!({"title": "First Post", "date": "2026-06-10", "hidden": true});
+        let raw = serde_json::json!({"title": "First Post", "date": "2026-06-10"});
         let meta = PageMetaMap::from([(post.clone(), page_meta_from_value(&raw))]);
         let pdf_files = BTreeSet::from([post.clone()]);
 
@@ -4141,41 +4654,6 @@ mod tests {
         assert_eq!(entries[1]["title"], "Home");
         assert_eq!(entries[1]["pdf"], serde_json::Value::Null);
         assert_eq!(entries[1]["meta"], serde_json::json!({}));
-    }
-
-    #[test]
-    fn nav_from_plans_drops_hidden_pages() {
-        let src = Path::new("/site/docs");
-        let visible = PathBuf::from("/site/docs/index.typ");
-        let hidden = PathBuf::from("/site/docs/blog/post.typ");
-        let sections = vec![NavSectionPlan {
-            language: None,
-            title: None,
-            items: vec![
-                NavItemPlan {
-                    path: visible.clone(),
-                    configured_label: None,
-                    icon: None,
-                },
-                NavItemPlan {
-                    path: hidden.clone(),
-                    configured_label: None,
-                    icon: None,
-                },
-            ],
-        }];
-        let meta = PageMetaMap::from([(
-            hidden.clone(),
-            page_meta_from_value(&serde_json::json!({"hidden": true})),
-        )]);
-
-        let page_info = test_page_info(src, &[visible.clone(), hidden.clone()], &BTreeSet::new());
-        let icon_temp = tempfile::tempdir().unwrap();
-        let mut icon_cache = IconCache::new(icon_temp.path().join(".calepin/icons"));
-        let nav = nav_from_plans(&sections, &meta, &page_info, &mut icon_cache).unwrap();
-
-        assert_eq!(nav[0].items.len(), 1);
-        assert_eq!(nav[0].items[0].href, "index.html");
     }
 
     #[test]
@@ -4226,6 +4704,25 @@ mod tests {
         assert!(!should_rebuild_for_path(&current, &out.join("index.typ")));
         assert!(!should_rebuild_for_path(&current, &out.join("style.css")));
         assert!(should_rebuild_for_path(&current, &src.join("index.typ")));
+    }
+
+    #[test]
+    fn should_rebuild_for_path_ignores_generated_calepin_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let wrappers = [
+            src.join(".calepin/index/calepin-wrapper.typ"),
+            src.join("websites/.calepin/website-config/calepin-wrapper.typ"),
+        ];
+        for wrapper in &wrappers {
+            fs::create_dir_all(wrapper.parent().unwrap()).unwrap();
+            fs::write(wrapper, "#import \"/.calepin/calepin.typ\"").unwrap();
+        }
+        let current = test_build_result(&src, &[]);
+
+        for wrapper in wrappers {
+            assert!(!should_rebuild_for_path(&current, &wrapper));
+        }
     }
 
     #[test]

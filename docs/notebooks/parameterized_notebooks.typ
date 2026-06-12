@@ -1,7 +1,6 @@
-= Parameterized notebooks
-<parameterized-notebooks>
-
 #import "@preview/calepin:0.0.1" as calepin
+
+#set document(title: [Parameterized notebooks])
 
 #calepin.setup(
   eval: true,
@@ -12,6 +11,8 @@
     palette: "viridis",
   ),
 )
+
+#title() <parameterized-notebooks>
 
 It is often useful to render the same notebook with different inputs. Calepin
 document parameters let Typst source code or command-line flags pass values to

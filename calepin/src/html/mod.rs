@@ -387,6 +387,7 @@ mod tests {
     fn bundled_website_theme_uses_configured_logo() {
         let site_context = SiteContextInput {
             sidebar: Vec::new(),
+            sidebar_fold: false,
             sidebar_sections: Vec::new(),
             navbar_left: Vec::new(),
             navbar_center: Vec::new(),
@@ -400,7 +401,7 @@ mod tests {
             logo: Some("assets/logo.svg".to_string()),
             logo_alt: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
-            github_url: None,
+            favicon: None,
             current_url: None,
             page_title: None,
             stylesheet: None,
@@ -427,6 +428,7 @@ mod tests {
     fn bundled_themes_render_navbar_widgets_links_and_language_picker() {
         let site_context = SiteContextInput {
             sidebar: Vec::new(),
+            sidebar_fold: false,
             sidebar_sections: Vec::new(),
             navbar_left: vec![SiteNavEntry {
                 href: "about.html".to_string(),
@@ -474,7 +476,7 @@ mod tests {
             logo: None,
             logo_alt: None,
             home_url: Some("index.html".to_string()),
-            github_url: None,
+            favicon: None,
             current_url: None,
             page_title: None,
             stylesheet: None,
@@ -512,10 +514,89 @@ mod tests {
         }
     }
 
+    fn sidebar_section(title: &str, href: &str, active: bool) -> SiteNavSection {
+        SiteNavSection {
+            title: Some(title.to_string()),
+            active,
+            items: vec![SiteNavEntry {
+                href: href.to_string(),
+                label: title.to_string(),
+                label_html: title.to_string(),
+                widget: None,
+                active,
+            }],
+        }
+    }
+
+    fn details_is_open(themed: &str, title: &str) -> bool {
+        let summary = themed
+            .find(&format!("<summary>{title}</summary>"))
+            .unwrap_or_else(|| panic!("no foldable section titled {title}"));
+        let details = themed[..summary]
+            .rfind("<details")
+            .expect("summary outside <details>");
+        themed[details..summary].contains(" open")
+    }
+
+    #[test]
+    fn bundled_website_theme_folds_inactive_sidebar_sections() {
+        let site_context = SiteContextInput {
+            sidebar_fold: true,
+            sidebar_sections: vec![
+                sidebar_section("Guide", "guide.html", false),
+                sidebar_section("Reference", "reference.html", true),
+            ],
+            ..Default::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(details_is_open(&themed, "Reference"));
+        assert!(!details_is_open(&themed, "Guide"));
+    }
+
+    #[test]
+    fn bundled_website_theme_keeps_sections_unfolded_when_fold_disabled() {
+        let site_context = SiteContextInput {
+            sidebar_fold: false,
+            sidebar_sections: vec![
+                sidebar_section("Guide", "guide.html", false),
+                sidebar_section("Reference", "reference.html", true),
+            ],
+            ..Default::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(!themed.contains("<summary>Guide</summary>"));
+        assert!(!themed.contains("<summary>Reference</summary>"));
+        assert!(themed.contains("<p><strong>Guide</strong></p>"));
+        assert!(themed.contains("<p><strong>Reference</strong></p>"));
+    }
+
     #[test]
     fn bundled_website_theme_can_link_external_stylesheet() {
         let site_context = SiteContextInput {
             sidebar: Vec::new(),
+            sidebar_fold: false,
             sidebar_sections: Vec::new(),
             navbar_left: Vec::new(),
             navbar_center: Vec::new(),
@@ -529,7 +610,7 @@ mod tests {
             logo: None,
             logo_alt: None,
             home_url: Some("index.html".to_string()),
-            github_url: None,
+            favicon: None,
             current_url: None,
             page_title: None,
             stylesheet: Some("../.calepin/calepin-website.css".to_string()),

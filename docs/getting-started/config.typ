@@ -1,4 +1,8 @@
-== `config.toml`
+#set document(title: [Configuration])
+
+#title()
+
+= `config.toml`
 
 `Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:
 

@@ -3,9 +3,15 @@ description = "A static website built from Typst documents."
 # base_url = "https://example.com"
 # logo = "assets/logo.svg"
 # logo_alt = "My Site"
-# home = "index.html"
-# github_url = "https://github.com/user/repo"
+# Omit favicon to use the generated default.
+# favicon = "assets/favicon.ico"
 pdf = false
+
+# Add top-bar links with [navbar]. External links can include icons.
+# [[navbar.item]]
+# position = "right"
+# target = "https://github.com/user/repo"
+# label = "{icon:github} GitHub"
 
 [sidebar]
 
@@ -13,5 +19,5 @@ pdf = false
 title = "Pages"
 
   [[sidebar.section.item]]
-  path = "index.typ"
+  target = "index.typ"
   label = "Home"

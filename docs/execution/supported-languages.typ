@@ -1,5 +1,6 @@
-= Supported Languages
-<supported-languages>
+#set document(title: [Supported Languages])
+
+#title() <supported-languages>
 
 Calepin has built-in engines for #strong[Python] and #strong[R]. Diagram
 engines (#strong[Mermaid], #strong[Graphviz DOT], #strong[TikZ],

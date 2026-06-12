@@ -1,69 +1,65 @@
-= Site configuration
+#set document(title: [Site configuration])
 
-Website settings live in `calepin.toml` at the root of your website source directory. A small site can start with:
+#title()
+
+Website settings live in `calepin.toml` at the root of your website source directory. Use `--config <path>` only when the config file lives somewhere else.
+
+= Basic settings
+
+A small site can start with:
 
 ```toml
+# Site name shown by bundled themes and page metadata.
+# Default: none.
 title = "My Site"
+
+# Short site description for metadata and previews.
+# Default: none.
 description = "A static website built from Typst documents."
+
+# Public site URL, used for sitemap.xml and canonical URLs.
+# Default: none.
 base_url = "https://example.com"
+
+# Theme: "calepin", "academic", a local theme directory, or false for raw output.
+# Default: "calepin".
 theme = "academic"
+
+# Also render .pdf files. Pages can override this with `pdf` metadata.
+# Default: false.
 pdf = false
 
+# Logo image path for the top bar.
+# Default: none.
+logo = "assets/logo.svg"
+
+# Alternative text for the logo image. Defaults to `title` when omitted.
+# Default: none.
+logo_alt = "My Site"
+
+# Browser favicon path. Omit this to use Calepin's generated default.
+# Default: ".calepin/favicon.svg".
+favicon = "assets/favicon.ico"
+```
+
+Use `--format html` for a one-time HTML-only build, regardless of `pdf`.
+
+Relative `logo` and `favicon` paths are resolved from the website source directory, then rendered as page-relative URLs so the same assets work from nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`. If no logo is set, the bundled theme uses `title` as the site name.
+
+= Navigation
+
+== Side bar
+
+The sidebar is the main navigation for documentation-style sites. Configure it with `[sidebar]`; a section can list pages one by one:
+
+```toml
 [sidebar]
 
 [[sidebar.section]]
 title = "Guide"
 
   [[sidebar.section.item]]
-  path = "index.typ"
-  label = "Home"
-
-  [[sidebar.section.item]]
-  path = "about.typ"
-  label = "About"
-```
-
-Use `--config <path>` only when the config file lives somewhere else.
-
-== Basic settings
-
-#table(
-  columns: (1fr, 0.8fr, 2.6fr),
-  stroke: none,
-  inset: 0.55em,
-  [*Key*], [*Default*], [*Use it for*],
-  [`title`], [`none`], [The site name shown by the bundled themes and in page metadata.],
-  [`description`], [`none`], [A short site description for metadata and previews.],
-  [`base_url`], [`none`], [The public site URL. Set this to generate `sitemap.xml` and canonical URLs.],
-  [`theme`], [`"calepin"`], [`"calepin"`, `"academic"`, a local theme directory, or `false` for raw output.],
-  [`pdf`], [`false`], [When `true`, also render `.pdf` files. Individual pages can override this with `pdf` in their `<website-metadata>` metadata.],
-)
-
-Use `--format html` for a one-time HTML-only build, regardless of `pdf`.
-
-== Branding
-
-Set a logo and links for the top bar:
-
-```toml
-logo = "assets/logo.svg"
-logo_alt = "My Site"
-home = "index.html"
-github_url = "https://github.com/user/repo"
-```
-
-Relative logo paths are resolved from the output directory, so the same logo works from nested pages. If no logo is set, the bundled theme uses `title` as the site name.
-
-== Navigation
-
-The sidebar is the main navigation for documentation-style sites. A section can list pages one by one:
-
-```toml
-[[sidebar.section]]
-title = "Guide"
-
-  [[sidebar.section.item]]
-  path = "install.typ"
+  target = "install.typ"
   label = "Install"
 ```
 
@@ -74,7 +70,16 @@ or include several pages with a glob:
 glob = "guide/*.typ"
 ```
 
+Use `target` for one link and `glob` for a list of source pages. A `target` ending in `.typ` and all `glob` entries point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site. Other `target` values are used as literal links, such as external URLs.
+
 If you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.
+
+Titled sections are foldable: each page loads with the section that contains it open and the others folded, and readers can open more sections by hand. To keep every section expanded instead, disable folding:
+
+```toml
+[sidebar]
+fold = false
+```
 
 Labels can include icons:
 
@@ -84,39 +89,37 @@ label = "{icon:lucide:download} Install"
 
 If the prefix is omitted, _Calepin_ uses `lucide`, so `{icon:home}` means `{icon:lucide:home}`. Icons are downloaded during the build and cached under `.calepin/icons/`.
 
-== Top navigation
+Icon prefixes are Iconify collection names. Search available icons in the #link("https://icon-sets.iconify.design/")[Iconify icon sets] browser. Common prefixes include `lucide`, `simple-icons`, `tabler`, `heroicons`, `material-symbols`, `carbon`, `ph`, and `bi`.
 
-Use `[navbar]` for a small top navigation bar:
+== Top bar
+
+Use `[navbar]` for a small top navigation bar. External links, such as a GitHub repository, are regular navbar items:
 
 ```toml
 [navbar]
 
 [[navbar.item]]
 position = "left"
-path = "index.typ"
+target = "index.typ"
 label = "Home"
 
 [[navbar.item]]
 position = "right"
-url = "https://github.com/user/repo"
-label = "{icon:simple-icons:github} GitHub"
+target = "https://github.com/user/repo"
+label = "{icon:github} GitHub"
+
+[[navbar.item]]
+position = "right"
+widget = "theme"
+
+[[navbar.item]]
+position = "right"
+widget = "language"
 ```
 
-Navbar items can use `path`, `glob`, `url`, or a theme widget such as `widget = "theme"` or `widget = "language"`. `position` can be `left`, `center`, or `right`.
+Navbar items can use `target`, `glob`, or a theme widget such as `widget = "theme"` or `widget = "language"`. Use a `.typ` `target` or `glob` for internal source pages; use any other `target` for external links or a literal already-rendered URL. `position` can be `left`, `center`, or `right`. If you configure `[navbar]`, include any default widgets you still want to show.
 
-== Page titles and hidden pages
-
-Set a page title in the Typst file when you want something clearer than the file name:
-
-```typ
-#metadata((title: "Getting started")) <website-metadata>
-```
-
-Navigation labels are chosen in this order:
-
-1. the `label` in `calepin.toml`
-2. the page's `title` metadata
-3. the file name
+= Include or exclude pages
 
 Use `[pages]` for pages that should be built but should not appear in navigation, such as blog posts or legal pages:
 
@@ -126,32 +129,52 @@ include = ["blog/*.typ", "legal/privacy.typ"]
 exclude = ["drafts/**"]
 ```
 
-Then hide individual pages from generated navigation with page metadata:
+Put the page title in the document and keep website metadata for fields used by listings, routing, and output options:
 
 ```typ
-#metadata((title: "First post", hidden: true)) <website-metadata>
+#set document(title: [First post])
+
+#metadata((
+  date: "2026-06-10",
+  tags: ("release", "website"),
+)) <website-metadata>
+
+#title()
 ```
 
 `index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.
 
-== Page listings
+= Working with pages
 
-Pages can list other pages in the site. This is useful for a blog index, project index, or publication list.
+Use `calepin.pages()` to get structured information about every built page and process it with normal Typst code. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.
 
 ```typ
 #import "@preview/calepin:0.0.1" as calepin
 
-#for post in calepin.pages()
+#let posts = calepin.pages()
   .filter(p => p.path.starts-with("blog/"))
   .sorted(key: p => p.meta.at("date", default: ""))
-  .rev() [
+  .rev()
+
+#for post in posts [
   - #link(post.href)[#post.title]
 ]
 ```
 
-Each page entry includes `path`, `href`, `title`, `language`, `translations`, `pdf`, and `meta`. The `meta` field contains the page's `<website-metadata>` values, so you can sort or filter on your own fields such as dates, tags, authors, or categories.
+Each page entry includes:
 
-== Multilingual sites
+- `path`: source path relative to the website root
+- `href`: rendered HTML path relative to the current page
+- `title`: resolved page title
+- `language`: language code, when multilingual sites are configured
+- `translation_key`: key used to connect translated pages
+- `translations`: matching pages in other languages
+- `pdf`: PDF path when the page has a PDF output
+- `meta`: the page's `<website-metadata>` dictionary
+
+Use `meta` for your own fields, such as dates, tags, authors, categories, venues, summaries, or feature flags. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst methods such as `filter`, `map`, `sorted`, and `rev` to select and format the pages you need.
+
+= Multilingual sites
 
 Configure languages with one content directory per language:
 
@@ -172,11 +195,14 @@ With this layout, `about.typ` and `fr/about.typ` are treated as translations of 
 Use page metadata when translations move or need different slugs:
 
 ```typ
+#set document(title: [À propos])
+
 #metadata((
-  title: "À propos",
   translation_key: "about",
   slug: "a-propos",
 )) <website-metadata>
+
+#title()
 ```
 
 When more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.

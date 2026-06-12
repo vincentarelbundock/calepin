@@ -51,6 +51,7 @@ struct SnippetContext {
 pub(crate) struct SiteContextInput {
     pub(crate) sidebar: Vec<SiteNavEntry>,
     pub(crate) sidebar_sections: Vec<SiteNavSection>,
+    pub(crate) sidebar_fold: bool,
     pub(crate) navbar_left: Vec<SiteNavEntry>,
     pub(crate) navbar_center: Vec<SiteNavEntry>,
     pub(crate) navbar_right: Vec<SiteNavEntry>,
@@ -63,7 +64,7 @@ pub(crate) struct SiteContextInput {
     pub(crate) logo: Option<String>,
     pub(crate) logo_alt: Option<String>,
     pub(crate) home_url: Option<String>,
-    pub(crate) github_url: Option<String>,
+    pub(crate) favicon: Option<String>,
     pub(crate) current_url: Option<String>,
     pub(crate) page_title: Option<String>,
     pub(crate) stylesheet: Option<String>,
@@ -73,6 +74,7 @@ pub(crate) struct SiteContextInput {
 struct SiteContext {
     sidebar: Vec<NavEntry>,
     sidebar_sections: Vec<NavSection>,
+    sidebar_fold: bool,
     navbar_left: Vec<NavEntry>,
     navbar_center: Vec<NavEntry>,
     navbar_right: Vec<NavEntry>,
@@ -86,7 +88,7 @@ struct SiteContext {
     logo: Option<String>,
     logo_alt: Option<String>,
     home_url: Option<String>,
-    github_url: Option<String>,
+    favicon: Option<String>,
     current_url: Option<String>,
     page_title: Option<String>,
     stylesheet: Option<String>,
@@ -95,6 +97,7 @@ struct SiteContext {
 #[derive(Serialize, Debug, Clone)]
 pub(crate) struct SiteNavSection {
     pub(crate) title: Option<String>,
+    pub(crate) active: bool,
     pub(crate) items: Vec<SiteNavEntry>,
 }
 
@@ -109,6 +112,7 @@ pub(crate) struct SiteLanguageEntry {
 #[derive(Serialize)]
 struct NavSection {
     title: Option<String>,
+    active: bool,
     items: Vec<NavEntry>,
 }
 
@@ -347,9 +351,11 @@ fn site_context(
                 .iter()
                 .map(|section| NavSection {
                     title: section.title.clone(),
+                    active: section.active,
                     items: section.items.iter().map(nav_entry_from_input).collect(),
                 })
                 .collect(),
+            sidebar_fold: input.sidebar_fold,
             navbar_left: input.navbar_left.iter().map(nav_entry_from_input).collect(),
             navbar_center: input
                 .navbar_center
@@ -379,7 +385,7 @@ fn site_context(
             logo: input.logo.clone(),
             logo_alt: input.logo_alt.clone(),
             home_url: input.home_url.clone(),
-            github_url: input.github_url.clone(),
+            favicon: input.favicon.clone(),
             current_url: input.current_url.clone(),
             page_title: input.page_title.clone(),
             stylesheet: input.stylesheet.clone(),
@@ -393,10 +399,12 @@ fn site_context(
         } else {
             vec![NavSection {
                 title: None,
+                active: false,
                 items: nav.clone(),
             }]
         },
         sidebar: nav,
+        sidebar_fold: false,
         navbar_left: Vec::new(),
         navbar_center: Vec::new(),
         navbar_right: Vec::new(),
@@ -410,7 +418,7 @@ fn site_context(
         logo: None,
         logo_alt: None,
         home_url: None,
-        github_url: None,
+        favicon: None,
         current_url: None,
         page_title: None,
         stylesheet: None,
