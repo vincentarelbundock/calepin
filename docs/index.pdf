@@ -554,10 +554,10 @@ endobj
 <</Type/Annot/Subtype/Link/Rect[132.47714 710.99664 266.40213 725.38464]/Border[0 0 0]/A<</Type/Action/S/URI/URI(https://open-vsx.org/extension/VincentArel-Bundock/calepin)>>/F 4/StructParent 5/Contents(https://open-vsx.org/extension/VincentArel-Bundock/calepin)>>
 endobj
 185 0 obj
-<</Type/Annot/Subtype/Link/Rect[302.4598 288.40344 500.1518 302.79144]/Border[0 0 0]/A<</Type/Action/S/URI/URI(options.html)>>/F 4/StructParent 6/Contents(options.html)>>
+<</Type/Annot/Subtype/Link/Rect[302.4598 288.40344 500.1518 302.79144]/Border[0 0 0]/A<</Type/Action/S/URI/URI(execution/options.html)>>/F 4/StructParent 6/Contents(execution/options.html)>>
 endobj
 186 0 obj
-<</Type/Annot/Subtype/Link/Rect[70.86614 274.01544 289.28214 288.40344]/Border[0 0 0]/A<</Type/Action/S/URI/URI(options.html)>>/F 4/StructParent 7/Contents(options.html)>>
+<</Type/Annot/Subtype/Link/Rect[70.86614 274.01544 289.28214 288.40344]/Border[0 0 0]/A<</Type/Action/S/URI/URI(execution/options.html)>>/F 4/StructParent 7/Contents(execution/options.html)>>
 endobj
 187 0 obj
 [/ICCBased 243 0 R]
@@ -979,12 +979,12 @@ xú}êøKq∆?◊UñX94%MQKSÅÜN¯#‘¶Û¸Q†v›˜BöÀ°©hàFk	¢Ÿ∆˙Ç†!
 endstream
 endobj
 245 0 obj
-<</Creator(Typst 0.15.0-rc.1)/ModDate(D:20260610220541-04'00)/CreationDate(D:20260610220541-04'00)>>
+<</Creator(Typst 0.15.0-rc.1)/ModDate(D:20260611222436-04'00)/CreationDate(D:20260611222436-04'00)>>
 endobj
 246 0 obj
 <</Length 1001/Type/Metadata/Subtype/XML>>
 stream
-<?xpacket begin="Ôªø" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="xmp-writer"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"  xmlns:xmp="http://ns.adobe.com/xap/1.0/"  xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"  xmlns:xmpTPg="http://ns.adobe.com/xap/1.0/t/pg/"  xmlns:pdf="http://ns.adobe.com/pdf/1.3/" ><xmp:CreatorTool>Typst 0.15.0-rc.1</xmp:CreatorTool><dc:language><rdf:Bag><rdf:li>en</rdf:li></rdf:Bag></dc:language><xmp:ModifyDate>2026-06-10T22:05:41-04:00</xmp:ModifyDate><xmp:CreateDate>2026-06-10T22:05:41-04:00</xmp:CreateDate><xmpTPg:NPages>4</xmpTPg:NPages><dc:format>application/pdf</dc:format><xmpMM:InstanceID>vZAmeiYgY03pwXZwYWLsPg==</xmpMM:InstanceID><xmpMM:DocumentID>vZAmeiYgY03pwXZwYWLsPg==</xmpMM:DocumentID><xmpMM:RenditionClass>proof</xmpMM:RenditionClass><pdf:PDFVersion>1.7</pdf:PDFVersion></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="r"?>
+<?xpacket begin="Ôªø" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="xmp-writer"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"  xmlns:xmp="http://ns.adobe.com/xap/1.0/"  xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"  xmlns:xmpTPg="http://ns.adobe.com/xap/1.0/t/pg/"  xmlns:pdf="http://ns.adobe.com/pdf/1.3/" ><xmp:CreatorTool>Typst 0.15.0-rc.1</xmp:CreatorTool><dc:language><rdf:Bag><rdf:li>en</rdf:li></rdf:Bag></dc:language><xmp:ModifyDate>2026-06-11T22:24:36-04:00</xmp:ModifyDate><xmp:CreateDate>2026-06-11T22:24:36-04:00</xmp:CreateDate><xmpTPg:NPages>4</xmpTPg:NPages><dc:format>application/pdf</dc:format><xmpMM:InstanceID>MDKE5Llk12OZaO+we51/uQ==</xmpMM:InstanceID><xmpMM:DocumentID>MDKE5Llk12OZaO+we51/uQ==</xmpMM:DocumentID><xmpMM:RenditionClass>proof</xmpMM:RenditionClass><pdf:PDFVersion>1.7</pdf:PDFVersion></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="r"?>
 endstream
 endobj
 247 0 obj
@@ -1178,70 +1178,70 @@ xref
 0000018208 00000 n
 0000018532 00000 n
 0000018814 00000 n
-0000019002 00000 n
-0000019191 00000 n
-0000019228 00000 n
-0000019265 00000 n
-0000019317 00000 n
-0000019369 00000 n
-0000019421 00000 n
-0000019473 00000 n
-0000019524 00000 n
-0000019576 00000 n
-0000019627 00000 n
-0000019679 00000 n
-0000019730 00000 n
-0000019782 00000 n
-0000019834 00000 n
-0000019886 00000 n
-0000020042 00000 n
-0000020187 00000 n
-0000020321 00000 n
-0000020455 00000 n
-0000020615 00000 n
-0000021421 00000 n
-0000021640 00000 n
-0000021780 00000 n
-0000021996 00000 n
-0000022235 00000 n
-0000022396 00000 n
-0000022843 00000 n
-0000023061 00000 n
-0000023220 00000 n
-0000023519 00000 n
-0000023738 00000 n
-0000023895 00000 n
-0000024439 00000 n
-0000024654 00000 n
-0000024821 00000 n
-0000024996 00000 n
-0000025124 00000 n
-0000025253 00000 n
-0000025333 00000 n
-0000026050 00000 n
-0000033345 00000 n
-0000033427 00000 n
-0000034081 00000 n
-0000043775 00000 n
-0000043856 00000 n
-0000044410 00000 n
-0000047963 00000 n
-0000048042 00000 n
-0000048528 00000 n
-0000050291 00000 n
-0000050373 00000 n
-0000050972 00000 n
-0000055462 00000 n
-0000065989 00000 n
-0000069494 00000 n
-0000072992 00000 n
-0000075071 00000 n
-0000075414 00000 n
-0000075821 00000 n
-0000075939 00000 n
-0000077018 00000 n
+0000019022 00000 n
+0000019231 00000 n
+0000019268 00000 n
+0000019305 00000 n
+0000019357 00000 n
+0000019409 00000 n
+0000019461 00000 n
+0000019513 00000 n
+0000019564 00000 n
+0000019616 00000 n
+0000019667 00000 n
+0000019719 00000 n
+0000019770 00000 n
+0000019822 00000 n
+0000019874 00000 n
+0000019926 00000 n
+0000020082 00000 n
+0000020227 00000 n
+0000020361 00000 n
+0000020495 00000 n
+0000020655 00000 n
+0000021461 00000 n
+0000021680 00000 n
+0000021820 00000 n
+0000022036 00000 n
+0000022275 00000 n
+0000022436 00000 n
+0000022883 00000 n
+0000023101 00000 n
+0000023260 00000 n
+0000023559 00000 n
+0000023778 00000 n
+0000023935 00000 n
+0000024479 00000 n
+0000024694 00000 n
+0000024861 00000 n
+0000025036 00000 n
+0000025164 00000 n
+0000025293 00000 n
+0000025373 00000 n
+0000026090 00000 n
+0000033385 00000 n
+0000033467 00000 n
+0000034121 00000 n
+0000043815 00000 n
+0000043896 00000 n
+0000044450 00000 n
+0000048003 00000 n
+0000048082 00000 n
+0000048568 00000 n
+0000050331 00000 n
+0000050413 00000 n
+0000051012 00000 n
+0000055502 00000 n
+0000066029 00000 n
+0000069534 00000 n
+0000073032 00000 n
+0000075111 00000 n
+0000075454 00000 n
+0000075861 00000 n
+0000075979 00000 n
+0000077058 00000 n
 trailer
-<</Size 248/Root 247 0 R/Info 245 0 R/ID[(vZAmeiYgY03pwXZwYWLsPg==)(vZAmeiYgY03pwXZwYWLsPg==)]>>
+<</Size 248/Root 247 0 R/Info 245 0 R/ID[(MDKE5Llk12OZaO+we51/uQ==)(MDKE5Llk12OZaO+we51/uQ==)]>>
 startxref
-77468
+77508
 %%EOF

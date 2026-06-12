@@ -222,7 +222,7 @@ print(x + 2)
 ```
 ````
 
-When you need extra control, use `#calepin.chunk` #link("options.html")[with options such as labels, captions, hiding source code, or changing how results are shown.] If the body is a fenced block with a language, `#calepin.chunk` infers the engine from the fence:
+When you need extra control, use `#calepin.chunk` #link("execution/options.html")[with options such as labels, captions, hiding source code, or changing how results are shown.] If the body is a fenced block with a language, `#calepin.chunk` infers the engine from the fence:
 
 ````typ
 #calepin.chunk(echo: true)[

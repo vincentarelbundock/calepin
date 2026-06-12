@@ -3,7 +3,7 @@ title = "Academic Site"
 description = "Research, teaching, publications, and notes."
 # base_url = "https://example.edu"
 # home = "index.html"
-# pdf = false
+pdf = false
 
 [sidebar]
 

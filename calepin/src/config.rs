@@ -304,7 +304,7 @@ typst = "~/Downloads/typst"
         let docs = project.join("docs");
         std::fs::create_dir_all(&docs).unwrap();
         std::fs::write(
-            project.join("website.toml"),
+            project.join("project.toml"),
             r#"[executables]
 typst = "typst-dev"
 "#,
@@ -313,7 +313,7 @@ typst = "typst-dev"
         let previous = std::env::current_dir().unwrap();
         std::env::set_current_dir(&project).unwrap();
 
-        let config = CalepinConfig::load(&docs, Some(Path::new("website.toml")));
+        let config = CalepinConfig::load(&docs, Some(Path::new("project.toml")));
 
         std::env::set_current_dir(previous).unwrap();
         let config = config.unwrap();

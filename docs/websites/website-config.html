@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     
     
-    <title>Calepin</title>
+    <title>Configuration | Calepin</title>
     
     
     
@@ -12,11 +12,11 @@
     <meta property="og:site_name" content="Calepin">
     
     
-    <meta property="og:title" content="Calepin">
+    <meta property="og:title" content="Configuration | Calepin">
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/404.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/404.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/websites/website-config.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/websites/website-config.html">
     
     
     <meta name="color-scheme" content="light dark">
@@ -51,10 +51,10 @@
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 
-    <link rel="stylesheet" href=".calepin/calepin-website.css">
+    <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" {\n  html.elem(\"section\", attrs: (class: \"calepin-website-404\"))[\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-code\", \"aria-hidden\": \"true\"))[404]\n    #html.elem(\"h1\", attrs: (class: \"calepin-website-404-title\"))[Page not found]\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-lede\"))[\n      Sorry, the page you are looking for does not exist or may have moved.\n    ]\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-actions\"))[\n      #html.elem(\"a\", attrs: (href: \"index.html\", role: \"button\"))[Back to home]\n    ]\n    #html.elem(\"nav\", attrs: (class: \"calepin-website-404-links\", \"aria-label\": \"Helpful links\"))[\n      #html.elem(\"a\", attrs: (href: \"index.html\"))[Home]\n      #html.elem(\"a\", attrs: (href: \"reference/cli.html\"))[CLI reference]\n      #html.elem(\"a\", attrs: (href: \"notebooks/example.html\"))[Example notebook]\n    ]\n  ]\n} else {\n  align(center + horizon)[\n    #text(size: 5em, weight: \"bold\")[404]\n    #v(0.1em)\n    #text(size: 1.5em, weight: \"bold\")[Page not found]\n    #v(0.4em)\n    Sorry, the page you are looking for does not exist or may have moved.\n  ]\n}\n"</script>
+<script id="calepin-website-source-data" type="application/json">"= Site configuration\n\nWebsite settings live in `calepin.toml` at the root of your website source directory. A small site can start with:\n\n```toml\ntitle = \"My Site\"\ndescription = \"A static website built from Typst documents.\"\nbase_url = \"https://example.com\"\ntheme = \"academic\"\npdf = false\n\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  path = \"index.typ\"\n  label = \"Home\"\n\n  [[sidebar.section.item]]\n  path = \"about.typ\"\n  label = \"About\"\n```\n\nUse `--config <path>` only when the config file lives somewhere else.\n\n== Basic settings\n\n#table(\n  columns: (1fr, 0.8fr, 2.6fr),\n  stroke: none,\n  inset: 0.55em,\n  [*Key*], [*Default*], [*Use it for*],\n  [`title`], [`none`], [The site name shown by the bundled themes and in page metadata.],\n  [`description`], [`none`], [A short site description for metadata and previews.],\n  [`base_url`], [`none`], [The public site URL. Set this to generate `sitemap.xml` and canonical URLs.],\n  [`theme`], [`\"calepin\"`], [`\"calepin\"`, `\"academic\"`, a local theme directory, or `false` for raw output.],\n  [`pdf`], [`false`], [When `true`, also render `.pdf` files. Individual pages can override this with `pdf` in their `<website-metadata>` metadata.],\n)\n\nUse `--format html` for a one-time HTML-only build, regardless of `pdf`.\n\n== Branding\n\nSet a logo and links for the top bar:\n\n```toml\nlogo = \"assets/logo.svg\"\nlogo_alt = \"My Site\"\nhome = \"index.html\"\ngithub_url = \"https://github.com/user/repo\"\n```\n\nRelative logo paths are resolved from the output directory, so the same logo works from nested pages. If no logo is set, the bundled theme uses `title` as the site name.\n\n== Navigation\n\nThe sidebar is the main navigation for documentation-style sites. A section can list pages one by one:\n\n```toml\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  path = \"install.typ\"\n  label = \"Install\"\n```\n\nor include several pages with a glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nIf you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.\n\nLabels can include icons:\n\n```toml\nlabel = \"{icon:lucide:download} Install\"\n```\n\nIf the prefix is omitted, _Calepin_ uses `lucide`, so `{icon:home}` means `{icon:lucide:home}`. Icons are downloaded during the build and cached under `.calepin/icons/`.\n\n== Top navigation\n\nUse `[navbar]` for a small top navigation bar:\n\n```toml\n[navbar]\n\n[[navbar.item]]\nposition = \"left\"\npath = \"index.typ\"\nlabel = \"Home\"\n\n[[navbar.item]]\nposition = \"right\"\nurl = \"https://github.com/user/repo\"\nlabel = \"{icon:simple-icons:github} GitHub\"\n```\n\nNavbar items can use `path`, `glob`, `url`, or a theme widget such as `widget = \"theme\"` or `widget = \"language\"`. `position` can be `left`, `center`, or `right`.\n\n== Page titles and hidden pages\n\nSet a page title in the Typst file when you want something clearer than the file name:\n\n```typ\n#metadata((title: \"Getting started\")) <website-metadata>\n```\n\nNavigation labels are chosen in this order:\n\n1. the `label` in `calepin.toml`\n2. the page's `title` metadata\n3. the file name\n\nUse `[pages]` for pages that should be built but should not appear in navigation, such as blog posts or legal pages:\n\n```toml\n[pages]\ninclude = [\"blog/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\nThen hide individual pages from generated navigation with page metadata:\n\n```typ\n#metadata((title: \"First post\", hidden: true)) <website-metadata>\n```\n\n`index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.\n\n== Page listings\n\nPages can list other pages in the site. This is useful for a blog index, project index, or publication list.\n\n```typ\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#for post in calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev() [\n  - #link(post.href)[#post.title]\n]\n```\n\nEach page entry includes `path`, `href`, `title`, `language`, `translations`, `pdf`, and `meta`. The `meta` field contains the page's `<website-metadata>` values, so you can sort or filter on your own fields such as dates, tags, authors, or categories.\n\n== Multilingual sites\n\nConfigure languages with one content directory per language:\n\n```toml\ndefault_language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent_dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent_dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; other languages use their language code as a URL prefix, such as `fr/about.html`.\n\nUse page metadata when translations move or need different slugs:\n\n```typ\n#metadata((\n  title: \"À propos\",\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) <website-metadata>\n```\n\nWhen more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -63,7 +63,7 @@
                     <button class="calepin-website-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
                 </li>
                 <li>
-                    <a class="calepin-website-topbrand contrast" href="index.html" aria-label="Calepin home">
+                    <a class="calepin-website-topbrand contrast" href="../index.html" aria-label="Calepin home">
                         
                         <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjQuOTA4Mjc5bW0iCiAgIGhlaWdodD0iMjUuMjMwNjg4bW0iCiAgIHZpZXdCb3g9IjAgMCAyNC45MDgyOCAyNS4yMzA2ODgiCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzEiCiAgIGlua3NjYXBlOnZlcnNpb249IjEuNC40IChkY2FmM2U3LCAyMDI2LTA1LTA1KSIKICAgc29kaXBvZGk6ZG9jbmFtZT0ibG9nb19zaG9ydF8yLnN2ZyIKICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSJsb2dvX2xvbmdfdGV4dF8yLnBuZyIKICAgaW5rc2NhcGU6ZXhwb3J0LXhkcGk9Ijk2IgogICBpbmtzY2FwZTpleHBvcnQteWRwaT0iOTYiCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iY3VycmVudENvbG9yIj4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgaW5rc2NhcGU6em9vbT0iMC45ODY5MTc1MiIKICAgICBpbmtzY2FwZTpjeD0iMTUyLjQ5NTAxIgogICAgIGlua3NjYXBlOmN5PSIyNjYuNDg2MyIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjE1MTIiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iOTIxIgogICAgIGlua3NjYXBlOndpbmRvdy14PSIwIgogICAgIGlua3NjYXBlOndpbmRvdy15PSIzMyIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIwIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSIKICAgICB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuOTUwODY5LC00NC4wNjExMTcpIj4KICAgIDxwYXRoCiAgICAgICBkPSJtIDU5LjE4NjY2OCw3Ni41MzgyMzEgaCAtMC41NjUyNzEgcSAtMC4yNjM3OTIsLTAuMzAxNDc4IC0wLjYwMjk1NSwtMC41Mjc1ODYgLTAuMzM5MTYyLC0wLjI2Mzc5MyAtMS4wNTUxNzEsLTAuMjYzNzkzIC0wLjU2NTI3MSwwIC0xLjI0MzU5NSwwLjIyNjEwOCAtMC42NDA2NCwwLjE4ODQyNCAtMS41MDczODgsMC40NTIyMTcgLTAuODI5MDY0LDAuMjYzNzkzIC0xLjg4NDIzNSwwLjQ1MjIxNiAtMS4wNTUxNzIsMC4yMjYxMDggLTIuMzM2NDUyLDAuMjI2MTA4IC0yLjM3NDEzNiwwIC00LjYzNTIxOCwtMC44NjY3NDggLTIuMjIzMzk3LC0wLjg2Njc0OCAtNC4yMjA2ODYsLTIuODI2MzUyIC0xLjg0NjU1MSwtMS44NDY1NTEgLTMuMDkwMTQ2LC00LjM3MTQyNSAtMS4yNDM1OTUsLTIuNTI0ODc1IC0xLjI0MzU5NSwtNS44NDExMjkgMCwtMi44MjYzNTIgMS4wMTc0ODcsLTUuMzg4OTEyIDEuMDE3NDg3LC0yLjU2MjU2IDIuODI2MzUzLC00LjUyMjE2NCAxLjgwODg2NSwtMS45NTk2MDQgNC4yNTgzNzEsLTMuMDkwMTQ1IDIuNDQ5NTA1LC0xLjE2ODIyNiA1LjM1MTIyNywtMS4xNjgyMjYgMS4xNjgyMjYsMCAyLjA3MjY1OSwwLjIyNjEwOCAwLjkwNDQzMiwwLjIyNjEwOCAxLjYyMDQ0MiwwLjUyNzU4NiAwLjcxNjAwOSwwLjI2Mzc5MyAxLjMxODk2NCwwLjQ4OTkwMSAwLjYwMjk1NSwwLjIyNjEwOCAxLjE2ODIyNiwwLjIyNjEwOCAwLjc1MzY5NCwwIDEuMDU1MTcxLC0wLjIyNjEwOCAwLjMzOTE2MywtMC4yNjM3OTMgMC42MDI5NTYsLTAuNTY1MjcxIGggMC41NjUyNyB2IDcuNTM2OTQgSCA1OC4yNDQ1NSBRIDU3LjkwNTM4OCw1NS44MTE2NDYgNTcuMzc3ODAyLDU0LjQxNzMxMiA1Ni44NTAyMTcsNTMuMDIyOTc4IDU1LjkwODA5OSw1MS45Njc4MDYgNTQuOTY1OTgyLDUwLjg3NDk1IDUzLjQ5NjI3OCw1MC4yMzQzMSA1Mi4wNjQyNiw0OS41NTU5ODYgNDkuOTE2MjMyLDQ5LjU1NTk4NiBxIC0xLjk5NzI4OSwwIC0zLjQyOTMwOCwwLjY0MDY0IC0xLjQzMjAxOSwwLjYwMjk1NSAtMi40MTE4MjEsMS42NTgxMjYgLTAuOTc5ODAyLDEuMDE3NDg3IC0xLjU4Mjc1NywyLjQxMTgyMSAtMC41NjUyNzEsMS4zNTY2NDkgLTAuODY2NzQ4LDIuOTAxNzIyIC0wLjMwMTQ3OCwxLjUwNzM4OCAtMC40MTQ1MzIsMy4wOTAxNDUgLTAuMDc1MzcsMS41NDUwNzMgLTAuMDc1MzcsMi45Mzk0MDcgMCwzLjk1Njg5NCAwLjY0MDY0LDYuNTU3MTM4IDAuNjQwNjM5LDIuNjAwMjQ0IDEuNzcxMTgsNC4xMDc2MzIgMS4xNjgyMjYsMS41MDczODggMi43ODg2NjgsMi4xMTAzNDMgMS42MjA0NDIsMC42MDI5NTYgMy41ODAwNDcsMC42MDI5NTYgMi41MjQ4NzUsMCA0LjA2OTk0NywtMC43MTYwMSAxLjU0NTA3MywtMC43MTYwMDkgMi40ODcxOTEsLTEuODQ2NTUgMC45NDIxMTcsLTEuMTY4MjI2IDEuNDMyMDE4LC0yLjYwMDI0NCAwLjQ4OTkwMSwtMS40Njk3MDQgMC44NjY3NDgsLTIuOTAxNzIyIGggMC40MTQ1MzIgeiIKICAgICAgIGlkPSJ0ZXh0OCIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MzcuNjg0N3B4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90LCBOb3JtYWwnO2xldHRlci1zcGFjaW5nOi0xLjcwNzU4cHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi4yMjU0NjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMS4xMTI3MzYyLDAuODk4Njg1NikiCiAgICAgICBhcmlhLWxhYmVsPSJDIiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpub3JtYWw7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6MzMuODY2N3B4O2ZvbnQtZmFtaWx5OkNvdXJpZXI7LWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjpDb3VyaWVyO2xldHRlci1zcGFjaW5nOjEuMTU4ODdweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNTUuMjI2NjY1IgogICAgICAgeT0iNTQuNjkwNDgzIgogICAgICAgaWQ9InRleHQzIj48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuMyIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6bm9ybWFsO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1mYW1pbHk6Q291cmllcjstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOkNvdXJpZXI7c3Ryb2tlLXdpZHRoOjEuOTk5OTkiCiAgICAgICAgIHg9IjU1LjIyNjY2NSIKICAgICAgICAgeT0iNTQuNjkwNDgzIiAvPjwvdGV4dD4KICAgIDxwYXRoCiAgICAgICBzdHlsZT0iZm9udC13ZWlnaHQ6NTAwO2ZvbnQtc2l6ZToxMi4zNjc3cHg7Zm9udC1mYW1pbHk6J0hhc2tsdWcgTmVyZCBGb250JzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidIYXNrbHVnIE5lcmQgRm9udCwgTWVkaXVtJztsZXR0ZXItc3BhY2luZzotMS45MjE0MXB4O3dvcmQtc3BhY2luZzowcHg7c3Ryb2tlLXdpZHRoOjIuNTA0MTY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICBkPSJtIDUyLjc0OTM4MSw2MC4yMDM2MzUgdiAtMS4xNTAxOTYgbCAtMy42MTEzNjksLTIuMzg2OTY2IHYgLTAuMDQ5NDcgbCAzLjYxMTM2OSwtMi4zODY5NjcgViA1My4wNzk4NCBsIC00LjY2MjYyMywzLjExNjY2MSB2IDAuODkwNDc0IHogbSAwLjUxNTAzMSwyLjUyMzAxMSBoIDEuMDYzNjIyIEwgNTguMzg0NjQsNTEuOTY2NzQ3IGggLTEuMDYzNjIzIHogbSA1LjYzNTI1OSwtMi41MjMwMTEgNC42NjI2MjMsLTMuMTE2NjYgViA1Ni4xOTY1MDEgTCA1OC44OTk2NzEsNTMuMDc5ODQgdiAxLjE1MDE5NiBsIDMuNjExMzY4LDIuMzg2OTY3IHYgMC4wNDk0NyBsIC0zLjYxMTM2OCwyLjM4Njk2NiB6IgogICAgICAgaWQ9InRleHQ0IgogICAgICAgYXJpYS1sYWJlbD0iJmx0Oy8mZ3Q7IiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpib2xkO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1zaXplOjkuODc3NzdweDtmb250LWZhbWlseTonRGlkb3QgSFRGJzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidEaWRvdCBIVEYgQm9sZCc7Zm9udC12YXJpYW50LWxpZ2F0dXJlczpub3JtYWw7Zm9udC12YXJpYW50LWNhcHM6bm9ybWFsO2ZvbnQtdmFyaWFudC1udW1lcmljOm5vcm1hbDtmb250LXZhcmlhbnQtZWFzdC1hc2lhbjpub3JtYWw7bGV0dGVyLXNwYWNpbmc6LTEuNTM0NThweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgeT0iNzguMjgyNDYzIgogICAgICAgaWQ9InRleHQ1Ij48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuNSIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6Ym9sZDtmb250LXN0cmV0Y2g6bm9ybWFsO2ZvbnQtZmFtaWx5OidEaWRvdCBIVEYnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90IEhURiBCb2xkJztzdHJva2Utd2lkdGg6MS45OTk5OSIKICAgICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgICB5PSI3OC4yODI0NjMiIC8+PC90ZXh0PgogIDwvZz4KPC9zdmc+Cg==" alt="Calepin" class="calepin-website-topbrand-logo" data-inline-svg="1">
                         
@@ -115,11 +115,11 @@
                     
                     <ul>
                         
-                        <li><a href="index.html" aria-label="Home">Home</a></li>
+                        <li><a href="../index.html" aria-label="Home">Home</a></li>
                         
-                        <li><a href="getting-started/install.html" aria-label="Install">Install</a></li>
+                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
                         
-                        <li><a href="getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
                         
                     </ul>
                     
@@ -130,15 +130,15 @@
                     
                     <ul>
                         
-                        <li><a href="notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
+                        <li><a href="../notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
                         
-                        <li><a href="notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
+                        <li><a href="../notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
                         
-                        <li><a href="notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
+                        <li><a href="../notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
                         
-                        <li><a href="notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
+                        <li><a href="../notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
                         
-                        <li><a href="notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
+                        <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
                         
                     </ul>
                     
@@ -149,9 +149,9 @@
                     
                     <ul>
                         
-                        <li><a href="execution/supported-languages.html" aria-label="Languages">Languages</a></li>
+                        <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
                         
-                        <li><a href="execution/options.html" aria-label="Options">Options</a></li>
+                        <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
                         
                     </ul>
                     
@@ -162,11 +162,11 @@
                     
                     <ul>
                         
-                        <li><a href="websites/websites.html" aria-label="Overview">Overview</a></li>
+                        <li><a href="websites.html" aria-label="Overview">Overview</a></li>
                         
-                        <li><a href="websites/website-config.html" aria-label="Configuration">Configuration</a></li>
+                        <li><a href="website-config.html" aria-label="Configuration" class="active" aria-current="page">Configuration</a></li>
                         
-                        <li><a href="websites/website-themes.html" aria-label="Themes">Themes</a></li>
+                        <li><a href="website-themes.html" aria-label="Themes">Themes</a></li>
                         
                     </ul>
                     
@@ -177,7 +177,7 @@
                     
                     <ul>
                         
-                        <li><a href="reference/cli.html" aria-label="Command line">Command line</a></li>
+                        <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
                         
                     </ul>
                     
@@ -186,7 +186,64 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <section class="calepin-website-404"><p class="calepin-website-404-code" aria-hidden="true">404</p><h1 class="calepin-website-404-title" id="page-not-found">Page not found</h1><p class="calepin-website-404-lede">Sorry, the page you are looking for does not exist or may have moved.</p><p class="calepin-website-404-actions"><a href="index.html" role="button">Back to home</a></p><nav class="calepin-website-404-links" aria-label="Helpful links"><a href="index.html">Home</a> <a href="reference/cli.html">CLI reference</a> <a href="notebooks/example.html">Example notebook</a></nav></section>
+            <h2 id="site-configuration">Site configuration</h2><p>Website settings live in <code>calepin.toml</code> at the root of your website source directory. A small site can start with:</p><pre><code data-lang="toml"><span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">My Site</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">description</span> = <span style="color: #198810">"</span><span style="color: #198810">A static website built from Typst documents.</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">base_url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://example.com</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">academic</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">pdf</span> = <span style="color: #d73948">false</span>
+
+[<span style="color: #4b69c6">sidebar</span>]
+
+[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>]]
+<span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">Guide</span><span style="color: #198810">"</span>
+
+  [[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
+  <span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">index.typ</span><span style="color: #198810">"</span>
+  <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Home</span><span style="color: #198810">"</span>
+
+  [[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
+  <span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">about.typ</span><span style="color: #198810">"</span>
+  <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">About</span><span style="color: #198810">"</span></code></pre><p>Use <code>--config &lt;path></code> only when the config file lives somewhere else.</p><h3 id="basic-settings">Basic settings</h3><table><tr><td><strong>Key</strong></td><td><strong>Default</strong></td><td><strong>Use it for</strong></td></tr><tr><td><code>title</code></td><td><code>none</code></td><td>The site name shown by the bundled themes and in page metadata.</td></tr><tr><td><code>description</code></td><td><code>none</code></td><td>A short site description for metadata and previews.</td></tr><tr><td><code>base_url</code></td><td><code>none</code></td><td>The public site URL. Set this to generate <code>sitemap.xml</code> and canonical URLs.</td></tr><tr><td><code>theme</code></td><td><code>"calepin"</code></td><td><code>"calepin"</code>, <code>"academic"</code>, a local theme directory, or <code>false</code> for raw output.</td></tr><tr><td><code>pdf</code></td><td><code>false</code></td><td>When <code>true</code>, also render <code>.pdf</code> files. Individual pages can override this with <code>pdf</code> in their <code>&lt;website-metadata></code> metadata.</td></tr></table><p>Use <code>--format html</code> for a one-time HTML-only build, regardless of <code>pdf</code>.</p><h3 id="branding">Branding</h3><p>Set a logo and links for the top bar:</p><pre><code data-lang="toml"><span style="color: #4b69c6">logo</span> = <span style="color: #198810">"</span><span style="color: #198810">assets/logo.svg</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">logo_alt</span> = <span style="color: #198810">"</span><span style="color: #198810">My Site</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">home</span> = <span style="color: #198810">"</span><span style="color: #198810">index.html</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">github_url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://github.com/user/repo</span><span style="color: #198810">"</span></code></pre><p>Relative logo paths are resolved from the output directory, so the same logo works from nested pages. If no logo is set, the bundled theme uses <code>title</code> as the site name.</p><h3 id="navigation">Navigation</h3><p>The sidebar is the main navigation for documentation-style sites. A section can list pages one by one:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>]]
+<span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">Guide</span><span style="color: #198810">"</span>
+
+  [[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
+  <span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">install.typ</span><span style="color: #198810">"</span>
+  <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Install</span><span style="color: #198810">"</span></code></pre><p>or include several pages with a glob:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">glob</span> = <span style="color: #198810">"</span><span style="color: #198810">guide/*.typ</span><span style="color: #198810">"</span></code></pre><p>If you do not configure a sidebar, <em>Calepin</em> builds one from <code>.typ</code> files in the source directory. Hidden files are skipped.</p><p>Labels can include icons:</p><pre><code data-lang="toml"><span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">{icon:lucide:download} Install</span><span style="color: #198810">"</span></code></pre><p>If the prefix is omitted, <em>Calepin</em> uses <code>lucide</code>, so <code>{icon:home}</code> means <code>{icon:lucide:home}</code>. Icons are downloaded during the build and cached under <code>.calepin/icons/</code>.</p><h3 id="top-navigation">Top navigation</h3><p>Use <code>[navbar]</code> for a small top navigation bar:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">navbar</span>]
+
+[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">left</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">path</span> = <span style="color: #198810">"</span><span style="color: #198810">index.typ</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Home</span><span style="color: #198810">"</span>
+
+[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
+<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">right</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://github.com/user/repo</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">{icon:simple-icons:github} GitHub</span><span style="color: #198810">"</span></code></pre><p>Navbar items can use <code>path</code>, <code>glob</code>, <code>url</code>, or a theme widget such as <code>widget = "theme"</code> or <code>widget = "language"</code>. <code>position</code> can be <code>left</code>, <code>center</code>, or <code>right</code>.</p><h3 id="page-titles-and-hidden-pages">Page titles and hidden pages</h3><p>Set a page title in the Typst file when you want something clearer than the file name:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((title: <span style="color: #198810">"Getting started"</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p>Navigation labels are chosen in this order:</p><ol><li value="1">the <code>label</code> in <code>calepin.toml</code></li><li value="2">the page’s <code>title</code> metadata</li><li value="3">the file name</li></ol><p>Use <code>[pages]</code> for pages that should be built but should not appear in navigation, such as blog posts or legal pages:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">pages</span>]
+<span style="color: #4b69c6">include</span> = [<span style="color: #198810">"</span><span style="color: #198810">blog/*.typ</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">legal/privacy.typ</span><span style="color: #198810">"</span>]
+<span style="color: #4b69c6">exclude</span> = [<span style="color: #198810">"</span><span style="color: #198810">drafts/**</span><span style="color: #198810">"</span>]</code></pre><p>Then hide individual pages from generated navigation with page metadata:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((title: <span style="color: #198810">"First post"</span>, hidden: <span style="color: #d73948">true</span>)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p><code>index.typ</code> and <code>404.typ</code> are always built when present. If <code>404.typ</code> exists, <em>Calepin</em> writes <code>404.html</code>; if PDF rendering is enabled for that page, it also writes <code>404.pdf</code>.</p><h3 id="page-listings">Page listings</h3><p>Pages can list other pages in the site. This is useful for a blog index, project index, or publication list.</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"@preview/calepin:0.0.1"</span> <span style="color: #d73948">as</span> calepin
+
+<span style="color: #d73948">#</span><span style="color: #d73948">for</span> post <span style="color: #d73948">in</span> calepin.<span style="color: #4b69c6">pages</span>()
+  .filter(p => p.path.starts-with("blog/"))
+  .sorted(key: p => p.meta.at("date", default: ""))
+  .rev() [
+  <span style="color: #8b41b1">-</span> <span style="color: #4b69c6">#</span><span style="color: #4b69c6">link</span>(post.href)[<span style="color: #8b41b1">#</span><span style="color: #8b41b1">post</span>.<span style="color: #8b41b1">title</span>]
+]</code></pre><p>Each page entry includes <code>path</code>, <code>href</code>, <code>title</code>, <code>language</code>, <code>translations</code>, <code>pdf</code>, and <code>meta</code>. The <code>meta</code> field contains the page’s <code>&lt;website-metadata></code> values, so you can sort or filter on your own fields such as dates, tags, authors, or categories.</p><h3 id="multilingual-sites">Multilingual sites</h3><p>Configure languages with one content directory per language:</p><pre><code data-lang="toml"><span style="color: #4b69c6">default_language</span> = <span style="color: #198810">"</span><span style="color: #198810">en</span><span style="color: #198810">"</span>
+
+[<span style="color: #4b69c6">languages</span>.<span style="color: #4b69c6">en</span>]
+<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">English</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">content_dir</span> = <span style="color: #198810">"</span><span style="color: #198810">.</span><span style="color: #198810">"</span>
+
+[<span style="color: #4b69c6">languages</span>.<span style="color: #4b69c6">fr</span>]
+<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Français</span><span style="color: #198810">"</span>
+<span style="color: #4b69c6">content_dir</span> = <span style="color: #198810">"</span><span style="color: #198810">fr</span><span style="color: #198810">"</span></code></pre><p>With this layout, <code>about.typ</code> and <code>fr/about.typ</code> are treated as translations of the same page. The default language keeps root URLs like <code>about.html</code>; other languages use their language code as a URL prefix, such as <code>fr/about.html</code>.</p><p>Use page metadata when translations move or need different slugs:</p><pre><code data-lang="typ"><span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((
+  title: <span style="color: #198810">"À propos"</span>,
+  translation_key: <span style="color: #198810">"about"</span>,
+  slug: <span style="color: #198810">"a-propos"</span>,
+)) <span style="color: #1d6c76">&lt;website-metadata></span></code></pre><p>When more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -194,7 +251,21 @@
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-1"><a href="#page-not-found">Page not found</a></li>
+                    <li class="level-2"><a href="#site-configuration">Site configuration</a></li>
+                    
+                    <li class="level-3"><a href="#basic-settings">Basic settings</a></li>
+                    
+                    <li class="level-3"><a href="#branding">Branding</a></li>
+                    
+                    <li class="level-3"><a href="#navigation">Navigation</a></li>
+                    
+                    <li class="level-3"><a href="#top-navigation">Top navigation</a></li>
+                    
+                    <li class="level-3"><a href="#page-titles-and-hidden-pages">Page titles and hidden pages</a></li>
+                    
+                    <li class="level-3"><a href="#page-listings">Page listings</a></li>
+                    
+                    <li class="level-3"><a href="#multilingual-sites">Multilingual sites</a></li>
                     
                 </ul>
             </nav>
@@ -261,10 +332,14 @@
         
     
         
-        
+            
             
         
+        
     
+        
+            
+            
         
         
             
@@ -276,6 +351,30 @@
         
     
 
+    
+    <footer class="calepin-website-page-nav" aria-label="Page navigation">
+      <div class="calepin-website-page-nav-inner">
+        
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="websites.html">
+          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
+          <span class="calepin-website-page-nav-content">
+            <span class="calepin-website-page-nav-kind">Previous</span>
+            <span class="calepin-website-page-nav-title">Overview</span>
+          </span>
+        </a>
+        
+
+        
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="website-themes.html">
+          <span class="calepin-website-page-nav-content">
+            <span class="calepin-website-page-nav-kind">Next</span>
+            <span class="calepin-website-page-nav-title">Themes</span>
+          </span>
+          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        
+      </div>
+    </footer>
     
     
     <script>(() => {

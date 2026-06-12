@@ -26,7 +26,6 @@ use crate::typst::preprocess::{
 };
 
 const DEFAULT_CONFIG: &str = "calepin.toml";
-const LEGACY_CONFIG: &str = "website.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
 const WEBSITE_STYLESHEET_PATH: &str = ".calepin/calepin-website.css";
 const FALLBACK_PAGE: &str = "404.typ";
@@ -151,7 +150,7 @@ struct WebsiteBuildOptions {
     out: Option<PathBuf>,
     theme: Option<String>,
     parallelism: Option<usize>,
-    /// `None` defers to the `pdf` key in calepin.toml (default: render PDFs).
+    /// `None` defers to the `pdf` key in calepin.toml (default: HTML only).
     render_pdf: Option<bool>,
     quiet: bool,
     timeout: Option<u64>,
@@ -722,7 +721,7 @@ fn pdf_enabled_files(
     if cli_render_pdf == Some(false) {
         return BTreeSet::new();
     }
-    let default = cli_render_pdf.unwrap_or_else(|| config_pdf.unwrap_or(true));
+    let default = cli_render_pdf.unwrap_or_else(|| config_pdf.unwrap_or(false));
     typ_files
         .iter()
         .filter(|path| {
@@ -1144,8 +1143,7 @@ fn load_website_config(path: &Path, required: bool) -> Result<WebsiteConfig> {
 }
 
 /// Resolves the website config: an explicit `--config` path wins, otherwise
-/// the input directory is searched for `calepin.toml` (with `website.toml`
-/// accepted as a deprecated fallback).
+/// the input directory is searched for `calepin.toml`.
 fn discover_website_config(
     current_dir: &Path,
     input: &Path,
@@ -1158,15 +1156,6 @@ fn discover_website_config(
     let preferred = input_dir.join(DEFAULT_CONFIG);
     if preferred.is_file() {
         return Ok(preferred);
-    }
-    let legacy = input_dir.join(LEGACY_CONFIG);
-    if legacy.is_file() {
-        cwarn!(
-            "{} is deprecated; rename it to {}",
-            legacy.display(),
-            DEFAULT_CONFIG
-        );
-        return Ok(legacy);
     }
     Err(anyhow!(
         "no {DEFAULT_CONFIG} found in {}; create one with `calepin new website` or pass `--config <path>`",
@@ -2977,7 +2966,7 @@ mod tests {
         WebsiteBuildResult {
             src_dir: root.to_path_buf(),
             out_dir: root.to_path_buf(),
-            config_path: root.join("website.toml"),
+            config_path: root.join("calepin.toml"),
             theme_dir: None,
             page_fingerprints: fingerprint_files(pages).unwrap(),
             nav_signature: 0,
@@ -4095,7 +4084,7 @@ mod tests {
     }
 
     #[test]
-    fn discover_website_config_prefers_explicit_then_calepin_then_legacy() {
+    fn discover_website_config_prefers_explicit_then_calepin() {
         let temp = tempfile::tempdir().unwrap();
         let input = temp.path().join("site");
         fs::create_dir_all(&input).unwrap();
@@ -4103,12 +4092,6 @@ mod tests {
         let missing = discover_website_config(temp.path(), &input, None);
         assert!(missing.is_err());
         assert!(missing.unwrap_err().to_string().contains("calepin.toml"));
-
-        fs::write(input.join("website.toml"), "").unwrap();
-        assert_eq!(
-            discover_website_config(temp.path(), &input, None).unwrap(),
-            input.join("website.toml")
-        );
 
         fs::write(input.join("calepin.toml"), "").unwrap();
         assert_eq!(
@@ -4222,7 +4205,10 @@ mod tests {
         assert_eq!(with_site_off, BTreeSet::from([on.clone()]));
 
         let with_default = pdf_enabled_files(&files, &meta, None, None);
-        assert_eq!(with_default, BTreeSet::from([on.clone(), plain]));
+        assert_eq!(with_default, BTreeSet::from([on.clone()]));
+
+        let with_site_on = pdf_enabled_files(&files, &meta, None, Some(true));
+        assert_eq!(with_site_on, BTreeSet::from([on.clone(), plain]));
 
         let with_cli_off = pdf_enabled_files(&files, &meta, Some(false), Some(true));
         assert!(with_cli_off.is_empty());

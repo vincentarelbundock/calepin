@@ -408,7 +408,7 @@ mod tests {
             "watch",
             "docs",
             "--config",
-            "website.toml",
+            "project.toml",
             "--serve",
             "--host",
             "0.0.0.0",
@@ -420,7 +420,7 @@ mod tests {
         match cli.command {
             Command::Watch(args) => {
                 assert_eq!(args.input, PathBuf::from("docs"));
-                assert_eq!(args.common.config, Some(PathBuf::from("website.toml")));
+                assert_eq!(args.common.config, Some(PathBuf::from("project.toml")));
                 assert!(args.serve);
                 assert_eq!(args.host, "0.0.0.0");
                 assert_eq!(args.port, Some(3000));

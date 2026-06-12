@@ -20,69 +20,65 @@ title = "Getting started"
   label = "Home"
 
   [[sidebar.section.item]]
-  path = "install.typ"
+  path = "getting-started/install.typ"
   label = "Install"
 
   [[sidebar.section.item]]
-  path = "config.typ"
+  path = "getting-started/config.typ"
   label = "Configuration"
 
 [[sidebar.section]]
 title = "Notebooks"
 
   [[sidebar.section.item]]
-  path = "parameterized_notebooks.typ"
+  path = "notebooks/parameterized_notebooks.typ"
   label = "Parameterized notebooks"
 
   [[sidebar.section.item]]
-  path = "tables_and_figures.typ"
+  path = "notebooks/tables_and_figures.typ"
   label = "Tables and figures"
 
   [[sidebar.section.item]]
-  path = "crossreferences.typ"
+  path = "notebooks/crossreferences.typ"
   label = "Cross-references"
 
   [[sidebar.section.item]]
-  path = "templates.typ"
+  path = "notebooks/templates.typ"
   label = "HTML themes"
 
   [[sidebar.section.item]]
-  path = "example.typ"
+  path = "notebooks/example.typ"
   label = "Example notebook"
 
 [[sidebar.section]]
 title = "Code execution"
 
   [[sidebar.section.item]]
-  path = "supported-languages.typ"
+  path = "execution/supported-languages.typ"
   label = "Languages"
 
   [[sidebar.section.item]]
-  path = "options.typ"
+  path = "execution/options.typ"
   label = "Options"
 
 [[sidebar.section]]
 title = "Website generator"
 
   [[sidebar.section.item]]
-  path = "websites.typ"
+  path = "websites/websites.typ"
   label = "Overview"
 
   [[sidebar.section.item]]
-  path = "website-config.typ"
+  path = "websites/website-config.typ"
   label = "Configuration"
 
   [[sidebar.section.item]]
-  path = "website-pages.typ"
-  label = "Navigation and listings"
-
-  [[sidebar.section.item]]
-  path = "website-themes.typ"
+  path = "websites/website-themes.typ"
   label = "Themes"
 
 [[sidebar.section]]
 title = "Reference"
 
   [[sidebar.section.item]]
-  path = "cli.typ"
+  path = "reference/cli.typ"
   label = "Command line"

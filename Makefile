@@ -141,7 +141,7 @@ positron: vscode-package  ## Install Calepin for Typst in Positron
 # Documentation targets
 # ==============================================================================
 
-cli-reference: build  ## Generate docs/cli.typ from clap help output
+cli-reference: build  ## Generate docs/reference/cli.typ from clap help output
 	@set -eu; BIN=target/debug/calepin; { \
 		printf '= CLI reference\n<cli-reference>\n\n'; \
 		printf '== `calepin`\n<calepin>\n\n```text\n'; \
@@ -168,7 +168,7 @@ cli-reference: build  ## Generate docs/cli.typ from clap help output
 		printf '== `calepin clean`\n<calepin-clean>\n\n```text\n'; \
 		$$BIN clean --help; \
 		printf '```\n'; \
-	} > docs/cli.typ
+	} > docs/reference/cli.typ
 
 website:  ## Render docs/ via calepin compile directory mode
 	@set -eu; \

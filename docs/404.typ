@@ -12,8 +12,8 @@
     ]
     #html.elem("nav", attrs: (class: "calepin-website-404-links", "aria-label": "Helpful links"))[
       #html.elem("a", attrs: (href: "index.html"))[Home]
-      #html.elem("a", attrs: (href: "cli.html"))[CLI reference]
-      #html.elem("a", attrs: (href: "example.html"))[Example notebook]
+      #html.elem("a", attrs: (href: "reference/cli.html"))[CLI reference]
+      #html.elem("a", attrs: (href: "notebooks/example.html"))[Example notebook]
     ]
   ]
 } else {

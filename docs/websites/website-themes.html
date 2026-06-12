@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     
     
-    <title>Calepin</title>
+    <title>Themes | Calepin</title>
     
     
     
@@ -12,11 +12,11 @@
     <meta property="og:site_name" content="Calepin">
     
     
-    <meta property="og:title" content="Calepin">
+    <meta property="og:title" content="Themes | Calepin">
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/404.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/404.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/websites/website-themes.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/websites/website-themes.html">
     
     
     <meta name="color-scheme" content="light dark">
@@ -51,10 +51,10 @@
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 
-    <link rel="stylesheet" href=".calepin/calepin-website.css">
+    <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" {\n  html.elem(\"section\", attrs: (class: \"calepin-website-404\"))[\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-code\", \"aria-hidden\": \"true\"))[404]\n    #html.elem(\"h1\", attrs: (class: \"calepin-website-404-title\"))[Page not found]\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-lede\"))[\n      Sorry, the page you are looking for does not exist or may have moved.\n    ]\n    #html.elem(\"p\", attrs: (class: \"calepin-website-404-actions\"))[\n      #html.elem(\"a\", attrs: (href: \"index.html\", role: \"button\"))[Back to home]\n    ]\n    #html.elem(\"nav\", attrs: (class: \"calepin-website-404-links\", \"aria-label\": \"Helpful links\"))[\n      #html.elem(\"a\", attrs: (href: \"index.html\"))[Home]\n      #html.elem(\"a\", attrs: (href: \"reference/cli.html\"))[CLI reference]\n      #html.elem(\"a\", attrs: (href: \"notebooks/example.html\"))[Example notebook]\n    ]\n  ]\n} else {\n  align(center + horizon)[\n    #text(size: 5em, weight: \"bold\")[404]\n    #v(0.1em)\n    #text(size: 1.5em, weight: \"bold\")[Page not found]\n    #v(0.4em)\n    Sorry, the page you are looking for does not exist or may have moved.\n  ]\n}\n"</script>
+<script id="calepin-website-source-data" type="application/json">"= Website themes\n\nA theme controls how your website looks: layout, navigation, colors, and typography. Every _Calepin_ site uses one. The default theme works with zero configuration, and when you want more control, you can copy any built-in theme into your project and edit it like the rest of your source files.\n\n== Built-in themes\n\n_Calepin_ ships with two themes:\n\n- *calepin* (the default): a documentation site layout with sidebar navigation, a top bar with your logo and a GitHub link, previous and next page links, a table of contents, a dark mode toggle, copy buttons on code blocks, and a view switcher that shows each page as rendered HTML, Typst source, or PDF. This documentation site uses it.\n- *academic*: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, and publication lists. Run `calepin new academic` to scaffold a complete starter site built on it.\n\n== Choosing a theme\n\nSet `theme` in your site's `calepin.toml`. It accepts three kinds of values:\n\n```toml\ntheme = \"academic\"          # a built-in theme: calepin or academic\ntheme = \"themes/my-theme\"   # a theme directory in your project\ntheme = false               # no theme: raw, unstyled output\n```\n\nThe same values work with `--theme` on `calepin compile` and `calepin watch`, and inside a document with `#calepin.setup(theme: ...)`. When several are set, the command line wins, then the document, then `calepin.toml`.\n\n== Customizing a theme\n\nBuilt-in themes are compiled into the _Calepin_ binary, so you cannot edit them directly. Instead, copy one into your project and edit the copy:\n\n```sh\ncalepin new theme                     # copies the default theme to themes/calepin/\ncalepin new theme --theme academic    # copies the academic theme to themes/academic/\n```\n\nThen point your site at the copy:\n\n```toml\ntheme = \"themes/calepin\"\n```\n\nThe copy is yours: edit its HTML, CSS, JavaScript, and Typst files freely, and check them into version control. _Calepin_ upgrades will never touch them.\n\nTwo tips:\n\n- Keep only the files you actually change. Anything you delete from your copy falls back to the built-in default, so a theme directory containing a single CSS file is perfectly valid, and the remaining files document exactly what you customized.\n- Never edit files under `.calepin/`. That directory is regenerated on every build, and changes there are silently lost.\n\n== Inside a theme\n\nA theme is just a directory. _Calepin_ looks for three entry files, one per kind of output:\n\n```text\nthemes/my-theme/\n  site.html         # layout for website pages\n  document.html     # layout for a single document rendered to HTML\n  paged.typ         # Typst styling for PDF, SVG, and PNG output\n  partials/         # reusable template fragments\n  styles/           # CSS files, loaded in filename order\n  scripts/          # JavaScript files, loaded in filename order\n```\n\nEvery file is optional. When an entry file is missing, that kind of output uses the default `calepin` theme instead, including the default's own partials, styles, and scripts. The built-in `academic` theme works this way: it only provides `site.html`, and falls back to the default for single-document HTML and paged output.\n\nOne special case: an empty `paged.typ` turns paged styling off entirely, while a missing one inherits the default styling.\n\n== Writing templates\n\n`site.html` and `document.html` use the MiniJinja template language, which follows the familiar Jinja2 syntax. Files in `partials/` can be included with `{% include \"partials/name.html\" %}`.\n\nOn website builds, templates receive a `site` object describing the site and the current page:\n\n- `site.title`, `site.description`, `site.base_url`: site identity from `calepin.toml`\n- `site.logo`, `site.logo_alt`, `site.home_url`, `site.github_url`: branding and top-bar links\n- `site.sidebar`, `site.sidebar_sections`: sidebar navigation entries\n- `site.navbar_left`, `site.navbar_center`, `site.navbar_right`: navbar entries by region\n- `site.toc`: table of contents for the current page\n- `site.page_title`, `site.current_url`: current page metadata\n- `site.language`, `site.languages`, `site.translations`: multilingual site data\n\nEach entry in `site.sidebar`, `site.sidebar_sections`, and the navbar regions exposes `href`, `label`, `label_html`, `active`, and `widget`. Plain links have `widget = none`. Widget entries carry whatever string was configured: the built-in themes recognize `widget = \"theme\"` (dark mode toggle) and `widget = \"language\"` (language picker), and a custom theme can invent its own names, such as `search`, and render them by checking `item.widget`.\n\nFor the variables available when rendering a single document, see #link(\"../notebooks/templates.html\")[HTML themes].\n\n== Reusable snippets\n\nYou do not have to write all the CSS and JavaScript yourself. _Calepin_ exposes its own building blocks to every theme through the `snippets` object:\n\n```html\n<style>{{ snippets.css.theme }}<\/style>\n<style>{{ snippets.css.code }}<\/style>\n<style>{{ snippets.css.widgets }}<\/style>\n<script>{{ snippets.js.copy_code }}<\/script>\n<script>{{ snippets.js.language_picker }}<\/script>\n<script>{{ snippets.js.theme_toggle }}<\/script>\n```\n\n- `snippets.css.theme` is the shared visual base of the built-in themes: typography, heading scale, colors, and code, output, and figure defaults.\n- `snippets.css.code` styles code blocks and computed output.\n- `snippets.css.widgets`, together with `snippets.js.theme_toggle` and `snippets.js.language_picker`, powers the dark mode toggle (elements marked `data-calepin-theme-toggle`) and the language picker (selects marked `data-calepin-language-picker`).\n- `snippets.js.copy_code` adds copy buttons to code blocks.\n\nPrefer these snippets over copying CSS or JavaScript out of the built-in themes: your theme stays small, and it inherits fixes and improvements from future _Calepin_ releases.\n\n== Styling PDF output\n\n`paged.typ` is a plain Typst file, not a template. When rendering PDF, SVG, or PNG output, _Calepin_ inserts it ahead of each page's source, after its own code chunk rules, so your `set` and `show` rules apply to the whole document.\n\n_Calepin_ also stages reusable Typst snippets under `/.calepin/snippets/typst/`. The default theme's `paged.typ` imports `code-block.typ` from there to style source blocks. A minimal `paged.typ` that does the same:\n\n```typ\n#import \"/.calepin/snippets/typst/code-block.typ\": code-block\n\n#show raw.where(block: true): it => {\n  if sys.inputs.at(\"calepin-target\", default: \"paged\") == \"html\" {\n    it\n  } else {\n    code-block(it)\n  }\n}\n```\n\n== Source and PDF views\n\nThe default theme's view switcher shows each page as rendered HTML, Typst source, or PDF.\n\nThe source view reads a JSON script embedded in each generated HTML page, so it always works. The PDF view links to the matching `.pdf` file, which only exists when PDF rendering is enabled. If you build with `--format html`, no PDF files are generated, and the PDF view has nothing to show.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -63,7 +63,7 @@
                     <button class="calepin-website-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
                 </li>
                 <li>
-                    <a class="calepin-website-topbrand contrast" href="index.html" aria-label="Calepin home">
+                    <a class="calepin-website-topbrand contrast" href="../index.html" aria-label="Calepin home">
                         
                         <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjQuOTA4Mjc5bW0iCiAgIGhlaWdodD0iMjUuMjMwNjg4bW0iCiAgIHZpZXdCb3g9IjAgMCAyNC45MDgyOCAyNS4yMzA2ODgiCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzEiCiAgIGlua3NjYXBlOnZlcnNpb249IjEuNC40IChkY2FmM2U3LCAyMDI2LTA1LTA1KSIKICAgc29kaXBvZGk6ZG9jbmFtZT0ibG9nb19zaG9ydF8yLnN2ZyIKICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSJsb2dvX2xvbmdfdGV4dF8yLnBuZyIKICAgaW5rc2NhcGU6ZXhwb3J0LXhkcGk9Ijk2IgogICBpbmtzY2FwZTpleHBvcnQteWRwaT0iOTYiCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iY3VycmVudENvbG9yIj4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgaW5rc2NhcGU6em9vbT0iMC45ODY5MTc1MiIKICAgICBpbmtzY2FwZTpjeD0iMTUyLjQ5NTAxIgogICAgIGlua3NjYXBlOmN5PSIyNjYuNDg2MyIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjE1MTIiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iOTIxIgogICAgIGlua3NjYXBlOndpbmRvdy14PSIwIgogICAgIGlua3NjYXBlOndpbmRvdy15PSIzMyIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIwIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSIKICAgICB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuOTUwODY5LC00NC4wNjExMTcpIj4KICAgIDxwYXRoCiAgICAgICBkPSJtIDU5LjE4NjY2OCw3Ni41MzgyMzEgaCAtMC41NjUyNzEgcSAtMC4yNjM3OTIsLTAuMzAxNDc4IC0wLjYwMjk1NSwtMC41Mjc1ODYgLTAuMzM5MTYyLC0wLjI2Mzc5MyAtMS4wNTUxNzEsLTAuMjYzNzkzIC0wLjU2NTI3MSwwIC0xLjI0MzU5NSwwLjIyNjEwOCAtMC42NDA2NCwwLjE4ODQyNCAtMS41MDczODgsMC40NTIyMTcgLTAuODI5MDY0LDAuMjYzNzkzIC0xLjg4NDIzNSwwLjQ1MjIxNiAtMS4wNTUxNzIsMC4yMjYxMDggLTIuMzM2NDUyLDAuMjI2MTA4IC0yLjM3NDEzNiwwIC00LjYzNTIxOCwtMC44NjY3NDggLTIuMjIzMzk3LC0wLjg2Njc0OCAtNC4yMjA2ODYsLTIuODI2MzUyIC0xLjg0NjU1MSwtMS44NDY1NTEgLTMuMDkwMTQ2LC00LjM3MTQyNSAtMS4yNDM1OTUsLTIuNTI0ODc1IC0xLjI0MzU5NSwtNS44NDExMjkgMCwtMi44MjYzNTIgMS4wMTc0ODcsLTUuMzg4OTEyIDEuMDE3NDg3LC0yLjU2MjU2IDIuODI2MzUzLC00LjUyMjE2NCAxLjgwODg2NSwtMS45NTk2MDQgNC4yNTgzNzEsLTMuMDkwMTQ1IDIuNDQ5NTA1LC0xLjE2ODIyNiA1LjM1MTIyNywtMS4xNjgyMjYgMS4xNjgyMjYsMCAyLjA3MjY1OSwwLjIyNjEwOCAwLjkwNDQzMiwwLjIyNjEwOCAxLjYyMDQ0MiwwLjUyNzU4NiAwLjcxNjAwOSwwLjI2Mzc5MyAxLjMxODk2NCwwLjQ4OTkwMSAwLjYwMjk1NSwwLjIyNjEwOCAxLjE2ODIyNiwwLjIyNjEwOCAwLjc1MzY5NCwwIDEuMDU1MTcxLC0wLjIyNjEwOCAwLjMzOTE2MywtMC4yNjM3OTMgMC42MDI5NTYsLTAuNTY1MjcxIGggMC41NjUyNyB2IDcuNTM2OTQgSCA1OC4yNDQ1NSBRIDU3LjkwNTM4OCw1NS44MTE2NDYgNTcuMzc3ODAyLDU0LjQxNzMxMiA1Ni44NTAyMTcsNTMuMDIyOTc4IDU1LjkwODA5OSw1MS45Njc4MDYgNTQuOTY1OTgyLDUwLjg3NDk1IDUzLjQ5NjI3OCw1MC4yMzQzMSA1Mi4wNjQyNiw0OS41NTU5ODYgNDkuOTE2MjMyLDQ5LjU1NTk4NiBxIC0xLjk5NzI4OSwwIC0zLjQyOTMwOCwwLjY0MDY0IC0xLjQzMjAxOSwwLjYwMjk1NSAtMi40MTE4MjEsMS42NTgxMjYgLTAuOTc5ODAyLDEuMDE3NDg3IC0xLjU4Mjc1NywyLjQxMTgyMSAtMC41NjUyNzEsMS4zNTY2NDkgLTAuODY2NzQ4LDIuOTAxNzIyIC0wLjMwMTQ3OCwxLjUwNzM4OCAtMC40MTQ1MzIsMy4wOTAxNDUgLTAuMDc1MzcsMS41NDUwNzMgLTAuMDc1MzcsMi45Mzk0MDcgMCwzLjk1Njg5NCAwLjY0MDY0LDYuNTU3MTM4IDAuNjQwNjM5LDIuNjAwMjQ0IDEuNzcxMTgsNC4xMDc2MzIgMS4xNjgyMjYsMS41MDczODggMi43ODg2NjgsMi4xMTAzNDMgMS42MjA0NDIsMC42MDI5NTYgMy41ODAwNDcsMC42MDI5NTYgMi41MjQ4NzUsMCA0LjA2OTk0NywtMC43MTYwMSAxLjU0NTA3MywtMC43MTYwMDkgMi40ODcxOTEsLTEuODQ2NTUgMC45NDIxMTcsLTEuMTY4MjI2IDEuNDMyMDE4LC0yLjYwMDI0NCAwLjQ4OTkwMSwtMS40Njk3MDQgMC44NjY3NDgsLTIuOTAxNzIyIGggMC40MTQ1MzIgeiIKICAgICAgIGlkPSJ0ZXh0OCIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MzcuNjg0N3B4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90LCBOb3JtYWwnO2xldHRlci1zcGFjaW5nOi0xLjcwNzU4cHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi4yMjU0NjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMS4xMTI3MzYyLDAuODk4Njg1NikiCiAgICAgICBhcmlhLWxhYmVsPSJDIiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpub3JtYWw7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6MzMuODY2N3B4O2ZvbnQtZmFtaWx5OkNvdXJpZXI7LWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjpDb3VyaWVyO2xldHRlci1zcGFjaW5nOjEuMTU4ODdweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNTUuMjI2NjY1IgogICAgICAgeT0iNTQuNjkwNDgzIgogICAgICAgaWQ9InRleHQzIj48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuMyIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6bm9ybWFsO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1mYW1pbHk6Q291cmllcjstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOkNvdXJpZXI7c3Ryb2tlLXdpZHRoOjEuOTk5OTkiCiAgICAgICAgIHg9IjU1LjIyNjY2NSIKICAgICAgICAgeT0iNTQuNjkwNDgzIiAvPjwvdGV4dD4KICAgIDxwYXRoCiAgICAgICBzdHlsZT0iZm9udC13ZWlnaHQ6NTAwO2ZvbnQtc2l6ZToxMi4zNjc3cHg7Zm9udC1mYW1pbHk6J0hhc2tsdWcgTmVyZCBGb250JzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidIYXNrbHVnIE5lcmQgRm9udCwgTWVkaXVtJztsZXR0ZXItc3BhY2luZzotMS45MjE0MXB4O3dvcmQtc3BhY2luZzowcHg7c3Ryb2tlLXdpZHRoOjIuNTA0MTY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICBkPSJtIDUyLjc0OTM4MSw2MC4yMDM2MzUgdiAtMS4xNTAxOTYgbCAtMy42MTEzNjksLTIuMzg2OTY2IHYgLTAuMDQ5NDcgbCAzLjYxMTM2OSwtMi4zODY5NjcgViA1My4wNzk4NCBsIC00LjY2MjYyMywzLjExNjY2MSB2IDAuODkwNDc0IHogbSAwLjUxNTAzMSwyLjUyMzAxMSBoIDEuMDYzNjIyIEwgNTguMzg0NjQsNTEuOTY2NzQ3IGggLTEuMDYzNjIzIHogbSA1LjYzNTI1OSwtMi41MjMwMTEgNC42NjI2MjMsLTMuMTE2NjYgViA1Ni4xOTY1MDEgTCA1OC44OTk2NzEsNTMuMDc5ODQgdiAxLjE1MDE5NiBsIDMuNjExMzY4LDIuMzg2OTY3IHYgMC4wNDk0NyBsIC0zLjYxMTM2OCwyLjM4Njk2NiB6IgogICAgICAgaWQ9InRleHQ0IgogICAgICAgYXJpYS1sYWJlbD0iJmx0Oy8mZ3Q7IiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpib2xkO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1zaXplOjkuODc3NzdweDtmb250LWZhbWlseTonRGlkb3QgSFRGJzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidEaWRvdCBIVEYgQm9sZCc7Zm9udC12YXJpYW50LWxpZ2F0dXJlczpub3JtYWw7Zm9udC12YXJpYW50LWNhcHM6bm9ybWFsO2ZvbnQtdmFyaWFudC1udW1lcmljOm5vcm1hbDtmb250LXZhcmlhbnQtZWFzdC1hc2lhbjpub3JtYWw7bGV0dGVyLXNwYWNpbmc6LTEuNTM0NThweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgeT0iNzguMjgyNDYzIgogICAgICAgaWQ9InRleHQ1Ij48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuNSIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6Ym9sZDtmb250LXN0cmV0Y2g6bm9ybWFsO2ZvbnQtZmFtaWx5OidEaWRvdCBIVEYnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90IEhURiBCb2xkJztzdHJva2Utd2lkdGg6MS45OTk5OSIKICAgICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgICB5PSI3OC4yODI0NjMiIC8+PC90ZXh0PgogIDwvZz4KPC9zdmc+Cg==" alt="Calepin" class="calepin-website-topbrand-logo" data-inline-svg="1">
                         
@@ -115,11 +115,11 @@
                     
                     <ul>
                         
-                        <li><a href="index.html" aria-label="Home">Home</a></li>
+                        <li><a href="../index.html" aria-label="Home">Home</a></li>
                         
-                        <li><a href="getting-started/install.html" aria-label="Install">Install</a></li>
+                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
                         
-                        <li><a href="getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
                         
                     </ul>
                     
@@ -130,15 +130,15 @@
                     
                     <ul>
                         
-                        <li><a href="notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
+                        <li><a href="../notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
                         
-                        <li><a href="notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
+                        <li><a href="../notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
                         
-                        <li><a href="notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
+                        <li><a href="../notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
                         
-                        <li><a href="notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
+                        <li><a href="../notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
                         
-                        <li><a href="notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
+                        <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
                         
                     </ul>
                     
@@ -149,9 +149,9 @@
                     
                     <ul>
                         
-                        <li><a href="execution/supported-languages.html" aria-label="Languages">Languages</a></li>
+                        <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
                         
-                        <li><a href="execution/options.html" aria-label="Options">Options</a></li>
+                        <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
                         
                     </ul>
                     
@@ -162,11 +162,11 @@
                     
                     <ul>
                         
-                        <li><a href="websites/websites.html" aria-label="Overview">Overview</a></li>
+                        <li><a href="websites.html" aria-label="Overview">Overview</a></li>
                         
-                        <li><a href="websites/website-config.html" aria-label="Configuration">Configuration</a></li>
+                        <li><a href="website-config.html" aria-label="Configuration">Configuration</a></li>
                         
-                        <li><a href="websites/website-themes.html" aria-label="Themes">Themes</a></li>
+                        <li><a href="website-themes.html" aria-label="Themes" class="active" aria-current="page">Themes</a></li>
                         
                     </ul>
                     
@@ -177,7 +177,7 @@
                     
                     <ul>
                         
-                        <li><a href="reference/cli.html" aria-label="Command line">Command line</a></li>
+                        <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
                         
                     </ul>
                     
@@ -186,7 +186,29 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <section class="calepin-website-404"><p class="calepin-website-404-code" aria-hidden="true">404</p><h1 class="calepin-website-404-title" id="page-not-found">Page not found</h1><p class="calepin-website-404-lede">Sorry, the page you are looking for does not exist or may have moved.</p><p class="calepin-website-404-actions"><a href="index.html" role="button">Back to home</a></p><nav class="calepin-website-404-links" aria-label="Helpful links"><a href="index.html">Home</a> <a href="reference/cli.html">CLI reference</a> <a href="notebooks/example.html">Example notebook</a></nav></section>
+            <h2 id="website-themes">Website themes</h2><p>A theme controls how your website looks: layout, navigation, colors, and typography. Every <em>Calepin</em> site uses one. The default theme works with zero configuration, and when you want more control, you can copy any built-in theme into your project and edit it like the rest of your source files.</p><h3 id="built-in-themes">Built-in themes</h3><p><em>Calepin</em> ships with two themes:</p><ul><li><strong>calepin</strong> (the default): a documentation site layout with sidebar navigation, a top bar with your logo and a GitHub link, previous and next page links, a table of contents, a dark mode toggle, copy buttons on code blocks, and a view switcher that shows each page as rendered HTML, Typst source, or PDF. This documentation site uses it.</li><li><strong>academic</strong>: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, and publication lists. Run <code>calepin new academic</code> to scaffold a complete starter site built on it.</li></ul><h3 id="choosing-a-theme">Choosing a theme</h3><p>Set <code>theme</code> in your site’s <code>calepin.toml</code>. It accepts three kinds of values:</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">academic</span><span style="color: #198810">"</span>          <span style="color: #74747c">#</span><span style="color: #74747c"> a built-in theme: calepin or academic</span>
+<span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/my-theme</span><span style="color: #198810">"</span>   <span style="color: #74747c">#</span><span style="color: #74747c"> a theme directory in your project</span>
+<span style="color: #4b69c6">theme</span> = <span style="color: #d73948">false</span>               <span style="color: #74747c">#</span><span style="color: #74747c"> no theme: raw, unstyled output</span></code></pre><p>The same values work with <code>--theme</code> on <code>calepin compile</code> and <code>calepin watch</code>, and inside a document with <code>#calepin.setup(theme: ...)</code>. When several are set, the command line wins, then the document, then <code>calepin.toml</code>.</p><h3 id="customizing-a-theme">Customizing a theme</h3><p>Built-in themes are compiled into the <em>Calepin</em> binary, so you cannot edit them directly. Instead, copy one into your project and edit the copy:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> new theme                     <span style="color: #74747c">#</span><span style="color: #74747c"> copies the default theme to themes/calepin/</span>
+<span style="color: #4b69c6">calepin</span> new theme --theme academic    <span style="color: #74747c">#</span><span style="color: #74747c"> copies the academic theme to themes/academic/</span></code></pre><p>Then point your site at the copy:</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/calepin</span><span style="color: #198810">"</span></code></pre><p>The copy is yours: edit its HTML, CSS, JavaScript, and Typst files freely, and check them into version control. <em>Calepin</em> upgrades will never touch them.</p><p>Two tips:</p><ul><li>Keep only the files you actually change. Anything you delete from your copy falls back to the built-in default, so a theme directory containing a single CSS file is perfectly valid, and the remaining files document exactly what you customized.</li><li>Never edit files under <code>.calepin/</code>. That directory is regenerated on every build, and changes there are silently lost.</li></ul><h3 id="inside-a-theme">Inside a theme</h3><p>A theme is just a directory. <em>Calepin</em> looks for three entry files, one per kind of output:</p><pre><code data-lang="text">themes/my-theme/
+  site.html         # layout for website pages
+  document.html     # layout for a single document rendered to HTML
+  paged.typ         # Typst styling for PDF, SVG, and PNG output
+  partials/         # reusable template fragments
+  styles/           # CSS files, loaded in filename order
+  scripts/          # JavaScript files, loaded in filename order</code></pre><p>Every file is optional. When an entry file is missing, that kind of output uses the default <code>calepin</code> theme instead, including the default’s own partials, styles, and scripts. The built-in <code>academic</code> theme works this way: it only provides <code>site.html</code>, and falls back to the default for single-document HTML and paged output.</p><p>One special case: an empty <code>paged.typ</code> turns paged styling off entirely, while a missing one inherits the default styling.</p><h3 id="writing-templates">Writing templates</h3><p><code>site.html</code> and <code>document.html</code> use the MiniJinja template language, which follows the familiar Jinja2 syntax. Files in <code>partials/</code> can be included with <code>{% include "partials/name.html" %}</code>.</p><p>On website builds, templates receive a <code>site</code> object describing the site and the current page:</p><ul><li><code>site.title</code>, <code>site.description</code>, <code>site.base_url</code>: site identity from <code>calepin.toml</code></li><li><code>site.logo</code>, <code>site.logo_alt</code>, <code>site.home_url</code>, <code>site.github_url</code>: branding and top-bar links</li><li><code>site.sidebar</code>, <code>site.sidebar_sections</code>: sidebar navigation entries</li><li><code>site.navbar_left</code>, <code>site.navbar_center</code>, <code>site.navbar_right</code>: navbar entries by region</li><li><code>site.toc</code>: table of contents for the current page</li><li><code>site.page_title</code>, <code>site.current_url</code>: current page metadata</li><li><code>site.language</code>, <code>site.languages</code>, <code>site.translations</code>: multilingual site data</li></ul><p>Each entry in <code>site.sidebar</code>, <code>site.sidebar_sections</code>, and the navbar regions exposes <code>href</code>, <code>label</code>, <code>label_html</code>, <code>active</code>, and <code>widget</code>. Plain links have <code>widget = none</code>. Widget entries carry whatever string was configured: the built-in themes recognize <code>widget = "theme"</code> (dark mode toggle) and <code>widget = "language"</code> (language picker), and a custom theme can invent its own names, such as <code>search</code>, and render them by checking <code>item.widget</code>.</p><p>For the variables available when rendering a single document, see <a href="../notebooks/templates.html">HTML themes</a>.</p><h3 id="reusable-snippets">Reusable snippets</h3><p>You do not have to write all the CSS and JavaScript yourself. <em>Calepin</em> exposes its own building blocks to every theme through the <code>snippets</code> object:</p><pre><code data-lang="html">&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.theme }}&lt;/<span style="color: #4b69c6">style</span>>
+&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.code }}&lt;/<span style="color: #4b69c6">style</span>>
+&lt;<span style="color: #4b69c6">style</span>>{{ snippets.css.widgets }}&lt;/<span style="color: #4b69c6">style</span>>
+&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.copy_code }}&lt;/<span style="color: #4b69c6">script</span>>
+&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.language_picker }}&lt;/<span style="color: #4b69c6">script</span>>
+&lt;<span style="color: #4b69c6">script</span>>{{ snippets.js.theme_toggle }}&lt;/<span style="color: #4b69c6">script</span>></code></pre><ul><li><code>snippets.css.theme</code> is the shared visual base of the built-in themes: typography, heading scale, colors, and code, output, and figure defaults.</li><li><code>snippets.css.code</code> styles code blocks and computed output.</li><li><code>snippets.css.widgets</code>, together with <code>snippets.js.theme_toggle</code> and <code>snippets.js.language_picker</code>, powers the dark mode toggle (elements marked <code>data-calepin-theme-toggle</code>) and the language picker (selects marked <code>data-calepin-language-picker</code>).</li><li><code>snippets.js.copy_code</code> adds copy buttons to code blocks.</li></ul><p>Prefer these snippets over copying CSS or JavaScript out of the built-in themes: your theme stays small, and it inherits fixes and improvements from future <em>Calepin</em> releases.</p><h3 id="styling-pdf-output">Styling PDF output</h3><p><code>paged.typ</code> is a plain Typst file, not a template. When rendering PDF, SVG, or PNG output, <em>Calepin</em> inserts it ahead of each page’s source, after its own code chunk rules, so your <code>set</code> and <code>show</code> rules apply to the whole document.</p><p><em>Calepin</em> also stages reusable Typst snippets under <code>/.calepin/snippets/typst/</code>. The default theme’s <code>paged.typ</code> imports <code>code-block.typ</code> from there to style source blocks. A minimal <code>paged.typ</code> that does the same:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"/.calepin/snippets/typst/code-block.typ"</span>: code-block
+
+<span style="color: #d73948">#</span><span style="color: #d73948">show</span> raw.<span style="color: #4b69c6">where</span>(block: <span style="color: #d73948">true</span>): it <span style="color: #d73948">=></span> {
+  <span style="color: #d73948">if</span> sys.inputs.<span style="color: #4b69c6">at</span>(<span style="color: #198810">"calepin-target"</span>, default: <span style="color: #198810">"paged"</span>) <span style="color: #d73948">==</span> <span style="color: #198810">"html"</span> {
+    it
+  } <span style="color: #d73948">else</span> {
+    <span style="color: #4b69c6">code-block</span>(it)
+  }
+}</code></pre><h3 id="source-and-pdf-views">Source and PDF views</h3><p>The default theme’s view switcher shows each page as rendered HTML, Typst source, or PDF.</p><p>The source view reads a JSON script embedded in each generated HTML page, so it always works. The PDF view links to the matching <code>.pdf</code> file, which only exists when PDF rendering is enabled. If you build with <code>--format html</code>, no PDF files are generated, and the PDF view has nothing to show.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -194,7 +216,23 @@
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-1"><a href="#page-not-found">Page not found</a></li>
+                    <li class="level-2"><a href="#website-themes">Website themes</a></li>
+                    
+                    <li class="level-3"><a href="#built-in-themes">Built-in themes</a></li>
+                    
+                    <li class="level-3"><a href="#choosing-a-theme">Choosing a theme</a></li>
+                    
+                    <li class="level-3"><a href="#customizing-a-theme">Customizing a theme</a></li>
+                    
+                    <li class="level-3"><a href="#inside-a-theme">Inside a theme</a></li>
+                    
+                    <li class="level-3"><a href="#writing-templates">Writing templates</a></li>
+                    
+                    <li class="level-3"><a href="#reusable-snippets">Reusable snippets</a></li>
+                    
+                    <li class="level-3"><a href="#styling-pdf-output">Styling PDF output</a></li>
+                    
+                    <li class="level-3"><a href="#source-and-pdf-views">Source and PDF views</a></li>
                     
                 </ul>
             </nav>
@@ -266,16 +304,44 @@
         
     
         
-        
+            
             
         
+        
     
+        
+            
+            
         
         
             
         
     
 
+    
+    <footer class="calepin-website-page-nav" aria-label="Page navigation">
+      <div class="calepin-website-page-nav-inner">
+        
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="website-config.html">
+          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
+          <span class="calepin-website-page-nav-content">
+            <span class="calepin-website-page-nav-kind">Previous</span>
+            <span class="calepin-website-page-nav-title">Configuration</span>
+          </span>
+        </a>
+        
+
+        
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="../reference/cli.html">
+          <span class="calepin-website-page-nav-content">
+            <span class="calepin-website-page-nav-kind">Next</span>
+            <span class="calepin-website-page-nav-title">Command line</span>
+          </span>
+          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        
+      </div>
+    </footer>
     
     
     <script>(() => {
