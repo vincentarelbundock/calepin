@@ -112,7 +112,10 @@ fn typst_eval(
         .arg("--root")
         .arg(&layout.root)
         .arg("--format")
-        .arg("json");
+        .arg("json")
+        // Documents may use Typst's HTML module even during metadata
+        // introspection; enable the feature just as the final HTML compile does.
+        .arg("--features=html");
     for input in inputs {
         command.arg("--input").arg(input);
     }

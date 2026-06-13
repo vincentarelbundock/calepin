@@ -33,7 +33,7 @@ pub enum Command {
     /// Create a new example Typst file or website scaffold
     New(NewArgs),
 
-    /// Check Calepin's local runtime environment
+    /// Check Calepin's local runtime environment and local links
     Health(HealthArgs),
 
     /// Preprocess, then invoke typst compile

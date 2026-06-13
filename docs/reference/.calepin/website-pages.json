@@ -1,0 +1,154 @@
+[
+  {
+    "href": "getting-started/config.html",
+    "language": null,
+    "meta": {},
+    "path": "getting-started/config.typ",
+    "pdf": "getting-started/config.pdf",
+    "title": "Configuration",
+    "translation_key": "getting-started/config",
+    "translations": {}
+  },
+  {
+    "href": "getting-started/install.html",
+    "language": null,
+    "meta": {},
+    "path": "getting-started/install.typ",
+    "pdf": "getting-started/install.pdf",
+    "title": "Install",
+    "translation_key": "getting-started/install",
+    "translations": {}
+  },
+  {
+    "href": "index.html",
+    "language": null,
+    "meta": {},
+    "path": "index.typ",
+    "pdf": "index.pdf",
+    "title": "Home",
+    "translation_key": "index",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/code_execution.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/code_execution.typ",
+    "pdf": "notebooks/code_execution.pdf",
+    "title": "Code execution",
+    "translation_key": "notebooks/code_execution",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/cross-references.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/cross-references.typ",
+    "pdf": "notebooks/cross-references.pdf",
+    "title": "Cross-references",
+    "translation_key": "notebooks/cross-references",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/example.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/example.typ",
+    "pdf": "notebooks/example.pdf",
+    "title": "Example notebook",
+    "translation_key": "notebooks/example",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/figures.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/figures.typ",
+    "pdf": "notebooks/figures.pdf",
+    "title": "Figures and tables",
+    "translation_key": "notebooks/figures",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/parameters.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/parameters.typ",
+    "pdf": "notebooks/parameters.pdf",
+    "title": "Parameters",
+    "translation_key": "notebooks/parameters",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/themes.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/themes.typ",
+    "pdf": "notebooks/themes.pdf",
+    "title": "Themes",
+    "translation_key": "notebooks/themes",
+    "translations": {}
+  },
+  {
+    "href": "reference/cli.html",
+    "language": null,
+    "meta": {},
+    "path": "reference/cli.typ",
+    "pdf": "reference/cli.pdf",
+    "title": "CLI reference",
+    "translation_key": "reference/cli",
+    "translations": {}
+  },
+  {
+    "href": "tips.html",
+    "language": null,
+    "meta": {},
+    "path": "tips.typ",
+    "pdf": "tips.pdf",
+    "title": "Tips",
+    "translation_key": "tips",
+    "translations": {}
+  },
+  {
+    "href": "websites/config.html",
+    "language": null,
+    "meta": {},
+    "path": "websites/config.typ",
+    "pdf": "websites/config.pdf",
+    "title": "Configuration",
+    "translation_key": "websites/config",
+    "translations": {}
+  },
+  {
+    "href": "websites/themes.html",
+    "language": null,
+    "meta": {},
+    "path": "websites/themes.typ",
+    "pdf": "websites/themes.pdf",
+    "title": "Themes",
+    "translation_key": "websites/themes",
+    "translations": {}
+  },
+  {
+    "href": "websites/web_components.html",
+    "language": null,
+    "meta": {
+      "pdf": false
+    },
+    "path": "websites/web_components.typ",
+    "pdf": null,
+    "title": "Web components",
+    "translation_key": "websites/web_components",
+    "translations": {}
+  },
+  {
+    "href": "websites/websites.html",
+    "language": null,
+    "meta": {},
+    "path": "websites/websites.typ",
+    "pdf": "websites/websites.pdf",
+    "title": "Overview",
+    "translation_key": "websites/websites",
+    "translations": {}
+  }
+]

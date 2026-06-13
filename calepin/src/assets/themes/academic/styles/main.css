@@ -193,21 +193,11 @@
 }
 
 .academic-button {
-  display: inline-flex;
-  align-items: center;
   min-height: 2rem;
-  padding: 0.18rem 0.55rem;
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: var(--academic-radius);
-  color: inherit;
+  margin: 0;
+  padding-block: 0.18rem;
+  padding-inline: 0.55rem;
   font-size: 0.86rem;
-  text-decoration: none;
-}
-
-.academic-button:hover,
-.academic-button:focus-visible {
-  border-color: var(--pico-primary);
-  color: var(--pico-primary);
 }
 
 .academic-section {
@@ -282,9 +272,7 @@
 }
 
 .academic-panel {
-  padding: 0.9rem;
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: var(--academic-radius);
+  margin: 0;
 }
 
 .academic-panel h3 {

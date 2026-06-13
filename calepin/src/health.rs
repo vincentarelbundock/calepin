@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::cli::HealthArgs;
@@ -159,6 +160,7 @@ pub fn build_report(config_path: Option<&Path>) -> Result<HealthReport> {
         python_available,
     ));
     checks.push(jupyter_kernels_check());
+    checks.push(link_check(&root));
 
     Ok(HealthReport {
         root: root.display().to_string(),
@@ -414,6 +416,306 @@ fn jupyter_kernels_json_check(stdout: &[u8]) -> HealthCheck {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LinkOccurrence {
+    source: PathBuf,
+    line: usize,
+    target: String,
+}
+
+const LINK_CHECK_SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
+
+fn link_check(root: &Path) -> HealthCheck {
+    match check_links(root) {
+        Ok(LinkSummary {
+            files,
+            links,
+            broken,
+        }) => {
+            let status = if broken.is_empty() {
+                HealthStatus::Ok
+            } else {
+                HealthStatus::Error
+            };
+            let message = if broken.is_empty() {
+                format!("checked {links} literal link(s) in {files} Typst file(s)")
+            } else {
+                format!(
+                    "{} broken link(s) among {links} literal link(s) in {files} Typst file(s)",
+                    broken.len()
+                )
+            };
+            HealthCheck {
+                name: "links".to_string(),
+                status,
+                path: Some(root.display().to_string()),
+                message,
+                hint: (!broken.is_empty()).then(|| {
+                    "fix missing local link targets or rebuild generated linked outputs".to_string()
+                }),
+                details: broken,
+            }
+        }
+        Err(error) => HealthCheck {
+            name: "links".to_string(),
+            status: HealthStatus::Warning,
+            path: Some(root.display().to_string()),
+            message: format!("failed to check links: {error}"),
+            hint: None,
+            details: Vec::new(),
+        },
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LinkSummary {
+    files: usize,
+    links: usize,
+    broken: Vec<String>,
+}
+
+fn check_links(root: &Path) -> Result<LinkSummary> {
+    let typ_files = collect_typst_files(root)?;
+    let mut links = 0usize;
+    let mut broken = Vec::new();
+
+    for file in &typ_files {
+        let source = fs::read_to_string(file)
+            .with_context(|| format!("failed to read {}", file.display()))?;
+        for link in extract_literal_links(file, &source) {
+            links += 1;
+            if let Some(message) = validate_local_link(root, &link) {
+                broken.push(message);
+            }
+        }
+    }
+
+    Ok(LinkSummary {
+        files: typ_files.len(),
+        links,
+        broken,
+    })
+}
+
+fn collect_typst_files(root: &Path) -> Result<Vec<PathBuf>> {
+    let mut out = Vec::new();
+    collect_typst_files_in(root, root, &mut out)?;
+    out.sort();
+    Ok(out)
+}
+
+fn collect_typst_files_in(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
+        let entry = entry?;
+        let path = entry.path();
+        let rel = path.strip_prefix(root).unwrap_or(&path);
+        if rel.components().any(|component| {
+            component
+                .as_os_str()
+                .to_str()
+                .is_some_and(|name| LINK_CHECK_SKIP_DIRS.contains(&name))
+        }) {
+            continue;
+        }
+        if path.is_dir() {
+            collect_typst_files_in(root, &path, out)?;
+        } else if path.extension().and_then(|extension| extension.to_str()) == Some("typ") {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn extract_literal_links(source_path: &Path, source: &str) -> Vec<LinkOccurrence> {
+    let mut links = Vec::new();
+    let mut offset = 0usize;
+    while let Some(relative) = source[offset..].find("#link") {
+        let start = offset + relative;
+        let after_name = start + "#link".len();
+        if source[after_name..]
+            .chars()
+            .next()
+            .is_some_and(is_identifier_char)
+        {
+            offset = after_name;
+            continue;
+        }
+        let open = skip_ws(source, after_name);
+        if source[open..].chars().next() != Some('(') {
+            offset = after_name;
+            continue;
+        }
+        let value_start = skip_ws(source, open + 1);
+        if source[value_start..].chars().next() != Some('"') {
+            offset = value_start;
+            continue;
+        }
+        match parse_string_literal(source, value_start) {
+            Some((target, end)) => {
+                links.push(LinkOccurrence {
+                    source: source_path.to_path_buf(),
+                    line: line_number(source, start),
+                    target,
+                });
+                offset = end;
+            }
+            None => {
+                offset = value_start + 1;
+            }
+        }
+    }
+    links
+}
+
+fn validate_local_link(root: &Path, link: &LinkOccurrence) -> Option<String> {
+    let target = link.target.trim();
+    if target.is_empty() || is_external_or_special_link(target) {
+        return None;
+    }
+    let path_part = target
+        .split_once('#')
+        .map(|(path, _)| path)
+        .unwrap_or(target)
+        .split_once('?')
+        .map(|(path, _)| path)
+        .unwrap_or_else(|| {
+            target
+                .split_once('#')
+                .map(|(path, _)| path)
+                .unwrap_or(target)
+        })
+        .trim();
+    if path_part.is_empty() {
+        return None;
+    }
+
+    let base = if path_part.starts_with('/') {
+        root.to_path_buf()
+    } else {
+        link.source.parent().unwrap_or(root).to_path_buf()
+    };
+    let candidate = normalize_path(&base.join(path_part.trim_start_matches('/')));
+    if !candidate.starts_with(root) {
+        return Some(format!(
+            "{}:{} `{}` escapes the project root",
+            display_rel(root, &link.source),
+            link.line,
+            link.target
+        ));
+    }
+    if link_target_exists(&candidate) {
+        return None;
+    }
+
+    Some(format!(
+        "{}:{} missing local link target `{}`",
+        display_rel(root, &link.source),
+        link.line,
+        link.target
+    ))
+}
+
+fn link_target_exists(candidate: &Path) -> bool {
+    if candidate.exists() {
+        return true;
+    }
+    if candidate
+        .extension()
+        .and_then(|extension| extension.to_str())
+        == Some("html")
+    {
+        let mut typ_source = candidate.to_path_buf();
+        typ_source.set_extension("typ");
+        return typ_source.is_file();
+    }
+    if candidate.extension().is_none() {
+        return candidate.join("index.typ").is_file() || candidate.join("index.html").is_file();
+    }
+    false
+}
+
+fn is_external_or_special_link(target: &str) -> bool {
+    target.starts_with('#')
+        || target.starts_with("http://")
+        || target.starts_with("https://")
+        || target.starts_with("//")
+        || target.starts_with("mailto:")
+        || target.starts_with("tel:")
+        || target.starts_with("data:")
+}
+
+fn parse_string_literal(source: &str, quote: usize) -> Option<(String, usize)> {
+    let mut out = String::new();
+    let mut escaped = false;
+    let mut index = quote + 1;
+    while index < source.len() {
+        let ch = source[index..].chars().next()?;
+        if escaped {
+            out.push(match ch {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                other => other,
+            });
+            escaped = false;
+        } else if ch == '\\' {
+            escaped = true;
+        } else if ch == '"' {
+            return Some((out, index + ch.len_utf8()));
+        } else {
+            out.push(ch);
+        }
+        index += ch.len_utf8();
+    }
+    None
+}
+
+fn skip_ws(value: &str, mut index: usize) -> usize {
+    while index < value.len() {
+        let Some(ch) = value[index..].chars().next() else {
+            break;
+        };
+        if !ch.is_whitespace() {
+            break;
+        }
+        index += ch.len_utf8();
+    }
+    index
+}
+
+fn is_identifier_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'
+}
+
+fn line_number(source: &str, offset: usize) -> usize {
+    source[..offset]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                out.pop();
+            }
+            _ => out.push(component.as_os_str()),
+        }
+    }
+    out
+}
+
+fn display_rel(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .display()
+        .to_string()
+}
+
 fn display_config_path(path: &Path) -> Result<String> {
     let path = if path.is_absolute() {
         PathBuf::from(path)
@@ -502,6 +804,55 @@ mod tests {
         );
 
         assert_eq!(check.status, HealthStatus::Warning);
+    }
+
+    #[test]
+    fn extracts_literal_typst_links() {
+        let links = extract_literal_links(
+            Path::new("doc.typ"),
+            r#"
+#link("guide.html")[Guide]
+#link(dynamic)[Dynamic]
+#link(
+  "../assets/logo.svg"
+)[Logo]
+"#,
+        );
+
+        assert_eq!(
+            links
+                .iter()
+                .map(|link| (link.line, link.target.as_str()))
+                .collect::<Vec<_>>(),
+            vec![(2, "guide.html"), (4, "../assets/logo.svg")]
+        );
+    }
+
+    #[test]
+    fn link_check_accepts_html_target_with_typst_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join("index.typ"), r#"#link("guide.html")[Guide]"#).unwrap();
+        fs::write(root.join("guide.typ"), "= Guide\n").unwrap();
+
+        let summary = check_links(root).unwrap();
+
+        assert_eq!(summary.links, 1);
+        assert!(summary.broken.is_empty());
+    }
+
+    #[test]
+    fn link_check_reports_missing_local_targets() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join("index.typ"), r#"#link("missing.html")[Missing]"#).unwrap();
+
+        let summary = check_links(root).unwrap();
+
+        assert_eq!(summary.links, 1);
+        assert_eq!(summary.broken.len(), 1);
+        assert!(summary.broken[0].contains("index.typ:1"));
+        assert!(summary.broken[0].contains("missing.html"));
     }
 
     #[test]

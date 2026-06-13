@@ -146,6 +146,8 @@
                         
                         <li><a href="../websites/themes.html" aria-label="Themes">Themes</a></li>
                         
+                        <li><a href="../websites/web_components.html" aria-label="Web components">Web components</a></li>
+                        
                     </ul>
                     
                     
@@ -309,12 +311,17 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
             
         
     
+        
+        
+            
+        
+    
 
     
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="cross-references.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="cross-references.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
@@ -324,7 +331,7 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="themes.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="themes.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
             <span class="calepin-website-page-nav-title">Themes</span>
@@ -467,8 +474,9 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
     document.querySelectorAll(".calepin-language-picker.is-open").forEach((picker) => {
       if (picker === except) return;
       picker.classList.remove("is-open");
-      const button = picker.querySelector("button");
-      if (button) button.setAttribute("aria-expanded", "false");
+      picker.open = false;
+      const summary = picker.querySelector("summary");
+      if (summary) summary.setAttribute("aria-expanded", "false");
     });
   }
 
@@ -480,42 +488,45 @@ colors &lt;- <span class="calepin-syntax-function">hcl.colors</span>(<span class
     if (options.length <= 1) return;
 
     const selected = options.find((option) => option.selected) || options[0];
-    const picker = document.createElement("div");
-    picker.className = "calepin-language-picker";
+    const picker = document.createElement("details");
+    picker.className = "calepin-language-picker dropdown";
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "calepin-language-picker-button outline secondary";
-    button.setAttribute("aria-haspopup", "menu");
-    button.setAttribute("aria-expanded", "false");
-    button.setAttribute("aria-label", select.getAttribute("aria-label") || "Language");
-    button.innerHTML = `${languageIcon()}<span>${escapeHtml(selected.textContent)}</span>`;
+    const summary = document.createElement("summary");
+    summary.className = "calepin-language-picker-button outline secondary";
+    summary.setAttribute("role", "button");
+    summary.setAttribute("aria-haspopup", "menu");
+    summary.setAttribute("aria-expanded", "false");
+    summary.setAttribute("aria-label", select.getAttribute("aria-label") || "Language");
+    summary.innerHTML = `${languageIcon()}<span>${escapeHtml(selected.textContent)}</span>`;
 
-    const menu = document.createElement("div");
+    const menu = document.createElement("ul");
     menu.className = "calepin-language-picker-menu";
     menu.setAttribute("role", "menu");
 
     options.forEach((option) => {
-      const item = document.createElement("button");
-      item.type = "button";
+      const li = document.createElement("li");
+      const item = document.createElement("a");
+      item.href = option.value;
       item.setAttribute("role", "menuitem");
-      item.dataset.href = option.value;
       item.innerHTML = `${languageIcon()}<span>${escapeHtml(option.textContent)}</span>`;
       if (option.selected) item.setAttribute("aria-current", "true");
-      item.addEventListener("click", () => {
-        window.location.href = option.value;
-      });
-      menu.appendChild(item);
+      li.appendChild(item);
+      menu.appendChild(li);
     });
 
-    button.addEventListener("click", () => {
-      const open = !picker.classList.contains("is-open");
+    summary.addEventListener("click", () => {
+      const open = !picker.open;
       closeAll(open ? picker : null);
       picker.classList.toggle("is-open", open);
-      button.setAttribute("aria-expanded", open ? "true" : "false");
+      summary.setAttribute("aria-expanded", open ? "true" : "false");
     });
 
-    picker.append(button, menu);
+    picker.addEventListener("toggle", () => {
+      picker.classList.toggle("is-open", picker.open);
+      summary.setAttribute("aria-expanded", picker.open ? "true" : "false");
+    });
+
+    picker.append(summary, menu);
     select.hidden = true;
     select.insertAdjacentElement("afterend", picker);
   }

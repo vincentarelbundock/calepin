@@ -93,7 +93,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     write_runtime(&layout.root)?;
     write_typst_snippets(&layout.root)?;
     let staged_input = write_staged_source(&layout)?;
-    let query_input = write_render_wrapper(&layout, &staged_input, &[], None)?;
+    // Metadata collection runs before the final target is known. Use a
+    // query-only source so documents can contain `html.*` calls without hiding
+    // chunks from Calepin's query pass.
+    let query_source = write_query_source(&layout, &staged_input)?;
+    let query_input = write_render_wrapper(&layout, &query_source, &[], None)?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
     let metadata = preprocess_metadata(
         &config.executables.typst,
@@ -269,6 +273,43 @@ fn write_render_wrapper(
 
     fs::write(&wrapper, lines).with_context(|| format!("failed to write {}", wrapper.display()))?;
     Ok(wrapper_relative)
+}
+
+fn write_query_source(layout: &LayoutPaths, staged_input: &Path) -> Result<PathBuf> {
+    let mut query_source_relative = PathBuf::from(".calepin");
+    let mut stem = layout.input_rel.clone();
+    stem.set_extension("");
+    query_source_relative.push(stem);
+    query_source_relative.push("query-source.typ");
+
+    let query_source = layout.root.join(&query_source_relative);
+    if let Some(parent) = query_source.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    write_query_html_fallback(&layout.root)?;
+
+    let staged_input_abs = layout.root.join(staged_input);
+    let source = fs::read_to_string(&staged_input_abs)
+        .with_context(|| format!("failed to read {}", staged_input_abs.display()))?;
+    // Typst's real `html` module wraps children in HTML nodes that are opaque to
+    // chunk discovery. During query only, replace it with a module that keeps
+    // element bodies visible and drops inert tags such as link/script/img.
+    let mut prefixed = String::from("#import \"/.calepin/query-html.typ\" as html\n\n");
+    prefixed.push_str(&source);
+    fs::write(&query_source, prefixed)
+        .with_context(|| format!("failed to write {}", query_source.display()))?;
+    Ok(query_source_relative)
+}
+
+fn write_query_html_fallback(root: &Path) -> Result<()> {
+    let path = root.join(".calepin/query-html.typ");
+    let source = r#"#let elem(name, attrs: (:), body) = body
+#let link(..args) = none
+#let script(..args) = none
+#let img(..args) = none
+"#;
+    fs::write(&path, source).with_context(|| format!("failed to write {}", path.display()))
 }
 
 fn write_typst_snippets(root: &Path) -> Result<()> {

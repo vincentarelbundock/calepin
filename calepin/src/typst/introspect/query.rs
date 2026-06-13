@@ -62,6 +62,9 @@ fn typst_query(
         .arg(format!("calepin-results={results_input}"))
         .arg("--input")
         .arg("calepin-target=paged")
+        // Keep the fallback `typst query` path compatible with documents that
+        // reference Typst's HTML module while Calepin is collecting metadata.
+        .arg("--features=html")
         .current_dir(&layout.root)
         .output()
         .map_err(|error| {

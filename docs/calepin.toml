@@ -77,6 +77,10 @@ title = "Websites"
   target = "websites/themes.typ"
   label = "Themes"
 
+  [[sidebar.section.item]]
+  target = "websites/web_components.typ"
+  label = "Web components"
+
 
 [[sidebar.section]]
 title = "More"

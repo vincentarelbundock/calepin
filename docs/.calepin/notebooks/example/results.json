@@ -1,0 +1,544 @@
+{
+  "schema": 1,
+  "calepin_version": "0.0.13",
+  "input": "notebooks/example.typ",
+  "chunks": {
+    "chunk-1": {
+      "label": "chunk-1",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "42"
+        }
+      ]
+    },
+    "chunk-2": {
+      "label": "chunk-2",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "#strong[42]"
+        }
+      ]
+    },
+    "chunk-3": {
+      "label": "chunk-3",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "typst",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "text/x-typst": {
+              "path": "/.calepin/notebooks/example/figures/chunk-3.typ"
+            }
+          }
+        }
+      ]
+    },
+    "inline-1": {
+      "label": "inline-1",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "42"
+        }
+      ]
+    },
+    "fig-plotnine": {
+      "label": "fig-plotnine",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Plotnine scatterplot",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/example/figures/fig-plotnine.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-plotnine"
+        }
+      ]
+    },
+    "inline-2": {
+      "label": "inline-2",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "42"
+        }
+      ]
+    },
+    "chunk-4": {
+      "label": "chunk-4",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nCall:\nlm(formula = hp ~ mpg, data = mtcars)\n\nResiduals:\n   Min     1Q Median     3Q    Max \n-59.26 -28.93 -13.45  25.65 143.36 \n\nCoefficients:\n            Estimate Std. Error t value Pr(>|t|)    \n(Intercept)   324.08      27.43  11.813 8.25e-13 ***\nmpg            -8.83       1.31  -6.742 1.79e-07 ***\n---\nSignif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1\n\nResidual standard error: 43.95 on 30 degrees of freedom\nMultiple R-squared:  0.6024,\tAdjusted R-squared:  0.5892 \nF-statistic: 45.46 on 1 and 30 DF,  p-value: 1.788e-07"
+        }
+      ]
+    },
+    "fig-scatter": {
+      "label": "fig-scatter",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Scatterplot",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/example/figures/fig-scatter.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-scatter"
+        }
+      ]
+    },
+    "inline-3": {
+      "label": "inline-3",
+      "engine": "julia-1.12",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "42"
+        }
+      ]
+    },
+    "chunk-5": {
+      "label": "chunk-5",
+      "engine": "julia-1.12",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "42"
+        }
+      ]
+    },
+    "chunk-6": {
+      "label": "chunk-6",
+      "engine": "bash",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "hello from bash"
+        }
+      ]
+    },
+    "fig-mermaid": {
+      "label": "fig-mermaid",
+      "engine": "mermaid",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Mermaid flowchart",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/example/figures/fig-mermaid.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-mermaid"
+        }
+      ]
+    },
+    "fig-dot": {
+      "label": "fig-dot",
+      "engine": "dot",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Graphviz state graph",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/example/figures/fig-dot.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-dot"
+        }
+      ]
+    },
+    "fig-tikz": {
+      "label": "fig-tikz",
+      "engine": "tikz",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "TikZ path",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/example/figures/fig-tikz.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-tikz"
+        }
+      ]
+    },
+    "fig-d2": {
+      "label": "fig-d2",
+      "engine": "d2",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "D2 service sketch",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/example/figures/fig-d2.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-d2"
+        }
+      ]
+    }
+  }
+}

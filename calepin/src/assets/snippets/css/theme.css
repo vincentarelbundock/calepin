@@ -5,26 +5,6 @@
   --calepin-accent-hover: #16808f;
   --calepin-radius-sm: 4px;
   --calepin-topbar-height: 3.5rem;
-
-  --calepin-code-border: 1px solid var(--pico-muted-border-color);
-  --calepin-code-border-left: 3px solid var(--pico-primary);
-  --calepin-code-radius: var(--calepin-radius-sm);
-  --calepin-code-padding: 0.65rem 0.8rem;
-  --calepin-code-padding-right: 0.8rem;
-  --calepin-code-margin: 0.9rem 0 0.35rem;
-  --calepin-code-font-family: var(--pico-font-family-monospace);
-  --calepin-code-line-height: 1.45;
-  --calepin-output-background: var(--pico-card-sectioning-background-color);
-  --calepin-output-border: 1px solid var(--pico-muted-border-color);
-  --calepin-output-border-left: 3px solid var(--pico-primary);
-  --calepin-output-padding: 0.5rem 0.7rem;
-  --calepin-output-padding-right: 0.7rem;
-  --calepin-output-margin: 0.25rem 0 0.9rem;
-  --calepin-output-font-family: var(--pico-font-family-monospace);
-  --calepin-output-line-height: 1.4;
-  --calepin-stderr-background: #fff6f2;
-  --calepin-stderr-border-left-color: #b75e43;
-  --calepin-stderr-color: #663021;
 }
 
 :root:not([data-theme="dark"]),

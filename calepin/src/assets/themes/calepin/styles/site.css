@@ -369,15 +369,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  border: 1px solid var(--pico-muted-border-color);
   padding: 0.55rem 0.8rem;
   text-decoration: none;
-  color: inherit;
-  background: color-mix(in srgb, var(--pico-background-color) 94%, transparent);
-}
-
-.calepin-website-page-nav-link:visited {
-  color: inherit;
 }
 
 .calepin-website-page-nav-link:hover,
@@ -387,6 +380,10 @@
 
 .calepin-website-page-nav-empty {
   display: block;
+}
+
+.calepin-website-page-nav-link--prev {
+  text-align: left;
 }
 
 .calepin-website-page-nav-link--next {
@@ -568,10 +565,6 @@
   flex-direction: column;
   min-height: 9.5rem;
   margin: 0;
-  padding: 0.9rem;
-  border: 1px solid var(--pico-card-border-color, var(--pico-muted-border-color));
-  border-radius: var(--calepin-radius-sm);
-  background: var(--pico-card-background-color, var(--pico-background-color));
 }
 
 .calepin-website-feature-card h4 {

@@ -46,7 +46,7 @@
   if url == none or url == "" {
     none
   } else if _html() {
-    html.elem("a", attrs: (class: "academic-button", href: url))[#label]
+    html.elem("a", attrs: (class: "academic-button outline secondary", href: url, role: "button"))[#label]
   } else {
     link(url)[#label]
   }
@@ -100,7 +100,11 @@
 
 #let panels(..items) = _div("academic-two-column")[
   #for item in items.pos() {
-    _div("academic-panel")[#item]
+    if _html() {
+      html.elem("article", attrs: (class: "academic-panel"))[#item]
+    } else {
+      item
+    }
   }
 ]
 
