@@ -90,8 +90,8 @@
   }
 ]
 
-#let widget(title, more: none, body) = _div("academic-widget")[
-  #_div("academic-widget-header")[
+#let section(title, more: none, body) = _div("academic-section")[
+  #_div("academic-section-header")[
     #if _html() { html.elem("h2")[#title] } else { heading(level: 2)[#title] }
     #if more != none { link(more.at("url"))[#more.at("label", default: "More")] }
   ]
@@ -156,7 +156,7 @@
   if count != none {
     pages = pages.slice(0, calc.min(count, pages.len()))
   }
-  widget(title, more: more)[
+  section(title, more: more)[
     #_div("academic-list")[
       #if pages.len() == 0 [
         No entries yet.

@@ -27,6 +27,7 @@ const TYPST_SNIPPETS: &[(&str, &str)] = &[(
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
     pub input: PathBuf,
+    pub root: Option<PathBuf>,
     pub config: Option<PathBuf>,
     pub display_root: Option<PathBuf>,
     pub quiet: bool,
@@ -85,7 +86,7 @@ pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput>
 }
 
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
-    let mut layout = resolve_layout(&options.input, None)?;
+    let mut layout = resolve_layout(&options.input, options.root.as_deref())?;
     let config = CalepinConfig::load(&layout.root, options.config.as_deref())?;
     assert_supported_typst(&config.executables.typst)?;
 
@@ -123,22 +124,28 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
             }
         })
         .collect();
+    let params = resolve_params(&setup_config.defaults.params, &options.param_overrides)?;
+
     let effective_theme = options
         .theme
         .clone()
         .or(setup_config.defaults.theme_selection(&layout.root)?)
         .unwrap_or_else(|| options.fallback_theme.clone());
-    let paged_theme = crate::theme::paged_source(&effective_theme)?;
+    let paged_context = paged_template_context(
+        &layout,
+        &staged_input,
+        metadata.page_meta.clone(),
+        params.clone(),
+    );
+    let paged_theme = crate::theme::paged_source(&effective_theme, &paged_context)?;
     if !jupyter_kernels.is_empty() {
         let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
         layout.render_input =
-            write_render_wrapper(&layout, &staged_input, &kernels, paged_theme.as_deref())?;
+            write_render_wrapper(&layout, &staged_input, &kernels, paged_theme.as_ref())?;
     } else {
         layout.render_input =
-            write_render_wrapper(&layout, &staged_input, &[], paged_theme.as_deref())?;
+            write_render_wrapper(&layout, &staged_input, &[], paged_theme.as_ref())?;
     }
-
-    let params = resolve_params(&setup_config.defaults.params, &options.param_overrides)?;
 
     let cwd = layout.work_dir.clone();
     let timeout = options.timeout.map(Duration::from_secs);
@@ -167,11 +174,37 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     })
 }
 
+fn paged_template_context(
+    layout: &LayoutPaths,
+    include_input: &Path,
+    page_meta: Option<serde_json::Value>,
+    params: serde_json::Value,
+) -> crate::theme::PagedTemplateContext {
+    let input_dir = layout
+        .input_rel
+        .parent()
+        .map(slash_path)
+        .unwrap_or_default();
+    let input_stem = layout
+        .input_rel
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().to_string())
+        .unwrap_or_default();
+    crate::theme::PagedTemplateContext {
+        input_path: slash_path(&layout.input_rel),
+        input_dir,
+        input_stem,
+        body: format!("#include \"/{}\"", slash_path(include_input)),
+        page_meta: page_meta.unwrap_or(serde_json::Value::Null),
+        params,
+    }
+}
+
 fn write_render_wrapper(
     layout: &LayoutPaths,
     include_input: &Path,
     jupyter_kernels: &[&str],
-    paged_theme: Option<&str>,
+    paged_theme: Option<&crate::theme::PagedSource>,
 ) -> Result<PathBuf> {
     let mut wrapper_relative = PathBuf::from(".calepin");
     let mut stem = layout.input_rel.clone();
@@ -216,13 +249,15 @@ fn write_render_wrapper(
 
     if let Some(paged_theme) = paged_theme {
         lines.push_str("\n// Paged theme\n");
-        lines.push_str(paged_theme);
-        if !paged_theme.ends_with('\n') {
+        lines.push_str(&paged_theme.source);
+        if !paged_theme.source.ends_with('\n') {
             lines.push('\n');
         }
     }
 
-    lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
+    if !paged_theme.is_some_and(|theme| theme.owns_body) {
+        lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
+    }
 
     if let Some(parent) = wrapper.parent() {
         fs::create_dir_all(parent)
@@ -342,8 +377,8 @@ fn write_page_meta(layout: &LayoutPaths, value: Option<&serde_json::Value>) -> R
 
 /// Returns the `<website-metadata>` value persisted by the last preprocess of
 /// `input`, or `None` when it is missing or stale for the current content.
-pub fn read_page_meta(input: &Path) -> Option<serde_json::Value> {
-    let layout = resolve_layout(input, None).ok()?;
+pub fn read_page_meta_with_root(input: &Path, root: Option<&Path>) -> Option<serde_json::Value> {
+    let layout = resolve_layout(input, root).ok()?;
     let contents = fs::read_to_string(page_meta_path(&layout)).ok()?;
     let document: serde_json::Value = serde_json::from_str(&contents).ok()?;
     let current = source_fingerprint(&layout.input).ok()?;
@@ -655,10 +690,10 @@ mod tests {
         let value = serde_json::json!({"title": "Home", "pdf": false});
 
         write_page_meta(&layout, Some(&value)).unwrap();
-        assert_eq!(read_page_meta(&input), Some(value));
+        assert_eq!(read_page_meta_with_root(&input, None), Some(value));
 
         fs::write(&input, "= Changed\n").unwrap();
-        assert_eq!(read_page_meta(&input), None);
+        assert_eq!(read_page_meta_with_root(&input, None), None);
     }
 
     #[test]
@@ -670,7 +705,7 @@ mod tests {
 
         write_page_meta(&layout, None).unwrap();
 
-        assert_eq!(read_page_meta(&input), None);
+        assert_eq!(read_page_meta_with_root(&input, None), None);
     }
 
     #[test]
@@ -972,9 +1007,13 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
         let staged_input = PathBuf::from(".calepin/paper/source.typ");
-        let paged_theme = "#let paged-theme-marker = true\n";
+        let paged_theme = crate::theme::PagedSource {
+            source: "#let paged-theme-marker = true\n".to_string(),
+            owns_body: false,
+        };
 
-        let wrapper = write_render_wrapper(&layout, &staged_input, &[], Some(paged_theme)).unwrap();
+        let wrapper =
+            write_render_wrapper(&layout, &staged_input, &[], Some(&paged_theme)).unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
         let theme_marker = contents.find("#let paged-theme-marker = true").unwrap();
@@ -985,16 +1024,44 @@ mod tests {
     }
 
     #[test]
-    fn paged_theme_comes_from_theme_selection() {
-        let source = crate::theme::paged_source(&crate::theme::ThemeSelection::Default)
-            .unwrap()
-            .unwrap();
-        assert!(source.contains("code-block"));
-        assert!(
-            crate::theme::paged_source(&crate::theme::ThemeSelection::Disabled)
-                .unwrap()
-                .is_none()
+    fn render_wrapper_does_not_duplicate_template_owned_body() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+        let staged_input = PathBuf::from(".calepin/paper/source.typ");
+        let paged_theme = crate::theme::PagedSource {
+            source: "#include \"/.calepin/paper/source.typ\"\n[#emph[Appendix]]\n".to_string(),
+            owns_body: true,
+        };
+
+        let wrapper =
+            write_render_wrapper(&layout, &staged_input, &[], Some(&paged_theme)).unwrap();
+        let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
+
+        assert_eq!(
+            contents
+                .matches("#include \"/.calepin/paper/source.typ\"")
+                .count(),
+            1
         );
+        assert!(contents.contains("[#emph[Appendix]]"));
+    }
+
+    #[test]
+    fn paged_theme_comes_from_theme_selection() {
+        let source = crate::theme::paged_source(
+            &crate::theme::ThemeSelection::Default,
+            &crate::theme::PagedTemplateContext::default(),
+        )
+        .unwrap()
+        .unwrap();
+        assert!(source.source.contains("code-block"));
+        assert!(source.source.contains("_fenced-chunks-runs"));
+        assert!(crate::theme::paged_source(
+            &crate::theme::ThemeSelection::Disabled,
+            &crate::theme::PagedTemplateContext::default(),
+        )
+        .unwrap()
+        .is_none());
     }
 
     #[test]

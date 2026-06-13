@@ -1,20 +1,3 @@
-{%- macro navbar_items(items, languages) %}
-                {% for item in items %}
-                {% if item.widget == "theme" %}
-                <button class="academic-theme-toggle outline secondary" type="button" aria-label="{{ item.label }}" title="{{ item.label }}" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-academic-theme">{{ item.label_html }}</button>
-                {% elif item.widget == "language" %}
-                {% if languages and languages | length > 1 %}
-                <select class="academic-language-picker" aria-label="{{ item.label }}" data-calepin-language-picker>
-                    {% for language in languages %}
-                    <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
-                    {% endfor %}
-                </select>
-                {% endif %}
-                {% else %}
-                <a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a>
-                {% endif %}
-                {% endfor %}
-{%- endmacro -%}
 {{ doc.head }}
     {% if not doc.title %}
     {% if site.page_title or site.title %}
@@ -65,9 +48,6 @@
 {% if site.stylesheet %}
     <link rel="stylesheet" href="{{ site.stylesheet }}">
 {% else %}
-    <style>{{ snippets.css.theme }}</style>
-    <style>{{ snippets.css.code }}</style>
-    <style>{{ snippets.css.widgets }}</style>
 {% for style in styles -%}
     <style>
 {{ style.css }}
@@ -92,9 +72,23 @@
                 <span aria-hidden="true"></span>
             </button>
             <div id="academic-menu" class="academic-menu">
-                {{ navbar_items(site.navbar_left, site.languages) }}
-                {{ navbar_items(site.navbar_center, site.languages) }}
-                {{ navbar_items(site.navbar_right, site.languages) }}
+                {% for item in site.navbar_left %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+                {% for item in site.navbar_center %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+                {% for item in site.navbar_right %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+                <button class="academic-theme-toggle outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-academic-theme">Theme</button>
+                {% if site.languages and site.languages | length > 1 %}
+                <select class="academic-language-picker" aria-label="Language" data-calepin-language-picker>
+                    {% for language in site.languages %}
+                    <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
                 {% if site.sidebar_sections %}
                     {% for section in site.sidebar_sections %}
                     {% for item in section.items %}
@@ -112,9 +106,6 @@
     <main class="academic-main">
         {{ doc.body }}
     </main>
-    <script>{{ snippets.js.theme_toggle }}</script>
-    <script>{{ snippets.js.language_picker }}</script>
-    <script>{{ snippets.js.copy_code }}</script>
 {% for script in scripts -%}
     <script>
 {{ script.content }}

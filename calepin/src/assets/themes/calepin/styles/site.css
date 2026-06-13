@@ -129,9 +129,31 @@
   height: 2.2rem;
   margin: 0;
   padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
   display: inline-grid;
   place-items: center;
   line-height: 1;
+}
+
+.calepin-website-theme-button:hover,
+.calepin-website-theme-button:focus,
+.calepin-website-theme-button:active,
+.calepin-website-nav-toggle:hover,
+.calepin-website-nav-toggle:focus,
+.calepin-website-nav-toggle:active {
+  border: 0;
+  background: color-mix(in srgb, var(--calepin-accent) 12%, transparent);
+  box-shadow: none;
+  color: inherit;
+}
+
+.calepin-website-theme-button:focus-visible,
+.calepin-website-nav-toggle:focus-visible {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 2px;
 }
 
 .calepin-website-nav-toggle {
@@ -665,61 +687,6 @@
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
-}
-
-/* --------------------------------------------------- Copy-to-clipboard */
-
-.calepin-website-copy-code-host {
-  position: relative;
-}
-
-.calepin-website-copy-code-scroll {
-  position: relative;
-}
-
-.calepin-website-copy-code-block {
-  position: relative;
-}
-
-.calepin-website-copy-code-button {
-  position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  width: 1.6rem;
-  height: 1.6rem;
-  padding: 0;
-  margin: 0;
-  display: inline-grid;
-  place-items: center;
-  border: 0;
-  border-radius: var(--calepin-radius-sm);
-  background: none;
-  color: inherit;
-  opacity: 1;
-  cursor: pointer;
-  line-height: 1;
-  z-index: 1;
-}
-
-.calepin-website-copy-code-button:hover,
-.calepin-website-copy-code-button:focus-visible {
-  opacity: 0.95;
-  background: none;
-}
-
-.calepin-website-copy-code-button svg {
-  width: 0.9rem;
-  height: 0.9rem;
-}
-
-.calepin-website-copy-code-button--copied {
-  opacity: 0.95;
-  color: var(--pico-primary);
-}
-
-.calepin-website-copy-code-button--error {
-  opacity: 0.9;
-  color: #ef4444;
 }
 
 /* --------------------------------------------------------- Source / PDF */

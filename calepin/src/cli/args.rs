@@ -76,6 +76,9 @@ pub struct NewArgs {
     /// Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
     pub path: PathBuf,
 
+    /// Destination directory when PATH is `website`, `academic`, or `theme`
+    pub output: Option<PathBuf>,
+
     /// Overwrite the file if it already exists
     #[arg(short, long)]
     pub force: bool,
@@ -490,6 +493,7 @@ mod tests {
         match cli.command {
             Command::New(args) => {
                 assert_eq!(args.path, PathBuf::from("paper.typ"));
+                assert_eq!(args.output, None);
                 assert!(args.force);
             }
             other => panic!("expected new command, got {other:?}"),
@@ -503,6 +507,21 @@ mod tests {
         match cli.command {
             Command::New(args) => {
                 assert_eq!(args.path, PathBuf::from("website"));
+                assert_eq!(args.output, None);
+                assert!(args.force);
+            }
+            other => panic!("expected new command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_new_website_output_args() {
+        let cli = Cli::try_parse_from(["calepin", "new", "website", "site", "--force"]).unwrap();
+
+        match cli.command {
+            Command::New(args) => {
+                assert_eq!(args.path, PathBuf::from("website"));
+                assert_eq!(args.output, Some(PathBuf::from("site")));
                 assert!(args.force);
             }
             other => panic!("expected new command, got {other:?}"),

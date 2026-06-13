@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://vincentarelbundock.github.io/calepin/execution/options.html</loc></url>
-  <url><loc>https://vincentarelbundock.github.io/calepin/execution/supported-languages.html</loc></url>
   <url><loc>https://vincentarelbundock.github.io/calepin/getting-started/config.html</loc></url>
   <url><loc>https://vincentarelbundock.github.io/calepin/getting-started/install.html</loc></url>
   <url><loc>https://vincentarelbundock.github.io/calepin/index.html</loc></url>
-  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/crossreferences.html</loc></url>
+  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/code_execution.html</loc></url>
+  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/cross-references.html</loc></url>
   <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/example.html</loc></url>
-  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/parameterized_notebooks.html</loc></url>
-  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/tables_and_figures.html</loc></url>
-  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/templates.html</loc></url>
+  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/figures.html</loc></url>
+  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/parameters.html</loc></url>
+  <url><loc>https://vincentarelbundock.github.io/calepin/notebooks/themes.html</loc></url>
   <url><loc>https://vincentarelbundock.github.io/calepin/reference/cli.html</loc></url>
-  <url><loc>https://vincentarelbundock.github.io/calepin/websites/website-config.html</loc></url>
-  <url><loc>https://vincentarelbundock.github.io/calepin/websites/website-themes.html</loc></url>
+  <url><loc>https://vincentarelbundock.github.io/calepin/tips.html</loc></url>
+  <url><loc>https://vincentarelbundock.github.io/calepin/websites/config.html</loc></url>
+  <url><loc>https://vincentarelbundock.github.io/calepin/websites/themes.html</loc></url>
   <url><loc>https://vincentarelbundock.github.io/calepin/websites/websites.html</loc></url>
 </urlset>

@@ -1,8 +1,8 @@
 /* Calepin website behaviour, consolidated.
  *
  * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
- * sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal link state
- * preservation, and the native <dialog> video lightbox.
+ * sidebar drawer, inline SVGs, internal link state preservation, and the
+ * native <dialog> video lightbox.
  *
  * The Rust theme loader inlines this file into a <script> at the end of <body>,
  * so the DOM already exists when it runs and no DOMContentLoaded guard is
@@ -14,7 +14,6 @@
   if (!document.querySelector(".calepin-website-shell")) return;
 
   const VIEW = {
-    storageKey: "calepin-website-view-mode",
     param: "view",
     rendered: "rendered",
     source: "source",
@@ -23,9 +22,6 @@
 
   const MOBILE_QUERY = "(max-width: 56rem)";
   const SOURCE_DATA_ID = "calepin-website-source-data";
-
-  const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
-  const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
 
   // ---------------------------------------------------------------- helpers
 
@@ -72,26 +68,6 @@
       window.history.replaceState({}, "", url.toString());
     } catch {
       /* ignore URL errors */
-    }
-  }
-
-  function readStored(key, normalize, fallback = "") {
-    try {
-      return normalize(localStorage.getItem(key) || "");
-    } catch {
-      return fallback;
-    }
-  }
-
-  function writeStored(key, value, fallback = "") {
-    try {
-      if (value === fallback) {
-        localStorage.removeItem(key);
-      } else {
-        localStorage.setItem(key, value);
-      }
-    } catch {
-      /* ignore storage errors */
     }
   }
 
@@ -212,7 +188,6 @@
         const value = normalizeView(event.target.value);
         const url = new URL(window.location.href);
         setUrlParam(url, VIEW.param, value === VIEW.rendered ? "" : value);
-        writeStored(VIEW.storageKey, value, VIEW.rendered);
         window.location.href = url.toString();
       });
     }
@@ -250,123 +225,6 @@
     });
 
     return { close };
-  }
-
-  // ----------------------------------------------------------- copy buttons
-
-  function copyText(text) {
-    if (!text) return Promise.resolve();
-    if (navigator.clipboard?.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-    return new Promise((resolve, reject) => {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        if (document.execCommand("copy")) resolve();
-        else reject(new Error("copy failed"));
-      } catch (error) {
-        reject(error);
-      } finally {
-        document.body.removeChild(textarea);
-      }
-    });
-  }
-
-  function copyTextForBlock(block) {
-    const pre = block.matches("pre")
-      ? block
-      : block.querySelector("pre") || block.querySelector("code");
-    if (!pre) return "";
-    return (pre.innerText || pre.textContent || "")
-      .replace(/\r\n/g, "\n")
-      .replace(/ /g, " ");
-  }
-
-  const COPY_WRAPPER_SELECTOR =
-    ".sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
-
-  function ensureCopyHost(block) {
-    if (block.parentElement && block.parentElement.classList.contains("calepin-website-copy-code-host")) {
-      return block.parentElement;
-    }
-
-    const host = document.createElement("div");
-    host.className = "calepin-website-copy-code-host";
-    block.parentNode.insertBefore(host, block);
-    host.appendChild(block);
-    return host;
-  }
-
-  function injectCopyButtons() {
-    const root = getMain();
-    if (!root) return;
-
-    const blocks = new Set();
-    root.querySelectorAll("pre").forEach((pre) => {
-      blocks.add(pre.closest(COPY_WRAPPER_SELECTOR) || pre);
-    });
-
-    blocks.forEach((block) => {
-      if (block.dataset.calepinCopyButton === "true") return;
-
-      block.classList.add("calepin-website-copy-code-scroll");
-
-      const host = ensureCopyHost(block);
-      if (host.dataset.calepinCopyButton === "true") return;
-
-      host.dataset.calepinCopyButton = "true";
-      host.classList.add("calepin-website-copy-code-block");
-
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "calepin-website-copy-code-button";
-      button.innerHTML = COPY_ICON;
-      button.setAttribute("aria-label", "Copy code block");
-      button.title = "Copy code";
-      host.appendChild(button);
-    });
-  }
-
-  function initCopy() {
-    injectCopyButtons();
-
-    const root = getMain();
-    if (!root || root.dataset.calepinCopyBound === "true") return;
-    root.dataset.calepinCopyBound = "true";
-
-    // One delegated listener for every copy button under <main>.
-    root.addEventListener("click", async (event) => {
-      const button = event.target.closest(".calepin-website-copy-code-button");
-      if (!button || !root.contains(button)) return;
-      event.preventDefault();
-
-      const block = button.closest(".calepin-website-copy-code-block");
-      const text = block ? copyTextForBlock(block) : "";
-      if (!text) return;
-
-      try {
-        await copyText(text);
-        button.innerHTML = COPIED_ICON;
-        button.classList.add("calepin-website-copy-code-button--copied");
-        button.title = "Copied";
-        window.setTimeout(() => {
-          button.innerHTML = COPY_ICON;
-          button.classList.remove("calepin-website-copy-code-button--copied");
-          button.title = "Copy code";
-        }, 1100);
-      } catch {
-        button.classList.add("calepin-website-copy-code-button--error");
-        button.title = "Copy failed";
-        window.setTimeout(() => {
-          button.classList.remove("calepin-website-copy-code-button--error");
-        }, 1100);
-      }
-    });
   }
 
   // ------------------------------------------------------------- inline svg
@@ -513,7 +371,6 @@
 
   initView(viewSelect);
   const nav = createNav();
-  initCopy();
   inlineSvgs();
   initDialogs();
   preserveStateInLinks(viewSelect);
@@ -522,13 +379,6 @@
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
     initView(viewSelect);
-    initCopy();
     preserveStateInLinks(viewSelect);
-  });
-
-  window.addEventListener("storage", (event) => {
-    if (event.key === VIEW.storageKey) {
-      initView(viewSelect);
-    }
   });
 })();

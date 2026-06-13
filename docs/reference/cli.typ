@@ -31,10 +31,11 @@ Options:
 ```text
 Create a new example Typst file or website scaffold
 
-Usage: calepin new [OPTIONS] <PATH>
+Usage: calepin new [OPTIONS] <PATH> [OUTPUT]
 
 Arguments:
-  <PATH>  Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
+  <PATH>    Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
+  [OUTPUT]  Destination directory when PATH is `website` or `academic`
 
 Options:
   -f, --force          Overwrite the file if it already exists

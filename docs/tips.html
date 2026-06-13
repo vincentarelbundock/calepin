@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Install</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tips &amp; tricks</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -8,14 +8,14 @@
     <meta property="og:site_name" content="Calepin">
     
     
-    <meta property="og:title" content="Install | Calepin">
+    <meta property="og:title" content="Tips &amp; tricks | Calepin">
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/getting-started/install.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/getting-started/install.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/tips.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/tips.html">
     
     
-    <link rel="icon" href="../.calepin/favicon.svg">
+    <link rel="icon" href=".calepin/favicon.svg">
     
     
     <meta name="color-scheme" content="light dark">
@@ -50,10 +50,10 @@
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 
-    <link rel="stylesheet" href="../.calepin/calepin-website.css">
+    <link rel="stylesheet" href=".calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Install])\n\n#title()\n\n= Typst CLI\n<typst-cli>\n\nCalepin requires Typst 0.14.2 or newer. Install or update the Typst CLI from the #link(\"https://github.com/typst/typst#installation\")[Typst installation instructions], and make sure it is available on your `PATH`.\n\n= Calepin\n<calepin-cli>\n\n\n\nMacOS and Linux:\n\n```sh\ncurl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh\n```\n\nWindows via powershell:\n\n```sh\npowershell -ExecutionPolicy Bypass -c \"irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex\"\n```\n\n= Jupyter support\n<jupyter-kernels>\n\nCalepin has built-in support for #strong[Python] and #strong[R], and can also\nrun many other languages through Jupyter kernels, but that requires installing\nthe language kernel and kernel client tooling.\n\nTo use a Jupyter kernel, install `jupyter_client` first:\n\n```sh\npip install jupyter_client\n```\n\nMost kernels then install with a single `pip install`:\n\n```sh\npip install bash_kernel       # Bash\npip install octave_kernel     # GNU Octave\npip install gnuplot_kernel    # Gnuplot\n```\n\nSome kernels are installed from their language's own package manager:\n\n```sh\n# Julia\njulia -e 'using Pkg; Pkg.add(\"IJulia\")'\n```\n\nRun `jupyter kernelspec list` to see what engines are registered and available.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Tips & tricks])\n\n#title()\n\n= Conditional output\n\nUse `calepin-target` when a small piece of Typst should change between HTML and paged output:\n\n```typ\n#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" [\n  This appears only in HTML.\n] else [\n  This appears in PDF, SVG, and PNG output.\n]\n```\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -62,7 +62,7 @@
                     <button class="calepin-website-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
                 </li>
                 <li>
-                    <a class="calepin-website-topbrand contrast" href="../index.html" aria-label="Calepin home">
+                    <a class="calepin-website-topbrand contrast" href="index.html" aria-label="Calepin home">
                         
                         <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjQuOTA4Mjc5bW0iCiAgIGhlaWdodD0iMjUuMjMwNjg4bW0iCiAgIHZpZXdCb3g9IjAgMCAyNC45MDgyOCAyNS4yMzA2ODgiCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzEiCiAgIGlua3NjYXBlOnZlcnNpb249IjEuNC40IChkY2FmM2U3LCAyMDI2LTA1LTA1KSIKICAgc29kaXBvZGk6ZG9jbmFtZT0ibG9nb19zaG9ydF8yLnN2ZyIKICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSJsb2dvX2xvbmdfdGV4dF8yLnBuZyIKICAgaW5rc2NhcGU6ZXhwb3J0LXhkcGk9Ijk2IgogICBpbmtzY2FwZTpleHBvcnQteWRwaT0iOTYiCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iY3VycmVudENvbG9yIj4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgaW5rc2NhcGU6em9vbT0iMC45ODY5MTc1MiIKICAgICBpbmtzY2FwZTpjeD0iMTUyLjQ5NTAxIgogICAgIGlua3NjYXBlOmN5PSIyNjYuNDg2MyIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjE1MTIiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iOTIxIgogICAgIGlua3NjYXBlOndpbmRvdy14PSIwIgogICAgIGlua3NjYXBlOndpbmRvdy15PSIzMyIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIwIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSIKICAgICB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuOTUwODY5LC00NC4wNjExMTcpIj4KICAgIDxwYXRoCiAgICAgICBkPSJtIDU5LjE4NjY2OCw3Ni41MzgyMzEgaCAtMC41NjUyNzEgcSAtMC4yNjM3OTIsLTAuMzAxNDc4IC0wLjYwMjk1NSwtMC41Mjc1ODYgLTAuMzM5MTYyLC0wLjI2Mzc5MyAtMS4wNTUxNzEsLTAuMjYzNzkzIC0wLjU2NTI3MSwwIC0xLjI0MzU5NSwwLjIyNjEwOCAtMC42NDA2NCwwLjE4ODQyNCAtMS41MDczODgsMC40NTIyMTcgLTAuODI5MDY0LDAuMjYzNzkzIC0xLjg4NDIzNSwwLjQ1MjIxNiAtMS4wNTUxNzIsMC4yMjYxMDggLTIuMzM2NDUyLDAuMjI2MTA4IC0yLjM3NDEzNiwwIC00LjYzNTIxOCwtMC44NjY3NDggLTIuMjIzMzk3LC0wLjg2Njc0OCAtNC4yMjA2ODYsLTIuODI2MzUyIC0xLjg0NjU1MSwtMS44NDY1NTEgLTMuMDkwMTQ2LC00LjM3MTQyNSAtMS4yNDM1OTUsLTIuNTI0ODc1IC0xLjI0MzU5NSwtNS44NDExMjkgMCwtMi44MjYzNTIgMS4wMTc0ODcsLTUuMzg4OTEyIDEuMDE3NDg3LC0yLjU2MjU2IDIuODI2MzUzLC00LjUyMjE2NCAxLjgwODg2NSwtMS45NTk2MDQgNC4yNTgzNzEsLTMuMDkwMTQ1IDIuNDQ5NTA1LC0xLjE2ODIyNiA1LjM1MTIyNywtMS4xNjgyMjYgMS4xNjgyMjYsMCAyLjA3MjY1OSwwLjIyNjEwOCAwLjkwNDQzMiwwLjIyNjEwOCAxLjYyMDQ0MiwwLjUyNzU4NiAwLjcxNjAwOSwwLjI2Mzc5MyAxLjMxODk2NCwwLjQ4OTkwMSAwLjYwMjk1NSwwLjIyNjEwOCAxLjE2ODIyNiwwLjIyNjEwOCAwLjc1MzY5NCwwIDEuMDU1MTcxLC0wLjIyNjEwOCAwLjMzOTE2MywtMC4yNjM3OTMgMC42MDI5NTYsLTAuNTY1MjcxIGggMC41NjUyNyB2IDcuNTM2OTQgSCA1OC4yNDQ1NSBRIDU3LjkwNTM4OCw1NS44MTE2NDYgNTcuMzc3ODAyLDU0LjQxNzMxMiA1Ni44NTAyMTcsNTMuMDIyOTc4IDU1LjkwODA5OSw1MS45Njc4MDYgNTQuOTY1OTgyLDUwLjg3NDk1IDUzLjQ5NjI3OCw1MC4yMzQzMSA1Mi4wNjQyNiw0OS41NTU5ODYgNDkuOTE2MjMyLDQ5LjU1NTk4NiBxIC0xLjk5NzI4OSwwIC0zLjQyOTMwOCwwLjY0MDY0IC0xLjQzMjAxOSwwLjYwMjk1NSAtMi40MTE4MjEsMS42NTgxMjYgLTAuOTc5ODAyLDEuMDE3NDg3IC0xLjU4Mjc1NywyLjQxMTgyMSAtMC41NjUyNzEsMS4zNTY2NDkgLTAuODY2NzQ4LDIuOTAxNzIyIC0wLjMwMTQ3OCwxLjUwNzM4OCAtMC40MTQ1MzIsMy4wOTAxNDUgLTAuMDc1MzcsMS41NDUwNzMgLTAuMDc1MzcsMi45Mzk0MDcgMCwzLjk1Njg5NCAwLjY0MDY0LDYuNTU3MTM4IDAuNjQwNjM5LDIuNjAwMjQ0IDEuNzcxMTgsNC4xMDc2MzIgMS4xNjgyMjYsMS41MDczODggMi43ODg2NjgsMi4xMTAzNDMgMS42MjA0NDIsMC42MDI5NTYgMy41ODAwNDcsMC42MDI5NTYgMi41MjQ4NzUsMCA0LjA2OTk0NywtMC43MTYwMSAxLjU0NTA3MywtMC43MTYwMDkgMi40ODcxOTEsLTEuODQ2NTUgMC45NDIxMTcsLTEuMTY4MjI2IDEuNDMyMDE4LC0yLjYwMDI0NCAwLjQ4OTkwMSwtMS40Njk3MDQgMC44NjY3NDgsLTIuOTAxNzIyIGggMC40MTQ1MzIgeiIKICAgICAgIGlkPSJ0ZXh0OCIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MzcuNjg0N3B4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90LCBOb3JtYWwnO2xldHRlci1zcGFjaW5nOi0xLjcwNzU4cHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi4yMjU0NjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMS4xMTI3MzYyLDAuODk4Njg1NikiCiAgICAgICBhcmlhLWxhYmVsPSJDIiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpub3JtYWw7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6MzMuODY2N3B4O2ZvbnQtZmFtaWx5OkNvdXJpZXI7LWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjpDb3VyaWVyO2xldHRlci1zcGFjaW5nOjEuMTU4ODdweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNTUuMjI2NjY1IgogICAgICAgeT0iNTQuNjkwNDgzIgogICAgICAgaWQ9InRleHQzIj48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuMyIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6bm9ybWFsO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1mYW1pbHk6Q291cmllcjstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOkNvdXJpZXI7c3Ryb2tlLXdpZHRoOjEuOTk5OTkiCiAgICAgICAgIHg9IjU1LjIyNjY2NSIKICAgICAgICAgeT0iNTQuNjkwNDgzIiAvPjwvdGV4dD4KICAgIDxwYXRoCiAgICAgICBzdHlsZT0iZm9udC13ZWlnaHQ6NTAwO2ZvbnQtc2l6ZToxMi4zNjc3cHg7Zm9udC1mYW1pbHk6J0hhc2tsdWcgTmVyZCBGb250JzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidIYXNrbHVnIE5lcmQgRm9udCwgTWVkaXVtJztsZXR0ZXItc3BhY2luZzotMS45MjE0MXB4O3dvcmQtc3BhY2luZzowcHg7c3Ryb2tlLXdpZHRoOjIuNTA0MTY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICBkPSJtIDUyLjc0OTM4MSw2MC4yMDM2MzUgdiAtMS4xNTAxOTYgbCAtMy42MTEzNjksLTIuMzg2OTY2IHYgLTAuMDQ5NDcgbCAzLjYxMTM2OSwtMi4zODY5NjcgViA1My4wNzk4NCBsIC00LjY2MjYyMywzLjExNjY2MSB2IDAuODkwNDc0IHogbSAwLjUxNTAzMSwyLjUyMzAxMSBoIDEuMDYzNjIyIEwgNTguMzg0NjQsNTEuOTY2NzQ3IGggLTEuMDYzNjIzIHogbSA1LjYzNTI1OSwtMi41MjMwMTEgNC42NjI2MjMsLTMuMTE2NjYgViA1Ni4xOTY1MDEgTCA1OC44OTk2NzEsNTMuMDc5ODQgdiAxLjE1MDE5NiBsIDMuNjExMzY4LDIuMzg2OTY3IHYgMC4wNDk0NyBsIC0zLjYxMTM2OCwyLjM4Njk2NiB6IgogICAgICAgaWQ9InRleHQ0IgogICAgICAgYXJpYS1sYWJlbD0iJmx0Oy8mZ3Q7IiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpib2xkO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1zaXplOjkuODc3NzdweDtmb250LWZhbWlseTonRGlkb3QgSFRGJzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidEaWRvdCBIVEYgQm9sZCc7Zm9udC12YXJpYW50LWxpZ2F0dXJlczpub3JtYWw7Zm9udC12YXJpYW50LWNhcHM6bm9ybWFsO2ZvbnQtdmFyaWFudC1udW1lcmljOm5vcm1hbDtmb250LXZhcmlhbnQtZWFzdC1hc2lhbjpub3JtYWw7bGV0dGVyLXNwYWNpbmc6LTEuNTM0NThweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgeT0iNzguMjgyNDYzIgogICAgICAgaWQ9InRleHQ1Ij48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuNSIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6Ym9sZDtmb250LXN0cmV0Y2g6bm9ybWFsO2ZvbnQtZmFtaWx5OidEaWRvdCBIVEYnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90IEhURiBCb2xkJztzdHJva2Utd2lkdGg6MS45OTk5OSIKICAgICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgICB5PSI3OC4yODI0NjMiIC8+PC90ZXh0PgogIDwvZz4KPC9zdmc+Cg==" alt="Calepin" class="calepin-website-topbrand-logo" data-inline-svg="1">
                         
@@ -100,11 +100,11 @@
                     
                     <ul>
                         
-                        <li><a href="../index.html" aria-label="Home">Home</a></li>
+                        <li><a href="index.html" aria-label="Home">Home</a></li>
                         
-                        <li><a href="install.html" aria-label="Install" class="active" aria-current="page">Install</a></li>
+                        <li><a href="getting-started/install.html" aria-label="Install">Install</a></li>
                         
-                        <li><a href="config.html" aria-label="Configuration">Configuration</a></li>
+                        <li><a href="getting-started/config.html" aria-label="Configuration">Configuration</a></li>
                         
                     </ul>
                     
@@ -117,17 +117,17 @@
                     
                     <ul>
                         
-                        <li><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
+                        <li><a href="notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
                         
-                        <li><a href="../notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
+                        <li><a href="notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
                         
-                        <li><a href="../notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
+                        <li><a href="notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
                         
-                        <li><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+                        <li><a href="notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
                         
-                        <li><a href="../notebooks/themes.html" aria-label="Themes">Themes</a></li>
+                        <li><a href="notebooks/themes.html" aria-label="Themes">Themes</a></li>
                         
-                        <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
+                        <li><a href="notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
                         
                     </ul>
                     
@@ -140,11 +140,11 @@
                     
                     <ul>
                         
-                        <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
+                        <li><a href="websites/websites.html" aria-label="Overview">Overview</a></li>
                         
-                        <li><a href="../websites/config.html" aria-label="Configuration">Configuration</a></li>
+                        <li><a href="websites/config.html" aria-label="Configuration">Configuration</a></li>
                         
-                        <li><a href="../websites/themes.html" aria-label="Themes">Themes</a></li>
+                        <li><a href="websites/themes.html" aria-label="Themes">Themes</a></li>
                         
                     </ul>
                     
@@ -157,9 +157,9 @@
                     
                     <ul>
                         
-                        <li><a href="../tips.html" aria-label="Tips">Tips</a></li>
+                        <li><a href="tips.html" aria-label="Tips" class="active" aria-current="page">Tips</a></li>
                         
-                        <li><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
+                        <li><a href="reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
                         
                     </ul>
                     
@@ -169,10 +169,13 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h1 id="install">Install</h1><h2 id="typst-cli">Typst CLI</h2><p>Calepin requires Typst 0.14.2 or newer. Install or update the Typst CLI from the <a href="https://github.com/typst/typst#installation">Typst installation instructions</a>, and make sure it is available on your <code>PATH</code>.</p><h2 id="calepin">Calepin</h2><p>MacOS and Linux:</p><pre><code data-lang="sh"><span style="color: #4b69c6">curl</span> --proto <span style="color: #198810">'</span><span style="color: #198810">=https</span><span style="color: #198810">'</span> --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh <span style="color: #d73948">|</span> <span style="color: #4b69c6">sh</span></code></pre><p>Windows via powershell:</p><pre><code data-lang="sh"><span style="color: #4b69c6">powershell</span> -ExecutionPolicy Bypass -c <span style="color: #198810">"</span><span style="color: #198810">irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex</span><span style="color: #198810">"</span></code></pre><h2 id="jupyter-support">Jupyter support</h2><p>Calepin has built-in support for <strong>Python</strong> and <strong>R</strong>, and can also run many other languages through Jupyter kernels, but that requires installing the language kernel and kernel client tooling.</p><p>To use a Jupyter kernel, install <code>jupyter_client</code> first:</p><pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install jupyter_client</code></pre><p>Most kernels then install with a single <code>pip install</code>:</p><pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install bash_kernel       <span style="color: #74747c">#</span><span style="color: #74747c"> Bash</span>
-<span style="color: #4b69c6">pip</span> install octave_kernel     <span style="color: #74747c">#</span><span style="color: #74747c"> GNU Octave</span>
-<span style="color: #4b69c6">pip</span> install gnuplot_kernel    <span style="color: #74747c">#</span><span style="color: #74747c"> Gnuplot</span></code></pre><p>Some kernels are installed from their language’s own package manager:</p><pre><code data-lang="sh"><span style="color: #74747c">#</span><span style="color: #74747c"> Julia</span>
-<span style="color: #4b69c6">julia</span> -e <span style="color: #198810">'</span><span style="color: #198810">using Pkg; Pkg.add("IJulia")</span><span style="color: #198810">'</span></code></pre><p>Run <code>jupyter kernelspec list</code> to see what engines are registered and available.</p>
+            <h1 id="tips-amp-tricks">Tips &amp; tricks</h1><h2 id="conditional-output">Conditional output</h2><p>Use <code>calepin-target</code> when a small piece of Typst should change between HTML and paged output:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">let</span> target <span style="color: #d73948">=</span> sys.inputs.<span style="color: #4b69c6">at</span>(<span style="color: #198810">"calepin-target"</span>, default: <span style="color: #198810">"paged"</span>)
+
+<span style="color: #d73948">#</span><span style="color: #d73948">if</span> target <span style="color: #d73948">==</span> <span style="color: #198810">"html"</span> [
+  This appears only in HTML.
+] <span style="color: #d73948">else</span> [
+  This appears in PDF, SVG, and PNG output.
+]</code></pre>
         </main>
         
         <aside class="calepin-website-toc">
@@ -180,11 +183,7 @@
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#typst-cli">Typst CLI</a></li>
-                    
-                    <li class="level-2"><a href="#calepin">Calepin</a></li>
-                    
-                    <li class="level-2"><a href="#jupyter-support">Jupyter support</a></li>
+                    <li class="level-2"><a href="#conditional-output">Conditional output</a></li>
                     
                 </ul>
             </nav>
@@ -201,15 +200,6 @@
         
     
         
-            
-            
-        
-        
-    
-        
-            
-            
-        
         
             
         
@@ -264,6 +254,15 @@
             
         
     
+        
+            
+            
+        
+        
+    
+        
+            
+            
         
         
             
@@ -274,20 +273,20 @@
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="../index.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="websites/themes.html">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Home</span>
+            <span class="calepin-website-page-nav-title">Themes</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="config.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="reference/cli.html">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Configuration</span>
+            <span class="calepin-website-page-nav-title">CLI reference</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

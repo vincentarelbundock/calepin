@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Supported Languages</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Notebook themes</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -8,11 +8,11 @@
     <meta property="og:site_name" content="Calepin">
     
     
-    <meta property="og:title" content="Supported Languages | Calepin">
+    <meta property="og:title" content="Notebook themes | Calepin">
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/execution/supported-languages.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/execution/supported-languages.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/notebooks/themes.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/notebooks/themes.html">
     
     
     <link rel="icon" href="../.calepin/favicon.svg">
@@ -53,7 +53,7 @@
     <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Supported Languages])\n\n#title() <supported-languages>\n\nCalepin has built-in engines for #strong[Python] and #strong[R]. Diagram\nengines (#strong[Mermaid], #strong[Graphviz DOT], #strong[TikZ],\n#strong[D2]) are also built in.\n\nAny language with a\n#link(\"https://github.com/jupyter/jupyter/wiki/Jupyter-kernels\")[Jupyter kernel]\nworks as an engine: use the kernel name as the chunk language. Popular\nexamples include #strong[Bash] (`bash`), #strong[Julia] (`julia`),\n#strong[Octave] (`octave`), #strong[Gnuplot] (`gnuplot`), and\n#strong[Ruby] (`ruby`). Install Jupyter kernels per\n#link(\"../getting-started/install.html#jupyter-support\")[the Jupyter install section].\n\nRun `jupyter kernelspec list` to see what is registered. Whatever name\nappears in that list can be used as an engine name directly in a chunk:\n\n````typ\n```bash\necho \"hello from bash\"\n```\n````\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Notebook themes])\n\n#title()\n\nTheme bundles can style notebook HTML output and paged output. For a single\ndocument, select a theme with `--theme` or `#calepin.setup(theme: ...)`:\n\n```sh\ncalepin compile paper.typ --theme calepin\n```\n\n`--theme` is optional. Builds use the builtin `calepin` bundle by default.\nThe builtin `academic` bundle customizes website pages and falls\nback to `calepin` for single-document HTML and paged output.\n\n= HTML themes\n\nHTML themes use MiniJinja templates plus optional CSS and JavaScript files. For\nnotebooks compiled as single documents, the relevant template is\n`document.html`.\n\nLocal HTML themes are selected by pointing `--theme`, a website `theme`\nsetting, or `#calepin.setup(theme: ...)` at a theme bundle:\n\n```text\nthemes/my-theme/\n  document.html\n  site.html\n  partials/\n  styles/\n  scripts/\n```\n\n`document.html` and `site.html` are MiniJinja templates. `partials/` files can be included with\n`{% include \"partials/name.html\" %}`. CSS files in `styles/` and JavaScript\nfiles in `scripts/` are loaded in filename order and exposed as `styles` and\n`scripts` arrays.\n\nTemplates can access:\n\n- `doc.head`\n- `doc.body_open`\n- `doc.body`\n- `doc.body_close`\n- `doc.title`\n- `site.sidebar`\n- `site.sidebar_sections`\n- `site.navbar_left`\n- `site.navbar_center`\n- `site.navbar_right`\n- `site.languages`\n- `site.translations`\n- `site.language`\n- `site.toc`\n- `site.title`\n- `site.description`\n- `site.base_url`\n- `site.logo`\n- `site.logo_alt`\n- `site.home_url`\n- `site.favicon`\n- `site.current_url`\n- `site.page_title`\n- `styles`\n- `scripts`\n- `syntax_css`\n- `theme`\n- `target`\n\nNavigation entries expose `href`, `label`, `label_html`, and `active`.\n\nHere is a minimal `document.html` for single-file HTML output:\n\n```html\n{{ doc.head }}\n  <title>{{ doc.title }}<\/title>\n  <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css\">\n  {% for style in styles %}\n  <style>\n{{ style.css }}\n  <\/style>\n  {% endfor %}\n{{ doc.body_open }}\n  <header class=\"document-header\">\n    <a href=\"index.html\">Home<\/a>\n    <button type=\"button\" data-calepin-theme-toggle>Theme<\/button>\n  <\/header>\n  <main class=\"container\">\n    {{ doc.body }}\n  <\/main>\n  {% for script in scripts %}\n  <script>\n{{ script.content }}\n  <\/script>\n  {% endfor %}\n{{ doc.body_close }}\n```\n\n`doc.head`, `doc.body_open`, and `doc.body_close` come from Typst's generated HTML. Keep them in the template unless you are deliberately replacing the whole document shell.\n\nShared CSS and JavaScript are exposed as normal files through `styles` and\n`scripts`. Built-in themes and newly ejected themes use files such as\n`styles/00-theme.css`, `styles/01-code.css`, `styles/02-widgets.css`,\n`scripts/00-theme-toggle.js`, `scripts/01-language-picker.js`, and\n`scripts/02-copy-code.js`.\n\n`styles/00-theme.css` is the shared visual base used by `calepin` and\n`academic`. It defines common typography, heading sizes,\naccent variables, Pico primary colors, code/output variables, figure defaults,\nand global document defaults. Theme-specific CSS should generally be limited to\nthe HTML shell and layout differences that cannot be shared.\n\n`styles/02-widgets.css` pairs with the shared JavaScript files:\n\n- `scripts/00-theme-toggle.js` enhances buttons marked with `data-calepin-theme-toggle`\n- `scripts/01-language-picker.js` enhances selects marked with `data-calepin-language-picker`\n- The website view switcher expects a select with `id=\"calepin-website-view-mode\"`\n\n= PDF themes\n\nPDF, SVG, and PNG notebook outputs use a paged MiniJinja template named\n`paged.typ.jinja`:\n\n```text\nthemes/my-theme/\n  paged.typ.jinja\n```\n\nTypst already has a complete #link(\"https://typst.app/docs/tutorial/formatting/\")[styling system]\nbased on `#set` and `#show` rules. Calepin's paged theme layer adds one\noptional step before Typst runs: `paged.typ.jinja` is rendered with MiniJinja\nand must produce Typst source. This keeps the customization model similar to\nHTML themes, exposes Calepin-specific values, and still lets Typst handle the\nactual PDF/SVG/PNG styling.\n\nThe bundled `calepin` theme's `paged.typ.jinja` is enabled by default for\n`calepin compile` and website PDF/SVG/PNG builds. To customize it, eject the\ndefault bundle:\n\n```sh\ncalepin new theme\n```\n\nThen edit `themes/calepin/paged.typ.jinja` and select that local theme:\n\n```sh\ncalepin compile paper.typ --theme themes/calepin\n```\n\nIn a website, use the same local theme directory in `calepin.toml`:\n\n```toml\ntheme = \"themes/calepin\"\n```\n\nInternally, Calepin uses the paged template while preparing the Typst file that\nTypst will compile:\n\n1. Calepin preprocesses the notebook and writes a staged Typst source file under `.calepin/`.\n2. Calepin renders `paged.typ.jinja` with MiniJinja.\n3. `document.body` expands to a Typst `#include` for the staged notebook source.\n4. Calepin writes a wrapper file that contains the rendered theme and any notebook execution rules.\n5. Typst compiles that wrapper to PDF, SVG, or PNG.\n\nFor example, this template:\n\n```typ\n#set page(numbering: \"1\")\n\n{{ document.body }}\n\n[#align(center)[Generated by Calepin]]\n```\n\nbecomes Typst source like this:\n\n```typ\n#set page(numbering: \"1\")\n\n#include \"/.calepin/paper/source.typ\"\n\n[#align(center)[Generated by Calepin]]\n```\n\nThe exact `.calepin/.../source.typ` path is generated by Calepin. You normally\ndo not write that path yourself; use `{{ document.body }}`.\n\nThe template can be mostly plain Typst when no Calepin variables are needed.\nUse `document.body` where the notebook source should appear:\n\n```typ\n#set page(\n  paper: \"us-letter\",\n  margin: (x: 1in, y: 0.85in),\n  numbering: \"1\",\n)\n\n#set text(font: \"Libertinus Serif\", size: 10.5pt)\n#set heading(numbering: \"1.1\")\n\n#show heading.where(level: 1): it => {\n  pagebreak(weak: true)\n  text(size: 18pt, weight: \"semibold\", it)\n}\n\n#show raw.where(block: true): it => {\n  if it.theme != auto {\n    it\n  } else {\n    block(\n      width: 100%,\n      fill: rgb(\"#f7f7f5\"),\n      stroke: 0.5pt + rgb(\"#d8d8d2\"),\n      inset: (x: 0.65em, y: 0.45em),\n      radius: 2pt,\n    )[#it]\n  }\n}\n\n{{ document.body }}\n```\n\nBecause the rendered output is Typst, it can also import project files such as\n`#import \"/styles/report.typ\": *`. Root-relative imports start from the website\nor document root.\n\n`paged.typ.jinja` receives:\n\n- `theme`: the local theme directory name\n- `target`: `paged`\n- `document.path`: the root-relative `.typ` input path\n- `document.dir`: the root-relative input directory\n- `document.stem`: the input filename without `.typ`\n- `document.body`: the staged notebook source as a Typst `#include`\n- `document.meta`: metadata from `#metadata(...) <website-metadata>`\n- `params`: document parameters after CLI overrides\n\nUse those values to insert generated front matter, appendices, disclaimers, or\nlabels from Calepin metadata:\n\n```typ\n{% if document.meta.title %}\n#set page(footer: align(right)[{{ document.meta.title }}])\n{% endif %}\n\n{{ document.body }}\n\n{% if document.meta.appendix %}\npagebreak(weak: true)\nheading(\"Appendix\")\n{{ document.meta.appendix }}\n{% endif %}\n```\n\nIf `paged.typ.jinja` does not reference `document.body`, Calepin treats it like\na prelude and includes the notebook source after the rendered template.\n\nFor output-specific branches, use Typst's runtime input instead of MiniJinja:\n\n```typ\n#let is-html = sys.inputs.at(\"calepin-target\", default: \"paged\") == \"html\"\n```\n\nSet `theme = false` or use an empty `paged.typ.jinja` to disable paged styling.\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -69,23 +69,13 @@
                     </a>
                 </li>
                 
-                
             </ul>
             
             <ul>
                 
-                
-                
-                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span> GitHub</a></li>
-                
-                
+                                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="https://github.com/vincentarelbundock/calepin"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span></a></li>
                 
                 <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
-                
-                
-                
-                
-                
                 
                 <li>
                     <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
@@ -105,84 +95,73 @@
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Getting started</summary>
-                        <ul>
-                            
-                            <li><a href="../index.html" aria-label="Home">Home</a></li>
-                            
-                            <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
-                            
-                            <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
-                            
-                        </ul>
-                    </details>
+                    
+                    <p><strong>Getting started</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="../index.html" aria-label="Home">Home</a></li>
+                        
+                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
+                        
+                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+                        
+                    </ul>
                     
                     
                     
                     
                     
-                    <details class="calepin-website-sidebar-section" open>
-                        <summary>Code execution</summary>
-                        <ul>
-                            
-                            <li><a href="supported-languages.html" aria-label="Languages" class="active" aria-current="page">Languages</a></li>
-                            
-                            <li><a href="options.html" aria-label="Options">Options</a></li>
-                            
-                        </ul>
-                    </details>
+                    
+                    <p><strong>Notebooks</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="code_execution.html" aria-label="Code execution">Code execution</a></li>
+                        
+                        <li><a href="figures.html" aria-label="Figures and tables">Figures and tables</a></li>
+                        
+                        <li><a href="cross-references.html" aria-label="Cross-references">Cross-references</a></li>
+                        
+                        <li><a href="parameters.html" aria-label="Parameters">Parameters</a></li>
+                        
+                        <li><a href="themes.html" aria-label="Themes" class="active" aria-current="page">Themes</a></li>
+                        
+                        <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
+                        
+                    </ul>
                     
                     
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Notebooks</summary>
-                        <ul>
-                            
-                            <li><a href="../notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
-                            
-                            <li><a href="../notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
-                            
-                            <li><a href="../notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
-                            
-                            <li><a href="../notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
-                            
-                            <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
-                            
-                        </ul>
-                    </details>
+                    
+                    <p><strong>Websites</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
+                        
+                        <li><a href="../websites/config.html" aria-label="Configuration">Configuration</a></li>
+                        
+                        <li><a href="../websites/themes.html" aria-label="Themes">Themes</a></li>
+                        
+                    </ul>
                     
                     
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Website generator</summary>
-                        <ul>
-                            
-                            <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
-                            
-                            <li><a href="../websites/website-config.html" aria-label="Configuration">Configuration</a></li>
-                            
-                            <li><a href="../websites/website-themes.html" aria-label="Themes">Themes</a></li>
-                            
-                        </ul>
-                    </details>
                     
+                    <p><strong>More</strong></p>
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Reference</summary>
-                        <ul>
-                            
-                            <li><a href="../reference/cli.html" aria-label="Command line">Command line</a></li>
-                            
-                        </ul>
-                    </details>
+                    <ul>
+                        
+                        <li><a href="../tips.html" aria-label="Tips">Tips</a></li>
+                        
+                        <li><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
+                        
+                    </ul>
                     
                     
                     
@@ -190,9 +169,80 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h1 id="supported-languages">Supported Languages</h1><p>Calepin has built-in engines for <strong>Python</strong> and <strong>R</strong>. Diagram engines (<strong>Mermaid</strong>, <strong>Graphviz DOT</strong>, <strong>TikZ</strong>, <strong>D2</strong>) are also built in.</p><p>Any language with a <a href="https://github.com/jupyter/jupyter/wiki/Jupyter-kernels">Jupyter kernel</a> works as an engine: use the kernel name as the chunk language. Popular examples include <strong>Bash</strong> (<code>bash</code>), <strong>Julia</strong> (<code>julia</code>), <strong>Octave</strong> (<code>octave</code>), <strong>Gnuplot</strong> (<code>gnuplot</code>), and <strong>Ruby</strong> (<code>ruby</code>). Install Jupyter kernels per <a href="../getting-started/install.html#jupyter-support">the Jupyter install section</a>.</p><p>Run <code>jupyter kernelspec list</code> to see what is registered. Whatever name appears in that list can be used as an engine name directly in a chunk:</p><pre><code data-lang="typ"><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">bash</span><span style="color: #6b6b6f"></span>
-<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">echo "hello from bash"</span><span style="color: #6b6b6f"></span>
-<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span></code></pre>
+            <h1 id="notebook-themes">Notebook themes</h1><p>Theme bundles can style notebook HTML output and paged output. For a single document, select a theme with <code>--theme</code> or <code>#calepin.setup(theme: ...)</code>:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile paper.typ --theme calepin</code></pre><p><code>--theme</code> is optional. Builds use the builtin <code>calepin</code> bundle by default. The builtin <code>academic</code> bundle customizes website pages and falls back to <code>calepin</code> for single-document HTML and paged output.</p><h2 id="html-themes">HTML themes</h2><p>HTML themes use MiniJinja templates plus optional CSS and JavaScript files. For notebooks compiled as single documents, the relevant template is <code>document.html</code>.</p><p>Local HTML themes are selected by pointing <code>--theme</code>, a website <code>theme</code> setting, or <code>#calepin.setup(theme: ...)</code> at a theme bundle:</p><pre><code data-lang="text">themes/my-theme/
+  document.html
+  site.html
+  partials/
+  styles/
+  scripts/</code></pre><p><code>document.html</code> and <code>site.html</code> are MiniJinja templates. <code>partials/</code> files can be included with <code>{% include "partials/name.html" %}</code>. CSS files in <code>styles/</code> and JavaScript files in <code>scripts/</code> are loaded in filename order and exposed as <code>styles</code> and <code>scripts</code> arrays.</p><p>Templates can access:</p><ul><li><code>doc.head</code></li><li><code>doc.body_open</code></li><li><code>doc.body</code></li><li><code>doc.body_close</code></li><li><code>doc.title</code></li><li><code>site.sidebar</code></li><li><code>site.sidebar_sections</code></li><li><code>site.navbar_left</code></li><li><code>site.navbar_center</code></li><li><code>site.navbar_right</code></li><li><code>site.languages</code></li><li><code>site.translations</code></li><li><code>site.language</code></li><li><code>site.toc</code></li><li><code>site.title</code></li><li><code>site.description</code></li><li><code>site.base_url</code></li><li><code>site.logo</code></li><li><code>site.logo_alt</code></li><li><code>site.home_url</code></li><li><code>site.favicon</code></li><li><code>site.current_url</code></li><li><code>site.page_title</code></li><li><code>styles</code></li><li><code>scripts</code></li><li><code>syntax_css</code></li><li><code>theme</code></li><li><code>target</code></li></ul><p>Navigation entries expose <code>href</code>, <code>label</code>, <code>label_html</code>, and <code>active</code>.</p><p>Here is a minimal <code>document.html</code> for single-file HTML output:</p><pre><code data-lang="html">{{ doc.head }}
+  &lt;<span style="color: #4b69c6">title</span>>{{ doc.title }}&lt;/<span style="color: #4b69c6">title</span>>
+  &lt;<span style="color: #4b69c6">link</span> <span style="color: #8b41b1">rel</span>=<span style="color: #198810">"</span><span style="color: #198810">stylesheet</span><span style="color: #198810">"</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css</span><span style="color: #198810">"</span>>
+  {% for style in styles %}
+  &lt;<span style="color: #4b69c6">style</span>>
+{{ style.css }}
+  &lt;/<span style="color: #4b69c6">style</span>>
+  {% endfor %}
+{{ doc.body_open }}
+  &lt;<span style="color: #4b69c6">header</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">document-header</span><span style="color: #198810">"</span>>
+    &lt;<span style="color: #4b69c6">a</span> <span style="color: #8b41b1">href</span>=<span style="color: #198810">"</span><span style="color: #198810">index.html</span><span style="color: #198810">"</span>>Home&lt;/<span style="color: #4b69c6">a</span>>
+    &lt;<span style="color: #4b69c6">button</span> <span style="color: #8b41b1">type</span>=<span style="color: #198810">"</span><span style="color: #198810">button</span><span style="color: #198810">"</span> <span style="color: #8b41b1">data-calepin-theme-toggle</span>>Theme&lt;/<span style="color: #4b69c6">button</span>>
+  &lt;/<span style="color: #4b69c6">header</span>>
+  &lt;<span style="color: #4b69c6">main</span> <span style="color: #8b41b1">class</span>=<span style="color: #198810">"</span><span style="color: #198810">container</span><span style="color: #198810">"</span>>
+    {{ doc.body }}
+  &lt;/<span style="color: #4b69c6">main</span>>
+  {% for script in scripts %}
+  &lt;<span style="color: #4b69c6">script</span>>
+{{ script.content }}
+  &lt;/<span style="color: #4b69c6">script</span>>
+  {% endfor %}
+{{ doc.body_close }}</code></pre><p><code>doc.head</code>, <code>doc.body_open</code>, and <code>doc.body_close</code> come from Typst’s generated HTML. Keep them in the template unless you are deliberately replacing the whole document shell.</p><p>Shared CSS and JavaScript are exposed as normal files through <code>styles</code> and <code>scripts</code>. Built-in themes and newly ejected themes use files such as <code>styles/00-theme.css</code>, <code>styles/01-code.css</code>, <code>styles/02-widgets.css</code>, <code>scripts/00-theme-toggle.js</code>, <code>scripts/01-language-picker.js</code>, and <code>scripts/02-copy-code.js</code>.</p><p><code>styles/00-theme.css</code> is the shared visual base used by <code>calepin</code> and <code>academic</code>. It defines common typography, heading sizes, accent variables, Pico primary colors, code/output variables, figure defaults, and global document defaults. Theme-specific CSS should generally be limited to the HTML shell and layout differences that cannot be shared.</p><p><code>styles/02-widgets.css</code> pairs with the shared JavaScript files:</p><ul><li><code>scripts/00-theme-toggle.js</code> enhances buttons marked with <code>data-calepin-theme-toggle</code></li><li><code>scripts/01-language-picker.js</code> enhances selects marked with <code>data-calepin-language-picker</code></li><li>The website view switcher expects a select with <code>id="calepin-website-view-mode"</code></li></ul><h2 id="pdf-themes">PDF themes</h2><p>PDF, SVG, and PNG notebook outputs use a paged MiniJinja template named <code>paged.typ.jinja</code>:</p><pre><code data-lang="text">themes/my-theme/
+  paged.typ.jinja</code></pre><p>Typst already has a complete <a href="https://typst.app/docs/tutorial/formatting/">styling system</a> based on <code>#set</code> and <code>#show</code> rules. Calepin’s paged theme layer adds one optional step before Typst runs: <code>paged.typ.jinja</code> is rendered with MiniJinja and must produce Typst source. This keeps the customization model similar to HTML themes, exposes Calepin-specific values, and still lets Typst handle the actual PDF/SVG/PNG styling.</p><p>The bundled <code>calepin</code> theme’s <code>paged.typ.jinja</code> is enabled by default for <code>calepin compile</code> and website PDF/SVG/PNG builds. To customize it, eject the default bundle:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> new theme</code></pre><p>Then edit <code>themes/calepin/paged.typ.jinja</code> and select that local theme:</p><pre><code data-lang="sh"><span style="color: #4b69c6">calepin</span> compile paper.typ --theme themes/calepin</code></pre><p>In a website, use the same local theme directory in <code>calepin.toml</code>:</p><pre><code data-lang="toml"><span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">themes/calepin</span><span style="color: #198810">"</span></code></pre><p>Internally, Calepin uses the paged template while preparing the Typst file that Typst will compile:</p><ol><li value="1">Calepin preprocesses the notebook and writes a staged Typst source file under <code>.calepin/</code>.</li><li value="2">Calepin renders <code>paged.typ.jinja</code> with MiniJinja.</li><li value="3"><code>document.body</code> expands to a Typst <code>#include</code> for the staged notebook source.</li><li value="4">Calepin writes a wrapper file that contains the rendered theme and any notebook execution rules.</li><li value="5">Typst compiles that wrapper to PDF, SVG, or PNG.</li></ol><p>For example, this template:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">page</span>(numbering: <span style="color: #198810">"1"</span>)
+
+{{ document.body }}
+
+[<span style="color: #4b69c6">#</span><span style="color: #4b69c6">align</span>(center)[Generated by Calepin]]</code></pre><p>becomes Typst source like this:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">page</span>(numbering: <span style="color: #198810">"1"</span>)
+
+<span style="color: #d73948">#</span><span style="color: #d73948">include</span> <span style="color: #198810">"/.calepin/paper/source.typ"</span>
+
+[<span style="color: #4b69c6">#</span><span style="color: #4b69c6">align</span>(center)[Generated by Calepin]]</code></pre><p>The exact <code>.calepin/.../source.typ</code> path is generated by Calepin. You normally do not write that path yourself; use <code>{{ document.body }}</code>.</p><p>The template can be mostly plain Typst when no Calepin variables are needed. Use <code>document.body</code> where the notebook source should appear:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">page</span>(
+  paper: <span style="color: #198810">"us-letter"</span>,
+  margin: (x: <span style="color: #b60157">1in</span>, y: <span style="color: #b60157">0.85in</span>),
+  numbering: <span style="color: #198810">"1"</span>,
+)
+
+<span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">text</span>(font: <span style="color: #198810">"Libertinus Serif"</span>, size: <span style="color: #b60157">10.5pt</span>)
+<span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">heading</span>(numbering: <span style="color: #198810">"1.1"</span>)
+
+<span style="color: #d73948">#</span><span style="color: #d73948">show</span> heading.<span style="color: #4b69c6">where</span>(level: <span style="color: #b60157">1</span>): it <span style="color: #d73948">=></span> {
+  <span style="color: #4b69c6">pagebreak</span>(weak: <span style="color: #d73948">true</span>)
+  <span style="color: #4b69c6">text</span>(size: <span style="color: #b60157">18pt</span>, weight: <span style="color: #198810">"semibold"</span>, it)
+}
+
+<span style="color: #d73948">#</span><span style="color: #d73948">show</span> raw.<span style="color: #4b69c6">where</span>(block: <span style="color: #d73948">true</span>): it <span style="color: #d73948">=></span> {
+  <span style="color: #d73948">if</span> it.theme <span style="color: #d73948">!=</span> <span style="color: #d73948">auto</span> {
+    it
+  } <span style="color: #d73948">else</span> {
+    <span style="color: #4b69c6">block</span>(
+      width: <span style="color: #b60157">100%</span>,
+      fill: <span style="color: #4b69c6">rgb</span>(<span style="color: #198810">"#f7f7f5"</span>),
+      stroke: <span style="color: #b60157">0.5pt</span> <span style="color: #d73948">+</span> <span style="color: #4b69c6">rgb</span>(<span style="color: #198810">"#d8d8d2"</span>),
+      inset: (x: <span style="color: #b60157">0.65em</span>, y: <span style="color: #b60157">0.45em</span>),
+      radius: <span style="color: #b60157">2pt</span>,
+    )[<span style="color: #8b41b1">#</span><span style="color: #8b41b1">it</span>]
+  }
+}
+
+{{ document.body }}</code></pre><p>Because the rendered output is Typst, it can also import project files such as <code>#import "/styles/report.typ": *</code>. Root-relative imports start from the website or document root.</p><p><code>paged.typ.jinja</code> receives:</p><ul><li><code>theme</code>: the local theme directory name</li><li><code>target</code>: <code>paged</code></li><li><code>document.path</code>: the root-relative <code>.typ</code> input path</li><li><code>document.dir</code>: the root-relative input directory</li><li><code>document.stem</code>: the input filename without <code>.typ</code></li><li><code>document.body</code>: the staged notebook source as a Typst <code>#include</code></li><li><code>document.meta</code>: metadata from <code>#metadata(...) &lt;website-metadata></code></li><li><code>params</code>: document parameters after CLI overrides</li></ul><p>Use those values to insert generated front matter, appendices, disclaimers, or labels from Calepin metadata:</p><pre><code data-lang="typ">{% if document.meta.title %}
+<span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">page</span>(footer: <span style="color: #4b69c6">align</span>(right)[{{ document.meta.title }}])
+{% endif %}
+
+{{ document.body }}
+
+{% if document.meta.appendix %}
+pagebreak(weak: true)
+heading("Appendix")
+{{ document.meta.appendix }}
+{% endif %}</code></pre><p>If <code>paged.typ.jinja</code> does not reference <code>document.body</code>, Calepin treats it like a prelude and includes the notebook source after the rendered template.</p><p>For output-specific branches, use Typst’s runtime input instead of MiniJinja:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">let</span> is-html <span style="color: #d73948">=</span> sys.inputs.<span style="color: #4b69c6">at</span>(<span style="color: #198810">"calepin-target"</span>, default: <span style="color: #198810">"paged"</span>) <span style="color: #d73948">==</span> <span style="color: #198810">"html"</span></code></pre><p>Set <code>theme = false</code> or use an empty <code>paged.typ.jinja</code> to disable paged styling.</p>
         </main>
         
         <aside class="calepin-website-toc">
@@ -200,7 +250,9 @@
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-1"><a href="#supported-languages">Supported Languages</a></li>
+                    <li class="level-2"><a href="#html-themes">HTML themes</a></li>
+                    
+                    <li class="level-2"><a href="#pdf-themes">PDF themes</a></li>
                     
                 </ul>
             </nav>
@@ -227,15 +279,6 @@
         
     
         
-            
-            
-        
-        
-    
-        
-            
-            
-        
         
             
         
@@ -255,6 +298,15 @@
             
         
     
+        
+            
+            
+        
+        
+    
+        
+            
+            
         
         
             
@@ -290,20 +342,20 @@
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="../getting-started/config.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="parameters.html">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Configuration</span>
+            <span class="calepin-website-page-nav-title">Parameters</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="options.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="example.html">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Options</span>
+            <span class="calepin-website-page-nav-title">Example notebook</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>
@@ -312,7 +364,8 @@
     </footer>
     
     
-    <script>(() => {
+<script>
+(() => {
   "use strict";
 
   const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
@@ -417,8 +470,10 @@
     if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
   });
 })();
-</script>
-    <script>(() => {
+
+    </script>
+<script>
+(() => {
   "use strict";
 
   const selects = document.querySelectorAll("select[data-calepin-language-picker]");
@@ -502,8 +557,10 @@
     if (event.key === "Escape") closeAll();
   });
 })();
-</script>
-    <script>(() => {
+
+    </script>
+<script>
+(() => {
   "use strict";
 
   const selector = window.CalepinCopyCode?.selector ||
@@ -565,13 +622,14 @@
     block.prepend(button);
   });
 })();
-</script>
+
+    </script>
 <script>
 /* Calepin website behaviour, consolidated.
  *
  * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
- * sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal link state
- * preservation, and the native <dialog> video lightbox.
+ * sidebar drawer, inline SVGs, internal link state preservation, and the
+ * native <dialog> video lightbox.
  *
  * The Rust theme loader inlines this file into a <script> at the end of <body>,
  * so the DOM already exists when it runs and no DOMContentLoaded guard is
@@ -583,7 +641,6 @@
   if (!document.querySelector(".calepin-website-shell")) return;
 
   const VIEW = {
-    storageKey: "calepin-website-view-mode",
     param: "view",
     rendered: "rendered",
     source: "source",
@@ -592,9 +649,6 @@
 
   const MOBILE_QUERY = "(max-width: 56rem)";
   const SOURCE_DATA_ID = "calepin-website-source-data";
-
-  const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
-  const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
 
   // ---------------------------------------------------------------- helpers
 
@@ -641,26 +695,6 @@
       window.history.replaceState({}, "", url.toString());
     } catch {
       /* ignore URL errors */
-    }
-  }
-
-  function readStored(key, normalize, fallback = "") {
-    try {
-      return normalize(localStorage.getItem(key) || "");
-    } catch {
-      return fallback;
-    }
-  }
-
-  function writeStored(key, value, fallback = "") {
-    try {
-      if (value === fallback) {
-        localStorage.removeItem(key);
-      } else {
-        localStorage.setItem(key, value);
-      }
-    } catch {
-      /* ignore storage errors */
     }
   }
 
@@ -781,7 +815,6 @@
         const value = normalizeView(event.target.value);
         const url = new URL(window.location.href);
         setUrlParam(url, VIEW.param, value === VIEW.rendered ? "" : value);
-        writeStored(VIEW.storageKey, value, VIEW.rendered);
         window.location.href = url.toString();
       });
     }
@@ -819,123 +852,6 @@
     });
 
     return { close };
-  }
-
-  // ----------------------------------------------------------- copy buttons
-
-  function copyText(text) {
-    if (!text) return Promise.resolve();
-    if (navigator.clipboard?.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-    return new Promise((resolve, reject) => {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        if (document.execCommand("copy")) resolve();
-        else reject(new Error("copy failed"));
-      } catch (error) {
-        reject(error);
-      } finally {
-        document.body.removeChild(textarea);
-      }
-    });
-  }
-
-  function copyTextForBlock(block) {
-    const pre = block.matches("pre")
-      ? block
-      : block.querySelector("pre") || block.querySelector("code");
-    if (!pre) return "";
-    return (pre.innerText || pre.textContent || "")
-      .replace(/\r\n/g, "\n")
-      .replace(/ /g, " ");
-  }
-
-  const COPY_WRAPPER_SELECTOR =
-    ".sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
-
-  function ensureCopyHost(block) {
-    if (block.parentElement && block.parentElement.classList.contains("calepin-website-copy-code-host")) {
-      return block.parentElement;
-    }
-
-    const host = document.createElement("div");
-    host.className = "calepin-website-copy-code-host";
-    block.parentNode.insertBefore(host, block);
-    host.appendChild(block);
-    return host;
-  }
-
-  function injectCopyButtons() {
-    const root = getMain();
-    if (!root) return;
-
-    const blocks = new Set();
-    root.querySelectorAll("pre").forEach((pre) => {
-      blocks.add(pre.closest(COPY_WRAPPER_SELECTOR) || pre);
-    });
-
-    blocks.forEach((block) => {
-      if (block.dataset.calepinCopyButton === "true") return;
-
-      block.classList.add("calepin-website-copy-code-scroll");
-
-      const host = ensureCopyHost(block);
-      if (host.dataset.calepinCopyButton === "true") return;
-
-      host.dataset.calepinCopyButton = "true";
-      host.classList.add("calepin-website-copy-code-block");
-
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "calepin-website-copy-code-button";
-      button.innerHTML = COPY_ICON;
-      button.setAttribute("aria-label", "Copy code block");
-      button.title = "Copy code";
-      host.appendChild(button);
-    });
-  }
-
-  function initCopy() {
-    injectCopyButtons();
-
-    const root = getMain();
-    if (!root || root.dataset.calepinCopyBound === "true") return;
-    root.dataset.calepinCopyBound = "true";
-
-    // One delegated listener for every copy button under <main>.
-    root.addEventListener("click", async (event) => {
-      const button = event.target.closest(".calepin-website-copy-code-button");
-      if (!button || !root.contains(button)) return;
-      event.preventDefault();
-
-      const block = button.closest(".calepin-website-copy-code-block");
-      const text = block ? copyTextForBlock(block) : "";
-      if (!text) return;
-
-      try {
-        await copyText(text);
-        button.innerHTML = COPIED_ICON;
-        button.classList.add("calepin-website-copy-code-button--copied");
-        button.title = "Copied";
-        window.setTimeout(() => {
-          button.innerHTML = COPY_ICON;
-          button.classList.remove("calepin-website-copy-code-button--copied");
-          button.title = "Copy code";
-        }, 1100);
-      } catch {
-        button.classList.add("calepin-website-copy-code-button--error");
-        button.title = "Copy failed";
-        window.setTimeout(() => {
-          button.classList.remove("calepin-website-copy-code-button--error");
-        }, 1100);
-      }
-    });
   }
 
   // ------------------------------------------------------------- inline svg
@@ -1082,7 +998,6 @@
 
   initView(viewSelect);
   const nav = createNav();
-  initCopy();
   inlineSvgs();
   initDialogs();
   preserveStateInLinks(viewSelect);
@@ -1091,14 +1006,7 @@
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
     initView(viewSelect);
-    initCopy();
     preserveStateInLinks(viewSelect);
-  });
-
-  window.addEventListener("storage", (event) => {
-    if (event.key === VIEW.storageKey) {
-      initView(viewSelect);
-    }
   });
 })();
 

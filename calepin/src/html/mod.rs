@@ -168,6 +168,10 @@ mod tests {
         entry_for(&ThemeSelection::Dir(dir.to_path_buf()), HtmlScope::Document)
     }
 
+    fn dir_site_entry(dir: &Path) -> HtmlEntry {
+        entry_for(&ThemeSelection::Dir(dir.to_path_buf()), HtmlScope::Site)
+    }
+
     #[test]
     fn default_document_theme_preserves_title_and_wraps_body() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Document);
@@ -197,20 +201,18 @@ mod tests {
     }
 
     #[test]
-    fn user_html_theme_can_include_builtin_snippets() {
+    fn user_html_theme_cannot_include_removed_template_context() {
         let dir = tempfile::tempdir().unwrap();
         let theme_dir = write_theme(
             dir.path(),
-            "with-snippets",
+            "with-removed-context",
             "document.html",
-            r#"{{ doc.body_open }}<style>{{ snippets.css.code }}</style><main>{{ doc.body }}</main><script>{{ snippets.js.copy_code }}</script><script type="text/plain">{{ snippets.typst.code_block }}</script>{{ doc.body_close }}"#,
+            r#"{{ doc.body_open }}<style>{{ removed_template_context.css.code }}</style><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
         );
 
-        let themed = apply_html_theme(SAMPLE_HTML, Some(&dir_document_entry(&theme_dir))).unwrap();
+        let result = apply_html_theme(SAMPLE_HTML, Some(&dir_document_entry(&theme_dir)));
 
-        assert!(themed.contains(".sourceCode,"));
-        assert!(themed.contains("window.CalepinCopyCode"));
-        assert!(themed.contains("#let code-block("));
+        assert!(result.is_err());
     }
 
     #[test]
@@ -243,6 +245,32 @@ mod tests {
         assert!(themed.contains("cli.typ"));
         assert!(themed.contains(r#"aria-current="page""#));
         assert!(themed.contains("href=\"#standard-title\""));
+        assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
+    }
+
+    #[test]
+    fn website_toc_skips_title_heading() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme_dir = write_theme(
+            dir.path(),
+            "site-toc",
+            "site.html",
+            r#"{{ doc.body_open }}<nav>{% for item in site.toc %}<a href="{{ item.href }}" class="level-{{ item.level }}">{{ item.label }}</a>{% endfor %}</nav><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
+        );
+        let html = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1><h2>Section</h2></body></html>";
+
+        let themed = theme::apply_html_theme(
+            html,
+            Some(&dir_site_entry(&theme_dir)),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&SiteContextInput::default()),
+        )
+        .unwrap();
+
+        assert!(!themed.contains(r##"href="#standard-title""##));
+        assert!(themed.contains(r##"href="#section" class="level-2">Section"##));
         assert!(themed.contains(r#"<h1 id="standard-title">Standard Title</h1>"#));
     }
 
@@ -425,7 +453,7 @@ mod tests {
     }
 
     #[test]
-    fn bundled_themes_render_navbar_widgets_links_and_language_picker() {
+    fn bundled_themes_render_navbar_links_theme_toggle_and_language_picker() {
         let site_context = SiteContextInput {
             sidebar: Vec::new(),
             sidebar_fold: false,
@@ -434,26 +462,10 @@ mod tests {
                 href: "about.html".to_string(),
                 label: "About".to_string(),
                 label_html: "About".to_string(),
-                widget: None,
                 active: true,
             }],
             navbar_center: Vec::new(),
-            navbar_right: vec![
-                SiteNavEntry {
-                    href: String::new(),
-                    label: "Theme".to_string(),
-                    label_html: "Theme".to_string(),
-                    widget: Some("theme".to_string()),
-                    active: false,
-                },
-                SiteNavEntry {
-                    href: String::new(),
-                    label: "Language".to_string(),
-                    label_html: "Language".to_string(),
-                    widget: Some("language".to_string()),
-                    active: false,
-                },
-            ],
+            navbar_right: Vec::new(),
             languages: vec![
                 SiteLanguageEntry {
                     code: "en".to_string(),
@@ -501,7 +513,7 @@ mod tests {
             );
             assert!(
                 themed.contains("data-calepin-theme-toggle"),
-                "{theme_name}: missing theme widget"
+                "{theme_name}: missing theme toggle"
             );
             assert!(
                 themed.contains("data-calepin-language-picker"),
@@ -514,6 +526,83 @@ mod tests {
         }
     }
 
+    #[test]
+    fn default_website_theme_renders_output_picker_directly() {
+        let site_context = SiteContextInput {
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            ..SiteContextInput::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains(r#"id="calepin-website-view-mode""#));
+        assert!(themed.contains(r#"<option value="source">Source</option>"#));
+    }
+
+    #[test]
+    fn bundled_themes_hide_language_picker_for_single_language_sites() {
+        let site_context = SiteContextInput {
+            sidebar: Vec::new(),
+            sidebar_fold: false,
+            sidebar_sections: Vec::new(),
+            navbar_left: Vec::new(),
+            navbar_center: Vec::new(),
+            navbar_right: vec![SiteNavEntry {
+                href: String::new(),
+                label: "Language".to_string(),
+                label_html: "Language".to_string(),
+                active: false,
+            }],
+            languages: vec![SiteLanguageEntry {
+                code: "en".to_string(),
+                label: "English".to_string(),
+                href: "index.html".to_string(),
+                active: true,
+            }],
+            translations: Vec::new(),
+            language: Some("en".to_string()),
+            title: Some("Example".to_string()),
+            description: None,
+            base_url: None,
+            logo: None,
+            logo_alt: None,
+            home_url: Some("index.html".to_string()),
+            favicon: None,
+            current_url: None,
+            page_title: None,
+            stylesheet: None,
+        };
+
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+            let entry = entry_for(&selection, HtmlScope::Site);
+            let theme_name = entry.theme_name.clone();
+            let themed = theme::apply_html_theme(
+                SAMPLE_HTML,
+                Some(&entry),
+                &HtmlSyntaxTheme::builtin(),
+                None,
+                None,
+                Some(&site_context),
+            )
+            .unwrap();
+
+            assert!(
+                !themed.contains(r#"<select class="calepin-website-view-mode" aria-label="Language" data-calepin-language-picker"#)
+                    && !themed.contains(r#"<select class="academic-language-picker" aria-label="Language" data-calepin-language-picker"#),
+                "{theme_name}: language picker should require multiple languages"
+            );
+        }
+    }
+
     fn sidebar_section(title: &str, href: &str, active: bool) -> SiteNavSection {
         SiteNavSection {
             title: Some(title.to_string()),
@@ -522,7 +611,6 @@ mod tests {
                 href: href.to_string(),
                 label: title.to_string(),
                 label_html: title.to_string(),
-                widget: None,
                 active,
             }],
         }

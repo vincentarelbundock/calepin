@@ -49,7 +49,8 @@
   margin-left: auto;
 }
 
-.academic-language-picker {
+.academic-language-picker,
+.academic-view-mode {
   width: auto;
   min-width: 7rem;
   margin: 0;
@@ -80,8 +81,30 @@
 .academic-nav-toggle {
   min-width: 0;
   margin: 0;
+  border: 0;
   border-radius: var(--academic-radius);
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
   font-size: 0.82rem;
+}
+
+.academic-theme-toggle:hover,
+.academic-theme-toggle:focus,
+.academic-theme-toggle:active,
+.academic-nav-toggle:hover,
+.academic-nav-toggle:focus,
+.academic-nav-toggle:active {
+  border: 0;
+  background: color-mix(in srgb, var(--pico-primary) 10%, transparent);
+  box-shadow: none;
+  color: inherit;
+}
+
+.academic-theme-toggle:focus-visible,
+.academic-nav-toggle:focus-visible {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 2px;
 }
 
 .academic-nav-toggle {
@@ -187,11 +210,11 @@
   color: var(--pico-primary);
 }
 
-.academic-widget {
+.academic-section {
   margin: 2rem 0;
 }
 
-.academic-widget-header {
+.academic-section-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -200,13 +223,13 @@
   border-bottom: 1px solid var(--pico-muted-border-color);
 }
 
-.academic-widget-header h2 {
+.academic-section-header h2 {
   margin: 0;
   padding: 0 0 0.4rem;
   border: 0;
 }
 
-.academic-widget-header a {
+.academic-section-header a {
   white-space: nowrap;
   font-size: 0.9rem;
 }

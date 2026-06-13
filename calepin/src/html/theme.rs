@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
@@ -32,19 +32,11 @@ struct DocContext {
 struct ThemeContext {
     doc: DocContext,
     site: SiteContext,
-    snippets: SnippetContext,
     styles: Vec<StyleEntry>,
     scripts: Vec<ScriptEntry>,
     syntax_css: String,
     theme: String,
     target: String,
-}
-
-#[derive(Serialize)]
-struct SnippetContext {
-    css: BTreeMap<String, String>,
-    js: BTreeMap<String, String>,
-    typst: BTreeMap<String, String>,
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
@@ -129,7 +121,6 @@ struct NavEntry {
     href: String,
     label: String,
     label_html: String,
-    widget: Option<String>,
     active: bool,
 }
 
@@ -138,7 +129,6 @@ pub(crate) struct SiteNavEntry {
     pub(crate) href: String,
     pub(crate) label: String,
     pub(crate) label_html: String,
-    pub(crate) widget: Option<String>,
     pub(crate) active: bool,
 }
 
@@ -197,7 +187,7 @@ pub(super) fn apply_html_theme(
 
 /// Build the shared website stylesheet from a resolved Site entry. The site
 /// layouts skip ALL inline CSS when `site.stylesheet` is set, so the shared
-/// stylesheet carries the snippet CSS as well as the bundle's own styles.
+/// stylesheet carries the bundle's styles.
 pub(super) fn theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<Option<String>> {
     let syntax_theme = HtmlSyntaxTheme::builtin();
     let mut css = String::new();
@@ -210,18 +200,6 @@ pub(super) fn theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<Option
             css.push('\n');
         }
     };
-    push(&theme_css(
-        include_str!("../assets/snippets/css/theme.css"),
-        &syntax_theme,
-    ));
-    push(&theme_css(
-        include_str!("../assets/snippets/css/code.css"),
-        &syntax_theme,
-    ));
-    push(&theme_css(
-        include_str!("../assets/snippets/css/widgets.css"),
-        &syntax_theme,
-    ));
     for (_, style) in &entry.styles {
         push(&theme_css(style, &syntax_theme));
     }
@@ -265,7 +243,11 @@ fn render_theme(
         })
         .collect();
 
-    let (body, toc) = body_with_heading_ids(parts.body);
+    let site_title_heading = site_context_input
+        .is_some()
+        .then_some(parts.title.as_deref())
+        .flatten();
+    let (body, toc) = body_with_heading_ids(parts.body, site_title_heading);
     let context = ThemeContext {
         doc: DocContext {
             head: parts.head.to_string(),
@@ -275,7 +257,6 @@ fn render_theme(
             title: parts.title.clone().unwrap_or_default(),
         },
         site: site_context(project_root, output_path, toc, site_context_input),
-        snippets: snippet_context(syntax_theme),
         styles,
         scripts,
         syntax_css: syntax_css(syntax_theme),
@@ -289,52 +270,6 @@ fn render_theme(
     template
         .render(&context)
         .map_err(|error| theme_error(&name, error))
-}
-
-fn snippet_context(syntax_theme: &HtmlSyntaxTheme) -> SnippetContext {
-    SnippetContext {
-        css: BTreeMap::from([
-            (
-                "theme".to_string(),
-                theme_css(
-                    include_str!("../assets/snippets/css/theme.css"),
-                    syntax_theme,
-                ),
-            ),
-            (
-                "code".to_string(),
-                theme_css(
-                    include_str!("../assets/snippets/css/code.css"),
-                    syntax_theme,
-                ),
-            ),
-            (
-                "widgets".to_string(),
-                theme_css(
-                    include_str!("../assets/snippets/css/widgets.css"),
-                    syntax_theme,
-                ),
-            ),
-        ]),
-        js: BTreeMap::from([
-            (
-                "copy_code".to_string(),
-                include_str!("../assets/snippets/js/copy-code.js").to_string(),
-            ),
-            (
-                "language_picker".to_string(),
-                include_str!("../assets/snippets/js/language-picker.js").to_string(),
-            ),
-            (
-                "theme_toggle".to_string(),
-                include_str!("../assets/snippets/js/theme-toggle.js").to_string(),
-            ),
-        ]),
-        typst: BTreeMap::from([(
-            "code_block".to_string(),
-            include_str!("../assets/snippets/typst/code-block.typ").to_string(),
-        )]),
-    }
 }
 
 fn site_context(
@@ -439,7 +374,6 @@ fn nav_entry_from_input(item: &SiteNavEntry) -> NavEntry {
         href: item.href.clone(),
         label: item.label.clone(),
         label_html: item.label_html.clone(),
-        widget: item.widget.clone(),
         active: item.active,
     }
 }
@@ -484,17 +418,17 @@ fn nav_entries(project_root: Option<&Path>, output_path: Option<&Path>) -> Vec<N
             href: format!("{stem}.html"),
             label: html_escape(&format!("{stem}.typ")),
             label_html: html_escape(&format!("{stem}.typ")),
-            widget: None,
             active: stem == current_stem,
         })
         .collect()
 }
 
-fn body_with_heading_ids(body: &str) -> (String, Vec<TocEntry>) {
+fn body_with_heading_ids(body: &str, title_heading: Option<&str>) -> (String, Vec<TocEntry>) {
     let mut out = String::with_capacity(body.len());
     let mut toc = Vec::new();
     let mut counts = HashMap::<String, usize>::new();
     let mut cursor = 0;
+    let mut skipped_title_heading = false;
 
     while let Some(relative_start) = body[cursor..].find("<h") {
         let start = cursor + relative_start;
@@ -552,7 +486,12 @@ fn body_with_heading_ids(body: &str) -> (String, Vec<TocEntry>) {
         }
         out.push_str(inner);
         out.push_str(&close_tag);
-        if level <= 3 {
+        let skip_toc = level == 1
+            && !skipped_title_heading
+            && title_heading.is_some_and(|title| title == label);
+        if skip_toc {
+            skipped_title_heading = true;
+        } else if level <= 3 {
             toc.push(TocEntry {
                 level,
                 href: format!("#{id}"),

@@ -22,7 +22,7 @@ use crate::html::{
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{
-    preprocess_cached, read_page_meta, PreprocessOptions, PreprocessOutput,
+    preprocess_cached, read_page_meta_with_root, PreprocessOptions, PreprocessOutput,
 };
 
 const DEFAULT_CONFIG: &str = "calepin.toml";
@@ -44,9 +44,8 @@ const PAGES_INDEX_FILE: &str = "website-pages.json";
 const PAGES_INDEX_REF: &str = "/.calepin/website-pages.json";
 const SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
 
-pub(crate) fn scaffold_website(root: &Path, force: bool) -> Result<()> {
-    let root = absolutize_for_create(root)?;
-    let docs = root.join(DEFAULT_SRC_DIR);
+pub(crate) fn scaffold_website(dir: &Path, force: bool) -> Result<()> {
+    let docs = absolutize_for_create(dir)?;
     fs::create_dir_all(&docs).with_context(|| format!("failed to create {}", docs.display()))?;
 
     write_scaffold_file(&docs.join(DEFAULT_CONFIG), WEBSITE_TOML_TEMPLATE, force)?;
@@ -55,9 +54,8 @@ pub(crate) fn scaffold_website(root: &Path, force: bool) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn scaffold_academic_website(root: &Path, force: bool) -> Result<()> {
-    let root = absolutize_for_create(root)?;
-    let docs = root.join(DEFAULT_SRC_DIR);
+pub(crate) fn scaffold_academic_website(dir: &Path, force: bool) -> Result<()> {
+    let docs = absolutize_for_create(dir)?;
     fs::create_dir_all(&docs).with_context(|| format!("failed to create {}", docs.display()))?;
 
     for (path, contents) in ACADEMIC_SCAFFOLD_FILES {
@@ -315,7 +313,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         theme_stylesheet_path = Some(PathBuf::from(WEBSITE_STYLESHEET_PATH));
     }
 
-    let page_meta = load_page_meta(&typ_files);
+    let page_meta = load_page_meta(&src_dir, &typ_files);
     let metadata = SiteMetadata::from_config(&config, &src_dir)?;
     let default_favicon_path = if clean_optional_string(config.favicon.as_deref()).is_none() {
         Some(PathBuf::from(DEFAULT_FAVICON_PATH))
@@ -874,13 +872,12 @@ struct NavbarConfig {
 }
 
 #[derive(Debug, Deserialize, Default)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 struct NavbarItemConfig {
     position: NavbarPosition,
     #[serde(alias = "path", alias = "url")]
     target: Option<String>,
     glob: Option<String>,
-    widget: Option<String>,
     label: Option<String>,
     icon: Option<String>,
 }
@@ -907,7 +904,6 @@ struct NavItemModel {
     href: String,
     label: String,
     label_html: String,
-    widget: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -932,14 +928,9 @@ impl NavbarModel {
                     .is_none_or(|language| Some(language) == current_language)
             })
             .map(|item| SiteNavEntry {
-                href: item
-                    .widget
-                    .as_ref()
-                    .map(|_| String::new())
-                    .unwrap_or_else(|| html_escape(&page_relative_url(current_href, &item.href))),
+                href: html_escape(&page_relative_url(current_href, &item.href)),
                 label: html_escape(&item.label),
                 label_html: item.label_html.clone(),
-                widget: item.widget.clone(),
                 active: item.href == current_href,
             })
             .collect()
@@ -1045,7 +1036,6 @@ impl SiteModel {
                     href: html_escape(&page_relative_url(current_href, &item.href)),
                     label: html_escape(&item.label),
                     label_html: item.label_html.clone(),
-                    widget: None,
                     active: item.href == current_href,
                 };
                 sidebar.push(entry.clone());
@@ -1270,7 +1260,6 @@ struct NavbarPlan {
 struct NavbarItemPlan {
     path: Option<PathBuf>,
     url: Option<String>,
-    widget: Option<String>,
     configured_label: Option<String>,
     icon: Option<String>,
 }
@@ -1338,33 +1327,7 @@ fn discover_site_navbar(
 }
 
 fn default_navbar_plan() -> NavbarPlan {
-    NavbarPlan {
-        right: vec![
-            NavbarItemPlan {
-                path: None,
-                url: None,
-                widget: Some("theme".to_string()),
-                configured_label: None,
-                icon: None,
-            },
-            NavbarItemPlan {
-                path: None,
-                url: None,
-                widget: Some("language".to_string()),
-                configured_label: None,
-                icon: None,
-            },
-        ],
-        ..NavbarPlan::default()
-    }
-}
-
-fn default_widget_label(widget: &str) -> String {
-    match widget {
-        "theme" => "Theme".to_string(),
-        "language" => "Language".to_string(),
-        _ => widget.replace(['-', '_'], " "),
-    }
+    NavbarPlan::default()
 }
 
 fn retain_navbar_language_items(
@@ -1535,27 +1498,6 @@ fn discover_navbar(
         for item in items {
             let configured_label = clean_optional_string(item.label.as_deref());
             let icon = clean_optional_string(item.icon.as_deref());
-            if let Some(widget) = clean_optional_string(item.widget.as_deref()) {
-                if item
-                    .target
-                    .as_deref()
-                    .is_some_and(|target| !target.trim().is_empty())
-                    || item
-                        .glob
-                        .as_deref()
-                        .is_some_and(|glob| !glob.trim().is_empty())
-                {
-                    bail!("navbar widget items cannot also set target or glob");
-                }
-                out.push(NavbarItemPlan {
-                    path: None,
-                    url: None,
-                    widget: Some(widget.clone()),
-                    configured_label: configured_label.clone(),
-                    icon: icon.clone(),
-                });
-                continue;
-            }
             if let Some(target) = item
                 .target
                 .as_deref()
@@ -1574,7 +1516,6 @@ fn discover_navbar(
                         out.push(NavbarItemPlan {
                             path: None,
                             url: Some(url),
-                            widget: None,
                             configured_label: configured_label.clone(),
                             icon: icon.clone(),
                         });
@@ -1586,7 +1527,6 @@ fn discover_navbar(
                         out.push(NavbarItemPlan {
                             path: Some(path),
                             url: None,
-                            widget: None,
                             configured_label: configured_label.clone(),
                             icon: icon.clone(),
                         });
@@ -1611,7 +1551,6 @@ fn discover_navbar(
                 out.push(NavbarItemPlan {
                     path: Some(path),
                     url: None,
-                    widget: None,
                     configured_label: configured_label.clone(),
                     icon: icon.clone(),
                 });
@@ -2123,7 +2062,6 @@ fn nav_from_plans(
                             href: url.clone(),
                             label: accessible_nav_label(&raw_label, url),
                             label_html,
-                            widget: None,
                         });
                     }
                     let Some(path) = item.path.as_ref() else {
@@ -2148,7 +2086,6 @@ fn nav_from_plans(
                             .unwrap_or_default(),
                         label,
                         label_html,
-                        widget: None,
                     })
                 })
                 .collect::<Result<Vec<_>>>()?;
@@ -2183,24 +2120,6 @@ fn navbar_items_from_plan(
     items
         .iter()
         .filter_map(|item| {
-            if let Some(widget) = item.widget.as_deref() {
-                let fallback = default_widget_label(widget);
-                let raw_label = item
-                    .configured_label
-                    .clone()
-                    .unwrap_or_else(|| fallback.clone());
-                return Some(
-                    nav_label_html(&raw_label, item.icon.as_deref(), icon_cache).map(
-                        |label_html| NavItemModel {
-                            language: None,
-                            href: String::new(),
-                            label: accessible_nav_label(&raw_label, &fallback),
-                            label_html,
-                            widget: Some(widget.to_string()),
-                        },
-                    ),
-                );
-            }
             if let Some(path) = &item.path {
                 let raw_label = item
                     .configured_label
@@ -2221,7 +2140,6 @@ fn navbar_items_from_plan(
                                 .unwrap_or_default(),
                             label: accessible_nav_label(&raw_label, &fallback),
                             label_html,
-                            widget: None,
                         },
                     ),
                 );
@@ -2234,7 +2152,6 @@ fn navbar_items_from_plan(
                         href: url.clone(),
                         label: accessible_nav_label(&raw_label, url),
                         label_html,
-                        widget: None,
                     }
                 })
             })
@@ -2429,11 +2346,11 @@ fn stem_label(path: &Path) -> String {
 
 /// Reads the page metadata persisted by preprocessing. Missing or stale
 /// entries degrade to an empty `PageMeta` rather than failing the build.
-fn load_page_meta(typ_files: &[PathBuf]) -> PageMetaMap {
+fn load_page_meta(src_dir: &Path, typ_files: &[PathBuf]) -> PageMetaMap {
     typ_files
         .iter()
         .map(|path| {
-            let mut meta = read_page_meta(path)
+            let mut meta = read_page_meta_with_root(path, Some(src_dir))
                 .map(|value| page_meta_from_value(&value))
                 .unwrap_or_default();
             if meta.title.is_none() {
@@ -2700,6 +2617,7 @@ fn preprocess_documents(
     let outputs = run_parallel(options.typ_files.to_vec(), options.parallelism, |input| {
         preprocess_cached(PreprocessOptions {
             input: input.to_path_buf(),
+            root: Some(options.src_dir.to_path_buf()),
             config: Some(options.config_path.to_path_buf()),
             display_root: Some(display_root.clone()),
             quiet: options.quiet,
@@ -3958,7 +3876,6 @@ favicon = "assets/favicon.ico"
                     href: "guide/usage.html".to_string(),
                     label: "Usage".to_string(),
                     label_html: html_escape("Usage"),
-                    widget: None,
                 }],
             }],
             NavbarModel::default(),
@@ -3994,21 +3911,18 @@ favicon = "assets/favicon.ico"
                         href: "index.html".to_string(),
                         label: "Home".to_string(),
                         label_html: html_escape("Home"),
-                        widget: None,
                     },
                     NavItemModel {
                         language: None,
                         href: "publications/index.html".to_string(),
                         label: "Publications".to_string(),
                         label_html: html_escape("Publications"),
-                        widget: None,
                     },
                     NavItemModel {
                         language: None,
                         href: "posts/welcome.html".to_string(),
                         label: "Welcome".to_string(),
                         label_html: html_escape("Welcome"),
-                        widget: None,
                     },
                 ],
             }],
@@ -4045,7 +3959,6 @@ favicon = "assets/favicon.ico"
                 href: href.to_string(),
                 label: title.to_string(),
                 label_html: html_escape(title),
-                widget: None,
             }],
         };
         let site = SiteModel::new(
@@ -4316,53 +4229,17 @@ favicon = "assets/favicon.ico"
     }
 
     #[test]
-    fn discover_navbar_preserves_widget_names() {
-        let temp = tempfile::tempdir().unwrap();
-        let src = temp.path();
-        let navbar: NavbarConfig = toml::from_str(
+    fn navbar_config_rejects_unknown_item_fields() {
+        let err = toml::from_str::<NavbarConfig>(
             r#"
             [[item]]
             position = "right"
-            widget = "language"
-
-            [[item]]
-            position = "right"
-            widget = "custom-search"
-            label = "{icon:search} Search"
+            behavior = "theme"
             "#,
         )
-        .unwrap();
+        .unwrap_err();
 
-        let (plan, files) = discover_navbar(src, &navbar, None).unwrap();
-
-        assert!(files.is_empty());
-        assert_eq!(plan.right.len(), 2);
-        assert_eq!(plan.right[0].widget.as_deref(), Some("language"));
-        assert_eq!(plan.right[1].widget.as_deref(), Some("custom-search"));
-        assert_eq!(
-            plan.right[1].configured_label.as_deref(),
-            Some("{icon:search} Search")
-        );
-    }
-
-    #[test]
-    fn discover_navbar_rejects_widget_link_fields() {
-        let temp = tempfile::tempdir().unwrap();
-        let src = temp.path();
-        let navbar = NavbarConfig {
-            item: vec![NavbarItemConfig {
-                widget: Some("theme".to_string()),
-                target: Some("index.typ".to_string()),
-                ..NavbarItemConfig::default()
-            }],
-            ..NavbarConfig::default()
-        };
-
-        let err = discover_navbar(src, &navbar, None).unwrap_err();
-
-        assert!(err
-            .to_string()
-            .contains("navbar widget items cannot also set target or glob"));
+        assert!(err.to_string().contains("unknown field `behavior`"));
     }
 
     #[test]
@@ -4395,21 +4272,18 @@ favicon = "assets/favicon.ico"
             left: vec![NavbarItemPlan {
                 path: Some(home.clone()),
                 url: None,
-                widget: None,
                 configured_label: Some("Home".to_string()),
                 icon: None,
             }],
             center: vec![NavbarItemPlan {
                 path: Some(usage.clone()),
                 url: None,
-                widget: None,
                 configured_label: None,
                 icon: None,
             }],
             right: vec![NavbarItemPlan {
                 path: None,
                 url: Some("https://example.com".to_string()),
-                widget: None,
                 configured_label: Some("External".to_string()),
                 icon: None,
             }],
@@ -4445,21 +4319,18 @@ favicon = "assets/favicon.ico"
                     href: "index.html".to_string(),
                     label: "Home".to_string(),
                     label_html: html_escape("Home"),
-                    widget: None,
                 }],
                 center: vec![NavItemModel {
                     language: None,
                     href: "guide/usage.html".to_string(),
                     label: "Usage".to_string(),
                     label_html: html_escape("Usage"),
-                    widget: None,
                 }],
                 right: vec![NavItemModel {
                     language: None,
                     href: "https://example.com".to_string(),
                     label: "External".to_string(),
                     label_html: html_escape("External"),
-                    widget: None,
                 }],
             },
             SiteMetadata::default(),
@@ -4507,14 +4378,12 @@ favicon = "assets/favicon.ico"
                         href: "index.html".to_string(),
                         label: "Home".to_string(),
                         label_html: html_escape("Home"),
-                        widget: None,
                     },
                     NavItemModel {
                         language: Some("fr".to_string()),
                         href: "fr/index.html".to_string(),
                         label: "Accueil".to_string(),
                         label_html: html_escape("Accueil"),
-                        widget: None,
                     },
                 ],
                 center: Vec::new(),
@@ -4523,7 +4392,6 @@ favicon = "assets/favicon.ico"
                     href: "https://example.com".to_string(),
                     label: "External".to_string(),
                     label_html: html_escape("External"),
-                    widget: None,
                 }],
             },
             SiteMetadata::default(),
@@ -4590,7 +4458,7 @@ favicon = "assets/favicon.ico"
         let page = temp.path().join("page.typ");
         fs::write(&page, "#set document(title: [From document])").unwrap();
 
-        let meta = load_page_meta(std::slice::from_ref(&page));
+        let meta = load_page_meta(temp.path(), std::slice::from_ref(&page));
 
         assert_eq!(meta[&page].title.as_deref(), Some("From document"));
     }

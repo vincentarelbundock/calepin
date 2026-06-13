@@ -29,6 +29,7 @@ const WATCH_PID_FILENAME: &str = "watch.pid";
 fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
     PreprocessOptions {
         input: args.input.clone(),
+        root: None,
         config: args.common.config.clone(),
         display_root: None,
         quiet: args.common.quiet,

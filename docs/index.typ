@@ -1,4 +1,4 @@
-#import "/assets/design.typ": target, asset-path, hero, feature-card, feature-card-grid
+#import "/assets/design.typ": target, asset-path, hero, feature-card, feature-card-grid, screenshot-lightbox, video-lightbox
 
 #set document(title: [Calepin])
 
@@ -83,41 +83,12 @@ superimpose their own syntax, language, and structure. For example,
 #link("https://quarto.org/")[Posit's Quarto] supports an extended idiom
 of Markdown, which can be translated to Typst and then rendered as PDF.
 
-#if sys.inputs.at("calepin-target", default: "paged") == "html" [
-  #html.elem("div", attrs: (class: "calepin-screenshot-block"))[
-  #html.elem("button", attrs: (
-    class: "calepin-screenshot-thumb",
-    type: "button",
-    "data-lightbox-dialog": "calepin-screenshot-dialog",
-    "aria-label": "Open Calepin notebook screenshot",
-  ))[
-    #html.elem("img", attrs: (
-      src: "assets/screenshot_notebook.png",
-      alt: "Calepin notebook screenshot",
-      class: "calepin-screenshot-thumb__media",
-    ))
-    #html.elem("span", attrs: (class: "calepin-screenshot-thumb__zoom", "aria-hidden": "true"))[↗]
-  ]
-]
-
-#html.elem("dialog", attrs: (id: "calepin-screenshot-dialog", class: "calepin-screenshot-dialog"))[
-  #html.elem("article")[
-    #html.elem("header")[
-      #html.elem("button", attrs: (
-        rel: "prev",
-        type: "button",
-        "data-close-dialog": "",
-        "aria-label": "Close screenshot preview",
-      ))
-    ]
-    #html.elem("img", attrs: (
-      class: "calepin-screenshot-dialog__media",
-      src: "assets/screenshot_notebook.png",
-      alt: "Calepin notebook screenshot",
-    ))
-  ]
-]
-]
+#screenshot-lightbox(
+  "calepin-screenshot-dialog",
+  "assets/screenshot_notebook.png",
+  "Calepin notebook screenshot",
+  open-label: "Open Calepin notebook screenshot",
+)
 
 
 === Calepin
@@ -141,48 +112,15 @@ Cursor, and Positron (via the Microsoft and VSX marketplaces).
 - Open VSX:
   #link("https://open-vsx.org/extension/VincentArel-Bundock/calepin")[VincentArel-Bundock/calepin]
 
-#if sys.inputs.at("calepin-target", default: "paged") == "html" [
+#if target() == "html" [
   Here is a short video of a live editing session in VS-Code.
 
-  #html.elem("div", attrs: (class: "calepin-video-block"))[
-    #html.elem("button", attrs: (
-        class: "calepin-video-thumb",
-        type: "button",
-        "data-video-dialog": "calepin-video-dialog",
-        "aria-label": "Open Calepin editor preview video",
-      ))[
-      #html.elem("video", attrs: (
-        class: "calepin-video-thumb__media",
-        src: "assets/calepin_vscode.mp4",
-        muted: "",
-        playsinline: "",
-        preload: "metadata",
-        poster: "assets/calepin_vscode-thumb.png",
-      ))
-      #html.elem("span", attrs: (class: "calepin-video-thumb__play", "aria-hidden": "true"))[▶]
-    ]
-  ]
-  #html.elem("dialog", attrs: (id: "calepin-video-dialog", class: "calepin-video-dialog"))[
-    #html.elem("article")[
-      #html.elem("header")[
-        #html.elem("button", attrs: (
-          rel: "prev",
-          type: "button",
-          "data-close-dialog": "",
-          "aria-label": "Close video preview",
-        ))
-      ]
-      #html.elem("video", attrs: (
-        class: "calepin-video-dialog__media",
-        src: "assets/calepin_vscode.mp4",
-        muted: "",
-        autoplay: "",
-        controls: "",
-        playsinline: "",
-        preload: "metadata",
-      ))
-    ]
-  ]
+  #video-lightbox(
+    "calepin-video-dialog",
+    "assets/calepin_vscode.mp4",
+    poster: "assets/calepin_vscode-thumb.png",
+    open-label: "Open Calepin editor preview video",
+  )
 ]
 
 = Example
@@ -224,7 +162,7 @@ print(x + 2)
 ```
 ````
 
-When you need extra control, use `#calepin.chunk` #link("execution/options.html")[with options such as labels, captions, hiding source code, or changing how results are shown.] If the body is a fenced block with a language, `#calepin.chunk` infers the engine from the fence:
+When you need extra control, use `#calepin.chunk` #link("notebooks/code_execution.html")[with options such as labels, captions, hiding source code, or changing how results are shown.] If the body is a fenced block with a language, `#calepin.chunk` infers the engine from the fence:
 
 ````typ
 #calepin.chunk(echo: true)[

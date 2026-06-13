@@ -53,7 +53,7 @@
     <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [CLI reference])\n\n#title() <cli-reference>\n\n= `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file or website scaffold\n  health   Check Calepin's local runtime environment\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  serve    Serve static files locally\n  stop     Stop a running calepin watch process\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n= `calepin new`\n<calepin-new>\n\n```text\nCreate a new example Typst file or website scaffold\n\nUsage: calepin new [OPTIONS] <PATH>\n\nArguments:\n  <PATH>  Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files\n\nOptions:\n  -f, --force          Overwrite the file if it already exists\n      --theme <THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)\n  -h, --help           Print help\n```\n\n= `calepin health`\n<calepin-health>\n\n```text\nCheck Calepin's local runtime environment\n\nUsage: calepin health [OPTIONS]\n\nOptions:\n      --config <CONFIG>  Path to project config TOML\n      --json             Print machine-readable JSON\n      --strict           Exit with an error when warnings are present\n  -h, --help             Print help\n```\n\n= `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --theme <THEME>\n          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst watch\n          \n          [possible values: pdf, png, svg, html]\n\n      --serve\n          Serve the website while watching a directory\n\n      --host <HOST>\n          Interface to bind when serving a watched website\n          \n          [default: 127.0.0.1]\n\n      --port <PORT>\n          Port to bind when serving a watched website (default: first free port from 8000)\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin serve`\n<calepin-serve>\n\n```text\nServe static files locally\n\nUsage: calepin serve [OPTIONS] <DIR>\n\nArguments:\n  <DIR>  Directory containing static files to serve\n\nOptions:\n      --host <HOST>  Interface to bind [default: 127.0.0.1]\n  -p, --port <PORT>  Port to bind (default: first free port from 8000)\n  -h, --help         Print help\n```\n\n= `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n\n= `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [CLI reference])\n\n#title() <cli-reference>\n\n= `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a new example Typst file or website scaffold\n  health   Check Calepin's local runtime environment\n  compile  Preprocess, then invoke typst compile\n  watch    Watch, preprocess, and delegate recompiles to typst watch\n  serve    Serve static files locally\n  stop     Stop a running calepin watch process\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n= `calepin new`\n<calepin-new>\n\n```text\nCreate a new example Typst file or website scaffold\n\nUsage: calepin new [OPTIONS] <PATH> [OUTPUT]\n\nArguments:\n  <PATH>    Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files\n  [OUTPUT]  Destination directory when PATH is `website` or `academic`\n\nOptions:\n  -f, --force          Overwrite the file if it already exists\n      --theme <THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)\n  -h, --help           Print help\n```\n\n= `calepin health`\n<calepin-health>\n\n```text\nCheck Calepin's local runtime environment\n\nUsage: calepin health [OPTIONS]\n\nOptions:\n      --config <CONFIG>  Path to project config TOML\n      --json             Print machine-readable JSON\n      --strict           Exit with an error when warnings are present\n  -h, --help             Print help\n```\n\n= `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst compile\n          \n          [possible values: pdf, png, svg, html]\n\n      --theme <THEME>\n          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin watch`\n<calepin-watch>\n\n```text\nWatch, preprocess, and delegate recompiles to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst watch\n          \n          [possible values: pdf, png, svg, html]\n\n      --serve\n          Serve the website while watching a directory\n\n      --host <HOST>\n          Interface to bind when serving a watched website\n          \n          [default: 127.0.0.1]\n\n      --port <PORT>\n          Port to bind when serving a watched website (default: first free port from 8000)\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n  -P, --param <KEY=VALUE>\n          Override a document parameter as `key=value` (repeatable).\n          \n          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin serve`\n<calepin-serve>\n\n```text\nServe static files locally\n\nUsage: calepin serve [OPTIONS] <DIR>\n\nArguments:\n  <DIR>  Directory containing static files to serve\n\nOptions:\n      --host <HOST>  Interface to bind [default: 127.0.0.1]\n  -p, --port <PORT>  Port to bind (default: first free port from 8000)\n  -h, --help         Print help\n```\n\n= `calepin stop`\n<calepin-stop>\n\n```text\nStop a running calepin watch process\n\nUsage: calepin stop [INPUT]\n\nArguments:\n  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory\n\nOptions:\n  -h, --help  Print help\n```\n\n= `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help\n```\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -69,23 +69,13 @@
                     </a>
                 </li>
                 
-                
             </ul>
             
             <ul>
                 
-                
-                
-                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="GitHub"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span> GitHub</a></li>
-                
-                
+                                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="https://github.com/vincentarelbundock/calepin"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span></a></li>
                 
                 <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
-                
-                
-                
-                
-                
                 
                 <li>
                     <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
@@ -105,84 +95,73 @@
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Getting started</summary>
-                        <ul>
-                            
-                            <li><a href="../index.html" aria-label="Home">Home</a></li>
-                            
-                            <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
-                            
-                            <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
-                            
-                        </ul>
-                    </details>
+                    
+                    <p><strong>Getting started</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="../index.html" aria-label="Home">Home</a></li>
+                        
+                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
+                        
+                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+                        
+                    </ul>
                     
                     
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Code execution</summary>
-                        <ul>
-                            
-                            <li><a href="../execution/supported-languages.html" aria-label="Languages">Languages</a></li>
-                            
-                            <li><a href="../execution/options.html" aria-label="Options">Options</a></li>
-                            
-                        </ul>
-                    </details>
+                    
+                    <p><strong>Notebooks</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
+                        
+                        <li><a href="../notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
+                        
+                        <li><a href="../notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
+                        
+                        <li><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+                        
+                        <li><a href="../notebooks/themes.html" aria-label="Themes">Themes</a></li>
+                        
+                        <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
+                        
+                    </ul>
                     
                     
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Notebooks</summary>
-                        <ul>
-                            
-                            <li><a href="../notebooks/parameterized_notebooks.html" aria-label="Parameterized notebooks">Parameterized notebooks</a></li>
-                            
-                            <li><a href="../notebooks/tables_and_figures.html" aria-label="Tables and figures">Tables and figures</a></li>
-                            
-                            <li><a href="../notebooks/crossreferences.html" aria-label="Cross-references">Cross-references</a></li>
-                            
-                            <li><a href="../notebooks/templates.html" aria-label="HTML themes">HTML themes</a></li>
-                            
-                            <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
-                            
-                        </ul>
-                    </details>
+                    
+                    <p><strong>Websites</strong></p>
+                    
+                    <ul>
+                        
+                        <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
+                        
+                        <li><a href="../websites/config.html" aria-label="Configuration">Configuration</a></li>
+                        
+                        <li><a href="../websites/themes.html" aria-label="Themes">Themes</a></li>
+                        
+                    </ul>
                     
                     
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Website generator</summary>
-                        <ul>
-                            
-                            <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
-                            
-                            <li><a href="../websites/website-config.html" aria-label="Configuration">Configuration</a></li>
-                            
-                            <li><a href="../websites/website-themes.html" aria-label="Themes">Themes</a></li>
-                            
-                        </ul>
-                    </details>
                     
+                    <p><strong>More</strong></p>
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section" open>
-                        <summary>Reference</summary>
-                        <ul>
-                            
-                            <li><a href="cli.html" aria-label="Command line" class="active" aria-current="page">Command line</a></li>
-                            
-                        </ul>
-                    </details>
+                    <ul>
+                        
+                        <li><a href="../tips.html" aria-label="Tips">Tips</a></li>
+                        
+                        <li><a href="cli.html" aria-label="CLI reference" class="active" aria-current="page">CLI reference</a></li>
+                        
+                    </ul>
                     
                     
                     
@@ -208,10 +187,11 @@ Options:
   -v, --version  Print version
   -h, --help     Print help</code></pre><h2 id="calepin-new"><code>calepin new</code></h2><pre><code data-lang="text">Create a new example Typst file or website scaffold
 
-Usage: calepin new [OPTIONS] &lt;PATH>
+Usage: calepin new [OPTIONS] &lt;PATH> [OUTPUT]
 
 Arguments:
-  &lt;PATH>  Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
+  &lt;PATH>    Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
+  [OUTPUT]  Destination directory when PATH is `website` or `academic`
 
 Options:
   -f, --force          Overwrite the file if it already exists
@@ -341,8 +321,6 @@ Options:
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-1"><a href="#cli-reference">CLI reference</a></li>
-                    
                     <li class="level-2"><a href="#calepin">calepin</a></li>
                     
                     <li class="level-2"><a href="#calepin-new">calepin new</a></li>
@@ -444,11 +422,11 @@ Options:
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="../websites/website-themes.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="../tips.html">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Themes</span>
+            <span class="calepin-website-page-nav-title">Tips</span>
           </span>
         </a>
         
@@ -460,7 +438,8 @@ Options:
     </footer>
     
     
-    <script>(() => {
+<script>
+(() => {
   "use strict";
 
   const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
@@ -565,8 +544,10 @@ Options:
     if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
   });
 })();
-</script>
-    <script>(() => {
+
+    </script>
+<script>
+(() => {
   "use strict";
 
   const selects = document.querySelectorAll("select[data-calepin-language-picker]");
@@ -650,8 +631,10 @@ Options:
     if (event.key === "Escape") closeAll();
   });
 })();
-</script>
-    <script>(() => {
+
+    </script>
+<script>
+(() => {
   "use strict";
 
   const selector = window.CalepinCopyCode?.selector ||
@@ -713,13 +696,14 @@ Options:
     block.prepend(button);
   });
 })();
-</script>
+
+    </script>
 <script>
 /* Calepin website behaviour, consolidated.
  *
  * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
- * sidebar drawer, copy-to-clipboard buttons, inline SVGs, internal link state
- * preservation, and the native <dialog> video lightbox.
+ * sidebar drawer, inline SVGs, internal link state preservation, and the
+ * native <dialog> video lightbox.
  *
  * The Rust theme loader inlines this file into a <script> at the end of <body>,
  * so the DOM already exists when it runs and no DOMContentLoaded guard is
@@ -731,7 +715,6 @@ Options:
   if (!document.querySelector(".calepin-website-shell")) return;
 
   const VIEW = {
-    storageKey: "calepin-website-view-mode",
     param: "view",
     rendered: "rendered",
     source: "source",
@@ -740,9 +723,6 @@ Options:
 
   const MOBILE_QUERY = "(max-width: 56rem)";
   const SOURCE_DATA_ID = "calepin-website-source-data";
-
-  const COPY_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="10" height="14" rx="2"></rect><path d="M16 8h-8"></path><path d="M16 11h-8"></path><path d="M16 14h-5"></path><path d="M4 6h-1a1 1 0 0 0-1 1v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1"></path></svg>`;
-  const COPIED_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>`;
 
   // ---------------------------------------------------------------- helpers
 
@@ -789,26 +769,6 @@ Options:
       window.history.replaceState({}, "", url.toString());
     } catch {
       /* ignore URL errors */
-    }
-  }
-
-  function readStored(key, normalize, fallback = "") {
-    try {
-      return normalize(localStorage.getItem(key) || "");
-    } catch {
-      return fallback;
-    }
-  }
-
-  function writeStored(key, value, fallback = "") {
-    try {
-      if (value === fallback) {
-        localStorage.removeItem(key);
-      } else {
-        localStorage.setItem(key, value);
-      }
-    } catch {
-      /* ignore storage errors */
     }
   }
 
@@ -929,7 +889,6 @@ Options:
         const value = normalizeView(event.target.value);
         const url = new URL(window.location.href);
         setUrlParam(url, VIEW.param, value === VIEW.rendered ? "" : value);
-        writeStored(VIEW.storageKey, value, VIEW.rendered);
         window.location.href = url.toString();
       });
     }
@@ -967,123 +926,6 @@ Options:
     });
 
     return { close };
-  }
-
-  // ----------------------------------------------------------- copy buttons
-
-  function copyText(text) {
-    if (!text) return Promise.resolve();
-    if (navigator.clipboard?.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-    return new Promise((resolve, reject) => {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        if (document.execCommand("copy")) resolve();
-        else reject(new Error("copy failed"));
-      } catch (error) {
-        reject(error);
-      } finally {
-        document.body.removeChild(textarea);
-      }
-    });
-  }
-
-  function copyTextForBlock(block) {
-    const pre = block.matches("pre")
-      ? block
-      : block.querySelector("pre") || block.querySelector("code");
-    if (!pre) return "";
-    return (pre.innerText || pre.textContent || "")
-      .replace(/\r\n/g, "\n")
-      .replace(/ /g, " ");
-  }
-
-  const COPY_WRAPPER_SELECTOR =
-    ".sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
-
-  function ensureCopyHost(block) {
-    if (block.parentElement && block.parentElement.classList.contains("calepin-website-copy-code-host")) {
-      return block.parentElement;
-    }
-
-    const host = document.createElement("div");
-    host.className = "calepin-website-copy-code-host";
-    block.parentNode.insertBefore(host, block);
-    host.appendChild(block);
-    return host;
-  }
-
-  function injectCopyButtons() {
-    const root = getMain();
-    if (!root) return;
-
-    const blocks = new Set();
-    root.querySelectorAll("pre").forEach((pre) => {
-      blocks.add(pre.closest(COPY_WRAPPER_SELECTOR) || pre);
-    });
-
-    blocks.forEach((block) => {
-      if (block.dataset.calepinCopyButton === "true") return;
-
-      block.classList.add("calepin-website-copy-code-scroll");
-
-      const host = ensureCopyHost(block);
-      if (host.dataset.calepinCopyButton === "true") return;
-
-      host.dataset.calepinCopyButton = "true";
-      host.classList.add("calepin-website-copy-code-block");
-
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "calepin-website-copy-code-button";
-      button.innerHTML = COPY_ICON;
-      button.setAttribute("aria-label", "Copy code block");
-      button.title = "Copy code";
-      host.appendChild(button);
-    });
-  }
-
-  function initCopy() {
-    injectCopyButtons();
-
-    const root = getMain();
-    if (!root || root.dataset.calepinCopyBound === "true") return;
-    root.dataset.calepinCopyBound = "true";
-
-    // One delegated listener for every copy button under <main>.
-    root.addEventListener("click", async (event) => {
-      const button = event.target.closest(".calepin-website-copy-code-button");
-      if (!button || !root.contains(button)) return;
-      event.preventDefault();
-
-      const block = button.closest(".calepin-website-copy-code-block");
-      const text = block ? copyTextForBlock(block) : "";
-      if (!text) return;
-
-      try {
-        await copyText(text);
-        button.innerHTML = COPIED_ICON;
-        button.classList.add("calepin-website-copy-code-button--copied");
-        button.title = "Copied";
-        window.setTimeout(() => {
-          button.innerHTML = COPY_ICON;
-          button.classList.remove("calepin-website-copy-code-button--copied");
-          button.title = "Copy code";
-        }, 1100);
-      } catch {
-        button.classList.add("calepin-website-copy-code-button--error");
-        button.title = "Copy failed";
-        window.setTimeout(() => {
-          button.classList.remove("calepin-website-copy-code-button--error");
-        }, 1100);
-      }
-    });
   }
 
   // ------------------------------------------------------------- inline svg
@@ -1230,7 +1072,6 @@ Options:
 
   initView(viewSelect);
   const nav = createNav();
-  initCopy();
   inlineSvgs();
   initDialogs();
   preserveStateInLinks(viewSelect);
@@ -1239,14 +1080,7 @@ Options:
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
     initView(viewSelect);
-    initCopy();
     preserveStateInLinks(viewSelect);
-  });
-
-  window.addEventListener("storage", (event) => {
-    if (event.key === VIEW.storageKey) {
-      initView(viewSelect);
-    }
   });
 })();
 

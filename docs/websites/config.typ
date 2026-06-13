@@ -1,4 +1,4 @@
-#set document(title: [Site configuration])
+#set document(title: [Configuration and metadata])
 
 #title()
 
@@ -25,7 +25,7 @@ base_url = "https://example.com"
 # Default: "calepin".
 theme = "academic"
 
-# Also render .pdf files. Pages can override this with `pdf` metadata.
+# Render .pdf files for every page.
 # Default: false.
 pdf = false
 
@@ -44,7 +44,9 @@ favicon = "assets/favicon.ico"
 
 Use `--format html` for a one-time HTML-only build, regardless of `pdf`.
 
-Relative `logo` and `favicon` paths are resolved from the website source directory, then rendered as page-relative URLs so the same assets work from nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`. If no logo is set, the bundled theme uses `title` as the site name.
+Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
+
+Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image("assets/diagram.svg")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`; if no logo is set, bundled themes use `title` as the site name.
 
 = Navigation
 
@@ -107,17 +109,9 @@ label = "Home"
 position = "right"
 target = "https://github.com/user/repo"
 label = "{icon:github} GitHub"
-
-[[navbar.item]]
-position = "right"
-widget = "theme"
-
-[[navbar.item]]
-position = "right"
-widget = "language"
 ```
 
-Navbar items can use `target`, `glob`, or a theme widget such as `widget = "theme"` or `widget = "language"`. Use a `.typ` `target` or `glob` for internal source pages; use any other `target` for external links or a literal already-rendered URL. `position` can be `left`, `center`, or `right`. If you configure `[navbar]`, include any default widgets you still want to show.
+Navbar items use `target` or `glob`. Use a `.typ` `target` or `glob` for internal source pages; use any other `target` for external links or a literal already-rendered URL. `position` can be `left`, `center`, or `right`.
 
 = Include or exclude pages
 
@@ -144,35 +138,55 @@ Put the page title in the document and keep website metadata for fields used by 
 
 `index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.
 
-= Working with pages
+= Pages metadata
 
-Use `calepin.pages()` to get structured information about every built page and process it with normal Typst code. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.
+Add arbitrary page metadata with Typst's `#metadata` function and the `<website-metadata>` label. _Calepin_ reads this dictionary while building the site and attaches it to the page entry returned by `calepin.pages()`.
+
+```typ
+#set document(title: [First post])
+
+#metadata((
+  date: "2026-06-10",
+  tags: ("release", "website"),
+  author: "Ada Lovelace",
+  summary: "A short release note for the new website.",
+  draft: false,
+)) <website-metadata>
+
+#title()
+```
+
+Use `calepin.pages()` to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.
 
 ```typ
 #import "@preview/calepin:0.0.1" as calepin
 
 #let posts = calepin.pages()
   .filter(p => p.path.starts-with("blog/"))
+  .filter(p => not p.meta.at("draft", default: false))
   .sorted(key: p => p.meta.at("date", default: ""))
   .rev()
 
 #for post in posts [
-  - #link(post.href)[#post.title]
+  - #link(post.href)[#post.title] \
+    #post.meta.at("summary", default: [])
 ]
 ```
 
-Each page entry includes:
+`calepin.pages()` returns one dictionary per built page, excluding `404.typ`. _Calepin_ creates these entry fields:
 
 - `path`: source path relative to the website root
 - `href`: rendered HTML path relative to the current page
 - `title`: resolved page title
-- `language`: language code, when multilingual sites are configured
-- `translation_key`: key used to connect translated pages
-- `translations`: matching pages in other languages
-- `pdf`: PDF path when the page has a PDF output
-- `meta`: the page's `<website-metadata>` dictionary
+- `language`: language code, or `none` when languages are not configured
+- `translation_key`: resolved key used to connect translated pages
+- `translations`: matching pages in other languages, or an empty dictionary
+- `pdf`: PDF path, or `none` when the page has no PDF output
+- `meta`: the page's `<website-metadata>` dictionary, or an empty dictionary
 
-Use `meta` for your own fields, such as dates, tags, authors, categories, venues, summaries, or feature flags. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst methods such as `filter`, `map`, `sorted`, and `rev` to select and format the pages you need.
+Only `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.
+
+There is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.
 
 = Multilingual sites
 

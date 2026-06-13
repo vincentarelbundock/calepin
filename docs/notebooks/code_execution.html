@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Install</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Code execution</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -8,11 +8,11 @@
     <meta property="og:site_name" content="Calepin">
     
     
-    <meta property="og:title" content="Install | Calepin">
+    <meta property="og:title" content="Code execution | Calepin">
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/getting-started/install.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/getting-started/install.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/notebooks/code_execution.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/notebooks/code_execution.html">
     
     
     <link rel="icon" href="../.calepin/favicon.svg">
@@ -53,7 +53,7 @@
     <link rel="stylesheet" href="../.calepin/calepin-website.css">
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Install])\n\n#title()\n\n= Typst CLI\n<typst-cli>\n\nCalepin requires Typst 0.14.2 or newer. Install or update the Typst CLI from the #link(\"https://github.com/typst/typst#installation\")[Typst installation instructions], and make sure it is available on your `PATH`.\n\n= Calepin\n<calepin-cli>\n\n\n\nMacOS and Linux:\n\n```sh\ncurl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh\n```\n\nWindows via powershell:\n\n```sh\npowershell -ExecutionPolicy Bypass -c \"irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex\"\n```\n\n= Jupyter support\n<jupyter-kernels>\n\nCalepin has built-in support for #strong[Python] and #strong[R], and can also\nrun many other languages through Jupyter kernels, but that requires installing\nthe language kernel and kernel client tooling.\n\nTo use a Jupyter kernel, install `jupyter_client` first:\n\n```sh\npip install jupyter_client\n```\n\nMost kernels then install with a single `pip install`:\n\n```sh\npip install bash_kernel       # Bash\npip install octave_kernel     # GNU Octave\npip install gnuplot_kernel    # Gnuplot\n```\n\nSome kernels are installed from their language's own package manager:\n\n```sh\n# Julia\njulia -e 'using Pkg; Pkg.add(\"IJulia\")'\n```\n\nRun `jupyter kernelspec list` to see what engines are registered and available.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#import \"@preview/calepin:0.0.1\" as calepin\n\n#set document(title: [Code execution])\n\n#calepin.setup(\n  echo: true,\n  eval: true,\n  results: \"verbatim\",\n)\n\n#title()\n\n_Calepin_ runs the code in your document and renders the results in place. The simplest way to run code is a fenced block named after its language.\n\n= Code blocks\n\nWrite an ordinary Typst fenced block and name it after a language. _Calepin_ runs the block and shows its output below the source:\n\n````typ\n```python\nprint(40 + 2)\n```\n````\n\n```python\nprint(40 + 2)\n```\n\nEach language runs in a persistent session, so a variable set in one block is available in later blocks:\n\n````typ\n```python\nx = 41\n```\n\n```python\nprint(x + 1)\n```\n````\n\n```python\nx = 41\n```\n\n```python\nprint(x + 1)\n```\n\n= Inline code\n\nAn inline expression drops a computed value into a sentence. Use `#calepin.inline(...)`, usually through a short alias:\n\n````typ\n#let py = calepin.inline.with(\"python\")\n\nThe answer is #py[`print(40 + 2)`].\n````\n\n#let py = calepin.inline.with(\"python\")\n\nThe answer is #py[`print(40 + 2)`].\n\n= Supported languages\n\n_Calepin_ has built-in engines for *Python* and *R*, and built-in diagram engines for *Mermaid*, *Graphviz DOT*, *TikZ*, and *D2*.\n\nAny language with a #link(\"https://github.com/jupyter/jupyter/wiki/Jupyter-kernels\")[Jupyter kernel] also works: use the kernel name as the block language. Popular examples include *Bash* (`bash`), *Julia* (`julia`), *Octave* (`octave`), *Gnuplot* (`gnuplot`), and *Ruby* (`ruby`). Install kernels as described in the #link(\"../getting-started/install.html#jupyter-support\")[Jupyter install section].\n\nRun `jupyter kernelspec list` to see what is registered. Whatever name appears there can be used as a block language directly:\n\n````typ\n```bash\necho \"hello from bash\"\n```\n````\n\n= Options\n\nOptions can be set in three places: as document-wide defaults, as arguments to one chunk, or as `#|` header lines inside a block.\n\n== Document defaults\n\n`#calepin.setup` sets defaults for every chunk in the document:\n\n````typ\n#calepin.setup(echo: true, eval: true, results: \"verbatim\")\n````\n\n== Chunk arguments\n\n`#calepin.chunk(...)` overrides options for a single chunk. Pass the body as a fenced block and _Calepin_ infers the engine from the fence:\n\n````typ\n#calepin.chunk(echo: false, results: \"typst\")[\n```python\nprint(\"#strong[42 in Typst]\")\n```\n]\n````\n\n#calepin.chunk(echo: false, results: \"typst\")[\n```python\nprint(\"#strong[42 in Typst]\")\n```\n]\n\n== `#|` header lines\n\nYou can also place options at the top of a plain fenced block, one per line, each prefixed with `#|`:\n\n````typ\n```r\n#| echo: false\n#| fig-align: right\nplot(mpg ~ hp, data = mtcars)\n```\n````\n\nThe `#|` form keeps options next to the code. Its downside is outside _Calepin_: compiling the `.typ` file directly with `typst` shows the `#|` lines as text inside the code block, while options passed to `#calepin.chunk(...)` do not.\n\n= Options reference\n\n== Global and chunk options\n\nThese options can be set in `#calepin.setup` as document-wide defaults and overridden per chunk.\n\n#table(\n  columns: (1.5fr, 0.9fr, 2.2fr),\n  stroke: none,\n  inset: 0.55em,\n  [*Option*], [*Default*], [*Meaning*],\n  [echo], [`true`], [Show the chunk's source code in the rendered document.],\n  [eval], [`true`], [Execute the code. When `false`, nothing runs and no output is produced (the source can still be shown via `echo`).],\n  [error], [`false`], [When `true`, capture an execution error and render it as output. When `false`, an error in the chunk aborts the build.],\n  [warning], [`true`], [Include warnings emitted by the engine in the output. When `false`, they are suppressed.],\n  [message], [`true`], [Include informational messages emitted by the engine (for example R's `message()` output). When `false`, they are suppressed.],\n  [results], [`\"render\"`], [How results are shown: `render` (pretty display of values, images, and tables), `verbatim` (raw output in a code block), `typst` (treat output text as Typst markup and render it), or `hide` (run the code but omit its output).],\n  [fig-device-format], [`\"svg\"`], [Format for figure files written by the engine: `svg`, `png`, `jpeg` (alias `jpg`), or `pdf`. Diagram engines always emit `svg` regardless of this setting.],\n  [fig-device-dpi], [`150`], [Resolution in dots per inch for raster formats (`png`, `jpeg`). Ignored for vector formats (`svg`, `pdf`).],\n  [fig-device-width], [`6`], [Width of the plotting device, in inches.],\n  [fig-device-height], [`\"auto\"`], [Height of the plotting device, in inches. `auto` derives it from the width and `fig-device-aspect`.],\n  [fig-device-aspect], [`0.618`], [Height-to-width ratio used when `fig-device-height` is `auto`: device height = `fig-device-width` × `fig-device-aspect`.],\n  [fig-width], [`\"70%\"`], [Width of the figure as rendered in the document. Accepts a Typst length or ratio (for example `70%` or `12cm`) or `auto`.],\n  [fig-height], [`\"auto\"`], [Height of the figure as rendered in the document. Accepts a Typst length or `auto`.],\n  [fig-align], [`\"center\"`], [Horizontal alignment of the figure in the document: `left`, `center`, or `right`.],\n  [fig-responsive], [`true`], [HTML output only: allow the figure to shrink to fit narrow viewports (sets `max-width: 100%`). No effect on paged output.],\n)\n\n== Chunk-only options\n\nThese options are understood only on individual chunks; they are not valid keys in `#calepin.setup`. The caption and layout options live here because they apply to one chunk's specific output.\n\n#table(\n  columns: (1.2fr, 0.9fr, 2.0fr),\n  stroke: none,\n  inset: 0.55em,\n  [*Option*], [*Default*], [*Meaning*],\n  [engine], [inferred], [Force the engine for this chunk instead of inferring it from the fence or surrounding context.],\n  [body], [from fence], [Provide the raw code body directly instead of writing a fenced block.],\n  [label], [auto], [Assign a stable chunk identifier used for cross-references and result lookup.],\n  [fig-caption], [`none`], [Caption text for the figure. When set, the output is wrapped in a numbered `figure` that can be cross-referenced.],\n  [fig-cap-location], [`\"auto\"`], [Where the caption sits relative to the figure: `top`, `bottom`, or `margin`. `auto` uses Typst's default placement.],\n  [fig-alt-text], [`none`], [Accessibility (alt) text for generated images. Empty when unset.],\n  [fig-subcaptions], [`none`], [Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).],\n  [fig-layout-columns], [`\"auto\"`], [Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or `auto` to choose a count from the number of images.],\n  [fig-layout-rows], [`\"auto\"`], [Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or `auto`.],\n)\n\n= Quarto-style names\n\nChunk options have different names in _Calepin_ and Quarto. Some Quarto aliases are accepted, but using them is not recommended, and _Calepin_ emits a warning when it meets an unsupported name. The accepted aliases are:\n\n- `out-width` maps to `fig-width`\n- `out-height` maps to `fig-height`\n- `out-align` maps to `fig-align`\n- `fig-alt` maps to `fig-alt-text`\n- `fig-subcap` maps to `fig-subcaptions`\n- `fig-format` maps to `fig-device-format`\n- `fig-dpi` maps to `fig-device-dpi`\n- `layout-ncol` maps to `fig-layout-columns`\n- `layout-nrow` maps to `fig-layout-rows`\n"</script>
 </head><body>
     <header class="calepin-website-topbar">
         <nav>
@@ -102,9 +102,9 @@
                         
                         <li><a href="../index.html" aria-label="Home">Home</a></li>
                         
-                        <li><a href="install.html" aria-label="Install" class="active" aria-current="page">Install</a></li>
+                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
                         
-                        <li><a href="config.html" aria-label="Configuration">Configuration</a></li>
+                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
                         
                     </ul>
                     
@@ -117,17 +117,17 @@
                     
                     <ul>
                         
-                        <li><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
+                        <li><a href="code_execution.html" aria-label="Code execution" class="active" aria-current="page">Code execution</a></li>
                         
-                        <li><a href="../notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
+                        <li><a href="figures.html" aria-label="Figures and tables">Figures and tables</a></li>
                         
-                        <li><a href="../notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
+                        <li><a href="cross-references.html" aria-label="Cross-references">Cross-references</a></li>
                         
-                        <li><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+                        <li><a href="parameters.html" aria-label="Parameters">Parameters</a></li>
                         
-                        <li><a href="../notebooks/themes.html" aria-label="Themes">Themes</a></li>
+                        <li><a href="themes.html" aria-label="Themes">Themes</a></li>
                         
-                        <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
+                        <li><a href="example.html" aria-label="Example notebook">Example notebook</a></li>
                         
                     </ul>
                     
@@ -169,10 +169,27 @@
             </nav>
         </aside>
         <main class="calepin-website-main">
-            <h1 id="install">Install</h1><h2 id="typst-cli">Typst CLI</h2><p>Calepin requires Typst 0.14.2 or newer. Install or update the Typst CLI from the <a href="https://github.com/typst/typst#installation">Typst installation instructions</a>, and make sure it is available on your <code>PATH</code>.</p><h2 id="calepin">Calepin</h2><p>MacOS and Linux:</p><pre><code data-lang="sh"><span style="color: #4b69c6">curl</span> --proto <span style="color: #198810">'</span><span style="color: #198810">=https</span><span style="color: #198810">'</span> --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh <span style="color: #d73948">|</span> <span style="color: #4b69c6">sh</span></code></pre><p>Windows via powershell:</p><pre><code data-lang="sh"><span style="color: #4b69c6">powershell</span> -ExecutionPolicy Bypass -c <span style="color: #198810">"</span><span style="color: #198810">irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex</span><span style="color: #198810">"</span></code></pre><h2 id="jupyter-support">Jupyter support</h2><p>Calepin has built-in support for <strong>Python</strong> and <strong>R</strong>, and can also run many other languages through Jupyter kernels, but that requires installing the language kernel and kernel client tooling.</p><p>To use a Jupyter kernel, install <code>jupyter_client</code> first:</p><pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install jupyter_client</code></pre><p>Most kernels then install with a single <code>pip install</code>:</p><pre><code data-lang="sh"><span style="color: #4b69c6">pip</span> install bash_kernel       <span style="color: #74747c">#</span><span style="color: #74747c"> Bash</span>
-<span style="color: #4b69c6">pip</span> install octave_kernel     <span style="color: #74747c">#</span><span style="color: #74747c"> GNU Octave</span>
-<span style="color: #4b69c6">pip</span> install gnuplot_kernel    <span style="color: #74747c">#</span><span style="color: #74747c"> Gnuplot</span></code></pre><p>Some kernels are installed from their language’s own package manager:</p><pre><code data-lang="sh"><span style="color: #74747c">#</span><span style="color: #74747c"> Julia</span>
-<span style="color: #4b69c6">julia</span> -e <span style="color: #198810">'</span><span style="color: #198810">using Pkg; Pkg.add("IJulia")</span><span style="color: #198810">'</span></code></pre><p>Run <code>jupyter kernelspec list</code> to see what engines are registered and available.</p>
+            <h1 id="code-execution">Code execution</h1><p><em>Calepin</em> runs the code in your document and renders the results in place. The simplest way to run code is a fenced block named after its language.</p><h2 id="code-blocks">Code blocks</h2><p>Write an ordinary Typst fenced block and name it after a language. <em>Calepin</em> runs the block and shows its output below the source:</p><pre><code data-lang="typ"><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">print(40 + 2)</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span></code></pre><div class="sourceCode" data-lang="python"><pre><code data-lang="python"><span class="calepin-syntax-function">print</span>(<span class="calepin-syntax-number">40</span> <span class="calepin-syntax-operator">+</span> <span class="calepin-syntax-number">2</span>)</code></pre></div><div class="cell-output cell-output-stdout"><pre><code>42</code></pre></div><p>Each language runs in a persistent session, so a variable set in one block is available in later blocks:</p><pre><code data-lang="typ"><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">x = 41</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span>
+
+<span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">print(x + 1)</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span></code></pre><div class="sourceCode" data-lang="python"><pre><code data-lang="python">x = <span class="calepin-syntax-number">41</span></code></pre></div><div class="sourceCode" data-lang="python"><pre><code data-lang="python"><span class="calepin-syntax-function">print</span>(x <span class="calepin-syntax-operator">+</span> <span class="calepin-syntax-number">1</span>)</code></pre></div><div class="cell-output cell-output-stdout"><pre><code>42</code></pre></div><h2 id="inline-code">Inline code</h2><p>An inline expression drops a computed value into a sentence. Use <code>#calepin.inline(...)</code>, usually through a short alias:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">let</span> py <span style="color: #d73948">=</span> calepin.inline.<span style="color: #4b69c6">with</span>(<span style="color: #198810">"python"</span>)
+
+The answer is <span style="color: #4b69c6">#</span><span style="color: #4b69c6">py</span>[<span style="color: #6b6b6f">`</span><span style="color: #6b6b6f">print(40 + 2)</span><span style="color: #6b6b6f">`</span>].</code></pre><p>The answer is 42.</p><h2 id="supported-languages">Supported languages</h2><p><em>Calepin</em> has built-in engines for <strong>Python</strong> and <strong>R</strong>, and built-in diagram engines for <strong>Mermaid</strong>, <strong>Graphviz DOT</strong>, <strong>TikZ</strong>, and <strong>D2</strong>.</p><p>Any language with a <a href="https://github.com/jupyter/jupyter/wiki/Jupyter-kernels">Jupyter kernel</a> also works: use the kernel name as the block language. Popular examples include <strong>Bash</strong> (<code>bash</code>), <strong>Julia</strong> (<code>julia</code>), <strong>Octave</strong> (<code>octave</code>), <strong>Gnuplot</strong> (<code>gnuplot</code>), and <strong>Ruby</strong> (<code>ruby</code>). Install kernels as described in the <a href="../getting-started/install.html#jupyter-support">Jupyter install section</a>.</p><p>Run <code>jupyter kernelspec list</code> to see what is registered. Whatever name appears there can be used as a block language directly:</p><pre><code data-lang="typ"><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">bash</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">echo "hello from bash"</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span></code></pre><h2 id="options">Options</h2><p>Options can be set in three places: as document-wide defaults, as arguments to one chunk, or as <code>#|</code> header lines inside a block.</p><h3 id="document-defaults">Document defaults</h3><p><code>#calepin.setup</code> sets defaults for every chunk in the document:</p><pre><code data-lang="typ"><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">setup</span>(echo: <span style="color: #d73948">true</span>, eval: <span style="color: #d73948">true</span>, results: <span style="color: #198810">"verbatim"</span>)</code></pre><h3 id="chunk-arguments">Chunk arguments</h3><p><code>#calepin.chunk(...)</code> overrides options for a single chunk. Pass the body as a fenced block and <em>Calepin</em> infers the engine from the fence:</p><pre><code data-lang="typ"><span style="color: #8b41b1">#</span><span style="color: #8b41b1">calepin</span>.<span style="color: #4b69c6">chunk</span>(echo: <span style="color: #d73948">false</span>, results: <span style="color: #198810">"typst"</span>)[
+<span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">python</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">print("#strong[42 in Typst]")</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span>
+]</code></pre><p><strong>42 in Typst</strong></p><h3 id="header-lines"><code>#|</code> header lines</h3><p>You can also place options at the top of a plain fenced block, one per line, each prefixed with <code>#|</code>:</p><pre><code data-lang="typ"><span style="color: #6b6b6f">```</span><span style="color: #6b6b6f">r</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">#| echo: false</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">#| fig-align: right</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">plot(mpg ~ hp, data = mtcars)</span><span style="color: #6b6b6f"></span>
+<span style="color: #6b6b6f"></span><span style="color: #6b6b6f">```</span></code></pre><p>The <code>#|</code> form keeps options next to the code. Its downside is outside <em>Calepin</em>: compiling the <code>.typ</code> file directly with <code>typst</code> shows the <code>#|</code> lines as text inside the code block, while options passed to <code>#calepin.chunk(...)</code> do not.</p><h2 id="options-reference">Options reference</h2><h3 id="global-and-chunk-options">Global and chunk options</h3><p>These options can be set in <code>#calepin.setup</code> as document-wide defaults and overridden per chunk.</p><table><tr><td><strong>Option</strong></td><td><strong>Default</strong></td><td><strong>Meaning</strong></td></tr><tr><td>echo</td><td><code>true</code></td><td>Show the chunk’s source code in the rendered document.</td></tr><tr><td>eval</td><td><code>true</code></td><td>Execute the code. When <code>false</code>, nothing runs and no output is produced (the source can still be shown via <code>echo</code>).</td></tr><tr><td>error</td><td><code>false</code></td><td>When <code>true</code>, capture an execution error and render it as output. When <code>false</code>, an error in the chunk aborts the build.</td></tr><tr><td>warning</td><td><code>true</code></td><td>Include warnings emitted by the engine in the output. When <code>false</code>, they are suppressed.</td></tr><tr><td>message</td><td><code>true</code></td><td>Include informational messages emitted by the engine (for example R’s <code>message()</code> output). When <code>false</code>, they are suppressed.</td></tr><tr><td>results</td><td><code>"render"</code></td><td>How results are shown: <code>render</code> (pretty display of values, images, and tables), <code>verbatim</code> (raw output in a code block), <code>typst</code> (treat output text as Typst markup and render it), or <code>hide</code> (run the code but omit its output).</td></tr><tr><td>fig-device-format</td><td><code>"svg"</code></td><td>Format for figure files written by the engine: <code>svg</code>, <code>png</code>, <code>jpeg</code> (alias <code>jpg</code>), or <code>pdf</code>. Diagram engines always emit <code>svg</code> regardless of this setting.</td></tr><tr><td>fig-device-dpi</td><td><code>150</code></td><td>Resolution in dots per inch for raster formats (<code>png</code>, <code>jpeg</code>). Ignored for vector formats (<code>svg</code>, <code>pdf</code>).</td></tr><tr><td>fig-device-width</td><td><code>6</code></td><td>Width of the plotting device, in inches.</td></tr><tr><td>fig-device-height</td><td><code>"auto"</code></td><td>Height of the plotting device, in inches. <code>auto</code> derives it from the width and <code>fig-device-aspect</code>.</td></tr><tr><td>fig-device-aspect</td><td><code>0.618</code></td><td>Height-to-width ratio used when <code>fig-device-height</code> is <code>auto</code>: device height = <code>fig-device-width</code> × <code>fig-device-aspect</code>.</td></tr><tr><td>fig-width</td><td><code>"70%"</code></td><td>Width of the figure as rendered in the document. Accepts a Typst length or ratio (for example <code>70%</code> or <code>12cm</code>) or <code>auto</code>.</td></tr><tr><td>fig-height</td><td><code>"auto"</code></td><td>Height of the figure as rendered in the document. Accepts a Typst length or <code>auto</code>.</td></tr><tr><td>fig-align</td><td><code>"center"</code></td><td>Horizontal alignment of the figure in the document: <code>left</code>, <code>center</code>, or <code>right</code>.</td></tr><tr><td>fig-responsive</td><td><code>true</code></td><td>HTML output only: allow the figure to shrink to fit narrow viewports (sets <code>max-width: 100%</code>). No effect on paged output.</td></tr></table><h3 id="chunk-only-options">Chunk-only options</h3><p>These options are understood only on individual chunks; they are not valid keys in <code>#calepin.setup</code>. The caption and layout options live here because they apply to one chunk’s specific output.</p><table><tr><td><strong>Option</strong></td><td><strong>Default</strong></td><td><strong>Meaning</strong></td></tr><tr><td>engine</td><td>inferred</td><td>Force the engine for this chunk instead of inferring it from the fence or surrounding context.</td></tr><tr><td>body</td><td>from fence</td><td>Provide the raw code body directly instead of writing a fenced block.</td></tr><tr><td>label</td><td>auto</td><td>Assign a stable chunk identifier used for cross-references and result lookup.</td></tr><tr><td>fig-caption</td><td><code>none</code></td><td>Caption text for the figure. When set, the output is wrapped in a numbered <code>figure</code> that can be cross-referenced.</td></tr><tr><td>fig-cap-location</td><td><code>"auto"</code></td><td>Where the caption sits relative to the figure: <code>top</code>, <code>bottom</code>, or <code>margin</code>. <code>auto</code> uses Typst’s default placement.</td></tr><tr><td>fig-alt-text</td><td><code>none</code></td><td>Accessibility (alt) text for generated images. Empty when unset.</td></tr><tr><td>fig-subcaptions</td><td><code>none</code></td><td>Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).</td></tr><tr><td>fig-layout-columns</td><td><code>"auto"</code></td><td>Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or <code>auto</code> to choose a count from the number of images.</td></tr><tr><td>fig-layout-rows</td><td><code>"auto"</code></td><td>Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or <code>auto</code>.</td></tr></table><h2 id="quarto-style-names">Quarto-style names</h2><p>Chunk options have different names in <em>Calepin</em> and Quarto. Some Quarto aliases are accepted, but using them is not recommended, and <em>Calepin</em> emits a warning when it meets an unsupported name. The accepted aliases are:</p><ul><li><code>out-width</code> maps to <code>fig-width</code></li><li><code>out-height</code> maps to <code>fig-height</code></li><li><code>out-align</code> maps to <code>fig-align</code></li><li><code>fig-alt</code> maps to <code>fig-alt-text</code></li><li><code>fig-subcap</code> maps to <code>fig-subcaptions</code></li><li><code>fig-format</code> maps to <code>fig-device-format</code></li><li><code>fig-dpi</code> maps to <code>fig-device-dpi</code></li><li><code>layout-ncol</code> maps to <code>fig-layout-columns</code></li><li><code>layout-nrow</code> maps to <code>fig-layout-rows</code></li></ul>
         </main>
         
         <aside class="calepin-website-toc">
@@ -180,11 +197,27 @@
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#typst-cli">Typst CLI</a></li>
+                    <li class="level-2"><a href="#code-blocks">Code blocks</a></li>
                     
-                    <li class="level-2"><a href="#calepin">Calepin</a></li>
+                    <li class="level-2"><a href="#inline-code">Inline code</a></li>
                     
-                    <li class="level-2"><a href="#jupyter-support">Jupyter support</a></li>
+                    <li class="level-2"><a href="#supported-languages">Supported languages</a></li>
+                    
+                    <li class="level-2"><a href="#options">Options</a></li>
+                    
+                    <li class="level-3"><a href="#document-defaults">Document defaults</a></li>
+                    
+                    <li class="level-3"><a href="#chunk-arguments">Chunk arguments</a></li>
+                    
+                    <li class="level-3"><a href="#header-lines">#| header lines</a></li>
+                    
+                    <li class="level-2"><a href="#options-reference">Options reference</a></li>
+                    
+                    <li class="level-3"><a href="#global-and-chunk-options">Global and chunk options</a></li>
+                    
+                    <li class="level-3"><a href="#chunk-only-options">Chunk-only options</a></li>
+                    
+                    <li class="level-2"><a href="#quarto-style-names">Quarto-style names</a></li>
                     
                 </ul>
             </nav>
@@ -201,15 +234,6 @@
         
     
         
-            
-            
-        
-        
-    
-        
-            
-            
-        
         
             
         
@@ -219,6 +243,15 @@
             
         
     
+        
+            
+            
+        
+        
+    
+        
+            
+            
         
         
             
@@ -274,20 +307,20 @@
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="../index.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev" href="../getting-started/config.html">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Home</span>
+            <span class="calepin-website-page-nav-title">Configuration</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="config.html">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next" href="figures.html">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Configuration</span>
+            <span class="calepin-website-page-nav-title">Figures and tables</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

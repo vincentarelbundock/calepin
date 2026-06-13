@@ -198,9 +198,17 @@ fn respond(request: Request, root: &Path, live: Option<&LiveReload>) -> Result<(
         path
     };
     if !path.is_file() {
+        let fallback = root.join("404.html");
+        if fallback.is_file() {
+            return send_file(request, &fallback, 404, live);
+        }
         return send_text(request, 404, "text/plain; charset=utf-8", "Not Found");
     }
 
+    send_file(request, &path, 200, live)
+}
+
+fn send_file(request: Request, path: &Path, status: u16, live: Option<&LiveReload>) -> Result<()> {
     let mime = mime_guess::from_path(&path)
         .first_or_octet_stream()
         .essence_str()
@@ -212,13 +220,13 @@ fn respond(request: Request, root: &Path, live: Option<&LiveReload>) -> Result<(
     }
 
     if request.method() == &Method::Head {
-        let response = Response::empty(StatusCode(200))
+        let response = Response::empty(StatusCode(status))
             .with_header(content_type_header(&mime)?)
             .with_header(no_store_header()?);
         request.respond(response)?;
     } else {
         let response = Response::from_data(body)
-            .with_status_code(StatusCode(200))
+            .with_status_code(StatusCode(status))
             .with_header(content_type_header(&mime)?)
             .with_header(no_store_header()?);
         request.respond(response)?;
@@ -350,6 +358,8 @@ fn hex_value(byte: u8) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
 
     #[test]
     fn request_path_rejects_traversal() {
@@ -383,6 +393,38 @@ mod tests {
         let status: serde_json::Value = serde_json::from_str(&live.status_json()).unwrap();
         assert!(status["error"].is_null());
         assert!(status["version"].as_u64().unwrap() > initial_version);
+    }
+
+    #[test]
+    fn missing_path_serves_404_html_when_present() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("404.html"),
+            "<html><body>Custom not found</body></html>",
+        )
+        .unwrap();
+        let root = dir.path().to_path_buf();
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let addr = server.server_addr().to_string();
+
+        let handle = thread::spawn(move || {
+            let request = server.recv().unwrap();
+            respond(request, &root, None).unwrap();
+        });
+
+        let mut stream = TcpStream::connect(addr).unwrap();
+        stream
+            .write_all(
+                b"GET /missing-page HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+            )
+            .unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        handle.join().unwrap();
+
+        assert!(response.starts_with("HTTP/1.1 404"));
+        assert!(response.contains("Content-Type: text/html"));
+        assert!(response.contains("Custom not found"));
     }
 
     #[test]
