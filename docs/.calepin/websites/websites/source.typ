@@ -54,6 +54,12 @@ Use `--host` and `--port` when you need a specific address:
 calepin serve my_site/ --host 127.0.0.1 --port 8001
 ```
 
+Add `--open` to launch the served site in your default browser:
+
+```sh
+calepin serve my_site/ --open
+```
+
 = Watch
 
 During development, watch the website source directory for changes, and re-compile automatically:
@@ -66,8 +72,8 @@ As with `compile`, the first positional argument is the source directory and the
 
 Changes that can affect more than one page trigger a full rebuild instead. This includes edits to `calepin.toml`, themes, or assets, pages that are added, removed, or renamed, and edits that change the site navigation or page metadata.
 
-Add `--serve` to run the local server while watching; it uses the same `--host` and `--port` options as `calepin serve`.
+Add `--serve` to run the local server while watching; it uses the same `--host`, `--port`, and `--open` options as `calepin serve`.
 
 ```sh
-calepin watch my_site/ my_site/ --serve
+calepin watch my_site/ my_site/ --serve --open
 ```

@@ -101,6 +101,11 @@ pub fn handle_watch(args: WatchArgs) -> Result<()> {
             "`calepin watch --serve` can only be used when watching a website directory"
         ));
     }
+    if args.open {
+        return Err(anyhow::anyhow!(
+            "`calepin watch --open` is only for website serving; pass Typst's flag after `--` as `calepin watch paper.typ -- --open`"
+        ));
+    }
     crate::typst::watch::run_watch(args)
 }
 

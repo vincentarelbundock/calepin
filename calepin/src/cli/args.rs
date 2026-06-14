@@ -143,6 +143,10 @@ pub struct WatchArgs {
     #[arg(long)]
     pub serve: bool,
 
+    /// Open the served website in the default browser
+    #[arg(long)]
+    pub open: bool,
+
     /// Interface to bind when serving a watched website
     #[arg(long, default_value = "127.0.0.1")]
     pub host: String,
@@ -171,6 +175,10 @@ pub struct ServeArgs {
     /// Port to bind (default: first free port from 8000)
     #[arg(short, long)]
     pub port: Option<u16>,
+
+    /// Open the website in the default browser
+    #[arg(long)]
+    pub open: bool,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -396,6 +404,7 @@ mod tests {
                 assert_eq!(args.output, Some(PathBuf::from("out/paper.html")));
                 assert_eq!(args.format, Some(CompileFormat::Html));
                 assert!(!args.serve);
+                assert!(!args.open);
                 assert!(args.common.quiet);
                 assert_eq!(args.common.timeout, Some(42));
                 assert_eq!(args.typst_args, vec!["--font-path", "fonts"]);
@@ -413,6 +422,7 @@ mod tests {
             "--config",
             "project.toml",
             "--serve",
+            "--open",
             "--host",
             "0.0.0.0",
             "--port",
@@ -425,6 +435,7 @@ mod tests {
                 assert_eq!(args.input, PathBuf::from("docs"));
                 assert_eq!(args.common.config, Some(PathBuf::from("project.toml")));
                 assert!(args.serve);
+                assert!(args.open);
                 assert_eq!(args.host, "0.0.0.0");
                 assert_eq!(args.port, Some(3000));
             }
@@ -435,7 +446,7 @@ mod tests {
     #[test]
     fn test_serve_args() {
         let cli = Cli::try_parse_from([
-            "calepin", "serve", "docs", "--host", "0.0.0.0", "--port", "3000",
+            "calepin", "serve", "docs", "--host", "0.0.0.0", "--port", "3000", "--open",
         ])
         .unwrap();
 
@@ -444,6 +455,7 @@ mod tests {
                 assert_eq!(args.dir, PathBuf::from("docs"));
                 assert_eq!(args.host, "0.0.0.0");
                 assert_eq!(args.port, Some(3000));
+                assert!(args.open);
             }
             other => panic!("expected serve command, got {other:?}"),
         }

@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -64,7 +65,11 @@ impl ServeHandle {
 pub(crate) fn serve(args: ServeArgs) -> Result<()> {
     let root = validate_root(&args.dir)?;
     let (server, bind) = bind_server(&args.host, args.port)?;
-    eprintln!("Serving {} at http://{bind}/", root.display());
+    let url = browser_url(&args.host, &bind);
+    eprintln!("Serving {} at {url}", root.display());
+    if args.open {
+        open_browser(&url);
+    }
     eprintln!("Press Ctrl+C to stop.");
     run_server(server, root, None, Arc::new(AtomicBool::new(false)))
 }
@@ -74,10 +79,15 @@ pub(crate) fn start(
     host: &str,
     port: Option<u16>,
     live: Arc<LiveReload>,
+    open: bool,
 ) -> Result<ServeHandle> {
     let root = validate_root(dir)?;
     let (server, bind) = bind_server(host, port)?;
-    eprintln!("Serving {} at http://{bind}/", root.display());
+    let url = browser_url(host, &bind);
+    eprintln!("Serving {} at {url}", root.display());
+    if open {
+        open_browser(&url);
+    }
     let stop = Arc::new(AtomicBool::new(false));
     let thread_stop = Arc::clone(&stop);
     let join = thread::spawn(move || {
@@ -148,6 +158,50 @@ fn is_port_in_use(message: &str) -> bool {
         || message.contains("os error 48")
         || message.contains("os error 98")
         || message.contains("os error 10048")
+}
+
+fn browser_url(host: &str, bind: &str) -> String {
+    let Some((_, port)) = bind.rsplit_once(':') else {
+        return format!("http://{bind}/");
+    };
+    let browser_host = match host {
+        "0.0.0.0" => "127.0.0.1".to_string(),
+        "::" | "[::]" => "[::1]".to_string(),
+        value if value.contains(':') && !value.starts_with('[') => format!("[{value}]"),
+        value => value.to_string(),
+    };
+    format!("http://{browser_host}:{port}/")
+}
+
+fn open_browser(url: &str) {
+    if let Err(error) = launch_browser(url) {
+        cwarn!("failed to open browser: {}", error);
+    }
+}
+
+fn launch_browser(url: &str) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(url)
+            .spawn()
+            .context("failed to run `open`")?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", "", url])
+            .spawn()
+            .context("failed to run `cmd /C start`")?;
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .context("failed to run `xdg-open`")?;
+    }
+    Ok(())
 }
 
 fn run_server(
@@ -393,6 +447,20 @@ mod tests {
         let status: serde_json::Value = serde_json::from_str(&live.status_json()).unwrap();
         assert!(status["error"].is_null());
         assert!(status["version"].as_u64().unwrap() > initial_version);
+    }
+
+    #[test]
+    fn browser_url_uses_loopback_for_wildcard_hosts() {
+        assert_eq!(
+            browser_url("0.0.0.0", "0.0.0.0:8000"),
+            "http://127.0.0.1:8000/"
+        );
+        assert_eq!(browser_url("::", ":::8000"), "http://[::1]:8000/");
+    }
+
+    #[test]
+    fn browser_url_brackets_ipv6_hosts() {
+        assert_eq!(browser_url("::1", "::1:8000"), "http://[::1]:8000/");
     }
 
     #[test]

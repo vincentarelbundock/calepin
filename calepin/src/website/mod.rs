@@ -107,6 +107,11 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
     }
 
     set_quiet(args.common.quiet);
+    if args.open && !args.serve {
+        return Err(anyhow!(
+            "`calepin watch --open` requires `--serve` when watching a website directory"
+        ));
+    }
     let options = WebsiteBuildOptions {
         config: config_path,
         src: Some(args.input.clone()),
@@ -129,6 +134,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
             &args.host,
             args.port,
             Arc::clone(&live),
+            args.open,
         )?)
     } else {
         None

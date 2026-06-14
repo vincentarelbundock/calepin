@@ -130,6 +130,9 @@ Options:
       --serve
           Serve the website while watching a directory
 
+      --open
+          Open the served website in the default browser
+
       --host <HOST>
           Interface to bind when serving a watched website
           
@@ -170,6 +173,7 @@ Arguments:
 Options:
       --host <HOST>  Interface to bind [default: 127.0.0.1]
   -p, --port <PORT>  Port to bind (default: first free port from 8000)
+      --open         Open the website in the default browser
   -h, --help         Print help
 ```
 
