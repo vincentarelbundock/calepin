@@ -344,7 +344,7 @@ a:has(.calepin-nav-icon) {
   --radius-md: 0.5rem;
   --radius-lg: 0.5rem;
   --shadow-card: 0 10px 30px color-mix(in srgb, var(--pico-color) 8%, transparent);
-  --landing-hero-wordmark-width: 22rem;
+  --landing-hero-wordmark-width: 14rem;
   --max-width: 1120px;
 }
 
@@ -739,10 +739,10 @@ html[data-theme="dark"] {
 }
 
 .landing-hero h2 {
-  max-width: 47rem;
-  margin: 2.25rem auto 0;
-  font-size: 2.1rem;
-  line-height: 1.14;
+  max-width: 34rem;
+  margin: 1.5rem auto 0;
+  font-size: 1.28rem;
+  line-height: 1.22;
   text-align: center;
 }
 
@@ -1026,28 +1026,6 @@ html[data-theme="dark"] {
   max-width: 48rem;
   margin: 0.8rem 0 0;
   line-height: 1.55;
-}
-
-.landing-workflow-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 0.85rem;
-  margin-top: 1.25rem;
-}
-
-.landing-workflow-card {
-  min-height: 9rem;
-  padding: 1rem;
-}
-
-.landing-workflow-card h3 {
-  font-size: 0.95rem;
-}
-
-.landing-workflow-card p {
-  margin: 0.55rem 0 0;
-  font-size: 0.86rem;
-  line-height: 1.5;
 }
 
 .landing-product-preview {
@@ -1752,6 +1730,12 @@ html:not([data-theme]) {
   .landing-hero {
     padding-inline: 0;
     padding-bottom: 2.1rem;
+  }
+
+  .landing-hero h2 {
+    max-width: 28rem;
+    margin-top: 1.25rem;
+    font-size: 1.12rem;
   }
 
   .calepin-website-main--landing > h1,

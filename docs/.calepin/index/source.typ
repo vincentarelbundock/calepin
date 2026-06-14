@@ -41,9 +41,7 @@
       #html.elem("article", attrs: (class: "landing-feature-card landing-feature-card-large"))[
         #html.elem("div", attrs: (class: "landing-feature-content"))[
           #html.elem("h2")[Computational notebooks]
-          #html.elem("p")[
-            Write in Typst, execute code, and see results inline. Perfect for data analysis, reports, and publications with reproducible outputs, in the spirit of literate programming.
-          ]
+          #html.elem("p")[Write in Typst, execute code, and see results inline. Perfect for data analysis, reports, and publications with reproducible outputs, in the spirit of literate programming.]
           #checklist(
             [Typst-native authoring],
             [Executable code chunks],
@@ -67,16 +65,14 @@
       #html.elem("article", attrs: (class: "landing-feature-card landing-feature-card-large"))[
         #html.elem("div", attrs: (class: "landing-feature-content"))[
           #html.elem("h2")[Static website generator]
-          #html.elem("p")[
-            Build multi-page websites from Typst with ease.
-            Great for docs, portfolios, and project sites.
-          ]
+          #html.elem("p")[Build multi-page websites from Typst with ease. Great for docs, portfolios, and project sites.]
           #checklist(
-            [Multi-page sites from Typst],
             [Themes, templates and layouts],
-            [Reusable components],
+            [Reusable web components],
             [Fast incremental builds],
             [Live preview],
+            [Multi-lingual support],
+            [Blog listings and feeds],
             [Search],
             [...and much more!],
           )
@@ -99,7 +95,7 @@
 
 = Pure Typst
 
-Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typesetting system. We do not push your notebooks through a lossy Pandoc translation layer, and you do not need to learn yet another _ad hoc_ markdown variant.
+Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typesetting system. There is no special file format; notebooks and websites are just standard `.typ` documents. _Calepin_ does not push your text through a lossy Pandoc translation layer, and you do not need to learn yet another _ad hoc_ markdown variant.
 
 #html.elem("section", attrs: (class: "landing-editor-integration"))[
       #html.elem("div", attrs: (class: "landing-editor-copy"))[

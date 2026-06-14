@@ -34,7 +34,7 @@
 }
 
 html[data-theme="dark"] {
-  --color-bg: color-mix(in srgb, var(--pico-background-color) 92%, #0f2f34);
+  --color-bg: var(--pico-background-color);
   --color-surface: color-mix(in srgb, var(--pico-background-color) 86%, #17202a);
   --color-accent: #2ca9b8;
   --color-accent-dark: #67d4df;
@@ -43,7 +43,7 @@ html[data-theme="dark"] {
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) {
-    --color-bg: color-mix(in srgb, var(--pico-background-color) 92%, #0f2f34);
+    --color-bg: var(--pico-background-color);
     --color-surface: color-mix(in srgb, var(--pico-background-color) 86%, #17202a);
     --color-accent: #2ca9b8;
     --color-accent-dark: #67d4df;
