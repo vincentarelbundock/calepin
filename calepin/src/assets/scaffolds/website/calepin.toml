@@ -7,6 +7,9 @@ description = "A static website built from Typst documents."
 # favicon = "assets/favicon.ico"
 pdf = false
 
+[static]
+include = ["assets/**"]
+
 # Add top-bar links with [navbar]. External links can include icons.
 # [[navbar.item]]
 # position = "right"

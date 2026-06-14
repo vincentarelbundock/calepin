@@ -281,6 +281,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     typ_files.dedup();
     let fallback_files = fallback_pages(&src_dir, &languages);
     let page_fingerprints = fingerprint_files(&typ_files)?;
+    let static_files = discover_static_files(&src_dir, config.static_files.as_ref())?;
 
     let build_set = match &args.incremental_inputs {
         Some(inputs) => {
@@ -349,6 +350,14 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         theme_stylesheet_path.as_deref(),
         default_favicon_path.as_deref(),
     );
+    let expected_outputs = if out_dir == src_dir {
+        expected_outputs
+    } else {
+        expected_outputs
+            .into_iter()
+            .chain(static_output_paths(&src_dir, &out_dir, &static_files))
+            .collect()
+    };
     let previous_manifest = load_manifest(&out_dir)?;
 
     if args.clean {
@@ -374,7 +383,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
 
     if out_dir != src_dir {
         if args.incremental_inputs.is_none() {
-            copy_assets(&src_dir, &out_dir)?;
+            copy_static_files(&src_dir, &out_dir, &static_files)?;
         }
         let source_files = if args.incremental_inputs.is_some() {
             build_set.clone()
@@ -705,6 +714,8 @@ struct WebsiteConfig {
     /// their `<website-metadata>`.
     pdf: Option<bool>,
     pages: Option<PagesConfig>,
+    #[serde(rename = "static")]
+    static_files: Option<StaticConfig>,
     navbar: Option<NavbarConfig>,
     sidebar: Option<SidebarConfig>,
 }
@@ -866,6 +877,13 @@ struct SidebarItemConfig {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 struct PagesConfig {
+    include: Vec<String>,
+    exclude: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default, deny_unknown_fields)]
+struct StaticConfig {
     include: Vec<String>,
     exclude: Vec<String>,
 }
@@ -1670,6 +1688,92 @@ fn discover_build_pages(src_dir: &Path, pages: Option<&PagesConfig>) -> Result<V
         }
     }
     Ok(files.into_iter().collect())
+}
+
+fn discover_static_files(
+    src_dir: &Path,
+    static_files: Option<&StaticConfig>,
+) -> Result<Vec<PathBuf>> {
+    let Some(static_files) = static_files else {
+        return Ok(Vec::new());
+    };
+    let include = static_patterns(&static_files.include, "static.include")?;
+    let exclude = static_patterns(&static_files.exclude, "static.exclude")?;
+    let all_files = iter_static_files(src_dir)?;
+    let mut files = BTreeSet::new();
+    for pattern in include {
+        let matches = if has_glob_chars(&pattern) {
+            all_files
+                .iter()
+                .filter(|path| wildcard_match(&pattern, &rel_posix(src_dir, path)))
+                .cloned()
+                .collect::<Vec<_>>()
+        } else {
+            let candidate = normalize_path(&src_dir.join(Path::new(&pattern)));
+            if candidate.is_file() {
+                vec![candidate]
+            } else if candidate.is_dir() {
+                all_files
+                    .iter()
+                    .filter(|path| path.starts_with(&candidate))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            } else {
+                cwarn!("static.include path does not exist: {}", pattern);
+                Vec::new()
+            }
+        };
+        for path in matches {
+            let rel = rel_posix(src_dir, &path);
+            if !exclude.iter().any(|pattern| wildcard_match(pattern, &rel)) {
+                files.insert(path);
+            }
+        }
+    }
+    Ok(files.into_iter().collect())
+}
+
+fn iter_static_files(src_dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut out = Vec::new();
+    collect_static_files(src_dir, src_dir, &mut out)?;
+    out.sort_by_key(|path| rel_posix(src_dir, path));
+    Ok(out)
+}
+
+fn collect_static_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
+        let entry = entry?;
+        let path = entry.path();
+        let rel = path.strip_prefix(root).unwrap_or(&path);
+        if rel.components().any(|component| {
+            component
+                .as_os_str()
+                .to_str()
+                .is_some_and(|name| SKIP_DIRS.contains(&name))
+        }) {
+            continue;
+        }
+        if path.is_dir() {
+            collect_static_files(root, &path, out)?;
+        } else if path.is_file() {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn static_patterns(patterns: &[String], key: &str) -> Result<Vec<String>> {
+    patterns
+        .iter()
+        .filter_map(|pattern| clean_optional_string(Some(pattern.as_str())))
+        .map(|pattern| {
+            let pattern = slash_path(Path::new(&pattern));
+            if !is_safe_output_route(&pattern) {
+                bail!("website `{key}` path must stay inside the source directory: {pattern}");
+            }
+            Ok(pattern)
+        })
+        .collect()
 }
 
 fn page_is_excluded(src_dir: &Path, path: &Path, pages: Option<&PagesConfig>) -> bool {
@@ -2838,7 +2942,7 @@ fn remove_unexpected_rendered_outputs_in(
         if first
             .as_os_str()
             .to_str()
-            .is_some_and(|name| name == "assets" || SKIP_DIRS.contains(&name))
+            .is_some_and(|name| SKIP_DIRS.contains(&name))
         {
             continue;
         }
@@ -2922,19 +3026,6 @@ fn clear_previous_outputs(src_dir: &Path, out_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn copy_assets(src_dir: &Path, out_dir: &Path) -> Result<()> {
-    let assets = src_dir.join("assets");
-    if !assets.is_dir() {
-        return Ok(());
-    }
-    let target = out_dir.join("assets");
-    if target.exists() {
-        fs::remove_dir_all(&target)
-            .with_context(|| format!("failed to remove {}", target.display()))?;
-    }
-    copy_dir_all(&assets, &target)
-}
-
 fn copy_typ_sources(src_dir: &Path, out_dir: &Path, typ_files: &[PathBuf]) -> Result<()> {
     for input_path in typ_files {
         let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
@@ -2954,19 +3045,39 @@ fn copy_typ_sources(src_dir: &Path, out_dir: &Path, typ_files: &[PathBuf]) -> Re
     Ok(())
 }
 
-fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
-    fs::create_dir_all(dst).with_context(|| format!("failed to create {}", dst.display()))?;
-    for entry in fs::read_dir(src).with_context(|| format!("failed to read {}", src.display()))? {
-        let entry = entry?;
-        let path = entry.path();
-        let target = dst.join(entry.file_name());
-        if path.is_dir() {
-            copy_dir_all(&path, &target)?;
-        } else {
-            fs::copy(&path, &target).with_context(|| {
-                format!("failed to copy {} to {}", path.display(), target.display())
-            })?;
+fn static_output_paths(
+    src_dir: &Path,
+    out_dir: &Path,
+    static_files: &[PathBuf],
+) -> BTreeSet<PathBuf> {
+    static_files
+        .iter()
+        .map(|path| {
+            let rel = path.strip_prefix(src_dir).unwrap_or(path);
+            out_dir.join(rel)
+        })
+        .collect()
+}
+
+fn copy_static_files(src_dir: &Path, out_dir: &Path, static_files: &[PathBuf]) -> Result<()> {
+    for input_path in static_files {
+        let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
+        let target = out_dir.join(rel);
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create {}", parent.display()))?;
         }
+        if target.is_dir() {
+            fs::remove_dir_all(&target)
+                .with_context(|| format!("failed to remove {}", target.display()))?;
+        }
+        fs::copy(input_path, &target).with_context(|| {
+            format!(
+                "failed to copy static file {} to {}",
+                input_path.display(),
+                target.display()
+            )
+        })?;
     }
     Ok(())
 }
@@ -3281,6 +3392,31 @@ mod tests {
     }
 
     #[test]
+    fn static_config_parses_include_exclude_and_rejects_unknown_fields() {
+        let config = website_config_from_toml(
+            r#"
+[static]
+include = ["assets/**", "robots.txt"]
+exclude = ["assets/private/**"]
+"#,
+        );
+        let static_files = config.static_files.unwrap();
+
+        assert_eq!(
+            static_files.include,
+            vec!["assets/**".to_string(), "robots.txt".to_string()]
+        );
+        assert_eq!(static_files.exclude, vec!["assets/private/**".to_string()]);
+        assert!(try_website_config_from_toml(
+            r#"
+[static]
+copy = ["assets/**"]
+"#
+        )
+        .is_err());
+    }
+
+    #[test]
     fn favicon_config_parses_and_defaults_to_generated_asset() {
         let src = Path::new("/site/docs");
         let config = website_config_from_toml(r#"favicon = "assets/favicon.ico""#);
@@ -3581,6 +3717,79 @@ favicon = "assets/favicon.ico"
                 .map(|path| rel_posix(src, path))
                 .collect::<Vec<_>>(),
             vec!["index.typ"]
+        );
+    }
+
+    #[test]
+    fn discover_static_files_includes_files_dirs_and_globs_then_excludes() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::create_dir_all(src.join("assets/private")).unwrap();
+        fs::create_dir_all(src.join("downloads")).unwrap();
+        fs::write(src.join("assets/logo.svg"), "<svg></svg>").unwrap();
+        fs::write(src.join("assets/private/draft.svg"), "<svg></svg>").unwrap();
+        fs::write(src.join("downloads/manual.pdf"), "pdf").unwrap();
+        fs::write(src.join("downloads/notes.txt"), "notes").unwrap();
+        fs::write(src.join("robots.txt"), "User-agent: *").unwrap();
+        fs::create_dir_all(src.join(".calepin")).unwrap();
+        fs::write(src.join(".calepin/generated.css"), "body {}").unwrap();
+        let config = StaticConfig {
+            include: vec![
+                "assets".to_string(),
+                "downloads/*.pdf".to_string(),
+                "robots.txt".to_string(),
+                ".calepin/**".to_string(),
+            ],
+            exclude: vec!["assets/private/**".to_string()],
+        };
+
+        let files = discover_static_files(src, Some(&config)).unwrap();
+        let rels = files
+            .iter()
+            .map(|path| rel_posix(src, path))
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            rels,
+            vec![
+                "assets/logo.svg".to_string(),
+                "downloads/manual.pdf".to_string(),
+                "robots.txt".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn discover_static_files_rejects_paths_outside_source_directory() {
+        let config = StaticConfig {
+            include: vec!["../secret.txt".to_string()],
+            exclude: Vec::new(),
+        };
+
+        let err = discover_static_files(Path::new("/site/docs"), Some(&config)).unwrap_err();
+
+        assert!(err.to_string().contains("source directory"));
+    }
+
+    #[test]
+    fn copy_static_files_preserves_source_relative_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let out = temp.path().join("public");
+        fs::create_dir_all(src.join("assets")).unwrap();
+        fs::write(src.join("assets/logo.svg"), "<svg></svg>").unwrap();
+        fs::write(src.join("robots.txt"), "User-agent: *").unwrap();
+        let files = vec![src.join("assets/logo.svg"), src.join("robots.txt")];
+
+        copy_static_files(&src, &out, &files).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(out.join("assets/logo.svg")).unwrap(),
+            "<svg></svg>"
+        );
+        assert_eq!(
+            fs::read_to_string(out.join("robots.txt")).unwrap(),
+            "User-agent: *"
         );
     }
 
@@ -4618,7 +4827,7 @@ favicon = "assets/favicon.ico"
     }
 
     #[test]
-    fn remove_unexpected_rendered_outputs_keeps_assets() {
+    fn remove_unexpected_rendered_outputs_uses_expected_outputs_for_assets() {
         let temp = tempfile::tempdir().unwrap();
         let expected_page = temp.path().join("index.html");
         let stale_page = temp.path().join("old.html");
@@ -4627,7 +4836,7 @@ favicon = "assets/favicon.ico"
         fs::write(&expected_page, "index").unwrap();
         fs::write(&stale_page, "old").unwrap();
         fs::write(&asset_pdf, "asset").unwrap();
-        let expected = BTreeSet::from([expected_page.clone()]);
+        let expected = BTreeSet::from([expected_page.clone(), asset_pdf.clone()]);
 
         remove_unexpected_rendered_outputs(temp.path(), &expected).unwrap();
 

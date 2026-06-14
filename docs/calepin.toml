@@ -6,6 +6,9 @@ logo_alt = "Calepin"
 pdf = true
 theme = "calepin"
 
+[static]
+include = ["assets/**"]
+
 [navbar]
 
 [[navbar.item]]

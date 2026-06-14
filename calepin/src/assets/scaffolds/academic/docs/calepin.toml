@@ -6,6 +6,9 @@ description = "Research, teaching, publications, and notes."
 # favicon = "assets/favicon.ico"
 pdf = false
 
+[static]
+include = ["assets/**"]
+
 [sidebar]
 
 [[sidebar.section]]
