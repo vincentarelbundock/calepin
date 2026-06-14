@@ -4,10 +4,6 @@ Items with direct Calepin equivalents have been removed. This keeps Zola feature
 that are still absent as built-in Calepin static-site-generator features.
 
 - [ ] link checker
-- [ ] feed generation
-  - feed filenames
-  - item limit
-  - atom.xml rss.xml
 - [ ] calepin new notebook (with default author, date, etc. would be useful for new blog posts)
 - [ ] syntax highlighting. Consistent in raw chunks and calepin processed chunks. PDF and HTML. Light vs. Dark
 
@@ -40,25 +36,12 @@ that are still absent as built-in Calepin static-site-generator features.
   - Generates taxonomy list pages.
   - Generates taxonomy term pages.
   - Supports taxonomy term pagination.
-  - Supports taxonomy term feeds.
   - Supports language-specific taxonomies.
   - Allows taxonomy rendering to be disabled with `render = false`.
   - Does not slugify taxonomy names.
   - Slugifies taxonomy terms by default.
   - Treats taxonomy terms as case-insensitive when they produce the same slug.
   - Supports `taxonomy_root` URL prefixes.
-
-- **Feeds**
-  - Generate site-wide feeds.
-  - Enable feeds with `generate_feeds = true`.
-  - Default feed filename is `atom.xml`.
-  - Built-in Atom 1.0 template.
-  - Built-in RSS 2.0 template.
-  - Support custom feed filenames.
-  - Support custom feed templates.
-  - Configure feed item limit.
-  - Include only dated pages in feeds.
-  - Generate taxonomy term feeds when taxonomy `feed = true`.
 
 - **Deployment documentation**
   - Deployment guide for Sourcehut Pages.
@@ -93,3 +76,47 @@ that are still absent as built-in Calepin static-site-generator features.
   - Use slugification strategy `off`.
   - Preserve or strip date prefixes in paths with `paths_keep_dates`.
   - Use escaping when relaxed slugification affects internal links.
+
+## Roadmap notes (Typst eval)
+
+Calepin could eventually replace its current multi-pass `typst query` flow with `typst eval --in` for structured document introspection.
+
+The current flow uses three query passes for:
+
+- setup and website metadata (`<calepin-config>`, `<website-metadata>`),
+- executable chunk discovery (raw blocks, fence labels, `<calepin-chunk>`),
+- page-sync anchors (`<calepin-page>`).
+
+A structured single-call replacement could look like:
+
+```sh
+typst query input.typ '<calepin-chunk>' ...
+typst eval --in input.typ 'query(<calepin-chunk>)' --format=json ...
+```
+
+For example:
+
+```typ
+(
+  setup: query(<calepin-config>).map(it => it.value),
+  page_meta: query(<website-metadata>).first().value,
+  chunks: query(raw.where(block: true).or(<calepin-fence-label>).or(<calepin-chunk>)),
+)
+```
+
+This could also simplify page sync by shaping results in Typst:
+
+```typ
+query(<calepin-page>).map(it => (
+  label: it.value.label,
+  page: it.location().page(),
+))
+```
+
+Proposed migration steps:
+
+1. Add a `typst_eval` helper alongside the existing `typst_query` helper.
+2. Use `eval` only when the configured Typst executable supports it.
+3. Migrate page-sync first.
+4. Migrate setup/page metadata and chunk discovery to a single structured eval call.
+5. Keep `typst query` as fallback until Typst 0.15+ is the minimum supported version.
