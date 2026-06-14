@@ -31,6 +31,10 @@ theme = "academic"
 # Default: false.
 pdf = false
 
+# Minify generated HTML, including inline CSS and JavaScript.
+# Default: false.
+minify = true
+
 # Logo image path for the top bar.
 # Default: none.
 logo = "assets/logo.svg"
@@ -44,7 +48,7 @@ logo_alt = "My Site"
 favicon = "assets/favicon.ico"
 ```
 
-Use `--format html` for a one-time HTML-only build, regardless of `pdf`.
+Use `--format html` for a one-time HTML-only build, regardless of `pdf`. Use `--minify` to minify HTML for a single build without changing `calepin.toml`.
 
 Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
 

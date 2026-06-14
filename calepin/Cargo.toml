@@ -21,6 +21,7 @@ serde_json = "1"
 toml = "0.8"
 anyhow = "1"
 minijinja = "2"
+minify-html = "0.18.1"
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 indexmap = { version = "2.13.0", features = ["serde"] }
 mimalloc = "0.1"

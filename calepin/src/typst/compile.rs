@@ -5,7 +5,7 @@ use std::process::Command;
 
 use crate::html::{
     apply_html_theme_file, apply_html_theme_file_with_site_context, inline_html_images_file,
-    prepare_html_theme, SiteContextInput,
+    minify_html_file, prepare_html_theme, SiteContextInput,
 };
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
@@ -27,6 +27,8 @@ pub struct CompileOptions<'a> {
     /// Site-relative html path of the page being rendered, exposed as the
     /// `calepin-current-href` input.
     pub current_href_input: Option<&'a str>,
+    /// Minify final HTML output after theming and asset processing.
+    pub minify_html: bool,
 }
 
 /// Optional reserved `--input` values forwarded to the typst subcommand.
@@ -271,6 +273,9 @@ pub fn compile_with_typst(
             )?;
         }
         inline_html_images_file(&path, &layout.root)?;
+        if options.minify_html {
+            minify_html_file(&path)?;
+        }
     }
     Ok(())
 }

@@ -128,7 +128,7 @@ Cursor, and Positron (via the Microsoft and VSX marketplaces).
 = Example
 <example>
 
-_Calepin_ notebooks are standard Typst documents with a few extra features. 
+_Calepin_ notebooks are standard Typst documents with a few extra features.
 
 == Preamble
 <preamble>
@@ -234,7 +234,7 @@ flags can stay in the same command.
 
 ```sh
 # open pdf in system viewer
-calepin compile paper.typ -- --open 
+calepin compile paper.typ -- --open
 
 # set path to font directory
 calepin compile paper.typ -- --font-path fonts

@@ -177,6 +177,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             site_context: None,
             pages_input: None,
             current_href_input: None,
+            minify_html: args.minify,
         },
     )?;
     Ok(())

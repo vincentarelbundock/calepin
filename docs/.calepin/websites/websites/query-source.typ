@@ -79,3 +79,16 @@ Add `--serve` to run the local server while watching; it uses the same `--host`,
 ```sh
 calepin watch my_site/ my_site/ --serve --open
 ```
+
+= Features
+
+- Directory builds from Typst source files.
+- In-place or separate output directories.
+- Sidebar and navbar navigation from configuration or discovered pages.
+- HTML output with optional PDF twins.
+- Page metadata and `calepin.pages()` for listings and indexes.
+- Multilingual site navigation.
+- Static file copying for assets, downloads, and host-specific files.
+- Generated `sitemap.xml` and `robots.txt`, with template overrides for `robots.txt`.
+- Optional HTML minification, including inline CSS and JavaScript.
+- Local serving and incremental watch builds.

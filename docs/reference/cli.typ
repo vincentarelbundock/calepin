@@ -85,6 +85,9 @@ Options:
       --theme <THEME>
           Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false
 
+      --minify
+          Minify HTML output after theming and asset processing
+
       --config <CONFIG>
           Path to project config TOML
 

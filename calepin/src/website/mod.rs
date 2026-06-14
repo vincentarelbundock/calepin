@@ -19,7 +19,8 @@ use xxhash_rust::xxh3::xxh3_64;
 use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
 use crate::html::{
-    write_html_theme_stylesheet, SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection,
+    minify_html_file, write_html_theme_stylesheet, SiteContextInput, SiteLanguageEntry,
+    SiteNavEntry, SiteNavSection,
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{
@@ -98,6 +99,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         typst_args: args.typst_args,
         incremental_inputs: None,
         clean: true,
+        minify_html: args.minify,
     })?;
     Ok(())
 }
@@ -131,6 +133,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         typst_args: args.typst_args.clone(),
         incremental_inputs: None,
         clean: true,
+        minify_html: false,
     };
     let initial = build_site(options.clone())?;
     let live = serve::LiveReload::new();
@@ -170,6 +173,7 @@ struct WebsiteBuildOptions {
     typst_args: Vec<String>,
     incremental_inputs: Option<Vec<PathBuf>>,
     clean: bool,
+    minify_html: bool,
 }
 
 /// Per-page metadata exposed through the `<website-metadata>` Typst label,
@@ -338,6 +342,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .as_ref()
         .map(|_| out_dir.join("sitemap.xml"));
     let robots_path = config.robots_enabled().then(|| out_dir.join(ROBOTS_FILE));
+    let minify_html = args.minify_html || config.minify.unwrap_or(false);
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
     let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
     let mut icon_cache = IconCache::new(src_dir.join(ICON_CACHE_DIR));
@@ -420,6 +425,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             theme_stylesheet: theme_stylesheet_path.map(|path| slash_path(&path)),
             parallelism: args.parallelism,
             typst_args: args.typst_args,
+            minify_html,
         },
         build_set,
         &site,
@@ -722,6 +728,8 @@ struct WebsiteConfig {
     /// Also render a PDF for every page; pages can override with `pdf` in
     /// their `<website-metadata>`.
     pdf: Option<bool>,
+    /// Minify generated HTML after theming and website metadata injection.
+    minify: Option<bool>,
     robots: Option<RawRobotsConfig>,
     pages: Option<PagesConfig>,
     #[serde(rename = "static")]
@@ -1245,6 +1253,7 @@ struct BuildContext {
     theme_stylesheet: Option<String>,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
+    minify_html: bool,
 }
 
 fn load_website_config(path: &Path, required: bool) -> Result<WebsiteConfig> {
@@ -2841,9 +2850,13 @@ fn render_document(
             site_context: Some(&site_context),
             pages_input: Some(PAGES_INDEX_REF),
             current_href_input: Some(&current_href),
+            minify_html: false,
         },
     )?;
     embed_source_blob(&html_output, input_path)?;
+    if context.minify_html {
+        minify_html_file(&html_output)?;
+    }
 
     if context.pdf_files.contains(input_path) {
         let pdf_href = page_info
@@ -2863,6 +2876,7 @@ fn render_document(
                 site_context: None,
                 pages_input: Some(PAGES_INDEX_REF),
                 current_href_input: Some(&current_href),
+                minify_html: false,
             },
         )?;
     }
@@ -3563,6 +3577,15 @@ allow = false
 "#
         )
         .is_err());
+    }
+
+    #[test]
+    fn minify_config_defaults_disabled_and_accepts_toggle() {
+        let config = website_config_from_toml("");
+        assert_eq!(config.minify, None);
+
+        let config = website_config_from_toml("minify = true");
+        assert_eq!(config.minify, Some(true));
     }
 
     #[test]

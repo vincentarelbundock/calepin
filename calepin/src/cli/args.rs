@@ -119,6 +119,10 @@ pub struct CompileArgs {
     #[arg(long = "theme", alias = "template")]
     pub theme: Option<String>,
 
+    /// Minify HTML output after theming and asset processing
+    #[arg(long)]
+    pub minify: bool,
+
     #[command(flatten)]
     pub common: CommonArgs,
 
@@ -300,6 +304,26 @@ mod tests {
         match cli.command {
             Command::Compile(args) => {
                 assert_eq!(args.theme, Some("calepin".to_string()));
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_typst_compile_args_minify() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "--format",
+            "html",
+            "--minify",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert!(args.minify);
             }
             other => panic!("expected compile command, got {other:?}"),
         }

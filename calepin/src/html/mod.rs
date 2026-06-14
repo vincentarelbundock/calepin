@@ -1,4 +1,5 @@
 mod assets;
+mod minify;
 mod syntax;
 mod theme;
 
@@ -7,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use syntax::HtmlSyntaxTheme;
 
+pub(crate) use minify::minify_html_file;
 pub(crate) use theme::{SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection};
 
 const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
@@ -130,6 +132,34 @@ pub(crate) fn write_html_theme_stylesheet(
     }
     std::fs::write(&path, css).with_context(|| format!("failed to write {}", path.display()))?;
     Ok(true)
+}
+
+#[cfg(test)]
+mod minify_tests {
+    use super::minify::minify_html;
+
+    #[test]
+    fn minifies_html_css_and_js() {
+        let html = r#"<!doctype html>
+<html>
+  <head>
+    <style>
+      body { color: red; }
+    </style>
+  </head>
+  <body>
+    <p>  Hello, world!  </p>
+    <script>const value = 1 + 2;</script>
+  </body>
+</html>
+"#;
+
+        let minified = minify_html(html);
+
+        assert!(minified.len() < html.len());
+        assert!(minified.contains("<p>Hello, world!"));
+        assert!(!minified.contains("\n  <body>"));
+    }
 }
 
 fn resolve_setup_theme_path(root: &Path, value: &str) -> PathBuf {

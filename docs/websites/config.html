@@ -1,1077 +1,140 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Configuration and metadata</title>
-    
-    
-    <meta name="description" content="A Typst-native computational notebook and static website generator.">
-    <meta property="og:description" content="A Typst-native computational notebook and static website generator.">
-    
-    
-    <meta property="og:site_name" content="Calepin">
-    
-    
-    <meta property="og:title" content="Configuration and metadata | Calepin">
-    
-    
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/websites/config.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/websites/config.html">
-    
-    
-    <link rel="icon" href="../.calepin/favicon.svg">
-    
-    
-    <meta name="color-scheme" content="light dark">
-    <script>
-(() => {
-  "use strict";
-  const storageKey = "calepin-website-theme";
-  const param = "theme";
-  const normalize = (value) => (value === "light" || value === "dark" ? value : "");
-  const root = document.documentElement;
+<!doctype html><html lang=en><head><meta charset=utf-8><meta content="width=device-width,initial-scale=1" name=viewport><title>Configuration and metadata</title><meta content="A Typst-native computational notebook and static website generator." name=description><meta content="A Typst-native computational notebook and static website generator." property=og:description><meta content=Calepin property=og:site_name><meta content="Configuration and metadata | Calepin" property=og:title><link href=https://vincentarelbundock.github.io/calepin/websites/config.html rel=canonical><meta content=https://vincentarelbundock.github.io/calepin/websites/config.html property=og:url><link href=../.calepin/favicon.svg rel=icon><meta content="light dark" name=color-scheme><script>(()=>{let storageKey=`calepin-website-theme`,param=`theme`,normalize=value=>value===`light`||value===`dark`?value:``,root=document.documentElement,theme=``;try{theme=normalize(new URL(window.location.href).searchParams.get(`theme`)||``)}catch{theme=``}if(!theme)try{theme=normalize(localStorage.getItem(`calepin-website-theme`)||``)}catch{theme=``}theme&&(root.dataset.theme=theme,root.style.colorScheme=theme)})();</script><link href=https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css rel=stylesheet><link href=../.calepin/calepin-website.css rel=stylesheet><script id=calepin-website-source-data type=application/json>"#set document(title: [Configuration and metadata])\n\n#title()\n\nWebsite settings live in `calepin.toml` at the root of your website source directory. Use `--config <path>` only when the config file lives somewhere else.\n\n= Basic settings\n\nA small site can start with:\n\n```toml\n# Site name shown by bundled themes and page metadata.\n# Default: none.\ntitle = \"My Site\"\n\n# Short site description for metadata and previews.\n# Default: none.\ndescription = \"A static website built from Typst documents.\"\n\n# Public site URL, used for sitemap.xml and canonical URLs.\n# Default: none.\nbase_url = \"https://example.com\"\n\n# Theme: \"calepin\", \"academic\", a local theme directory, or false for raw output.\n# Default: \"calepin\".\ntheme = \"academic\"\n\n# Render .pdf files for every page.\n# Default: false.\npdf = false\n\n# Minify generated HTML, including inline CSS and JavaScript.\n# Default: false.\nminify = true\n\n# Logo image path for the top bar.\n# Default: none.\nlogo = \"assets/logo.svg\"\n\n# Alternative text for the logo image. Defaults to `title` when omitted.\n# Default: none.\nlogo_alt = \"My Site\"\n\n# Browser favicon path. Omit this to use Calepin's generated default.\n# Default: \".calepin/favicon.svg\".\nfavicon = \"assets/favicon.ico\"\n```\n\nUse `--format html` for a one-time HTML-only build, regardless of `pdf`. Use `--minify` to minify HTML for a single build without changing `calepin.toml`.\n\nPaths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.\n\nPaths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image(\"/assets/diagram.svg\")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image(\"assets/diagram.svg\")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`; if no logo is set, bundled themes use `title` as the site name.\n\n= Robots.txt\n\n_Calepin_ writes `robots.txt` by default:\n\n```txt\nUser-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml\n```\n\nThe `Sitemap:` line is included when `base_url` is set. To disable generation:\n\n```toml\nrobots = false\n```\n\nor:\n\n```toml\n[robots]\nenabled = false\n```\n\nTo override the generated file, create `templates/robots.txt` in the website source directory. The template uses MiniJinja syntax and receives `config` and `sitemap_url`:\n\n```txt\nUser-agent: *\nDisallow: /drafts/\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}\n```\n\nFiles under `templates/` can be included or extended from the robots template:\n\n```txt\n{% extends \"base.txt\" %}\n{% block body %}\nUser-agent: *\nAllow: /\n{% endblock %}\n```\n\n= Static files\n\nUse `[static]` for files that should be copied to the built website without being rendered as Typst pages:\n\n```toml\n[static]\ninclude = [\n  \"assets/**\",\n  \"CNAME\",\n  \"downloads/**\",\n]\nexclude = [\n  \"assets/drafts/**\",\n]\n```\n\nEach included file keeps its source-relative path in the output directory: `assets/logo.svg` becomes `assets/logo.svg`, `CNAME` becomes `CNAME`, and `downloads/manual.pdf` becomes `downloads/manual.pdf`. `include` entries can be files, directories, or glob patterns. `exclude` patterns are applied after includes. Paths must stay inside the website source directory.\n\n= Navigation\n\n== Side bar\n\nThe sidebar is the main navigation for documentation-style sites. Configure it with `[sidebar]`; a section can list pages one by one:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  target = \"install.typ\"\n  label = \"Install\"\n```\n\nor include several pages with a glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nUse `target` for one link and `glob` for a list of source pages. A `target` ending in `.typ` and all `glob` entries point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site. Other `target` values are used as literal links, such as external URLs.\n\nIf you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.\n\nTitled sections are foldable: each page loads with the section that contains it open and the others folded, and readers can open more sections by hand. To keep every section expanded instead, disable folding:\n\n```toml\n[sidebar]\nfold = false\n```\n\nLabels can include icons:\n\n```toml\nlabel = \"{icon:lucide:download} Install\"\n```\n\nIf the prefix is omitted, _Calepin_ uses `lucide`, so `{icon:home}` means `{icon:lucide:home}`. Icons are downloaded during the build and cached under `.calepin/icons/`.\n\nIcon prefixes are Iconify collection names. Search available icons in the #link(\"https://icon-sets.iconify.design/\")[Iconify icon sets] browser. Common prefixes include `lucide`, `simple-icons`, `tabler`, `heroicons`, `material-symbols`, `carbon`, `ph`, and `bi`.\n\n== Top bar\n\nUse `[navbar]` for a small top navigation bar. External links, such as a GitHub repository, are regular navbar items:\n\n```toml\n[navbar]\n\n[[navbar.item]]\nposition = \"left\"\ntarget = \"index.typ\"\nlabel = \"Home\"\n\n[[navbar.item]]\nposition = \"right\"\ntarget = \"https://github.com/user/repo\"\nlabel = \"{icon:github} GitHub\"\n```\n\nNavbar items use `target` or `glob`. Use a `.typ` `target` or `glob` for internal source pages; use any other `target` for external links or a literal already-rendered URL. `position` can be `left`, `center`, or `right`.\n\n= Include or exclude pages\n\nUse `[pages]` for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:\n\n```toml\n[pages]\ninclude = [\"blog/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\nPut the page title in the document and keep website metadata for fields used by listings, routing, and output options:\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n)) <website-metadata>\n\n#title()\n```\n\n`index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.\n\n= Pages metadata\n\nAdd arbitrary page metadata with Typst's `#metadata` function and the `<website-metadata>` label. _Calepin_ reads this dictionary while building the site and attaches it to the page entry returned by `calepin.pages()`.\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n  author: \"Ada Lovelace\",\n  summary: \"A short release note for the new website.\",\n  draft: false,\n)) <website-metadata>\n\n#title()\n```\n\nUse `calepin.pages()` to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.\n\n```typ\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#let posts = calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .filter(p => not p.meta.at(\"draft\", default: false))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev()\n\n#for post in posts [\n  - #link(post.href)[#post.title] \\\n    #post.meta.at(\"summary\", default: [])\n]\n```\n\n`calepin.pages()` returns one dictionary per built page, excluding `404.typ`. _Calepin_ creates these entry fields:\n\n- `path`: source path relative to the website root\n- `href`: rendered HTML path relative to the current page\n- `title`: resolved page title\n- `language`: language code, or `none` when languages are not configured\n- `translation_key`: resolved key used to connect translated pages\n- `translations`: matching pages in other languages, or an empty dictionary\n- `pdf`: PDF path, or `none` when the page has no PDF output\n- `meta`: the page's `<website-metadata>` dictionary, or an empty dictionary\n\nOnly `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.\n\nThere is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.\n\n= Multilingual sites\n\nConfigure languages with one content directory per language:\n\n```toml\ndefault_language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent_dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent_dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; other languages use their language code as a URL prefix, such as `fr/about.html`.\n\nUse page metadata when translations move or need different slugs:\n\n```typ\n#set document(title: [À propos])\n\n#metadata((\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) <website-metadata>\n\n#title()\n```\n\nWhen more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.\n"</script><body><header class=calepin-website-topbar><nav><ul><li><button aria-label="Toggle navigation menu" class="calepin-website-nav-toggle outline secondary" aria-controls=calepin-website-sidebar aria-expanded=false type=button>☰</button><li><a aria-label="Calepin home" class="calepin-website-topbrand contrast" href=../index.html> <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjQuOTA4Mjc5bW0iCiAgIGhlaWdodD0iMjUuMjMwNjg4bW0iCiAgIHZpZXdCb3g9IjAgMCAyNC45MDgyOCAyNS4yMzA2ODgiCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzEiCiAgIGlua3NjYXBlOnZlcnNpb249IjEuNC40IChkY2FmM2U3LCAyMDI2LTA1LTA1KSIKICAgc29kaXBvZGk6ZG9jbmFtZT0ibG9nb19zaG9ydF8yLnN2ZyIKICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSJsb2dvX2xvbmdfdGV4dF8yLnBuZyIKICAgaW5rc2NhcGU6ZXhwb3J0LXhkcGk9Ijk2IgogICBpbmtzY2FwZTpleHBvcnQteWRwaT0iOTYiCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iY3VycmVudENvbG9yIj4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgaW5rc2NhcGU6em9vbT0iMC45ODY5MTc1MiIKICAgICBpbmtzY2FwZTpjeD0iMTUyLjQ5NTAxIgogICAgIGlua3NjYXBlOmN5PSIyNjYuNDg2MyIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjE1MTIiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iOTIxIgogICAgIGlua3NjYXBlOndpbmRvdy14PSIwIgogICAgIGlua3NjYXBlOndpbmRvdy15PSIzMyIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIwIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSIKICAgICB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuOTUwODY5LC00NC4wNjExMTcpIj4KICAgIDxwYXRoCiAgICAgICBkPSJtIDU5LjE4NjY2OCw3Ni41MzgyMzEgaCAtMC41NjUyNzEgcSAtMC4yNjM3OTIsLTAuMzAxNDc4IC0wLjYwMjk1NSwtMC41Mjc1ODYgLTAuMzM5MTYyLC0wLjI2Mzc5MyAtMS4wNTUxNzEsLTAuMjYzNzkzIC0wLjU2NTI3MSwwIC0xLjI0MzU5NSwwLjIyNjEwOCAtMC42NDA2NCwwLjE4ODQyNCAtMS41MDczODgsMC40NTIyMTcgLTAuODI5MDY0LDAuMjYzNzkzIC0xLjg4NDIzNSwwLjQ1MjIxNiAtMS4wNTUxNzIsMC4yMjYxMDggLTIuMzM2NDUyLDAuMjI2MTA4IC0yLjM3NDEzNiwwIC00LjYzNTIxOCwtMC44NjY3NDggLTIuMjIzMzk3LC0wLjg2Njc0OCAtNC4yMjA2ODYsLTIuODI2MzUyIC0xLjg0NjU1MSwtMS44NDY1NTEgLTMuMDkwMTQ2LC00LjM3MTQyNSAtMS4yNDM1OTUsLTIuNTI0ODc1IC0xLjI0MzU5NSwtNS44NDExMjkgMCwtMi44MjYzNTIgMS4wMTc0ODcsLTUuMzg4OTEyIDEuMDE3NDg3LC0yLjU2MjU2IDIuODI2MzUzLC00LjUyMjE2NCAxLjgwODg2NSwtMS45NTk2MDQgNC4yNTgzNzEsLTMuMDkwMTQ1IDIuNDQ5NTA1LC0xLjE2ODIyNiA1LjM1MTIyNywtMS4xNjgyMjYgMS4xNjgyMjYsMCAyLjA3MjY1OSwwLjIyNjEwOCAwLjkwNDQzMiwwLjIyNjEwOCAxLjYyMDQ0MiwwLjUyNzU4NiAwLjcxNjAwOSwwLjI2Mzc5MyAxLjMxODk2NCwwLjQ4OTkwMSAwLjYwMjk1NSwwLjIyNjEwOCAxLjE2ODIyNiwwLjIyNjEwOCAwLjc1MzY5NCwwIDEuMDU1MTcxLC0wLjIyNjEwOCAwLjMzOTE2MywtMC4yNjM3OTMgMC42MDI5NTYsLTAuNTY1MjcxIGggMC41NjUyNyB2IDcuNTM2OTQgSCA1OC4yNDQ1NSBRIDU3LjkwNTM4OCw1NS44MTE2NDYgNTcuMzc3ODAyLDU0LjQxNzMxMiA1Ni44NTAyMTcsNTMuMDIyOTc4IDU1LjkwODA5OSw1MS45Njc4MDYgNTQuOTY1OTgyLDUwLjg3NDk1IDUzLjQ5NjI3OCw1MC4yMzQzMSA1Mi4wNjQyNiw0OS41NTU5ODYgNDkuOTE2MjMyLDQ5LjU1NTk4NiBxIC0xLjk5NzI4OSwwIC0zLjQyOTMwOCwwLjY0MDY0IC0xLjQzMjAxOSwwLjYwMjk1NSAtMi40MTE4MjEsMS42NTgxMjYgLTAuOTc5ODAyLDEuMDE3NDg3IC0xLjU4Mjc1NywyLjQxMTgyMSAtMC41NjUyNzEsMS4zNTY2NDkgLTAuODY2NzQ4LDIuOTAxNzIyIC0wLjMwMTQ3OCwxLjUwNzM4OCAtMC40MTQ1MzIsMy4wOTAxNDUgLTAuMDc1MzcsMS41NDUwNzMgLTAuMDc1MzcsMi45Mzk0MDcgMCwzLjk1Njg5NCAwLjY0MDY0LDYuNTU3MTM4IDAuNjQwNjM5LDIuNjAwMjQ0IDEuNzcxMTgsNC4xMDc2MzIgMS4xNjgyMjYsMS41MDczODggMi43ODg2NjgsMi4xMTAzNDMgMS42MjA0NDIsMC42MDI5NTYgMy41ODAwNDcsMC42MDI5NTYgMi41MjQ4NzUsMCA0LjA2OTk0NywtMC43MTYwMSAxLjU0NTA3MywtMC43MTYwMDkgMi40ODcxOTEsLTEuODQ2NTUgMC45NDIxMTcsLTEuMTY4MjI2IDEuNDMyMDE4LC0yLjYwMDI0NCAwLjQ4OTkwMSwtMS40Njk3MDQgMC44NjY3NDgsLTIuOTAxNzIyIGggMC40MTQ1MzIgeiIKICAgICAgIGlkPSJ0ZXh0OCIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MzcuNjg0N3B4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90LCBOb3JtYWwnO2xldHRlci1zcGFjaW5nOi0xLjcwNzU4cHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi4yMjU0NjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMS4xMTI3MzYyLDAuODk4Njg1NikiCiAgICAgICBhcmlhLWxhYmVsPSJDIiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpub3JtYWw7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6MzMuODY2N3B4O2ZvbnQtZmFtaWx5OkNvdXJpZXI7LWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjpDb3VyaWVyO2xldHRlci1zcGFjaW5nOjEuMTU4ODdweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNTUuMjI2NjY1IgogICAgICAgeT0iNTQuNjkwNDgzIgogICAgICAgaWQ9InRleHQzIj48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuMyIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6bm9ybWFsO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1mYW1pbHk6Q291cmllcjstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOkNvdXJpZXI7c3Ryb2tlLXdpZHRoOjEuOTk5OTkiCiAgICAgICAgIHg9IjU1LjIyNjY2NSIKICAgICAgICAgeT0iNTQuNjkwNDgzIiAvPjwvdGV4dD4KICAgIDxwYXRoCiAgICAgICBzdHlsZT0iZm9udC13ZWlnaHQ6NTAwO2ZvbnQtc2l6ZToxMi4zNjc3cHg7Zm9udC1mYW1pbHk6J0hhc2tsdWcgTmVyZCBGb250JzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidIYXNrbHVnIE5lcmQgRm9udCwgTWVkaXVtJztsZXR0ZXItc3BhY2luZzotMS45MjE0MXB4O3dvcmQtc3BhY2luZzowcHg7c3Ryb2tlLXdpZHRoOjIuNTA0MTY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICBkPSJtIDUyLjc0OTM4MSw2MC4yMDM2MzUgdiAtMS4xNTAxOTYgbCAtMy42MTEzNjksLTIuMzg2OTY2IHYgLTAuMDQ5NDcgbCAzLjYxMTM2OSwtMi4zODY5NjcgViA1My4wNzk4NCBsIC00LjY2MjYyMywzLjExNjY2MSB2IDAuODkwNDc0IHogbSAwLjUxNTAzMSwyLjUyMzAxMSBoIDEuMDYzNjIyIEwgNTguMzg0NjQsNTEuOTY2NzQ3IGggLTEuMDYzNjIzIHogbSA1LjYzNTI1OSwtMi41MjMwMTEgNC42NjI2MjMsLTMuMTE2NjYgViA1Ni4xOTY1MDEgTCA1OC44OTk2NzEsNTMuMDc5ODQgdiAxLjE1MDE5NiBsIDMuNjExMzY4LDIuMzg2OTY3IHYgMC4wNDk0NyBsIC0zLjYxMTM2OCwyLjM4Njk2NiB6IgogICAgICAgaWQ9InRleHQ0IgogICAgICAgYXJpYS1sYWJlbD0iJmx0Oy8mZ3Q7IiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpib2xkO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1zaXplOjkuODc3NzdweDtmb250LWZhbWlseTonRGlkb3QgSFRGJzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidEaWRvdCBIVEYgQm9sZCc7Zm9udC12YXJpYW50LWxpZ2F0dXJlczpub3JtYWw7Zm9udC12YXJpYW50LWNhcHM6bm9ybWFsO2ZvbnQtdmFyaWFudC1udW1lcmljOm5vcm1hbDtmb250LXZhcmlhbnQtZWFzdC1hc2lhbjpub3JtYWw7bGV0dGVyLXNwYWNpbmc6LTEuNTM0NThweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgeT0iNzguMjgyNDYzIgogICAgICAgaWQ9InRleHQ1Ij48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuNSIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6Ym9sZDtmb250LXN0cmV0Y2g6bm9ybWFsO2ZvbnQtZmFtaWx5OidEaWRvdCBIVEYnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90IEhURiBCb2xkJztzdHJva2Utd2lkdGg6MS45OTk5OSIKICAgICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgICB5PSI3OC4yODI0NjMiIC8+PC90ZXh0PgogIDwvZz4KPC9zdmc+Cg==" alt=Calepin class=calepin-website-topbrand-logo data-inline-svg=1> </a></ul><ul><li><a aria-label=https://github.com/vincentarelbundock/calepin href=https://github.com/vincentarelbundock/calepin><span class=calepin-nav-icon><svg viewbox="0 0 24 24" height=1em width=1em xmlns=http://www.w3.org/2000/svg><g fill=none stroke=currentColor stroke-linecap=round stroke-linejoin=round stroke-width=2><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span></a><li><button class="calepin-website-theme-button outline secondary" aria-label=Theme data-calepin-theme-param=theme data-calepin-theme-storage-key=calepin-website-theme data-calepin-theme-toggle title=Theme type=button>Theme</button><li><select aria-label="Choose rendered HTML, source, or PDF view" class=calepin-website-view-mode id=calepin-website-view-mode><option value=rendered>HTML<option value=source>Source<option value=pdf>PDF</select></ul></nav></header><div class="calepin-website-shell grid"><div aria-hidden=true class=calepin-website-nav-backdrop></div><aside class=calepin-website-sidebar id=calepin-website-sidebar><nav aria-label=Documentation><p><strong>Getting started</strong><ul><li><a aria-label=Home href=../index.html>Home</a><li><a aria-label=Install href=../getting-started/install.html>Install</a><li><a aria-label=Configuration href=../getting-started/config.html>Configuration</a></ul><p><strong>Notebooks</strong><ul><li><a aria-label="Code execution" href=../notebooks/code_execution.html>Code execution</a><li><a aria-label="Figures and tables" href=../notebooks/figures.html>Figures and tables</a><li><a aria-label=Cross-references href=../notebooks/cross-references.html>Cross-references</a><li><a aria-label=Parameters href=../notebooks/parameters.html>Parameters</a><li><a aria-label=Themes href=../notebooks/themes.html>Themes</a><li><a aria-label="Example notebook" href=../notebooks/example.html>Example notebook</a></ul><p><strong>Websites</strong><ul><li><a aria-label=Overview href=websites.html>Overview</a><li><a aria-current=page aria-label=Configuration class=active href=config.html>Configuration</a><li><a aria-label=Themes href=themes.html>Themes</a><li><a aria-label="Web components" href=web_components.html>Web components</a></ul><p><strong>More</strong><ul><li><a aria-label=Tips href=../tips.html>Tips</a><li><a aria-label="CLI reference" href=../reference/cli.html>CLI reference</a></ul></nav></aside><main class=calepin-website-main><h1 id=configuration-and-metadata>Configuration and metadata</h1><p>Website settings live in <code>calepin.toml</code> at the root of your website source directory. Use <code>--config &lt;path></code> only when the config file lives somewhere else.<h2 id=basic-settings>Basic settings</h2><p>A small site can start with:<pre><code data-lang=toml><span style=color:#74747c>#</span><span style=color:#74747c> Site name shown by bundled themes and page metadata.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: none.</span>
+<span style=color:#4b69c6>title</span> = <span style=color:#198810>"</span><span style=color:#198810>My Site</span><span style=color:#198810>"</span>
 
-  let theme = "";
-  try {
-    theme = normalize(new URL(window.location.href).searchParams.get(param) || "");
-  } catch {
-    theme = "";
-  }
+<span style=color:#74747c>#</span><span style=color:#74747c> Short site description for metadata and previews.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: none.</span>
+<span style=color:#4b69c6>description</span> = <span style=color:#198810>"</span><span style=color:#198810>A static website built from Typst documents.</span><span style=color:#198810>"</span>
 
-  if (!theme) {
-    try {
-      theme = normalize(localStorage.getItem(storageKey) || "");
-    } catch {
-      theme = "";
-    }
-  }
+<span style=color:#74747c>#</span><span style=color:#74747c> Public site URL, used for sitemap.xml and canonical URLs.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: none.</span>
+<span style=color:#4b69c6>base_url</span> = <span style=color:#198810>"</span><span style=color:#198810>https://example.com</span><span style=color:#198810>"</span>
 
-  if (theme) {
-    root.dataset.theme = theme;
-    root.style.colorScheme = theme;
-  }
-})();
-    </script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+<span style=color:#74747c>#</span><span style=color:#74747c> Theme: "calepin", "academic", a local theme directory, or false for raw output.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: "calepin".</span>
+<span style=color:#4b69c6>theme</span> = <span style=color:#198810>"</span><span style=color:#198810>academic</span><span style=color:#198810>"</span>
 
-    <link rel="stylesheet" href="../.calepin/calepin-website.css">
+<span style=color:#74747c>#</span><span style=color:#74747c> Render .pdf files for every page.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: false.</span>
+<span style=color:#4b69c6>pdf</span> = <span style=color:#d73948>false</span>
 
+<span style=color:#74747c>#</span><span style=color:#74747c> Minify generated HTML, including inline CSS and JavaScript.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: false.</span>
+<span style=color:#4b69c6>minify</span> = <span style=color:#d73948>true</span>
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Configuration and metadata])\n\n#title()\n\nWebsite settings live in `calepin.toml` at the root of your website source directory. Use `--config <path>` only when the config file lives somewhere else.\n\n= Basic settings\n\nA small site can start with:\n\n```toml\n# Site name shown by bundled themes and page metadata.\n# Default: none.\ntitle = \"My Site\"\n\n# Short site description for metadata and previews.\n# Default: none.\ndescription = \"A static website built from Typst documents.\"\n\n# Public site URL, used for sitemap.xml and canonical URLs.\n# Default: none.\nbase_url = \"https://example.com\"\n\n# Theme: \"calepin\", \"academic\", a local theme directory, or false for raw output.\n# Default: \"calepin\".\ntheme = \"academic\"\n\n# Render .pdf files for every page.\n# Default: false.\npdf = false\n\n# Logo image path for the top bar.\n# Default: none.\nlogo = \"assets/logo.svg\"\n\n# Alternative text for the logo image. Defaults to `title` when omitted.\n# Default: none.\nlogo_alt = \"My Site\"\n\n# Browser favicon path. Omit this to use Calepin's generated default.\n# Default: \".calepin/favicon.svg\".\nfavicon = \"assets/favicon.ico\"\n```\n\nUse `--format html` for a one-time HTML-only build, regardless of `pdf`.\n\nPaths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.\n\nPaths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image(\"/assets/diagram.svg\")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image(\"assets/diagram.svg\")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`; if no logo is set, bundled themes use `title` as the site name.\n\n= Robots.txt\n\n_Calepin_ writes `robots.txt` by default:\n\n```txt\nUser-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml\n```\n\nThe `Sitemap:` line is included when `base_url` is set. To disable generation:\n\n```toml\nrobots = false\n```\n\nor:\n\n```toml\n[robots]\nenabled = false\n```\n\nTo override the generated file, create `templates/robots.txt` in the website source directory. The template uses MiniJinja syntax and receives `config` and `sitemap_url`:\n\n```txt\nUser-agent: *\nDisallow: /drafts/\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}\n```\n\nFiles under `templates/` can be included or extended from the robots template:\n\n```txt\n{% extends \"base.txt\" %}\n{% block body %}\nUser-agent: *\nAllow: /\n{% endblock %}\n```\n\n= Static files\n\nUse `[static]` for files that should be copied to the built website without being rendered as Typst pages:\n\n```toml\n[static]\ninclude = [\n  \"assets/**\",\n  \"CNAME\",\n  \"downloads/**\",\n]\nexclude = [\n  \"assets/drafts/**\",\n]\n```\n\nEach included file keeps its source-relative path in the output directory: `assets/logo.svg` becomes `assets/logo.svg`, `CNAME` becomes `CNAME`, and `downloads/manual.pdf` becomes `downloads/manual.pdf`. `include` entries can be files, directories, or glob patterns. `exclude` patterns are applied after includes. Paths must stay inside the website source directory.\n\n= Navigation\n\n== Side bar\n\nThe sidebar is the main navigation for documentation-style sites. Configure it with `[sidebar]`; a section can list pages one by one:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  target = \"install.typ\"\n  label = \"Install\"\n```\n\nor include several pages with a glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nUse `target` for one link and `glob` for a list of source pages. A `target` ending in `.typ` and all `glob` entries point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site. Other `target` values are used as literal links, such as external URLs.\n\nIf you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.\n\nTitled sections are foldable: each page loads with the section that contains it open and the others folded, and readers can open more sections by hand. To keep every section expanded instead, disable folding:\n\n```toml\n[sidebar]\nfold = false\n```\n\nLabels can include icons:\n\n```toml\nlabel = \"{icon:lucide:download} Install\"\n```\n\nIf the prefix is omitted, _Calepin_ uses `lucide`, so `{icon:home}` means `{icon:lucide:home}`. Icons are downloaded during the build and cached under `.calepin/icons/`.\n\nIcon prefixes are Iconify collection names. Search available icons in the #link(\"https://icon-sets.iconify.design/\")[Iconify icon sets] browser. Common prefixes include `lucide`, `simple-icons`, `tabler`, `heroicons`, `material-symbols`, `carbon`, `ph`, and `bi`.\n\n== Top bar\n\nUse `[navbar]` for a small top navigation bar. External links, such as a GitHub repository, are regular navbar items:\n\n```toml\n[navbar]\n\n[[navbar.item]]\nposition = \"left\"\ntarget = \"index.typ\"\nlabel = \"Home\"\n\n[[navbar.item]]\nposition = \"right\"\ntarget = \"https://github.com/user/repo\"\nlabel = \"{icon:github} GitHub\"\n```\n\nNavbar items use `target` or `glob`. Use a `.typ` `target` or `glob` for internal source pages; use any other `target` for external links or a literal already-rendered URL. `position` can be `left`, `center`, or `right`.\n\n= Include or exclude pages\n\nUse `[pages]` for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:\n\n```toml\n[pages]\ninclude = [\"blog/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\nPut the page title in the document and keep website metadata for fields used by listings, routing, and output options:\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n)) <website-metadata>\n\n#title()\n```\n\n`index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.\n\n= Pages metadata\n\nAdd arbitrary page metadata with Typst's `#metadata` function and the `<website-metadata>` label. _Calepin_ reads this dictionary while building the site and attaches it to the page entry returned by `calepin.pages()`.\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n  author: \"Ada Lovelace\",\n  summary: \"A short release note for the new website.\",\n  draft: false,\n)) <website-metadata>\n\n#title()\n```\n\nUse `calepin.pages()` to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.\n\n```typ\n#import \"@preview/calepin:0.0.1\" as calepin\n\n#let posts = calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .filter(p => not p.meta.at(\"draft\", default: false))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev()\n\n#for post in posts [\n  - #link(post.href)[#post.title] \\\n    #post.meta.at(\"summary\", default: [])\n]\n```\n\n`calepin.pages()` returns one dictionary per built page, excluding `404.typ`. _Calepin_ creates these entry fields:\n\n- `path`: source path relative to the website root\n- `href`: rendered HTML path relative to the current page\n- `title`: resolved page title\n- `language`: language code, or `none` when languages are not configured\n- `translation_key`: resolved key used to connect translated pages\n- `translations`: matching pages in other languages, or an empty dictionary\n- `pdf`: PDF path, or `none` when the page has no PDF output\n- `meta`: the page's `<website-metadata>` dictionary, or an empty dictionary\n\nOnly `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.\n\nThere is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.\n\n= Multilingual sites\n\nConfigure languages with one content directory per language:\n\n```toml\ndefault_language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent_dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent_dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; other languages use their language code as a URL prefix, such as `fr/about.html`.\n\nUse page metadata when translations move or need different slugs:\n\n```typ\n#set document(title: [À propos])\n\n#metadata((\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) <website-metadata>\n\n#title()\n```\n\nWhen more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.\n"</script>
-</head><body>
-    <header class="calepin-website-topbar">
-        <nav>
-            <ul>
-                <li>
-                    <button class="calepin-website-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
-                </li>
-                <li>
-                    <a class="calepin-website-topbrand contrast" href="../index.html" aria-label="Calepin home">
-                        
-                        <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjQuOTA4Mjc5bW0iCiAgIGhlaWdodD0iMjUuMjMwNjg4bW0iCiAgIHZpZXdCb3g9IjAgMCAyNC45MDgyOCAyNS4yMzA2ODgiCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzEiCiAgIGlua3NjYXBlOnZlcnNpb249IjEuNC40IChkY2FmM2U3LCAyMDI2LTA1LTA1KSIKICAgc29kaXBvZGk6ZG9jbmFtZT0ibG9nb19zaG9ydF8yLnN2ZyIKICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSJsb2dvX2xvbmdfdGV4dF8yLnBuZyIKICAgaW5rc2NhcGU6ZXhwb3J0LXhkcGk9Ijk2IgogICBpbmtzY2FwZTpleHBvcnQteWRwaT0iOTYiCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iY3VycmVudENvbG9yIj4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgaW5rc2NhcGU6em9vbT0iMC45ODY5MTc1MiIKICAgICBpbmtzY2FwZTpjeD0iMTUyLjQ5NTAxIgogICAgIGlua3NjYXBlOmN5PSIyNjYuNDg2MyIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjE1MTIiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iOTIxIgogICAgIGlua3NjYXBlOndpbmRvdy14PSIwIgogICAgIGlua3NjYXBlOndpbmRvdy15PSIzMyIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIwIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSIKICAgICB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuOTUwODY5LC00NC4wNjExMTcpIj4KICAgIDxwYXRoCiAgICAgICBkPSJtIDU5LjE4NjY2OCw3Ni41MzgyMzEgaCAtMC41NjUyNzEgcSAtMC4yNjM3OTIsLTAuMzAxNDc4IC0wLjYwMjk1NSwtMC41Mjc1ODYgLTAuMzM5MTYyLC0wLjI2Mzc5MyAtMS4wNTUxNzEsLTAuMjYzNzkzIC0wLjU2NTI3MSwwIC0xLjI0MzU5NSwwLjIyNjEwOCAtMC42NDA2NCwwLjE4ODQyNCAtMS41MDczODgsMC40NTIyMTcgLTAuODI5MDY0LDAuMjYzNzkzIC0xLjg4NDIzNSwwLjQ1MjIxNiAtMS4wNTUxNzIsMC4yMjYxMDggLTIuMzM2NDUyLDAuMjI2MTA4IC0yLjM3NDEzNiwwIC00LjYzNTIxOCwtMC44NjY3NDggLTIuMjIzMzk3LC0wLjg2Njc0OCAtNC4yMjA2ODYsLTIuODI2MzUyIC0xLjg0NjU1MSwtMS44NDY1NTEgLTMuMDkwMTQ2LC00LjM3MTQyNSAtMS4yNDM1OTUsLTIuNTI0ODc1IC0xLjI0MzU5NSwtNS44NDExMjkgMCwtMi44MjYzNTIgMS4wMTc0ODcsLTUuMzg4OTEyIDEuMDE3NDg3LC0yLjU2MjU2IDIuODI2MzUzLC00LjUyMjE2NCAxLjgwODg2NSwtMS45NTk2MDQgNC4yNTgzNzEsLTMuMDkwMTQ1IDIuNDQ5NTA1LC0xLjE2ODIyNiA1LjM1MTIyNywtMS4xNjgyMjYgMS4xNjgyMjYsMCAyLjA3MjY1OSwwLjIyNjEwOCAwLjkwNDQzMiwwLjIyNjEwOCAxLjYyMDQ0MiwwLjUyNzU4NiAwLjcxNjAwOSwwLjI2Mzc5MyAxLjMxODk2NCwwLjQ4OTkwMSAwLjYwMjk1NSwwLjIyNjEwOCAxLjE2ODIyNiwwLjIyNjEwOCAwLjc1MzY5NCwwIDEuMDU1MTcxLC0wLjIyNjEwOCAwLjMzOTE2MywtMC4yNjM3OTMgMC42MDI5NTYsLTAuNTY1MjcxIGggMC41NjUyNyB2IDcuNTM2OTQgSCA1OC4yNDQ1NSBRIDU3LjkwNTM4OCw1NS44MTE2NDYgNTcuMzc3ODAyLDU0LjQxNzMxMiA1Ni44NTAyMTcsNTMuMDIyOTc4IDU1LjkwODA5OSw1MS45Njc4MDYgNTQuOTY1OTgyLDUwLjg3NDk1IDUzLjQ5NjI3OCw1MC4yMzQzMSA1Mi4wNjQyNiw0OS41NTU5ODYgNDkuOTE2MjMyLDQ5LjU1NTk4NiBxIC0xLjk5NzI4OSwwIC0zLjQyOTMwOCwwLjY0MDY0IC0xLjQzMjAxOSwwLjYwMjk1NSAtMi40MTE4MjEsMS42NTgxMjYgLTAuOTc5ODAyLDEuMDE3NDg3IC0xLjU4Mjc1NywyLjQxMTgyMSAtMC41NjUyNzEsMS4zNTY2NDkgLTAuODY2NzQ4LDIuOTAxNzIyIC0wLjMwMTQ3OCwxLjUwNzM4OCAtMC40MTQ1MzIsMy4wOTAxNDUgLTAuMDc1MzcsMS41NDUwNzMgLTAuMDc1MzcsMi45Mzk0MDcgMCwzLjk1Njg5NCAwLjY0MDY0LDYuNTU3MTM4IDAuNjQwNjM5LDIuNjAwMjQ0IDEuNzcxMTgsNC4xMDc2MzIgMS4xNjgyMjYsMS41MDczODggMi43ODg2NjgsMi4xMTAzNDMgMS42MjA0NDIsMC42MDI5NTYgMy41ODAwNDcsMC42MDI5NTYgMi41MjQ4NzUsMCA0LjA2OTk0NywtMC43MTYwMSAxLjU0NTA3MywtMC43MTYwMDkgMi40ODcxOTEsLTEuODQ2NTUgMC45NDIxMTcsLTEuMTY4MjI2IDEuNDMyMDE4LC0yLjYwMDI0NCAwLjQ4OTkwMSwtMS40Njk3MDQgMC44NjY3NDgsLTIuOTAxNzIyIGggMC40MTQ1MzIgeiIKICAgICAgIGlkPSJ0ZXh0OCIKICAgICAgIHN0eWxlPSJmb250LXNpemU6MzcuNjg0N3B4O2ZvbnQtZmFtaWx5OkRpZG90Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90LCBOb3JtYWwnO2xldHRlci1zcGFjaW5nOi0xLjcwNzU4cHg7d29yZC1zcGFjaW5nOjBweDtzdHJva2Utd2lkdGg6Mi4yMjU0NjtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOmJldmVsO3N0cm9rZS1taXRlcmxpbWl0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMS4xMTI3MzYyLDAuODk4Njg1NikiCiAgICAgICBhcmlhLWxhYmVsPSJDIiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpub3JtYWw7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6MzMuODY2N3B4O2ZvbnQtZmFtaWx5OkNvdXJpZXI7LWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjpDb3VyaWVyO2xldHRlci1zcGFjaW5nOjEuMTU4ODdweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNTUuMjI2NjY1IgogICAgICAgeT0iNTQuNjkwNDgzIgogICAgICAgaWQ9InRleHQzIj48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuMyIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6bm9ybWFsO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1mYW1pbHk6Q291cmllcjstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOkNvdXJpZXI7c3Ryb2tlLXdpZHRoOjEuOTk5OTkiCiAgICAgICAgIHg9IjU1LjIyNjY2NSIKICAgICAgICAgeT0iNTQuNjkwNDgzIiAvPjwvdGV4dD4KICAgIDxwYXRoCiAgICAgICBzdHlsZT0iZm9udC13ZWlnaHQ6NTAwO2ZvbnQtc2l6ZToxMi4zNjc3cHg7Zm9udC1mYW1pbHk6J0hhc2tsdWcgTmVyZCBGb250JzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidIYXNrbHVnIE5lcmQgRm9udCwgTWVkaXVtJztsZXR0ZXItc3BhY2luZzotMS45MjE0MXB4O3dvcmQtc3BhY2luZzowcHg7c3Ryb2tlLXdpZHRoOjIuNTA0MTY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpiZXZlbDtzdHJva2UtbWl0ZXJsaW1pdDowO3BhaW50LW9yZGVyOm1hcmtlcnMgc3Ryb2tlIGZpbGwiCiAgICAgICBkPSJtIDUyLjc0OTM4MSw2MC4yMDM2MzUgdiAtMS4xNTAxOTYgbCAtMy42MTEzNjksLTIuMzg2OTY2IHYgLTAuMDQ5NDcgbCAzLjYxMTM2OSwtMi4zODY5NjcgViA1My4wNzk4NCBsIC00LjY2MjYyMywzLjExNjY2MSB2IDAuODkwNDc0IHogbSAwLjUxNTAzMSwyLjUyMzAxMSBoIDEuMDYzNjIyIEwgNTguMzg0NjQsNTEuOTY2NzQ3IGggLTEuMDYzNjIzIHogbSA1LjYzNTI1OSwtMi41MjMwMTEgNC42NjI2MjMsLTMuMTE2NjYgViA1Ni4xOTY1MDEgTCA1OC44OTk2NzEsNTMuMDc5ODQgdiAxLjE1MDE5NiBsIDMuNjExMzY4LDIuMzg2OTY3IHYgMC4wNDk0NyBsIC0zLjYxMTM2OCwyLjM4Njk2NiB6IgogICAgICAgaWQ9InRleHQ0IgogICAgICAgYXJpYS1sYWJlbD0iJmx0Oy8mZ3Q7IiAvPgogICAgPHRleHQKICAgICAgIHhtbDpzcGFjZT0icHJlc2VydmUiCiAgICAgICBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDpib2xkO2ZvbnQtc3RyZXRjaDpub3JtYWw7Zm9udC1zaXplOjkuODc3NzdweDtmb250LWZhbWlseTonRGlkb3QgSFRGJzstaW5rc2NhcGUtZm9udC1zcGVjaWZpY2F0aW9uOidEaWRvdCBIVEYgQm9sZCc7Zm9udC12YXJpYW50LWxpZ2F0dXJlczpub3JtYWw7Zm9udC12YXJpYW50LWNhcHM6bm9ybWFsO2ZvbnQtdmFyaWFudC1udW1lcmljOm5vcm1hbDtmb250LXZhcmlhbnQtZWFzdC1hc2lhbjpub3JtYWw7bGV0dGVyLXNwYWNpbmc6LTEuNTM0NThweDt3b3JkLXNwYWNpbmc6MHB4O3dyaXRpbmctbW9kZTpsci10YjtkaXJlY3Rpb246bHRyO2ZpbGw6Y3VycmVudENvbG9yO3N0cm9rZS13aWR0aDoxLjk5OTk5O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46YmV2ZWw7c3Ryb2tlLW1pdGVybGltaXQ6MDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgeT0iNzguMjgyNDYzIgogICAgICAgaWQ9InRleHQ1Ij48dHNwYW4KICAgICAgICAgc29kaXBvZGk6cm9sZT0ibGluZSIKICAgICAgICAgaWQ9InRzcGFuNSIKICAgICAgICAgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtdmFyaWFudDpub3JtYWw7Zm9udC13ZWlnaHQ6Ym9sZDtmb250LXN0cmV0Y2g6bm9ybWFsO2ZvbnQtZmFtaWx5OidEaWRvdCBIVEYnOy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0RpZG90IEhURiBCb2xkJztzdHJva2Utd2lkdGg6MS45OTk5OSIKICAgICAgICAgeD0iNDUuODQzNDk0IgogICAgICAgICB5PSI3OC4yODI0NjMiIC8+PC90ZXh0PgogIDwvZz4KPC9zdmc+Cg==" alt="Calepin" class="calepin-website-topbrand-logo" data-inline-svg="1">
-                        
-                    </a>
-                </li>
-                
-            </ul>
-            
-            <ul>
-                
-                                <li><a href="https://github.com/vincentarelbundock/calepin" aria-label="https://github.com/vincentarelbundock/calepin"><span class="calepin-nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></svg></span></a></li>
-                
-                <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
-                
-                <li>
-                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
-                        <option value="rendered">HTML</option>
-                        <option value="source">Source</option>
-                        <option value="pdf">PDF</option>
-                    </select>
-                </li>
-            </ul>
-        </nav>
-    </header>
-    <div class="calepin-website-shell grid">
-        <div class="calepin-website-nav-backdrop" aria-hidden="true"></div>
-        <aside id="calepin-website-sidebar" class="calepin-website-sidebar">
-            <nav aria-label="Documentation">
-                
-                    
-                    
-                    
-                    
-                    <p><strong>Getting started</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../index.html" aria-label="Home">Home</a></li>
-                        
-                        <li><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
-                        
-                        <li><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    
-                    
-                    <p><strong>Notebooks</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
-                        
-                        <li><a href="../notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
-                        
-                        <li><a href="../notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
-                        
-                        <li><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
-                        
-                        <li><a href="../notebooks/themes.html" aria-label="Themes">Themes</a></li>
-                        
-                        <li><a href="../notebooks/example.html" aria-label="Example notebook">Example notebook</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    
-                    
-                    <p><strong>Websites</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="websites.html" aria-label="Overview">Overview</a></li>
-                        
-                        <li><a href="config.html" aria-label="Configuration" class="active" aria-current="page">Configuration</a></li>
-                        
-                        <li><a href="themes.html" aria-label="Themes">Themes</a></li>
-                        
-                        <li><a href="web_components.html" aria-label="Web components">Web components</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                    
-                    
-                    
-                    <p><strong>More</strong></p>
-                    
-                    <ul>
-                        
-                        <li><a href="../tips.html" aria-label="Tips">Tips</a></li>
-                        
-                        <li><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
-                        
-                    </ul>
-                    
-                    
-                    
-                
-            </nav>
-        </aside>
-        <main class="calepin-website-main">
-            <h1 id="configuration-and-metadata">Configuration and metadata</h1><p>Website settings live in <code>calepin.toml</code> at the root of your website source directory. Use <code>--config &lt;path></code> only when the config file lives somewhere else.</p><h2 id="basic-settings">Basic settings</h2><p>A small site can start with:</p><pre><code data-lang="toml"><span style="color: #74747c">#</span><span style="color: #74747c"> Site name shown by bundled themes and page metadata.</span>
-<span style="color: #74747c">#</span><span style="color: #74747c"> Default: none.</span>
-<span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">My Site</span><span style="color: #198810">"</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Logo image path for the top bar.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: none.</span>
+<span style=color:#4b69c6>logo</span> = <span style=color:#198810>"</span><span style=color:#198810>assets/logo.svg</span><span style=color:#198810>"</span>
 
-<span style="color: #74747c">#</span><span style="color: #74747c"> Short site description for metadata and previews.</span>
-<span style="color: #74747c">#</span><span style="color: #74747c"> Default: none.</span>
-<span style="color: #4b69c6">description</span> = <span style="color: #198810">"</span><span style="color: #198810">A static website built from Typst documents.</span><span style="color: #198810">"</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Alternative text for the logo image. Defaults to `title` when omitted.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: none.</span>
+<span style=color:#4b69c6>logo_alt</span> = <span style=color:#198810>"</span><span style=color:#198810>My Site</span><span style=color:#198810>"</span>
 
-<span style="color: #74747c">#</span><span style="color: #74747c"> Public site URL, used for sitemap.xml and canonical URLs.</span>
-<span style="color: #74747c">#</span><span style="color: #74747c"> Default: none.</span>
-<span style="color: #4b69c6">base_url</span> = <span style="color: #198810">"</span><span style="color: #198810">https://example.com</span><span style="color: #198810">"</span>
-
-<span style="color: #74747c">#</span><span style="color: #74747c"> Theme: "calepin", "academic", a local theme directory, or false for raw output.</span>
-<span style="color: #74747c">#</span><span style="color: #74747c"> Default: "calepin".</span>
-<span style="color: #4b69c6">theme</span> = <span style="color: #198810">"</span><span style="color: #198810">academic</span><span style="color: #198810">"</span>
-
-<span style="color: #74747c">#</span><span style="color: #74747c"> Render .pdf files for every page.</span>
-<span style="color: #74747c">#</span><span style="color: #74747c"> Default: false.</span>
-<span style="color: #4b69c6">pdf</span> = <span style="color: #d73948">false</span>
-
-<span style="color: #74747c">#</span><span style="color: #74747c"> Logo image path for the top bar.</span>
-<span style="color: #74747c">#</span><span style="color: #74747c"> Default: none.</span>
-<span style="color: #4b69c6">logo</span> = <span style="color: #198810">"</span><span style="color: #198810">assets/logo.svg</span><span style="color: #198810">"</span>
-
-<span style="color: #74747c">#</span><span style="color: #74747c"> Alternative text for the logo image. Defaults to `title` when omitted.</span>
-<span style="color: #74747c">#</span><span style="color: #74747c"> Default: none.</span>
-<span style="color: #4b69c6">logo_alt</span> = <span style="color: #198810">"</span><span style="color: #198810">My Site</span><span style="color: #198810">"</span>
-
-<span style="color: #74747c">#</span><span style="color: #74747c"> Browser favicon path. Omit this to use Calepin's generated default.</span>
-<span style="color: #74747c">#</span><span style="color: #74747c"> Default: ".calepin/favicon.svg".</span>
-<span style="color: #4b69c6">favicon</span> = <span style="color: #198810">"</span><span style="color: #198810">assets/favicon.ico</span><span style="color: #198810">"</span></code></pre><p>Use <code>--format html</code> for a one-time HTML-only build, regardless of <code>pdf</code>.</p><p>Paths in <code>calepin.toml</code> are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit <code>--config</code>. This includes <code>logo</code>, <code>favicon</code>, page <code>target</code> values ending in <code>.typ</code>, page <code>glob</code> patterns, page and static <code>include</code> and <code>exclude</code> patterns, and local theme paths. During the build, <em>Calepin</em> rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as <code>https://example.com</code> are left unchanged.</p><p>Paths inside <code>.typ</code> files follow Typst path rules, not <code>calepin.toml</code> rules. In website builds, use root-relative Typst paths for shared website assets, such as <code>#image("/assets/diagram.svg")</code>; the leading <code>/</code> points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as <code>#image("assets/diagram.svg")</code> for shared assets in nested pages. If no favicon is set, <em>Calepin</em> writes a small default to <code>.calepin/favicon.svg</code>; if no logo is set, bundled themes use <code>title</code> as the site name.</p><h2 id="robots-txt">Robots.txt</h2><p><em>Calepin</em> writes <code>robots.txt</code> by default:</p><pre><code data-lang="txt">User-agent: *
+<span style=color:#74747c>#</span><span style=color:#74747c> Browser favicon path. Omit this to use Calepin's generated default.</span>
+<span style=color:#74747c>#</span><span style=color:#74747c> Default: ".calepin/favicon.svg".</span>
+<span style=color:#4b69c6>favicon</span> = <span style=color:#198810>"</span><span style=color:#198810>assets/favicon.ico</span><span style=color:#198810>"</span></code></pre><p>Use <code>--format html</code> for a one-time HTML-only build, regardless of <code>pdf</code>. Use <code>--minify</code> to minify HTML for a single build without changing <code>calepin.toml</code>.<p>Paths in <code>calepin.toml</code> are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit <code>--config</code>. This includes <code>logo</code>, <code>favicon</code>, page <code>target</code> values ending in <code>.typ</code>, page <code>glob</code> patterns, page and static <code>include</code> and <code>exclude</code> patterns, and local theme paths. During the build, <em>Calepin</em> rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as <code>https://example.com</code> are left unchanged.<p>Paths inside <code>.typ</code> files follow Typst path rules, not <code>calepin.toml</code> rules. In website builds, use root-relative Typst paths for shared website assets, such as <code>#image("/assets/diagram.svg")</code>; the leading <code>/</code> points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as <code>#image("assets/diagram.svg")</code> for shared assets in nested pages. If no favicon is set, <em>Calepin</em> writes a small default to <code>.calepin/favicon.svg</code>; if no logo is set, bundled themes use <code>title</code> as the site name.<h2 id=robots-txt>Robots.txt</h2><p><em>Calepin</em> writes <code>robots.txt</code> by default:<pre><code data-lang=txt>User-agent: *
 Allow: /
-Sitemap: https://example.com/sitemap.xml</code></pre><p>The <code>Sitemap:</code> line is included when <code>base_url</code> is set. To disable generation:</p><pre><code data-lang="toml"><span style="color: #4b69c6">robots</span> = <span style="color: #d73948">false</span></code></pre><p>or:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">robots</span>]
-<span style="color: #4b69c6">enabled</span> = <span style="color: #d73948">false</span></code></pre><p>To override the generated file, create <code>templates/robots.txt</code> in the website source directory. The template uses MiniJinja syntax and receives <code>config</code> and <code>sitemap_url</code>:</p><pre><code data-lang="txt">User-agent: *
+Sitemap: https://example.com/sitemap.xml</code></pre><p>The <code>Sitemap:</code> line is included when <code>base_url</code> is set. To disable generation:<pre><code data-lang=toml><span style=color:#4b69c6>robots</span> = <span style=color:#d73948>false</span></code></pre><p>or:<pre><code data-lang=toml>[<span style=color:#4b69c6>robots</span>]
+<span style=color:#4b69c6>enabled</span> = <span style=color:#d73948>false</span></code></pre><p>To override the generated file, create <code>templates/robots.txt</code> in the website source directory. The template uses MiniJinja syntax and receives <code>config</code> and <code>sitemap_url</code>:<pre><code data-lang=txt>User-agent: *
 Disallow: /drafts/
-{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}</code></pre><p>Files under <code>templates/</code> can be included or extended from the robots template:</p><pre><code data-lang="txt">{% extends "base.txt" %}
+{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}</code></pre><p>Files under <code>templates/</code> can be included or extended from the robots template:<pre><code data-lang=txt>{% extends "base.txt" %}
 {% block body %}
 User-agent: *
 Allow: /
-{% endblock %}</code></pre><h2 id="static-files">Static files</h2><p>Use <code>[static]</code> for files that should be copied to the built website without being rendered as Typst pages:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">static</span>]
-<span style="color: #4b69c6">include</span> = [
-  <span style="color: #198810">"</span><span style="color: #198810">assets/**</span><span style="color: #198810">"</span>,
-  <span style="color: #198810">"</span><span style="color: #198810">CNAME</span><span style="color: #198810">"</span>,
-  <span style="color: #198810">"</span><span style="color: #198810">downloads/**</span><span style="color: #198810">"</span>,
+{% endblock %}</code></pre><h2 id=static-files>Static files</h2><p>Use <code>[static]</code> for files that should be copied to the built website without being rendered as Typst pages:<pre><code data-lang=toml>[<span style=color:#4b69c6>static</span>]
+<span style=color:#4b69c6>include</span> = [
+  <span style=color:#198810>"</span><span style=color:#198810>assets/**</span><span style=color:#198810>"</span>,
+  <span style=color:#198810>"</span><span style=color:#198810>CNAME</span><span style=color:#198810>"</span>,
+  <span style=color:#198810>"</span><span style=color:#198810>downloads/**</span><span style=color:#198810>"</span>,
 ]
-<span style="color: #4b69c6">exclude</span> = [
-  <span style="color: #198810">"</span><span style="color: #198810">assets/drafts/**</span><span style="color: #198810">"</span>,
-]</code></pre><p>Each included file keeps its source-relative path in the output directory: <code>assets/logo.svg</code> becomes <code>assets/logo.svg</code>, <code>CNAME</code> becomes <code>CNAME</code>, and <code>downloads/manual.pdf</code> becomes <code>downloads/manual.pdf</code>. <code>include</code> entries can be files, directories, or glob patterns. <code>exclude</code> patterns are applied after includes. Paths must stay inside the website source directory.</p><h2 id="navigation">Navigation</h2><h3 id="side-bar">Side bar</h3><p>The sidebar is the main navigation for documentation-style sites. Configure it with <code>[sidebar]</code>; a section can list pages one by one:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">sidebar</span>]
+<span style=color:#4b69c6>exclude</span> = [
+  <span style=color:#198810>"</span><span style=color:#198810>assets/drafts/**</span><span style=color:#198810>"</span>,
+]</code></pre><p>Each included file keeps its source-relative path in the output directory: <code>assets/logo.svg</code> becomes <code>assets/logo.svg</code>, <code>CNAME</code> becomes <code>CNAME</code>, and <code>downloads/manual.pdf</code> becomes <code>downloads/manual.pdf</code>. <code>include</code> entries can be files, directories, or glob patterns. <code>exclude</code> patterns are applied after includes. Paths must stay inside the website source directory.<h2 id=navigation>Navigation</h2><h3 id=side-bar>Side bar</h3><p>The sidebar is the main navigation for documentation-style sites. Configure it with <code>[sidebar]</code>; a section can list pages one by one:<pre><code data-lang=toml>[<span style=color:#4b69c6>sidebar</span>]
 
-[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>]]
-<span style="color: #4b69c6">title</span> = <span style="color: #198810">"</span><span style="color: #198810">Guide</span><span style="color: #198810">"</span>
+[[<span style=color:#4b69c6>sidebar</span>.<span style=color:#4b69c6>section</span>]]
+<span style=color:#4b69c6>title</span> = <span style=color:#198810>"</span><span style=color:#198810>Guide</span><span style=color:#198810>"</span>
 
-  [[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
-  <span style="color: #4b69c6">target</span> = <span style="color: #198810">"</span><span style="color: #198810">install.typ</span><span style="color: #198810">"</span>
-  <span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Install</span><span style="color: #198810">"</span></code></pre><p>or include several pages with a glob:</p><pre><code data-lang="toml">[[<span style="color: #4b69c6">sidebar</span>.<span style="color: #4b69c6">section</span>.<span style="color: #4b69c6">item</span>]]
-<span style="color: #4b69c6">glob</span> = <span style="color: #198810">"</span><span style="color: #198810">guide/*.typ</span><span style="color: #198810">"</span></code></pre><p>Use <code>target</code> for one link and <code>glob</code> for a list of source pages. A <code>target</code> ending in <code>.typ</code> and all <code>glob</code> entries point to Typst source files, not rendered <code>.html</code> files. <em>Calepin</em> resolves those pages and writes the right <code>.html</code> links in the generated site. Other <code>target</code> values are used as literal links, such as external URLs.</p><p>If you do not configure a sidebar, <em>Calepin</em> builds one from <code>.typ</code> files in the source directory. Hidden files are skipped.</p><p>Titled sections are foldable: each page loads with the section that contains it open and the others folded, and readers can open more sections by hand. To keep every section expanded instead, disable folding:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">sidebar</span>]
-<span style="color: #4b69c6">fold</span> = <span style="color: #d73948">false</span></code></pre><p>Labels can include icons:</p><pre><code data-lang="toml"><span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">{icon:lucide:download} Install</span><span style="color: #198810">"</span></code></pre><p>If the prefix is omitted, <em>Calepin</em> uses <code>lucide</code>, so <code>{icon:home}</code> means <code>{icon:lucide:home}</code>. Icons are downloaded during the build and cached under <code>.calepin/icons/</code>.</p><p>Icon prefixes are Iconify collection names. Search available icons in the <a href="https://icon-sets.iconify.design/">Iconify icon sets</a> browser. Common prefixes include <code>lucide</code>, <code>simple-icons</code>, <code>tabler</code>, <code>heroicons</code>, <code>material-symbols</code>, <code>carbon</code>, <code>ph</code>, and <code>bi</code>.</p><h3 id="top-bar">Top bar</h3><p>Use <code>[navbar]</code> for a small top navigation bar. External links, such as a GitHub repository, are regular navbar items:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">navbar</span>]
+  [[<span style=color:#4b69c6>sidebar</span>.<span style=color:#4b69c6>section</span>.<span style=color:#4b69c6>item</span>]]
+  <span style=color:#4b69c6>target</span> = <span style=color:#198810>"</span><span style=color:#198810>install.typ</span><span style=color:#198810>"</span>
+  <span style=color:#4b69c6>label</span> = <span style=color:#198810>"</span><span style=color:#198810>Install</span><span style=color:#198810>"</span></code></pre><p>or include several pages with a glob:<pre><code data-lang=toml>[[<span style=color:#4b69c6>sidebar</span>.<span style=color:#4b69c6>section</span>.<span style=color:#4b69c6>item</span>]]
+<span style=color:#4b69c6>glob</span> = <span style=color:#198810>"</span><span style=color:#198810>guide/*.typ</span><span style=color:#198810>"</span></code></pre><p>Use <code>target</code> for one link and <code>glob</code> for a list of source pages. A <code>target</code> ending in <code>.typ</code> and all <code>glob</code> entries point to Typst source files, not rendered <code>.html</code> files. <em>Calepin</em> resolves those pages and writes the right <code>.html</code> links in the generated site. Other <code>target</code> values are used as literal links, such as external URLs.<p>If you do not configure a sidebar, <em>Calepin</em> builds one from <code>.typ</code> files in the source directory. Hidden files are skipped.<p>Titled sections are foldable: each page loads with the section that contains it open and the others folded, and readers can open more sections by hand. To keep every section expanded instead, disable folding:<pre><code data-lang=toml>[<span style=color:#4b69c6>sidebar</span>]
+<span style=color:#4b69c6>fold</span> = <span style=color:#d73948>false</span></code></pre><p>Labels can include icons:<pre><code data-lang=toml><span style=color:#4b69c6>label</span> = <span style=color:#198810>"</span><span style=color:#198810>{icon:lucide:download} Install</span><span style=color:#198810>"</span></code></pre><p>If the prefix is omitted, <em>Calepin</em> uses <code>lucide</code>, so <code>{icon:home}</code> means <code>{icon:lucide:home}</code>. Icons are downloaded during the build and cached under <code>.calepin/icons/</code>.<p>Icon prefixes are Iconify collection names. Search available icons in the <a href=https://icon-sets.iconify.design/>Iconify icon sets</a> browser. Common prefixes include <code>lucide</code>, <code>simple-icons</code>, <code>tabler</code>, <code>heroicons</code>, <code>material-symbols</code>, <code>carbon</code>, <code>ph</code>, and <code>bi</code>.<h3 id=top-bar>Top bar</h3><p>Use <code>[navbar]</code> for a small top navigation bar. External links, such as a GitHub repository, are regular navbar items:<pre><code data-lang=toml>[<span style=color:#4b69c6>navbar</span>]
 
-[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
-<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">left</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">target</span> = <span style="color: #198810">"</span><span style="color: #198810">index.typ</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Home</span><span style="color: #198810">"</span>
+[[<span style=color:#4b69c6>navbar</span>.<span style=color:#4b69c6>item</span>]]
+<span style=color:#4b69c6>position</span> = <span style=color:#198810>"</span><span style=color:#198810>left</span><span style=color:#198810>"</span>
+<span style=color:#4b69c6>target</span> = <span style=color:#198810>"</span><span style=color:#198810>index.typ</span><span style=color:#198810>"</span>
+<span style=color:#4b69c6>label</span> = <span style=color:#198810>"</span><span style=color:#198810>Home</span><span style=color:#198810>"</span>
 
-[[<span style="color: #4b69c6">navbar</span>.<span style="color: #4b69c6">item</span>]]
-<span style="color: #4b69c6">position</span> = <span style="color: #198810">"</span><span style="color: #198810">right</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">target</span> = <span style="color: #198810">"</span><span style="color: #198810">https://github.com/user/repo</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">{icon:github} GitHub</span><span style="color: #198810">"</span></code></pre><p>Navbar items use <code>target</code> or <code>glob</code>. Use a <code>.typ</code> <code>target</code> or <code>glob</code> for internal source pages; use any other <code>target</code> for external links or a literal already-rendered URL. <code>position</code> can be <code>left</code>, <code>center</code>, or <code>right</code>.</p><h2 id="include-or-exclude-pages">Include or exclude pages</h2><p>Use <code>[pages]</code> for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:</p><pre><code data-lang="toml">[<span style="color: #4b69c6">pages</span>]
-<span style="color: #4b69c6">include</span> = [<span style="color: #198810">"</span><span style="color: #198810">blog/*.typ</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">legal/privacy.typ</span><span style="color: #198810">"</span>]
-<span style="color: #4b69c6">exclude</span> = [<span style="color: #198810">"</span><span style="color: #198810">drafts/**</span><span style="color: #198810">"</span>]</code></pre><p>Put the page title in the document and keep website metadata for fields used by listings, routing, and output options:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">document</span>(title: [First post])
+[[<span style=color:#4b69c6>navbar</span>.<span style=color:#4b69c6>item</span>]]
+<span style=color:#4b69c6>position</span> = <span style=color:#198810>"</span><span style=color:#198810>right</span><span style=color:#198810>"</span>
+<span style=color:#4b69c6>target</span> = <span style=color:#198810>"</span><span style=color:#198810>https://github.com/user/repo</span><span style=color:#198810>"</span>
+<span style=color:#4b69c6>label</span> = <span style=color:#198810>"</span><span style=color:#198810>{icon:github} GitHub</span><span style=color:#198810>"</span></code></pre><p>Navbar items use <code>target</code> or <code>glob</code>. Use a <code>.typ</code> <code>target</code> or <code>glob</code> for internal source pages; use any other <code>target</code> for external links or a literal already-rendered URL. <code>position</code> can be <code>left</code>, <code>center</code>, or <code>right</code>.<h2 id=include-or-exclude-pages>Include or exclude pages</h2><p>Use <code>[pages]</code> for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:<pre><code data-lang=toml>[<span style=color:#4b69c6>pages</span>]
+<span style=color:#4b69c6>include</span> = [<span style=color:#198810>"</span><span style=color:#198810>blog/*.typ</span><span style=color:#198810>"</span>, <span style=color:#198810>"</span><span style=color:#198810>legal/privacy.typ</span><span style=color:#198810>"</span>]
+<span style=color:#4b69c6>exclude</span> = [<span style=color:#198810>"</span><span style=color:#198810>drafts/**</span><span style=color:#198810>"</span>]</code></pre><p>Put the page title in the document and keep website metadata for fields used by listings, routing, and output options:<pre><code data-lang=typ><span style=color:#d73948>#</span><span style=color:#d73948>set</span> <span style=color:#4b69c6>document</span>(title: [First post])
 
-<span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((
-  date: <span style="color: #198810">"2026-06-10"</span>,
-  tags: (<span style="color: #198810">"release"</span>, <span style="color: #198810">"website"</span>),
-)) <span style="color: #1d6c76">&lt;website-metadata></span>
+<span style=color:#4b69c6>#</span><span style=color:#4b69c6>metadata</span>((
+  date: <span style=color:#198810>"2026-06-10"</span>,
+  tags: (<span style=color:#198810>"release"</span>, <span style=color:#198810>"website"</span>),
+)) <span style=color:#1d6c76>&lt;website-metadata></span>
 
-<span style="color: #4b69c6">#</span><span style="color: #4b69c6">title</span>()</code></pre><p><code>index.typ</code> and <code>404.typ</code> are always built when present. If <code>404.typ</code> exists, <em>Calepin</em> writes <code>404.html</code>; if PDF rendering is enabled for that page, it also writes <code>404.pdf</code>.</p><h2 id="pages-metadata">Pages metadata</h2><p>Add arbitrary page metadata with Typst’s <code>#metadata</code> function and the <code>&lt;website-metadata></code> label. <em>Calepin</em> reads this dictionary while building the site and attaches it to the page entry returned by <code>calepin.pages()</code>.</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">document</span>(title: [First post])
+<span style=color:#4b69c6>#</span><span style=color:#4b69c6>title</span>()</code></pre><p><code>index.typ</code> and <code>404.typ</code> are always built when present. If <code>404.typ</code> exists, <em>Calepin</em> writes <code>404.html</code>; if PDF rendering is enabled for that page, it also writes <code>404.pdf</code>.<h2 id=pages-metadata>Pages metadata</h2><p>Add arbitrary page metadata with Typst’s <code>#metadata</code> function and the <code>&lt;website-metadata></code> label. <em>Calepin</em> reads this dictionary while building the site and attaches it to the page entry returned by <code>calepin.pages()</code>.<pre><code data-lang=typ><span style=color:#d73948>#</span><span style=color:#d73948>set</span> <span style=color:#4b69c6>document</span>(title: [First post])
 
-<span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((
-  date: <span style="color: #198810">"2026-06-10"</span>,
-  tags: (<span style="color: #198810">"release"</span>, <span style="color: #198810">"website"</span>),
-  author: <span style="color: #198810">"Ada Lovelace"</span>,
-  summary: <span style="color: #198810">"A short release note for the new website."</span>,
-  draft: <span style="color: #d73948">false</span>,
-)) <span style="color: #1d6c76">&lt;website-metadata></span>
+<span style=color:#4b69c6>#</span><span style=color:#4b69c6>metadata</span>((
+  date: <span style=color:#198810>"2026-06-10"</span>,
+  tags: (<span style=color:#198810>"release"</span>, <span style=color:#198810>"website"</span>),
+  author: <span style=color:#198810>"Ada Lovelace"</span>,
+  summary: <span style=color:#198810>"A short release note for the new website."</span>,
+  draft: <span style=color:#d73948>false</span>,
+)) <span style=color:#1d6c76>&lt;website-metadata></span>
 
-<span style="color: #4b69c6">#</span><span style="color: #4b69c6">title</span>()</code></pre><p>Use <code>calepin.pages()</code> to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">import</span> <span style="color: #198810">"@preview/calepin:0.0.1"</span> <span style="color: #d73948">as</span> calepin
+<span style=color:#4b69c6>#</span><span style=color:#4b69c6>title</span>()</code></pre><p>Use <code>calepin.pages()</code> to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.<pre><code data-lang=typ><span style=color:#d73948>#</span><span style=color:#d73948>import</span> <span style=color:#198810>"@preview/calepin:0.0.1"</span> <span style=color:#d73948>as</span> calepin
 
-<span style="color: #d73948">#</span><span style="color: #d73948">let</span> posts <span style="color: #d73948">=</span> calepin.<span style="color: #4b69c6">pages</span>()
+<span style=color:#d73948>#</span><span style=color:#d73948>let</span> posts <span style=color:#d73948>=</span> calepin.<span style=color:#4b69c6>pages</span>()
   .filter(p => p.path.starts-with("blog/"))
   .filter(p => not p.meta.at("draft", default: false))
   .sorted(key: p => p.meta.at("date", default: ""))
   .rev()
 
-<span style="color: #d73948">#</span><span style="color: #d73948">for</span> post <span style="color: #d73948">in</span> posts [
-  <span style="color: #8b41b1">-</span> <span style="color: #4b69c6">#</span><span style="color: #4b69c6">link</span>(post.href)[<span style="color: #8b41b1">#</span><span style="color: #8b41b1">post</span>.<span style="color: #8b41b1">title</span>] <span style="color: #1d6c76">\</span>
-    <span style="color: #8b41b1">#</span><span style="color: #8b41b1">post</span>.<span style="color: #8b41b1">meta</span>.<span style="color: #4b69c6">at</span>(<span style="color: #198810">"summary"</span>, default: [])
-]</code></pre><p><code>calepin.pages()</code> returns one dictionary per built page, excluding <code>404.typ</code>. <em>Calepin</em> creates these entry fields:</p><ul><li><code>path</code>: source path relative to the website root</li><li><code>href</code>: rendered HTML path relative to the current page</li><li><code>title</code>: resolved page title</li><li><code>language</code>: language code, or <code>none</code> when languages are not configured</li><li><code>translation_key</code>: resolved key used to connect translated pages</li><li><code>translations</code>: matching pages in other languages, or an empty dictionary</li><li><code>pdf</code>: PDF path, or <code>none</code> when the page has no PDF output</li><li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, or an empty dictionary</li></ul><p>Only <code>meta</code> comes from the page’s <code>#metadata</code> value. <em>Calepin</em> interprets a few optional metadata keys: <code>title</code>, <code>pdf</code>, <code>translation_key</code>, <code>slug</code>, and <code>url</code>. All other keys are left untouched for your own Typst code.</p><p>There is no required schema for custom metadata. Common keys include <code>date</code>, <code>tags</code>, <code>author</code>, <code>authors</code>, <code>category</code>, <code>venue</code>, <code>summary</code>, and <code>draft</code>, but you can use any key your page list or template expects. Since <code>calepin.pages()</code> returns a Typst array of dictionaries, you can use Typst functions and methods such as <code>filter</code>, <code>map</code>, <code>sorted</code>, <code>rev</code>, <code>at</code>, and <code>contains</code> to select and format the pages you need.</p><h2 id="multilingual-sites">Multilingual sites</h2><p>Configure languages with one content directory per language:</p><pre><code data-lang="toml"><span style="color: #4b69c6">default_language</span> = <span style="color: #198810">"</span><span style="color: #198810">en</span><span style="color: #198810">"</span>
-
-[<span style="color: #4b69c6">languages</span>.<span style="color: #4b69c6">en</span>]
-<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">English</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">content_dir</span> = <span style="color: #198810">"</span><span style="color: #198810">.</span><span style="color: #198810">"</span>
-
-[<span style="color: #4b69c6">languages</span>.<span style="color: #4b69c6">fr</span>]
-<span style="color: #4b69c6">label</span> = <span style="color: #198810">"</span><span style="color: #198810">Français</span><span style="color: #198810">"</span>
-<span style="color: #4b69c6">content_dir</span> = <span style="color: #198810">"</span><span style="color: #198810">fr</span><span style="color: #198810">"</span></code></pre><p>With this layout, <code>about.typ</code> and <code>fr/about.typ</code> are treated as translations of the same page. The default language keeps root URLs like <code>about.html</code>; other languages use their language code as a URL prefix, such as <code>fr/about.html</code>.</p><p>Use page metadata when translations move or need different slugs:</p><pre><code data-lang="typ"><span style="color: #d73948">#</span><span style="color: #d73948">set</span> <span style="color: #4b69c6">document</span>(title: [À propos])
-
-<span style="color: #4b69c6">#</span><span style="color: #4b69c6">metadata</span>((
-  translation_key: <span style="color: #198810">"about"</span>,
-  slug: <span style="color: #198810">"a-propos"</span>,
-)) <span style="color: #1d6c76">&lt;website-metadata></span>
-
-<span style="color: #4b69c6">#</span><span style="color: #4b69c6">title</span>()</code></pre><p>When more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.</p>
-        </main>
-        
-        <aside class="calepin-website-toc">
-            <p class="calepin-website-toc-title">On this page</p>
-            <nav aria-label="On this page">
-                <ul>
-                    
-                    <li class="level-2"><a href="#basic-settings">Basic settings</a></li>
-                    
-                    <li class="level-2"><a href="#robots-txt">Robots.txt</a></li>
-                    
-                    <li class="level-2"><a href="#static-files">Static files</a></li>
-                    
-                    <li class="level-2"><a href="#navigation">Navigation</a></li>
-                    
-                    <li class="level-3"><a href="#side-bar">Side bar</a></li>
-                    
-                    <li class="level-3"><a href="#top-bar">Top bar</a></li>
-                    
-                    <li class="level-2"><a href="#include-or-exclude-pages">Include or exclude pages</a></li>
-                    
-                    <li class="level-2"><a href="#pages-metadata">Pages metadata</a></li>
-                    
-                    <li class="level-2"><a href="#multilingual-sites">Multilingual sites</a></li>
-                    
-                </ul>
-            </nav>
-        </aside>
-        
-    </div>
-
-    
-    
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-            
-            
-        
-        
-    
-        
-            
-            
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-        
-        
-            
-        
-    
-
-    
-    <footer class="calepin-website-page-nav" aria-label="Page navigation">
-      <div class="calepin-website-page-nav-inner">
-        
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="websites.html" role="button">
-          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
-          <span class="calepin-website-page-nav-content">
-            <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Overview</span>
-          </span>
-        </a>
-        
-
-        
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="themes.html" role="button">
-          <span class="calepin-website-page-nav-content">
-            <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Themes</span>
-          </span>
-          <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
-        </a>
-        
-      </div>
-    </footer>
-    
-    
-<script>
-(() => {
-  "use strict";
-
-  const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
-  if (!buttons.length) return;
-
-  const order = ["", "light", "dark"];
-  const labels = { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" };
-  const icons = {
-    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
-    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
-    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
-  };
-
-  const normalize = (value) => value === "light" || value === "dark" ? value : "";
-  const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
-  const urlParam = (button) => button.dataset.calepinThemeParam || "";
-
-  function readUrl(button) {
-    const param = urlParam(button);
-    if (!param) return "";
-    try {
-      return normalize(new URL(window.location.href).searchParams.get(param) || "");
-    } catch {
-      return "";
-    }
-  }
-
-  function clearUrl(button) {
-    const param = urlParam(button);
-    if (!param) return;
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete(param);
-      window.history.replaceState({}, "", url.toString());
-    } catch {
-      /* ignore URL errors */
-    }
-  }
-
-  function readStored(button) {
-    try {
-      return normalize(localStorage.getItem(storageKey(button)) || "");
-    } catch {
-      return "";
-    }
-  }
-
-  function writeStored(button, value) {
-    try {
-      if (value) localStorage.setItem(storageKey(button), value);
-      else localStorage.removeItem(storageKey(button));
-    } catch {
-      /* ignore storage errors */
-    }
-  }
-
-  function readTheme(button) {
-    const fromUrl = readUrl(button);
-    if (fromUrl) {
-      writeStored(button, fromUrl);
-      clearUrl(button);
-      return fromUrl;
-    }
-    return readStored(button);
-  }
-
-  function applyTheme(value) {
-    const theme = normalize(value);
-    if (theme) {
-      document.documentElement.dataset.theme = theme;
-      document.documentElement.style.colorScheme = theme;
-    } else {
-      delete document.documentElement.dataset.theme;
-      document.documentElement.style.colorScheme = "";
-    }
-    buttons.forEach((button) => {
-      const label = labels[theme] || labels[""];
-      button.innerHTML = icons[theme] || icons[""];
-      button.setAttribute("aria-label", label);
-      button.setAttribute("title", label);
-    });
-  }
-
-  applyTheme(readTheme(buttons[0]));
-
-  buttons.forEach((button) => {
-    if (button.dataset.calepinThemeBound === "true") return;
-    button.dataset.calepinThemeBound = "true";
-    button.addEventListener("click", () => {
-      const current = normalize(document.documentElement.dataset.theme || "");
-      const next = order[(order.indexOf(current) + 1) % order.length];
-      applyTheme(next);
-      writeStored(button, next);
-    });
-  });
-
-  window.addEventListener("pageshow", (event) => {
-    if (event.persisted) applyTheme(readTheme(buttons[0]));
-  });
-
-  window.addEventListener("storage", (event) => {
-    if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
-  });
-})();
-
-    </script>
-<script>
-(() => {
-  "use strict";
-
-  const selects = document.querySelectorAll("select[data-calepin-language-picker]");
-  if (!selects.length) return;
-
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  function languageIcon() {
-    return `<svg class="calepin-language-picker-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a13.5 13.5 0 0 1 0 18"></path><path d="M12 3a13.5 13.5 0 0 0 0 18"></path></svg>`;
-  }
-
-  function closeAll(except) {
-    document.querySelectorAll(".calepin-language-picker.is-open").forEach((picker) => {
-      if (picker === except) return;
-      picker.classList.remove("is-open");
-      picker.open = false;
-      const summary = picker.querySelector("summary");
-      if (summary) summary.setAttribute("aria-expanded", "false");
-    });
-  }
-
-  function enhance(select) {
-    if (select.dataset.calepinLanguageBound === "true") return;
-    select.dataset.calepinLanguageBound = "true";
-
-    const options = Array.from(select.options).filter((option) => option.value);
-    if (options.length <= 1) return;
-
-    const selected = options.find((option) => option.selected) || options[0];
-    const picker = document.createElement("details");
-    picker.className = "calepin-language-picker dropdown";
-
-    const summary = document.createElement("summary");
-    summary.className = "calepin-language-picker-button outline secondary";
-    summary.setAttribute("role", "button");
-    summary.setAttribute("aria-haspopup", "menu");
-    summary.setAttribute("aria-expanded", "false");
-    summary.setAttribute("aria-label", select.getAttribute("aria-label") || "Language");
-    summary.innerHTML = `${languageIcon()}<span>${escapeHtml(selected.textContent)}</span>`;
-
-    const menu = document.createElement("ul");
-    menu.className = "calepin-language-picker-menu";
-    menu.setAttribute("role", "menu");
-
-    options.forEach((option) => {
-      const li = document.createElement("li");
-      const item = document.createElement("a");
-      item.href = option.value;
-      item.setAttribute("role", "menuitem");
-      item.innerHTML = `${languageIcon()}<span>${escapeHtml(option.textContent)}</span>`;
-      if (option.selected) item.setAttribute("aria-current", "true");
-      li.appendChild(item);
-      menu.appendChild(li);
-    });
-
-    summary.addEventListener("click", () => {
-      const open = !picker.open;
-      closeAll(open ? picker : null);
-      picker.classList.toggle("is-open", open);
-      summary.setAttribute("aria-expanded", open ? "true" : "false");
-    });
-
-    picker.addEventListener("toggle", () => {
-      picker.classList.toggle("is-open", picker.open);
-      summary.setAttribute("aria-expanded", picker.open ? "true" : "false");
-    });
-
-    picker.append(summary, menu);
-    select.hidden = true;
-    select.insertAdjacentElement("afterend", picker);
-  }
-
-  selects.forEach(enhance);
-
-  document.addEventListener("click", (event) => {
-    if (!event.target.closest(".calepin-language-picker")) closeAll();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeAll();
-  });
-})();
-
-    </script>
-<script>
-(() => {
-  "use strict";
-
-  const selector = window.CalepinCopyCode?.selector ||
-    "div.sourceCode, pre.sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
-  const buttonClass = window.CalepinCopyCode?.buttonClass || "calepin-copy-code";
-  const copiedClass = window.CalepinCopyCode?.copiedClass || "copied";
-  const icon = window.CalepinCopyCode?.icon ||
-    `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-
-  function copyText(text) {
-    if (navigator.clipboard?.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand("copy");
-    } finally {
-      textarea.remove();
-    }
-    return Promise.resolve();
-  }
-
-  function codeText(node) {
-    if (!node) return "";
-    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
-    if (node.nodeType !== Node.ELEMENT_NODE) return "";
-    if (node.tagName === "BR") return "\n";
-    return Array.from(node.childNodes).map(codeText).join("");
-  }
-
-  document.querySelectorAll(selector).forEach((block) => {
-    if (block.dataset.calepinCopyBound === "true" || block.querySelector(`:scope > .${buttonClass}`)) {
-      return;
-    }
-    block.dataset.calepinCopyBound = "true";
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = buttonClass;
-    button.setAttribute("aria-label", "Copy code");
-    button.setAttribute("title", "Copy code");
-    button.innerHTML = icon;
-    button.addEventListener("click", async () => {
-      const code = block.querySelector("pre code, code, pre");
-      const text = codeText(code);
-      try {
-        await copyText(text);
-        button.classList.add(copiedClass);
-        window.setTimeout(() => button.classList.remove(copiedClass), 900);
-      } catch {
-        button.classList.remove(copiedClass);
-      }
-    });
-    block.prepend(button);
-  });
-})();
-
-    </script>
-<script>
-/* Calepin website behaviour, consolidated.
- *
- * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
- * sidebar drawer, inline SVGs, internal link state preservation, and the
- * native <dialog> video lightbox.
- *
- * The Rust theme loader inlines this file into a <script> at the end of <body>,
- * so the DOM already exists when it runs and no DOMContentLoaded guard is
- * needed. */
-(() => {
-  "use strict";
-
-  // Single-document render: website shell behaviors do not apply.
-  if (!document.querySelector(".calepin-website-shell")) return;
-
-  const VIEW = {
-    param: "view",
-    rendered: "rendered",
-    source: "source",
-    pdf: "pdf",
-  };
-
-  const MOBILE_QUERY = "(max-width: 56rem)";
-  const SOURCE_DATA_ID = "calepin-website-source-data";
-
-  // ---------------------------------------------------------------- helpers
-
-  const isMobile = () => window.matchMedia(MOBILE_QUERY).matches;
-
-  const isPlainLeftClick = (event) =>
-    event &&
-    event.button === 0 &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    !event.shiftKey &&
-    !event.altKey;
-
-  const isInternalPageHref = (href) =>
-    Boolean(href) &&
-    !href.startsWith("#") &&
-    !href.startsWith("http://") &&
-    !href.startsWith("https://") &&
-    !href.startsWith("//") &&
-    !href.startsWith("mailto:") &&
-    !href.startsWith("tel:");
-
-  function setUrlParam(url, name, value) {
-    if (value) {
-      url.searchParams.set(name, value);
-    } else {
-      url.searchParams.delete(name);
-    }
-  }
-
-  function readUrlParam(name, normalize, fallback = "") {
-    try {
-      const url = new URL(window.location.href);
-      return normalize((url.searchParams.get(name) || "").toLowerCase());
-    } catch {
-      return fallback;
-    }
-  }
-
-  function updateCurrentUrlParam(name, value) {
-    try {
-      const url = new URL(window.location.href);
-      setUrlParam(url, name, value);
-      window.history.replaceState({}, "", url.toString());
-    } catch {
-      /* ignore URL errors */
-    }
-  }
-
-  const getMain = () => document.querySelector(".calepin-website-main");
-
-  // ------------------------------------------------------------------- view
-
-  const normalizeView = (value) =>
-    value === VIEW.source || value === VIEW.pdf ? value : VIEW.rendered;
-
-  function currentView(select) {
-    return normalizeView((select && select.value) || VIEW.rendered);
-  }
-
-  function pageAssetCandidates(extension) {
-    const { pathname } = window.location;
-    if (pathname.endsWith("/")) return [`${pathname}index.${extension}`];
-    if (pathname.endsWith(".html")) return [`${pathname.slice(0, -5)}.${extension}`];
-    if (!pathname || pathname.endsWith(".")) return [`index.${extension}`];
-    if (!pathname.includes(".")) return [`${pathname}/index.${extension}`];
-    return [`${pathname}.${extension}`];
-  }
-
-  function replaceMainContent(node) {
-    const main = getMain();
-    if (!main) return false;
-    main.innerHTML = "";
-    main.appendChild(node);
-    return true;
-  }
-
-  function showMainFallback(message) {
-    const main = getMain();
-    if (!main) return;
-    const fallback = document.createElement("p");
-    fallback.textContent = message;
-    main.prepend(fallback);
-  }
-
-  function renderSourceText(text) {
-    const container = document.createElement("div");
-    container.className = "calepin-website-source-view";
-    const pre = document.createElement("pre");
-    const code = document.createElement("code");
-    code.className = "language-typ";
-    code.textContent = text;
-    pre.appendChild(code);
-    container.appendChild(pre);
-    replaceMainContent(container);
-  }
-
-  async function renderSourceMode() {
-    const element = document.getElementById(SOURCE_DATA_ID);
-    if (element) {
-      try {
-        const inline = JSON.parse(element.textContent || "");
-        if (typeof inline === "string" && inline.length > 0) {
-          renderSourceText(inline);
-          return;
-        }
-      } catch {
-        /* fall through to fetch */
-      }
-    }
-
-    for (const sourcePath of pageAssetCandidates("typ")) {
-      try {
-        const response = await fetch(sourcePath);
-        if (!response.ok) continue;
-        renderSourceText(await response.text());
-        return;
-      } catch {
-        /* try next candidate */
-      }
-    }
-    showMainFallback("Could not load source view.");
-  }
-
-  async function renderPdfMode() {
-    const isLocal = window.location.protocol === "file:";
-    for (const pdfPath of pageAssetCandidates("pdf")) {
-      if (!isLocal) {
-        try {
-          const response = await fetch(pdfPath, { method: "HEAD" });
-          if (!response.ok && response.status !== 405) continue;
-        } catch {
-          /* probe failed; render directly */
-        }
-      }
-      const viewer = document.createElement("iframe");
-      viewer.className = "calepin-website-pdf-viewer";
-      try {
-        viewer.src = new URL(pdfPath, window.location.href).toString();
-      } catch {
-        viewer.src = pdfPath;
-      }
-      viewer.setAttribute("title", "Page PDF view");
-      viewer.setAttribute("loading", "lazy");
-      replaceMainContent(viewer);
-      return;
-    }
-    showMainFallback("Could not load PDF view.");
-  }
-
-  function applyView(mode, select) {
-    const value = normalizeView(mode);
-    if (select) select.value = value;
-    updateCurrentUrlParam(VIEW.param, value === VIEW.rendered ? "" : value);
-    if (value === VIEW.source) renderSourceMode();
-    else if (value === VIEW.pdf) renderPdfMode();
-  }
-
-  function initView(select) {
-    applyView(readUrlParam(VIEW.param, normalizeView, VIEW.rendered), select);
-    if (select && !select.dataset.calepinBound) {
-      select.dataset.calepinBound = "true";
-      select.addEventListener("change", (event) => {
-        const value = normalizeView(event.target.value);
-        const url = new URL(window.location.href);
-        setUrlParam(url, VIEW.param, value === VIEW.rendered ? "" : value);
-        window.location.href = url.toString();
-      });
-    }
-  }
-
-  // ----------------------------------------------------------- nav drawer
-
-  function createNav() {
-    const shell = document.querySelector(".calepin-website-shell");
-    const backdrop = document.querySelector(".calepin-website-nav-backdrop");
-    const toggle = document.querySelector(".calepin-website-nav-toggle");
-
-    function setOpen(isOpen) {
-      if (!shell || !toggle) return;
-      shell.classList.toggle("nav-open", isOpen);
-      document.body.classList.toggle("calepin-website-nav-open", isOpen);
-      toggle.setAttribute("aria-expanded", String(isOpen));
-      if (backdrop) backdrop.setAttribute("aria-hidden", String(!isOpen));
-    }
-
-    const close = () => setOpen(false);
-
-    if (toggle) {
-      toggle.addEventListener("click", (event) => {
-        event.preventDefault();
-        if (isMobile()) setOpen(!shell.classList.contains("nav-open"));
-      });
-    }
-    backdrop?.addEventListener("click", close);
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") close();
-    });
-    window.addEventListener("resize", () => {
-      if (!isMobile()) close();
-    });
-
-    return { close };
-  }
-
-  // ------------------------------------------------------------- inline svg
-
-  function svgTextFromSource(src) {
-    if (!src) return Promise.resolve("");
-    const prefix = "data:image/svg+xml";
-    if (src.startsWith(prefix)) {
-      const payload = src.slice(src.indexOf(",") + 1);
-      try {
-        return Promise.resolve(
-          src.startsWith(`${prefix};base64,`) ? atob(payload) : decodeURIComponent(payload),
-        );
-      } catch {
-        return Promise.resolve(payload);
-      }
-    }
-    return fetch(src)
-      .then((response) => response.text())
-      .catch(() => "");
-  }
-
-  function inlineSvgImage(image) {
-    const src = image.getAttribute("src");
-    return svgTextFromSource(src).then((text) => {
-      if (!text) return;
-      const svg = new DOMParser()
-        .parseFromString(text, "image/svg+xml")
-        .querySelector("svg");
-      if (!svg) return;
-
-      svg.removeAttribute("xmlns:xlink");
-      svg.removeAttribute("width");
-      svg.removeAttribute("height");
-      if (image.className) svg.setAttribute("class", image.className);
-      if (image.id) svg.setAttribute("id", image.id);
-
-      const alt = image.getAttribute("alt");
-      if (alt) {
-        svg.setAttribute("aria-label", alt);
-        svg.setAttribute("role", "img");
-      }
-      const ariaHidden = image.getAttribute("aria-hidden");
-      if (ariaHidden !== null) svg.setAttribute("aria-hidden", ariaHidden);
-
-      image.replaceWith(svg);
-    });
-  }
-
-  function inlineSvgs() {
-    document
-      .querySelectorAll("img[data-inline-svg]")
-      .forEach((image) => inlineSvgImage(image));
-  }
-
-  // --------------------------------------------------------- link state
-
-  function urlWithState(href, viewSelect) {
-    if (!isInternalPageHref(href)) return href;
-    try {
-      const url = new URL(href, window.location.href);
-      const view = currentView(viewSelect);
-      setUrlParam(url, VIEW.param, view === VIEW.rendered ? "" : view);
-      return url.toString();
-    } catch {
-      return href;
-    }
-  }
-
-  function preserveStateInLinks(viewSelect) {
-    document.querySelectorAll("a[href]").forEach((link) => {
-      const href = link.getAttribute("href");
-      if (!isInternalPageHref(href)) return;
-      const next = urlWithState(href, viewSelect);
-      if (next && next !== href) link.setAttribute("href", next);
-    });
-  }
-
-  function initLinkInterception(nav, viewSelect) {
-    document.addEventListener("click", (event) => {
-      const tocLink = event.target.closest(".calepin-website-toc a");
-      if (tocLink) {
-        const href = tocLink.getAttribute("href");
-        if (href && href.startsWith("#")) {
-          let target = null;
-          try {
-            target = document.querySelector(href);
-          } catch {
-            target = null;
-          }
-          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        if (isMobile()) nav.close();
-        return;
-      }
-
-      const link = event.target.closest("a");
-      if (!link || !isPlainLeftClick(event)) return;
-
-      const isSidebar = Boolean(event.target.closest(".calepin-website-sidebar a"));
-      if (isSidebar && isMobile()) nav.close();
-
-      const href = link.getAttribute("href");
-      const next = urlWithState(href, viewSelect);
-      if (next && next !== href) {
-        event.preventDefault();
-        window.location.href = next;
-      }
-    });
-  }
-
-  // ----------------------------------------------------- dialog lightbox
-
-  function initDialogs() {
-    document.querySelectorAll("[data-video-dialog], [data-lightbox-dialog]").forEach((trigger) => {
-      const dialogId = trigger.dataset.videoDialog || trigger.dataset.lightboxDialog;
-      const dialog = document.getElementById(dialogId);
-      if (!dialog || typeof dialog.showModal !== "function") return;
-      trigger.addEventListener("click", (event) => {
-        event.preventDefault();
-        dialog.showModal();
-      });
-    });
-
-    document.querySelectorAll("dialog.calepin-video-dialog, dialog.calepin-screenshot-dialog").forEach((dialog) => {
-      const stop = () => {
-        const video = dialog.querySelector("video");
-        if (video) video.pause();
-      };
-      dialog.addEventListener("click", (event) => {
-        // Clicking the dialog backdrop (the dialog element itself) closes it.
-        if (event.target === dialog) dialog.close();
-      });
-      dialog.querySelectorAll("[data-close-dialog]").forEach((button) => {
-        button.addEventListener("click", () => dialog.close());
-      });
-      dialog.addEventListener("close", stop);
-    });
-  }
-
-  // --------------------------------------------------------------- bootstrap
-
-  const viewSelect = document.getElementById("calepin-website-view-mode");
-
-  initView(viewSelect);
-  const nav = createNav();
-  inlineSvgs();
-  initDialogs();
-  preserveStateInLinks(viewSelect);
-  initLinkInterception(nav, viewSelect);
-
-  window.addEventListener("pageshow", (event) => {
-    if (!event.persisted) return;
-    initView(viewSelect);
-    preserveStateInLinks(viewSelect);
-  });
-})();
-
-    </script>
-</body></html>
+<span style=color:#d73948>#</span><span style=color:#d73948>for</span> post <span style=color:#d73948>in</span> posts [
+  <span style=color:#8b41b1>-</span> <span style=color:#4b69c6>#</span><span style=color:#4b69c6>link</span>(post.href)[<span style=color:#8b41b1>#</span><span style=color:#8b41b1>post</span>.<span style=color:#8b41b1>title</span>] <span style=color:#1d6c76>\</span>
+    <span style=color:#8b41b1>#</span><span style=color:#8b41b1>post</span>.<span style=color:#8b41b1>meta</span>.<span style=color:#4b69c6>at</span>(<span style=color:#198810>"summary"</span>, default: [])
+]</code></pre><p><code>calepin.pages()</code> returns one dictionary per built page, excluding <code>404.typ</code>. <em>Calepin</em> creates these entry fields:<ul><li><code>path</code>: source path relative to the website root<li><code>href</code>: rendered HTML path relative to the current page<li><code>title</code>: resolved page title<li><code>language</code>: language code, or <code>none</code> when languages are not configured<li><code>translation_key</code>: resolved key used to connect translated pages<li><code>translations</code>: matching pages in other languages, or an empty dictionary<li><code>pdf</code>: PDF path, or <code>none</code> when the page has no PDF output<li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, or an empty dictionary</ul><p>Only <code>meta</code> comes from the page’s <code>#metadata</code> value. <em>Calepin</em> interprets a few optional metadata keys: <code>title</code>, <code>pdf</code>, <code>translation_key</code>, <code>slug</code>, and <code>url</code>. All other keys are left untouched for your own Typst code.<p>There is no required schema for custom metadata. Common keys include <code>date</code>, <code>tags</code>, <code>author</code>, <code>authors</code>, <code>category</code>, <code>venue</code>, <code>summary</code>, and <code>draft</code>, but you can use any key your page list or template expects. Since <code>calepin.pages()</code> returns a Typst array of dictionaries, you can use Typst functions and methods such as <code>filter</code>, <code>map</code>, <code>sorted</code>, <code>rev</code>, <code>at</code>, and <code>contains</code> to select and format the pages you need.<h2 id=multilingual-sites>Multilingual sites</h2><p>Configure languages with one content directory per language:<pre><code data-lang=toml><span style=color:#4b69c6>default_language</span> = <span style=color:#198810>"</span><span style=color:#198810>en</span><span style=color:#198810>"</span>
+
+[<span style=color:#4b69c6>languages</span>.<span style=color:#4b69c6>en</span>]
+<span style=color:#4b69c6>label</span> = <span style=color:#198810>"</span><span style=color:#198810>English</span><span style=color:#198810>"</span>
+<span style=color:#4b69c6>content_dir</span> = <span style=color:#198810>"</span><span style=color:#198810>.</span><span style=color:#198810>"</span>
+
+[<span style=color:#4b69c6>languages</span>.<span style=color:#4b69c6>fr</span>]
+<span style=color:#4b69c6>label</span> = <span style=color:#198810>"</span><span style=color:#198810>Français</span><span style=color:#198810>"</span>
+<span style=color:#4b69c6>content_dir</span> = <span style=color:#198810>"</span><span style=color:#198810>fr</span><span style=color:#198810>"</span></code></pre><p>With this layout, <code>about.typ</code> and <code>fr/about.typ</code> are treated as translations of the same page. The default language keeps root URLs like <code>about.html</code>; other languages use their language code as a URL prefix, such as <code>fr/about.html</code>.<p>Use page metadata when translations move or need different slugs:<pre><code data-lang=typ><span style=color:#d73948>#</span><span style=color:#d73948>set</span> <span style=color:#4b69c6>document</span>(title: [À propos])
+
+<span style=color:#4b69c6>#</span><span style=color:#4b69c6>metadata</span>((
+  translation_key: <span style=color:#198810>"about"</span>,
+  slug: <span style=color:#198810>"a-propos"</span>,
+)) <span style=color:#1d6c76>&lt;website-metadata></span>
+
+<span style=color:#4b69c6>#</span><span style=color:#4b69c6>title</span>()</code></pre><p>When more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.</main><aside class=calepin-website-toc><p class=calepin-website-toc-title>On this page<nav aria-label="On this page"><ul><li class=level-2><a href=#basic-settings>Basic settings</a><li class=level-2><a href=#robots-txt>Robots.txt</a><li class=level-2><a href=#static-files>Static files</a><li class=level-2><a href=#navigation>Navigation</a><li class=level-3><a href=#side-bar>Side bar</a><li class=level-3><a href=#top-bar>Top bar</a><li class=level-2><a href=#include-or-exclude-pages>Include or exclude pages</a><li class=level-2><a href=#pages-metadata>Pages metadata</a><li class=level-2><a href=#multilingual-sites>Multilingual sites</a></ul></nav></aside></div><footer aria-label="Page navigation" class=calepin-website-page-nav><div class=calepin-website-page-nav-inner><a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href=websites.html role=button> <span aria-hidden=true class=calepin-website-page-nav-arrow>←</span> <span class=calepin-website-page-nav-content> <span class=calepin-website-page-nav-kind>Previous</span> <span class=calepin-website-page-nav-title>Overview</span> </span> </a><a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href=themes.html role=button> <span class=calepin-website-page-nav-content> <span class=calepin-website-page-nav-kind>Next</span> <span class=calepin-website-page-nav-title>Themes</span> </span> <span aria-hidden=true class=calepin-website-page-nav-arrow>→</span> </a></div></footer><script>(()=>{let buttons=document.querySelectorAll(`[data-calepin-theme-toggle], #calepin-theme-button`);if(!buttons.length)return;let order=[``,`light`,`dark`],labels={"":`Theme: Auto`,light:`Theme: Light`,dark:`Theme: Dark`},icons={"":`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,light:`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,dark:`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`},normalize=value=>value===`light`||value===`dark`?value:``,storageKey=button=>button.dataset.calepinThemeStorageKey||`calepin-theme`,urlParam=button=>button.dataset.calepinThemeParam||``;function readUrl(button){let param=urlParam(button);if(!param)return``;try{return normalize(new URL(window.location.href).searchParams.get(param)||``)}catch{return``}}function clearUrl(button){let param=urlParam(button);if(param)try{let url=new URL(window.location.href);url.searchParams.delete(param),window.history.replaceState({},``,url.toString())}catch{}}function readStored(button){try{return normalize(localStorage.getItem(storageKey(button))||``)}catch{return``}}function writeStored(button,value){try{value?localStorage.setItem(storageKey(button),value):localStorage.removeItem(storageKey(button))}catch{}}function readTheme(button){let fromUrl=readUrl(button);return fromUrl?(writeStored(button,fromUrl),clearUrl(button),fromUrl):readStored(button)}function applyTheme(value){let theme=normalize(value);theme?(document.documentElement.dataset.theme=theme,document.documentElement.style.colorScheme=theme):(delete document.documentElement.dataset.theme,document.documentElement.style.colorScheme=``),buttons.forEach(button=>{let label=labels[theme]||labels[``];button.innerHTML=icons[theme]||icons[``],button.setAttribute(`aria-label`,label),button.setAttribute(`title`,label)})}applyTheme(readTheme(buttons[0])),buttons.forEach(button=>{button.dataset.calepinThemeBound!==`true`&&(button.dataset.calepinThemeBound=`true`,button.addEventListener(`click`,()=>{let current=normalize(document.documentElement.dataset.theme||``),next=order[(order.indexOf(current)+1)%order.length];applyTheme(next),writeStored(button,next)}))}),window.addEventListener(`pageshow`,event=>{event.persisted&&applyTheme(readTheme(buttons[0]))}),window.addEventListener(`storage`,event=>{event.key===storageKey(buttons[0])&&applyTheme(readStored(buttons[0]))})})();</script><script>(()=>{let selects=document.querySelectorAll(`select[data-calepin-language-picker]`);if(!selects.length)return;function escapeHtml(value){return String(value).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`)}function languageIcon(){return`<svg class="calepin-language-picker-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a13.5 13.5 0 0 1 0 18"></path><path d="M12 3a13.5 13.5 0 0 0 0 18"></path></svg>`}function closeAll(except){document.querySelectorAll(`.calepin-language-picker.is-open`).forEach(picker=>{if(picker===except)return;picker.classList.remove(`is-open`),picker.open=!1;let summary=picker.querySelector(`summary`);summary&&summary.setAttribute(`aria-expanded`,`false`)})}function enhance(select){if(select.dataset.calepinLanguageBound===`true`)return;select.dataset.calepinLanguageBound=`true`;let options=Array.from(select.options).filter(option=>option.value);if(options.length<=1)return;let selected=options.find(option=>option.selected)||options[0],picker=document.createElement(`details`);picker.className=`calepin-language-picker dropdown`;let summary=document.createElement(`summary`);summary.className=`calepin-language-picker-button outline secondary`,summary.setAttribute(`role`,`button`),summary.setAttribute(`aria-haspopup`,`menu`),summary.setAttribute(`aria-expanded`,`false`),summary.setAttribute(`aria-label`,select.getAttribute(`aria-label`)||`Language`),summary.innerHTML=`${languageIcon()}<span>${escapeHtml(selected.textContent)}</span>`;let menu=document.createElement(`ul`);menu.className=`calepin-language-picker-menu`,menu.setAttribute(`role`,`menu`),options.forEach(option=>{let li=document.createElement(`li`),item=document.createElement(`a`);item.href=option.value,item.setAttribute(`role`,`menuitem`),item.innerHTML=`${languageIcon()}<span>${escapeHtml(option.textContent)}</span>`,option.selected&&item.setAttribute(`aria-current`,`true`),li.appendChild(item),menu.appendChild(li)}),summary.addEventListener(`click`,()=>{let open=!picker.open;closeAll(open?picker:null),picker.classList.toggle(`is-open`,open),summary.setAttribute(`aria-expanded`,open?`true`:`false`)}),picker.addEventListener(`toggle`,()=>{picker.classList.toggle(`is-open`,picker.open),summary.setAttribute(`aria-expanded`,picker.open?`true`:`false`)}),picker.append(summary,menu),select.hidden=!0,select.insertAdjacentElement(`afterend`,picker)}selects.forEach(enhance),document.addEventListener(`click`,event=>{event.target.closest(`.calepin-language-picker`)||closeAll()}),document.addEventListener(`keydown`,event=>{event.key===`Escape`&&closeAll()})})();</script><script>(()=>{let selector=window.CalepinCopyCode?.selector||`div.sourceCode, pre.sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr`,buttonClass=window.CalepinCopyCode?.buttonClass||`calepin-copy-code`,copiedClass=window.CalepinCopyCode?.copiedClass||`copied`,icon=window.CalepinCopyCode?.icon||`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;function copyText(text){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(text);let textarea=document.createElement(`textarea`);textarea.value=text,textarea.setAttribute(`readonly`,``),textarea.style.position=`fixed`,textarea.style.opacity=`0`,document.body.appendChild(textarea),textarea.select();try{document.execCommand(`copy`)}finally{textarea.remove()}return Promise.resolve()}function codeText(node){return node?node.nodeType===Node.TEXT_NODE?node.nodeValue||``:node.nodeType===Node.ELEMENT_NODE?node.tagName===`BR`?`
+`:Array.from(node.childNodes).map(codeText).join(``):``:``}document.querySelectorAll(selector).forEach(block=>{if(block.dataset.calepinCopyBound===`true`||block.querySelector(`:scope > .${buttonClass}`))return;block.dataset.calepinCopyBound=`true`;let button=document.createElement(`button`);button.type=`button`,button.className=buttonClass,button.setAttribute(`aria-label`,`Copy code`),button.setAttribute(`title`,`Copy code`),button.innerHTML=icon,button.addEventListener(`click`,async()=>{let text=codeText(block.querySelector(`pre code, code, pre`));try{await copyText(text),button.classList.add(copiedClass),window.setTimeout(()=>button.classList.remove(copiedClass),900)}catch{button.classList.remove(copiedClass)}}),block.prepend(button)})})();</script><script>/* Calepin website behaviour, consolidated.
+*
+* One module-local script wires: view switcher (HTML/Source/PDF), the mobile
+* sidebar drawer, inline SVGs, internal link state preservation, and the
+* native <dialog> video lightbox.
+*
+* The Rust theme loader inlines this file into a <script> at the end of <body>,
+* so the DOM already exists when it runs and no DOMContentLoaded guard is
+* needed. */
+(()=>{
+// Single-document render: website shell behaviors do not apply.
+if(!document.querySelector(`.calepin-website-shell`))return;let VIEW={param:`view`,rendered:`rendered`,source:`source`,pdf:`pdf`},MOBILE_QUERY=`(max-width: 56rem)`,SOURCE_DATA_ID=`calepin-website-source-data`,isMobile=()=>window.matchMedia(`(max-width: 56rem)`).matches,isPlainLeftClick=event=>event&&event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey,isInternalPageHref=href=>!!href&&!href.startsWith(`#`)&&!href.startsWith(`http://`)&&!href.startsWith(`https://`)&&!href.startsWith(`//`)&&!href.startsWith(`mailto:`)&&!href.startsWith(`tel:`);function setUrlParam(url,name,value){value?url.searchParams.set(name,value):url.searchParams.delete(name)}function readUrlParam(name,normalize,fallback=``){try{return normalize((new URL(window.location.href).searchParams.get(name)||``).toLowerCase())}catch{return fallback}}function updateCurrentUrlParam(name,value){try{let url=new URL(window.location.href);setUrlParam(url,name,value),window.history.replaceState({},``,url.toString())}catch{}}let getMain=()=>document.querySelector(`.calepin-website-main`),normalizeView=value=>value===VIEW.source||value===VIEW.pdf?value:VIEW.rendered;function currentView(select){return normalizeView(select&&select.value||VIEW.rendered)}function pageAssetCandidates(extension){let{pathname}=window.location;return pathname.endsWith(`/`)?[`${pathname}index.${extension}`]:pathname.endsWith(`.html`)?[`${pathname.slice(0,-5)}.${extension}`]:!pathname||pathname.endsWith(`.`)?[`index.${extension}`]:pathname.includes(`.`)?[`${pathname}.${extension}`]:[`${pathname}/index.${extension}`]}function replaceMainContent(node){let main=getMain();return main?(main.innerHTML=``,main.appendChild(node),!0):!1}function showMainFallback(message){let main=getMain();if(!main)return;let fallback=document.createElement(`p`);fallback.textContent=message,main.prepend(fallback)}function renderSourceText(text){let container=document.createElement(`div`);container.className=`calepin-website-source-view`;let pre=document.createElement(`pre`),code=document.createElement(`code`);code.className=`language-typ`,code.textContent=text,pre.appendChild(code),container.appendChild(pre),replaceMainContent(container)}async function renderSourceMode(){let element=document.getElementById(`calepin-website-source-data`);if(element)try{let inline=JSON.parse(element.textContent||``);if(typeof inline==`string`&&inline.length>0){renderSourceText(inline);return}}catch{}for(let sourcePath of pageAssetCandidates(`typ`))try{let response=await fetch(sourcePath);if(!response.ok)continue;renderSourceText(await response.text());return}catch{}showMainFallback(`Could not load source view.`)}async function renderPdfMode(){let isLocal=window.location.protocol===`file:`;for(let pdfPath of pageAssetCandidates(`pdf`)){if(!isLocal)try{let response=await fetch(pdfPath,{method:`HEAD`});if(!response.ok&&response.status!==405)continue}catch{}let viewer=document.createElement(`iframe`);viewer.className=`calepin-website-pdf-viewer`;try{viewer.src=new URL(pdfPath,window.location.href).toString()}catch{viewer.src=pdfPath}viewer.setAttribute(`title`,`Page PDF view`),viewer.setAttribute(`loading`,`lazy`),replaceMainContent(viewer);return}showMainFallback(`Could not load PDF view.`)}function applyView(mode,select){let value=normalizeView(mode);select&&(select.value=value),updateCurrentUrlParam(VIEW.param,value===VIEW.rendered?``:value),value===VIEW.source?renderSourceMode():value===VIEW.pdf&&renderPdfMode()}function initView(select){applyView(readUrlParam(VIEW.param,normalizeView,VIEW.rendered),select),select&&!select.dataset.calepinBound&&(select.dataset.calepinBound=`true`,select.addEventListener(`change`,event=>{let value=normalizeView(event.target.value),url=new URL(window.location.href);setUrlParam(url,VIEW.param,value===VIEW.rendered?``:value),window.location.href=url.toString()}))}
+// ----------------------------------------------------------- nav drawer
+function createNav(){let shell=document.querySelector(`.calepin-website-shell`),backdrop=document.querySelector(`.calepin-website-nav-backdrop`),toggle=document.querySelector(`.calepin-website-nav-toggle`);function setOpen(isOpen){!shell||!toggle||(shell.classList.toggle(`nav-open`,isOpen),document.body.classList.toggle(`calepin-website-nav-open`,isOpen),toggle.setAttribute(`aria-expanded`,String(isOpen)),backdrop&&backdrop.setAttribute(`aria-hidden`,String(!isOpen)))}let close=()=>setOpen(!1);return toggle&&toggle.addEventListener(`click`,event=>{event.preventDefault(),isMobile()&&setOpen(!shell.classList.contains(`nav-open`))}),backdrop?.addEventListener(`click`,close),document.addEventListener(`keydown`,event=>{event.key===`Escape`&&close()}),window.addEventListener(`resize`,()=>{isMobile()||close()}),{close}}
+// ------------------------------------------------------------- inline svg
+function svgTextFromSource(src){if(!src)return Promise.resolve(``);let prefix=`data:image/svg+xml`;if(src.startsWith(prefix)){let payload=src.slice(src.indexOf(`,`)+1);try{return Promise.resolve(src.startsWith(`${prefix};base64,`)?atob(payload):decodeURIComponent(payload))}catch{return Promise.resolve(payload)}}return fetch(src).then(response=>response.text()).catch(()=>``)}function inlineSvgImage(image){return svgTextFromSource(image.getAttribute(`src`)).then(text=>{if(!text)return;let svg=new DOMParser().parseFromString(text,`image/svg+xml`).querySelector(`svg`);if(!svg)return;svg.removeAttribute(`xmlns:xlink`),svg.removeAttribute(`width`),svg.removeAttribute(`height`),image.className&&svg.setAttribute(`class`,image.className),image.id&&svg.setAttribute(`id`,image.id);let alt=image.getAttribute(`alt`);alt&&(svg.setAttribute(`aria-label`,alt),svg.setAttribute(`role`,`img`));let ariaHidden=image.getAttribute(`aria-hidden`);ariaHidden!==null&&svg.setAttribute(`aria-hidden`,ariaHidden),image.replaceWith(svg)})}function inlineSvgs(){document.querySelectorAll(`img[data-inline-svg]`).forEach(image=>inlineSvgImage(image))}
+// --------------------------------------------------------- link state
+function urlWithState(href,viewSelect){if(!isInternalPageHref(href))return href;try{let url=new URL(href,window.location.href),view=currentView(viewSelect);return setUrlParam(url,VIEW.param,view===VIEW.rendered?``:view),url.toString()}catch{return href}}function preserveStateInLinks(viewSelect){document.querySelectorAll(`a[href]`).forEach(link=>{let href=link.getAttribute(`href`);if(!isInternalPageHref(href))return;let next=urlWithState(href,viewSelect);next&&next!==href&&link.setAttribute(`href`,next)})}function initLinkInterception(nav,viewSelect){document.addEventListener(`click`,event=>{let tocLink=event.target.closest(`.calepin-website-toc a`);if(tocLink){let href=tocLink.getAttribute(`href`);if(href&&href.startsWith(`#`)){let target=null;try{target=document.querySelector(href)}catch{target=null}target&&target.scrollIntoView({behavior:`smooth`,block:`start`})}isMobile()&&nav.close();return}let link=event.target.closest(`a`);if(!link||!isPlainLeftClick(event))return;event.target.closest(`.calepin-website-sidebar a`)&&isMobile()&&nav.close();let href=link.getAttribute(`href`),next=urlWithState(href,viewSelect);next&&next!==href&&(event.preventDefault(),window.location.href=next)})}
+// ----------------------------------------------------- dialog lightbox
+function initDialogs(){document.querySelectorAll(`[data-video-dialog], [data-lightbox-dialog]`).forEach(trigger=>{let dialogId=trigger.dataset.videoDialog||trigger.dataset.lightboxDialog,dialog=document.getElementById(dialogId);!dialog||typeof dialog.showModal!=`function`||trigger.addEventListener(`click`,event=>{event.preventDefault(),dialog.showModal()})}),document.querySelectorAll(`dialog.calepin-video-dialog, dialog.calepin-screenshot-dialog`).forEach(dialog=>{let stop=()=>{let video=dialog.querySelector(`video`);video&&video.pause()};dialog.addEventListener(`click`,event=>{
+// Clicking the dialog backdrop (the dialog element itself) closes it.
+event.target===dialog&&dialog.close()}),dialog.querySelectorAll(`[data-close-dialog]`).forEach(button=>{button.addEventListener(`click`,()=>dialog.close())}),dialog.addEventListener(`close`,stop)})}
+// --------------------------------------------------------------- bootstrap
+let viewSelect=document.getElementById(`calepin-website-view-mode`);initView(viewSelect);let nav=createNav();inlineSvgs(),initDialogs(),preserveStateInLinks(viewSelect),initLinkInterception(nav,viewSelect),window.addEventListener(`pageshow`,event=>{event.persisted&&(initView(viewSelect),preserveStateInLinks(viewSelect))})})();</script>
