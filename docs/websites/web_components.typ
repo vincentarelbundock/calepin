@@ -4,20 +4,18 @@
 
 #metadata((pdf: false)) <website-metadata>
 
+#calepin.setup(fenced-chunks: true)
+
 #title()
 
-Web components are a practical way to add focused browser-only interaction to a
-Calepin site without turning the page into a JavaScript application. They work
-well for self-contained widgets such as carousels, media controls, maps, tabs,
-or small form controls: Typst still owns the document, while the component
-library handles the interactive behavior in HTML output.
+Web components are a practical way to add focused browser-only interaction to a Calepin site without turning the page into a JavaScript application. They work well for self-contained widgets such as carousels, media controls, maps, tabs, or small form controls: Typst still owns the document, while the component library handles the interactive behavior in HTML output.
 
 Popular web component libraries include #link("https://webawesome.com/")[Web Awesome],
 #link("https://shoelace.style/")[Shoelace],
 #link("https://ui5.github.io/webcomponents/")[UI5 Web Components],
 #link("https://opensource.adobe.com/spectrum-web-components/")[Spectrum Web Components],
 and #link("https://github.com/material-components/material-web")[Material Web].
-This page uses UI5 Web Components for the carousel example and `ui5-tabcontainer` for tabs.
+This page uses UI5 Web Components for the carousel and tab examples.
 
 #let load-ui5() = [
   #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/Assets.js?module", type: "module",)
@@ -73,6 +71,7 @@ ui5-tabcontainer {
 ui5-tab {
   color: var(--pico-color);
   font: inherit;
+  font-weight: var(--pico-font-weight, 400);
   --sapFontFamily: inherit;
   --sapFontSize: 1rem;
   --sapTextColor: var(--pico-color);
@@ -86,6 +85,11 @@ ui5-tab {
 ui5-tab::part(tab),
 ui5-tab::part(text) {
   color: inherit;
+  font-weight: var(--pico-font-weight, 400);
+}
+
+ui5-tab p {
+  font-weight: var(--pico-font-weight, 400);
 }
 
 ui5-tabcontainer::part(tabStrip) {
@@ -165,66 +169,92 @@ The Typst above produces the equivalent UI5 Web Components markup:
 
 = Tabs
 
-`<ui5-tabcontainer>` supports the native tabs pattern, with each `<ui5-tab>`
-containing its corresponding content directly:
+`<ui5-tabcontainer>` supports the native tabs pattern, with each `<ui5-tab>` containing its corresponding content directly. To keep the syntax cleaner let's define two simple helpers:
+
+- `tabs(...)` for the outer container (so defaults stay in one place)
+- `tab(...)` for each individual tab
+
+#let tabs(body, header-background-design: "Transparent", content-background-design: "Transparent") = {
+  html.elem("ui5-tabcontainer", attrs: (
+    header-background-design: header-background-design,
+    content-background-design: content-background-design,
+  ))[
+    #body
+  ]
+}
+
+#let tab(label, selected: false, body) = {
+  html.elem("ui5-tab", attrs: (text: label, selected: repr(selected)))[
+    #body
+  ]
+}
+
+```typ
+#let tabs(body, header-background-design: "Transparent", content-background-design: "Transparent",) = {
+  html.elem("ui5-tabcontainer", attrs: (
+    header-background-design: header-background-design,
+    content-background-design: content-background-design,
+  ))[
+    #body
+  ]
+}
+
+#let tab(label, selected: false, body) = {
+  html.elem("ui5-tab", attrs: (text: label, selected: repr(selected)))[
+    #body
+  ]
+}
+```
+
+Here is the rendered example chunk using those helpers:
 
 ````typ
-#html.elem("ui5-tabcontainer", attrs: (
-  header-background-design: "Transparent",
-  content-background-design: "Transparent",
-))[
-  #html.elem("ui5-tab", attrs: (text: "R", selected: "true"))[
+#tabs[
+
+#tab("R", selected: true)[
 This tab includes R code:
 
-#calepin.chunk("r")[
-```r
-x <- c(1, 2, 3, 4)
-mean(x)
-```
-]
-  ]
-
-  #html.elem("ui5-tab", attrs: (text: "Python"))[
-This tab includes Python code:
-
-#calepin.chunk("python")[
-```python
-x = [1, 2, 3, 4]
-sum(x) / len(x)
-```
-]
-  ]
-]
-````
-
-#html.elem("ui5-tabcontainer", attrs: (
-  header-background-design: "Transparent",
-  content-background-design: "Transparent",
-))[
-  #html.elem("ui5-tab", attrs: (text: "R", selected: "true"))[
-This tab includes R code:
-
-#calepin.chunk("r")[
 ```r
 x <- c(1, 2, 3, 4, 5)
 mean(x)
 ```
 ]
-  ]
 
-  #html.elem("ui5-tab", attrs: (text: "Python"))[
+#tab("Python")[
 This tab includes Python code:
 
-#calepin.chunk("python")[
 ```python
 x = [1, 2, 3, 4]
 sum(x) / len(x)
 ```
+
 ]
-  ]
+````
+
+#tabs[
+
+#tab("R", selected: true)[
+This tab includes R code:
+
+```r
+x <- c(1, 2, 3, 4, 5)
+mean(x)
+```
 ]
 
-After Calepin expands the chunks, the HTML output follows the same order as the
+#tab("Python")[
+This tab includes Python code:
+
+```python
+x = [1, 2, 3, 4]
+sum(x) / len(x)
+```
+
+]
+
+]
+
+After Calepin expands the chunks, the same order as the
 Typst code above:
 
 ```html
@@ -238,5 +268,79 @@ Typst code above:
     <!-- Calepin renders the Python chunk here. -->
   </ui5-tab>
 </ui5-tabcontainer>
+```
+
+To keep the rendered result visually consistent with the rest of this page, it also uses this local CSS:
+
+```css
+ui5-carousel:focus,
+ui5-carousel:focus-visible,
+ui5-carousel:focus-within,
+ui5-carousel button:focus,
+ui5-carousel button:focus-visible,
+ui5-carousel [role='button']:focus,
+ui5-carousel [role='button']:focus-visible,
+ui5-carousel [tabindex]:focus,
+ui5-carousel [tabindex]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+ui5-tabcontainer {
+  display: block;
+  margin-block: 1rem;
+  color: var(--pico-color);
+  font: inherit;
+  --sapFontFamily: inherit;
+  --sapFontSize: 1rem;
+  --sapTextColor: var(--pico-color);
+  --sapContent_TextColor: var(--pico-color);
+  --sapTextInvertedColor: var(--pico-color);
+  --sapTab_TextColor: var(--pico-muted-color);
+  --sapTab_Selected_TextColor: var(--pico-color);
+  --sapTab_Hover_TextColor: var(--pico-color);
+  --sapTab_Active_TextColor: var(--pico-color);
+  --sapList_TextColor: var(--pico-color);
+  --sapList_BorderColor: var(--pico-muted-border-color);
+  --sapTile_TextColor: var(--pico-color);
+  --sapObjectHeader_Title_TextColor: var(--pico-color);
+  --sapPage_Background: transparent;
+  --sapGroup_ContentBackground: transparent;
+  --sapList_Background: transparent;
+  --sapList_HeaderBackground: transparent;
+}
+
+ui5-tab {
+  color: var(--pico-color);
+  font: inherit;
+  font-weight: var(--pico-font-weight, 400);
+  --sapFontFamily: inherit;
+  --sapFontSize: 1rem;
+  --sapTextColor: var(--pico-color);
+  --sapContent_TextColor: var(--pico-color);
+  --sapTab_TextColor: var(--pico-muted-color);
+  --sapTab_Selected_TextColor: var(--pico-color);
+  --sapTab_Hover_TextColor: var(--pico-color);
+  --sapTab_Active_TextColor: var(--pico-color);
+}
+
+ui5-tab::part(tab),
+ui5-tab::part(text) {
+  color: inherit;
+  font-weight: var(--pico-font-weight, 400);
+}
+
+ui5-tab p {
+  font-weight: var(--pico-font-weight, 400);
+}
+
+ui5-tabcontainer::part(tabStrip) {
+  border-block-end: 1px solid var(--pico-muted-border-color);
+}
+
+ui5-tabcontainer::part(tabContainer) {
+  background: transparent;
+  color: var(--pico-color);
+}
 ```
 
