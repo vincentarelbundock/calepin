@@ -9,7 +9,9 @@ use std::path::{Path, PathBuf};
 use syntax::HtmlSyntaxTheme;
 
 pub(crate) use minify::minify_html_file;
-pub(crate) use theme::{SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection};
+pub(crate) use theme::{
+    SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
+};
 
 const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
 const HTML_INPUT_LIGHT_THEME_REF: &str = "/.calepin/calepin-input-light.tmTheme";
@@ -463,6 +465,7 @@ mod tests {
             current_url: None,
             page_title: None,
             stylesheet: None,
+            pagefind: None,
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
 
@@ -522,6 +525,7 @@ mod tests {
             current_url: None,
             page_title: None,
             stylesheet: None,
+            pagefind: None,
         };
 
         for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
@@ -610,6 +614,7 @@ mod tests {
             current_url: None,
             page_title: None,
             stylesheet: None,
+            pagefind: None,
         };
 
         for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
@@ -732,6 +737,7 @@ mod tests {
             current_url: None,
             page_title: None,
             stylesheet: Some("../.calepin/calepin-website.css".to_string()),
+            pagefind: None,
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
 

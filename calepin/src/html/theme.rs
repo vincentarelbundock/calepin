@@ -60,6 +60,7 @@ pub(crate) struct SiteContextInput {
     pub(crate) current_url: Option<String>,
     pub(crate) page_title: Option<String>,
     pub(crate) stylesheet: Option<String>,
+    pub(crate) pagefind: Option<SitePagefindEntry>,
 }
 
 #[derive(Serialize)]
@@ -84,6 +85,19 @@ struct SiteContext {
     current_url: Option<String>,
     page_title: Option<String>,
     stylesheet: Option<String>,
+    pagefind: Option<PagefindEntry>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub(crate) struct SitePagefindEntry {
+    pub(crate) css: String,
+    pub(crate) js: String,
+}
+
+#[derive(Serialize)]
+struct PagefindEntry {
+    css: String,
+    js: String,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -324,6 +338,10 @@ fn site_context(
             current_url: input.current_url.clone(),
             page_title: input.page_title.clone(),
             stylesheet: input.stylesheet.clone(),
+            pagefind: input.pagefind.as_ref().map(|entry| PagefindEntry {
+                css: entry.css.clone(),
+                js: entry.js.clone(),
+            }),
         };
     }
 
@@ -357,6 +375,7 @@ fn site_context(
         current_url: None,
         page_title: None,
         stylesheet: None,
+        pagefind: None,
     }
 }
 

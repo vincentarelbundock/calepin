@@ -17,188 +17,210 @@ Popular web component libraries include #link("https://webawesome.com/")[Web Awe
 #link("https://ui5.github.io/webcomponents/")[UI5 Web Components],
 #link("https://opensource.adobe.com/spectrum-web-components/")[Spectrum Web Components],
 and #link("https://github.com/material-components/material-web")[Material Web].
-This page uses Web Awesome for the concrete examples.
+This page uses UI5 Web Components for the carousel example and `ui5-tabcontainer` for tabs.
 
-#let load-webawesome() = [
-  #html.link(
-    rel: "stylesheet",
-    href: "https://ka-p.webawesome.com/kit/b9bfcf2dca544e85/webawesome@3.8.0/styles/webawesome.css",
-  )
-
-  #html.script(
-    "",
-    src: "https://ka-p.webawesome.com/kit/b9bfcf2dca544e85/webawesome@3.8.0/webawesome.loader.js",
-    type: "module",
-  )
+#let load-ui5() = [
+  #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/Assets.js?module", type: "module",)
+  #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/Carousel.js?module", type: "module",)
+  #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/TabContainer.js?module", type: "module",)
+  #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/Tab.js?module", type: "module",)
 ]
 
-#let carousel-image(src, alt) = html.elem("wa-carousel-item")[
-  #html.img(
-    src: src,
-    alt: alt,
-    style: "width: 100%; height: 100%; object-fit: contain; background: #f6f8fa;",
-  )
-]
+#let carousel-image(src, alt) = html.img(
+  src: src, alt: alt, style: "width: 100%; height: auto; object-fit: contain; background: #f6f8fa;",
+)
 
-#let wa-tab(name, label, body) = [
-  #html.elem("wa-tab", attrs: (panel: name))[#label]
-  #html.elem("wa-tab-panel", attrs: (name: name))[#body]
-]
+#load-ui5()
 
-#load-webawesome()
+#html.elem("style", "
+ui5-carousel:focus,
+ui5-carousel:focus-visible,
+ui5-carousel:focus-within,
+ui5-carousel button:focus,
+ui5-carousel button:focus-visible,
+ui5-carousel [role='button']:focus,
+ui5-carousel [role='button']:focus-visible,
+ui5-carousel [tabindex]:focus,
+ui5-carousel [tabindex]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
 
-Define a helper for the library setup and call it once near the top of the
+ui5-tabcontainer {
+  display: block;
+  margin-block: 1rem;
+  color: var(--pico-color);
+  font: inherit;
+  --sapFontFamily: inherit;
+  --sapFontSize: 1rem;
+  --sapTextColor: var(--pico-color);
+  --sapContent_TextColor: var(--pico-color);
+  --sapTextInvertedColor: var(--pico-color);
+  --sapTab_TextColor: var(--pico-muted-color);
+  --sapTab_Selected_TextColor: var(--pico-color);
+  --sapTab_Hover_TextColor: var(--pico-color);
+  --sapTab_Active_TextColor: var(--pico-color);
+  --sapList_TextColor: var(--pico-color);
+  --sapList_BorderColor: var(--pico-muted-border-color);
+  --sapTile_TextColor: var(--pico-color);
+  --sapObjectHeader_Title_TextColor: var(--pico-color);
+  --sapPage_Background: transparent;
+  --sapGroup_ContentBackground: transparent;
+  --sapList_Background: transparent;
+  --sapList_HeaderBackground: transparent;
+}
+
+ui5-tab {
+  color: var(--pico-color);
+  font: inherit;
+  --sapFontFamily: inherit;
+  --sapFontSize: 1rem;
+  --sapTextColor: var(--pico-color);
+  --sapContent_TextColor: var(--pico-color);
+  --sapTab_TextColor: var(--pico-muted-color);
+  --sapTab_Selected_TextColor: var(--pico-color);
+  --sapTab_Hover_TextColor: var(--pico-color);
+  --sapTab_Active_TextColor: var(--pico-color);
+}
+
+ui5-tab::part(tab),
+ui5-tab::part(text) {
+  color: inherit;
+}
+
+ui5-tabcontainer::part(tabStrip) {
+  border-block-end: 1px solid var(--pico-muted-border-color);
+}
+
+ui5-tabcontainer::part(tabContainer) {
+  background: transparent;
+  color: var(--pico-color);
+}
+")
+
+Define helper functions for the library setup and call them once near the top of the
 document:
 
 ````typ
-#let load-webawesome() = [
-  #html.link(
-    rel: "stylesheet",
-    href: "https://ka-p.webawesome.com/kit/b9bfcf2dca544e85/webawesome@3.8.0/styles/webawesome.css",
-  )
-
-  #html.script(
-    "",
-    src: "https://ka-p.webawesome.com/kit/b9bfcf2dca544e85/webawesome@3.8.0/webawesome.loader.js",
-    type: "module",
-  )
+#let load-ui5() = [
+  #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/Assets.js?module", type: "module",)
+  #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/Carousel.js?module", type: "module",)
+  #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/TabContainer.js?module", type: "module",)
+  #html.script("", src: "https://unpkg.com/@ui5/webcomponents@2.23.1/dist/Tab.js?module", type: "module",)
 ]
 
-#load-webawesome()
+#load-ui5()
 ````
 
 = Carousel
 
-Web Awesome provides navigation arrows, pagination, looping, and mouse dragging
-as attributes on `<wa-carousel>`, so no custom overlay buttons or event
-listeners are needed. The images are wrapped in `<wa-carousel-item>` custom
-elements, while `html.img` handles the ordinary image element.
+UI5 Web Components provide navigation arrows, a page indicator, and looping
+via `<ui5-carousel>`, so no custom overlay buttons or event listeners are
+needed. Images are added as direct child elements, and `html.img` handles
+each image directly.
 
-````typ
-#let carousel-image(src, alt) = html.elem("wa-carousel-item")[
-  #html.img(
-    src: src,
-    alt: alt,
-    style: "width: 100%; height: 100%; object-fit: contain; background: #f6f8fa;",
-  )
-]
+```typ
+#let carousel-image(src, alt) = html.img(
+  src: src, alt: alt, style: "width: 100%; height: auto; object-fit: contain; background: #f6f8fa;",
+)
 
-#html.elem("wa-carousel", attrs: (
-  navigation: "true",
-  pagination: "true",
-  loop: "true",
-  "mouse-dragging": "true",
-  style: "display: block; width: 100%; max-width: 42rem; --aspect-ratio: 3 / 2;",
+#html.elem("ui5-carousel", attrs: (cyclic: "true",
+  style: "display: block; width: 100%; max-width: 42rem; aspect-ratio: 3 / 2; height: 28rem;",
 ))[
   #carousel-image("../assets/flowers_01.jpg", "First flower")
   #carousel-image("../assets/flowers_02.jpg", "Second flower")
   #carousel-image("../assets/flowers_03.jpg", "Third flower")
 ]
-````
-
-#html.elem("wa-carousel", attrs: (
-  navigation: "true",
-  pagination: "true",
-  loop: "true",
-  "mouse-dragging": "true",
-  style: "display: block; width: 100%; max-width: 42rem; --aspect-ratio: 3 / 2;",
+```
+#html.elem("ui5-carousel", attrs: (
+  cyclic: "true",
+  style: "display: block; width: 100%; max-width: 42rem; aspect-ratio: 3 / 2; height: 28rem;",
 ))[
   #carousel-image("../assets/flowers_01.jpg", "First flower")
   #carousel-image("../assets/flowers_02.jpg", "Second flower")
   #carousel-image("../assets/flowers_03.jpg", "Third flower")
 ]
 
-The Typst above produces the same component structure as ordinary Web Awesome
-markup:
+The Typst above produces the equivalent UI5 Web Components markup:
 
 ```html
-<wa-carousel
-  navigation="true"
-  pagination="true"
-  loop="true"
-  mouse-dragging="true"
-  style="display: block; width: 100%; max-width: 42rem; --aspect-ratio: 3 / 2;"
+<ui5-carousel
+  cyclic="true"
+  style="display: block; width: 100%; max-width: 42rem; aspect-ratio: 3 / 2; height: 28rem;"
 >
-  <wa-carousel-item>
-    <img
-      src="../assets/flowers_01.jpg"
-      alt="First flower"
-      style="width: 100%; height: 100%; object-fit: contain; background: #f6f8fa;"
-    >
-  </wa-carousel-item>
-  <wa-carousel-item>
-    <img
-      src="../assets/flowers_02.jpg"
-      alt="Second flower"
-      style="width: 100%; height: 100%; object-fit: contain; background: #f6f8fa;"
-    >
-  </wa-carousel-item>
-  <wa-carousel-item>
-    <img
-      src="../assets/flowers_03.jpg"
-      alt="Third flower"
-      style="width: 100%; height: 100%; object-fit: contain; background: #f6f8fa;"
-    >
-  </wa-carousel-item>
-</wa-carousel>
+  <img src="../assets/flowers_01.jpg" alt="First flower"
+    style="width: 100%; height: auto; object-fit: contain; background: #f6f8fa;"
+  >
+  <img
+    src="../assets/flowers_02.jpg" alt="Second flower"
+    style="width: 100%; height: auto; object-fit: contain; background: #f6f8fa;"
+  >
+  <img
+    src="../assets/flowers_03.jpg" alt="Third flower"
+    style="width: 100%; height: auto; object-fit: contain; background: #f6f8fa;"
+  >
+</ui5-carousel>
 ```
+
 
 = Tabs
 
-A tab group follows the same pattern: the Web Awesome component is emitted as
-custom HTML, and each tab points to a panel by name. The `active` attribute sets
-the initially selected panel. Here, each panel contains a nested
-`#calepin.chunk()` call with equivalent code in R and Python.
+`<ui5-tabcontainer>` supports the native tabs pattern, with each `<ui5-tab>`
+containing its corresponding content directly:
 
 ````typ
-#let wa-tab(name, label, body) = [
-  #html.elem("wa-tab", attrs: (panel: name))[#label]
-  #html.elem("wa-tab-panel", attrs: (name: name))[#body]
-]
-
-#html.elem("wa-tab-group", attrs: (active: "python"))[
-  #wa-tab("r", [R])[
+#html.elem("ui5-tabcontainer", attrs: (
+  header-background-design: "Transparent",
+  content-background-design: "Transparent",
+))[
+  #html.elem("ui5-tab", attrs: (text: "R", selected: "true"))[
 This tab includes R code:
 
 #calepin.chunk("r")[
 ```r
 x <- c(1, 2, 3, 4)
 mean(x)
-```]
+```
+]
   ]
 
-  #wa-tab("python", [Python])[
+  #html.elem("ui5-tab", attrs: (text: "Python"))[
 This tab includes Python code:
 
 #calepin.chunk("python")[
 ```python
 x = [1, 2, 3, 4]
 sum(x) / len(x)
-```]
+```
+]
   ]
 ]
-
 ````
 
-#html.elem("wa-tab-group", attrs: (active: "python"))[
-  #wa-tab("r", [R])[
+#html.elem("ui5-tabcontainer", attrs: (
+  header-background-design: "Transparent",
+  content-background-design: "Transparent",
+))[
+  #html.elem("ui5-tab", attrs: (text: "R", selected: "true"))[
 This tab includes R code:
 
 #calepin.chunk("r")[
 ```r
-x <- c(1, 2, 3, 4)
+x <- c(1, 2, 3, 4, 5)
 mean(x)
-```]
+```
+]
   ]
 
-  #wa-tab("python", [Python])[
+  #html.elem("ui5-tab", attrs: (text: "Python"))[
 This tab includes Python code:
 
 #calepin.chunk("python")[
 ```python
 x = [1, 2, 3, 4]
 sum(x) / len(x)
-```]
+```
+]
   ]
 ]
 
@@ -206,17 +228,15 @@ After Calepin expands the chunks, the HTML output follows the same order as the
 Typst code above:
 
 ```html
-<wa-tab-group active="python">
-  <wa-tab panel="r">R</wa-tab>
-  <wa-tab-panel name="r">
+<ui5-tabcontainer header-background-design="Transparent" content-background-design="Transparent">
+  <ui5-tab text="R" selected>
     <p>This tab includes R code:</p>
     <!-- Calepin renders the R chunk here. -->
-  </wa-tab-panel>
-
-  <wa-tab panel="python">Python</wa-tab>
-  <wa-tab-panel name="python">
+  </ui5-tab>
+  <ui5-tab text="Python">
     <p>This tab includes Python code:</p>
     <!-- Calepin renders the Python chunk here. -->
-  </wa-tab-panel>
-</wa-tab-group>
+  </ui5-tab>
+</ui5-tabcontainer>
 ```
+

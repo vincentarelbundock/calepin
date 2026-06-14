@@ -54,6 +54,10 @@
     </style>
 {% endfor -%}
 {% endif %}
+{% if site.pagefind %}
+    <link rel="stylesheet" href="{{ site.pagefind.css }}">
+    <script src="{{ site.pagefind.js }}" type="module"></script>
+{% endif %}
 {{ doc.body_open }}
     <header class="academic-topbar">
         <nav class="academic-nav" aria-label="Site">
@@ -81,6 +85,9 @@
                 {% for item in site.navbar_right %}
                 {% include "partials/navbar-item.html" %}
                 {% endfor %}
+                {% if site.pagefind %}
+                <pagefind-modal-trigger></pagefind-modal-trigger>
+                {% endif %}
                 <button class="academic-theme-toggle outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-academic-theme">Theme</button>
                 {% if site.languages and site.languages | length > 1 %}
                 <select class="academic-language-picker" aria-label="Language" data-calepin-language-picker>
@@ -103,9 +110,12 @@
             </div>
         </nav>
     </header>
-    <main class="academic-main">
+    <main class="academic-main" data-pagefind-body>
         {{ doc.body }}
     </main>
+{% if site.pagefind %}
+    <pagefind-modal></pagefind-modal>
+{% endif %}
 {% for script in scripts -%}
     <script>
 {{ script.content }}

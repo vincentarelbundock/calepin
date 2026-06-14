@@ -90,5 +90,6 @@ calepin watch my_site/ my_site/ --serve --open
 - Multilingual site navigation.
 - Static file copying for assets, downloads, and host-specific files.
 - Generated `sitemap.xml` and `robots.txt`, with template overrides for `robots.txt`.
+- Optional Pagefind search index generation, with cached no-op rebuilds.
 - Optional HTML minification, including inline CSS and JavaScript.
 - Local serving and incremental watch builds.

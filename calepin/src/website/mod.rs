@@ -20,7 +20,7 @@ use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
 use crate::html::{
     minify_html_file, write_html_theme_stylesheet, SiteContextInput, SiteLanguageEntry,
-    SiteNavEntry, SiteNavSection,
+    SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{
@@ -43,6 +43,10 @@ const PAGES_INDEX_FILE: &str = "website-pages.json";
 const ROBOTS_FILE: &str = "robots.txt";
 const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
+const PAGEFIND_DIR: &str = "pagefind";
+const PAGEFIND_CSS: &str = "pagefind/pagefind-component-ui.css";
+const PAGEFIND_JS: &str = "pagefind/pagefind-component-ui.js";
+const PAGEFIND_ROOT_SELECTOR: &str = "[data-pagefind-body]";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
     "User-agent: *\nAllow: /\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}\n{% endif %}";
 /// Root-relative reference to the pages index. Each page renders with
@@ -345,6 +349,13 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let minify_html = args.minify_html || config.minify.unwrap_or(false);
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
     let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
+    let pagefind_pages = pagefind_pages(
+        &out_dir,
+        &typ_files,
+        &page_info,
+        &fallback_files,
+        metadata.base_url.as_deref(),
+    );
     let mut icon_cache = IconCache::new(src_dir.join(ICON_CACHE_DIR));
     let sidebar_sections = nav_from_plans(&section_plans, &page_meta, &page_info, &mut icon_cache)?;
     let navbar = navbar_from_plan(&navbar_plan, &page_meta, &page_info, &mut icon_cache)?;
@@ -363,7 +374,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         theme_stylesheet_path.as_deref(),
         default_favicon_path.as_deref(),
     );
-    let expected_outputs = if out_dir == src_dir {
+    let mut expected_outputs = if out_dir == src_dir {
         expected_outputs
     } else {
         expected_outputs
@@ -372,9 +383,23 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             .collect()
     };
     let previous_manifest = load_manifest(&out_dir)?;
+    let protected_pagefind_outputs = if config.search == Some(SearchEngine::Pagefind) {
+        previous_manifest
+            .pagefind
+            .as_ref()
+            .map(|pagefind| manifest_output_paths(&out_dir, &pagefind.outputs))
+            .unwrap_or_default()
+    } else {
+        BTreeSet::new()
+    };
+    expected_outputs.extend(protected_pagefind_outputs.iter().cloned());
 
     if args.clean {
-        clear_previous_outputs(&src_dir, &out_dir)?;
+        clear_previous_outputs(
+            &src_dir,
+            &out_dir,
+            config.search == Some(SearchEngine::Pagefind) && previous_manifest.pagefind.is_some(),
+        )?;
     }
     reconcile_manifest_outputs(&out_dir, &previous_manifest, &expected_outputs)?;
     if args.clean && out_dir != src_dir {
@@ -426,6 +451,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             parallelism: args.parallelism,
             typst_args: args.typst_args,
             minify_html,
+            search: config.search,
         },
         build_set,
         &site,
@@ -438,7 +464,33 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .collect::<BTreeSet<_>>();
     write_sitemap(&out_dir, metadata.base_url.as_deref(), &sitemap_hrefs)?;
     write_robots(&out_dir, &src_dir, &config, metadata.base_url.as_deref())?;
-    write_manifest(&out_dir, &expected_outputs)?;
+    let pagefind_manifest = if config.search == Some(SearchEngine::Pagefind) {
+        let signature = pagefind_signature(&out_dir, &pagefind_pages)?;
+        let cached_outputs = cached_pagefind_outputs(&out_dir, &previous_manifest, signature);
+        let outputs = if let Some(outputs) = cached_outputs {
+            if !args.quiet {
+                eprintln!("calepin [cache] {PAGEFIND_DIR}/");
+            }
+            outputs
+        } else {
+            expected_outputs.retain(|path| !protected_pagefind_outputs.contains(path));
+            let outputs = write_pagefind_index(&out_dir, &pagefind_pages)?;
+            remove_stale_pagefind_outputs(&out_dir, &previous_manifest, &outputs)?;
+            expected_outputs.extend(outputs.iter().cloned());
+            outputs
+        };
+        expected_outputs.extend(outputs.iter().cloned());
+        Some(PagefindManifest {
+            signature,
+            outputs: outputs
+                .iter()
+                .map(|path| rel_posix(&out_dir, path))
+                .collect(),
+        })
+    } else {
+        None
+    };
+    write_manifest(&out_dir, &expected_outputs, pagefind_manifest)?;
     Ok(WebsiteBuildResult {
         src_dir,
         out_dir,
@@ -730,6 +782,7 @@ struct WebsiteConfig {
     pdf: Option<bool>,
     /// Minify generated HTML after theming and website metadata injection.
     minify: Option<bool>,
+    search: Option<SearchEngine>,
     robots: Option<RawRobotsConfig>,
     pages: Option<PagesConfig>,
     #[serde(rename = "static")]
@@ -750,6 +803,12 @@ enum RawThemeValue {
 enum RawRobotsConfig {
     Toggle(bool),
     Config(RobotsConfig),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum SearchEngine {
+    Pagefind,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -1086,6 +1145,7 @@ impl SiteModel {
         page_info: Option<&PageInfo>,
         page_info_map: &PageInfoMap,
         languages: Option<&[LanguageInfo]>,
+        search: Option<SearchEngine>,
     ) -> SiteContextInput {
         let mut sidebar = Vec::new();
         let mut sidebar_sections = Vec::new();
@@ -1171,6 +1231,10 @@ impl SiteModel {
                 .map(|base_url| html_escape(&absolute_site_url(base_url, current_href))),
             page_title,
             stylesheet: None,
+            pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {
+                css: html_escape(&page_relative_url(current_href, PAGEFIND_CSS)),
+                js: html_escape(&page_relative_url(current_href, PAGEFIND_JS)),
+            }),
         }
     }
 }
@@ -1241,6 +1305,14 @@ fn translation_entries(
 #[derive(Debug, Deserialize, Serialize, Default)]
 struct WebsiteManifest {
     outputs: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pagefind: Option<PagefindManifest>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct PagefindManifest {
+    signature: u64,
+    outputs: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -1254,6 +1326,7 @@ struct BuildContext {
     parallelism: Option<usize>,
     typst_args: Vec<String>,
     minify_html: bool,
+    search: Option<SearchEngine>,
 }
 
 fn load_website_config(path: &Path, required: bool) -> Result<WebsiteConfig> {
@@ -2826,6 +2899,7 @@ fn render_document(
         Some(page_info),
         &context.page_info,
         context.languages.as_deref(),
+        context.search,
     );
     let page_site_entry =
         crate::theme::resolve_html_entry(&preprocessed.theme, crate::theme::HtmlScope::Site)?;
@@ -2899,6 +2973,183 @@ fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
     }
     fs::write(html_output, html)
         .with_context(|| format!("failed to write {}", html_output.display()))
+}
+
+fn pagefind_pages(
+    out_dir: &Path,
+    typ_files: &[PathBuf],
+    page_info: &PageInfoMap,
+    fallback_files: &[PathBuf],
+    base_url: Option<&str>,
+) -> Vec<(PathBuf, String)> {
+    typ_files
+        .iter()
+        .filter(|path| !fallback_files.contains(path))
+        .filter_map(|path| {
+            page_info.get(path).map(|info| {
+                (
+                    out_dir.join(&info.href),
+                    pagefind_page_url(base_url, &info.href),
+                )
+            })
+        })
+        .collect()
+}
+
+fn pagefind_page_url(base_url: Option<&str>, href: &str) -> String {
+    match base_url.and_then(base_url_path_prefix) {
+        Some(prefix) => format!("{prefix}/{href}"),
+        None => format!("/{href}"),
+    }
+}
+
+fn base_url_path_prefix(base_url: &str) -> Option<String> {
+    let after_host = base_url
+        .split_once("://")
+        .map(|(_, rest)| rest)
+        .unwrap_or(base_url);
+    let path = after_host
+        .find('/')
+        .map(|index| &after_host[index..])
+        .unwrap_or("");
+    let path = path
+        .split(['?', '#'])
+        .next()
+        .unwrap_or("")
+        .trim_end_matches('/');
+    (!path.is_empty()).then(|| path.to_string())
+}
+
+fn pagefind_signature(out_dir: &Path, pages: &[(PathBuf, String)]) -> Result<u64> {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"calepin-pagefind-v1\0");
+    bytes.extend_from_slice(PAGEFIND_ROOT_SELECTOR.as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(b"keep_index_url=true\0");
+    let mut pages = pages.to_vec();
+    pages.sort_by(|left, right| {
+        rel_posix(out_dir, &left.0)
+            .cmp(&rel_posix(out_dir, &right.0))
+            .then_with(|| left.1.cmp(&right.1))
+    });
+    for (path, url) in pages {
+        bytes.extend_from_slice(rel_posix(out_dir, &path).as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(url.as_bytes());
+        bytes.push(0);
+        let html = fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+        bytes.extend_from_slice(&(html.len() as u64).to_le_bytes());
+        bytes.extend_from_slice(&html);
+        bytes.push(0xff);
+    }
+    Ok(xxh3_64(&bytes))
+}
+
+fn manifest_output_paths(out_dir: &Path, outputs: &[String]) -> BTreeSet<PathBuf> {
+    outputs.iter().map(|rel| out_dir.join(rel)).collect()
+}
+
+fn cached_pagefind_outputs(
+    out_dir: &Path,
+    manifest: &WebsiteManifest,
+    signature: u64,
+) -> Option<BTreeSet<PathBuf>> {
+    let pagefind = manifest.pagefind.as_ref()?;
+    if pagefind.signature != signature {
+        return None;
+    }
+    let outputs = manifest_output_paths(out_dir, &pagefind.outputs);
+    if outputs.iter().all(|path| path.is_file()) {
+        Some(outputs)
+    } else {
+        None
+    }
+}
+
+fn remove_stale_pagefind_outputs(
+    out_dir: &Path,
+    manifest: &WebsiteManifest,
+    expected_outputs: &BTreeSet<PathBuf>,
+) -> Result<()> {
+    let Some(pagefind) = manifest.pagefind.as_ref() else {
+        return Ok(());
+    };
+    for path in manifest_output_paths(out_dir, &pagefind.outputs) {
+        if expected_outputs.contains(&path) || !path.exists() {
+            continue;
+        }
+        if path.is_file() {
+            fs::remove_file(&path)
+                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
+        }
+    }
+    Ok(())
+}
+
+fn write_pagefind_index(out_dir: &Path, pages: &[(PathBuf, String)]) -> Result<BTreeSet<PathBuf>> {
+    if pages.is_empty() {
+        return Ok(BTreeSet::new());
+    }
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .context("failed to start Pagefind runtime")?;
+    runtime.block_on(write_pagefind_index_async(
+        out_dir.to_path_buf(),
+        pages.to_vec(),
+    ))
+}
+
+async fn write_pagefind_index_async(
+    out_dir: PathBuf,
+    pages: Vec<(PathBuf, String)>,
+) -> Result<BTreeSet<PathBuf>> {
+    let options = pagefind::options::PagefindServiceConfig::builder()
+        .root_selector(PAGEFIND_ROOT_SELECTOR.to_string())
+        .keep_index_url(true)
+        .build();
+    let mut index = pagefind::api::PagefindIndex::new(Some(options))
+        .context("failed to initialize Pagefind")?;
+
+    for (path, url) in pages {
+        let html = tokio::fs::read_to_string(&path)
+            .await
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        index
+            .add_html_file(Some(path.to_string_lossy().into_owned()), Some(url), html)
+            .await
+            .with_context(|| format!("failed to index {}", path.display()))?;
+    }
+
+    let files = index
+        .get_files()
+        .await
+        .context("failed to build Pagefind index")?;
+    let mut outputs = BTreeSet::new();
+    for file in files {
+        let path = pagefind_output_path(&out_dir, &file.filename)?;
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .with_context(|| format!("failed to create {}", parent.display()))?;
+        }
+        tokio::fs::write(&path, file.contents)
+            .await
+            .with_context(|| format!("failed to write {}", path.display()))?;
+        outputs.insert(path);
+    }
+    Ok(outputs)
+}
+
+fn pagefind_output_path(out_dir: &Path, rel: &Path) -> Result<PathBuf> {
+    if rel.is_absolute()
+        || rel
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Err(anyhow!("invalid Pagefind output path: {}", rel.display()));
+    }
+    Ok(out_dir.join(PAGEFIND_DIR).join(rel))
 }
 
 fn expected_generated_outputs(
@@ -3015,7 +3266,11 @@ fn remove_unexpected_rendered_outputs_in(
     Ok(())
 }
 
-fn write_manifest(out_dir: &Path, expected_outputs: &BTreeSet<PathBuf>) -> Result<()> {
+fn write_manifest(
+    out_dir: &Path,
+    expected_outputs: &BTreeSet<PathBuf>,
+    pagefind: Option<PagefindManifest>,
+) -> Result<()> {
     let path = out_dir.join(MANIFEST_PATH);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
@@ -3026,6 +3281,7 @@ fn write_manifest(out_dir: &Path, expected_outputs: &BTreeSet<PathBuf>) -> Resul
             .iter()
             .map(|path| rel_posix(out_dir, path))
             .collect(),
+        pagefind,
     };
     let contents = serde_json::to_string_pretty(&manifest)?;
     fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
@@ -3138,7 +3394,7 @@ fn collect_template_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Re
     Ok(())
 }
 
-fn clear_previous_outputs(src_dir: &Path, out_dir: &Path) -> Result<()> {
+fn clear_previous_outputs(src_dir: &Path, out_dir: &Path, preserve_pagefind: bool) -> Result<()> {
     if out_dir == src_dir {
         return Ok(());
     } else if out_dir.exists() {
@@ -3150,7 +3406,9 @@ fn clear_previous_outputs(src_dir: &Path, out_dir: &Path) -> Result<()> {
             if path.is_dir() {
                 // The output directory may be a git checkout (e.g. a gh-pages
                 // worktree) or hold regenerable state; never delete those.
-                if name.is_some_and(|name| SKIP_DIRS.contains(&name)) {
+                if name.is_some_and(|name| {
+                    SKIP_DIRS.contains(&name) || (preserve_pagefind && name == PAGEFIND_DIR)
+                }) {
                     continue;
                 }
                 fs::remove_dir_all(&path)
@@ -3586,6 +3844,17 @@ allow = false
 
         let config = website_config_from_toml("minify = true");
         assert_eq!(config.minify, Some(true));
+    }
+
+    #[test]
+    fn search_config_accepts_pagefind_and_rejects_unknown_engines() {
+        let config = website_config_from_toml("");
+        assert_eq!(config.search, None);
+
+        let config = website_config_from_toml(r#"search = "pagefind""#);
+        assert_eq!(config.search, Some(SearchEngine::Pagefind));
+
+        assert!(try_website_config_from_toml(r#"search = "lunr""#).is_err());
     }
 
     #[test]
@@ -4231,6 +4500,7 @@ favicon = "assets/favicon.ico"
         fs::write(&current, "current").unwrap();
         let manifest = WebsiteManifest {
             outputs: vec!["old.html".to_string(), "index.html".to_string()],
+            pagefind: None,
         };
         let expected = BTreeSet::from([current.clone()]);
 
@@ -4250,6 +4520,76 @@ favicon = "assets/favicon.ico"
         let sitemap = fs::read_to_string(temp.path().join("sitemap.xml")).unwrap();
         assert!(sitemap.contains("<loc>https://example.com/project/index.html</loc>"));
         assert!(sitemap.contains("<loc>https://example.com/project/guide/usage.html</loc>"));
+    }
+
+    #[test]
+    fn pagefind_index_writes_bundle_files_and_project_relative_urls() {
+        let temp = tempfile::tempdir().unwrap();
+        let page = temp.path().join("guide").join("usage.html");
+        fs::create_dir_all(page.parent().unwrap()).unwrap();
+        fs::write(
+            &page,
+            r#"<!doctype html><html><body><main data-pagefind-body><h1>Guide</h1><p>Searchable content.</p></main></body></html>"#,
+        )
+        .unwrap();
+
+        let pages = vec![(
+            page,
+            pagefind_page_url(Some("https://example.com/project/"), "guide/usage.html"),
+        )];
+        let outputs = write_pagefind_index(temp.path(), &pages).unwrap();
+
+        assert!(outputs
+            .iter()
+            .any(|path| path.ends_with(Path::new("pagefind/pagefind-component-ui.js"))));
+        assert!(outputs
+            .iter()
+            .any(|path| path.ends_with(Path::new("pagefind/pagefind-component-ui.css"))));
+        assert!(outputs.iter().any(|path| path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.ends_with(".pf_fragment"))));
+        assert_eq!(
+            pagefind_page_url(Some("https://example.com/project/"), "guide/usage.html"),
+            "/project/guide/usage.html"
+        );
+    }
+
+    #[test]
+    fn pagefind_signature_tracks_rendered_html_and_urls() {
+        let temp = tempfile::tempdir().unwrap();
+        let page = temp.path().join("index.html");
+        fs::write(&page, "<main data-pagefind-body>one</main>").unwrap();
+        let pages = vec![(page.clone(), "/index.html".to_string())];
+
+        let original = pagefind_signature(temp.path(), &pages).unwrap();
+        fs::write(&page, "<main data-pagefind-body>two</main>").unwrap();
+        let content_changed = pagefind_signature(temp.path(), &pages).unwrap();
+        let url_changed =
+            pagefind_signature(temp.path(), &[(page, "/renamed.html".to_string())]).unwrap();
+
+        assert_ne!(original, content_changed);
+        assert_ne!(content_changed, url_changed);
+    }
+
+    #[test]
+    fn cached_pagefind_outputs_require_matching_signature_and_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let output = temp.path().join("pagefind").join("pagefind.js");
+        fs::create_dir_all(output.parent().unwrap()).unwrap();
+        fs::write(&output, "bundle").unwrap();
+        let manifest = WebsiteManifest {
+            outputs: vec!["index.html".to_string()],
+            pagefind: Some(PagefindManifest {
+                signature: 42,
+                outputs: vec!["pagefind/pagefind.js".to_string()],
+            }),
+        };
+
+        assert!(cached_pagefind_outputs(temp.path(), &manifest, 42).is_some());
+        assert!(cached_pagefind_outputs(temp.path(), &manifest, 7).is_none());
+        fs::remove_file(output).unwrap();
+        assert!(cached_pagefind_outputs(temp.path(), &manifest, 42).is_none());
     }
 
     #[test]
@@ -4352,7 +4692,7 @@ favicon = "assets/favicon.ico"
             true,
         );
 
-        let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None);
+        let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None, None);
 
         assert_eq!(context.logo.as_deref(), Some("../assets/logo.svg"));
         assert_eq!(context.home_url.as_deref(), Some("../index.html"));
@@ -4393,7 +4733,8 @@ favicon = "assets/favicon.ico"
             true,
         );
 
-        let context = site.theme_context("posts/welcome.html", None, &PageInfoMap::new(), None);
+        let context =
+            site.theme_context("posts/welcome.html", None, &PageInfoMap::new(), None, None);
         let hrefs = context
             .sidebar
             .iter()
@@ -4433,7 +4774,8 @@ favicon = "assets/favicon.ico"
             true,
         );
 
-        let context = site.theme_context("reference/cli.html", None, &PageInfoMap::new(), None);
+        let context =
+            site.theme_context("reference/cli.html", None, &PageInfoMap::new(), None, None);
 
         assert!(context.sidebar_fold);
         assert!(!context.sidebar_sections[0].active);
@@ -4458,6 +4800,28 @@ favicon = "assets/favicon.ico"
             page_relative_url("index.html", WEBSITE_STYLESHEET_PATH),
             ".calepin/calepin-website.css"
         );
+    }
+
+    #[test]
+    fn theme_context_exposes_pagefind_assets_when_search_enabled() {
+        let site = SiteModel::new(
+            Vec::new(),
+            NavbarModel::default(),
+            SiteMetadata::default(),
+            true,
+        );
+
+        let context = site.theme_context(
+            "guide/usage.html",
+            None,
+            &PageInfoMap::new(),
+            None,
+            Some(SearchEngine::Pagefind),
+        );
+        let pagefind = context.pagefind.expect("Pagefind search context");
+
+        assert_eq!(pagefind.css, "../pagefind/pagefind-component-ui.css");
+        assert_eq!(pagefind.js, "../pagefind/pagefind-component-ui.js");
     }
 
     #[test]
@@ -4799,7 +5163,7 @@ favicon = "assets/favicon.ico"
             true,
         );
 
-        let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None);
+        let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None, None);
 
         assert_eq!(context.navbar_left[0].href, "../index.html");
         assert_eq!(context.navbar_center[0].href, "usage.html");
@@ -4860,7 +5224,8 @@ favicon = "assets/favicon.ico"
             true,
         );
 
-        let context = site.theme_context("fr/index.html", page_info.get(&fr), &page_info, None);
+        let context =
+            site.theme_context("fr/index.html", page_info.get(&fr), &page_info, None, None);
 
         assert_eq!(context.navbar_left.len(), 1);
         assert_eq!(context.navbar_left[0].label, "Accueil");
@@ -5066,10 +5431,26 @@ favicon = "assets/favicon.ico"
         fs::write(out.join("stale.html"), "old").unwrap();
         fs::write(out.join(".gitkeep"), "").unwrap();
 
-        clear_previous_outputs(&src, &out).unwrap();
+        clear_previous_outputs(&src, &out, false).unwrap();
 
         assert!(out.join(".git").join("HEAD").exists());
         assert!(out.join(".gitkeep").exists());
+        assert!(!out.join("stale.html").exists());
+    }
+
+    #[test]
+    fn clear_previous_outputs_can_preserve_pagefind_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let out = temp.path().join("site");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(out.join(PAGEFIND_DIR)).unwrap();
+        fs::write(out.join(PAGEFIND_DIR).join("pagefind.js"), "bundle").unwrap();
+        fs::write(out.join("stale.html"), "old").unwrap();
+
+        clear_previous_outputs(&src, &out, true).unwrap();
+
+        assert!(out.join(PAGEFIND_DIR).join("pagefind.js").exists());
         assert!(!out.join("stale.html").exists());
     }
 
@@ -5100,7 +5481,7 @@ favicon = "assets/favicon.ico"
         fs::write(temp.path().join("index.pdf"), "previous pdf").unwrap();
         fs::write(temp.path().join("notes.html"), "user html").unwrap();
 
-        clear_previous_outputs(temp.path(), temp.path()).unwrap();
+        clear_previous_outputs(temp.path(), temp.path(), false).unwrap();
 
         assert!(temp.path().join("index.html").exists());
         assert!(temp.path().join("index.pdf").exists());

@@ -68,6 +68,10 @@
     </style>
 {% endfor -%}
 {% endif %}
+{% if site.pagefind %}
+    <link rel="stylesheet" href="{{ site.pagefind.css }}">
+    <script src="{{ site.pagefind.js }}" type="module"></script>
+{% endif %}
 {{ doc.body_open }}
     <header class="calepin-website-topbar">
         <nav>
@@ -109,6 +113,14 @@
                         <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
                         {% endfor %}
                     </select>
+                </li>
+                {% endif %}
+                {% if site.pagefind %}
+                <li class="calepin-website-search-item">
+                    <form class="calepin-website-search" role="search" data-calepin-search-form>
+                        <input class="calepin-website-search-input" type="search" placeholder="Search" aria-label="Search documentation" aria-haspopup="listbox" aria-expanded="false" autocomplete="off" spellcheck="false" data-calepin-search-input>
+                        <div class="calepin-website-search-results" role="listbox" aria-label="Search results" hidden data-calepin-search-results></div>
+                    </form>
                 </li>
                 {% endif %}
                 <li>
@@ -158,7 +170,7 @@
                 {% endif %}
             </nav>
         </aside>
-        <main class="calepin-website-main">
+        <main class="calepin-website-main" data-pagefind-body>
             {{ doc.body }}
         </main>
         {% if site.toc %}
@@ -220,6 +232,9 @@
     </footer>
     {% endif %}
     {% endif %}
+{% if site.pagefind %}
+    <pagefind-modal></pagefind-modal>
+{% endif %}
 {% for script in scripts -%}
     <script>
 {{ script.content }}

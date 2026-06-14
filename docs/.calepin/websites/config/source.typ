@@ -33,6 +33,10 @@ pdf = false
 # Default: false.
 minify = true
 
+# Static search engine. Set to "pagefind" to generate a search index.
+# Default: none.
+search = "pagefind"
+
 # Logo image path for the top bar.
 # Default: none.
 logo = "assets/logo.svg"
@@ -47,6 +51,8 @@ favicon = "assets/favicon.ico"
 ```
 
 Use `--format html` for a one-time HTML-only build, regardless of `pdf`. Use `--minify` to minify HTML for a single build without changing `calepin.toml`.
+
+Set `search = "pagefind"` to add static search to bundled website themes. _Calepin_ writes the Pagefind search bundle to `pagefind/` after rendering the site and links the bundled themes to the generated component script and stylesheet. Bundled themes mark the main page content with `data-pagefind-body`, so navigation, toolbars, and footers are excluded from the search index.
 
 Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
 

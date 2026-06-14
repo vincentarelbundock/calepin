@@ -64,6 +64,7 @@ impl ServeHandle {
 
 pub(crate) fn serve(args: ServeArgs) -> Result<()> {
     let root = validate_root(&args.dir)?;
+    let base_path_prefix = local_base_path_prefix(&root);
     let (server, bind) = bind_server(&args.host, args.port)?;
     let url = browser_url(&args.host, &bind);
     eprintln!("Serving {} at {url}", root.display());
@@ -71,7 +72,13 @@ pub(crate) fn serve(args: ServeArgs) -> Result<()> {
         open_browser(&url);
     }
     eprintln!("Press Ctrl+C to stop.");
-    run_server(server, root, None, Arc::new(AtomicBool::new(false)))
+    run_server(
+        server,
+        root,
+        base_path_prefix,
+        None,
+        Arc::new(AtomicBool::new(false)),
+    )
 }
 
 pub(crate) fn start(
@@ -82,6 +89,7 @@ pub(crate) fn start(
     open: bool,
 ) -> Result<ServeHandle> {
     let root = validate_root(dir)?;
+    let base_path_prefix = local_base_path_prefix(&root);
     let (server, bind) = bind_server(host, port)?;
     let url = browser_url(host, &bind);
     eprintln!("Serving {} at {url}", root.display());
@@ -91,7 +99,7 @@ pub(crate) fn start(
     let stop = Arc::new(AtomicBool::new(false));
     let thread_stop = Arc::clone(&stop);
     let join = thread::spawn(move || {
-        if let Err(error) = run_server(server, root, Some(live), thread_stop) {
+        if let Err(error) = run_server(server, root, base_path_prefix, Some(live), thread_stop) {
             cwarn!("serve failed: {}", error);
         }
     });
@@ -108,6 +116,15 @@ fn validate_root(dir: &Path) -> Result<PathBuf> {
         return Err(anyhow!("serve path is not a directory: {}", root.display()));
     }
     Ok(root)
+}
+
+fn local_base_path_prefix(root: &Path) -> Option<String> {
+    let config_path = root.join(super::DEFAULT_CONFIG);
+    let config = super::load_website_config(&config_path, false).ok()?;
+    config
+        .base_url
+        .as_deref()
+        .and_then(super::base_url_path_prefix)
 }
 
 /// Binds the requested port, or scans for a free one starting at
@@ -207,13 +224,16 @@ fn launch_browser(url: &str) -> Result<()> {
 fn run_server(
     server: Server,
     root: PathBuf,
+    base_path_prefix: Option<String>,
     live: Option<Arc<LiveReload>>,
     stop: Arc<AtomicBool>,
 ) -> Result<()> {
     while !stop.load(Ordering::Relaxed) {
         match server.recv_timeout(Duration::from_millis(200)) {
             Ok(Some(request)) => {
-                if let Err(error) = respond(request, &root, live.as_deref()) {
+                if let Err(error) =
+                    respond(request, &root, base_path_prefix.as_deref(), live.as_deref())
+                {
                     cwarn!("serve request failed: {}", error);
                 }
             }
@@ -226,7 +246,12 @@ fn run_server(
     Ok(())
 }
 
-fn respond(request: Request, root: &Path, live: Option<&LiveReload>) -> Result<()> {
+fn respond(
+    request: Request,
+    root: &Path,
+    base_path_prefix: Option<&str>,
+    live: Option<&LiveReload>,
+) -> Result<()> {
     if request.url() == STATUS_ENDPOINT {
         let status = live
             .map(LiveReload::status_json)
@@ -243,7 +268,7 @@ fn respond(request: Request, root: &Path, live: Option<&LiveReload>) -> Result<(
         );
     }
 
-    let Some(path) = resolve_request_path(root, request.url()) else {
+    let Some(path) = resolve_request_path(root, request.url(), base_path_prefix) else {
         return send_text(request, 403, "text/plain; charset=utf-8", "Forbidden");
     };
     let path = if path.is_dir() {
@@ -362,12 +387,17 @@ fn find_case_insensitive(haystack: &[u8], needle: &[u8]) -> Option<usize> {
         .position(|window| window.eq_ignore_ascii_case(needle))
 }
 
-fn resolve_request_path(root: &Path, target: &str) -> Option<PathBuf> {
+fn resolve_request_path(
+    root: &Path,
+    target: &str,
+    base_path_prefix: Option<&str>,
+) -> Option<PathBuf> {
     let path = target
         .split_once('?')
         .map(|(path, _)| path)
         .unwrap_or(target);
     let decoded = percent_decode(path)?;
+    let decoded = strip_base_path_prefix(&decoded, base_path_prefix);
     let mut out = root.to_path_buf();
     for component in Path::new(decoded.trim_start_matches('/')).components() {
         match component {
@@ -377,6 +407,22 @@ fn resolve_request_path(root: &Path, target: &str) -> Option<PathBuf> {
         }
     }
     Some(out)
+}
+
+fn strip_base_path_prefix<'a>(path: &'a str, base_path_prefix: Option<&str>) -> &'a str {
+    let Some(prefix) = base_path_prefix else {
+        return path;
+    };
+    let prefix = prefix.trim_end_matches('/');
+    if prefix.is_empty() || prefix == "/" {
+        return path;
+    }
+    if path == prefix {
+        return "/";
+    }
+    path.strip_prefix(prefix)
+        .filter(|rest| rest.starts_with('/'))
+        .unwrap_or(path)
 }
 
 fn percent_decode(value: &str) -> Option<String> {
@@ -418,9 +464,27 @@ mod tests {
     #[test]
     fn request_path_rejects_traversal() {
         let root = Path::new("/tmp/site");
-        assert!(resolve_request_path(root, "/index.html").is_some());
-        assert!(resolve_request_path(root, "/../secret").is_none());
-        assert!(resolve_request_path(root, "/%2e%2e/secret").is_none());
+        assert!(resolve_request_path(root, "/index.html", None).is_some());
+        assert!(resolve_request_path(root, "/../secret", None).is_none());
+        assert!(resolve_request_path(root, "/%2e%2e/secret", None).is_none());
+    }
+
+    #[test]
+    fn request_path_accepts_configured_base_url_prefix() {
+        let root = Path::new("/tmp/site");
+
+        assert_eq!(
+            resolve_request_path(root, "/calepin/notebooks/guide.html", Some("/calepin")).unwrap(),
+            root.join("notebooks").join("guide.html")
+        );
+        assert_eq!(
+            resolve_request_path(root, "/calepin", Some("/calepin")).unwrap(),
+            root
+        );
+        assert_eq!(
+            resolve_request_path(root, "/other/notebooks/guide.html", Some("/calepin")).unwrap(),
+            root.join("other").join("notebooks").join("guide.html")
+        );
     }
 
     #[test]
@@ -477,7 +541,7 @@ mod tests {
 
         let handle = thread::spawn(move || {
             let request = server.recv().unwrap();
-            respond(request, &root, None).unwrap();
+            respond(request, &root, None, None).unwrap();
         });
 
         let mut stream = TcpStream::connect(addr).unwrap();

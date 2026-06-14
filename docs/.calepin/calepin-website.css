@@ -438,6 +438,107 @@ a:has(.calepin-nav-icon) {
   font-size: 0.85rem;
 }
 
+.calepin-website-search-item {
+  min-width: min(14rem, 28vw);
+}
+
+.calepin-website-search {
+  position: relative;
+  margin: 0;
+}
+
+.calepin-website-search-input {
+  width: 100%;
+  min-width: 9rem;
+  margin: 0;
+  padding-block: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.calepin-website-search-results {
+  position: absolute;
+  inset: calc(100% + 0.35rem) 0 auto auto;
+  z-index: calc(var(--calepin-topbar-z) + 1);
+  width: min(30rem, 88vw);
+  max-height: min(32rem, 72vh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.35rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-background-color);
+  box-shadow: var(--pico-card-box-shadow);
+}
+
+.calepin-website-search-results[hidden] {
+  display: none;
+}
+
+.calepin-website-search-result {
+  display: block;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.calepin-website-search-result:hover,
+.calepin-website-search-result:focus,
+.calepin-website-search-subresult:hover,
+.calepin-website-search-subresult:focus {
+  color: inherit;
+  text-decoration: none;
+  background: color-mix(in srgb, var(--calepin-accent) 12%, transparent);
+}
+
+.calepin-website-search-result-title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.calepin-website-search-result-excerpt,
+.calepin-website-search-subresult-excerpt,
+.calepin-website-search-empty {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--pico-muted-color);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.calepin-website-search-empty {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+}
+
+.calepin-website-search-subresults {
+  margin: 0.05rem 0 0.25rem 0.8rem;
+  padding-inline-start: 0.7rem;
+  border-inline-start: 1px solid var(--pico-muted-border-color);
+}
+
+.calepin-website-search-subresult {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.calepin-website-search-subresult-title {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.calepin-website-search-subresult-title::before {
+  content: "\2937  ";
+  color: var(--pico-muted-color);
+}
+
 .calepin-website-theme-button,
 .calepin-website-nav-toggle {
   width: 2.2rem;
@@ -474,6 +575,28 @@ a:has(.calepin-nav-icon) {
 .calepin-website-nav-toggle {
   display: none;
   font-size: 1.2rem;
+}
+
+/* -------------------------------------------------------------- Pagefind */
+
+html[data-theme="light"],
+html[data-theme="dark"],
+html:not([data-theme]) {
+  --pf-text: var(--pico-color);
+  --pf-text-secondary: var(--pico-muted-color);
+  --pf-text-muted: var(--pico-muted-color);
+  --pf-background: var(--pico-background-color);
+  --pf-border: var(--pico-muted-border-color);
+  --pf-border-focus: color-mix(in srgb, var(--pico-color) 30%, var(--pico-muted-border-color));
+  --pf-skeleton: var(--pico-muted-border-color);
+  --pf-skeleton-shine: color-mix(in srgb, var(--pico-muted-border-color) 65%, var(--pico-background-color));
+  --pf-hover: color-mix(in srgb, var(--calepin-accent) 12%, var(--pico-background-color));
+  --pf-mark: var(--pico-color);
+  --pf-outline-focus: var(--pico-primary-focus);
+  --pf-error-bg: color-mix(in srgb, #dc2626 12%, var(--pico-background-color));
+  --pf-error-border: color-mix(in srgb, #dc2626 36%, var(--pico-muted-border-color));
+  --pf-error-text: #dc2626;
+  --pf-error-text-secondary: #b91c1c;
 }
 
 
@@ -1032,6 +1155,15 @@ a:has(.calepin-nav-icon) {
 @media (max-width: 56rem) {
   .calepin-website-nav-toggle {
     display: inline-grid;
+  }
+
+  .calepin-website-search-item {
+    flex: 1 1 9rem;
+    min-width: 8rem;
+  }
+
+  .calepin-website-search-input {
+    min-width: 0;
   }
 
   .calepin-website-shell.grid {
