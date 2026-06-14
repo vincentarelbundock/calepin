@@ -350,6 +350,42 @@ pub fn resolve_html_entry(
     }
 }
 
+/// Resolve a website layout at an explicit theme-relative path. Unlike the
+/// standard site/document entries, explicit page layouts never fall back to
+/// the default theme: the path must exist exactly as written.
+pub fn resolve_explicit_site_html_entry(
+    selection: &ThemeSelection,
+    layout_path: &str,
+) -> Result<Option<HtmlEntry>> {
+    validate_explicit_html_layout_path(layout_path)?;
+    match selection {
+        ThemeSelection::Disabled => Err(anyhow!(
+            "page layout `{layout_path}` requires an HTML theme, but theming is disabled"
+        )),
+        ThemeSelection::Default => explicit_bundle_entry(&CALEPIN, layout_path, true),
+        ThemeSelection::Builtin(name) => {
+            let bundle = builtin_bundle(name).ok_or_else(|| {
+                anyhow!(
+                    "unknown theme `{name}`; use one of {}",
+                    builtin_names().join(", ")
+                )
+            })?;
+            explicit_bundle_entry(bundle, layout_path, bundle.name == DEFAULT_THEME_NAME)
+        }
+        ThemeSelection::Dir(dir) => {
+            validate_theme_dir(dir)?;
+            if dir.join(layout_path).is_file() {
+                Ok(Some(dir_entry(dir, layout_path)?))
+            } else {
+                Err(anyhow!(
+                    "theme `{}` does not contain page layout `{layout_path}`",
+                    dir_theme_name(dir)
+                ))
+            }
+        }
+    }
+}
+
 /// The Typst source to inject for paged output. `None` disables paged
 /// theming entirely. An empty paged.typ.jinja file is rendered as-is (no
 /// styling), while an absent file falls back to the default bundle's
@@ -435,6 +471,30 @@ fn paged_template_error(name: &str, error: minijinja::Error) -> anyhow::Error {
     anyhow!("theme `{name}` paged.typ.jinja: {error}")
 }
 
+fn validate_explicit_html_layout_path(value: &str) -> Result<()> {
+    let path = Path::new(value);
+    if value.trim() != value || value.is_empty() {
+        return Err(anyhow!(
+            "page layout path must be a non-empty relative path"
+        ));
+    }
+    if path.extension().and_then(|extension| extension.to_str()) != Some("html") {
+        return Err(anyhow!(
+            "page layout path must name an .html file: `{value}`"
+        ));
+    }
+    if path.is_absolute()
+        || path
+            .components()
+            .any(|component| !matches!(component, std::path::Component::Normal(_)))
+    {
+        return Err(anyhow!(
+            "page layout path must stay inside the active theme: `{value}`"
+        ));
+    }
+    Ok(())
+}
+
 fn validate_theme_dir(dir: &Path) -> Result<()> {
     let has_entry = ["paged.typ.jinja", "document.html", "site.html"]
         .iter()
@@ -446,6 +506,21 @@ fn validate_theme_dir(dir: &Path) -> Result<()> {
         ));
     }
     Ok(())
+}
+
+fn explicit_bundle_entry(
+    bundle: &'static BundleDef,
+    entry: &str,
+    is_default: bool,
+) -> Result<Option<HtmlEntry>> {
+    if bundle.files.iter().any(|file| file.path == entry) {
+        Ok(Some(bundle_entry(bundle, entry, is_default)?))
+    } else {
+        Err(anyhow!(
+            "theme `{}` does not contain page layout `{entry}`",
+            bundle.name
+        ))
+    }
 }
 
 fn bundle_entry(bundle: &'static BundleDef, entry: &str, is_default: bool) -> Result<HtmlEntry> {
@@ -637,6 +712,54 @@ mod tests {
             paged_source(&sel, &PagedTemplateContext::default()).unwrap(),
             paged_source(&ThemeSelection::Default, &PagedTemplateContext::default()).unwrap()
         );
+    }
+
+    #[test]
+    fn explicit_site_layout_uses_exact_theme_relative_path() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
+        std::fs::write(dir.path().join("site.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(dir.path().join("layouts/landing.html"), "landing").unwrap();
+        let sel = ThemeSelection::Dir(dir.path().to_path_buf());
+
+        let entry = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(entry.layout, "landing");
+        assert!(!entry.is_default);
+    }
+
+    #[test]
+    fn explicit_site_layout_rejects_sugar_and_escape_paths() {
+        for value in [
+            "landing",
+            "landing.typ",
+            "../landing.html",
+            "/tmp/landing.html",
+        ] {
+            let err = match resolve_explicit_site_html_entry(&ThemeSelection::Default, value) {
+                Ok(_) => panic!("expected `{value}` to be rejected"),
+                Err(error) => error.to_string(),
+            };
+            assert!(
+                err.contains("page layout path") || err.contains("inside the active theme"),
+                "{err}"
+            );
+        }
+    }
+
+    #[test]
+    fn explicit_site_layout_does_not_fallback_to_default_theme() {
+        let err = match resolve_explicit_site_html_entry(
+            &ThemeSelection::Builtin("academic"),
+            "document.html",
+        ) {
+            Ok(_) => panic!("expected missing explicit layout to be rejected"),
+            Err(error) => error.to_string(),
+        };
+
+        assert!(err.contains("does not contain page layout"), "{err}");
     }
 
     #[test]

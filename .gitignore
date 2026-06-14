@@ -1,6 +1,7 @@
 target/
 calepin/target
 Cargo.lock
+pagefind/
 
 __pycache__
 .claude

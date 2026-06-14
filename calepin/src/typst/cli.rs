@@ -174,6 +174,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             typst_args: &args.typst_args,
             theme: &output.theme,
             html_scope: crate::theme::HtmlScope::Document,
+            html_entry: None,
             site_context: None,
             pages_input: None,
             current_href_input: None,

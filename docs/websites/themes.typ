@@ -60,12 +60,34 @@ A theme can provide HTML templates for website pages and single documents:
 themes/my-theme/
   site.html         # layout for website pages
   document.html     # layout for a single document rendered to HTML
+  layouts/          # optional page-specific website layouts
   partials/         # reusable template fragments
   styles/           # CSS files, loaded in filename order
   scripts/          # JavaScript files, loaded in filename order
 ```
 
 `site.html` and `document.html` use the #link("https://docs.rs/minijinja/latest/minijinja/")[MiniJinja template language], which follows familiar Jinja2 syntax. On website builds, templates receive a `site` object describing the site and current page.
+
+== Page-specific layouts
+
+Most website pages use `site.html`. A page can select a different HTML layout from the active theme with `layout` in its `<website-metadata>`:
+
+```typ
+#metadata((
+  title: "Landing page",
+  layout: "layouts/landing.html",
+)) <website-metadata>
+```
+
+The `layout` value is an explicit path inside the active theme. _Calepin_ uses it exactly as written: it does not add `layouts/`, does not add `.html`, and does not fall back to `site.html` if the file is missing. The path must name a relative `.html` file that stays inside the theme directory.
+
+For example, with `theme = "themes/my-theme"`, the metadata above resolves to:
+
+```text
+themes/my-theme/layouts/landing.html
+```
+
+Page-specific layouts receive the same MiniJinja context as `site.html`, including `doc`, `site`, `styles`, and `scripts`, and they share the active theme's `partials/`, `styles/`, and `scripts/` files.
 
 From the `calepin.toml`, the template receives:
 

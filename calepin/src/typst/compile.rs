@@ -20,6 +20,9 @@ pub struct CompileOptions<'a> {
     /// Which HTML layout the theme provides for this render: a standalone
     /// document or a website page.
     pub html_scope: crate::theme::HtmlScope,
+    /// Pre-resolved HTML layout to use instead of resolving `theme` +
+    /// `html_scope`.
+    pub html_entry: Option<&'a crate::theme::HtmlEntry>,
     pub site_context: Option<&'a SiteContextInput>,
     /// Root-relative path to the website pages index, exposed to the runtime
     /// as the `calepin-pages` input.
@@ -214,8 +217,13 @@ pub fn compile_with_typst(
     layout: &LayoutPaths,
     options: CompileOptions<'_>,
 ) -> Result<()> {
-    let html_entry = if options.format == Some("html") {
+    let resolved_html_entry = if options.format == Some("html") && options.html_entry.is_none() {
         crate::theme::resolve_html_entry(options.theme, options.html_scope)?
+    } else {
+        None
+    };
+    let html_entry = if options.format == Some("html") {
+        options.html_entry.or(resolved_html_entry.as_ref())
     } else {
         None
     };
@@ -259,7 +267,7 @@ pub fn compile_with_typst(
         if let Some(site_context) = options.site_context {
             apply_html_theme_file_with_site_context(
                 &path,
-                html_entry.as_ref(),
+                html_entry,
                 &prepared_theme.syntax_theme,
                 &layout.root,
                 Some(site_context),
@@ -267,7 +275,7 @@ pub fn compile_with_typst(
         } else {
             apply_html_theme_file(
                 &path,
-                html_entry.as_ref(),
+                html_entry,
                 &prepared_theme.syntax_theme,
                 &layout.root,
             )?;

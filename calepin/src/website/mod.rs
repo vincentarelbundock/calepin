@@ -224,13 +224,14 @@ struct WebsiteBuildOptions {
 }
 
 /// Per-page metadata exposed through the `<website-metadata>` Typst label,
-/// extracted during preprocessing and persisted under `.calepin/`. `title` and
-/// `pdf` are the keys calepin interprets; `raw` carries the author's whole
-/// dictionary verbatim for the pages index.
+/// extracted during preprocessing and persisted under `.calepin/`. `title`,
+/// `pdf`, and `layout` are the keys calepin interprets; `raw` carries the
+/// author's whole dictionary verbatim for the pages index.
 #[derive(Debug, Clone, Default, PartialEq)]
 struct PageMeta {
     title: Option<String>,
     pdf: Option<bool>,
+    layout: Option<String>,
     translation_key: Option<String>,
     slug: Option<String>,
     url: Option<String>,
@@ -499,6 +500,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             out_dir: out_dir.clone(),
             typst: calepin_config.executables.typst,
             pdf_files,
+            page_meta: page_meta.clone(),
             page_info: page_info.clone(),
             languages: languages.clone(),
             theme_stylesheet: theme_stylesheet_path.map(|path| slash_path(&path)),
@@ -1414,6 +1416,7 @@ struct BuildContext {
     out_dir: PathBuf,
     typst: PathBuf,
     pdf_files: BTreeSet<PathBuf>,
+    page_meta: PageMetaMap,
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
     theme_stylesheet: Option<String>,
@@ -2846,6 +2849,12 @@ fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
             .filter(|title| !title.is_empty())
             .map(str::to_string),
         pdf: value.get("pdf").and_then(|pdf| pdf.as_bool()),
+        layout: value
+            .get("layout")
+            .and_then(|layout| layout.as_str())
+            .map(str::trim)
+            .filter(|layout| !layout.is_empty())
+            .map(str::to_string),
         translation_key: value
             .get("translation_key")
             .or_else(|| value.get("translationKey"))
@@ -2988,6 +2997,7 @@ fn render_document(
     }
 
     let current_href = page_info.href.clone();
+    let page_meta = context.page_meta.get(input_path);
     let mut site_context = site.theme_context(
         &current_href,
         Some(page_info),
@@ -2995,8 +3005,11 @@ fn render_document(
         context.languages.as_deref(),
         context.search,
     );
-    let page_site_entry =
-        crate::theme::resolve_html_entry(&preprocessed.theme, crate::theme::HtmlScope::Site)?;
+    let page_site_entry = if let Some(layout) = page_meta.and_then(|meta| meta.layout.as_deref()) {
+        crate::theme::resolve_explicit_site_html_entry(&preprocessed.theme, layout)?
+    } else {
+        crate::theme::resolve_html_entry(&preprocessed.theme, crate::theme::HtmlScope::Site)?
+    };
     if page_site_entry
         .as_ref()
         .is_some_and(|entry| entry.is_default)
@@ -3015,6 +3028,7 @@ fn render_document(
             typst_args: &context.typst_args,
             theme: &preprocessed.theme,
             html_scope: crate::theme::HtmlScope::Site,
+            html_entry: page_site_entry.as_ref(),
             site_context: Some(&site_context),
             pages_input: Some(PAGES_INDEX_REF),
             current_href_input: Some(&current_href),
@@ -3041,6 +3055,7 @@ fn render_document(
                 typst_args: &context.typst_args,
                 theme: &preprocessed.theme,
                 html_scope: crate::theme::HtmlScope::Site,
+                html_entry: None,
                 site_context: None,
                 pages_input: Some(PAGES_INDEX_REF),
                 current_href_input: Some(&current_href),
@@ -5831,10 +5846,16 @@ filenames = ["atom.xml", "rss.xml"]
 
     #[test]
     fn page_meta_from_value_reads_calepin_keys_and_keeps_raw_dict() {
-        let value = serde_json::json!({"title": " My Page ", "pdf": false, "date": "2026-06-10"});
+        let value = serde_json::json!({
+            "title": " My Page ",
+            "pdf": false,
+            "layout": "layouts/landing.html",
+            "date": "2026-06-10"
+        });
         let meta = page_meta_from_value(&value);
         assert_eq!(meta.title.as_deref(), Some("My Page"));
         assert_eq!(meta.pdf, Some(false));
+        assert_eq!(meta.layout.as_deref(), Some("layouts/landing.html"));
         assert_eq!(meta.raw, value);
 
         let blank_title = page_meta_from_value(&serde_json::json!({"title": ""}));
