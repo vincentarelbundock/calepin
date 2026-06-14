@@ -91,6 +91,10 @@ title = "Websites"
   target = "websites/web_components.typ"
   label = "Web components"
 
+  [[sidebar.section.item]]
+  target = "websites/health.typ"
+  label = "Health"
+
 
 [[sidebar.section]]
 title = "More"

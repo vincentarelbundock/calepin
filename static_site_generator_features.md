@@ -3,7 +3,6 @@
 Items with direct Calepin equivalents have been removed. This keeps Zola features
 that are still absent as built-in Calepin static-site-generator features.
 
-- [ ] link checker
 - [ ] calepin new notebook (with default author, date, etc. would be useful for new blog posts)
 - [ ] syntax highlighting. Consistent in raw chunks and calepin processed chunks. PDF and HTML. Light vs. Dark
 
@@ -58,14 +57,6 @@ that are still absent as built-in Calepin static-site-generator features.
   - Deployment guide for Fly.io.
   - Deployment guide for AWS S3 Bucket.
   - Deployment guide for Docker image.
-
-- **Link checking**
-  - Check external Markdown links with `zola check`.
-  - Skip external link checking with `--skip-external-links`.
-  - Configure skipped URL prefixes.
-  - Configure skipped anchor-check prefixes.
-  - Treat internal link failures as errors or warnings.
-  - Treat external link failures as errors or warnings.
 
 - **URL and slug control**
   - Slugify paths.

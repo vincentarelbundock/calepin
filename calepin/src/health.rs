@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -67,7 +68,11 @@ impl HealthReport {
 }
 
 pub fn handle_health(args: HealthArgs) -> Result<()> {
-    let report = build_report(args.config.as_deref())?;
+    let report = build_report(
+        args.config.as_deref(),
+        args.depth,
+        args.check_external_links,
+    )?;
 
     if args.json {
         println!("{}", serde_json::to_string_pretty(&report)?);
@@ -82,7 +87,11 @@ pub fn handle_health(args: HealthArgs) -> Result<()> {
     Ok(())
 }
 
-pub fn build_report(config_path: Option<&Path>) -> Result<HealthReport> {
+pub fn build_report(
+    config_path: Option<&Path>,
+    check_links_depth: Option<usize>,
+    check_external_links: bool,
+) -> Result<HealthReport> {
     let root = std::env::current_dir()?;
     let config = CalepinConfig::load(&root, config_path)?;
     let mut checks = Vec::new();
@@ -160,7 +169,7 @@ pub fn build_report(config_path: Option<&Path>) -> Result<HealthReport> {
         python_available,
     ));
     checks.push(jupyter_kernels_check());
-    checks.push(link_check(&root));
+    checks.push(link_check(&root, check_links_depth, check_external_links));
 
     Ok(HealthReport {
         root: root.display().to_string(),
@@ -425,24 +434,39 @@ struct LinkOccurrence {
 
 const LINK_CHECK_SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
 
-fn link_check(root: &Path) -> HealthCheck {
-    match check_links(root) {
+fn link_check(
+    root: &Path,
+    check_links_depth: Option<usize>,
+    check_external_links: bool,
+) -> HealthCheck {
+    match check_links(root, check_links_depth, check_external_links) {
         Ok(LinkSummary {
             files,
             links,
             broken,
+            broken_local,
+            broken_external,
         }) => {
-            let status = if broken.is_empty() {
-                HealthStatus::Ok
-            } else {
+            let status = if broken_local > 0 {
                 HealthStatus::Error
+            } else if broken_external > 0 {
+                HealthStatus::Warning
+            } else {
+                HealthStatus::Ok
             };
-            let message = if broken.is_empty() {
+            let message = if broken_local == 0 && broken_external == 0 {
                 format!("checked {links} literal link(s) in {files} Typst file(s)")
             } else {
+                let mut suffix = Vec::new();
+                if broken_local > 0 {
+                    suffix.push(format!("{broken_local} local"));
+                }
+                if broken_external > 0 {
+                    suffix.push(format!("{broken_external} external"));
+                }
                 format!(
                     "{} broken link(s) among {links} literal link(s) in {files} Typst file(s)",
-                    broken.len()
+                    suffix.join(" and "),
                 )
             };
             HealthCheck {
@@ -451,7 +475,12 @@ fn link_check(root: &Path) -> HealthCheck {
                 path: Some(root.display().to_string()),
                 message,
                 hint: (!broken.is_empty()).then(|| {
-                    "fix missing local link targets or rebuild generated linked outputs".to_string()
+                    if broken_local > 0 {
+                        "fix missing local link targets or rebuild generated linked outputs"
+                            .to_string()
+                    } else {
+                        "fix missing external link targets".to_string()
+                    }
                 }),
                 details: broken,
             }
@@ -472,20 +501,37 @@ struct LinkSummary {
     files: usize,
     links: usize,
     broken: Vec<String>,
+    broken_local: usize,
+    broken_external: usize,
 }
 
-fn check_links(root: &Path) -> Result<LinkSummary> {
-    let typ_files = collect_typst_files(root)?;
+fn check_links(
+    root: &Path,
+    check_links_depth: Option<usize>,
+    check_external_links: bool,
+) -> Result<LinkSummary> {
+    let typ_files = collect_typst_files(root, check_links_depth)?;
     let mut links = 0usize;
     let mut broken = Vec::new();
+    let mut broken_local = 0usize;
+    let mut broken_external = 0usize;
+    let external_agent = check_external_links.then(external_link_agent);
 
     for file in &typ_files {
         let source = fs::read_to_string(file)
             .with_context(|| format!("failed to read {}", file.display()))?;
         for link in extract_literal_links(file, &source) {
             links += 1;
-            if let Some(message) = validate_local_link(root, &link) {
+            if is_external_http_link(&link.target) {
+                if let Some(client) = external_agent.as_ref() {
+                    if let Some(message) = validate_external_link(root, &link, client) {
+                        broken.push(message);
+                        broken_external += 1;
+                    }
+                }
+            } else if let Some(message) = validate_local_link(root, &link) {
                 broken.push(message);
+                broken_local += 1;
             }
         }
     }
@@ -494,17 +540,25 @@ fn check_links(root: &Path) -> Result<LinkSummary> {
         files: typ_files.len(),
         links,
         broken,
+        broken_local,
+        broken_external,
     })
 }
 
-fn collect_typst_files(root: &Path) -> Result<Vec<PathBuf>> {
+fn collect_typst_files(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
-    collect_typst_files_in(root, root, &mut out)?;
+    collect_typst_files_in(root, root, 0, max_depth, &mut out)?;
     out.sort();
     Ok(out)
 }
 
-fn collect_typst_files_in(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+fn collect_typst_files_in(
+    root: &Path,
+    dir: &Path,
+    depth: usize,
+    max_depth: Option<usize>,
+    out: &mut Vec<PathBuf>,
+) -> Result<()> {
     for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
         let entry = entry?;
         let path = entry.path();
@@ -518,7 +572,9 @@ fn collect_typst_files_in(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Re
             continue;
         }
         if path.is_dir() {
-            collect_typst_files_in(root, &path, out)?;
+            if max_depth.is_none_or(|limit| depth < limit) {
+                collect_typst_files_in(root, &path, depth + 1, max_depth, out)?;
+            }
         } else if path.extension().and_then(|extension| extension.to_str()) == Some("typ") {
             out.push(path);
         }
@@ -613,6 +669,63 @@ fn validate_local_link(root: &Path, link: &LinkOccurrence) -> Option<String> {
         link.line,
         link.target
     ))
+}
+
+fn external_link_agent() -> ureq::Agent {
+    ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(8))
+        .build()
+}
+
+fn is_external_http_link(target: &str) -> bool {
+    target.starts_with("http://") || target.starts_with("https://")
+}
+
+fn validate_external_link(
+    root: &Path,
+    link: &LinkOccurrence,
+    client: &ureq::Agent,
+) -> Option<String> {
+    let target = link.target.trim();
+    if target.is_empty() {
+        return None;
+    }
+
+    let normalized = target
+        .split_once('#')
+        .map(|(path, _)| path)
+        .unwrap_or(target)
+        .trim();
+    if normalized.is_empty() {
+        return None;
+    }
+
+    let message = match client.head(normalized).call() {
+        Ok(response) => {
+            if response.status() < 400 {
+                return None;
+            }
+            match client.get(normalized).call() {
+                Ok(response) if response.status() < 400 => return None,
+                Ok(response) => Some(format!("HTTP {}", response.status())),
+                Err(inner) => Some(format!("{inner}")),
+            }
+        }
+        Err(error) => match client.get(normalized).call() {
+            Ok(response) if response.status() < 400 => return None,
+            Ok(response) => Some(format!("HTTP {}", response.status())),
+            Err(inner) => Some(format!("{error}; fallback GET failed: {inner}")),
+        },
+    };
+
+    message.map(|detail| {
+        format!(
+            "{}:{} external link `{}` is not reachable ({detail})",
+            display_rel(root, &link.source),
+            link.line,
+            link.target
+        )
+    })
 }
 
 fn link_target_exists(candidate: &Path) -> bool {
@@ -835,7 +948,7 @@ mod tests {
         fs::write(root.join("index.typ"), r#"#link("guide.html")[Guide]"#).unwrap();
         fs::write(root.join("guide.typ"), "= Guide\n").unwrap();
 
-        let summary = check_links(root).unwrap();
+        let summary = check_links(root, None, false).unwrap();
 
         assert_eq!(summary.links, 1);
         assert!(summary.broken.is_empty());
@@ -847,12 +960,87 @@ mod tests {
         let root = dir.path();
         fs::write(root.join("index.typ"), r#"#link("missing.html")[Missing]"#).unwrap();
 
-        let summary = check_links(root).unwrap();
+        let summary = check_links(root, None, false).unwrap();
 
         assert_eq!(summary.links, 1);
         assert_eq!(summary.broken.len(), 1);
         assert!(summary.broken[0].contains("index.typ:1"));
         assert!(summary.broken[0].contains("missing.html"));
+    }
+
+    #[test]
+    fn link_check_skips_external_links_by_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(
+            root.join("index.typ"),
+            r#"#link("https://example.com")[External]"#,
+        )
+        .unwrap();
+
+        let summary = check_links(root, None, false).unwrap();
+
+        assert_eq!(summary.links, 1);
+        assert!(summary.broken.is_empty());
+        assert_eq!(summary.broken_local, 0);
+        assert_eq!(summary.broken_external, 0);
+    }
+
+    #[test]
+    fn link_check_reports_reachable_external_links_when_enabled() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::thread;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let handle = thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buf = [0u8; 512];
+                let _ = stream.read(&mut buf);
+                let response =
+                    b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok";
+                let _ = stream.write_all(response);
+            }
+        });
+
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(
+            root.join("index.typ"),
+            &format!(r#"#link("http://{}/ok")[External]"#, addr),
+        )
+        .unwrap();
+
+        let summary = check_links(root, None, true).unwrap();
+        let _ = handle.join();
+
+        assert_eq!(summary.links, 1);
+        assert!(summary.broken.is_empty());
+        assert_eq!(summary.broken_local, 0);
+        assert_eq!(summary.broken_external, 0);
+    }
+
+    #[test]
+    fn link_check_respects_depth_limit() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join("index.typ"), "= Root").unwrap();
+        let nested = root.join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(nested.join("sub.typ"), r#"#link("missing.typ")[Missing]"#).unwrap();
+
+        let summary = check_links(root, Some(0), false).unwrap();
+        assert_eq!(summary.files, 1);
+        assert_eq!(summary.links, 0);
+        assert!(summary.broken.is_empty());
+
+        let summary = check_links(root, Some(1), false).unwrap();
+        assert_eq!(summary.files, 2);
+        assert_eq!(summary.links, 1);
+        assert_eq!(summary.broken_local, 1);
+        assert_eq!(summary.broken.len(), 1);
+        assert!(summary.broken[0].contains("nested/sub.typ"));
     }
 
     #[test]

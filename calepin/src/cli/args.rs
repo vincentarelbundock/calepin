@@ -94,6 +94,10 @@ pub struct HealthArgs {
     #[arg(long)]
     pub config: Option<PathBuf>,
 
+    /// Maximum recursion depth when searching for links
+    #[arg(short = 'd', long)]
+    pub depth: Option<usize>,
+
     /// Print machine-readable JSON
     #[arg(long)]
     pub json: bool,
@@ -101,6 +105,10 @@ pub struct HealthArgs {
     /// Exit with an error when warnings are present
     #[arg(long)]
     pub strict: bool,
+
+    /// Also check external links
+    #[arg(long)]
+    pub check_external_links: bool,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -247,15 +255,28 @@ mod tests {
             "config.toml",
             "--json",
             "--strict",
+            "--check-external-links",
         ])
         .unwrap();
 
         match cli.command {
             Command::Health(args) => {
                 assert_eq!(args.config, Some(PathBuf::from("config.toml")));
+                assert_eq!(args.depth, None);
                 assert!(args.json);
                 assert!(args.strict);
+                assert!(args.check_external_links);
             }
+            other => panic!("expected health command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_health_args_depth() {
+        let cli = Cli::try_parse_from(["calepin", "health", "--depth", "2"]).unwrap();
+
+        match cli.command {
+            Command::Health(args) => assert_eq!(args.depth, Some(2)),
             other => panic!("expected health command, got {other:?}"),
         }
     }
