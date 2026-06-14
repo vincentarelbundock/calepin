@@ -54,10 +54,12 @@ Check Calepin's local runtime environment and local links
 Usage: calepin health [OPTIONS]
 
 Options:
-      --config <CONFIG>  Path to project config TOML
-      --json             Print machine-readable JSON
-      --strict           Exit with an error when warnings are present
-  -h, --help             Print help
+      --config <CONFIG>       Path to project config TOML
+  -d, --depth <DEPTH>        Maximum recursion depth when searching links
+      --json                  Print machine-readable JSON
+      --strict                Exit with an error when warnings are present
+      --check-external-links  Also check external links
+  -h, --help                  Print help
 ```
 
 = `calepin compile`
