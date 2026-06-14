@@ -10,6 +10,7 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
+use minijinja::{AutoEscape, Environment};
 use notify::RecursiveMode;
 use notify_debouncer_full::new_debouncer;
 use serde::{Deserialize, Serialize};
@@ -38,6 +39,11 @@ const ICON_CACHE_DIR: &str = ".calepin/icons";
 const DEFAULT_ICON_PREFIX: &str = "lucide";
 const ICON_DOWNLOAD_TIMEOUT_SECS: u64 = 5;
 const PAGES_INDEX_FILE: &str = "website-pages.json";
+const ROBOTS_FILE: &str = "robots.txt";
+const ROBOTS_TEMPLATE_DIR: &str = "templates";
+const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
+const DEFAULT_ROBOTS_TEMPLATE: &str =
+    "User-agent: *\nAllow: /\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}\n{% endif %}";
 /// Root-relative reference to the pages index. Each page renders with
 /// `--root` at its own directory, so the index is written into every page
 /// directory's `.calepin` and this reference resolves for all of them.
@@ -331,6 +337,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .base_url
         .as_ref()
         .map(|_| out_dir.join("sitemap.xml"));
+    let robots_path = config.robots_enabled().then(|| out_dir.join(ROBOTS_FILE));
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
     let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
     let mut icon_cache = IconCache::new(src_dir.join(ICON_CACHE_DIR));
@@ -347,6 +354,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         &typ_files,
         &page_info,
         &sitemap_path,
+        &robots_path,
         theme_stylesheet_path.as_deref(),
         default_favicon_path.as_deref(),
     );
@@ -423,6 +431,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .filter_map(|path| page_info.get(path).map(|info| info.href.clone()))
         .collect::<BTreeSet<_>>();
     write_sitemap(&out_dir, metadata.base_url.as_deref(), &sitemap_hrefs)?;
+    write_robots(&out_dir, &src_dir, &config, metadata.base_url.as_deref())?;
     write_manifest(&out_dir, &expected_outputs)?;
     Ok(WebsiteBuildResult {
         src_dir,
@@ -696,7 +705,7 @@ fn changed_typ_pages(
     Ok(Some(pages))
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default, deny_unknown_fields)]
 struct WebsiteConfig {
     default_language: Option<String>,
@@ -713,6 +722,7 @@ struct WebsiteConfig {
     /// Also render a PDF for every page; pages can override with `pdf` in
     /// their `<website-metadata>`.
     pdf: Option<bool>,
+    robots: Option<RawRobotsConfig>,
     pages: Option<PagesConfig>,
     #[serde(rename = "static")]
     static_files: Option<StaticConfig>,
@@ -720,11 +730,30 @@ struct WebsiteConfig {
     sidebar: Option<SidebarConfig>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 enum RawThemeValue {
     Enabled(String),
     Toggle(bool),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(untagged)]
+enum RawRobotsConfig {
+    Toggle(bool),
+    Config(RobotsConfig),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(default, deny_unknown_fields)]
+struct RobotsConfig {
+    enabled: bool,
+}
+
+impl Default for RobotsConfig {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
 }
 
 impl WebsiteConfig {
@@ -738,9 +767,17 @@ impl WebsiteConfig {
             }
         }
     }
+
+    fn robots_enabled(&self) -> bool {
+        match &self.robots {
+            None => true,
+            Some(RawRobotsConfig::Toggle(enabled)) => *enabled,
+            Some(RawRobotsConfig::Config(config)) => config.enabled,
+        }
+    }
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default)]
 struct LanguageConfig {
     label: Option<String>,
@@ -839,7 +876,7 @@ fn clean_url_prefix(value: &str) -> String {
         .to_string()
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 struct SidebarConfig {
     show_hidden: bool,
@@ -857,14 +894,14 @@ impl Default for SidebarConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default)]
 struct SidebarSectionConfig {
     title: Option<String>,
     item: Vec<SidebarItemConfig>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default)]
 struct SidebarItemConfig {
     #[serde(alias = "path", alias = "url")]
@@ -874,28 +911,28 @@ struct SidebarItemConfig {
     icon: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default)]
 struct PagesConfig {
     include: Vec<String>,
     exclude: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default, deny_unknown_fields)]
 struct StaticConfig {
     include: Vec<String>,
     exclude: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default)]
 struct NavbarConfig {
     show_hidden: bool,
     item: Vec<NavbarItemConfig>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default, deny_unknown_fields)]
 struct NavbarItemConfig {
     position: NavbarPosition,
@@ -906,7 +943,7 @@ struct NavbarItemConfig {
     icon: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 enum NavbarPosition {
     #[default]
@@ -2855,6 +2892,7 @@ fn expected_generated_outputs(
     typ_files: &[PathBuf],
     page_info: &PageInfoMap,
     sitemap_path: &Option<PathBuf>,
+    robots_path: &Option<PathBuf>,
     theme_stylesheet_path: Option<&Path>,
     default_favicon_path: Option<&Path>,
 ) -> BTreeSet<PathBuf> {
@@ -2868,6 +2906,9 @@ fn expected_generated_outputs(
         }
     }
     if let Some(path) = sitemap_path {
+        outputs.insert(path.clone());
+    }
+    if let Some(path) = robots_path {
         outputs.insert(path.clone());
     }
     if let Some(path) = theme_stylesheet_path {
@@ -2998,6 +3039,89 @@ fn write_sitemap(out_dir: &Path, base_url: Option<&str>, hrefs: &BTreeSet<String
     xml.push_str("</urlset>\n");
 
     fs::write(&path, xml).with_context(|| format!("failed to write {}", path.display()))
+}
+
+#[derive(Serialize)]
+struct RobotsTemplateContext<'a> {
+    config: &'a WebsiteConfig,
+    sitemap_url: Option<String>,
+}
+
+fn write_robots(
+    out_dir: &Path,
+    src_dir: &Path,
+    config: &WebsiteConfig,
+    base_url: Option<&str>,
+) -> Result<()> {
+    let path = out_dir.join(ROBOTS_FILE);
+    if !config.robots_enabled() {
+        return Ok(());
+    }
+
+    let template_dir = src_dir.join(ROBOTS_TEMPLATE_DIR);
+    let mut env = Environment::new();
+    env.set_auto_escape_callback(|_| AutoEscape::None);
+    let mut has_robots_template = false;
+
+    if template_dir.is_dir() {
+        for (name, source) in read_template_files(&template_dir)? {
+            if name == ROBOTS_TEMPLATE_FILE {
+                has_robots_template = true;
+            }
+            env.add_template_owned(name, source)
+                .map_err(|error| anyhow!("robots template: {error}"))?;
+        }
+    }
+    if !has_robots_template {
+        env.add_template(ROBOTS_TEMPLATE_FILE, DEFAULT_ROBOTS_TEMPLATE)
+            .map_err(|error| anyhow!("robots template: {error}"))?;
+    }
+
+    let template = env
+        .get_template(ROBOTS_TEMPLATE_FILE)
+        .map_err(|error| anyhow!("robots template: {error}"))?;
+    let contents = template
+        .render(RobotsTemplateContext {
+            config,
+            sitemap_url: base_url.map(|url| absolute_site_url(url, "sitemap.xml")),
+        })
+        .map_err(|error| anyhow!("robots template: {error}"))?;
+    fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
+}
+
+fn read_template_files(dir: &Path) -> Result<Vec<(String, String)>> {
+    let mut paths = Vec::new();
+    collect_template_files(dir, dir, &mut paths)?;
+    paths.sort();
+
+    let mut files = Vec::with_capacity(paths.len());
+    for path in paths {
+        let rel = path.strip_prefix(dir).unwrap_or(&path);
+        let name = slash_path(rel);
+        let contents = fs::read_to_string(&path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        files.push((name, contents));
+    }
+    Ok(files)
+}
+
+fn collect_template_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
+        let path = entry?.path();
+        if path.is_dir() {
+            collect_template_files(root, &path, out)?;
+        } else if path.is_file() {
+            let rel = path.strip_prefix(root).unwrap_or(&path);
+            if rel
+                .components()
+                .any(|component| component.as_os_str().to_str() == Some(".calepin"))
+            {
+                continue;
+            }
+            out.push(path);
+        }
+    }
+    Ok(())
 }
 
 fn clear_previous_outputs(src_dir: &Path, out_dir: &Path) -> Result<()> {
@@ -3411,6 +3535,31 @@ exclude = ["assets/private/**"]
             r#"
 [static]
 copy = ["assets/**"]
+"#
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn robots_config_defaults_enabled_and_accepts_toggle_or_table() {
+        let config = website_config_from_toml("");
+        assert!(config.robots_enabled());
+
+        let config = website_config_from_toml("robots = false");
+        assert!(!config.robots_enabled());
+
+        let config = website_config_from_toml(
+            r#"
+[robots]
+enabled = false
+"#,
+        );
+        assert!(!config.robots_enabled());
+
+        assert!(try_website_config_from_toml(
+            r#"
+[robots]
+allow = false
 "#
         )
         .is_err());
@@ -4078,6 +4227,81 @@ favicon = "assets/favicon.ico"
         let sitemap = fs::read_to_string(temp.path().join("sitemap.xml")).unwrap();
         assert!(sitemap.contains("<loc>https://example.com/project/index.html</loc>"));
         assert!(sitemap.contains("<loc>https://example.com/project/guide/usage.html</loc>"));
+    }
+
+    #[test]
+    fn write_robots_uses_default_template_and_sitemap_url() {
+        let temp = tempfile::tempdir().unwrap();
+        let config = website_config_from_toml(r#"base_url = "https://example.com/project""#);
+
+        write_robots(
+            temp.path(),
+            temp.path(),
+            &config,
+            Some("https://example.com/project"),
+        )
+        .unwrap();
+
+        assert_eq!(
+            fs::read_to_string(temp.path().join("robots.txt")).unwrap(),
+            "User-agent: *\nAllow: /\nSitemap: https://example.com/project/sitemap.xml\n"
+        );
+    }
+
+    #[test]
+    fn write_robots_leaves_existing_file_when_disabled() {
+        let temp = tempfile::tempdir().unwrap();
+        fs::write(temp.path().join("robots.txt"), "old").unwrap();
+        let config = website_config_from_toml("robots = false");
+
+        write_robots(
+            temp.path(),
+            temp.path(),
+            &config,
+            Some("https://example.com"),
+        )
+        .unwrap();
+
+        assert_eq!(
+            fs::read_to_string(temp.path().join("robots.txt")).unwrap(),
+            "old"
+        );
+    }
+
+    #[test]
+    fn write_robots_uses_template_override_with_includes_and_config() {
+        let temp = tempfile::tempdir().unwrap();
+        let templates = temp.path().join("templates");
+        fs::create_dir_all(templates.join("partials")).unwrap();
+        fs::write(
+            templates.join("base.txt"),
+            "{% block body %}{% endblock %}{% include \"partials/footer.txt\" %}",
+        )
+        .unwrap();
+        fs::write(
+            templates.join("partials/footer.txt"),
+            "Host: {{ config.base_url }}\n",
+        )
+        .unwrap();
+        fs::write(
+            templates.join("robots.txt"),
+            "{% extends \"base.txt\" %}{% block body %}User-agent: *\nDisallow: /drafts/\n{% endblock %}",
+        )
+        .unwrap();
+        let config = website_config_from_toml(r#"base_url = "https://example.com""#);
+
+        write_robots(
+            temp.path(),
+            temp.path(),
+            &config,
+            Some("https://example.com"),
+        )
+        .unwrap();
+
+        assert_eq!(
+            fs::read_to_string(temp.path().join("robots.txt")).unwrap(),
+            "User-agent: *\nDisallow: /drafts/\nHost: https://example.com"
+        );
     }
 
     #[test]

@@ -46,9 +46,68 @@ favicon = "assets/favicon.ico"
 
 Use `--format html` for a one-time HTML-only build, regardless of `pdf`.
 
-Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
+Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
 
 Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image("assets/diagram.svg")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`; if no logo is set, bundled themes use `title` as the site name.
+
+= Robots.txt
+
+_Calepin_ writes `robots.txt` by default:
+
+```txt
+User-agent: *
+Allow: /
+Sitemap: https://example.com/sitemap.xml
+```
+
+The `Sitemap:` line is included when `base_url` is set. To disable generation:
+
+```toml
+robots = false
+```
+
+or:
+
+```toml
+[robots]
+enabled = false
+```
+
+To override the generated file, create `templates/robots.txt` in the website source directory. The template uses MiniJinja syntax and receives `config` and `sitemap_url`:
+
+```txt
+User-agent: *
+Disallow: /drafts/
+{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}
+```
+
+Files under `templates/` can be included or extended from the robots template:
+
+```txt
+{% extends "base.txt" %}
+{% block body %}
+User-agent: *
+Allow: /
+{% endblock %}
+```
+
+= Static files
+
+Use `[static]` for files that should be copied to the built website without being rendered as Typst pages:
+
+```toml
+[static]
+include = [
+  "assets/**",
+  "CNAME",
+  "downloads/**",
+]
+exclude = [
+  "assets/drafts/**",
+]
+```
+
+Each included file keeps its source-relative path in the output directory: `assets/logo.svg` becomes `assets/logo.svg`, `CNAME` becomes `CNAME`, and `downloads/manual.pdf` becomes `downloads/manual.pdf`. `include` entries can be files, directories, or glob patterns. `exclude` patterns are applied after includes. Paths must stay inside the website source directory.
 
 = Navigation
 
@@ -117,7 +176,7 @@ Navbar items use `target` or `glob`. Use a `.typ` `target` or `glob` for interna
 
 = Include or exclude pages
 
-Use `[pages]` for pages that should be built but should not appear in navigation, such as blog posts or legal pages:
+Use `[pages]` for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:
 
 ```toml
 [pages]

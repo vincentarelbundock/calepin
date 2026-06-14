@@ -48,6 +48,47 @@ Paths in `calepin.toml` are interpreted from the website source directory: the d
 
 Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image("assets/diagram.svg")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`; if no logo is set, bundled themes use `title` as the site name.
 
+= Robots.txt
+
+_Calepin_ writes `robots.txt` by default:
+
+```txt
+User-agent: *
+Allow: /
+Sitemap: https://example.com/sitemap.xml
+```
+
+The `Sitemap:` line is included when `base_url` is set. To disable generation:
+
+```toml
+robots = false
+```
+
+or:
+
+```toml
+[robots]
+enabled = false
+```
+
+To override the generated file, create `templates/robots.txt` in the website source directory. The template uses MiniJinja syntax and receives `config` and `sitemap_url`:
+
+```txt
+User-agent: *
+Disallow: /drafts/
+{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}
+```
+
+Files under `templates/` can be included or extended from the robots template:
+
+```txt
+{% extends "base.txt" %}
+{% block body %}
+User-agent: *
+Allow: /
+{% endblock %}
+```
+
 = Static files
 
 Use `[static]` for files that should be copied to the built website without being rendered as Typst pages:
@@ -56,7 +97,6 @@ Use `[static]` for files that should be copied to the built website without bein
 [static]
 include = [
   "assets/**",
-  "robots.txt",
   "CNAME",
   "downloads/**",
 ]
@@ -65,7 +105,7 @@ exclude = [
 ]
 ```
 
-Each included file keeps its source-relative path in the output directory: `assets/logo.svg` becomes `assets/logo.svg`, `robots.txt` becomes `robots.txt`, and `downloads/manual.pdf` becomes `downloads/manual.pdf`. `include` entries can be files, directories, or glob patterns. `exclude` patterns are applied after includes. Paths must stay inside the website source directory.
+Each included file keeps its source-relative path in the output directory: `assets/logo.svg` becomes `assets/logo.svg`, `CNAME` becomes `CNAME`, and `downloads/manual.pdf` becomes `downloads/manual.pdf`. `include` entries can be files, directories, or glob patterns. `exclude` patterns are applied after includes. Paths must stay inside the website source directory.
 
 = Navigation
 
