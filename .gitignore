@@ -61,3 +61,4 @@ _calepin_files/
 _calepin_cache/
 _site/
 *.tar.gz
+.agents
