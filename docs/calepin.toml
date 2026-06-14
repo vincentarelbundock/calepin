@@ -8,6 +8,11 @@ minify = true
 search = "pagefind"
 theme = "calepin"
 
+generate_feeds = true
+
+[feeds]
+filenames = ["atom.xml", "rss.xml"]
+
 [static]
 include = ["assets/**"]
 

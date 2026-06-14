@@ -5,6 +5,14 @@ description = "A static website built from Typst documents."
 # logo_alt = "My Site"
 # Omit favicon to use the generated default.
 # favicon = "assets/favicon.ico"
+
+# Generate Atom/RSS feeds for the site.
+# Requires base_url to be set.
+# generate_feeds = true
+#
+# [feeds]
+# filenames = ["atom.xml", "rss.xml"]
+
 pdf = false
 
 [static]

@@ -43,12 +43,55 @@ const PAGES_INDEX_FILE: &str = "website-pages.json";
 const ROBOTS_FILE: &str = "robots.txt";
 const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
+const DEFAULT_FEED_FILE: &str = "atom.xml";
+const DEFAULT_ATOM_TEMPLATE_NAME: &str = "__calepin_builtin_atom.xml";
+const DEFAULT_RSS_TEMPLATE_NAME: &str = "__calepin_builtin_rss.xml";
 const PAGEFIND_DIR: &str = "pagefind";
 const PAGEFIND_CSS: &str = "pagefind/pagefind-component-ui.css";
 const PAGEFIND_JS: &str = "pagefind/pagefind-component-ui.js";
 const PAGEFIND_ROOT_SELECTOR: &str = "[data-pagefind-body]";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
     "User-agent: *\nAllow: /\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}\n{% endif %}";
+const DEFAULT_ATOM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>{{ feed.title }}</title>
+  <id>{{ feed.site_url }}</id>
+  <link href="{{ feed.site_url }}"/>
+  <link href="{{ feed.feed_url }}" rel="self"/>
+  <updated>{{ feed.updated }}</updated>
+  {% if feed.description %}<subtitle>{{ feed.description }}</subtitle>{% endif %}
+  {% for item in items %}
+  <entry>
+    <title>{{ item.title }}</title>
+    <id>{{ item.url }}</id>
+    <link href="{{ item.url }}"/>
+    <updated>{{ item.updated }}</updated>
+    {% if item.author %}<author><name>{{ item.author }}</name></author>{% endif %}
+    {% if item.summary %}<summary>{{ item.summary }}</summary>{% endif %}
+  </entry>
+  {% endfor %}
+</feed>
+"#;
+const DEFAULT_RSS_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>{{ feed.title }}</title>
+    <link>{{ feed.site_url }}</link>
+    {% if feed.description %}<description>{{ feed.description }}</description>{% endif %}
+    {% if feed.rss_updated %}<lastBuildDate>{{ feed.rss_updated }}</lastBuildDate>{% endif %}
+    {% for item in items %}
+    <item>
+      <title>{{ item.title }}</title>
+      <link>{{ item.url }}</link>
+      <guid>{{ item.url }}</guid>
+      <pubDate>{{ item.rss_date }}</pubDate>
+      {% if item.author %}<author>{{ item.author }}</author>{% endif %}
+      {% if item.summary %}<description>{{ item.summary }}</description>{% endif %}
+    </item>
+    {% endfor %}
+  </channel>
+</rss>
+"#;
 /// Root-relative reference to the pages index. Each page renders with
 /// `--root` at its own directory, so the index is written into every page
 /// directory's `.calepin` and this reference resolves for all of them.
@@ -346,6 +389,16 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .as_ref()
         .map(|_| out_dir.join("sitemap.xml"));
     let robots_path = config.robots_enabled().then(|| out_dir.join(ROBOTS_FILE));
+    let feed_targets = feed_targets(&config)?;
+    let feed_paths: BTreeSet<PathBuf> = config
+        .feeds_enabled()
+        .then(|| {
+            feed_targets
+                .iter()
+                .map(|feed| out_dir.join(&feed.filename))
+                .collect()
+        })
+        .unwrap_or_default();
     let minify_html = args.minify_html || config.minify.unwrap_or(false);
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
     let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
@@ -371,6 +424,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         &page_info,
         &sitemap_path,
         &robots_path,
+        &feed_paths,
         theme_stylesheet_path.as_deref(),
         default_favicon_path.as_deref(),
     );
@@ -464,6 +518,15 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .collect::<BTreeSet<_>>();
     write_sitemap(&out_dir, metadata.base_url.as_deref(), &sitemap_hrefs)?;
     write_robots(&out_dir, &src_dir, &config, metadata.base_url.as_deref())?;
+    write_feeds(
+        &out_dir,
+        &src_dir,
+        &config,
+        metadata.base_url.as_deref(),
+        &metadata,
+        &pages_index,
+        &feed_targets,
+    )?;
     let pagefind_manifest = if config.search == Some(SearchEngine::Pagefind) {
         let signature = pagefind_signature(&out_dir, &pagefind_pages)?;
         let cached_outputs = cached_pagefind_outputs(&out_dir, &previous_manifest, signature);
@@ -783,6 +846,8 @@ struct WebsiteConfig {
     /// Minify generated HTML after theming and website metadata injection.
     minify: Option<bool>,
     search: Option<SearchEngine>,
+    generate_feeds: Option<bool>,
+    feeds: Option<FeedsConfig>,
     robots: Option<RawRobotsConfig>,
     pages: Option<PagesConfig>,
     #[serde(rename = "static")]
@@ -842,6 +907,35 @@ impl WebsiteConfig {
             Some(RawRobotsConfig::Config(config)) => config.enabled,
         }
     }
+
+    fn feeds_enabled(&self) -> bool {
+        self.generate_feeds.unwrap_or(false)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
+#[serde(default, deny_unknown_fields)]
+struct FeedsConfig {
+    limit: Option<usize>,
+    filenames: Vec<String>,
+    file: Vec<FeedFileConfig>,
+    atom_template: Option<String>,
+    rss_template: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
+#[serde(default, deny_unknown_fields)]
+struct FeedFileConfig {
+    filename: String,
+    format: Option<FeedFormat>,
+    template: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum FeedFormat {
+    Atom,
+    Rss,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -3158,6 +3252,7 @@ fn expected_generated_outputs(
     page_info: &PageInfoMap,
     sitemap_path: &Option<PathBuf>,
     robots_path: &Option<PathBuf>,
+    feed_paths: &BTreeSet<PathBuf>,
     theme_stylesheet_path: Option<&Path>,
     default_favicon_path: Option<&Path>,
 ) -> BTreeSet<PathBuf> {
@@ -3176,6 +3271,7 @@ fn expected_generated_outputs(
     if let Some(path) = robots_path {
         outputs.insert(path.clone());
     }
+    outputs.extend(feed_paths.iter().cloned());
     if let Some(path) = theme_stylesheet_path {
         outputs.insert(out_dir.join(path));
     }
@@ -3285,6 +3381,344 @@ fn write_manifest(
     };
     let contents = serde_json::to_string_pretty(&manifest)?;
     fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FeedTarget {
+    filename: String,
+    format: FeedFormat,
+    template: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct FeedBuildItem {
+    sort_date: String,
+    item: FeedTemplateItem,
+}
+
+#[derive(Serialize)]
+struct FeedTemplateContext<'a> {
+    config: &'a WebsiteConfig,
+    feed: FeedTemplateInfo,
+    items: Vec<FeedTemplateItem>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct FeedTemplateInfo {
+    title: String,
+    description: Option<String>,
+    site_url: String,
+    feed_url: String,
+    updated: String,
+    rss_updated: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct FeedTemplateItem {
+    title: String,
+    url: String,
+    id: String,
+    date: String,
+    updated: String,
+    rss_date: String,
+    summary: Option<String>,
+    author: Option<String>,
+}
+
+fn feed_targets(config: &WebsiteConfig) -> Result<Vec<FeedTarget>> {
+    if !config.feeds_enabled() {
+        return Ok(Vec::new());
+    }
+
+    let feeds = config.feeds.as_ref();
+    let mut targets = Vec::new();
+    if let Some(feeds) = feeds {
+        for filename in &feeds.filenames {
+            let filename = clean_feed_filename(filename)?;
+            let format = infer_feed_format(&filename);
+            let template = feed_format_template(feeds, format);
+            targets.push(FeedTarget {
+                filename,
+                format,
+                template,
+            });
+        }
+        for file in &feeds.file {
+            let filename = clean_feed_filename(&file.filename)?;
+            let format = file.format.unwrap_or_else(|| infer_feed_format(&filename));
+            targets.push(FeedTarget {
+                filename,
+                format,
+                template: file
+                    .template
+                    .as_deref()
+                    .and_then(|value| clean_optional_string(Some(value)))
+                    .or_else(|| feed_format_template(feeds, format)),
+            });
+        }
+    }
+
+    if targets.is_empty() {
+        targets.push(FeedTarget {
+            filename: DEFAULT_FEED_FILE.to_string(),
+            format: FeedFormat::Atom,
+            template: feeds.and_then(|feeds| feed_format_template(feeds, FeedFormat::Atom)),
+        });
+    }
+
+    let mut seen = BTreeSet::new();
+    for target in &targets {
+        if !seen.insert(target.filename.clone()) {
+            bail!("duplicate feed filename `{}`", target.filename);
+        }
+    }
+    Ok(targets)
+}
+
+fn clean_feed_filename(value: &str) -> Result<String> {
+    let Some(filename) = clean_optional_string(Some(value)) else {
+        bail!("feed filename cannot be empty");
+    };
+    if filename.ends_with('/') || !is_safe_output_route(&filename) {
+        bail!("feed filename must stay inside the output directory: `{filename}`");
+    }
+    Ok(filename)
+}
+
+fn feed_format_template(feeds: &FeedsConfig, format: FeedFormat) -> Option<String> {
+    match format {
+        FeedFormat::Atom => feeds
+            .atom_template
+            .as_deref()
+            .and_then(|value| clean_optional_string(Some(value))),
+        FeedFormat::Rss => feeds
+            .rss_template
+            .as_deref()
+            .and_then(|value| clean_optional_string(Some(value))),
+    }
+}
+
+fn infer_feed_format(filename: &str) -> FeedFormat {
+    let lower = filename.to_ascii_lowercase();
+    let basename = Path::new(&lower)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(lower.as_str());
+    if basename == "rss.xml" || basename.ends_with(".rss") || basename.ends_with("rss.xml") {
+        FeedFormat::Rss
+    } else {
+        FeedFormat::Atom
+    }
+}
+
+fn write_feeds(
+    out_dir: &Path,
+    src_dir: &Path,
+    config: &WebsiteConfig,
+    base_url: Option<&str>,
+    metadata: &SiteMetadata,
+    pages_index: &serde_json::Value,
+    targets: &[FeedTarget],
+) -> Result<()> {
+    if !config.feeds_enabled() {
+        return Ok(());
+    }
+    let Some(base_url) = base_url else {
+        bail!("generate_feeds = true requires base_url so feed links can be absolute");
+    };
+
+    let limit = config.feeds.as_ref().and_then(|feeds| feeds.limit);
+    let items = feed_items_from_pages(pages_index, base_url, limit);
+    let mut env = Environment::new();
+    env.set_auto_escape_callback(|_| AutoEscape::None);
+    env.add_template(DEFAULT_ATOM_TEMPLATE_NAME, DEFAULT_ATOM_TEMPLATE)
+        .map_err(|error| anyhow!("feed template: {error}"))?;
+    env.add_template(DEFAULT_RSS_TEMPLATE_NAME, DEFAULT_RSS_TEMPLATE)
+        .map_err(|error| anyhow!("feed template: {error}"))?;
+
+    let template_dir = src_dir.join(ROBOTS_TEMPLATE_DIR);
+    if template_dir.is_dir() {
+        for (name, source) in read_template_files(&template_dir)? {
+            env.add_template_owned(name, source)
+                .map_err(|error| anyhow!("feed template: {error}"))?;
+        }
+    }
+
+    for target in targets {
+        let template_name = target.template.as_deref().unwrap_or(match target.format {
+            FeedFormat::Atom => DEFAULT_ATOM_TEMPLATE_NAME,
+            FeedFormat::Rss => DEFAULT_RSS_TEMPLATE_NAME,
+        });
+        let template = env
+            .get_template(template_name)
+            .map_err(|error| anyhow!("feed template `{template_name}`: {error}"))?;
+        let feed_url = absolute_site_url(base_url, &target.filename);
+        let updated = items
+            .first()
+            .map(|item| item.updated.clone())
+            .unwrap_or_else(|| "1970-01-01T00:00:00Z".to_string());
+        let rss_updated = items
+            .first()
+            .map(|item| item.rss_date.clone())
+            .unwrap_or_else(|| "Thu, 01 Jan 1970 00:00:00 GMT".to_string());
+        let contents = template
+            .render(FeedTemplateContext {
+                config,
+                feed: FeedTemplateInfo {
+                    title: xml_escape(metadata.title.as_deref().unwrap_or("Feed")),
+                    description: metadata.description.as_deref().map(xml_escape),
+                    site_url: xml_escape(base_url),
+                    feed_url: xml_escape(&feed_url),
+                    updated,
+                    rss_updated,
+                },
+                items: items.clone(),
+            })
+            .map_err(|error| anyhow!("feed template `{template_name}`: {error}"))?;
+        let path = out_dir.join(&target.filename);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create {}", parent.display()))?;
+        }
+        fs::write(&path, contents)
+            .with_context(|| format!("failed to write {}", path.display()))?;
+    }
+    Ok(())
+}
+
+fn feed_items_from_pages(
+    pages_index: &serde_json::Value,
+    base_url: &str,
+    limit: Option<usize>,
+) -> Vec<FeedTemplateItem> {
+    let mut items = pages_index
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| feed_item_from_page(entry, base_url))
+        .collect::<Vec<_>>();
+    items.sort_by(|left, right| {
+        right
+            .sort_date
+            .cmp(&left.sort_date)
+            .then_with(|| left.item.title.cmp(&right.item.title))
+    });
+    if let Some(limit) = limit {
+        items.truncate(limit);
+    }
+    items.into_iter().map(|entry| entry.item).collect()
+}
+
+fn feed_item_from_page(entry: &serde_json::Value, base_url: &str) -> Option<FeedBuildItem> {
+    let meta = entry.get("meta")?.as_object()?;
+    let date = clean_optional_string(meta.get("date")?.as_str())?;
+    let href = clean_optional_string(entry.get("href")?.as_str())?;
+    let url = absolute_site_url(base_url, &href);
+    let title = entry
+        .get("title")
+        .and_then(|title| title.as_str())
+        .and_then(|title| clean_optional_string(Some(title)))
+        .unwrap_or_else(|| href.clone());
+    let summary = meta
+        .get("summary")
+        .or_else(|| meta.get("description"))
+        .and_then(|summary| summary.as_str())
+        .and_then(|summary| clean_optional_string(Some(summary)))
+        .map(|summary| xml_escape(&summary));
+    let author = feed_author(meta).map(|author| xml_escape(&author));
+    let updated = normalize_feed_date(&date);
+    let rss_date = rss_feed_date(&date);
+    Some(FeedBuildItem {
+        sort_date: date.clone(),
+        item: FeedTemplateItem {
+            title: xml_escape(&title),
+            url: xml_escape(&url),
+            id: xml_escape(&url),
+            date: xml_escape(&date),
+            updated,
+            rss_date,
+            summary,
+            author,
+        },
+    })
+}
+
+fn feed_author(meta: &serde_json::Map<String, serde_json::Value>) -> Option<String> {
+    if let Some(author) = meta
+        .get("author")
+        .and_then(|author| author.as_str())
+        .and_then(|author| clean_optional_string(Some(author)))
+    {
+        return Some(author);
+    }
+    let authors = meta.get("authors")?.as_array()?;
+    let names = authors
+        .iter()
+        .filter_map(|author| author.as_str())
+        .filter_map(|author| clean_optional_string(Some(author)))
+        .collect::<Vec<_>>();
+    (!names.is_empty()).then(|| names.join(", "))
+}
+
+fn normalize_feed_date(date: &str) -> String {
+    let date = date.trim();
+    if date.contains('T') {
+        date.to_string()
+    } else {
+        format!("{date}T00:00:00Z")
+    }
+}
+
+fn rss_feed_date(date: &str) -> String {
+    parse_iso_date(date)
+        .map(|(year, month, day)| {
+            let weekday = weekday_name(year, month, day);
+            let month = month_name(month);
+            format!("{weekday}, {day:02} {month} {year:04} 00:00:00 GMT")
+        })
+        .unwrap_or_else(|| date.trim().to_string())
+}
+
+fn parse_iso_date(date: &str) -> Option<(i32, u32, u32)> {
+    let date = date.trim();
+    if date.len() < 10 {
+        return None;
+    }
+    let bytes = date.as_bytes();
+    if bytes.get(4) != Some(&b'-') || bytes.get(7) != Some(&b'-') {
+        return None;
+    }
+    let year = date.get(0..4)?.parse::<i32>().ok()?;
+    let month = date.get(5..7)?.parse::<u32>().ok()?;
+    let day = date.get(8..10)?.parse::<u32>().ok()?;
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+    Some((year, month, day))
+}
+
+fn weekday_name(year: i32, month: u32, day: u32) -> &'static str {
+    const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    let days = days_from_civil(year, month, day);
+    WEEKDAYS[(days + 4).rem_euclid(7) as usize]
+}
+
+fn month_name(month: u32) -> &'static str {
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    MONTHS[(month - 1) as usize]
+}
+
+fn days_from_civil(year: i32, month: u32, day: u32) -> i64 {
+    let year = year - i32::from(month <= 2);
+    let era = if year >= 0 { year } else { year - 399 } / 400;
+    let yoe = year - era * 400;
+    let month = month as i32;
+    let day = day as i32;
+    let doy = (153 * (month + if month > 2 { -3 } else { 9 }) + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    i64::from(era * 146_097 + doe - 719_468)
 }
 
 /// Writes the sitemap from every built page except the 404 page.
@@ -3855,6 +4289,80 @@ allow = false
         assert_eq!(config.search, Some(SearchEngine::Pagefind));
 
         assert!(try_website_config_from_toml(r#"search = "lunr""#).is_err());
+    }
+
+    #[test]
+    fn feed_config_defaults_to_atom_and_accepts_explicit_targets() {
+        let config = website_config_from_toml(
+            r#"
+generate_feeds = true
+
+[feeds]
+limit = 10
+filenames = ["atom.xml", "rss.xml"]
+
+[[feeds.file]]
+filename = "updates.xml"
+format = "rss"
+template = "feeds/custom-rss.xml"
+"#,
+        );
+        assert!(config.feeds_enabled());
+        let targets = feed_targets(&config).unwrap();
+
+        assert_eq!(
+            targets,
+            vec![
+                FeedTarget {
+                    filename: "atom.xml".to_string(),
+                    format: FeedFormat::Atom,
+                    template: None,
+                },
+                FeedTarget {
+                    filename: "rss.xml".to_string(),
+                    format: FeedFormat::Rss,
+                    template: None,
+                },
+                FeedTarget {
+                    filename: "updates.xml".to_string(),
+                    format: FeedFormat::Rss,
+                    template: Some("feeds/custom-rss.xml".to_string()),
+                },
+            ]
+        );
+
+        let default = website_config_from_toml("generate_feeds = true");
+        assert_eq!(
+            feed_targets(&default).unwrap(),
+            vec![FeedTarget {
+                filename: "atom.xml".to_string(),
+                format: FeedFormat::Atom,
+                template: None,
+            }]
+        );
+    }
+
+    #[test]
+    fn feed_config_rejects_unsafe_or_duplicate_filenames() {
+        assert!(feed_targets(&website_config_from_toml(
+            r#"
+generate_feeds = true
+[feeds]
+filenames = ["../atom.xml"]
+"#
+        ))
+        .is_err());
+
+        assert!(feed_targets(&website_config_from_toml(
+            r#"
+generate_feeds = true
+[feeds]
+filenames = ["atom.xml"]
+[[feeds.file]]
+filename = "atom.xml"
+"#
+        ))
+        .is_err());
     }
 
     #[test]
@@ -4520,6 +5028,93 @@ favicon = "assets/favicon.ico"
         let sitemap = fs::read_to_string(temp.path().join("sitemap.xml")).unwrap();
         assert!(sitemap.contains("<loc>https://example.com/project/index.html</loc>"));
         assert!(sitemap.contains("<loc>https://example.com/project/guide/usage.html</loc>"));
+    }
+
+    #[test]
+    fn feed_items_include_only_dated_pages_sorted_newest_first() {
+        let pages = serde_json::json!([
+            {
+                "href": "posts/old.html",
+                "title": "Old",
+                "meta": {"date": "2026-01-01", "summary": "Older"}
+            },
+            {
+                "href": "about.html",
+                "title": "About",
+                "meta": {}
+            },
+            {
+                "href": "posts/new.html",
+                "title": "New",
+                "meta": {"date": "2026-06-10", "authors": ["Ada", "Grace"]}
+            }
+        ]);
+
+        let items = feed_items_from_pages(&pages, "https://example.com/site", None);
+
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].title, "New");
+        assert_eq!(items[0].url, "https://example.com/site/posts/new.html");
+        assert_eq!(items[0].author.as_deref(), Some("Ada, Grace"));
+        assert_eq!(items[1].title, "Old");
+    }
+
+    #[test]
+    fn write_feeds_generates_atom_and_rss_from_dated_pages() {
+        let temp = tempfile::tempdir().unwrap();
+        let config = website_config_from_toml(
+            r#"
+title = "Example Site"
+description = "Research updates"
+base_url = "https://example.com/project"
+generate_feeds = true
+
+[feeds]
+filenames = ["atom.xml", "rss.xml"]
+"#,
+        );
+        let metadata = SiteMetadata::from_config(&config, temp.path()).unwrap();
+        let pages = serde_json::json!([
+            {
+                "href": "posts/first.html",
+                "title": "First & Best",
+                "meta": {
+                    "date": "2026-06-10",
+                    "summary": "A <short> update.",
+                    "author": "Ada Lovelace"
+                }
+            },
+            {
+                "href": "about.html",
+                "title": "About",
+                "meta": {}
+            }
+        ]);
+        let targets = feed_targets(&config).unwrap();
+
+        write_feeds(
+            temp.path(),
+            temp.path(),
+            &config,
+            metadata.base_url.as_deref(),
+            &metadata,
+            &pages,
+            &targets,
+        )
+        .unwrap();
+
+        let atom = fs::read_to_string(temp.path().join("atom.xml")).unwrap();
+        assert!(atom.contains("<feed xmlns=\"http://www.w3.org/2005/Atom\">"));
+        assert!(atom.contains("<title>First &amp; Best</title>"));
+        assert!(atom.contains("https://example.com/project/posts/first.html"));
+        assert!(atom.contains("A &lt;short&gt; update."));
+        assert!(!atom.contains("about.html"));
+
+        let rss = fs::read_to_string(temp.path().join("rss.xml")).unwrap();
+        assert!(rss.contains("<rss version=\"2.0\">"));
+        assert!(rss.contains("<title>First &amp; Best</title>"));
+        assert!(rss.contains("<pubDate>Wed, 10 Jun 2026 00:00:00 GMT</pubDate>"));
+        assert!(rss.contains("Ada Lovelace"));
     }
 
     #[test]
