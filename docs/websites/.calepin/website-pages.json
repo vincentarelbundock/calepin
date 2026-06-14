@@ -1,5 +1,15 @@
 [
   {
+    "href": "compile_watch_serve.html",
+    "language": null,
+    "meta": {},
+    "path": "compile_watch_serve.typ",
+    "pdf": "compile_watch_serve.pdf",
+    "title": "Compile, watch, serve",
+    "translation_key": "compile_watch_serve",
+    "translations": {}
+  },
+  {
     "href": "getting-started/config.html",
     "language": null,
     "meta": {},
@@ -22,10 +32,13 @@
   {
     "href": "index.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "layout": "layouts/landing.html",
+      "pdf": false
+    },
     "path": "index.typ",
-    "pdf": "index.pdf",
-    "title": "Home",
+    "pdf": null,
+    "title": "Calepin",
     "translation_key": "index",
     "translations": {}
   },

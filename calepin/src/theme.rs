@@ -33,112 +33,16 @@ pub(crate) struct BundleDef {
     pub(crate) files: &'static [BundleFile],
 }
 
+include!(concat!(env!("OUT_DIR"), "/theme_assets.rs"));
+
 static CALEPIN: BundleDef = BundleDef {
     name: "calepin",
-    files: &[
-        BundleFile {
-            path: "document.html",
-            source: include_str!("assets/themes/calepin/document.html"),
-        },
-        BundleFile {
-            path: "site.html",
-            source: include_str!("assets/themes/calepin/site.html"),
-        },
-        BundleFile {
-            path: "paged.typ.jinja",
-            source: include_str!("assets/themes/calepin/paged.typ.jinja"),
-        },
-        BundleFile {
-            path: "partials/theme-switcher.html",
-            source: include_str!("assets/themes/calepin/partials/theme-switcher.html"),
-        },
-        BundleFile {
-            path: "partials/navbar-item.html",
-            source: include_str!("assets/themes/calepin/partials/navbar-item.html"),
-        },
-        BundleFile {
-            path: "styles/00-theme.css",
-            source: include_str!("assets/snippets/css/theme.css"),
-        },
-        BundleFile {
-            path: "styles/01-code.css",
-            source: include_str!("assets/snippets/css/code.css"),
-        },
-        BundleFile {
-            path: "styles/02-widgets.css",
-            source: include_str!("assets/snippets/css/widgets.css"),
-        },
-        BundleFile {
-            path: "styles/document.css",
-            source: include_str!("assets/themes/calepin/styles/document.css"),
-        },
-        BundleFile {
-            path: "styles/site.css",
-            source: include_str!("assets/themes/calepin/styles/site.css"),
-        },
-        BundleFile {
-            path: "scripts/00-theme-toggle.js",
-            source: include_str!("assets/snippets/js/theme-toggle.js"),
-        },
-        BundleFile {
-            path: "scripts/01-language-picker.js",
-            source: include_str!("assets/snippets/js/language-picker.js"),
-        },
-        BundleFile {
-            path: "scripts/02-copy-code.js",
-            source: include_str!("assets/snippets/js/copy-code.js"),
-        },
-        BundleFile {
-            path: "scripts/site.js",
-            source: include_str!("assets/themes/calepin/scripts/site.js"),
-        },
-    ],
+    files: CALEPIN_FILES,
 };
 
 static ACADEMIC: BundleDef = BundleDef {
     name: "academic",
-    files: &[
-        BundleFile {
-            path: "site.html",
-            source: include_str!("assets/themes/academic/site.html"),
-        },
-        BundleFile {
-            path: "partials/navbar-item.html",
-            source: include_str!("assets/themes/academic/partials/navbar-item.html"),
-        },
-        BundleFile {
-            path: "styles/00-theme.css",
-            source: include_str!("assets/snippets/css/theme.css"),
-        },
-        BundleFile {
-            path: "styles/01-code.css",
-            source: include_str!("assets/snippets/css/code.css"),
-        },
-        BundleFile {
-            path: "styles/02-widgets.css",
-            source: include_str!("assets/snippets/css/widgets.css"),
-        },
-        BundleFile {
-            path: "styles/main.css",
-            source: include_str!("assets/themes/academic/styles/main.css"),
-        },
-        BundleFile {
-            path: "scripts/00-theme-toggle.js",
-            source: include_str!("assets/snippets/js/theme-toggle.js"),
-        },
-        BundleFile {
-            path: "scripts/01-language-picker.js",
-            source: include_str!("assets/snippets/js/language-picker.js"),
-        },
-        BundleFile {
-            path: "scripts/02-copy-code.js",
-            source: include_str!("assets/snippets/js/copy-code.js"),
-        },
-        BundleFile {
-            path: "scripts/main.js",
-            source: include_str!("assets/themes/academic/scripts/main.js"),
-        },
-    ],
+    files: ACADEMIC_FILES,
 };
 
 static BUILTINS: [&BundleDef; 2] = [&CALEPIN, &ACADEMIC];
@@ -731,6 +635,17 @@ mod tests {
     }
 
     #[test]
+    fn explicit_builtin_landing_layout_resolves() {
+        let entry =
+            resolve_explicit_site_html_entry(&ThemeSelection::Default, "layouts/landing.html")
+                .unwrap()
+                .unwrap();
+
+        assert!(entry.layout.contains("calepin-website-main--landing"));
+        assert!(entry.is_default);
+    }
+
+    #[test]
     fn explicit_site_layout_rejects_sugar_and_escape_paths() {
         for value in [
             "landing",
@@ -857,10 +772,14 @@ mod tests {
         assert_eq!(dest, dir.path().join("themes/calepin"));
         assert!(dest.join("document.html").is_file());
         assert!(dest.join("site.html").is_file());
+        assert!(dest.join("layouts/landing.html").is_file());
         assert!(dest.join("paged.typ.jinja").is_file());
         assert!(!dest.join("paged.typ").exists());
         assert!(dest.join("partials/navbar-item.html").is_file());
         assert!(dest.join("partials/theme-switcher.html").is_file());
+        assert!(dest.join("partials/scripts.html").is_file());
+        assert!(dest.join("partials/site-topbar.html").is_file());
+        assert!(dest.join("partials/styles.html").is_file());
         assert!(dest.join("styles/00-theme.css").is_file());
         assert!(dest.join("styles/01-code.css").is_file());
         assert!(dest.join("styles/02-widgets.css").is_file());

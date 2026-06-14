@@ -1,16 +1,10 @@
 {{ doc.head }}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-{% for style in styles -%}
-    <style>
-{{ style.css }}
-    </style>
-{% endfor -%}
+{% set calepin_theme_storage_key = "calepin-html-theme" %}
+{% set calepin_theme_param = "" %}
+{% include "partials/theme-init.html" %}
+{% include "partials/styles.html" %}
 {{ doc.body_open }}
 {% include "partials/theme-switcher.html" %}
     <main class="container">{{ doc.body }}</main>
-{% for script in scripts -%}
-    <script>
-{{ script.content }}
-    </script>
-{% endfor -%}
+{% include "partials/scripts.html" %}
 {{ doc.body_close }}

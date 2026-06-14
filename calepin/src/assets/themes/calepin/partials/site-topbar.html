@@ -1,0 +1,62 @@
+    <header class="calepin-website-topbar">
+        <nav>
+            <ul>
+                {% if show_site_sidebar | default(true) %}
+                <li>
+                    <button class="calepin-website-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
+                </li>
+                {% endif %}
+                <li>
+                    <a class="calepin-website-topbrand contrast" href="{% if site.home_url %}{{ site.home_url }}{% else %}index.html{% endif %}" aria-label="{% if site.logo_alt %}{{ site.logo_alt }} home{% elif site.title %}{{ site.title }} home{% else %}Home{% endif %}">
+                        {% if site.logo %}
+                        <img src="{{ site.logo }}" alt="{% if site.logo_alt %}{{ site.logo_alt }}{% elif site.title %}{{ site.title }}{% endif %}" class="calepin-website-topbrand-logo" data-inline-svg="1">
+                        {% elif site.title %}
+                        <span class="calepin-website-topbrand-text">{{ site.title }}</span>
+                        {% else %}
+                        <span class="calepin-website-topbrand-text">Home</span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% for item in site.navbar_left %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+            </ul>
+            {% if site.navbar_center %}
+            <ul class="calepin-website-navbar-center">
+                {% for item in site.navbar_center %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <ul>
+                {% for item in site.navbar_right %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+                <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
+                {% if site.languages and site.languages | length > 1 %}
+                <li>
+                    <select class="calepin-website-view-mode" aria-label="Language" data-calepin-language-picker>
+                        {% for language in site.languages %}
+                        <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
+                        {% endfor %}
+                    </select>
+                </li>
+                {% endif %}
+                {% if site.pagefind %}
+                <li class="calepin-website-search-item">
+                    <form class="calepin-website-search" role="search" data-calepin-search-form>
+                        <input class="calepin-website-search-input" type="search" placeholder="Search" aria-label="Search documentation" aria-haspopup="listbox" aria-expanded="false" autocomplete="off" spellcheck="false" data-calepin-search-input>
+                        <div class="calepin-website-search-results" role="listbox" aria-label="Search results" hidden data-calepin-search-results></div>
+                    </form>
+                </li>
+                {% endif %}
+                <li>
+                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
+                        <option value="rendered">HTML</option>
+                        <option value="source">Source</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </li>
+            </ul>
+        </nav>
+    </header>

@@ -463,11 +463,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     fs::create_dir_all(&out_dir)
         .with_context(|| format!("failed to create {}", out_dir.display()))?;
     if let Some(path) = theme_stylesheet_path.as_deref() {
-        let entry = crate::theme::resolve_html_entry(
-            &crate::theme::ThemeSelection::Default,
-            crate::theme::HtmlScope::Site,
-        )?
-        .expect("default theme must provide a site entry");
+        let entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?
+            .expect("active theme must provide a site entry");
         write_html_theme_stylesheet(&entry, &out_dir, path)?;
     }
     if let Some(path) = default_favicon_path.as_deref() {

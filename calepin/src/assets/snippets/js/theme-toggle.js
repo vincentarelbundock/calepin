@@ -13,8 +13,11 @@
   };
 
   const normalize = (value) => value === "light" || value === "dark" ? value : "";
+  const root = document.documentElement;
+  const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
   const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
   const urlParam = (button) => button.dataset.calepinThemeParam || "";
+  const systemTheme = () => media && media.matches ? "dark" : "light";
 
   function readUrl(button) {
     const param = urlParam(button);
@@ -66,17 +69,14 @@
   }
 
   function applyTheme(value) {
-    const theme = normalize(value);
-    if (theme) {
-      document.documentElement.dataset.theme = theme;
-      document.documentElement.style.colorScheme = theme;
-    } else {
-      delete document.documentElement.dataset.theme;
-      document.documentElement.style.colorScheme = "";
-    }
+    const mode = normalize(value);
+    const theme = mode || systemTheme();
+    root.dataset.calepinThemeMode = mode;
+    root.dataset.theme = theme;
+    root.style.colorScheme = theme;
     buttons.forEach((button) => {
-      const label = labels[theme] || labels[""];
-      button.innerHTML = icons[theme] || icons[""];
+      const label = labels[mode] || labels[""];
+      button.innerHTML = icons[mode] || icons[""];
       button.setAttribute("aria-label", label);
       button.setAttribute("title", label);
     });
@@ -88,7 +88,7 @@
     if (button.dataset.calepinThemeBound === "true") return;
     button.dataset.calepinThemeBound = "true";
     button.addEventListener("click", () => {
-      const current = normalize(document.documentElement.dataset.theme || "");
+      const current = normalize(root.dataset.calepinThemeMode || "");
       const next = order[(order.indexOf(current) + 1) % order.length];
       applyTheme(next);
       writeStored(button, next);
@@ -102,4 +102,12 @@
   window.addEventListener("storage", (event) => {
     if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
   });
+
+  if (media) {
+    const updateSystemTheme = () => {
+      if (!normalize(root.dataset.calepinThemeMode || "")) applyTheme("");
+    };
+    if (media.addEventListener) media.addEventListener("change", updateSystemTheme);
+    else if (media.addListener) media.addListener(updateSystemTheme);
+  }
 })();

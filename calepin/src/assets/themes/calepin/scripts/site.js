@@ -10,8 +10,13 @@
 (() => {
   "use strict";
 
-  // Single-document render: website shell behaviors do not apply.
-  if (!document.querySelector(".calepin-website-shell")) return;
+  // Single-document render: website behaviors do not apply. Page-specific
+  // website layouts may omit the sidebar shell but still use shared topbar
+  // controls, dialogs, and inline SVGs.
+  const hasWebsiteBehavior = document.querySelector(
+    ".calepin-website-topbar, .calepin-website-main, pagefind-modal, img[data-inline-svg], [data-video-dialog], [data-lightbox-dialog]",
+  );
+  if (!hasWebsiteBehavior) return;
 
   const VIEW = {
     param: "view",
@@ -213,7 +218,7 @@
     if (toggle) {
       toggle.addEventListener("click", (event) => {
         event.preventDefault();
-        if (isMobile()) setOpen(!shell.classList.contains("nav-open"));
+        if (isMobile() && shell) setOpen(!shell.classList.contains("nav-open"));
       });
     }
     backdrop?.addEventListener("click", close);
