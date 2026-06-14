@@ -11,8 +11,8 @@ that are still absent as built-in Calepin static-site-generator features.
   - word count.
   - reading time.
   - date formatted
-    - Filenames starting with dates can set page dates automatically.
-    - Date prefixes can be stripped from slugs.
+    - [x] Filenames starting with dates can set page dates automatically.
+    - [x] Date prefixes can be stripped from slugs (`paths_keep_dates = false` in calepin.toml).
   - breadcrumb
   - nice blog listing
   - Slugify paths.

@@ -227,7 +227,7 @@ struct WebsiteBuildOptions {
 /// extracted during preprocessing and persisted under `.calepin/`. `title` and
 /// `pdf` are the keys calepin interprets; `raw` carries the author's whole
 /// dictionary verbatim for the pages index.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 struct PageMeta {
     title: Option<String>,
     pdf: Option<bool>,
@@ -235,6 +235,23 @@ struct PageMeta {
     slug: Option<String>,
     url: Option<String>,
     raw: serde_json::Value,
+    /// Filename stem with any leading `YYYY-MM-DD[-_]` date prefix removed.
+    /// `None` when the filename has no date prefix.
+    date_slug: Option<String>,
+}
+
+impl Default for PageMeta {
+    fn default() -> Self {
+        Self {
+            title: None,
+            pdf: None,
+            translation_key: None,
+            slug: None,
+            url: None,
+            raw: serde_json::json!({}),
+            date_slug: None,
+        }
+    }
 }
 
 type PageMetaMap = BTreeMap<PathBuf, PageMeta>;
@@ -401,7 +418,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .unwrap_or_default();
     let minify_html = args.minify_html || config.minify.unwrap_or(false);
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
-    let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
+    let paths_keep_dates = config.paths_keep_dates.unwrap_or(true);
+    let page_info =
+        build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages, paths_keep_dates)?;
     let pagefind_pages = pagefind_pages(
         &out_dir,
         &typ_files,
@@ -854,6 +873,9 @@ struct WebsiteConfig {
     static_files: Option<StaticConfig>,
     navbar: Option<NavbarConfig>,
     sidebar: Option<SidebarConfig>,
+    /// When `false`, filenames starting with `YYYY-MM-DD[-_]` have the date
+    /// prefix stripped from their output URL (default: `true`, keep dates).
+    paths_keep_dates: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -2017,6 +2039,7 @@ fn build_page_info(
     page_meta: &PageMetaMap,
     pdf_files: &BTreeSet<PathBuf>,
     languages: &Option<Vec<LanguageInfo>>,
+    paths_keep_dates: bool,
 ) -> Result<PageInfoMap> {
     let mut out = PageInfoMap::new();
     for path in typ_files {
@@ -2047,10 +2070,10 @@ fn build_page_info(
         let translation_key = meta
             .and_then(|meta| meta.translation_key.clone())
             .unwrap_or_else(|| slash_path(&rel.with_extension("")));
-        let href = page_output_href(&rel, language, meta, "html");
+        let href = page_output_href(&rel, language, meta, "html", paths_keep_dates);
         let pdf_href = pdf_files
             .contains(path)
-            .then(|| page_output_href(&rel, language, meta, "pdf"));
+            .then(|| page_output_href(&rel, language, meta, "pdf", paths_keep_dates));
         out.insert(
             path.clone(),
             PageInfo {
@@ -2100,11 +2123,24 @@ fn page_output_href(
     language: Option<&LanguageInfo>,
     meta: Option<&PageMeta>,
     extension: &str,
+    paths_keep_dates: bool,
 ) -> String {
     if let Some(url) = meta.and_then(|meta| meta.url.as_deref()) {
         return output_href_with_extension(url, extension);
     }
-    let rel = if let Some(slug) = meta.and_then(|meta| meta.slug.as_deref()) {
+    // Explicit `slug` from the document always wins. When the filename carries
+    // a date prefix and `paths_keep_dates = false`, fall back to the
+    // date-stripped stem so `2024-01-15-my-post.typ` → `my-post.html`.
+    let effective_slug = meta
+        .and_then(|meta| meta.slug.as_deref())
+        .or_else(|| {
+            if !paths_keep_dates {
+                meta.and_then(|meta| meta.date_slug.as_deref())
+            } else {
+                None
+            }
+        });
+    let rel = if let Some(slug) = effective_slug {
         let mut rel = rel_source
             .parent()
             .unwrap_or_else(|| Path::new(""))
@@ -2661,10 +2697,56 @@ fn collect_typ_files(
 }
 
 fn stem_label(path: &Path) -> String {
-    path.file_stem()
+    let stem = path
+        .file_stem()
         .and_then(|stem| stem.to_str())
-        .unwrap_or_default()
-        .replace(['-', '_'], " ")
+        .unwrap_or_default();
+    // Strip any `YYYY-MM-DD[-_]` date prefix so `2024-01-15-my-post` renders
+    // as "my post" rather than "2024 01 15 my post".
+    let label_stem = date_from_stem(stem)
+        .map(|(_, rest)| rest)
+        .unwrap_or(stem);
+    label_stem.replace(['-', '_'], " ")
+}
+
+/// Parses a `YYYY-MM-DD` date prefix from a file stem.
+///
+/// Returns `(date, rest)` when the stem matches `YYYY-MM-DD[-_]rest` where
+/// each component is valid-looking (digits only, correct separator positions)
+/// and `rest` is non-empty.  The minimum valid input is 12 characters:
+/// 10 for the date + 1 separator + at least 1 character of `rest`.
+///
+/// The date string is **not** fully validated beyond structural checks
+/// (four digits, dash, two digits, dash, two digits).  Out-of-range values
+/// such as month `00` or day `99` are accepted; validation against a
+/// calendar is left to downstream consumers (feed generators, templates).
+/// An empty `date` field in the Typst document is treated the same as an
+/// absent one — both are replaced by the filename date.
+fn date_from_stem(stem: &str) -> Option<(&str, &str)> {
+    // Minimum: 10 (date) + 1 (separator) + 1 (rest) = 12 characters.
+    if stem.len() < 12 {
+        return None;
+    }
+    let bytes = stem.as_bytes();
+    // Validate YYYY-MM-DD structure
+    if !bytes[0..4].iter().all(|b| b.is_ascii_digit())
+        || bytes[4] != b'-'
+        || !bytes[5..7].iter().all(|b| b.is_ascii_digit())
+        || bytes[7] != b'-'
+        || !bytes[8..10].iter().all(|b| b.is_ascii_digit())
+    {
+        return None;
+    }
+    // Character after the date must be `-` or `_`
+    let sep = bytes[10];
+    if sep != b'-' && sep != b'_' {
+        return None;
+    }
+    let rest = &stem[11..];
+    if rest.is_empty() {
+        return None;
+    }
+    Some((&stem[..10], rest))
 }
 
 /// Reads the page metadata persisted by preprocessing. Missing or stale
@@ -2678,6 +2760,30 @@ fn load_page_meta(src_dir: &Path, typ_files: &[PathBuf]) -> PageMetaMap {
                 .unwrap_or_default();
             if meta.title.is_none() {
                 meta.title = document_title_from_source(path);
+            }
+            // When the filename starts with a date prefix (`YYYY-MM-DD[-_]`),
+            // inject the date into `raw` metadata if the document hasn't set
+            // one explicitly, and record the stripped stem for optional use as
+            // the output slug.
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                if let Some((date, rest)) = date_from_stem(stem) {
+                    let has_date = meta
+                        .raw
+                        .get("date")
+                        .and_then(|v| v.as_str())
+                        .is_some_and(|s| !s.is_empty());
+                    if !has_date {
+                        if let Some(obj) = meta.raw.as_object_mut() {
+                            obj.insert(
+                                "date".to_string(),
+                                serde_json::Value::String(date.to_string()),
+                            );
+                        }
+                    }
+                    if meta.date_slug.is_none() {
+                        meta.date_slug = Some(rest.to_string());
+                    }
+                }
             }
             (path.clone(), meta)
         })
@@ -2870,6 +2976,7 @@ fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
         } else {
             serde_json::json!({})
         },
+        date_slug: None,
     }
 }
 
@@ -4173,7 +4280,7 @@ mod tests {
     }
 
     fn test_page_info(src: &Path, files: &[PathBuf], pdf_files: &BTreeSet<PathBuf>) -> PageInfoMap {
-        build_page_info(src, files, &PageMetaMap::new(), pdf_files, &None).unwrap()
+        build_page_info(src, files, &PageMetaMap::new(), pdf_files, &None, true).unwrap()
     }
 
     fn website_config_from_toml(toml: &str) -> WebsiteConfig {
@@ -4777,6 +4884,7 @@ favicon = "assets/favicon.ico"
             &meta,
             &pdf_files,
             &languages,
+            true,
         )
         .unwrap();
 
@@ -4800,7 +4908,8 @@ favicon = "assets/favicon.ico"
         let pdf_files = BTreeSet::from([page.clone()]);
 
         let info =
-            build_page_info(src, std::slice::from_ref(&page), &meta, &pdf_files, &None).unwrap();
+            build_page_info(src, std::slice::from_ref(&page), &meta, &pdf_files, &None, true)
+                .unwrap();
 
         assert_eq!(info[&page].href, "info/about.html");
         assert_eq!(info[&page].pdf_href.as_deref(), Some("info/about.pdf"));
@@ -4823,6 +4932,7 @@ favicon = "assets/favicon.ico"
                 &meta,
                 &BTreeSet::new(),
                 &None,
+                true,
             )
             .unwrap_err();
             assert!(
@@ -5931,7 +6041,7 @@ filenames = ["atom.xml", "rss.xml"]
         let meta = PageMetaMap::from([(post.clone(), page_meta_from_value(&raw))]);
         let pdf_files = BTreeSet::from([post.clone()]);
 
-        let page_info = build_page_info(src, &typ_files, &meta, &pdf_files, &None).unwrap();
+        let page_info = build_page_info(src, &typ_files, &meta, &pdf_files, &None, true).unwrap();
         let index = build_pages_index(src, &typ_files, &sections, &meta, &page_info);
 
         let entries = index.as_array().unwrap();
@@ -6081,5 +6191,208 @@ filenames = ["atom.xml", "rss.xml"]
         assert!(temp.path().join("index.html").exists());
         assert!(temp.path().join("index.pdf").exists());
         assert!(temp.path().join("notes.html").exists());
+    }
+
+    // --- date_from_stem ---
+
+    #[test]
+    fn date_from_stem_parses_dash_separated_date_and_rest() {
+        let (date, rest) = date_from_stem("2024-01-15-my-post").unwrap();
+        assert_eq!(date, "2024-01-15");
+        assert_eq!(rest, "my-post");
+    }
+
+    #[test]
+    fn date_from_stem_parses_underscore_separator() {
+        let (date, rest) = date_from_stem("2024-01-15_welcome").unwrap();
+        assert_eq!(date, "2024-01-15");
+        assert_eq!(rest, "welcome");
+    }
+
+    #[test]
+    fn date_from_stem_requires_nonempty_rest() {
+        assert!(date_from_stem("2024-01-15-").is_none());
+        assert!(date_from_stem("2024-01-15").is_none());
+    }
+
+    #[test]
+    fn date_from_stem_accepts_single_char_rest() {
+        // Minimum valid input: 10 (date) + 1 (sep) + 1 (rest) = 12 chars.
+        let (date, rest) = date_from_stem("2024-01-15-x").unwrap();
+        assert_eq!(date, "2024-01-15");
+        assert_eq!(rest, "x");
+    }
+
+    #[test]
+    fn date_from_stem_rejects_non_date_stems() {
+        assert!(date_from_stem("my-post").is_none());
+        assert!(date_from_stem("2024-1-5-post").is_none());
+        assert!(date_from_stem("2024/01/15-post").is_none());
+        assert!(date_from_stem("abc-01-15-post").is_none());
+    }
+
+    #[test]
+    fn date_from_stem_rejects_too_short_stems() {
+        assert!(date_from_stem("2024-01-1").is_none());
+        assert!(date_from_stem("").is_none());
+    }
+
+    // --- stem_label with date stripping ---
+
+    #[test]
+    fn stem_label_strips_date_prefix_from_path() {
+        let path = Path::new("/docs/2024-01-15-my-blog-post.typ");
+        assert_eq!(stem_label(path), "my blog post");
+    }
+
+    #[test]
+    fn stem_label_leaves_non_dated_path_unchanged() {
+        let path = Path::new("/docs/about-us.typ");
+        assert_eq!(stem_label(path), "about us");
+    }
+
+    // --- load_page_meta date injection ---
+
+    #[test]
+    fn load_page_meta_injects_date_from_filename_when_not_set() {
+        let temp = tempfile::tempdir().unwrap();
+        let post = temp.path().join("2024-03-10-hello-world.typ");
+        fs::write(&post, "= Hello\n").unwrap();
+
+        let meta_map = load_page_meta(temp.path(), std::slice::from_ref(&post));
+        let meta = &meta_map[&post];
+
+        assert_eq!(meta.raw["date"].as_str(), Some("2024-03-10"));
+        assert_eq!(meta.date_slug.as_deref(), Some("hello-world"));
+    }
+
+    #[test]
+    fn load_page_meta_does_not_override_explicit_date() {
+        let temp = tempfile::tempdir().unwrap();
+        let post = temp.path().join("2024-03-10-hello-world.typ");
+        let content = b"= Hello\n";
+        fs::write(&post, content).unwrap();
+
+        // Simulate a prior preprocess by writing page-meta.json with an
+        // explicit date, tagged with the current source fingerprint so
+        // read_page_meta_with_root treats it as fresh.
+        let calepin_dir = temp.path().join(".calepin").join("2024-03-10-hello-world");
+        fs::create_dir_all(&calepin_dir).unwrap();
+        let fingerprint = format!("{:016x}", xxh3_64(content));
+        let page_meta_file = serde_json::json!({
+            "source_xxh3": fingerprint,
+            "value": {"date": "2000-12-25", "title": "Hello"}
+        });
+        fs::write(
+            calepin_dir.join("page-meta.json"),
+            serde_json::to_string(&page_meta_file).unwrap(),
+        )
+        .unwrap();
+
+        let meta_map = load_page_meta(temp.path(), std::slice::from_ref(&post));
+        let meta = &meta_map[&post];
+
+        // The explicitly-set date must not be overwritten by the filename date.
+        assert_eq!(meta.raw["date"].as_str(), Some("2000-12-25"));
+    }
+
+    #[test]
+    fn load_page_meta_leaves_date_slug_none_for_plain_filenames() {
+        let temp = tempfile::tempdir().unwrap();
+        let page = temp.path().join("about.typ");
+        fs::write(&page, "= About\n").unwrap();
+
+        let meta_map = load_page_meta(temp.path(), std::slice::from_ref(&page));
+        let meta = &meta_map[&page];
+
+        assert!(meta.date_slug.is_none());
+        assert!(meta.raw.get("date").is_none());
+    }
+
+    // --- paths_keep_dates in build_page_info ---
+
+    #[test]
+    fn build_page_info_keeps_date_prefix_in_url_by_default() {
+        let src = Path::new("/site/docs");
+        let post = PathBuf::from("/site/docs/2024-01-15-hello.typ");
+        let meta = PageMetaMap::from([(
+            post.clone(),
+            PageMeta {
+                date_slug: Some("hello".to_string()),
+                ..PageMeta::default()
+            },
+        )]);
+
+        let info =
+            build_page_info(src, std::slice::from_ref(&post), &meta, &BTreeSet::new(), &None, true)
+                .unwrap();
+
+        assert_eq!(info[&post].href, "2024-01-15-hello.html");
+    }
+
+    #[test]
+    fn build_page_info_strips_date_prefix_when_paths_keep_dates_is_false() {
+        let src = Path::new("/site/docs");
+        let post = PathBuf::from("/site/docs/2024-01-15-hello.typ");
+        let meta = PageMetaMap::from([(
+            post.clone(),
+            PageMeta {
+                date_slug: Some("hello".to_string()),
+                ..PageMeta::default()
+            },
+        )]);
+
+        let info = build_page_info(
+            src,
+            std::slice::from_ref(&post),
+            &meta,
+            &BTreeSet::new(),
+            &None,
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(info[&post].href, "hello.html");
+    }
+
+    #[test]
+    fn build_page_info_explicit_slug_overrides_date_slug() {
+        let src = Path::new("/site/docs");
+        let post = PathBuf::from("/site/docs/2024-01-15-hello.typ");
+        let meta = PageMetaMap::from([(
+            post.clone(),
+            PageMeta {
+                slug: Some("custom-slug".to_string()),
+                date_slug: Some("hello".to_string()),
+                ..PageMeta::default()
+            },
+        )]);
+
+        // Even with paths_keep_dates = false, explicit slug wins
+        let info = build_page_info(
+            src,
+            std::slice::from_ref(&post),
+            &meta,
+            &BTreeSet::new(),
+            &None,
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(info[&post].href, "custom-slug.html");
+    }
+
+    // --- website config parsing ---
+
+    #[test]
+    fn website_config_parses_paths_keep_dates() {
+        let config: WebsiteConfig = toml::from_str("paths_keep_dates = false").unwrap();
+        assert_eq!(config.paths_keep_dates, Some(false));
+
+        let config: WebsiteConfig = toml::from_str("paths_keep_dates = true").unwrap();
+        assert_eq!(config.paths_keep_dates, Some(true));
+
+        let config: WebsiteConfig = toml::from_str("").unwrap();
+        assert_eq!(config.paths_keep_dates, None);
     }
 }
