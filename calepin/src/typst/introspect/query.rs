@@ -1,12 +1,11 @@
 use anyhow::{anyhow, Context, Result};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::ffi::OsString;
 use std::path::Path;
 
-use super::{split_page_meta, PreprocessMetadata, PAGE_META_LABEL, PAGE_SYNC_SELECTOR};
+use super::{commands, split_page_meta, PreprocessMetadata, PAGE_META_LABEL, PAGE_SYNC_SELECTOR};
 use crate::typst::model::LayoutPaths;
-use crate::typst::run::{push_calepin_inputs, run_typst_capture, CalepinMode, CalepinTarget};
+use crate::typst::run::{CalepinMode, CalepinTarget};
 
 pub fn preprocess_metadata(
     typst: &Path,
@@ -54,54 +53,26 @@ fn typst_query(
     selector: &str,
     results_input: &str,
 ) -> Result<String> {
-    let mut args: Vec<OsString> = vec![
-        "query".into(),
-        input.as_os_str().into(),
-        selector.into(),
-        "--root".into(),
-        layout.root.as_os_str().into(),
-    ];
-    push_calepin_inputs(
-        &mut args,
-        CalepinMode::Query,
-        results_input,
-        CalepinTarget::Paged,
-    );
-    // Keep the fallback `typst query` path compatible with documents that
-    // reference Typst's HTML module while Calepin is collecting metadata.
-    args.push("--features=html".into());
-    run_typst_capture(
+    commands::typst_query(
         typst,
-        "run typst query",
-        &args,
-        &layout.root,
-        |stderr| format!("typst query {selector} failed:\n{stderr}"),
-        "typst query output was not UTF-8",
+        layout,
+        input,
+        selector,
+        results_input,
+        CalepinMode::Query,
+        CalepinTarget::Paged,
     )
 }
 
 fn query_page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<String> {
     let results_input = super::results_input(layout);
-    let mut args: Vec<OsString> = vec![
-        "query".into(),
-        layout.render_input.as_os_str().into(),
-        PAGE_SYNC_SELECTOR.into(),
-        "--root".into(),
-        layout.root.as_os_str().into(),
-    ];
-    push_calepin_inputs(
-        &mut args,
-        CalepinMode::Render,
-        &results_input,
-        CalepinTarget::Paged,
-    );
-    run_typst_capture(
+    commands::query_page_anchors(
         typst,
-        "run typst page sync query",
-        &args,
-        &layout.root,
-        |stderr| format!("typst query {PAGE_SYNC_SELECTOR} failed:\n{stderr}"),
-        "typst page sync query output was not UTF-8",
+        layout,
+        PAGE_SYNC_SELECTOR,
+        &results_input,
+        CalepinMode::Render,
+        CalepinTarget::Paged,
     )
 }
 

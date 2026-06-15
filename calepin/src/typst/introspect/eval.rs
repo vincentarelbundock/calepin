@@ -1,14 +1,13 @@
 use anyhow::{anyhow, Context, Result};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
-use super::{root_relative, split_page_meta, PreprocessMetadata};
+use super::{commands, split_page_meta, PreprocessMetadata};
 use crate::typst::model::LayoutPaths;
-use crate::typst::run::{run_typst_capture, TypstInput, INPUT_MODE, INPUT_RESULTS, INPUT_TARGET};
+use crate::typst::run::{TypstInput, INPUT_MODE, INPUT_RESULTS, INPUT_TARGET};
 
 static EVAL_AVAILABLE: OnceLock<Mutex<HashMap<PathBuf, bool>>> = OnceLock::new();
 
@@ -41,7 +40,7 @@ pub fn preprocess_metadata(
     input: &Path,
     results_input: &str,
 ) -> Result<PreprocessMetadata> {
-    let output = typst_eval(
+    let output = commands::typst_eval(
         typst,
         layout,
         input,
@@ -79,7 +78,7 @@ pub fn preprocess_metadata(
 
 pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String, usize>> {
     let results_input = super::results_input(layout);
-    let output = typst_eval(
+    let output = commands::typst_eval(
         typst,
         layout,
         &layout.render_input,
@@ -96,40 +95,6 @@ pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String
     let root: Value =
         serde_json::from_str(&output).context("failed to parse typst eval page sync output")?;
     super::parse_page_anchor_entries(&root)
-}
-
-fn typst_eval(
-    typst: &Path,
-    layout: &LayoutPaths,
-    input: &Path,
-    expression: &str,
-    inputs: &[TypstInput],
-) -> Result<String> {
-    let input = root_relative(input, &layout.root);
-    let mut args: Vec<OsString> = vec![
-        "eval".into(),
-        expression.into(),
-        "--in".into(),
-        input.as_os_str().into(),
-        "--root".into(),
-        layout.root.as_os_str().into(),
-        "--format".into(),
-        "json".into(),
-        // Documents may use Typst's HTML module even during metadata
-        // introspection; enable the feature just as the final HTML compile does.
-        "--features=html".into(),
-    ];
-    for input in inputs {
-        input.push_to(&mut args);
-    }
-    run_typst_capture(
-        typst,
-        "run typst eval",
-        &args,
-        &layout.root,
-        |stderr| format!("typst eval failed:\n{stderr}"),
-        "typst eval output was not UTF-8",
-    )
 }
 
 #[cfg(test)]
