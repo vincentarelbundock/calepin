@@ -23,7 +23,7 @@ use xxhash_rust::xxh3::xxh3_64;
 use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
 use crate::html::{
-    html_theme_script, html_theme_stylesheet, minify_html_file, SiteContextInput,
+    html_theme_script, html_theme_stylesheet, minify_html_file, HtmlSyntaxTheme, SiteContextInput,
     SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
@@ -304,6 +304,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let fallback_files = fallback_pages(&src_dir, &languages);
     let page_fingerprints = fingerprint_files(&typ_files)?;
     let static_files = discover_static_files(&src_dir, config.static_files.as_ref())?;
+    let config_dir = config_path.parent().unwrap_or(&src_dir);
+    let html_syntax_theme = HtmlSyntaxTheme::from_paths(
+        config_dir,
+        config.highlight_light.as_deref(),
+        config.highlight_dark.as_deref(),
+    )?;
 
     let build_set = match &args.incremental_inputs {
         Some(inputs) => {
@@ -329,6 +335,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         params: &args.params,
         cli_theme: cli_theme.clone(),
         fallback_theme: config_theme.clone(),
+        html_syntax_theme: html_syntax_theme.clone(),
         parallelism: args.parallelism,
     })?;
     if !external_theme_assets
@@ -347,7 +354,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             crate::theme::HtmlScope::Site,
         )?
         .expect("default theme must provide a site entry");
-        ThemeGeneratedAssets::from_entry(&entry)?
+        ThemeGeneratedAssets::from_entry(&entry, &html_syntax_theme)?
     } else {
         ThemeGeneratedAssets::default()
     };
@@ -479,6 +486,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
                 .as_ref()
                 .map(|asset| vec![slash_path(&asset.rel_path)])
                 .unwrap_or_default(),
+            syntax_theme: html_syntax_theme,
             parallelism: args.parallelism,
             typst_args: args.typst_args,
             minify_html,
@@ -1164,6 +1172,7 @@ struct BuildContext {
     languages: Option<Vec<LanguageInfo>>,
     theme_stylesheet: Option<String>,
     theme_scripts: Vec<String>,
+    syntax_theme: HtmlSyntaxTheme,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
     minify_html: bool,
@@ -2443,6 +2452,7 @@ struct WebsitePreprocessOptions<'a> {
     params: &'a [String],
     cli_theme: Option<crate::theme::ThemeSelection>,
     fallback_theme: crate::theme::ThemeSelection,
+    html_syntax_theme: HtmlSyntaxTheme,
     parallelism: Option<usize>,
 }
 
@@ -2462,6 +2472,7 @@ fn preprocess_documents(
             sync_pages: false,
             theme: options.cli_theme.clone(),
             fallback_theme: options.fallback_theme.clone(),
+            html_syntax_theme: Some(options.html_syntax_theme.clone()),
             param_overrides: options.params.to_vec(),
         })
         .with_context(|| format!("failed to preprocess {}", input.display()))
@@ -2539,6 +2550,7 @@ fn render_document(
             theme: &preprocessed.theme,
             html_scope: crate::theme::HtmlScope::Site,
             html_entry: page_site_entry.as_ref(),
+            html_syntax_theme: Some(&context.syntax_theme),
             site_context: Some(&site_context),
             pages_input: Some(PAGES_INDEX_REF),
             current_href_input: Some(&current_href),
@@ -2568,6 +2580,7 @@ fn render_document(
                 theme: &preprocessed.theme,
                 html_scope: crate::theme::HtmlScope::Site,
                 html_entry: None,
+                html_syntax_theme: None,
                 site_context: None,
                 pages_input: Some(PAGES_INDEX_REF),
                 current_href_input: Some(&current_href),
@@ -2609,8 +2622,8 @@ struct GeneratedThemeAsset {
 }
 
 impl ThemeGeneratedAssets {
-    fn from_entry(entry: &crate::theme::HtmlEntry) -> Result<Self> {
-        let stylesheet = html_theme_stylesheet(entry)?
+    fn from_entry(entry: &crate::theme::HtmlEntry, syntax_theme: &HtmlSyntaxTheme) -> Result<Self> {
+        let stylesheet = html_theme_stylesheet(entry, syntax_theme)?
             .map(|content| GeneratedThemeAsset::new(WEBSITE_ASSET_STEM, "css", content));
         let script = html_theme_script(entry)
             .map(|content| GeneratedThemeAsset::new(WEBSITE_ASSET_STEM, "js", content));
@@ -2909,7 +2922,7 @@ mod tests {
         .unwrap()
         .unwrap();
 
-        let assets = ThemeGeneratedAssets::from_entry(&entry).unwrap();
+        let assets = ThemeGeneratedAssets::from_entry(&entry, &HtmlSyntaxTheme::builtin()).unwrap();
         let stylesheet = assets.stylesheet.as_ref().unwrap();
         let script = assets.script.as_ref().unwrap();
 

@@ -135,11 +135,9 @@
   {
     "href": "websites/health.html",
     "language": null,
-    "meta": {
-      "pdf": false
-    },
+    "meta": {},
     "path": "websites/health.typ",
-    "pdf": null,
+    "pdf": "websites/health.pdf",
     "title": "Health",
     "translation_key": "websites/health",
     "translations": {}

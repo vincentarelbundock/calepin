@@ -1,6 +1,6 @@
+mod commands;
 mod eval;
 mod query;
-mod commands;
 
 use anyhow::{anyhow, Result};
 use serde_json::Value;

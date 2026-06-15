@@ -185,15 +185,6 @@
   }
 }
 
-#let _resolve-input-theme() = {
-  let theme = sys.inputs.at("calepin-raw-theme", default: "")
-  if theme == "" {
-    _input-syntax-theme
-  } else {
-    theme
-  }
-}
-
 #let _block-lang-label(lang) = {
   if lang == none {
     ""
@@ -207,6 +198,15 @@
 #let _raw-block(value, lang: none, theme: auto) = {
   show raw.where(block: true): set text(size: 1em)
   raw(value, block: true, lang: lang, theme: theme)
+}
+
+#let _html-themed-raw-block(it) = {
+  if _html-target() {
+    let lang = if it.has("lang") { it.lang } else { none }
+    _raw-block(it.text, lang: lang, theme: _input-syntax-theme)
+  } else {
+    it
+  }
 }
 
 #let code-block(
@@ -240,18 +240,17 @@
       class: "sourceCode",
       "data-lang": _block-lang-label(lang),
     ))[
-      #_raw-block(code, lang: lang, theme: _resolve-input-theme())
+      #_raw-block(code, lang: lang, theme: _input-syntax-theme)
     ]
   } else {
     code-block(
-      code,
       fill: rgb("#f7f7f5"),
       stroke: 0.5pt + rgb("#d8d8d2"),
       radius: 2pt,
       inset: (x: 0.65em, y: 0.45em),
     )[
       #text(fill: rgb("#1f2933"))[
-        #_raw-block(code, lang: lang, theme: _input-syntax-theme)
+        #_raw-block(code, lang: lang, theme: _paged-syntax-theme)
       ]
     ]
   }
@@ -285,7 +284,6 @@
       )
     }
     code-block(
-      (),
       fill: fill,
       stroke: stroke,
       radius: 2pt,
@@ -294,10 +292,10 @@
     )[
       #if stream == "stderr" {
         text(fill: rgb("#5f3328"))[
-          #_raw-block(output, theme: _output-syntax-theme)
+          #_raw-block(output, theme: _paged-syntax-theme)
         ]
       } else {
-        _raw-block(output, theme: _output-syntax-theme)
+        _raw-block(output, theme: _paged-syntax-theme)
       }
     ]
   }

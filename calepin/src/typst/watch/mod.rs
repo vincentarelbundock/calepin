@@ -40,6 +40,7 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
         sync_pages,
         theme: None,
         fallback_theme: crate::theme::ThemeSelection::Default,
+        html_syntax_theme: None,
         param_overrides: args.common.params.clone(),
     }
 }

@@ -133,10 +133,9 @@ pub(super) fn apply_html_theme(
     // the theme's syntax CSS (placeholders or `syntax_css`) can drive colors.
     let rewritten = syntax_theme.rewrite_classes(html);
     // Typst emits a bare HTML fragment (no <html>/<head>/<body> wrapper) when
-    // the document has no explicit html.elem("html") root element, i.e. when
-    // the user has not called #calepin.html[...].  Wrap those fragments in a
-    // minimal well-formed document so html_document_parts can always locate
-    // </head>, <body>, and </body>.
+    // the document has no explicit html.elem("html") root element. Wrap those
+    // fragments in a minimal well-formed document so html_document_parts can
+    // always locate </head>, <body>, and </body>.
     let normalized = if rewritten.contains("</head>") {
         rewritten
     } else {
@@ -159,12 +158,14 @@ pub(super) fn apply_html_theme(
 /// Build the shared website stylesheet from a resolved Site entry. The site
 /// layouts skip ALL inline CSS when `site.stylesheet` is set, so the shared
 /// stylesheet carries the bundle's styles.
-pub(super) fn theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<Option<String>> {
-    let syntax_theme = HtmlSyntaxTheme::builtin();
+pub(super) fn theme_stylesheet(
+    entry: &crate::theme::HtmlEntry,
+    syntax_theme: &HtmlSyntaxTheme,
+) -> Result<Option<String>> {
     let blocks = entry
         .styles
         .iter()
-        .map(|(_, css)| theme_css(css, &syntax_theme))
+        .map(|(_, css)| theme_css(css, syntax_theme))
         .filter(|css| !css.trim().is_empty())
         .collect::<Vec<_>>();
     Ok((!blocks.is_empty()).then(|| blocks.join("\n")))

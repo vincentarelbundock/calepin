@@ -6,10 +6,13 @@ use anyhow::Result;
 
 use crate::typst::io::write_if_changed;
 
+#[cfg(test)]
 fn runtime_source() -> Result<String> {
-    const SHARED_CHUNK_STYLING: &str =
-        concat!(env!("CARGO_MANIFEST_DIR"), "/src/assets/themes/shared/typst/code-block.typ");
-    let mut source = fs::read_to_string(SHARED_CHUNK_STYLING)?;
+    runtime_source_with_syntax_theme(&crate::html::HtmlSyntaxTheme::builtin())
+}
+
+fn runtime_source_with_syntax_theme(syntax_theme: &crate::html::HtmlSyntaxTheme) -> Result<String> {
+    let mut source = syntax_theme.typst_runtime_source();
     for path in runtime_files()? {
         source.push_str(&fs::read_to_string(path.as_path())?);
     }
@@ -35,9 +38,17 @@ fn runtime_files() -> Result<Vec<PathBuf>> {
     Ok(files)
 }
 
+#[cfg(test)]
 pub fn write_runtime(root: &Path) -> Result<PathBuf> {
+    write_runtime_with_syntax_theme(root, &crate::html::HtmlSyntaxTheme::builtin())
+}
+
+pub(crate) fn write_runtime_with_syntax_theme(
+    root: &Path,
+    syntax_theme: &crate::html::HtmlSyntaxTheme,
+) -> Result<PathBuf> {
     let path = root.join(".calepin").join("calepin.typ");
-    let source = runtime_source()?;
+    let source = runtime_source_with_syntax_theme(syntax_theme)?;
     write_if_changed(&path, &source)?;
     Ok(path)
 }

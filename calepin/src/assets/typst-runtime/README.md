@@ -5,8 +5,9 @@ all `.typ` files in this directory in lexicographic filename order.
 Typst resolves symbols top to bottom, so each file may only reference symbols
 defined in itself or an earlier file:
 
-1. `assets/typst-runtime/10_template.typ`
-   - HTML shell helper (`html`) for the final document wrapper
+1. Generated syntax theme prelude
+   - Syntax highlighting themes for input/output code blocks, generated from
+     `src/syntax_theme.rs`
 2. `assets/typst-runtime/20_state.typ`
    - The mode constant, label counters, and the option-defaults dictionaries
    - Small pure helpers (raw-node parsing, MIME selection, asset/href resolution,
@@ -22,6 +23,4 @@ defined in itself or an earlier file:
    - Query/render dispatch (`_emit-chunk`), label handling, raw-block interception
 
 `runtime.rs` reads that directory at build time and concatenates every `.typ` file
-in sorted filename order. Theme customization remains in
-`src/assets/themes/shared/typst/code-block.typ`; runtime semantics stay in
-`src/assets/typst-runtime`.
+in sorted filename order.

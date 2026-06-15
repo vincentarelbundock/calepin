@@ -1,7 +1,7 @@
 {
   "outputs": [
-    ".calepin/calepin-website.a8f415c57d451d3e.css",
-    ".calepin/calepin-website.f38fcce2c3c07532.js",
+    ".calepin/calepin-website.8efb64663db2c65e.css",
+    ".calepin/calepin-website.933854fe319a9902.js",
     ".calepin/favicon.svg",
     "404.html",
     "404.pdf",
@@ -35,6 +35,7 @@
     "websites/config.html",
     "websites/config.pdf",
     "websites/health.html",
+    "websites/health.pdf",
     "websites/web_components.html",
     "websites/websites.html",
     "websites/websites.pdf"

@@ -8,8 +8,8 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
-use super::{build_payload, make_sentinel};
 use super::subprocess::SubprocessSession;
+use super::{build_payload, make_sentinel};
 use crate::utils::tools;
 
 pub(crate) const JUPYTER_BRIDGE: &str = r#"
@@ -284,7 +284,7 @@ impl JupyterBridgeSession {
                 "",
             )?,
         )
-            .context(
+        .context(
             "jupyter_client Python package not found — install with: pip install jupyter_client",
         )?;
         Ok(Self { proc })

@@ -108,6 +108,8 @@ pub fn resolve_explicit_site_html_entry(
             validate_theme_dir(dir)?;
             if dir.join(layout_path).is_file() {
                 Ok(Some(dir_entry(dir, layout_path)?))
+            } else if !dir.join(HtmlScope::Site.entry_file()).is_file() {
+                explicit_bundle_entry(&CALEPIN, layout_path, true)
             } else {
                 Err(anyhow!(
                     "theme `{}` does not contain page layout `{layout_path}`",

@@ -9,7 +9,6 @@ use crate::utils::{process, tools};
 pub const INPUT_MODE: &str = "calepin-mode";
 pub const INPUT_RESULTS: &str = "calepin-results";
 pub const INPUT_TARGET: &str = "calepin-target";
-pub const INPUT_RAW_THEME: &str = "calepin-raw-theme";
 pub const INPUT_ASSETS: &str = "calepin-assets";
 pub const INPUT_PAGES: &str = "calepin-pages";
 pub const INPUT_CURRENT_HREF: &str = "calepin-current-href";
@@ -18,7 +17,6 @@ pub const RESERVED_INPUT_KEYS: &[&str] = &[
     INPUT_MODE,
     INPUT_RESULTS,
     INPUT_TARGET,
-    INPUT_RAW_THEME,
     INPUT_ASSETS,
     INPUT_PAGES,
     INPUT_CURRENT_HREF,

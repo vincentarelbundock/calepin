@@ -31,8 +31,8 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
-use super::{build_payload, make_sentinel};
 use super::subprocess::SubprocessSession;
+use super::{build_payload, make_sentinel};
 use crate::utils::tools;
 
 /// Bootstrap Python script sent once at startup.

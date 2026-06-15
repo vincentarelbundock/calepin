@@ -8,9 +8,8 @@ use std::path::Path;
 #[cfg(test)]
 use std::path::PathBuf;
 
-use syntax::HtmlSyntaxTheme;
-
 pub(crate) use minify::minify_html_file;
+pub(crate) use syntax::HtmlSyntaxTheme;
 pub(crate) use theme::{
     SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
@@ -47,6 +46,7 @@ fn join_blocks(chunks: impl IntoIterator<Item = String>) -> Option<String> {
     (!out.is_empty()).then_some(out)
 }
 
+#[cfg(test)]
 pub(crate) fn apply_html_theme_file(
     path: &Path,
     entry: Option<&crate::theme::HtmlEntry>,
@@ -88,8 +88,11 @@ pub(crate) fn inline_html_images_file(path: &Path, root: &Path) -> Result<()> {
     })
 }
 
-pub(crate) fn html_theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<Option<String>> {
-    theme::theme_stylesheet(entry)
+pub(crate) fn html_theme_stylesheet(
+    entry: &crate::theme::HtmlEntry,
+    syntax_theme: &HtmlSyntaxTheme,
+) -> Result<Option<String>> {
+    theme::theme_stylesheet(entry, syntax_theme)
 }
 
 pub(crate) fn html_theme_script(entry: &crate::theme::HtmlEntry) -> Option<String> {
@@ -102,7 +105,8 @@ pub(crate) fn write_html_theme_stylesheet(
     out_dir: &Path,
     rel_path: &Path,
 ) -> Result<bool> {
-    let Some(css) = html_theme_stylesheet(entry)? else {
+    let syntax_theme = HtmlSyntaxTheme::builtin();
+    let Some(css) = html_theme_stylesheet(entry, &syntax_theme)? else {
         return Ok(false);
     };
     let path = out_dir.join(rel_path);
@@ -287,8 +291,8 @@ mod tests {
 
     #[test]
     fn default_document_theme_applies_to_bare_html_fragment() {
-        // Typst emits a fragment (no <html>/<head>/<body>) for documents that
-        // don't call #calepin.html[...].  The theme must still apply.
+        // Typst emits a fragment (no <html>/<head>/<body>) for normal document
+        // content. The theme must still apply.
         let fragment = "<h1>Hello</h1><p>World</p>";
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Document);
         let themed = apply_html_theme(fragment, Some(&entry)).unwrap();

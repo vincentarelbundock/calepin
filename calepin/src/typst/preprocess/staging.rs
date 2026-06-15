@@ -7,11 +7,6 @@ use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::slash_path;
 
-const SHARED_TYPST_FILES: &[(&str, &str)] = &[(
-    "code-block.typ",
-    include_str!("../../assets/themes/shared/typst/code-block.typ"),
-)];
-
 pub(super) fn paged_template_context(
     layout: &LayoutPaths,
     include_input: &Path,
@@ -54,7 +49,7 @@ pub(super) fn write_render_wrapper(
 
     for lang in ["typ", "typst"] {
         lines.push_str(&format!(
-            "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => _without-raw-chunk-transforms(() => it)\n"
+            "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => _without-raw-chunk-transforms(() => _html-themed-raw-block(it))\n"
         ));
     }
 
@@ -65,6 +60,9 @@ pub(super) fn write_render_wrapper(
     for kernel in jupyter_kernels {
         lines.push_str(&raw_show_rule(kernel));
     }
+
+    lines.push_str("\n");
+    lines.push_str(html_raw_show_rule());
 
     if let Some(paged_theme) = paged_theme {
         lines.push_str("\n// Paged theme\n");
@@ -84,8 +82,28 @@ pub(super) fn write_render_wrapper(
 
 fn raw_show_rule(lang: &str) -> String {
     format!(
-        "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ it }} else {{ chunk-from-raw-plain(\"{lang}\", it) }}\n"
+        "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ chunk-from-raw-plain(\"{lang}\", it) }}\n"
     )
+}
+
+fn html_raw_show_rule() -> &'static str {
+    r#"#show raw.where(block: true, theme: auto): it => {
+  if _mode == "query" {
+    it
+  } else if not _html-target() {
+    it
+  } else if _disable-raw-chunk-transforms.get() {
+    _html-themed-raw-block(it)
+  } else if it.has("lang") and it.lang != none and _fenced-chunks-runs(
+    it.lang,
+    _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
+  ) {
+    it
+  } else {
+    _html-themed-raw-block(it)
+  }
+}
+"#
 }
 
 pub(super) fn write_query_source(layout: &LayoutPaths, staged_input: &Path) -> Result<PathBuf> {
@@ -110,21 +128,4 @@ fn write_query_html_fallback(root: &Path) -> Result<()> {
 #let img(..args) = none
 "#;
     write_if_changed(&path, source)
-}
-
-pub(super) fn write_shared_typst_files(root: &Path) -> Result<()> {
-    let dir = root.join(".calepin/shared/typst");
-    fs::create_dir_all(&dir).with_context(|| format!("failed to create {}", dir.display()))?;
-    for (name, source) in SHARED_TYPST_FILES {
-        let path = dir.join(name);
-        write_if_changed(&path, source)?;
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-pub(super) fn shared_typst_source(name: &str) -> Option<&'static str> {
-    SHARED_TYPST_FILES
-        .iter()
-        .find_map(|(file_name, source)| (*file_name == name).then_some(*source))
 }

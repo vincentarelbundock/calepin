@@ -6,7 +6,8 @@ logo_alt = "Calepin"
 pdf = true
 minify = true
 # search = "pagefind"
-theme = "calepin"
+highlight-light = "assets/Catppuccin Latte.tmTheme"
+highlight-dark = "assets/Catppuccin Mocha.tmTheme"
 
 generate_feeds = true
 

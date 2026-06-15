@@ -6,8 +6,8 @@ pub mod r;
 pub mod subprocess;
 
 use anyhow::{Context, Result};
-use std::path::{Path, PathBuf};
 use serde_json::Value;
+use std::path::{Path, PathBuf};
 
 use crate::engines::jupyter::JupyterCapture;
 use crate::typst::model::{EngineName, FigureSpec};
@@ -15,11 +15,7 @@ use crate::typst::model::{EngineName, FigureSpec};
 pub(crate) const META_PREFIX: &str = "META:";
 
 pub(crate) fn build_payload(meta: Value, code: &str) -> Result<String> {
-    Ok(format!(
-        "{}\n{}",
-        format_meta_payload(meta)?,
-        code
-    ))
+    Ok(format!("{}\n{}", format_meta_payload(meta)?, code))
 }
 
 fn format_meta_payload(meta: Value) -> Result<String> {

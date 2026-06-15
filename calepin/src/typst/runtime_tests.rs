@@ -508,17 +508,15 @@ fn typst_compile_html_renders_explicit_figure_grid_layout_from_results() {
         &input,
         r##"#import ".calepin/calepin.typ"
 
-#calepin.html[
-  #calepin.chunk(
-    "python",
-    label: "fig-demo",
-    echo: false,
-    fig-caption: [HTML grid figure],
-    fig-subcaptions: ([Panel A], [Panel B]),
-    fig-layout-columns: (2fr, 1fr),
-    fig-layout-rows: (auto, auto),
-  )[`print("ignored")`]
-]
+#calepin.chunk(
+  "python",
+  label: "fig-demo",
+  echo: false,
+  fig-caption: [HTML grid figure],
+  fig-subcaptions: ([Panel A], [Panel B]),
+  fig-layout-columns: (2fr, 1fr),
+  fig-layout-rows: (auto, auto),
+)[`print("ignored")`]
 "##,
     )
     .unwrap();
@@ -597,16 +595,14 @@ fn typst_compile_html_respects_figure_display_dimensions_from_results() {
         &input,
         r##"#import ".calepin/calepin.typ"
 
-#calepin.html[
-  #calepin.chunk(
-    "python",
-    label: "fig-demo",
-    echo: false,
-    fig-width: 37%,
-    fig-height: 44pt,
-    fig-caption: [HTML sized figure],
-  )[`print("ignored")`]
-]
+#calepin.chunk(
+  "python",
+  label: "fig-demo",
+  echo: false,
+  fig-width: 37%,
+  fig-height: 44pt,
+  fig-caption: [HTML sized figure],
+)[`print("ignored")`]
 "##,
     )
     .unwrap();
@@ -688,16 +684,14 @@ fn typst_compile_html_accepts_css_string_figure_display_dimensions_from_results(
         &input,
         r##"#import ".calepin/calepin.typ"
 
-#calepin.html[
-  #calepin.chunk(
-    "python",
-    label: "fig-demo",
-    echo: false,
-    fig-width: "37%",
-    fig-height: "44px",
-    fig-caption: [HTML CSS sized figure],
-  )[`print("ignored")`]
-]
+#calepin.chunk(
+  "python",
+  label: "fig-demo",
+  echo: false,
+  fig-width: "37%",
+  fig-height: "44px",
+  fig-caption: [HTML CSS sized figure],
+)[`print("ignored")`]
 "##,
     )
     .unwrap();
@@ -873,14 +867,12 @@ fn typst_compile_html_applies_default_figure_display_options_from_results() {
         &input,
         r##"#import ".calepin/calepin.typ"
 
-#calepin.html[
-  #calepin.chunk(
-    "python",
-    label: "fig-demo",
-    echo: false,
-    fig-caption: [HTML default sized figure],
-  )[`print("ignored")`]
-]
+#calepin.chunk(
+  "python",
+  label: "fig-demo",
+  echo: false,
+  fig-caption: [HTML default sized figure],
+)[`print("ignored")`]
 "##,
     )
     .unwrap();

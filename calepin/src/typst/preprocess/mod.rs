@@ -15,7 +15,7 @@ use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, LayoutPath
 use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout};
 use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
 use crate::typst::results::{build_results_document, write_results};
-use crate::typst::runtime::write_runtime;
+use crate::typst::runtime::write_runtime_with_syntax_theme;
 use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
 use crate::typst::version::assert_supported_typst;
@@ -23,9 +23,7 @@ use crate::typst::version::assert_supported_typst;
 const PAGE_META_FILE: &str = "page-meta.json";
 
 use fingerprint::{preprocess_cache_hit, preprocess_fingerprint, write_preprocess_fingerprint};
-use staging::{
-    paged_template_context, write_query_source, write_render_wrapper, write_shared_typst_files,
-};
+use staging::{paged_template_context, write_query_source, write_render_wrapper};
 
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
@@ -40,6 +38,7 @@ pub struct PreprocessOptions {
     /// `fallback_theme` to decide.
     pub theme: Option<crate::theme::ThemeSelection>,
     pub fallback_theme: crate::theme::ThemeSelection,
+    pub html_syntax_theme: Option<crate::html::HtmlSyntaxTheme>,
     /// `key=value` document-parameter overrides from the CLI (`-P`).
     pub param_overrides: Vec<String>,
 }
@@ -93,8 +92,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let config = CalepinConfig::load(&layout.root, options.config.as_deref())?;
     assert_supported_typst(&config.executables.typst)?;
 
-    write_runtime(&layout.root)?;
-    write_shared_typst_files(&layout.root)?;
+    let html_syntax_theme = options
+        .html_syntax_theme
+        .clone()
+        .unwrap_or_else(crate::html::HtmlSyntaxTheme::builtin);
+    write_runtime_with_syntax_theme(&layout.root, &html_syntax_theme)?;
     let staged_input = write_staged_source(&layout)?;
     // Metadata collection runs before the final target is known. Use a
     // query-only source so documents can contain `html.*` calls without hiding
@@ -799,18 +801,6 @@ mod tests {
     }
 
     #[test]
-    fn shared_typst_files_are_staged_under_calepin_dir() {
-        let dir = tempfile::tempdir().unwrap();
-
-        write_shared_typst_files(dir.path()).unwrap();
-
-        assert_eq!(
-            std::fs::read_to_string(dir.path().join(".calepin/shared/typst/code-block.typ"))
-                .unwrap(),
-            staging::shared_typst_source("code-block.typ").unwrap()
-        );
-    }
-
     fn test_layout(root: &Path) -> LayoutPaths {
         testfixtures::layout(root)
     }

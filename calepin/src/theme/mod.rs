@@ -307,6 +307,20 @@ styles = ["../theme.css"]
     }
 
     #[test]
+    fn explicit_site_layout_falls_back_for_paged_only_local_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("paged.typ.jinja"), "{{ document.body }}").unwrap();
+        let sel = ThemeSelection::Dir(dir.path().to_path_buf());
+
+        let entry = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
+            .unwrap()
+            .unwrap();
+
+        assert!(entry.layout.contains("calepin-website-main--landing"));
+        assert!(entry.is_default);
+    }
+
+    #[test]
     fn explicit_builtin_landing_layout_resolves() {
         let entry =
             resolve_explicit_site_html_entry(&ThemeSelection::Default, "layouts/landing.html")
@@ -470,7 +484,6 @@ styles = ["../theme.css"]
         assert!(shared.join("scripts/theme-toggle.js").is_file());
         assert!(shared.join("scripts/language-picker.js").is_file());
         assert!(shared.join("scripts/copy-code.js").is_file());
-        assert!(shared.join("typst/code-block.typ").is_file());
         assert!(std::fs::read_to_string(shared.join("styles/widgets.css"))
             .unwrap()
             .contains("[data-calepin-theme-toggle]"));
@@ -494,7 +507,6 @@ styles = ["../theme.css"]
         let shared = wrote.parent().unwrap().join("shared");
         assert!(shared.join("styles/theme.css").is_file());
         assert!(shared.join("scripts/copy-code.js").is_file());
-        assert!(shared.join("typst/code-block.typ").is_file());
     }
 
     #[test]

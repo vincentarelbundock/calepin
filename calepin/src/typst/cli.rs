@@ -163,6 +163,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         sync_pages: false,
         theme,
         fallback_theme: crate::theme::ThemeSelection::Default,
+        html_syntax_theme: None,
         param_overrides: args.common.params,
     })?;
     compile_with_typst(
@@ -175,6 +176,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             theme: &output.theme,
             html_scope: crate::theme::HtmlScope::Document,
             html_entry: None,
+            html_syntax_theme: None,
             site_context: None,
             pages_input: None,
             current_href_input: None,

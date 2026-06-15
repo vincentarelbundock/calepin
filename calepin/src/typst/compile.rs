@@ -3,13 +3,14 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use crate::html::{
-    apply_html_theme_file, inline_html_images_file, minify_html_file, SiteContextInput,
+    apply_html_theme_file_with_site_context, inline_html_images_file, minify_html_file,
+    HtmlSyntaxTheme, SiteContextInput,
 };
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
 use crate::typst::run::{
     push_calepin_inputs, push_input, run_typst_status, CalepinMode, CalepinTarget, INPUT_ASSETS,
-    INPUT_CURRENT_HREF, INPUT_PAGES, INPUT_RAW_THEME, RESERVED_INPUT_KEYS,
+    INPUT_CURRENT_HREF, INPUT_PAGES, RESERVED_INPUT_KEYS,
 };
 use crate::typst::version::assert_supported_typst;
 
@@ -24,6 +25,7 @@ pub struct CompileOptions<'a> {
     /// Pre-resolved HTML layout to use instead of resolving `theme` +
     /// `html_scope`.
     pub html_entry: Option<&'a crate::theme::HtmlEntry>,
+    pub html_syntax_theme: Option<&'a HtmlSyntaxTheme>,
     pub site_context: Option<&'a SiteContextInput>,
     /// Root-relative path to the website pages index, exposed to the runtime
     /// as the `calepin-pages` input.
@@ -38,7 +40,6 @@ pub struct CompileOptions<'a> {
 /// Optional reserved `--input` values forwarded to the typst subcommand.
 #[derive(Default, Clone, Copy)]
 pub(crate) struct ReservedInputs<'a> {
-    pub raw_theme: Option<&'a str>,
     pub asset_base: Option<&'a str>,
     pub pages: Option<&'a str>,
     pub current_href: Option<&'a str>,
@@ -101,9 +102,6 @@ fn typst_subcommand_args(
         args.push(format.into());
         if format == "html" {
             args.push("--features=html".into());
-            if let Some(raw_theme_input) = inputs.raw_theme {
-                push_input(&mut args, INPUT_RAW_THEME, raw_theme_input);
-            }
         }
     }
     if let Some(asset_base_input) = inputs.asset_base {
@@ -216,7 +214,6 @@ pub fn compile_with_typst(
         options.format,
         options.typst_args,
         ReservedInputs {
-            raw_theme: None,
             asset_base: None,
             pages: options.pages_input,
             current_href: options.current_href_input,
@@ -227,7 +224,20 @@ pub fn compile_with_typst(
         format!("typst compile failed:\n{stderr}")
     })?;
     if let Some(path) = html_output {
-        apply_html_theme_file(&path, html_entry, &layout.root, options.site_context)?;
+        let builtin_syntax_theme;
+        let syntax_theme = if let Some(theme) = options.html_syntax_theme {
+            theme
+        } else {
+            builtin_syntax_theme = HtmlSyntaxTheme::builtin();
+            &builtin_syntax_theme
+        };
+        apply_html_theme_file_with_site_context(
+            &path,
+            html_entry,
+            syntax_theme,
+            &layout.root,
+            options.site_context,
+        )?;
         inline_html_images_file(&path, &layout.root)?;
         if options.minify_html {
             minify_html_file(&path)?;
@@ -265,14 +275,6 @@ mod tests {
 
         let err = reject_reserved_typst_inputs(&[
             "--input=calepin-assets=http://127.0.0.1:3001".to_string()
-        ])
-        .unwrap_err()
-        .to_string();
-        assert!(err.contains("reserved Calepin input"));
-
-        let err = reject_reserved_typst_inputs(&[
-            "--input".to_string(),
-            "calepin-raw-theme=theme.tmTheme".to_string(),
         ])
         .unwrap_err()
         .to_string();
@@ -316,37 +318,6 @@ mod tests {
         assert!(args.contains(&"--features=html".to_string()));
     }
 
-    #[test]
-    fn html_compile_passes_prepared_raw_theme_path() {
-        let dir = tempfile::tempdir().unwrap();
-        let input = dir.path().join("paper.typ");
-        std::fs::write(&input, "").unwrap();
-        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
-
-        let args = typst_compile_args(
-            &layout,
-            Some(&PathBuf::from("paper.html")),
-            Some("html"),
-            &[],
-            ReservedInputs {
-                raw_theme: Some("/.calepin/calepin-input-light.tmTheme"),
-                ..ReservedInputs::default()
-            },
-        );
-        let args: Vec<_> = args
-            .into_iter()
-            .map(|arg| arg.to_string_lossy().to_string())
-            .collect();
-
-        assert!(args.windows(2).any(|pair| {
-            pair == [
-                "--input",
-                "calepin-raw-theme=/.calepin/calepin-input-light.tmTheme",
-            ]
-        }));
-    }
-
-    #[test]
     fn non_html_formats_do_not_enable_typst_html_feature() {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");

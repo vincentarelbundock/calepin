@@ -4,7 +4,9 @@ use std::path::Path;
 
 use super::root_relative;
 use crate::typst::model::LayoutPaths;
-use crate::typst::run::{push_calepin_inputs, run_typst_capture, CalepinMode, CalepinTarget, TypstInput};
+use crate::typst::run::{
+    push_calepin_inputs, run_typst_capture, CalepinMode, CalepinTarget, TypstInput,
+};
 
 pub(super) fn typst_query(
     typst: &Path,

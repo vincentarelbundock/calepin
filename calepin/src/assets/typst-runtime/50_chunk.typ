@@ -245,7 +245,7 @@
   if _fenced-chunks-runs(engine, defaults.at("fenced-chunks")) {
     _emit-chunk(engine, it, ..defaults)
   } else {
-    it
+    _html-themed-raw-block(it)
   }
 }
 

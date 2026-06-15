@@ -2,8 +2,6 @@
 
 #title()
 
-#metadata((pdf: false)) <website-metadata>
-
 `calepin health` runs quick diagnostic checks on the current project (notebook or website) and reports anything that could break rendering or execution.
 
 It checks the following by default:

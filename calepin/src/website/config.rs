@@ -20,6 +20,10 @@ pub(super) struct WebsiteConfig {
     pub(super) logo: Option<String>,
     pub(super) logo_alt: Option<String>,
     pub(super) favicon: Option<String>,
+    #[serde(rename = "highlight-light")]
+    pub(super) highlight_light: Option<PathBuf>,
+    #[serde(rename = "highlight-dark")]
+    pub(super) highlight_dark: Option<PathBuf>,
     /// Also render a PDF for every page; pages can override with `pdf` in
     /// their `<website-metadata>`.
     pub(super) pdf: Option<bool>,
