@@ -93,16 +93,6 @@
     "translations": {}
   },
   {
-    "href": "notebooks/themes.html",
-    "language": null,
-    "meta": {},
-    "path": "notebooks/themes.typ",
-    "pdf": "notebooks/themes.pdf",
-    "title": "Themes",
-    "translation_key": "notebooks/themes",
-    "translations": {}
-  },
-  {
     "href": "reference/cli.html",
     "language": null,
     "meta": {},
@@ -110,6 +100,16 @@
     "pdf": "reference/cli.pdf",
     "title": "CLI reference",
     "translation_key": "reference/cli",
+    "translations": {}
+  },
+  {
+    "href": "themes.html",
+    "language": null,
+    "meta": {},
+    "path": "themes.typ",
+    "pdf": "themes.pdf",
+    "title": "Themes",
+    "translation_key": "themes",
     "translations": {}
   },
   {
@@ -142,16 +142,6 @@
     "pdf": null,
     "title": "Health",
     "translation_key": "websites/health",
-    "translations": {}
-  },
-  {
-    "href": "websites/themes.html",
-    "language": null,
-    "meta": {},
-    "path": "websites/themes.typ",
-    "pdf": "websites/themes.pdf",
-    "title": "Themes",
-    "translation_key": "websites/themes",
     "translations": {}
   },
   {
