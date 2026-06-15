@@ -80,7 +80,8 @@ fn write_runtime_writes_calepin_typ() {
     let path = write_runtime(dir.path()).unwrap();
     assert_eq!(path, dir.path().join(".calepin").join("calepin.typ"));
     let written = std::fs::read_to_string(path).unwrap();
-    assert_eq!(written, RUNTIME_SOURCE);
+    let expected = runtime_source().unwrap();
+    assert_eq!(written, expected);
 }
 
 #[test]

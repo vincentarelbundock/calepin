@@ -1,95 +1,3 @@
-#let _raw-block(value, lang: none, theme: auto) = {
-  show raw.where(block: true): set text(size: 1em)
-  raw(value, block: true, lang: lang, theme: theme)
-}
-
-#let _resolve-input-theme() = {
-  let theme = sys.inputs.at("calepin-raw-theme", default: "")
-  if theme == "" {
-    _input-syntax-theme
-  } else {
-    theme
-  }
-}
-
-#let _block-lang-label(lang) = {
-  if lang == none {
-    ""
-  } else if lang == "r" {
-    "R"
-  } else {
-    lang
-  }
-}
-
-#let _input-block(code, lang: none) = {
-  if sys.inputs.at("calepin-target", default: "paged") == "html" {
-    std.html.elem("div", attrs: (
-      class: "sourceCode",
-      "data-lang": _block-lang-label(lang),
-    ))[
-      #_raw-block(code, lang: lang, theme: _resolve-input-theme())
-    ]
-  } else {
-    block(
-      width: 100%,
-      fill: rgb("#f7f7f5"),
-      stroke: 0.5pt + rgb("#d8d8d2"),
-      radius: 2pt,
-      inset: (x: 0.65em, y: 0.45em),
-    )[
-      #text(fill: rgb("#1f2933"))[
-        #_raw-block(code, lang: lang, theme: _input-syntax-theme)
-      ]
-    ]
-  }
-}
-
-#let _output-block(output, stream: "stdout") = {
-  if sys.inputs.at("calepin-target", default: "paged") == "html" {
-    let class = if stream == "stderr" {
-      "cell-output cell-output-stderr"
-    } else {
-      "cell-output cell-output-stdout"
-    }
-    std.html.elem("div", attrs: (class: class))[
-      #_raw-block(output, theme: _output-syntax-theme)
-    ]
-  } else {
-    let fill = if stream == "stderr" {
-      rgb("#fffaf7")
-    } else {
-      rgb("#fbfbfa")
-    }
-    let stroke = if stream == "stderr" {
-      (
-        rest: 0.5pt + rgb("#e2c7ba"),
-        left: 1.5pt + rgb("#c48672"),
-      )
-    } else {
-      (
-        rest: 0.5pt + rgb("#ddddda"),
-        left: 1.5pt + rgb("#cfcfc8"),
-      )
-    }
-    block(
-      width: 100%,
-      fill: fill,
-      stroke: stroke,
-      radius: 2pt,
-      inset: (x: 0.65em, y: 0.4em),
-    )[
-      #if stream == "stderr" {
-        text(fill: rgb("#5f3328"))[
-          #_raw-block(output, theme: _output-syntax-theme)
-        ]
-      } else {
-        _raw-block(output, theme: _output-syntax-theme)
-      }
-    ]
-  }
-}
-
 #let _figure-caption(fig-caption, fig-cap-location) = {
   if fig-caption == none {
     none
@@ -274,6 +182,99 @@
     opts + options
   } else {
     opts + _paged-result-options(options)
+  }
+}
+
+#let _resolve-input-theme() = {
+  let theme = sys.inputs.at("calepin-raw-theme", default: "")
+  if theme == "" {
+    _input-syntax-theme
+  } else {
+    theme
+  }
+}
+
+#let _block-lang-label(lang) = {
+  if lang == none {
+    ""
+  } else if lang == "r" {
+    "R"
+  } else {
+    lang
+  }
+}
+
+#let _raw-block(value, lang: none, theme: auto) = {
+  show raw.where(block: true): set text(size: 1em)
+  raw(value, block: true, lang: lang, theme: theme)
+}
+
+#let _input-block(code, lang: none) = {
+  if sys.inputs.at("calepin-target", default: "paged") == "html" {
+    std.html.elem("div", attrs: (
+      class: "sourceCode",
+      "data-lang": _block-lang-label(lang),
+    ))[
+      #_raw-block(code, lang: lang, theme: _resolve-input-theme())
+    ]
+  } else {
+    code-block(
+      code,
+      fill: rgb("#f7f7f5"),
+      stroke: 0.5pt + rgb("#d8d8d2"),
+      radius: 2pt,
+      inset: (x: 0.65em, y: 0.45em),
+    )[
+      #text(fill: rgb("#1f2933"))[
+        #_raw-block(code, lang: lang, theme: _input-syntax-theme)
+      ]
+    ]
+  }
+}
+
+#let _output-block(output, stream: "stdout") = {
+  if sys.inputs.at("calepin-target", default: "paged") == "html" {
+    let class = if stream == "stderr" {
+      "cell-output cell-output-stderr"
+    } else {
+      "cell-output cell-output-stdout"
+    }
+    std.html.elem("div", attrs: (class: class))[
+      #_raw-block(output, theme: _output-syntax-theme)
+    ]
+  } else {
+    let fill = if stream == "stderr" {
+      rgb("#fffaf7")
+    } else {
+      rgb("#fbfbfa")
+    }
+    let stroke = if stream == "stderr" {
+      (
+        rest: 0.5pt + rgb("#e2c7ba"),
+        left: 1.5pt + rgb("#c48672"),
+      )
+    } else {
+      (
+        rest: 0.5pt + rgb("#ddddda"),
+        left: 1.5pt + rgb("#cfcfc8"),
+      )
+    }
+    code-block(
+      (),
+      fill: fill,
+      stroke: stroke,
+      radius: 2pt,
+      inset: (x: 0.65em, y: 0.4em),
+      plain: true,
+    )[
+      #if stream == "stderr" {
+        text(fill: rgb("#5f3328"))[
+          #_raw-block(output, theme: _output-syntax-theme)
+        ]
+      } else {
+        _raw-block(output, theme: _output-syntax-theme)
+      }
+    ]
   }
 }
 
