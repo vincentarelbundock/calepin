@@ -1,4 +1,11 @@
+mod config;
+mod feeds;
+mod metadata;
+mod outputs;
+mod pagefind;
+mod paths;
 mod serve;
+mod templates;
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
@@ -10,7 +17,6 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
-use minijinja::{AutoEscape, Environment};
 use notify::RecursiveMode;
 use notify_debouncer_full::new_debouncer;
 use serde::{Deserialize, Serialize};
@@ -23,20 +29,44 @@ use crate::html::{
     SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
-use crate::typst::preprocess::{
-    preprocess_cached, read_page_meta_with_root, PreprocessOptions, PreprocessOutput,
+use crate::typst::preprocess::{preprocess_cached, PreprocessOptions, PreprocessOutput};
+#[cfg(test)]
+use config::{LanguageConfig, SidebarItemConfig, SidebarSectionConfig};
+use config::{
+    NavbarConfig, NavbarItemConfig, NavbarPosition, PagesConfig, SearchEngine, SidebarConfig,
+    StaticConfig, WebsiteConfig,
 };
+#[cfg(test)]
+use feeds::{feed_items_from_pages, infer_feed_format, rss_feed_date, FeedFormat, FeedTarget};
+use feeds::{feed_targets, write_feeds};
+#[cfg(test)]
+use metadata::{extract_document_title, page_meta_from_value};
+use metadata::{load_page_meta, PageMeta, PageMetaMap};
+#[cfg(test)]
+use outputs::MANIFEST_PATH;
+use outputs::{
+    clear_previous_outputs, copy_static_files, copy_typ_sources, expected_generated_outputs,
+    load_manifest, reconcile_manifest_outputs, remove_unexpected_rendered_outputs,
+    static_output_paths, write_default_favicon, write_manifest,
+};
+#[cfg(test)]
+use pagefind::pagefind_page_url;
+use pagefind::{
+    base_url_path_prefix, cached_pagefind_outputs, manifest_output_paths, pagefind_pages,
+    pagefind_signature, remove_stale_pagefind_outputs, write_pagefind_index, PAGEFIND_CSS,
+    PAGEFIND_DIR, PAGEFIND_JS,
+};
+use paths::{normalize_path, rel_posix, slash_path, wildcard_match};
+use templates::{write_robots, write_sitemap};
 
 const DEFAULT_CONFIG: &str = "calepin.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
 const WEBSITE_ASSET_DIR: &str = ".calepin";
 const WEBSITE_ASSET_STEM: &str = "calepin-website";
 const DEFAULT_FAVICON_PATH: &str = ".calepin/favicon.svg";
-const DEFAULT_FAVICON_SVG: &str = include_str!("../assets/default-favicon.svg");
 const FALLBACK_PAGE: &str = "404.typ";
 const INDEX_PAGE: &str = "index.typ";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
-const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
 const ICON_CACHE_DIR: &str = ".calepin/icons";
 const DEFAULT_ICON_PREFIX: &str = "lucide";
 const ICON_DOWNLOAD_TIMEOUT_SECS: u64 = 5;
@@ -44,55 +74,8 @@ const PAGES_INDEX_FILE: &str = "website-pages.json";
 const ROBOTS_FILE: &str = "robots.txt";
 const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
-const DEFAULT_FEED_FILE: &str = "atom.xml";
-const DEFAULT_ATOM_TEMPLATE_NAME: &str = "__calepin_builtin_atom.xml";
-const DEFAULT_RSS_TEMPLATE_NAME: &str = "__calepin_builtin_rss.xml";
-const PAGEFIND_DIR: &str = "pagefind";
-const PAGEFIND_CSS: &str = "pagefind/pagefind-component-ui.css";
-const PAGEFIND_JS: &str = "pagefind/pagefind-component-ui.js";
-const PAGEFIND_ROOT_SELECTOR: &str = "[data-pagefind-body]";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
     "User-agent: *\nAllow: /\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}\n{% endif %}";
-const DEFAULT_ATOM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-  <title>{{ feed.title }}</title>
-  <id>{{ feed.site_url }}</id>
-  <link href="{{ feed.site_url }}"/>
-  <link href="{{ feed.feed_url }}" rel="self"/>
-  <updated>{{ feed.updated }}</updated>
-  {% if feed.description %}<subtitle>{{ feed.description }}</subtitle>{% endif %}
-  {% for item in items %}
-  <entry>
-    <title>{{ item.title }}</title>
-    <id>{{ item.url }}</id>
-    <link href="{{ item.url }}"/>
-    <updated>{{ item.updated }}</updated>
-    {% if item.author %}<author><name>{{ item.author }}</name></author>{% endif %}
-    {% if item.summary %}<summary>{{ item.summary }}</summary>{% endif %}
-  </entry>
-  {% endfor %}
-</feed>
-"#;
-const DEFAULT_RSS_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
-  <channel>
-    <title>{{ feed.title }}</title>
-    <link>{{ feed.site_url }}</link>
-    {% if feed.description %}<description>{{ feed.description }}</description>{% endif %}
-    {% if feed.rss_updated %}<lastBuildDate>{{ feed.rss_updated }}</lastBuildDate>{% endif %}
-    {% for item in items %}
-    <item>
-      <title>{{ item.title }}</title>
-      <link>{{ item.url }}</link>
-      <guid>{{ item.url }}</guid>
-      <pubDate>{{ item.rss_date }}</pubDate>
-      {% if item.author %}<author>{{ item.author }}</author>{% endif %}
-      {% if item.summary %}<description>{{ item.summary }}</description>{% endif %}
-    </item>
-    {% endfor %}
-  </channel>
-</rss>
-"#;
 /// Root-relative reference to the pages index. Each page renders with
 /// `--root` at its own directory, so the index is written into every page
 /// directory's `.calepin` and this reference resolves for all of them.
@@ -223,23 +206,6 @@ struct WebsiteBuildOptions {
     clean: bool,
     minify_html: bool,
 }
-
-/// Per-page metadata exposed through the `<website-metadata>` Typst label,
-/// extracted during preprocessing and persisted under `.calepin/`. `title`,
-/// `pdf`, and `layout` are the keys calepin interprets; `raw` carries the
-/// author's whole dictionary verbatim for the pages index.
-#[derive(Debug, Clone, Default, PartialEq)]
-struct PageMeta {
-    title: Option<String>,
-    pdf: Option<bool>,
-    layout: Option<String>,
-    translation_key: Option<String>,
-    slug: Option<String>,
-    url: Option<String>,
-    raw: serde_json::Value,
-}
-
-type PageMetaMap = BTreeMap<PathBuf, PageMeta>;
 
 #[derive(Debug, Clone)]
 struct LanguageInfo {
@@ -837,126 +803,6 @@ fn changed_typ_pages(
     Ok(Some(pages))
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default, deny_unknown_fields)]
-struct WebsiteConfig {
-    default_language: Option<String>,
-    languages: BTreeMap<String, LanguageConfig>,
-    #[serde(rename = "executables")]
-    _executables: Option<toml::Value>,
-    theme: Option<RawThemeValue>,
-    title: Option<String>,
-    description: Option<String>,
-    base_url: Option<String>,
-    logo: Option<String>,
-    logo_alt: Option<String>,
-    favicon: Option<String>,
-    /// Also render a PDF for every page; pages can override with `pdf` in
-    /// their `<website-metadata>`.
-    pdf: Option<bool>,
-    /// Minify generated HTML after theming and website metadata injection.
-    minify: Option<bool>,
-    search: Option<SearchEngine>,
-    generate_feeds: Option<bool>,
-    feeds: Option<FeedsConfig>,
-    robots: Option<RawRobotsConfig>,
-    pages: Option<PagesConfig>,
-    #[serde(rename = "static")]
-    static_files: Option<StaticConfig>,
-    navbar: Option<NavbarConfig>,
-    sidebar: Option<SidebarConfig>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(untagged)]
-enum RawThemeValue {
-    Enabled(String),
-    Toggle(bool),
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(untagged)]
-enum RawRobotsConfig {
-    Toggle(bool),
-    Config(RobotsConfig),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-enum SearchEngine {
-    Pagefind,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(default, deny_unknown_fields)]
-struct RobotsConfig {
-    enabled: bool,
-}
-
-impl Default for RobotsConfig {
-    fn default() -> Self {
-        Self { enabled: true }
-    }
-}
-
-impl WebsiteConfig {
-    fn theme_selection(&self, config_dir: &Path) -> Result<crate::theme::ThemeSelection> {
-        match &self.theme {
-            None => Ok(crate::theme::ThemeSelection::Default),
-            Some(RawThemeValue::Toggle(false)) => Ok(crate::theme::ThemeSelection::Disabled),
-            Some(RawThemeValue::Toggle(true)) => Ok(crate::theme::ThemeSelection::Default),
-            Some(RawThemeValue::Enabled(value)) => {
-                crate::theme::ThemeSelection::parse(value, config_dir)
-            }
-        }
-    }
-
-    fn robots_enabled(&self) -> bool {
-        match &self.robots {
-            None => true,
-            Some(RawRobotsConfig::Toggle(enabled)) => *enabled,
-            Some(RawRobotsConfig::Config(config)) => config.enabled,
-        }
-    }
-
-    fn feeds_enabled(&self) -> bool {
-        self.generate_feeds.unwrap_or(false)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
-#[serde(default, deny_unknown_fields)]
-struct FeedsConfig {
-    limit: Option<usize>,
-    filenames: Vec<String>,
-    file: Vec<FeedFileConfig>,
-    atom_template: Option<String>,
-    rss_template: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
-#[serde(default, deny_unknown_fields)]
-struct FeedFileConfig {
-    filename: String,
-    format: Option<FeedFormat>,
-    template: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-enum FeedFormat {
-    Atom,
-    Rss,
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default)]
-struct LanguageConfig {
-    label: Option<String>,
-    content_dir: Option<PathBuf>,
-    url_prefix: Option<String>,
-}
-
 fn pdf_enabled_files(
     typ_files: &[PathBuf],
     page_meta: &PageMetaMap,
@@ -1046,82 +892,6 @@ fn clean_url_prefix(value: &str) -> String {
         .trim_matches('/')
         .trim_start_matches("./")
         .to_string()
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(default)]
-struct SidebarConfig {
-    show_hidden: bool,
-    fold: bool,
-    section: Vec<SidebarSectionConfig>,
-}
-
-impl Default for SidebarConfig {
-    fn default() -> Self {
-        Self {
-            show_hidden: false,
-            fold: true,
-            section: Vec::new(),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default)]
-struct SidebarSectionConfig {
-    title: Option<String>,
-    item: Vec<SidebarItemConfig>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default)]
-struct SidebarItemConfig {
-    #[serde(alias = "path", alias = "url")]
-    target: Option<String>,
-    glob: Option<String>,
-    label: Option<String>,
-    icon: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default)]
-struct PagesConfig {
-    include: Vec<String>,
-    exclude: Vec<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default, deny_unknown_fields)]
-struct StaticConfig {
-    include: Vec<String>,
-    exclude: Vec<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default)]
-struct NavbarConfig {
-    show_hidden: bool,
-    item: Vec<NavbarItemConfig>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default, deny_unknown_fields)]
-struct NavbarItemConfig {
-    position: NavbarPosition,
-    #[serde(alias = "path", alias = "url")]
-    target: Option<String>,
-    glob: Option<String>,
-    label: Option<String>,
-    icon: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-enum NavbarPosition {
-    #[default]
-    Left,
-    Center,
-    Right,
 }
 
 #[derive(Debug, Clone)]
@@ -1500,6 +1270,13 @@ struct NavSectionPlan {
     items: Vec<NavItemPlan>,
 }
 
+struct NavItemInput<'a> {
+    target: Option<&'a str>,
+    glob: Option<&'a str>,
+    label: Option<&'a str>,
+    icon: Option<&'a str>,
+}
+
 #[derive(Debug, Clone, Default)]
 struct NavbarPlan {
     left: Vec<NavbarItemPlan>,
@@ -1507,13 +1284,7 @@ struct NavbarPlan {
     right: Vec<NavbarItemPlan>,
 }
 
-#[derive(Debug, Clone)]
-struct NavbarItemPlan {
-    path: Option<PathBuf>,
-    url: Option<String>,
-    configured_label: Option<String>,
-    icon: Option<String>,
-}
+type NavbarItemPlan = NavItemPlan;
 
 fn discover_site_pages(
     src_dir: &Path,
@@ -1554,7 +1325,7 @@ fn discover_site_navbar(
     languages: &Option<Vec<LanguageInfo>>,
 ) -> Result<(NavbarPlan, Vec<PathBuf>)> {
     let Some(navbar) = navbar else {
-        return Ok((default_navbar_plan(), Vec::new()));
+        return Ok((NavbarPlan::default(), Vec::new()));
     };
     let Some(languages) = languages else {
         return discover_navbar(src_dir, navbar, pages);
@@ -1575,10 +1346,6 @@ fn discover_site_navbar(
         files.append(&mut language_files);
     }
     Ok((plan, files))
-}
-
-fn default_navbar_plan() -> NavbarPlan {
-    NavbarPlan::default()
 }
 
 fn retain_navbar_language_items(
@@ -1655,71 +1422,26 @@ fn discover_pages(
     let mut build_files = Vec::new();
 
     for section_config in &sidebar.section {
-        let mut items = Vec::new();
-        for item_config in &section_config.item {
-            let configured_label = clean_optional_string(item_config.label.as_deref());
-            let icon = clean_optional_string(item_config.icon.as_deref());
-            if let Some(target) = item_config
-                .target
-                .as_deref()
-                .map(str::trim)
-                .filter(|target| !target.is_empty())
-            {
-                if item_config
-                    .glob
-                    .as_deref()
-                    .is_some_and(|glob| !glob.trim().is_empty())
-                {
-                    bail!("sidebar target items cannot also set glob");
-                }
-                match resolve_nav_target("sidebar", src_dir, target) {
-                    Some(NavTarget::Url(url)) => {
-                        items.push(NavItemPlan {
-                            path: None,
-                            url: Some(url),
-                            configured_label,
-                            icon,
-                        });
-                    }
-                    Some(NavTarget::Page(path)) => {
-                        if used.insert(path.clone()) {
-                            items.push(NavItemPlan {
-                                path: Some(path.clone()),
-                                url: None,
-                                configured_label,
-                                icon,
-                            });
-                            build_files.push(path);
-                        }
-                    }
-                    None => {}
-                }
-                continue;
-            }
-            let candidates = resolve_file_list(
-                "sidebar",
-                src_dir,
-                None,
-                item_config.glob.as_deref(),
-                &all_typ_files,
-            )?;
-            let candidates = candidates
-                .into_iter()
-                .filter(|path| !page_is_excluded(src_dir, path, pages))
-                .collect::<Vec<_>>();
-            for path in candidates {
-                if !used.insert(path.clone()) {
-                    continue;
-                }
-                items.push(NavItemPlan {
-                    path: Some(path.clone()),
-                    url: None,
-                    configured_label: configured_label.clone(),
-                    icon: icon.clone(),
-                });
-                build_files.push(path);
-            }
-        }
+        let inputs = section_config
+            .item
+            .iter()
+            .map(|item| NavItemInput {
+                target: item.target.as_deref(),
+                glob: item.glob.as_deref(),
+                label: item.label.as_deref(),
+                icon: item.icon.as_deref(),
+            })
+            .collect::<Vec<_>>();
+        let items = resolve_nav_item_plans(
+            "sidebar",
+            src_dir,
+            pages,
+            &all_typ_files,
+            &inputs,
+            &mut used,
+            &mut build_files,
+            true,
+        )?;
         sections.push(NavSectionPlan {
             language: language.clone(),
             title: section_config.title.clone(),
@@ -1745,69 +1467,25 @@ fn discover_navbar(
     let mut used = BTreeSet::new();
 
     let mut resolve = |items: &[&NavbarItemConfig]| -> Result<Vec<NavbarItemPlan>> {
-        let mut out = Vec::new();
-        for item in items {
-            let configured_label = clean_optional_string(item.label.as_deref());
-            let icon = clean_optional_string(item.icon.as_deref());
-            if let Some(target) = item
-                .target
-                .as_deref()
-                .map(str::trim)
-                .filter(|target| !target.is_empty())
-            {
-                if item
-                    .glob
-                    .as_deref()
-                    .is_some_and(|glob| !glob.trim().is_empty())
-                {
-                    bail!("navbar target items cannot also set glob");
-                }
-                match resolve_nav_target("navbar", src_dir, target) {
-                    Some(NavTarget::Url(url)) => {
-                        out.push(NavbarItemPlan {
-                            path: None,
-                            url: Some(url),
-                            configured_label: configured_label.clone(),
-                            icon: icon.clone(),
-                        });
-                    }
-                    Some(NavTarget::Page(path)) => {
-                        if used.insert(path.clone()) {
-                            files.push(path.clone());
-                        }
-                        out.push(NavbarItemPlan {
-                            path: Some(path),
-                            url: None,
-                            configured_label: configured_label.clone(),
-                            icon: icon.clone(),
-                        });
-                    }
-                    None => {}
-                }
-                continue;
-            }
-            for path in resolve_file_list(
-                "navbar",
-                src_dir,
-                None,
-                item.glob.as_deref(),
-                &all_typ_files,
-            )?
-            .into_iter()
-            .filter(|path| !page_is_excluded(src_dir, path, pages))
-            {
-                if used.insert(path.clone()) {
-                    files.push(path.clone());
-                }
-                out.push(NavbarItemPlan {
-                    path: Some(path),
-                    url: None,
-                    configured_label: configured_label.clone(),
-                    icon: icon.clone(),
-                });
-            }
-        }
-        Ok(out)
+        let inputs = items
+            .iter()
+            .map(|item| NavItemInput {
+                target: item.target.as_deref(),
+                glob: item.glob.as_deref(),
+                label: item.label.as_deref(),
+                icon: item.icon.as_deref(),
+            })
+            .collect::<Vec<_>>();
+        resolve_nav_item_plans(
+            "navbar",
+            src_dir,
+            pages,
+            &all_typ_files,
+            &inputs,
+            &mut used,
+            &mut files,
+            false,
+        )
     };
     let left = navbar
         .item
@@ -1833,6 +1511,77 @@ fn discover_navbar(
         },
         files,
     ))
+}
+
+fn resolve_nav_item_plans(
+    context: &str,
+    src_dir: &Path,
+    pages: Option<&PagesConfig>,
+    all_typ_files: &[PathBuf],
+    inputs: &[NavItemInput<'_>],
+    used: &mut BTreeSet<PathBuf>,
+    build_files: &mut Vec<PathBuf>,
+    skip_duplicate_items: bool,
+) -> Result<Vec<NavItemPlan>> {
+    let mut items = Vec::new();
+    for input in inputs {
+        let configured_label = clean_optional_string(input.label);
+        let icon = clean_optional_string(input.icon);
+        if let Some(target) = input
+            .target
+            .map(str::trim)
+            .filter(|target| !target.is_empty())
+        {
+            if input.glob.is_some_and(|glob| !glob.trim().is_empty()) {
+                bail!("{context} target items cannot also set glob");
+            }
+            match resolve_nav_target(context, src_dir, target) {
+                Some(NavTarget::Url(url)) => {
+                    items.push(NavItemPlan {
+                        path: None,
+                        url: Some(url),
+                        configured_label,
+                        icon,
+                    });
+                }
+                Some(NavTarget::Page(path)) => {
+                    let first_use = used.insert(path.clone());
+                    if first_use {
+                        build_files.push(path.clone());
+                    }
+                    if first_use || !skip_duplicate_items {
+                        items.push(NavItemPlan {
+                            path: Some(path),
+                            url: None,
+                            configured_label,
+                            icon,
+                        });
+                    }
+                }
+                None => {}
+            }
+            continue;
+        }
+
+        for path in resolve_file_list(context, src_dir, None, input.glob, all_typ_files)?
+            .into_iter()
+            .filter(|path| !page_is_excluded(src_dir, path, pages))
+        {
+            let first_use = used.insert(path.clone());
+            if first_use {
+                build_files.push(path.clone());
+            }
+            if first_use || !skip_duplicate_items {
+                items.push(NavItemPlan {
+                    path: Some(path),
+                    url: None,
+                    configured_label: configured_label.clone(),
+                    icon: icon.clone(),
+                });
+            }
+        }
+    }
+    Ok(items)
 }
 
 fn fallback_pages(src_dir: &Path, languages: &Option<Vec<LanguageInfo>>) -> Vec<PathBuf> {
@@ -2281,6 +2030,9 @@ fn valid_icon_component(value: &str) -> bool {
 fn sanitize_icon_svg(svg: &str, spec: &str) -> Result<String> {
     let svg = svg.trim();
     let lower = svg.to_ascii_lowercase();
+    // Icons are fetched from the trusted Iconify API after prefix/name
+    // validation. This denylist is intentionally scoped to that provenance; do
+    // not reuse it for arbitrary user-provided SVG.
     if !lower.starts_with("<svg")
         || !lower.contains("</svg>")
         || lower.contains("<script")
@@ -2389,41 +2141,14 @@ fn nav_from_plans(
                 .items
                 .iter()
                 .map(|item| {
-                    if let Some(url) = item.url.as_ref() {
-                        let raw_label =
-                            item.configured_label.clone().unwrap_or_else(|| url.clone());
-                        let label_html =
-                            nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
-                        return Ok(NavItemModel {
-                            language: None,
-                            href: url.clone(),
-                            label: accessible_nav_label(&raw_label, url),
-                            label_html,
-                        });
-                    }
-                    let Some(path) = item.path.as_ref() else {
-                        return Err(anyhow!("sidebar item must set path, glob, or url"));
-                    };
-                    let raw_label = item
-                        .configured_label
-                        .clone()
-                        .or_else(|| page_meta.get(path).and_then(|meta| meta.title.clone()))
-                        .unwrap_or_else(|| stem_label(path));
-                    let fallback = page_meta
-                        .get(path)
-                        .and_then(|meta| meta.title.clone())
-                        .unwrap_or_else(|| stem_label(path));
-                    let label = accessible_nav_label(&raw_label, &fallback);
-                    let label_html = nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
-                    Ok(NavItemModel {
-                        language: section.language.clone(),
-                        href: page_info
-                            .get(path)
-                            .map(|info| info.href.clone())
-                            .unwrap_or_default(),
-                        label,
-                        label_html,
-                    })
+                    nav_item_model(
+                        item,
+                        section.language.clone(),
+                        page_meta,
+                        page_info,
+                        icon_cache,
+                        "sidebar",
+                    )
                 })
                 .collect::<Result<Vec<_>>>()?;
             Ok(NavSectionModel {
@@ -2456,44 +2181,49 @@ fn navbar_items_from_plan(
 ) -> Result<Vec<NavItemModel>> {
     items
         .iter()
-        .filter_map(|item| {
-            if let Some(path) = &item.path {
-                let raw_label = item
-                    .configured_label
-                    .clone()
-                    .or_else(|| page_meta.get(path).and_then(|meta| meta.title.clone()))
-                    .unwrap_or_else(|| stem_label(path));
-                let fallback = page_meta
-                    .get(path)
-                    .and_then(|meta| meta.title.clone())
-                    .unwrap_or_else(|| stem_label(path));
-                return Some(
-                    nav_label_html(&raw_label, item.icon.as_deref(), icon_cache).map(
-                        |label_html| NavItemModel {
-                            language: page_info.get(path).and_then(|info| info.language.clone()),
-                            href: page_info
-                                .get(path)
-                                .map(|info| info.href.clone())
-                                .unwrap_or_default(),
-                            label: accessible_nav_label(&raw_label, &fallback),
-                            label_html,
-                        },
-                    ),
-                );
-            }
-            item.url.as_ref().map(|url| {
-                let raw_label = item.configured_label.clone().unwrap_or_else(|| url.clone());
-                nav_label_html(&raw_label, item.icon.as_deref(), icon_cache).map(|label_html| {
-                    NavItemModel {
-                        language: None,
-                        href: url.clone(),
-                        label: accessible_nav_label(&raw_label, url),
-                        label_html,
-                    }
-                })
-            })
-        })
+        .map(|item| nav_item_model(item, None, page_meta, page_info, icon_cache, "navbar"))
         .collect()
+}
+
+fn nav_item_model(
+    item: &NavItemPlan,
+    language_override: Option<String>,
+    page_meta: &PageMetaMap,
+    page_info: &PageInfoMap,
+    icon_cache: &mut IconCache,
+    context: &str,
+) -> Result<NavItemModel> {
+    if let Some(url) = item.url.as_ref() {
+        let raw_label = item.configured_label.clone().unwrap_or_else(|| url.clone());
+        let label_html = nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
+        return Ok(NavItemModel {
+            language: None,
+            href: url.clone(),
+            label: accessible_nav_label(&raw_label, url),
+            label_html,
+        });
+    }
+
+    let Some(path) = item.path.as_ref() else {
+        return Err(anyhow!("{context} item must set path, glob, or url"));
+    };
+    let raw_label = item
+        .configured_label
+        .clone()
+        .or_else(|| page_meta.get(path).and_then(|meta| meta.title.clone()))
+        .unwrap_or_else(|| stem_label(path));
+    let fallback = page_meta
+        .get(path)
+        .and_then(|meta| meta.title.clone())
+        .unwrap_or_else(|| stem_label(path));
+    let label_html = nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
+    let info = page_info.get(path);
+    Ok(NavItemModel {
+        language: language_override.or_else(|| info.and_then(|info| info.language.clone())),
+        href: info.map(|info| info.href.clone()).unwrap_or_default(),
+        label: accessible_nav_label(&raw_label, &fallback),
+        label_html,
+    })
 }
 
 /// Builds the site-wide pages index consumed by `calepin.pages()` in the
@@ -2557,9 +2287,10 @@ fn page_translations_json(path: &Path, page_info: &PageInfoMap) -> serde_json::V
     serde_json::Value::Object(translations)
 }
 
-/// Writes the pages index into every page directory's `.calepin`, so the
-/// constant root-relative `PAGES_INDEX_REF` resolves for each page's typst
-/// root (the page's own directory).
+/// Writes the pages index into every source page directory's `.calepin`, so
+/// the constant root-relative `PAGES_INDEX_REF` resolves for each page's typst
+/// root (the page's own directory). This intentionally mutates the source tree
+/// even for out-of-place builds.
 fn write_pages_index(typ_files: &[PathBuf], index_json: &str) -> Result<()> {
     let dirs = typ_files
         .iter()
@@ -2681,218 +2412,6 @@ fn stem_label(path: &Path) -> String {
         .replace(['-', '_'], " ")
 }
 
-/// Reads the page metadata persisted by preprocessing. Missing or stale
-/// entries degrade to an empty `PageMeta` rather than failing the build.
-fn load_page_meta(src_dir: &Path, typ_files: &[PathBuf]) -> PageMetaMap {
-    typ_files
-        .iter()
-        .map(|path| {
-            let mut meta = read_page_meta_with_root(path, Some(src_dir))
-                .map(|value| page_meta_from_value(&value))
-                .unwrap_or_default();
-            if meta.title.is_none() {
-                meta.title = document_title_from_source(path);
-            }
-            (path.clone(), meta)
-        })
-        .collect()
-}
-
-fn document_title_from_source(path: &Path) -> Option<String> {
-    let source = fs::read_to_string(path).ok()?;
-    extract_document_title(&source)
-}
-
-fn extract_document_title(source: &str) -> Option<String> {
-    let mut offset = 0;
-    while let Some(relative) = source[offset..].find("#set") {
-        let start = offset + relative;
-        let mut rest_start = start + "#set".len();
-        rest_start = skip_ws(source, rest_start);
-        if !source[rest_start..].starts_with("document") {
-            offset = rest_start;
-            continue;
-        }
-        let after_document = rest_start + "document".len();
-        if source[after_document..]
-            .chars()
-            .next()
-            .is_some_and(is_identifier_char)
-        {
-            offset = after_document;
-            continue;
-        }
-        let open = skip_ws(source, after_document);
-        if source[open..].chars().next() != Some('(') {
-            offset = after_document;
-            continue;
-        }
-        let close = find_matching_delimiter(source, open, '(', ')')?;
-        let args = &source[open + 1..close];
-        return title_argument(args).and_then(title_value_to_text);
-    }
-    None
-}
-
-fn title_argument(args: &str) -> Option<&str> {
-    let mut index = 0;
-    while index < args.len() {
-        index = skip_ws(args, index);
-        if args[index..].starts_with("title") {
-            let after_name = index + "title".len();
-            if !args[after_name..]
-                .chars()
-                .next()
-                .is_some_and(is_identifier_char)
-            {
-                let colon = skip_ws(args, after_name);
-                if args[colon..].chars().next() == Some(':') {
-                    let value_start = skip_ws(args, colon + 1);
-                    return Some(args[value_start..].trim());
-                }
-            }
-        }
-        index += args[index..].chars().next()?.len_utf8();
-    }
-    None
-}
-
-fn title_value_to_text(value: &str) -> Option<String> {
-    if value.starts_with('[') {
-        let close = find_matching_delimiter(value, 0, '[', ']')?;
-        return clean_optional_string(Some(&typst_content_to_plain_text(&value[1..close])));
-    }
-    if value.starts_with('"') {
-        let close = find_string_end(value, 0)?;
-        let raw = &value[..=close];
-        let parsed = serde_json::from_str::<String>(raw).ok()?;
-        return clean_optional_string(Some(&parsed));
-    }
-    let value = value.split(',').next().unwrap_or(value);
-    clean_optional_string(Some(&typst_content_to_plain_text(value)))
-}
-
-fn typst_content_to_plain_text(value: &str) -> String {
-    let mut out = String::new();
-    let mut chars = value.chars().peekable();
-    while let Some(ch) = chars.next() {
-        match ch {
-            '#' => {
-                while chars.peek().is_some_and(|next| is_identifier_char(*next)) {
-                    chars.next();
-                }
-            }
-            '[' | ']' => {}
-            '\n' | '\r' | '\t' => out.push(' '),
-            _ => out.push(ch),
-        }
-    }
-    out.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
-fn find_matching_delimiter(
-    value: &str,
-    open_index: usize,
-    open: char,
-    close: char,
-) -> Option<usize> {
-    let mut depth = 0usize;
-    let mut index = open_index;
-    while index < value.len() {
-        let ch = value[index..].chars().next()?;
-        if ch == '"' {
-            index = find_string_end(value, index)? + 1;
-            continue;
-        }
-        if ch == open {
-            depth += 1;
-        } else if ch == close {
-            depth = depth.saturating_sub(1);
-            if depth == 0 {
-                return Some(index);
-            }
-        }
-        index += ch.len_utf8();
-    }
-    None
-}
-
-fn find_string_end(value: &str, quote_index: usize) -> Option<usize> {
-    let mut escaped = false;
-    let mut index = quote_index + 1;
-    while index < value.len() {
-        let ch = value[index..].chars().next()?;
-        if escaped {
-            escaped = false;
-        } else if ch == '\\' {
-            escaped = true;
-        } else if ch == '"' {
-            return Some(index);
-        }
-        index += ch.len_utf8();
-    }
-    None
-}
-
-fn skip_ws(value: &str, mut index: usize) -> usize {
-    while index < value.len() {
-        let Some(ch) = value[index..].chars().next() else {
-            break;
-        };
-        if !ch.is_whitespace() {
-            break;
-        }
-        index += ch.len_utf8();
-    }
-    index
-}
-
-fn is_identifier_char(ch: char) -> bool {
-    ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'
-}
-
-fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
-    PageMeta {
-        title: value
-            .get("title")
-            .and_then(|title| title.as_str())
-            .map(str::trim)
-            .filter(|title| !title.is_empty())
-            .map(str::to_string),
-        pdf: value.get("pdf").and_then(|pdf| pdf.as_bool()),
-        layout: value
-            .get("layout")
-            .and_then(|layout| layout.as_str())
-            .map(str::trim)
-            .filter(|layout| !layout.is_empty())
-            .map(str::to_string),
-        translation_key: value
-            .get("translation_key")
-            .or_else(|| value.get("translationKey"))
-            .and_then(|key| key.as_str())
-            .map(str::trim)
-            .filter(|key| !key.is_empty())
-            .map(str::to_string),
-        slug: value
-            .get("slug")
-            .and_then(|slug| slug.as_str())
-            .map(str::trim)
-            .filter(|slug| !slug.is_empty())
-            .map(str::to_string),
-        url: value
-            .get("url")
-            .and_then(|url| url.as_str())
-            .map(str::trim)
-            .filter(|url| !url.is_empty())
-            .map(str::to_string),
-        raw: if value.is_object() {
-            value.clone()
-        } else {
-            serde_json::json!({})
-        },
-    }
-}
-
 /// Runs `task` over `items` on a small worker pool, failing on the first
 /// error. Results are returned in completion order.
 fn run_parallel<T: Send>(
@@ -2914,17 +2433,26 @@ fn run_parallel<T: Send>(
         .min(items.len());
     let queue = Mutex::new(VecDeque::from(items));
     let results = Mutex::new(Vec::new());
+    let abort = AtomicBool::new(false);
 
     thread::scope(|scope| {
         let mut handles = Vec::new();
         for _ in 0..worker_count {
             handles.push(scope.spawn(|| -> Result<()> {
                 loop {
+                    if abort.load(Ordering::Relaxed) {
+                        return Ok(());
+                    }
                     let Some(item) = queue.lock().unwrap().pop_front() else {
                         return Ok(());
                     };
-                    let value = task(&item)?;
-                    results.lock().unwrap().push((item, value));
+                    match task(&item) {
+                        Ok(value) => results.lock().unwrap().push((item, value)),
+                        Err(error) => {
+                            abort.store(true, Ordering::Relaxed);
+                            return Err(error);
+                        }
+                    }
                 }
             }));
         }
@@ -3051,6 +2579,8 @@ fn render_document(
             minify_html: false,
         },
     )?;
+    // Publishes the complete page source for the runtime view-source feature.
+    // Authors should treat comments and code chunks in site pages as public.
     embed_source_blob(&html_output, input_path)?;
     if context.minify_html {
         minify_html_file(&html_output)?;
@@ -3098,51 +2628,6 @@ fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
     }
     fs::write(html_output, html)
         .with_context(|| format!("failed to write {}", html_output.display()))
-}
-
-fn pagefind_pages(
-    out_dir: &Path,
-    typ_files: &[PathBuf],
-    page_info: &PageInfoMap,
-    fallback_files: &[PathBuf],
-    base_url: Option<&str>,
-) -> Vec<(PathBuf, String)> {
-    typ_files
-        .iter()
-        .filter(|path| !fallback_files.contains(path))
-        .filter_map(|path| {
-            page_info.get(path).map(|info| {
-                (
-                    out_dir.join(&info.href),
-                    pagefind_page_url(base_url, &info.href),
-                )
-            })
-        })
-        .collect()
-}
-
-fn pagefind_page_url(base_url: Option<&str>, href: &str) -> String {
-    match base_url.and_then(base_url_path_prefix) {
-        Some(prefix) => format!("{prefix}/{href}"),
-        None => format!("/{href}"),
-    }
-}
-
-fn base_url_path_prefix(base_url: &str) -> Option<String> {
-    let after_host = base_url
-        .split_once("://")
-        .map(|(_, rest)| rest)
-        .unwrap_or(base_url);
-    let path = after_host
-        .find('/')
-        .map(|index| &after_host[index..])
-        .unwrap_or("");
-    let path = path
-        .split(['?', '#'])
-        .next()
-        .unwrap_or("")
-        .trim_end_matches('/');
-    (!path.is_empty()).then(|| path.to_string())
 }
 
 #[derive(Debug, Clone, Default)]
@@ -3204,852 +2689,6 @@ impl GeneratedThemeAsset {
         fs::write(&path, &self.content)
             .with_context(|| format!("failed to write {}", path.display()))
     }
-}
-
-fn pagefind_signature(out_dir: &Path, pages: &[(PathBuf, String)]) -> Result<u64> {
-    let mut bytes = Vec::new();
-    bytes.extend_from_slice(b"calepin-pagefind-v1\0");
-    bytes.extend_from_slice(PAGEFIND_ROOT_SELECTOR.as_bytes());
-    bytes.push(0);
-    bytes.extend_from_slice(b"keep_index_url=true\0");
-    let mut pages = pages.to_vec();
-    pages.sort_by(|left, right| {
-        rel_posix(out_dir, &left.0)
-            .cmp(&rel_posix(out_dir, &right.0))
-            .then_with(|| left.1.cmp(&right.1))
-    });
-    for (path, url) in pages {
-        bytes.extend_from_slice(rel_posix(out_dir, &path).as_bytes());
-        bytes.push(0);
-        bytes.extend_from_slice(url.as_bytes());
-        bytes.push(0);
-        let html = fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
-        bytes.extend_from_slice(&(html.len() as u64).to_le_bytes());
-        bytes.extend_from_slice(&html);
-        bytes.push(0xff);
-    }
-    Ok(xxh3_64(&bytes))
-}
-
-fn manifest_output_paths(out_dir: &Path, outputs: &[String]) -> BTreeSet<PathBuf> {
-    outputs.iter().map(|rel| out_dir.join(rel)).collect()
-}
-
-fn cached_pagefind_outputs(
-    out_dir: &Path,
-    manifest: &WebsiteManifest,
-    signature: u64,
-) -> Option<BTreeSet<PathBuf>> {
-    let pagefind = manifest.pagefind.as_ref()?;
-    if pagefind.signature != signature {
-        return None;
-    }
-    let outputs = manifest_output_paths(out_dir, &pagefind.outputs);
-    if outputs.iter().all(|path| path.is_file()) {
-        Some(outputs)
-    } else {
-        None
-    }
-}
-
-fn remove_stale_pagefind_outputs(
-    out_dir: &Path,
-    manifest: &WebsiteManifest,
-    expected_outputs: &BTreeSet<PathBuf>,
-) -> Result<()> {
-    let Some(pagefind) = manifest.pagefind.as_ref() else {
-        return Ok(());
-    };
-    for path in manifest_output_paths(out_dir, &pagefind.outputs) {
-        if expected_outputs.contains(&path) || !path.exists() {
-            continue;
-        }
-        if path.is_file() {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
-        }
-    }
-    Ok(())
-}
-
-fn write_pagefind_index(out_dir: &Path, pages: &[(PathBuf, String)]) -> Result<BTreeSet<PathBuf>> {
-    if pages.is_empty() {
-        return Ok(BTreeSet::new());
-    }
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .context("failed to start Pagefind runtime")?;
-    runtime.block_on(write_pagefind_index_async(
-        out_dir.to_path_buf(),
-        pages.to_vec(),
-    ))
-}
-
-async fn write_pagefind_index_async(
-    out_dir: PathBuf,
-    pages: Vec<(PathBuf, String)>,
-) -> Result<BTreeSet<PathBuf>> {
-    let options = pagefind::options::PagefindServiceConfig::builder()
-        .root_selector(PAGEFIND_ROOT_SELECTOR.to_string())
-        .keep_index_url(true)
-        .build();
-    let mut index = pagefind::api::PagefindIndex::new(Some(options))
-        .context("failed to initialize Pagefind")?;
-
-    for (path, url) in pages {
-        let html = tokio::fs::read_to_string(&path)
-            .await
-            .with_context(|| format!("failed to read {}", path.display()))?;
-        index
-            .add_html_file(Some(path.to_string_lossy().into_owned()), Some(url), html)
-            .await
-            .with_context(|| format!("failed to index {}", path.display()))?;
-    }
-
-    let files = index
-        .get_files()
-        .await
-        .context("failed to build Pagefind index")?;
-    let mut outputs = BTreeSet::new();
-    for file in files {
-        let path = pagefind_output_path(&out_dir, &file.filename)?;
-        if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent)
-                .await
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        tokio::fs::write(&path, file.contents)
-            .await
-            .with_context(|| format!("failed to write {}", path.display()))?;
-        outputs.insert(path);
-    }
-    Ok(outputs)
-}
-
-fn pagefind_output_path(out_dir: &Path, rel: &Path) -> Result<PathBuf> {
-    if rel.is_absolute()
-        || rel
-            .components()
-            .any(|component| matches!(component, std::path::Component::ParentDir))
-    {
-        return Err(anyhow!("invalid Pagefind output path: {}", rel.display()));
-    }
-    Ok(out_dir.join(PAGEFIND_DIR).join(rel))
-}
-
-fn expected_generated_outputs(
-    out_dir: &Path,
-    typ_files: &[PathBuf],
-    page_info: &PageInfoMap,
-    sitemap_path: &Option<PathBuf>,
-    robots_path: &Option<PathBuf>,
-    feed_paths: &BTreeSet<PathBuf>,
-    theme_asset_paths: &BTreeSet<PathBuf>,
-    default_favicon_path: Option<&Path>,
-) -> BTreeSet<PathBuf> {
-    let mut outputs = BTreeSet::new();
-    for input_path in typ_files {
-        if let Some(info) = page_info.get(input_path) {
-            outputs.insert(out_dir.join(&info.href));
-            if let Some(pdf_href) = &info.pdf_href {
-                outputs.insert(out_dir.join(pdf_href));
-            }
-        }
-    }
-    if let Some(path) = sitemap_path {
-        outputs.insert(path.clone());
-    }
-    if let Some(path) = robots_path {
-        outputs.insert(path.clone());
-    }
-    outputs.extend(feed_paths.iter().cloned());
-    outputs.extend(theme_asset_paths.iter().cloned());
-    if let Some(path) = default_favicon_path {
-        outputs.insert(out_dir.join(path));
-    }
-    outputs
-}
-
-fn write_default_favicon(out_dir: &Path, path: &Path) -> Result<()> {
-    let path = out_dir.join(path);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    fs::write(&path, DEFAULT_FAVICON_SVG)
-        .with_context(|| format!("failed to write {}", path.display()))
-}
-
-fn load_manifest(out_dir: &Path) -> Result<WebsiteManifest> {
-    let path = out_dir.join(MANIFEST_PATH);
-    if !path.is_file() {
-        return Ok(WebsiteManifest::default());
-    }
-    let contents =
-        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
-    serde_json::from_str(&contents).with_context(|| format!("failed to parse {}", path.display()))
-}
-
-fn reconcile_manifest_outputs(
-    out_dir: &Path,
-    manifest: &WebsiteManifest,
-    expected_outputs: &BTreeSet<PathBuf>,
-) -> Result<()> {
-    for rel in &manifest.outputs {
-        let path = out_dir.join(Path::new(rel));
-        if expected_outputs.contains(&path) || !path.exists() {
-            continue;
-        }
-        if path.is_file() {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
-        }
-    }
-    Ok(())
-}
-
-fn remove_unexpected_rendered_outputs(
-    out_dir: &Path,
-    expected_outputs: &BTreeSet<PathBuf>,
-) -> Result<()> {
-    if !out_dir.is_dir() {
-        return Ok(());
-    }
-    remove_unexpected_rendered_outputs_in(out_dir, out_dir, expected_outputs)
-}
-
-fn remove_unexpected_rendered_outputs_in(
-    root: &Path,
-    dir: &Path,
-    expected_outputs: &BTreeSet<PathBuf>,
-) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let entry = entry?;
-        let path = entry.path();
-        let rel = path.strip_prefix(root).unwrap_or(&path);
-        let Some(first) = rel.components().next() else {
-            continue;
-        };
-        if first
-            .as_os_str()
-            .to_str()
-            .is_some_and(|name| SKIP_DIRS.contains(&name))
-        {
-            continue;
-        }
-        if path.is_dir() {
-            remove_unexpected_rendered_outputs_in(root, &path, expected_outputs)?;
-        } else if matches!(
-            path.extension().and_then(|extension| extension.to_str()),
-            Some("html" | "pdf")
-        ) && !expected_outputs.contains(&path)
-        {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
-        }
-    }
-    Ok(())
-}
-
-fn write_manifest(
-    out_dir: &Path,
-    expected_outputs: &BTreeSet<PathBuf>,
-    pagefind: Option<PagefindManifest>,
-) -> Result<()> {
-    let path = out_dir.join(MANIFEST_PATH);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    let manifest = WebsiteManifest {
-        outputs: expected_outputs
-            .iter()
-            .map(|path| rel_posix(out_dir, path))
-            .collect(),
-        pagefind,
-    };
-    let contents = serde_json::to_string_pretty(&manifest)?;
-    fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct FeedTarget {
-    filename: String,
-    format: FeedFormat,
-    template: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-struct FeedBuildItem {
-    sort_date: String,
-    item: FeedTemplateItem,
-}
-
-#[derive(Serialize)]
-struct FeedTemplateContext<'a> {
-    config: &'a WebsiteConfig,
-    feed: FeedTemplateInfo,
-    items: Vec<FeedTemplateItem>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct FeedTemplateInfo {
-    title: String,
-    description: Option<String>,
-    site_url: String,
-    feed_url: String,
-    updated: String,
-    rss_updated: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct FeedTemplateItem {
-    title: String,
-    url: String,
-    id: String,
-    date: String,
-    updated: String,
-    rss_date: String,
-    summary: Option<String>,
-    author: Option<String>,
-}
-
-fn feed_targets(config: &WebsiteConfig) -> Result<Vec<FeedTarget>> {
-    if !config.feeds_enabled() {
-        return Ok(Vec::new());
-    }
-
-    let feeds = config.feeds.as_ref();
-    let mut targets = Vec::new();
-    if let Some(feeds) = feeds {
-        for filename in &feeds.filenames {
-            let filename = clean_feed_filename(filename)?;
-            let format = infer_feed_format(&filename);
-            let template = feed_format_template(feeds, format);
-            targets.push(FeedTarget {
-                filename,
-                format,
-                template,
-            });
-        }
-        for file in &feeds.file {
-            let filename = clean_feed_filename(&file.filename)?;
-            let format = file.format.unwrap_or_else(|| infer_feed_format(&filename));
-            targets.push(FeedTarget {
-                filename,
-                format,
-                template: file
-                    .template
-                    .as_deref()
-                    .and_then(|value| clean_optional_string(Some(value)))
-                    .or_else(|| feed_format_template(feeds, format)),
-            });
-        }
-    }
-
-    if targets.is_empty() {
-        targets.push(FeedTarget {
-            filename: DEFAULT_FEED_FILE.to_string(),
-            format: FeedFormat::Atom,
-            template: feeds.and_then(|feeds| feed_format_template(feeds, FeedFormat::Atom)),
-        });
-    }
-
-    let mut seen = BTreeSet::new();
-    for target in &targets {
-        if !seen.insert(target.filename.clone()) {
-            bail!("duplicate feed filename `{}`", target.filename);
-        }
-    }
-    Ok(targets)
-}
-
-fn clean_feed_filename(value: &str) -> Result<String> {
-    let Some(filename) = clean_optional_string(Some(value)) else {
-        bail!("feed filename cannot be empty");
-    };
-    if filename.ends_with('/') || !is_safe_output_route(&filename) {
-        bail!("feed filename must stay inside the output directory: `{filename}`");
-    }
-    Ok(filename)
-}
-
-fn feed_format_template(feeds: &FeedsConfig, format: FeedFormat) -> Option<String> {
-    match format {
-        FeedFormat::Atom => feeds
-            .atom_template
-            .as_deref()
-            .and_then(|value| clean_optional_string(Some(value))),
-        FeedFormat::Rss => feeds
-            .rss_template
-            .as_deref()
-            .and_then(|value| clean_optional_string(Some(value))),
-    }
-}
-
-fn infer_feed_format(filename: &str) -> FeedFormat {
-    let lower = filename.to_ascii_lowercase();
-    let basename = Path::new(&lower)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or(lower.as_str());
-    if basename == "rss.xml" || basename.ends_with(".rss") || basename.ends_with("rss.xml") {
-        FeedFormat::Rss
-    } else {
-        FeedFormat::Atom
-    }
-}
-
-fn write_feeds(
-    out_dir: &Path,
-    src_dir: &Path,
-    config: &WebsiteConfig,
-    base_url: Option<&str>,
-    metadata: &SiteMetadata,
-    pages_index: &serde_json::Value,
-    targets: &[FeedTarget],
-) -> Result<()> {
-    if !config.feeds_enabled() {
-        return Ok(());
-    }
-    let Some(base_url) = base_url else {
-        bail!("generate_feeds = true requires base_url so feed links can be absolute");
-    };
-
-    let limit = config.feeds.as_ref().and_then(|feeds| feeds.limit);
-    let items = feed_items_from_pages(pages_index, base_url, limit);
-    let mut env = Environment::new();
-    env.set_auto_escape_callback(|_| AutoEscape::None);
-    env.add_template(DEFAULT_ATOM_TEMPLATE_NAME, DEFAULT_ATOM_TEMPLATE)
-        .map_err(|error| anyhow!("feed template: {error}"))?;
-    env.add_template(DEFAULT_RSS_TEMPLATE_NAME, DEFAULT_RSS_TEMPLATE)
-        .map_err(|error| anyhow!("feed template: {error}"))?;
-
-    let template_dir = src_dir.join(ROBOTS_TEMPLATE_DIR);
-    if template_dir.is_dir() {
-        for (name, source) in read_template_files(&template_dir)? {
-            env.add_template_owned(name, source)
-                .map_err(|error| anyhow!("feed template: {error}"))?;
-        }
-    }
-
-    for target in targets {
-        let template_name = target.template.as_deref().unwrap_or(match target.format {
-            FeedFormat::Atom => DEFAULT_ATOM_TEMPLATE_NAME,
-            FeedFormat::Rss => DEFAULT_RSS_TEMPLATE_NAME,
-        });
-        let template = env
-            .get_template(template_name)
-            .map_err(|error| anyhow!("feed template `{template_name}`: {error}"))?;
-        let feed_url = absolute_site_url(base_url, &target.filename);
-        let updated = items
-            .first()
-            .map(|item| item.updated.clone())
-            .unwrap_or_else(|| "1970-01-01T00:00:00Z".to_string());
-        let rss_updated = items
-            .first()
-            .map(|item| item.rss_date.clone())
-            .unwrap_or_else(|| "Thu, 01 Jan 1970 00:00:00 GMT".to_string());
-        let contents = template
-            .render(FeedTemplateContext {
-                config,
-                feed: FeedTemplateInfo {
-                    title: xml_escape(metadata.title.as_deref().unwrap_or("Feed")),
-                    description: metadata.description.as_deref().map(xml_escape),
-                    site_url: xml_escape(base_url),
-                    feed_url: xml_escape(&feed_url),
-                    updated,
-                    rss_updated,
-                },
-                items: items.clone(),
-            })
-            .map_err(|error| anyhow!("feed template `{template_name}`: {error}"))?;
-        let path = out_dir.join(&target.filename);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        fs::write(&path, contents)
-            .with_context(|| format!("failed to write {}", path.display()))?;
-    }
-    Ok(())
-}
-
-fn feed_items_from_pages(
-    pages_index: &serde_json::Value,
-    base_url: &str,
-    limit: Option<usize>,
-) -> Vec<FeedTemplateItem> {
-    let mut items = pages_index
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|entry| feed_item_from_page(entry, base_url))
-        .collect::<Vec<_>>();
-    items.sort_by(|left, right| {
-        right
-            .sort_date
-            .cmp(&left.sort_date)
-            .then_with(|| left.item.title.cmp(&right.item.title))
-    });
-    if let Some(limit) = limit {
-        items.truncate(limit);
-    }
-    items.into_iter().map(|entry| entry.item).collect()
-}
-
-fn feed_item_from_page(entry: &serde_json::Value, base_url: &str) -> Option<FeedBuildItem> {
-    let meta = entry.get("meta")?.as_object()?;
-    let date = clean_optional_string(meta.get("date")?.as_str())?;
-    let href = clean_optional_string(entry.get("href")?.as_str())?;
-    let url = absolute_site_url(base_url, &href);
-    let title = entry
-        .get("title")
-        .and_then(|title| title.as_str())
-        .and_then(|title| clean_optional_string(Some(title)))
-        .unwrap_or_else(|| href.clone());
-    let summary = meta
-        .get("summary")
-        .or_else(|| meta.get("description"))
-        .and_then(|summary| summary.as_str())
-        .and_then(|summary| clean_optional_string(Some(summary)))
-        .map(|summary| xml_escape(&summary));
-    let author = feed_author(meta).map(|author| xml_escape(&author));
-    let updated = normalize_feed_date(&date);
-    let rss_date = rss_feed_date(&date);
-    Some(FeedBuildItem {
-        sort_date: date.clone(),
-        item: FeedTemplateItem {
-            title: xml_escape(&title),
-            url: xml_escape(&url),
-            id: xml_escape(&url),
-            date: xml_escape(&date),
-            updated,
-            rss_date,
-            summary,
-            author,
-        },
-    })
-}
-
-fn feed_author(meta: &serde_json::Map<String, serde_json::Value>) -> Option<String> {
-    if let Some(author) = meta
-        .get("author")
-        .and_then(|author| author.as_str())
-        .and_then(|author| clean_optional_string(Some(author)))
-    {
-        return Some(author);
-    }
-    let authors = meta.get("authors")?.as_array()?;
-    let names = authors
-        .iter()
-        .filter_map(|author| author.as_str())
-        .filter_map(|author| clean_optional_string(Some(author)))
-        .collect::<Vec<_>>();
-    (!names.is_empty()).then(|| names.join(", "))
-}
-
-fn normalize_feed_date(date: &str) -> String {
-    let date = date.trim();
-    if date.contains('T') {
-        date.to_string()
-    } else {
-        format!("{date}T00:00:00Z")
-    }
-}
-
-fn rss_feed_date(date: &str) -> String {
-    parse_iso_date(date)
-        .map(|(year, month, day)| {
-            let weekday = weekday_name(year, month, day);
-            let month = month_name(month);
-            format!("{weekday}, {day:02} {month} {year:04} 00:00:00 GMT")
-        })
-        .unwrap_or_else(|| date.trim().to_string())
-}
-
-fn parse_iso_date(date: &str) -> Option<(i32, u32, u32)> {
-    let date = date.trim();
-    if date.len() < 10 {
-        return None;
-    }
-    let bytes = date.as_bytes();
-    if bytes.get(4) != Some(&b'-') || bytes.get(7) != Some(&b'-') {
-        return None;
-    }
-    let year = date.get(0..4)?.parse::<i32>().ok()?;
-    let month = date.get(5..7)?.parse::<u32>().ok()?;
-    let day = date.get(8..10)?.parse::<u32>().ok()?;
-    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
-        return None;
-    }
-    Some((year, month, day))
-}
-
-fn weekday_name(year: i32, month: u32, day: u32) -> &'static str {
-    const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    let days = days_from_civil(year, month, day);
-    WEEKDAYS[(days + 4).rem_euclid(7) as usize]
-}
-
-fn month_name(month: u32) -> &'static str {
-    const MONTHS: [&str; 12] = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ];
-    MONTHS[(month - 1) as usize]
-}
-
-fn days_from_civil(year: i32, month: u32, day: u32) -> i64 {
-    let year = year - i32::from(month <= 2);
-    let era = if year >= 0 { year } else { year - 399 } / 400;
-    let yoe = year - era * 400;
-    let month = month as i32;
-    let day = day as i32;
-    let doy = (153 * (month + if month > 2 { -3 } else { 9 }) + 2) / 5 + day - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    i64::from(era * 146_097 + doe - 719_468)
-}
-
-/// Writes the sitemap from every built page except the 404 page.
-fn write_sitemap(out_dir: &Path, base_url: Option<&str>, hrefs: &BTreeSet<String>) -> Result<()> {
-    let path = out_dir.join("sitemap.xml");
-    let Some(base_url) = base_url else {
-        if path.exists() {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove stale sitemap {}", path.display()))?;
-        }
-        return Ok(());
-    };
-
-    let mut xml = String::from(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
-    );
-    for href in hrefs {
-        xml.push_str("  <url><loc>");
-        xml.push_str(&xml_escape(&absolute_site_url(base_url, &href)));
-        xml.push_str("</loc></url>\n");
-    }
-    xml.push_str("</urlset>\n");
-
-    fs::write(&path, xml).with_context(|| format!("failed to write {}", path.display()))
-}
-
-#[derive(Serialize)]
-struct RobotsTemplateContext<'a> {
-    config: &'a WebsiteConfig,
-    sitemap_url: Option<String>,
-}
-
-fn write_robots(
-    out_dir: &Path,
-    src_dir: &Path,
-    config: &WebsiteConfig,
-    base_url: Option<&str>,
-) -> Result<()> {
-    let path = out_dir.join(ROBOTS_FILE);
-    if !config.robots_enabled() {
-        return Ok(());
-    }
-
-    let template_dir = src_dir.join(ROBOTS_TEMPLATE_DIR);
-    let mut env = Environment::new();
-    env.set_auto_escape_callback(|_| AutoEscape::None);
-    let mut has_robots_template = false;
-
-    if template_dir.is_dir() {
-        for (name, source) in read_template_files(&template_dir)? {
-            if name == ROBOTS_TEMPLATE_FILE {
-                has_robots_template = true;
-            }
-            env.add_template_owned(name, source)
-                .map_err(|error| anyhow!("robots template: {error}"))?;
-        }
-    }
-    if !has_robots_template {
-        env.add_template(ROBOTS_TEMPLATE_FILE, DEFAULT_ROBOTS_TEMPLATE)
-            .map_err(|error| anyhow!("robots template: {error}"))?;
-    }
-
-    let template = env
-        .get_template(ROBOTS_TEMPLATE_FILE)
-        .map_err(|error| anyhow!("robots template: {error}"))?;
-    let contents = template
-        .render(RobotsTemplateContext {
-            config,
-            sitemap_url: base_url.map(|url| absolute_site_url(url, "sitemap.xml")),
-        })
-        .map_err(|error| anyhow!("robots template: {error}"))?;
-    fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
-}
-
-fn read_template_files(dir: &Path) -> Result<Vec<(String, String)>> {
-    let mut paths = Vec::new();
-    collect_template_files(dir, dir, &mut paths)?;
-    paths.sort();
-
-    let mut files = Vec::with_capacity(paths.len());
-    for path in paths {
-        let rel = path.strip_prefix(dir).unwrap_or(&path);
-        let name = slash_path(rel);
-        let contents = fs::read_to_string(&path)
-            .with_context(|| format!("failed to read {}", path.display()))?;
-        files.push((name, contents));
-    }
-    Ok(files)
-}
-
-fn collect_template_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let path = entry?.path();
-        if path.is_dir() {
-            collect_template_files(root, &path, out)?;
-        } else if path.is_file() {
-            let rel = path.strip_prefix(root).unwrap_or(&path);
-            if rel
-                .components()
-                .any(|component| component.as_os_str().to_str() == Some(".calepin"))
-            {
-                continue;
-            }
-            out.push(path);
-        }
-    }
-    Ok(())
-}
-
-fn clear_previous_outputs(src_dir: &Path, out_dir: &Path, preserve_pagefind: bool) -> Result<()> {
-    if out_dir == src_dir {
-        return Ok(());
-    } else if out_dir.exists() {
-        for entry in fs::read_dir(out_dir)
-            .with_context(|| format!("failed to read {}", out_dir.display()))?
-        {
-            let path = entry?.path();
-            let name = path.file_name().and_then(|name| name.to_str());
-            if path.is_dir() {
-                // The output directory may be a git checkout (e.g. a gh-pages
-                // worktree) or hold regenerable state; never delete those.
-                if name.is_some_and(|name| {
-                    SKIP_DIRS.contains(&name) || (preserve_pagefind && name == PAGEFIND_DIR)
-                }) {
-                    continue;
-                }
-                fs::remove_dir_all(&path)
-                    .with_context(|| format!("failed to remove {}", path.display()))?;
-            } else if name != Some(".gitkeep") {
-                fs::remove_file(&path)
-                    .with_context(|| format!("failed to remove {}", path.display()))?;
-            }
-        }
-    }
-    Ok(())
-}
-
-fn copy_typ_sources(src_dir: &Path, out_dir: &Path, typ_files: &[PathBuf]) -> Result<()> {
-    for input_path in typ_files {
-        let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
-        let target = out_dir.join(rel);
-        if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        fs::copy(input_path, &target).with_context(|| {
-            format!(
-                "failed to copy {} to {}",
-                input_path.display(),
-                target.display()
-            )
-        })?;
-    }
-    Ok(())
-}
-
-fn static_output_paths(
-    src_dir: &Path,
-    out_dir: &Path,
-    static_files: &[PathBuf],
-) -> BTreeSet<PathBuf> {
-    static_files
-        .iter()
-        .map(|path| {
-            let rel = path.strip_prefix(src_dir).unwrap_or(path);
-            out_dir.join(rel)
-        })
-        .collect()
-}
-
-fn copy_static_files(src_dir: &Path, out_dir: &Path, static_files: &[PathBuf]) -> Result<()> {
-    for input_path in static_files {
-        let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
-        let target = out_dir.join(rel);
-        if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        if target.is_dir() {
-            fs::remove_dir_all(&target)
-                .with_context(|| format!("failed to remove {}", target.display()))?;
-        }
-        fs::copy(input_path, &target).with_context(|| {
-            format!(
-                "failed to copy static file {} to {}",
-                input_path.display(),
-                target.display()
-            )
-        })?;
-    }
-    Ok(())
-}
-
-fn rel_posix(src_dir: &Path, path: &Path) -> String {
-    path.strip_prefix(src_dir)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .replace('\\', "/")
-}
-
-fn slash_path(path: &Path) -> String {
-    path.components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/")
-}
-
-fn normalize_path(path: &Path) -> PathBuf {
-    let mut out = PathBuf::new();
-    for component in path.components() {
-        match component {
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                out.pop();
-            }
-            _ => out.push(component.as_os_str()),
-        }
-    }
-    out
-}
-
-fn wildcard_match(pattern: &str, value: &str) -> bool {
-    let pattern = pattern.as_bytes();
-    let value = value.as_bytes();
-    let mut dp = vec![vec![false; value.len() + 1]; pattern.len() + 1];
-    dp[0][0] = true;
-    for i in 1..=pattern.len() {
-        if pattern[i - 1] == b'*' {
-            dp[i][0] = dp[i - 1][0];
-        }
-    }
-    for i in 1..=pattern.len() {
-        for j in 1..=value.len() {
-            dp[i][j] = match pattern[i - 1] {
-                b'*' => dp[i - 1][j] || dp[i][j - 1],
-                b'?' => dp[i - 1][j - 1],
-                byte => dp[i - 1][j - 1] && byte == value[j - 1],
-            };
-        }
-    }
-    dp[pattern.len()][value.len()]
 }
 
 fn html_escape(value: &str) -> String {
@@ -4362,6 +3001,21 @@ copy = ["assets/**"]
     }
 
     #[test]
+    fn wildcard_match_keeps_single_star_within_path_segment() {
+        assert!(wildcard_match("*.png", "logo.png"));
+        assert!(!wildcard_match("*.png", "assets/logo.png"));
+        assert!(wildcard_match("assets/*.png", "assets/logo.png"));
+        assert!(!wildcard_match("assets/*.png", "assets/icons/logo.png"));
+        assert!(wildcard_match("assets/**", "assets/icons/logo.png"));
+        assert!(wildcard_match(
+            "assets/**/logo.png",
+            "assets/icons/ui/logo.png"
+        ));
+        assert!(wildcard_match("assets/?.png", "assets/a.png"));
+        assert!(!wildcard_match("assets/?.png", "assets/a/b.png"));
+    }
+
+    #[test]
     fn robots_config_defaults_enabled_and_accepts_toggle_or_table() {
         let config = website_config_from_toml("");
         assert!(config.robots_enabled());
@@ -4458,6 +3112,13 @@ template = "feeds/custom-rss.xml"
     }
 
     #[test]
+    fn infer_feed_format_only_treats_rss_names_as_rss() {
+        assert_eq!(infer_feed_format("rss.xml"), FeedFormat::Rss);
+        assert_eq!(infer_feed_format("feeds/updates.rss"), FeedFormat::Rss);
+        assert_eq!(infer_feed_format("myrss.xml"), FeedFormat::Atom);
+    }
+
+    #[test]
     fn feed_config_rejects_unsafe_or_duplicate_filenames() {
         assert!(feed_targets(&website_config_from_toml(
             r#"
@@ -4478,6 +3139,14 @@ filename = "atom.xml"
 "#
         ))
         .is_err());
+    }
+
+    #[test]
+    fn rss_feed_date_rejects_impossible_iso_dates() {
+        assert_eq!(rss_feed_date("2024-02-29"), "Thu, 29 Feb 2024 00:00:00 GMT");
+        assert_eq!(rss_feed_date("2023-02-29"), "2023-02-29");
+        assert_eq!(rss_feed_date("2024-04-31"), "2024-04-31");
+        assert_eq!(rss_feed_date("2024-13-01"), "2024-13-01");
     }
 
     #[test]
@@ -5997,6 +4666,28 @@ filenames = ["atom.xml", "rss.xml"]
     }
 
     #[test]
+    fn extract_document_title_ignores_title_inside_other_arguments() {
+        assert_eq!(
+            extract_document_title(r#"#set document(subtitle: "Sub", title: "Real")"#).as_deref(),
+            Some("Real")
+        );
+        assert_eq!(
+            extract_document_title(
+                r#"#set document(description: "see title: intro", title: "Real")"#
+            )
+            .as_deref(),
+            Some("Real")
+        );
+        assert_eq!(
+            extract_document_title(
+                r#"#set document(description: [see title: intro], title: "Real")"#
+            )
+            .as_deref(),
+            Some("Real")
+        );
+    }
+
+    #[test]
     fn load_page_meta_falls_back_to_document_title() {
         let temp = tempfile::tempdir().unwrap();
         let page = temp.path().join("page.typ");
@@ -6144,6 +4835,8 @@ filenames = ["atom.xml", "rss.xml"]
         let out = temp.path().join("site");
         fs::create_dir_all(&src).unwrap();
         fs::create_dir_all(out.join(".git")).unwrap();
+        fs::create_dir_all(out.join(".calepin")).unwrap();
+        fs::write(out.join(MANIFEST_PATH), "{}").unwrap();
         fs::write(out.join(".git").join("HEAD"), "ref: refs/heads/main").unwrap();
         fs::write(out.join("stale.html"), "old").unwrap();
         fs::write(out.join(".gitkeep"), "").unwrap();
@@ -6161,6 +4854,8 @@ filenames = ["atom.xml", "rss.xml"]
         let src = temp.path().join("docs");
         let out = temp.path().join("site");
         fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(out.join(".calepin")).unwrap();
+        fs::write(out.join(MANIFEST_PATH), "{}").unwrap();
         fs::create_dir_all(out.join(PAGEFIND_DIR)).unwrap();
         fs::write(out.join(PAGEFIND_DIR).join("pagefind.js"), "bundle").unwrap();
         fs::write(out.join("stale.html"), "old").unwrap();
@@ -6169,6 +4864,21 @@ filenames = ["atom.xml", "rss.xml"]
 
         assert!(out.join(PAGEFIND_DIR).join("pagefind.js").exists());
         assert!(!out.join("stale.html").exists());
+    }
+
+    #[test]
+    fn clear_previous_outputs_refuses_unknown_non_empty_output_dir() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let out = temp.path().join("site");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&out).unwrap();
+        fs::write(out.join("notes.txt"), "keep me").unwrap();
+
+        let error = clear_previous_outputs(&src, &out, false).unwrap_err();
+
+        assert!(error.to_string().contains("refusing to clean non-empty"));
+        assert!(out.join("notes.txt").exists());
     }
 
     #[test]

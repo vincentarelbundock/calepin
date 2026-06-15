@@ -278,10 +278,13 @@ fn respond(
     };
     if !path.is_file() {
         let fallback = root.join("404.html");
-        if fallback.is_file() {
+        if fallback.is_file() && path_stays_under_root(root, &fallback) {
             return send_file(request, &fallback, 404, live);
         }
         return send_text(request, 404, "text/plain; charset=utf-8", "Not Found");
+    }
+    if !path_stays_under_root(root, &path) {
+        return send_text(request, 403, "text/plain; charset=utf-8", "Forbidden");
     }
 
     send_file(request, &path, 200, live)
@@ -301,6 +304,7 @@ fn send_file(request: Request, path: &Path, status: u16, live: Option<&LiveReloa
     if request.method() == &Method::Head {
         let response = Response::empty(StatusCode(status))
             .with_header(content_type_header(&mime)?)
+            .with_header(content_length_header(body.len())?)
             .with_header(no_store_header()?);
         request.respond(response)?;
     } else {
@@ -311,6 +315,13 @@ fn send_file(request: Request, path: &Path, status: u16, live: Option<&LiveReloa
         request.respond(response)?;
     }
     Ok(())
+}
+
+fn path_stays_under_root(root: &Path, path: &Path) -> bool {
+    let Ok(root) = fs::canonicalize(root) else {
+        return false;
+    };
+    fs::canonicalize(path).is_ok_and(|path| path.starts_with(root))
 }
 
 fn send_text(request: Request, status: u16, content_type: &str, body: &str) -> Result<()> {
@@ -325,6 +336,11 @@ fn send_text(request: Request, status: u16, content_type: &str, body: &str) -> R
 fn content_type_header(value: &str) -> Result<Header> {
     Header::from_bytes("Content-Type", value)
         .map_err(|_| anyhow!("failed to create content-type header"))
+}
+
+fn content_length_header(length: usize) -> Result<Header> {
+    Header::from_bytes("Content-Length", length.to_string())
+        .map_err(|_| anyhow!("failed to create content-length header"))
 }
 
 fn no_store_header() -> Result<Header> {
@@ -557,6 +573,62 @@ mod tests {
         assert!(response.starts_with("HTTP/1.1 404"));
         assert!(response.contains("Content-Type: text/html"));
         assert!(response.contains("Custom not found"));
+    }
+
+    #[test]
+    fn head_file_reports_content_length_without_body() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("index.html"), "hello").unwrap();
+        let root = dir.path().to_path_buf();
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let addr = server.server_addr().to_string();
+
+        let handle = thread::spawn(move || {
+            let request = server.recv().unwrap();
+            respond(request, &root, None, None).unwrap();
+        });
+
+        let mut stream = TcpStream::connect(addr).unwrap();
+        stream
+            .write_all(b"HEAD /index.html HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+            .unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        handle.join().unwrap();
+
+        assert!(response.starts_with("HTTP/1.1 200"));
+        assert!(response.contains("Content-Length: 5"));
+        assert!(!response.ends_with("hello"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn request_path_rejects_symlink_escape() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("site");
+        fs::create_dir_all(&root).unwrap();
+        fs::write(dir.path().join("secret.html"), "secret").unwrap();
+        symlink(dir.path().join("secret.html"), root.join("secret.html")).unwrap();
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let addr = server.server_addr().to_string();
+
+        let handle = thread::spawn(move || {
+            let request = server.recv().unwrap();
+            respond(request, &root, None, None).unwrap();
+        });
+
+        let mut stream = TcpStream::connect(addr).unwrap();
+        stream
+            .write_all(b"GET /secret.html HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+            .unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        handle.join().unwrap();
+
+        assert!(response.starts_with("HTTP/1.1 403"));
+        assert!(!response.contains("secret"));
     }
 
     #[test]
