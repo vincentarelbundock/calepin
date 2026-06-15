@@ -84,7 +84,7 @@ pub fn eject_builtin_to(name: &str, dest: &Path, force: bool) -> Result<PathBuf>
         ));
     }
     for file in bundle.files {
-        write_theme_file(&dest, file.path, file.source)?;
+        write_theme_file(dest, file.path, file.source)?;
     }
     Ok(dest.to_path_buf())
 }

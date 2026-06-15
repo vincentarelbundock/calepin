@@ -4,13 +4,17 @@ pub mod compile;
 pub mod crossref;
 pub mod execute;
 pub mod introspect;
+pub mod io;
 pub mod model;
 pub mod paths;
 pub mod preprocess;
 pub mod query;
 pub mod results;
+pub mod run;
 pub mod runtime;
 pub mod source_rewrite;
 pub mod sync;
+#[cfg(test)]
+pub(crate) mod testfixtures;
 pub mod version;
 pub mod watch;

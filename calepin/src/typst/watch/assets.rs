@@ -1,13 +1,17 @@
 use std::fs;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+
+use crate::utils::static_files::{
+    content_type, raw_http_response_head, resolve_existing_file, TEXT_PLAIN_UTF8,
+};
 
 pub(crate) struct AssetServer {
     base_url: String,
@@ -86,17 +90,17 @@ fn handle_connection(mut stream: TcpStream, root: &Path) -> io::Result<()> {
         return write_response(
             &mut stream,
             "405 Method Not Allowed",
-            "text/plain; charset=utf-8",
+            TEXT_PLAIN_UTF8,
             b"method not allowed\n",
             is_head,
         );
     }
 
-    let Some(path) = resolve_asset_path(root, target) else {
+    let Some(path) = resolve_existing_file(root, target, None) else {
         return write_response(
             &mut stream,
             "404 Not Found",
-            "text/plain; charset=utf-8",
+            TEXT_PLAIN_UTF8,
             b"not found\n",
             is_head,
         );
@@ -109,94 +113,11 @@ fn handle_connection(mut stream: TcpStream, root: &Path) -> io::Result<()> {
             write_response(
                 &mut stream,
                 "500 Internal Server Error",
-                "text/plain; charset=utf-8",
+                TEXT_PLAIN_UTF8,
                 body.as_bytes(),
                 is_head,
             )
         }
-    }
-}
-
-fn resolve_asset_path(root: &Path, target: &str) -> Option<PathBuf> {
-    let relative = request_relative_path(target)?;
-    let canonical = root.join(relative).canonicalize().ok()?;
-    if canonical.starts_with(root) && canonical.is_file() {
-        Some(canonical)
-    } else {
-        None
-    }
-}
-
-fn request_relative_path(target: &str) -> Option<PathBuf> {
-    let target = target.split('?').next().unwrap_or(target);
-    let target = target.split('#').next().unwrap_or(target);
-    let decoded = percent_decode(target)?;
-    if decoded.contains('\\') {
-        return None;
-    }
-    let trimmed = decoded.trim_start_matches('/');
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    let mut relative = PathBuf::new();
-    for component in Path::new(trimmed).components() {
-        match component {
-            Component::Normal(part) => relative.push(part),
-            Component::CurDir => {}
-            Component::ParentDir | Component::RootDir | Component::Prefix(_) => return None,
-        }
-    }
-
-    if relative.as_os_str().is_empty() {
-        None
-    } else {
-        Some(relative)
-    }
-}
-
-fn percent_decode(input: &str) -> Option<String> {
-    let bytes = input.as_bytes();
-    let mut decoded = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-
-    while index < bytes.len() {
-        if bytes[index] == b'%' {
-            let high = *bytes.get(index + 1)?;
-            let low = *bytes.get(index + 2)?;
-            decoded.push(hex_value(high)? << 4 | hex_value(low)?);
-            index += 3;
-        } else {
-            decoded.push(bytes[index]);
-            index += 1;
-        }
-    }
-
-    String::from_utf8(decoded).ok()
-}
-
-fn hex_value(byte: u8) -> Option<u8> {
-    match byte {
-        b'0'..=b'9' => Some(byte - b'0'),
-        b'a'..=b'f' => Some(byte - b'a' + 10),
-        b'A'..=b'F' => Some(byte - b'A' + 10),
-        _ => None,
-    }
-}
-
-fn content_type(path: &Path) -> &'static str {
-    match path.extension().and_then(|extension| extension.to_str()) {
-        Some("css") => "text/css; charset=utf-8",
-        Some("gif") => "image/gif",
-        Some("html") => "text/html; charset=utf-8",
-        Some("jpeg" | "jpg") => "image/jpeg",
-        Some("js") => "text/javascript; charset=utf-8",
-        Some("json") => "application/json; charset=utf-8",
-        Some("pdf") => "application/pdf",
-        Some("png") => "image/png",
-        Some("svg") => "image/svg+xml",
-        Some("webp") => "image/webp",
-        _ => "application/octet-stream",
     }
 }
 
@@ -207,17 +128,7 @@ fn write_response(
     body: &[u8],
     is_head: bool,
 ) -> io::Result<()> {
-    write!(
-        stream,
-        "HTTP/1.1 {status}\r\n\
-         Content-Type: {content_type}\r\n\
-         Content-Length: {}\r\n\
-         Access-Control-Allow-Origin: *\r\n\
-         Cache-Control: no-store\r\n\
-         Connection: close\r\n\
-         \r\n",
-        body.len()
-    )?;
+    stream.write_all(raw_http_response_head(status, content_type, body.len(), true).as_bytes())?;
     if !is_head {
         stream.write_all(body)?;
     }
@@ -231,7 +142,12 @@ mod tests {
     #[test]
     fn request_relative_path_accepts_root_relative_assets() {
         assert_eq!(
-            request_relative_path("/.calepin/paper/figures/fig%2Ddemo.svg?cache=1").unwrap(),
+            crate::utils::static_files::request_relative_path(
+                "/.calepin/paper/figures/fig%2Ddemo.svg?cache=1",
+                None,
+                false
+            )
+            .unwrap(),
             PathBuf::from(".calepin")
                 .join("paper")
                 .join("figures")
@@ -241,9 +157,22 @@ mod tests {
 
     #[test]
     fn request_relative_path_rejects_traversal() {
-        assert!(request_relative_path("/../secret.txt").is_none());
-        assert!(request_relative_path("/.calepin/%2e%2e/secret.txt").is_none());
-        assert!(request_relative_path("/.calepin\\secret.txt").is_none());
+        assert!(
+            crate::utils::static_files::request_relative_path("/../secret.txt", None, false)
+                .is_none()
+        );
+        assert!(crate::utils::static_files::request_relative_path(
+            "/.calepin/%2e%2e/secret.txt",
+            None,
+            false
+        )
+        .is_none());
+        assert!(crate::utils::static_files::request_relative_path(
+            "/.calepin\\secret.txt",
+            None,
+            false
+        )
+        .is_none());
     }
 
     #[test]

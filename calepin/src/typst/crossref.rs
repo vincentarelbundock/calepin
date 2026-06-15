@@ -57,6 +57,12 @@ pub fn classify_label(name: &str) -> Result<CrossrefLabel> {
     ))
 }
 
+pub fn has_crossref_prefix(name: &str) -> bool {
+    PREFIXES
+        .iter()
+        .any(|(prefix, _)| name.starts_with(prefix) && name.len() > prefix.len())
+}
+
 /// Classify a list of names; reject empty lists and repeated kinds.
 pub fn parse_label_names(names: &[String]) -> Result<Vec<CrossrefLabel>> {
     if names.is_empty() {

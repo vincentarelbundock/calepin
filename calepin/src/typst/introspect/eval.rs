@@ -1,13 +1,14 @@
 use anyhow::{anyhow, Context, Result};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
-use super::{root_relative, PreprocessMetadata, PAGE_META_LABEL};
+use super::{root_relative, split_page_meta, PreprocessMetadata};
 use crate::typst::model::LayoutPaths;
-use crate::utils::{process, tools};
+use crate::typst::run::{run_typst_capture, TypstInput, INPUT_MODE, INPUT_RESULTS, INPUT_TARGET};
 
 static EVAL_AVAILABLE: OnceLock<Mutex<HashMap<PathBuf, bool>>> = OnceLock::new();
 
@@ -49,9 +50,9 @@ pub fn preprocess_metadata(
   chunks: query(raw.where(block: true).or(<calepin-fence-label>).or(<calepin-chunk>)),
 )"#,
         &[
-            "calepin-mode=query".to_string(),
-            format!("calepin-results={results_input}"),
-            "calepin-target=paged".to_string(),
+            TypstInput::new(INPUT_MODE, "query"),
+            TypstInput::new(INPUT_RESULTS, results_input),
+            TypstInput::new(INPUT_TARGET, "paged"),
         ],
     )?;
     let root: Value =
@@ -64,7 +65,10 @@ pub fn preprocess_metadata(
         .get("chunks")
         .cloned()
         .ok_or_else(|| anyhow!("typst eval metadata output is missing `chunks`"))?;
-    let (setup_json, page_meta) = split_page_meta(setup)?;
+    let setup_array = setup
+        .as_array()
+        .ok_or_else(|| anyhow!("typst eval setup output must be an array"))?;
+    let (setup_json, page_meta) = split_page_meta(setup_array)?;
 
     Ok(PreprocessMetadata {
         setup_json,
@@ -84,9 +88,9 @@ pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String
   page: it.value.page,
 ))"#,
         &[
-            "calepin-mode=render".to_string(),
-            format!("calepin-results={results_input}"),
-            "calepin-target=paged".to_string(),
+            TypstInput::new(INPUT_MODE, "render"),
+            TypstInput::new(INPUT_RESULTS, results_input),
+            TypstInput::new(INPUT_TARGET, "paged"),
         ],
     )?;
     let root: Value =
@@ -99,82 +103,34 @@ fn typst_eval(
     layout: &LayoutPaths,
     input: &Path,
     expression: &str,
-    inputs: &[String],
+    inputs: &[TypstInput],
 ) -> Result<String> {
-    process::validate_executable(typst, "run typst eval", Some(&tools::TYPST))?;
     let input = root_relative(input, &layout.root);
-    let mut command = Command::new(typst);
-    command
-        .arg("eval")
-        .arg(expression)
-        .arg("--in")
-        .arg(input)
-        .arg("--root")
-        .arg(&layout.root)
-        .arg("--format")
-        .arg("json")
+    let mut args: Vec<OsString> = vec![
+        "eval".into(),
+        expression.into(),
+        "--in".into(),
+        input.as_os_str().into(),
+        "--root".into(),
+        layout.root.as_os_str().into(),
+        "--format".into(),
+        "json".into(),
         // Documents may use Typst's HTML module even during metadata
         // introspection; enable the feature just as the final HTML compile does.
-        .arg("--features=html");
+        "--features=html".into(),
+    ];
     for input in inputs {
-        command.arg("--input").arg(input);
+        input.push_to(&mut args);
     }
-    let output = command
-        .current_dir(&layout.root)
-        .output()
-        .map_err(|error| {
-            process::spawn_error(typst, "run typst eval", error, Some(&tools::TYPST))
-        })?;
-
-    if !output.status.success() {
-        return Err(anyhow!(
-            "typst eval failed:\n{}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-
-    String::from_utf8(output.stdout).context("typst eval output was not UTF-8")
-}
-
-fn split_page_meta(setup: Value) -> Result<(String, Option<Value>)> {
-    let array = setup
-        .as_array()
-        .ok_or_else(|| anyhow!("typst eval setup output must be an array"))?;
-    let page_meta_label = format!("<{PAGE_META_LABEL}>");
-    let mut rest = Vec::new();
-    let mut page_meta = None;
-    for item in array {
-        let label = item.get("label").and_then(Value::as_str);
-        if label == Some(page_meta_label.as_str()) {
-            if page_meta.is_none() {
-                page_meta = item.get("value").cloned();
-            }
-        } else {
-            rest.push(item.clone());
-        }
-    }
-    Ok((serde_json::to_string(&rest)?, page_meta))
+    run_typst_capture(
+        typst,
+        "run typst eval",
+        &args,
+        &layout.root,
+        |stderr| format!("typst eval failed:\n{stderr}"),
+        "typst eval output was not UTF-8",
+    )
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn split_page_meta_separates_setup_entries_from_page_metadata() {
-        let setup = serde_json::json!([
-            {"func":"metadata","value":{"echo":true},"label":"<calepin-config>"},
-            {"func":"metadata","value":{"title":"T","pdf":false},"label":"<website-metadata>"}
-        ]);
-
-        let (setup_json, page_meta) = split_page_meta(setup).unwrap();
-
-        let setup: Value = serde_json::from_str(&setup_json).unwrap();
-        assert_eq!(setup.as_array().unwrap().len(), 1);
-        assert_eq!(setup[0]["label"], "<calepin-config>");
-        assert_eq!(
-            page_meta,
-            Some(serde_json::json!({"title": "T", "pdf": false}))
-        );
-    }
-}
+mod tests {}

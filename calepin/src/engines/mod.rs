@@ -8,6 +8,7 @@ pub mod subprocess;
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
+use crate::engines::jupyter::JupyterCapture;
 use crate::typst::model::{EngineName, FigureSpec};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -87,15 +88,15 @@ pub fn execute_chunk(
                 .jupyter
                 .as_mut()
                 .ok_or_else(|| anyhow::anyhow!("Jupyter engine session was not initialized"))?;
-            session.capture(
+            session.capture(JupyterCapture {
                 kernel,
-                &code,
-                &fig_full_str,
-                &figure.format,
-                figure.width,
-                figure.height,
-                f64::from(figure.dpi),
-            )?
+                code: &code,
+                fig_path: &fig_full_str,
+                fig_format: &figure.format,
+                width: figure.width,
+                height: figure.height,
+                dpi: f64::from(figure.dpi),
+            })?
         }
         other => return Err(anyhow::anyhow!("unsupported engine `{}`", other)),
     };

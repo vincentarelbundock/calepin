@@ -94,71 +94,71 @@ pub fn build_report(
 ) -> Result<HealthReport> {
     let root = std::env::current_dir()?;
     let config = CalepinConfig::load(&root, config_path)?;
-    let mut checks = Vec::new();
-
-    checks.push(typst_check(
-        "typst",
-        &config.executables.typst,
-        Some(&tools::TYPST),
-        true,
-        "render Typst documents",
-    ));
-    checks.push(tool_check(
-        "python",
-        &config.executables.python,
-        Some(&tools::PYTHON),
-        true,
-        "execute Python chunks",
-    ));
-    checks.push(tool_check(
-        "Rscript",
-        &config.executables.rscript,
-        Some(&tools::RSCRIPT),
-        false,
-        "execute R chunks",
-    ));
-    checks.push(tool_check(
-        "mmdc",
-        &config.executables.mmdc,
-        Some(&tools::MMDC),
-        false,
-        "render Mermaid diagrams",
-    ));
-    checks.push(tool_check(
-        "dot",
-        &config.executables.dot,
-        Some(&tools::DOT),
-        false,
-        "render Graphviz DOT diagrams",
-    ));
-    checks.push(tool_check(
-        "d2",
-        &config.executables.d2,
-        Some(&tools::D2),
-        false,
-        "render D2 diagrams",
-    ));
-    checks.push(tool_check(
-        "tectonic",
-        &config.executables.tectonic,
-        Some(&tools::TECTONIC),
-        false,
-        "render TikZ diagrams",
-    ));
-    checks.push(tool_check(
-        "dvisvgm",
-        &config.executables.dvisvgm,
-        Some(&tools::DVISVGM),
-        false,
-        "convert TikZ output to SVG",
-    ));
-    checks.push(tool_check(
-        "pdf2svg",
-        &config.executables.pdf2svg,
-        Some(&tools::PDF2SVG),
-        false,
-        "convert PDFs to SVG",
-    ));
+    let mut checks = vec![
+        typst_check(
+            "typst",
+            &config.executables.typst,
+            Some(&tools::TYPST),
+            true,
+            "render Typst documents",
+        ),
+        tool_check(
+            "python",
+            &config.executables.python,
+            Some(&tools::PYTHON),
+            true,
+            "execute Python chunks",
+        ),
+        tool_check(
+            "Rscript",
+            &config.executables.rscript,
+            Some(&tools::RSCRIPT),
+            false,
+            "execute R chunks",
+        ),
+        tool_check(
+            "mmdc",
+            &config.executables.mmdc,
+            Some(&tools::MMDC),
+            false,
+            "render Mermaid diagrams",
+        ),
+        tool_check(
+            "dot",
+            &config.executables.dot,
+            Some(&tools::DOT),
+            false,
+            "render Graphviz DOT diagrams",
+        ),
+        tool_check(
+            "d2",
+            &config.executables.d2,
+            Some(&tools::D2),
+            false,
+            "render D2 diagrams",
+        ),
+        tool_check(
+            "tectonic",
+            &config.executables.tectonic,
+            Some(&tools::TECTONIC),
+            false,
+            "render TikZ diagrams",
+        ),
+        tool_check(
+            "dvisvgm",
+            &config.executables.dvisvgm,
+            Some(&tools::DVISVGM),
+            false,
+            "convert TikZ output to SVG",
+        ),
+        tool_check(
+            "pdf2svg",
+            &config.executables.pdf2svg,
+            Some(&tools::PDF2SVG),
+            false,
+            "convert PDFs to SVG",
+        ),
+    ];
 
     let python_available = checks
         .iter()
@@ -597,12 +597,12 @@ fn extract_literal_links(source_path: &Path, source: &str) -> Vec<LinkOccurrence
             continue;
         }
         let open = skip_ws(source, after_name);
-        if source[open..].chars().next() != Some('(') {
+        if !source[open..].starts_with('(') {
             offset = after_name;
             continue;
         }
         let value_start = skip_ws(source, open + 1);
-        if source[value_start..].chars().next() != Some('"') {
+        if !source[value_start..].starts_with('"') {
             offset = value_start;
             continue;
         }
@@ -1008,7 +1008,7 @@ mod tests {
         let root = dir.path();
         fs::write(
             root.join("index.typ"),
-            &format!(r#"#link("http://{}/ok")[External]"#, addr),
+            format!(r#"#link("http://{}/ok")[External]"#, addr),
         )
         .unwrap();
 

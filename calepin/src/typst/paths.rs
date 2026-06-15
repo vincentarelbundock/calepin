@@ -40,6 +40,7 @@ pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> 
         input_rel: input_rel.clone(),
         render_input: input_rel.clone(),
         work_dir,
+        artifact_dir: base.clone(),
         results_path,
         figures_dir: base.join("figures"),
     })

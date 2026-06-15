@@ -1,5 +1,7 @@
+mod fingerprint;
+mod staging;
+
 use anyhow::{anyhow, Context, Result};
-use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -8,8 +10,9 @@ use xxhash_rust::xxh3::xxh3_64;
 use crate::config::{CalepinConfig, ExecutablePaths};
 use crate::typst::execute::{EnginePool, ExecutionConfig};
 use crate::typst::introspect::preprocess_metadata;
-use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, ExecOptions, LayoutPaths};
-use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout, slash_path};
+use crate::typst::io::{ensure_parent, write_if_changed};
+use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, LayoutPaths};
+use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout};
 use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
 use crate::typst::results::{build_results_document, write_results};
 use crate::typst::runtime::write_runtime;
@@ -17,12 +20,12 @@ use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
 use crate::typst::version::assert_supported_typst;
 
-const PREPROCESS_FINGERPRINT_FILE: &str = "fingerprint.xxh3";
 const PAGE_META_FILE: &str = "page-meta.json";
-const TYPST_SNIPPETS: &[(&str, &str)] = &[(
-    "code-block.typ",
-    include_str!("../assets/snippets/typst/code-block.typ"),
-)];
+
+use fingerprint::{preprocess_cache_hit, preprocess_fingerprint, write_preprocess_fingerprint};
+use staging::{
+    paged_template_context, write_query_source, write_render_wrapper, write_typst_snippets,
+};
 
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
@@ -178,153 +181,6 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     })
 }
 
-fn paged_template_context(
-    layout: &LayoutPaths,
-    include_input: &Path,
-    page_meta: Option<serde_json::Value>,
-    params: serde_json::Value,
-) -> crate::theme::PagedTemplateContext {
-    let input_dir = layout
-        .input_rel
-        .parent()
-        .map(slash_path)
-        .unwrap_or_default();
-    let input_stem = layout
-        .input_rel
-        .file_stem()
-        .map(|stem| stem.to_string_lossy().to_string())
-        .unwrap_or_default();
-    crate::theme::PagedTemplateContext {
-        input_path: slash_path(&layout.input_rel),
-        input_dir,
-        input_stem,
-        body: format!("#include \"/{}\"", slash_path(include_input)),
-        page_meta: page_meta.unwrap_or(serde_json::Value::Null),
-        params,
-    }
-}
-
-fn write_render_wrapper(
-    layout: &LayoutPaths,
-    include_input: &Path,
-    jupyter_kernels: &[&str],
-    paged_theme: Option<&crate::theme::PagedSource>,
-) -> Result<PathBuf> {
-    let mut wrapper_relative = PathBuf::from(".calepin");
-    let mut stem = layout.input_rel.clone();
-    stem.set_extension("");
-    wrapper_relative.push(stem);
-    wrapper_relative.push("calepin-wrapper.typ");
-
-    let wrapper = layout.root.join(&wrapper_relative);
-
-    let mut lines = String::from("#import \"/.calepin/calepin.typ\": *\n\n");
-
-    lines.push('\n');
-    lines.push('\n');
-
-    for lang in ["typ", "typst"] {
-        lines.push_str(&format!(
-            "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => _without-raw-chunk-transforms(() => it)\n"
-        ));
-    }
-
-    let engines: [(&str, &str); 6] = [
-        ("python", "python"),
-        ("r", "r"),
-        ("mermaid", "mermaid"),
-        ("dot", "dot"),
-        ("tikz", "tikz"),
-        ("d2", "d2"),
-    ];
-
-    for (lang, engine) in &engines {
-        lines.push_str(&format!(
-            "#show raw.where(block: true, lang: \"{}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ it }} else {{ chunk-from-raw-plain(\"{}\", it) }}\n",
-            lang, engine
-        ));
-    }
-
-    for kernel in jupyter_kernels {
-        lines.push_str(&format!(
-            "#show raw.where(block: true, lang: \"{kernel}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ it }} else {{ chunk-from-raw-plain(\"{kernel}\", it) }}\n"
-        ));
-    }
-
-    if let Some(paged_theme) = paged_theme {
-        lines.push_str("\n// Paged theme\n");
-        lines.push_str(&paged_theme.source);
-        if !paged_theme.source.ends_with('\n') {
-            lines.push('\n');
-        }
-    }
-
-    if !paged_theme.is_some_and(|theme| theme.owns_body) {
-        lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
-    }
-
-    if let Some(parent) = wrapper.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    if fs::read_to_string(&wrapper).is_ok_and(|existing| existing == lines) {
-        return Ok(wrapper_relative);
-    }
-
-    fs::write(&wrapper, lines).with_context(|| format!("failed to write {}", wrapper.display()))?;
-    Ok(wrapper_relative)
-}
-
-fn write_query_source(layout: &LayoutPaths, staged_input: &Path) -> Result<PathBuf> {
-    let mut query_source_relative = PathBuf::from(".calepin");
-    let mut stem = layout.input_rel.clone();
-    stem.set_extension("");
-    query_source_relative.push(stem);
-    query_source_relative.push("query-source.typ");
-
-    let query_source = layout.root.join(&query_source_relative);
-    if let Some(parent) = query_source.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    write_query_html_fallback(&layout.root)?;
-
-    let staged_input_abs = layout.root.join(staged_input);
-    let source = fs::read_to_string(&staged_input_abs)
-        .with_context(|| format!("failed to read {}", staged_input_abs.display()))?;
-    // Typst's real `html` module wraps children in HTML nodes that are opaque to
-    // chunk discovery. During query only, replace it with a module that keeps
-    // element bodies visible and drops inert tags such as link/script/img.
-    let mut prefixed = String::from("#import \"/.calepin/query-html.typ\" as html\n\n");
-    prefixed.push_str(&source);
-    fs::write(&query_source, prefixed)
-        .with_context(|| format!("failed to write {}", query_source.display()))?;
-    Ok(query_source_relative)
-}
-
-fn write_query_html_fallback(root: &Path) -> Result<()> {
-    let path = root.join(".calepin/query-html.typ");
-    let source = r#"#let elem(name, attrs: (:), body) = body
-#let link(..args) = none
-#let script(..args) = none
-#let img(..args) = none
-"#;
-    fs::write(&path, source).with_context(|| format!("failed to write {}", path.display()))
-}
-
-fn write_typst_snippets(root: &Path) -> Result<()> {
-    let dir = root.join(".calepin/snippets/typst");
-    fs::create_dir_all(&dir).with_context(|| format!("failed to create {}", dir.display()))?;
-    for (name, source) in TYPST_SNIPPETS {
-        let path = dir.join(name);
-        if fs::read_to_string(&path).is_ok_and(|existing| existing == *source) {
-            continue;
-        }
-        fs::write(&path, source).with_context(|| format!("failed to write {}", path.display()))?;
-    }
-    Ok(())
-}
-
 pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
     let staged = tempfile::Builder::new()
         .prefix("calepin-figures-")
@@ -392,7 +248,7 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
 }
 
 fn page_meta_path(layout: &LayoutPaths) -> PathBuf {
-    layout.results_path.with_file_name(PAGE_META_FILE)
+    layout.sibling_path(PAGE_META_FILE)
 }
 
 fn source_fingerprint(input: &Path) -> Result<String> {
@@ -408,12 +264,7 @@ fn write_page_meta(layout: &LayoutPaths, value: Option<&serde_json::Value>) -> R
         "value": value,
     });
     let path = page_meta_path(layout);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    fs::write(&path, serde_json::to_string(&document)?)
-        .with_context(|| format!("failed to write {}", path.display()))
+    write_if_changed(&path, serde_json::to_string(&document)?)
 }
 
 /// Returns the `<website-metadata>` value persisted by the last preprocess of
@@ -522,31 +373,21 @@ fn publish_staged_figures(staged: &Path, final_dir: &Path) -> Result<()> {
 fn publish_staged_file(source: &Path, target: &Path) -> Result<()> {
     let bytes = std::fs::read(source)
         .with_context(|| format!("failed to read staged figure {}", source.display()))?;
-    if std::fs::read(target).is_ok_and(|existing| existing == bytes) {
-        return Ok(());
-    }
-    if let Some(parent) = target.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    std::fs::write(target, bytes).with_context(|| format!("failed to write {}", target.display()))
+    write_if_changed(target, bytes)
 }
 
 /// Write `params.json` next to `results.json` when there are parameters, and
 /// return its path. Returns `None` (and removes any stale file) when empty.
 fn write_params_file(layout: &LayoutPaths, params: &serde_json::Value) -> Result<Option<PathBuf>> {
-    let path = layout.results_path.with_file_name("params.json");
+    let path = layout.sibling_path("params.json");
     let is_empty = params.as_object().is_none_or(|map| map.is_empty());
     if is_empty {
         let _ = fs::remove_file(&path);
         return Ok(None);
     }
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
+    ensure_parent(&path)?;
     let json = serde_json::to_string_pretty(params)?;
-    fs::write(&path, json).with_context(|| format!("failed to write {}", path.display()))?;
+    write_if_changed(&path, json)?;
     Ok(Some(path))
 }
 
@@ -567,160 +408,12 @@ fn resolve_params(base: &serde_json::Value, overrides: &[String]) -> Result<serd
     Ok(serde_json::Value::Object(map))
 }
 
-fn preprocess_fingerprint(
-    layout: &LayoutPaths,
-    executables: &ExecutablePaths,
-    chunks: &[ChunkSpec],
-    cwd: &Path,
-    timeout: Option<Duration>,
-    params: &serde_json::Value,
-    theme: &crate::theme::ThemeSelection,
-) -> Result<u64> {
-    let payload = PreprocessFingerprint {
-        schema: crate::typst::model::RESULT_SCHEMA_VERSION,
-        calepin_version: env!("CARGO_PKG_VERSION"),
-        input_rel: path_fingerprint(&layout.input_rel),
-        figures_dir: path_fingerprint(&layout.figures_dir),
-        cwd: path_fingerprint(cwd),
-        timeout_secs: timeout.map(|duration| duration.as_secs()),
-        executables: ExecutableFingerprint::from(executables),
-        chunks: chunks
-            .iter()
-            .map(ChunkFingerprint::from)
-            .collect::<Vec<_>>(),
-        params: params.clone(),
-        theme: theme_fingerprint(theme),
-    };
-    let bytes = serde_json::to_vec(&payload)?;
-    Ok(xxh3_64(&bytes))
-}
-
-fn preprocess_cache_hit(layout: &LayoutPaths, fingerprint: u64) -> Result<bool> {
-    if !layout.results_path.is_file() {
-        return Ok(false);
-    }
-    Ok(read_preprocess_fingerprint(layout)? == Some(fingerprint))
-}
-
-fn preprocess_fingerprint_path(layout: &LayoutPaths) -> PathBuf {
-    layout
-        .results_path
-        .with_file_name(PREPROCESS_FINGERPRINT_FILE)
-}
-
-fn read_preprocess_fingerprint(layout: &LayoutPaths) -> Result<Option<u64>> {
-    let path = preprocess_fingerprint_path(layout);
-    let text = match fs::read_to_string(&path) {
-        Ok(text) => text,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(error).with_context(|| format!("failed to read {}", path.display()))
-        }
-    };
-    let text = text.trim();
-    if text.is_empty() {
-        return Ok(None);
-    }
-    Ok(u64::from_str_radix(text, 16).ok())
-}
-
-fn write_preprocess_fingerprint(layout: &LayoutPaths, fingerprint: u64) -> Result<()> {
-    let path = preprocess_fingerprint_path(layout);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    let text = format!("{fingerprint:016x}\n");
-    if fs::read_to_string(&path).is_ok_and(|existing| existing == text) {
-        return Ok(());
-    }
-    fs::write(&path, text).with_context(|| format!("failed to write {}", path.display()))
-}
-
-#[derive(Serialize)]
-struct PreprocessFingerprint {
-    schema: u8,
-    calepin_version: &'static str,
-    input_rel: String,
-    figures_dir: String,
-    cwd: String,
-    timeout_secs: Option<u64>,
-    executables: ExecutableFingerprint,
-    chunks: Vec<ChunkFingerprint>,
-    params: serde_json::Value,
-    theme: String,
-}
-
-#[derive(Serialize)]
-struct ChunkFingerprint {
-    label: String,
-    ordinal: usize,
-    engine: EngineName,
-    code: String,
-    exec_options: ExecOptions,
-}
-
-impl From<&ChunkSpec> for ChunkFingerprint {
-    fn from(chunk: &ChunkSpec) -> Self {
-        Self {
-            label: chunk.label.clone(),
-            ordinal: chunk.ordinal,
-            engine: chunk.engine.clone(),
-            code: chunk.code.clone(),
-            exec_options: chunk.exec_options.clone(),
-        }
-    }
-}
-
-#[derive(Serialize)]
-struct ExecutableFingerprint {
-    typst: String,
-    rscript: String,
-    python: String,
-    mmdc: String,
-    dot: String,
-    tectonic: String,
-    dvisvgm: String,
-    pdf2svg: String,
-    d2: String,
-    chrome: Option<String>,
-}
-
-impl From<&ExecutablePaths> for ExecutableFingerprint {
-    fn from(paths: &ExecutablePaths) -> Self {
-        Self {
-            typst: path_fingerprint(&paths.typst),
-            rscript: path_fingerprint(&paths.rscript),
-            python: path_fingerprint(&paths.python),
-            mmdc: path_fingerprint(&paths.mmdc),
-            dot: path_fingerprint(&paths.dot),
-            tectonic: path_fingerprint(&paths.tectonic),
-            dvisvgm: path_fingerprint(&paths.dvisvgm),
-            pdf2svg: path_fingerprint(&paths.pdf2svg),
-            d2: path_fingerprint(&paths.d2),
-            chrome: paths.chrome.as_deref().map(path_fingerprint),
-        }
-    }
-}
-
-fn path_fingerprint(path: &Path) -> String {
-    path.to_string_lossy().into_owned()
-}
-
-fn theme_fingerprint(theme: &crate::theme::ThemeSelection) -> String {
-    match theme {
-        crate::theme::ThemeSelection::Default => "default".to_string(),
-        crate::theme::ThemeSelection::Disabled => "disabled".to_string(),
-        crate::theme::ThemeSelection::Builtin(name) => format!("builtin:{name}"),
-        crate::theme::ThemeSelection::Dir(path) => format!("dir:{}", path.display()),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{DisplayOptions, ResultsMode};
+    use crate::typst::model::ResultsMode;
     use crate::typst::paths::slash_path;
+    use crate::typst::testfixtures;
 
     #[test]
     fn page_meta_roundtrips_and_detects_stale_source() {
@@ -1114,58 +807,15 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(dir.path().join(".calepin/snippets/typst/code-block.typ"))
                 .unwrap(),
-            TYPST_SNIPPETS[0].1
+            staging::typst_snippet_source("code-block.typ").unwrap()
         );
     }
 
     fn test_layout(root: &Path) -> LayoutPaths {
-        LayoutPaths {
-            root: root.to_path_buf(),
-            input: root.join("paper.typ"),
-            input_rel: PathBuf::from("paper.typ"),
-            render_input: PathBuf::from("paper.typ"),
-            work_dir: root.to_path_buf(),
-            results_path: root.join(".calepin/paper/results.json"),
-            figures_dir: root.join(".calepin/paper/figures"),
-        }
+        testfixtures::layout(root)
     }
 
     fn test_chunk(code: &str) -> ChunkSpec {
-        ChunkSpec {
-            label: "answer".to_string(),
-            engine: EngineName::Python,
-            code: code.to_string(),
-            exec_options: ExecOptions {
-                eval: true,
-                error: false,
-                fig_device_format: "svg".to_string(),
-                fig_device_dpi: 150,
-                fig_device_width: 6.0,
-                fig_device_height: None,
-                fig_device_aspect: 0.618,
-            },
-            display_options: DisplayOptions {
-                echo: true,
-                output: true,
-                results: ResultsMode::Verbatim,
-                warning: true,
-                message: true,
-                placeholder: true,
-                fig_width: None,
-                fig_height: None,
-                fig_align: None,
-                fig_responsive: None,
-                fig_link: None,
-                fig_caption: None,
-                fig_cap_location: None,
-                fig_alt_text: None,
-                fig_subcaptions: None,
-                fig_layout_columns: None,
-                fig_layout_rows: None,
-                kind: None,
-            },
-            ordinal: 0,
-            crossref_labels: vec![],
-        }
+        testfixtures::chunk("answer", code, ResultsMode::Verbatim)
     }
 }

@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Context, Result};
 use serde_json::{json, Value};
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -249,21 +248,11 @@ pub fn normalize_engine_results(
             EngineResult::Plot(path) => {
                 let artifact = normalize_plot_path(&chunk.label, figures_dir, figure, &path)
                     .context("failed to normalize plot artifact path")?;
-                let mut data = MimeData::new();
-                data.insert(
+                items.push(rich_text_item(
+                    ResultItemType::Display,
                     figure.mime_type().to_string(),
                     json!({ "path": artifact_path(&artifact) }),
-                );
-                items.push(ResultItem {
-                    item_type: ResultItemType::Display,
-                    name: None,
-                    text: None,
-                    level: None,
-                    message: None,
-                    traceback: None,
-                    data: Some(data),
-                    metadata: BTreeMap::new(),
-                });
+                ));
             }
         }
     }
@@ -313,24 +302,16 @@ fn stream_item(name: ResultItemName, text: String) -> ResultItem {
         item_type: ResultItemType::Stream,
         name: Some(name),
         text: Some(text),
-        level: None,
-        message: None,
-        traceback: None,
-        data: None,
-        metadata: BTreeMap::new(),
+        ..ResultItem::default()
     }
 }
 
 fn diagnostic_item(level: DiagnosticLevel, text: String) -> ResultItem {
     ResultItem {
         item_type: ResultItemType::Diagnostic,
-        name: None,
         text: Some(text),
         level: Some(level),
-        message: None,
-        traceback: None,
-        data: None,
-        metadata: BTreeMap::new(),
+        ..ResultItem::default()
     }
 }
 
@@ -338,27 +319,18 @@ fn error_item(message: String) -> ResultItem {
     ResultItem {
         item_type: ResultItemType::Error,
         name: Some(ResultItemName::Error),
-        text: None,
-        level: None,
         message: Some(message),
-        traceback: None,
-        data: None,
-        metadata: BTreeMap::new(),
+        ..ResultItem::default()
     }
 }
 
-fn rich_text_item(kind: ResultItemType, mime: &str, value: Value) -> ResultItem {
+fn rich_text_item(kind: ResultItemType, mime: impl Into<String>, value: Value) -> ResultItem {
     let mut data = MimeData::new();
-    data.insert(mime.to_string(), value);
+    data.insert(mime.into(), value);
     ResultItem {
         item_type: kind,
-        name: None,
-        text: None,
-        level: None,
-        message: None,
-        traceback: None,
         data: Some(data),
-        metadata: BTreeMap::new(),
+        ..ResultItem::default()
     }
 }
 
@@ -369,45 +341,13 @@ fn lines(code: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{DisplayOptions, ExecOptions, ResultsMode};
+    use crate::typst::model::{ExecOptions, ResultsMode};
+    use crate::typst::testfixtures;
 
     fn chunk(results: ResultsMode) -> ChunkSpec {
-        ChunkSpec {
-            label: "fig-demo".to_string(),
-            engine: EngineName::R,
-            code: "x <- 1".to_string(),
-            exec_options: ExecOptions {
-                eval: true,
-                error: false,
-                fig_device_format: "svg".to_string(),
-                fig_device_dpi: 150,
-                fig_device_width: 6.0,
-                fig_device_height: None,
-                fig_device_aspect: 0.618,
-            },
-            display_options: DisplayOptions {
-                echo: true,
-                output: true,
-                results,
-                warning: true,
-                message: true,
-                placeholder: true,
-                fig_width: None,
-                fig_height: None,
-                fig_align: None,
-                fig_responsive: None,
-                fig_link: None,
-                fig_caption: None,
-                fig_cap_location: None,
-                fig_alt_text: None,
-                fig_subcaptions: None,
-                fig_layout_columns: None,
-                fig_layout_rows: None,
-                kind: None,
-            },
-            ordinal: 0,
-            crossref_labels: vec![],
-        }
+        let mut chunk = testfixtures::chunk("fig-demo", "x <- 1", results);
+        chunk.engine = EngineName::R;
+        chunk
     }
 
     fn figure_for(chunk: &ChunkSpec) -> FigureSpec {

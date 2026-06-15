@@ -1,30 +1,20 @@
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
+use crate::typst::crossref::has_crossref_prefix;
+use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 const RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
 
 pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
-    let mut staged_relative = PathBuf::from(".calepin");
-    let mut stem = layout.input_rel.clone();
-    stem.set_extension("");
-    staged_relative.push(stem);
-    staged_relative.push("source.typ");
+    let staged_relative = layout.artifact_relative_path("source.typ");
 
     let source = std::fs::read_to_string(&layout.input)
         .with_context(|| format!("failed to read {}", layout.input.display()))?;
     let staged = rewrite_calepin_imports(&source);
     let staged_path = layout.root.join(&staged_relative);
 
-    if let Some(parent) = staged_path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    if std::fs::read_to_string(&staged_path).is_ok_and(|existing| existing == staged) {
-        return Ok(staged_relative);
-    }
-    std::fs::write(&staged_path, staged)
-        .with_context(|| format!("failed to write {}", staged_path.display()))?;
+    write_if_changed(&staged_path, staged)?;
     Ok(staged_relative)
 }
 
@@ -175,9 +165,7 @@ fn is_executable_label_candidate_lang(raw_lang: Option<&str>) -> bool {
 }
 
 fn is_routed_crossref_label(label: &str) -> bool {
-    ["fig-", "tbl-", "lst-"]
-        .iter()
-        .any(|prefix| label.starts_with(prefix) && label.len() > prefix.len())
+    has_crossref_prefix(label)
 }
 
 fn typst_string_escape(value: &str) -> String {

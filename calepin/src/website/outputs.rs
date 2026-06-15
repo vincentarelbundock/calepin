@@ -11,35 +11,37 @@ use super::{PageInfoMap, PagefindManifest, WebsiteManifest, SKIP_DIRS};
 pub(super) const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
 const DEFAULT_FAVICON_SVG: &str = include_str!("../assets/default-favicon.svg");
 
-pub(super) fn expected_generated_outputs(
-    out_dir: &Path,
-    typ_files: &[PathBuf],
-    page_info: &PageInfoMap,
-    sitemap_path: &Option<PathBuf>,
-    robots_path: &Option<PathBuf>,
-    feed_paths: &BTreeSet<PathBuf>,
-    theme_asset_paths: &BTreeSet<PathBuf>,
-    default_favicon_path: Option<&Path>,
-) -> BTreeSet<PathBuf> {
+pub(super) struct GeneratedOutputInputs<'a> {
+    pub out_dir: &'a Path,
+    pub typ_files: &'a [PathBuf],
+    pub page_info: &'a PageInfoMap,
+    pub sitemap_path: &'a Option<PathBuf>,
+    pub robots_path: &'a Option<PathBuf>,
+    pub feed_paths: &'a BTreeSet<PathBuf>,
+    pub theme_asset_paths: &'a BTreeSet<PathBuf>,
+    pub default_favicon_path: Option<&'a Path>,
+}
+
+pub(super) fn expected_generated_outputs(inputs: GeneratedOutputInputs<'_>) -> BTreeSet<PathBuf> {
     let mut outputs = BTreeSet::new();
-    for input_path in typ_files {
-        if let Some(info) = page_info.get(input_path) {
-            outputs.insert(out_dir.join(&info.href));
+    for input_path in inputs.typ_files {
+        if let Some(info) = inputs.page_info.get(input_path) {
+            outputs.insert(inputs.out_dir.join(&info.href));
             if let Some(pdf_href) = &info.pdf_href {
-                outputs.insert(out_dir.join(pdf_href));
+                outputs.insert(inputs.out_dir.join(pdf_href));
             }
         }
     }
-    if let Some(path) = sitemap_path {
+    if let Some(path) = inputs.sitemap_path {
         outputs.insert(path.clone());
     }
-    if let Some(path) = robots_path {
+    if let Some(path) = inputs.robots_path {
         outputs.insert(path.clone());
     }
-    outputs.extend(feed_paths.iter().cloned());
-    outputs.extend(theme_asset_paths.iter().cloned());
-    if let Some(path) = default_favicon_path {
-        outputs.insert(out_dir.join(path));
+    outputs.extend(inputs.feed_paths.iter().cloned());
+    outputs.extend(inputs.theme_asset_paths.iter().cloned());
+    if let Some(path) = inputs.default_favicon_path {
+        outputs.insert(inputs.out_dir.join(path));
     }
     outputs
 }

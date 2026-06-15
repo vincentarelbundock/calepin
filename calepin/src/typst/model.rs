@@ -330,6 +330,21 @@ pub struct ResultItem {
     pub metadata: BTreeMap<String, Value>,
 }
 
+impl Default for ResultItem {
+    fn default() -> Self {
+        Self {
+            item_type: ResultItemType::Display,
+            name: None,
+            text: None,
+            level: None,
+            message: None,
+            traceback: None,
+            data: None,
+            metadata: BTreeMap::new(),
+        }
+    }
+}
+
 pub type MimeData = IndexMap<String, Value>;
 
 /// Serialized form of a routed cross-reference label, written into results.json
@@ -379,8 +394,26 @@ pub struct LayoutPaths {
     pub input_rel: PathBuf,
     pub render_input: PathBuf,
     pub work_dir: PathBuf,
+    pub artifact_dir: PathBuf,
     pub results_path: PathBuf,
     pub figures_dir: PathBuf,
+}
+
+impl LayoutPaths {
+    pub fn artifact_path(&self, name: impl AsRef<Path>) -> PathBuf {
+        self.artifact_dir.join(name)
+    }
+
+    pub fn artifact_relative_path(&self, name: impl AsRef<Path>) -> PathBuf {
+        let path = self.artifact_path(name);
+        path.strip_prefix(&self.root)
+            .map(Path::to_path_buf)
+            .unwrap_or(path)
+    }
+
+    pub fn sibling_path(&self, name: impl AsRef<Path>) -> PathBuf {
+        self.artifact_path(name)
+    }
 }
 
 #[cfg(test)]

@@ -63,7 +63,7 @@ pub(super) fn extract_document_title(source: &str) -> Option<String> {
             continue;
         }
         let open = skip_ws(source, after_document);
-        if source[open..].chars().next() != Some('(') {
+        if !source[open..].starts_with('(') {
             offset = after_document;
             continue;
         }
@@ -101,7 +101,7 @@ fn title_argument(args: &str) -> Option<&str> {
                 .is_some_and(is_identifier_char)
             {
                 let colon = skip_ws(args, after_name);
-                if args[colon..].chars().next() == Some(':') {
+                if args[colon..].starts_with(':') {
                     let value_start = skip_ws(args, colon + 1);
                     return Some(args[value_start..].trim());
                 }

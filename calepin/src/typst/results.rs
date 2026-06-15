@@ -1,7 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use indexmap::IndexMap;
 use std::path::Path;
 
+use crate::typst::io::write_if_changed;
 use crate::typst::model::{ChunkResultDocument, ResultsDocument, RESULT_SCHEMA_VERSION};
 use crate::typst::paths::slash_path;
 
@@ -22,45 +23,16 @@ pub fn build_results_document(
 }
 
 pub fn write_results(path: &Path, document: &ResultsDocument) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
     let json = serde_json::to_string_pretty(document)?;
     let json = format!("{}\n", json);
-    if std::fs::read_to_string(path).is_ok_and(|existing| existing == json) {
-        return Ok(());
-    }
-    std::fs::write(path, json).with_context(|| format!("failed to write {}", path.display()))
+    write_if_changed(path, json)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{ChunkStatus, DisplayOptions, EngineName, ResultsMode};
-
-    fn display_options() -> DisplayOptions {
-        DisplayOptions {
-            echo: true,
-            output: true,
-            results: ResultsMode::Render,
-            warning: true,
-            message: true,
-            placeholder: true,
-            fig_width: None,
-            fig_height: None,
-            fig_align: None,
-            fig_responsive: None,
-            fig_link: None,
-            fig_caption: None,
-            fig_cap_location: None,
-            fig_alt_text: None,
-            fig_subcaptions: None,
-            fig_layout_columns: None,
-            fig_layout_rows: None,
-            kind: None,
-        }
-    }
+    use crate::typst::model::{ChunkStatus, EngineName, ResultsMode};
+    use crate::typst::testfixtures::display_options;
 
     #[test]
     fn builds_results_document_keyed_by_label() {
@@ -70,7 +42,7 @@ mod tests {
                 label: "setup".to_string(),
                 engine: EngineName::Python,
                 status: ChunkStatus::Ok,
-                display_options: display_options(),
+                display_options: display_options(ResultsMode::Render),
                 items: Vec::new(),
                 crossref_labels: vec![],
             }],

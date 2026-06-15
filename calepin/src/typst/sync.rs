@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::typst::introspect::page_anchors;
+use crate::typst::io::write_if_changed;
 use crate::typst::model::{ChunkSpec, LayoutPaths};
 use crate::typst::paths::slash_path;
 
@@ -25,11 +26,7 @@ struct PageSyncEntry {
 }
 
 pub fn page_sync_path(layout: &LayoutPaths) -> PathBuf {
-    layout
-        .results_path
-        .parent()
-        .map(|parent| parent.join("pages.json"))
-        .unwrap_or_else(|| layout.root.join(".calepin/pages.json"))
+    layout.sibling_path("pages.json")
 }
 
 pub fn write_page_sync(typst: &Path, layout: &LayoutPaths, chunks: &[ChunkSpec]) -> Result<()> {
@@ -99,22 +96,16 @@ fn byte_index_to_line(source: &str, index: usize) -> usize {
 }
 
 fn write_page_sync_document(path: &Path, document: &PageSyncDocument) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
     let json = serde_json::to_string_pretty(document)?;
     let json = format!("{}\n", json);
-    if std::fs::read_to_string(path).is_ok_and(|existing| existing == json) {
-        return Ok(());
-    }
-    std::fs::write(path, json).with_context(|| format!("failed to write {}", path.display()))
+    write_if_changed(path, json)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{DisplayOptions, EngineName, ExecOptions, ResultsMode};
+    use crate::typst::model::ResultsMode;
+    use crate::typst::testfixtures;
 
     #[test]
     fn maps_chunks_to_source_lines_in_document_order() {
@@ -132,15 +123,8 @@ print(2)
 "#,
         )
         .unwrap();
-        let layout = LayoutPaths {
-            root: dir.path().to_path_buf(),
-            input,
-            input_rel: PathBuf::from("paper.typ"),
-            render_input: PathBuf::from("paper.typ"),
-            work_dir: dir.path().to_path_buf(),
-            results_path: dir.path().join(".calepin/paper/results.json"),
-            figures_dir: dir.path().join(".calepin/paper/figures"),
-        };
+        let mut layout = testfixtures::layout(dir.path());
+        layout.input = input;
         let chunks = vec![
             test_chunk("inline-1", "print(1)"),
             test_chunk("chunk-1", "print(2)"),
@@ -153,41 +137,6 @@ print(2)
     }
 
     fn test_chunk(label: &str, code: &str) -> ChunkSpec {
-        ChunkSpec {
-            label: label.to_string(),
-            engine: EngineName::Python,
-            code: code.to_string(),
-            exec_options: ExecOptions {
-                eval: true,
-                error: false,
-                fig_device_format: "svg".to_string(),
-                fig_device_dpi: 150,
-                fig_device_width: 6.0,
-                fig_device_height: None,
-                fig_device_aspect: 0.618,
-            },
-            display_options: DisplayOptions {
-                echo: true,
-                output: true,
-                results: ResultsMode::Verbatim,
-                warning: true,
-                message: true,
-                placeholder: true,
-                fig_width: None,
-                fig_height: None,
-                fig_align: None,
-                fig_responsive: None,
-                fig_link: None,
-                fig_caption: None,
-                fig_cap_location: None,
-                fig_alt_text: None,
-                fig_subcaptions: None,
-                fig_layout_columns: None,
-                fig_layout_rows: None,
-                kind: None,
-            },
-            ordinal: 0,
-            crossref_labels: vec![],
-        }
+        testfixtures::chunk(label, code, ResultsMode::Verbatim)
     }
 }

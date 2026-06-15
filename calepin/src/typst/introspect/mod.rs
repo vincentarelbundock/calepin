@@ -1,7 +1,7 @@
 mod eval;
 mod query;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -46,7 +46,7 @@ fn results_input(layout: &LayoutPaths) -> String {
 fn parse_page_anchor_entries(root: &Value) -> Result<HashMap<String, usize>> {
     let array = root
         .as_array()
-        .ok_or_else(|| anyhow::anyhow!("typst page sync output must be an array"))?;
+        .ok_or_else(|| anyhow!("typst page sync output must be an array"))?;
     let mut pages = HashMap::new();
 
     for item in array {
@@ -70,6 +70,23 @@ fn root_relative(path: &Path, root: &Path) -> PathBuf {
     path.strip_prefix(root).unwrap_or(path).to_path_buf()
 }
 
+fn split_page_meta(items: &[Value]) -> Result<(String, Option<Value>)> {
+    let page_meta_label = format!("<{PAGE_META_LABEL}>");
+    let mut rest = Vec::new();
+    let mut page_meta = None;
+    for item in items {
+        let label = item.get("label").and_then(Value::as_str);
+        if label == Some(page_meta_label.as_str()) {
+            if page_meta.is_none() {
+                page_meta = item.get("value").cloned();
+            }
+        } else {
+            rest.push(item.clone());
+        }
+    }
+    Ok((serde_json::to_string(&rest)?, page_meta))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,5 +99,23 @@ mod tests {
         .unwrap();
 
         assert_eq!(pages.get("chunk-1"), Some(&3));
+    }
+
+    #[test]
+    fn split_page_meta_separates_setup_entries_from_page_metadata() {
+        let setup = serde_json::json!([
+            {"func":"metadata","value":{"echo":true},"label":"<calepin-config>"},
+            {"func":"metadata","value":{"title":"T","pdf":false},"label":"<website-metadata>"}
+        ]);
+
+        let (setup_json, page_meta) = split_page_meta(setup.as_array().unwrap()).unwrap();
+
+        let setup: Value = serde_json::from_str(&setup_json).unwrap();
+        assert_eq!(setup.as_array().unwrap().len(), 1);
+        assert_eq!(setup[0]["label"], "<calepin-config>");
+        assert_eq!(
+            page_meta,
+            Some(serde_json::json!({"title": "T", "pdf": false}))
+        );
     }
 }

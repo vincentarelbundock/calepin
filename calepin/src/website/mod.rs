@@ -11,14 +11,12 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
 use notify::RecursiveMode;
-use notify_debouncer_full::new_debouncer;
 use serde::{Deserialize, Serialize};
 use xxhash_rust::xxh3::xxh3_64;
 
@@ -30,6 +28,9 @@ use crate::html::{
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions, PreprocessOutput};
+use crate::utils::static_files::path_has_common_skip_dir;
+pub(crate) use crate::utils::static_files::COMMON_SKIP_DIRS as SKIP_DIRS;
+use crate::utils::watch::{is_rebuild_event, run_debounced_watch};
 #[cfg(test)]
 use config::{LanguageConfig, SidebarItemConfig, SidebarSectionConfig};
 use config::{
@@ -47,7 +48,7 @@ use outputs::MANIFEST_PATH;
 use outputs::{
     clear_previous_outputs, copy_static_files, copy_typ_sources, expected_generated_outputs,
     load_manifest, reconcile_manifest_outputs, remove_unexpected_rendered_outputs,
-    static_output_paths, write_default_favicon, write_manifest,
+    static_output_paths, write_default_favicon, write_manifest, GeneratedOutputInputs,
 };
 #[cfg(test)]
 use pagefind::pagefind_page_url;
@@ -80,8 +81,6 @@ const DEFAULT_ROBOTS_TEMPLATE: &str =
 /// `--root` at its own directory, so the index is written into every page
 /// directory's `.calepin` and this reference resolves for all of them.
 const PAGES_INDEX_REF: &str = "/.calepin/website-pages.json";
-const SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
-
 pub(crate) fn scaffold_website(dir: &Path, force: bool) -> Result<()> {
     let docs = absolutize_for_create(dir)?;
     fs::create_dir_all(&docs).with_context(|| format!("failed to create {}", docs.display()))?;
@@ -365,15 +364,14 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .map(|_| out_dir.join("sitemap.xml"));
     let robots_path = config.robots_enabled().then(|| out_dir.join(ROBOTS_FILE));
     let feed_targets = feed_targets(&config)?;
-    let feed_paths: BTreeSet<PathBuf> = config
-        .feeds_enabled()
-        .then(|| {
-            feed_targets
-                .iter()
-                .map(|feed| out_dir.join(&feed.filename))
-                .collect()
-        })
-        .unwrap_or_default();
+    let feed_paths: BTreeSet<PathBuf> = if config.feeds_enabled() {
+        feed_targets
+            .iter()
+            .map(|feed| out_dir.join(&feed.filename))
+            .collect()
+    } else {
+        BTreeSet::new()
+    };
     let minify_html = args.minify_html || config.minify.unwrap_or(false);
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
     let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
@@ -393,16 +391,17 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
     let pages_signature = xxh3_64(pages_index_json.as_bytes());
     write_pages_index(&typ_files, &pages_index_json)?;
-    let expected_outputs = expected_generated_outputs(
-        &out_dir,
-        &typ_files,
-        &page_info,
-        &sitemap_path,
-        &robots_path,
-        &feed_paths,
-        &theme_assets.output_paths(&out_dir),
-        default_favicon_path.as_deref(),
-    );
+    let theme_asset_paths = theme_assets.output_paths(&out_dir);
+    let expected_outputs = expected_generated_outputs(GeneratedOutputInputs {
+        out_dir: &out_dir,
+        typ_files: &typ_files,
+        page_info: &page_info,
+        sitemap_path: &sitemap_path,
+        robots_path: &robots_path,
+        feed_paths: &feed_paths,
+        theme_asset_paths: &theme_asset_paths,
+        default_favicon_path: default_favicon_path.as_deref(),
+    });
     let mut expected_outputs = if out_dir == src_dir {
         expected_outputs
     } else {
@@ -556,19 +555,12 @@ fn watch_site(
     })
     .context("failed to set Ctrl+C handler")?;
 
-    let (tx, rx) = mpsc::channel();
-    let mut debouncer = new_debouncer(Duration::from_millis(350), None, tx)
-        .context("failed to create file watcher")?;
-    debouncer
-        .watch(&current.src_dir, RecursiveMode::Recursive)
-        .with_context(|| format!("failed to watch {}", current.src_dir.display()))?;
-    debouncer
-        .watch(&current.config_path, RecursiveMode::NonRecursive)
-        .with_context(|| format!("failed to watch {}", current.config_path.display()))?;
+    let mut watches = vec![
+        (current.src_dir.clone(), RecursiveMode::Recursive),
+        (current.config_path.clone(), RecursiveMode::NonRecursive),
+    ];
     if let Some(theme_dir) = current.theme_dir.as_deref() {
-        debouncer
-            .watch(theme_dir, RecursiveMode::Recursive)
-            .with_context(|| format!("failed to watch {}", theme_dir.display()))?;
+        watches.push((theme_dir.to_path_buf(), RecursiveMode::Recursive));
     }
 
     if !quiet {
@@ -576,70 +568,45 @@ fn watch_site(
         eprintln!("Press Ctrl+C to stop.");
     }
 
-    loop {
-        if stop.load(Ordering::Relaxed) {
-            break;
-        }
-        match rx.recv_timeout(Duration::from_millis(200)) {
-            Ok(Ok(events)) => {
-                let mut changed = Vec::new();
-                for event in events {
-                    if !is_rebuild_event(&event.event.kind) {
-                        continue;
-                    }
-                    for path in event.event.paths {
-                        let path = path.canonicalize().unwrap_or(path);
-                        if should_rebuild_for_path(&current, &path) && !changed.contains(&path) {
-                            changed.push(path);
-                        }
-                    }
+    run_debounced_watch(
+        &watches,
+        Duration::from_millis(350),
+        Duration::from_millis(200),
+        stop,
+        is_rebuild_event,
+        Some,
+        |raw_changed| {
+            let changed = raw_changed
+                .iter()
+                .filter(|path| should_rebuild_for_path(&current, path))
+                .cloned()
+                .collect::<Vec<_>>();
+            if changed.is_empty() {
+                return;
+            }
+            if !quiet {
+                let names = changed
+                    .iter()
+                    .filter_map(|path| path.file_name())
+                    .map(|name| name.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                eprintln!("rebuilding {names}...");
+            }
+            match rebuild_changed_pages(&options, &current, &changed) {
+                Ok(Some(next)) => {
+                    current = next;
+                    live.rebuilt();
                 }
-                if changed.is_empty() {
-                    continue;
-                }
-                if !quiet {
-                    let names = changed
-                        .iter()
-                        .filter_map(|path| path.file_name())
-                        .map(|name| name.to_string_lossy().to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    eprintln!("rebuilding {names}...");
-                }
-                match rebuild_changed_pages(&options, &current, &changed) {
-                    Ok(Some(next)) => {
-                        current = next;
-                        live.rebuilt();
-                    }
-                    Ok(None) => {}
-                    Err(error) => {
-                        cwarn!("website rebuild failed: {}", error);
-                        live.set_error(format!("{error:#}"));
-                    }
+                Ok(None) => {}
+                Err(error) => {
+                    cwarn!("website rebuild failed: {}", error);
+                    live.set_error(format!("{error:#}"));
                 }
             }
-            Ok(Err(errors)) => {
-                for error in errors {
-                    cwarn!("watch error: {}", error);
-                }
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => {}
-            Err(mpsc::RecvTimeoutError::Disconnected) => break,
-        }
-    }
-
-    Ok(())
-}
-
-fn is_rebuild_event(kind: &notify::EventKind) -> bool {
-    matches!(
-        kind,
-        notify::EventKind::Create(_)
-            | notify::EventKind::Modify(notify::event::ModifyKind::Data(_))
-            | notify::EventKind::Modify(notify::event::ModifyKind::Name(_))
-            | notify::EventKind::Modify(notify::event::ModifyKind::Any)
-            | notify::EventKind::Remove(_)
+        },
     )
+    .map(|_| ())
 }
 
 fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
@@ -663,12 +630,7 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     if rel.components().next().is_none() {
         return false;
     }
-    if rel.components().any(|component| {
-        component
-            .as_os_str()
-            .to_str()
-            .is_some_and(|name| SKIP_DIRS.contains(&name))
-    }) {
+    if path_has_common_skip_dir(rel) {
         return false;
     }
     if path.starts_with(&initial.out_dir) {
@@ -1277,6 +1239,16 @@ struct NavItemInput<'a> {
     icon: Option<&'a str>,
 }
 
+struct NavItemResolution<'a> {
+    context: &'a str,
+    src_dir: &'a Path,
+    pages: Option<&'a PagesConfig>,
+    all_typ_files: &'a [PathBuf],
+    used: &'a mut BTreeSet<PathBuf>,
+    build_files: &'a mut Vec<PathBuf>,
+    skip_duplicate_items: bool,
+}
+
 #[derive(Debug, Clone, Default)]
 struct NavbarPlan {
     left: Vec<NavbarItemPlan>,
@@ -1432,16 +1404,16 @@ fn discover_pages(
                 icon: item.icon.as_deref(),
             })
             .collect::<Vec<_>>();
-        let items = resolve_nav_item_plans(
-            "sidebar",
+        let mut resolution = NavItemResolution {
+            context: "sidebar",
             src_dir,
             pages,
-            &all_typ_files,
-            &inputs,
-            &mut used,
-            &mut build_files,
-            true,
-        )?;
+            all_typ_files: &all_typ_files,
+            used: &mut used,
+            build_files: &mut build_files,
+            skip_duplicate_items: true,
+        };
+        let items = resolve_nav_item_plans(&mut resolution, &inputs)?;
         sections.push(NavSectionPlan {
             language: language.clone(),
             title: section_config.title.clone(),
@@ -1476,16 +1448,16 @@ fn discover_navbar(
                 icon: item.icon.as_deref(),
             })
             .collect::<Vec<_>>();
-        resolve_nav_item_plans(
-            "navbar",
+        let mut resolution = NavItemResolution {
+            context: "navbar",
             src_dir,
             pages,
-            &all_typ_files,
-            &inputs,
-            &mut used,
-            &mut files,
-            false,
-        )
+            all_typ_files: &all_typ_files,
+            used: &mut used,
+            build_files: &mut files,
+            skip_duplicate_items: false,
+        };
+        resolve_nav_item_plans(&mut resolution, &inputs)
     };
     let left = navbar
         .item
@@ -1514,14 +1486,8 @@ fn discover_navbar(
 }
 
 fn resolve_nav_item_plans(
-    context: &str,
-    src_dir: &Path,
-    pages: Option<&PagesConfig>,
-    all_typ_files: &[PathBuf],
+    resolution: &mut NavItemResolution<'_>,
     inputs: &[NavItemInput<'_>],
-    used: &mut BTreeSet<PathBuf>,
-    build_files: &mut Vec<PathBuf>,
-    skip_duplicate_items: bool,
 ) -> Result<Vec<NavItemPlan>> {
     let mut items = Vec::new();
     for input in inputs {
@@ -1533,9 +1499,9 @@ fn resolve_nav_item_plans(
             .filter(|target| !target.is_empty())
         {
             if input.glob.is_some_and(|glob| !glob.trim().is_empty()) {
-                bail!("{context} target items cannot also set glob");
+                bail!("{} target items cannot also set glob", resolution.context);
             }
-            match resolve_nav_target(context, src_dir, target) {
+            match resolve_nav_target(resolution.context, resolution.src_dir, target) {
                 Some(NavTarget::Url(url)) => {
                     items.push(NavItemPlan {
                         path: None,
@@ -1545,11 +1511,11 @@ fn resolve_nav_item_plans(
                     });
                 }
                 Some(NavTarget::Page(path)) => {
-                    let first_use = used.insert(path.clone());
+                    let first_use = resolution.used.insert(path.clone());
                     if first_use {
-                        build_files.push(path.clone());
+                        resolution.build_files.push(path.clone());
                     }
-                    if first_use || !skip_duplicate_items {
+                    if first_use || !resolution.skip_duplicate_items {
                         items.push(NavItemPlan {
                             path: Some(path),
                             url: None,
@@ -1563,15 +1529,21 @@ fn resolve_nav_item_plans(
             continue;
         }
 
-        for path in resolve_file_list(context, src_dir, None, input.glob, all_typ_files)?
-            .into_iter()
-            .filter(|path| !page_is_excluded(src_dir, path, pages))
+        for path in resolve_file_list(
+            resolution.context,
+            resolution.src_dir,
+            None,
+            input.glob,
+            resolution.all_typ_files,
+        )?
+        .into_iter()
+        .filter(|path| !page_is_excluded(resolution.src_dir, path, resolution.pages))
         {
-            let first_use = used.insert(path.clone());
+            let first_use = resolution.used.insert(path.clone());
             if first_use {
-                build_files.push(path.clone());
+                resolution.build_files.push(path.clone());
             }
-            if first_use || !skip_duplicate_items {
+            if first_use || !resolution.skip_duplicate_items {
                 items.push(NavItemPlan {
                     path: Some(path),
                     url: None,
@@ -1721,12 +1693,7 @@ fn collect_static_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Resu
         let entry = entry?;
         let path = entry.path();
         let rel = path.strip_prefix(root).unwrap_or(&path);
-        if rel.components().any(|component| {
-            component
-                .as_os_str()
-                .to_str()
-                .is_some_and(|name| SKIP_DIRS.contains(&name))
-        }) {
+        if path_has_common_skip_dir(rel) {
             continue;
         }
         if path.is_dir() {

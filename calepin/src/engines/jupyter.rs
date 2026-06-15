@@ -238,6 +238,16 @@ pub struct JupyterBridgeSession {
     proc: SubprocessSession,
 }
 
+pub struct JupyterCapture<'a> {
+    pub kernel: &'a str,
+    pub code: &'a str,
+    pub fig_path: &'a str,
+    pub fig_format: &'a str,
+    pub width: f64,
+    pub height: f64,
+    pub dpi: f64,
+}
+
 impl JupyterBridgeSession {
     pub fn init_with_program(
         program: &Path,
@@ -272,28 +282,19 @@ impl JupyterBridgeSession {
         Ok(Self { proc })
     }
 
-    pub fn capture(
-        &mut self,
-        kernel: &str,
-        code: &str,
-        fig_path: &str,
-        fig_format: &str,
-        width: f64,
-        height: f64,
-        dpi: f64,
-    ) -> Result<String> {
+    pub fn capture(&mut self, request: JupyterCapture<'_>) -> Result<String> {
         let sentinel = make_sentinel();
         let timeout_secs = self.proc.timeout().map(|d| d.as_secs_f64()).unwrap_or(30.0);
         let meta = serde_json::json!({
-            "kernel": kernel,
-            "fig_path": fig_path,
-            "fig_format": fig_format,
-            "width": width,
-            "height": height,
-            "dpi": dpi,
+            "kernel": request.kernel,
+            "fig_path": request.fig_path,
+            "fig_format": request.fig_format,
+            "width": request.width,
+            "height": request.height,
+            "dpi": request.dpi,
             "timeout": timeout_secs,
         });
-        let payload = format!("META:{meta}\n{code}");
+        let payload = format!("META:{meta}\n{}", request.code);
         self.proc.execute(&sentinel, &payload)
     }
 
@@ -360,19 +361,19 @@ mod tests {
         .unwrap();
 
         let raw = session
-            .capture(
-                "python3",
-                r#"from IPython.display import display
+            .capture(JupyterCapture {
+                kernel: "python3",
+                code: r#"from IPython.display import display
 display({
     "image/svg+xml": "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><circle cx='5' cy='5' r='4'/></svg>",
     "text/plain": "fallback text",
 }, raw=True)"#,
-                &fig_path,
-                "svg",
-                6.0,
-                3.708,
-                150.0,
-            )
+                fig_path: &fig_path,
+                fig_format: "svg",
+                width: 6.0,
+                height: 3.708,
+                dpi: 150.0,
+            })
             .unwrap();
 
         assert!(raw.contains("_PLOT:"), "{raw}");
@@ -400,17 +401,17 @@ display({
         .unwrap();
 
         let raw = session
-            .capture(
-                "python3",
-                r#"from IPython.display import display
+            .capture(JupyterCapture {
+                kernel: "python3",
+                code: r#"from IPython.display import display
 display({"image/svg+xml": "<svg xmlns='http://www.w3.org/2000/svg'><path d='M0 0L1 1'/></svg>"}, raw=True)
 display({"image/svg+xml": "<svg xmlns='http://www.w3.org/2000/svg'><path d='M1 0L0 1'/></svg>"}, raw=True)"#,
-                &fig_path,
-                "svg",
-                6.0,
-                3.708,
-                150.0,
-            )
+                fig_path: &fig_path,
+                fig_format: "svg",
+                width: 6.0,
+                height: 3.708,
+                dpi: 150.0,
+            })
             .unwrap();
 
         assert_eq!(raw.matches("_PLOT:").count(), 2, "{raw}");

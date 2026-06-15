@@ -1,8 +1,9 @@
+use std::ffi::OsString;
 use std::path::Path;
-use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
 
+use crate::typst::run::run_typst_capture;
 use crate::utils::{process, tools};
 
 pub const REQUIRED_TYPST_VERSION: &str = "0.14.2";
@@ -23,20 +24,16 @@ pub fn assert_supported_typst(typst: &Path) -> Result<()> {
 }
 
 pub fn typst_version(typst: &Path) -> Result<String> {
-    let output = Command::new(typst)
-        .arg("--version")
-        .output()
-        .map_err(|error| {
-            process::spawn_error(typst, "check typst version", error, Some(&tools::TYPST))
-        })?;
-    if !output.status.success() {
-        return Err(anyhow!(
-            "failed to check typst version:\n{}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-    let stdout =
-        String::from_utf8(output.stdout).context("typst --version output was not UTF-8")?;
+    let args = vec![OsString::from("--version")];
+    let cwd = std::env::current_dir().context("failed to resolve current directory")?;
+    let stdout = run_typst_capture(
+        typst,
+        "check typst version",
+        &args,
+        &cwd,
+        |stderr| format!("failed to check typst version:\n{stderr}"),
+        "typst --version output was not UTF-8",
+    )?;
     parse_typst_version(&stdout)
 }
 

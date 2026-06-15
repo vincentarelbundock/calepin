@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -10,6 +10,10 @@ use anyhow::{anyhow, Context, Result};
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 use crate::cli::ServeArgs;
+use crate::utils::static_files::{
+    content_type, path_stays_under_root, resolve_request_path, APPLICATION_JSON_UTF8,
+    CACHE_CONTROL_NO_STORE, TEXT_PLAIN_UTF8,
+};
 
 const DEFAULT_PORT: u16 = 8000;
 const AUTO_PORT_ATTEMPTS: u16 = 50;
@@ -256,20 +260,15 @@ fn respond(
         let status = live
             .map(LiveReload::status_json)
             .unwrap_or_else(|| "{\"version\":0,\"error\":null}".to_string());
-        return send_text(request, 200, "application/json; charset=utf-8", &status);
+        return send_text(request, 200, APPLICATION_JSON_UTF8, &status);
     }
 
     if request.method() != &Method::Get && request.method() != &Method::Head {
-        return send_text(
-            request,
-            405,
-            "text/plain; charset=utf-8",
-            "Method Not Allowed",
-        );
+        return send_text(request, 405, TEXT_PLAIN_UTF8, "Method Not Allowed");
     }
 
-    let Some(path) = resolve_request_path(root, request.url(), base_path_prefix) else {
-        return send_text(request, 403, "text/plain; charset=utf-8", "Forbidden");
+    let Some(path) = resolve_request_path(root, request.url(), base_path_prefix, true) else {
+        return send_text(request, 403, TEXT_PLAIN_UTF8, "Forbidden");
     };
     let path = if path.is_dir() {
         path.join("index.html")
@@ -281,47 +280,37 @@ fn respond(
         if fallback.is_file() && path_stays_under_root(root, &fallback) {
             return send_file(request, &fallback, 404, live);
         }
-        return send_text(request, 404, "text/plain; charset=utf-8", "Not Found");
+        return send_text(request, 404, TEXT_PLAIN_UTF8, "Not Found");
     }
     if !path_stays_under_root(root, &path) {
-        return send_text(request, 403, "text/plain; charset=utf-8", "Forbidden");
+        return send_text(request, 403, TEXT_PLAIN_UTF8, "Forbidden");
     }
 
     send_file(request, &path, 200, live)
 }
 
 fn send_file(request: Request, path: &Path, status: u16, live: Option<&LiveReload>) -> Result<()> {
-    let mime = mime_guess::from_path(&path)
-        .first_or_octet_stream()
-        .essence_str()
-        .to_string();
-    let is_html = mime == "text/html";
-    let mut body = fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+    let mime = content_type(path);
+    let is_html = mime.starts_with("text/html");
+    let mut body = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     if is_html && live.is_some() {
         body = inject_reload_script(body);
     }
 
     if request.method() == &Method::Head {
         let response = Response::empty(StatusCode(status))
-            .with_header(content_type_header(&mime)?)
+            .with_header(content_type_header(mime)?)
             .with_header(content_length_header(body.len())?)
             .with_header(no_store_header()?);
         request.respond(response)?;
     } else {
         let response = Response::from_data(body)
             .with_status_code(StatusCode(status))
-            .with_header(content_type_header(&mime)?)
+            .with_header(content_type_header(mime)?)
             .with_header(no_store_header()?);
         request.respond(response)?;
     }
     Ok(())
-}
-
-fn path_stays_under_root(root: &Path, path: &Path) -> bool {
-    let Ok(root) = fs::canonicalize(root) else {
-        return false;
-    };
-    fs::canonicalize(path).is_ok_and(|path| path.starts_with(root))
 }
 
 fn send_text(request: Request, status: u16, content_type: &str, body: &str) -> Result<()> {
@@ -344,7 +333,7 @@ fn content_length_header(length: usize) -> Result<Header> {
 }
 
 fn no_store_header() -> Result<Header> {
-    Header::from_bytes("Cache-Control", "no-store")
+    Header::from_bytes("Cache-Control", CACHE_CONTROL_NO_STORE)
         .map_err(|_| anyhow!("failed to create cache-control header"))
 }
 
@@ -403,74 +392,6 @@ fn find_case_insensitive(haystack: &[u8], needle: &[u8]) -> Option<usize> {
         .position(|window| window.eq_ignore_ascii_case(needle))
 }
 
-fn resolve_request_path(
-    root: &Path,
-    target: &str,
-    base_path_prefix: Option<&str>,
-) -> Option<PathBuf> {
-    let path = target
-        .split_once('?')
-        .map(|(path, _)| path)
-        .unwrap_or(target);
-    let decoded = percent_decode(path)?;
-    let decoded = strip_base_path_prefix(&decoded, base_path_prefix);
-    let mut out = root.to_path_buf();
-    for component in Path::new(decoded.trim_start_matches('/')).components() {
-        match component {
-            Component::Normal(part) => out.push(part),
-            Component::CurDir => {}
-            Component::ParentDir | Component::RootDir | Component::Prefix(_) => return None,
-        }
-    }
-    Some(out)
-}
-
-fn strip_base_path_prefix<'a>(path: &'a str, base_path_prefix: Option<&str>) -> &'a str {
-    let Some(prefix) = base_path_prefix else {
-        return path;
-    };
-    let prefix = prefix.trim_end_matches('/');
-    if prefix.is_empty() || prefix == "/" {
-        return path;
-    }
-    if path == prefix {
-        return "/";
-    }
-    path.strip_prefix(prefix)
-        .filter(|rest| rest.starts_with('/'))
-        .unwrap_or(path)
-}
-
-fn percent_decode(value: &str) -> Option<String> {
-    let bytes = value.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'%' {
-            if index + 2 >= bytes.len() {
-                return None;
-            }
-            let high = hex_value(bytes[index + 1])?;
-            let low = hex_value(bytes[index + 2])?;
-            out.push(high * 16 + low);
-            index += 3;
-        } else {
-            out.push(bytes[index]);
-            index += 1;
-        }
-    }
-    String::from_utf8(out).ok()
-}
-
-fn hex_value(byte: u8) -> Option<u8> {
-    match byte {
-        b'0'..=b'9' => Some(byte - b'0'),
-        b'a'..=b'f' => Some(byte - b'a' + 10),
-        b'A'..=b'F' => Some(byte - b'A' + 10),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -480,9 +401,9 @@ mod tests {
     #[test]
     fn request_path_rejects_traversal() {
         let root = Path::new("/tmp/site");
-        assert!(resolve_request_path(root, "/index.html", None).is_some());
-        assert!(resolve_request_path(root, "/../secret", None).is_none());
-        assert!(resolve_request_path(root, "/%2e%2e/secret", None).is_none());
+        assert!(resolve_request_path(root, "/index.html", None, true).is_some());
+        assert!(resolve_request_path(root, "/../secret", None, true).is_none());
+        assert!(resolve_request_path(root, "/%2e%2e/secret", None, true).is_none());
     }
 
     #[test]
@@ -490,15 +411,22 @@ mod tests {
         let root = Path::new("/tmp/site");
 
         assert_eq!(
-            resolve_request_path(root, "/calepin/notebooks/guide.html", Some("/calepin")).unwrap(),
+            resolve_request_path(
+                root,
+                "/calepin/notebooks/guide.html",
+                Some("/calepin"),
+                true
+            )
+            .unwrap(),
             root.join("notebooks").join("guide.html")
         );
         assert_eq!(
-            resolve_request_path(root, "/calepin", Some("/calepin")).unwrap(),
+            resolve_request_path(root, "/calepin", Some("/calepin"), true).unwrap(),
             root
         );
         assert_eq!(
-            resolve_request_path(root, "/other/notebooks/guide.html", Some("/calepin")).unwrap(),
+            resolve_request_path(root, "/other/notebooks/guide.html", Some("/calepin"), true)
+                .unwrap(),
             root.join("other").join("notebooks").join("guide.html")
         );
     }

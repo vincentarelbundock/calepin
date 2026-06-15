@@ -1,10 +1,9 @@
 use anyhow::{anyhow, Result};
 use serde_json::Value;
 
-pub fn parse_chunk_body_with_qmd_header(
-    body: &Value,
-    label: &str,
-) -> Result<(String, Vec<(String, Value)>, Vec<String>)> {
+pub type ParsedChunkSource = (String, Vec<(String, Value)>, Vec<String>);
+
+pub fn parse_chunk_body_with_qmd_header(body: &Value, label: &str) -> Result<ParsedChunkSource> {
     let (raw, _) = extract_raw_node_and_fence_label(body, label)?;
     parse_chunk_source_with_qmd_header(
         raw.get("text")
@@ -14,10 +13,7 @@ pub fn parse_chunk_body_with_qmd_header(
     )
 }
 
-pub fn parse_chunk_source_with_qmd_header(
-    source: &str,
-    label: &str,
-) -> Result<(String, Vec<(String, Value)>, Vec<String>)> {
+pub fn parse_chunk_source_with_qmd_header(source: &str, label: &str) -> Result<ParsedChunkSource> {
     let mut code = String::new();
     let mut overrides = Vec::new();
     let mut warnings = Vec::new();
@@ -147,7 +143,7 @@ fn raw_node_label(node: &Value) -> Result<Option<String>> {
         .transpose()
 }
 
-fn query_label_name(value: &str) -> Result<String> {
+pub(crate) fn query_label_name(value: &str) -> Result<String> {
     if value.starts_with('<') && value.ends_with('>') && value.len() >= 2 {
         let name = &value[1..value.len() - 1];
         if name.is_empty() {
@@ -198,16 +194,18 @@ fn is_whitespace_node(node: &Value) -> bool {
         .is_some_and(|s| s.trim().is_empty())
 }
 
+const BASE_CHUNK_KEYS: [&str; 7] = [
+    "body",
+    "code",
+    "crossref-labels",
+    "engine",
+    "label",
+    "kind",
+    "lang",
+];
+
 fn supported_chunk_argument_names() -> String {
-    let mut names: Vec<&str> = vec![
-        "body",
-        "code",
-        "crossref-labels",
-        "engine",
-        "label",
-        "kind",
-        "lang",
-    ];
+    let mut names: Vec<&str> = BASE_CHUNK_KEYS.to_vec();
     names.extend_from_slice(native_chunk_option_names());
     names.sort_unstable();
     names.dedup();
@@ -215,10 +213,7 @@ fn supported_chunk_argument_names() -> String {
 }
 
 fn is_supported_chunk_key(name: &str) -> bool {
-    matches!(
-        name,
-        "body" | "code" | "crossref-labels" | "engine" | "label" | "kind" | "lang"
-    ) || is_native_chunk_option(name)
+    BASE_CHUNK_KEYS.contains(&name) || is_native_chunk_option(name)
 }
 
 fn resolve_chunk_option_name(raw_key: &str, label: &str, line_no: usize) -> Result<(String, bool)> {

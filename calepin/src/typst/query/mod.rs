@@ -1,19 +1,26 @@
+mod options;
+mod value;
+
 use anyhow::{anyhow, Context, Result};
 use serde_json::Value;
 use std::collections::HashSet;
 
 use crate::typst::chunk_options::{
     fence_label_from_chunk_body, parse_chunk_body_with_qmd_header,
-    parse_chunk_source_with_qmd_header, validate_chunk_arguments,
+    parse_chunk_source_with_qmd_header, query_label_name, validate_chunk_arguments,
 };
 use crate::typst::crossref::parse_label_names;
-use crate::typst::model::{
-    ChunkSpec, CrossrefLabelDoc, DisplayOptions, EngineName, ExecOptions, FencedChunks,
-    ResultsMode, SetupDefaults,
+use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName, FencedChunks};
+
+use options::parse_chunk_options;
+pub use options::{parse_setup_config, SetupConfig};
+use value::{
+    is_auto, is_calepin_chunk_metadata, is_calepin_fence_label_metadata, is_raw_code_block,
+    parse_query_values, value_for,
 };
 
-#[allow(dead_code)]
-pub fn parse_chunks(query_json: &str, defaults: Option<SetupConfig>) -> Result<Vec<ChunkSpec>> {
+#[cfg(test)]
+fn parse_chunks(query_json: &str, defaults: Option<SetupConfig>) -> Result<Vec<ChunkSpec>> {
     Ok(parse_chunks_with_warnings(query_json, defaults)?.chunks)
 }
 
@@ -47,14 +54,17 @@ pub fn parse_chunks_with_warnings(
                 .filter(|value| is_calepin_fence_label_metadata(value))
                 .map(parse_fence_label_metadata)
                 .transpose()?;
+            let mut state = ChunkParseState {
+                seen: &mut seen,
+                auto_label_index: &mut auto_label_index,
+                warnings: &mut warnings,
+            };
             if let Some(chunk) = parse_chunk_raw_block(
                 value,
                 &config,
-                &mut seen,
-                &mut auto_label_index,
+                &mut state,
                 ordinal,
                 has_chunk_metadata,
-                &mut warnings,
                 lookahead_fence_label.clone(),
             )? {
                 raw_labels.insert(chunk.label.clone());
@@ -95,38 +105,10 @@ pub fn parse_chunks_with_warnings(
     Ok(ChunkParseResult { chunks, warnings })
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct SetupConfig {
-    pub defaults: SetupDefaults,
-}
-
-impl Default for SetupConfig {
-    fn default() -> Self {
-        Self {
-            defaults: SetupDefaults::default(),
-        }
-    }
-}
-
-fn is_calepin_chunk_metadata(value: &Value) -> bool {
-    value.get("func") == Some(&Value::String("metadata".into()))
-        && value
-            .get("label")
-            .and_then(Value::as_str)
-            .is_some_and(|value| value == "<calepin-chunk>")
-}
-
-fn is_raw_code_block(value: &Value) -> bool {
-    value.get("func") == Some(&Value::String("raw".into()))
-        && value.get("block").and_then(Value::as_bool) == Some(true)
-}
-
-fn is_calepin_fence_label_metadata(value: &Value) -> bool {
-    value.get("func") == Some(&Value::String("metadata".into()))
-        && value
-            .get("label")
-            .and_then(Value::as_str)
-            .is_some_and(|value| value == "<calepin-fence-label>")
+struct ChunkParseState<'a> {
+    seen: &'a mut HashSet<String>,
+    auto_label_index: &'a mut usize,
+    warnings: &'a mut Vec<String>,
 }
 
 fn parse_fence_label_metadata(value: &Value) -> Result<String> {
@@ -144,20 +126,6 @@ fn raw_block_query_label(value: &Value) -> Result<Option<String>> {
         .and_then(Value::as_str)
         .map(query_label_name)
         .transpose()
-}
-
-fn query_label_name(value: &str) -> Result<String> {
-    if value.starts_with('<') && value.ends_with('>') && value.len() >= 2 {
-        let name = &value[1..value.len() - 1];
-        if name.is_empty() {
-            return Err(anyhow!("fence label must not be empty"));
-        }
-        Ok(name.to_string())
-    } else if value.is_empty() {
-        Err(anyhow!("fence label must not be empty"))
-    } else {
-        Ok(value.to_string())
-    }
 }
 
 fn parse_chunk_metadata(
@@ -186,12 +154,7 @@ fn parse_chunk_metadata(
     let value = Value::Object(value_with_options);
     let engine = parse_engine(&value)?;
     let defaults = &config.defaults;
-    let fig_width = raw_option(&value, "fig-width").or_else(|| defaults.fig_width.clone());
-    let fig_align = raw_option(&value, "fig-align").or_else(|| defaults.fig_align.clone());
-    let fig_responsive = opt_bool_option(&value, "fig-responsive")?.or(defaults.fig_responsive);
-    let exec_options = parse_exec_options(&value, defaults, &fig_width)?;
-    let display_options =
-        parse_display_options(&value, defaults, fig_width, fig_align, fig_responsive)?;
+    let (exec_options, display_options) = parse_chunk_options(&value, defaults)?;
     let mut crossref_labels = parse_crossref_labels(&value)
         .map_err(|err| anyhow!("invalid cross-reference labels for chunk `{label}`: {err}"))?;
     if let Some(fence_label) = fence_label {
@@ -249,11 +212,9 @@ fn normalize_chunk_label(
 fn parse_chunk_raw_block(
     value: &Value,
     config: &SetupConfig,
-    seen: &mut HashSet<String>,
-    auto_label_index: &mut usize,
+    state: &mut ChunkParseState<'_>,
     ordinal: usize,
     has_chunk_metadata: bool,
-    warnings: &mut Vec<String>,
     lookahead_fence_label: Option<String>,
 ) -> Result<Option<ChunkSpec>> {
     let Some(lang) = value.get("lang").and_then(Value::as_str) else {
@@ -267,10 +228,10 @@ fn parse_chunk_raw_block(
     };
     let raw_fence_label = raw_block_query_label(value)?;
     let raw_text = value.get("text").and_then(Value::as_str).unwrap_or("");
-    let label_hint = format!("chunk-{}", *auto_label_index);
+    let label_hint = format!("chunk-{}", *state.auto_label_index);
     let (raw_code, chunk_options, mut header_warnings) =
         parse_chunk_source_with_qmd_header(raw_text, &label_hint)?;
-    warnings.append(&mut header_warnings);
+    state.warnings.append(&mut header_warnings);
     let mut value_with_options = value
         .as_object()
         .cloned()
@@ -314,53 +275,25 @@ fn parse_chunk_raw_block(
             ));
         }
         let names = label_names_from_value(label_value)?;
-        let labels = parse_label_names(&names)
-            .map_err(|err| anyhow!("invalid cross-reference labels for fenced chunk: {err}"))?;
-        let label = names
-            .first()
-            .cloned()
-            .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
-        if !seen.insert(label.clone()) {
-            return Err(anyhow!("duplicate label `{}`", label));
-        }
-        bump_auto_label(auto_label_index, &label);
-        (
-            label,
-            labels
-                .into_iter()
-                .map(|label| label.to_doc())
-                .collect::<Vec<_>>(),
-        )
+        resolve_named_label(
+            names,
+            state.seen,
+            state.auto_label_index,
+            "invalid cross-reference labels for fenced chunk",
+        )?
     } else if let Some(fence_label) = fence_label {
-        let names = vec![fence_label];
-        let labels = parse_label_names(&names)
-            .map_err(|err| anyhow!("invalid trailing fence label for fenced chunk: {err}"))?;
-        let label = names
-            .first()
-            .cloned()
-            .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
-        if !seen.insert(label.clone()) {
-            return Err(anyhow!("duplicate label `{}`", label));
-        }
-        bump_auto_label(auto_label_index, &label);
-        (
-            label,
-            labels
-                .into_iter()
-                .map(|label| label.to_doc())
-                .collect::<Vec<_>>(),
-        )
+        resolve_named_label(
+            vec![fence_label],
+            state.seen,
+            state.auto_label_index,
+            "invalid trailing fence label for fenced chunk",
+        )?
     } else {
-        let label = next_available_label(seen, auto_label_index);
-        seen.insert(label.clone());
+        let label = next_available_label(state.seen, state.auto_label_index);
+        state.seen.insert(label.clone());
         (label, vec![])
     };
-    let fig_width = raw_option(&value, "fig-width").or_else(|| defaults.fig_width.clone());
-    let fig_align = raw_option(&value, "fig-align").or_else(|| defaults.fig_align.clone());
-    let fig_responsive = opt_bool_option(&value, "fig-responsive")?.or(defaults.fig_responsive);
-    let exec_options = parse_exec_options(&value, defaults, &fig_width)?;
-    let display_options =
-        parse_display_options(&value, defaults, fig_width, fig_align, fig_responsive)?;
+    let (exec_options, display_options) = parse_chunk_options(&value, defaults)?;
     Ok(Some(ChunkSpec {
         label,
         engine,
@@ -370,6 +303,27 @@ fn parse_chunk_raw_block(
         ordinal,
         crossref_labels,
     }))
+}
+
+fn resolve_named_label(
+    names: Vec<String>,
+    seen: &mut HashSet<String>,
+    auto_label_index: &mut usize,
+    error_context: &str,
+) -> Result<(String, Vec<CrossrefLabelDoc>)> {
+    let labels = parse_label_names(&names).map_err(|err| anyhow!("{error_context}: {err}"))?;
+    let label = names
+        .first()
+        .cloned()
+        .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
+    if !seen.insert(label.clone()) {
+        return Err(anyhow!("duplicate label `{}`", label));
+    }
+    bump_auto_label(auto_label_index, &label);
+    Ok((
+        label,
+        labels.into_iter().map(|label| label.to_doc()).collect(),
+    ))
 }
 
 fn is_typst_fence(lang: &str) -> bool {
@@ -392,150 +346,6 @@ fn next_available_label(seen: &mut HashSet<String>, counter: &mut usize) -> Stri
     let label = format!("chunk-{counter}");
     *counter += 1;
     label
-}
-
-fn parse_query_values(query_json: &str) -> Result<Vec<Value>> {
-    serde_json::from_str(query_json).context("failed to parse typst query output")
-}
-
-pub fn parse_setup_config(query_json: &str) -> Result<Option<SetupConfig>> {
-    let values = parse_metadata_values(query_json)
-        .context("failed to parse calepin setup metadata from typst query output")?;
-    if values.is_empty() {
-        return Ok(None);
-    }
-
-    let mut config = SetupConfig::default();
-    for value in values {
-        if value.get("lang").is_some() {
-            return Err(anyhow!(
-                "`lang` is no longer supported in #calepin.setup; use a single setup call for document-wide defaults"
-            ));
-        }
-        config.defaults = parse_setup_defaults(&value, &config.defaults)?;
-    }
-
-    Ok(Some(config))
-}
-
-fn parse_exec_options(
-    value: &Value,
-    defaults: &SetupDefaults,
-    fig_width: &Option<Value>,
-) -> Result<ExecOptions> {
-    Ok(ExecOptions {
-        eval: bool_option(value, "eval", defaults.eval)?,
-        error: bool_option(value, "error", defaults.error)?,
-        fig_device_format: string_option(value, "fig-device-format", &defaults.fig_device_format)?,
-        fig_device_dpi: u32_option(value, "fig-device-dpi", defaults.fig_device_dpi)?,
-        fig_device_width: fig_device_width_option(
-            value,
-            "fig-device-width",
-            defaults.fig_device_width,
-            fig_width,
-            &defaults.fig_width,
-        )?,
-        fig_device_height: opt_f64_option(value, "fig-device-height", defaults.fig_device_height)?,
-        fig_device_aspect: f64_option(value, "fig-device-aspect", defaults.fig_device_aspect)?,
-    })
-}
-
-fn parse_display_options(
-    value: &Value,
-    defaults: &SetupDefaults,
-    fig_width: Option<Value>,
-    fig_align: Option<Value>,
-    fig_responsive: Option<bool>,
-) -> Result<DisplayOptions> {
-    Ok(DisplayOptions {
-        echo: bool_option(value, "echo", defaults.echo)?,
-        output: bool_option(value, "output", defaults.output)?,
-        results: results_option(value, "results", &defaults.results)?,
-        warning: bool_option(value, "warning", defaults.warning)?,
-        message: bool_option(value, "message", defaults.message)?,
-        placeholder: bool_option(value, "placeholder", defaults.placeholder)?,
-        fig_width,
-        fig_height: raw_option(value, "fig-height"),
-        fig_align,
-        fig_responsive,
-        fig_link: raw_option(value, "fig-link"),
-        fig_caption: caption_option(value, "fig-caption")?,
-        fig_cap_location: raw_option(value, "fig-cap-location"),
-        fig_alt_text: caption_option(value, "fig-alt-text")?,
-        fig_subcaptions: caption_list_option(value, "fig-subcaptions")?,
-        fig_layout_columns: raw_option(value, "fig-layout-columns"),
-        fig_layout_rows: raw_option(value, "fig-layout-rows"),
-        kind: opt_string_option(value, "kind")?,
-    })
-}
-
-fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefaults> {
-    Ok(SetupDefaults {
-        echo: bool_option(value, "echo", base.echo)?,
-        eval: bool_option(value, "eval", base.eval)?,
-        output: bool_option(value, "output", base.output)?,
-        results: string_option(value, "results", &base.results)?,
-        warning: bool_option(value, "warning", base.warning)?,
-        message: bool_option(value, "message", base.message)?,
-        error: bool_option(value, "error", base.error)?,
-        placeholder: bool_option(value, "placeholder", base.placeholder)?,
-        fig_device_format: string_option(value, "fig-device-format", &base.fig_device_format)?,
-        fig_device_dpi: u32_option(value, "fig-device-dpi", base.fig_device_dpi)?,
-        fig_device_width: f64_option(value, "fig-device-width", base.fig_device_width)?,
-        fig_device_height: opt_f64_option(value, "fig-device-height", base.fig_device_height)?,
-        fig_device_aspect: f64_option(value, "fig-device-aspect", base.fig_device_aspect)?,
-        fig_width: raw_option(value, "fig-width").or_else(|| base.fig_width.clone()),
-        fig_align: raw_option(value, "fig-align").or_else(|| base.fig_align.clone()),
-        fig_responsive: opt_bool_option(value, "fig-responsive")?.or(base.fig_responsive),
-        fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
-        params: params_option(value, "params", &base.params)?,
-        theme: raw_option(value, "theme").or_else(|| base.theme.clone()),
-    })
-}
-
-/// Read document-level `params` as a JSON object. An absent or empty value keeps
-/// the base (so a later `setup` without `params` does not clobber an earlier one);
-/// a present non-empty object replaces it.
-fn params_option(value: &Value, key: &str, base: &Value) -> Result<Value> {
-    match value.get(key) {
-        None | Some(Value::Null) => Ok(base.clone()),
-        Some(Value::Object(map)) if map.is_empty() => Ok(base.clone()),
-        Some(Value::Object(map)) => Ok(Value::Object(map.clone())),
-        Some(_) => Err(anyhow!("`{}` must be a dictionary", key)),
-    }
-}
-
-/// Parse the unified `fenced-chunks` setting: `false`/absent, `true` (all engines),
-/// an engine name, or a list of engine names.
-fn fenced_chunks_option(value: &Value, base: &FencedChunks) -> Result<FencedChunks> {
-    match value.get("fenced-chunks") {
-        None | Some(Value::Null) => Ok(base.clone()),
-        Some(Value::Bool(false)) => Ok(FencedChunks::Off),
-        Some(Value::Bool(true)) => Ok(FencedChunks::All),
-        Some(Value::String(lang)) => Ok(FencedChunks::Only(vec![lang.clone()])),
-        Some(Value::Array(items)) => Ok(FencedChunks::Only(
-            items
-                .iter()
-                .filter_map(|item| item.as_str().map(str::to_string))
-                .collect(),
-        )),
-        Some(other) => Err(anyhow!("invalid `fenced-chunks` value: {other}")),
-    }
-}
-
-fn parse_metadata_values(query_json: &str) -> Result<Vec<Value>> {
-    let root: Value = serde_json::from_str(query_json)?;
-    let array = root
-        .as_array()
-        .ok_or_else(|| anyhow!("typst query output must be an array"))?;
-    array
-        .iter()
-        .map(|item| {
-            item.get("value")
-                .cloned()
-                .ok_or_else(|| anyhow!("metadata item is missing `value`"))
-        })
-        .collect()
 }
 
 fn parse_label(value: &Value) -> Result<String> {
@@ -596,200 +406,6 @@ fn label_names_from_value(value: &Value) -> Result<Vec<String>> {
             .collect::<Result<Vec<_>>>(),
         _ => Err(anyhow!("label must be a string or an array")),
     }
-}
-
-fn value_for<'a>(object: &'a Value, key: &str) -> Option<&'a Value> {
-    let value = object.get(key)?;
-    if is_auto(value) || value.is_null() {
-        None
-    } else {
-        Some(value)
-    }
-}
-
-fn is_auto(value: &Value) -> bool {
-    value.as_str() == Some("auto")
-}
-
-fn bool_option(object: &Value, key: &str, default: bool) -> Result<bool> {
-    match value_for(object, key) {
-        None => Ok(default),
-        Some(value) => value
-            .as_bool()
-            .ok_or_else(|| anyhow!("`{}` must be a boolean", key)),
-    }
-}
-
-fn string_option(object: &Value, key: &str, default: &str) -> Result<String> {
-    match value_for(object, key) {
-        None => Ok(default.to_string()),
-        Some(value) => value
-            .as_str()
-            .map(ToOwned::to_owned)
-            .ok_or_else(|| anyhow!("`{}` must be a string", key)),
-    }
-}
-
-fn opt_string_option(object: &Value, key: &str) -> Result<Option<String>> {
-    match value_for(object, key) {
-        None => Ok(None),
-        Some(value) => value
-            .as_str()
-            .map(|s| Some(s.to_string()))
-            .ok_or_else(|| anyhow!("`{}` must be a string", key)),
-    }
-}
-
-fn raw_option(object: &Value, key: &str) -> Option<Value> {
-    value_for(object, key).cloned()
-}
-
-fn opt_bool_option(object: &Value, key: &str) -> Result<Option<bool>> {
-    match value_for(object, key) {
-        None => Ok(None),
-        Some(value) => value
-            .as_bool()
-            .map(Some)
-            .ok_or_else(|| anyhow!("`{}` must be a boolean", key)),
-    }
-}
-
-fn u32_option(object: &Value, key: &str, default: u32) -> Result<u32> {
-    match value_for(object, key) {
-        None => Ok(default),
-        Some(value) => value
-            .as_u64()
-            .and_then(|n| u32::try_from(n).ok())
-            .ok_or_else(|| anyhow!("`{}` must be a positive integer", key)),
-    }
-}
-
-fn f64_option(object: &Value, key: &str, default: f64) -> Result<f64> {
-    match value_for(object, key) {
-        None => Ok(default),
-        Some(value) => value
-            .as_f64()
-            .ok_or_else(|| anyhow!("`{}` must be a number", key)),
-    }
-}
-
-fn fig_device_width_option(
-    object: &Value,
-    key: &str,
-    default: f64,
-    fig_width: &Option<Value>,
-    default_fig_width: &Option<Value>,
-) -> Result<f64> {
-    match value_for(object, key) {
-        Some(value) => value
-            .as_f64()
-            .ok_or_else(|| anyhow!("`{}` must be a number", key)),
-        None => Ok(derived_fig_device_width(
-            default,
-            fig_width,
-            default_fig_width,
-        )),
-    }
-}
-
-fn derived_fig_device_width(
-    default: f64,
-    fig_width: &Option<Value>,
-    default_fig_width: &Option<Value>,
-) -> f64 {
-    let Some(display_ratio) = display_width_ratio(fig_width) else {
-        return default;
-    };
-    let Some(default_ratio) = display_width_ratio(default_fig_width) else {
-        return default;
-    };
-    if default_ratio <= 0.0 {
-        return default;
-    }
-    if (display_ratio - default_ratio).abs() < f64::EPSILON {
-        return default;
-    }
-    default * display_ratio / default_ratio
-}
-
-fn display_width_ratio(value: &Option<Value>) -> Option<f64> {
-    match value.as_ref()? {
-        Value::Number(number) => number.as_f64(),
-        Value::String(value) => {
-            let trimmed = value.trim();
-            if let Some(percent) = trimmed.strip_suffix('%') {
-                percent
-                    .trim()
-                    .parse::<f64>()
-                    .ok()
-                    .map(|value| value / 100.0)
-            } else {
-                trimmed.parse::<f64>().ok()
-            }
-        }
-        _ => None,
-    }
-}
-
-fn opt_f64_option(object: &Value, key: &str, default: Option<f64>) -> Result<Option<f64>> {
-    match value_for(object, key) {
-        None => Ok(default),
-        Some(value) => value
-            .as_f64()
-            .map(Some)
-            .ok_or_else(|| anyhow!("`{}` must be a number", key)),
-    }
-}
-
-fn results_option(object: &Value, key: &str, default: &str) -> Result<ResultsMode> {
-    let value = string_option(object, key, default)?;
-    ResultsMode::parse(&value)
-}
-fn caption_option(object: &Value, key: &str) -> Result<Option<String>> {
-    let Some(value) = value_for(object, key) else {
-        return Ok(None);
-    };
-    extract_text(value)
-        .map(Some)
-        .ok_or_else(|| anyhow!("`{}` must be text content or a string", key))
-}
-
-fn caption_list_option(object: &Value, key: &str) -> Result<Option<Vec<String>>> {
-    let Some(value) = value_for(object, key) else {
-        return Ok(None);
-    };
-    if let Some(array) = value.as_array() {
-        let mut captions = Vec::with_capacity(array.len());
-        for item in array {
-            captions.push(
-                extract_text(item)
-                    .ok_or_else(|| anyhow!("`{}` array values must be text content", key))?,
-            );
-        }
-        return Ok(Some(captions));
-    }
-    extract_text(value)
-        .map(|caption| Some(vec![caption]))
-        .ok_or_else(|| anyhow!("`{}` must be text content or an array", key))
-}
-
-fn extract_text(value: &Value) -> Option<String> {
-    if let Some(s) = value.as_str() {
-        return Some(s.to_string());
-    }
-    if let Some(text) = value.get("text").and_then(Value::as_str) {
-        return Some(text.to_string());
-    }
-    if let Some(children) = value.get("children").and_then(Value::as_array) {
-        let mut text = String::new();
-        for child in children {
-            if let Some(child_text) = extract_text(child) {
-                text.push_str(&child_text);
-            }
-        }
-        return Some(text);
-    }
-    None
 }
 
 /// Typst's raw-block fence parser stops the `lang` identifier at the first
@@ -1323,8 +939,8 @@ mod tests {
         ]"#;
         let config = parse_setup_config(json).unwrap().unwrap();
 
-        assert_eq!(config.defaults.echo, true);
-        assert_eq!(config.defaults.eval, false);
+        assert!(config.defaults.echo);
+        assert!(!config.defaults.eval);
     }
 
     #[test]
@@ -1512,7 +1128,7 @@ mod tests {
         let json = r#"[
           {"func":"raw","text":"x","block":true,"lang":"r"}
         ]"#;
-        let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
+        let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].engine, EngineName::R);
         assert_eq!(chunks[0].code, "x");
@@ -1528,7 +1144,7 @@ mod tests {
           {"func":"raw","text":"x","block":true,"lang":"r"},
           {"func":"raw","text":"print(1)","block":true,"lang":"python"}
         ]"#;
-        let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
+        let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].engine, EngineName::Python);
         assert_eq!(chunks[0].code, "print(1)");
@@ -1580,7 +1196,7 @@ mod tests {
         let json = r#"[
           {"func":"raw","text":"x","block":true,"lang":"r"}
         ]"#;
-        let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
+        let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
         assert_eq!(chunks.len(), 0);
     }
 
@@ -1595,7 +1211,7 @@ mod tests {
           {"func":"raw","text":"#let y = 2","block":true,"lang":"typst"},
           {"func":"raw","text":"print(1)","block":true,"lang":"python"}
         ]"##;
-        let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
+        let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].engine, EngineName::Python);
         assert_eq!(chunks[0].code, "print(1)");

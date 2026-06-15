@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::html::{
     apply_html_theme_file, apply_html_theme_file_with_site_context, inline_html_images_file,
@@ -9,8 +8,11 @@ use crate::html::{
 };
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
+use crate::typst::run::{
+    push_calepin_inputs, push_input, run_typst_status, CalepinMode, CalepinTarget, INPUT_ASSETS,
+    INPUT_CURRENT_HREF, INPUT_PAGES, INPUT_RAW_THEME, RESERVED_INPUT_KEYS,
+};
 use crate::typst::version::assert_supported_typst;
-use crate::utils::{process, tools};
 
 pub struct CompileOptions<'a> {
     pub output: Option<PathBuf>,
@@ -61,13 +63,9 @@ pub fn reject_reserved_typst_inputs(args: &[String]) -> Result<()> {
 }
 
 fn reject_reserved_input_value(value: &str) -> Result<()> {
-    if value.starts_with("calepin-mode=")
-        || value.starts_with("calepin-results=")
-        || value.starts_with("calepin-target=")
-        || value.starts_with("calepin-raw-theme=")
-        || value.starts_with("calepin-assets=")
-        || value.starts_with("calepin-pages=")
-        || value.starts_with("calepin-current-href=")
+    if RESERVED_INPUT_KEYS
+        .iter()
+        .any(|key| value.starts_with(&format!("{key}=")))
     {
         return Err(anyhow!(
             "forwarded Typst args may not override reserved Calepin input `{}`",
@@ -87,22 +85,17 @@ fn typst_subcommand_args(
 ) -> Vec<OsString> {
     let results_input = artifact_reference(&layout.root, &layout.results_path);
     let target = if format == Some("html") {
-        "html"
+        CalepinTarget::Html
     } else {
-        "paged"
+        CalepinTarget::Paged
     };
 
     let mut args = vec![
         subcommand.into(),
         "--root".into(),
         layout.root.as_os_str().into(),
-        "--input".into(),
-        "calepin-mode=render".into(),
-        "--input".into(),
-        format!("calepin-results={results_input}").into(),
-        "--input".into(),
-        format!("calepin-target={target}").into(),
     ];
+    push_calepin_inputs(&mut args, CalepinMode::Render, &results_input, target);
 
     if let Some(format) = format {
         args.push("--format".into());
@@ -110,22 +103,18 @@ fn typst_subcommand_args(
         if format == "html" {
             args.push("--features=html".into());
             if let Some(raw_theme_input) = inputs.raw_theme {
-                args.push("--input".into());
-                args.push(format!("calepin-raw-theme={raw_theme_input}").into());
+                push_input(&mut args, INPUT_RAW_THEME, raw_theme_input);
             }
         }
     }
     if let Some(asset_base_input) = inputs.asset_base {
-        args.push("--input".into());
-        args.push(format!("calepin-assets={asset_base_input}").into());
+        push_input(&mut args, INPUT_ASSETS, asset_base_input);
     }
     if let Some(pages_input) = inputs.pages {
-        args.push("--input".into());
-        args.push(format!("calepin-pages={pages_input}").into());
+        push_input(&mut args, INPUT_PAGES, pages_input);
     }
     if let Some(current_href_input) = inputs.current_href {
-        args.push("--input".into());
-        args.push(format!("calepin-current-href={current_href_input}").into());
+        push_input(&mut args, INPUT_CURRENT_HREF, current_href_input);
     }
 
     args.push(layout.render_input.as_os_str().into());
@@ -204,14 +193,6 @@ pub(crate) fn resolve_output_path(
     }
 }
 
-fn resolve_default_output_path(
-    layout: &LayoutPaths,
-    output: Option<&Path>,
-    format: Option<&str>,
-) -> PathBuf {
-    resolve_output_path(layout, output, format)
-}
-
 pub fn compile_with_typst(
     typst: &Path,
     layout: &LayoutPaths,
@@ -235,8 +216,7 @@ pub fn compile_with_typst(
         None,
         None,
     )?;
-    let output_path =
-        resolve_default_output_path(layout, options.output.as_deref(), options.format);
+    let output_path = resolve_output_path(layout, options.output.as_deref(), options.format);
     let html_output = html_output_path(layout, Some(output_path.as_path()), options.format);
     let args = typst_compile_args(
         layout,
@@ -251,18 +231,9 @@ pub fn compile_with_typst(
         },
     );
     assert_supported_typst(typst)?;
-    process::validate_executable(typst, "run typst compile", Some(&tools::TYPST))?;
-    let mut command = Command::new(typst);
-    command.args(args).current_dir(&layout.root);
-    let command_output = command.output().map_err(|error| {
-        process::spawn_error(typst, "run typst compile", error, Some(&tools::TYPST))
+    run_typst_status(typst, "run typst compile", &args, &layout.root, |stderr| {
+        format!("typst compile failed:\n{stderr}")
     })?;
-    if !command_output.status.success() {
-        return Err(anyhow!(
-            "typst compile failed:\n{}",
-            String::from_utf8_lossy(&command_output.stderr)
-        ));
-    }
     if let Some(path) = html_output {
         if let Some(site_context) = options.site_context {
             apply_html_theme_file_with_site_context(

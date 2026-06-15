@@ -1,22 +1,14 @@
-use std::path::{Component, Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 
+pub(crate) use crate::utils::watch::is_write_event;
 use anyhow::{Context, Result};
 use notify::RecursiveMode;
-use notify_debouncer_full::new_debouncer;
 
-pub(crate) fn is_write_event(kind: &notify::EventKind) -> bool {
-    matches!(
-        kind,
-        notify::EventKind::Create(_)
-            | notify::EventKind::Modify(notify::event::ModifyKind::Data(_))
-            | notify::EventKind::Modify(notify::event::ModifyKind::Name(_))
-            | notify::EventKind::Modify(notify::event::ModifyKind::Any)
-    )
-}
+use crate::utils::static_files::path_has_common_skip_dir;
+use crate::utils::watch::run_debounced_watch;
 
 pub(crate) fn is_watch_candidate(
     root: &Path,
@@ -39,17 +31,7 @@ pub(crate) fn is_watch_candidate(
         }
     }
 
-    let Some(first) = rel.components().next() else {
-        return false;
-    };
-    let Component::Normal(name) = first else {
-        return true;
-    };
-
-    if matches!(
-        name.to_str(),
-        Some(".calepin" | ".git" | "target" | "node_modules" | ".venv")
-    ) {
+    if rel.components().next().is_none() || path_has_common_skip_dir(rel) {
         return false;
     }
 
@@ -88,12 +70,8 @@ pub(crate) fn watch_root(
     preview_output: &Path,
     config_path: Option<&Path>,
     stop: Arc<AtomicBool>,
-    mut on_change: impl FnMut(&[PathBuf]),
+    on_change: impl FnMut(&[PathBuf]),
 ) -> Result<()> {
-    let (tx, rx) = mpsc::channel();
-    let mut debouncer = new_debouncer(Duration::from_millis(300), None, tx)
-        .context("failed to create file watcher")?;
-
     let root = root
         .canonicalize()
         .with_context(|| format!("watch root not found: {}", root.display()))?;
@@ -107,49 +85,18 @@ pub(crate) fn watch_root(
         path.canonicalize().unwrap_or(path)
     });
 
-    debouncer
-        .watch(&root, RecursiveMode::Recursive)
-        .with_context(|| format!("failed to watch {}", root.display()))?;
-
-    loop {
-        match rx.recv_timeout(Duration::from_millis(200)) {
-            Ok(Ok(events)) => {
-                let excluded = preview_output
-                    .canonicalize()
-                    .unwrap_or_else(|_| preview_output.clone());
-                let mut changed = Vec::new();
-                for event in events {
-                    if !is_write_event(&event.event.kind) {
-                        continue;
-                    }
-                    for path in event.event.paths {
-                        let path = path.canonicalize().unwrap_or(path);
-                        if is_watch_candidate(&root, &excluded, config_path.as_deref(), &path)
-                            && !changed.contains(&path)
-                        {
-                            changed.push(path);
-                        }
-                    }
-                }
-                if !changed.is_empty() {
-                    on_change(&changed);
-                }
-            }
-            Ok(Err(errors)) => {
-                for error in errors {
-                    cwarn!("Watch error: {}", error);
-                }
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => {
-                if stop.load(Ordering::Relaxed) {
-                    break;
-                }
-            }
-            Err(mpsc::RecvTimeoutError::Disconnected) => break,
-        }
-    }
-
-    Ok(())
+    let excluded = preview_output
+        .canonicalize()
+        .unwrap_or_else(|_| preview_output.clone());
+    run_debounced_watch(
+        &[(root.clone(), RecursiveMode::Recursive)],
+        Duration::from_millis(300),
+        Duration::from_millis(200),
+        stop,
+        is_write_event,
+        |path| is_watch_candidate(&root, &excluded, config_path.as_deref(), &path).then_some(path),
+        on_change,
+    )
 }
 
 #[cfg(test)]
