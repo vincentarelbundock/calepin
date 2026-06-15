@@ -31,7 +31,7 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
-use super::make_sentinel;
+use super::{build_payload, make_sentinel};
 use super::subprocess::SubprocessSession;
 use crate::utils::tools;
 
@@ -40,7 +40,7 @@ use crate::utils::tools;
 /// executes them with output/warning/error/plot capture, and writes
 /// sentinel-delimited results to stdout.
 const PYTHON_BOOTSTRAP: &str = r#"
-import sys, io, os
+import sys, io, os, json
 
 # Force non-interactive matplotlib backend before any user code can import it.
 # The env var is checked by matplotlib on first import -- no import needed here,
@@ -80,8 +80,15 @@ while True:
         print(f"{sentinel}_DONE", flush=True)
         continue
 
-    # Parse metadata: "META:fig_path=/tmp/fig.png;width=7;height=5;dpi=150"
-    meta = dict(item.split("=", 1) for item in meta_line[5:].split(";") if "=" in item) if meta_line.startswith("META:") else {}
+    # Parse metadata: JSON preferred, semicolon format as fallback for legacy callers.
+    meta = {}
+    if meta_line.startswith("META:"):
+        raw_meta = meta_line[5:]
+        if raw_meta:
+            try:
+                meta = json.loads(raw_meta)
+            except Exception:
+                meta = dict(item.split("=", 1) for item in raw_meta.split(";") if "=" in item)
 
     fig_path = meta.get("fig_path", "")
     width = float(meta.get("width", "7"))
@@ -295,11 +302,16 @@ impl PythonSession {
         dpi: f64,
     ) -> Result<String> {
         let sentinel = make_sentinel();
-        let meta = format!(
-            "META:fig_path={};dev=;width={};height={};dpi={}",
-            fig_path, width, height, dpi
-        );
-        let payload = format!("{}\n{}", meta, code);
+        let payload = build_payload(
+            serde_json::json!({
+                "fig_path": fig_path,
+                "dev": "",
+                "width": width,
+                "height": height,
+                "dpi": dpi,
+            }),
+            code,
+        )?;
         self.proc.execute(&sentinel, &payload)
     }
 }

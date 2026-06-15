@@ -8,7 +8,7 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
-use super::make_sentinel;
+use super::{build_payload, make_sentinel};
 use super::subprocess::SubprocessSession;
 use crate::utils::tools;
 
@@ -275,7 +275,15 @@ impl JupyterBridgeSession {
         )
         .context("failed to start Jupyter bridge")?;
         let sentinel = make_sentinel();
-        proc.execute(&sentinel, r#"META:{"command":"ping"}"#)
+        proc.execute(
+            &sentinel,
+            &build_payload(
+                serde_json::json!({
+                    "command": "ping",
+                }),
+                "",
+            )?,
+        )
             .context(
             "jupyter_client Python package not found — install with: pip install jupyter_client",
         )?;
@@ -285,23 +293,33 @@ impl JupyterBridgeSession {
     pub fn capture(&mut self, request: JupyterCapture<'_>) -> Result<String> {
         let sentinel = make_sentinel();
         let timeout_secs = self.proc.timeout().map(|d| d.as_secs_f64()).unwrap_or(30.0);
-        let meta = serde_json::json!({
-            "kernel": request.kernel,
-            "fig_path": request.fig_path,
-            "fig_format": request.fig_format,
-            "width": request.width,
-            "height": request.height,
-            "dpi": request.dpi,
-            "timeout": timeout_secs,
-        });
-        let payload = format!("META:{meta}\n{}", request.code);
+        let payload = build_payload(
+            serde_json::json!({
+                "kernel": request.kernel,
+                "fig_path": request.fig_path,
+                "fig_format": request.fig_format,
+                "width": request.width,
+                "height": request.height,
+                "dpi": request.dpi,
+                "timeout": timeout_secs,
+            }),
+            request.code,
+        )?;
         self.proc.execute(&sentinel, &payload)
     }
 
     fn shutdown(&mut self) -> Result<()> {
         let sentinel = make_sentinel();
         self.proc
-            .execute(&sentinel, r#"META:{"command":"shutdown"}"#)
+            .execute(
+                &sentinel,
+                &build_payload(
+                    serde_json::json!({
+                        "command": "shutdown",
+                    }),
+                    "",
+                )?,
+            )
             .map(|_| ())
     }
 }

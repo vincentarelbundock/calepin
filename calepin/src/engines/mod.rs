@@ -5,11 +5,27 @@ pub mod python;
 pub mod r;
 pub mod subprocess;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
+use serde_json::Value;
 
 use crate::engines::jupyter::JupyterCapture;
 use crate::typst::model::{EngineName, FigureSpec};
+
+pub(crate) const META_PREFIX: &str = "META:";
+
+pub(crate) fn build_payload(meta: Value, code: &str) -> Result<String> {
+    Ok(format!(
+        "{}\n{}",
+        format_meta_payload(meta)?,
+        code
+    ))
+}
+
+fn format_meta_payload(meta: Value) -> Result<String> {
+    let encoded = serde_json::to_string(&meta).context("serialize engine meta payload")?;
+    Ok(format!("{META_PREFIX}{encoded}"))
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum EngineResult {
