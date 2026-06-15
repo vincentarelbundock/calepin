@@ -119,12 +119,31 @@ pub(crate) fn inline_html_images_file(path: &Path, root: &Path) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn html_theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<Option<String>> {
+    theme::theme_stylesheet(entry)
+}
+
+pub(crate) fn html_theme_script(entry: &crate::theme::HtmlEntry) -> Option<String> {
+    let mut script = String::new();
+    for (_, content) in &entry.scripts {
+        if !script.is_empty() {
+            script.push_str("\n\n");
+        }
+        script.push_str(content);
+        if !content.ends_with('\n') {
+            script.push('\n');
+        }
+    }
+    (!script.is_empty()).then_some(script)
+}
+
+#[cfg(test)]
 pub(crate) fn write_html_theme_stylesheet(
     entry: &crate::theme::HtmlEntry,
     out_dir: &Path,
     rel_path: &Path,
 ) -> Result<bool> {
-    let Some(css) = theme::theme_stylesheet(entry)? else {
+    let Some(css) = html_theme_stylesheet(entry)? else {
         return Ok(false);
     };
     let path = out_dir.join(rel_path);
@@ -465,6 +484,7 @@ mod tests {
             current_url: None,
             page_title: None,
             stylesheet: None,
+            scripts: Vec::new(),
             pagefind: None,
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
@@ -525,6 +545,7 @@ mod tests {
             current_url: None,
             page_title: None,
             stylesheet: None,
+            scripts: Vec::new(),
             pagefind: None,
         };
 
@@ -614,6 +635,7 @@ mod tests {
             current_url: None,
             page_title: None,
             stylesheet: None,
+            scripts: Vec::new(),
             pagefind: None,
         };
 
@@ -737,6 +759,7 @@ mod tests {
             current_url: None,
             page_title: None,
             stylesheet: Some("../.calepin/calepin-website.css".to_string()),
+            scripts: Vec::new(),
             pagefind: None,
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
@@ -756,6 +779,32 @@ mod tests {
         );
         assert!(!themed.contains("--calepin-code-border"));
         assert!(!themed.contains("--calepin-topbar-height"));
+    }
+
+    #[test]
+    fn bundled_website_theme_can_link_external_scripts() {
+        let site_context = SiteContextInput {
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            scripts: vec!["../.calepin/calepin-website.0123456789abcdef.js".to_string()],
+            ..SiteContextInput::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains(
+            r#"<script src="../.calepin/calepin-website.0123456789abcdef.js"></script>"#
+        ));
+        assert!(!themed.contains("data-calepin-theme-toggle], #calepin-theme-button"));
     }
 
     #[test]

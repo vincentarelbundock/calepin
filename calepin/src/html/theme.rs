@@ -60,6 +60,7 @@ pub(crate) struct SiteContextInput {
     pub(crate) current_url: Option<String>,
     pub(crate) page_title: Option<String>,
     pub(crate) stylesheet: Option<String>,
+    pub(crate) scripts: Vec<String>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
 }
 
@@ -85,6 +86,7 @@ struct SiteContext {
     current_url: Option<String>,
     page_title: Option<String>,
     stylesheet: Option<String>,
+    scripts: Vec<String>,
     pagefind: Option<PagefindEntry>,
 }
 
@@ -338,6 +340,7 @@ fn site_context(
             current_url: input.current_url.clone(),
             page_title: input.page_title.clone(),
             stylesheet: input.stylesheet.clone(),
+            scripts: input.scripts.clone(),
             pagefind: input.pagefind.as_ref().map(|entry| PagefindEntry {
                 css: entry.css.clone(),
                 js: entry.js.clone(),
@@ -375,6 +378,7 @@ fn site_context(
         current_url: None,
         page_title: None,
         stylesheet: None,
+        scripts: Vec::new(),
         pagefind: None,
     }
 }

@@ -19,8 +19,8 @@ use xxhash_rust::xxh3::xxh3_64;
 use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
 use crate::html::{
-    minify_html_file, write_html_theme_stylesheet, SiteContextInput, SiteLanguageEntry,
-    SiteNavEntry, SiteNavSection, SitePagefindEntry,
+    html_theme_script, html_theme_stylesheet, minify_html_file, SiteContextInput,
+    SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{
@@ -29,7 +29,8 @@ use crate::typst::preprocess::{
 
 const DEFAULT_CONFIG: &str = "calepin.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
-const WEBSITE_STYLESHEET_PATH: &str = ".calepin/calepin-website.css";
+const WEBSITE_ASSET_DIR: &str = ".calepin";
+const WEBSITE_ASSET_STEM: &str = "calepin-website";
 const DEFAULT_FAVICON_PATH: &str = ".calepin/favicon.svg";
 const DEFAULT_FAVICON_SVG: &str = include_str!("../assets/default-favicon.svg");
 const FALLBACK_PAGE: &str = "404.typ";
@@ -313,10 +314,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         _ => None,
     };
     let site_entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?;
-    let mut theme_stylesheet_path = site_entry
-        .as_ref()
-        .filter(|entry| entry.is_default)
-        .map(|_| PathBuf::from(WEBSITE_STYLESHEET_PATH));
+    let mut external_theme_assets = site_entry.as_ref().is_some_and(|entry| entry.is_default);
     let languages = configured_languages(&src_dir, &config)?;
     let (section_plans, mut typ_files) = discover_site_pages(
         &src_dir,
@@ -367,7 +365,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         fallback_theme: config_theme.clone(),
         parallelism: args.parallelism,
     })?;
-    if theme_stylesheet_path.is_none()
+    if !external_theme_assets
         && preprocessed.values().any(|output| {
             crate::theme::resolve_html_entry(&output.theme, crate::theme::HtmlScope::Site)
                 .ok()
@@ -375,8 +373,18 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
                 .is_some_and(|entry| entry.is_default)
         })
     {
-        theme_stylesheet_path = Some(PathBuf::from(WEBSITE_STYLESHEET_PATH));
+        external_theme_assets = true;
     }
+    let theme_assets = if external_theme_assets {
+        let entry = crate::theme::resolve_html_entry(
+            &crate::theme::ThemeSelection::Default,
+            crate::theme::HtmlScope::Site,
+        )?
+        .expect("default theme must provide a site entry");
+        ThemeGeneratedAssets::from_entry(&entry)?
+    } else {
+        ThemeGeneratedAssets::default()
+    };
 
     let page_meta = load_page_meta(&src_dir, &typ_files);
     let metadata = SiteMetadata::from_config(&config, &src_dir)?;
@@ -426,7 +434,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         &sitemap_path,
         &robots_path,
         &feed_paths,
-        theme_stylesheet_path.as_deref(),
+        &theme_assets.output_paths(&out_dir),
         default_favicon_path.as_deref(),
     );
     let mut expected_outputs = if out_dir == src_dir {
@@ -462,11 +470,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     }
     fs::create_dir_all(&out_dir)
         .with_context(|| format!("failed to create {}", out_dir.display()))?;
-    if let Some(path) = theme_stylesheet_path.as_deref() {
-        let entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?
-            .expect("active theme must provide a site entry");
-        write_html_theme_stylesheet(&entry, &out_dir, path)?;
-    }
+    theme_assets.write(&out_dir)?;
     if let Some(path) = default_favicon_path.as_deref() {
         write_default_favicon(&out_dir, path)?;
     }
@@ -500,7 +504,15 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             page_meta: page_meta.clone(),
             page_info: page_info.clone(),
             languages: languages.clone(),
-            theme_stylesheet: theme_stylesheet_path.map(|path| slash_path(&path)),
+            theme_stylesheet: theme_assets
+                .stylesheet
+                .as_ref()
+                .map(|asset| slash_path(&asset.rel_path)),
+            theme_scripts: theme_assets
+                .script
+                .as_ref()
+                .map(|asset| vec![slash_path(&asset.rel_path)])
+                .unwrap_or_default(),
             parallelism: args.parallelism,
             typst_args: args.typst_args,
             minify_html,
@@ -1324,6 +1336,7 @@ impl SiteModel {
                 .map(|base_url| html_escape(&absolute_site_url(base_url, current_href))),
             page_title,
             stylesheet: None,
+            scripts: Vec::new(),
             pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {
                 css: html_escape(&page_relative_url(current_href, PAGEFIND_CSS)),
                 js: html_escape(&page_relative_url(current_href, PAGEFIND_JS)),
@@ -1417,6 +1430,7 @@ struct BuildContext {
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
     theme_stylesheet: Option<String>,
+    theme_scripts: Vec<String>,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
     minify_html: bool,
@@ -3015,6 +3029,11 @@ fn render_document(
             site_context.stylesheet =
                 Some(html_escape(&page_relative_url(&current_href, stylesheet)));
         }
+        site_context.scripts = context
+            .theme_scripts
+            .iter()
+            .map(|script| html_escape(&page_relative_url(&current_href, script)))
+            .collect();
     }
     compile_with_typst(
         &context.typst,
@@ -3124,6 +3143,67 @@ fn base_url_path_prefix(base_url: &str) -> Option<String> {
         .unwrap_or("")
         .trim_end_matches('/');
     (!path.is_empty()).then(|| path.to_string())
+}
+
+#[derive(Debug, Clone, Default)]
+struct ThemeGeneratedAssets {
+    stylesheet: Option<GeneratedThemeAsset>,
+    script: Option<GeneratedThemeAsset>,
+}
+
+#[derive(Debug, Clone)]
+struct GeneratedThemeAsset {
+    rel_path: PathBuf,
+    content: String,
+}
+
+impl ThemeGeneratedAssets {
+    fn from_entry(entry: &crate::theme::HtmlEntry) -> Result<Self> {
+        let stylesheet = html_theme_stylesheet(entry)?
+            .map(|content| GeneratedThemeAsset::new(WEBSITE_ASSET_STEM, "css", content));
+        let script = html_theme_script(entry)
+            .map(|content| GeneratedThemeAsset::new(WEBSITE_ASSET_STEM, "js", content));
+        Ok(Self { stylesheet, script })
+    }
+
+    fn output_paths(&self, out_dir: &Path) -> BTreeSet<PathBuf> {
+        [&self.stylesheet, &self.script]
+            .into_iter()
+            .filter_map(|asset| asset.as_ref())
+            .map(|asset| out_dir.join(&asset.rel_path))
+            .collect()
+    }
+
+    fn write(&self, out_dir: &Path) -> Result<()> {
+        for asset in [&self.stylesheet, &self.script]
+            .into_iter()
+            .filter_map(|asset| asset.as_ref())
+        {
+            asset.write(out_dir)?;
+        }
+        Ok(())
+    }
+}
+
+impl GeneratedThemeAsset {
+    fn new(stem: &str, extension: &str, content: String) -> Self {
+        let hash = xxh3_64(content.as_bytes());
+        Self {
+            rel_path: PathBuf::from(WEBSITE_ASSET_DIR)
+                .join(format!("{stem}.{hash:016x}.{extension}")),
+            content,
+        }
+    }
+
+    fn write(&self, out_dir: &Path) -> Result<()> {
+        let path = out_dir.join(&self.rel_path);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create {}", parent.display()))?;
+        }
+        fs::write(&path, &self.content)
+            .with_context(|| format!("failed to write {}", path.display()))
+    }
 }
 
 fn pagefind_signature(out_dir: &Path, pages: &[(PathBuf, String)]) -> Result<u64> {
@@ -3265,7 +3345,7 @@ fn expected_generated_outputs(
     sitemap_path: &Option<PathBuf>,
     robots_path: &Option<PathBuf>,
     feed_paths: &BTreeSet<PathBuf>,
-    theme_stylesheet_path: Option<&Path>,
+    theme_asset_paths: &BTreeSet<PathBuf>,
     default_favicon_path: Option<&Path>,
 ) -> BTreeSet<PathBuf> {
     let mut outputs = BTreeSet::new();
@@ -3284,9 +3364,7 @@ fn expected_generated_outputs(
         outputs.insert(path.clone());
     }
     outputs.extend(feed_paths.iter().cloned());
-    if let Some(path) = theme_stylesheet_path {
-        outputs.insert(out_dir.join(path));
-    }
+    outputs.extend(theme_asset_paths.iter().cloned());
     if let Some(path) = default_favicon_path {
         outputs.insert(out_dir.join(path));
     }
@@ -4221,6 +4299,31 @@ mod tests {
             config.theme_selection(Path::new("/tmp")).unwrap(),
             crate::theme::ThemeSelection::Default
         );
+    }
+
+    #[test]
+    fn theme_generated_assets_use_fingerprinted_calepin_paths() {
+        let entry = crate::theme::resolve_html_entry(
+            &crate::theme::ThemeSelection::Default,
+            crate::theme::HtmlScope::Site,
+        )
+        .unwrap()
+        .unwrap();
+
+        let assets = ThemeGeneratedAssets::from_entry(&entry).unwrap();
+        let stylesheet = assets.stylesheet.as_ref().unwrap();
+        let script = assets.script.as_ref().unwrap();
+
+        let stylesheet_path = slash_path(&stylesheet.rel_path);
+        let script_path = slash_path(&script.rel_path);
+        assert!(stylesheet_path.starts_with(".calepin/calepin-website."));
+        assert!(stylesheet_path.ends_with(".css"));
+        assert!(script_path.starts_with(".calepin/calepin-website."));
+        assert!(script_path.ends_with(".js"));
+        assert_ne!(stylesheet_path, ".calepin/calepin-website.css");
+        assert_ne!(script_path, ".calepin/calepin-website.js");
+        assert!(stylesheet.content.contains(".calepin-website-shell"));
+        assert!(script.content.contains("data-calepin-theme-toggle"));
     }
 
     #[test]
@@ -5391,9 +5494,10 @@ filenames = ["atom.xml", "rss.xml"]
 
     #[test]
     fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
+        let stylesheet = ".calepin/calepin-website.0123456789abcdef.css";
         assert_eq!(
-            page_relative_url("guide/usage.html", WEBSITE_STYLESHEET_PATH),
-            "../.calepin/calepin-website.css"
+            page_relative_url("guide/usage.html", stylesheet),
+            "../.calepin/calepin-website.0123456789abcdef.css"
         );
         assert_eq!(
             page_relative_url("guide/usage.html", "guide/advanced.html"),
@@ -5404,8 +5508,8 @@ filenames = ["atom.xml", "rss.xml"]
             "../publications/index.html"
         );
         assert_eq!(
-            page_relative_url("index.html", WEBSITE_STYLESHEET_PATH),
-            ".calepin/calepin-website.css"
+            page_relative_url("index.html", stylesheet),
+            ".calepin/calepin-website.0123456789abcdef.css"
         );
     }
 
