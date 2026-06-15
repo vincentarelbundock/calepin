@@ -70,10 +70,6 @@ title = "Notebooks"
   label = "Parameters"
 
   [[sidebar.section.item]]
-  target = "notebooks/themes.typ"
-  label = "Themes"
-
-  [[sidebar.section.item]]
   target = "notebooks/example.typ"
   label = "Example notebook"
 
@@ -89,10 +85,6 @@ title = "Websites"
   label = "Configuration"
 
   [[sidebar.section.item]]
-  target = "websites/themes.typ"
-  label = "Themes"
-
-  [[sidebar.section.item]]
   target = "websites/web_components.typ"
   label = "Web components"
 
@@ -100,6 +92,10 @@ title = "Websites"
 
 [[sidebar.section]]
 title = "More"
+
+  [[sidebar.section.item]]
+  target = "themes.typ"
+  label = "Themes"
 
   [[sidebar.section.item]]
   target = "tips.typ"

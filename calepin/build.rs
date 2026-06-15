@@ -22,6 +22,13 @@ fn main() {
         &manifest_dir,
         "src/assets/themes/academic",
     );
+    source.push('\n');
+    write_theme_files(
+        &mut source,
+        "SHARED_FILES",
+        &manifest_dir,
+        "src/assets/themes/shared",
+    );
 
     fs::write(output, source).unwrap();
 }
@@ -32,7 +39,6 @@ fn write_theme_files(source: &mut String, const_name: &str, manifest_dir: &Path,
 
     let mut files = Vec::new();
     collect_theme_files(&root, &root, &mut files);
-    files.extend(shared_theme_files());
     files.sort_by(|left, right| left.0.cmp(&right.0));
     files.dedup_by(|left, right| left.0 == right.0);
 
@@ -89,35 +95,6 @@ fn collect_theme_files(root: &Path, dir: &Path, files: &mut Vec<(String, String)
 fn is_theme_asset(path: &Path) -> bool {
     matches!(
         path.extension().and_then(|extension| extension.to_str()),
-        Some("css" | "html" | "jinja" | "js")
+        Some("css" | "html" | "jinja" | "js" | "toml" | "typ")
     )
-}
-
-fn shared_theme_files() -> Vec<(String, String)> {
-    vec![
-        (
-            "styles/00-theme.css".to_string(),
-            "src/assets/snippets/css/theme.css".to_string(),
-        ),
-        (
-            "styles/01-code.css".to_string(),
-            "src/assets/snippets/css/code.css".to_string(),
-        ),
-        (
-            "styles/02-widgets.css".to_string(),
-            "src/assets/snippets/css/widgets.css".to_string(),
-        ),
-        (
-            "scripts/00-theme-toggle.js".to_string(),
-            "src/assets/snippets/js/theme-toggle.js".to_string(),
-        ),
-        (
-            "scripts/01-language-picker.js".to_string(),
-            "src/assets/snippets/js/language-picker.js".to_string(),
-        ),
-        (
-            "scripts/02-copy-code.js".to_string(),
-            "src/assets/snippets/js/copy-code.js".to_string(),
-        ),
-    ]
 }

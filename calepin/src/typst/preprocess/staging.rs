@@ -7,9 +7,9 @@ use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::slash_path;
 
-const TYPST_SNIPPETS: &[(&str, &str)] = &[(
+const SHARED_TYPST_FILES: &[(&str, &str)] = &[(
     "code-block.typ",
-    include_str!("../../assets/snippets/typst/code-block.typ"),
+    include_str!("../../assets/themes/shared/typst/code-block.typ"),
 )];
 
 pub(super) fn paged_template_context(
@@ -112,10 +112,10 @@ fn write_query_html_fallback(root: &Path) -> Result<()> {
     write_if_changed(&path, source)
 }
 
-pub(super) fn write_typst_snippets(root: &Path) -> Result<()> {
-    let dir = root.join(".calepin/snippets/typst");
+pub(super) fn write_shared_typst_files(root: &Path) -> Result<()> {
+    let dir = root.join(".calepin/shared/typst");
     fs::create_dir_all(&dir).with_context(|| format!("failed to create {}", dir.display()))?;
-    for (name, source) in TYPST_SNIPPETS {
+    for (name, source) in SHARED_TYPST_FILES {
         let path = dir.join(name);
         write_if_changed(&path, source)?;
     }
@@ -123,8 +123,8 @@ pub(super) fn write_typst_snippets(root: &Path) -> Result<()> {
 }
 
 #[cfg(test)]
-pub(super) fn typst_snippet_source(name: &str) -> Option<&'static str> {
-    TYPST_SNIPPETS
+pub(super) fn shared_typst_source(name: &str) -> Option<&'static str> {
+    SHARED_TYPST_FILES
         .iter()
-        .find_map(|(snippet_name, source)| (*snippet_name == name).then_some(*source))
+        .find_map(|(file_name, source)| (*file_name == name).then_some(*source))
 }

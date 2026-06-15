@@ -39,6 +39,13 @@ static ACADEMIC: BundleDef = BundleDef {
 
 static BUILTINS: [&BundleDef; 2] = [&CALEPIN, &ACADEMIC];
 
+pub(crate) fn shared_file(path: &str) -> Option<&'static str> {
+    SHARED_FILES
+        .iter()
+        .find(|file| file.path == path)
+        .map(|file| file.source)
+}
+
 pub fn builtin_names() -> Vec<&'static str> {
     BUILTINS.iter().map(|bundle| bundle.name).collect()
 }
@@ -77,7 +84,21 @@ pub fn eject_builtin_to(name: &str, dest: &Path, force: bool) -> Result<PathBuf>
     for file in bundle.files {
         write_theme_file(dest, file.path, file.source)?;
     }
+    if let Some(parent) = dest.parent() {
+        write_shared_files(&parent.join("shared"), force)?;
+    }
     Ok(dest.to_path_buf())
+}
+
+fn write_shared_files(dest: &Path, force: bool) -> Result<()> {
+    for file in SHARED_FILES {
+        let path = dest.join(file.path);
+        if path.exists() && !force {
+            continue;
+        }
+        write_theme_file(dest, file.path, file.source)?;
+    }
+    Ok(())
 }
 
 fn write_theme_file(dest: &Path, relative: &str, source: &str) -> Result<()> {

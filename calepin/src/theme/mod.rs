@@ -218,6 +218,79 @@ mod tests {
     }
 
     #[test]
+    fn dir_theme_imports_shared_assets_in_manifest_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme = dir.path().join("custom");
+        std::fs::create_dir_all(theme.join("styles")).unwrap();
+        std::fs::create_dir_all(theme.join("scripts")).unwrap();
+        std::fs::create_dir_all(dir.path().join("shared/styles")).unwrap();
+        std::fs::write(theme.join("document.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(
+            theme.join("theme.toml"),
+            r#"[shared]
+styles = ["theme.css", "widgets.css"]
+scripts = ["copy-code.js"]
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("shared/styles/theme.css"),
+            "/* sibling shared theme */",
+        )
+        .unwrap();
+        std::fs::write(theme.join("styles/widgets.css"), "/* local override */").unwrap();
+        std::fs::write(theme.join("styles/local.css"), "/* local extra */").unwrap();
+        std::fs::write(theme.join("scripts/local.js"), "console.log('local')").unwrap();
+
+        let entry = resolve_html_entry(&ThemeSelection::Dir(theme), HtmlScope::Document)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            entry
+                .styles
+                .iter()
+                .map(|(name, _)| name.as_str())
+                .collect::<Vec<_>>(),
+            ["theme.css", "widgets.css", "local.css"]
+        );
+        assert!(entry.styles[0].1.contains("sibling shared theme"));
+        assert!(entry.styles[1].1.contains("local override"));
+        assert_eq!(
+            entry
+                .scripts
+                .iter()
+                .map(|(name, _)| name.as_str())
+                .collect::<Vec<_>>(),
+            ["copy-code.js", "local.js"]
+        );
+        assert!(entry.scripts[0].1.contains("window.CalepinCopyCode"));
+    }
+
+    #[test]
+    fn shared_manifest_rejects_path_imports() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("document.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(
+            dir.path().join("theme.toml"),
+            r#"[shared]
+styles = ["../theme.css"]
+"#,
+        )
+        .unwrap();
+
+        let err = match resolve_html_entry(
+            &ThemeSelection::Dir(dir.path().to_path_buf()),
+            HtmlScope::Document,
+        ) {
+            Ok(_) => panic!("expected shared path import to be rejected"),
+            Err(error) => error,
+        };
+
+        assert!(err.to_string().contains("must be a filename"));
+    }
+
+    #[test]
     fn explicit_site_layout_uses_exact_theme_relative_path() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
@@ -376,26 +449,34 @@ mod tests {
         assert!(!dest.join("paged.typ").exists());
         assert!(dest.join("partials/navbar-item.html").is_file());
         assert!(dest.join("partials/theme-switcher.html").is_file());
-        assert!(dest.join("partials/scripts.html").is_file());
         assert!(dest.join("partials/site-topbar.html").is_file());
-        assert!(dest.join("partials/styles.html").is_file());
-        assert!(dest.join("styles/00-theme.css").is_file());
-        assert!(dest.join("styles/01-code.css").is_file());
-        assert!(dest.join("styles/02-widgets.css").is_file());
+        assert!(!dest.join("partials/scripts.html").exists());
+        assert!(!dest.join("partials/styles.html").exists());
+        assert!(dest.join("theme.toml").is_file());
         assert!(dest.join("styles/site.css").is_file());
-        assert!(dest.join("scripts/00-theme-toggle.js").is_file());
-        assert!(dest.join("scripts/01-language-picker.js").is_file());
-        assert!(dest.join("scripts/02-copy-code.js").is_file());
         assert!(dest.join("scripts/site.js").is_file());
+        assert!(!dest.join("styles/00-theme.css").exists());
+        assert!(!dest.join("scripts/02-copy-code.js").exists());
 
-        assert!(std::fs::read_to_string(dest.join("styles/02-widgets.css"))
+        let shared = dest.parent().unwrap().join("shared");
+        assert!(shared.join("partials/site-meta.html").is_file());
+        assert!(shared.join("partials/theme-init.html").is_file());
+        assert!(shared.join("partials/styles.html").is_file());
+        assert!(shared.join("partials/scripts.html").is_file());
+        assert!(shared.join("partials/pagefind-modal.html").is_file());
+        assert!(shared.join("styles/theme.css").is_file());
+        assert!(shared.join("styles/code.css").is_file());
+        assert!(shared.join("styles/widgets.css").is_file());
+        assert!(shared.join("scripts/theme-toggle.js").is_file());
+        assert!(shared.join("scripts/language-picker.js").is_file());
+        assert!(shared.join("scripts/copy-code.js").is_file());
+        assert!(shared.join("typst/code-block.typ").is_file());
+        assert!(std::fs::read_to_string(shared.join("styles/widgets.css"))
             .unwrap()
             .contains("[data-calepin-theme-toggle]"));
-        assert!(
-            std::fs::read_to_string(dest.join("scripts/02-copy-code.js"))
-                .unwrap()
-                .contains("window.CalepinCopyCode")
-        );
+        assert!(std::fs::read_to_string(shared.join("scripts/copy-code.js"))
+            .unwrap()
+            .contains("window.CalepinCopyCode"));
     }
 
     #[test]
@@ -407,14 +488,13 @@ mod tests {
         assert_eq!(wrote, dest);
         assert!(wrote.join("site.html").is_file());
         assert!(wrote.join("partials/navbar-item.html").is_file());
-        assert!(wrote.join("styles/00-theme.css").is_file());
-        assert!(wrote.join("styles/01-code.css").is_file());
-        assert!(wrote.join("styles/02-widgets.css").is_file());
+        assert!(wrote.join("theme.toml").is_file());
         assert!(wrote.join("styles/main.css").is_file());
-        assert!(wrote.join("scripts/00-theme-toggle.js").is_file());
-        assert!(wrote.join("scripts/01-language-picker.js").is_file());
-        assert!(wrote.join("scripts/02-copy-code.js").is_file());
         assert!(wrote.join("scripts/main.js").is_file());
+        let shared = wrote.parent().unwrap().join("shared");
+        assert!(shared.join("styles/theme.css").is_file());
+        assert!(shared.join("scripts/copy-code.js").is_file());
+        assert!(shared.join("typst/code-block.typ").is_file());
     }
 
     #[test]

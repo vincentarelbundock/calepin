@@ -1,63 +1,9 @@
 {{ doc.head }}
-    {% if not doc.title %}
-    {% if site.page_title or site.title %}
-    <title>{% if site.page_title %}{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}{% elif site.title %}{{ site.title }}{% endif %}</title>
-    {% endif %}
-    {% endif %}
-    {% if site.description %}
-    <meta name="description" content="{{ site.description }}">
-    <meta property="og:description" content="{{ site.description }}">
-    {% endif %}
-    {% if site.title %}
-    <meta property="og:site_name" content="{{ site.title }}">
-    {% endif %}
-    {% if doc.title %}
-    <meta property="og:title" content="{{ doc.title }}{% if site.title %} | {{ site.title }}{% endif %}">
-    {% elif site.page_title %}
-    <meta property="og:title" content="{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}">
-    {% elif site.title %}
-    <meta property="og:title" content="{{ site.title }}">
-    {% endif %}
-    {% if site.current_url %}
-    <link rel="canonical" href="{{ site.current_url }}">
-    <meta property="og:url" content="{{ site.current_url }}">
-    {% endif %}
-    {% if site.favicon %}
-    <link rel="icon" href="{{ site.favicon }}">
-    {% endif %}
-    {% for translation in site.translations %}
-    <link rel="alternate" hreflang="{{ translation.code }}" href="{{ translation.href }}">
-    {% endfor %}
-    <meta name="color-scheme" content="light dark">
-    <script>
-(() => {
-  "use strict";
-  let value = "";
-  try {
-    value = localStorage.getItem("calepin-academic-theme") || "";
-  } catch {
-    value = "";
-  }
-  if (value === "light" || value === "dark") {
-    document.documentElement.dataset.theme = value;
-    document.documentElement.style.colorScheme = value;
-  }
-})();
-    </script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-{% if site.stylesheet %}
-    <link rel="stylesheet" href="{{ site.stylesheet }}">
-{% else %}
-{% for style in styles -%}
-    <style>
-{{ style.css }}
-    </style>
-{% endfor -%}
-{% endif %}
-{% if site.pagefind %}
-    <link rel="stylesheet" href="{{ site.pagefind.css }}">
-    <script src="{{ site.pagefind.js }}" type="module"></script>
-{% endif %}
+{% include "partials/site-meta.html" %}
+{% set calepin_theme_storage_key = "calepin-academic-theme" %}
+{% set calepin_theme_param = "" %}
+{% include "partials/theme-init.html" %}
+{% include "partials/styles.html" %}
 {{ doc.body_open }}
     <header class="academic-topbar">
         <nav class="academic-nav" aria-label="Site">
@@ -113,12 +59,6 @@
     <main class="academic-main" data-pagefind-body>
         {{ doc.body }}
     </main>
-{% if site.pagefind %}
-    <pagefind-modal></pagefind-modal>
-{% endif %}
-{% for script in scripts -%}
-    <script>
-{{ script.content }}
-    </script>
-{% endfor -%}
+{% include "partials/pagefind-modal.html" %}
+{% include "partials/scripts.html" %}
 {{ doc.body_close }}
