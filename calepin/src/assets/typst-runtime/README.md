@@ -7,21 +7,17 @@ defined in itself or an earlier file:
 
 1. `assets/typst-runtime/10_template.typ`
    - HTML shell helper (`html`) for the final document wrapper
-2. `assets/typst-runtime/20_themes.typ`
-   - Compatibility shim. User-overridable chunk styling hooks (`code-block` plus
-     syntax themes) are sourced from
-     `assets/themes/shared/typst/code-block.typ`.
-3. `assets/typst-runtime/30_state.typ`
+2. `assets/typst-runtime/20_state.typ`
    - The mode constant, label counters, and the option-defaults dictionaries
    - Small pure helpers (raw-node parsing, MIME selection, asset/href resolution,
      label attachment)
-4. `assets/typst-runtime/40_render.typ`
+3. `assets/typst-runtime/30_render.typ`
    - Styled input/output block rendering helpers (`_input-block`, `_output-block`,
      `_raw-block`) and figure/result rendering utilities
      (`_render-results` -> `_render-item` -> `_render-display-item`)
-5. `assets/typst-runtime/50_options.typ`
+4. `assets/typst-runtime/40_options.typ`
    - `setup()` plus full option resolution (`_setup-options`, `_resolve-options`)
-6. `assets/typst-runtime/60_chunk.typ`
+5. `assets/typst-runtime/50_chunk.typ`
    - Public chunking API (`chunk`, `inline`, `chunk-from-raw-plain`)
    - Query/render dispatch (`_emit-chunk`), label handling, raw-block interception
 

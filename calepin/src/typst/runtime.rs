@@ -9,22 +9,30 @@ use crate::typst::io::write_if_changed;
 fn runtime_source() -> Result<String> {
     const SHARED_CHUNK_STYLING: &str =
         concat!(env!("CARGO_MANIFEST_DIR"), "/src/assets/themes/shared/typst/code-block.typ");
-    let runtime_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/src/assets/typst-runtime");
-    let mut files: Vec<PathBuf> = fs::read_dir(runtime_dir)?
+    let mut source = fs::read_to_string(SHARED_CHUNK_STYLING)?;
+    for path in runtime_files()? {
+        source.push_str(&fs::read_to_string(path.as_path())?);
+    }
+
+    Ok(source)
+}
+
+fn runtime_files() -> Result<Vec<PathBuf>> {
+    const RUNTIME_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/assets/typst-runtime");
+
+    let mut files: Vec<PathBuf> = fs::read_dir(RUNTIME_DIR)?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| path.extension() == Some(OsStr::new("typ")))
         .collect();
 
-    files.sort_unstable_by(|a, b| a.file_name().cmp(&b.file_name()));
+    files.sort_unstable_by_key(|path| {
+        path.file_name()
+            .unwrap_or_else(|| OsStr::new(""))
+            .to_owned()
+    });
 
-    let mut source = String::new();
-    source.push_str(&fs::read_to_string(SHARED_CHUNK_STYLING)?);
-    for path in files {
-        source.push_str(&fs::read_to_string(&path)?);
-    }
-
-    Ok(source)
+    Ok(files)
 }
 
 pub fn write_runtime(root: &Path) -> Result<PathBuf> {

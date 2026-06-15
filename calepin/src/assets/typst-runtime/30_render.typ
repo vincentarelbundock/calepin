@@ -209,8 +209,33 @@
   raw(value, block: true, lang: lang, theme: theme)
 }
 
+#let code-block(
+  body,
+  fill: rgb("#f7f7f5"),
+  stroke: 0.5pt + rgb("#d8d8d2"),
+  radius: 2pt,
+  inset: (x: 0.65em, y: 0.45em),
+  text-fill: rgb("#1f2933"),
+  plain: false,
+) = {
+  let content = if plain {
+    body
+  } else {
+    text(fill: text-fill)[#body]
+  }
+  block(
+    width: 100%,
+    fill: fill,
+    stroke: stroke,
+    radius: radius,
+    inset: inset,
+  )[
+    #content
+  ]
+}
+
 #let _input-block(code, lang: none) = {
-  if sys.inputs.at("calepin-target", default: "paged") == "html" {
+  if _html-target() {
     std.html.elem("div", attrs: (
       class: "sourceCode",
       "data-lang": _block-lang-label(lang),
@@ -233,7 +258,7 @@
 }
 
 #let _output-block(output, stream: "stdout") = {
-  if sys.inputs.at("calepin-target", default: "paged") == "html" {
+  if _html-target() {
     let class = if stream == "stderr" {
       "cell-output cell-output-stderr"
     } else {
