@@ -3,8 +3,9 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
-use minijinja::{AutoEscape, Environment};
 use serde::{Deserialize, Serialize};
+
+use crate::utils::template::no_autoescape_env;
 
 use super::{
     absolute_site_url, clean_optional_string, is_safe_output_route, templates::read_template_files,
@@ -226,8 +227,7 @@ pub(super) fn write_feeds(
 
     let limit = config.feeds.as_ref().and_then(|feeds| feeds.limit);
     let items = feed_items_from_pages(pages_index, base_url, limit);
-    let mut env = Environment::new();
-    env.set_auto_escape_callback(|_| AutoEscape::None);
+    let mut env = no_autoescape_env();
     env.add_template(DEFAULT_ATOM_TEMPLATE_NAME, DEFAULT_ATOM_TEMPLATE)
         .map_err(|error| anyhow!("feed template: {error}"))?;
     env.add_template(DEFAULT_RSS_TEMPLATE_NAME, DEFAULT_RSS_TEMPLATE)

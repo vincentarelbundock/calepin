@@ -2,6 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+use crate::utils::path::{expand_home, is_path_like};
 use crate::utils::tools;
 
 pub const PYTHON_EXECUTABLE_ENV_VAR: &str = "CALEPIN_PYTHON";
@@ -155,59 +156,14 @@ fn resolve_tool_path(root: &Path, path: PathBuf) -> PathBuf {
     root.join(path)
 }
 
-fn expand_home(path: PathBuf) -> PathBuf {
-    let text = path.to_string_lossy();
-    let Some(rest) = text.strip_prefix("~/") else {
-        return path;
-    };
-    std::env::var_os("HOME")
-        .map(|home| PathBuf::from(home).join(rest))
-        .unwrap_or(path)
-}
-
-fn is_path_like(path: &Path) -> bool {
-    path.components().count() > 1 || path.to_string_lossy().contains('\\')
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::OsString;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-    struct EnvVarGuard {
-        key: &'static str,
-        previous: Option<OsString>,
-    }
-
-    impl EnvVarGuard {
-        fn set(key: &'static str, value: &str) -> Self {
-            let previous = std::env::var_os(key);
-            std::env::set_var(key, value);
-            Self { key, previous }
-        }
-
-        fn unset(key: &'static str) -> Self {
-            let previous = std::env::var_os(key);
-            std::env::remove_var(key);
-            Self { key, previous }
-        }
-    }
-
-    impl Drop for EnvVarGuard {
-        fn drop(&mut self) {
-            match &self.previous {
-                Some(value) => std::env::set_var(self.key, value),
-                None => std::env::remove_var(self.key),
-            }
-        }
-    }
+    use crate::utils::testutil::{env_lock, EnvVarGuard};
 
     #[test]
     fn missing_config_uses_current_defaults() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
+        let _env_lock = env_lock();
         let _env = EnvVarGuard::unset(PYTHON_EXECUTABLE_ENV_VAR);
         let dir = tempfile::tempdir().unwrap();
         let config = CalepinConfig::load(dir.path(), None).unwrap();
@@ -219,7 +175,7 @@ mod tests {
 
     #[test]
     fn missing_config_uses_python_env_default() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
+        let _env_lock = env_lock();
         let _env = EnvVarGuard::set(PYTHON_EXECUTABLE_ENV_VAR, "env-python");
         let dir = tempfile::tempdir().unwrap();
         let config = CalepinConfig::load(dir.path(), None).unwrap();
@@ -229,7 +185,7 @@ mod tests {
 
     #[test]
     fn missing_config_uses_project_venv_python() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
+        let _env_lock = env_lock();
         let _env = EnvVarGuard::unset(PYTHON_EXECUTABLE_ENV_VAR);
         let dir = tempfile::tempdir().unwrap();
         let python = dir.path().join(PROJECT_VENV_PYTHON_RELATIVE_PATH);
@@ -243,7 +199,7 @@ mod tests {
 
     #[test]
     fn config_overrides_executable_paths() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
+        let _env_lock = env_lock();
         let _env = EnvVarGuard::set(PYTHON_EXECUTABLE_ENV_VAR, "env-python");
         let dir = tempfile::tempdir().unwrap();
         let calepin_dir = dir.path().join(".calepin");
@@ -275,7 +231,7 @@ chrome = "tools/chrome"
 
     #[test]
     fn config_expands_home_in_executable_paths() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
+        let _env_lock = env_lock();
         let dir = tempfile::tempdir().unwrap();
         let home = dir.path().join("home");
         std::fs::create_dir(&home).unwrap();
@@ -298,7 +254,7 @@ typst = "~/Downloads/typst"
 
     #[test]
     fn explicit_relative_config_path_resolves_from_current_directory() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
+        let _env_lock = env_lock();
         let dir = tempfile::tempdir().unwrap();
         let project = dir.path().join("project");
         let docs = project.join("docs");

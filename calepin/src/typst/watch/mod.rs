@@ -13,7 +13,6 @@ use std::time::Duration;
 use anyhow::{anyhow, Context, Result};
 
 use crate::cli::{StopArgs, WatchArgs};
-use crate::html::prepare_html_theme;
 use crate::typst::compile::{
     reject_reserved_typst_inputs, resolve_output_path, typst_watch_args, ReservedInputs,
 };
@@ -51,8 +50,6 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     reject_reserved_typst_inputs(&args.typst_args)?;
 
     let initial = preprocess(preprocess_options(&args, sync_pages))?;
-    let prepared_theme =
-        prepare_html_theme(&initial.layout.root, format.as_deref(), None, None, None)?;
 
     let stop = Arc::new(AtomicBool::new(false));
     let stop_for_handler = Arc::clone(&stop);
@@ -80,7 +77,6 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         format.as_deref(),
         &args.typst_args,
         ReservedInputs {
-            raw_theme: prepared_theme.raw_theme_input.as_deref(),
             asset_base: asset_server.as_ref().map(|server| server.base_url()),
             ..ReservedInputs::default()
         },

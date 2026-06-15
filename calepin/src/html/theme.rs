@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
-use minijinja::{AutoEscape, Environment};
 use serde::Serialize;
 
 use super::syntax::HtmlSyntaxTheme;
+use crate::utils::html::escape as html_escape;
+use crate::utils::template::no_autoescape_env;
 
 #[derive(Serialize)]
 struct StyleEntry {
@@ -64,42 +65,19 @@ pub(crate) struct SiteContextInput {
     pub(crate) pagefind: Option<SitePagefindEntry>,
 }
 
+/// The site context handed to the template: the caller-supplied input (or a
+/// filesystem-derived fallback) plus the per-page `toc` computed during render.
 #[derive(Serialize)]
 struct SiteContext {
-    sidebar: Vec<NavEntry>,
-    sidebar_sections: Vec<NavSection>,
-    sidebar_fold: bool,
-    navbar_left: Vec<NavEntry>,
-    navbar_center: Vec<NavEntry>,
-    navbar_right: Vec<NavEntry>,
-    languages: Vec<LanguageEntry>,
-    translations: Vec<LanguageEntry>,
-    language: Option<String>,
+    #[serde(flatten)]
+    input: SiteContextInput,
     toc: Vec<TocEntry>,
-    title: Option<String>,
-    description: Option<String>,
-    base_url: Option<String>,
-    logo: Option<String>,
-    logo_alt: Option<String>,
-    home_url: Option<String>,
-    favicon: Option<String>,
-    current_url: Option<String>,
-    page_title: Option<String>,
-    stylesheet: Option<String>,
-    scripts: Vec<String>,
-    pagefind: Option<PagefindEntry>,
 }
 
 #[derive(Serialize, Debug, Clone)]
 pub(crate) struct SitePagefindEntry {
     pub(crate) css: String,
     pub(crate) js: String,
-}
-
-#[derive(Serialize)]
-struct PagefindEntry {
-    css: String,
-    js: String,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -115,29 +93,6 @@ pub(crate) struct SiteLanguageEntry {
     pub(crate) label: String,
     pub(crate) href: String,
     pub(crate) active: bool,
-}
-
-#[derive(Serialize)]
-struct NavSection {
-    title: Option<String>,
-    active: bool,
-    items: Vec<NavEntry>,
-}
-
-#[derive(Serialize, Clone)]
-struct LanguageEntry {
-    code: String,
-    label: String,
-    href: String,
-    active: bool,
-}
-
-#[derive(Serialize, Clone)]
-struct NavEntry {
-    href: String,
-    label: String,
-    label_html: String,
-    active: bool,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -206,20 +161,13 @@ pub(super) fn apply_html_theme(
 /// stylesheet carries the bundle's styles.
 pub(super) fn theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<Option<String>> {
     let syntax_theme = HtmlSyntaxTheme::builtin();
-    let mut css = String::new();
-    let mut push = |chunk: &str| {
-        if !css.is_empty() {
-            css.push_str("\n\n");
-        }
-        css.push_str(chunk);
-        if !chunk.ends_with('\n') {
-            css.push('\n');
-        }
-    };
-    for (_, style) in &entry.styles {
-        push(&theme_css(style, &syntax_theme));
-    }
-    Ok((!css.is_empty()).then_some(css))
+    let blocks = entry
+        .styles
+        .iter()
+        .map(|(_, css)| theme_css(css, &syntax_theme))
+        .filter(|css| !css.trim().is_empty())
+        .collect::<Vec<_>>();
+    Ok((!blocks.is_empty()).then(|| blocks.join("\n")))
 }
 
 fn render_theme(
@@ -231,10 +179,9 @@ fn render_theme(
     site_context_input: Option<&SiteContextInput>,
 ) -> Result<String> {
     let name = entry.theme_name.clone();
-    let mut env = Environment::new();
+    let mut env = no_autoescape_env();
     // Every injected fragment is already-escaped Typst HTML or trusted theme
     // content, so emit raw and avoid double-escaping (e.g. of an escaped title).
-    env.set_auto_escape_callback(|_| AutoEscape::None);
     env.add_template_owned("layout.html", entry.layout.clone())
         .map_err(|error| theme_error(&name, error))?;
     for (template_name, source) in &entry.partials {
@@ -294,114 +241,36 @@ fn site_context(
     toc: Vec<TocEntry>,
     site_context_input: Option<&SiteContextInput>,
 ) -> SiteContext {
-    if let Some(input) = site_context_input {
-        return SiteContext {
-            sidebar: input.sidebar.iter().map(nav_entry_from_input).collect(),
-            sidebar_sections: input
-                .sidebar_sections
-                .iter()
-                .map(|section| NavSection {
-                    title: section.title.clone(),
-                    active: section.active,
-                    items: section.items.iter().map(nav_entry_from_input).collect(),
-                })
-                .collect(),
-            sidebar_fold: input.sidebar_fold,
-            navbar_left: input.navbar_left.iter().map(nav_entry_from_input).collect(),
-            navbar_center: input
-                .navbar_center
-                .iter()
-                .map(nav_entry_from_input)
-                .collect(),
-            navbar_right: input
-                .navbar_right
-                .iter()
-                .map(nav_entry_from_input)
-                .collect(),
-            languages: input
-                .languages
-                .iter()
-                .map(language_entry_from_input)
-                .collect(),
-            translations: input
-                .translations
-                .iter()
-                .map(language_entry_from_input)
-                .collect(),
-            language: input.language.clone(),
-            toc,
-            title: input.title.clone(),
-            description: input.description.clone(),
-            base_url: input.base_url.clone(),
-            logo: input.logo.clone(),
-            logo_alt: input.logo_alt.clone(),
-            home_url: input.home_url.clone(),
-            favicon: input.favicon.clone(),
-            current_url: input.current_url.clone(),
-            page_title: input.page_title.clone(),
-            stylesheet: input.stylesheet.clone(),
-            scripts: input.scripts.clone(),
-            pagefind: input.pagefind.as_ref().map(|entry| PagefindEntry {
-                css: entry.css.clone(),
-                js: entry.js.clone(),
-            }),
-        };
-    }
+    let input = site_context_input
+        .cloned()
+        .unwrap_or_else(|| default_site_context(project_root, output_path));
+    SiteContext { input, toc }
+}
 
+/// Fallback site context used when no website orchestrator supplied one: a
+/// single sidebar section listing the sibling `.typ` documents.
+fn default_site_context(
+    project_root: Option<&Path>,
+    output_path: Option<&Path>,
+) -> SiteContextInput {
     let nav = nav_entries(project_root, output_path);
-    SiteContext {
-        sidebar_sections: if nav.is_empty() {
-            Vec::new()
-        } else {
-            vec![NavSection {
-                title: None,
-                active: false,
-                items: nav.clone(),
-            }]
-        },
+    let sidebar_sections = if nav.is_empty() {
+        Vec::new()
+    } else {
+        vec![SiteNavSection {
+            title: None,
+            active: false,
+            items: nav.clone(),
+        }]
+    };
+    SiteContextInput {
         sidebar: nav,
-        sidebar_fold: false,
-        navbar_left: Vec::new(),
-        navbar_center: Vec::new(),
-        navbar_right: Vec::new(),
-        languages: Vec::new(),
-        translations: Vec::new(),
-        language: None,
-        toc,
-        title: None,
-        description: None,
-        base_url: None,
-        logo: None,
-        logo_alt: None,
-        home_url: None,
-        favicon: None,
-        current_url: None,
-        page_title: None,
-        stylesheet: None,
-        scripts: Vec::new(),
-        pagefind: None,
+        sidebar_sections,
+        ..Default::default()
     }
 }
 
-fn language_entry_from_input(entry: &SiteLanguageEntry) -> LanguageEntry {
-    LanguageEntry {
-        code: entry.code.clone(),
-        label: entry.label.clone(),
-        href: entry.href.clone(),
-        active: entry.active,
-    }
-}
-
-fn nav_entry_from_input(item: &SiteNavEntry) -> NavEntry {
-    NavEntry {
-        href: item.href.clone(),
-        label: item.label.clone(),
-        label_html: item.label_html.clone(),
-        active: item.active,
-    }
-}
-
-fn nav_entries(project_root: Option<&Path>, output_path: Option<&Path>) -> Vec<NavEntry> {
+fn nav_entries(project_root: Option<&Path>, output_path: Option<&Path>) -> Vec<SiteNavEntry> {
     let Some(root) = project_root else {
         return Vec::new();
     };
@@ -437,7 +306,7 @@ fn nav_entries(project_root: Option<&Path>, output_path: Option<&Path>) -> Vec<N
 
     stems
         .into_iter()
-        .map(|stem| NavEntry {
+        .map(|stem| SiteNavEntry {
             href: format!("{stem}.html"),
             label: html_escape(&format!("{stem}.typ")),
             label_html: html_escape(&format!("{stem}.typ")),
@@ -459,17 +328,17 @@ fn body_with_heading_ids(body: &str, title_heading: Option<&str>) -> (String, Ve
         let Some(level_byte) = body.as_bytes().get(tag_start).copied() else {
             break;
         };
-        if !(b"1"[0]..=b"6"[0]).contains(&level_byte) {
+        if !(b'1'..=b'6').contains(&level_byte) {
             out.push_str(&body[cursor..start + 2]);
             cursor = start + 2;
             continue;
         }
-        let level = (level_byte - b"0"[0]) as usize;
+        let level = (level_byte - b'0') as usize;
         let after_level = tag_start + 1;
         let Some(after_byte) = body.as_bytes().get(after_level).copied() else {
             break;
         };
-        if after_byte != b">"[0] && !after_byte.is_ascii_whitespace() {
+        if after_byte != b'>' && !after_byte.is_ascii_whitespace() {
             out.push_str(&body[cursor..after_level]);
             cursor = after_level;
             continue;
@@ -504,8 +373,8 @@ fn body_with_heading_ids(body: &str, title_heading: Option<&str>) -> (String, Ve
             out.push_str(&open_tag[..open_tag.len() - 1]);
             out.push_str(r#" id=""#);
             out.push_str(&id);
-            out.push(34 as char);
-            out.push(62 as char);
+            out.push('"');
+            out.push('>');
         }
         out.push_str(inner);
         out.push_str(&close_tag);
@@ -532,9 +401,9 @@ fn strip_html_tags(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     let mut in_tag = false;
     for ch in value.chars() {
-        match ch as u32 {
-            60 => in_tag = true,
-            62 => in_tag = false,
+        match ch {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
             _ if !in_tag => out.push(ch),
             _ => {}
         }
@@ -548,15 +417,7 @@ fn decode_basic_entities(value: &str) -> String {
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
-        .replace("&#39;", "\u{27}")
-}
-
-fn html_escape(value: &str) -> String {
-    value
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
+        .replace("&#39;", "'")
 }
 
 fn slugify(value: &str) -> String {
@@ -565,7 +426,7 @@ fn slugify(value: &str) -> String {
     for ch in value.chars().flat_map(|ch| ch.to_lowercase()) {
         if ch.is_ascii_alphanumeric() {
             if pending_dash && !slug.is_empty() {
-                slug.push(45 as char);
+                slug.push('-');
             }
             slug.push(ch);
             pending_dash = false;

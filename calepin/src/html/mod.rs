@@ -3,8 +3,12 @@ mod minify;
 mod syntax;
 mod theme;
 
-use anyhow::{anyhow, Context, Result};
-use std::path::{Path, PathBuf};
+#[cfg(test)]
+use anyhow::anyhow;
+use anyhow::{Context, Result};
+use std::path::Path;
+#[cfg(test)]
+use std::path::PathBuf;
 
 use syntax::HtmlSyntaxTheme;
 
@@ -13,15 +17,19 @@ pub(crate) use theme::{
     SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
 
+#[cfg(test)]
 const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
+#[cfg(test)]
 const HTML_INPUT_LIGHT_THEME_REF: &str = "/.calepin/calepin-input-light.tmTheme";
 
+#[cfg(test)]
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedHtmlTheme {
     pub(crate) syntax_theme: HtmlSyntaxTheme,
     pub(crate) raw_theme_input: Option<String>,
 }
 
+#[cfg(test)]
 pub(crate) fn prepare_html_theme(
     root: &Path,
     format: Option<&str>,
@@ -74,13 +82,51 @@ pub(crate) fn prepare_html_theme(
     }
 }
 
+/// Read `path`, transform its contents, and write the result back only when it
+/// changed (so `watch` does not retrigger the child `typst watch` on a no-op).
+fn rewrite_file_in_place(
+    path: &Path,
+    transform: impl FnOnce(&str) -> Result<String>,
+) -> Result<()> {
+    let original = std::fs::read_to_string(path)
+        .with_context(|| format!("failed to read {}", path.display()))?;
+    let updated = transform(&original)?;
+    if updated != original {
+        std::fs::write(path, &updated)
+            .with_context(|| format!("failed to write {}", path.display()))?;
+    }
+    Ok(())
+}
+
+/// Concatenate non-empty CSS/JS chunks separated by a blank line, each
+/// terminated by a newline. Returns `None` when there is nothing to join.
+fn join_blocks(chunks: impl IntoIterator<Item = String>) -> Option<String> {
+    let mut out = String::new();
+    for chunk in chunks {
+        if !out.is_empty() {
+            out.push_str("\n\n");
+        }
+        out.push_str(&chunk);
+        if !chunk.ends_with('\n') {
+            out.push('\n');
+        }
+    }
+    (!out.is_empty()).then_some(out)
+}
+
 pub(crate) fn apply_html_theme_file(
     path: &Path,
     entry: Option<&crate::theme::HtmlEntry>,
-    syntax_theme: &HtmlSyntaxTheme,
     root: &Path,
+    site_context: Option<&SiteContextInput>,
 ) -> Result<()> {
-    apply_html_theme_file_with_site_context(path, entry, syntax_theme, root, None)
+    apply_html_theme_file_with_site_context(
+        path,
+        entry,
+        &HtmlSyntaxTheme::builtin(),
+        root,
+        site_context,
+    )
 }
 
 pub(crate) fn apply_html_theme_file_with_site_context(
@@ -90,33 +136,23 @@ pub(crate) fn apply_html_theme_file_with_site_context(
     root: &Path,
     site_context: Option<&SiteContextInput>,
 ) -> Result<()> {
-    let html = std::fs::read_to_string(path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
-    let themed = theme::apply_html_theme(
-        &html,
-        entry,
-        syntax_theme,
-        Some(path),
-        Some(root),
-        site_context,
-    )?;
-    if themed != html {
-        std::fs::write(path, themed)
-            .with_context(|| format!("failed to write {}", path.display()))?;
-    }
-    Ok(())
+    rewrite_file_in_place(path, |source| {
+        theme::apply_html_theme(
+            source,
+            entry,
+            syntax_theme,
+            Some(path),
+            Some(root),
+            site_context,
+        )
+    })
 }
 
 pub(crate) fn inline_html_images_file(path: &Path, root: &Path) -> Result<()> {
-    let html = std::fs::read_to_string(path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
     let base_dir = path.parent().unwrap_or(root);
-    let inlined = assets::inline_html_images(&html, root, base_dir)?;
-    if inlined != html {
-        std::fs::write(path, inlined)
-            .with_context(|| format!("failed to write {}", path.display()))?;
-    }
-    Ok(())
+    rewrite_file_in_place(path, |source| {
+        assets::inline_html_images(source, root, base_dir)
+    })
 }
 
 pub(crate) fn html_theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<Option<String>> {
@@ -124,17 +160,7 @@ pub(crate) fn html_theme_stylesheet(entry: &crate::theme::HtmlEntry) -> Result<O
 }
 
 pub(crate) fn html_theme_script(entry: &crate::theme::HtmlEntry) -> Option<String> {
-    let mut script = String::new();
-    for (_, content) in &entry.scripts {
-        if !script.is_empty() {
-            script.push_str("\n\n");
-        }
-        script.push_str(content);
-        if !content.ends_with('\n') {
-            script.push('\n');
-        }
-    }
-    (!script.is_empty()).then_some(script)
+    join_blocks(entry.scripts.iter().map(|(_, content)| content.clone()))
 }
 
 #[cfg(test)]
@@ -183,6 +209,7 @@ mod minify_tests {
     }
 }
 
+#[cfg(test)]
 fn resolve_setup_theme_path(root: &Path, value: &str) -> PathBuf {
     let path = Path::new(value);
     if path.is_absolute() {
@@ -401,6 +428,16 @@ mod tests {
         .to_string();
 
         assert!(err.contains("require `html-theme`"));
+    }
+
+    #[test]
+    fn prepare_html_theme_defaults_without_custom_syntax_theme() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let prepared = prepare_html_theme(dir.path(), Some("html"), None, None, None).unwrap();
+
+        assert!(prepared.raw_theme_input.is_none());
+        assert!(prepared.syntax_theme.class_rules().contains("sourceCode"));
     }
 
     #[test]

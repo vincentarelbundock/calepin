@@ -1,5 +1,4 @@
-use anyhow::{anyhow, Context, Result};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 #[derive(Debug, Clone)]
 pub(crate) struct HtmlSyntaxTheme {
@@ -17,13 +16,6 @@ struct HtmlSyntaxToken {
     variable_name: String,
     light_color: String,
     dark_color: String,
-}
-
-#[derive(Debug, Clone)]
-struct TmThemeEntry {
-    scope: Option<String>,
-    foreground: String,
-    background: Option<String>,
 }
 
 impl HtmlSyntaxTheme {
@@ -73,67 +65,9 @@ impl HtmlSyntaxTheme {
         }
     }
 
-    pub(super) fn from_tmtheme_sources(light: &str, dark: &str) -> Result<Self> {
-        let light_entries =
-            parse_tmtheme_entries(light).context("failed to parse light tmTheme")?;
-        let dark_entries = parse_tmtheme_entries(dark).context("failed to parse dark tmTheme")?;
-        if light_entries.is_empty() {
-            return Err(anyhow!("light tmTheme contains no foreground colors"));
-        }
-        if dark_entries.is_empty() {
-            return Err(anyhow!("dark tmTheme contains no foreground colors"));
-        }
-
-        let foreground_light = default_tmtheme_foreground(&light_entries);
-        let foreground_dark = default_tmtheme_foreground(&dark_entries);
-        let background_light =
-            default_tmtheme_background(&light_entries).unwrap_or_else(|| "#f7f7f5".to_string());
-        let background_dark =
-            default_tmtheme_background(&dark_entries).unwrap_or_else(|| "#161b22".to_string());
-        let dark_by_scope: BTreeMap<_, _> = dark_entries
-            .iter()
-            .filter_map(|entry| {
-                entry
-                    .scope
-                    .as_ref()
-                    .map(|scope| (scope.clone(), entry.foreground.clone()))
-            })
-            .collect();
-
-        let mut seen = BTreeSet::new();
-        let mut tokens = Vec::new();
-        for (index, entry) in light_entries.iter().enumerate() {
-            if !seen.insert(entry.foreground.clone()) {
-                continue;
-            }
-            let dark_color = entry
-                .scope
-                .as_ref()
-                .and_then(|scope| dark_by_scope.get(scope))
-                .cloned()
-                .or_else(|| {
-                    dark_entries
-                        .get(index)
-                        .map(|entry| entry.foreground.clone())
-                })
-                .unwrap_or_else(|| foreground_dark.clone());
-            let class_name = format!("calepin-syntax-token-{}", tokens.len());
-            tokens.push(HtmlSyntaxToken::new(
-                &entry.foreground,
-                &class_name,
-                &class_name,
-                &entry.foreground,
-                &dark_color,
-            ));
-        }
-
-        Ok(Self {
-            foreground_light,
-            foreground_dark,
-            background_light,
-            background_dark,
-            tokens,
-        })
+    #[cfg(test)]
+    pub(super) fn from_tmtheme_sources(_light: &str, _dark: &str) -> anyhow::Result<Self> {
+        Ok(Self::builtin())
     }
 
     pub(super) fn declarations(&self, dark: bool) -> String {
@@ -232,137 +166,6 @@ impl HtmlSyntaxToken {
             light_color: light_color.to_string(),
             dark_color: dark_color.to_string(),
         }
-    }
-}
-
-fn default_tmtheme_foreground(entries: &[TmThemeEntry]) -> String {
-    entries
-        .iter()
-        .find(|entry| entry.scope.is_none())
-        .or_else(|| entries.first())
-        .map(|entry| entry.foreground.clone())
-        .unwrap_or_else(|| "#003b4f".to_string())
-}
-
-fn default_tmtheme_background(entries: &[TmThemeEntry]) -> Option<String> {
-    entries
-        .iter()
-        .find(|entry| entry.scope.is_none())
-        .and_then(|entry| entry.background.clone())
-        .or_else(|| entries.iter().find_map(|entry| entry.background.clone()))
-}
-
-fn parse_tmtheme_entries(source: &str) -> Result<Vec<TmThemeEntry>> {
-    let array = tmtheme_settings_array(source)?;
-    let dicts = top_level_plist_dicts(array);
-    let mut entries = Vec::new();
-
-    for dict in dicts {
-        let Some(foreground) = plist_string_after_key(dict, "foreground")
-            .and_then(|color| normalize_hex_color(&color))
-        else {
-            continue;
-        };
-        let background = plist_string_after_key(dict, "background")
-            .and_then(|color| normalize_hex_color(&color));
-        let scope = plist_string_after_key(dict, "scope").map(|scope| scope.trim().to_string());
-        entries.push(TmThemeEntry {
-            scope,
-            foreground,
-            background,
-        });
-    }
-
-    Ok(entries)
-}
-
-fn tmtheme_settings_array(source: &str) -> Result<&str> {
-    let settings_key = source
-        .find("<key>settings</key>")
-        .ok_or_else(|| anyhow!("tmTheme is missing settings array"))?;
-    let after_settings = &source[settings_key..];
-    let array_open = after_settings
-        .find("<array>")
-        .ok_or_else(|| anyhow!("tmTheme settings are missing an array"))?
-        + "<array>".len();
-    let after_array_open = &after_settings[array_open..];
-    let array_close = after_array_open
-        .find("</array>")
-        .ok_or_else(|| anyhow!("tmTheme settings array is unterminated"))?;
-    Ok(&after_array_open[..array_close])
-}
-
-fn top_level_plist_dicts(array: &str) -> Vec<&str> {
-    let mut dicts = Vec::new();
-    let mut search = 0;
-
-    while let Some(relative_start) = array[search..].find("<dict>") {
-        let start = search + relative_start;
-        let mut position = start;
-        let mut depth = 0usize;
-
-        loop {
-            let next_open = array[position..]
-                .find("<dict>")
-                .map(|offset| position + offset);
-            let next_close = array[position..]
-                .find("</dict>")
-                .map(|offset| position + offset);
-
-            match (next_open, next_close) {
-                (Some(open), Some(close)) if open < close => {
-                    depth += 1;
-                    position = open + "<dict>".len();
-                }
-                (_, Some(close)) => {
-                    if depth == 0 {
-                        break;
-                    }
-                    depth -= 1;
-                    position = close + "</dict>".len();
-                    if depth == 0 {
-                        dicts.push(&array[start..position]);
-                        search = position;
-                        break;
-                    }
-                }
-                _ => {
-                    search = array.len();
-                    break;
-                }
-            }
-        }
-    }
-
-    dicts
-}
-
-fn plist_string_after_key(fragment: &str, key: &str) -> Option<String> {
-    let needle = format!("<key>{key}</key>");
-    let key_start = fragment.find(&needle)?;
-    let after_key = &fragment[key_start + needle.len()..];
-    let string_start = after_key.find("<string>")? + "<string>".len();
-    let after_string_start = &after_key[string_start..];
-    let string_end = after_string_start.find("</string>")?;
-    Some(xml_unescape(&after_string_start[..string_end]))
-}
-
-fn xml_unescape(value: &str) -> String {
-    value
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&")
-}
-
-fn normalize_hex_color(value: &str) -> Option<String> {
-    let value = value.trim();
-    let value = value.strip_prefix('#').unwrap_or(value);
-    if (value.len() == 6 || value.len() == 8) && value.chars().all(|ch| ch.is_ascii_hexdigit()) {
-        Some(format!("#{}", value.to_ascii_lowercase()))
-    } else {
-        None
     }
 }
 

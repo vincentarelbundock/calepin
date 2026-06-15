@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::utils::path::is_path_like;
 use crate::utils::tools::Tool;
 
 pub fn validate_executable(
@@ -103,40 +104,11 @@ fn is_executable_file(path: &Path) -> bool {
     path.is_file()
 }
 
-fn is_path_like(path: &Path) -> bool {
-    path.components().count() > 1 || path.to_string_lossy().contains('\\')
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::OsString;
+    use crate::utils::testutil::{env_lock, EnvVarGuard};
     use std::path::PathBuf;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-    struct EnvVarGuard {
-        key: &'static str,
-        previous: Option<OsString>,
-    }
-
-    impl EnvVarGuard {
-        fn set(key: &'static str, value: OsString) -> Self {
-            let previous = std::env::var_os(key);
-            std::env::set_var(key, value);
-            Self { key, previous }
-        }
-    }
-
-    impl Drop for EnvVarGuard {
-        fn drop(&mut self) {
-            match &self.previous {
-                Some(value) => std::env::set_var(self.key, value),
-                None => std::env::remove_var(self.key),
-            }
-        }
-    }
 
     #[test]
     fn missing_configured_path_names_the_path() {
@@ -179,7 +151,7 @@ mod tests {
 
     #[test]
     fn validate_searches_path_for_bare_command() {
-        let _env_lock = ENV_LOCK.lock().unwrap();
+        let _env_lock = env_lock();
         let dir = tempfile::tempdir().unwrap();
         let executable = dir.path().join("tool");
         std::fs::write(&executable, "").unwrap();

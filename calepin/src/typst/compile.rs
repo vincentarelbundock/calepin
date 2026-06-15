@@ -3,8 +3,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use crate::html::{
-    apply_html_theme_file, apply_html_theme_file_with_site_context, inline_html_images_file,
-    minify_html_file, prepare_html_theme, SiteContextInput,
+    apply_html_theme_file, inline_html_images_file, minify_html_file, SiteContextInput,
 };
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
@@ -209,13 +208,6 @@ pub fn compile_with_typst(
         None
     };
     reject_reserved_typst_inputs(options.typst_args)?;
-    let prepared_theme = prepare_html_theme(
-        &layout.root,
-        options.format,
-        html_entry.as_ref().map(|entry| entry.theme_name.as_str()),
-        None,
-        None,
-    )?;
     let output_path = resolve_output_path(layout, options.output.as_deref(), options.format);
     let html_output = html_output_path(layout, Some(output_path.as_path()), options.format);
     let args = typst_compile_args(
@@ -224,7 +216,7 @@ pub fn compile_with_typst(
         options.format,
         options.typst_args,
         ReservedInputs {
-            raw_theme: prepared_theme.raw_theme_input.as_deref(),
+            raw_theme: None,
             asset_base: None,
             pages: options.pages_input,
             current_href: options.current_href_input,
@@ -235,22 +227,7 @@ pub fn compile_with_typst(
         format!("typst compile failed:\n{stderr}")
     })?;
     if let Some(path) = html_output {
-        if let Some(site_context) = options.site_context {
-            apply_html_theme_file_with_site_context(
-                &path,
-                html_entry,
-                &prepared_theme.syntax_theme,
-                &layout.root,
-                Some(site_context),
-            )?;
-        } else {
-            apply_html_theme_file(
-                &path,
-                html_entry,
-                &prepared_theme.syntax_theme,
-                &layout.root,
-            )?;
-        }
+        apply_html_theme_file(&path, html_entry, &layout.root, options.site_context)?;
         inline_html_images_file(&path, &layout.root)?;
         if options.minify_html {
             minify_html_file(&path)?;

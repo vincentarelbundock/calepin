@@ -189,57 +189,8 @@ pub(super) fn tool_error(program: &Path, stderr: Vec<u8>) -> EngineResult {
 #[cfg(test)]
 pub(super) mod test_support {
     use crate::engines::EngineResult;
-    use std::ffi::{OsStr, OsString};
-    use std::path::{Path, PathBuf};
-    use std::sync::{Mutex, OnceLock};
-
-    pub(super) fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        ENV_LOCK
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-    }
-
-    pub(super) struct EnvVarGuard {
-        key: &'static str,
-        old_value: Option<OsString>,
-    }
-
-    impl EnvVarGuard {
-        pub(super) fn set(key: &'static str, value: impl AsRef<OsStr>) -> Self {
-            let guard = Self {
-                key,
-                old_value: std::env::var_os(key),
-            };
-            std::env::set_var(key, value);
-            guard
-        }
-
-        pub(super) fn prepend_path(path: PathBuf) -> Self {
-            let old_value = std::env::var_os("PATH");
-            let mut paths = vec![path];
-            if let Some(old_path) = &old_value {
-                paths.extend(std::env::split_paths(old_path));
-            }
-            let guard = Self {
-                key: "PATH",
-                old_value,
-            };
-            std::env::set_var("PATH", std::env::join_paths(paths).unwrap());
-            guard
-        }
-    }
-
-    impl Drop for EnvVarGuard {
-        fn drop(&mut self) {
-            if let Some(value) = &self.old_value {
-                std::env::set_var(self.key, value);
-            } else {
-                std::env::remove_var(self.key);
-            }
-        }
-    }
+    pub(super) use crate::utils::testutil::{env_lock, EnvVarGuard};
+    use std::path::Path;
 
     #[cfg(unix)]
     pub(super) fn write_executable(path: &Path, contents: impl AsRef<[u8]>) {

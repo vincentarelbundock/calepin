@@ -17,12 +17,8 @@ use clap::Parser;
 
 use cli::{Cli, Command};
 
-fn parse_cli() -> Cli {
-    Cli::parse()
-}
-
 fn main() -> Result<()> {
-    let cli = parse_cli();
+    let cli = Cli::parse();
 
     match cli.command {
         Command::New(args) => typst::cli::handle_new(args),

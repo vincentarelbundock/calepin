@@ -28,6 +28,7 @@ use crate::html::{
 };
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions, PreprocessOutput};
+use crate::utils::http::timeout_agent;
 use crate::utils::static_files::path_has_common_skip_dir;
 pub(crate) use crate::utils::static_files::COMMON_SKIP_DIRS as SKIP_DIRS;
 use crate::utils::watch::{is_rebuild_event, run_debounced_watch};
@@ -1890,9 +1891,7 @@ struct IconCache {
 
 impl IconCache {
     fn new(dir: PathBuf) -> Self {
-        let agent = ureq::AgentBuilder::new()
-            .timeout(Duration::from_secs(ICON_DOWNLOAD_TIMEOUT_SECS))
-            .build();
+        let agent = timeout_agent(Duration::from_secs(ICON_DOWNLOAD_TIMEOUT_SECS));
         Self {
             dir,
             agent,
@@ -2658,13 +2657,7 @@ impl GeneratedThemeAsset {
     }
 }
 
-fn html_escape(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
+use crate::utils::html::escape as html_escape;
 
 fn xml_escape(value: &str) -> String {
     html_escape(value).replace('\'', "&apos;")

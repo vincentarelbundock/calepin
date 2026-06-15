@@ -3,8 +3,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
-use minijinja::{AutoEscape, Environment};
 use serde::Serialize;
+
+use crate::utils::template::no_autoescape_env;
 
 use super::paths::slash_path;
 use super::{
@@ -58,8 +59,7 @@ pub(super) fn write_robots(
     }
 
     let template_dir = src_dir.join(ROBOTS_TEMPLATE_DIR);
-    let mut env = Environment::new();
-    env.set_auto_escape_callback(|_| AutoEscape::None);
+    let mut env = no_autoescape_env();
     let mut has_robots_template = false;
 
     if template_dir.is_dir() {
