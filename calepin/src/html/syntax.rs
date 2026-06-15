@@ -65,11 +65,6 @@ impl HtmlSyntaxTheme {
         }
     }
 
-    #[cfg(test)]
-    pub(super) fn from_tmtheme_sources(_light: &str, _dark: &str) -> anyhow::Result<Self> {
-        Ok(Self::builtin())
-    }
-
     pub(super) fn declarations(&self, dark: bool) -> String {
         let mut declarations = String::new();
         declarations.push_str("  --calepin-syntax-foreground: ");

@@ -3,8 +3,6 @@ mod minify;
 mod syntax;
 mod theme;
 
-#[cfg(test)]
-use anyhow::anyhow;
 use anyhow::{Context, Result};
 use std::path::Path;
 #[cfg(test)]
@@ -16,71 +14,6 @@ pub(crate) use minify::minify_html_file;
 pub(crate) use theme::{
     SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
-
-#[cfg(test)]
-const HTML_INPUT_LIGHT_THEME_PATH: &str = ".calepin/calepin-input-light.tmTheme";
-#[cfg(test)]
-const HTML_INPUT_LIGHT_THEME_REF: &str = "/.calepin/calepin-input-light.tmTheme";
-
-#[cfg(test)]
-#[derive(Debug, Clone)]
-pub(crate) struct PreparedHtmlTheme {
-    pub(crate) syntax_theme: HtmlSyntaxTheme,
-    pub(crate) raw_theme_input: Option<String>,
-}
-
-#[cfg(test)]
-pub(crate) fn prepare_html_theme(
-    root: &Path,
-    format: Option<&str>,
-    html_theme: Option<&str>,
-    html_theme_light: Option<&str>,
-    html_theme_dark: Option<&str>,
-) -> Result<PreparedHtmlTheme> {
-    if format != Some("html") {
-        return Ok(PreparedHtmlTheme {
-            syntax_theme: HtmlSyntaxTheme::builtin(),
-            raw_theme_input: None,
-        });
-    }
-
-    match (html_theme_light, html_theme_dark) {
-        (None, None) => Ok(PreparedHtmlTheme {
-            syntax_theme: HtmlSyntaxTheme::builtin(),
-            raw_theme_input: None,
-        }),
-        (Some(light), Some(dark)) => {
-            if html_theme.is_none() {
-                return Err(anyhow!(
-                    "`html-theme-light` and `html-theme-dark` require `html-theme`"
-                ));
-            }
-            let light_path = resolve_setup_theme_path(root, light);
-            let dark_path = resolve_setup_theme_path(root, dark);
-            let light_source = std::fs::read_to_string(&light_path)
-                .with_context(|| format!("failed to read {}", light_path.display()))?;
-            let dark_source = std::fs::read_to_string(&dark_path)
-                .with_context(|| format!("failed to read {}", dark_path.display()))?;
-            let syntax_theme = HtmlSyntaxTheme::from_tmtheme_sources(&light_source, &dark_source)?;
-
-            let prepared_path = root.join(HTML_INPUT_LIGHT_THEME_PATH);
-            if let Some(parent) = prepared_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .with_context(|| format!("failed to create {}", parent.display()))?;
-            }
-            std::fs::write(&prepared_path, light_source)
-                .with_context(|| format!("failed to write {}", prepared_path.display()))?;
-
-            Ok(PreparedHtmlTheme {
-                syntax_theme,
-                raw_theme_input: Some(HTML_INPUT_LIGHT_THEME_REF.to_string()),
-            })
-        }
-        _ => Err(anyhow!(
-            "`html-theme-light` and `html-theme-dark` must be supplied together"
-        )),
-    }
-}
 
 /// Read `path`, transform its contents, and write the result back only when it
 /// changed (so `watch` does not retrigger the child `typst watch` on a no-op).
@@ -206,16 +139,6 @@ mod minify_tests {
         assert!(minified.len() < html.len());
         assert!(minified.contains("<p>Hello, world!"));
         assert!(!minified.contains("\n  <body>"));
-    }
-}
-
-#[cfg(test)]
-fn resolve_setup_theme_path(root: &Path, value: &str) -> PathBuf {
-    let path = Path::new(value);
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        root.join(path)
     }
 }
 
@@ -414,33 +337,6 @@ mod tests {
     }
 
     #[test]
-    fn html_custom_syntax_themes_require_html_theme() {
-        let dir = tempfile::tempdir().unwrap();
-
-        let err = prepare_html_theme(
-            dir.path(),
-            Some("html"),
-            None,
-            Some("light.tmTheme"),
-            Some("dark.tmTheme"),
-        )
-        .unwrap_err()
-        .to_string();
-
-        assert!(err.contains("require `html-theme`"));
-    }
-
-    #[test]
-    fn prepare_html_theme_defaults_without_custom_syntax_theme() {
-        let dir = tempfile::tempdir().unwrap();
-
-        let prepared = prepare_html_theme(dir.path(), Some("html"), None, None, None).unwrap();
-
-        assert!(prepared.raw_theme_input.is_none());
-        assert!(prepared.syntax_theme.class_rules().contains("sourceCode"));
-    }
-
-    #[test]
     fn user_theme_directory_can_be_referenced_directly() {
         let dir = tempfile::tempdir().unwrap();
         let theme_dir = write_theme(
@@ -502,27 +398,11 @@ mod tests {
     #[test]
     fn bundled_website_theme_uses_configured_logo() {
         let site_context = SiteContextInput {
-            sidebar: Vec::new(),
-            sidebar_fold: false,
-            sidebar_sections: Vec::new(),
-            navbar_left: Vec::new(),
-            navbar_center: Vec::new(),
-            navbar_right: Vec::new(),
-            languages: Vec::new(),
-            translations: Vec::new(),
-            language: None,
             title: Some("Example".to_string()),
-            description: None,
-            base_url: None,
             logo: Some("assets/logo.svg".to_string()),
             logo_alt: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
-            favicon: None,
-            current_url: None,
-            page_title: None,
-            stylesheet: None,
-            scripts: Vec::new(),
-            pagefind: None,
+            ..SiteContextInput::default()
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
 
@@ -538,24 +418,19 @@ mod tests {
 
         assert!(themed.contains(r#"<img src="assets/logo.svg" alt="Example""#));
         assert!(themed.contains(r#"aria-label="Example home""#));
-        assert!(!themed.contains("logo_short_2.svg"));
+        assert!(!themed.contains("logo_short.svg"));
         assert!(!themed.contains("Calepin home"));
     }
 
     #[test]
     fn bundled_themes_render_navbar_links_theme_toggle_and_language_picker() {
         let site_context = SiteContextInput {
-            sidebar: Vec::new(),
-            sidebar_fold: false,
-            sidebar_sections: Vec::new(),
             navbar_left: vec![SiteNavEntry {
                 href: "about.html".to_string(),
                 label: "About".to_string(),
                 label_html: "About".to_string(),
                 active: true,
             }],
-            navbar_center: Vec::new(),
-            navbar_right: Vec::new(),
             languages: vec![
                 SiteLanguageEntry {
                     code: "en".to_string(),
@@ -570,20 +445,10 @@ mod tests {
                     active: false,
                 },
             ],
-            translations: Vec::new(),
             language: Some("en".to_string()),
             title: Some("Example".to_string()),
-            description: None,
-            base_url: None,
-            logo: None,
-            logo_alt: None,
             home_url: Some("index.html".to_string()),
-            favicon: None,
-            current_url: None,
-            page_title: None,
-            stylesheet: None,
-            scripts: Vec::new(),
-            pagefind: None,
+            ..SiteContextInput::default()
         };
 
         for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
@@ -643,11 +508,6 @@ mod tests {
     #[test]
     fn bundled_themes_hide_language_picker_for_single_language_sites() {
         let site_context = SiteContextInput {
-            sidebar: Vec::new(),
-            sidebar_fold: false,
-            sidebar_sections: Vec::new(),
-            navbar_left: Vec::new(),
-            navbar_center: Vec::new(),
             navbar_right: vec![SiteNavEntry {
                 href: String::new(),
                 label: "Language".to_string(),
@@ -660,20 +520,10 @@ mod tests {
                 href: "index.html".to_string(),
                 active: true,
             }],
-            translations: Vec::new(),
             language: Some("en".to_string()),
             title: Some("Example".to_string()),
-            description: None,
-            base_url: None,
-            logo: None,
-            logo_alt: None,
             home_url: Some("index.html".to_string()),
-            favicon: None,
-            current_url: None,
-            page_title: None,
-            stylesheet: None,
-            scripts: Vec::new(),
-            pagefind: None,
+            ..SiteContextInput::default()
         };
 
         for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
@@ -777,27 +627,10 @@ mod tests {
     #[test]
     fn bundled_website_theme_can_link_external_stylesheet() {
         let site_context = SiteContextInput {
-            sidebar: Vec::new(),
-            sidebar_fold: false,
-            sidebar_sections: Vec::new(),
-            navbar_left: Vec::new(),
-            navbar_center: Vec::new(),
-            navbar_right: Vec::new(),
-            languages: Vec::new(),
-            translations: Vec::new(),
-            language: None,
             title: Some("Example".to_string()),
-            description: None,
-            base_url: None,
-            logo: None,
-            logo_alt: None,
             home_url: Some("index.html".to_string()),
-            favicon: None,
-            current_url: None,
-            page_title: None,
             stylesheet: Some("../.calepin/calepin-website.css".to_string()),
-            scripts: Vec::new(),
-            pagefind: None,
+            ..SiteContextInput::default()
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
 

@@ -15,7 +15,7 @@
 
 #html.elem("section", attrs: (class: "landing-hero"))[
   #html.elem("img", attrs: (
-    src: "assets/logo_long_2.svg",
+    src: "assets/logo_long.svg",
     alt: "Calepin",
     class: "landing-hero-wordmark",
     style: "width: 14rem; max-width: 72vw;",
