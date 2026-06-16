@@ -31,19 +31,23 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
         }
         return Ok(());
     }
-    if args.theme.is_some() {
-        return Err(anyhow::anyhow!(
-            "`--theme` only applies to `calepin new theme`"
-        ));
-    }
-
     if args.path == Path::new("website") {
         let dest = args.output.as_deref().unwrap_or(Path::new("docs"));
-        crate::website::scaffold_website(dest, args.force)?;
+        let theme = args
+            .theme
+            .as_deref()
+            .unwrap_or(crate::theme::DEFAULT_THEME_NAME);
+        crate::website::scaffold_website(dest, theme, args.force)?;
         if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
-            eprintln!("Created website scaffold in {}", dest.display());
+            eprintln!("Created {theme} website scaffold in {}", dest.display());
         }
         return Ok(());
+    }
+
+    if args.theme.is_some() {
+        return Err(anyhow::anyhow!(
+            "`--theme` only applies to `calepin new website` or `calepin new theme`"
+        ));
     }
 
     if args.output.is_some() {
