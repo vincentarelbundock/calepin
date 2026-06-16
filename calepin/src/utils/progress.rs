@@ -3,6 +3,41 @@ use std::time::Duration;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 
+#[derive(Clone)]
+pub struct ProgressManager {
+    quiet: bool,
+    interactive: bool,
+    multi: Option<MultiProgress>,
+}
+
+impl ProgressManager {
+    pub fn new(quiet: bool) -> Self {
+        if quiet {
+            return Self {
+                quiet,
+                interactive: false,
+                multi: None,
+            };
+        }
+        let interactive = io::stderr().is_terminal();
+        let multi = interactive
+            .then(|| MultiProgress::with_draw_target(ProgressDrawTarget::stderr_with_hz(12)));
+        Self {
+            quiet,
+            interactive,
+            multi,
+        }
+    }
+
+    pub fn spinner(&self, message: impl Into<String>) -> Progress {
+        Progress::from_manager(self, ProgressKind::Spinner, message.into(), 0)
+    }
+
+    pub fn bar(&self, message: impl Into<String>, len: u64) -> Progress {
+        Progress::from_manager(self, ProgressKind::Bar, message.into(), len)
+    }
+}
+
 pub struct Progress {
     quiet: bool,
     finished: bool,
@@ -10,70 +45,63 @@ pub struct Progress {
     _multi: Option<MultiProgress>,
 }
 
+enum ProgressKind {
+    Spinner,
+    Bar,
+}
+
 impl Progress {
     pub fn spinner(message: impl Into<String>, quiet: bool) -> Self {
-        let message = message.into();
-        if quiet {
-            return Self::hidden(quiet);
-        }
-
-        if !io::stderr().is_terminal() {
-            eprintln!("{message}");
-            return Self {
-                quiet,
-                finished: false,
-                bar: None,
-                _multi: None,
-            };
-        }
-
-        let multi = MultiProgress::with_draw_target(ProgressDrawTarget::stderr_with_hz(12));
-        let bar = multi.add(ProgressBar::new_spinner());
-        let style = ProgressStyle::with_template("{spinner} {msg}")
-            .unwrap_or_else(|_| ProgressStyle::default_spinner())
-            .tick_chars("|/-\\");
-        bar.set_style(style);
-        bar.set_message(message);
-        bar.enable_steady_tick(Duration::from_millis(120));
-
-        Self {
-            quiet,
-            finished: false,
-            bar: Some(bar),
-            _multi: Some(multi),
-        }
+        ProgressManager::new(quiet).spinner(message)
     }
 
     pub fn bar(message: impl Into<String>, len: u64, quiet: bool) -> Self {
-        let message = message.into();
-        if quiet {
-            return Self::hidden(quiet);
-        }
+        ProgressManager::new(quiet).bar(message, len)
+    }
 
-        if !io::stderr().is_terminal() {
+    fn from_manager(
+        manager: &ProgressManager,
+        kind: ProgressKind,
+        message: String,
+        len: u64,
+    ) -> Self {
+        if manager.quiet {
+            return Self::hidden(manager.quiet);
+        }
+        if !manager.interactive {
             eprintln!("{message}");
-            return Self {
-                quiet,
-                finished: false,
-                bar: None,
-                _multi: None,
-            };
+            return Self::hidden(manager.quiet);
         }
 
-        let multi = MultiProgress::with_draw_target(ProgressDrawTarget::stderr_with_hz(12));
-        let bar = multi.add(ProgressBar::new(len));
-        let style = ProgressStyle::with_template(
-            "{spinner} [{elapsed_precise}] [{bar:32.cyan/blue}] {pos}/{len} {msg}",
-        )
-        .unwrap_or_else(|_| ProgressStyle::default_bar())
-        .progress_chars("#>-")
-        .tick_chars("|/-\\");
-        bar.set_style(style);
+        let Some(multi) = manager.multi.clone() else {
+            return Self::hidden(manager.quiet);
+        };
+        let bar = match kind {
+            ProgressKind::Spinner => {
+                let bar = multi.add(ProgressBar::new_spinner());
+                let style = ProgressStyle::with_template("{spinner} {msg}")
+                    .unwrap_or_else(|_| ProgressStyle::default_spinner())
+                    .tick_chars("|/-\\");
+                bar.set_style(style);
+                bar
+            }
+            ProgressKind::Bar => {
+                let bar = multi.add(ProgressBar::new(len));
+                let style = ProgressStyle::with_template(
+                    "{spinner} [{elapsed_precise}] [{bar:32.cyan/blue}] {pos}/{len} {msg}",
+                )
+                .unwrap_or_else(|_| ProgressStyle::default_bar())
+                .progress_chars("#>-")
+                .tick_chars("|/-\\");
+                bar.set_style(style);
+                bar
+            }
+        };
         bar.set_message(message);
         bar.enable_steady_tick(Duration::from_millis(120));
 
         Self {
-            quiet,
+            quiet: manager.quiet,
             finished: false,
             bar: Some(bar),
             _multi: Some(multi),
@@ -97,7 +125,7 @@ impl Progress {
             bar.finish_and_clear();
         }
         self.finished = true;
-        if !self.quiet {
+        if !self.quiet && self.bar.is_none() {
             eprintln!("{}", message.as_ref());
         }
     }

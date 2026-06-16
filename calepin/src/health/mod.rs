@@ -12,8 +12,11 @@ use crate::utils::process::validate_executable;
 use crate::utils::tools::{self, Tool};
 
 mod links;
+mod quality;
+mod source;
 
 use links::link_check;
+use quality::{image_check, slug_check};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -217,6 +220,8 @@ pub fn build_report(
     ));
     checks.push(jupyter_kernels_check());
     checks.push(link_check(&root, check_links_depth, check_external_links));
+    checks.push(image_check(&root, check_links_depth));
+    checks.push(slug_check(&root, check_links_depth));
 
     Ok(HealthReport {
         root: root.display().to_string(),

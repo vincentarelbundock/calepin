@@ -36,6 +36,7 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
         config: args.common.config.clone(),
         display_root: None,
         quiet: args.common.quiet,
+        status: true,
         progress: false,
         timeout: args.common.timeout,
         sync_pages,

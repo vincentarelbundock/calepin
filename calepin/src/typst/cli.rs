@@ -150,6 +150,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         config: args.common.config,
         display_root: None,
         quiet: args.common.quiet,
+        status: true,
         progress: true,
         timeout: args.common.timeout,
         sync_pages: false,

@@ -7,6 +7,10 @@ use anyhow::{Context, Result};
 use crate::utils::http::timeout_agent;
 use crate::utils::path::normalize_path;
 
+use super::source::{
+    collect_typst_files, display_rel, is_external_or_special_target, is_identifier_char,
+    line_number, mask_raw_spans, parse_string_literal, skip_ws,
+};
 use super::{HealthCheck, HealthStatus};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,8 +19,6 @@ struct LinkOccurrence {
     line: usize,
     target: String,
 }
-
-const LINK_CHECK_SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
 
 pub(super) fn link_check(
     root: &Path,
@@ -94,6 +96,7 @@ fn check_links(
     for file in &typ_files {
         let source = fs::read_to_string(file)
             .with_context(|| format!("failed to read {}", file.display()))?;
+        let source = mask_raw_spans(&source);
         for link in extract_literal_links(file, &source) {
             links += 1;
             if is_external_http_link(&link.target) {
@@ -117,43 +120,6 @@ fn check_links(
         broken_local,
         broken_external,
     })
-}
-
-fn collect_typst_files(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBuf>> {
-    let mut out = Vec::new();
-    collect_typst_files_in(root, root, 0, max_depth, &mut out)?;
-    out.sort();
-    Ok(out)
-}
-
-fn collect_typst_files_in(
-    root: &Path,
-    dir: &Path,
-    depth: usize,
-    max_depth: Option<usize>,
-    out: &mut Vec<PathBuf>,
-) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let entry = entry?;
-        let path = entry.path();
-        let rel = path.strip_prefix(root).unwrap_or(&path);
-        if rel.components().any(|component| {
-            component
-                .as_os_str()
-                .to_str()
-                .is_some_and(|name| LINK_CHECK_SKIP_DIRS.contains(&name))
-        }) {
-            continue;
-        }
-        if path.is_dir() {
-            if max_depth.is_none_or(|limit| depth < limit) {
-                collect_typst_files_in(root, &path, depth + 1, max_depth, out)?;
-            }
-        } else if path.extension().and_then(|extension| extension.to_str()) == Some("typ") {
-            out.push(path);
-        }
-    }
-    Ok(())
 }
 
 fn extract_literal_links(source_path: &Path, source: &str) -> Vec<LinkOccurrence> {
@@ -199,7 +165,7 @@ fn extract_literal_links(source_path: &Path, source: &str) -> Vec<LinkOccurrence
 
 fn validate_local_link(root: &Path, link: &LinkOccurrence) -> Option<String> {
     let target = link.target.trim();
-    if target.is_empty() || is_external_or_special_link(target) {
+    if target.is_empty() || is_external_or_special_target(target) {
         return None;
     }
     let path_part = target
@@ -318,74 +284,6 @@ fn link_target_exists(candidate: &Path) -> bool {
     false
 }
 
-fn is_external_or_special_link(target: &str) -> bool {
-    target.starts_with('#')
-        || target.starts_with("http://")
-        || target.starts_with("https://")
-        || target.starts_with("//")
-        || target.starts_with("mailto:")
-        || target.starts_with("tel:")
-        || target.starts_with("data:")
-}
-
-fn parse_string_literal(source: &str, quote: usize) -> Option<(String, usize)> {
-    let mut out = String::new();
-    let mut escaped = false;
-    let mut index = quote + 1;
-    while index < source.len() {
-        let ch = source[index..].chars().next()?;
-        if escaped {
-            out.push(match ch {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                other => other,
-            });
-            escaped = false;
-        } else if ch == '\\' {
-            escaped = true;
-        } else if ch == '"' {
-            return Some((out, index + ch.len_utf8()));
-        } else {
-            out.push(ch);
-        }
-        index += ch.len_utf8();
-    }
-    None
-}
-
-fn skip_ws(value: &str, mut index: usize) -> usize {
-    while index < value.len() {
-        let Some(ch) = value[index..].chars().next() else {
-            break;
-        };
-        if !ch.is_whitespace() {
-            break;
-        }
-        index += ch.len_utf8();
-    }
-    index
-}
-
-fn is_identifier_char(ch: char) -> bool {
-    ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'
-}
-
-fn line_number(source: &str, offset: usize) -> usize {
-    source[..offset]
-        .bytes()
-        .filter(|byte| *byte == b'\n')
-        .count()
-        + 1
-}
-
-fn display_rel(root: &Path, path: &Path) -> String {
-    path.strip_prefix(root)
-        .unwrap_or(path)
-        .display()
-        .to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -455,6 +353,27 @@ mod tests {
         assert!(summary.broken.is_empty());
         assert_eq!(summary.broken_local, 0);
         assert_eq!(summary.broken_external, 0);
+    }
+
+    #[test]
+    fn link_check_ignores_links_inside_raw_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(
+            root.join("index.typ"),
+            r#"`#link("missing.html")`
+
+```typ
+#link("also-missing.html")
+```
+"#,
+        )
+        .unwrap();
+
+        let summary = check_links(root, None, false).unwrap();
+
+        assert_eq!(summary.links, 0);
+        assert!(summary.broken.is_empty());
     }
 
     #[test]

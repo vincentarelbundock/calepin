@@ -31,7 +31,9 @@
     let cells = ()
     for (index, page) in items.enumerate() {
       let date = _meta(page, "date", default: "")
-      cells.push(text(size: 0.9em, fill: luma(45%))[#date])
+      cells.push(html.elem("span", attrs: (style: "white-space: nowrap"))[
+        #text(size: 0.9em, fill: luma(45%))[#date]
+      ])
       cells.push(link(page.href)[#page.title])
       if index < items.len() - 1 {
         cells.push(table.hline(stroke: 0.5pt + luma(80%)))

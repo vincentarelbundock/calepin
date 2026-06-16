@@ -15,8 +15,6 @@
 - [ ] Optional stripping of date prefixes from generated paths.
 - [ ] Date formatting helpers for page listings and templates.
 - [ ] Breadcrumb metadata and breadcrumb rendering.
-- [ ] Automatic word count.
-- [ ] Automatic reading time.
 - [ ] Configurable slugification strategies for generated paths and anchors.
 
 = Broader SSG backlog

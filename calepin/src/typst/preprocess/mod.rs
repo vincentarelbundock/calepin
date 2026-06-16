@@ -33,6 +33,7 @@ pub struct PreprocessOptions {
     pub config: Option<PathBuf>,
     pub display_root: Option<PathBuf>,
     pub quiet: bool,
+    pub status: bool,
     pub progress: bool,
     pub timeout: Option<u64>,
     pub sync_pages: bool,
@@ -62,6 +63,7 @@ pub struct PreprocessPlan {
     cwd: PathBuf,
     timeout: Option<Duration>,
     quiet: bool,
+    status: bool,
     progress: bool,
     sync_pages: bool,
     display_root: Option<PathBuf>,
@@ -76,18 +78,30 @@ pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
 
 pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput> {
     let plan = prepare_preprocess_plan(options)?;
-    if preprocess_cache_hit(&plan.layout, plan.fingerprint)? {
-        if !plan.quiet {
+    if preprocess_plan_cache_hit(&plan)? {
+        if !plan.quiet && plan.status {
             eprintln!("calepin [cache] {}", display_input(&plan));
         }
-        return Ok(PreprocessOutput {
-            layout: plan.layout,
-            executables: plan.executables,
-            fingerprint: plan.fingerprint,
-            theme: plan.theme,
-        });
+        return Ok(preprocess_cached_output(plan));
     }
     execute_preprocess_plan(plan)
+}
+
+pub fn preprocess_plan_cache_hit(plan: &PreprocessPlan) -> Result<bool> {
+    preprocess_cache_hit(&plan.layout, plan.fingerprint)
+}
+
+pub fn preprocess_plan_chunk_count(plan: &PreprocessPlan) -> usize {
+    plan.chunks.len()
+}
+
+pub fn preprocess_cached_output(plan: PreprocessPlan) -> PreprocessOutput {
+    PreprocessOutput {
+        layout: plan.layout,
+        executables: plan.executables,
+        fingerprint: plan.fingerprint,
+        theme: plan.theme,
+    }
 }
 
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
@@ -179,6 +193,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         cwd,
         timeout,
         quiet: options.quiet,
+        status: options.status,
         progress: options.progress,
         sync_pages: options.sync_pages,
         display_root: options.display_root,
@@ -188,6 +203,13 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
 }
 
 pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
+    execute_preprocess_plan_with_chunk_progress(plan, None)
+}
+
+pub fn execute_preprocess_plan_with_chunk_progress(
+    plan: PreprocessPlan,
+    chunk_progress: Option<&Progress>,
+) -> Result<PreprocessOutput> {
     let staged = tempfile::Builder::new()
         .prefix("calepin-figures-")
         .tempdir()
@@ -220,7 +242,7 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
             plan.quiet,
         ))
     } else {
-        if !plan.quiet {
+        if !plan.quiet && plan.status {
             eprintln!("calepin [run] {input}: {chunk_count} {chunk_word}");
         }
         None
@@ -238,6 +260,9 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
         }
         let result = execute_chunk_live(&mut pool, chunk, &staged_figures_dir, &plan.layout)?;
         if let Some(progress) = &progress {
+            progress.inc(1);
+        }
+        if let Some(progress) = chunk_progress {
             progress.inc(1);
         }
         chunk_results[chunk_index] = Some(result);
