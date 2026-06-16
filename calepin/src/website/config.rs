@@ -134,12 +134,11 @@ pub(super) struct SidebarSectionConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub(super) struct SidebarItemConfig {
     #[serde(alias = "path", alias = "url")]
     pub(super) target: Option<String>,
     pub(super) glob: Option<String>,
-    pub(super) label: Option<String>,
     pub(super) icon: Option<String>,
 }
 

@@ -1,4 +1,5 @@
 #set document(title: [Static website generator])
+#metadata((title: "Overview")) <website-metadata>
 
 #title()
 

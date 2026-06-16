@@ -41,53 +41,42 @@ title = "Getting started"
 
   [[sidebar.section.item]]
   target = "getting-started/install.typ"
-  label = "Install"
 
   [[sidebar.section.item]]
   target = "getting-started/config.typ"
-  label = "Configuration"
 
   [[sidebar.section.item]]
   target = "compile_watch_serve.typ"
-  label = "Compile, watch, serve"
 
 [[sidebar.section]]
 title = "Notebooks"
 
   [[sidebar.section.item]]
   target = "notebooks/code_execution.typ"
-  label = "Code execution"
 
   [[sidebar.section.item]]
   target = "notebooks/figures.typ"
-  label = "Figures and tables"
 
   [[sidebar.section.item]]
   target = "notebooks/cross-references.typ"
-  label = "Cross-references"
 
   [[sidebar.section.item]]
   target = "notebooks/parameters.typ"
-  label = "Parameters"
 
   [[sidebar.section.item]]
   target = "notebooks/example.typ"
-  label = "Example notebook"
 
 [[sidebar.section]]
 title = "Websites"
 
   [[sidebar.section.item]]
   target = "websites/websites.typ"
-  label = "Overview"
 
   [[sidebar.section.item]]
   target = "websites/config.typ"
-  label = "Configuration"
 
   [[sidebar.section.item]]
   target = "websites/web_components.typ"
-  label = "Web components"
 
 
 
@@ -96,16 +85,12 @@ title = "More"
 
   [[sidebar.section.item]]
   target = "themes.typ"
-  label = "Themes"
 
   [[sidebar.section.item]]
   target = "tips.typ"
-  label = "Tips & tricks"
 
   [[sidebar.section.item]]
   target = "websites/health.typ"
-  label = "Health"
 
   [[sidebar.section.item]]
   target = "reference/cli.typ"
-  label = "CLI reference"

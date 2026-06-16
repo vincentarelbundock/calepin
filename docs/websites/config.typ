@@ -1,4 +1,5 @@
 #set document(title: [Configuration and metadata])
+#metadata((title: "Configuration")) <website-metadata>
 
 #title()
 
@@ -171,7 +172,6 @@ title = "Guide"
 
   [[sidebar.section.item]]
   target = "install.typ"
-  label = "Install"
 ```
 
 or include several pages with a glob:
@@ -181,7 +181,18 @@ or include several pages with a glob:
 glob = "guide/*.typ"
 ```
 
-Use `target` for one link and `glob` for a list of source pages. A `target` ending in `.typ` and all `glob` entries point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site. Other `target` values are used as literal links, such as external URLs.
+Use `target` for one source page and `glob` for a list of source pages. Sidebar entries always point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site.
+
+The sidebar label comes from the page source, not from `calepin.toml`. Put the label in the page's website metadata:
+
+```typ
+#set document(title: [Install])
+#metadata((title: "Install")) <website-metadata>
+
+#title()
+```
+
+If a page has no `website-metadata.title`, _Calepin_ falls back to the document title, then the filename stem. This keeps multilingual sidebars in one place: each translated page carries its own translated title.
 
 If you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.
 
@@ -192,13 +203,15 @@ Titled sections are foldable: each page loads with the section that contains it 
 fold = false
 ```
 
-Labels can include icons:
+Sidebar icons are configured separately from labels:
 
 ```toml
-label = "{icon:lucide:download} Install"
+[[sidebar.section.item]]
+target = "install.typ"
+icon = "lucide:download"
 ```
 
-If the prefix is omitted, _Calepin_ uses `lucide`, so `{icon:home}` means `{icon:lucide:home}`. Icons are downloaded during the build and cached under `.calepin/icons/`.
+If the prefix is omitted, _Calepin_ uses `lucide`, so `icon = "home"` means `icon = "lucide:home"`. Icons are downloaded during the build and cached under `.calepin/icons/`.
 
 Icon prefixes are Iconify collection names. Search available icons in the #link("https://icon-sets.iconify.design/")[Iconify icon sets] browser. Common prefixes include `lucide`, `simple-icons`, `tabler`, `heroicons`, `material-symbols`, `carbon`, `ph`, and `bi`.
 

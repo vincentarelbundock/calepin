@@ -1,4 +1,5 @@
 #set document(title: [Health checks])
+#metadata((title: "Health")) <website-metadata>
 
 #title()
 

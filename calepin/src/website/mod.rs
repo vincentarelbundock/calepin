@@ -1225,8 +1225,7 @@ fn resolve_cli_path(current_dir: &Path, path: &Path) -> PathBuf {
     }
 }
 
-/// Plan for one sidebar entry: the page and its explicitly configured label,
-/// resolved before metadata is available.
+/// Plan for one navigation entry, resolved before metadata is available.
 #[derive(Debug, Clone)]
 struct NavItemPlan {
     path: Option<PathBuf>,
@@ -1410,7 +1409,7 @@ fn discover_pages(
             .map(|item| NavItemInput {
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
-                label: item.label.as_deref(),
+                label: None,
                 icon: item.icon.as_deref(),
             })
             .collect::<Vec<_>>();
@@ -1513,6 +1512,11 @@ fn resolve_nav_item_plans(
             }
             match resolve_nav_target(resolution.context, resolution.src_dir, target) {
                 Some(NavTarget::Url(url)) => {
+                    if resolution.context == "sidebar" {
+                        bail!(
+                            "sidebar target must point to a .typ source page, got literal URL: {url}"
+                        );
+                    }
                     items.push(NavItemPlan {
                         path: None,
                         url: Some(url),
@@ -2169,6 +2173,9 @@ fn nav_item_model(
     context: &str,
 ) -> Result<NavItemModel> {
     if let Some(url) = item.url.as_ref() {
+        if context == "sidebar" {
+            bail!("sidebar items must point to .typ source pages");
+        }
         let raw_label = item.configured_label.clone().unwrap_or_else(|| url.clone());
         let label_html = nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
         return Ok(NavItemModel {
@@ -2182,11 +2189,17 @@ fn nav_item_model(
     let Some(path) = item.path.as_ref() else {
         return Err(anyhow!("{context} item must set path, glob, or url"));
     };
-    let raw_label = item
-        .configured_label
-        .clone()
-        .or_else(|| page_meta.get(path).and_then(|meta| meta.title.clone()))
-        .unwrap_or_else(|| stem_label(path));
+    let page_label = || {
+        page_meta
+            .get(path)
+            .and_then(|meta| meta.title.clone())
+            .unwrap_or_else(|| stem_label(path))
+    };
+    let raw_label = if context == "sidebar" {
+        page_label()
+    } else {
+        item.configured_label.clone().unwrap_or_else(page_label)
+    };
     let fallback = page_meta
         .get(path)
         .and_then(|meta| meta.title.clone())
@@ -2207,24 +2220,17 @@ fn nav_item_model(
 fn build_pages_index(
     src_dir: &Path,
     typ_files: &[PathBuf],
-    sections: &[NavSectionPlan],
+    _sections: &[NavSectionPlan],
     page_meta: &PageMetaMap,
     page_info: &PageInfoMap,
 ) -> serde_json::Value {
-    let configured_labels = sections
-        .iter()
-        .flat_map(|section| section.items.iter())
-        .filter_map(|item| item.path.as_ref().zip(item.configured_label.as_deref()))
-        .collect::<BTreeMap<_, _>>();
     let entries = typ_files
         .iter()
         .filter(|path| path.file_name().and_then(|name| name.to_str()) != Some(FALLBACK_PAGE))
         .map(|path| {
             let meta = page_meta.get(path);
-            let title = configured_labels
-                .get(path)
-                .map(|label| label.to_string())
-                .or_else(|| meta.and_then(|meta| meta.title.clone()))
+            let title = meta
+                .and_then(|meta| meta.title.clone())
                 .unwrap_or_else(|| stem_label(path));
             let raw = meta
                 .map(|meta| meta.raw.clone())
@@ -4195,21 +4201,33 @@ filenames = ["atom.xml", "rss.xml"]
     }
 
     #[test]
-    fn nav_from_plans_prefers_configured_label_then_metadata_title_then_stem() {
+    fn sidebar_item_config_rejects_labels() {
+        let err = try_website_config_from_toml(
+            r#"
+[sidebar]
+
+[[sidebar.section]]
+title = "Guide"
+
+  [[sidebar.section.item]]
+  target = "install.typ"
+  label = "Install"
+"#,
+        )
+        .unwrap_err();
+
+        assert!(err.to_string().contains("unknown field `label`"));
+    }
+
+    #[test]
+    fn nav_from_plans_uses_metadata_title_then_stem() {
         let src = Path::new("/site/docs");
-        let labeled = PathBuf::from("/site/docs/a.typ");
         let titled = PathBuf::from("/site/docs/b-page.typ");
         let bare = PathBuf::from("/site/docs/c_page.typ");
         let sections = vec![NavSectionPlan {
             language: None,
             title: Some("Guide".to_string()),
             items: vec![
-                NavItemPlan {
-                    path: Some(labeled.clone()),
-                    url: None,
-                    configured_label: Some("Configured".to_string()),
-                    icon: None,
-                },
                 NavItemPlan {
                     path: Some(titled.clone()),
                     url: None,
@@ -4224,24 +4242,15 @@ filenames = ["atom.xml", "rss.xml"]
                 },
             ],
         }];
-        let meta = PageMetaMap::from([
-            (
-                labeled.clone(),
-                PageMeta {
-                    title: Some("Ignored".to_string()),
-                    ..PageMeta::default()
-                },
-            ),
-            (
-                titled.clone(),
-                PageMeta {
-                    title: Some("From Metadata".to_string()),
-                    ..PageMeta::default()
-                },
-            ),
-        ]);
+        let meta = PageMetaMap::from([(
+            titled.clone(),
+            PageMeta {
+                title: Some("From Metadata".to_string()),
+                ..PageMeta::default()
+            },
+        )]);
 
-        let files = vec![labeled.clone(), titled.clone(), bare.clone()];
+        let files = vec![titled.clone(), bare.clone()];
         let page_info = test_page_info(src, &files, &BTreeSet::new());
         let icon_temp = tempfile::tempdir().unwrap();
         let mut icon_cache = IconCache::new(icon_temp.path().join(".calepin/icons"));
@@ -4252,11 +4261,11 @@ filenames = ["atom.xml", "rss.xml"]
             .iter()
             .map(|item| item.label.as_str())
             .collect::<Vec<_>>();
-        assert_eq!(labels, vec!["Configured", "From Metadata", "c page"]);
+        assert_eq!(labels, vec!["From Metadata", "c page"]);
     }
 
     #[test]
-    fn nav_from_plans_interpolates_cached_icons_in_labels() {
+    fn nav_from_plans_uses_configured_icon_with_metadata_label() {
         let temp = tempfile::tempdir().unwrap();
         let src = temp.path();
         let home = src.join("index.typ");
@@ -4274,15 +4283,21 @@ filenames = ["atom.xml", "rss.xml"]
             items: vec![NavItemPlan {
                 path: Some(home.clone()),
                 url: None,
-                configured_label: Some("{icon:home} Home".to_string()),
-                icon: None,
+                configured_label: None,
+                icon: Some("home".to_string()),
             }],
         }];
+        let meta = PageMetaMap::from([(
+            home.clone(),
+            PageMeta {
+                title: Some("Home".to_string()),
+                ..PageMeta::default()
+            },
+        )]);
         let page_info = test_page_info(src, std::slice::from_ref(&home), &BTreeSet::new());
         let mut icon_cache = IconCache::new(src.join(ICON_CACHE_DIR));
 
-        let nav =
-            nav_from_plans(&sections, &PageMetaMap::new(), &page_info, &mut icon_cache).unwrap();
+        let nav = nav_from_plans(&sections, &meta, &page_info, &mut icon_cache).unwrap();
 
         assert_eq!(nav[0].items[0].label, "Home");
         assert!(nav[0].items[0]
@@ -4293,24 +4308,16 @@ filenames = ["atom.xml", "rss.xml"]
     }
 
     #[test]
-    fn discover_pages_resolves_sidebar_page_and_external_targets() {
+    fn discover_pages_resolves_sidebar_page_targets() {
         let temp = tempfile::tempdir().unwrap();
         let src = temp.path();
         fs::write(src.join("index.typ"), "= Home\n").unwrap();
         let sidebar = SidebarConfig {
             section: vec![SidebarSectionConfig {
-                item: vec![
-                    SidebarItemConfig {
-                        target: Some("index.typ".to_string()),
-                        label: Some("Home".to_string()),
-                        ..SidebarItemConfig::default()
-                    },
-                    SidebarItemConfig {
-                        target: Some("https://example.com".to_string()),
-                        label: Some("External".to_string()),
-                        ..SidebarItemConfig::default()
-                    },
-                ],
+                item: vec![SidebarItemConfig {
+                    target: Some("index.typ".to_string()),
+                    ..SidebarItemConfig::default()
+                }],
                 ..SidebarSectionConfig::default()
             }],
             ..SidebarConfig::default()
@@ -4329,10 +4336,28 @@ filenames = ["atom.xml", "rss.xml"]
             sections[0].items[0].path.as_deref(),
             Some(src.join("index.typ").as_path())
         );
-        assert_eq!(
-            sections[0].items[1].url.as_deref(),
-            Some("https://example.com")
-        );
+    }
+
+    #[test]
+    fn discover_pages_rejects_sidebar_external_targets() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        let sidebar = SidebarConfig {
+            section: vec![SidebarSectionConfig {
+                item: vec![SidebarItemConfig {
+                    target: Some("https://example.com".to_string()),
+                    ..SidebarItemConfig::default()
+                }],
+                ..SidebarSectionConfig::default()
+            }],
+            ..SidebarConfig::default()
+        };
+
+        let err = discover_pages(src, Some(&sidebar), None, None).unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("sidebar target must point to a .typ source page"));
     }
 
     #[test]
