@@ -7,7 +7,7 @@
 = Typst CLI
 <typst-cli>
 
-Calepin requires Typst 0.14.2 or newer. Install or update the Typst CLI from the #link("https://github.com/typst/typst#installation")[Typst installation instructions], and make sure it is available on your `PATH`.
+Calepin requires Typst 0.15.0 or newer. Install or update the Typst CLI from the #link("https://github.com/typst/typst#installation")[Typst installation instructions], and make sure it is available on your `PATH`.
 
 = Calepin
 <calepin-cli>

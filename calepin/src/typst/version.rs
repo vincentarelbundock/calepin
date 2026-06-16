@@ -6,8 +6,8 @@ use anyhow::{anyhow, Context, Result};
 use crate::typst::run::run_typst_capture;
 use crate::utils::{process, tools};
 
-pub const REQUIRED_TYPST_VERSION: &str = "0.14.2";
-const REQUIRED_TYPST_VERSION_PARTS: (u64, u64, u64) = (0, 14, 2);
+pub const REQUIRED_TYPST_VERSION: &str = "0.15.0";
+const REQUIRED_TYPST_VERSION_PARTS: (u64, u64, u64) = (0, 15, 0);
 
 pub fn assert_supported_typst(typst: &Path) -> Result<()> {
     process::validate_executable(typst, "check typst version", Some(&tools::TYPST))?;
@@ -66,8 +66,8 @@ mod tests {
     #[test]
     fn parses_typst_version_output() {
         assert_eq!(
-            parse_typst_version("typst 0.14.2 (abc123)").unwrap(),
-            "0.14.2"
+            parse_typst_version("typst 0.15.0 (abc123)").unwrap(),
+            "0.15.0"
         );
     }
 
@@ -86,8 +86,7 @@ mod tests {
 
     #[test]
     fn compares_versions() {
-        assert!(version_is_too_old("0.14.1"));
-        assert!(!version_is_too_old("0.14.2"));
+        assert!(version_is_too_old("0.14.2"));
         assert!(!version_is_too_old("0.15.0-rc.1"));
         assert!(!version_is_too_old("0.15.0"));
     }

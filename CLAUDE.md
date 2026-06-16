@@ -30,7 +30,7 @@ Integration tests in `tests/typst_preprocess.rs` shell out to the built binary p
 
 Calepin never renders Typst itself. It wraps the user's `typst` binary and drives it twice over the same source file. The mode is selected via Typst CLI inputs that `runtime.typ` reads from `sys.inputs`:
 
-1. **Query pass** (`--input calepin-mode=query`): `typst::preprocess` runs `typst query` twice to extract metadata as JSON: `<calepin-config>` (setup defaults, themes) and `<calepin-chunk>` (one entry per chunk). `typst::query` parses these into `ChunkSpec`s.
+1. **Query pass** (`--input calepin-mode=query`): `typst::preprocess` runs `typst eval` with internal `query(...)` expressions to extract metadata as JSON: `<calepin-config>` (setup defaults, themes) and `<calepin-chunk>` (one entry per chunk). `typst::query` parses these into `ChunkSpec`s.
 2. **Render pass** (`--input calepin-mode=render`): `typst::compile` invokes the real `typst compile` or `typst watch`, passing `calepin-results=<path>` and `calepin-target=paged|html`. The embedded runtime reads `results.json` and splices computed output back into the document.
 
 Between the two passes, `typst::execute` runs every chunk and writes `results.json`.

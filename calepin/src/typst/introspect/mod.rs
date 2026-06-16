@@ -1,6 +1,5 @@
 mod commands;
 mod eval;
-mod query;
 
 use anyhow::{anyhow, Result};
 use serde_json::Value;
@@ -25,19 +24,11 @@ pub fn preprocess_metadata(
     input: &Path,
     results_input: &str,
 ) -> Result<PreprocessMetadata> {
-    if eval::is_available(typst) {
-        eval::preprocess_metadata(typst, layout, input, results_input)
-    } else {
-        query::preprocess_metadata(typst, layout, input, results_input)
-    }
+    eval::preprocess_metadata(typst, layout, input, results_input)
 }
 
 pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String, usize>> {
-    if eval::is_available(typst) {
-        eval::page_anchors(typst, layout)
-    } else {
-        query::page_anchors(typst, layout)
-    }
+    eval::page_anchors(typst, layout)
 }
 
 fn results_input(layout: &LayoutPaths) -> String {

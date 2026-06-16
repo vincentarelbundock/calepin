@@ -69,14 +69,12 @@ pub fn run_typst_status(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CalepinMode {
-    Query,
     Render,
 }
 
 impl CalepinMode {
     fn as_str(self) -> &'static str {
         match self {
-            Self::Query => "query",
             Self::Render => "render",
         }
     }

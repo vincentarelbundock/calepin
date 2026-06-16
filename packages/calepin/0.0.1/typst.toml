@@ -9,4 +9,4 @@ repository = "https://github.com/vincentarelbundock/calepin"
 homepage = "https://vincentarelbundock.github.io/calepin"
 keywords = ["notebook", "literate-programming", "reproducible", "code-execution", "python", "r"]
 categories = ["integration", "scripting"]
-compiler = "0.13.0"
+compiler = "0.15.0"
