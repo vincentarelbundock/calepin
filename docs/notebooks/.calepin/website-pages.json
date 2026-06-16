@@ -65,7 +65,9 @@
   {
     "href": "notebooks/example.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "title": "Example notebook"
+    },
     "path": "notebooks/example.typ",
     "pdf": "notebooks/example.pdf",
     "title": "Example notebook",
@@ -125,7 +127,9 @@
   {
     "href": "websites/config.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "title": "Configuration"
+    },
     "path": "websites/config.typ",
     "pdf": "websites/config.pdf",
     "title": "Configuration",
@@ -135,7 +139,9 @@
   {
     "href": "websites/health.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "title": "Health"
+    },
     "path": "websites/health.typ",
     "pdf": "websites/health.pdf",
     "title": "Health",
@@ -157,7 +163,9 @@
   {
     "href": "websites/websites.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "title": "Overview"
+    },
     "path": "websites/websites.typ",
     "pdf": "websites/websites.pdf",
     "title": "Overview",

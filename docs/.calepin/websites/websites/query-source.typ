@@ -1,6 +1,7 @@
 #import "/.calepin/query-html.typ" as html
 
 #set document(title: [Static website generator])
+#metadata((title: "Overview")) <website-metadata>
 
 #title()
 
@@ -8,17 +9,25 @@ _Calepin_ can turn a directory of Typst documents into a website. In fact, the w
 
 = New website
 
-Use this command to scaffold a minimal site:
+Use this command to scaffold an example site:
 
 ```sh
 calepin new website my_site/
 ```
 
-This creates the website source directory:
+This creates a website source directory with enough structure to exercise the bundled themes:
 
 - `my_site/calepin.toml`: the site configuration file, where you set the title, base URL, navigation, theme, and output options.
 - `my_site/index.typ`: the home page source file, which builds to `index.html`.
 - `my_site/404.typ`: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.
+- `my_site/about.typ`, `my_site/guide/*.typ`, and `my_site/fr/*.typ`: regular pages in two languages, with navbar and sidebar entries.
+- `my_site/blog.typ` and `my_site/posts/*.typ`: a small blog index and post source files using `calepin.pages()`.
+- `my_site/assets/site.typ`: a tiny site helper for rendering the blog listing.
+
+The scaffold includes footnotes, margin-note markup, code output, tables, top
+navigation, sidebar navigation, language metadata, posts, and PDF twins for
+every page. Switch `theme` in `calepin.toml` between `calepin`, `academic`, and
+`tufte` to compare the same content across themes.
 
 = Build
 

@@ -86,17 +86,7 @@ pub(crate) fn scaffold_website(dir: &Path, force: bool) -> Result<()> {
     let docs = absolutize_for_create(dir)?;
     fs::create_dir_all(&docs).with_context(|| format!("failed to create {}", docs.display()))?;
 
-    write_scaffold_file(&docs.join(DEFAULT_CONFIG), WEBSITE_TOML_TEMPLATE, force)?;
-    write_scaffold_file(&docs.join("index.typ"), INDEX_TYP_TEMPLATE, force)?;
-    write_scaffold_file(&docs.join("404.typ"), NOT_FOUND_TYP_TEMPLATE, force)?;
-    Ok(())
-}
-
-pub(crate) fn scaffold_academic_website(dir: &Path, force: bool) -> Result<()> {
-    let docs = absolutize_for_create(dir)?;
-    fs::create_dir_all(&docs).with_context(|| format!("failed to create {}", docs.display()))?;
-
-    for (path, contents) in ACADEMIC_SCAFFOLD_FILES {
+    for (path, contents) in WEBSITE_SCAFFOLD_FILES {
         write_scaffold_file(&docs.join(path), contents, force)?;
     }
     Ok(())
@@ -2773,94 +2763,98 @@ fn write_scaffold_file(path: &Path, contents: &str, force: bool) -> Result<()> {
     fs::write(path, contents).with_context(|| format!("failed to write {}", path.display()))
 }
 
-const WEBSITE_TOML_TEMPLATE: &str = include_str!("../assets/scaffolds/website/calepin.toml");
-const INDEX_TYP_TEMPLATE: &str = include_str!("../assets/scaffolds/website/docs/index.typ");
-const NOT_FOUND_TYP_TEMPLATE: &str = include_str!("../assets/scaffolds/website/docs/404.typ");
-
-const ACADEMIC_SCAFFOLD_FILES: &[(&str, &str)] = &[
+const WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
     (
         "calepin.toml",
-        include_str!("../assets/scaffolds/academic/docs/calepin.toml"),
+        include_str!("../assets/scaffolds/website/calepin.toml"),
     ),
     (
         "index.typ",
-        include_str!("../assets/scaffolds/academic/docs/index.typ"),
-    ),
-    (
-        "assets/academic.typ",
-        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
-    ),
-    (
-        "assets/profile.svg",
-        include_str!("../assets/scaffolds/academic/docs/assets/profile.svg"),
-    ),
-    (
-        "publications/index.typ",
-        include_str!("../assets/scaffolds/academic/docs/publications/index.typ"),
-    ),
-    (
-        "publications/assets/academic.typ",
-        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
-    ),
-    (
-        "publications/example-paper.typ",
-        include_str!("../assets/scaffolds/academic/docs/publications/example-paper.typ"),
-    ),
-    (
-        "talks/index.typ",
-        include_str!("../assets/scaffolds/academic/docs/talks/index.typ"),
-    ),
-    (
-        "talks/assets/academic.typ",
-        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
-    ),
-    (
-        "talks/example-talk.typ",
-        include_str!("../assets/scaffolds/academic/docs/talks/example-talk.typ"),
-    ),
-    (
-        "teaching/index.typ",
-        include_str!("../assets/scaffolds/academic/docs/teaching/index.typ"),
-    ),
-    (
-        "teaching/assets/academic.typ",
-        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
-    ),
-    (
-        "teaching/pol6021.typ",
-        include_str!("../assets/scaffolds/academic/docs/teaching/pol6021.typ"),
-    ),
-    (
-        "projects/index.typ",
-        include_str!("../assets/scaffolds/academic/docs/projects/index.typ"),
-    ),
-    (
-        "projects/assets/academic.typ",
-        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
-    ),
-    (
-        "projects/example-project.typ",
-        include_str!("../assets/scaffolds/academic/docs/projects/example-project.typ"),
-    ),
-    (
-        "posts/index.typ",
-        include_str!("../assets/scaffolds/academic/docs/posts/index.typ"),
-    ),
-    (
-        "posts/assets/academic.typ",
-        include_str!("../assets/scaffolds/academic/docs/assets/academic.typ"),
-    ),
-    (
-        "posts/welcome.typ",
-        include_str!("../assets/scaffolds/academic/docs/posts/welcome.typ"),
-    ),
-    (
-        "cv.typ",
-        include_str!("../assets/scaffolds/academic/docs/cv.typ"),
+        include_str!("../assets/scaffolds/website/docs/index.typ"),
     ),
     (
         "404.typ",
-        include_str!("../assets/scaffolds/academic/docs/404.typ"),
+        include_str!("../assets/scaffolds/website/docs/404.typ"),
+    ),
+    (
+        "assets/site.typ",
+        include_str!("../assets/scaffolds/website/docs/assets/site.typ"),
+    ),
+    (
+        "about.typ",
+        include_str!("../assets/scaffolds/website/docs/about.typ"),
+    ),
+    (
+        "guide/features.typ",
+        include_str!("../assets/scaffolds/website/docs/guide/features.typ"),
+    ),
+    (
+        "guide/writing.typ",
+        include_str!("../assets/scaffolds/website/docs/guide/writing.typ"),
+    ),
+    (
+        "blog.typ",
+        include_str!("../assets/scaffolds/website/docs/blog.typ"),
+    ),
+    (
+        "posts/first-post.typ",
+        include_str!("../assets/scaffolds/website/docs/posts/first-post.typ"),
+    ),
+    (
+        "posts/theme-tour.typ",
+        include_str!("../assets/scaffolds/website/docs/posts/theme-tour.typ"),
+    ),
+    (
+        "posts/writing-with-footnotes.typ",
+        include_str!("../assets/scaffolds/website/docs/posts/writing-with-footnotes.typ"),
+    ),
+    (
+        "posts/code-and-results.typ",
+        include_str!("../assets/scaffolds/website/docs/posts/code-and-results.typ"),
+    ),
+    (
+        "posts/multilingual-notes.typ",
+        include_str!("../assets/scaffolds/website/docs/posts/multilingual-notes.typ"),
+    ),
+    (
+        "fr/index.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/index.typ"),
+    ),
+    (
+        "fr/about.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/about.typ"),
+    ),
+    (
+        "fr/guide/features.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/guide/features.typ"),
+    ),
+    (
+        "fr/guide/writing.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/guide/writing.typ"),
+    ),
+    (
+        "fr/blog.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/blog.typ"),
+    ),
+    (
+        "fr/posts/first-post.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/posts/first-post.typ"),
+    ),
+    (
+        "fr/posts/theme-tour.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/posts/theme-tour.typ"),
+    ),
+    (
+        "fr/posts/writing-with-footnotes.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/posts/writing-with-footnotes.typ"),
+    ),
+    (
+        "fr/posts/code-and-results.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/posts/code-and-results.typ"),
+    ),
+    (
+        "fr/posts/multilingual-notes.typ",
+        include_str!("../assets/scaffolds/website/docs/fr/posts/multilingual-notes.typ"),
     ),
 ];
 
@@ -4188,7 +4182,7 @@ filenames = ["atom.xml", "rss.xml"]
         let temp = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(temp.path().join("themes/my-theme")).unwrap();
         std::fs::write(
-            temp.path().join("themes/my-theme/site.html"),
+            temp.path().join("themes/my-theme/layouts/webpage.html"),
             "{{ doc.body }}",
         )
         .unwrap();

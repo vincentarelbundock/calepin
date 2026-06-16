@@ -14,6 +14,7 @@ The default theme is `calepin`. Select a different built-in or local theme with
 ```toml
 theme = "calepin"           # the default documentation theme
 theme = "academic"          # a built-in academic site theme
+theme = "tufte"             # a built-in essay/blog theme
 theme = "themes/my-theme"   # a local theme directory
 theme = false               # no theme: raw, unstyled output
 ```
@@ -30,10 +31,11 @@ wins, then the document, then `calepin.toml`. `calepin watch` does not have a
 `--theme` option; it uses the document setting when present, otherwise the
 website's `calepin.toml` setting, otherwise the default theme.
 
-_Calepin_ ships with two built-in themes:
+_Calepin_ ships with three built-in themes:
 
 - *calepin*: the default documentation site layout, with sidebar navigation, a top bar, previous and next page links, a table of contents, dark mode, copy buttons on code blocks, and rendered/source/PDF view switching.
-- *academic*: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, publication lists, projects, talks, and posts. Run `calepin new academic` to scaffold a complete starter site built on it. For single-document HTML and paged notebook output, `academic` falls back to `calepin`.
+- *academic*: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, publication lists, projects, talks, and posts. For single-document HTML and paged notebook output, `academic` falls back to `calepin`.
+- *tufte*: a reading-first essay and blog layout inspired by Tufte-style pages, with a narrow text column, margin-note support, a right-side table of contents, top navigation, dark mode, copy buttons on code blocks, and shared Calepin search and language controls.
 
 = Ejecting and local themes
 
@@ -43,6 +45,7 @@ directly. Instead, copy one into your project and edit the copy:
 ```sh
 calepin new theme                     # copies the default theme to themes/calepin/
 calepin new theme --theme academic    # copies the academic theme to themes/academic/
+calepin new theme --theme tufte       # copies the Tufte theme to themes/tufte/
 calepin new theme themes/my-theme --theme academic
 ```
 
@@ -58,9 +61,9 @@ will never touch them. Ejected shared files are written beside the theme in
 `themes/shared/`.
 
 A local theme can be small. Missing entry files fall back to the built-in
-`calepin` theme, so a local theme can override just `site.html` or just
-`document.html`. Supporting files such as partials, styles, and scripts come
-from the selected theme plus any imports declared in `theme.toml`.
+`calepin` theme, so a local theme can override just `layouts/webpage.html` or
+just `layouts/notebook.html`. Supporting files such as partials, styles, and
+scripts come from the selected theme plus any imports declared in `theme.toml`.
 
 = Structure
 
@@ -70,9 +73,10 @@ outputs:
 ```text
 themes/my-theme/
   theme.toml        # optional shared partial/CSS/JS imports
-  site.html         # layout for website pages
-  document.html     # layout for a single document rendered to HTML
-  layouts/          # optional page-specific website layouts
+  layouts/
+    webpage.html    # layout for website pages
+    notebook.html   # layout for a single notebook rendered to HTML
+    landing.html    # optional page-specific website layout
   partials/         # theme-local MiniJinja fragments
   styles/           # theme-local CSS files
   scripts/          # theme-local JavaScript files
@@ -84,13 +88,14 @@ themes/shared/      # optional local source for imported shared files
   typst/
 ```
 
-`site.html`, `document.html`, files in `layouts/`, and files in `partials/` use
-the #link("https://docs.rs/minijinja/latest/minijinja/")[MiniJinja template language].
+`layouts/webpage.html`, `layouts/notebook.html`, page-specific files in
+`layouts/`, and files in `partials/` use the
+#link("https://docs.rs/minijinja/latest/minijinja/")[MiniJinja template language].
 
 = HTML templates
 
-For notebooks compiled as single HTML documents, the relevant template is
-`document.html`. For websites, most pages use `site.html`.
+For notebooks compiled as single HTML documents, the relevant layout is
+`layouts/notebook.html`. For websites, most pages use `layouts/webpage.html`.
 
 Templates can access:
 
@@ -125,7 +130,7 @@ Templates can access:
 
 Navigation entries expose `href`, `label`, `label_html`, and `active`.
 
-Here is a minimal `document.html` for single-file HTML output:
+Here is a minimal `layouts/notebook.html` for single-file HTML output:
 
 ```html
 {{ doc.head }}
@@ -170,8 +175,8 @@ A website page can select a different HTML layout from the active theme with
 
 The `layout` value is an explicit path inside the active theme. _Calepin_ uses
 it exactly as written: it does not add `layouts/`, does not add `.html`, and
-does not fall back to `site.html` if the file is missing. The path must name a
-relative `.html` file that stays inside the theme directory.
+does not fall back to `layouts/webpage.html` if the file is missing. The path
+must name a relative `.html` file that stays inside the theme directory.
 
 For example, with `theme = "themes/my-theme"`, the metadata above resolves to:
 
@@ -179,7 +184,7 @@ For example, with `theme = "themes/my-theme"`, the metadata above resolves to:
 themes/my-theme/layouts/landing.html
 ```
 
-Page-specific layouts receive the same MiniJinja context as `site.html`,
+Page-specific layouts receive the same MiniJinja context as `layouts/webpage.html`,
 including `doc`, `site`, `styles`, and `scripts`, and they share the active
 theme's partials, shared imports, styles, and scripts.
 
@@ -189,16 +194,17 @@ A partial is a reusable MiniJinja template fragment stored under `partials/`.
 Use partials for repeated HTML such as a header, footer, navigation list, search
 box, or analytics snippet.
 
-Include a partial from `site.html`, `document.html`, a page-specific layout, or
-another partial:
+Include a partial from `layouts/webpage.html`, `layouts/notebook.html`, a
+page-specific layout, or another partial:
 
 ```html
 {% include "partials/header.html" %}
 ```
 
 Partials receive the same template context as the file that includes them, so a
-partial included by `site.html` can read `site.title`, `site.navbar_left`,
-`styles`, `scripts`, and the other website template variables.
+partial included by `layouts/webpage.html` can read `site.title`,
+`site.navbar_left`, `styles`, `scripts`, and the other website template
+variables.
 
 For example, `partials/site-header.html` can render the brand and top
 navigation:
@@ -246,11 +252,11 @@ Then `partials/nav-item.html` can render one navigation link:
 Themes can opt into shared partials, CSS, and JavaScript with `theme.toml`.
 These are the pieces that the built-in themes use for metadata,
 stylesheet/script wiring, typography, syntax highlighting, code output, dark
-mode, language selection, and copy buttons.
+mode, language selection, theme toggles, and copy buttons.
 
 ```toml
 [shared]
-partials = ["site-meta.html", "theme-init.html", "styles.html", "scripts.html", "pagefind-modal.html"]
+partials = ["site-meta.html", "theme-init.html", "styles.html", "scripts.html", "pagefind-modal.html", "theme-toggle.html"]
 styles = ["theme.css", "code.css", "widgets.css"]
 scripts = ["theme-toggle.js", "language-picker.js", "copy-code.js"]
 ```
@@ -284,6 +290,7 @@ themes/
     partials/styles.html
     partials/scripts.html
     partials/pagefind-modal.html
+    partials/theme-toggle.html
 ```
 
 Themes include imported partials like normal MiniJinja partials:
@@ -294,9 +301,10 @@ Themes include imported partials like normal MiniJinja partials:
 ```
 
 The built-in themes share these partials for page metadata, early theme
-initialization, stylesheet output, script output, and the Pagefind modal. Keep
-those imports when you want the same behavior, or remove individual names from
-`theme.toml` to take full control in your theme.
+initialization, stylesheet output, script output, the Pagefind modal, and the
+generic theme-toggle button. Keep those imports when you want the same
+behavior, or remove individual names from `theme.toml` to take full control in
+your theme.
 
 == Shared CSS
 
@@ -324,7 +332,7 @@ in `[shared].styles`, the theme-local file replaces the shared one. If
 `styles/90-overrides.css` has a different filename, it loads after all shared
 styles.
 
-`theme.css` is the shared visual base used by `calepin` and `academic`. It
+`theme.css` is the shared visual base used by the bundled themes. It
 defines common typography, heading sizes, accent variables, Pico primary colors,
 code/output variables, figure defaults, and global document defaults.
 Theme-specific CSS should generally be limited to the HTML shell and layout

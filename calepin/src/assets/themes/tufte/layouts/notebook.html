@@ -1,0 +1,12 @@
+{% include "partials/document-head.html" %}
+{{ doc.body_open }}
+    <header class="tufte-document-topbar">
+        {% set calepin_theme_toggle_class = "tufte-theme-toggle" %}
+        {% set calepin_theme_toggle_storage_key = "calepin-tufte-document-theme" %}
+        {% include "partials/theme-toggle.html" %}
+    </header>
+    <main class="tufte-main tufte-document-main">
+        {{ doc.body }}
+    </main>
+{% include "partials/scripts.html" %}
+{{ doc.body_close }}

@@ -165,7 +165,11 @@ mod tests {
     fn write_theme(parent: &Path, name: &str, entry_file: &str, layout: &str) -> PathBuf {
         let dir = parent.join(name);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join(entry_file), layout).unwrap();
+        let path = dir.join(entry_file);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(path, layout).unwrap();
         dir
     }
 
@@ -211,7 +215,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "with-removed-context",
-            "document.html",
+            "layouts/notebook.html",
             r#"{{ doc.body_open }}<style>{{ removed_template_context.css.code }}</style><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
         );
 
@@ -230,7 +234,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "zensical",
-            "document.html",
+            "layouts/notebook.html",
             r#"{{ doc.body_open }}<aside>{% for item in site.sidebar %}<a href="{{ item.href }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>{% endfor %}</aside><nav>{% for item in site.toc %}<a href="{{ item.href }}">{{ item.label }}</a>{% endfor %}</nav><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
         );
         let output = dir.path().join("docs-src2-build/html/cli.html");
@@ -259,7 +263,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "site-toc",
-            "site.html",
+            "layouts/webpage.html",
             r#"{{ doc.body_open }}<nav>{% for item in site.toc %}<a href="{{ item.href }}" class="level-{{ item.level }}">{{ item.label }}</a>{% endfor %}</nav><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
         );
         let html = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1><h2>Section</h2></body></html>";
@@ -346,7 +350,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "custom",
-            "document.html",
+            "layouts/notebook.html",
             "<custom-shell>{{ doc.body }}</custom-shell>",
         );
 
@@ -359,11 +363,12 @@ mod tests {
     fn user_theme_loops_styles_scripts_and_includes_partials() {
         let dir = tempfile::tempdir().unwrap();
         let theme_dir = dir.path().join("mini");
+        std::fs::create_dir_all(theme_dir.join("layouts")).unwrap();
         std::fs::create_dir_all(theme_dir.join("partials")).unwrap();
         std::fs::create_dir_all(theme_dir.join("styles")).unwrap();
         std::fs::create_dir_all(theme_dir.join("scripts")).unwrap();
         std::fs::write(
-            theme_dir.join("document.html"),
+            theme_dir.join("layouts/notebook.html"),
             "{{ doc.head }}{% for s in styles %}<style>{{ s.css }}</style>{% endfor %}{{ doc.body_open }}{% include \"partials/banner.html\" %}{{ doc.body }}{% for s in scripts %}<script>{{ s.content }}</script>{% endfor %}{{ doc.body_close }}",
         )
         .unwrap();
@@ -388,7 +393,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "broken",
-            "document.html",
+            "layouts/notebook.html",
             "{% include \"partials/missing.html\" %}",
         );
 
@@ -455,7 +460,11 @@ mod tests {
             ..SiteContextInput::default()
         };
 
-        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+        for selection in [
+            ThemeSelection::Default,
+            ThemeSelection::Builtin("academic"),
+            ThemeSelection::Builtin("tufte"),
+        ] {
             let entry = entry_for(&selection, HtmlScope::Site);
             let theme_name = entry.theme_name.clone();
             let themed = theme::apply_html_theme(
@@ -530,7 +539,11 @@ mod tests {
             ..SiteContextInput::default()
         };
 
-        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+        for selection in [
+            ThemeSelection::Default,
+            ThemeSelection::Builtin("academic"),
+            ThemeSelection::Builtin("tufte"),
+        ] {
             let entry = entry_for(&selection, HtmlScope::Site);
             let theme_name = entry.theme_name.clone();
             let themed = theme::apply_html_theme(
@@ -544,8 +557,7 @@ mod tests {
             .unwrap();
 
             assert!(
-                !themed.contains(r#"<select class="calepin-website-view-mode" aria-label="Language" data-calepin-language-picker"#)
-                    && !themed.contains(r#"<select class="academic-language-picker" aria-label="Language" data-calepin-language-picker"#),
+                !themed.contains(r#"aria-label="Language" data-calepin-language-picker"#),
                 "{theme_name}: language picker should require multiple languages"
             );
         }
@@ -702,7 +714,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "title-only",
-            "document.html",
+            "layouts/notebook.html",
             "<h1>{{ doc.title }}</h1>{{ doc.body_open }}{{ doc.body }}{{ doc.body_close }}",
         );
         let html = "<html><head><title>Foo &amp; Bar</title></head><body><p>x</p></body></html>";

@@ -12,10 +12,6 @@
       .replace(/"/g, "&quot;");
   }
 
-  function languageIcon() {
-    return `<svg class="calepin-language-picker-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a13.5 13.5 0 0 1 0 18"></path><path d="M12 3a13.5 13.5 0 0 0 0 18"></path></svg>`;
-  }
-
   function closeAll(except) {
     document.querySelectorAll(".calepin-language-picker.is-open").forEach((picker) => {
       if (picker === except) return;
@@ -43,7 +39,7 @@
     summary.setAttribute("aria-haspopup", "menu");
     summary.setAttribute("aria-expanded", "false");
     summary.setAttribute("aria-label", select.getAttribute("aria-label") || "Language");
-    summary.innerHTML = `${languageIcon()}<span>${escapeHtml(selected.textContent)}</span>`;
+    summary.innerHTML = `<span>${escapeHtml(selected.textContent)}</span>`;
 
     const menu = document.createElement("ul");
     menu.className = "calepin-language-picker-menu";
@@ -54,7 +50,7 @@
       const item = document.createElement("a");
       item.href = option.value;
       item.setAttribute("role", "menuitem");
-      item.innerHTML = `${languageIcon()}<span>${escapeHtml(option.textContent)}</span>`;
+      item.innerHTML = `<span>${escapeHtml(option.textContent)}</span>`;
       if (option.selected) item.setAttribute("aria-current", "true");
       li.appendChild(item);
       menu.appendChild(li);

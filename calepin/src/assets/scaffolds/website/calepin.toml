@@ -1,34 +1,78 @@
-title = "My Site"
-description = "A static website built from Typst documents."
+title = "Example Site"
+description = "A bilingual Calepin website scaffold with pages, posts, and theme-friendly content."
 # base_url = "https://example.com"
-# logo = "assets/logo.svg"
-# logo_alt = "My Site"
-# Omit favicon to use the generated default.
-# favicon = "assets/favicon.ico"
+# Try the bundled themes:
+# theme = "calepin"
+# theme = "academic"
+# theme = "tufte"
+theme = "calepin"
 
-# Generate Atom/RSS feeds for the site.
-# Requires base_url to be set.
+pdf = true
+default_language = "en"
+
+# Uncomment to generate static search if Pagefind is available.
+# search = "pagefind"
+
+# Uncomment feeds after setting base_url.
 # generate_feeds = true
-#
 # [feeds]
 # filenames = ["atom.xml", "rss.xml"]
 
-pdf = false
+[languages.en]
+label = "English"
+content_dir = "."
+
+[languages.fr]
+label = "Français"
+content_dir = "fr"
 
 [static]
 include = ["assets/**"]
 
-# Add top-bar links with [navbar]. External links can include icons.
-# [[navbar.item]]
-# position = "right"
-# target = "https://github.com/user/repo"
-# label = "{icon:github} GitHub"
+[pages]
+include = ["posts/*.typ"]
+
+[navbar]
+
+[[navbar.item]]
+position = "left"
+target = "about.typ"
+label = "About"
+
+[[navbar.item]]
+position = "left"
+target = "blog.typ"
+label = "Blog"
+
+[[navbar.item]]
+position = "right"
+target = "https://github.com/user/project"
+label = "{icon:github} Source"
 
 [sidebar]
+fold = false
 
 [[sidebar.section]]
-title = "Pages"
+title = "Start"
 
   [[sidebar.section.item]]
   target = "index.typ"
-  label = "Home"
+  icon = "home"
+
+  [[sidebar.section.item]]
+  target = "about.typ"
+
+[[sidebar.section]]
+title = "Guide"
+
+  [[sidebar.section.item]]
+  target = "guide/features.typ"
+
+  [[sidebar.section.item]]
+  target = "guide/writing.typ"
+
+[[sidebar.section]]
+title = "Publishing"
+
+  [[sidebar.section.item]]
+  target = "blog.typ"

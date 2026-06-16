@@ -42,28 +42,43 @@ a:has(.calepin-nav-icon) {
 
 .calepin-language-picker.dropdown {
   margin: 0;
+  width: max-content;
 }
 
 .calepin-language-picker-button {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: max-content;
+  max-width: none;
+  padding-inline: 0.65rem;
   white-space: nowrap;
 }
 
-.calepin-language-picker-icon {
-  width: 1rem;
-  height: 1rem;
-  flex: 0 0 auto;
+.calepin-language-picker-button::after {
+  display: none;
+}
+
+.calepin-language-picker-button span,
+.calepin-language-picker-menu a span {
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .calepin-language-picker-menu a {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: flex-start;
   width: 100%;
+  min-width: max-content;
   color: inherit;
   white-space: nowrap;
+}
+
+.calepin-language-picker-menu {
+  min-width: 100%;
+  width: max-content;
 }
 
 .calepin-language-picker-menu a[aria-current="true"] {

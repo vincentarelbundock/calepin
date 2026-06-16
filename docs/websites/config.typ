@@ -22,7 +22,7 @@ description = "A static website built from Typst documents."
 # Default: none.
 base_url = "https://example.com"
 
-# Theme: "calepin", "academic", a local theme directory, or false for raw output.
+# Theme: "calepin", "academic", "tufte", a local theme directory, or false for raw output.
 # Default: "calepin".
 theme = "academic"
 

@@ -3,6 +3,7 @@
 #set document(
   title: [#emph[Calepin]: Computational notebooks in Typst],
 )
+#metadata((title: "Example notebook")) <website-metadata>
 
 // Document-wide defaults for all chunks in this example.
 #calepin.setup(

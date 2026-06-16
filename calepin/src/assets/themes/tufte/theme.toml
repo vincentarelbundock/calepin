@@ -1,0 +1,4 @@
+[shared]
+partials = ["site-meta.html", "theme-init.html", "styles.html", "scripts.html", "pagefind-modal.html", "theme-toggle.html"]
+styles = ["theme.css", "code.css", "widgets.css"]
+scripts = ["theme-toggle.js", "language-picker.js", "copy-code.js", "search.js"]

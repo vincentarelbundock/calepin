@@ -13,7 +13,7 @@ Preprocess Typst documents with executable code chunks
 Usage: calepin <COMMAND>
 
 Commands:
-  new      Create a new example Typst file or website scaffold
+  new      Create a notebook file, website scaffold, or ejected theme
   health   Check Calepin's local runtime environment and local links
   compile  Preprocess, then invoke typst compile
   watch    Watch, preprocess, and delegate recompiles to typst watch
@@ -31,18 +31,24 @@ Options:
 <calepin-new>
 
 ```text
-Create a new example Typst file or website scaffold
+Create a notebook file, website scaffold, or ejected theme
 
-Usage: calepin new [OPTIONS] <PATH> [OUTPUT]
+Usage: calepin new [OPTIONS] <PATH|website|theme> [DIR]
 
 Arguments:
-  <PATH>    Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
-  [OUTPUT]  Destination directory when PATH is `website` or `academic`
+  <PATH|website|theme>  What to create: a .typ notebook path, `website`, or `theme`
+  [DIR]                 Destination directory when creating a website scaffold or ejected theme
 
 Options:
   -f, --force          Overwrite the file if it already exists
-      --theme <THEME>  Builtin theme to copy when PATH is `theme` (default: calepin)
+      --theme <THEME>  Builtin theme to copy when creating an ejected theme (default: calepin)
   -h, --help           Print help
+
+Examples:
+  calepin new paper.typ
+  calepin new website my_site/
+  calepin new theme --theme tufte
+  calepin new theme themes/my-theme --theme academic
 ```
 
 = `calepin health`
@@ -87,7 +93,7 @@ Options:
           [possible values: pdf, png, svg, html]
 
       --theme <THEME>
-          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false
+          Theme bundle: a builtin name (calepin, academic, tufte), a path to a theme directory, or false
 
       --minify
           Minify HTML output after theming and asset processing

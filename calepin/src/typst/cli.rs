@@ -46,18 +46,9 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
         return Ok(());
     }
 
-    if args.path == Path::new("academic") {
-        let dest = args.output.as_deref().unwrap_or(Path::new("docs"));
-        crate::website::scaffold_academic_website(dest, args.force)?;
-        if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
-            eprintln!("Created academic website scaffold in {}", dest.display());
-        }
-        return Ok(());
-    }
-
     if args.output.is_some() {
         return Err(anyhow::anyhow!(
-            "an output path only applies to `calepin new website`, `calepin new academic`, or `calepin new theme`"
+            "an output path only applies to `calepin new website` or `calepin new theme`"
         ));
     }
 
@@ -333,6 +324,17 @@ mod tests {
         assert!(site.join("calepin.toml").exists());
         assert!(site.join("index.typ").exists());
         assert!(site.join("404.typ").exists());
+        assert!(site.join("assets/site.typ").exists());
+        assert!(site.join("about.typ").exists());
+        assert!(site.join("guide/features.typ").exists());
+        assert!(site.join("guide/writing.typ").exists());
+        assert!(site.join("blog.typ").exists());
+        assert!(site.join("posts/first-post.typ").exists());
+        assert!(site.join("posts/theme-tour.typ").exists());
+        assert!(site.join("posts/code-and-results.typ").exists());
+        assert!(site.join("fr/index.typ").exists());
+        assert!(site.join("fr/blog.typ").exists());
+        assert!(site.join("fr/posts/theme-tour.typ").exists());
     }
 
     #[test]
@@ -348,7 +350,7 @@ mod tests {
         })
         .unwrap();
 
-        assert!(theme.join("site.html").exists());
+        assert!(theme.join("layouts/webpage.html").exists());
         assert!(theme.join("partials/navbar-item.html").exists());
         assert!(theme.join("styles/main.css").exists());
         assert!(theme.join("scripts/main.js").exists());

@@ -1,6 +1,6 @@
 //! Theme bundles. A theme is a directory named by family; the target and
 //! scope dimensions are well-known filenames inside it: `paged.typ.jinja`,
-//! `document.html`, `site.html`. See specs/2026-06-10-theme-bundles-design.md.
+//! `layouts/notebook.html`, `layouts/webpage.html`. See specs/2026-06-10-theme-bundles-design.md.
 
 use std::path::{Path, PathBuf};
 
@@ -69,12 +69,16 @@ fn is_path_like(value: &str) -> bool {
 }
 
 fn validate_theme_dir(dir: &Path) -> Result<()> {
-    let has_entry = ["paged.typ.jinja", "document.html", "site.html"]
-        .iter()
-        .any(|file| dir.join(file).is_file());
+    let has_entry = [
+        "paged.typ.jinja",
+        "layouts/notebook.html",
+        "layouts/webpage.html",
+    ]
+    .iter()
+    .any(|file| dir.join(file).is_file());
     if !has_entry {
         return Err(anyhow!(
-            "theme directory {} contains none of paged.typ.jinja, document.html, site.html",
+            "theme directory {} contains none of paged.typ.jinja, layouts/notebook.html, layouts/webpage.html",
             dir.display()
         ));
     }
@@ -130,6 +134,10 @@ mod tests {
             ThemeSelection::parse("academic", base).unwrap(),
             ThemeSelection::Builtin("academic")
         );
+        assert_eq!(
+            ThemeSelection::parse("tufte", base).unwrap(),
+            ThemeSelection::Builtin("tufte")
+        );
     }
 
     #[test]
@@ -159,6 +167,7 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("calepin"), "{msg}");
         assert!(msg.contains("academic"), "{msg}");
+        assert!(msg.contains("tufte"), "{msg}");
     }
 
     #[test]
@@ -182,6 +191,29 @@ mod tests {
     }
 
     #[test]
+    fn tufte_has_site_document_and_landing_entries() {
+        let sel = ThemeSelection::Builtin("tufte");
+        let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
+        assert_eq!(site.theme_name, "tufte");
+        assert!(!site.is_default);
+        assert!(site.layout.contains("tufte-page"));
+
+        let document = resolve_html_entry(&sel, HtmlScope::Document)
+            .unwrap()
+            .unwrap();
+        assert_eq!(document.theme_name, "tufte");
+        assert!(!document.is_default);
+        assert!(document.layout.contains("tufte-document-main"));
+
+        let landing = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
+            .unwrap()
+            .unwrap();
+        assert_eq!(landing.theme_name, "tufte");
+        assert!(!landing.is_default);
+        assert!(landing.layout.contains("tufte-landing"));
+    }
+
+    #[test]
     fn disabled_selection_resolves_to_no_entry_and_no_paged_source() {
         assert!(
             resolve_html_entry(&ThemeSelection::Disabled, HtmlScope::Site)
@@ -198,8 +230,9 @@ mod tests {
     #[test]
     fn dir_theme_uses_own_entry_and_falls_back_per_missing_file() {
         let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
-            dir.path().join("site.html"),
+            dir.path().join("layouts/webpage.html"),
             "<html><head></head><body>X</body></html>",
         )
         .unwrap();
@@ -223,8 +256,9 @@ mod tests {
         let theme = dir.path().join("custom");
         std::fs::create_dir_all(theme.join("styles")).unwrap();
         std::fs::create_dir_all(theme.join("scripts")).unwrap();
+        std::fs::create_dir_all(theme.join("layouts")).unwrap();
         std::fs::create_dir_all(dir.path().join("shared/styles")).unwrap();
-        std::fs::write(theme.join("document.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
             r#"[shared]
@@ -270,7 +304,8 @@ scripts = ["copy-code.js"]
     #[test]
     fn shared_manifest_rejects_path_imports() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("document.html"), "{{ doc.body }}").unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
+        std::fs::write(dir.path().join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             dir.path().join("theme.toml"),
             r#"[shared]
@@ -294,7 +329,7 @@ styles = ["../theme.css"]
     fn explicit_site_layout_uses_exact_theme_relative_path() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
-        std::fs::write(dir.path().join("site.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(dir.path().join("layouts/webpage.html"), "{{ doc.body }}").unwrap();
         std::fs::write(dir.path().join("layouts/landing.html"), "landing").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
@@ -354,7 +389,7 @@ styles = ["../theme.css"]
     fn explicit_site_layout_does_not_fallback_to_default_theme() {
         let err = match resolve_explicit_site_html_entry(
             &ThemeSelection::Builtin("academic"),
-            "document.html",
+            "layouts/notebook.html",
         ) {
             Ok(_) => panic!("expected missing explicit layout to be rejected"),
             Err(error) => error.to_string(),
@@ -456,8 +491,8 @@ styles = ["../theme.css"]
         let dest = eject_builtin(DEFAULT_THEME_NAME, &dir.path().join("themes"), false).unwrap();
 
         assert_eq!(dest, dir.path().join("themes/calepin"));
-        assert!(dest.join("document.html").is_file());
-        assert!(dest.join("site.html").is_file());
+        assert!(dest.join("layouts/notebook.html").is_file());
+        assert!(dest.join("layouts/webpage.html").is_file());
         assert!(dest.join("layouts/landing.html").is_file());
         assert!(dest.join("paged.typ.jinja").is_file());
         assert!(!dest.join("paged.typ").exists());
@@ -478,6 +513,7 @@ styles = ["../theme.css"]
         assert!(shared.join("partials/styles.html").is_file());
         assert!(shared.join("partials/scripts.html").is_file());
         assert!(shared.join("partials/pagefind-modal.html").is_file());
+        assert!(shared.join("partials/theme-toggle.html").is_file());
         assert!(shared.join("styles/theme.css").is_file());
         assert!(shared.join("styles/code.css").is_file());
         assert!(shared.join("styles/widgets.css").is_file());
@@ -499,7 +535,7 @@ styles = ["../theme.css"]
         let wrote = eject_builtin_to("academic", &dest, false).unwrap();
 
         assert_eq!(wrote, dest);
-        assert!(wrote.join("site.html").is_file());
+        assert!(wrote.join("layouts/webpage.html").is_file());
         assert!(wrote.join("partials/navbar-item.html").is_file());
         assert!(wrote.join("theme.toml").is_file());
         assert!(wrote.join("styles/main.css").is_file());
@@ -526,5 +562,6 @@ styles = ["../theme.css"]
         let err = eject_builtin("zensical", &dir.path().join("themes"), false).unwrap_err();
 
         assert!(err.to_string().contains("academic"));
+        assert!(err.to_string().contains("tufte"));
     }
 }

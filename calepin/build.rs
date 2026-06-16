@@ -25,6 +25,13 @@ fn main() {
     source.push('\n');
     write_theme_files(
         &mut source,
+        "TUFTE_FILES",
+        &manifest_dir,
+        "src/assets/themes/tufte",
+    );
+    source.push('\n');
+    write_theme_files(
+        &mut source,
         "SHARED_FILES",
         &manifest_dir,
         "src/assets/themes/shared",
@@ -93,8 +100,9 @@ fn collect_theme_files(root: &Path, dir: &Path, files: &mut Vec<(String, String)
 }
 
 fn is_theme_asset(path: &Path) -> bool {
-    matches!(
-        path.extension().and_then(|extension| extension.to_str()),
-        Some("css" | "html" | "jinja" | "js" | "toml" | "typ")
-    )
+    path.file_name().and_then(|name| name.to_str()) == Some("LICENSE")
+        || matches!(
+            path.extension().and_then(|extension| extension.to_str()),
+            Some("css" | "html" | "jinja" | "js" | "toml" | "typ")
+        )
 }

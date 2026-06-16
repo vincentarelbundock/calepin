@@ -30,7 +30,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// Create a new example Typst file or website scaffold
+    /// Create a notebook file, website scaffold, or ejected theme
     New(NewArgs),
 
     /// Check Calepin's local runtime environment and local links
@@ -72,19 +72,25 @@ impl CompileFormat {
 }
 
 #[derive(clap::Args, Debug, Clone)]
+#[command(
+    arg_required_else_help = true,
+    after_help = "Examples:\n  calepin new paper.typ\n  calepin new website my_site/\n  calepin new theme --theme tufte\n  calepin new theme themes/my-theme --theme academic"
+)]
 pub struct NewArgs {
-    /// Path to the new .typ file, or `website`/`academic`/`theme` to scaffold project files
+    /// What to create: a .typ notebook path, `website`, or `theme`
+    #[arg(value_name = "PATH|website|theme")]
     pub path: PathBuf,
 
-    /// Destination directory when PATH is `website`, `academic`, or `theme`
+    /// Destination directory when creating a website scaffold or ejected theme
+    #[arg(value_name = "DIR")]
     pub output: Option<PathBuf>,
 
     /// Overwrite the file if it already exists
     #[arg(short, long)]
     pub force: bool,
 
-    /// Builtin theme to copy when PATH is `theme` (default: calepin)
-    #[arg(long = "theme")]
+    /// Builtin theme to copy when creating an ejected theme (default: calepin)
+    #[arg(long = "theme", value_name = "THEME")]
     pub theme: Option<String>,
 }
 
@@ -112,6 +118,7 @@ pub struct HealthArgs {
 }
 
 #[derive(clap::Args, Debug, Clone)]
+#[command(arg_required_else_help = true)]
 pub struct CompileArgs {
     /// Input .typ file, or a website source directory containing calepin.toml
     pub input: PathBuf,
@@ -123,7 +130,7 @@ pub struct CompileArgs {
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
-    /// Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false.
+    /// Theme bundle: a builtin name (calepin, academic, tufte), a path to a theme directory, or false.
     #[arg(long = "theme", alias = "template")]
     pub theme: Option<String>,
 
@@ -140,6 +147,7 @@ pub struct CompileArgs {
 }
 
 #[derive(clap::Args, Debug, Clone)]
+#[command(arg_required_else_help = true)]
 pub struct WatchArgs {
     /// Input .typ file, or a website source directory containing calepin.toml
     pub input: PathBuf,
@@ -176,6 +184,7 @@ pub struct WatchArgs {
 }
 
 #[derive(clap::Args, Debug, Clone)]
+#[command(arg_required_else_help = true)]
 pub struct ServeArgs {
     /// Directory containing static files to serve
     pub dir: PathBuf,
