@@ -25,13 +25,6 @@ fn main() {
     source.push('\n');
     write_theme_files(
         &mut source,
-        "TUFTE_FILES",
-        &manifest_dir,
-        "src/assets/themes/tufte",
-    );
-    source.push('\n');
-    write_theme_files(
-        &mut source,
         "SHARED_FILES",
         &manifest_dir,
         "src/assets/themes/shared",

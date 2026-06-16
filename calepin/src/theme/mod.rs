@@ -1,5 +1,5 @@
 //! Theme bundles. A theme is a directory named by family; the target and
-//! scope dimensions are well-known filenames inside it: `paged.typ.jinja`,
+//! scope dimensions are well-known filenames inside it: `notebook.typ.jinja`,
 //! `layouts/notebook.html`, `layouts/webpage.html`. See specs/2026-06-10-theme-bundles-design.md.
 
 use std::path::{Path, PathBuf};
@@ -8,11 +8,11 @@ use anyhow::{anyhow, Context, Result};
 
 mod bundle;
 mod html;
-mod paged;
+mod notebook;
 
 pub use bundle::{builtin_names, eject_builtin, eject_builtin_to};
 pub use html::{resolve_explicit_site_html_entry, resolve_html_entry, HtmlEntry, HtmlScope};
-pub use paged::{paged_source, PagedSource, PagedTemplateContext};
+pub use notebook::{notebook_source, NotebookSource, NotebookTemplateContext};
 
 pub const DEFAULT_THEME_NAME: &str = "calepin";
 
@@ -70,6 +70,7 @@ fn is_path_like(value: &str) -> bool {
 
 fn validate_theme_dir(dir: &Path) -> Result<()> {
     let has_entry = [
+        "notebook.typ.jinja",
         "paged.typ.jinja",
         "layouts/notebook.html",
         "layouts/webpage.html",
@@ -78,7 +79,7 @@ fn validate_theme_dir(dir: &Path) -> Result<()> {
     .any(|file| dir.join(file).is_file());
     if !has_entry {
         return Err(anyhow!(
-            "theme directory {} contains none of paged.typ.jinja, layouts/notebook.html, layouts/webpage.html",
+            "theme directory {} contains none of notebook.typ.jinja, layouts/notebook.html, layouts/webpage.html",
             dir.display()
         ));
     }
@@ -134,10 +135,6 @@ mod tests {
             ThemeSelection::parse("academic", base).unwrap(),
             ThemeSelection::Builtin("academic")
         );
-        assert_eq!(
-            ThemeSelection::parse("tufte", base).unwrap(),
-            ThemeSelection::Builtin("tufte")
-        );
     }
 
     #[test]
@@ -167,7 +164,6 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("calepin"), "{msg}");
         assert!(msg.contains("academic"), "{msg}");
-        assert!(msg.contains("tufte"), "{msg}");
     }
 
     #[test]
@@ -178,53 +174,41 @@ mod tests {
     }
 
     #[test]
-    fn academic_falls_back_to_default_for_document_scope() {
+    fn academic_has_site_document_and_landing_entries() {
         let sel = ThemeSelection::Builtin("academic");
-        let entry = resolve_html_entry(&sel, HtmlScope::Document)
-            .unwrap()
-            .unwrap();
-        assert_eq!(entry.theme_name, "calepin");
-        assert!(entry.is_default);
         let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
         assert_eq!(site.theme_name, "academic");
         assert!(!site.is_default);
-    }
-
-    #[test]
-    fn tufte_has_site_document_and_landing_entries() {
-        let sel = ThemeSelection::Builtin("tufte");
-        let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
-        assert_eq!(site.theme_name, "tufte");
-        assert!(!site.is_default);
-        assert!(site.layout.contains("tufte-page"));
+        assert!(site.layout.contains("academic-page"));
 
         let document = resolve_html_entry(&sel, HtmlScope::Document)
             .unwrap()
             .unwrap();
-        assert_eq!(document.theme_name, "tufte");
+        assert_eq!(document.theme_name, "academic");
         assert!(!document.is_default);
-        assert!(document.layout.contains("tufte-document-main"));
+        assert!(document.layout.contains("academic-document-main"));
 
         let landing = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
             .unwrap()
             .unwrap();
-        assert_eq!(landing.theme_name, "tufte");
+        assert_eq!(landing.theme_name, "academic");
         assert!(!landing.is_default);
-        assert!(landing.layout.contains("tufte-landing"));
+        assert!(landing.layout.contains("academic-landing"));
     }
 
     #[test]
-    fn disabled_selection_resolves_to_no_entry_and_no_paged_source() {
+    fn disabled_selection_resolves_to_no_entry_and_no_notebook_source() {
         assert!(
             resolve_html_entry(&ThemeSelection::Disabled, HtmlScope::Site)
                 .unwrap()
                 .is_none()
         );
-        assert!(
-            paged_source(&ThemeSelection::Disabled, &PagedTemplateContext::default())
-                .unwrap()
-                .is_none()
-        );
+        assert!(notebook_source(
+            &ThemeSelection::Disabled,
+            &NotebookTemplateContext::default()
+        )
+        .unwrap()
+        .is_none());
     }
 
     #[test]
@@ -243,10 +227,14 @@ mod tests {
             .unwrap()
             .unwrap();
         assert!(document.is_default);
-        // paged.typ.jinja absent: default paged styling
+        // notebook.typ.jinja absent: default notebook styling
         assert_eq!(
-            paged_source(&sel, &PagedTemplateContext::default()).unwrap(),
-            paged_source(&ThemeSelection::Default, &PagedTemplateContext::default()).unwrap()
+            notebook_source(&sel, &NotebookTemplateContext::default()).unwrap(),
+            notebook_source(
+                &ThemeSelection::Default,
+                &NotebookTemplateContext::default()
+            )
+            .unwrap()
         );
     }
 
@@ -342,9 +330,9 @@ styles = ["../theme.css"]
     }
 
     #[test]
-    fn explicit_site_layout_falls_back_for_paged_only_local_theme() {
+    fn explicit_site_layout_falls_back_for_notebook_only_local_theme() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("paged.typ.jinja"), "{{ document.body }}").unwrap();
+        std::fs::write(dir.path().join("notebook.typ.jinja"), "{{ document.body }}").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
         let entry = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
@@ -389,7 +377,7 @@ styles = ["../theme.css"]
     fn explicit_site_layout_does_not_fallback_to_default_theme() {
         let err = match resolve_explicit_site_html_entry(
             &ThemeSelection::Builtin("academic"),
-            "layouts/notebook.html",
+            "layouts/missing.html",
         ) {
             Ok(_) => panic!("expected missing explicit layout to be rejected"),
             Err(error) => error.to_string(),
@@ -399,13 +387,13 @@ styles = ["../theme.css"]
     }
 
     #[test]
-    fn empty_paged_typ_jinja_means_no_styling_not_fallback() {
+    fn empty_notebook_typ_jinja_means_no_styling_not_fallback() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("paged.typ.jinja"), "").unwrap();
+        std::fs::write(dir.path().join("notebook.typ.jinja"), "").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         assert_eq!(
-            paged_source(&sel, &PagedTemplateContext::default()).unwrap(),
-            Some(PagedSource {
+            notebook_source(&sel, &NotebookTemplateContext::default()).unwrap(),
+            Some(NotebookSource {
                 source: String::new(),
                 owns_body: false,
             })
@@ -413,17 +401,17 @@ styles = ["../theme.css"]
     }
 
     #[test]
-    fn paged_typ_jinja_can_use_calepin_context() {
+    fn notebook_typ_jinja_can_use_calepin_context() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
-            dir.path().join("paged.typ.jinja"),
+            dir.path().join("notebook.typ.jinja"),
             r#"#let title = "{{ document.meta.title }}"
 #let species = "{{ params.Species }}"
 "#,
         )
         .unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
-        let context = PagedTemplateContext {
+        let context = NotebookTemplateContext {
             input_path: "reports/iris.typ".to_string(),
             input_dir: "reports".to_string(),
             input_stem: "iris".to_string(),
@@ -432,7 +420,7 @@ styles = ["../theme.css"]
             params: serde_json::json!({"Species": "setosa"}),
         };
 
-        let source = paged_source(&sel, &context).unwrap().unwrap();
+        let source = notebook_source(&sel, &context).unwrap().unwrap();
         assert_eq!(
             source.source,
             "#let title = \"Iris Report\"\n#let species = \"setosa\""
@@ -441,10 +429,10 @@ styles = ["../theme.css"]
     }
 
     #[test]
-    fn paged_typ_jinja_can_place_document_body() {
+    fn notebook_typ_jinja_can_place_document_body() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
-            dir.path().join("paged.typ.jinja"),
+            dir.path().join("notebook.typ.jinja"),
             r#"#set text(size: 11pt)
 {{ document.body }}
 [#emph[Generated footer]]
@@ -452,7 +440,7 @@ styles = ["../theme.css"]
         )
         .unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
-        let context = PagedTemplateContext {
+        let context = NotebookTemplateContext {
             input_path: "paper.typ".to_string(),
             input_dir: String::new(),
             input_stem: "paper".to_string(),
@@ -461,11 +449,27 @@ styles = ["../theme.css"]
             params: serde_json::json!({}),
         };
 
-        let source = paged_source(&sel, &context).unwrap().unwrap();
+        let source = notebook_source(&sel, &context).unwrap().unwrap();
         assert_eq!(
             source.source,
             "#set text(size: 11pt)\n#include \"/.calepin/paper/source.typ\"\n[#emph[Generated footer]]"
         );
+        assert!(source.owns_body);
+    }
+
+    #[test]
+    fn legacy_paged_typ_jinja_still_works_for_local_themes() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("paged.typ.jinja"),
+            "{{ target }} {{ document.body }}",
+        )
+        .unwrap();
+        let sel = ThemeSelection::Dir(dir.path().to_path_buf());
+        let source = notebook_source(&sel, &NotebookTemplateContext::default())
+            .unwrap()
+            .unwrap();
+        assert_eq!(source.source, "paged ");
         assert!(source.owns_body);
     }
 
@@ -482,7 +486,7 @@ styles = ["../theme.css"]
         std::fs::write(dir.path().join("paged.typ"), "#set text(size: 10pt)").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
-        assert!(paged_source(&sel, &PagedTemplateContext::default()).is_err());
+        assert!(notebook_source(&sel, &NotebookTemplateContext::default()).is_err());
     }
 
     #[test]
@@ -494,7 +498,8 @@ styles = ["../theme.css"]
         assert!(dest.join("layouts/notebook.html").is_file());
         assert!(dest.join("layouts/webpage.html").is_file());
         assert!(dest.join("layouts/landing.html").is_file());
-        assert!(dest.join("paged.typ.jinja").is_file());
+        assert!(dest.join("notebook.typ.jinja").is_file());
+        assert!(!dest.join("paged.typ.jinja").exists());
         assert!(!dest.join("paged.typ").exists());
         assert!(dest.join("partials/navbar-item.html").is_file());
         assert!(dest.join("partials/theme-switcher.html").is_file());
@@ -562,6 +567,5 @@ styles = ["../theme.css"]
         let err = eject_builtin("zensical", &dir.path().join("themes"), false).unwrap_err();
 
         assert!(err.to_string().contains("academic"));
-        assert!(err.to_string().contains("tufte"));
     }
 }

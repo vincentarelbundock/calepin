@@ -1,5 +1,4 @@
 #import "@preview/calepin:0.0.1" as calepin
-#import "/assets/site.typ" as site
 
 #set document(title: [Example Site])
 #metadata((title: "Home", translation_key: "home")) <website-metadata>
@@ -11,22 +10,51 @@
   fenced-chunks: true,
 )
 
+#let target = sys.inputs.at("calepin-target", default: "paged")
+
+#show: body => {
+  if target == "html" {
+    body
+  } else {
+    set page(columns: 2)
+    body
+  }
+}
+
 #title()
 
 This scaffold is a compact website that exercises Calepin's bundled themes.
-Switch `theme` in `calepin.toml` between `calepin`, `academic`, and `tufte` to
-compare the same content in different layouts.
+Switch `theme` in `calepin.toml` between `calepin` and `academic` to compare the
+same content in different layouts.
 
 = Reading Content
 
+#if target == "html" {
+  html.elem("img", "", attrs: (
+    class: "calepin-float-right calepin-scaffold-portrait",
+    src: "assets/portrait.jpg",
+    alt: "Portrait photograph",
+    width: "1280",
+    height: "1920",
+    loading: "lazy",
+    decoding: "async",
+  ))
+} else {
+  place(
+    top + right,
+    float: true,
+    clearance: 1em,
+    image("/assets/portrait.jpg", width: 32%),
+  )
+}
+
 #lorem(45)
 
+#lorem(75)
+
 This sentence has a footnote.#footnote[Footnotes are useful for the default
-theme and also help inspect Tufte-style reading layouts.] The next sentence
-places a short note in the margin when the active theme supports it.
-#site.margin-note[A margin note gives the Tufte
-theme something to place in its side rail. Other themes keep it readable in the
-normal flow.]
+theme and also help inspect essay-style reading layouts.] The next sentence
+continues the sample paragraph in normal flow.
 
 #lorem(35)
 
@@ -43,8 +71,7 @@ print(sum(values))
   columns: 3,
   [Theme], [Best for], [What to check],
   [calepin], [Documentation], [Sidebar, page navigation, code],
-  [academic], [Profile sites], [Top navigation, lists, posts],
-  [tufte], [Essays], [Footnotes, margin notes, reading width],
+  [academic], [Essays], [Footnotes, reading width],
 )
 
 = More Text

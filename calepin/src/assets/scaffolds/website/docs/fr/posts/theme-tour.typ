@@ -1,5 +1,3 @@
-#import "/assets/site.typ" as site
-
 #set document(title: [Tour des thèmes])
 #metadata((
   title: "Tour des thèmes",
@@ -15,8 +13,7 @@
 
 #lorem(70)
 
-Ce billet contient une note marginale.
-#site.margin-note[Le thème Tufte peut placer
-cette note près de la colonne principale.]
+Ce billet contient assez de prose pour comparer la largeur de lecture et
+l'espacement dans les thèmes.
 
 #lorem(100)

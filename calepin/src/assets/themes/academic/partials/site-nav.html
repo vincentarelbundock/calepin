@@ -1,0 +1,42 @@
+    <header class="academic-topbar calepin-site-topbar">
+        <nav class="academic-nav calepin-site-nav" aria-label="Site">
+            <a class="academic-brand calepin-site-brand contrast" href="{% if site.home_url %}{{ site.home_url }}{% else %}index.html{% endif %}">
+                {% if site.logo %}
+                <img src="{{ site.logo }}" alt="{% if site.logo_alt %}{{ site.logo_alt }}{% elif site.title %}{{ site.title }}{% endif %}" class="academic-logo calepin-site-logo">
+                {% elif site.title %}
+                <span>{{ site.title }}</span>
+                {% else %}
+                <span>Home</span>
+                {% endif %}
+            </a>
+            <button class="academic-nav-toggle calepin-nav-toggle" type="button" aria-controls="academic-menu" aria-expanded="false" aria-label="Toggle navigation">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </button>
+            <div id="academic-menu" class="academic-menu calepin-site-menu">
+                {% for item in site.navbar_left %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+                {% for item in site.navbar_center %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+                {% for item in site.navbar_right %}
+                {% include "partials/navbar-item.html" %}
+                {% endfor %}
+                {% if site.pagefind %}
+                <pagefind-modal-trigger></pagefind-modal-trigger>
+                {% endif %}
+                {% set calepin_theme_toggle_class = "academic-theme-toggle" %}
+                {% set calepin_theme_toggle_storage_key = "calepin-academic-theme" %}
+                {% include "partials/theme-toggle.html" %}
+                {% if site.languages and site.languages | length > 1 %}
+                <select class="academic-language-picker" aria-label="Language" data-calepin-language-picker>
+                    {% for language in site.languages %}
+                    <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+        </nav>
+    </header>

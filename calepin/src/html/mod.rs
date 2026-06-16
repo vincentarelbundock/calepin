@@ -188,7 +188,7 @@ mod tests {
 
         assert!(themed.contains("<title>Standard Title</title>"));
         assert!(themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
-        assert!(themed.contains("<main class=\"container\">"));
+        assert!(themed.contains("<main class=\"container calepin-content calepin-document-main\">"));
         assert!(themed.contains(".sourceCode,"));
         assert!(themed.contains(".cell-output,"));
         assert!(themed.contains("calepin-copy-code"));
@@ -302,7 +302,7 @@ mod tests {
         let themed = apply_html_theme(fragment, Some(&entry)).unwrap();
 
         assert!(themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
-        assert!(themed.contains("<main class=\"container\">"));
+        assert!(themed.contains("<main class=\"container calepin-content calepin-document-main\">"));
         assert!(themed.contains(r#"<h1 id="hello">Hello</h1>"#));
     }
 
@@ -460,11 +460,7 @@ mod tests {
             ..SiteContextInput::default()
         };
 
-        for selection in [
-            ThemeSelection::Default,
-            ThemeSelection::Builtin("academic"),
-            ThemeSelection::Builtin("tufte"),
-        ] {
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
             let entry = entry_for(&selection, HtmlScope::Site);
             let theme_name = entry.theme_name.clone();
             let themed = theme::apply_html_theme(
@@ -539,11 +535,7 @@ mod tests {
             ..SiteContextInput::default()
         };
 
-        for selection in [
-            ThemeSelection::Default,
-            ThemeSelection::Builtin("academic"),
-            ThemeSelection::Builtin("tufte"),
-        ] {
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
             let entry = entry_for(&selection, HtmlScope::Site);
             let theme_name = entry.theme_name.clone();
             let themed = theme::apply_html_theme(
@@ -561,6 +553,128 @@ mod tests {
                 "{theme_name}: language picker should require multiple languages"
             );
         }
+    }
+
+    #[test]
+    fn bundled_themes_render_borderless_language_picker_button() {
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+            let entry = entry_for(&selection, HtmlScope::Site);
+            let theme_name = entry.theme_name.clone();
+            let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+                .unwrap()
+                .unwrap();
+            let script = html_theme_script(&entry).unwrap();
+
+            assert!(
+                css.contains(
+                    r#".calepin-language-picker-button {
+  display: inline-flex;"#
+                ),
+                "{theme_name}: missing language picker button styles"
+            );
+            assert!(
+                css.contains("border: 0;"),
+                "{theme_name}: language picker button should not have a border"
+            );
+            assert!(
+                css.contains("background: transparent;"),
+                "{theme_name}: language picker button should not use the primary button color"
+            );
+            assert!(
+                css.contains("color: inherit;"),
+                "{theme_name}: language picker button should inherit text color"
+            );
+            assert!(
+                css.contains("text-decoration: none;"),
+                "{theme_name}: themed links should not be underlined"
+            );
+            assert!(
+                script.contains(r#"summary.className = "calepin-language-picker-button";"#),
+                "{theme_name}: language picker button should not use outline classes"
+            );
+            assert!(
+                !script.contains("calepin-language-picker-button outline secondary"),
+                "{theme_name}: language picker button should not use outline classes"
+            );
+        }
+    }
+
+    #[test]
+    fn academic_site_theme_omits_toc_and_sidebar_nav_links() {
+        let site_context = SiteContextInput {
+            navbar_left: vec![SiteNavEntry {
+                href: "about.html".to_string(),
+                label: "About".to_string(),
+                label_html: "About".to_string(),
+                active: false,
+            }],
+            sidebar_sections: vec![sidebar_section("Guide", "guide.html", false)],
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            ..SiteContextInput::default()
+        };
+        let html = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1><h2>Section</h2></body></html>";
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            html,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains(r#"href="about.html" aria-label="About""#));
+        assert!(!themed.contains(r#"href="guide.html" aria-label="Guide""#));
+        assert!(!themed.contains("academic-toc"));
+        assert!(!themed.contains("On this page"));
+    }
+
+    #[test]
+    fn academic_site_theme_centers_text_and_inherits_shared_code_styles() {
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+
+        assert!(css.contains(
+            r#".academic-page {
+  width: min(100% - 2rem, var(--academic-text-width));"#
+        ));
+        assert!(css.contains("justify-content: space-evenly;"));
+        assert!(css.contains(
+            r#".academic-menu {
+  display: contents;"#
+        ));
+        assert!(css.contains(
+            r#".academic-page-nav-link-next {
+  grid-column: 2;"#
+        ));
+        assert!(css.contains("pre > code"));
+        assert!(css.contains("calepin-copy-code"));
+        assert!(!css.contains(".academic-main pre"));
+        assert!(!css.contains(".academic-main code"));
+        assert!(!css.contains(".academic-landing .landing-command-row code"));
+        assert!(!css.contains(".academic-toc"));
+    }
+
+    #[test]
+    fn academic_site_theme_enhances_footnotes_as_margin_notes() {
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+        let script = html_theme_script(&entry).unwrap();
+
+        assert!(css.contains(".academic-footnote"));
+        assert!(css.contains(".academic-footnote-backref"));
+        assert!(script.contains(r#"section[role="doc-endnotes"]"#));
+        assert!(script.contains("sidenote academic-footnote"));
+        assert!(script.contains("scrollToElement(sidenote)"));
+        assert!(script.contains("scrollToElement(reference)"));
+        assert!(script.contains(r#"insertAdjacentElement("afterend", sidenote)"#));
     }
 
     fn sidebar_section(title: &str, href: &str, active: bool) -> SiteNavSection {

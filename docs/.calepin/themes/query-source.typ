@@ -4,9 +4,9 @@
 
 #title()
 
-Themes control how _Calepin_ renders HTML pages and paged outputs. A theme can
+Themes control how _Calepin_ renders HTML pages and notebook outputs. A theme can
 provide MiniJinja HTML templates, shared or local partials, CSS, JavaScript, and
-a paged Typst template for PDF, SVG, and PNG output.
+a Typst notebook template for PDF, SVG, PNG, and HTML output.
 
 = Choosing a theme
 
@@ -15,8 +15,7 @@ The default theme is `calepin`. Select a different built-in or local theme with
 
 ```toml
 theme = "calepin"           # the default documentation theme
-theme = "academic"          # a built-in academic site theme
-theme = "tufte"             # a built-in essay/blog theme
+theme = "academic"          # a built-in essay/blog theme
 theme = "themes/my-theme"   # a local theme directory
 theme = false               # no theme: raw, unstyled output
 ```
@@ -33,11 +32,10 @@ wins, then the document, then `calepin.toml`. `calepin watch` does not have a
 `--theme` option; it uses the document setting when present, otherwise the
 website's `calepin.toml` setting, otherwise the default theme.
 
-_Calepin_ ships with three built-in themes:
+_Calepin_ ships with two built-in themes:
 
 - *calepin*: the default documentation site layout, with sidebar navigation, a top bar, previous and next page links, a table of contents, dark mode, copy buttons on code blocks, and rendered/source/PDF view switching.
-- *academic*: a personal homepage layout with top navigation instead of a sidebar, designed for profile pages, teaching materials, publication lists, projects, talks, and posts. For single-document HTML and paged notebook output, `academic` falls back to `calepin`.
-- *tufte*: a reading-first essay and blog layout inspired by Tufte-style pages, with a narrow text column, margin-note support, a right-side table of contents, top navigation, dark mode, copy buttons on code blocks, and shared Calepin search and language controls.
+- *academic*: a reading-first essay and blog layout with a centered narrow text column, margin-note support, top navigation, dark mode, copy buttons on code blocks, and shared Calepin search and language controls.
 
 = Ejecting and local themes
 
@@ -47,7 +45,6 @@ directly. Instead, copy one into your project and edit the copy:
 ```sh
 calepin new theme                     # copies the default theme to themes/calepin/
 calepin new theme --theme academic    # copies the academic theme to themes/academic/
-calepin new theme --theme tufte       # copies the Tufte theme to themes/tufte/
 calepin new theme themes/my-theme --theme academic
 ```
 
@@ -57,20 +54,21 @@ Then point your site or compile command at the copy:
 theme = "themes/calepin"
 ```
 
-The copy is yours: edit its HTML, CSS, JavaScript, `theme.toml`, and paged
+The copy is yours: edit its HTML, CSS, JavaScript, `theme.toml`, and notebook
 template files freely, and check them into version control. _Calepin_ upgrades
 will never touch them. Ejected shared files are written beside the theme in
 `themes/shared/`.
 
 A local theme can be small. Missing entry files fall back to the built-in
 `calepin` theme, so a local theme can override just `layouts/webpage.html` or
-just `layouts/notebook.html`. Supporting files such as partials, styles, and
-scripts come from the selected theme plus any imports declared in `theme.toml`.
+just `layouts/notebook.html` or `notebook.typ.jinja`. Supporting files such as
+partials, styles, and scripts come from the selected theme plus any imports
+declared in `theme.toml`.
 
 = Structure
 
-A theme can provide templates for website pages, single-document HTML, and paged
-outputs:
+A theme can provide templates for website pages, single-document HTML, and
+Typst-level notebook rendering:
 
 ```text
 themes/my-theme/
@@ -82,7 +80,7 @@ themes/my-theme/
   partials/         # theme-local MiniJinja fragments
   styles/           # theme-local CSS files
   scripts/          # theme-local JavaScript files
-  paged.typ.jinja   # optional PDF/SVG/PNG template
+  notebook.typ.jinja # optional Typst notebook template
 themes/shared/      # optional local source for imported shared files
   partials/
   styles/
@@ -378,32 +376,32 @@ The shared JavaScript files expect these attributes:
 - `language-picker.js` enhances selects marked with `data-calepin-language-picker`
 - The website view switcher expects a select with `id="calepin-website-view-mode"`
 
-= Paged themes
+= Notebook Typst templates
 
-PDF, SVG, and PNG notebook outputs use a paged MiniJinja template named
-`paged.typ.jinja`:
+Notebook outputs use a Typst-source MiniJinja template named
+`notebook.typ.jinja`:
 
 ```text
 themes/my-theme/
-  paged.typ.jinja
+  notebook.typ.jinja
 ```
 
 Typst already has a complete #link("https://typst.app/docs/tutorial/formatting/")[styling system]
-based on `#set` and `#show` rules. _Calepin_'s paged theme layer adds one
-optional step before Typst runs: `paged.typ.jinja` is rendered with MiniJinja
+based on `#set` and `#show` rules. _Calepin_'s notebook theme layer adds one
+optional step before Typst runs: `notebook.typ.jinja` is rendered with MiniJinja
 and must produce Typst source. This keeps the customization model similar to
 HTML themes, exposes _Calepin_-specific values, and still lets Typst handle the
-actual PDF/SVG/PNG styling.
+actual notebook rendering.
 
-The bundled `calepin` theme's `paged.typ.jinja` is enabled by default for
-`calepin compile` and website PDF/SVG/PNG builds. To customize it, eject the
-default bundle:
+Every bundled theme includes `notebook.typ.jinja`. The selected theme's template
+is enabled by default for `calepin compile`, `calepin watch`, and website page
+builds. To customize it, eject a bundle:
 
 ```sh
 calepin new theme
 ```
 
-Then edit `themes/calepin/paged.typ.jinja` and select that local theme:
+Then edit `themes/calepin/notebook.typ.jinja` and select that local theme:
 
 ```sh
 calepin compile paper.typ --theme themes/calepin
@@ -415,14 +413,14 @@ In a website, use the same local theme directory in `calepin.toml`:
 theme = "themes/calepin"
 ```
 
-Internally, _Calepin_ uses the paged template while preparing the Typst file
+Internally, _Calepin_ uses the notebook template while preparing the Typst file
 that Typst will compile:
 
 1. _Calepin_ preprocesses the notebook and writes a staged Typst source file under `.calepin/`.
-2. _Calepin_ renders `paged.typ.jinja` with MiniJinja.
+2. _Calepin_ renders `notebook.typ.jinja` with MiniJinja.
 3. `document.body` expands to a Typst `#include` for the staged notebook source.
 4. _Calepin_ writes a wrapper file that contains the rendered theme and any notebook execution rules.
-5. Typst compiles that wrapper to PDF, SVG, or PNG.
+5. Typst compiles that wrapper to the requested output format.
 
 For example, this template:
 
@@ -447,7 +445,7 @@ becomes Typst source like this:
 The exact `.calepin/.../source.typ` path is generated by _Calepin_. You
 normally do not write that path yourself; use `{{ document.body }}`.
 
-The built-in paged template currently imports its fenced-code helper from
+The built-in notebook template currently imports its fenced-code helper from
 the runtime module:
 `/.calepin/calepin.typ`.
 That runtime is assembled from `src/assets/typst-runtime/*.typ` and includes
@@ -480,10 +478,10 @@ Because the rendered output is Typst, it can also import project files such as
 `#import "/styles/report.typ": *`. Root-relative imports start from the website
 or document root.
 
-`paged.typ.jinja` receives:
+`notebook.typ.jinja` receives:
 
 - `theme`: the local theme directory name
-- `target`: `paged`
+- `target`: `notebook`
 - `document.path`: the root-relative `.typ` input path
 - `document.dir`: the root-relative input directory
 - `document.stem`: the input filename without `.typ`
@@ -508,7 +506,7 @@ heading("Appendix")
 {% endif %}
 ```
 
-If `paged.typ.jinja` does not reference `document.body`, _Calepin_ treats it
+If `notebook.typ.jinja` does not reference `document.body`, _Calepin_ treats it
 like a prelude and includes the notebook source after the rendered template.
 
 For output-specific branches, use Typst's runtime input instead of MiniJinja:
@@ -517,4 +515,6 @@ For output-specific branches, use Typst's runtime input instead of MiniJinja:
 #let is-html = sys.inputs.at("calepin-target", default: "paged") == "html"
 ```
 
-Set `theme = false` or use an empty `paged.typ.jinja` to disable paged styling.
+Set `theme = false` or use an empty `notebook.typ.jinja` to disable notebook
+Typst styling. Local themes that still use the older `paged.typ.jinja` filename
+continue to work, but new themes should use `notebook.typ.jinja`.

@@ -34,7 +34,7 @@
     picker.className = "calepin-language-picker dropdown";
 
     const summary = document.createElement("summary");
-    summary.className = "calepin-language-picker-button outline secondary";
+    summary.className = "calepin-language-picker-button";
     summary.setAttribute("role", "button");
     summary.setAttribute("aria-haspopup", "menu");
     summary.setAttribute("aria-expanded", "false");

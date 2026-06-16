@@ -1,5 +1,3 @@
-#import "/assets/site.typ" as site
-
 #set document(title: [Theme Tour])
 #metadata((
   title: "Theme Tour",
@@ -14,8 +12,7 @@
 
 #lorem(70)
 
-This post includes a margin note marker.
-#site.margin-note[Tufte can place this beside
-the main text column; other themes keep it readable in flow.]
+This post includes enough prose to compare reading width and spacing across
+the bundled themes.
 
 #lorem(100)

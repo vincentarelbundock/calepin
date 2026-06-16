@@ -7,12 +7,12 @@ use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::slash_path;
 
-pub(super) fn paged_template_context(
+pub(super) fn notebook_template_context(
     layout: &LayoutPaths,
     include_input: &Path,
     page_meta: Option<serde_json::Value>,
     params: serde_json::Value,
-) -> crate::theme::PagedTemplateContext {
+) -> crate::theme::NotebookTemplateContext {
     let input_dir = layout
         .input_rel
         .parent()
@@ -23,7 +23,7 @@ pub(super) fn paged_template_context(
         .file_stem()
         .map(|stem| stem.to_string_lossy().to_string())
         .unwrap_or_default();
-    crate::theme::PagedTemplateContext {
+    crate::theme::NotebookTemplateContext {
         input_path: slash_path(&layout.input_rel),
         input_dir,
         input_stem,
@@ -37,7 +37,7 @@ pub(super) fn write_render_wrapper(
     layout: &LayoutPaths,
     include_input: &Path,
     jupyter_kernels: &[&str],
-    paged_theme: Option<&crate::theme::PagedSource>,
+    notebook_theme: Option<&crate::theme::NotebookSource>,
 ) -> Result<PathBuf> {
     let wrapper_relative = layout.artifact_relative_path("calepin-wrapper.typ");
     let wrapper = layout.root.join(&wrapper_relative);
@@ -64,15 +64,15 @@ pub(super) fn write_render_wrapper(
     lines.push_str("\n");
     lines.push_str(html_raw_show_rule());
 
-    if let Some(paged_theme) = paged_theme {
-        lines.push_str("\n// Paged theme\n");
-        lines.push_str(&paged_theme.source);
-        if !paged_theme.source.ends_with('\n') {
+    if let Some(notebook_theme) = notebook_theme {
+        lines.push_str("\n// Notebook theme\n");
+        lines.push_str(&notebook_theme.source);
+        if !notebook_theme.source.ends_with('\n') {
             lines.push('\n');
         }
     }
 
-    if !paged_theme.is_some_and(|theme| theme.owns_body) {
+    if !notebook_theme.is_some_and(|theme| theme.owns_body) {
         lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
     }
 

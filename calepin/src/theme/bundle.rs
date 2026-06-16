@@ -37,12 +37,7 @@ static ACADEMIC: BundleDef = BundleDef {
     files: ACADEMIC_FILES,
 };
 
-static TUFTE: BundleDef = BundleDef {
-    name: "tufte",
-    files: TUFTE_FILES,
-};
-
-static BUILTINS: [&BundleDef; 3] = [&CALEPIN, &ACADEMIC, &TUFTE];
+static BUILTINS: [&BundleDef; 2] = [&CALEPIN, &ACADEMIC];
 
 pub(crate) fn shared_file(path: &str) -> Option<&'static str> {
     SHARED_FILES

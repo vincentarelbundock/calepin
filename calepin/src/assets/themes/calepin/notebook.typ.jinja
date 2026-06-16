@@ -1,0 +1,18 @@
+#import "/.calepin/calepin.typ": code-block
+
+#show raw.where(block: true): it => {
+  if it.theme != auto {
+    it
+  } else if it.lang != none and _fenced-chunks-runs(
+    it.lang,
+    _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
+  ) {
+    it
+  } else if sys.inputs.at("calepin-target", default: "paged") == "html" {
+    _html-themed-raw-block(it)
+  } else {
+    code-block(it)
+  }
+}
+
+{{ document.body }}

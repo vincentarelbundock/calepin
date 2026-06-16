@@ -47,7 +47,7 @@ Options:
 Examples:
   calepin new paper.typ
   calepin new website my_site/
-  calepin new theme --theme tufte
+  calepin new theme --theme academic
   calepin new theme themes/my-theme --theme academic
 ```
 
@@ -93,7 +93,7 @@ Options:
           [possible values: pdf, png, svg, html]
 
       --theme <THEME>
-          Theme bundle: a builtin name (calepin, academic, tufte), a path to a theme directory, or false
+          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false
 
       --minify
           Minify HTML output after theming and asset processing

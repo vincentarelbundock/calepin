@@ -20,12 +20,11 @@ This creates a website source directory with enough structure to exercise the bu
 - `my_site/404.typ`: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.
 - `my_site/about.typ`, `my_site/guide/*.typ`, and `my_site/fr/*.typ`: regular pages in two languages, with navbar and sidebar entries.
 - `my_site/blog.typ` and `my_site/posts/*.typ`: a small blog index and post source files using `calepin.pages()`.
-- `my_site/assets/site.typ`: a tiny site helper for rendering the blog listing.
 
-The scaffold includes footnotes, margin-note markup, code output, tables, top
-navigation, sidebar navigation, language metadata, posts, and PDF twins for
-every page. Switch `theme` in `calepin.toml` between `calepin`, `academic`, and
-`tufte` to compare the same content across themes.
+The scaffold includes footnotes, code output, tables, top navigation, sidebar
+navigation, language metadata, posts, and PDF twins for every page. Switch
+`theme` in `calepin.toml` between `calepin` and `academic` to compare the same
+content across themes.
 
 = Build
 

@@ -54,4 +54,5 @@ pub(crate) fn write_runtime_with_syntax_theme(
 }
 
 #[cfg(test)]
+#[path = "runtime_tests.rs"]
 mod runtime_tests;

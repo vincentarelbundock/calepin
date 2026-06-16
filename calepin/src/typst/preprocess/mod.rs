@@ -23,7 +23,7 @@ use crate::typst::version::assert_supported_typst;
 const PAGE_META_FILE: &str = "page-meta.json";
 
 use fingerprint::{preprocess_cache_hit, preprocess_fingerprint, write_preprocess_fingerprint};
-use staging::{paged_template_context, write_query_source, write_render_wrapper};
+use staging::{notebook_template_context, write_query_source, write_render_wrapper};
 
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
@@ -140,20 +140,20 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .clone()
         .or(setup_config.defaults.theme_selection(&layout.root)?)
         .unwrap_or_else(|| options.fallback_theme.clone());
-    let paged_context = paged_template_context(
+    let notebook_context = notebook_template_context(
         &layout,
         &staged_input,
         metadata.page_meta.clone(),
         params.clone(),
     );
-    let paged_theme = crate::theme::paged_source(&effective_theme, &paged_context)?;
+    let notebook_theme = crate::theme::notebook_source(&effective_theme, &notebook_context)?;
     if !jupyter_kernels.is_empty() {
         let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
         layout.render_input =
-            write_render_wrapper(&layout, &staged_input, &kernels, paged_theme.as_ref())?;
+            write_render_wrapper(&layout, &staged_input, &kernels, notebook_theme.as_ref())?;
     } else {
         layout.render_input =
-            write_render_wrapper(&layout, &staged_input, &[], paged_theme.as_ref())?;
+            write_render_wrapper(&layout, &staged_input, &[], notebook_theme.as_ref())?;
     }
 
     let cwd = layout.work_dir.clone();
@@ -739,20 +739,20 @@ mod tests {
     }
 
     #[test]
-    fn render_wrapper_includes_paged_theme_before_source() {
+    fn render_wrapper_includes_notebook_theme_before_source() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
         let staged_input = PathBuf::from(".calepin/paper/source.typ");
-        let paged_theme = crate::theme::PagedSource {
-            source: "#let paged-theme-marker = true\n".to_string(),
+        let notebook_theme = crate::theme::NotebookSource {
+            source: "#let notebook-theme-marker = true\n".to_string(),
             owns_body: false,
         };
 
         let wrapper =
-            write_render_wrapper(&layout, &staged_input, &[], Some(&paged_theme)).unwrap();
+            write_render_wrapper(&layout, &staged_input, &[], Some(&notebook_theme)).unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
-        let theme_marker = contents.find("#let paged-theme-marker = true").unwrap();
+        let theme_marker = contents.find("#let notebook-theme-marker = true").unwrap();
         let source_include = contents
             .find("#include \"/.calepin/paper/source.typ\"")
             .unwrap();
@@ -764,13 +764,13 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
         let staged_input = PathBuf::from(".calepin/paper/source.typ");
-        let paged_theme = crate::theme::PagedSource {
+        let notebook_theme = crate::theme::NotebookSource {
             source: "#include \"/.calepin/paper/source.typ\"\n[#emph[Appendix]]\n".to_string(),
             owns_body: true,
         };
 
         let wrapper =
-            write_render_wrapper(&layout, &staged_input, &[], Some(&paged_theme)).unwrap();
+            write_render_wrapper(&layout, &staged_input, &[], Some(&notebook_theme)).unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
         assert_eq!(
@@ -783,24 +783,23 @@ mod tests {
     }
 
     #[test]
-    fn paged_theme_comes_from_theme_selection() {
-        let source = crate::theme::paged_source(
+    fn notebook_theme_comes_from_theme_selection() {
+        let source = crate::theme::notebook_source(
             &crate::theme::ThemeSelection::Default,
-            &crate::theme::PagedTemplateContext::default(),
+            &crate::theme::NotebookTemplateContext::default(),
         )
         .unwrap()
         .unwrap();
         assert!(source.source.contains("code-block"));
         assert!(source.source.contains("_fenced-chunks-runs"));
-        assert!(crate::theme::paged_source(
+        assert!(crate::theme::notebook_source(
             &crate::theme::ThemeSelection::Disabled,
-            &crate::theme::PagedTemplateContext::default(),
+            &crate::theme::NotebookTemplateContext::default(),
         )
         .unwrap()
         .is_none());
     }
 
-    #[test]
     fn test_layout(root: &Path) -> LayoutPaths {
         testfixtures::layout(root)
     }

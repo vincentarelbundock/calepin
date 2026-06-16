@@ -4,7 +4,29 @@
   --calepin-accent: #1c9bad;
   --calepin-accent-hover: #16808f;
   --calepin-radius-sm: 4px;
+  --calepin-radius-md: 0.5rem;
   --calepin-topbar-height: 3.5rem;
+  --calepin-topbar-z: 20;
+  --calepin-content-width: 39rem;
+  --calepin-wide-width: 68rem;
+  --calepin-page-width: var(--calepin-wide-width);
+  --calepin-surface: color-mix(in srgb, var(--pico-background-color) 94%, #ffffff);
+  --calepin-muted-surface: color-mix(in srgb, var(--pico-muted-border-color) 28%, var(--calepin-surface));
+  --calepin-card-shadow: 0 10px 30px color-mix(in srgb, var(--pico-color) 8%, transparent);
+}
+
+html[data-theme="dark"] {
+  --calepin-surface: color-mix(in srgb, var(--pico-background-color) 86%, #17202a);
+  --calepin-muted-surface: color-mix(in srgb, var(--pico-muted-border-color) 24%, var(--calepin-surface));
+  --calepin-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --calepin-surface: color-mix(in srgb, var(--pico-background-color) 86%, #17202a);
+    --calepin-muted-surface: color-mix(in srgb, var(--pico-muted-border-color) 24%, var(--calepin-surface));
+    --calepin-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  }
 }
 
 :root:not([data-theme="dark"]),
@@ -12,11 +34,11 @@
   --pico-primary: var(--calepin-accent);
   --pico-primary-background: var(--calepin-accent);
   --pico-primary-border: var(--calepin-accent);
-  --pico-primary-underline: rgba(28, 155, 173, 0.5);
+  --pico-primary-underline: transparent;
   --pico-primary-hover: var(--calepin-accent-hover);
   --pico-primary-hover-background: var(--calepin-accent-hover);
   --pico-primary-hover-border: var(--calepin-accent-hover);
-  --pico-primary-hover-underline: var(--calepin-accent-hover);
+  --pico-primary-hover-underline: transparent;
   --pico-primary-focus: rgba(28, 155, 173, 0.4);
   --pico-primary-inverse: #fff;
 }
@@ -29,6 +51,15 @@ body {
   font-variant-numeric: oldstyle-nums;
 }
 
+a,
+a:hover,
+a:focus,
+a:focus-visible,
+a:active,
+a:visited {
+  text-decoration: none;
+}
+
 h1,
 h2,
 h3,
@@ -39,9 +70,41 @@ h6 {
 }
 
 h1 {
-  font-size: 1.9rem;
-  line-height: 1.2;
-  margin-bottom: 1rem;
+  font-size: 2.4rem;
+  line-height: 1.12;
+  margin-bottom: 1.15rem;
+}
+
+h2 {
+  margin-top: 2.4rem;
+  font-size: 1.55rem;
+}
+
+h3 {
+  margin-top: 1.8rem;
+  font-size: 1.2rem;
+}
+
+p,
+li,
+dd {
+  line-height: 1.65;
+}
+
+.calepin-content {
+  min-width: 0;
+}
+
+.calepin-content > :first-child {
+  margin-top: 0;
+}
+
+.calepin-content img,
+.calepin-content svg,
+.calepin-content video,
+.calepin-content canvas {
+  max-width: 100%;
+  height: auto;
 }
 
 figure {
@@ -52,4 +115,186 @@ figure > img {
   display: block;
   max-width: 100%;
   margin-inline: auto;
+}
+
+.calepin-content figure {
+  margin: 1.6rem 0;
+}
+
+.calepin-content figcaption {
+  max-width: 34rem;
+  margin-top: 0.6rem;
+  color: var(--pico-muted-color);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.calepin-content .fullwidth,
+.calepin-content .full-width,
+.calepin-content figure.fullwidth,
+.calepin-content figure.full-width,
+.calepin-content .calepin-figure-grid {
+  width: min(100vw - 2rem, var(--calepin-page-width));
+  max-width: var(--calepin-page-width);
+}
+
+.calepin-content blockquote {
+  margin: 1.6rem 0;
+  padding: 0.15rem 0 0.15rem 1.1rem;
+  border-left: 2px solid var(--pico-primary);
+  color: var(--pico-muted-color);
+}
+
+.calepin-content .calepin-float-right {
+  float: right;
+  width: min(32%, 12rem);
+  height: auto;
+  margin: 0.25rem 0 1rem 1.25rem;
+  border-radius: var(--calepin-radius-md);
+}
+
+.calepin-content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin-block: 1.6rem;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.calepin-content th,
+.calepin-content td {
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  vertical-align: top;
+}
+
+.calepin-content th {
+  font-weight: 700;
+}
+
+.calepin-landing,
+.calepin-landing-page {
+  width: 100%;
+  margin: 0;
+}
+
+.calepin-landing > :first-child,
+.calepin-landing-page > :first-child {
+  margin-top: 0;
+}
+
+.landing-button,
+.landing-button:visited {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--calepin-radius-md);
+  color: inherit;
+  font-weight: 650;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.landing-button-primary,
+.landing-button-primary:visited {
+  border-color: var(--pico-primary);
+  background: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+}
+
+.landing-button-primary:hover,
+.landing-button-primary:focus-visible {
+  border-color: var(--pico-primary-hover);
+  background: var(--pico-primary-hover);
+  color: var(--pico-primary-inverse);
+}
+
+.landing-button-secondary,
+.landing-button-secondary:visited {
+  border-color: var(--pico-muted-border-color);
+  background: var(--calepin-surface);
+  color: inherit;
+}
+
+.landing-button-secondary:hover,
+.landing-button-secondary:focus-visible {
+  border-color: color-mix(in srgb, var(--pico-primary) 50%, var(--pico-muted-border-color));
+  color: var(--pico-primary-hover);
+}
+
+.landing-command-row,
+.landing-cta-row,
+.landing-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.landing-command-row code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--calepin-radius-md);
+  background: var(--calepin-muted-surface);
+  color: var(--pico-color);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.landing-primary-features,
+.landing-editor-integration,
+.landing-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-block: 2.2rem;
+}
+
+.landing-feature-card,
+.landing-panel {
+  padding-block: 1rem;
+  border-top: 1px solid var(--pico-muted-border-color);
+}
+
+.landing-feature-card footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  color: var(--pico-muted-color);
+  font-size: 0.9rem;
+}
+
+.landing-checklist {
+  padding-left: 1.1rem;
+}
+
+@media (max-width: 48rem) {
+  h1 {
+    font-size: 2.15rem;
+  }
+
+  .landing-primary-features,
+  .landing-editor-integration,
+  .landing-two-column {
+    grid-template-columns: 1fr;
+  }
+
+  .calepin-content .calepin-float-right {
+    float: none;
+    display: block;
+    width: min(100%, 16rem);
+    margin: 0.75rem auto 1.2rem;
+  }
 }

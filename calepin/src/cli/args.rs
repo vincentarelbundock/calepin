@@ -74,7 +74,7 @@ impl CompileFormat {
 #[derive(clap::Args, Debug, Clone)]
 #[command(
     arg_required_else_help = true,
-    after_help = "Examples:\n  calepin new paper.typ\n  calepin new website my_site/\n  calepin new theme --theme tufte\n  calepin new theme themes/my-theme --theme academic"
+    after_help = "Examples:\n  calepin new paper.typ\n  calepin new website my_site/\n  calepin new theme --theme academic\n  calepin new theme themes/my-theme --theme academic"
 )]
 pub struct NewArgs {
     /// What to create: a .typ notebook path, `website`, or `theme`
@@ -130,7 +130,7 @@ pub struct CompileArgs {
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
-    /// Theme bundle: a builtin name (calepin, academic, tufte), a path to a theme directory, or false.
+    /// Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false.
     #[arg(long = "theme", alias = "template")]
     pub theme: Option<String>,
 

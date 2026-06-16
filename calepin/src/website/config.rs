@@ -139,7 +139,6 @@ pub(super) struct SidebarItemConfig {
     #[serde(alias = "path", alias = "url")]
     pub(super) target: Option<String>,
     pub(super) glob: Option<String>,
-    pub(super) icon: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -171,7 +170,6 @@ pub(super) struct NavbarItemConfig {
     pub(super) target: Option<String>,
     pub(super) glob: Option<String>,
     pub(super) label: Option<String>,
-    pub(super) icon: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, Default, PartialEq, Eq)]

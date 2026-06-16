@@ -1,5 +1,3 @@
-#import "/assets/site.typ" as site
-
 #set document(title: [Theme Features])
 #metadata((title: "Theme features", translation_key: "features")) <website-metadata>
 
@@ -35,9 +33,9 @@ bundled theme.
   #lorem(24)
 ]
 
-= Margin Note
+= Footnote
 
-#site.margin-note[Margin notes are intentionally
-plain HTML spans with a class, so custom themes can decide how to display them.]
+Footnotes are ordinary Typst content.#footnote[They stay portable across
+HTML and paged outputs.]
 
 #lorem(80)

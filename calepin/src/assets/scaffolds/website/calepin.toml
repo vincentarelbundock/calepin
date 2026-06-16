@@ -4,7 +4,6 @@ description = "A bilingual Calepin website scaffold with pages, posts, and theme
 # Try the bundled themes:
 # theme = "calepin"
 # theme = "academic"
-# theme = "tufte"
 theme = "calepin"
 
 pdf = true
@@ -46,8 +45,13 @@ label = "Blog"
 
 [[navbar.item]]
 position = "right"
-target = "https://github.com/user/project"
-label = "{icon:github} Source"
+target = "https://scholar.google.com/citations?user=RKN66-kAAAAJ&hl"
+label = "{icon:simple-icons:googlescholar}"
+
+[[navbar.item]]
+position = "right"
+target = "https://github.com/vincentarelbundock/calepin"
+label = "{icon:github}"
 
 [sidebar]
 fold = false
@@ -57,7 +61,6 @@ title = "Start"
 
   [[sidebar.section.item]]
   target = "index.typ"
-  icon = "home"
 
   [[sidebar.section.item]]
   target = "about.typ"

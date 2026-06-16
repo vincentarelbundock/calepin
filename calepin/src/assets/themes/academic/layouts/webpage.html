@@ -1,64 +1,12 @@
-{{ doc.head }}
-{% include "partials/site-meta.html" %}
-{% set calepin_theme_storage_key = "calepin-academic-theme" %}
-{% set calepin_theme_param = "" %}
-{% include "partials/theme-init.html" %}
-{% include "partials/styles.html" %}
+{% include "partials/site-head.html" %}
 {{ doc.body_open }}
-    <header class="academic-topbar">
-        <nav class="academic-nav" aria-label="Site">
-            <a class="academic-brand contrast" href="{% if site.home_url %}{{ site.home_url }}{% else %}index.html{% endif %}">
-                {% if site.logo %}
-                <img src="{{ site.logo }}" alt="{% if site.logo_alt %}{{ site.logo_alt }}{% elif site.title %}{{ site.title }}{% endif %}" class="academic-logo">
-                {% elif site.title %}
-                <span>{{ site.title }}</span>
-                {% else %}
-                <span>Home</span>
-                {% endif %}
-            </a>
-            <a class="academic-nav-toggle outline secondary" href="#academic-menu" aria-controls="academic-menu" aria-expanded="false" aria-label="Toggle navigation">
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-            </a>
-            <div id="academic-menu" class="academic-menu">
-                {% for item in site.navbar_left %}
-                {% include "partials/navbar-item.html" %}
-                {% endfor %}
-                {% for item in site.navbar_center %}
-                {% include "partials/navbar-item.html" %}
-                {% endfor %}
-                {% for item in site.navbar_right %}
-                {% include "partials/navbar-item.html" %}
-                {% endfor %}
-                {% if site.pagefind %}
-                <pagefind-modal-trigger></pagefind-modal-trigger>
-                {% endif %}
-                <button class="academic-theme-toggle outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-academic-theme">Theme</button>
-                {% if site.languages and site.languages | length > 1 %}
-                <select class="academic-language-picker" aria-label="Language" data-calepin-language-picker>
-                    {% for language in site.languages %}
-                    <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
-                    {% endfor %}
-                </select>
-                {% endif %}
-                {% if site.sidebar_sections %}
-                    {% for section in site.sidebar_sections %}
-                    {% for item in section.items %}
-                    <a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a>
-                    {% endfor %}
-                    {% endfor %}
-                {% elif site.sidebar %}
-                    {% for item in site.sidebar %}
-                    <a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a>
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </nav>
-    </header>
-    <main class="academic-main" data-pagefind-body>
-        {{ doc.body }}
-    </main>
+{% include "partials/site-nav.html" %}
+    <div class="academic-page calepin-reading-page">
+        <main class="academic-main calepin-content" data-pagefind-body>
+            {{ doc.body }}
+        </main>
+    </div>
+{% include "partials/page-nav.html" %}
 {% include "partials/pagefind-modal.html" %}
 {% include "partials/scripts.html" %}
 {{ doc.body_close }}

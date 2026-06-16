@@ -89,6 +89,9 @@ pub(crate) fn scaffold_website(dir: &Path, force: bool) -> Result<()> {
     for (path, contents) in WEBSITE_SCAFFOLD_FILES {
         write_scaffold_file(&docs.join(path), contents, force)?;
     }
+    for (path, contents) in WEBSITE_SCAFFOLD_BINARY_FILES {
+        write_scaffold_bytes(&docs.join(path), contents, force)?;
+    }
     Ok(())
 }
 
@@ -1221,7 +1224,6 @@ struct NavItemPlan {
     path: Option<PathBuf>,
     url: Option<String>,
     configured_label: Option<String>,
-    icon: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -1235,7 +1237,6 @@ struct NavItemInput<'a> {
     target: Option<&'a str>,
     glob: Option<&'a str>,
     label: Option<&'a str>,
-    icon: Option<&'a str>,
 }
 
 struct NavItemResolution<'a> {
@@ -1366,7 +1367,6 @@ fn discover_pages(
                 path: Some(path.clone()),
                 url: None,
                 configured_label: None,
-                icon: None,
             })
             .collect();
         return Ok((
@@ -1400,7 +1400,6 @@ fn discover_pages(
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
                 label: None,
-                icon: item.icon.as_deref(),
             })
             .collect::<Vec<_>>();
         let mut resolution = NavItemResolution {
@@ -1444,7 +1443,6 @@ fn discover_navbar(
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
                 label: item.label.as_deref(),
-                icon: item.icon.as_deref(),
             })
             .collect::<Vec<_>>();
         let mut resolution = NavItemResolution {
@@ -1491,7 +1489,6 @@ fn resolve_nav_item_plans(
     let mut items = Vec::new();
     for input in inputs {
         let configured_label = clean_optional_string(input.label);
-        let icon = clean_optional_string(input.icon);
         if let Some(target) = input
             .target
             .map(str::trim)
@@ -1511,7 +1508,6 @@ fn resolve_nav_item_plans(
                         path: None,
                         url: Some(url),
                         configured_label,
-                        icon,
                     });
                 }
                 Some(NavTarget::Page(path)) => {
@@ -1524,7 +1520,6 @@ fn resolve_nav_item_plans(
                             path: Some(path),
                             url: None,
                             configured_label,
-                            icon,
                         });
                     }
                 }
@@ -1552,7 +1547,6 @@ fn resolve_nav_item_plans(
                     path: Some(path),
                     url: None,
                     configured_label: configured_label.clone(),
-                    icon: icon.clone(),
                 });
             }
         }
@@ -2032,17 +2026,8 @@ fn contains_event_handler_attribute(lower: &str) -> bool {
     })
 }
 
-fn nav_label_html(
-    label: &str,
-    fallback_icon: Option<&str>,
-    icon_cache: &mut IconCache,
-) -> Result<String> {
+fn nav_label_html(label: &str, icon_cache: &mut IconCache) -> Result<String> {
     let mut html = String::new();
-    if let Some(icon) = fallback_icon {
-        if !label_contains_icon_token(label) {
-            push_nav_icon(&mut html, icon, icon_cache)?;
-        }
-    }
     let mut rest = label;
     while let Some(start) = rest.find("{icon:") {
         html.push_str(&html_escape(&rest[..start]));
@@ -2057,10 +2042,6 @@ fn nav_label_html(
     }
     html.push_str(&html_escape(rest));
     Ok(html)
-}
-
-fn label_contains_icon_token(label: &str) -> bool {
-    label.contains("{icon:")
 }
 
 fn push_nav_icon(html: &mut String, icon: &str, icon_cache: &mut IconCache) -> Result<()> {
@@ -2167,7 +2148,7 @@ fn nav_item_model(
             bail!("sidebar items must point to .typ source pages");
         }
         let raw_label = item.configured_label.clone().unwrap_or_else(|| url.clone());
-        let label_html = nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
+        let label_html = nav_label_html(&raw_label, icon_cache)?;
         return Ok(NavItemModel {
             language: None,
             href: url.clone(),
@@ -2194,7 +2175,7 @@ fn nav_item_model(
         .get(path)
         .and_then(|meta| meta.title.clone())
         .unwrap_or_else(|| stem_label(path));
-    let label_html = nav_label_html(&raw_label, item.icon.as_deref(), icon_cache)?;
+    let label_html = nav_label_html(&raw_label, icon_cache)?;
     let info = page_info.get(path);
     Ok(NavItemModel {
         language: language_override.or_else(|| info.and_then(|info| info.language.clone())),
@@ -2749,7 +2730,7 @@ fn absolutize_for_create(path: &Path) -> Result<PathBuf> {
     }
 }
 
-fn write_scaffold_file(path: &Path, contents: &str, force: bool) -> Result<()> {
+fn write_scaffold_bytes(path: &Path, contents: &[u8], force: bool) -> Result<()> {
     if path.exists() && !force {
         return Err(anyhow!(
             "{} already exists; pass --force to overwrite it",
@@ -2763,10 +2744,18 @@ fn write_scaffold_file(path: &Path, contents: &str, force: bool) -> Result<()> {
     fs::write(path, contents).with_context(|| format!("failed to write {}", path.display()))
 }
 
+fn write_scaffold_file(path: &Path, contents: &str, force: bool) -> Result<()> {
+    write_scaffold_bytes(path, contents.as_bytes(), force)
+}
+
 const WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
     (
         "calepin.toml",
         include_str!("../assets/scaffolds/website/calepin.toml"),
+    ),
+    (
+        "README.md",
+        include_str!("../assets/scaffolds/website/docs/README.md"),
     ),
     (
         "index.typ",
@@ -2775,10 +2764,6 @@ const WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
     (
         "404.typ",
         include_str!("../assets/scaffolds/website/docs/404.typ"),
-    ),
-    (
-        "assets/site.typ",
-        include_str!("../assets/scaffolds/website/docs/assets/site.typ"),
     ),
     (
         "about.typ",
@@ -2857,6 +2842,11 @@ const WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
         include_str!("../assets/scaffolds/website/docs/fr/posts/multilingual-notes.typ"),
     ),
 ];
+
+const WEBSITE_SCAFFOLD_BINARY_FILES: &[(&str, &[u8])] = &[(
+    "assets/portrait.jpg",
+    include_bytes!("../assets/scaffolds/website/docs/assets/portrait.jpg"),
+)];
 
 #[cfg(test)]
 mod tests {
@@ -4180,7 +4170,7 @@ filenames = ["atom.xml", "rss.xml"]
     #[test]
     fn theme_key_resolves_local_directory_against_config_dir() {
         let temp = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(temp.path().join("themes/my-theme")).unwrap();
+        std::fs::create_dir_all(temp.path().join("themes/my-theme/layouts")).unwrap();
         std::fs::write(
             temp.path().join("themes/my-theme/layouts/webpage.html"),
             "{{ doc.body }}",
@@ -4214,6 +4204,37 @@ title = "Guide"
     }
 
     #[test]
+    fn navigation_config_rejects_icon_fields() {
+        let sidebar_err = try_website_config_from_toml(
+            r#"
+[sidebar]
+
+[[sidebar.section]]
+title = "Start"
+
+  [[sidebar.section.item]]
+  target = "index.typ"
+  icon = "home"
+"#,
+        )
+        .unwrap_err();
+        assert!(sidebar_err.to_string().contains("unknown field `icon`"));
+
+        let navbar_err = try_website_config_from_toml(
+            r#"
+[navbar]
+
+[[navbar.item]]
+target = "index.typ"
+label = "Home"
+icon = "home"
+"#,
+        )
+        .unwrap_err();
+        assert!(navbar_err.to_string().contains("unknown field `icon`"));
+    }
+
+    #[test]
     fn nav_from_plans_uses_metadata_title_then_stem() {
         let src = Path::new("/site/docs");
         let titled = PathBuf::from("/site/docs/b-page.typ");
@@ -4226,13 +4247,11 @@ title = "Guide"
                     path: Some(titled.clone()),
                     url: None,
                     configured_label: None,
-                    icon: None,
                 },
                 NavItemPlan {
                     path: Some(bare.clone()),
                     url: None,
                     configured_label: None,
-                    icon: None,
                 },
             ],
         }];
@@ -4259,7 +4278,7 @@ title = "Guide"
     }
 
     #[test]
-    fn nav_from_plans_uses_configured_icon_with_metadata_label() {
+    fn navbar_from_plan_expands_explicit_label_icon_tokens() {
         let temp = tempfile::tempdir().unwrap();
         let src = temp.path();
         let home = src.join("index.typ");
@@ -4271,34 +4290,27 @@ title = "Guide"
             r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/></svg>"#,
         )
         .unwrap();
-        let sections = vec![NavSectionPlan {
-            language: None,
-            title: None,
-            items: vec![NavItemPlan {
+        let plan = NavbarPlan {
+            left: vec![NavbarItemPlan {
                 path: Some(home.clone()),
                 url: None,
-                configured_label: None,
-                icon: Some("home".to_string()),
+                configured_label: Some("{icon:home} Home".to_string()),
             }],
-        }];
-        let meta = PageMetaMap::from([(
-            home.clone(),
-            PageMeta {
-                title: Some("Home".to_string()),
-                ..PageMeta::default()
-            },
-        )]);
+            center: Vec::new(),
+            right: Vec::new(),
+        };
+        let meta = PageMetaMap::new();
         let page_info = test_page_info(src, std::slice::from_ref(&home), &BTreeSet::new());
         let mut icon_cache = IconCache::new(src.join(ICON_CACHE_DIR));
 
-        let nav = nav_from_plans(&sections, &meta, &page_info, &mut icon_cache).unwrap();
+        let nav = navbar_from_plan(&plan, &meta, &page_info, &mut icon_cache).unwrap();
 
-        assert_eq!(nav[0].items[0].label, "Home");
-        assert!(nav[0].items[0]
+        assert_eq!(nav.left[0].label, "Home");
+        assert!(nav.left[0]
             .label_html
             .contains(r#"<span class="calepin-nav-icon">"#));
-        assert!(nav[0].items[0].label_html.contains("viewBox=\"0 0 24 24\""));
-        assert!(nav[0].items[0].label_html.ends_with(" Home"));
+        assert!(nav.left[0].label_html.contains("viewBox=\"0 0 24 24\""));
+        assert!(nav.left[0].label_html.ends_with(" Home"));
     }
 
     #[test]
@@ -4471,19 +4483,16 @@ title = "Guide"
                 path: Some(home.clone()),
                 url: None,
                 configured_label: Some("Home".to_string()),
-                icon: None,
             }],
             center: vec![NavbarItemPlan {
                 path: Some(usage.clone()),
                 url: None,
                 configured_label: None,
-                icon: None,
             }],
             right: vec![NavbarItemPlan {
                 path: None,
                 url: Some("https://example.com".to_string()),
                 configured_label: Some("External".to_string()),
-                icon: None,
             }],
         };
         let meta = PageMetaMap::from([(
@@ -4729,7 +4738,6 @@ title = "Guide"
                 path: Some(home.clone()),
                 url: None,
                 configured_label: Some("Home".to_string()),
-                icon: None,
             }],
         }];
         let raw = serde_json::json!({"title": "First Post", "date": "2026-06-10"});

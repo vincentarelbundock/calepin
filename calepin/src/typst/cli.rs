@@ -322,13 +322,32 @@ mod tests {
         .unwrap();
 
         assert!(site.join("calepin.toml").exists());
+        let config = std::fs::read_to_string(site.join("calepin.toml")).unwrap();
+        assert!(config
+            .contains(r#"target = "https://scholar.google.com/citations?user=RKN66-kAAAAJ&hl""#));
+        assert!(config.contains(r#"label = "{icon:simple-icons:googlescholar}""#));
+        assert!(config.contains(r#"target = "https://github.com/vincentarelbundock/calepin""#));
+        assert!(config.contains(r#"label = "{icon:github}""#));
         assert!(site.join("index.typ").exists());
+        let index = std::fs::read_to_string(site.join("index.typ")).unwrap();
+        assert!(index.contains("set page(columns: 2)"));
+        assert!(index.contains("calepin-scaffold-portrait"));
+        assert!(index.contains(r#"src: "assets/portrait.jpg""#));
+        assert!(site.join("README.md").exists());
+        let readme = std::fs::read_to_string(site.join("README.md")).unwrap();
+        assert!(readme.contains("Helmut Koch"));
+        assert!(readme.contains("Pixabay"));
+        assert!(site.join("assets/portrait.jpg").exists());
         assert!(site.join("404.typ").exists());
-        assert!(site.join("assets/site.typ").exists());
+        assert!(!site.join("assets/site.typ").exists());
         assert!(site.join("about.typ").exists());
         assert!(site.join("guide/features.typ").exists());
         assert!(site.join("guide/writing.typ").exists());
         assert!(site.join("blog.typ").exists());
+        let blog = std::fs::read_to_string(site.join("blog.typ")).unwrap();
+        assert!(blog.contains("#let listing("));
+        assert!(blog.contains("table.hline"));
+        assert!(!blog.contains(r#"#import "/assets/site.typ""#));
         assert!(site.join("posts/first-post.typ").exists());
         assert!(site.join("posts/theme-tour.typ").exists());
         assert!(site.join("posts/code-and-results.typ").exists());

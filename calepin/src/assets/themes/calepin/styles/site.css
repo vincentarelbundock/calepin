@@ -18,36 +18,32 @@
 
   /* Landing page */
   --color-bg: color-mix(in srgb, var(--pico-background-color) 94%, #e8f6f8);
-  --color-surface: color-mix(in srgb, var(--pico-background-color) 94%, #ffffff);
+  --color-surface: var(--calepin-surface);
   --color-text: var(--pico-color);
   --color-muted: var(--pico-muted-color);
   --color-border: var(--pico-muted-border-color);
   --color-accent: #158a9a;
   --color-accent-dark: #0f6f7d;
   --color-accent-soft: color-mix(in srgb, var(--color-accent) 14%, var(--pico-background-color));
-  --radius-sm: 0.35rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.5rem;
-  --shadow-card: 0 10px 30px color-mix(in srgb, var(--pico-color) 8%, transparent);
+  --radius-sm: var(--calepin-radius-sm);
+  --radius-md: var(--calepin-radius-md);
+  --radius-lg: var(--calepin-radius-md);
+  --shadow-card: var(--calepin-card-shadow);
   --landing-hero-wordmark-width: 14rem;
-  --max-width: 1120px;
+  --max-width: var(--calepin-wide-width);
 }
 
 html[data-theme="dark"] {
   --color-bg: var(--pico-background-color);
-  --color-surface: color-mix(in srgb, var(--pico-background-color) 86%, #17202a);
   --color-accent: #2ca9b8;
   --color-accent-dark: #67d4df;
-  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.22);
 }
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) {
     --color-bg: var(--pico-background-color);
-    --color-surface: color-mix(in srgb, var(--pico-background-color) 86%, #17202a);
     --color-accent: #2ca9b8;
     --color-accent-dark: #67d4df;
-    --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.22);
   }
 }
 
@@ -266,95 +262,11 @@ html[data-theme="dark"] {
   color: var(--pico-muted-color);
 }
 
-.calepin-website-theme-button,
 .calepin-website-nav-toggle {
-  width: 2.2rem;
-  height: 2.2rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  color: inherit;
-  display: inline-grid;
-  place-items: center;
-  line-height: 1;
-}
-
-.calepin-website-theme-button:hover,
-.calepin-website-theme-button:focus,
-.calepin-website-theme-button:active,
-.calepin-website-nav-toggle:hover,
-.calepin-website-nav-toggle:focus,
-.calepin-website-nav-toggle:active {
-  border: 0;
-  background: color-mix(in srgb, var(--calepin-accent) 12%, transparent);
-  box-shadow: none;
-  color: inherit;
-}
-
-.calepin-website-theme-button:focus-visible,
-.calepin-website-nav-toggle:focus-visible {
-  outline: 2px solid var(--pico-primary-focus);
-  outline-offset: 2px;
-}
-
-.calepin-website-nav-toggle {
-  display: none;
   font-size: 1.2rem;
 }
 
 /* ------------------------------------------------------------ Landing */
-
-.landing-page {
-  width: 100%;
-  margin: 0;
-}
-
-.landing-button,
-.landing-button:visited {
-  min-height: 2.35rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0.55rem 0.9rem;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  font-weight: 650;
-  line-height: 1.1;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.landing-button-primary,
-.landing-button-primary:visited {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: #ffffff;
-}
-
-.landing-button-primary:hover,
-.landing-button-primary:focus-visible {
-  border-color: var(--color-accent-dark);
-  background: var(--color-accent-dark);
-  color: #ffffff;
-  text-decoration: none;
-}
-
-.landing-button-secondary,
-.landing-button-secondary:visited {
-  border-color: var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.landing-button-secondary:hover,
-.landing-button-secondary:focus-visible {
-  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
-  color: var(--color-accent-dark);
-  text-decoration: none;
-}
 
 .calepin-website-main--landing h1,
 .calepin-website-main--landing h2,
@@ -383,11 +295,6 @@ html[data-theme="dark"] {
   margin: 0;
   font-size: 1.55rem;
   line-height: 1.16;
-}
-
-.calepin-website-main--landing > :first-child,
-.landing-page > :first-child {
-  margin-top: 0;
 }
 
 .calepin-website-main--landing h3,
@@ -419,10 +326,6 @@ html[data-theme="dark"] {
   fill: currentColor;
 }
 
-.landing-accent {
-  color: var(--color-accent);
-}
-
 .landing-hero h2 {
   max-width: 34rem;
   margin: 1.5rem auto 0;
@@ -438,44 +341,21 @@ html[data-theme="dark"] {
   line-height: 1.65;
 }
 
-.landing-command-row,
-.landing-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.75rem;
-}
-
 .landing-command-row {
+  justify-content: center;
   margin-top: 1.4rem;
 }
 
-.landing-command-row code {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.35rem;
-  margin: 0;
-  padding: 0.45rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-border) 28%, var(--color-surface));
-  color: var(--color-text);
-  font-size: 0.88rem;
-  white-space: nowrap;
-}
-
 .landing-cta-row {
+  justify-content: center;
   margin-top: 1.25rem;
 }
 
 .landing-primary-features {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.75rem;
   align-items: stretch;
 }
 
-.landing-feature-card,
 .landing-workflow-card,
 .landing-editor-integration,
 .landing-product-preview,
@@ -486,13 +366,6 @@ html[data-theme="dark"] {
   box-shadow: var(--shadow-card);
 }
 
-.landing-feature-card {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  padding: 1.35rem;
-}
-
 .landing-feature-content p {
   margin: 0.65rem 0 0;
   line-height: 1.55;
@@ -500,7 +373,6 @@ html[data-theme="dark"] {
 
 .landing-checklist {
   display: grid;
-  grid-template-columns: 1fr;
   gap: 0.45rem;
   margin: 1.05rem 0 0;
   padding: 0;
@@ -653,17 +525,6 @@ html[data-theme="dark"] {
   color: var(--color-muted);
   font-size: 0.74rem;
   text-align: center;
-}
-
-.landing-feature-card footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: auto;
-  padding-top: 1rem;
-  color: var(--color-muted);
-  font-size: 0.84rem;
 }
 
 .landing-feature-card footer strong {

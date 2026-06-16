@@ -28,7 +28,7 @@
   }
 }
 
-// Paged theme
+// Notebook theme
 #import "/.calepin/calepin.typ": code-block
 
 #show raw.where(block: true): it => {

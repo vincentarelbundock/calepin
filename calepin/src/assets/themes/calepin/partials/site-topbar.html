@@ -1,15 +1,15 @@
-    <header class="calepin-website-topbar">
-        <nav>
+    <header class="calepin-website-topbar calepin-site-topbar">
+        <nav class="calepin-site-nav">
             <ul>
                 {% if show_site_sidebar | default(true) %}
                 <li>
-                    <button class="calepin-website-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
+                    <button class="calepin-website-nav-toggle calepin-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu">☰</button>
                 </li>
                 {% endif %}
                 <li>
-                    <a class="calepin-website-topbrand contrast" href="{% if site.home_url %}{{ site.home_url }}{% else %}index.html{% endif %}" aria-label="{% if site.logo_alt %}{{ site.logo_alt }} home{% elif site.title %}{{ site.title }} home{% else %}Home{% endif %}">
+                    <a class="calepin-website-topbrand calepin-site-brand contrast" href="{% if site.home_url %}{{ site.home_url }}{% else %}index.html{% endif %}" aria-label="{% if site.logo_alt %}{{ site.logo_alt }} home{% elif site.title %}{{ site.title }} home{% else %}Home{% endif %}">
                         {% if site.logo %}
-                        <img src="{{ site.logo }}" alt="{% if site.logo_alt %}{{ site.logo_alt }}{% elif site.title %}{{ site.title }}{% endif %}" class="calepin-website-topbrand-logo" data-inline-svg="1">
+                        <img src="{{ site.logo }}" alt="{% if site.logo_alt %}{{ site.logo_alt }}{% elif site.title %}{{ site.title }}{% endif %}" class="calepin-website-topbrand-logo calepin-site-logo" data-inline-svg="1">
                         {% elif site.title %}
                         <span class="calepin-website-topbrand-text">{{ site.title }}</span>
                         {% else %}
