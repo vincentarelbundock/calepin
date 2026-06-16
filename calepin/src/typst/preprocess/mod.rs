@@ -19,6 +19,7 @@ use crate::typst::runtime::write_runtime_with_syntax_theme;
 use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
 use crate::typst::version::assert_supported_typst;
+use crate::utils::progress::Progress;
 
 const PAGE_META_FILE: &str = "page-meta.json";
 
@@ -32,6 +33,7 @@ pub struct PreprocessOptions {
     pub config: Option<PathBuf>,
     pub display_root: Option<PathBuf>,
     pub quiet: bool,
+    pub progress: bool,
     pub timeout: Option<u64>,
     pub sync_pages: bool,
     /// CLI-level theme selection. `None` allows document setup and then
@@ -60,6 +62,7 @@ pub struct PreprocessPlan {
     cwd: PathBuf,
     timeout: Option<Duration>,
     quiet: bool,
+    progress: bool,
     sync_pages: bool,
     display_root: Option<PathBuf>,
     params: serde_json::Value,
@@ -176,6 +179,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         cwd,
         timeout,
         quiet: options.quiet,
+        progress: options.progress,
         sync_pages: options.sync_pages,
         display_root: options.display_root,
         params,
@@ -206,19 +210,36 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
     };
     let mut pool = EnginePool::new(execution_config);
     let mut chunk_results: Vec<Option<ChunkResultDocument>> = vec![None; plan.chunks.len()];
+    let input = display_input(&plan);
+    let chunk_count = plan.chunks.len();
+    let chunk_word = if chunk_count == 1 { "chunk" } else { "chunks" };
+    let progress = if plan.progress {
+        Some(Progress::bar(
+            format!("calepin [run] {input}: {chunk_count} {chunk_word}"),
+            chunk_count as u64,
+            plan.quiet,
+        ))
+    } else {
+        if !plan.quiet {
+            eprintln!("calepin [run] {input}: {chunk_count} {chunk_word}");
+        }
+        None
+    };
 
-    if !plan.quiet {
-        eprintln!(
-            "calepin [run] {}: {} chunk{}",
-            display_input(&plan),
-            plan.chunks.len(),
-            if plan.chunks.len() == 1 { "" } else { "s" },
-        );
-    }
-
-    for chunk_index in chunks_in_engine_order(&plan.chunks) {
+    for (position, chunk_index) in chunks_in_engine_order(&plan.chunks).into_iter().enumerate() {
         let chunk = &plan.chunks[chunk_index];
+        if let Some(progress) = &progress {
+            progress.set_message(format!(
+                "calepin [run] {input}: chunk {}/{} `{}`",
+                position + 1,
+                chunk_count,
+                chunk.label
+            ));
+        }
         let result = execute_chunk_live(&mut pool, chunk, &staged_figures_dir, &plan.layout)?;
+        if let Some(progress) = &progress {
+            progress.inc(1);
+        }
         chunk_results[chunk_index] = Some(result);
     }
 
@@ -239,6 +260,11 @@ pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput>
                 cwarn!("page sync failed: {}", error);
             }
         }
+    }
+    if let Some(progress) = progress {
+        progress.finish(format!(
+            "calepin [done] {input}: {chunk_count} {chunk_word}"
+        ));
     }
 
     Ok(PreprocessOutput {

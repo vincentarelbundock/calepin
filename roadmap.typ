@@ -1,9 +1,5 @@
 = Static Site Generator Roadmap
 
-Items with direct Calepin or Typst equivalents have been removed. This keeps
-features that are still absent as built-in Calepin static-site-generator
-features.
-
 = Existing gaps
 
 - [ ] `calepin new notebook` with useful defaults for new posts, notes, and
@@ -14,7 +10,6 @@ features.
 == Content and URL controls
 
 - [ ] First-class sections, collections, and taxonomies.
-- [ ] Custom content types.
 - [ ] Site-level custom permalink patterns.
 - [ ] Automatic page dates from filename prefixes.
 - [ ] Optional stripping of date prefixes from generated paths.

@@ -2445,6 +2445,7 @@ fn preprocess_documents(
             config: Some(options.config_path.to_path_buf()),
             display_root: Some(display_root.clone()),
             quiet: options.quiet,
+            progress: false,
             timeout: options.timeout,
             sync_pages: false,
             theme: options.cli_theme.clone(),
@@ -2532,6 +2533,7 @@ fn render_document(
             pages_input: Some(PAGES_INDEX_REF),
             current_href_input: Some(&current_href),
             minify_html: false,
+            progress: false,
         },
     )?;
     // Publishes the complete page source for the runtime view-source feature.
@@ -2562,6 +2564,7 @@ fn render_document(
                 pages_input: Some(PAGES_INDEX_REF),
                 current_href_input: Some(&current_href),
                 minify_html: false,
+                progress: false,
             },
         )?;
     }

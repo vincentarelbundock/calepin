@@ -150,6 +150,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         config: args.common.config,
         display_root: None,
         quiet: args.common.quiet,
+        progress: true,
         timeout: args.common.timeout,
         sync_pages: false,
         theme,
@@ -172,6 +173,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             pages_input: None,
             current_href_input: None,
             minify_html: args.minify,
+            progress: true,
         },
     )?;
     Ok(())

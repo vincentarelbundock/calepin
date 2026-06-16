@@ -27,6 +27,7 @@ pagefind = { version = "1.5.2", default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "fs", "time", "macros", "sync", "io-util"] }
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 indexmap = { version = "2.13.0", features = ["serde"] }
+indicatif = "0.18"
 mimalloc = "0.1"
 tempfile = "3"
 notify = "8"

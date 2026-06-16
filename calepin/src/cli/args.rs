@@ -9,6 +9,10 @@ pub fn set_quiet(q: bool) {
     QUIET.store(q, Ordering::Relaxed);
 }
 
+pub fn is_quiet() -> bool {
+    QUIET.load(Ordering::Relaxed)
+}
+
 #[derive(Parser, Debug)]
 #[command(
     name = "calepin",

@@ -13,6 +13,7 @@ use crate::typst::run::{
     INPUT_CURRENT_HREF, INPUT_PAGES, RESERVED_INPUT_KEYS,
 };
 use crate::typst::version::assert_supported_typst;
+use crate::utils::progress::Progress;
 
 pub struct CompileOptions<'a> {
     pub output: Option<PathBuf>,
@@ -35,6 +36,8 @@ pub struct CompileOptions<'a> {
     pub current_href_input: Option<&'a str>,
     /// Minify final HTML output after theming and asset processing.
     pub minify_html: bool,
+    /// Show a live status line around the final Typst render.
+    pub progress: bool,
 }
 
 /// Optional reserved `--input` values forwarded to the typst subcommand.
@@ -220,10 +223,27 @@ pub fn compile_with_typst(
         },
     );
     assert_supported_typst(typst)?;
+    let progress = Progress::spinner(
+        format!(
+            "calepin [render] {} -> {}",
+            layout.input_rel.display(),
+            output_path
+                .strip_prefix(&layout.root)
+                .unwrap_or(output_path.as_path())
+                .display()
+        ),
+        crate::cli::is_quiet() || !options.progress,
+    );
     run_typst_status(typst, "run typst compile", &args, &layout.root, |stderr| {
         format!("typst compile failed:\n{stderr}")
     })?;
     if let Some(path) = html_output {
+        progress.set_message(format!(
+            "calepin [html] {}",
+            path.strip_prefix(&layout.root)
+                .unwrap_or(path.as_path())
+                .display()
+        ));
         let builtin_syntax_theme;
         let syntax_theme = if let Some(theme) = options.html_syntax_theme {
             theme
@@ -243,6 +263,13 @@ pub fn compile_with_typst(
             minify_html_file(&path)?;
         }
     }
+    progress.finish(format!(
+        "calepin [done] {}",
+        output_path
+            .strip_prefix(&layout.root)
+            .unwrap_or(output_path.as_path())
+            .display()
+    ));
     Ok(())
 }
 

@@ -97,7 +97,7 @@
 
 = Pure Typst
 
-Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typesetting system. There is no special file format; notebooks and websites are just standard `.typ` documents. _Calepin_ does not push your text through a lossy Pandoc translation layer, and you do not need to learn yet another _ad hoc_ markdown variant.
+Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typesetting system. There is no special file format; notebooks and websites are just standard `.typ` documents. You do not need to "declare" your markup as Typst using special "fences." _Calepin_ does not push your text through a lossy Pandoc translation layer, and you do not need to learn yet another _ad hoc_ markdown variant.
 
 #html.elem("section", attrs: (class: "landing-editor-integration"))[
       #html.elem("div", attrs: (class: "landing-editor-copy"))[
