@@ -80,7 +80,7 @@ pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput>
     let plan = prepare_preprocess_plan(options)?;
     if preprocess_plan_cache_hit(&plan)? {
         if !plan.quiet && plan.status {
-            eprintln!("calepin [cache] {}", display_input(&plan));
+            eprintln!("[cache] {}", display_input(&plan));
         }
         return Ok(preprocess_cached_output(plan));
     }
@@ -237,13 +237,13 @@ pub fn execute_preprocess_plan_with_chunk_progress(
     let chunk_word = if chunk_count == 1 { "chunk" } else { "chunks" };
     let progress = if plan.progress {
         Some(Progress::bar(
-            format!("calepin [run] {input}: {chunk_count} {chunk_word}"),
+            format!("[run] {input}: {chunk_count} {chunk_word}"),
             chunk_count as u64,
             plan.quiet,
         ))
     } else {
         if !plan.quiet && plan.status {
-            eprintln!("calepin [run] {input}: {chunk_count} {chunk_word}");
+            eprintln!("[run] {input}: {chunk_count} {chunk_word}");
         }
         None
     };
@@ -252,7 +252,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         let chunk = &plan.chunks[chunk_index];
         if let Some(progress) = &progress {
             progress.set_message(format!(
-                "calepin [run] {input}: chunk {}/{} `{}`",
+                "[run] {input}: chunk {}/{} `{}`",
                 position + 1,
                 chunk_count,
                 chunk.label
@@ -287,9 +287,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         }
     }
     if let Some(progress) = progress {
-        progress.finish(format!(
-            "calepin [done] {input}: {chunk_count} {chunk_word}"
-        ));
+        progress.finish(format!("[done] {input}: {chunk_count} {chunk_word}"));
     }
 
     Ok(PreprocessOutput {

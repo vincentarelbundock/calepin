@@ -431,7 +431,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     };
     expected_outputs.extend(protected_pagefind_outputs.iter().cloned());
 
-    let output_progress = progress.spinner("calepin [site] prepare output");
+    let output_progress = progress.spinner("[site] prepare output");
     if args.clean {
         clear_previous_outputs(
             &src_dir,
@@ -445,9 +445,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     }
     fs::create_dir_all(&out_dir)
         .with_context(|| format!("failed to create {}", out_dir.display()))?;
-    output_progress.finish("calepin [done] prepare output");
+    output_progress.finish("[done] prepare output");
 
-    let asset_progress = progress.spinner("calepin [site] write assets");
+    let asset_progress = progress.spinner("[site] write assets");
     theme_assets.write(&out_dir)?;
     if let Some(path) = default_favicon_path.as_deref() {
         write_default_favicon(&out_dir, path)?;
@@ -466,7 +466,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         };
         copy_typ_sources(&src_dir, &out_dir, &source_files)?;
     }
-    asset_progress.finish("calepin [done] write assets");
+    asset_progress.finish("[done] write assets");
 
     // Phase 2: render the preprocessed pages with full site context.
     let site = SiteModel::new(
@@ -509,7 +509,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .filter(|path| !fallback_files.contains(path))
         .filter_map(|path| page_info.get(path).map(|info| info.href.clone()))
         .collect::<BTreeSet<_>>();
-    let site_files_progress = progress.spinner("calepin [site] write sitemap, feeds, robots");
+    let site_files_progress = progress.spinner("[site] write sitemap, feeds, robots");
     write_sitemap(&out_dir, metadata.base_url.as_deref(), &sitemap_hrefs)?;
     write_robots(&out_dir, &src_dir, &config, metadata.base_url.as_deref())?;
     write_feeds(
@@ -521,20 +521,20 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         &pages_index,
         &feed_targets,
     )?;
-    site_files_progress.finish("calepin [done] write sitemap, feeds, robots");
+    site_files_progress.finish("[done] write sitemap, feeds, robots");
     let pagefind_manifest = if config.search == Some(SearchEngine::Pagefind) {
-        let pagefind_progress = progress.spinner("calepin [pagefind] index");
+        let pagefind_progress = progress.spinner("[pagefind] index");
         let signature = pagefind_signature(&out_dir, &pagefind_pages)?;
         let cached_outputs = cached_pagefind_outputs(&out_dir, &previous_manifest, signature);
         let outputs = if let Some(outputs) = cached_outputs {
-            pagefind_progress.finish(format!("calepin [cache] {PAGEFIND_DIR}/"));
+            pagefind_progress.finish(format!("[cache] {PAGEFIND_DIR}/"));
             outputs
         } else {
             expected_outputs.retain(|path| !protected_pagefind_outputs.contains(path));
             let outputs = write_pagefind_index(&out_dir, &pagefind_pages)?;
             remove_stale_pagefind_outputs(&out_dir, &previous_manifest, &outputs)?;
             expected_outputs.extend(outputs.iter().cloned());
-            pagefind_progress.finish(format!("calepin [done] {PAGEFIND_DIR}/"));
+            pagefind_progress.finish(format!("[done] {PAGEFIND_DIR}/"));
             outputs
         };
         expected_outputs.extend(outputs.iter().cloned());
@@ -548,9 +548,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     } else {
         None
     };
-    let manifest_progress = progress.spinner("calepin [site] write manifest");
+    let manifest_progress = progress.spinner("[site] write manifest");
     write_manifest(&out_dir, &expected_outputs, pagefind_manifest)?;
-    manifest_progress.finish("calepin [done] write manifest");
+    manifest_progress.finish("[done] write manifest");
     Ok(WebsiteBuildResult {
         src_dir,
         out_dir,
@@ -2473,16 +2473,14 @@ fn preprocess_documents(
         fs::canonicalize(options.src_dir).unwrap_or_else(|_| options.src_dir.to_path_buf());
     let scan_progress = options
         .progress
-        .bar("calepin [scan] pages", options.typ_files.len() as u64);
+        .bar("[scan] pages", options.typ_files.len() as u64);
     let planned = run_parallel(
         options.typ_files.to_vec(),
         options.parallelism,
         Some(&scan_progress),
         |input| {
             let rel = project_relative_path(&display_root, &input);
-            let page_progress = options
-                .progress
-                .spinner(format!("calepin [page] scan {rel}"));
+            let page_progress = options.progress.spinner(format!("[scan] {rel}"));
             let plan = prepare_preprocess_plan(PreprocessOptions {
                 input: input.to_path_buf(),
                 root: Some(options.src_dir.to_path_buf()),
@@ -2500,20 +2498,23 @@ fn preprocess_documents(
             })
             .with_context(|| format!("failed to scan {}", input.display()))?;
             let work = if preprocess_plan_cache_hit(&plan)? {
-                page_progress.finish(format!("calepin [cache] scan {rel}"));
+                page_progress.finish(format!("[cache] scan {rel}"));
                 WebsitePreprocessWork::Cached(preprocess_cached_output(plan))
             } else {
                 let chunk_count = preprocess_plan_chunk_count(&plan);
-                let chunk_word = if chunk_count == 1 { "chunk" } else { "chunks" };
-                page_progress.finish(format!(
-                    "calepin [ready] run {rel}: {chunk_count} {chunk_word}"
-                ));
+                let chunk_label = if chunk_count == 0 {
+                    "no chunks".to_string()
+                } else {
+                    let chunk_word = if chunk_count == 1 { "chunk" } else { "chunks" };
+                    format!("{chunk_count} {chunk_word}")
+                };
+                page_progress.finish(format!("[ready] run {rel}: {chunk_label}"));
                 WebsitePreprocessWork::Pending(plan)
             };
             Ok((input, work))
         },
     )?;
-    scan_progress.finish("calepin [done] scan pages");
+    scan_progress.finish("[done] scan pages");
 
     let mut outputs = BTreeMap::new();
     let mut pending = Vec::new();
@@ -2533,14 +2534,14 @@ fn preprocess_documents(
     if !pending.is_empty() {
         let run_unit_count = run_chunk_count.max(pending.len());
         let run_label = if run_chunk_count == 0 {
-            format!("calepin [run] {} pages without chunks", pending.len())
+            format!("[run] {} pages without chunks", pending.len())
         } else {
             let chunk_word = if run_chunk_count == 1 {
                 "chunk"
             } else {
                 "chunks"
             };
-            format!("calepin [run] {run_chunk_count} {chunk_word}")
+            format!("[run] {run_chunk_count} {chunk_word}")
         };
         let run_progress = options.progress.bar(run_label, run_unit_count as u64);
         let run_outputs = run_parallel(
@@ -2549,27 +2550,25 @@ fn preprocess_documents(
             (run_chunk_count == 0).then_some(&run_progress),
             |(input, plan)| {
                 let rel = project_relative_path(&display_root, &input);
-                let page_progress = options
-                    .progress
-                    .spinner(format!("calepin [page] run chunks {rel}"));
+                let page_progress = options.progress.spinner(format!("[run] {rel}"));
                 let output = execute_preprocess_plan_with_chunk_progress(
                     plan,
                     (run_chunk_count > 0).then_some(&run_progress),
                 )
                 .with_context(|| format!("failed to run chunks for {}", input.display()))?;
-                page_progress.finish(format!("calepin [done] run chunks {rel}"));
+                page_progress.finish(format!("[done] run {rel}"));
                 Ok((input, output))
             },
         )?;
         let finish_label = if run_chunk_count == 0 {
-            "calepin [done] run pages without chunks".to_string()
+            "[done] run pages without chunks".to_string()
         } else {
             let chunk_word = if run_chunk_count == 1 {
                 "chunk"
             } else {
                 "chunks"
             };
-            format!("calepin [done] run {run_chunk_count} {chunk_word}")
+            format!("[done] run {run_chunk_count} {chunk_word}")
         };
         run_progress.finish(finish_label);
         outputs.extend(run_outputs);
@@ -2586,23 +2585,21 @@ fn render_documents(
 ) -> Result<()> {
     let progress = context
         .progress
-        .bar("calepin [render] pages", typ_files.len() as u64);
+        .bar("[render] pages", typ_files.len() as u64);
     run_parallel(
         typ_files,
         context.parallelism,
         Some(&progress),
         |input_path| {
             let rel = project_relative_path(&context.src_dir, &input_path);
-            let page_progress = context
-                .progress
-                .spinner(format!("calepin [page] render {rel}"));
+            let page_progress = context.progress.spinner(format!("[render] {rel}"));
             render_document(context, site, &input_path, preprocessed)
                 .with_context(|| format!("failed to render {}", input_path.display()))?;
-            page_progress.finish(format!("calepin [done] render {rel}"));
+            page_progress.finish(format!("[done] render {rel}"));
             Ok(())
         },
     )?;
-    progress.finish("calepin [done] render pages");
+    progress.finish("[done] render pages");
     Ok(())
 }
 

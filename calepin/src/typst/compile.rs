@@ -225,7 +225,7 @@ pub fn compile_with_typst(
     assert_supported_typst(typst)?;
     let progress = Progress::spinner(
         format!(
-            "calepin [render] {} -> {}",
+            "[render] {} -> {}",
             layout.input_rel.display(),
             output_path
                 .strip_prefix(&layout.root)
@@ -239,7 +239,7 @@ pub fn compile_with_typst(
     })?;
     if let Some(path) = html_output {
         progress.set_message(format!(
-            "calepin [html] {}",
+            "[html] {}",
             path.strip_prefix(&layout.root)
                 .unwrap_or(path.as_path())
                 .display()
@@ -264,7 +264,7 @@ pub fn compile_with_typst(
         }
     }
     progress.finish(format!(
-        "calepin [done] {}",
+        "[done] {}",
         output_path
             .strip_prefix(&layout.root)
             .unwrap_or(output_path.as_path())
