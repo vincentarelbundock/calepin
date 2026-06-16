@@ -296,7 +296,8 @@
     position: absolute;
     inset: calc(var(--academic-topbar-height) - 0.35rem) 0 auto auto;
     display: none;
-    width: min(18rem, calc(100vw - 2rem));
+    width: max-content;
+    max-width: calc(100vw - 2rem);
     padding: 0.7rem;
     border: 1px solid var(--pico-muted-border-color);
     border-radius: var(--academic-radius);
@@ -307,6 +308,7 @@
   .academic-menu.is-open {
     display: grid;
     gap: 0.25rem;
+    justify-items: stretch;
   }
 
   .academic-menu a {

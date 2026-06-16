@@ -11,7 +11,10 @@
       button.setAttribute("aria-expanded", open ? "true" : "false");
     }
 
-    button.addEventListener("click", () => setOpen(!menu.classList.contains("is-open")));
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      setOpen(!menu.classList.contains("is-open"));
+    });
     menu.addEventListener("click", (event) => {
       if (event.target.closest("a")) setOpen(false);
     });

@@ -16,11 +16,11 @@
                 <span>Home</span>
                 {% endif %}
             </a>
-            <button class="academic-nav-toggle outline secondary" type="button" aria-controls="academic-menu" aria-expanded="false" aria-label="Toggle navigation">
+            <a class="academic-nav-toggle outline secondary" href="#academic-menu" aria-controls="academic-menu" aria-expanded="false" aria-label="Toggle navigation">
                 <span aria-hidden="true"></span>
                 <span aria-hidden="true"></span>
                 <span aria-hidden="true"></span>
-            </button>
+            </a>
             <div id="academic-menu" class="academic-menu">
                 {% for item in site.navbar_left %}
                 {% include "partials/navbar-item.html" %}
