@@ -6,6 +6,7 @@
   date: "2026-06-16",
   tags: ("demo", "scaffold"),
   summary: "A sample post used by the generated blog listing.",
+  thumbnail: "/assets/flowers_01.jpg",
 )) <website-metadata>
 
 #title()

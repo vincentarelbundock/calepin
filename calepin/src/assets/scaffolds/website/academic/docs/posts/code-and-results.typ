@@ -13,7 +13,7 @@
 #calepin.setup(
   echo: true,
   eval: true,
-  results: "verbatim",
+  results: "render",
   fenced-chunks: true,
 )
 
@@ -21,9 +21,8 @@
 
 #lorem(50)
 
-```python
-numbers = [2, 4, 6, 8]
-print(sum(numbers) / len(numbers))
+```r
+plot(mpg ~ hp, data = mtcars)
 ```
 
 #lorem(70)

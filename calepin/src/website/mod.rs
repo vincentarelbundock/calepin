@@ -3005,6 +3005,9 @@ const CALEPIN_WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
 const CALEPIN_WEBSITE_SCAFFOLD_BINARY_FILES: &[(&str, &[u8])] = &[(
     "assets/portrait.jpg",
     include_bytes!("../assets/scaffolds/website/calepin/docs/assets/portrait.jpg"),
+), (
+    "assets/flowers_01.jpg",
+    include_bytes!("../assets/scaffolds/website/calepin/docs/assets/flowers_01.jpg"),
 )];
 
 const ACADEMIC_WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
@@ -3107,6 +3110,9 @@ const ACADEMIC_WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
 const ACADEMIC_WEBSITE_SCAFFOLD_BINARY_FILES: &[(&str, &[u8])] = &[(
     "assets/portrait.jpg",
     include_bytes!("../assets/scaffolds/website/academic/docs/assets/portrait.jpg"),
+), (
+    "assets/flowers_01.jpg",
+    include_bytes!("../assets/scaffolds/website/academic/docs/assets/flowers_01.jpg"),
 )];
 
 #[cfg(test)]

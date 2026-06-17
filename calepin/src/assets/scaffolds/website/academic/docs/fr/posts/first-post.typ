@@ -7,6 +7,7 @@
   tags: ("demo", "site"),
   summary: "Un billet exemple affiché dans la liste du blogue.",
   slug: "premier-billet",
+  thumbnail: "/assets/flowers_01.jpg",
 )) <website-metadata>
 
 #title()
