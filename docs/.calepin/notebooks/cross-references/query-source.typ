@@ -18,18 +18,9 @@ There are three ways to attach a label. Use exactly one of them per chunk.
 
 The clearest place for a label is the `label` argument of `#calepin.chunk`, alongside the caption:
 
-````typ
 In prose we mention @fig-cross-scatter.
 
 #calepin.chunk(label: "fig-cross-scatter", fig-caption: [Miles per gallon and horsepower])[
-```r
-plot(mpg ~ hp, data = mtcars)
-```]
-````
-
-In prose we mention @fig-cross-scatter.
-
-#calepin.chunk(label: "fig-cross-scatter", echo: false, fig-caption: [Miles per gallon and horsepower])[
 ```r
 plot(mpg ~ hp, data = mtcars)
 ```]
@@ -39,8 +30,6 @@ plot(mpg ~ hp, data = mtcars)
 Put `#| label:` at the top of a plain fenced block when you want the label next to other chunk options:
 
 ````typ
-In prose we mention @fig-cross-qmd.
-
 ```r
 #| label: fig-cross-qmd
 #| fig-caption: Distribution of car weights
@@ -50,30 +39,35 @@ hist(mtcars$wt, col = "gray80", border = "white")
 
 In prose we mention @fig-cross-qmd.
 
+#calepin.chunk(label: "fig-cross-qmd", fig-caption: [Distribution of car weights])[
 ```r
-#| label: fig-cross-qmd
-#| fig-caption: Distribution of car weights
 hist(mtcars$wt, col = "gray80", border = "white")
-```
+```]
 
 = Trailing fence label
 
 For a plain fenced block, you can also write a single label right after the closing fence. This is the most compact form, equivalent to one `#| label:` header:
 
 ````typ
-In prose we mention @fig-cross-trailing.
-
 ```r
 plot(dist ~ speed, data = cars)
 ```<fig-cross-trailing>
+```
 ````
 
 In prose we mention @fig-cross-trailing.
 
+````typ
 ```r
-#| label: "fig-cross-trailing"
 plot(dist ~ speed, data = cars)
+```<fig-cross-trailing>
 ```
+````
+
+#calepin.chunk(label: "fig-cross-trailing", fig-caption: [Speed and stopping distance])[
+```r
+plot(dist ~ speed, data = cars)
+```]
 
 = Label prefixes
 

@@ -1,7 +1,6 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Calepin])
-#let target = sys.inputs.at("calepin-target", default: "paged")
 
 #metadata((
   layout: "layouts/landing.html",
@@ -45,7 +44,10 @@
 
 // features
 #let notebook-card() = [
-  #calepin.elements.card(class: "landing-feature-card landing-feature-card-large")[
+  #calepin.elements.card(
+    class: "landing-feature-card",
+    style: "height: 100%; width: 100%; flex: 1;",
+  )[
     = Computational notebooks
 
     Write in Typst, execute code, and see results inline. Perfect for data analysis, reports, and publications with reproducible outputs, in the spirit of literate programming.
@@ -66,7 +68,10 @@
 ]
 
 #let website-card() = [
-  #calepin.elements.card(class: "landing-feature-card landing-feature-card-large")[
+  #calepin.elements.card(
+    class: "landing-feature-card",
+    style: "height: 100%; width: 100%; flex: 1;",
+  )[
     = Static website generator
 
     Build multi-page websites from Typst with ease. Great for docs, portfolios, and project sites.
@@ -89,21 +94,11 @@
   ]
 ]
 
-#calepin.elements.target(
-  html: () => [
-    #html.elem("section", attrs: (class: "grid", id: "features"))[
-      #notebook-card()
-      #website-card()
-    ]
-  ],
-  paged: () => [
-    #grid(
-      columns: (1fr, 1fr),
-      gutter: 1em,
-      notebook-card(),
-      website-card(),
-    )
-  ],
+#calepin.elements.columns(
+  html-attrs: (style: "align-items: stretch;"),
+  html-item-attrs: (style: "display: flex;"),
+  notebook-card(),
+  website-card(),
 )
 
 = Pure Typst
@@ -127,21 +122,11 @@ Write notebooks in pure Typst, a simple, consistent, powerful, and elegant types
   )
 ]
 
-#calepin.elements.target(
-  html: () => [
-    #html.elem("div", attrs: (class: "grid"))[
-      #html.elem("div")[#editor-text()]
-      #html.elem("div")[#editor-video()]
-    ]
-  ],
-  paged: () => [
-    #grid(
-      columns: (1fr, 1fr),
-      gutter: 1em,
-      editor-text(),
-      editor-video(),
-    )
-  ],
+#calepin.elements.columns(
+  html-attrs: (style: "align-items: stretch;"),
+  html-item-attrs: (style: "display: block;"),
+  editor-text(),
+  editor-video(),
 )
 
 = A simple computational notebook

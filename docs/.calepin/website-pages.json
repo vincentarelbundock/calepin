@@ -137,6 +137,18 @@
     "translations": {}
   },
   {
+    "href": "websites/elements.html",
+    "language": null,
+    "meta": {
+      "pdf": false
+    },
+    "path": "websites/elements.typ",
+    "pdf": null,
+    "title": "Re-useable elements",
+    "translation_key": "websites/elements",
+    "translations": {}
+  },
+  {
     "href": "websites/health.html",
     "language": null,
     "meta": {
@@ -146,18 +158,6 @@
     "pdf": "websites/health.pdf",
     "title": "Health",
     "translation_key": "websites/health",
-    "translations": {}
-  },
-  {
-    "href": "websites/web_components.html",
-    "language": null,
-    "meta": {
-      "pdf": false
-    },
-    "path": "websites/web_components.typ",
-    "pdf": null,
-    "title": "Web components",
-    "translation_key": "websites/web_components",
     "translations": {}
   },
   {

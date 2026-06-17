@@ -76,7 +76,7 @@ title = "Websites"
   target = "websites/config.typ"
 
   [[sidebar.section.item]]
-  target = "websites/web_components.typ"
+  target = "websites/elements.typ"
 
 
 

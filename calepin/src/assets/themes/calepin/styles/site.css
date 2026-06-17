@@ -643,14 +643,15 @@ html:not([data-theme]) {
 .calepin-website-toc nav ul {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.3rem;
   margin: 0;
   padding: 0;
   list-style: none;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: flex-start;
   text-align: left !important;
   width: 100%;
+  min-width: 0;
 }
 
 .calepin-website-sidebar nav li,
@@ -659,20 +660,29 @@ html:not([data-theme]) {
   margin: 0;
   padding: 0;
   width: 100%;
+  min-width: 0;
   text-align: left !important;
 }
 
 .calepin-website-sidebar a,
 .calepin-website-toc a {
   display: block;
-  padding: 0.2rem 0.45rem;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding-block: 0.28rem;
+  padding-inline: 0.45rem;
+  padding-inline-end: 0.45rem;
   border-radius: var(--calepin-radius-sm);
   text-decoration: none;
   text-align: left !important;
   width: 100%;
   color: inherit;
   white-space: normal;
-  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  text-wrap: pretty;
+  hyphens: auto;
+  line-height: 1.55;
 }
 
 .calepin-website-sidebar a:hover,
@@ -787,14 +797,33 @@ html:not([data-theme]) {
   margin: 0 0 0.9rem;
 }
 
-.calepin-website-toc li.level-3 a {
-  padding-left: 1rem;
+.calepin-website-toc li.level-2 a {
+  --calepin-toc-indent: 0rem;
 }
 
-.calepin-website-toc li.level-4,
-.calepin-website-toc li.level-5,
-.calepin-website-toc li.level-6 {
-  display: none;
+.calepin-website-toc li.level-3 a {
+  --calepin-toc-indent: 0.75rem;
+}
+
+.calepin-website-toc li.level-4 a {
+  --calepin-toc-indent: 1.5rem;
+}
+
+.calepin-website-toc li.level-5 a {
+  --calepin-toc-indent: 2.25rem;
+}
+
+.calepin-website-toc li.level-6 a {
+  --calepin-toc-indent: 3rem;
+}
+
+.calepin-website-toc li.level-2 a,
+.calepin-website-toc li.level-3 a,
+.calepin-website-toc li.level-4 a,
+.calepin-website-toc li.level-5 a,
+.calepin-website-toc li.level-6 a {
+  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
+  line-height: 1.55;
 }
 
 /* ------------------------------------------------------ Page navigation */
