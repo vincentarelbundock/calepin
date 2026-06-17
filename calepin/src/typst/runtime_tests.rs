@@ -93,6 +93,130 @@ fn write_runtime_writes_calepin_typ() {
 }
 
 #[test]
+fn typst_compile_html_elements_columns_uses_plain_pico_grid() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.columns(
+  columns: 2,
+  wrap: false,
+  html.elem("section")[One],
+  html.elem("section")[Two],
+)
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("class=grid") || html.contains(r#"class="grid""#),
+        "expected Pico grid class in HTML output:\n{html}"
+    );
+    assert!(
+        !html.contains("grid-template-columns"),
+        "expected columns helper not to emit explicit grid tracks:\n{html}"
+    );
+    assert!(
+        html.contains("<div class=grid><section>One</section><section>Two</section></div>")
+            || html.contains(r#"<div class="grid"><section>One</section><section>Two</section></div>"#),
+        "expected grid children to be emitted without item wrappers:\n{html}"
+    );
+}
+
+#[test]
+fn typst_compile_html_elements_columns_wraps_items_by_default() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.columns(
+  columns: 2,
+  html.elem("section")[One],
+  html.elem("section")[Two],
+)
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("<div class=grid><div><section>One</section></div><div><section>Two</section></div></div>")
+            || html.contains(r#"<div class="grid"><div><section>One</section></div><div><section>Two</section></div></div>"#),
+        "expected grid children to be wrapped by default:\n{html}"
+    );
+}
+
+#[test]
+fn typst_compile_elements_columns_rejects_track_list() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.columns(
+  columns: (2fr, 1fr),
+  [One],
+  [Two],
+)
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new("typst")
+        .arg("compile")
+        .arg(&input)
+        .arg(&output)
+        .arg("--root")
+        .arg(dir.path())
+        .arg("--features")
+        .arg("html")
+        .arg("--input")
+        .arg("calepin-target=html")
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("calepin.elements.columns: columns must be a positive integer"),
+        "{stderr}"
+    );
+}
+
+#[test]
 fn typst_query_emits_chunk_metadata() {
     skip_if_no_typst!();
 

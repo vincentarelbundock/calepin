@@ -45,6 +45,20 @@ pip install octave_kernel     # GNU Octave
 pip install gnuplot_kernel    # Gnuplot
 ```
 
+Some Python kernel packages also need to register a Jupyter kernelspec after
+installation. For Bash, run this in the same Python environment that Calepin
+uses:
+
+```sh
+python -m bash_kernel.install --sys-prefix
+```
+
+If you use `uv run`, the equivalent command is:
+
+```sh
+uv run python -m bash_kernel.install --sys-prefix
+```
+
 Some kernels are installed from their language's own package manager:
 
 ```sh

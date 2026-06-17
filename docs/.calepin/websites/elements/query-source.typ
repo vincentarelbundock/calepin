@@ -111,70 +111,58 @@ The namespace includes a compact set of reusable elements for cards, galleries, 
 
 == `columns`
 
-`calepin.elements.columns` is output-aware, so the same call produces an HTML-friendly structure and a `grid(...)` for paged output. This supports more than 2 columns—use a tuple or an integer column count.
+`calepin.elements.columns` is output-aware, so the same call produces a plain Pico `.grid` for HTML and a `grid(...)` for paged output. Columns are equal-width; pass the paged-output column count as an integer. By default, each item is wrapped in a `<div>` so plain Typst blocks stay together as one column; use `wrap: false` when the items already render as standalone HTML elements such as cards.
 
 ```typ
 #calepin.elements.columns(
-  columns: (2fr, 1fr),
-  gutter: 1em,
-)[
-  #calepin.elements.card[
-    #heading(level: 3)[Left]
-    Use a two-column layout for a wide narrative + visual split.
-  ]
-
-  #calepin.elements.card[
-    #heading(level: 3)[Right]
-    Paged output renders this via Typst `grid(...)`; HTML uses `<div class="grid">` by default.
-  ]
-]
-```
-
-#calepin.elements.columns(
-  columns: (2fr, 1fr),
-  gutter: 1em,
-)[
-  #calepin.elements.card[
-    #heading(level: 3)[Left]
-    Use a two-column layout for a wide narrative + visual split.
-  ]
-
-  #calepin.elements.card[
-    #heading(level: 3)[Right]
-    Paged output renders this via Typst `grid(...)`; HTML uses `<div class="grid">` by default.
-  ]
-]
-
-You can also request more than two columns:
-
-```typ
-#calepin.elements.columns(
-  columns: (1fr, 1fr, 1fr),
-  gutter: 1em,
+  columns: 2,
+  wrap: false,
   [
-    #calepin.elements.card[One]
+    #calepin.elements.card[
+      #heading(level: 3)[Left]
+      Use an equal-width two-column layout for related content.
+    ]
   ],
   [
-    #calepin.elements.card[Two]
-  ],
-  [
-    #calepin.elements.card[Three]
+    #calepin.elements.card[
+      #heading(level: 3)[Right]
+      Paged output renders this via Typst `grid(...)`; HTML uses `<div class="grid">` by default.
+    ]
   ],
 )
 ```
 
 #calepin.elements.columns(
-  columns: (1fr, 1fr, 1fr),
-  gutter: 1em,
+  columns: 2,
+  wrap: false,
   [
-    #calepin.elements.card[One]
+    #calepin.elements.card[
+      #heading(level: 3)[Left]
+      Use an equal-width two-column layout for related content.
+    ]
   ],
   [
-    #calepin.elements.card[Two]
+    #calepin.elements.card[
+      #heading(level: 3)[Right]
+      Paged output renders this via Typst `grid(...)`; HTML uses `<div class="grid">` by default.
+    ]
   ],
-  [
-    #calepin.elements.card[Three]
-  ],
+)
+
+You can also request more than two columns:
+
+```typ
+#calepin.elements.columns(
+  columns: 4,
+  wrap: true,
+  [One], [Two], [Three]
+)
+```
+
+#calepin.elements.columns(
+  columns: 4,
+  wrap: true,
+  [One], [Two], [Three]
 )
 
 == `lightbox-image` and `lightbox-video`
@@ -197,23 +185,25 @@ You can also request more than two columns:
 ```
 
 #calepin.elements.columns(
-  columns: (1fr, 1fr),
-  gutter: 1em,
-)[
-  #calepin.elements.lightbox-image(
-    "editor-image",
-    "../assets/screenshot_notebook.png",
-    "Notebook screenshot",
-    width: 16em,
-  )
-][
-  #calepin.elements.lightbox-video(
-    "editor-video",
-    "../assets/calepin_vscode.mp4",
-    poster: "../assets/calepin_vscode-thumb.png",
-    width: 16em,
-  )
-]
+  columns: 2,
+  wrap: false,
+  [
+    #calepin.elements.lightbox-image(
+      "editor-image",
+      "../assets/screenshot_notebook.png",
+      "Notebook screenshot",
+      width: 16em,
+    )
+  ],
+  [
+    #calepin.elements.lightbox-video(
+      "editor-video",
+      "../assets/calepin_vscode.mp4",
+      poster: "../assets/calepin_vscode-thumb.png",
+      width: 16em,
+    )
+  ],
+)
 
 = Custom web elements
 

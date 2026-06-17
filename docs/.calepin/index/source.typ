@@ -96,7 +96,7 @@
 
 #calepin.elements.columns(
   html-attrs: (style: "align-items: stretch;"),
-  html-item-attrs: (style: "display: flex;"),
+  wrap: false,
   notebook-card(),
   website-card(),
 )
@@ -105,13 +105,18 @@
 
 Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typesetting system. There is no special file format; notebooks and websites are just standard `.typ` documents. You do not need to "declare" your markup as Typst using special "fences." _Calepin_ does not push your text through a lossy Pandoc translation layer, and you do not need to learn yet another _ad hoc_ markdown variant.
 
-#let editor-text() = [
+#let editor-text-content() = [
   = Editor integration
 
   Write, execute, preview, and publish Calepin documents without leaving your editor.
   Install the Calepin extension from the VS Code Marketplace, or from Open VSX for Cursor,
   Positron, and other VSX-compatible editors.
 ]
+
+#let editor-text() = calepin.elements.target(
+  html: () => html.elem("section")[#editor-text-content()],
+  paged: () => editor-text-content(),
+)
 
 #let editor-video() = [
   #calepin.elements.lightbox-video(
@@ -124,7 +129,7 @@ Write notebooks in pure Typst, a simple, consistent, powerful, and elegant types
 
 #calepin.elements.columns(
   html-attrs: (style: "align-items: stretch;"),
-  html-item-attrs: (style: "display: block;"),
+  wrap: false,
   editor-text(),
   editor-video(),
 )
