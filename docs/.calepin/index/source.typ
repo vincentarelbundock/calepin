@@ -1,120 +1,148 @@
-#import "/assets/design.typ": screenshot-lightbox, video-lightbox
+#import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Calepin])
+#let target = sys.inputs.at("calepin-target", default: "paged")
 
 #metadata((
   layout: "layouts/landing.html",
-  pdf: false,
+  pdf: true,
 )) <website-metadata>
 
-#let checklist(..items) = html.elem("ul", attrs: (class: "landing-checklist"))[
-  #for item in items.pos() {
-    html.elem("li")[#item]
-  }
-]
-
-#html.elem("section", attrs: (class: "landing-hero"))[
-  #html.elem("img", attrs: (
-    src: "assets/logo_long.svg",
-    alt: "Calepin",
-    class: "landing-hero-wordmark",
-    style: "width: 14rem; max-width: 72vw;",
-    "data-inline-svg": "1",
-  ))[]
-  #html.elem("h2", attrs: (style: "max-width: 34rem; margin-top: 1.5rem; font-size: 1.3rem; line-height: 1.22;"))[
-    Computational Notebooks and Static Websites in
-    #html.elem("span", attrs: (class: "landing-accent"))[typst]
-  ]
-  #html.elem("div", attrs: (class: "landing-command-row"))[
-    #html.elem("code", "calepin compile notebook.typ")
-    #html.elem("code", "calepin compile website/")
-  ]
-  #html.elem("div", attrs: (class: "landing-cta-row"))[
-    #html.elem("a", attrs: (
-      class: "landing-button landing-button-primary",
-      href: "getting-started/install.html",
-    ))[Documentation]
-  ]
-]
-
-#html.elem("section", attrs: (class: "landing-primary-features", id: "features"))[
-      #html.elem("article", attrs: (class: "landing-feature-card landing-feature-card-large"))[
-        #html.elem("div", attrs: (class: "landing-feature-content"))[
-          #html.elem("h2")[Computational notebooks]
-          #html.elem("p")[Write in Typst, execute code, and see results inline. Perfect for data analysis, reports, and publications with reproducible outputs, in the spirit of literate programming.]
-          #checklist(
-            [Typst-native authoring],
-            [Executable code chunks],
-            [Inline results and plots],
-            [Python, R, Julia, Bash, and all Jupyter kernels],
-            [Export to HTML and PDF],
-          )
-        ]
-        #screenshot-lightbox(
-          "calepin-notebook-screenshot-dialog",
-          "assets/screenshot_notebook.png",
-          "Calepin notebook screenshot",
-          open-label: "Open Calepin notebook screenshot",
-        )
-        #html.elem("footer")[
-          #html.elem("span")[Reproducible reports.]
-          #html.elem("strong")[HTML / PDF]
-        ]
+// hero
+#let hero() = calepin.elements.target(
+  html: () => [
+    #html.elem("section", attrs: (class: "landing-hero"))[
+      #html.elem("img", attrs: (
+        src: "assets/logo_long.svg",
+        alt: "Calepin",
+        class: "landing-hero-wordmark",
+        style: "display: block; width: 14em; max-width: 72vw; margin-inline: auto; color: currentColor;",
+        "data-inline-svg": "1",
+      ))[]
+      #text(size: 1.35em, weight: "bold")[Computational Notebooks and Static Websites in Typst]
+      #html.elem("div", attrs: (class: "landing-command-row"))[
+        #html.elem("code", "calepin compile notebook.typ")
+        #html.elem("code", "calepin compile website/")
       ]
-
-      #html.elem("article", attrs: (class: "landing-feature-card landing-feature-card-large"))[
-        #html.elem("div", attrs: (class: "landing-feature-content"))[
-          #html.elem("h2")[Static website generator]
-          #html.elem("p")[Build multi-page websites from Typst with ease. Great for docs, portfolios, and project sites.]
-          #checklist(
-            [Themes, templates and layouts],
-            [Reusable web components],
-            [Fast incremental builds],
-            [Live preview],
-            [Multi-lingual support],
-            [Blog listings and feeds],
-            [Search],
-            [...and much more!],
-          )
-        ]
-
-        #linebreak()
-        #screenshot-lightbox(
-          "calepin-website-screenshot-dialog",
-          "assets/screenshot_website.png",
-          "Calepin website screenshot",
-          open-label: "Open Calepin website screenshot",
-        )
-
-        #html.elem("footer")[
-          #html.elem("span")[Clean, responsive, and search-friendly websites.]
-          #html.elem("strong")[HTML]
-        ]
+      #html.elem("div", attrs: (class: "landing-cta-row"))[
+        #html.elem("a", attrs: (
+          class: "landing-button landing-button-primary",
+          href: "getting-started/install.html",
+        ))[Documentation]
       ]
+    ]
+  ],
+  paged: () => [
+    #align(center)[
+      #image("/assets/logo_long.svg", width: 30%)
+      #text(size: 1.35em, weight: "bold")[Computational Notebooks and Static Websites in Typst]
+    ]
+  ],
+)
+
+#hero()
+
+
+// features
+#let notebook-card() = [
+  #calepin.elements.card(class: "landing-feature-card landing-feature-card-large")[
+    = Computational notebooks
+
+    Write in Typst, execute code, and see results inline. Perfect for data analysis, reports, and publications with reproducible outputs, in the spirit of literate programming.
+
+    - Typst-native authoring
+    - Executable code chunks
+    - Inline results and plots
+    - Python, R, Julia, Bash, and all Jupyter kernels
+    - Export to HTML and PDF
+
+    #calepin.elements.lightbox-image(
+      "calepin-notebook-screenshot-dialog",
+      "assets/screenshot_notebook.png",
+      "Calepin notebook screenshot",
+      open-label: "Open Calepin notebook screenshot",
+    )
+  ]
 ]
+
+#let website-card() = [
+  #calepin.elements.card(class: "landing-feature-card landing-feature-card-large")[
+    = Static website generator
+
+    Build multi-page websites from Typst with ease. Great for docs, portfolios, and project sites.
+
+    - Themes, templates and layouts
+    - Reusable web components
+    - Fast incremental builds
+    - Live preview
+    - Multi-lingual support
+    - Blog listings and feeds
+    - Search
+    - ...and much more!
+
+    #calepin.elements.lightbox-image(
+      "calepin-website-screenshot-dialog",
+      "assets/screenshot_website.png",
+      "Calepin website screenshot",
+      open-label: "Open Calepin website screenshot",
+    )
+  ]
+]
+
+#calepin.elements.target(
+  html: () => [
+    #html.elem("section", attrs: (class: "grid", id: "features"))[
+      #notebook-card()
+      #website-card()
+    ]
+  ],
+  paged: () => [
+    #grid(
+      columns: (1fr, 1fr),
+      gutter: 1em,
+      notebook-card(),
+      website-card(),
+    )
+  ],
+)
 
 = Pure Typst
 
 Write notebooks in pure Typst, a simple, consistent, powerful, and elegant typesetting system. There is no special file format; notebooks and websites are just standard `.typ` documents. You do not need to "declare" your markup as Typst using special "fences." _Calepin_ does not push your text through a lossy Pandoc translation layer, and you do not need to learn yet another _ad hoc_ markdown variant.
 
-#html.elem("section", attrs: (class: "landing-editor-integration"))[
-      #html.elem("div", attrs: (class: "landing-editor-copy"))[
-        #html.elem("h2")[Editor integration]
-        #html.elem("p")[
-          Write, execute, preview, and publish Calepin documents without leaving your editor.
-          Install the Calepin extension from the VS Code Marketplace, or from Open VSX for Cursor,
-          Positron, and other VSX-compatible editors.
-        ]
-      ]
-      #html.elem("div", attrs: (class: "landing-editor-video"))[
-        #video-lightbox(
-          "calepin-video-dialog",
-          "assets/calepin_vscode.mp4",
-          poster: "assets/calepin_vscode-thumb.png",
-          open-label: "Open Calepin editor preview video",
-        )
-      ]
+#let editor-text() = [
+  = Editor integration
+
+  Write, execute, preview, and publish Calepin documents without leaving your editor.
+  Install the Calepin extension from the VS Code Marketplace, or from Open VSX for Cursor,
+  Positron, and other VSX-compatible editors.
 ]
+
+#let editor-video() = [
+  #calepin.elements.lightbox-video(
+    "calepin-video-dialog",
+    "assets/calepin_vscode.mp4",
+    poster: "assets/calepin_vscode-thumb.png",
+    open-label: "Open Calepin editor preview video",
+  )
+]
+
+#calepin.elements.target(
+  html: () => [
+    #html.elem("div", attrs: (class: "grid"))[
+      #html.elem("div")[#editor-text()]
+      #html.elem("div")[#editor-video()]
+    ]
+  ],
+  paged: () => [
+    #grid(
+      columns: (1fr, 1fr),
+      gutter: 1em,
+      editor-text(),
+      editor-video(),
+    )
+  ],
+)
 
 = A simple computational notebook
 

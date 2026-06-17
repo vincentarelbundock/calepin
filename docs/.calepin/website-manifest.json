@@ -1,7 +1,7 @@
 {
   "outputs": [
-    ".calepin/calepin-website.234b933e8727095b.css",
     ".calepin/calepin-website.8cc45ee9b08e6238.js",
+    ".calepin/calepin-website.c14f12bc9fd93c0f.css",
     ".calepin/favicon.svg",
     "404.html",
     "404.pdf",
@@ -13,6 +13,7 @@
     "getting-started/install.html",
     "getting-started/install.pdf",
     "index.html",
+    "index.pdf",
     "notebooks/code_execution.html",
     "notebooks/code_execution.pdf",
     "notebooks/cross-references.html",

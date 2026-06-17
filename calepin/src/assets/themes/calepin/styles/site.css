@@ -268,49 +268,6 @@ html[data-theme="dark"] {
 
 /* ------------------------------------------------------------ Landing */
 
-.calepin-website-main--landing h1,
-.calepin-website-main--landing h2,
-.landing-page h1,
-.landing-page h2 {
-  color: var(--color-text);
-  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.calepin-website-main--landing > h1,
-.calepin-website-main--landing > h2,
-.landing-page > h1,
-.landing-page > h2 {
-  max-width: 48rem;
-  margin: 2.35rem 0 0;
-  font-size: 1.8rem;
-  line-height: 1.16;
-  text-align: left;
-}
-
-.landing-feature-card h2,
-.landing-editor-integration h2,
-.landing-page article h2 {
-  margin: 0;
-  font-size: 1.55rem;
-  line-height: 1.16;
-}
-
-.calepin-website-main--landing h3,
-.landing-page h3 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: 1rem;
-  line-height: 1.25;
-}
-
-.calepin-website-main--landing p,
-.landing-page p {
-  color: var(--color-muted);
-  line-height: 1.55;
-}
-
 .landing-hero {
   padding: 0.8rem 1rem 2.6rem;
   text-align: center;
@@ -349,11 +306,6 @@ html[data-theme="dark"] {
 .landing-cta-row {
   justify-content: center;
   margin-top: 1.25rem;
-}
-
-.landing-primary-features {
-  gap: 1.75rem;
-  align-items: stretch;
 }
 
 .landing-workflow-card,
@@ -527,51 +479,9 @@ html[data-theme="dark"] {
   text-align: center;
 }
 
-.landing-feature-card footer strong {
-  color: var(--color-accent-dark);
-  font-size: 0.82rem;
-  white-space: nowrap;
-}
-
-.landing-editor-integration,
 .landing-product-preview,
 .landing-tool-strip {
   margin-top: 2rem;
-}
-
-.landing-editor-integration {
-  display: grid !important;
-  grid-template-columns: minmax(15rem, 0.8fr) minmax(0, 1.5fr) !important;
-  gap: 1.75rem;
-  align-items: center;
-  padding: 1.35rem;
-}
-
-.landing-editor-copy p {
-  margin: 0.65rem 0 0;
-  line-height: 1.55;
-}
-
-.landing-editor-video .calepin-video-block {
-  width: 100%;
-  margin: 0;
-}
-
-.landing-editor-video .calepin-video-thumb {
-  border-radius: var(--radius-md);
-}
-
-.landing-editor-video .calepin-video-thumb__media {
-  background: #17202a;
-}
-
-.calepin-website-main--landing > h1 + p,
-.calepin-website-main--landing > h2 + p,
-.landing-page > h1 + p,
-.landing-page > h2 + p {
-  max-width: 48rem;
-  margin: 0.8rem 0 0;
-  line-height: 1.55;
 }
 
 .landing-product-preview {
@@ -1284,20 +1194,6 @@ html:not([data-theme]) {
     font-size: 1.12rem;
   }
 
-  .calepin-website-main--landing > h1,
-  .calepin-website-main--landing > h2,
-  .landing-page > h1,
-  .landing-page > h2 {
-    font-size: 1.7rem;
-  }
-
-  .landing-feature-card h2,
-  .landing-editor-integration h2,
-  .landing-page article h2 {
-    font-size: 1.38rem;
-  }
-
-  .landing-primary-features,
   .landing-editor-preview {
     grid-template-columns: 1fr;
   }
@@ -1426,13 +1322,10 @@ html:not([data-theme]) {
     grid-template-columns: 1fr !important;
   }
 
-  .landing-feature-card,
-  .landing-editor-integration,
   .landing-product-preview {
     padding: 1rem;
   }
 
-  .landing-feature-card footer,
   .landing-tool-strip {
     align-items: flex-start;
     flex-direction: column;

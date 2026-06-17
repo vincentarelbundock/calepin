@@ -1,4 +1,5 @@
 mod fingerprint;
+mod image_meta;
 mod staging;
 
 use anyhow::{anyhow, Context, Result};
@@ -24,7 +25,10 @@ use crate::utils::progress::Progress;
 const PAGE_META_FILE: &str = "page-meta.json";
 
 use fingerprint::{preprocess_cache_hit, preprocess_fingerprint, write_preprocess_fingerprint};
+use image_meta::write_image_meta;
 use staging::{notebook_template_context, write_query_source, write_render_wrapper};
+
+pub(crate) use image_meta::image_meta_relative_path;
 
 #[derive(Debug, Clone)]
 pub struct PreprocessOptions {
@@ -115,9 +119,10 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .unwrap_or_else(crate::html::HtmlSyntaxTheme::builtin);
     write_runtime_with_syntax_theme(&layout.root, &html_syntax_theme)?;
     let staged_input = write_staged_source(&layout)?;
-    // Metadata collection runs before the final target is known. Use a
-    // query-only source so documents can contain `html.*` calls without hiding
-    // chunks from Calepin's query pass.
+    let image_meta = write_image_meta(&layout)?;
+    // Metadata collection runs before the final target is known. Use the
+    // staged source directly; document-level HTML must be guarded by target
+    // checks so paged/query passes never evaluate `html.*` calls.
     let query_source = write_query_source(&layout, &staged_input)?;
     let query_input = write_render_wrapper(&layout, &query_source, &[], None)?;
     let results_input = artifact_reference(&layout.root, &layout.results_path);
@@ -130,8 +135,13 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     write_page_meta(&layout, metadata.page_meta.as_ref())?;
     let setup_config = parse_setup_config(&metadata.setup_json)?;
     let setup_config = setup_config.unwrap_or_default();
-    let parsed_chunks =
-        parse_chunks_with_warnings(&metadata.chunks_json, Some(setup_config.clone()))?;
+    let parsed_chunks = merge_chunk_parse_results(
+        metadata
+            .chunk_queries
+            .iter()
+            .map(|chunks_json| parse_chunks_with_warnings(chunks_json, Some(setup_config.clone())))
+            .collect::<Result<Vec<_>>>()?,
+    )?;
     let chunks = parsed_chunks.chunks;
     if !options.quiet {
         for warning in parsed_chunks.warnings {
@@ -183,6 +193,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         timeout,
         &params,
         &effective_theme,
+        image_meta.signature()?,
     )?;
 
     Ok(PreprocessPlan {
@@ -200,6 +211,47 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         params,
         theme: effective_theme,
     })
+}
+
+fn merge_chunk_parse_results(
+    results: Vec<crate::typst::query::ChunkParseResult>,
+) -> Result<crate::typst::query::ChunkParseResult> {
+    let mut label_index = std::collections::HashMap::new();
+    let mut chunks = Vec::new();
+    let mut warnings = Vec::new();
+
+    for result in results {
+        warnings.extend(result.warnings);
+        for chunk in result.chunks {
+            if let Some(existing_index) = label_index.get(&chunk.label).copied() {
+                let existing = &chunks[existing_index];
+                if !same_chunk_definition(existing, &chunk) {
+                    // Auto labels are target-local: paged and HTML scans can
+                    // both produce `chunk-1` for different hidden branches. The
+                    // render runtime only asks for results by label, so allowing
+                    // that collision would attach the wrong result. Require
+                    // authors to disambiguate target-specific chunks explicitly.
+                    return Err(anyhow!(
+                        "chunk label `{}` resolves to different code or options across paged/html targets; add explicit labels to target-specific chunks",
+                        chunk.label
+                    ));
+                }
+                continue;
+            }
+            label_index.insert(chunk.label.clone(), chunks.len());
+            chunks.push(chunk);
+        }
+    }
+
+    Ok(crate::typst::query::ChunkParseResult { chunks, warnings })
+}
+
+fn same_chunk_definition(left: &ChunkSpec, right: &ChunkSpec) -> bool {
+    left.engine == right.engine
+        && left.code == right.code
+        && left.exec_options == right.exec_options
+        && left.display_options == right.display_options
+        && left.crossref_labels == right.crossref_labels
 }
 
 pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
@@ -564,6 +616,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
 
@@ -580,6 +633,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
 
@@ -600,6 +654,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({"region": "NY"}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
         let changed = preprocess_fingerprint(
@@ -610,6 +665,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({"region": "CA"}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
         assert_ne!(baseline, changed);
@@ -629,6 +685,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
 
@@ -640,6 +697,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
         assert_ne!(baseline, code_changed);
@@ -654,6 +712,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
         assert_ne!(baseline, exec_changed);
@@ -668,6 +727,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
         assert_ne!(baseline, executables_changed);
@@ -687,6 +747,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            0,
         )
         .unwrap();
         let changed = preprocess_fingerprint(
@@ -697,6 +758,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Disabled,
+            0,
         )
         .unwrap();
         assert_ne!(baseline, changed);

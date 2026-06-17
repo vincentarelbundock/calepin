@@ -34,10 +34,10 @@
     "language": null,
     "meta": {
       "layout": "layouts/landing.html",
-      "pdf": false
+      "pdf": true
     },
     "path": "index.typ",
-    "pdf": null,
+    "pdf": "index.pdf",
     "title": "Calepin",
     "translation_key": "index",
     "translations": {}

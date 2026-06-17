@@ -2,8 +2,8 @@
 
 #let target = sys.inputs.at("calepin-target", default: "paged")
 
-#if target == "html" {
-  html.elem("section", attrs: (class: "calepin-website-404"))[
+#if target == "html" [
+  #html.elem("section", attrs: (class: "calepin-website-404"))[
     #html.elem("p", attrs: (class: "calepin-website-404-code", "aria-hidden": "true"))[404]
     #html.elem("h1", attrs: (class: "calepin-website-404-title"))[Page not found]
     #html.elem("p", attrs: (class: "calepin-website-404-lede"))[
@@ -18,7 +18,7 @@
       #html.elem("a", attrs: (href: "notebooks/example.html"))[Example notebook]
     ]
   ]
-} else {
+] else [
   align(center + horizon)[
     #text(size: 5em, weight: "bold")[404]
     #v(0.1em)
@@ -26,4 +26,4 @@
     #v(0.4em)
     Sorry, the page you are looking for does not exist or may have moved.
   ]
-}
+]

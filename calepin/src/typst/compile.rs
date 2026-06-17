@@ -10,7 +10,7 @@ use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
 use crate::typst::run::{
     push_calepin_inputs, push_input, run_typst_status, CalepinMode, CalepinTarget, INPUT_ASSETS,
-    INPUT_CURRENT_HREF, INPUT_PAGES, RESERVED_INPUT_KEYS,
+    INPUT_CURRENT_HREF, INPUT_IMAGE_META, INPUT_PAGES, INPUT_SOURCE_DIR, RESERVED_INPUT_KEYS,
 };
 use crate::typst::version::assert_supported_typst;
 use crate::utils::progress::Progress;
@@ -99,6 +99,12 @@ fn typst_subcommand_args(
         layout.root.as_os_str().into(),
     ];
     push_calepin_inputs(&mut args, CalepinMode::Render, &results_input, target);
+    push_input(&mut args, INPUT_SOURCE_DIR, source_dir_input(layout));
+    let image_meta = artifact_reference(
+        &layout.root,
+        &layout.root.join(crate::typst::preprocess::image_meta_relative_path(layout)),
+    );
+    push_input(&mut args, INPUT_IMAGE_META, image_meta);
 
     if let Some(format) = format {
         args.push("--format".into());
@@ -126,6 +132,14 @@ fn typst_subcommand_args(
     }
     args.extend(typst_args.iter().map(|arg| OsString::from(arg.as_str())));
     args
+}
+
+fn source_dir_input(layout: &LayoutPaths) -> String {
+    layout
+        .input_rel
+        .parent()
+        .map(crate::typst::paths::slash_path)
+        .unwrap_or_default()
 }
 
 pub(crate) fn typst_compile_args(

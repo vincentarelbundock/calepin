@@ -12,6 +12,8 @@ pub const INPUT_TARGET: &str = "calepin-target";
 pub const INPUT_ASSETS: &str = "calepin-assets";
 pub const INPUT_PAGES: &str = "calepin-pages";
 pub const INPUT_CURRENT_HREF: &str = "calepin-current-href";
+pub const INPUT_IMAGE_META: &str = "calepin-image-meta";
+pub const INPUT_SOURCE_DIR: &str = "calepin-source-dir";
 
 pub const RESERVED_INPUT_KEYS: &[&str] = &[
     INPUT_MODE,
@@ -20,6 +22,8 @@ pub const RESERVED_INPUT_KEYS: &[&str] = &[
     INPUT_ASSETS,
     INPUT_PAGES,
     INPUT_CURRENT_HREF,
+    INPUT_IMAGE_META,
+    INPUT_SOURCE_DIR,
 ];
 
 pub fn run_typst_capture(

@@ -79,9 +79,17 @@ fn write_runtime_writes_calepin_typ() {
     let dir = tempfile::tempdir().unwrap();
     let path = write_runtime(dir.path()).unwrap();
     assert_eq!(path, dir.path().join(".calepin").join("calepin.typ"));
-    let written = std::fs::read_to_string(path).unwrap();
-    let expected = runtime_source().unwrap();
-    assert_eq!(written, expected);
+    let facade = std::fs::read_to_string(path).unwrap();
+    assert!(facade.contains("#import \"runtime/core/state.typ\" as state"));
+    assert!(facade.contains("#let elements = elementmod"));
+    assert!(dir
+        .path()
+        .join(".calepin/runtime/00_syntax-theme.typ")
+        .is_file());
+    assert!(dir
+        .path()
+        .join(".calepin/runtime/elements/mod.typ")
+        .is_file());
 }
 
 #[test]

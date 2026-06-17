@@ -11,6 +11,7 @@ pub(super) fn typst_eval(
     layout: &LayoutPaths,
     input: &Path,
     expression: &str,
+    target: &str,
     inputs: &[TypstInput],
 ) -> Result<String> {
     let input = root_relative(input, &layout.root);
@@ -21,6 +22,8 @@ pub(super) fn typst_eval(
         input.as_os_str().into(),
         "--root".into(),
         layout.root.as_os_str().into(),
+        "--target".into(),
+        target.into(),
         "--format".into(),
         "json".into(),
         // Documents may use Typst's HTML module even during metadata

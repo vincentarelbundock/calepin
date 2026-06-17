@@ -15,7 +15,7 @@ const PAGE_SYNC_SELECTOR: &str = "<calepin-page>";
 pub struct PreprocessMetadata {
     pub setup_json: String,
     pub page_meta: Option<Value>,
-    pub chunks_json: String,
+    pub chunk_queries: Vec<String>,
 }
 
 pub fn preprocess_metadata(

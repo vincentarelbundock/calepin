@@ -74,6 +74,7 @@ h4,
 h5,
 h6 {
   font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+  margin-top: 2rem;
 }
 
 h1 {
@@ -83,12 +84,12 @@ h1 {
 }
 
 h2 {
-  margin-top: 2.4rem;
+  margin-top: 2.8rem;
   font-size: 1.55rem;
 }
 
 h3 {
-  margin-top: 1.8rem;
+  margin-top: 2.1rem;
   font-size: 1.2rem;
 }
 
@@ -257,8 +258,6 @@ figure > img {
   white-space: nowrap;
 }
 
-.landing-primary-features,
-.landing-editor-integration,
 .landing-two-column {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -266,19 +265,9 @@ figure > img {
   margin-block: 2.2rem;
 }
 
-.landing-feature-card,
 .landing-panel {
   padding-block: 1rem;
   border-top: 1px solid var(--pico-muted-border-color);
-}
-
-.landing-feature-card footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 1rem;
-  color: var(--pico-muted-color);
-  font-size: 0.9rem;
 }
 
 .landing-checklist {
@@ -290,8 +279,6 @@ figure > img {
     font-size: 1.9rem;
   }
 
-  .landing-primary-features,
-  .landing-editor-integration,
   .landing-two-column {
     grid-template-columns: 1fr;
   }

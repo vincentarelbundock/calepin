@@ -20,6 +20,7 @@ pub(super) fn preprocess_fingerprint(
     timeout: Option<Duration>,
     params: &serde_json::Value,
     theme: &crate::theme::ThemeSelection,
+    image_meta_signature: u64,
 ) -> Result<u64> {
     let payload = PreprocessFingerprint {
         schema: crate::typst::model::RESULT_SCHEMA_VERSION,
@@ -35,6 +36,7 @@ pub(super) fn preprocess_fingerprint(
             .collect::<Vec<_>>(),
         params: params.clone(),
         theme: theme_fingerprint(theme),
+        image_meta: format!("{image_meta_signature:016x}"),
     };
     let bytes = serde_json::to_vec(&payload)?;
     Ok(xxh3_64(&bytes))
@@ -85,6 +87,7 @@ struct PreprocessFingerprint {
     chunks: Vec<ChunkFingerprint>,
     params: serde_json::Value,
     theme: String,
+    image_meta: String,
 }
 
 #[derive(Serialize)]

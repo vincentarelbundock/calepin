@@ -1,5 +1,3 @@
-#import "/.calepin/query-html.typ" as html
-
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Figures and tables])

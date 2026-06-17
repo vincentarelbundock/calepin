@@ -12,9 +12,9 @@
 #show raw.where(block: true, lang: "d2", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk-from-raw-plain("d2", it) }
 
 #show raw.where(block: true, theme: auto): it => {
-  if _mode == "query" {
+  if _is-query() {
     it
-  } else if not _html-target() {
+  } else if not _is-html() {
     it
   } else if _disable-raw-chunk-transforms.get() {
     _html-themed-raw-block(it)

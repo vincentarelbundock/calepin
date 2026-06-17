@@ -88,9 +88,9 @@ fn raw_show_rule(lang: &str) -> String {
 
 fn html_raw_show_rule() -> &'static str {
     r#"#show raw.where(block: true, theme: auto): it => {
-  if _mode == "query" {
+  if _is-query() {
     it
-  } else if not _html-target() {
+  } else if not _is-html() {
     it
   } else if _disable-raw-chunk-transforms.get() {
     _html-themed-raw-block(it)
@@ -109,23 +109,10 @@ fn html_raw_show_rule() -> &'static str {
 pub(super) fn write_query_source(layout: &LayoutPaths, staged_input: &Path) -> Result<PathBuf> {
     let query_source_relative = layout.artifact_relative_path("query-source.typ");
     let query_source = layout.root.join(&query_source_relative);
-    write_query_html_fallback(&layout.root)?;
 
     let staged_input_abs = layout.root.join(staged_input);
     let source = fs::read_to_string(&staged_input_abs)
         .with_context(|| format!("failed to read {}", staged_input_abs.display()))?;
-    let mut prefixed = String::from("#import \"/.calepin/query-html.typ\" as html\n\n");
-    prefixed.push_str(&source);
-    write_if_changed(&query_source, prefixed)?;
+    write_if_changed(&query_source, source)?;
     Ok(query_source_relative)
-}
-
-fn write_query_html_fallback(root: &Path) -> Result<()> {
-    let path = root.join(".calepin/query-html.typ");
-    let source = r#"#let elem(name, attrs: (:), body) = body
-#let link(..args) = none
-#let script(..args) = none
-#let img(..args) = none
-"#;
-    write_if_changed(&path, source)
 }

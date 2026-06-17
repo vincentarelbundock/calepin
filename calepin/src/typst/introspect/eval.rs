@@ -5,7 +5,8 @@ use std::path::Path;
 
 use super::{commands, split_page_meta, PreprocessMetadata, PAGE_META_LABEL, PAGE_SYNC_SELECTOR};
 use crate::typst::model::LayoutPaths;
-use crate::typst::run::{TypstInput, INPUT_MODE, INPUT_RESULTS, INPUT_TARGET};
+use crate::typst::paths::slash_path;
+use crate::typst::run::{TypstInput, INPUT_MODE, INPUT_RESULTS, INPUT_SOURCE_DIR, INPUT_TARGET};
 
 pub fn preprocess_metadata(
     typst: &Path,
@@ -13,6 +14,53 @@ pub fn preprocess_metadata(
     input: &Path,
     results_input: &str,
 ) -> Result<PreprocessMetadata> {
+    // Chunk discovery uses Typst eval rather than Rust text scanning because
+    // executable chunks are part of the evaluated Typst document: they can come
+    // from includes, functions, loops, Calepin chunk calls, setup defaults, and
+    // target conditionals. A Rust scanner would only see literal source text
+    // and would miss valid Typst-generated chunks.
+    //
+    // Discovery also needs both target-specific branches. A document may put
+    // executable chunks inside `if target == "html"` UI, while another may put
+    // chunks inside `if target == "paged"` fallbacks. Calepin executes chunks
+    // before the final render, so a single-target scan can miss chunks that the
+    // later render will ask for.
+    let paged = preprocess_metadata_for_target(typst, layout, input, results_input, "paged")?;
+    let html = preprocess_metadata_for_target(typst, layout, input, results_input, "html")?;
+    let setup = paged
+        .get("setup")
+        .cloned()
+        .ok_or_else(|| anyhow!("typst eval metadata output is missing `setup`"))?;
+    let setup_array = setup
+        .as_array()
+        .ok_or_else(|| anyhow!("typst eval setup output must be an array"))?;
+    let (setup_json, page_meta) = split_page_meta(setup_array)?;
+    let paged_chunks = paged
+        .get("chunks")
+        .cloned()
+        .ok_or_else(|| anyhow!("typst eval metadata output is missing `chunks`"))?;
+    let html_chunks = html
+        .get("chunks")
+        .cloned()
+        .ok_or_else(|| anyhow!("typst eval metadata output is missing `chunks`"))?;
+
+    Ok(PreprocessMetadata {
+        setup_json,
+        page_meta,
+        chunk_queries: vec![
+            serde_json::to_string(&paged_chunks)?,
+            serde_json::to_string(&html_chunks)?,
+        ],
+    })
+}
+
+fn preprocess_metadata_for_target(
+    typst: &Path,
+    layout: &LayoutPaths,
+    input: &Path,
+    results_input: &str,
+    target: &str,
+) -> Result<Value> {
     let output = commands::typst_eval(
         typst,
         layout,
@@ -23,32 +71,15 @@ pub fn preprocess_metadata(
   chunks: query(raw.where(block: true).or(<calepin-fence-label>).or(<calepin-chunk>)),
 )"#
         ),
+        target,
         &[
             TypstInput::new(INPUT_MODE, "query"),
             TypstInput::new(INPUT_RESULTS, results_input),
-            TypstInput::new(INPUT_TARGET, "paged"),
+            TypstInput::new(INPUT_SOURCE_DIR, source_dir_input(layout)),
+            TypstInput::new(INPUT_TARGET, target),
         ],
     )?;
-    let root: Value =
-        serde_json::from_str(&output).context("failed to parse typst eval metadata output")?;
-    let setup = root
-        .get("setup")
-        .cloned()
-        .ok_or_else(|| anyhow!("typst eval metadata output is missing `setup`"))?;
-    let chunks = root
-        .get("chunks")
-        .cloned()
-        .ok_or_else(|| anyhow!("typst eval metadata output is missing `chunks`"))?;
-    let setup_array = setup
-        .as_array()
-        .ok_or_else(|| anyhow!("typst eval setup output must be an array"))?;
-    let (setup_json, page_meta) = split_page_meta(setup_array)?;
-
-    Ok(PreprocessMetadata {
-        setup_json,
-        page_meta,
-        chunks_json: serde_json::to_string(&chunks)?,
-    })
+    serde_json::from_str(&output).context("failed to parse typst eval metadata output")
 }
 
 pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String, usize>> {
@@ -63,15 +94,21 @@ pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String
   page: it.value.page,
 ))"#
         ),
+        "paged",
         &[
             TypstInput::new(INPUT_MODE, "render"),
             TypstInput::new(INPUT_RESULTS, results_input),
+            TypstInput::new(INPUT_SOURCE_DIR, source_dir_input(layout)),
             TypstInput::new(INPUT_TARGET, "paged"),
         ],
     )?;
     let root: Value =
         serde_json::from_str(&output).context("failed to parse typst eval page sync output")?;
     super::parse_page_anchor_entries(&root)
+}
+
+fn source_dir_input(layout: &LayoutPaths) -> String {
+    layout.input_rel.parent().map(slash_path).unwrap_or_default()
 }
 
 #[cfg(test)]
