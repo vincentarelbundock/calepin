@@ -15,7 +15,9 @@ use crate::typst::io::{ensure_parent, write_if_changed};
 use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, LayoutPaths};
 use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout};
 use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
-use crate::typst::results::{build_results_document, write_results};
+use crate::typst::results::{
+    build_results_document, refresh_cached_results_metadata, write_results,
+};
 use crate::typst::runtime::write_runtime_with_syntax_theme;
 use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
@@ -83,6 +85,7 @@ pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
 pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput> {
     let plan = prepare_preprocess_plan(options)?;
     if preprocess_plan_cache_hit(&plan)? {
+        refresh_cached_results_metadata(&plan.layout.results_path, &plan.chunks)?;
         if !plan.quiet && plan.status {
             eprintln!("[cache] {}", display_input(&plan));
         }

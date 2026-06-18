@@ -81,6 +81,63 @@ print(x + 1)
 }
 
 #[test]
+fn compile_cache_refreshes_render_only_chunk_options() {
+    if !has_command("typst") || !has_command("python3") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    let input = dir.path().join("paper.typ");
+    let write_source = |fig_width: &str| {
+        std::fs::write(
+            &input,
+            format!(
+                r#"#import ".calepin/calepin.typ"
+
+#calepin.setup(echo: false)
+
+```python
+#| fig-width: {fig_width}
+print("cached")
+```
+"#
+            ),
+        )
+        .unwrap();
+    };
+
+    write_source("70%");
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    write_source("10%");
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results_path = dir.path().join(".calepin/paper/results.json");
+    let results: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
+    assert_eq!(results["chunks"]["chunk-1"]["options"]["fig-width"], "10%");
+    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "cached");
+}
+
+#[test]
 fn compile_rejects_preview_package_import_with_migration_message() {
     if !has_command("typst") || !has_command("python3") {
         return;
