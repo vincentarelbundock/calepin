@@ -16,7 +16,6 @@ Commands:
   compile  Preprocess, then invoke typst compile
   watch    Watch, preprocess, and delegate recompiles to typst watch
   serve    Serve static files locally
-  stop     Stop a running calepin watch process
   update   Update Calepin using the official installer updater
   clean    Remove `.calepin` directories and generated artifacts
   help     Print this message or the help of the given subcommand(s)
@@ -188,21 +187,6 @@ Options:
   -p, --port <PORT>  Port to bind (default: first free port from 8000)
       --open         Open the website in the default browser
   -h, --help         Print help
-```
-
-= `calepin stop`
-<calepin-stop>
-
-```text
-Stop a running calepin watch process
-
-Usage: calepin stop [INPUT]
-
-Arguments:
-  [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory
-
-Options:
-  -h, --help  Print help
 ```
 
 = `calepin update`

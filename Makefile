@@ -163,9 +163,6 @@ cli-reference: build  ## Generate docs/reference/cli.typ from clap help output
 		printf '= `calepin serve`\n<calepin-serve>\n\n```text\n'; \
 		$$BIN serve --help; \
 		printf '```\n\n'; \
-		printf '= `calepin stop`\n<calepin-stop>\n\n```text\n'; \
-		$$BIN stop --help; \
-		printf '```\n\n'; \
 		printf '= `calepin update`\n<calepin-update>\n\n```text\n'; \
 		$$BIN update --help; \
 		printf '```\n\n'; \

@@ -49,9 +49,6 @@ pub enum Command {
     /// Serve static files locally
     Serve(ServeArgs),
 
-    /// Stop a running calepin watch process
-    Stop(StopArgs),
-
     /// Update Calepin using the official installer updater
     Update,
 
@@ -207,13 +204,6 @@ pub struct ServeArgs {
     /// Open the website in the default browser
     #[arg(long)]
     pub open: bool,
-}
-
-#[derive(clap::Args, Debug, Clone)]
-pub struct StopArgs {
-    /// Input .typ file to stop the matching calepin watch.
-    /// Omit this value to stop all active watches under the current project's `.calepin` directory.
-    pub input: Option<PathBuf>,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -540,27 +530,9 @@ mod tests {
     }
 
     #[test]
-    fn test_typst_stop_args() {
-        let cli = Cli::try_parse_from(["calepin", "stop"]).unwrap();
-
-        match cli.command {
-            Command::Stop(args) => {
-                assert!(args.input.is_none());
-            }
-            other => panic!("expected stop command, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn test_typst_stop_args_with_input() {
-        let cli = Cli::try_parse_from(["calepin", "stop", "paper.typ"]).unwrap();
-
-        match cli.command {
-            Command::Stop(args) => {
-                assert_eq!(args.input, Some(PathBuf::from("paper.typ")));
-            }
-            other => panic!("expected stop command, got {other:?}"),
-        }
+    fn test_stop_subcommand_is_not_supported() {
+        let error = Cli::try_parse_from(["calepin", "stop"]).unwrap_err();
+        assert_eq!(error.kind(), clap::error::ErrorKind::InvalidSubcommand);
     }
 
     #[test]

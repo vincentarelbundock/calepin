@@ -1,5 +1,4 @@
 mod assets;
-mod pid;
 mod relay;
 mod watcher;
 
@@ -10,23 +9,18 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 
-use crate::cli::{StopArgs, WatchArgs};
+use crate::cli::WatchArgs;
 use crate::typst::compile::{
     reject_reserved_typst_inputs, resolve_output_path, typst_watch_args, ReservedInputs,
 };
-use crate::typst::paths::resolve_layout;
 use crate::typst::preprocess::{
     execute_preprocess_plan, prepare_preprocess_plan, preprocess, PreprocessOptions,
 };
 use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
-use pid::{
-    collect_watch_pid_files, remove_watch_pid_file, stop_watch_from_pid_file, watch_pid_file_path,
-    write_watch_pid_file,
-};
 use relay::{join_relay, relay_typst_watch_output};
 
 fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
@@ -116,14 +110,6 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
             return Err(error);
         }
     };
-    let watch_pid_path = watch_pid_file_path(&initial.layout.results_path);
-    if let Err(error) = write_watch_pid_file(&watch_pid_path, child.id()) {
-        cwarn!(
-            "failed to write watch pid file {}: {}",
-            watch_pid_path.display(),
-            error
-        );
-    }
     let stdout = child
         .stdout
         .take()
@@ -198,36 +184,11 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     stop.store(true, Ordering::Relaxed);
     let _ = child.kill();
     let _ = child.wait();
-    let _ = remove_watch_pid_file(&watch_pid_path);
     join_relay("stdout", stdout_relay);
     join_relay("stderr", stderr_relay);
     let _ = watcher.join();
     if let Some(server) = asset_server {
         server.join();
-    }
-    Ok(())
-}
-
-pub fn run_stop(args: StopArgs) -> Result<()> {
-    match args.input {
-        Some(input) => {
-            let layout = resolve_layout(&input, None).with_context(|| {
-                format!("failed to resolve watch context from {}", input.display())
-            })?;
-            let watch_pid_path = watch_pid_file_path(&layout.results_path);
-            stop_watch_from_pid_file(&watch_pid_path)?;
-        }
-        None => {
-            let calepin_dir = std::env::current_dir()?.join(".calepin");
-            let mut watch_pid_paths = Vec::new();
-            collect_watch_pid_files(&calepin_dir, &mut watch_pid_paths)?;
-            if watch_pid_paths.is_empty() {
-                return Err(anyhow!("no running calepin watch found"));
-            }
-            for path in watch_pid_paths {
-                stop_watch_from_pid_file(&path)?;
-            }
-        }
     }
     Ok(())
 }

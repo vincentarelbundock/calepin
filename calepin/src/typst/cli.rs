@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, StopArgs, WatchArgs};
+use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, WatchArgs};
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
@@ -102,10 +102,6 @@ pub fn handle_watch(args: WatchArgs) -> Result<()> {
         ));
     }
     crate::typst::watch::run_watch(args)
-}
-
-pub fn handle_stop(args: StopArgs) -> Result<()> {
-    crate::typst::watch::run_stop(args)
 }
 
 pub fn handle_clean(args: CleanArgs) -> Result<()> {
