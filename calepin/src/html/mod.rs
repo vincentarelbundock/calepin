@@ -584,6 +584,24 @@ mod tests {
     }
 
     #[test]
+    fn default_website_theme_allows_wider_landing_hero_headline() {
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+
+        assert!(css.contains(
+            r#".landing-hero h2 {
+  max-width: 42rem;"#
+        ));
+        assert!(css.contains(r#"@media (max-width: 56rem)"#));
+        assert!(css.contains(
+            r#".landing-hero h2 {
+    max-width: 34rem;"#
+        ));
+    }
+
+    #[test]
     fn bundled_themes_hide_language_picker_for_single_language_sites() {
         let site_context = SiteContextInput {
             menus: BTreeMap::from([(

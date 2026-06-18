@@ -279,7 +279,7 @@ html[data-theme="dark"] {
 }
 
 .landing-hero h2 {
-  max-width: 34rem;
+  max-width: 42rem;
   margin: 1.5rem auto 0;
   font-size: 1.28rem;
   line-height: 1.22;
@@ -1197,7 +1197,7 @@ html:not([data-theme]) {
   }
 
   .landing-hero h2 {
-    max-width: 28rem;
+    max-width: 34rem;
     margin-top: 1.25rem;
     font-size: 1.12rem;
   }
