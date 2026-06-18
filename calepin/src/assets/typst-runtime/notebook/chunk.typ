@@ -208,9 +208,30 @@
     let code = _strip-lang-version-suffix(engine, code)
     let code = _strip-qmd-header(code)
     let options = _resolve-options(engine, options)
+    let results-path = sys.inputs.at("calepin-results", default: "")
+    // The runtime parses only `#| label` from the fence header itself; the
+    // remaining `#|` options are parsed during the query/execute pass and
+    // stored in results.json. Fold the display toggles back in so directives
+    // like `#| echo: false`, `#| results: hide`, or `#| warning: false` drive
+    // the runtime's own gates below (and the paged renderer, which otherwise
+    // forwards only figure options). Figure-layout keys are deliberately left
+    // to `_render-results`, which converts their JSON form for the active
+    // target. Function-call options already match what is stored, so this is a
+    // no-op for them.
+    if results-path != "" {
+      let results-doc = json(results-path)
+      let chunk = results-doc.at("chunks", default: (:)).at(label, default: none)
+      if chunk != none {
+        let stored = chunk.at("options", default: (:))
+        for key in ("echo", "results", "warning", "message") {
+          if key in stored {
+            options.insert(key, stored.at(key))
+          }
+        }
+      }
+    }
     let show-echo = options.at("echo") == true
     let results-mode = options.at("results")
-    let results-path = sys.inputs.at("calepin-results", default: "")
     label-step
     [#metadata((label: label, page: here().page())) <calepin-page>]
 

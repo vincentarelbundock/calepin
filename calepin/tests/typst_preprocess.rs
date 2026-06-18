@@ -671,6 +671,68 @@ print("EXPLICIT_RAW_SHOW_12345")
 }
 
 #[test]
+fn compile_honors_hashpipe_options_on_bare_fences() {
+    if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(echo: true, results: "verbatim")
+
+```python
+#| echo: false
+print("HASHPIPE_ECHO_MARK")
+```
+
+```python
+#| results: hide
+print("HASHPIPE_HIDE_MARK")
+```
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .expect("failed to run pdftotext");
+    assert!(text.status.success());
+    let extracted = String::from_utf8(text.stdout).unwrap();
+
+    // `#| echo: false` hides the source even though the document default is
+    // `echo: true`; the chunk still runs and shows its output.
+    assert!(extracted.contains("HASHPIPE_ECHO_MARK"), "{extracted}");
+    assert!(
+        !extracted.contains("print(\"HASHPIPE_ECHO_MARK\")"),
+        "`#| echo: false` should hide the source:\n{extracted}"
+    );
+
+    // `#| results: hide` keeps the echoed source (default echo) but suppresses
+    // the output, so the marker appears exactly once (in the source listing).
+    assert_eq!(
+        extracted.matches("HASHPIPE_HIDE_MARK").count(),
+        1,
+        "`#| results: hide` should suppress the output:\n{extracted}"
+    );
+}
+
+#[test]
 fn compile_renders_inline_output_in_surrounding_text() {
     if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
         return;
