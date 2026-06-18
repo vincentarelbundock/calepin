@@ -17,6 +17,7 @@ Commands:
   watch    Watch, preprocess, and delegate recompiles to typst watch
   serve    Serve static files locally
   stop     Stop a running calepin watch process
+  update   Update Calepin using the official installer updater
   clean    Remove `.calepin` directories and generated artifacts
   help     Print this message or the help of the given subcommand(s)
 
@@ -60,7 +61,7 @@ Usage: calepin health [OPTIONS]
 
 Options:
       --config <CONFIG>       Path to project config TOML
-  -d, --depth <DEPTH>        Maximum recursion depth when searching links
+  -d, --depth <DEPTH>         Maximum recursion depth when searching for links
       --json                  Print machine-readable JSON
       --strict                Exit with an error when warnings are present
       --check-external-links  Also check external links
@@ -199,6 +200,18 @@ Usage: calepin stop [INPUT]
 
 Arguments:
   [INPUT]  Input .typ file to stop the matching calepin watch. Omit this value to stop all active watches under the current project's `.calepin` directory
+
+Options:
+  -h, --help  Print help
+```
+
+= `calepin update`
+<calepin-update>
+
+```text
+Update Calepin using the official installer updater
+
+Usage: calepin update
 
 Options:
   -h, --help  Print help

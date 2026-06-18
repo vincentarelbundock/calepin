@@ -143,29 +143,33 @@ positron: vscode-package  ## Install Calepin for Typst in Positron
 
 cli-reference: build  ## Generate docs/reference/cli.typ from clap help output
 	@set -eu; BIN=target/debug/calepin; { \
-		printf '= CLI reference\n<cli-reference>\n\n'; \
-		printf '== `calepin`\n<calepin>\n\n```text\n'; \
+		printf '#set document(title: [CLI reference])\n\n'; \
+		printf '#title() <cli-reference>\n\n'; \
+		printf '= `calepin`\n<calepin>\n\n```text\n'; \
 		$$BIN --help; \
 		printf '```\n\n'; \
-		printf '== `calepin new`\n<calepin-new>\n\n```text\n'; \
+		printf '= `calepin new`\n<calepin-new>\n\n```text\n'; \
 		$$BIN new --help; \
 		printf '```\n\n'; \
-		printf '== `calepin health`\n<calepin-health>\n\n```text\n'; \
+		printf '= `calepin health`\n<calepin-health>\n\n```text\n'; \
 		$$BIN health --help; \
 		printf '```\n\n'; \
-		printf '== `calepin compile`\n<calepin-compile>\n\n```text\n'; \
+		printf '= `calepin compile`\n<calepin-compile>\n\n```text\n'; \
 		$$BIN compile --help; \
 		printf '```\n\n'; \
-		printf '== `calepin watch`\n<calepin-watch>\n\n```text\n'; \
+		printf '= `calepin watch`\n<calepin-watch>\n\n```text\n'; \
 		$$BIN watch --help; \
 		printf '```\n\n'; \
-		printf '== `calepin serve`\n<calepin-serve>\n\n```text\n'; \
+		printf '= `calepin serve`\n<calepin-serve>\n\n```text\n'; \
 		$$BIN serve --help; \
 		printf '```\n\n'; \
-		printf '== `calepin stop`\n<calepin-stop>\n\n```text\n'; \
+		printf '= `calepin stop`\n<calepin-stop>\n\n```text\n'; \
 		$$BIN stop --help; \
 		printf '```\n\n'; \
-		printf '== `calepin clean`\n<calepin-clean>\n\n```text\n'; \
+		printf '= `calepin update`\n<calepin-update>\n\n```text\n'; \
+		$$BIN update --help; \
+		printf '```\n\n'; \
+		printf '= `calepin clean`\n<calepin-clean>\n\n```text\n'; \
 		$$BIN clean --help; \
 		printf '```\n'; \
 	} > docs/reference/cli.typ

@@ -52,6 +52,9 @@ pub enum Command {
     /// Stop a running calepin watch process
     Stop(StopArgs),
 
+    /// Update Calepin using the official installer updater
+    Update,
+
     /// Remove `.calepin` directories and generated artifacts
     Clean(CleanArgs),
 }

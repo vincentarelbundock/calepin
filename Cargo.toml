@@ -31,7 +31,7 @@ installers = ["shell", "powershell"]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
-install-updater = false
+install-updater = true
 # Whether to auto-include files like README/LICENSE/CHANGELOG
 auto-includes = true
 # Post-announce jobs

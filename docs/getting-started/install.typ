@@ -24,6 +24,22 @@ Windows via powershell:
 powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex"
 ```
 
+== Updating Calepin
+
+If you installed Calepin with the official installer, update it with:
+
+```sh
+calepin update
+```
+
+This updates only Calepin, using the `calepin-update` helper installed alongside
+the main binary. Typst, Python, R, Jupyter, and Jupyter kernels are managed
+separately.
+
+If `calepin update` reports that `calepin-update` is missing, reinstall Calepin
+with the official installer command above. If you installed Calepin with Cargo,
+Homebrew, or another package manager, use that tool to upgrade Calepin instead.
+
 = Jupyter support
 <jupyter-kernels>
 

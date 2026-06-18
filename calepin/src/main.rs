@@ -10,6 +10,7 @@ mod html;
 mod syntax_theme;
 mod theme;
 mod typst;
+mod update;
 mod utils;
 mod website;
 
@@ -40,6 +41,7 @@ fn main() -> Result<()> {
         Command::Watch(args) => typst::cli::handle_watch(args),
         Command::Serve(args) => website::serve(args),
         Command::Stop(args) => typst::cli::handle_stop(args),
+        Command::Update => update::handle_update(),
         Command::Clean(args) => typst::cli::handle_clean(args),
     }
 }
