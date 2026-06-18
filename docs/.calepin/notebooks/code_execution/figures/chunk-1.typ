@@ -1,0 +1,1 @@
+#strong[42 in Typst]
