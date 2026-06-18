@@ -266,6 +266,8 @@
       svg.removeAttribute("height");
       if (image.className) svg.setAttribute("class", image.className);
       if (image.id) svg.setAttribute("id", image.id);
+      const style = image.getAttribute("style");
+      if (style) svg.setAttribute("style", style);
 
       const alt = image.getAttribute("alt");
       if (alt) {

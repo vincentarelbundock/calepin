@@ -21,6 +21,7 @@ editors/vscode/node_modules/
 editors/vscode/out/
 .venv/
 _site/
+**/node_modules/
 
 # Rendered output
 TODO.html
@@ -63,3 +64,7 @@ _calepin_cache/
 _site/
 *.tar.gz
 .agents
+.claude
+.uv-cache
+.agents
+.DS_Store

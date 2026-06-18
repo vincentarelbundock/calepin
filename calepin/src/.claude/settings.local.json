@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(code-reviewer)",
+      "Bash(awk 'NR>=841{c++} END{print c\" test lines \\(of 1751\\)\"}' typst/query.rs)",
+      "Bash(cargo build *)",
+      "Bash(cargo test *)",
+      "Bash(cargo clippy *)",
+      "Bash(ls specs/)",
+      "Bash(find . -name \"*theme-bundle*\" -not -path \"*/target/*\")"
+    ]
+  }
+}

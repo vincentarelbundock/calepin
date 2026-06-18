@@ -29,7 +29,7 @@
   --radius-md: var(--calepin-radius-md);
   --radius-lg: var(--calepin-radius-md);
   --shadow-card: var(--calepin-card-shadow);
-  --landing-hero-wordmark-width: 14rem;
+  --landing-hero-wordmark-width: 24rem;
   --max-width: var(--calepin-wide-width);
 }
 

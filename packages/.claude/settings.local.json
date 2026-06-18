@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(typst --version)",
+      "Bash(typst compile *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(awk '{print length\\($0\\)-13\" chars \\(desc only\\)\"}')",
+      "Bash(python3 -)",
+      "Bash(echo \"compile exit: $?\")"
+    ]
+  }
+}

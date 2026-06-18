@@ -22,7 +22,7 @@ include = ["assets/**", "index.typ"]
 [[navbar.item]]
 position = "right"
 target = "getting-started/install.typ"
-label = "Docs"
+label = "Documentation"
 
 [[navbar.item]]
 position = "right"
