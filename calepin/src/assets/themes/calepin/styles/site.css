@@ -116,11 +116,6 @@ html[data-theme="dark"] {
   gap: 1rem;
 }
 
-.calepin-website-navbar-center {
-  flex: 1;
-  justify-content: center;
-}
-
 .calepin-website-topbrand {
   display: inline-flex;
   align-items: center;
@@ -140,7 +135,7 @@ html[data-theme="dark"] {
   font-weight: 600;
 }
 
-/* Navbar links keep the standard text color instead of the accent. */
+/* Header menu links keep the standard text color instead of the accent. */
 .calepin-website-topbar nav a:not(.calepin-website-topbrand),
 .calepin-website-topbar nav a:not(.calepin-website-topbrand):hover,
 .calepin-website-topbar nav a:not(.calepin-website-topbrand):focus,

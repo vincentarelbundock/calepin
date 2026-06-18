@@ -31,25 +31,19 @@ include = ["assets/**"]
 [pages]
 include = ["posts/*.typ"]
 
-[navbar]
-
-[[navbar.item]]
-position = "left"
+[[menus.main]]
 target = "about.typ"
 label = "About"
 
-[[navbar.item]]
-position = "left"
+[[menus.main]]
 target = "blog.typ"
 label = "Blog"
 
-[[navbar.item]]
-position = "right"
+[[menus.social]]
 target = "https://scholar.google.com/citations?user=RKN66-kAAAAJ&hl"
 label = "{icon:simple-icons:googlescholar}"
 
-[[navbar.item]]
-position = "right"
+[[menus.social]]
 target = "https://github.com/vincentarelbundock/calepin"
 label = "{icon:github}"
 

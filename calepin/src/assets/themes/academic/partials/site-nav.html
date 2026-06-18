@@ -15,13 +15,10 @@
                 <span aria-hidden="true"></span>
             </button>
             <div id="academic-menu" class="academic-menu calepin-site-menu">
-                {% for item in site.navbar_left %}
+                {% for item in site.menus.main %}
                 {% include "partials/navbar-item.html" %}
                 {% endfor %}
-                {% for item in site.navbar_center %}
-                {% include "partials/navbar-item.html" %}
-                {% endfor %}
-                {% for item in site.navbar_right %}
+                {% for item in site.menus.social %}
                 {% include "partials/navbar-item.html" %}
                 {% endfor %}
                 {% if site.pagefind %}

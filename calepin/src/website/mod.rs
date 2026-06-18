@@ -41,8 +41,7 @@ use crate::utils::watch::{is_rebuild_event, run_debounced_watch};
 #[cfg(test)]
 use config::{LanguageConfig, SidebarItemConfig, SidebarSectionConfig};
 use config::{
-    NavbarConfig, NavbarItemConfig, NavbarPosition, PagesConfig, SearchEngine, SidebarConfig,
-    StaticConfig, WebsiteConfig,
+    MenuItemConfig, PagesConfig, SearchEngine, SidebarConfig, StaticConfig, WebsiteConfig,
 };
 #[cfg(test)]
 use feeds::{feed_items_from_pages, infer_feed_format, rss_feed_date, FeedFormat, FeedTarget};
@@ -309,13 +308,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config.pages.as_ref(),
         &languages,
     )?;
-    let (navbar_plan, mut navbar_files) = discover_site_navbar(
-        &src_dir,
-        config.navbar.as_ref(),
-        config.pages.as_ref(),
-        &languages,
-    )?;
-    typ_files.append(&mut navbar_files);
+    let (menus_plan, mut menu_files) =
+        discover_site_menus(&src_dir, &config.menus, config.pages.as_ref(), &languages)?;
+    typ_files.append(&mut menu_files);
     let mut included_pages =
         discover_site_build_pages(&src_dir, config.pages.as_ref(), &languages)?;
     typ_files.append(&mut included_pages);
@@ -413,10 +408,10 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         &fallback_files,
         metadata.base_url.as_deref(),
     );
-    let mut icon_cache = IconCache::new(src_dir.join(ICON_CACHE_DIR));
+    let mut icon_cache = IconCache::new(&src_dir, ICON_CACHE_DIR);
     let sidebar_sections = nav_from_plans(&section_plans, &page_meta, &page_info, &mut icon_cache)?;
-    let navbar = navbar_from_plan(&navbar_plan, &page_meta, &page_info, &mut icon_cache)?;
-    let nav_signature = navigation_signature(&sidebar_sections) ^ navbar_signature(&navbar);
+    let menus = menus_from_plan(&menus_plan, &page_meta, &page_info, &mut icon_cache)?;
+    let nav_signature = navigation_signature(&sidebar_sections) ^ menus_signature(&menus);
     let pages_index =
         build_pages_index(&src_dir, &typ_files, &section_plans, &page_meta, &page_info);
     let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
@@ -493,7 +488,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     // Phase 2: render the preprocessed pages with full site context.
     let site = SiteModel::new(
         sidebar_sections,
-        navbar,
+        menus,
         metadata.clone(),
         config.sidebar.as_ref().is_none_or(|sidebar| sidebar.fold),
     );
@@ -763,9 +758,11 @@ fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
     xxh3_64(&bytes)
 }
 
-fn navbar_signature(navbar: &NavbarModel) -> u64 {
+fn menus_signature(menus: &MenusModel) -> u64 {
     let mut bytes = Vec::new();
-    for items in [&navbar.left, &navbar.center, &navbar.right] {
+    for (name, items) in &menus.items {
+        bytes.extend_from_slice(name.as_bytes());
+        bytes.push(0);
         for item in items {
             if let Some(language) = &item.language {
                 bytes.extend_from_slice(language.as_bytes());
@@ -915,31 +912,34 @@ struct NavItemModel {
 }
 
 #[derive(Debug, Clone, Default)]
-struct NavbarModel {
-    left: Vec<NavItemModel>,
-    center: Vec<NavItemModel>,
-    right: Vec<NavItemModel>,
+struct MenusModel {
+    items: BTreeMap<String, Vec<NavItemModel>>,
 }
 
-impl NavbarModel {
+impl MenusModel {
     fn entries_for_current_page(
         &self,
         current_href: &str,
-        items: &[NavItemModel],
         current_language: Option<&str>,
-    ) -> Vec<SiteNavEntry> {
-        items
+    ) -> BTreeMap<String, Vec<SiteNavEntry>> {
+        self.items
             .iter()
-            .filter(|item| {
-                item.language
-                    .as_deref()
-                    .is_none_or(|language| Some(language) == current_language)
-            })
-            .map(|item| SiteNavEntry {
-                href: html_escape(&page_relative_url(current_href, &item.href)),
-                label: html_escape(&item.label),
-                label_html: item.label_html.clone(),
-                active: item.href == current_href,
+            .map(|(name, items)| {
+                let entries = items
+                    .iter()
+                    .filter(|item| {
+                        item.language
+                            .as_deref()
+                            .is_none_or(|language| Some(language) == current_language)
+                    })
+                    .map(|item| SiteNavEntry {
+                        href: html_escape(&page_relative_url(current_href, &item.href)),
+                        label: html_escape(&item.label),
+                        label_html: item.label_html.clone(),
+                        active: item.href == current_href,
+                    })
+                    .collect();
+                (name.clone(), entries)
             })
             .collect()
     }
@@ -999,7 +999,7 @@ fn source_asset_output_path(
 #[derive(Debug)]
 struct SiteModel {
     sections: Vec<NavSectionModel>,
-    navbar: NavbarModel,
+    menus: MenusModel,
     metadata: SiteMetadata,
     sidebar_fold: bool,
 }
@@ -1007,13 +1007,13 @@ struct SiteModel {
 impl SiteModel {
     fn new(
         sections: Vec<NavSectionModel>,
-        navbar: NavbarModel,
+        menus: MenusModel,
         metadata: SiteMetadata,
         sidebar_fold: bool,
     ) -> Self {
         Self {
             sections,
-            navbar,
+            menus,
             metadata,
             sidebar_fold,
         }
@@ -1066,26 +1066,23 @@ impl SiteModel {
                 })
             })
             .unwrap_or_default();
+        let menus = self
+            .menus
+            .entries_for_current_page(current_href, current_language);
+        let menu_list = menus
+            .iter()
+            .map(|(name, items)| crate::html::SiteMenu {
+                name: name.clone(),
+                items: items.clone(),
+            })
+            .collect();
 
         SiteContextInput {
             sidebar,
             sidebar_sections,
             sidebar_fold: self.sidebar_fold,
-            navbar_left: self.navbar.entries_for_current_page(
-                current_href,
-                &self.navbar.left,
-                current_language,
-            ),
-            navbar_center: self.navbar.entries_for_current_page(
-                current_href,
-                &self.navbar.center,
-                current_language,
-            ),
-            navbar_right: self.navbar.entries_for_current_page(
-                current_href,
-                &self.navbar.right,
-                current_language,
-            ),
+            menus,
+            menu_list,
             languages: language_entries,
             translations,
             language: current_language.map(str::to_string),
@@ -1267,6 +1264,7 @@ struct NavItemPlan {
     path: Option<PathBuf>,
     url: Option<String>,
     configured_label: Option<String>,
+    weight: Option<i32>,
 }
 
 #[derive(Debug, Clone)]
@@ -1280,6 +1278,7 @@ struct NavItemInput<'a> {
     target: Option<&'a str>,
     glob: Option<&'a str>,
     label: Option<&'a str>,
+    weight: Option<i32>,
 }
 
 struct NavItemResolution<'a> {
@@ -1293,13 +1292,11 @@ struct NavItemResolution<'a> {
 }
 
 #[derive(Debug, Clone, Default)]
-struct NavbarPlan {
-    left: Vec<NavbarItemPlan>,
-    center: Vec<NavbarItemPlan>,
-    right: Vec<NavbarItemPlan>,
+struct MenusPlan {
+    items: BTreeMap<String, Vec<MenuItemPlan>>,
 }
 
-type NavbarItemPlan = NavItemPlan;
+type MenuItemPlan = NavItemPlan;
 
 fn discover_site_pages(
     src_dir: &Path,
@@ -1333,42 +1330,42 @@ fn discover_site_pages(
     Ok((sections, files))
 }
 
-fn discover_site_navbar(
+fn discover_site_menus(
     src_dir: &Path,
-    navbar: Option<&NavbarConfig>,
+    menus: &BTreeMap<String, Vec<MenuItemConfig>>,
     pages: Option<&PagesConfig>,
     languages: &Option<Vec<LanguageInfo>>,
-) -> Result<(NavbarPlan, Vec<PathBuf>)> {
-    let Some(navbar) = navbar else {
-        return Ok((NavbarPlan::default(), Vec::new()));
-    };
+) -> Result<(MenusPlan, Vec<PathBuf>)> {
+    if menus.is_empty() {
+        return Ok((MenusPlan::default(), Vec::new()));
+    }
     let Some(languages) = languages else {
-        return discover_navbar(src_dir, navbar, pages);
+        return discover_menus(src_dir, menus, pages);
     };
-    let mut plan = NavbarPlan::default();
+    let mut plan = MenusPlan::default();
     let mut files = Vec::new();
     for language in languages {
         let (mut language_plan, mut language_files) =
-            discover_navbar(&language.content_dir, navbar, pages)?;
+            discover_menus(&language.content_dir, menus, pages)?;
         language_files.retain(|path| !is_nested_language_page(path, language, languages));
-        retain_navbar_language_items(&mut language_plan, language, languages);
+        retain_menu_language_items(&mut language_plan, language, languages);
         if !language.default {
-            retain_language_specific_navbar_items(&mut language_plan);
+            retain_language_specific_menu_items(&mut language_plan);
         }
-        plan.left.append(&mut language_plan.left);
-        plan.center.append(&mut language_plan.center);
-        plan.right.append(&mut language_plan.right);
+        for (name, mut items) in language_plan.items {
+            plan.items.entry(name).or_default().append(&mut items);
+        }
         files.append(&mut language_files);
     }
     Ok((plan, files))
 }
 
-fn retain_navbar_language_items(
-    plan: &mut NavbarPlan,
+fn retain_menu_language_items(
+    plan: &mut MenusPlan,
     current: &LanguageInfo,
     languages: &[LanguageInfo],
 ) {
-    for items in [&mut plan.left, &mut plan.center, &mut plan.right] {
+    for items in plan.items.values_mut() {
         items.retain(|item| {
             item.path
                 .as_ref()
@@ -1377,8 +1374,8 @@ fn retain_navbar_language_items(
     }
 }
 
-fn retain_language_specific_navbar_items(plan: &mut NavbarPlan) {
-    for items in [&mut plan.left, &mut plan.center, &mut plan.right] {
+fn retain_language_specific_menu_items(plan: &mut MenusPlan) {
+    for items in plan.items.values_mut() {
         items.retain(|item| item.path.is_some());
     }
 }
@@ -1410,6 +1407,7 @@ fn discover_pages(
                 path: Some(path.clone()),
                 url: None,
                 configured_label: None,
+                weight: None,
             })
             .collect();
         return Ok((
@@ -1443,6 +1441,7 @@ fn discover_pages(
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
                 label: None,
+                weight: None,
             })
             .collect::<Vec<_>>();
         let mut resolution = NavItemResolution {
@@ -1465,31 +1464,36 @@ fn discover_pages(
     Ok((sections, build_files))
 }
 
-fn discover_navbar(
+fn discover_menus(
     src_dir: &Path,
-    navbar: &NavbarConfig,
+    menus: &BTreeMap<String, Vec<MenuItemConfig>>,
     pages: Option<&PagesConfig>,
-) -> Result<(NavbarPlan, Vec<PathBuf>)> {
-    let all_typ_files =
-        iter_typ_files(src_dir, navbar.show_hidden, &[PathBuf::from(FALLBACK_PAGE)])?;
+) -> Result<(MenusPlan, Vec<PathBuf>)> {
+    for name in menus.keys() {
+        validate_menu_name(name)?;
+    }
+    let all_typ_files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)])?;
     let all_typ_files = all_typ_files
         .into_iter()
         .filter(|path| !page_is_excluded(src_dir, path, pages))
         .collect::<Vec<_>>();
     let mut files = Vec::new();
     let mut used = BTreeSet::new();
+    let mut plan = MenusPlan::default();
 
-    let mut resolve = |items: &[&NavbarItemConfig]| -> Result<Vec<NavbarItemPlan>> {
+    for (name, items) in menus {
+        let context = format!("menu `{name}`");
         let inputs = items
             .iter()
             .map(|item| NavItemInput {
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
                 label: item.label.as_deref(),
+                weight: item.weight,
             })
             .collect::<Vec<_>>();
         let mut resolution = NavItemResolution {
-            context: "navbar",
+            context: &context,
             src_dir,
             pages,
             all_typ_files: &all_typ_files,
@@ -1497,32 +1501,48 @@ fn discover_navbar(
             build_files: &mut files,
             skip_duplicate_items: false,
         };
-        resolve_nav_item_plans(&mut resolution, &inputs)
-    };
-    let left = navbar
-        .item
-        .iter()
-        .filter(|item| item.position == NavbarPosition::Left)
-        .collect::<Vec<_>>();
-    let center = navbar
-        .item
-        .iter()
-        .filter(|item| item.position == NavbarPosition::Center)
-        .collect::<Vec<_>>();
-    let right = navbar
-        .item
-        .iter()
-        .filter(|item| item.position == NavbarPosition::Right)
-        .collect::<Vec<_>>();
+        let mut resolved = resolve_nav_item_plans(&mut resolution, &inputs)?;
+        sort_menu_items(&mut resolved);
+        plan.items.insert(name.clone(), resolved);
+    }
 
-    Ok((
-        NavbarPlan {
-            left: resolve(&left)?,
-            center: resolve(&center)?,
-            right: resolve(&right)?,
-        },
-        files,
-    ))
+    files = menu_build_files(&plan);
+    Ok((plan, files))
+}
+
+fn validate_menu_name(name: &str) -> Result<()> {
+    if name.is_empty()
+        || !name.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-' || byte == b'_'
+        })
+    {
+        bail!(
+            "invalid menu name `{name}`; use lowercase letters, digits, hyphens, and underscores"
+        );
+    }
+    Ok(())
+}
+
+fn sort_menu_items(items: &mut [MenuItemPlan]) {
+    if items.iter().all(|item| item.weight.is_none()) {
+        return;
+    }
+    items.sort_by_key(|item| (item.weight.is_none(), item.weight.unwrap_or_default()));
+}
+
+fn menu_build_files(plan: &MenusPlan) -> Vec<PathBuf> {
+    let mut seen = BTreeSet::new();
+    let mut files = Vec::new();
+    for items in plan.items.values() {
+        for item in items {
+            if let Some(path) = &item.path {
+                if seen.insert(path.clone()) {
+                    files.push(path.clone());
+                }
+            }
+        }
+    }
+    files
 }
 
 fn resolve_nav_item_plans(
@@ -1551,6 +1571,7 @@ fn resolve_nav_item_plans(
                         path: None,
                         url: Some(url),
                         configured_label,
+                        weight: input.weight,
                     });
                 }
                 Some(NavTarget::Page(path)) => {
@@ -1563,6 +1584,7 @@ fn resolve_nav_item_plans(
                             path: Some(path),
                             url: None,
                             configured_label,
+                            weight: input.weight,
                         });
                     }
                 }
@@ -1590,6 +1612,7 @@ fn resolve_nav_item_plans(
                     path: Some(path),
                     url: None,
                     configured_label: configured_label.clone(),
+                    weight: input.weight,
                 });
             }
         }
@@ -1922,7 +1945,8 @@ fn is_safe_output_route(value: &str) -> bool {
 }
 
 struct IconCache {
-    dir: PathBuf,
+    src_dir: PathBuf,
+    cache_dir: PathBuf,
     agent: ureq::Agent,
     /// Icons that already failed this build; avoids repeating slow download
     /// attempts (and duplicate warnings) for every nav item that uses them.
@@ -1930,10 +1954,11 @@ struct IconCache {
 }
 
 impl IconCache {
-    fn new(dir: PathBuf) -> Self {
+    fn new(src_dir: &Path, cache_subdir: &str) -> Self {
         let agent = timeout_agent(Duration::from_secs(ICON_DOWNLOAD_TIMEOUT_SECS));
         Self {
-            dir,
+            src_dir: src_dir.to_path_buf(),
+            cache_dir: src_dir.join(cache_subdir),
             agent,
             unavailable: BTreeSet::new(),
         }
@@ -1946,12 +1971,15 @@ impl IconCache {
         let Some(spec) = spec else {
             return Ok(None);
         };
-        let icon = parse_icon_spec(spec)?;
         if self.unavailable.contains(spec) {
             return Ok(None);
         }
+        if icon_spec_is_local_path(spec) {
+            return self.resolve_local(spec);
+        }
+        let icon = parse_icon_spec(spec)?;
         let path = self
-            .dir
+            .cache_dir
             .join(&icon.prefix)
             .join(format!("{}.svg", icon.name));
         if path.is_file() {
@@ -1961,7 +1989,7 @@ impl IconCache {
         }
 
         fs::create_dir_all(path.parent().unwrap())
-            .with_context(|| format!("failed to create icon cache {}", self.dir.display()))?;
+            .with_context(|| format!("failed to create icon cache {}", self.cache_dir.display()))?;
         let url = format!(
             "https://api.iconify.design/{}/{}.svg",
             icon.prefix, icon.name
@@ -1989,6 +2017,23 @@ impl IconCache {
         Ok(Some(svg))
     }
 
+    fn resolve_local(&mut self, spec: &str) -> Result<Option<String>> {
+        let requested = Path::new(spec.trim());
+        let absolute = if requested.is_absolute() {
+            requested.to_path_buf()
+        } else {
+            self.src_dir.join(requested)
+        };
+        let normalized = normalize_path(&absolute);
+        let src_dir = normalize_path(&self.src_dir);
+        normalized.strip_prefix(&src_dir).with_context(|| {
+            format!("local icon `{spec}` must stay inside the source directory")
+        })?;
+        let svg = fs::read_to_string(&normalized)
+            .with_context(|| format!("failed to read local icon {}", normalized.display()))?;
+        Ok(self.sanitized_or_warn(&svg, spec))
+    }
+
     fn sanitized_or_warn(&mut self, svg: &str, spec: &str) -> Option<String> {
         match sanitize_icon_svg(svg, spec) {
             Ok(svg) => Some(svg),
@@ -1999,6 +2044,11 @@ impl IconCache {
             }
         }
     }
+}
+
+fn icon_spec_is_local_path(spec: &str) -> bool {
+    let spec = spec.trim();
+    spec.ends_with(".svg") || spec.contains('/') || spec.contains('\\')
 }
 
 struct IconSpec {
@@ -2036,9 +2086,6 @@ fn valid_icon_component(value: &str) -> bool {
 fn sanitize_icon_svg(svg: &str, spec: &str) -> Result<String> {
     let svg = svg.trim();
     let lower = svg.to_ascii_lowercase();
-    // Icons are fetched from the trusted Iconify API after prefix/name
-    // validation. This denylist is intentionally scoped to that provenance; do
-    // not reuse it for arbitrary user-provided SVG.
     if !lower.starts_with("<svg")
         || !lower.contains("</svg>")
         || lower.contains("<script")
@@ -2153,29 +2200,30 @@ fn nav_from_plans(
         .collect()
 }
 
-fn navbar_from_plan(
-    plan: &NavbarPlan,
+fn menus_from_plan(
+    plan: &MenusPlan,
     page_meta: &PageMetaMap,
     page_info: &PageInfoMap,
     icon_cache: &mut IconCache,
-) -> Result<NavbarModel> {
-    Ok(NavbarModel {
-        left: navbar_items_from_plan(&plan.left, page_meta, page_info, icon_cache)?,
-        center: navbar_items_from_plan(&plan.center, page_meta, page_info, icon_cache)?,
-        right: navbar_items_from_plan(&plan.right, page_meta, page_info, icon_cache)?,
-    })
-}
-
-fn navbar_items_from_plan(
-    items: &[NavbarItemPlan],
-    page_meta: &PageMetaMap,
-    page_info: &PageInfoMap,
-    icon_cache: &mut IconCache,
-) -> Result<Vec<NavItemModel>> {
-    items
-        .iter()
-        .map(|item| nav_item_model(item, None, page_meta, page_info, icon_cache, "navbar"))
-        .collect()
+) -> Result<MenusModel> {
+    let mut menus = BTreeMap::new();
+    for (name, items) in &plan.items {
+        let entries = items
+            .iter()
+            .map(|item| {
+                nav_item_model(
+                    item,
+                    None,
+                    page_meta,
+                    page_info,
+                    icon_cache,
+                    &format!("menu `{name}`"),
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
+        menus.insert(name.clone(), entries);
+    }
+    Ok(MenusModel { items: menus })
 }
 
 fn nav_item_model(
@@ -4317,7 +4365,7 @@ filenames = ["atom.xml", "rss.xml"]
                     label_html: html_escape("Usage"),
                 }],
             }],
-            NavbarModel::default(),
+            MenusModel::default(),
             SiteMetadata {
                 title: Some("Example".to_string()),
                 description: None,
@@ -4365,7 +4413,7 @@ filenames = ["atom.xml", "rss.xml"]
                     },
                 ],
             }],
-            NavbarModel::default(),
+            MenusModel::default(),
             SiteMetadata::default(),
             true,
         );
@@ -4406,7 +4454,7 @@ filenames = ["atom.xml", "rss.xml"]
                 section("Guide", "guide/usage.html"),
                 section("Reference", "reference/cli.html"),
             ],
-            NavbarModel::default(),
+            MenusModel::default(),
             SiteMetadata::default(),
             true,
         );
@@ -4444,7 +4492,7 @@ filenames = ["atom.xml", "rss.xml"]
     fn theme_context_exposes_pagefind_assets_when_search_enabled() {
         let site = SiteModel::new(
             Vec::new(),
-            NavbarModel::default(),
+            MenusModel::default(),
             SiteMetadata::default(),
             true,
         );
@@ -4515,18 +4563,18 @@ title = "Start"
         .unwrap_err();
         assert!(sidebar_err.to_string().contains("unknown field `icon`"));
 
-        let navbar_err = try_website_config_from_toml(
+        let menu_err = try_website_config_from_toml(
             r#"
-[navbar]
+[menus]
 
-[[navbar.item]]
+[[menus.main]]
 target = "index.typ"
 label = "Home"
 icon = "home"
 "#,
         )
         .unwrap_err();
-        assert!(navbar_err.to_string().contains("unknown field `icon`"));
+        assert!(menu_err.to_string().contains("unknown field `icon`"));
     }
 
     #[test]
@@ -4542,11 +4590,13 @@ icon = "home"
                     path: Some(titled.clone()),
                     url: None,
                     configured_label: None,
+                    weight: None,
                 },
                 NavItemPlan {
                     path: Some(bare.clone()),
                     url: None,
                     configured_label: None,
+                    weight: None,
                 },
             ],
         }];
@@ -4561,7 +4611,7 @@ icon = "home"
         let files = vec![titled.clone(), bare.clone()];
         let page_info = test_page_info(src, &files, &BTreeSet::new());
         let icon_temp = tempfile::tempdir().unwrap();
-        let mut icon_cache = IconCache::new(icon_temp.path().join(".calepin/icons"));
+        let mut icon_cache = IconCache::new(icon_temp.path(), ICON_CACHE_DIR);
         let nav = nav_from_plans(&sections, &meta, &page_info, &mut icon_cache).unwrap();
 
         let labels = nav[0]
@@ -4573,39 +4623,169 @@ icon = "home"
     }
 
     #[test]
-    fn navbar_from_plan_expands_explicit_label_icon_tokens() {
+    fn menu_config_parses_named_menus_and_rejects_navbar() {
+        let config = website_config_from_toml(
+            r#"
+[menus]
+
+[[menus.main]]
+target = "index.typ"
+label = "Home"
+weight = 20
+
+[[menus.social]]
+target = "https://github.com/example/project"
+label = "{icon:github} GitHub"
+weight = 10
+"#,
+        );
+
+        assert_eq!(config.menus["main"][0].target.as_deref(), Some("index.typ"));
+        assert_eq!(config.menus["main"][0].label.as_deref(), Some("Home"));
+        assert_eq!(config.menus["main"][0].weight, Some(20));
+        assert_eq!(
+            config.menus["social"][0].target.as_deref(),
+            Some("https://github.com/example/project")
+        );
+
+        let err = try_website_config_from_toml(
+            r#"
+[navbar]
+
+[[navbar.item]]
+position = "right"
+target = "index.typ"
+"#,
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("unknown field `navbar`"));
+    }
+
+    #[test]
+    fn discover_menus_resolves_named_menus_and_orders_by_weight() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        fs::write(src.join("index.typ"), "= Home\n").unwrap();
+        fs::create_dir_all(src.join("guide")).unwrap();
+        fs::write(src.join("guide").join("usage.typ"), "= Usage\n").unwrap();
+        let menus = BTreeMap::from([
+            (
+                "main".to_string(),
+                vec![
+                    MenuItemConfig {
+                        target: Some("index.typ".to_string()),
+                        label: Some("Home".to_string()),
+                        weight: Some(20),
+                        ..MenuItemConfig::default()
+                    },
+                    MenuItemConfig {
+                        glob: Some("guide/*.typ".to_string()),
+                        weight: Some(10),
+                        ..MenuItemConfig::default()
+                    },
+                ],
+            ),
+            (
+                "social".to_string(),
+                vec![MenuItemConfig {
+                    target: Some("https://github.com/example/project".to_string()),
+                    label: Some("GitHub".to_string()),
+                    ..MenuItemConfig::default()
+                }],
+            ),
+        ]);
+
+        let (plan, files) = discover_menus(src, &menus, None).unwrap();
+
+        assert_eq!(
+            plan.items["main"][0].path.as_deref(),
+            Some(src.join("guide/usage.typ").as_path())
+        );
+        assert_eq!(
+            plan.items["main"][1].path.as_deref(),
+            Some(src.join("index.typ").as_path())
+        );
+        assert_eq!(
+            plan.items["social"][0].url.as_deref(),
+            Some("https://github.com/example/project")
+        );
+        assert_eq!(
+            files
+                .iter()
+                .map(|path| rel_posix(src, path))
+                .collect::<Vec<_>>(),
+            vec!["guide/usage.typ", "index.typ"]
+        );
+    }
+
+    #[test]
+    fn discover_menus_rejects_invalid_menu_names() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        let menus = BTreeMap::from([("Main Nav".to_string(), Vec::new())]);
+
+        let err = discover_menus(src, &menus, None).unwrap_err();
+
+        assert!(err.to_string().contains("invalid menu name `Main Nav`"));
+    }
+
+    #[test]
+    fn menus_from_plan_expands_label_icon_tokens_and_local_svg_paths() {
         let temp = tempfile::tempdir().unwrap();
         let src = temp.path();
         let home = src.join("index.typ");
         fs::write(&home, "= Home\n").unwrap();
-        let icon_path = src.join(".calepin/icons/lucide/home.svg");
+        let icon_path = src.join("assets/icons/home.svg");
         fs::create_dir_all(icon_path.parent().unwrap()).unwrap();
         fs::write(
             &icon_path,
             r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/></svg>"#,
         )
         .unwrap();
-        let plan = NavbarPlan {
-            left: vec![NavbarItemPlan {
-                path: Some(home.clone()),
-                url: None,
-                configured_label: Some("{icon:home} Home".to_string()),
-            }],
-            center: Vec::new(),
-            right: Vec::new(),
+        let plan = MenusPlan {
+            items: BTreeMap::from([(
+                "main".to_string(),
+                vec![MenuItemPlan {
+                    path: Some(home.clone()),
+                    url: None,
+                    configured_label: Some("{icon:assets/icons/home.svg} Home".to_string()),
+                    weight: None,
+                }],
+            )]),
         };
         let meta = PageMetaMap::new();
         let page_info = test_page_info(src, std::slice::from_ref(&home), &BTreeSet::new());
-        let mut icon_cache = IconCache::new(src.join(ICON_CACHE_DIR));
+        let mut icon_cache = IconCache::new(src, ICON_CACHE_DIR);
 
-        let nav = navbar_from_plan(&plan, &meta, &page_info, &mut icon_cache).unwrap();
+        let menus = menus_from_plan(&plan, &meta, &page_info, &mut icon_cache).unwrap();
 
-        assert_eq!(nav.left[0].label, "Home");
-        assert!(nav.left[0]
+        assert_eq!(menus.items["main"][0].label, "Home");
+        assert!(menus.items["main"][0]
             .label_html
             .contains(r#"<span class="calepin-nav-icon">"#));
-        assert!(nav.left[0].label_html.contains("viewBox=\"0 0 24 24\""));
-        assert!(nav.left[0].label_html.ends_with(" Home"));
+        assert!(menus.items["main"][0]
+            .label_html
+            .contains("viewBox=\"0 0 24 24\""));
+        assert!(menus.items["main"][0].label_html.ends_with(" Home"));
+    }
+
+    #[test]
+    fn local_icon_paths_must_stay_inside_source_directory_and_be_safe() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path();
+        let outside = temp.path().parent().unwrap().join("outside-icon.svg");
+        fs::write(&outside, r#"<svg viewBox="0 0 1 1"></svg>"#).unwrap();
+        let mut icon_cache = IconCache::new(src, ICON_CACHE_DIR);
+
+        let outside_err = nav_label_html("{icon:../outside-icon.svg}", &mut icon_cache)
+            .unwrap_err()
+            .to_string();
+        assert!(outside_err.contains("must stay inside the source directory"));
+
+        let unsafe_path = src.join("unsafe.svg");
+        fs::write(&unsafe_path, r#"<svg onload="alert(1)"></svg>"#).unwrap();
+        let unsafe_html = nav_label_html("{icon:unsafe.svg} Unsafe", &mut icon_cache).unwrap();
+        assert_eq!(unsafe_html, " Unsafe");
     }
 
     #[test]
@@ -4686,59 +4866,9 @@ icon = "home"
     }
 
     #[test]
-    fn discover_navbar_resolves_left_center_right_items() {
-        let temp = tempfile::tempdir().unwrap();
-        let src = temp.path();
-        fs::write(src.join("index.typ"), "= Home\n").unwrap();
-        fs::create_dir_all(src.join("guide")).unwrap();
-        fs::write(src.join("guide").join("usage.typ"), "= Usage\n").unwrap();
-        let navbar = NavbarConfig {
-            item: vec![
-                NavbarItemConfig {
-                    position: NavbarPosition::Left,
-                    target: Some("index.typ".to_string()),
-                    label: Some("Home".to_string()),
-                    ..NavbarItemConfig::default()
-                },
-                NavbarItemConfig {
-                    position: NavbarPosition::Center,
-                    glob: Some("guide/*.typ".to_string()),
-                    ..NavbarItemConfig::default()
-                },
-                NavbarItemConfig {
-                    position: NavbarPosition::Right,
-                    target: Some("https://github.com/example/project".to_string()),
-                    label: Some("GitHub".to_string()),
-                    ..NavbarItemConfig::default()
-                },
-            ],
-            ..NavbarConfig::default()
-        };
-
-        let (plan, files) = discover_navbar(src, &navbar, None).unwrap();
-
-        assert_eq!(plan.left.len(), 1);
-        assert_eq!(plan.center.len(), 1);
-        assert_eq!(plan.right.len(), 1);
-        assert_eq!(
-            plan.right[0].url.as_deref(),
-            Some("https://github.com/example/project")
-        );
-        assert_eq!(
-            files
-                .iter()
-                .map(|path| rel_posix(src, path))
-                .collect::<Vec<_>>(),
-            vec!["index.typ", "guide/usage.typ"]
-        );
-    }
-
-    #[test]
-    fn navbar_config_rejects_unknown_item_fields() {
-        let err = toml::from_str::<NavbarConfig>(
+    fn menu_config_rejects_unknown_item_fields() {
+        let err = toml::from_str::<MenuItemConfig>(
             r#"
-            [[item]]
-            position = "right"
             behavior = "theme"
             "#,
         )
@@ -4748,47 +4878,60 @@ icon = "home"
     }
 
     #[test]
-    fn discover_navbar_rejects_target_combined_with_glob() {
+    fn discover_menus_rejects_target_combined_with_glob() {
         let temp = tempfile::tempdir().unwrap();
         let src = temp.path();
         fs::write(src.join("index.typ"), "= Home\n").unwrap();
-        let navbar = NavbarConfig {
-            item: vec![NavbarItemConfig {
+        let menus = BTreeMap::from([(
+            "main".to_string(),
+            vec![MenuItemConfig {
                 target: Some("https://example.com".to_string()),
                 glob: Some("*.typ".to_string()),
-                ..NavbarItemConfig::default()
+                ..MenuItemConfig::default()
             }],
-            ..NavbarConfig::default()
-        };
+        )]);
 
-        let err = discover_navbar(src, &navbar, None).unwrap_err();
+        let err = discover_menus(src, &menus, None).unwrap_err();
 
         assert!(err
             .to_string()
-            .contains("navbar target items cannot also set glob"));
+            .contains("menu `main` target items cannot also set glob"));
     }
 
     #[test]
-    fn navbar_from_plan_uses_page_metadata_and_external_labels() {
+    fn menus_from_plan_uses_page_metadata_and_external_labels() {
         let src = Path::new("/site/docs");
         let home = PathBuf::from("/site/docs/index.typ");
         let usage = PathBuf::from("/site/docs/guide/usage.typ");
-        let plan = NavbarPlan {
-            left: vec![NavbarItemPlan {
-                path: Some(home.clone()),
-                url: None,
-                configured_label: Some("Home".to_string()),
-            }],
-            center: vec![NavbarItemPlan {
-                path: Some(usage.clone()),
-                url: None,
-                configured_label: None,
-            }],
-            right: vec![NavbarItemPlan {
-                path: None,
-                url: Some("https://example.com".to_string()),
-                configured_label: Some("External".to_string()),
-            }],
+        let plan = MenusPlan {
+            items: BTreeMap::from([
+                (
+                    "main".to_string(),
+                    vec![
+                        MenuItemPlan {
+                            path: Some(home.clone()),
+                            url: None,
+                            configured_label: Some("Home".to_string()),
+                            weight: None,
+                        },
+                        MenuItemPlan {
+                            path: Some(usage.clone()),
+                            url: None,
+                            configured_label: None,
+                            weight: None,
+                        },
+                    ],
+                ),
+                (
+                    "social".to_string(),
+                    vec![MenuItemPlan {
+                        path: None,
+                        url: Some("https://example.com".to_string()),
+                        configured_label: Some("External".to_string()),
+                        weight: None,
+                    }],
+                ),
+            ]),
         };
         let meta = PageMetaMap::from([(
             usage.clone(),
@@ -4800,40 +4943,50 @@ icon = "home"
         let page_info = test_page_info(src, &[home, usage], &BTreeSet::new());
 
         let icon_temp = tempfile::tempdir().unwrap();
-        let mut icon_cache = IconCache::new(icon_temp.path().join(".calepin/icons"));
-        let navbar = navbar_from_plan(&plan, &meta, &page_info, &mut icon_cache).unwrap();
+        let mut icon_cache = IconCache::new(icon_temp.path(), ICON_CACHE_DIR);
+        let menus = menus_from_plan(&plan, &meta, &page_info, &mut icon_cache).unwrap();
 
-        assert_eq!(navbar.left[0].href, "index.html");
-        assert_eq!(navbar.left[0].label, "Home");
-        assert_eq!(navbar.center[0].href, "guide/usage.html");
-        assert_eq!(navbar.center[0].label, "Usage Guide");
-        assert_eq!(navbar.right[0].href, "https://example.com");
-        assert_eq!(navbar.right[0].label, "External");
+        assert_eq!(menus.items["main"][0].href, "index.html");
+        assert_eq!(menus.items["main"][0].label, "Home");
+        assert_eq!(menus.items["main"][1].href, "guide/usage.html");
+        assert_eq!(menus.items["main"][1].label, "Usage Guide");
+        assert_eq!(menus.items["social"][0].href, "https://example.com");
+        assert_eq!(menus.items["social"][0].label, "External");
     }
 
     #[test]
-    fn theme_context_exposes_relative_navbar_regions() {
+    fn theme_context_exposes_relative_named_menus() {
         let site = SiteModel::new(
             Vec::new(),
-            NavbarModel {
-                left: vec![NavItemModel {
-                    language: None,
-                    href: "index.html".to_string(),
-                    label: "Home".to_string(),
-                    label_html: html_escape("Home"),
-                }],
-                center: vec![NavItemModel {
-                    language: None,
-                    href: "guide/usage.html".to_string(),
-                    label: "Usage".to_string(),
-                    label_html: html_escape("Usage"),
-                }],
-                right: vec![NavItemModel {
-                    language: None,
-                    href: "https://example.com".to_string(),
-                    label: "External".to_string(),
-                    label_html: html_escape("External"),
-                }],
+            MenusModel {
+                items: BTreeMap::from([
+                    (
+                        "main".to_string(),
+                        vec![
+                            NavItemModel {
+                                language: None,
+                                href: "index.html".to_string(),
+                                label: "Home".to_string(),
+                                label_html: html_escape("Home"),
+                            },
+                            NavItemModel {
+                                language: None,
+                                href: "guide/usage.html".to_string(),
+                                label: "Usage".to_string(),
+                                label_html: html_escape("Usage"),
+                            },
+                        ],
+                    ),
+                    (
+                        "social".to_string(),
+                        vec![NavItemModel {
+                            language: None,
+                            href: "https://example.com".to_string(),
+                            label: "External".to_string(),
+                            label_html: html_escape("External"),
+                        }],
+                    ),
+                ]),
             },
             SiteMetadata::default(),
             true,
@@ -4841,14 +4994,16 @@ icon = "home"
 
         let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None, None);
 
-        assert_eq!(context.navbar_left[0].href, "../index.html");
-        assert_eq!(context.navbar_center[0].href, "usage.html");
-        assert!(context.navbar_center[0].active);
-        assert_eq!(context.navbar_right[0].href, "https://example.com");
+        assert_eq!(context.menus["main"][0].href, "../index.html");
+        assert_eq!(context.menus["main"][1].href, "usage.html");
+        assert!(context.menus["main"][1].active);
+        assert_eq!(context.menus["social"][0].href, "https://example.com");
+        assert_eq!(context.menu_list[0].name, "main");
+        assert_eq!(context.menu_list[1].name, "social");
     }
 
     #[test]
-    fn theme_context_filters_navbar_page_links_by_language() {
+    fn theme_context_filters_menu_page_links_by_language() {
         let en = PathBuf::from("/site/docs/index.typ");
         let fr = PathBuf::from("/site/docs/fr/index.typ");
         let page_info = PageInfoMap::from([
@@ -4873,28 +5028,35 @@ icon = "home"
         ]);
         let site = SiteModel::new(
             Vec::new(),
-            NavbarModel {
-                left: vec![
-                    NavItemModel {
-                        language: Some("en".to_string()),
-                        href: "index.html".to_string(),
-                        label: "Home".to_string(),
-                        label_html: html_escape("Home"),
-                    },
-                    NavItemModel {
-                        language: Some("fr".to_string()),
-                        href: "fr/index.html".to_string(),
-                        label: "Accueil".to_string(),
-                        label_html: html_escape("Accueil"),
-                    },
-                ],
-                center: Vec::new(),
-                right: vec![NavItemModel {
-                    language: None,
-                    href: "https://example.com".to_string(),
-                    label: "External".to_string(),
-                    label_html: html_escape("External"),
-                }],
+            MenusModel {
+                items: BTreeMap::from([
+                    (
+                        "main".to_string(),
+                        vec![
+                            NavItemModel {
+                                language: Some("en".to_string()),
+                                href: "index.html".to_string(),
+                                label: "Home".to_string(),
+                                label_html: html_escape("Home"),
+                            },
+                            NavItemModel {
+                                language: Some("fr".to_string()),
+                                href: "fr/index.html".to_string(),
+                                label: "Accueil".to_string(),
+                                label_html: html_escape("Accueil"),
+                            },
+                        ],
+                    ),
+                    (
+                        "social".to_string(),
+                        vec![NavItemModel {
+                            language: None,
+                            href: "https://example.com".to_string(),
+                            label: "External".to_string(),
+                            label_html: html_escape("External"),
+                        }],
+                    ),
+                ]),
             },
             SiteMetadata::default(),
             true,
@@ -4903,11 +5065,11 @@ icon = "home"
         let context =
             site.theme_context("fr/index.html", page_info.get(&fr), &page_info, None, None);
 
-        assert_eq!(context.navbar_left.len(), 1);
-        assert_eq!(context.navbar_left[0].label, "Accueil");
-        assert_eq!(context.navbar_left[0].href, "index.html");
-        assert_eq!(context.navbar_right.len(), 1);
-        assert_eq!(context.navbar_right[0].href, "https://example.com");
+        assert_eq!(context.menus["main"].len(), 1);
+        assert_eq!(context.menus["main"][0].label, "Accueil");
+        assert_eq!(context.menus["main"][0].href, "index.html");
+        assert_eq!(context.menus["social"].len(), 1);
+        assert_eq!(context.menus["social"][0].href, "https://example.com");
     }
 
     #[test]

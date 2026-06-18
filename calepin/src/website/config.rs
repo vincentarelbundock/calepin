@@ -36,7 +36,7 @@ pub(super) struct WebsiteConfig {
     pub(super) pages: Option<PagesConfig>,
     #[serde(rename = "static")]
     pub(super) static_files: Option<StaticConfig>,
-    pub(super) navbar: Option<NavbarConfig>,
+    pub(super) menus: BTreeMap<String, Vec<MenuItemConfig>>,
     pub(super) sidebar: Option<SidebarConfig>,
 }
 
@@ -155,28 +155,12 @@ pub(super) struct StaticConfig {
     pub(super) exclude: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default)]
-pub(super) struct NavbarConfig {
-    pub(super) show_hidden: bool,
-    pub(super) item: Vec<NavbarItemConfig>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 #[serde(default, deny_unknown_fields)]
-pub(super) struct NavbarItemConfig {
-    pub(super) position: NavbarPosition,
+pub(super) struct MenuItemConfig {
     #[serde(alias = "path", alias = "url")]
     pub(super) target: Option<String>,
     pub(super) glob: Option<String>,
     pub(super) label: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub(super) enum NavbarPosition {
-    #[default]
-    Left,
-    Center,
-    Right,
+    pub(super) weight: Option<i32>,
 }

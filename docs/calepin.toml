@@ -17,15 +17,11 @@ filenames = ["atom.xml", "rss.xml"]
 [static]
 include = ["assets/**", "index.typ"]
 
-[navbar]
-
-[[navbar.item]]
-position = "right"
+[[menus.main]]
 target = "getting-started/install.typ"
 label = "Documentation"
 
-[[navbar.item]]
-position = "right"
+[[menus.social]]
 target = "https://github.com/vincentarelbundock/calepin"
 label = "{icon:github}"
 

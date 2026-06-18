@@ -104,9 +104,8 @@ Templates can access:
 - `doc.title`
 - `site.sidebar`
 - `site.sidebar_sections`
-- `site.navbar_left`
-- `site.navbar_center`
-- `site.navbar_right`
+- `site.menus`
+- `site.menu_list`
 - `site.languages`
 - `site.translations`
 - `site.language`
@@ -127,6 +126,10 @@ Templates can access:
 - `target`
 
 Navigation entries expose `href`, `label`, `label_html`, and `active`.
+`site.menus` is a map from menu name to navigation entries, such as
+`site.menus.main` and `site.menus.social`. `site.menu_list` contains the same
+menus as `{ name, items }` records for themes that need to iterate over every
+configured menu.
 
 Here is a minimal `layouts/notebook.html` for single-file HTML output:
 
@@ -201,7 +204,7 @@ page-specific layout, or another partial:
 
 Partials receive the same template context as the file that includes them, so a
 partial included by `layouts/webpage.html` can read `site.title`,
-`site.navbar_left`, `styles`, `scripts`, and the other website template
+`site.menus`, `styles`, `scripts`, and the other website template
 variables.
 
 For example, `partials/site-header.html` can render the brand and top
@@ -222,12 +225,12 @@ navigation:
           {% endif %}
         </a>
       </li>
-      {% for item in site.navbar_left %}
+      {% for item in site.menus.main %}
       {% include "partials/nav-item.html" %}
       {% endfor %}
     </ul>
     <ul>
-      {% for item in site.navbar_right %}
+      {% for item in site.menus.social %}
       {% include "partials/nav-item.html" %}
       {% endfor %}
     </ul>

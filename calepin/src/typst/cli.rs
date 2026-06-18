@@ -326,6 +326,9 @@ mod tests {
 
         assert!(site.join("calepin.toml").exists());
         let config = std::fs::read_to_string(site.join("calepin.toml")).unwrap();
+        assert!(config.contains("[[menus.main]]"));
+        assert!(config.contains("[[menus.social]]"));
+        assert!(!config.contains("[navbar]"));
         assert!(config
             .contains(r#"target = "https://scholar.google.com/citations?user=RKN66-kAAAAJ&hl""#));
         assert!(config.contains(r#"label = "{icon:simple-icons:googlescholar}""#));

@@ -17,19 +17,12 @@
                         {% endif %}
                     </a>
                 </li>
-                {% for item in site.navbar_left %}
+                {% for item in site.menus.main %}
                 {% include "partials/navbar-item.html" %}
                 {% endfor %}
             </ul>
-            {% if site.navbar_center %}
-            <ul class="calepin-website-navbar-center">
-                {% for item in site.navbar_center %}
-                {% include "partials/navbar-item.html" %}
-                {% endfor %}
-            </ul>
-            {% endif %}
             <ul>
-                {% for item in site.navbar_right %}
+                {% for item in site.menus.social %}
                 {% include "partials/navbar-item.html" %}
                 {% endfor %}
                 <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>

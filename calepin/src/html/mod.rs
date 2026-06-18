@@ -11,7 +11,7 @@ use std::path::PathBuf;
 pub(crate) use minify::minify_html_file;
 pub(crate) use syntax::HtmlSyntaxTheme;
 pub(crate) use theme::{
-    SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
+    SiteContextInput, SiteLanguageEntry, SiteMenu, SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
 
 /// Read `path`, transform its contents, and write the result back only when it
@@ -166,6 +166,7 @@ mod minify_tests {
 mod tests {
     use super::*;
     use crate::theme::{resolve_html_entry, HtmlEntry, HtmlScope, ThemeSelection};
+    use std::collections::BTreeMap;
 
     const SAMPLE_HTML: &str = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1></body></html>";
 
@@ -448,14 +449,17 @@ mod tests {
     }
 
     #[test]
-    fn bundled_themes_render_navbar_links_theme_toggle_and_language_picker() {
+    fn bundled_themes_render_menu_links_theme_toggle_and_language_picker() {
         let site_context = SiteContextInput {
-            navbar_left: vec![SiteNavEntry {
-                href: "about.html".to_string(),
-                label: "About".to_string(),
-                label_html: "About".to_string(),
-                active: true,
-            }],
+            menus: BTreeMap::from([(
+                "main".to_string(),
+                vec![SiteNavEntry {
+                    href: "about.html".to_string(),
+                    label: "About".to_string(),
+                    label_html: "About".to_string(),
+                    active: true,
+                }],
+            )]),
             languages: vec![
                 SiteLanguageEntry {
                     code: "en".to_string(),
@@ -491,7 +495,7 @@ mod tests {
 
             assert!(
                 themed.contains(r#"href="about.html" aria-label="About""#),
-                "{theme_name}: missing navbar page link"
+                "{theme_name}: missing menu page link"
             );
             assert!(
                 themed.contains("data-calepin-theme-toggle"),
@@ -533,12 +537,15 @@ mod tests {
     #[test]
     fn bundled_themes_hide_language_picker_for_single_language_sites() {
         let site_context = SiteContextInput {
-            navbar_right: vec![SiteNavEntry {
-                href: String::new(),
-                label: "Language".to_string(),
-                label_html: "Language".to_string(),
-                active: false,
-            }],
+            menus: BTreeMap::from([(
+                "social".to_string(),
+                vec![SiteNavEntry {
+                    href: String::new(),
+                    label: "Language".to_string(),
+                    label_html: "Language".to_string(),
+                    active: false,
+                }],
+            )]),
             languages: vec![SiteLanguageEntry {
                 code: "en".to_string(),
                 label: "English".to_string(),
@@ -618,12 +625,15 @@ mod tests {
     #[test]
     fn academic_site_theme_omits_toc_and_sidebar_nav_links() {
         let site_context = SiteContextInput {
-            navbar_left: vec![SiteNavEntry {
-                href: "about.html".to_string(),
-                label: "About".to_string(),
-                label_html: "About".to_string(),
-                active: false,
-            }],
+            menus: BTreeMap::from([(
+                "main".to_string(),
+                vec![SiteNavEntry {
+                    href: "about.html".to_string(),
+                    label: "About".to_string(),
+                    label_html: "About".to_string(),
+                    active: false,
+                }],
+            )]),
             sidebar_sections: vec![sidebar_section("Guide", "guide.html", false)],
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),

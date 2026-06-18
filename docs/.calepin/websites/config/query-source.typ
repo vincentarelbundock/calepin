@@ -203,37 +203,46 @@ Titled sections are foldable: each page loads with the section that contains it 
 fold = false
 ```
 
-Sidebar icons are configured separately from labels:
+== Site menus
+
+Use `[menus]` for named navigation groups. Menu names describe what the links
+mean; themes decide where to render them. The bundled themes understand
+`main`, `social`, and `footer`. Custom themes can use any additional menu name.
 
 ```toml
-[[sidebar.section.item]]
-target = "install.typ"
-icon = "lucide:download"
-```
-
-If the prefix is omitted, _Calepin_ uses `lucide`, so `icon = "home"` means `icon = "lucide:home"`. Icons are downloaded during the build and cached under `.calepin/icons/`.
-
-Icon prefixes are Iconify collection names. Search available icons in the #link("https://icon-sets.iconify.design/")[Iconify icon sets] browser. Common prefixes include `lucide`, `simple-icons`, `tabler`, `heroicons`, `material-symbols`, `carbon`, `ph`, and `bi`.
-
-== Top bar
-
-Use `[navbar]` for a small top navigation bar. External links, such as a GitHub repository, are regular navbar items:
-
-```toml
-[navbar]
-
-[[navbar.item]]
-position = "left"
+[[menus.main]]
 target = "index.typ"
 label = "Home"
+weight = 10
 
-[[navbar.item]]
-position = "right"
+[[menus.social]]
 target = "https://github.com/user/repo"
 label = "{icon:github} GitHub"
 ```
 
-Navbar items use `target` or `glob`. Use a `.typ` `target` or `glob` for internal source pages; use any other `target` for external links or a literal already-rendered URL. `position` can be `left`, `center`, or `right`.
+Menu items use `target` or `glob`. Use a `.typ` `target` or `glob` for internal
+source pages; use any other `target` for external links or a literal
+already-rendered URL. Omit `label` for internal pages to use the page metadata
+title, document title, or filename stem.
+
+Use `weight` to control ordering within one menu. Lower weights appear first.
+Items without weights keep their config order after weighted items.
+
+Labels can include Iconify icons with `{icon:...}`. If the prefix is omitted,
+_Calepin_ uses `lucide`, so `{icon:github}` means `{icon:lucide:github}`.
+Icon prefixes are Iconify collection names. Search available icons in the
+#link("https://icon-sets.iconify.design/")[Iconify icon sets] browser.
+
+Local SVG icons are also supported with source-relative paths:
+
+```toml
+[[menus.social]]
+target = "https://example.com/project"
+label = "{icon:assets/icons/project.svg} Project"
+```
+
+Local icon paths must stay inside the website source directory. _Calepin_
+sanitizes local and downloaded SVGs before inlining them.
 
 = Include or exclude pages
 

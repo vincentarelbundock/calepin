@@ -80,12 +80,6 @@ calepin watch docs docs --serve --open
 calepin watch my_site public --serve --host 127.0.0.1 --port 8001
 ```
 
-Stop a running watch from the same project:
-
-```sh
-calepin stop paper.typ
-```
-
 == PDF viewer auto-refresh
 <pdf-viewer-auto-refresh>
 

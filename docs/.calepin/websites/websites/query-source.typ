@@ -18,7 +18,7 @@ This creates a website source directory with enough structure to exercise the bu
 - `my_site/calepin.toml`: the site configuration file, where you set the title, base URL, navigation, theme, and output options.
 - `my_site/index.typ`: the home page source file, which builds to `index.html`.
 - `my_site/404.typ`: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.
-- `my_site/about.typ`, `my_site/guide/*.typ`, and `my_site/fr/*.typ`: regular pages in two languages, with navbar and sidebar entries.
+- `my_site/about.typ`, `my_site/guide/*.typ`, and `my_site/fr/*.typ`: regular pages in two languages, with site menu and sidebar entries.
 - `my_site/blog.typ` and `my_site/posts/*.typ`: a small blog index and post source files using `calepin.pages()`.
 
 The `--theme` value selects the scaffold to create. Use `--theme academic` for
@@ -90,7 +90,7 @@ calepin watch my_site/ my_site/ --serve --open
 
 - Directory builds from Typst source files.
 - In-place or separate output directories.
-- Sidebar and navbar navigation from configuration or discovered pages.
+- Sidebar and site menu navigation from configuration or discovered pages.
 - HTML output with optional PDF twins.
 - Page metadata and `calepin.pages()` for listings and indexes.
 - Multilingual site navigation.
