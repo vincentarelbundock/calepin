@@ -56,7 +56,6 @@ pub struct PreprocessOptions {
 pub struct PreprocessOutput {
     pub layout: LayoutPaths,
     pub executables: ExecutablePaths,
-    pub fingerprint: u64,
     pub theme: crate::theme::ThemeSelection,
 }
 
@@ -77,13 +76,12 @@ pub struct PreprocessPlan {
     theme: crate::theme::ThemeSelection,
 }
 
-pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
-    let plan = prepare_preprocess_plan(options)?;
-    execute_preprocess_plan(plan)
-}
-
 pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput> {
     let plan = prepare_preprocess_plan(options)?;
+    preprocess_cached_plan(plan)
+}
+
+pub fn preprocess_cached_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
     if preprocess_plan_cache_hit(&plan)? {
         return refresh_cached_preprocess_output(plan);
     }
@@ -102,7 +100,6 @@ pub fn preprocess_cached_output(plan: PreprocessPlan) -> PreprocessOutput {
     PreprocessOutput {
         layout: plan.layout,
         executables: plan.executables,
-        fingerprint: plan.fingerprint,
         theme: plan.theme,
     }
 }
@@ -352,7 +349,6 @@ pub fn execute_preprocess_plan_with_chunk_progress(
     Ok(PreprocessOutput {
         layout: plan.layout,
         executables: plan.executables,
-        fingerprint: plan.fingerprint,
         theme: plan.theme,
     })
 }
@@ -854,6 +850,48 @@ mod tests {
         std::fs::write(&layout.results_path, "{}\n").unwrap();
         assert!(preprocess_cache_hit(&layout, 0x2a).unwrap());
         assert!(!preprocess_cache_hit(&layout, 0x2b).unwrap());
+    }
+
+    #[test]
+    fn preprocess_cached_plan_reuses_matching_cache() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+        let fingerprint = 0x2a;
+        let chunk = test_chunk("print(1)");
+        let results = build_results_document(
+            &layout.input_rel,
+            vec![crate::typst::model::ChunkResultDocument {
+                label: chunk.label.clone(),
+                engine: chunk.engine.clone(),
+                status: crate::typst::model::ChunkStatus::Ok,
+                display_options: chunk.display_options.clone(),
+                items: Vec::new(),
+                crossref_labels: chunk.crossref_labels.clone(),
+            }],
+        );
+        write_results(&layout.results_path, &results).unwrap();
+        write_preprocess_fingerprint(&layout, fingerprint).unwrap();
+        let mut executables = ExecutablePaths::defaults();
+        executables.python = PathBuf::from("/no/such/python");
+
+        let output = preprocess_cached_plan(PreprocessPlan {
+            layout,
+            executables,
+            fingerprint,
+            chunks: vec![chunk],
+            cwd: dir.path().to_path_buf(),
+            timeout: None,
+            quiet: true,
+            status: false,
+            progress: false,
+            sync_pages: false,
+            display_root: None,
+            params: serde_json::json!({}),
+            theme: crate::theme::ThemeSelection::Default,
+        })
+        .unwrap();
+
+        assert_eq!(output.layout.input_rel, PathBuf::from("paper.typ"));
     }
 
     #[test]

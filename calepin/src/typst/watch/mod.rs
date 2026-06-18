@@ -16,8 +16,7 @@ use crate::typst::compile::{
     reject_reserved_typst_inputs, resolve_output_path, typst_watch_args, ReservedInputs,
 };
 use crate::typst::preprocess::{
-    execute_preprocess_plan, prepare_preprocess_plan, preprocess, refresh_cached_preprocess_output,
-    PreprocessOptions,
+    prepare_preprocess_plan, preprocess_cached, preprocess_cached_plan, PreprocessOptions,
 };
 use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
@@ -47,7 +46,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let sync_pages = format.as_deref().unwrap_or("pdf") == "pdf";
     reject_reserved_typst_inputs(&args.typst_args)?;
 
-    let initial = preprocess(preprocess_options(&args, sync_pages))?;
+    let initial = preprocess_cached(preprocess_options(&args, sync_pages))?;
 
     let stop = Arc::new(AtomicBool::new(false));
     let stop_for_handler = Arc::clone(&stop);
@@ -129,7 +128,6 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let quiet = args.common.quiet;
     let watcher = thread::spawn(move || {
         let options = preprocess_options(&watcher_args, sync_pages);
-        let mut last_fingerprint = initial.fingerprint;
         let result = watcher::watch_root(
             &watcher_root,
             &watcher_output,
@@ -137,12 +135,6 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
             Arc::clone(&watcher_stop),
             move |changed| match prepare_preprocess_plan(options.clone()) {
                 Ok(plan) => {
-                    if plan.fingerprint == last_fingerprint && plan.layout.results_path.exists() {
-                        if let Err(error) = refresh_cached_preprocess_output(plan) {
-                            cwarn!("rebuild failed: {}", error);
-                        }
-                        return;
-                    }
                     if !quiet {
                         let names = changed
                             .iter()
@@ -152,10 +144,8 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
                             .join(", ");
                         eprintln!("rebuilding {names}...");
                     }
-                    match execute_preprocess_plan(plan) {
-                        Ok(output) => {
-                            last_fingerprint = output.fingerprint;
-                        }
+                    match preprocess_cached_plan(plan) {
+                        Ok(_) => {}
                         Err(error) => {
                             cwarn!("rebuild failed: {}", error);
                         }
