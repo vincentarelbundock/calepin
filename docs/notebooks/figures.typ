@@ -20,9 +20,12 @@ Any chunk that produces a plot is shown as a figure. Nothing extra is required:
 plot(mpg ~ hp, data = mtcars)
 ```
 
+`ggplot2` works the same way:
+
 ```r
-library(ggplot2)
-ggplot(mtcars, aes(hp, mpg)) + geom_point()
+suppressPackageStartupMessages(suppressWarnings(library(ggplot2)))
+ggplot(mtcars, aes(hp, mpg)) +
+  geom_point()
 ```
 
 == Captions and labels

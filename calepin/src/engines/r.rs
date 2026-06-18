@@ -301,6 +301,7 @@ calepin.preamble <- function(text) {
               # Then emit visible return value
               if (.val$visible) {
                 r <- capture.output(print(.val$value))
+                .calepin_note_plot_change()
                 if (length(r) > 0) {
                   if (plot_pending_before) .calepin_emit_plot_pending()
                   if (!has_output) {
@@ -434,6 +435,14 @@ mod tests {
     fn has_rscript() -> bool {
         Command::new("Rscript")
             .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+
+    fn has_ggplot2() -> bool {
+        Command::new("Rscript")
+            .args(["-e", "suppressWarnings(library(ggplot2))"])
             .output()
             .map(|output| output.status.success())
             .unwrap_or(false)
@@ -593,6 +602,33 @@ summary(m)"#,
         let mut session = session();
         let raw = session
             .capture("plot(1:3)", &fig_path, "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(std::path::Path::new(&fig_path).exists());
+        assert!(raw.contains("_PLOT:"), "{raw}");
+        assert!(raw.contains(&fig_path), "{raw}");
+    }
+
+    #[test]
+    fn r_session_captures_visible_ggplot_return_as_plot() {
+        if !has_rscript() || !has_ggplot2() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("ggplot.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture(
+                r#"suppressWarnings(library(ggplot2))
+ggplot(mtcars, aes(hp, mpg)) + geom_point()"#,
+                &fig_path,
+                "svg",
+                6.0,
+                3.708,
+                150.0,
+            )
             .unwrap();
 
         assert!(std::path::Path::new(&fig_path).exists());
