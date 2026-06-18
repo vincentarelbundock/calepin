@@ -12,6 +12,15 @@ pub(super) fn prepare_source(code: &str) -> Cow<'_, str> {
         return Cow::Borrowed(code);
     }
 
+    if let Some(body_start) = code.find("\\begin{tikzpicture}") {
+        let (preamble, body) = code.split_at(body_start);
+        return Cow::Owned(format!(
+            "\\documentclass{{standalone}}\n\\usepackage{{tikz}}\n\\usepackage{{amsmath}}\n{}\n\\begin{{document}}\n{}\n\\end{{document}}\n",
+            preamble.trim_end(),
+            body.trim_start()
+        ));
+    }
+
     let mut preamble = Vec::new();
     let mut body = Vec::new();
     for line in code.lines() {
@@ -163,6 +172,20 @@ printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$2"
         assert!(document.contains("\\usetikzlibrary{arrows.meta}"));
         assert!(document.contains("\\begin{document}"));
         assert!(document.contains("\\begin{tikzpicture}"));
+    }
+
+    #[test]
+    fn keeps_multiline_setup_before_document_body() {
+        let document = prepare_source(
+            "\\tikzset{\n  >=stealth',\n  punkt/.style={rectangle, draw=black}\n}\n\\begin{tikzpicture}\n\\draw (0,0) -- (1,1);\n\\end{tikzpicture}",
+        );
+        let (preamble, body) = document
+            .split_once("\\begin{document}")
+            .expect("wrapped document should have a document body");
+
+        assert!(preamble.contains("punkt/.style={rectangle, draw=black}"));
+        assert!(body.contains("\\begin{tikzpicture}"));
+        assert!(!body.contains("punkt/.style={rectangle, draw=black}"));
     }
 
     #[test]
