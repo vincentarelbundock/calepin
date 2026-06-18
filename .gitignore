@@ -68,3 +68,5 @@ _site/
 .uv-cache
 .agents
 .DS_Store
+# roborev snapshots
+/.roborev/
