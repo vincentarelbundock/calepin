@@ -2234,11 +2234,10 @@ fn nav_item_model(
 fn build_pages_index(
     src_dir: &Path,
     typ_files: &[PathBuf],
-    sections: &[NavSectionPlan],
+    _sections: &[NavSectionPlan],
     page_meta: &PageMetaMap,
     page_info: &PageInfoMap,
 ) -> serde_json::Value {
-    let configured_titles = page_index_configured_titles(sections);
     let entries = typ_files
         .iter()
         .filter(|path| path.file_name().and_then(|name| name.to_str()) != Some(FALLBACK_PAGE))
@@ -2246,7 +2245,6 @@ fn build_pages_index(
             let meta = page_meta.get(path);
             let title = meta
                 .and_then(|meta| meta.title.clone())
-                .or_else(|| configured_titles.get(path).cloned())
                 .unwrap_or_else(|| stem_label(path));
             let raw = meta
                 .map(|meta| meta.raw.clone())
@@ -2265,22 +2263,6 @@ fn build_pages_index(
         })
         .collect::<Vec<_>>();
     serde_json::Value::Array(entries)
-}
-
-fn page_index_configured_titles(sections: &[NavSectionPlan]) -> BTreeMap<PathBuf, String> {
-    let mut titles = BTreeMap::new();
-    for section in sections {
-        for item in &section.items {
-            let (Some(path), Some(label)) = (
-                &item.path,
-                clean_optional_string(item.configured_label.as_deref()),
-            ) else {
-                continue;
-            };
-            titles.entry(path.clone()).or_insert(label);
-        }
-    }
-    titles
 }
 
 fn page_translations_json(path: &Path, page_info: &PageInfoMap) -> serde_json::Value {
@@ -5044,15 +5026,7 @@ icon = "home"
         let home = PathBuf::from("/site/docs/index.typ");
         let fallback = PathBuf::from("/site/docs/404.typ");
         let typ_files = vec![fallback, post.clone(), home.clone()];
-        let sections = vec![NavSectionPlan {
-            language: None,
-            title: None,
-            items: vec![NavItemPlan {
-                path: Some(home.clone()),
-                url: None,
-                configured_label: Some("Home".to_string()),
-            }],
-        }];
+        let sections = Vec::new();
         let raw = serde_json::json!({"title": "First Post", "date": "2026-06-10"});
         let meta = PageMetaMap::from([(post.clone(), page_meta_from_value(&raw))]);
         let pdf_files = BTreeSet::from([post.clone()]);
@@ -5067,7 +5041,7 @@ icon = "home"
         assert_eq!(entries[0]["title"], "First Post");
         assert_eq!(entries[0]["pdf"], "blog/first.pdf");
         assert_eq!(entries[0]["meta"], raw);
-        assert_eq!(entries[1]["title"], "Home");
+        assert_eq!(entries[1]["title"], "index");
         assert_eq!(entries[1]["pdf"], serde_json::Value::Null);
         assert_eq!(entries[1]["meta"], serde_json::json!({}));
     }
