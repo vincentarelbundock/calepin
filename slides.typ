@@ -6,7 +6,7 @@
 
 #show: simple-theme.with(aspect-ratio: "16-9")
 
-#show raw.where(block: true): set text(size: .5em)
+#show raw.where(block: true): set text(size: .8em)
 
 #title-slide[
   #calepin.setup(
@@ -14,36 +14,37 @@
     eval: true,
     results: "render",
   )
-
   Calepin results in Touying
 ]
 
 == Calepin results in Touying
 
-Run Python on one slide, then place the output exactly where the presentation
-needs it.
+Run Python on one slide, then place the output exactly where the presentation needs it.
+
+```python
+print("Hello, Touying!")
+```
 
 == Output in the next column
 
 #grid(
   columns: (1fr, 1fr),
   gutter: 1.2em,
-  [
-    #calepin.chunk("python", label: "column-summary", results: "hidden")[
+[
+=== Column 1: Code goes here
+#calepin.chunk("python", label: "column-summary", results: "hidden")[
 ```python
 values = [2, 3, 5, 8, 13]
 total = sum(values)
-print(f"n = {len(values)}")
-print(f"sum = {total}")
-print(f"mean = {total / len(values):.1f}")
+print(f"Total = {total}")
 ```
-    ]
-  ],
-  [
-    #strong[Relocated output]
+]
+],
 
-    #calepin.results("column-summary")
-  ],
+[
+=== Column 2: Output appears here
+#calepin.results("column-summary")
+],
 )
 
 == Compute now, show later
