@@ -10,55 +10,13 @@
 
 #title()
 
-_Calepin_ runs the code in your document and renders the results in place. The simplest way to run code is a fenced block named after its language.
+This page is the reference for controlling how _Calepin_ runs chunks and displays their output. If you are starting from scratch, read #link("notebooks.html")[Notebooks] first for the basic document structure, runtime import, code chunks, and inline results.
 
-= Code blocks
+= Execution model
 
-Write an ordinary Typst fenced block and name it after a language. _Calepin_ runs the block and shows its output below the source:
+_Calepin_ collects executable chunks before Typst renders the document, runs them, writes their results to `.calepin`, and then asks Typst to render with those results available. Each programming language runs in a persistent session for the duration of the document build, so objects created in one chunk are available in later chunks with the same engine.
 
-````typ
-```python
-print(40 + 2)
-```
-````
-
-```python
-print(40 + 2)
-```
-
-Each language runs in a persistent session, so a variable set in one block is available in later blocks:
-
-````typ
-```python
-x = 41
-```
-
-```python
-print(x + 1)
-```
-````
-
-```python
-x = 41
-```
-
-```python
-print(x + 1)
-```
-
-= Inline code
-
-An inline expression drops a computed value into a sentence. Use `#calepin.inline(...)`, usually through a short alias:
-
-````typ
-#let py = calepin.inline.with("python")
-
-The answer is #py[`print(40 + 2)`].
-````
-
-#let py = calepin.inline.with("python")
-
-The answer is #py[`print(40 + 2)`].
+Use chunk options when you need to change what runs, what is shown, or where the output appears.
 
 = Output elsewhere
 
