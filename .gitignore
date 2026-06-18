@@ -2,6 +2,7 @@ target/
 calepin/target
 Cargo.lock
 pagefind/
+.DS_Store
 
 __pycache__
 .claude
