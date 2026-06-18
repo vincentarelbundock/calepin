@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.16",
+  "calepin_version": "0.0.17",
   "input": "index.typ",
   "chunks": {}
 }

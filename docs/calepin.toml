@@ -52,6 +52,9 @@ title = "Getting started"
 title = "Notebooks"
 
   [[sidebar.section.item]]
+  target = "notebooks/notebooks.typ"
+
+  [[sidebar.section.item]]
   target = "notebooks/code_execution.typ"
 
   [[sidebar.section.item]]
@@ -64,7 +67,7 @@ title = "Notebooks"
   target = "notebooks/parameters.typ"
 
   [[sidebar.section.item]]
-  target = "notebooks/example.typ"
+  target = "notebooks/diagrams.typ"
 
 [[sidebar.section]]
 title = "Websites"

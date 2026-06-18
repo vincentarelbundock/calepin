@@ -63,15 +63,15 @@
     "translations": {}
   },
   {
-    "href": "notebooks/example.html",
+    "href": "notebooks/diagrams.html",
     "language": null,
     "meta": {
-      "title": "Example notebook"
+      "title": "Diagrams"
     },
-    "path": "notebooks/example.typ",
-    "pdf": "notebooks/example.pdf",
-    "title": "Example notebook",
-    "translation_key": "notebooks/example",
+    "path": "notebooks/diagrams.typ",
+    "pdf": "notebooks/diagrams.pdf",
+    "title": "Diagrams",
+    "translation_key": "notebooks/diagrams",
     "translations": {}
   },
   {
@@ -82,6 +82,18 @@
     "pdf": "notebooks/figures.pdf",
     "title": "Figures and tables",
     "translation_key": "notebooks/figures",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/notebooks.html",
+    "language": null,
+    "meta": {
+      "title": "Notebooks"
+    },
+    "path": "notebooks/notebooks.typ",
+    "pdf": "notebooks/notebooks.pdf",
+    "title": "Notebooks",
+    "translation_key": "notebooks/notebooks",
     "translations": {}
   },
   {
