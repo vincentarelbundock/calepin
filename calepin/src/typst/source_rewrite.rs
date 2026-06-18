@@ -14,6 +14,11 @@ pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
         .with_context(|| format!("failed to read {}", layout.input.display()))?;
     reject_preview_calepin_imports(&source)?;
     let staged = rewrite_calepin_imports(&source);
+    let staged = if staged.contains("#calepin_runtime.chunk_from_raw_plain(") {
+        format!("#import \"{RUNTIME_IMPORT}\" as calepin_runtime\n{staged}")
+    } else {
+        staged
+    };
     let staged_path = layout.root.join(&staged_relative);
 
     write_if_changed(&staged_path, staged)?;
@@ -106,6 +111,7 @@ fn preview_import_candidate_suggestion(candidate: &str) -> Option<(String, &str)
 fn rewrite_calepin_imports(source: &str) -> String {
     let mut out = String::with_capacity(source.len());
     let mut raw_block: Option<RawBlock> = None;
+    let mut parse_state = TypstParseState::default();
 
     for segment in source.split_inclusive('\n') {
         let (line, newline) = segment
@@ -128,9 +134,12 @@ fn rewrite_calepin_imports(source: &str) -> String {
                 fence_len,
                 lang: lang.map(str::to_string),
                 segments: vec![segment.to_string()],
+                in_calepin_chunk: parse_state.in_calepin_chunk(),
             });
         } else {
-            out.push_str(&rewrite_calepin_imports_in_line(line));
+            let rewritten = rewrite_calepin_imports_in_line(line);
+            parse_state.scan_line(&rewritten);
+            out.push_str(&rewritten);
             out.push_str(newline);
         }
     }
@@ -145,6 +154,154 @@ struct RawBlock {
     fence_len: usize,
     lang: Option<String>,
     segments: Vec<String>,
+    in_calepin_chunk: bool,
+}
+
+#[derive(Default)]
+struct TypstParseState {
+    brackets: Vec<BracketContext>,
+    paren_depth: usize,
+    pending_chunk_call: Option<PendingChunkCall>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BracketContext {
+    Plain,
+    CalepinChunk,
+}
+
+#[derive(Clone, Copy)]
+struct PendingChunkCall {
+    target_paren_depth: usize,
+    state: PendingChunkCallState,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PendingChunkCallState {
+    AwaitingArgsOrBody,
+    InArgs,
+    ReadyForBody,
+}
+
+impl TypstParseState {
+    fn in_calepin_chunk(&self) -> bool {
+        self.brackets
+            .iter()
+            .any(|context| *context == BracketContext::CalepinChunk)
+    }
+
+    fn scan_line(&mut self, line: &str) {
+        let mut chars = line.char_indices().peekable();
+        while let Some((idx, ch)) = chars.next() {
+            if ch == '/' && chars.peek().is_some_and(|(_, next)| *next == '/') {
+                break;
+            }
+
+            if ch == '"' {
+                let mut escaped = false;
+                for (_, inner) in chars.by_ref() {
+                    if escaped {
+                        escaped = false;
+                    } else if inner == '\\' {
+                        escaped = true;
+                    } else if inner == '"' {
+                        break;
+                    }
+                }
+                continue;
+            }
+
+            if chunk_call_match_len(&line[idx..]).is_some() {
+                self.pending_chunk_call = Some(PendingChunkCall {
+                    target_paren_depth: self.paren_depth,
+                    state: PendingChunkCallState::AwaitingArgsOrBody,
+                });
+            }
+
+            match ch {
+                '(' => {
+                    if let Some(pending) = self.pending_chunk_call.as_mut() {
+                        if pending.state == PendingChunkCallState::AwaitingArgsOrBody
+                            && self.paren_depth == pending.target_paren_depth
+                        {
+                            pending.state = PendingChunkCallState::InArgs;
+                        }
+                    }
+                    self.paren_depth += 1;
+                }
+                ')' => {
+                    self.paren_depth = self.paren_depth.saturating_sub(1);
+                    if let Some(pending) = self.pending_chunk_call.as_mut() {
+                        if pending.state == PendingChunkCallState::InArgs
+                            && self.paren_depth == pending.target_paren_depth
+                        {
+                            pending.state = PendingChunkCallState::ReadyForBody;
+                        }
+                    }
+                }
+                '[' => {
+                    let is_chunk_body = self.pending_chunk_call.is_some_and(|pending| {
+                        pending.state == PendingChunkCallState::AwaitingArgsOrBody
+                            || pending.state == PendingChunkCallState::ReadyForBody
+                    });
+                    self.brackets.push(if is_chunk_body {
+                        self.pending_chunk_call = None;
+                        BracketContext::CalepinChunk
+                    } else {
+                        BracketContext::Plain
+                    });
+                }
+                ']' => {
+                    self.brackets.pop();
+                }
+                _ if !ch.is_whitespace()
+                    && self.pending_chunk_call.is_some_and(|pending| {
+                        pending.state == PendingChunkCallState::ReadyForBody
+                    }) =>
+                {
+                    self.pending_chunk_call = None;
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+fn chunk_call_match_len(input: &str) -> Option<usize> {
+    let rest = input.strip_prefix('#')?;
+    let first_len = identifier_len(rest);
+    if first_len == 0 {
+        return None;
+    }
+    let mut consumed = 1 + first_len;
+    let mut tail = &rest[first_len..];
+    let mut last = &rest[..first_len];
+    while let Some(after_dot) = tail.strip_prefix('.') {
+        let part_len = identifier_len(after_dot);
+        if part_len == 0 {
+            return None;
+        }
+        consumed += 1 + part_len;
+        last = &after_dot[..part_len];
+        tail = &after_dot[part_len..];
+    }
+    if last != "chunk" || tail.starts_with('.') || tail.chars().next().is_some_and(is_ident_char) {
+        return None;
+    }
+    Some(consumed)
+}
+
+fn identifier_len(input: &str) -> usize {
+    input
+        .char_indices()
+        .take_while(|(_, ch)| is_ident_char(*ch))
+        .last()
+        .map(|(idx, ch)| idx + ch.len_utf8())
+        .unwrap_or(0)
+}
+
+fn is_ident_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || ch == '_' || ch == '-'
 }
 
 fn opening_fence(trimmed_line: &str) -> Option<(usize, Option<&str>)> {
@@ -175,18 +332,28 @@ fn leading_backtick_count(value: &str) -> usize {
 }
 
 fn rewrite_raw_block(mut block: RawBlock) -> String {
-    if !is_executable_label_candidate_lang(block.lang.as_deref()) {
+    let should_rewrite_as_chunk =
+        !block.in_calepin_chunk && is_source_rewritten_chunk_lang(block.lang.as_deref());
+    if !should_rewrite_as_chunk && !is_executable_label_candidate_lang(block.lang.as_deref()) {
         return block.segments.concat();
     }
+    let had_trailing_label = rewrite_trailing_fence_label(&mut block, should_rewrite_as_chunk);
+    if should_rewrite_as_chunk {
+        return rewrite_raw_block_as_chunk_from_raw_plain(&block, had_trailing_label);
+    }
+    block.segments.concat()
+}
+
+fn rewrite_trailing_fence_label(block: &mut RawBlock, rewrite_plain_labels: bool) -> bool {
     let Some(last) = block.segments.last() else {
-        return String::new();
+        return false;
     };
     let (line, newline) = split_segment(last);
     let Some((prefix, label)) = trailing_fence_label(line) else {
-        return block.segments.concat();
+        return false;
     };
-    if !is_routed_crossref_label(label) {
-        return block.segments.concat();
+    if !rewrite_plain_labels && !is_routed_crossref_label(label) {
+        return false;
     }
     let label = label.to_string();
 
@@ -199,15 +366,57 @@ fn rewrite_raw_block(mut block: RawBlock) -> String {
     let last_index = block.segments.len() - 1;
     block.segments[last_index] = closing;
 
-    let mut out = String::with_capacity(block.segments.concat().len() + label.len() + 16);
-    out.push_str(&block.segments[0]);
-    out.push_str("#| label: ");
-    out.push_str(&qmd_string_literal(&label));
-    out.push('\n');
-    for segment in block.segments.iter().skip(1) {
-        out.push_str(segment);
+    block
+        .segments
+        .insert(1, format!("#| label: {}\n", qmd_string_literal(&label)));
+    true
+}
+
+fn rewrite_raw_block_as_chunk_from_raw_plain(block: &RawBlock, had_trailing_label: bool) -> String {
+    let Some(lang) = block.lang.as_deref() else {
+        return block.segments.concat();
+    };
+    let code = if block.segments.len() > 2 {
+        block.segments[1..block.segments.len() - 1].concat()
+    } else {
+        String::new()
+    };
+    let label_metadata = if had_trailing_label {
+        String::new()
+    } else {
+        trailing_label_metadata(&block.segments)
+            .map(|label| {
+                format!(
+                    " #metadata((label: {})) <calepin-fence-label>",
+                    qmd_string_literal(label)
+                )
+            })
+            .unwrap_or_default()
+    };
+    format!(
+        "#calepin_runtime.chunk_from_raw_plain({}, raw({}, block: true, lang: {})){}\n",
+        qmd_string_literal(lang),
+        qmd_string_literal(&code),
+        qmd_string_literal(lang),
+        label_metadata
+    )
+}
+
+fn trailing_label_metadata(segments: &[String]) -> Option<&str> {
+    let last = segments.last()?;
+    let (line, _) = split_segment(last);
+    let (_, label) = trailing_fence_label(line)?;
+    Some(label)
+}
+
+fn is_source_rewritten_chunk_lang(raw_lang: Option<&str>) -> bool {
+    let Some(lang) = raw_lang else {
+        return false;
+    };
+    if matches!(lang, "typ" | "typst") {
+        return false;
     }
-    out
+    matches!(lang, "python" | "r") || crate::engines::diagram::is_known_diagram_engine_name(lang)
 }
 
 fn split_segment(segment: &str) -> (&str, &str) {
@@ -411,12 +620,35 @@ mod tests {
     fn rewrites_routed_executable_fence_label_to_qmd_header() {
         let source = "```r\nplot(1)\n```<fig-plot>\n";
         let rewritten = rewrite_calepin_imports(source);
-        assert_eq!(rewritten, "```r\n#| label: \"fig-plot\"\nplot(1)\n```\n");
+        assert_eq!(
+            rewritten,
+            "#calepin_runtime.chunk_from_raw_plain(\"r\", raw(\"#| label: \\\"fig-plot\\\"\\nplot(1)\\n\", block: true, lang: \"r\"))\n"
+        );
     }
 
     #[test]
     fn leaves_unrouted_and_typst_fence_labels_for_strict_query_validation() {
         let source = "```r\nplot(1)\n```<plot>\n```typ\n#strong[x]\n```<fig-typ>\n";
+        let rewritten = rewrite_calepin_imports(source);
+        assert_eq!(
+            rewritten,
+            "#calepin_runtime.chunk_from_raw_plain(\"r\", raw(\"#| label: \\\"plot\\\"\\nplot(1)\\n\", block: true, lang: \"r\"))\n```typ\n#strong[x]\n```<fig-typ>\n"
+        );
+    }
+
+    #[test]
+    fn rewrites_bare_executable_fences_to_chunk_calls() {
+        let source = "Before\n```python\nprint(\"x\")\n```\nAfter\n";
+        let rewritten = rewrite_calepin_imports(source);
+        assert_eq!(
+            rewritten,
+            "Before\n#calepin_runtime.chunk_from_raw_plain(\"python\", raw(\"print(\\\"x\\\")\\n\", block: true, lang: \"python\"))\nAfter\n"
+        );
+    }
+
+    #[test]
+    fn does_not_wrap_raw_blocks_inside_explicit_chunks() {
+        let source = "#calepin.chunk(\"python\")[\n```python\nprint(\"x\")\n```\n]\n";
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(rewritten, source);
     }

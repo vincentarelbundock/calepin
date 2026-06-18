@@ -550,6 +550,70 @@ plt.plot([1, 2, 3], [1, 4, 9])
 }
 
 #[test]
+fn compile_runs_bare_fences_with_document_raw_show_rule() {
+    if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#show raw.where(block: true): set text(size: .5em)
+
+#calepin.setup(echo: false, results: "verbatim")
+
+```python
+print("BARE_RAW_SHOW_12345")
+```
+
+#calepin.chunk("python", echo: false, results: "verbatim")[
+```python
+print("EXPLICIT_RAW_SHOW_12345")
+```
+]
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let staged = std::fs::read_to_string(dir.path().join(".calepin/paper/source.typ")).unwrap();
+    assert_eq!(
+        staged
+            .matches("#calepin_runtime.chunk_from_raw_plain(\"python\"")
+            .count(),
+        1,
+        "only the bare fence should be rewritten:\n{staged}"
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .expect("failed to run pdftotext");
+    assert!(text.status.success());
+    let extracted = String::from_utf8(text.stdout).unwrap();
+    assert!(extracted.contains("BARE_RAW_SHOW_12345"), "{extracted}");
+    assert!(extracted.contains("EXPLICIT_RAW_SHOW_12345"), "{extracted}");
+    assert!(
+        !extracted.contains("print(\"BARE_RAW_SHOW_12345\")"),
+        "{extracted}"
+    );
+}
+
+#[test]
 fn compile_renders_inline_output_in_surrounding_text() {
     if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
         return;

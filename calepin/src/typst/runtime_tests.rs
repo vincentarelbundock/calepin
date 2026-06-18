@@ -532,6 +532,74 @@ print("RESULT_12345")
     );
 }
 
+fn svg_path_heights(svg: &str, fill: &str) -> Vec<f64> {
+    let needle = format!(r#"<path fill="{fill}" fill-rule="nonzero" d=""#);
+    let mut heights = Vec::new();
+    for part in svg.split(&needle).skip(1) {
+        let Some(path) = part.split('"').next() else {
+            continue;
+        };
+        if let Some((_, after_v)) = path.split_once("v ") {
+            if let Some(value) = after_v.split_whitespace().next() {
+                let value = value.trim_end_matches(|ch: char| {
+                    !(ch.is_ascii_digit() || matches!(ch, '.' | '-' | '+'))
+                });
+                if let Ok(height) = value.parse::<f64>() {
+                    heights.push(height.abs());
+                }
+            }
+        }
+    }
+    heights
+}
+
+#[test]
+fn typst_compile_raw_size_applies_to_rewritten_and_explicit_chunks() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.svg");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#set page(width: 420pt, height: 220pt, margin: 16pt)
+#set text(size: 20pt)
+#show raw.where(block: true): set text(size: .5em)
+
+#calepin.setup(fenced-chunks: true, echo: true)
+
+#calepin.chunk_from_raw_plain("python", raw("print(\"rewritten\")\n", block: true, lang: "python"))
+
+#calepin.chunk("python", label: "explicit")[
+```python
+print("explicit")
+```
+]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    let svg = std::fs::read_to_string(&output).unwrap();
+    let input_heights = svg_path_heights(&svg, "#f7f7f5");
+    assert_eq!(
+        input_heights.len(),
+        2,
+        "expected two Calepin input code cells in SVG: {svg}"
+    );
+    assert_eq!(
+        input_heights[0], input_heights[1],
+        "bare and explicit chunks should use the same input cell height: {input_heights:?}"
+    );
+    assert!(
+        input_heights.iter().all(|height| *height < 28.0),
+        "raw text sizing should reduce both input cells: {input_heights:?}"
+    );
+}
+
 #[test]
 fn typst_compile_echo_strips_qmd_header_lines() {
     skip_if_no_typst!();

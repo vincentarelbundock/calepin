@@ -175,10 +175,7 @@
 
 #let _results-hidden(mode) = mode in ("hide", "hidden")
 
-#let _raw-block(value, lang: none, theme: auto) = {
-  show raw.where(block: true): set text(size: 1em)
-  raw(value, block: true, lang: lang, theme: theme)
-}
+#let _raw-block(value, lang: none, theme: auto) = raw(value, block: true, lang: lang, theme: theme)
 
 #let code-block(
   body,

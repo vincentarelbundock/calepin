@@ -64,7 +64,7 @@ fn runtime_facade_source() -> Result<String> {
 #let chunk = chunks.chunk
 #let inline = chunks.inline
 #let results = chunks.results
-#let chunk-from-raw-plain = chunks.chunk-from-raw-plain
+#let chunk_from_raw_plain = chunks.chunk_from_raw_plain
 #let code-block = render.code-block
 #let elements = elementmod
 

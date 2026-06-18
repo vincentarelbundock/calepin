@@ -264,7 +264,7 @@
   }
 }
 
-#let chunk-from-raw-plain(engine, it) = {
+#let chunk_from_raw_plain(engine, it) = context {
   let defaults = _resolve-options(engine, _call-defaults)
   if _fenced-chunks-runs(engine, defaults.at("fenced-chunks")) {
     _emit-chunk(engine, it, ..defaults)

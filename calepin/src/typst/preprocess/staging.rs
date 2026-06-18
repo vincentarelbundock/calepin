@@ -110,7 +110,7 @@ fn typst_string(value: &str) -> String {
 
 fn raw_show_rule(lang: &str) -> String {
     format!(
-        "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ chunk-from-raw-plain(\"{lang}\", it) }}\n"
+        "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ chunk_from_raw_plain(\"{lang}\", it) }}\n"
     )
 }
 

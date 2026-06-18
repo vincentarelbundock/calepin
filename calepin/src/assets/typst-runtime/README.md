@@ -24,7 +24,7 @@ do not share scope across modules.
 7. `assets/typst-runtime/notebook/options.typ`
    - `setup()` plus full option resolution (`_setup-options`, `_resolve-options`)
 8. `assets/typst-runtime/notebook/chunk.typ`
-    - Public chunking API (`chunk`, `inline`, `chunk-from-raw-plain`)
+    - Public chunking API (`chunk`, `inline`, `chunk_from_raw_plain`)
     - Query/render dispatch (`_emit-chunk`), label handling, raw-block interception
 
 9. `assets/typst-runtime/elements/mod.typ`
