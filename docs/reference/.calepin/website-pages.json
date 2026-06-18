@@ -133,26 +133,40 @@
     "translations": {}
   },
   {
-    "href": "websites/config.html",
+    "href": "websites/configuration.html",
     "language": null,
     "meta": {
       "title": "Configuration"
     },
-    "path": "websites/config.typ",
-    "pdf": "websites/config.pdf",
+    "path": "websites/configuration.typ",
+    "pdf": "websites/configuration.pdf",
     "title": "Configuration",
-    "translation_key": "websites/config",
+    "translation_key": "websites/configuration",
+    "translations": {}
+  },
+  {
+    "href": "websites/custom-elements.html",
+    "language": null,
+    "meta": {
+      "pdf": false,
+      "title": "Custom elements"
+    },
+    "path": "websites/custom-elements.typ",
+    "pdf": null,
+    "title": "Custom elements",
+    "translation_key": "websites/custom-elements",
     "translations": {}
   },
   {
     "href": "websites/elements.html",
     "language": null,
     "meta": {
-      "pdf": false
+      "pdf": false,
+      "title": "Elements"
     },
     "path": "websites/elements.typ",
     "pdf": null,
-    "title": "Re-useable elements",
+    "title": "Elements",
     "translation_key": "websites/elements",
     "translations": {}
   },
@@ -166,6 +180,42 @@
     "pdf": "websites/health.pdf",
     "title": "Health",
     "translation_key": "websites/health",
+    "translations": {}
+  },
+  {
+    "href": "websites/multilingual.html",
+    "language": null,
+    "meta": {
+      "title": "Multilingual"
+    },
+    "path": "websites/multilingual.typ",
+    "pdf": "websites/multilingual.pdf",
+    "title": "Multilingual",
+    "translation_key": "websites/multilingual",
+    "translations": {}
+  },
+  {
+    "href": "websites/navigation.html",
+    "language": null,
+    "meta": {
+      "title": "Navigation"
+    },
+    "path": "websites/navigation.typ",
+    "pdf": "websites/navigation.pdf",
+    "title": "Navigation",
+    "translation_key": "websites/navigation",
+    "translations": {}
+  },
+  {
+    "href": "websites/pages.html",
+    "language": null,
+    "meta": {
+      "title": "Pages"
+    },
+    "path": "websites/pages.typ",
+    "pdf": "websites/pages.pdf",
+    "title": "Pages",
+    "translation_key": "websites/pages",
     "translations": {}
   },
   {

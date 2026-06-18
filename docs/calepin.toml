@@ -72,12 +72,22 @@ title = "Websites"
   target = "websites/websites.typ"
 
   [[sidebar.section.item]]
-  target = "websites/config.typ"
+  target = "websites/configuration.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/navigation.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/pages.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/multilingual.typ"
 
   [[sidebar.section.item]]
   target = "websites/elements.typ"
 
-
+  [[sidebar.section.item]]
+  target = "websites/custom-elements.typ"
 
 [[sidebar.section]]
 title = "More"

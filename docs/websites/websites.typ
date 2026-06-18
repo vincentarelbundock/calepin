@@ -44,7 +44,7 @@ calepin compile my_site/ public/
 
 When the input path is a directory, _Calepin_ looks for `calepin.toml` at the root of that directory. An explicit `--config <path>` supersedes the automatic lookup; if no config is found either way, the build fails.
 
-By default, website pages render to HTML. Configure PDF output and page selection in #link("config.html")[Site configuration].
+By default, website pages render to HTML. Configure PDF output and site settings in #link("configuration.html")[Site configuration].
 
 = Serve
 
