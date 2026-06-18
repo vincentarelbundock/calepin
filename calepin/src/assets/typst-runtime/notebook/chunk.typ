@@ -3,7 +3,7 @@
 #import "../core/state.typ": _raw-node, _raw-text, _sync-auto-label-counter
 #import "../core/state.typ": _relocate-opts
 #import "../core/target.typ": _is-query
-#import "render.typ": _html-themed-raw-block, _input-block, _render-results
+#import "render.typ": _html-themed-raw-block, _input-block, _render-results, _results-hidden
 #import "options.typ": _resolve-options
 
 
@@ -232,9 +232,9 @@
     } else if results-path == "" {
       _input-block(code, lang: engine)
     }
-    // `results: "hide"` runs the chunk but renders nothing here; the output can
-    // still be shown elsewhere with `#calepin.results(label)`.
-    if results-path != "" and results-mode != "hide" {
+    // `results: "hide"`/`"hidden"` runs the chunk but renders nothing here; the
+    // output can still be shown elsewhere with `#calepin.results(label)`.
+    if results-path != "" and not _results-hidden(results-mode) {
       _render-results(label, options, anchor: true)
     }
   }
@@ -316,9 +316,9 @@
 }
 
 // Render a chunk's output at this location instead of (or in addition to) the
-// chunk's own position. Pair it with `results: "hide"` on the chunk to move the
-// output elsewhere. The label is given positionally (`calepin.results("foo")`)
-// or named (`calepin.results(label: "foo")`).
+// chunk's own position. Pair it with `results: "hide"` or `results: "hidden"`
+// on the chunk to move the output elsewhere. The label is given positionally
+// (`calepin.results("foo")`) or named (`calepin.results(label: "foo")`).
 //
 // A cross-reference anchor (a `fig-`/`tbl-`/`lst-` label) lives wherever the
 // figure is shown: at the chunk's own position when it is visible, and here when
@@ -354,7 +354,7 @@
         }
         // The anchor follows the figure: attach it here only when the source
         // chunk is hidden (and so renders nothing at its own position).
-        let hidden = opts.at("results", default: "render") == "hide"
+        let hidden = _results-hidden(opts.at("results", default: "render"))
         _render-results(label, opts, anchor: hidden)
       }
     }

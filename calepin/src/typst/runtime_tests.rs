@@ -1285,6 +1285,49 @@ Nothing should appear from the chunk.
 }
 
 #[test]
+fn typst_compile_hidden_results_alias_suppresses_inline_output() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+    write_stream_results(dir.path(), "greeting", "ALIAS_12345");
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", label: "greeting", echo: true, results: "hidden")[`
+pass
+`]
+
+The result appears only at the relocation:
+
+#calepin.results("greeting")
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+    let extracted = pdf_text(&output);
+    let count = extracted.matches("ALIAS_12345").count();
+    assert_eq!(count, 1, "expected relocated output once: {extracted}");
+    assert!(
+        extracted.contains("pass"),
+        "expected visible source: {extracted}"
+    );
+}
+
+#[test]
 fn typst_compile_relocates_output_twice() {
     skip_if_no_typst!();
     if Command::new("pdftotext").arg("-v").output().is_err() {

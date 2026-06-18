@@ -173,6 +173,8 @@
   }
 }
 
+#let _results-hidden(mode) = mode in ("hide", "hidden")
+
 #let _raw-block(value, lang: none, theme: auto) = {
   show raw.where(block: true): set text(size: 1em)
   raw(value, block: true, lang: lang, theme: theme)
@@ -572,7 +574,7 @@
   let item-type = item.at("type", default: "")
   if item-type == "stream" {
     let text = item.at("text", default: "")
-    if results-mode == "hide" {
+    if _results-hidden(results-mode) {
       none
     } else if results-mode == "typst" {
       eval(text, mode: "markup")
@@ -613,7 +615,7 @@
   // `results: "hide"` only suppresses a chunk's own inline render. Reaching
   // `_render-results` at all (e.g. through a `#calepin.results` relocation)
   // means the output should be shown here.
-  if opts.at("results", default: "render") == "hide" {
+  if _results-hidden(opts.at("results", default: "render")) {
     opts.insert("results", "render")
   }
   let fig-labels = if anchor { _crossref-labels-for(chunk, "fig") } else { () }

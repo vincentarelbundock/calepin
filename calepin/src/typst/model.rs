@@ -84,7 +84,7 @@ impl ResultsMode {
             "verbatim" => Ok(Self::Verbatim),
             "render" => Ok(Self::Render),
             "typst" => Ok(Self::Typst),
-            "hide" => Ok(Self::Hide),
+            "hide" | "hidden" => Ok(Self::Hide),
             other => Err(anyhow::anyhow!("unsupported results mode `{}`", other)),
         }
     }
@@ -451,6 +451,11 @@ mod tests {
             let engine = EngineName::parse(name).unwrap();
             assert_eq!(engine.as_str(), name);
         }
+    }
+
+    #[test]
+    fn parses_hidden_results_mode_alias() {
+        assert_eq!(ResultsMode::parse("hidden").unwrap(), ResultsMode::Hide);
     }
 
     #[test]
