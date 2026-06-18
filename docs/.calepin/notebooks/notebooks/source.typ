@@ -1,9 +1,6 @@
 #import "/.calepin/calepin.typ" as calepin
 
-#set document(
-  title: [#emph[Calepin]: Computational notebooks in Typst],
-)
-#metadata((title: "Notebooks")) <website-metadata>
+#set document(title: [Notebooks])
 
 #calepin.setup(
   echo: true,

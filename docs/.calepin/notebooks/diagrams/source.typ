@@ -1,7 +1,6 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Diagrams])
-#metadata((title: "Diagrams")) <website-metadata>
 
 #calepin.setup(
   echo: true,

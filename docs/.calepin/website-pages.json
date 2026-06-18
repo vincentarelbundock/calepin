@@ -65,9 +65,7 @@
   {
     "href": "notebooks/diagrams.html",
     "language": null,
-    "meta": {
-      "title": "Diagrams"
-    },
+    "meta": {},
     "path": "notebooks/diagrams.typ",
     "pdf": "notebooks/diagrams.pdf",
     "title": "Diagrams",
@@ -87,9 +85,7 @@
   {
     "href": "notebooks/notebooks.html",
     "language": null,
-    "meta": {
-      "title": "Notebooks"
-    },
+    "meta": {},
     "path": "notebooks/notebooks.typ",
     "pdf": "notebooks/notebooks.pdf",
     "title": "Notebooks",
