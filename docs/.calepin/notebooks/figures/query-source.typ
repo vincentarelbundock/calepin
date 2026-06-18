@@ -19,7 +19,9 @@ Any chunk that produces a plot is shown as a figure. Nothing extra is required:
 
 #calepin_runtime.chunk_from_raw_plain("r", raw("plot(mpg ~ hp, data = mtcars)\n", block: true, lang: "r"))
 
-#calepin_runtime.chunk_from_raw_plain("r", raw("library(ggplot2)\nggplot(mtcars, aes(hp, mpg)) + geom_point()\n", block: true, lang: "r"))
+`ggplot2` works the same way:
+
+#calepin_runtime.chunk_from_raw_plain("r", raw("suppressPackageStartupMessages(suppressWarnings(library(ggplot2)))\nggplot(mtcars, aes(hp, mpg)) +\n  geom_point()\n", block: true, lang: "r"))
 
 == Captions and labels
 

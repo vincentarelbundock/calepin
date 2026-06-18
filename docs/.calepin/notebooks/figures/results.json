@@ -64,9 +64,12 @@
       },
       "items": [
         {
-          "type": "diagnostic",
-          "text": "package ‘ggplot2’ was built under R version 4.5.2",
-          "level": "warning"
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/figures/figures/chunk-2.svg"
+            }
+          }
         }
       ]
     },
