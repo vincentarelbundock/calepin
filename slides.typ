@@ -14,25 +14,29 @@
     eval: true,
     results: "render",
   )
-  Calepin results in Touying
+  _Calepin_: Code execution in Touying slides
 ]
 
-== Calepin results in Touying
-
-Run Python on one slide, then place the output exactly where the presentation needs it.
+== Print from Python
 
 ```python
 print("Hello, Touying!")
 ```
 
-== Output in the next column
+== Plot from R
 
-#grid(
-  columns: (1fr, 1fr),
-  gutter: 1.2em,
-[
-=== Column 1: Code goes here
-#calepin.chunk("python", label: "column-summary", results: "hidden")[
+```r
+#| fig-width: 50%
+plot(mpg ~ hp, data = mtcars)
+```
+
+== Compute in one column; show in another
+
+Use the `results: "hidden"` option to keep the output hidden from the code location, then call it later with `calepin.results(label)` in the other column.
+
+#grid(columns: (1fr, 1fr), gutter: .4em, [
+=== Column 1: Code here
+#calepin.chunk("python", label: "summary2", results: "hidden")[
 ```python
 values = [2, 3, 5, 8, 13]
 total = sum(values)
@@ -42,19 +46,18 @@ print(f"Total = {total}")
 ],
 
 [
-=== Column 2: Output appears here
-#calepin.results("column-summary")
+=== Column 2: Output here
+#calepin.results("summary2")
 ],
 )
 
-== Compute now, show later
+== Compute in one slide; show in another
 
 #calepin.chunk("python", label: "next-slide-claim", results: "hidden")[
 ```python
 baseline = 120
 current = 156
 change = (current - baseline) / baseline
-print(f"Current value: {current}")
 print(f"Change from baseline: {change:.0%}")
 ```
 ]
@@ -66,4 +69,6 @@ this slide.
 
 #calepin.results("next-slide-claim")
 
-The same label can be reused anywhere the deck needs that computed result.
+The same label can be reused multiple times, anywhere in the deck.
+
+#calepin.results("next-slide-claim")
