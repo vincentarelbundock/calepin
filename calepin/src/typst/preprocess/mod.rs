@@ -85,11 +85,7 @@ pub fn preprocess(options: PreprocessOptions) -> Result<PreprocessOutput> {
 pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput> {
     let plan = prepare_preprocess_plan(options)?;
     if preprocess_plan_cache_hit(&plan)? {
-        refresh_cached_results_metadata(&plan.layout.results_path, &plan.chunks)?;
-        if !plan.quiet && plan.status {
-            eprintln!("[cache] {}", display_input(&plan));
-        }
-        return Ok(preprocess_cached_output(plan));
+        return refresh_cached_preprocess_output(plan);
     }
     execute_preprocess_plan(plan)
 }
@@ -109,6 +105,14 @@ pub fn preprocess_cached_output(plan: PreprocessPlan) -> PreprocessOutput {
         fingerprint: plan.fingerprint,
         theme: plan.theme,
     }
+}
+
+pub fn refresh_cached_preprocess_output(plan: PreprocessPlan) -> Result<PreprocessOutput> {
+    refresh_cached_results_metadata(&plan.layout.results_path, &plan.chunks)?;
+    if !plan.quiet && plan.status {
+        eprintln!("[cache] {}", display_input(&plan));
+    }
+    Ok(preprocess_cached_output(plan))
 }
 
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {

@@ -16,7 +16,8 @@ use crate::typst::compile::{
     reject_reserved_typst_inputs, resolve_output_path, typst_watch_args, ReservedInputs,
 };
 use crate::typst::preprocess::{
-    execute_preprocess_plan, prepare_preprocess_plan, preprocess, PreprocessOptions,
+    execute_preprocess_plan, prepare_preprocess_plan, preprocess, refresh_cached_preprocess_output,
+    PreprocessOptions,
 };
 use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
@@ -137,6 +138,9 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
             move |changed| match prepare_preprocess_plan(options.clone()) {
                 Ok(plan) => {
                     if plan.fingerprint == last_fingerprint && plan.layout.results_path.exists() {
+                        if let Err(error) = refresh_cached_preprocess_output(plan) {
+                            cwarn!("rebuild failed: {}", error);
+                        }
                         return;
                     }
                     if !quiet {
