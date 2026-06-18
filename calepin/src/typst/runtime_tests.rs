@@ -1010,6 +1010,95 @@ fn typst_compile_html_accepts_css_string_figure_display_dimensions_from_results(
 }
 
 #[test]
+fn typst_compile_paged_respects_string_figure_width_from_results() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+    let figures = dir.path().join(".calepin/paper/figures");
+    std::fs::create_dir_all(&figures).unwrap();
+    std::fs::write(
+        figures.join("fig-demo.svg"),
+        r##"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="#88c0d0"/></svg>"##,
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join(".calepin/paper")).unwrap();
+    std::fs::write(
+        dir.path().join(".calepin/paper/results.json"),
+        r#"{
+  "schema": 1,
+  "calepin_version": "test",
+  "input": "paper.typ",
+  "chunks": {
+    "fig-demo": {
+      "label": "fig-demo",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "10%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/paper/figures/fig-demo.svg"
+            }
+          }
+        }
+      ]
+    }
+  }
+}"#,
+    )
+    .unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.svg");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#set page(width: 400pt, height: 200pt, margin: 0pt)
+
+#calepin.chunk("python", label: "fig-demo", echo: false)[
+`print("ignored")`
+]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", "calepin-results=/.calepin/paper/results.json"],
+    );
+    let svg = std::fs::read_to_string(output).unwrap();
+    assert!(
+        svg.contains(r#"width="40""#),
+        "expected 10% of the 400pt page width, got:\n{svg}"
+    );
+}
+
+#[test]
 fn typst_query_emits_crossref_labels_for_array_label() {
     skip_if_no_typst!();
 

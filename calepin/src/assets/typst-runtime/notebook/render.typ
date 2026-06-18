@@ -146,9 +146,41 @@
   }
 }
 
+#let _paged-layout-size(value) = {
+  if type(value) != str {
+    return value
+  }
+  let value = value.trim()
+  if value.ends-with("%") {
+    return float(value.slice(0, value.len() - 1).trim()) * 1%
+  }
+  if value.ends-with("pt") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1pt
+  }
+  if value.ends-with("em") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1em
+  }
+  if value.ends-with("cm") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1cm
+  }
+  if value.ends-with("mm") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1mm
+  }
+  if value.ends-with("in") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1in
+  }
+  value
+}
+
 #let _paged-result-options(options) = {
   let out = (:)
-  if "fig-align" in options {
+  if "fig-width" in options and options.at("fig-width") != none {
+    out.insert("fig-width", _paged-layout-size(options.at("fig-width")))
+  }
+  if "fig-height" in options and options.at("fig-height") != none {
+    out.insert("fig-height", _paged-layout-size(options.at("fig-height")))
+  }
+  if "fig-align" in options and options.at("fig-align") != none {
     out.insert("fig-align", options.at("fig-align"))
   }
   out
