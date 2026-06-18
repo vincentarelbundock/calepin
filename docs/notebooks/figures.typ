@@ -20,6 +20,11 @@ Any chunk that produces a plot is shown as a figure. Nothing extra is required:
 plot(mpg ~ hp, data = mtcars)
 ```
 
+```r
+library(ggplot2)
+ggplot(mtcars, aes(hp, mpg)) + geom_point()
+```
+
 == Captions and labels
 
 Add `fig-caption` to wrap the plot in a numbered figure. Add a `fig-` `label` so you can refer to it from the prose with `@fig-mpg` (see #link("cross-references.html")[Cross-references]).

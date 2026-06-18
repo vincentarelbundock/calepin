@@ -1,6 +1,6 @@
 #show figure: set block(breakable: false)
 #figure( // start preamble figure
-  caption: text([This table is not aligned.]),
+  caption: text([First rows of iris]),
   kind: "tinytable",
   supplement: "Table", // end preamble figure
 
@@ -8,10 +8,12 @@ block[ // start block
 
   #let style-dict = (
     // tinytable style-dict after
+    "1_1": 0, "2_1": 0, "1_2": 0, "2_2": 0
   )
 
   #let style-array = ( 
     // tinytable cell style after
+    (color: white, background: rgb("#008080"),),
   )
 
   // Helper function to get cell style
@@ -40,6 +42,8 @@ block[ // start block
     if ("smallcaps" in style) { tmp = smallcaps(tmp) }
     tmp
   }
+
+  #align(center, [
 
   #table( // tinytable table start
     columns: (auto, auto, auto, auto, auto),
@@ -76,6 +80,8 @@ block[ // start block
     // tinytable footer after
 
   ) // end table
+
+  ]) // end align
 
 ] // end block
 ) // end figure

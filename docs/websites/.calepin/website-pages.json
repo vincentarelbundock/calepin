@@ -113,6 +113,19 @@
     "translations": {}
   },
   {
+    "href": "slides/touying.html",
+    "language": null,
+    "meta": {
+      "pdf": false,
+      "title": "Touying"
+    },
+    "path": "slides/touying.typ",
+    "pdf": null,
+    "title": "Touying",
+    "translation_key": "slides/touying",
+    "translations": {}
+  },
+  {
     "href": "themes.html",
     "language": null,
     "meta": {},

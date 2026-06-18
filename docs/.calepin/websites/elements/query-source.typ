@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Reusable elements])
@@ -194,19 +195,13 @@ sum(x) / len(x)
   #calepin.elements.tab("R", active: true)[
 This tab shows R code:
 
-```r
-x <- c(1, 2, 3, 4, 5)
-mean(x)
-```
+#calepin_runtime.chunk_from_raw_plain("r", raw("x <- c(1, 2, 3, 4, 5)\nmean(x)\n", block: true, lang: "r"))
   ]
 
   #calepin.elements.tab("Python")[
 This tab shows Python code:
 
-```python
-x = [1, 2, 3, 4, 5]
-sum(x) / len(x)
-```
+#calepin_runtime.chunk_from_raw_plain("python", raw("x = [1, 2, 3, 4, 5]\nsum(x) / len(x)\n", block: true, lang: "python"))
   ]
 ]
 

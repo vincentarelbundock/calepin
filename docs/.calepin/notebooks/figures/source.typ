@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Figures and tables])
@@ -16,9 +17,9 @@ A chunk that draws a plot becomes a figure, and a chunk that prints Typst markup
 
 Any chunk that produces a plot is shown as a figure. Nothing extra is required:
 
-```r
-plot(mpg ~ hp, data = mtcars)
-```
+#calepin_runtime.chunk_from_raw_plain("r", raw("plot(mpg ~ hp, data = mtcars)\n", block: true, lang: "r"))
+
+#calepin_runtime.chunk_from_raw_plain("r", raw("library(ggplot2)\nggplot(mtcars, aes(hp, mpg)) + geom_point()\n", block: true, lang: "r"))
 
 == Captions and labels
 

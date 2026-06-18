@@ -38,6 +38,38 @@
         }
       ]
     },
+    "chunk-2": {
+      "label": "chunk-2",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "diagnostic",
+          "text": "package ‘ggplot2’ was built under R version 4.5.2",
+          "level": "warning"
+        }
+      ]
+    },
     "fig-mpg": {
       "label": "fig-mpg",
       "engine": "r",
@@ -79,8 +111,8 @@
         }
       ]
     },
-    "chunk-2": {
-      "label": "chunk-2",
+    "chunk-3": {
+      "label": "chunk-3",
       "engine": "r",
       "status": "ok",
       "options": {
@@ -96,41 +128,6 @@
         "fig-responsive": true,
         "fig-link": null,
         "fig-caption": null,
-        "fig-cap-location": null,
-        "fig-alt-text": null,
-        "fig-subcaptions": null,
-        "fig-layout-columns": null,
-        "fig-layout-rows": null,
-        "kind": null
-      },
-      "items": [
-        {
-          "type": "display",
-          "data": {
-            "image/svg+xml": {
-              "path": "/.calepin/notebooks/figures/figures/chunk-2.svg"
-            }
-          }
-        }
-      ]
-    },
-    "chunk-3": {
-      "label": "chunk-3",
-      "engine": "r",
-      "status": "ok",
-      "options": {
-        "echo": false,
-        "output": true,
-        "results": "render",
-        "warning": true,
-        "message": true,
-        "placeholder": true,
-        "fig-width": "55%",
-        "fig-height": null,
-        "fig-align": "center",
-        "fig-responsive": true,
-        "fig-link": null,
-        "fig-caption": "Wide device(8 in):smaller text and points",
         "fig-cap-location": null,
         "fig-alt-text": null,
         "fig-subcaptions": null,
@@ -165,7 +162,7 @@
         "fig-align": "center",
         "fig-responsive": true,
         "fig-link": null,
-        "fig-caption": "Narrow device(4 in):larger text and points",
+        "fig-caption": "Wide device(8 in):smaller text and points",
         "fig-cap-location": null,
         "fig-alt-text": null,
         "fig-subcaptions": null,
@@ -179,6 +176,41 @@
           "data": {
             "image/svg+xml": {
               "path": "/.calepin/notebooks/figures/figures/chunk-4.svg"
+            }
+          }
+        }
+      ]
+    },
+    "chunk-5": {
+      "label": "chunk-5",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "55%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Narrow device(4 in):larger text and points",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/figures/figures/chunk-5.svg"
             }
           }
         }
@@ -257,8 +289,8 @@
         }
       ]
     },
-    "chunk-5": {
-      "label": "chunk-5",
+    "chunk-6": {
+      "label": "chunk-6",
       "engine": "r",
       "status": "ok",
       "options": {
@@ -286,14 +318,14 @@
           "type": "display",
           "data": {
             "text/x-typst": {
-              "path": "/.calepin/notebooks/figures/figures/chunk-5.typ"
+              "path": "/.calepin/notebooks/figures/figures/chunk-6.typ"
             }
           }
         }
       ]
     },
-    "chunk-6": {
-      "label": "chunk-6",
+    "chunk-7": {
+      "label": "chunk-7",
       "engine": "r",
       "status": "ok",
       "options": {
@@ -321,7 +353,7 @@
           "type": "display",
           "data": {
             "text/x-typst": {
-              "path": "/.calepin/notebooks/figures/figures/chunk-6.typ"
+              "path": "/.calepin/notebooks/figures/figures/chunk-7.typ"
             }
           }
         }

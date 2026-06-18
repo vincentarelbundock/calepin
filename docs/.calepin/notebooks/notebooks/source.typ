@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Notebooks])
@@ -46,9 +47,7 @@ print(40 + 2)
 ```
 ````
 
-```python
-print(40 + 2)
-```
+#calepin_runtime.chunk_from_raw_plain("python", raw("print(40 + 2)\n", block: true, lang: "python"))
 
 Languages run in persistent sessions, so variables defined in one chunk are available in later chunks:
 
@@ -62,13 +61,9 @@ print(x + 1)
 ```
 ````
 
-```python
-x = 41
-```
+#calepin_runtime.chunk_from_raw_plain("python", raw("x = 41\n", block: true, lang: "python"))
 
-```python
-print(x + 1)
-```
+#calepin_runtime.chunk_from_raw_plain("python", raw("print(x + 1)\n", block: true, lang: "python"))
 
 Set document-wide defaults with `#calepin.setup(...)`. For example, this page uses `results: "verbatim"` so console output is shown as plain text. Other pages use `results: "render"` when plots, rich values, or Typst output should be rendered more fully.
 

@@ -146,9 +146,41 @@
   }
 }
 
+#let _paged-layout-size(value) = {
+  if type(value) != str {
+    return value
+  }
+  let value = value.trim()
+  if value.ends-with("%") {
+    return float(value.slice(0, value.len() - 1).trim()) * 1%
+  }
+  if value.ends-with("pt") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1pt
+  }
+  if value.ends-with("em") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1em
+  }
+  if value.ends-with("cm") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1cm
+  }
+  if value.ends-with("mm") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1mm
+  }
+  if value.ends-with("in") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1in
+  }
+  value
+}
+
 #let _paged-result-options(options) = {
   let out = (:)
-  if "fig-align" in options {
+  if "fig-width" in options and options.at("fig-width") != none {
+    out.insert("fig-width", _paged-layout-size(options.at("fig-width")))
+  }
+  if "fig-height" in options and options.at("fig-height") != none {
+    out.insert("fig-height", _paged-layout-size(options.at("fig-height")))
+  }
+  if "fig-align" in options and options.at("fig-align") != none {
     out.insert("fig-align", options.at("fig-align"))
   }
   out
@@ -173,10 +205,9 @@
   }
 }
 
-#let _raw-block(value, lang: none, theme: auto) = {
-  show raw.where(block: true): set text(size: 1em)
-  raw(value, block: true, lang: lang, theme: theme)
-}
+#let _results-hidden(mode) = mode in ("hide", "hidden")
+
+#let _raw-block(value, lang: none, theme: auto) = raw(value, block: true, lang: lang, theme: theme)
 
 #let code-block(
   body,
@@ -572,7 +603,7 @@
   let item-type = item.at("type", default: "")
   if item-type == "stream" {
     let text = item.at("text", default: "")
-    if results-mode == "hide" {
+    if _results-hidden(results-mode) {
       none
     } else if results-mode == "typst" {
       eval(text, mode: "markup")
@@ -613,7 +644,7 @@
   // `results: "hide"` only suppresses a chunk's own inline render. Reaching
   // `_render-results` at all (e.g. through a `#calepin.results` relocation)
   // means the output should be shown here.
-  if opts.at("results", default: "render") == "hide" {
+  if _results-hidden(opts.at("results", default: "render")) {
     opts.insert("results", "render")
   }
   let fig-labels = if anchor { _crossref-labels-for(chunk, "fig") } else { () }

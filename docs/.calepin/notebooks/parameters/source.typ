@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Parameters])
@@ -54,25 +55,7 @@ plot(
 
 The selected species is #calepin.inline("r")[`cat(params$Species)`].
 
-```r
-#| fig-caption: Iris rows selected by document parameters
-filtered <- subset(
-  iris,
-  Species == params$Species & Petal.Length >= params$min_petal_length
-)
-
-colors <- hcl.colors(3, palette = params$palette)
-
-plot(
-  Sepal.Length ~ Petal.Length,
-  data = filtered,
-  pch = 19,
-  col = colors[2],
-  xlab = "Petal length",
-  ylab = "Sepal length",
-  main = paste(params$Species, "with Petal.Length >=", params$min_petal_length)
-)
-```
+#calepin_runtime.chunk_from_raw_plain("r", raw("#| fig-caption: Iris rows selected by document parameters\nfiltered <- subset(\n  iris,\n  Species == params$Species & Petal.Length >= params$min_petal_length\n)\n\ncolors <- hcl.colors(3, palette = params$palette)\n\nplot(\n  Sepal.Length ~ Petal.Length,\n  data = filtered,\n  pch = 19,\n  col = colors[2],\n  xlab = \"Petal length\",\n  ylab = \"Sepal length\",\n  main = paste(params$Species, \"with Petal.Length >=\", params$min_petal_length)\n)\n", block: true, lang: "r"))
 
 = Overriding at render time
 
