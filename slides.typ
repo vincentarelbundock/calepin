@@ -6,15 +6,15 @@
 
 #show: simple-theme.with(aspect-ratio: "16-9")
 
-#calepin.setup(
-  echo: true,
-  eval: true,
-  results: "render",
-)
-
-#let small-code(body) = text(size: 5.2pt)[#body]
+#show raw.where(block: true): set text(size: .5em)
 
 #title-slide[
+  #calepin.setup(
+    echo: true,
+    eval: true,
+    results: "render",
+  )
+
   Calepin results in Touying
 ]
 
@@ -29,8 +29,7 @@ needs it.
   columns: (1fr, 1fr),
   gutter: 1.2em,
   [
-    #small-code[
-      #calepin.chunk("python", label: "column-summary", results: "hidden")[
+    #calepin.chunk("python", label: "column-summary", results: "hidden")[
 ```python
 values = [2, 3, 5, 8, 13]
 total = sum(values)
@@ -38,20 +37,18 @@ print(f"n = {len(values)}")
 print(f"sum = {total}")
 print(f"mean = {total / len(values):.1f}")
 ```
-      ]
     ]
   ],
   [
     #strong[Relocated output]
 
-    #small-code[#calepin.results("column-summary")]
+    #calepin.results("column-summary")
   ],
 )
 
 == Compute now, show later
 
-#small-code[
-  #calepin.chunk("python", label: "next-slide-claim", results: "hidden")[
+#calepin.chunk("python", label: "next-slide-claim", results: "hidden")[
 ```python
 baseline = 120
 current = 156
@@ -59,7 +56,6 @@ change = (current - baseline) / baseline
 print(f"Current value: {current}")
 print(f"Change from baseline: {change:.0%}")
 ```
-  ]
 ]
 
 The chunk source is visible here, but `results: "hidden"` keeps its output off
@@ -67,6 +63,6 @@ this slide.
 
 == Result on the next slide
 
-#small-code[#calepin.results("next-slide-claim")]
+#calepin.results("next-slide-claim")
 
 The same label can be reused anywhere the deck needs that computed result.
