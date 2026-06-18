@@ -7,6 +7,8 @@ use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::slash_path;
 
+const BUILTIN_RAW_CHUNK_LANGS: &[&str] = &["python", "r", "mermaid", "dot", "tikz", "d2"];
+
 pub(super) fn notebook_template_context(
     layout: &LayoutPaths,
     include_input: &Path,
@@ -61,7 +63,7 @@ pub(super) fn write_render_wrapper(
         ));
     }
 
-    for lang in ["python", "r", "mermaid", "dot", "tikz", "d2"] {
+    for lang in BUILTIN_RAW_CHUNK_LANGS {
         lines.push_str(&raw_show_rule(lang));
     }
 
@@ -90,7 +92,7 @@ pub(super) fn write_render_wrapper(
 
 fn raw_chunk_langs(jupyter_kernels: &[&str]) -> Vec<String> {
     let mut langs = Vec::new();
-    for lang in ["python", "r", "mermaid", "dot", "tikz", "d2"] {
+    for lang in BUILTIN_RAW_CHUNK_LANGS {
         langs.push(lang.to_string());
     }
     for kernel in jupyter_kernels {

@@ -203,21 +203,23 @@
   ]
 }
 
+#let _paged-input-code-block(code, lang: none) = {
+  code-block(
+    fill: rgb("#f7f7f5"),
+    stroke: 0.5pt + rgb("#d8d8d2"),
+    radius: 2pt,
+    inset: (x: 0.65em, y: 0.45em),
+  )[
+    #_raw-block(code, lang: lang, theme: _paged-syntax-theme)
+  ]
+}
+
 #let _html-themed-raw-block(it) = {
   let lang = if it.has("lang") { it.lang } else { none }
   if _is-html() {
     _raw-block(it.text, lang: lang, theme: _input-syntax-theme)
   } else {
-    code-block(
-      fill: rgb("#f7f7f5"),
-      stroke: 0.5pt + rgb("#d8d8d2"),
-      radius: 2pt,
-      inset: (x: 0.65em, y: 0.45em),
-    )[
-      #text(fill: rgb("#1f2933"))[
-        #_raw-block(it.text, lang: lang, theme: _paged-syntax-theme)
-      ]
-    ]
+    _paged-input-code-block(it.text, lang: lang)
   }
 }
 
@@ -230,16 +232,7 @@
       #_raw-block(code, lang: lang, theme: _input-syntax-theme)
     ]
   } else {
-    code-block(
-      fill: rgb("#f7f7f5"),
-      stroke: 0.5pt + rgb("#d8d8d2"),
-      radius: 2pt,
-      inset: (x: 0.65em, y: 0.45em),
-    )[
-      #text(fill: rgb("#1f2933"))[
-        #_raw-block(code, lang: lang, theme: _paged-syntax-theme)
-      ]
-    ]
+    _paged-input-code-block(code, lang: lang)
   }
 }
 
