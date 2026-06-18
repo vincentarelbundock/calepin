@@ -90,6 +90,12 @@ title = "Websites"
   target = "websites/custom-elements.typ"
 
 [[sidebar.section]]
+title = "Slides"
+
+  [[sidebar.section.item]]
+  target = "slides/touying.typ"
+
+[[sidebar.section]]
 title = "More"
 
   [[sidebar.section.item]]
