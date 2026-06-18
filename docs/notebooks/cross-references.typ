@@ -71,7 +71,7 @@ plot(dist ~ speed, data = cars)
 
 = Label prefixes
 
-Use a recognized prefix so _Calepin_ knows where the label belongs. Unprefixed labels such as `label: "myplot"` are rejected.
+Use a recognized prefix so _Calepin_ knows where the label belongs. A label without a recognized prefix, such as `label: "myplot"`, is still a valid chunk identifier (you can look it up with `#calepin.results`), but it is not a cross-reference, so `@myplot` will not resolve.
 
 #table(
   columns: (0.7fr, 1.5fr, 2fr),

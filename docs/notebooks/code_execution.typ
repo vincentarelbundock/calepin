@@ -60,6 +60,37 @@ The answer is #py[`print(40 + 2)`].
 
 The answer is #py[`print(40 + 2)`].
 
+= Output elsewhere
+
+Sometimes you want to run a chunk in one place but show its result somewhere else. Set `results: "hide"` so the chunk runs without showing anything where it is written, give it a `label`, then print its output later with `#calepin.results`:
+
+````typ
+#calepin.chunk("python", label: "summary", echo: false, results: "hide")[
+```python
+total = 40 + 2
+print(f"The total is {total}.")
+```
+]
+
+Run live, the chunk above shows nothing where it is defined, and its output appears here on request:
+
+#calepin.results("summary")
+````
+
+`#calepin.results("summary")` prints that chunk's full output: text, figures, warnings, everything it would have shown in place. You can put the call before or after the chunk, and you can call it more than once to repeat the output.
+
+When the chunk produces a cross-referenced figure or table (a `fig-`, `tbl-`, or `lst-` label), the `@label` reference points to where the figure is shown: the chunk's own position when it is visible, or the relocation when the chunk is hidden. Printing the same figure in more than one place and then referencing it is ambiguous, so Typst reports an error.
+
+Run live, the hidden chunk below shows nothing where it is defined, and its output is printed on request:
+
+#calepin.chunk("python", label: "summary", echo: false, results: "hide")[
+```python
+total = 40 + 2
+print(f"The total is {total}.")
+```
+]
+#calepin.results("summary")
+
 = Supported languages
 
 _Calepin_ has built-in engines for *Python* and *R*, and built-in diagram engines for *Mermaid*, *Graphviz DOT*, *TikZ*, and *D2*.

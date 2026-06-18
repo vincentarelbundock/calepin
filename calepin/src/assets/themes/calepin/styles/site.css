@@ -1191,22 +1191,6 @@ html:not([data-theme]) {
   }
 }
 
-@media (max-width: 88rem) {
-  .calepin-website-shell.grid {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "sidebar"
-      "main"
-      "toc";
-  }
-
-  .calepin-website-sidebar,
-  .calepin-website-toc {
-    position: static;
-    max-height: none;
-  }
-}
-
 @media (max-width: 56rem) {
   .calepin-website-main--landing {
     padding-block: 2.4rem 3rem;

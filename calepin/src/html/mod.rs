@@ -144,6 +144,22 @@ mod minify_tests {
         assert!(minified.contains("<p>Hello, world!"));
         assert!(!minified.contains("\n  <body>"));
     }
+
+    #[test]
+    fn minify_leaves_mathml_documents_unchanged() {
+        let html = r#"<!doctype html><html><head></head><body><main>
+<math display="block"><mi>𝒜︀</mi><mo>≔</mo><mrow><mo>{</mo><mrow><mi>𝑥</mi><mo>∈</mo><mi>ℝ</mi><mspace width="0.2222em"/><mo lspace="0em" rspace="0em">|</mo><mspace width="0.2222em"/><mi>𝑥</mi><mspace width="0.2222em"/><mtext>is natural</mtext></mrow><mo>}</mo></mrow></math>
+<p>after math</p></main><aside>toc</aside></body></html>"#;
+
+        let minified = minify_html(html);
+
+        assert_eq!(minified, html);
+        assert_eq!(minified.matches("<math").count(), 1, "{minified}");
+        assert_eq!(minified.matches("</math>").count(), 1, "{minified}");
+        assert_eq!(minified.matches("<mrow").count(), 2, "{minified}");
+        assert_eq!(minified.matches("</mrow>").count(), 2, "{minified}");
+        assert!(minified.contains("</main><aside>"), "{minified}");
+    }
 }
 
 #[cfg(test)]

@@ -51,7 +51,8 @@ fn collect_image_meta(layout: &LayoutPaths) -> Result<ImageMetaDocument> {
 
     let mut images = BTreeMap::new();
     for (path, keys) in keys_by_path {
-        let bytes = fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+        let bytes =
+            fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
         let Some((width, height)) = dimensions(&path, &bytes) else {
             continue;
         };
@@ -262,7 +263,17 @@ fn jpeg_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
         }
         if matches!(
             marker,
-            0xc0 | 0xc1 | 0xc2 | 0xc3 | 0xc5 | 0xc6 | 0xc7 | 0xc9 | 0xca | 0xcb | 0xcd | 0xce
+            0xc0 | 0xc1
+                | 0xc2
+                | 0xc3
+                | 0xc5
+                | 0xc6
+                | 0xc7
+                | 0xc9
+                | 0xca
+                | 0xcb
+                | 0xcd
+                | 0xce
                 | 0xcf
         ) {
             if length < 7 {

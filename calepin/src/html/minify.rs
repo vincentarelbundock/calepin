@@ -3,6 +3,12 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 pub(crate) fn minify_html(source: &str) -> String {
+    // minify-html currently parses MathML as HTML, which corrupts self-closing
+    // MathML elements such as <mspace/> and can swallow following content.
+    if source.contains("<math") {
+        return source.to_owned();
+    }
+
     let mut cfg = minify_html::Cfg::new();
     cfg.keep_html_and_head_opening_tags = true;
     cfg.minify_css = true;

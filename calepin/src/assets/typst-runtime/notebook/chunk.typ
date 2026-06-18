@@ -1,6 +1,7 @@
 #import "../core/state.typ": _auto-inline-label-index, _base-options, _call-defaults
 #import "../core/state.typ": _derive-label, _disable-raw-chunk-transforms
 #import "../core/state.typ": _raw-node, _raw-text, _sync-auto-label-counter
+#import "../core/state.typ": _relocate-opts
 #import "../core/target.typ": _is-query
 #import "render.typ": _html-themed-raw-block, _input-block, _render-results
 #import "options.typ": _resolve-options
@@ -208,17 +209,33 @@
     let code = _strip-qmd-header(code)
     let options = _resolve-options(engine, options)
     let show-echo = options.at("echo") == true
+    let results-mode = options.at("results")
     let results-path = sys.inputs.at("calepin-results", default: "")
     label-step
     [#metadata((label: label, page: here().page())) <calepin-page>]
+
+    // Stash the resolved display options so a `#calepin.results(label)` call
+    // placed elsewhere can render this chunk with identical settings. Only the
+    // render-relevant keys are kept so the stored value stays plain data.
+    let stashed = (:)
+    for key in _base-options.keys() {
+      stashed.insert(key, options.at(key))
+    }
+    stashed.insert("inline-output", options.at("inline-output"))
+    _relocate-opts.update(reg => {
+      reg.insert(label, stashed)
+      reg
+    })
 
     if show-echo {
       _input-block(code, lang: engine)
     } else if results-path == "" {
       _input-block(code, lang: engine)
     }
-    if results-path != "" {
-      _render-results(label, options)
+    // `results: "hide"` runs the chunk but renders nothing here; the output can
+    // still be shown elsewhere with `#calepin.results(label)`.
+    if results-path != "" and results-mode != "hide" {
+      _render-results(label, options, anchor: true)
     }
   }
 }
@@ -296,4 +313,50 @@
     auto-label-state: _auto-inline-label-index,
   )
   chunk(engine, body, ..(defaults + opts))
+}
+
+// Render a chunk's output at this location instead of (or in addition to) the
+// chunk's own position. Pair it with `results: "hide"` on the chunk to move the
+// output elsewhere. The label is given positionally (`calepin.results("foo")`)
+// or named (`calepin.results(label: "foo")`).
+//
+// A cross-reference anchor (a `fig-`/`tbl-`/`lst-` label) lives wherever the
+// figure is shown: at the chunk's own position when it is visible, and here when
+// the source chunk is hidden. Referencing a figure that is shown in more than
+// one place is ambiguous, and Typst reports it as a duplicate-label error.
+#let results(..args) = {
+  let positional = args.pos()
+  let named = args.named()
+  let label = if named.at("label", default: none) != none {
+    named.at("label")
+  } else if positional.len() >= 1 {
+    positional.at(0)
+  } else {
+    panic("calepin.results: provide a chunk label, e.g. calepin.results(\"my-label\")")
+  }
+  if type(label) != str {
+    panic("calepin.results: label must be a string")
+  }
+  if _is-query() {
+    // Nothing to emit in the query pass; rendering happens during the render pass.
+  } else {
+    context {
+      let results-path = sys.inputs.at("calepin-results", default: "")
+      if results-path != "" {
+        let results-doc = json(results-path)
+        let chunk = results-doc.at("chunks", default: (:)).at(label, default: none)
+        if chunk == none {
+          panic("calepin.results: no chunk is labeled `" + label + "`")
+        }
+        let opts = _relocate-opts.final().at(label, default: none)
+        if opts == none {
+          panic("calepin.results: cannot find a chunk labeled `" + label + "` to relocate")
+        }
+        // The anchor follows the figure: attach it here only when the source
+        // chunk is hidden (and so renders nothing at its own position).
+        let hidden = opts.at("results", default: "render") == "hide"
+        _render-results(label, opts, anchor: hidden)
+      }
+    }
+  }
 }

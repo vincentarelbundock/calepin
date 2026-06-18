@@ -102,7 +102,9 @@ fn typst_subcommand_args(
     push_input(&mut args, INPUT_SOURCE_DIR, source_dir_input(layout));
     let image_meta = artifact_reference(
         &layout.root,
-        &layout.root.join(crate::typst::preprocess::image_meta_relative_path(layout)),
+        &layout
+            .root
+            .join(crate::typst::preprocess::image_meta_relative_path(layout)),
     );
     push_input(&mut args, INPUT_IMAGE_META, image_meta);
 

@@ -159,3 +159,7 @@ print(x + 2)
 
 The inline answer is #py[`print(40 + 2)`].
 ````
+
+= Etymology and pronunciation
+
+_Calepin_ comes from the French word for "notebook." You should, of course, feel free to say it however you like. The closest English sounds might be "cal-huh-pan," with "cal" as in "calendar," and "pan" like the cooking instrument. (The French would pronounce that last syllable more nasally, with a silent "n".)

@@ -108,7 +108,11 @@ pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String
 }
 
 fn source_dir_input(layout: &LayoutPaths) -> String {
-    layout.input_rel.parent().map(slash_path).unwrap_or_default()
+    layout
+        .input_rel
+        .parent()
+        .map(slash_path)
+        .unwrap_or_default()
 }
 
 #[cfg(test)]

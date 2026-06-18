@@ -9,7 +9,7 @@ use crate::typst::chunk_options::{
     fence_label_from_chunk_body, parse_chunk_body_with_qmd_header,
     parse_chunk_source_with_qmd_header, query_label_name, validate_chunk_arguments,
 };
-use crate::typst::crossref::parse_label_names;
+use crate::typst::crossref::{has_crossref_prefix, parse_label_names};
 use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName, FencedChunks};
 
 use options::parse_chunk_options;
@@ -158,18 +158,22 @@ fn parse_chunk_metadata(
     let mut crossref_labels = parse_crossref_labels(&value)
         .map_err(|err| anyhow!("invalid cross-reference labels for chunk `{label}`: {err}"))?;
     if let Some(fence_label) = fence_label {
-        let names = vec![fence_label];
-        let routed_fence_labels = parse_label_names(&names)
-            .map_err(|err| anyhow!("invalid trailing fence label for chunk `{label}`: {err}"))?
-            .into_iter()
-            .map(|label| label.to_doc())
-            .collect::<Vec<_>>();
-        if crossref_labels.is_empty() {
-            crossref_labels = routed_fence_labels;
-        } else if crossref_labels != routed_fence_labels {
-            return Err(anyhow!(
-                "chunk `{label}` supplied a trailing fence label and another label channel"
-            ));
+        // A non-prefixed trailing label is a plain id (already reflected in the
+        // chunk's label); only prefixed labels route to cross-references.
+        if has_crossref_prefix(&fence_label) {
+            let names = vec![fence_label];
+            let routed_fence_labels = parse_label_names(&names)
+                .map_err(|err| anyhow!("invalid trailing fence label for chunk `{label}`: {err}"))?
+                .into_iter()
+                .map(|label| label.to_doc())
+                .collect::<Vec<_>>();
+            if crossref_labels.is_empty() {
+                crossref_labels = routed_fence_labels;
+            } else if crossref_labels != routed_fence_labels {
+                return Err(anyhow!(
+                    "chunk `{label}` supplied a trailing fence label and another label channel"
+                ));
+            }
         }
     }
     chunks.push(ChunkSpec {
@@ -311,19 +315,27 @@ fn resolve_named_label(
     auto_label_index: &mut usize,
     error_context: &str,
 ) -> Result<(String, Vec<CrossrefLabelDoc>)> {
-    let labels = parse_label_names(&names).map_err(|err| anyhow!("{error_context}: {err}"))?;
     let label = names
         .first()
         .cloned()
         .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
+    // Prefixed names become cross-reference anchors; a plain name is just the
+    // chunk id (usable for `#calepin.results` relocation), not a cross-reference.
+    let prefixed: Vec<String> = names.iter().filter(|name| has_crossref_prefix(name)).cloned().collect();
+    let crossref_labels = if prefixed.is_empty() {
+        Vec::new()
+    } else {
+        parse_label_names(&prefixed)
+            .map_err(|err| anyhow!("{error_context}: {err}"))?
+            .into_iter()
+            .map(|label| label.to_doc())
+            .collect()
+    };
     if !seen.insert(label.clone()) {
         return Err(anyhow!("duplicate label `{}`", label));
     }
     bump_auto_label(auto_label_index, &label);
-    Ok((
-        label,
-        labels.into_iter().map(|label| label.to_doc()).collect(),
-    ))
+    Ok((label, crossref_labels))
 }
 
 fn is_typst_fence(lang: &str) -> bool {
@@ -390,7 +402,16 @@ fn parse_crossref_labels(value: &Value) -> Result<Vec<CrossrefLabelDoc>> {
         return Ok(Vec::new());
     }
 
-    parse_label_names(&names).map(|labels| labels.into_iter().map(|label| label.to_doc()).collect())
+    // Only prefixed names are cross-reference anchors. A plain label is a chunk
+    // id used for results lookup and `#calepin.results` relocation, not a
+    // cross-reference, so it is accepted and contributes no anchor.
+    let prefixed: Vec<String> = names.into_iter().filter(|name| has_crossref_prefix(name)).collect();
+    if prefixed.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    parse_label_names(&prefixed)
+        .map(|labels| labels.into_iter().map(|label| label.to_doc()).collect())
 }
 
 fn label_names_from_value(value: &Value) -> Result<Vec<String>> {
@@ -576,7 +597,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unprefixed_crossref_labels_from_metadata_chunks() {
+    fn accepts_unprefixed_label_as_plain_id_from_metadata_chunks() {
         let json = metadata(
             &serde_json::json!({
                 "body":{"func":"raw","text":"plot(1)","block":false},
@@ -586,13 +607,11 @@ mod tests {
             })
             .to_string(),
         );
-        let err = parse_chunks(&json, None).unwrap_err().to_string();
-        assert!(
-            err.contains("invalid cross-reference labels for chunk `plot`"),
-            "{err}"
-        );
-        assert!(err.contains("plot"), "{err}");
-        assert!(err.contains("fig-"), "{err}");
+        // A plain (non-prefixed) label is a valid chunk id, not a
+        // cross-reference, so it is accepted with no cross-reference labels.
+        let chunks = parse_chunks(&json, None).unwrap();
+        assert_eq!(chunks[0].label, "plot");
+        assert!(chunks[0].crossref_labels.is_empty());
     }
 
     #[test]
@@ -694,7 +713,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unprefixed_trailing_label_in_fenced_chunks() {
+    fn accepts_unprefixed_trailing_label_as_plain_id_in_fenced_chunks() {
         let json = serde_json::json!([
           {"func":"raw","text":"plot(1)","block":true,"lang":"r","label":"<plot>"}
         ])
@@ -703,12 +722,12 @@ mod tests {
             fenced_chunks: FencedChunks::All,
             ..SetupDefaults::default()
         };
-        let err = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults)))
-            .unwrap_err()
-            .to_string();
-        assert!(err.contains("invalid trailing fence label"), "{err}");
-        assert!(err.contains("plot"), "{err}");
-        assert!(err.contains("fig-"), "{err}");
+        // A plain trailing fence label is a chunk id, not a cross-reference.
+        let chunks = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults)))
+            .unwrap()
+            .chunks;
+        assert_eq!(chunks[0].label, "plot");
+        assert!(chunks[0].crossref_labels.is_empty());
     }
 
     #[test]

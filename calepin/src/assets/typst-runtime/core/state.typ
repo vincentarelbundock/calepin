@@ -92,6 +92,12 @@
 
 #let _disable-raw-chunk-transforms = state("calepin-disable-raw-chunk-transforms", false)
 
+// Deferred output. A chunk stashes its resolved render options here keyed by
+// label, so a `#calepin.results(label)` call placed elsewhere can render the
+// same output with identical settings. Read with `.final()` so the lookup works
+// regardless of document order (a relocation may appear before its chunk).
+#let _relocate-opts = state("calepin-relocate-opts", (:))
+
 #let _raw-node(body) = {
   if body.has("text") {
     return body

@@ -113,6 +113,10 @@ h3 {
   height: auto;
 }
 
+.calepin-content math[display="block"] {
+  margin-block: 1.6rem;
+}
+
 figure {
   text-align: center;
 }
@@ -138,8 +142,7 @@ figure > img {
 .calepin-content .fullwidth,
 .calepin-content .full-width,
 .calepin-content figure.fullwidth,
-.calepin-content figure.full-width,
-.calepin-content .calepin-figure-grid {
+.calepin-content figure.full-width {
   width: min(100vw - 2rem, var(--calepin-page-width));
   max-width: var(--calepin-page-width);
 }

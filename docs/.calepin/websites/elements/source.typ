@@ -60,7 +60,7 @@ The rendered result:
 
 = Built-in elements
 
-The namespace includes a compact set of reusable elements for cards, galleries, columns, and lightbox media. They are designed to demonstrate output-aware patterning in practical notebook websites.
+The namespace includes a compact set of reusable elements for cards, galleries, columns, tabs, and lightbox media. They are designed to demonstrate output-aware patterning in practical notebook websites.
 
 == `card`
 
@@ -79,7 +79,7 @@ The namespace includes a compact set of reusable elements for cards, galleries, 
   A card wraps content with matching style in HTML and paged output.
 ]
 
-== `gallery`
+== Gallery
 
 `calepin.elements.gallery` accepts image items as tuples or dictionaries and handles local image metadata automatically in static outputs. In HTML output, it can activate lightbox behavior.
 
@@ -109,7 +109,7 @@ The namespace includes a compact set of reusable elements for cards, galleries, 
   max-width: 42em,
 )
 
-== `columns`
+== Columns
 
 `calepin.elements.columns` is output-aware, so the same call produces a plain Pico `.grid` for HTML and a `grid(...)` for paged output. Columns are equal-width; pass the paged-output column count as an integer. By default, each item is wrapped in a `<div>` so plain Typst blocks stay together as one column; use `wrap: false` when the items already render as standalone HTML elements such as cards.
 
@@ -165,7 +165,53 @@ You can also request more than two columns:
   [One], [Two], [Three]
 )
 
-== `lightbox-image` and `lightbox-video`
+== Tabs
+
+`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the group and `calepin.elements.tab("Label", active: true)[...]` for each panel. Panel names are generated automatically; pass `name: "..."` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed.
+
+````typ
+#calepin.elements.tabs[
+  #calepin.elements.tab("R", active: true)[
+This tab shows R code:
+
+```r
+x <- c(1, 2, 3, 4, 5)
+mean(x)
+```
+  ]
+
+  #calepin.elements.tab("Python")[
+This tab shows Python code:
+
+```python
+x = [1, 2, 3, 4, 5]
+sum(x) / len(x)
+```
+  ]
+]
+````
+
+#calepin.elements.tabs[
+  #calepin.elements.tab("R", active: true)[
+This tab shows R code:
+
+```r
+x <- c(1, 2, 3, 4, 5)
+mean(x)
+```
+  ]
+
+  #calepin.elements.tab("Python")[
+This tab shows Python code:
+
+```python
+x = [1, 2, 3, 4, 5]
+sum(x) / len(x)
+```
+  ]
+]
+
+== Lightbox
 
 `lightbox-image(...)` and `lightbox-video(...)` produce browser-only interactive media wrappers in HTML while degrading gracefully in paged output.
 
@@ -231,65 +277,6 @@ ui5-carousel button:focus,
 ui5-carousel button:focus-visible,
 ui5-carousel [role='button']:focus,
 ui5-carousel [role='button']:focus-visible,
-ui5-carousel [tabindex]:focus,
-ui5-carousel [tabindex]:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-
-ui5-tabcontainer {
-  display: block;
-  margin-block: 1rem;
-  color: var(--pico-color);
-  font: inherit;
-  font-family: var(--pico-font-family);
-  --sapFontFamily: var(--pico-font-family);
-  --sapFontSize: 1rem;
-  --sapTextColor: var(--pico-color);
-  --sapContent_TextColor: var(--pico-color);
-  --sapTextInvertedColor: var(--pico-color);
-  --sapTab_TextColor: var(--pico-muted-color);
-  --sapTab_Selected_TextColor: var(--pico-color);
-  --sapTab_Hover_TextColor: var(--pico-color);
-  --sapTab_Active_TextColor: var(--pico-color);
-  --sapList_TextColor: var(--pico-color);
-  --sapList_BorderColor: var(--pico-muted-border-color);
-  --sapTile_TextColor: var(--pico-color);
-  --sapObjectHeader_Title_TextColor: var(--pico-color);
-  --sapPage_Background: transparent;
-  --sapGroup_ContentBackground: transparent;
-  --sapList_Background: transparent;
-  --sapList_HeaderBackground: transparent;
-}
-
-ui5-tab {
-  color: var(--pico-color);
-  font: inherit;
-  font-family: var(--pico-font-family);
-  font-weight: 400;
-  --sapFontFamily: var(--pico-font-family);
-  --sapFontSize: 1rem;
-  --sapTextColor: var(--pico-color);
-  --sapContent_TextColor: var(--pico-color);
-  --sapTab_TextColor: var(--pico-muted-color);
-  --sapTab_Selected_TextColor: var(--pico-color);
-  --sapTab_Hover_TextColor: var(--pico-color);
-  --sapTab_Active_TextColor: var(--pico-color);
-}
-
-ui5-tab p {
-  font-family: var(--pico-font-family);
-  font-weight: 400;
-}
-
-ui5-tabcontainer::part(tabStrip) {
-  border-block-end: 1px solid var(--pico-muted-border-color);
-}
-
-ui5-tabcontainer::part(tabContainer) {
-  background: transparent;
-  color: var(--pico-color);
-}
 ")
 ]
 
@@ -325,85 +312,6 @@ ui5-tabcontainer::part(tabContainer) {
   ]
 ]
 
-== Tabs
-
-`<ui5-tabcontainer>` supports the native tabs pattern. Define helpers so you can keep this reusable:
-
-```typ
-#let tabs(body, header-background-design: "Transparent", content-background-design: "Transparent") = [
-  #html.elem("ui5-tabcontainer", attrs: (
-    header-background-design: header-background-design,
-    content-background-design: content-background-design,
-  ))[
-    #body
-  ]
-]
-
-#let tab(label, selected: false, body) = [
-  #html.elem("ui5-tab", attrs: if selected { (text: label, selected: "true") } else { (text: label) })[
-    #body
-  ]
-]
-```
-
-#let tabs(body, header-background-design: "Transparent", content-background-design: "Transparent") = [
-  #html.elem("ui5-tabcontainer", attrs: (
-    header-background-design: header-background-design,
-    content-background-design: content-background-design,
-  ))[
-    #body
-  ]
-]
-
-#let tab(label, selected: false, body) = [
-  #html.elem("ui5-tab", attrs: if selected { (text: label, selected: "true") } else { (text: label) })[
-    #body
-  ]
-]
-
-````typ
-#tabs[
-  #tab("R", selected: true)[
-  This tab includes R code:
-
-  ```r
-  x <- c(1, 2, 3, 4, 5)
-  mean(x)
-  ```
-  ]
-
-  #tab("Python")[
-  This tab includes Python code:
-
-  ```python
-  x = [1, 2, 3, 4]
-  sum(x) / len(x)
-  ```
-  ]
-]
-````
-
-#if target == "html" [
-  #tabs[
-    #tab("R", selected: true)[
-    This tab includes R code:
-
-    ```r
-    x <- c(1, 2, 3, 4, 5)
-    mean(x)
-    ```
-    ]
-
-    #tab("Python")[
-    This tab includes Python code:
-
-    ```python
-    x = [1, 2, 3, 4]
-    sum(x) / len(x)
-    ```
-    ]
-  ]
-]
 
 == CSS hooks
 
@@ -416,6 +324,7 @@ ui5-tabcontainer::part(tabContainer) {
 .calepin-elements-gallery__caption {}
 .calepin-elements-gallery--lightbox {}
 .calepin-elements-card {}
+.calepin-elements-tabs {}
 .calepin-screenshot-thumb {}
 .calepin-screenshot-dialog {}
 .calepin-video-thumb {}

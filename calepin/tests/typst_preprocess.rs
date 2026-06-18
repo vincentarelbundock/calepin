@@ -850,3 +850,49 @@ Body text.
         "{stderr}"
     );
 }
+
+#[test]
+fn compile_relocates_hidden_chunk_output_by_plain_label() {
+    if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", label: "summary", echo: false, results: "hide")[```
+print("RELOCATED_OUTPUT_42")
+```]
+
+Body text in between.
+
+#calepin.results("summary")
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8(text.stdout).unwrap();
+    let count = extracted.matches("RELOCATED_OUTPUT_42").count();
+    assert_eq!(
+        count, 1,
+        "expected hidden output to appear once at the relocation: {extracted}"
+    );
+}

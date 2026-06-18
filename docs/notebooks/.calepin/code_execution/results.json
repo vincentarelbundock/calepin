@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "calepin_version": "0.0.16",
+  "input": "code_execution.typ",
+  "chunks": {
+    "chunk-1": {
+      "label": "chunk-1",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "42"
+        }
+      ]
+    },
+    "chunk-2": {
+      "label": "chunk-2",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-3": {
+      "label": "chunk-3",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "42"
+        }
+      ]
+    },
+    "inline-1": {
+      "label": "inline-1",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "42"
+        }
+      ]
+    },
+    "summary": {
+      "label": "summary",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "hide",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "The total is 42."
+        }
+      ]
+    },
+    "chunk-4": {
+      "label": "chunk-4",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "typst",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "text/x-typst": {
+              "path": "/.calepin/code_execution/figures/chunk-4.typ"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

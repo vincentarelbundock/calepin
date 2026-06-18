@@ -450,7 +450,7 @@
   }
 }
 
-#let _render-image-grid(items, label, opts, fig-labels) = {
+#let _render-image-grid(items, label, opts, fig-labels, anchor: true) = {
   let fig-width = opts.at("fig-width")
   let fig-align = opts.at("fig-align")
   let fig-responsive = opts.at("fig-responsive")
@@ -477,8 +477,10 @@
     let fig = figure(content, caption: _figure-caption(fig-caption, fig-cap-location))
     if fig-labels.len() > 0 {
       _attach-labels(fig, fig-labels)
-    } else {
+    } else if anchor {
       _attach-label(fig, label)
+    } else {
+      fig
     }
   } else {
     content
@@ -486,7 +488,7 @@
   _finalize-figure-display(rendered, fig-align, fig-link)
 }
 
-#let _render-display-item(item, label, opts, fig-labels) = {
+#let _render-display-item(item, label, opts, fig-labels, anchor: true) = {
   let fig-width = opts.at("fig-width")
   let fig-height = opts.at("fig-height")
   let fig-align = opts.at("fig-align")
@@ -521,7 +523,7 @@
           fig-align,
         )
       } else {
-        _attach-label(fig, label)
+        if anchor { _attach-label(fig, label) } else { fig }
       }
       return _finalize-figure-display(rendered, none, fig-link)
     }
@@ -540,7 +542,7 @@
       if fig-labels.len() > 0 {
         _attach-labels(fig, fig-labels)
       } else {
-        _attach-label(fig, label)
+        if anchor { _attach-label(fig, label) } else { fig }
       }
     } else {
       img
@@ -559,7 +561,7 @@
   }
 }
 
-#let _render-item(item, label, opts, fig-labels) = {
+#let _render-item(item, label, opts, fig-labels, anchor: true) = {
   let results-mode = opts.at("results")
   let inline-output = opts.at("inline-output")
   let warning = opts.at("warning")
@@ -587,11 +589,15 @@
   } else if item-type == "error" {
     _output-block(item.at("message", default: ""), stream: "stderr")
   } else if item-type == "display" or item-type == "result" {
-    _render-display-item(item, label, opts, fig-labels)
+    _render-display-item(item, label, opts, fig-labels, anchor: anchor)
   }
 }
 
-#let _render-results(label, opts) = {
+// `anchor` controls whether cross-reference labels (and the chunk's internal-id
+// label) are attached. The inline render owns the anchor; a relocated copy that
+// does not own it passes `anchor: false` so the same output can appear more than
+// once without defining a Typst label twice.
+#let _render-results(label, opts, anchor: true) = {
   let results-path = sys.inputs.at("calepin-results", default: "")
   if results-path == "" {
     return none
@@ -602,7 +608,13 @@
     panic("calepin results do not contain label `" + label + "`")
   }
   let opts = _merge-result-options(opts, chunk)
-  let fig-labels = _crossref-labels-for(chunk, "fig")
+  // `results: "hide"` only suppresses a chunk's own inline render. Reaching
+  // `_render-results` at all (e.g. through a `#calepin.results` relocation)
+  // means the output should be shown here.
+  if opts.at("results", default: "render") == "hide" {
+    opts.insert("results", "render")
+  }
+  let fig-labels = if anchor { _crossref-labels-for(chunk, "fig") } else { () }
   let items = chunk.at("items", default: ())
   let image-group = ()
   for result-item in items {
@@ -611,20 +623,20 @@
     } else {
       if image-group.len() > 0 {
         if image-group.len() == 1 {
-          _render-item(image-group.first(), label, opts, fig-labels)
+          _render-item(image-group.first(), label, opts, fig-labels, anchor: anchor)
         } else {
-          _render-image-grid(image-group, label, opts, fig-labels)
+          _render-image-grid(image-group, label, opts, fig-labels, anchor: anchor)
         }
         image-group = ()
       }
-      _render-item(result-item, label, opts, fig-labels)
+      _render-item(result-item, label, opts, fig-labels, anchor: anchor)
     }
   }
   if image-group.len() > 0 {
     if image-group.len() == 1 {
-      _render-item(image-group.first(), label, opts, fig-labels)
+      _render-item(image-group.first(), label, opts, fig-labels, anchor: anchor)
     } else {
-      _render-image-grid(image-group, label, opts, fig-labels)
+      _render-image-grid(image-group, label, opts, fig-labels, anchor: anchor)
     }
   }
 }

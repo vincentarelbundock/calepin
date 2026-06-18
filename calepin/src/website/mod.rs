@@ -3002,13 +3002,16 @@ const CALEPIN_WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
     ),
 ];
 
-const CALEPIN_WEBSITE_SCAFFOLD_BINARY_FILES: &[(&str, &[u8])] = &[(
-    "assets/portrait.jpg",
-    include_bytes!("../assets/scaffolds/website/calepin/docs/assets/portrait.jpg"),
-), (
-    "assets/flowers_01.jpg",
-    include_bytes!("../assets/scaffolds/website/calepin/docs/assets/flowers_01.jpg"),
-)];
+const CALEPIN_WEBSITE_SCAFFOLD_BINARY_FILES: &[(&str, &[u8])] = &[
+    (
+        "assets/portrait.jpg",
+        include_bytes!("../assets/scaffolds/website/calepin/docs/assets/portrait.jpg"),
+    ),
+    (
+        "assets/flowers_01.jpg",
+        include_bytes!("../assets/scaffolds/website/calepin/docs/assets/flowers_01.jpg"),
+    ),
+];
 
 const ACADEMIC_WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
     (
@@ -3107,13 +3110,16 @@ const ACADEMIC_WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
     ),
 ];
 
-const ACADEMIC_WEBSITE_SCAFFOLD_BINARY_FILES: &[(&str, &[u8])] = &[(
-    "assets/portrait.jpg",
-    include_bytes!("../assets/scaffolds/website/academic/docs/assets/portrait.jpg"),
-), (
-    "assets/flowers_01.jpg",
-    include_bytes!("../assets/scaffolds/website/academic/docs/assets/flowers_01.jpg"),
-)];
+const ACADEMIC_WEBSITE_SCAFFOLD_BINARY_FILES: &[(&str, &[u8])] = &[
+    (
+        "assets/portrait.jpg",
+        include_bytes!("../assets/scaffolds/website/academic/docs/assets/portrait.jpg"),
+    ),
+    (
+        "assets/flowers_01.jpg",
+        include_bytes!("../assets/scaffolds/website/academic/docs/assets/flowers_01.jpg"),
+    ),
+];
 
 #[cfg(test)]
 mod tests {
@@ -3192,6 +3198,28 @@ mod tests {
         assert_ne!(stylesheet_path, ".calepin/calepin-website.css");
         assert_ne!(script_path, ".calepin/calepin-website.js");
         assert!(stylesheet.content.contains(".calepin-website-shell"));
+        assert!(
+            stylesheet
+                .content
+                .contains(".calepin-content math[display=\"block\"]"),
+            "block MathML should get document-level vertical rhythm"
+        );
+        assert!(
+            !stylesheet
+                .content
+                .contains(".calepin-content math[display=\"block\"] {\n  display:"),
+            "block MathML spacing must not override native MathML display"
+        );
+        assert!(
+            !stylesheet
+                .content
+                .contains(".calepin-content .calepin-figure-grid"),
+            "figure grids should stay within the figure display wrapper, not be promoted to full-width"
+        );
+        assert!(
+            !stylesheet.content.contains("@media (max-width: 88rem)"),
+            "the site TOC should not move below page content at a desktop/tablet breakpoint"
+        );
         assert!(script.content.contains("data-calepin-theme-toggle"));
     }
 
