@@ -894,15 +894,48 @@ mod tests {
     }
 
     #[test]
+    fn render_wrapper_themes_generic_raw_blocks_in_paged_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+        let staged_input = PathBuf::from(".calepin/paper/source.typ");
+
+        let wrapper = write_render_wrapper(&layout, &staged_input, &["bash"], None).unwrap();
+        let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
+
+        assert!(
+            !contents.contains("else if not _is-html() {\n    it\n  }"),
+            "generic raw fallback must not leave paged raw blocks unthemed:\n{contents}"
+        );
+        assert!(
+            contents.contains("_raw-chunk-langs.contains(it.lang)"),
+            "generic raw fallback should only defer to known executable chunk languages:\n{contents}"
+        );
+        assert!(
+            contents.contains("\"bash\""),
+            "jupyter kernels should be included among known executable chunk languages:\n{contents}"
+        );
+        assert!(
+            contents.contains("_html-themed-raw-block(it)"),
+            "generic raw fallback should route non-running fences through Calepin code styling:\n{contents}"
+        );
+    }
+
+    #[test]
     fn notebook_theme_comes_from_theme_selection() {
-        let source = crate::theme::notebook_source(
-            &crate::theme::ThemeSelection::Default,
-            &crate::theme::NotebookTemplateContext::default(),
-        )
-        .unwrap()
-        .unwrap();
-        assert!(source.source.contains("code-block"));
-        assert!(source.source.contains("_fenced-chunks-runs"));
+        for selection in [
+            crate::theme::ThemeSelection::Default,
+            crate::theme::ThemeSelection::Builtin("academic"),
+        ] {
+            let source = crate::theme::notebook_source(
+                &selection,
+                &crate::theme::NotebookTemplateContext::default(),
+            )
+            .unwrap()
+            .unwrap();
+            assert!(source.source.contains("_html-themed-raw-block"));
+            assert!(source.source.contains("_raw-chunk-langs.contains(it.lang)"));
+            assert!(source.source.contains("_fenced-chunks-runs"));
+        }
         assert!(crate::theme::notebook_source(
             &crate::theme::ThemeSelection::Disabled,
             &crate::theme::NotebookTemplateContext::default(),

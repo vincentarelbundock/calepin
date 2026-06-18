@@ -46,6 +46,14 @@ pub(super) fn write_render_wrapper(
 
     lines.push('\n');
     lines.push('\n');
+    lines.push_str(&format!(
+        "#let _raw-chunk-langs = ({})\n",
+        raw_chunk_langs(jupyter_kernels)
+            .iter()
+            .map(|lang| typst_string(lang))
+            .collect::<Vec<_>>()
+            .join(", ")
+    ));
 
     for lang in ["typ", "typst"] {
         lines.push_str(&format!(
@@ -80,6 +88,24 @@ pub(super) fn write_render_wrapper(
     Ok(wrapper_relative)
 }
 
+fn raw_chunk_langs(jupyter_kernels: &[&str]) -> Vec<String> {
+    let mut langs = Vec::new();
+    for lang in ["python", "r", "mermaid", "dot", "tikz", "d2"] {
+        langs.push(lang.to_string());
+    }
+    for kernel in jupyter_kernels {
+        if !langs.iter().any(|lang| lang == kernel) {
+            langs.push((*kernel).to_string());
+        }
+    }
+    langs
+}
+
+fn typst_string(value: &str) -> String {
+    let escaped = value.replace('\\', "\\\\").replace('"', "\\\"");
+    format!("\"{escaped}\"")
+}
+
 fn raw_show_rule(lang: &str) -> String {
     format!(
         "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ chunk-from-raw-plain(\"{lang}\", it) }}\n"
@@ -90,11 +116,9 @@ fn html_raw_show_rule() -> &'static str {
     r#"#show raw.where(block: true, theme: auto): it => {
   if _is-query() {
     it
-  } else if not _is-html() {
-    it
   } else if _disable-raw-chunk-transforms.get() {
     _html-themed-raw-block(it)
-  } else if it.has("lang") and it.lang != none and _fenced-chunks-runs(
+  } else if it.has("lang") and it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
