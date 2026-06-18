@@ -513,6 +513,55 @@ mod tests {
     }
 
     #[test]
+    fn default_website_theme_places_main_menu_on_right_before_social_menu() {
+        let site_context = SiteContextInput {
+            menus: BTreeMap::from([
+                (
+                    "main".to_string(),
+                    vec![SiteNavEntry {
+                        href: "docs.html".to_string(),
+                        label: "Documentation".to_string(),
+                        label_html: "Documentation".to_string(),
+                        active: false,
+                    }],
+                ),
+                (
+                    "social".to_string(),
+                    vec![SiteNavEntry {
+                        href: "https://github.com/example/project".to_string(),
+                        label: "GitHub".to_string(),
+                        label_html: "GitHub".to_string(),
+                        active: false,
+                    }],
+                ),
+            ]),
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            ..SiteContextInput::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        let brand = themed.find("calepin-website-topbrand").unwrap();
+        let right_menu = themed.find("</ul>\n            <ul>").unwrap();
+        let documentation = themed.find("Documentation").unwrap();
+        let github = themed.find("GitHub").unwrap();
+
+        assert!(brand < right_menu);
+        assert!(right_menu < documentation);
+        assert!(documentation < github);
+    }
+
+    #[test]
     fn default_website_theme_renders_output_picker_directly() {
         let site_context = SiteContextInput {
             title: Some("Example".to_string()),
