@@ -256,7 +256,7 @@ mod tests {
         .unwrap();
 
         let content = fs::read_to_string(path).unwrap();
-        assert!(content.contains(r#"#import "@preview/calepin:0.0.1" as calepin"#));
+        assert!(content.contains(r#"#import "/.calepin/calepin.typ" as calepin"#));
         assert!(content.contains("calepin.inline.with(\"python\")"));
         assert!(content.contains("fenced-chunks: true"));
         assert!(content.contains("```python\n"));

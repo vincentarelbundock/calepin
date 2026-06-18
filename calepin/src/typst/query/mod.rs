@@ -321,7 +321,11 @@ fn resolve_named_label(
         .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
     // Prefixed names become cross-reference anchors; a plain name is just the
     // chunk id (usable for `#calepin.results` relocation), not a cross-reference.
-    let prefixed: Vec<String> = names.iter().filter(|name| has_crossref_prefix(name)).cloned().collect();
+    let prefixed: Vec<String> = names
+        .iter()
+        .filter(|name| has_crossref_prefix(name))
+        .cloned()
+        .collect();
     let crossref_labels = if prefixed.is_empty() {
         Vec::new()
     } else {
@@ -405,7 +409,10 @@ fn parse_crossref_labels(value: &Value) -> Result<Vec<CrossrefLabelDoc>> {
     // Only prefixed names are cross-reference anchors. A plain label is a chunk
     // id used for results lookup and `#calepin.results` relocation, not a
     // cross-reference, so it is accepted and contributes no anchor.
-    let prefixed: Vec<String> = names.into_iter().filter(|name| has_crossref_prefix(name)).collect();
+    let prefixed: Vec<String> = names
+        .into_iter()
+        .filter(|name| has_crossref_prefix(name))
+        .collect();
     if prefixed.is_empty() {
         return Ok(Vec::new());
     }

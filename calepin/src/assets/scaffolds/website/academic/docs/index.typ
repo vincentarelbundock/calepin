@@ -1,4 +1,4 @@
-#import "@preview/calepin:0.0.1" as calepin
+#import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Example Site])
 #metadata((title: "Home", translation_key: "home")) <website-metadata>

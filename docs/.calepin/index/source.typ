@@ -162,7 +162,7 @@ Write notebooks in pure Typst, a simple, consistent, powerful, and elegant types
 = A simple computational notebook
 
 ````typ
-#import "@preview/calepin:0.0.1" as calepin
+#import "/.calepin/calepin.typ" as calepin
 
 #calepin.setup(
   echo: true,

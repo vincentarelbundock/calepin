@@ -2234,10 +2234,11 @@ fn nav_item_model(
 fn build_pages_index(
     src_dir: &Path,
     typ_files: &[PathBuf],
-    _sections: &[NavSectionPlan],
+    sections: &[NavSectionPlan],
     page_meta: &PageMetaMap,
     page_info: &PageInfoMap,
 ) -> serde_json::Value {
+    let configured_titles = page_index_configured_titles(sections);
     let entries = typ_files
         .iter()
         .filter(|path| path.file_name().and_then(|name| name.to_str()) != Some(FALLBACK_PAGE))
@@ -2245,6 +2246,7 @@ fn build_pages_index(
             let meta = page_meta.get(path);
             let title = meta
                 .and_then(|meta| meta.title.clone())
+                .or_else(|| configured_titles.get(path).cloned())
                 .unwrap_or_else(|| stem_label(path));
             let raw = meta
                 .map(|meta| meta.raw.clone())
@@ -2263,6 +2265,22 @@ fn build_pages_index(
         })
         .collect::<Vec<_>>();
     serde_json::Value::Array(entries)
+}
+
+fn page_index_configured_titles(sections: &[NavSectionPlan]) -> BTreeMap<PathBuf, String> {
+    let mut titles = BTreeMap::new();
+    for section in sections {
+        for item in &section.items {
+            let (Some(path), Some(label)) = (
+                &item.path,
+                clean_optional_string(item.configured_label.as_deref()),
+            ) else {
+                continue;
+            };
+            titles.entry(path.clone()).or_insert(label);
+        }
+    }
+    titles
 }
 
 fn page_translations_json(path: &Path, page_info: &PageInfoMap) -> serde_json::Value {

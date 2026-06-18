@@ -5,17 +5,102 @@ use crate::typst::crossref::has_crossref_prefix;
 use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 const RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
+const PREVIEW_IMPORT_PREFIX: &str = "@preview/calepin:";
 
 pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
     let staged_relative = layout.artifact_relative_path("source.typ");
 
     let source = std::fs::read_to_string(&layout.input)
         .with_context(|| format!("failed to read {}", layout.input.display()))?;
+    reject_preview_calepin_imports(&source)?;
     let staged = rewrite_calepin_imports(&source);
     let staged_path = layout.root.join(&staged_relative);
 
     write_if_changed(&staged_path, staged)?;
     Ok(staged_relative)
+}
+
+fn reject_preview_calepin_imports(source: &str) -> Result<()> {
+    if let Some(suggestion) = preview_calepin_import_suggestion(source) {
+        return Err(anyhow::anyhow!(
+            "unsupported Calepin Typst package import. Calepin documents must import the binary-written local runtime instead:\n{suggestion}\nRun `calepin compile` or `calepin watch` so Calepin writes .calepin/calepin.typ before Typst renders the document."
+        ));
+    }
+    Ok(())
+}
+
+fn preview_calepin_import_suggestion(source: &str) -> Option<String> {
+    let mut raw_block: Option<usize> = None;
+
+    for segment in source.split_inclusive('\n') {
+        let (line, _) = segment
+            .strip_suffix('\n')
+            .map(|line| (line, "\n"))
+            .unwrap_or((segment, ""));
+        let trimmed = line.trim_start();
+
+        if let Some(fence_len) = raw_block {
+            if is_closing_fence(trimmed, fence_len) {
+                raw_block = None;
+            }
+            continue;
+        }
+
+        if let Some((fence_len, _)) = opening_fence(trimmed) {
+            raw_block = Some(fence_len);
+            continue;
+        }
+
+        if let Some(suggestion) = preview_calepin_import_suggestion_in_line(line) {
+            return Some(suggestion);
+        }
+    }
+
+    None
+}
+
+fn preview_calepin_import_suggestion_in_line(line: &str) -> Option<String> {
+    let mut rest = line;
+
+    while let Some(index) = rest.find("#import") {
+        let (before, candidate) = rest.split_at(index);
+        if before.contains("//") {
+            return None;
+        }
+
+        if !import_keyword_boundary(candidate) {
+            rest = &candidate["#import".len()..];
+            continue;
+        }
+
+        let Some((suggestion, _tail)) = preview_import_candidate_suggestion(candidate) else {
+            rest = &candidate["#import".len()..];
+            continue;
+        };
+        return Some(suggestion);
+    }
+
+    None
+}
+
+fn preview_import_candidate_suggestion(candidate: &str) -> Option<(String, &str)> {
+    let after_keyword = &candidate["#import".len()..];
+    let whitespace_len = after_keyword
+        .char_indices()
+        .find_map(|(idx, ch)| if ch.is_whitespace() { None } else { Some(idx) })
+        .unwrap_or(after_keyword.len());
+    let whitespace = &after_keyword[..whitespace_len];
+    let after_whitespace = &after_keyword[whitespace_len..];
+    let literal = parse_string_literal(after_whitespace)?;
+    if !literal.value.starts_with(PREVIEW_IMPORT_PREFIX) {
+        return None;
+    }
+
+    let tail = &after_whitespace[literal.source_len..];
+    Some((
+        format!("#import{}\"{}\"{}", whitespace, RUNTIME_IMPORT, tail),
+        tail,
+    ))
 }
 
 fn rewrite_calepin_imports(source: &str) -> String {
@@ -271,9 +356,7 @@ fn parse_string_literal(input: &str) -> Option<StringLiteral> {
 }
 
 fn is_calepin_runtime_import(value: &str) -> bool {
-    value == ".calepin/calepin.typ"
-        || value == RUNTIME_IMPORT
-        || value.starts_with("@preview/calepin:")
+    value == ".calepin/calepin.typ" || value == RUNTIME_IMPORT
 }
 
 #[cfg(test)]
@@ -281,7 +364,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rewrites_preview_import_path_and_preserves_style() {
+    fn leaves_preview_import_path_for_migration_diagnostic() {
         let source = r#"#import "@preview/calepin:0.0.1" as cp
 #import "@preview/calepin:9.8.7": chunk, inline
 #import "@preview/other:1.0.0" as other
@@ -289,8 +372,8 @@ mod tests {
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(
             rewritten,
-            r#"#import "/.calepin/calepin.typ" as cp
-#import "/.calepin/calepin.typ": chunk, inline
+            r#"#import "@preview/calepin:0.0.1" as cp
+#import "@preview/calepin:9.8.7": chunk, inline
 #import "@preview/other:1.0.0" as other
 "#
         );
@@ -305,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_rewrite_comments_or_raw_blocks() {
+    fn does_not_rewrite_comments_raw_blocks_or_preview_imports() {
         let source = r#"// #import "@preview/calepin:0.0.1"
 ```typ
 #import "@preview/calepin:0.0.1"
@@ -319,7 +402,7 @@ mod tests {
 ```typ
 #import "@preview/calepin:0.0.1"
 ```
-#import "/.calepin/calepin.typ" as calepin
+#import "@preview/calepin:0.0.1" as calepin
 "#
         );
     }

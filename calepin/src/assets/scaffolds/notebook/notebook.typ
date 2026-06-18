@@ -1,4 +1,4 @@
-#import "@preview/calepin:0.0.1" as calepin
+#import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Calepin example])
 

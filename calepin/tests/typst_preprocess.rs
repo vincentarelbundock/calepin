@@ -81,7 +81,7 @@ print(x + 1)
 }
 
 #[test]
-fn compile_rewrites_preview_package_import_to_runtime() {
+fn compile_rejects_preview_package_import_with_migration_message() {
     if !has_command("typst") || !has_command("python3") {
         return;
     }
@@ -105,23 +105,16 @@ print(42)
         .output()
         .expect("failed to run calepin compile");
 
+    assert!(!output.status.success(), "compile unexpectedly succeeded");
+    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        output.status.success(),
-        "compile failed:\n{}",
-        String::from_utf8_lossy(&output.stderr)
+        stderr.contains("unsupported Calepin Typst package import"),
+        "{stderr}"
     );
-
-    let staged = std::fs::read_to_string(dir.path().join(".calepin/paper/source.typ")).unwrap();
-    assert!(staged.contains(r#"#import "/.calepin/calepin.typ" as cp"#));
-    assert!(!staged.contains("@preview/calepin"));
-
-    let original = std::fs::read_to_string(input).unwrap();
-    assert!(original.contains(r#"#import "@preview/calepin:0.0.1" as cp"#));
-
-    let results_path = dir.path().join(".calepin/paper/results.json");
-    let results: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
-    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "42");
+    assert!(
+        stderr.contains(r#"#import "/.calepin/calepin.typ" as cp"#),
+        "{stderr}"
+    );
 }
 
 #[test]
@@ -204,7 +197,8 @@ Theme is a compile-time concern.
         html.contains("href=\"https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css\""),
         "{html}"
     );
-    assert!(html.contains("<main class=\"container\">"), "{html}");
+    assert!(html.contains("calepin-document-main"), "{html}");
+    assert!(html.contains("Theme is a compile-time concern."), "{html}");
 }
 
 #[test]

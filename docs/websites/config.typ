@@ -281,7 +281,7 @@ Add arbitrary page metadata with Typst's `#metadata` function and the `<website-
 Use `calepin.pages()` to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.
 
 ```typ
-#import "@preview/calepin:0.0.1" as calepin
+#import "/.calepin/calepin.typ" as calepin
 
 #let posts = calepin.pages()
   .filter(p => p.path.starts-with("blog/"))

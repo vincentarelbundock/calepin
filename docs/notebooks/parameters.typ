@@ -1,4 +1,4 @@
-#import "@preview/calepin:0.0.1" as calepin
+#import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Parameters])
 
@@ -19,7 +19,7 @@ Parameters let you render the same notebook with different inputs. Declare them 
 This complete document filters the built-in R `iris` data to one species and a minimum petal length, then uses a third parameter to choose the color palette:
 
 ````typ
-#import "@preview/calepin:0.0.1" as calepin
+#import "/.calepin/calepin.typ" as calepin
 
 #calepin.setup(
   params: (

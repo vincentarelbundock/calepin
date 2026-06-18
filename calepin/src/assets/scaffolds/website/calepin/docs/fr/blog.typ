@@ -1,4 +1,4 @@
-#import "@preview/calepin:0.0.1" as calepin
+#import "/.calepin/calepin.typ" as calepin
 
 #let _meta(page, key, default: none) = {
   let meta = page.at("meta", default: (:))
