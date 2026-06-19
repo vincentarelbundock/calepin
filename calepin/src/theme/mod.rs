@@ -11,7 +11,10 @@ mod html;
 mod notebook;
 
 pub use bundle::{builtin_names, eject_builtin, eject_builtin_to};
-pub use html::{resolve_explicit_site_html_entry, resolve_html_entry, HtmlEntry, HtmlScope};
+pub use html::{
+    resolve_explicit_site_html_entry, resolve_html_entry, style_only_html_entry, HtmlEntry,
+    HtmlScope,
+};
 pub use notebook::{notebook_source, NotebookSource, NotebookTemplateContext};
 
 pub const DEFAULT_THEME_NAME: &str = "calepin";
@@ -122,7 +125,7 @@ fn read_theme_files(dir: &Path, ext: &str) -> Result<Vec<(String, String)>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn parse_builtin_names() {
@@ -287,6 +290,39 @@ scripts = ["copy-code.js"]
             ["copy-code.js", "local.js"]
         );
         assert!(entry.scripts[0].1.contains("window.CalepinCopyCode"));
+    }
+
+    #[test]
+    fn html_entry_appends_config_styles_after_theme_styles() {
+        let mut entry =
+            resolve_html_entry(&ThemeSelection::Builtin("academic"), HtmlScope::Document)
+                .unwrap()
+                .unwrap();
+        entry.append_styles(vec![crate::config::CssOverride {
+            name: "site.css".to_string(),
+            path: PathBuf::from("/project/styles/site.css"),
+            css: "/* config style */".to_string(),
+        }]);
+
+        let last = entry.styles.last().unwrap();
+        assert_eq!(last.0, "site.css");
+        assert_eq!(last.1, "/* config style */");
+    }
+
+    #[test]
+    fn style_only_entry_preserves_document_shell_and_adds_styles() {
+        let entry = crate::theme::style_only_html_entry(vec![crate::config::CssOverride {
+            name: "raw.css".to_string(),
+            path: PathBuf::from("/project/styles/raw.css"),
+            css: "body { color: red; }".to_string(),
+        }]);
+
+        assert_eq!(entry.theme_name, "styles");
+        assert!(!entry.is_default);
+        assert_eq!(entry.styles.len(), 1);
+        assert!(entry.layout.contains("{{ doc.head }}"));
+        assert!(entry.layout.contains("{{ doc.body }}"));
+        assert!(entry.layout.contains("{% for style in styles %}"));
     }
 
     #[test]

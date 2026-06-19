@@ -25,6 +25,7 @@ impl HtmlScope {
 
 /// An HTML entry resolved to render-ready sources. The asset lists come from
 /// the same bundle that provided the layout (the spec's "asset closure").
+#[derive(Clone)]
 pub struct HtmlEntry {
     pub theme_name: String,
     pub layout: String,
@@ -37,6 +38,39 @@ pub struct HtmlEntry {
     /// True when the layout came from the builtin default bundle (either
     /// because it was selected or via fallback).
     pub is_default: bool,
+}
+
+impl HtmlEntry {
+    pub fn append_styles(&mut self, styles: Vec<crate::config::CssOverride>) {
+        self.styles
+            .extend(styles.into_iter().map(|style| (style.name, style.css)));
+    }
+}
+
+pub fn style_only_html_entry(styles: Vec<crate::config::CssOverride>) -> HtmlEntry {
+    let mut entry = HtmlEntry {
+        theme_name: "styles".to_string(),
+        layout: r#"{{ doc.head }}
+{% if site.stylesheet %}
+  <link rel="stylesheet" href="{{ site.stylesheet }}">
+{% else %}
+  {% for style in styles %}
+  <style>
+{{ style.css }}
+  </style>
+  {% endfor %}
+{% endif %}
+{{ doc.body_open }}
+{{ doc.body }}
+{{ doc.body_close }}"#
+            .to_string(),
+        partials: Vec::new(),
+        styles: Vec::new(),
+        scripts: Vec::new(),
+        is_default: false,
+    };
+    entry.append_styles(styles);
+    entry
 }
 
 #[derive(Debug, Default, Deserialize)]
