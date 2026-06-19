@@ -226,9 +226,14 @@ for epoch, value in checkpoints:
 def cell(value):
     return f"[{value}]"
 
-rows = [cell("*Item*"), cell("factor 1"), cell("factor 2")]
+rows = [
+    "table.hline()",
+    cell("*Item*"), cell("factor 1"), cell("factor 2"),
+    "table.hline()",
+]
 for name, vector in zip(items, item_factors):
     rows.extend([cell(name), cell(f"{vector[0]:.2f}"), cell(f"{vector[1]:.2f}")])
+rows.append("table.hline()")
 
 fragment = (
     "#figure("
