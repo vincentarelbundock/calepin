@@ -3,7 +3,7 @@
 
 #title()
 
-_Calepin_ ships with two built-in themes. Built-in themes are compiled into the
+_Calepin_ ships with three built-in themes. Built-in themes are compiled into the
 binary, so they are always available by name and can be selected without adding
 theme files to your project.
 
@@ -38,6 +38,7 @@ Set `theme` in `calepin.toml`:
 ```toml
 theme = "calepin"
 theme = "academic"
+theme = "typst"
 ```
 
 For a single document, set the theme in the source:
@@ -45,6 +46,12 @@ For a single document, set the theme in the source:
 ```typ
 #calepin.setup(theme: "academic")
 ```
+
+= `typst`
+
+`typst` disables the website and notebook themed wrappers and uses raw Typst
+output. Use this when you want unstyled HTML or the output unchanged from the
+Typst source.
 
 Website scaffolds are also theme-aware:
 
