@@ -36,23 +36,16 @@
 // Notebook helpers
 #let chunk = calepin.chunk
 #let newthought = smallcaps
-#let setup(
+
+// Document options
+#set document(title: [Matrix factorization with Calepin])
+#calepin.setup(
   echo: true,
   eval: true,
   results: "verbatim",
-) = {
-  set document(title: [Matrix factorization with Calepin])
-  calepin.setup(
-    echo: echo,
-    eval: eval,
-    results: results,
-  )
-}
+)
 
-// Document options
-#setup()
-
-= Matrix factorization with Calepin
+#title()
 
 Matrix factorization represents a rectangular data matrix as the product of
 two thinner matrices. In recommender systems, the rows are users, the columns
