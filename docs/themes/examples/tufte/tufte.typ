@@ -23,6 +23,8 @@
   spacing: 0.9em,
 )
 #set heading(numbering: none)
+#show title: smallcaps
+#show title: set text(weight: "regular")
 #show heading: set align(left)
 #show heading.where(level: 1): smallcaps
 #show heading.where(level: 1): set text(size: 1.1em, weight: "regular")
