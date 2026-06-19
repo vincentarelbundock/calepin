@@ -1,4 +1,0 @@
-themes_dir = "../themes"
-
-[executables]
-python = "../.venv/bin/python"

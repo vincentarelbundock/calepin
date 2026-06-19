@@ -1,0 +1,5 @@
+theme = "academic"
+styles = ["../visual-identity.css"]
+
+[executables]
+python = "../.venv/bin/python"

@@ -1,4 +1,6 @@
 #import "/_tufte_literate.typ": *
+#import "/.calepin/calepin.typ": elements
+
 
 #setup(title: [Matrix factorization with Calepin])
 
@@ -12,7 +14,7 @@ are items, and the observed entries are ratings. A rank #rank-k model writes
 
 where #user-vector is a user vector, #item-vector is an item vector, and
 #global-mean is the global average rating. The dot product is large when the
-user and item point in similar latent directions.#sidenote[The sign and
+user and item point in similar latent directions.#elements.sidenote[The sign and
 rotation of the latent dimensions are not identified. What matters for
 prediction is the dot product, not a unique interpretation of each axis.]
 
@@ -148,8 +150,8 @@ for epoch, value in checkpoints:
     print(f"epoch {epoch:4d}: observed RMSE = {value:.3f}")
 ```
 
-#margin-python[
-```python
+#elements.sidefigure[
+#chunk("python", echo: false, results: "typst")[```python
 def cell(value):
     return f"[{value}]"
 
@@ -164,7 +166,7 @@ fragment = (
     + "), caption: [Learned item factors])"
 )
 print(fragment)
-```
+```]
 ]
 
 The margin table is computed from the trained model. The exact coordinate

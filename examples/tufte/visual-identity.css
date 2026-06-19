@@ -1,0 +1,111 @@
+/*
+ *
+ * Built as a lightweight CSS overlay on top of the built-in `academic` theme.
+ * Sidenotes and side figures use `academic`'s existing classes.
+ */
+
+:root,
+html[data-theme="light"],
+html[data-theme="dark"] {
+  --calepin-color-background: #fffff8;
+  --calepin-color-text: #12110f;
+  --calepin-color-muted: #5a5650;
+  --calepin-color-accent: #7a2e2a;
+  --calepin-color-accent-hover: #5f2520;
+  --calepin-color-link: #7a2e2a;
+  --calepin-color-link-hover: #5f2520;
+  --calepin-font-body: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --calepin-font-heading: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --calepin-heading-weight: 400;
+  --calepin-font-size: 112.5%;
+  --calepin-margin-width: 280px;
+  --calepin-margin-gap: 40px;
+  --calepin-surface-code: #fffdf0;
+  --calepin-surface-output: #fffdf0;
+  --calepin-surface: #fffdf0;
+  --calepin-surface-muted: #fff8eb;
+}
+
+html {
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-text);
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-text);
+  font-family: var(--calepin-font-body);
+  overflow-x: hidden;
+  font-size: var(--calepin-font-size);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--calepin-color-text);
+  line-height: 1.1;
+  font-weight: var(--calepin-heading-weight);
+}
+
+a,
+a:visited {
+  color: var(--calepin-color-link);
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.16em;
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--calepin-color-link-hover);
+}
+
+figcaption {
+  color: var(--calepin-color-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.calepin-math-inline {
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.calepin-math-display {
+  max-width: var(--calepin-content-width);
+  margin: 1.1rem 0;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+  font-style: italic;
+  text-align: center;
+  white-space: nowrap;
+}
+
+[role="doc-noteref"] {
+  color: var(--calepin-color-accent);
+}
+
+.cell-output {
+  background: var(--calepin-surface-output);
+  border: 1px solid #ded8ca;
+  border-left: 3px solid #b6aa90;
+  border-radius: 4px;
+  color: #2f2b25;
+}
+
+.cell-output-stderr {
+  background: #fff6f2;
+  border-color: #d9b8a9;
+  border-left-color: #9f4b3e;
+  color: #5d2d27;
+}
+
+section[role="doc-endnotes"] {
+  margin-top: 2.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d8d1c3;
+  color: var(--calepin-color-muted);
+  font-size: 0.86rem;
+}

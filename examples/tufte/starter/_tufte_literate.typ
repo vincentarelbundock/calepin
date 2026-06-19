@@ -42,26 +42,6 @@
 
 #let html-target = sys.inputs.at("calepin-target", default: "paged") == "html"
 
-#let sidenote(body) = {
-  if html-target {
-    std.html.elem("span", attrs: (class: "sidenote"))[#body]
-  } else {
-    footnote(body)
-  }
-}
-
-#let marginfig(body) = {
-  if html-target {
-    std.html.elem("aside", attrs: (class: "margin-figure"))[#body]
-  } else {
-    body
-  }
-}
-
-#let margin-python(body) = marginfig[
-  #chunk("python", echo: false, results: "typst")[#body]
-]
-
 #let inline-math(html, math) = {
   if html-target {
     std.html.elem("span", attrs: (class: "calepin-math-inline"))[#html()]
