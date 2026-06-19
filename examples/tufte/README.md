@@ -21,11 +21,9 @@ the built-in element helpers:
 - `config.toml`:
   - sets `theme = "academic"` and `styles = ["visual-identity.css"]
   - keeps a local `python` executable path override
-- `_tufte_literate.typ`:
-  - keeps setup/math helpers and chunk settings
-  - no longer defines local sidenote/margin helpers
 - `tufte_starter.typ`:
-  - imports `/.calepin/calepin.typ` `elements` and uses built-in `elements.sidenote`/`elements.sidefigure`
+  - keeps setup/math helpers and chunk settings inline
+  - imports `/.calepin/calepin.typ` and uses built-in `elements.sidenote`/`elements.sidefigure`
 - `visual-identity.css`:
   - token-based override of `--calepin-*` variables and minimal presentational tweaks
 - `tufte_starter.html` is retained as a rendered reference artifact
