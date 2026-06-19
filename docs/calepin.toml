@@ -30,7 +30,7 @@ python = "../.venv/bin/python"
 typst = "typst"
 
 [sidebar]
-fold = false
+fold = true
 
 [[sidebar.section]]
 title = "Getting started"
