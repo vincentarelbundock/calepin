@@ -1,6 +1,6 @@
 # tufte/
 
-A Tufte-style starter example migrated from the legacy staged `tufte/` layout to
+A Tufte-style starter example migrated from the staged `tufte/` layout to
 `examples/tufte` and converted to the built-in `academic` theme.
 
 The build now uses the CSS customization workflow from `docs/themes/customize.typ`:
@@ -28,4 +28,4 @@ the built-in element helpers:
   - imports `/.calepin/calepin.typ` `elements` and uses built-in `elements.sidenote`/`elements.sidefigure`
 - `visual-identity.css`:
   - token-based override of `--calepin-*` variables and minimal presentational tweaks
-- `margin-figure.css` and `tufte_starter.html` are retained as historical reference artifacts
+- `tufte_starter.html` is retained as a rendered reference artifact
