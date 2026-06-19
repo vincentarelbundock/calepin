@@ -255,26 +255,26 @@
   ]
 }
 
-#let _html-themed-raw-block(it) = {
-  let lang = if it.has("lang") { it.lang } else { none }
-  if _is-html() {
-    _raw-block(it.text, lang: lang, theme: _input-syntax-theme)
-  } else {
-    _paged-input-code-block(it.text, lang: lang)
-  }
-}
-
-#let _input-block(code, lang: none) = {
+#let _source-block(code, lang: none, theme: _input-syntax-theme) = {
   if _is-html() {
     std.html.elem("div", attrs: (
       class: "sourceCode",
       "data-lang": _block-lang-label(lang),
     ))[
-      #_raw-block(code, lang: lang, theme: _input-syntax-theme)
+      #_raw-block(code, lang: lang, theme: theme)
     ]
   } else {
     _paged-input-code-block(code, lang: lang)
   }
+}
+
+#let _html-themed-raw-block(it) = {
+  let lang = if it.has("lang") { it.lang } else { none }
+  _source-block(it.text, lang: lang, theme: _input-syntax-theme)
+}
+
+#let _input-block(code, lang: none) = {
+  _source-block(code, lang: lang, theme: _input-syntax-theme)
 }
 
 #let _output-block(output, stream: "stdout") = {

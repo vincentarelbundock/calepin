@@ -599,6 +599,34 @@ print("explicit")
 }
 
 #[test]
+fn typst_compile_html_themed_raw_blocks_use_source_container() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ": _html-themed-raw-block
+
+#_html-themed-raw-block(raw("print('plain')", block: true, lang: "python"))
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(html.contains("sourceCode"), "expected source wrapper: {html}");
+    assert!(html.contains("data-lang=Python") || html.contains(r#"data-lang="Python""#));
+}
+
+#[test]
 fn typst_compile_echo_strips_qmd_header_lines() {
     skip_if_no_typst!();
     if Command::new("pdftotext").arg("-v").output().is_err() {
