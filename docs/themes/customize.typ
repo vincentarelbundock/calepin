@@ -29,8 +29,8 @@ styles = ["styles/raw.css"]
 = Theme tokens
 
 Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
-namespace. As a best practice, override these tokens from project CSS rather than trying
-to target the internals directly.
+namespace. The recommended best practice is to override these tokens from project CSS
+rather than trying to target the internals directly.
 
 #table(
   columns: (1.5fr, 1.5fr, 3.7fr),
