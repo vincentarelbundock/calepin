@@ -10,7 +10,7 @@
   }
 
   if _is-html() {
-    return html.elem("figure", attrs: (class: "margin-figure"))[
+    return html.elem("figure", attrs: (class: "calepin-sidefigure sidefigure margin-figure"))[
       #body
       #if caption != none {
         html.elem("figcaption")[#caption]

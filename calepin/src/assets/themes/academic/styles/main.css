@@ -59,8 +59,11 @@
   max-width: var(--calepin-content-width) !important;
 }
 
+.calepin-sidenote,
 .sidenote,
 .marginnote,
+.calepin-sidefigure,
+.sidefigure,
 .margin-figure {
   display: block;
   float: right;
@@ -73,8 +76,11 @@
   scroll-margin-top: calc(var(--calepin-topbar-height) + 1rem);
 }
 
+.calepin-sidenote p,
 .sidenote p,
 .marginnote p,
+.calepin-sidefigure figcaption,
+.sidefigure figcaption,
 .margin-figure figcaption {
   margin: 0 0 0.7rem;
   line-height: inherit;
@@ -92,10 +98,20 @@
 }
 
 /* A figure, table, or code output placed in the margin. */
+.calepin-sidefigure,
+.sidefigure,
 .margin-figure {
   margin-top: 0.4rem;
 }
 
+.calepin-sidefigure figure,
+.calepin-sidefigure img,
+.calepin-sidefigure svg,
+.calepin-sidefigure table,
+.sidefigure figure,
+.sidefigure img,
+.sidefigure svg,
+.sidefigure table,
 .margin-figure figure,
 .margin-figure img,
 .margin-figure svg,
@@ -104,6 +120,8 @@
   margin: 0;
 }
 
+.calepin-sidefigure table,
+.sidefigure table,
 .margin-figure table {
   font-size: 0.8rem;
 }
@@ -160,8 +178,11 @@
 }
 
 @media (max-width: 56rem) {
+  .calepin-sidenote,
   .sidenote,
   .marginnote,
+  .calepin-sidefigure,
+  .sidefigure,
   .margin-figure {
     display: block;
     float: none;

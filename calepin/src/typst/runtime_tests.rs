@@ -1839,8 +1839,11 @@ Text#calepin.elements.sidenote[A margin remark.] continues.
         "expected a doc-noteref marker:\n{html}"
     );
     assert!(
-        html.contains("class=sidenote") || html.contains(r#"class="sidenote""#),
-        "expected a sidenote container:\n{html}"
+        html.contains("class=calepin-sidenote")
+            || html.contains(r#"class="calepin-sidenote""#)
+            || html.contains("class=sidenote")
+            || html.contains(r#"class="sidenote""#),
+        "expected a canonical or legacy sidenote container:\n{html}"
     );
     // Marker and note are associated by a shared id.
     assert!(
@@ -1879,8 +1882,11 @@ Text#calepin.elements.sidenote(numbering: none)[An unnumbered aside.] ends.
         "expected the note body in HTML output:\n{html}"
     );
     assert!(
-        html.contains("class=marginnote") || html.contains(r#"class="marginnote""#),
-        "expected a marginnote container:\n{html}"
+        html.contains("class=calepin-sidenote")
+            || html.contains(r#"class="calepin-sidenote""#)
+            || html.contains("class=marginnote")
+            || html.contains(r#"class="marginnote""#),
+        "expected a canonical or legacy unnumbered sidenote container:\n{html}"
     );
     assert!(
         !html.contains("doc-noteref"),
@@ -1916,8 +1922,13 @@ fn typst_compile_html_sidefigure_emits_margin_figure_with_caption() {
     );
     let html = std::fs::read_to_string(output).unwrap();
     assert!(
-        html.contains("class=margin-figure") || html.contains(r#"class="margin-figure""#),
-        "expected a margin-figure container:\n{html}"
+        html.contains("class=calepin-sidefigure")
+            || html.contains(r#"class="calepin-sidefigure""#)
+            || html.contains("class=sidefigure")
+            || html.contains(r#"class="sidefigure""#)
+            || html.contains("class=margin-figure")
+            || html.contains(r#"class="margin-figure""#),
+        "expected a canonical or legacy sidefigure container:\n{html}"
     );
     assert!(
         html.contains("<figure"),
