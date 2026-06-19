@@ -26,14 +26,22 @@ theme = "typst"
 styles = ["styles/raw.css"]
 ```
 
+= Theme tokens
+
+Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
+namespace. The recommended best practice is to override these tokens from project CSS
+rather than try to target the internals directly.
+
 ```css
-/* styles/raw.css */
-body {
+/* styles/custom.css */
+:root {
   --calepin-color-background: #f6f7f9;
   --calepin-color-text: #111827;
   --calepin-color-accent: #2563eb;
   --calepin-color-border: #d1d5db;
+}
 
+body {
   font-family: Inter, system-ui, sans-serif;
   background: var(--calepin-color-background);
   color: var(--calepin-color-text);
@@ -44,14 +52,8 @@ pre {
 }
 ```
 
-This sets a minimal typography stack and a few `--calepin-*` tokens to align the page with your
-brand palette while keeping the rest of the styles fully under your own stylesheet.
-
-= Theme tokens
-
-Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
-namespace. The recommended best practice is to override these tokens from project CSS
-rather than try to target the internals directly.
+This override uses token variables for major surfaces and then applies your own typography and border
+styles, while leaving all Calepin component structure intact.
 
 #table(
   columns: (1.5fr, 1.5fr, 3.7fr),
