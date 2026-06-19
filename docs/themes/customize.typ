@@ -26,6 +26,27 @@ theme = "typst"
 styles = ["styles/raw.css"]
 ```
 
+```css
+/* styles/raw.css */
+body {
+  --calepin-color-background: #f6f7f9;
+  --calepin-color-text: #111827;
+  --calepin-color-accent: #2563eb;
+  --calepin-color-border: #d1d5db;
+
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-text);
+}
+
+pre {
+  border: 1px solid var(--calepin-color-border);
+}
+```
+
+This sets a minimal typography stack and a few `--calepin-*` tokens to align the page with your
+brand palette while keeping the rest of the styles fully under your own stylesheet.
+
 = Theme tokens
 
 Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
