@@ -139,6 +139,9 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
 
     let format = args.format.map(|format| format.as_str().to_string());
     let current_dir = std::env::current_dir()?;
+    let calepin_config =
+        crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
+    let config_styles = calepin_config.styles.clone();
     let theme = args
         .theme
         .as_deref()
@@ -169,6 +172,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             theme: &output.theme,
             html_scope: crate::theme::HtmlScope::Document,
             html_entry: None,
+            config_styles: &config_styles,
             html_syntax_theme: None,
             site_context: None,
             pages_input: None,

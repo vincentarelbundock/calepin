@@ -26,6 +26,7 @@ pub struct CompileOptions<'a> {
     /// Pre-resolved HTML layout to use instead of resolving `theme` +
     /// `html_scope`.
     pub html_entry: Option<&'a crate::theme::HtmlEntry>,
+    pub config_styles: &'a [crate::config::CssOverride],
     pub html_syntax_theme: Option<&'a HtmlSyntaxTheme>,
     pub site_context: Option<&'a SiteContextInput>,
     /// Root-relative path to the website pages index, exposed to the runtime
@@ -219,8 +220,20 @@ pub fn compile_with_typst(
     } else {
         None
     };
+    let style_only_entry;
+    let mut owned_html_entry;
     let html_entry = if options.format == Some("html") {
-        options.html_entry.or(resolved_html_entry.as_ref())
+        let base = options.html_entry.or(resolved_html_entry.as_ref());
+        if let Some(entry) = base {
+            owned_html_entry = entry.clone();
+            owned_html_entry.append_styles(options.config_styles.to_vec());
+            Some(&owned_html_entry)
+        } else if !options.config_styles.is_empty() {
+            style_only_entry = crate::theme::style_only_html_entry(options.config_styles.to_vec());
+            Some(&style_only_entry)
+        } else {
+            None
+        }
     } else {
         None
     };

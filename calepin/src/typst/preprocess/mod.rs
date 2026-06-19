@@ -115,6 +115,7 @@ pub fn refresh_cached_preprocess_output(plan: PreprocessPlan) -> Result<Preproce
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
     let mut layout = resolve_layout(&options.input, options.root.as_deref())?;
     let config = CalepinConfig::load(&layout.root, options.config.as_deref())?;
+    let config_theme = config.theme_selection()?;
     assert_supported_typst(&config.executables.typst)?;
 
     let html_syntax_theme = options
@@ -170,6 +171,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .theme
         .clone()
         .or(setup_config.defaults.theme_selection(&layout.root)?)
+        .or(config_theme)
         .unwrap_or_else(|| options.fallback_theme.clone());
     let notebook_context = notebook_template_context(
         &layout,
@@ -520,6 +522,11 @@ mod tests {
     use crate::typst::model::ResultsMode;
     use crate::typst::paths::slash_path;
     use crate::typst::testfixtures;
+    use std::process::Command;
+
+    fn typst_available() -> bool {
+        Command::new("typst").arg("--version").output().is_ok()
+    }
 
     #[test]
     fn page_meta_roundtrips_and_detects_stale_source() {
@@ -563,6 +570,40 @@ mod tests {
         assert_eq!(
             resolved,
             serde_json::json!({"region":"CA","min_count":10,"alpha":0.5,"active":true})
+        );
+    }
+
+    #[test]
+    fn preprocess_theme_can_come_from_config() {
+        if !typst_available() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "#set document(title: [Paper])\nHello").unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), r#"theme = "academic""#).unwrap();
+
+        let plan = prepare_preprocess_plan(PreprocessOptions {
+            input,
+            root: Some(dir.path().to_path_buf()),
+            config: Some(dir.path().join("calepin.toml")),
+            display_root: None,
+            quiet: true,
+            status: false,
+            progress: false,
+            timeout: None,
+            sync_pages: false,
+            theme: None,
+            fallback_theme: crate::theme::ThemeSelection::Default,
+            html_syntax_theme: None,
+            param_overrides: Vec::new(),
+        })
+        .unwrap();
+
+        assert_eq!(
+            plan.theme,
+            crate::theme::ThemeSelection::Builtin("academic")
         );
     }
 
