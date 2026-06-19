@@ -78,7 +78,7 @@ impl CompileFormat {
 #[derive(clap::Args, Debug, Clone)]
 #[command(
     arg_required_else_help = true,
-    after_help = "Examples:\n  calepin new paper.typ\n  calepin new website my_site/ --theme calepin\n  calepin new website my_site/ --theme academic\n  calepin new theme --theme academic\n  calepin new theme themes/my-theme --theme academic"
+    after_help = "Examples:\n  calepin new paper.typ\n  calepin new website my_site/\n  calepin new theme\n  calepin new theme themes/my-theme"
 )]
 pub struct NewArgs {
     /// What to create: a .typ notebook path, `website`, or `theme`
@@ -93,9 +93,6 @@ pub struct NewArgs {
     #[arg(short, long)]
     pub force: bool,
 
-    /// Builtin theme for website scaffolds or ejected themes (default: calepin)
-    #[arg(long = "theme", value_name = "THEME")]
-    pub theme: Option<String>,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -312,9 +309,9 @@ mod tests {
     }
 
     #[test]
-    fn test_new_website_args_theme_name() {
+    fn test_new_website_with_output_from_positional_arg() {
         let cli = Cli::try_parse_from([
-            "calepin", "new", "website", "my_site", "--theme", "academic",
+            "calepin", "new", "website", "my_site",
         ])
         .unwrap();
 
@@ -322,26 +319,9 @@ mod tests {
             Command::New(args) => {
                 assert_eq!(args.path, PathBuf::from("website"));
                 assert_eq!(args.output, Some(PathBuf::from("my_site")));
-                assert_eq!(args.theme, Some("academic".to_string()));
             }
             other => panic!("expected new command, got {other:?}"),
         }
-    }
-
-    #[test]
-    fn test_typst_compile_rejects_theme_flag() {
-        let err = Cli::try_parse_from([
-            "calepin",
-            "compile",
-            "paper.typ",
-            "--format",
-            "html",
-            "--theme",
-            "calepin",
-        ])
-        .unwrap_err();
-
-        assert!(err.to_string().contains("--theme"), "{err}");
     }
 
     #[test]

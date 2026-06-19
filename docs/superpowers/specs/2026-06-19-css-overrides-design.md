@@ -58,10 +58,9 @@ Semantics:
 
 Theme selection precedence remains unchanged:
 
-1. CLI `--theme`
-2. document `#calepin.setup(theme: ...)`
-3. config `theme`
-4. default theme
+1. document `#calepin.setup(theme: ...)`
+2. config `theme`
+3. default theme
 
 Config `styles` remain attached to the config file even when the base theme is
 chosen by CLI or document setup. This allows a project to define its common CSS

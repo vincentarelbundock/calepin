@@ -1,5 +1,6 @@
 #set document(title: [Built-in themes])
 #metadata((title: "Built-in")) <website-metadata>
+#import "/.calepin/calepin.typ" as calepin
 
 #title()
 
@@ -17,7 +18,14 @@ It includes sidebar navigation, a top bar, previous and next page links, an
 on-page table of contents, dark mode, copy buttons on code blocks, and rendered,
 source, and PDF view switching.
 
-#image("/assets/screenshot_website.png", width: 100%, alt: "Screenshot of the Calepin documentation theme")
+#calepin.elements.gallery(
+  (
+    ("/themes/screenshots/calepin_website_dark.png", "Calepin theme dark website", [blah]),
+    ("/themes/screenshots/calepin_website_light.png", "Calepin theme light website", [blah]),
+  ),
+  columns: 2,
+  max-width: 42em,
+)
 
 = `academic`
 
@@ -29,32 +37,17 @@ It includes a centered narrow text column, margin-note support, top navigation,
 dark mode, copy buttons on code blocks, and the shared Calepin search and
 language controls.
 
-#image("/assets/screenshot_academic.png", width: 100%, alt: "Screenshot of the Calepin academic theme")
-
-= Selecting a built-in theme
-
-Set `theme` in `calepin.toml`:
-
-```toml
-theme = "calepin"
-theme = "academic"
-theme = "typst"
-```
-
-For a single document, set the theme in the source:
-
-```typ
-#calepin.setup(theme: "academic")
-```
+#calepin.elements.gallery(
+  (
+    ("/themes/screenshots/academic_website_dark.png", "academic theme dark website", [blah]),
+    ("/themes/screenshots/academic_website_light.png", "academic theme light website", [blah]),
+  ),
+  columns: 2,
+  max-width: 42em,
+)
 
 = `typst`
 
 `typst` disables the website and notebook themed wrappers and uses raw Typst
 output. Use this when you want unstyled HTML or the output unchanged from the
 Typst source.
-
-Website scaffolds are also theme-aware:
-
-```sh
-calepin new website my-site --theme academic
-```

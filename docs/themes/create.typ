@@ -14,8 +14,7 @@ directly. Instead, copy one into your project and edit the copy:
 
 ```sh
 calepin new theme                     # copies calepin to themes/calepin/
-calepin new theme --theme academic    # copies academic to themes/academic/
-calepin new theme themes/my-theme --theme academic
+calepin new theme themes/my-theme
 ```
 
 Then point your site or document at the copy:

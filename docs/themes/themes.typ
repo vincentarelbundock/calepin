@@ -3,15 +3,9 @@
 
 #title()
 
-Themes control how _Calepin_ renders two types of content: websites and notebooks
-(HTML or PDF). A website theme can provide MiniJinja HTML templates, partials, CSS,
-JavaScript, and notebook themes add typst-side template support for HTML and PDF
-outputs.
+Themes control how _Calepin_ renders two types of content: websites and notebooks (HTML or PDF). A website theme can provide MiniJinja HTML templates, partials, CSS, JavaScript, and notebook themes add typst-side template support for HTML and PDF outputs.
 
-= Choosing a theme
-
-The default theme is `calepin`. Select a different built-in or local theme with
-`theme` in a website's `calepin.toml`:
+The default theme is `calepin`. Select a different built-in or local theme with `theme` in a website's `calepin.toml`:
 
 ```toml
 theme = "calepin"           # the default documentation theme
@@ -32,41 +26,23 @@ You can also set the theme in-document with:
 #calepin.setup(theme: "academic")
 ```
 
-When several theme settings are present during a compile, the document setting
-wins, then `calepin.toml`, then the default theme. Use `--config` to choose an
-alternate TOML file for a render.
+When several theme settings are present during a compile, the document setting wins, then `calepin.toml`, then the default theme.
 
 = Structure
 
-A theme can provide templates for website pages, single-document HTML, and
-Typst-level notebook rendering:
+A theme can provide templates for website pages, single-document HTML, and Typst-level notebook rendering:
 
 ```text
 themes/my-theme/
-  theme.toml         # optional theme metadata
+  theme.toml         # theme metadata
   layouts/
     webpage.html     # layout for website pages
     notebook.html    # layout for a single notebook rendered to HTML
     landing.html     # optional page-specific website layout
-  partials/          # theme-local MiniJinja fragments
-  styles/            # theme-local CSS files
-  scripts/           # theme-local JavaScript files
-  notebook.typ.jinja # optional Typst notebook template
+  partials/          # MiniJinja fragments
+  styles/            # CSS files
+  scripts/           # JavaScript files
+  notebook.typ.jinja # Typst notebook template for PDF (and SVG)
 ```
 
-`layouts/webpage.html`, `layouts/notebook.html`, page-specific files in
-`layouts/`, and files in `partials/` use the
-#link("https://docs.rs/minijinja/latest/minijinja/")[MiniJinja template language].
-
-= Customization paths
-
-Use the smallest customization layer that fits the change:
-
-- Use #link("customize.html")[CSS customization] for colors, fonts, spacing,
-  reading width, and small project rules.
-- Use #link("create.html")[local themes] when you need to edit HTML templates,
-  JavaScript, partials, or the Typst notebook template.
-- Use `theme = "typst"` plus `styles = [...]` when you want raw Typst HTML with
-  your own CSS instead of a bundled base theme.
-
-See #link("builtin.html")[Built-in themes] for the bundled theme choices.
+The files in `layouts/` and `partials/` use the #link("https://docs.rs/minijinja/latest/minijinja/")[MiniJinja template language].

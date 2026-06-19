@@ -13,10 +13,7 @@ const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/noteb
 
 pub fn handle_new(args: NewArgs) -> Result<()> {
     if args.path == Path::new("theme") {
-        let name = args
-            .theme
-            .as_deref()
-            .unwrap_or(crate::theme::DEFAULT_THEME_NAME);
+        let name = crate::theme::DEFAULT_THEME_NAME;
         let dest = match args.output.as_deref() {
             Some(output) => crate::theme::eject_builtin_to(name, output, args.force)?,
             None => crate::theme::eject_builtin(name, Path::new("themes"), args.force)?,
@@ -32,21 +29,12 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
     }
     if args.path == Path::new("website") {
         let dest = args.output.as_deref().unwrap_or(Path::new("docs"));
-        let theme = args
-            .theme
-            .as_deref()
-            .unwrap_or(crate::theme::DEFAULT_THEME_NAME);
+        let theme = crate::theme::DEFAULT_THEME_NAME;
         crate::website::scaffold_website(dest, theme, args.force)?;
         if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
             eprintln!("Created {theme} website scaffold in {}", dest.display());
         }
         return Ok(());
-    }
-
-    if args.theme.is_some() {
-        return Err(anyhow::anyhow!(
-            "`--theme` only applies to `calepin new website` or `calepin new theme`"
-        ));
     }
 
     if args.output.is_some() {
@@ -245,7 +233,6 @@ mod tests {
             path: path.clone(),
             output: None,
             force: false,
-            theme: None,
         })
         .unwrap();
 
@@ -268,7 +255,6 @@ mod tests {
             path: path.clone(),
             output: None,
             force: false,
-            theme: None,
         })
         .unwrap_err();
 
@@ -286,7 +272,6 @@ mod tests {
             path: path.clone(),
             output: None,
             force: true,
-            theme: None,
         })
         .unwrap();
 
@@ -296,17 +281,17 @@ mod tests {
     }
 
     #[test]
-    fn new_rejects_theme_flag_for_plain_files() {
+    fn new_creates_plain_notebook_file() {
         let dir = tempfile::tempdir().unwrap();
-        let err = handle_new(NewArgs {
-            path: dir.path().join("x.typ"),
+        let path = dir.path().join("x.typ");
+        handle_new(NewArgs {
+            path: path.clone(),
             output: None,
             force: false,
-            theme: Some("calepin".to_string()),
         })
-        .unwrap_err();
+        .unwrap();
 
-        assert!(err.to_string().contains("--theme"));
+        assert!(path.exists());
     }
 
     #[test]
@@ -318,7 +303,6 @@ mod tests {
             path: PathBuf::from("website"),
             output: Some(site.clone()),
             force: false,
-            theme: None,
         })
         .unwrap();
 
@@ -369,14 +353,13 @@ mod tests {
             path: PathBuf::from("theme"),
             output: Some(theme.clone()),
             force: false,
-            theme: Some("academic".to_string()),
         })
         .unwrap();
 
         assert!(theme.join("layouts/webpage.html").exists());
         assert!(theme.join("partials/navbar-item.html").exists());
-        assert!(theme.join("styles/main.css").exists());
-        assert!(theme.join("scripts/main.js").exists());
+        assert!(theme.join("styles/site.css").exists());
+        assert!(theme.join("scripts/site.js").exists());
         assert!(!theme.join("academic").exists());
     }
 
@@ -387,7 +370,6 @@ mod tests {
             path: dir.path().join("x.typ"),
             output: Some(dir.path().join("site")),
             force: false,
-            theme: None,
         })
         .unwrap_err();
 
