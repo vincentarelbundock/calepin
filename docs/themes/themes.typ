@@ -4,9 +4,9 @@
 #title()
 
 Themes control how _Calepin_ renders HTML pages, single-document HTML notebooks,
-and Typst notebook outputs. A theme can provide MiniJinja HTML templates, shared
-or local partials, CSS, JavaScript, and a Typst notebook template for PDF, SVG,
-PNG, and HTML output.
+and Typst notebook outputs. A theme can provide MiniJinja HTML templates,
+partials, CSS, JavaScript, and a Typst notebook template for PDF, SVG, PNG, and
+HTML output.
 
 = Choosing a theme
 
@@ -37,7 +37,7 @@ Typst-level notebook rendering:
 
 ```text
 themes/my-theme/
-  theme.toml         # optional shared partial/CSS/JS imports
+  theme.toml         # optional theme metadata
   layouts/
     webpage.html     # layout for website pages
     notebook.html    # layout for a single notebook rendered to HTML
@@ -46,10 +46,6 @@ themes/my-theme/
   styles/            # theme-local CSS files
   scripts/           # theme-local JavaScript files
   notebook.typ.jinja # optional Typst notebook template
-themes/shared/       # optional local source for imported shared files
-  partials/
-  styles/
-  scripts/
 ```
 
 `layouts/webpage.html`, `layouts/notebook.html`, page-specific files in
