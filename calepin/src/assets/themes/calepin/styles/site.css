@@ -1,57 +1,20 @@
-/* Bundled website theme — Pico-native overrides.
+/* Bundled website theme.
  *
- * Pico is loaded unlayered via <link> in layout.html; this stylesheet is
- * inlined immediately after it, so plain rules win at equal specificity by
- * source order (Pico uses zero-specificity :where() selectors throughout).
- * That is why there is no @layer wrapping and no !important here: the cascade
- * already favours these rules. Keep selectors class-scoped so we tune Pico
- * rather than fight it. */
+ * The shared theme stylesheet defines the public --calepin-* token contract and
+ * maps those tokens into Pico variables. Keep this file on the public tokens so
+ * built-in themes can be customized through one stable CSS surface. */
 
 :root {
   /* Layout */
-  --calepin-topbar-z: 20;
-  --calepin-overlay-z: 25;
-  --calepin-drawer-z: 30;
-  --calepin-side-width: 12rem;
-  --calepin-shell-gap: 1.5rem;
   --calepin-sidebar-mobile-width: min(18rem, 78vw);
-
-  /* Landing page */
-  --color-bg: color-mix(in srgb, var(--pico-background-color) 94%, #e8f6f8);
-  --color-surface: var(--calepin-surface);
-  --color-text: var(--pico-color);
-  --color-muted: var(--pico-muted-color);
-  --color-border: var(--pico-muted-border-color);
-  --color-accent: #158a9a;
-  --color-accent-dark: #0f6f7d;
-  --color-accent-soft: color-mix(in srgb, var(--color-accent) 14%, var(--pico-background-color));
-  --radius-sm: var(--calepin-radius-sm);
-  --radius-md: var(--calepin-radius-md);
-  --radius-lg: var(--calepin-radius-md);
-  --shadow-card: var(--calepin-card-shadow);
   --landing-hero-wordmark-width: 24rem;
-  --max-width: var(--calepin-wide-width);
-}
-
-html[data-theme="dark"] {
-  --color-bg: var(--pico-background-color);
-  --color-accent: #2ca9b8;
-  --color-accent-dark: #67d4df;
-}
-
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme]) {
-    --color-bg: var(--pico-background-color);
-    --color-accent: #2ca9b8;
-    --color-accent-dark: #67d4df;
-  }
 }
 
 /* ------------------------------------------------------------------ Shell */
 
 .calepin-website-shell.grid {
   display: grid;
-  grid-template-columns: var(--calepin-side-width) minmax(0, 1fr) var(--calepin-side-width);
+  grid-template-columns: var(--calepin-sidebar-width) minmax(0, 1fr) var(--calepin-sidebar-width);
   grid-template-areas: "sidebar main toc";
   gap: var(--calepin-shell-gap);
   width: min(100% - 2rem, 95rem);
@@ -73,11 +36,11 @@ html[data-theme="dark"] {
 }
 
 .calepin-website-main--landing {
-  width: min(100% - 2rem, var(--max-width));
+  width: min(100% - 2rem, var(--calepin-wide-width));
   margin: 0 auto;
   padding: 3.5rem 0 4rem;
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: var(--calepin-color-text);
+  background: var(--calepin-color-background);
 }
 
 .calepin-website-main > :first-child {
@@ -103,11 +66,11 @@ html[data-theme="dark"] {
 .calepin-website-topbar {
   position: sticky;
   top: 0;
-  z-index: var(--calepin-topbar-z);
+  z-index: var(--calepin-z-topbar);
   min-height: var(--calepin-topbar-height);
   padding: 0 1.25rem;
-  background: color-mix(in srgb, var(--pico-background-color) 92%, transparent);
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  background: color-mix(in srgb, var(--calepin-color-background) 92%, transparent);
+  border-bottom: 1px solid var(--calepin-color-border);
   backdrop-filter: blur(12px);
 }
 
@@ -176,16 +139,16 @@ html[data-theme="dark"] {
 .calepin-website-search-results {
   position: absolute;
   inset: calc(100% + 0.35rem) 0 auto auto;
-  z-index: calc(var(--calepin-topbar-z) + 1);
+  z-index: calc(var(--calepin-z-topbar) + 1);
   width: min(30rem, 88vw);
   max-height: min(32rem, 72vh);
   overflow: auto;
   overscroll-behavior: contain;
   padding: 0.35rem;
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: var(--pico-border-radius);
-  background: var(--pico-background-color);
-  box-shadow: var(--pico-card-box-shadow);
+  border: 1px solid var(--calepin-color-border);
+  border-radius: var(--calepin-radius-sm);
+  background: var(--calepin-color-background);
+  box-shadow: var(--calepin-shadow-card);
 }
 
 .calepin-website-search-results[hidden] {
@@ -206,7 +169,7 @@ html[data-theme="dark"] {
 .calepin-website-search-subresult:focus {
   color: inherit;
   text-decoration: none;
-  background: color-mix(in srgb, var(--calepin-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-search-result-title {
@@ -221,7 +184,7 @@ html[data-theme="dark"] {
 .calepin-website-search-empty {
   display: block;
   margin-top: 0.15rem;
-  color: var(--pico-muted-color);
+  color: var(--calepin-color-muted);
   font-size: 0.78rem;
   line-height: 1.35;
 }
@@ -234,7 +197,7 @@ html[data-theme="dark"] {
 .calepin-website-search-subresults {
   margin: 0.05rem 0 0.25rem 0.8rem;
   padding-inline-start: 0.7rem;
-  border-inline-start: 1px solid var(--pico-muted-border-color);
+  border-inline-start: 1px solid var(--calepin-color-border);
 }
 
 .calepin-website-search-subresult {
@@ -254,7 +217,7 @@ html[data-theme="dark"] {
 
 .calepin-website-search-subresult-title::before {
   content: "\2937  ";
-  color: var(--pico-muted-color);
+  color: var(--calepin-color-muted);
 }
 
 .calepin-website-nav-toggle {
@@ -274,7 +237,7 @@ html[data-theme="dark"] {
   width: min(100%, var(--landing-hero-wordmark-width));
   height: auto;
   margin-inline: auto;
-  color: var(--color-text);
+  color: var(--calepin-color-text);
   fill: currentColor;
 }
 
@@ -307,10 +270,10 @@ html[data-theme="dark"] {
 .landing-editor-integration,
 .landing-product-preview,
 .landing-tool-strip {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--calepin-color-border);
+  border-radius: var(--calepin-radius-lg);
+  background: var(--calepin-surface);
+  box-shadow: var(--calepin-shadow-card);
 }
 
 .landing-feature-content p {
@@ -324,7 +287,7 @@ html[data-theme="dark"] {
   margin: 1.05rem 0 0;
   padding: 0;
   list-style: none;
-  color: var(--color-text);
+  color: var(--calepin-color-text);
   font-size: 0.9rem;
 }
 
@@ -349,15 +312,15 @@ html[data-theme="dark"] {
   width: 0.42rem;
   height: 0.42rem;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--calepin-color-accent);
 }
 
 .landing-mini-preview {
   margin-top: 1.25rem;
   padding: 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--color-border) 75%, var(--color-accent-soft));
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-bg) 65%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--calepin-color-border) 75%, var(--calepin-color-accent-soft));
+  border-radius: var(--calepin-radius-md);
+  background: color-mix(in srgb, var(--calepin-color-background) 65%, var(--calepin-surface));
 }
 
 .preview-window-bar,
@@ -391,7 +354,7 @@ html[data-theme="dark"] {
 .landing-code-pane code {
   display: block;
   padding: 0.75rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--calepin-radius-sm);
   background: #17202a;
   color: #edf7f8;
   font-size: 0.78rem;
@@ -409,18 +372,18 @@ html[data-theme="dark"] {
 .mini-table th,
 .mini-table td {
   padding: 0.28rem 0.35rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--calepin-color-border);
 }
 
 .mini-table th {
-  color: var(--color-muted);
+  color: var(--calepin-color-muted);
   font-weight: 650;
 }
 
 .site-browser-bar {
   min-height: 2.1rem;
   padding: 0 0.65rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--calepin-radius-sm);
   background: #17202a;
   color: #edf7f8;
   font-size: 0.7rem;
@@ -447,9 +410,9 @@ html[data-theme="dark"] {
   min-height: 1.9rem;
   align-items: center;
   padding: 0.35rem 0.6rem;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent);
-  color: #ffffff;
+  border-radius: var(--calepin-radius-sm);
+  background: var(--calepin-color-accent);
+  color: var(--calepin-color-accent-contrast);
   font-size: 0.78rem;
   text-decoration: none;
 }
@@ -466,10 +429,10 @@ html[data-theme="dark"] {
   display: grid;
   place-items: center;
   padding: 0.3rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-muted);
+  border: 1px solid var(--calepin-color-border);
+  border-radius: var(--calepin-radius-sm);
+  background: var(--calepin-surface);
+  color: var(--calepin-color-muted);
   font-size: 0.74rem;
   text-align: center;
 }
@@ -494,14 +457,14 @@ html[data-theme="dark"] {
 
 .landing-preview-copy a,
 .landing-preview-copy a:visited {
-  color: var(--color-accent-dark);
+  color: var(--calepin-color-link-hover);
   font-weight: 650;
   text-decoration: none;
 }
 
 .landing-preview-copy a:hover,
 .landing-preview-copy a:focus-visible {
-  color: var(--color-accent);
+  color: var(--calepin-color-accent);
   text-decoration: none;
 }
 
@@ -510,8 +473,8 @@ html[data-theme="dark"] {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   min-height: 21rem;
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--calepin-color-border);
+  border-radius: var(--calepin-radius-md);
 }
 
 .landing-code-pane,
@@ -531,10 +494,10 @@ html[data-theme="dark"] {
   align-items: center;
   margin-bottom: 0.5rem;
   padding: 0.25rem 0.55rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--calepin-radius-sm);
   background: rgba(255, 255, 255, 0.1);
   color: #edf7f8;
-  font-family: var(--pico-font-family-monospace);
+  font-family: var(--calepin-font-mono);
   font-size: 0.76rem;
 }
 
@@ -545,7 +508,7 @@ html[data-theme="dark"] {
 
 .landing-render-pane {
   padding: 1rem;
-  background: var(--color-surface);
+  background: var(--calepin-surface);
 }
 
 .landing-render-pane p {
@@ -563,7 +526,7 @@ html[data-theme="dark"] {
 }
 
 .landing-tool-strip > span {
-  color: var(--color-text);
+  color: var(--calepin-color-text);
   font-weight: 650;
 }
 
@@ -579,10 +542,10 @@ html[data-theme="dark"] {
   min-height: 1.8rem;
   align-items: center;
   padding: 0.25rem 0.55rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  color: var(--color-muted);
+  border: 1px solid var(--calepin-color-border);
+  border-radius: var(--calepin-radius-sm);
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-muted);
   font-size: 0.8rem;
   font-weight: 650;
 }
@@ -592,21 +555,21 @@ html[data-theme="dark"] {
 html[data-theme="light"],
 html[data-theme="dark"],
 html:not([data-theme]) {
-  --pf-text: var(--pico-color);
-  --pf-text-secondary: var(--pico-muted-color);
-  --pf-text-muted: var(--pico-muted-color);
-  --pf-background: var(--pico-background-color);
-  --pf-border: var(--pico-muted-border-color);
-  --pf-border-focus: color-mix(in srgb, var(--pico-color) 30%, var(--pico-muted-border-color));
-  --pf-skeleton: var(--pico-muted-border-color);
-  --pf-skeleton-shine: color-mix(in srgb, var(--pico-muted-border-color) 65%, var(--pico-background-color));
-  --pf-hover: color-mix(in srgb, var(--calepin-accent) 12%, var(--pico-background-color));
-  --pf-mark: var(--pico-color);
-  --pf-outline-focus: var(--pico-primary-focus);
-  --pf-error-bg: color-mix(in srgb, #dc2626 12%, var(--pico-background-color));
-  --pf-error-border: color-mix(in srgb, #dc2626 36%, var(--pico-muted-border-color));
-  --pf-error-text: #dc2626;
-  --pf-error-text-secondary: #b91c1c;
+  --pf-text: var(--calepin-color-text);
+  --pf-text-secondary: var(--calepin-color-muted);
+  --pf-text-muted: var(--calepin-color-muted);
+  --pf-background: var(--calepin-color-background);
+  --pf-border: var(--calepin-color-border);
+  --pf-border-focus: color-mix(in srgb, var(--calepin-color-text) 30%, var(--calepin-color-border));
+  --pf-skeleton: var(--calepin-color-border);
+  --pf-skeleton-shine: color-mix(in srgb, var(--calepin-color-border) 65%, var(--calepin-color-background));
+  --pf-hover: color-mix(in srgb, var(--calepin-color-accent) 12%, var(--calepin-color-background));
+  --pf-mark: var(--calepin-color-text);
+  --pf-outline-focus: var(--calepin-color-focus);
+  --pf-error-bg: var(--calepin-color-danger-soft);
+  --pf-error-border: color-mix(in srgb, var(--calepin-color-danger) 36%, var(--calepin-color-border));
+  --pf-error-text: var(--calepin-color-danger);
+  --pf-error-text-secondary: var(--calepin-color-danger);
 }
 
 
@@ -689,13 +652,13 @@ html:not([data-theme]) {
 .calepin-website-sidebar a:visited,
 .calepin-website-toc a:visited {
   color: inherit;
-  background: color-mix(in srgb, var(--calepin-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
 .calepin-website-sidebar a[aria-current],
 .calepin-website-toc a.active {
-  background: color-mix(in srgb, var(--calepin-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
 }
@@ -706,7 +669,7 @@ html:not([data-theme]) {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--pico-muted-color);
+  color: var(--calepin-color-muted);
   text-align: left;
   font-weight: 600;
 }
@@ -739,7 +702,7 @@ html:not([data-theme]) {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--pico-muted-color);
+  color: var(--calepin-color-muted);
   font-weight: 600;
   margin: 0.4rem 0;
   padding: 0;
@@ -900,7 +863,7 @@ html:not([data-theme]) {
   font-size: 1rem;
   line-height: 1;
   font-weight: 600;
-  color: var(--pico-muted-color);
+  color: var(--calepin-color-muted);
 }
 
 /* ------------------------------------------------------ Home page (hero) */
@@ -922,7 +885,7 @@ html:not([data-theme]) {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid var(--calepin-color-border);
   border-radius: 0.45rem;
   overflow: hidden;
   cursor: pointer;
@@ -1019,13 +982,13 @@ html:not([data-theme]) {
 .hero-lede {
   margin: 0.2rem auto 1rem;
   max-width: 49ch;
-  color: var(--pico-muted-color);
+  color: var(--calepin-color-muted);
 }
 
 .hero-command {
   display: inline-block;
   margin-top: 0.2rem;
-  font-family: var(--pico-font-family-monospace);
+  font-family: var(--calepin-font-mono);
 }
 
 .calepin-website-features {
@@ -1052,7 +1015,7 @@ html:not([data-theme]) {
 
 .calepin-website-feature-card p {
   margin: 0;
-  color: var(--pico-muted-color);
+  color: var(--calepin-color-muted);
 }
 
 /* -------------------------------------------------------- 404 */
@@ -1066,11 +1029,11 @@ html:not([data-theme]) {
 
 .calepin-website-404-code {
   margin: 0;
-  font-family: var(--pico-font-family-monospace);
+  font-family: var(--calepin-font-mono);
   font-weight: 700;
   font-size: clamp(4rem, 18vw, 8rem);
   line-height: 1;
-  color: var(--calepin-accent);
+  color: var(--calepin-color-accent);
 }
 
 .calepin-website-404-title {
@@ -1080,7 +1043,7 @@ html:not([data-theme]) {
 .calepin-website-404-lede {
   margin: 0.6rem auto 1.6rem;
   max-width: 42ch;
-  color: var(--pico-muted-color);
+  color: var(--calepin-color-muted);
 }
 
 .calepin-website-404-actions {
@@ -1108,7 +1071,7 @@ html:not([data-theme]) {
   width: 100%;
   padding: 0;
   margin: 0;
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid var(--calepin-color-border);
   border-radius: var(--calepin-radius-sm);
   background: none;
   overflow: hidden;
@@ -1240,13 +1203,13 @@ html:not([data-theme]) {
     width: var(--calepin-sidebar-mobile-width);
     height: calc(100vh - var(--calepin-topbar-height));
     padding: 0.8rem;
-    background: var(--pico-background-color);
-    border-right: 1px solid var(--pico-muted-border-color);
+    background: var(--calepin-color-background);
+    border-right: 1px solid var(--calepin-color-border);
     box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.2);
     overflow: auto;
     transform: translateX(-105%);
     transition: transform 180ms ease;
-    z-index: var(--calepin-drawer-z);
+    z-index: var(--calepin-z-drawer);
   }
 
   .calepin-website-shell.nav-open .calepin-website-sidebar {
@@ -1261,7 +1224,7 @@ html:not([data-theme]) {
     opacity: 0;
     pointer-events: none;
     transition: opacity 180ms ease;
-    z-index: var(--calepin-overlay-z);
+    z-index: var(--calepin-z-backdrop);
   }
 
   .calepin-website-page-nav {
@@ -1299,7 +1262,7 @@ html:not([data-theme]) {
 
 @media (max-width: 42rem) {
   .calepin-website-main--landing {
-    width: min(100% - 1.25rem, var(--max-width));
+    width: min(100% - 1.25rem, var(--calepin-wide-width));
   }
 
   .landing-button,

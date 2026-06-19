@@ -26,14 +26,14 @@
 .calepin-nav-toggle:focus,
 .calepin-nav-toggle:active {
   border: 0;
-  background: color-mix(in srgb, var(--pico-primary) 10%, transparent);
+  background: var(--calepin-color-accent-soft);
   box-shadow: none;
   color: inherit;
 }
 
 [data-calepin-theme-toggle]:focus-visible,
 .calepin-nav-toggle:focus-visible {
-  outline: 2px solid var(--pico-primary-focus);
+  outline: 2px solid var(--calepin-color-focus);
   outline-offset: 2px;
 }
 
@@ -72,10 +72,10 @@ a:has(.calepin-nav-icon) {
 .calepin-site-topbar {
   position: sticky;
   top: 0;
-  z-index: var(--calepin-topbar-z);
+  z-index: var(--calepin-z-topbar);
   min-height: var(--calepin-topbar-height);
-  border-bottom: 1px solid var(--pico-muted-border-color);
-  background: color-mix(in srgb, var(--pico-background-color) 94%, transparent);
+  border-bottom: var(--calepin-border);
+  background: color-mix(in srgb, var(--calepin-color-background) 94%, transparent);
   backdrop-filter: blur(10px);
 }
 
@@ -89,8 +89,8 @@ a:has(.calepin-nav-icon) {
   align-items: center;
   min-width: 0;
   color: inherit;
-  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
-  font-weight: 700;
+  font-family: var(--calepin-font-heading);
+  font-weight: var(--calepin-heading-weight);
   text-decoration: none;
 }
 
@@ -126,7 +126,7 @@ a:has(.calepin-nav-icon) {
 .calepin-site-menu a:focus-visible,
 .calepin-site-menu a.active,
 .calepin-site-menu a[aria-current] {
-  border-bottom-color: var(--pico-primary);
+  border-bottom-color: var(--calepin-color-accent);
   color: inherit;
 }
 
@@ -172,7 +172,7 @@ a:has(.calepin-nav-icon) {
 .calepin-language-picker-button:focus,
 .calepin-language-picker-button:active {
   border: 0;
-  background: color-mix(in srgb, var(--pico-muted-color) 10%, transparent);
+  background: color-mix(in srgb, var(--calepin-color-muted) 10%, transparent);
   box-shadow: none;
   color: inherit;
 }
@@ -203,5 +203,5 @@ a:has(.calepin-nav-icon) {
 }
 
 .calepin-language-picker-menu a[aria-current="true"] {
-  background: var(--pico-muted-border-color);
+  background: var(--calepin-surface-muted);
 }

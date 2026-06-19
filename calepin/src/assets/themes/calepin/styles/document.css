@@ -2,21 +2,21 @@
   max-width: 1120px;
   margin: 1rem auto 0 auto;
   padding: 0 1rem;
-  color: var(--pico-color);
+  color: var(--calepin-color-text);
   justify-content: flex-end;
 }
 
 .calepin-theme-button {
   appearance: none;
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid var(--calepin-color-border);
   border-radius: 999px;
-  background: var(--pico-card-background-color);
+  background: var(--calepin-surface-raised);
   color: inherit;
   box-shadow: none;
 }
 
 .calepin-theme-button:hover,
 .calepin-theme-button:focus-visible {
-  background: var(--pico-card-background-color);
+  background: var(--calepin-surface-raised);
   color: inherit;
 }

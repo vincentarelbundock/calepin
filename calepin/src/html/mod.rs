@@ -690,6 +690,57 @@ mod tests {
     }
 
     #[test]
+    fn bundled_themes_expose_public_light_and_dark_theme_tokens() {
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+            let entry = entry_for(&selection, HtmlScope::Site);
+            let theme_name = entry.theme_name.clone();
+            let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+                .unwrap()
+                .unwrap();
+
+            for token in [
+                "--calepin-color-background",
+                "--calepin-color-text",
+                "--calepin-color-muted",
+                "--calepin-color-border",
+                "--calepin-color-accent",
+                "--calepin-color-link",
+                "--calepin-color-info",
+                "--calepin-color-success",
+                "--calepin-color-warning",
+                "--calepin-color-danger",
+                "--calepin-color-important",
+                "--calepin-callout-note-color",
+                "--calepin-callout-tip-color",
+                "--calepin-callout-warning-color",
+                "--calepin-callout-caution-color",
+                "--calepin-callout-important-color",
+                "--calepin-surface",
+                "--calepin-surface-raised",
+                "--calepin-surface-inset",
+                "--calepin-font-body",
+                "--calepin-font-size-aside",
+                "--calepin-space-md",
+                "--calepin-block-gap",
+                "--calepin-margin-width",
+                "--calepin-focus-ring",
+            ] {
+                assert!(css.contains(token), "{theme_name}: missing {token}");
+            }
+
+            assert!(
+                css.contains("html[data-theme=\"dark\"] {\n  color-scheme: dark;"),
+                "{theme_name}: missing explicit dark token block"
+            );
+            assert!(
+                css.contains("@media (prefers-color-scheme: dark)")
+                    && css.contains("html:not([data-theme])"),
+                "{theme_name}: missing system dark token block"
+            );
+        }
+    }
+
+    #[test]
     fn academic_site_theme_omits_toc_and_sidebar_nav_links() {
         let site_context = SiteContextInput {
             menus: BTreeMap::from([(
@@ -734,7 +785,7 @@ mod tests {
 
         assert!(css.contains(
             r#".academic-page {
-  width: min(100% - 2rem, var(--academic-text-width));"#
+  width: min(100% - 2rem, var(--calepin-content-width));"#
         ));
         assert!(css.contains("justify-content: space-evenly;"));
         assert!(css.contains(

@@ -1,16 +1,11 @@
 :root {
-  --academic-text-width: var(--calepin-content-width);
-  --academic-margin-width: 11.5rem;
-  --academic-gap: 2rem;
-  --academic-page-width: calc(var(--academic-text-width) + var(--academic-gap) + var(--academic-margin-width));
-  --academic-topbar-height: var(--calepin-topbar-height);
-  --calepin-page-width: var(--academic-page-width);
+  --calepin-page-width: calc(var(--calepin-content-width) + var(--calepin-margin-gap) + var(--calepin-margin-width));
 }
 
 .academic-document-topbar {
   display: flex;
   justify-content: flex-end;
-  width: min(100% - 2rem, var(--academic-page-width));
+  width: min(100% - 2rem, var(--calepin-page-width));
   margin-inline: auto;
   border-bottom: 0;
 }
@@ -19,7 +14,7 @@
   display: flex;
   align-items: center;
   justify-content: space-evenly;
-  width: min(100% - 2rem, var(--academic-page-width));
+  width: min(100% - 2rem, var(--calepin-page-width));
   margin-inline: auto;
 }
 
@@ -40,23 +35,23 @@
 }
 
 .academic-page {
-  width: min(100% - 2rem, var(--academic-text-width));
+  width: min(100% - 2rem, var(--calepin-content-width));
   margin-inline: auto;
   padding-block: 3.2rem 4rem;
 }
 
 .academic-main {
-  width: min(100%, var(--academic-text-width));
+  width: min(100%, var(--calepin-content-width));
 }
 
 .academic-document-main {
-  width: min(100% - 2rem, var(--academic-page-width));
+  width: min(100% - 2rem, var(--calepin-page-width));
   margin-inline: auto;
   padding-block: 2.4rem 4rem;
 }
 
 .academic-document-main > :not(.fullwidth):not(.full-width):not(.calepin-figure-grid) {
-  max-width: var(--academic-text-width);
+  max-width: var(--calepin-content-width);
 }
 
 .marginnote,
@@ -66,12 +61,12 @@
 .academic-footnote {
   float: right;
   clear: right;
-  width: var(--academic-margin-width);
-  margin: 0.25rem calc(-1 * (var(--academic-margin-width) + var(--academic-gap))) 1rem var(--academic-gap);
-  color: var(--pico-muted-color);
+  width: var(--calepin-margin-width);
+  margin: 0.25rem calc(-1 * (var(--calepin-margin-width) + var(--calepin-margin-gap))) 1rem var(--calepin-margin-gap);
+  color: var(--calepin-color-muted);
   font-size: 0.84rem;
   line-height: 1.45;
-  scroll-margin-top: calc(var(--academic-topbar-height) + 1rem);
+  scroll-margin-top: calc(var(--calepin-topbar-height) + 1rem);
 }
 
 .marginnote p,
@@ -85,7 +80,7 @@
 
 .academic-footnote-backref {
   margin-right: 0.35rem;
-  color: var(--pico-color);
+  color: var(--calepin-color-text);
   font-size: 0.78rem;
   font-weight: 700;
   text-decoration: none;
@@ -95,10 +90,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  width: min(100% - 2rem, var(--academic-page-width));
+  width: min(100% - 2rem, var(--calepin-page-width));
   margin: 0 auto 4rem;
   padding-top: 1.4rem;
-  border-top: 1px solid var(--pico-muted-border-color);
+  border-top: 1px solid var(--calepin-color-border);
 }
 
 .academic-page-nav-link {
@@ -118,11 +113,11 @@
 
 .academic-page-nav-link:hover,
 .academic-page-nav-link:focus-visible {
-  color: var(--pico-primary);
+  color: var(--calepin-color-accent);
 }
 
 .academic-landing {
-  width: min(100% - 2rem, var(--academic-page-width));
+  width: min(100% - 2rem, var(--calepin-page-width));
   margin-inline: auto;
   padding-block: 3rem 5rem;
 }
@@ -132,9 +127,9 @@
   align-content: center;
   justify-items: start;
   gap: 1rem;
-  max-width: var(--academic-text-width);
+  max-width: var(--calepin-content-width);
   min-height: min(52vh, 32rem);
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  border-bottom: 1px solid var(--calepin-color-border);
 }
 
 .academic-landing .landing-hero h1,
@@ -152,9 +147,9 @@
     width: auto;
     margin: 0.75rem 0 1.2rem;
     padding: 0.8rem 0.9rem;
-    border: 1px solid var(--pico-muted-border-color);
+    border: 1px solid var(--calepin-color-border);
     border-radius: var(--calepin-radius-sm);
-    background: var(--pico-card-sectioning-background-color);
+    background: var(--calepin-surface-muted);
   }
 }
 
@@ -170,15 +165,15 @@
 
   .academic-menu {
     position: absolute;
-    inset: calc(var(--academic-topbar-height) - 0.35rem) 0 auto auto;
+    inset: calc(var(--calepin-topbar-height) - 0.35rem) 0 auto auto;
     display: none;
     width: max-content;
     max-width: calc(100vw - 2rem);
     padding: 0.75rem;
-    border: 1px solid var(--pico-muted-border-color);
+    border: 1px solid var(--calepin-color-border);
     border-radius: var(--calepin-radius-sm);
-    background: var(--pico-background-color);
-    box-shadow: var(--pico-card-box-shadow);
+    background: var(--calepin-color-background);
+    box-shadow: var(--calepin-shadow-card);
   }
 
   .academic-menu.is-open {
@@ -197,13 +192,13 @@
   .academic-page,
   .academic-document-main,
   .academic-landing {
-    width: min(100% - 1.25rem, var(--academic-text-width));
+    width: min(100% - 1.25rem, var(--calepin-content-width));
     padding-block: 2rem 3rem;
   }
 
   .academic-page-nav {
     grid-template-columns: 1fr;
-    width: min(100% - 1.25rem, var(--academic-text-width));
+    width: min(100% - 1.25rem, var(--calepin-content-width));
   }
 
   .academic-page-nav-link-next {
