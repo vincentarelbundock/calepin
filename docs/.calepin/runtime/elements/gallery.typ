@@ -72,20 +72,6 @@
         .calepin-elements-gallery__item:focus-visible .calepin-elements-gallery__caption {
           display: block;
         }
-
-        .pswp__img {
-          width: auto !important;
-          height: auto !important;
-          max-width: 90vw !important;
-          max-height: 90vh !important;
-          object-fit: contain;
-          pointer-events: auto;
-        }
-
-        .pswp__container,
-        .pswp__item {
-          align-items: center;
-        }
       ")
       #std.html.elem("script", "
         import PhotoSwipeLightbox from 'https://unpkg.com/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js';
