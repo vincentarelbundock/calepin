@@ -29,7 +29,10 @@
           "a",
           attrs: (role: "doc-noteref", href: "#" + id, id: id + "ref"),
         )[#str(n)]
-        html.elem("span", attrs: (class: note_class, id: id))[#body]
+        html.elem(
+          "span",
+          attrs: (class: note_class, id: id, "data-sidenote-number": str(n)),
+        )[#body]
       }
     }
   }

@@ -78,6 +78,16 @@
   line-height: inherit;
 }
 
+.calepin-sidenote-numbered::before {
+  content: "[" attr(data-sidenote-number) "]";
+  display: inline-block;
+  margin-right: 0.28rem;
+  color: var(--calepin-color-accent);
+  font-size: 0.82em;
+  font-weight: 600;
+  line-height: 1;
+}
+
 /* In-text marker for a numbered sidenote. The number is emitted by the sidenote
    element; CSS only renders it as a superscript. */
 [role="doc-noteref"] {
