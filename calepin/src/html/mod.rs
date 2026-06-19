@@ -895,6 +895,34 @@ mod tests {
     }
 
     #[test]
+    fn academic_document_reserves_margin_only_for_margin_content() {
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+
+        assert!(
+            css.contains(
+                r#".academic-document-main {
+  width: min(100% - 2rem, var(--calepin-content-width));"#
+            ),
+            "academic document should collapse to the text column by default"
+        );
+        assert!(
+            css.contains(r#"body:has(.academic-document-main .calepin-sidenote) .academic-document-main"#),
+            "academic document should widen when sidenotes are present"
+        );
+        assert!(
+            css.contains(r#"body:has(.academic-document-main .calepin-sidefigure) .academic-document-topbar"#),
+            "academic document topbar should widen when side figures are present"
+        );
+        assert!(
+            css.contains("width: min(100% - 2rem, var(--calepin-page-width));"),
+            "academic document should reserve the margin column for margin content"
+        );
+    }
+
+    #[test]
     fn academic_document_caps_sized_figures_to_text_column() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
         let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
