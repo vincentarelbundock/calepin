@@ -239,9 +239,12 @@
   line-height: 1;
 }
 
+.calepin-website-nav-toggle svg,
+.calepin-website-mobile-search-button svg,
 .calepin-website-theme-button svg {
   width: 1.1rem;
   height: 1.1rem;
+  display: block;
 }
 
 /* ------------------------------------------------------------ Landing */
