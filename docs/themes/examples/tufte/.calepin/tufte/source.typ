@@ -3,7 +3,7 @@
 #import "@preview/marginalia:0.3.1" as marginalia
 
 #show: marginalia.setup.with(
-  outer: (far: 6mm, width: 68mm, sep: 6mm),
+  outer: (far: 6mm, width: 50mm, sep: 6mm),
   inner: (far: 2.2cm, width: 0mm, sep: 0mm),
   top: 2.0cm,
   bottom: 2.0cm,
@@ -15,6 +15,9 @@
   numbering: "1",
   number-align: right,
 )
+
+#let sidenote = calepin.elements.sidenote.with(side: "right")
+#let sidefigure = calepin.elements.sidefigure.with(side: "right")
 
 #set text(size: 10pt)
 #set par(
@@ -32,13 +35,6 @@
 #set figure(gap: 0.55em)
 #set table(stroke: none)
 #set table(inset: 0.45em)
-
-#let sidenote(body, numbering: auto, side: auto) = {
-  calepin.elements.sidenote(body, numbering: numbering, side: "right")
-}
-#let sidefigure(body, caption: none, side: auto) = {
-  calepin.elements.sidefigure(body, caption: caption, side: "right")
-}
 
 #let chunk = calepin.chunk
 #let newthought = smallcaps
