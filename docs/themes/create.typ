@@ -46,18 +46,18 @@ Use this map when you want to choose the right file first:
 
 ```text
 themes/my-theme/
-  theme.toml           # theme metadata and shared imports
+  theme.toml            # theme metadata and shared imports
   layouts/
-    webpage.html        # website page wrapper
-    notebook.html       # standalone notebook HTML wrapper
-    landing.html        # optional page-specific override
+    webpage.html         # website page wrapper
+    notebook.html        # standalone notebook HTML wrapper
+    landing.html         # optional page-specific override
   partials/
-    ...                # reusable template fragments
+    ...                 # reusable template fragments
   styles/
-    ...                # theme CSS
+    ...                 # theme CSS
   scripts/
-    ...                # theme JavaScript
-  notebook.typ.jinja    # Typst template around notebook source
+    ...                 # theme JavaScript
+  notebook.typ.jinja   # Typst template around notebook source
 ```
 
 = HTML templates
