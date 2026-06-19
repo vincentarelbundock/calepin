@@ -33,23 +33,11 @@
 #set table(stroke: none)
 #set table(inset: 0.45em)
 
-#let _tufte-marginalia-side(side) = {
-  if side == auto {
-    "right"
-  } else if side == "outer" {
-    "right"
-  } else if side == "inner" {
-    "left"
-  } else {
-    side
-  }
-}
-
 #let sidenote(body, numbering: auto, side: auto) = {
-  calepin.elements.sidenote(body, numbering: numbering, side: _tufte-marginalia-side(side))
+  calepin.elements.sidenote(body, numbering: numbering, side: "right")
 }
 #let sidefigure(body, caption: none, side: auto) = {
-  calepin.elements.sidefigure(body, caption: caption, side: _tufte-marginalia-side(side))
+  calepin.elements.sidefigure(body, caption: caption, side: "right")
 }
 
 #let chunk = calepin.chunk

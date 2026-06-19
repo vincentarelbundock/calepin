@@ -32,18 +32,6 @@
 #import "/.calepin/calepin.typ" as calepin
 #import "@preview/marginalia:0.3.1" as marginalia
 
-#let _tufte-marginalia-side(side) = {
-  if side == auto {
-    "right"
-  } else if side == "outer" {
-    "right"
-  } else if side == "inner" {
-    "left"
-  } else {
-    side
-  }
-}
-
 // Place margin elements with marginalia in paged output. Page geometry stays
 // under author control; add `marginalia.setup` in the document or a local theme
 // when you want to reserve margin space.
@@ -53,14 +41,14 @@
     marginalia.note(
       body,
       numbering: numbering,
-      side: _tufte-marginalia-side(side),
+      side: "right",
     )
   },
   figure: (body, caption: none, side: auto) => {
     marginalia.notefigure(
       body,
       caption: caption,
-      side: _tufte-marginalia-side(side),
+      side: "right",
     )
   },
 )
