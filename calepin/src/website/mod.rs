@@ -4888,7 +4888,7 @@ filenames = ["atom.xml", "rss.xml"]
     }
 
     #[test]
-    fn pagefind_index_writes_bundle_files_and_project_relative_urls() {
+    fn pagefind_index_writes_bundle_files_and_pagefind_relative_urls() {
         let temp = tempfile::tempdir().unwrap();
         let page = temp.path().join("guide").join("usage.html");
         fs::create_dir_all(page.parent().unwrap()).unwrap();
@@ -4916,7 +4916,7 @@ filenames = ["atom.xml", "rss.xml"]
             .is_some_and(|name| name.ends_with(".pf_fragment"))));
         assert_eq!(
             pagefind_page_url(Some("https://example.com/project/"), "guide/usage.html"),
-            "/project/guide/usage.html"
+            "guide/usage.html"
         );
     }
 
@@ -4925,13 +4925,13 @@ filenames = ["atom.xml", "rss.xml"]
         let temp = tempfile::tempdir().unwrap();
         let page = temp.path().join("index.html");
         fs::write(&page, "<main data-pagefind-body>one</main>").unwrap();
-        let pages = vec![(page.clone(), "/index.html".to_string())];
+        let pages = vec![(page.clone(), "index.html".to_string())];
 
         let original = pagefind_signature(temp.path(), &pages).unwrap();
         fs::write(&page, "<main data-pagefind-body>two</main>").unwrap();
         let content_changed = pagefind_signature(temp.path(), &pages).unwrap();
         let url_changed =
-            pagefind_signature(temp.path(), &[(page, "/renamed.html".to_string())]).unwrap();
+            pagefind_signature(temp.path(), &[(page, "renamed.html".to_string())]).unwrap();
 
         assert_ne!(original, content_changed);
         assert_ne!(content_changed, url_changed);

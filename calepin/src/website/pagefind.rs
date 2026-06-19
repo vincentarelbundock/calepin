@@ -38,11 +38,12 @@ pub(super) fn pagefind_pages(
         .collect()
 }
 
-pub(super) fn pagefind_page_url(base_url: Option<&str>, href: &str) -> String {
-    match base_url.and_then(base_url_path_prefix) {
-        Some(prefix) => format!("{prefix}/{href}"),
-        None => format!("/{href}"),
-    }
+pub(super) fn pagefind_page_url(_base_url: Option<&str>, href: &str) -> String {
+    // Pagefind prepends its runtime `baseUrl` to indexed URLs. That base URL is
+    // inferred from the loaded bundle path (for example `/calepin/pagefind/` on
+    // GitHub Pages), so storing a site `base_url` prefix here would duplicate it
+    // in search result links.
+    href.to_string()
 }
 
 pub(super) fn base_url_path_prefix(base_url: &str) -> Option<String> {
