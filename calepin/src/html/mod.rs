@@ -198,6 +198,84 @@ mod tests {
         entry_for(&ThemeSelection::Dir(dir.to_path_buf()), HtmlScope::Site)
     }
 
+    fn root_custom_property(css: &str, theme: &str, property: &str) -> Option<String> {
+        let mut winner: Option<((usize, usize, usize), usize, String)> = None;
+        for (order, (selectors, declarations)) in top_level_css_rules(css).into_iter().enumerate() {
+            let Some(value) = declaration_value(declarations, property) else {
+                continue;
+            };
+            for selector in selectors.split(',').map(str::trim) {
+                if !selector_matches_root_theme(selector, theme) {
+                    continue;
+                }
+                let specificity = selector_specificity(selector);
+                if winner.as_ref().is_none_or(|(current, current_order, _)| {
+                    (specificity, order) >= (*current, *current_order)
+                }) {
+                    winner = Some((specificity, order, value.clone()));
+                }
+            }
+        }
+        winner.map(|(_, _, value)| value)
+    }
+
+    fn top_level_css_rules(css: &str) -> Vec<(&str, &str)> {
+        let mut rules = Vec::new();
+        let bytes = css.as_bytes();
+        let mut selector_start = 0;
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b';' && css[selector_start..i].trim_start().starts_with('@') {
+                selector_start = i + 1;
+                i += 1;
+                continue;
+            }
+            if bytes[i] != b'{' {
+                i += 1;
+                continue;
+            }
+            let selector = css[selector_start..i].trim();
+            let body_start = i + 1;
+            let mut depth = 1;
+            let mut j = body_start;
+            while j < bytes.len() && depth > 0 {
+                match bytes[j] {
+                    b'{' => depth += 1,
+                    b'}' => depth -= 1,
+                    _ => {}
+                }
+                j += 1;
+            }
+            if depth == 0 && !selector.starts_with('@') {
+                rules.push((selector, css[body_start..j - 1].trim()));
+            }
+            selector_start = j;
+            i = j;
+        }
+        rules
+    }
+
+    fn declaration_value(declarations: &str, property: &str) -> Option<String> {
+        declarations.split(';').find_map(|declaration| {
+            let (name, value) = declaration.split_once(':')?;
+            (name.trim() == property).then(|| value.trim().to_string())
+        })
+    }
+
+    fn selector_matches_root_theme(selector: &str, theme: &str) -> bool {
+        selector == ":root"
+            || selector == format!("html[data-theme=\"{theme}\"]")
+            || selector == format!("html[data-theme='{theme}']")
+    }
+
+    fn selector_specificity(selector: &str) -> (usize, usize, usize) {
+        match selector {
+            ":root" => (0, 1, 0),
+            selector if selector.starts_with("html[data-theme=") => (0, 1, 1),
+            _ => (0, 0, 0),
+        }
+    }
+
     #[test]
     fn default_document_theme_preserves_title_and_wraps_body() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Document);
@@ -738,6 +816,26 @@ mod tests {
                 "{theme_name}: missing system dark token block"
             );
         }
+    }
+
+    #[test]
+    fn academic_document_page_width_token_is_theme_invariant() {
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+
+        let light = root_custom_property(&css, "light", "--calepin-page-width").unwrap();
+        let dark = root_custom_property(&css, "dark", "--calepin-page-width").unwrap();
+
+        assert_eq!(
+            light, dark,
+            "academic document margins should not change between explicit light and dark themes"
+        );
+        assert_eq!(
+            light,
+            "calc(var(--calepin-content-width) + var(--calepin-margin-gap) + var(--calepin-margin-width))"
+        );
     }
 
     #[test]
