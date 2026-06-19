@@ -2,7 +2,7 @@
   "use strict";
 
   function initScrollAwareTopbar() {
-    const topbar = document.querySelector(".academic-topbar, .academic-document-topbar");
+    const topbar = document.querySelector(".academic-topbar");
     if (!topbar) return;
 
     const menu = document.getElementById("academic-menu");

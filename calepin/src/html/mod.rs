@@ -926,12 +926,12 @@ mod tests {
         );
         assert!(
             css.contains(
-                r#".academic-document-topbar {
+                r#".academic-document-controls {
   display: flex;
   justify-content: flex-end;
   width: min(100% - 2rem, var(--calepin-content-width));"#
             ),
-            "academic document topbar should stay aligned to the text column"
+            "academic document controls should stay aligned to the text column"
         );
         assert!(
             css.contains("body:has(.academic-document-main .calepin-sidenote) .academic-document-main")

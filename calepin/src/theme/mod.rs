@@ -226,6 +226,28 @@ mod tests {
     }
 
     #[test]
+    fn academic_document_uses_static_theme_controls_without_topbar() {
+        let sel = ThemeSelection::Builtin("academic");
+        let document = resolve_html_entry(&sel, HtmlScope::Document)
+            .unwrap()
+            .unwrap();
+        let js = document
+            .scripts
+            .iter()
+            .find(|(name, _)| name == "main.js")
+            .map(|(_, source)| source)
+            .expect("academic main.js should be included");
+
+        assert!(document.layout.contains("academic-document-controls"));
+        assert!(!document.layout.contains("calepin-site-topbar"));
+        assert!(!document.layout.contains("academic-document-topbar"));
+        assert!(
+            !js.contains(".academic-document-topbar"),
+            "document topbar should not participate in scroll hiding:\n{js}"
+        );
+    }
+
+    #[test]
     fn typst_selection_resolves_to_no_entry_and_no_notebook_source() {
         assert!(resolve_html_entry(&ThemeSelection::Typst, HtmlScope::Site)
             .unwrap()

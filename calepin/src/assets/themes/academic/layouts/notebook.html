@@ -1,10 +1,10 @@
 {% include "partials/document-head.html" %}
 {{ doc.body_open }}
-    <header class="academic-document-topbar calepin-site-topbar calepin-document-topbar">
+    <div class="academic-document-controls">
         {% set calepin_theme_toggle_class = "academic-theme-toggle" %}
         {% set calepin_theme_toggle_storage_key = "calepin-academic-document-theme" %}
         {% include "partials/theme-toggle.html" %}
-    </header>
+    </div>
     <main class="academic-main academic-document-main calepin-content calepin-document-main">
         {{ doc.body }}
     </main>
