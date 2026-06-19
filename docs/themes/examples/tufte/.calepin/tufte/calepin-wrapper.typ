@@ -30,7 +30,19 @@
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block
 #import "/.calepin/calepin.typ" as calepin
-#import "@preview/marginalia:0.2.0" as marginalia
+#import "@preview/marginalia:0.3.1" as marginalia
+
+#let _tufte-marginalia-side(side) = {
+  if side == auto {
+    "right"
+  } else if side == "outer" {
+    "right"
+  } else if side == "inner" {
+    "left"
+  } else {
+    side
+  }
+}
 
 // Place margin elements with marginalia in paged output. Page geometry stays
 // under author control; add `marginalia.setup` in the document or a local theme
@@ -38,17 +50,18 @@
 #calepin.elements.set-margin-impl(
   note: (body, numbering: auto, side: auto) => {
     let numbering = if numbering == auto { "1" } else { numbering }
-    let args = (
+    marginalia.note(
+      body,
       numbering: numbering,
-      side: if side == auto { "outer" } else { side },
+      side: _tufte-marginalia-side(side),
     )
-    marginalia.note(body, ..args)
   },
   figure: (body, caption: none, side: auto) => {
-    let args = (
-      side: if side == auto { "outer" } else { side },
+    marginalia.notefigure(
+      body,
+      caption: caption,
+      side: _tufte-marginalia-side(side),
     )
-    marginalia.notefigure(body, caption: caption, ..args)
   },
 )
 

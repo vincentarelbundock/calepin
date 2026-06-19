@@ -1,15 +1,16 @@
 #import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
-#import "@preview/marginalia:0.2.0" as marginalia
+#import "@preview/marginalia:0.3.1" as marginalia
 
 #show: marginalia.setup.with(
-  outer: (far: 6mm, width: 60mm, sep: 6mm),
+  outer: (far: 6mm, width: 68mm, sep: 6mm),
+  inner: (far: 5mm, width: 0pt, sep: 0mm),
   book: false,
 )
 
 #set page(
   paper: "us-letter",
-  margin: (inside: 2.2cm, outside: 7.2cm, y: 2.0cm),
+  margin: (inside: 2.2cm, outside: 8.0cm, y: 2.0cm),
   numbering: "1",
   number-align: right,
 )
@@ -31,13 +32,22 @@
 #set table(stroke: none)
 #set table(inset: 0.45em)
 
+#let _tufte-marginalia-side(side) = {
+  if side == auto {
+    "right"
+  } else if side == "outer" {
+    "right"
+  } else if side == "inner" {
+    "left"
+  } else {
+    side
+  }
+}
 #let sidenote(body, numbering: auto, side: auto) = {
-  let resolved-side = if side == auto { "outer" } else { side }
-  calepin.elements.sidenote(body, numbering: numbering, side: resolved-side)
+  calepin.elements.sidenote(body, numbering: numbering, side: _tufte-marginalia-side(side))
 }
 #let sidefigure(body, caption: none, side: auto) = {
-  let resolved-side = if side == auto { "outer" } else { side }
-  calepin.elements.sidefigure(body, caption: caption, side: resolved-side)
+  calepin.elements.sidefigure(body, caption: caption, side: _tufte-marginalia-side(side))
 }
 #let chunk = calepin.chunk
 #let newthought = smallcaps
